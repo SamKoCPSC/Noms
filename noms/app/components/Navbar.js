@@ -16,6 +16,9 @@ import AccountCircle from '@mui/icons-material/AccountCircle';
 import MailIcon from '@mui/icons-material/Mail';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import MoreIcon from '@mui/icons-material/MoreVert';
+import { Dancing_Script } from "next/font/google";
+
+const dancingScript = Dancing_Script({subsets: ['latin']})
 
 const Search = styled('div')(({ theme }) => ({
   position: 'relative',
@@ -172,9 +175,9 @@ export default function PrimarySearchAppBar() {
             variant="h6"
             noWrap
             component="div"
-            sx={{ display: { xs: 'none', sm: 'block' } }}
+            sx={{ display: { xs: 'none', sm: 'block', fontFamily: dancingScript.style.fontFamily } }}
           >
-            MUI
+            NOMS
           </Typography>
           <Search>
             <SearchIconWrapper>
