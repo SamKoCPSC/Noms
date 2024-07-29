@@ -23,7 +23,7 @@ export default function TemporaryDrawer(props) {
     <Box sx={{ width: 250 }} role="presentation" onClick={props.setOpen}>
       <Box height={'56px'}></Box>  
       <List>
-        {['Inbox', 'Starred', 'Send email', 'Drafts'].map((text, index) => (
+        {['Create New Recipe'].map((text, index) => (
           <ListItem key={text} disablePadding>
             <ListItemButton>
               <ListItemIcon>
@@ -36,7 +36,7 @@ export default function TemporaryDrawer(props) {
       </List>
       <Divider />
       <List>
-        {['All mail', 'Trash', 'Spam'].map((text, index) => (
+        {['Recipes'].map((text, index) => (
           <ListItem key={text} disablePadding>
             <ListItemButton>
               <ListItemIcon>

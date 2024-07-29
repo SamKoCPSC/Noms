@@ -64,6 +64,7 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 export default function PrimarySearchAppBar(props) {
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState(null);
+  const [isNavdrawerOpen, setNavdrawerOpen] = React.useState(false)
 
   const isMenuOpen = Boolean(anchorEl);
   const isMobileMenuOpen = Boolean(mobileMoreAnchorEl);
@@ -84,6 +85,10 @@ export default function PrimarySearchAppBar(props) {
   const handleMobileMenuOpen = (event) => {
     setMobileMoreAnchorEl(event.currentTarget);
   };
+
+  const handleNavdrawerOpen = () => {
+      setNavdrawerOpen(!isNavdrawerOpen)
+    }
 
   const menuId = 'primary-search-account-menu';
   const renderMenu = (
@@ -161,16 +166,16 @@ export default function PrimarySearchAppBar(props) {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      
+      <Navdrawer open={isNavdrawerOpen} setOpen={handleNavdrawerOpen}></Navdrawer>
       <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
         <Toolbar>
           <IconButton
             size="large"
             edge="start"
-            color="inherit"
+            color="inherit" 
             aria-label="open drawer"
             sx={{ mr: 2 }}
-            onClick={() => {props.setOpen()}}
+            onClick={() => {setNavdrawerOpen(true)}}
           >
             <MenuIcon />
           </IconButton>

@@ -10,17 +10,16 @@ import { Dancing_Script } from "next/font/google";
 const dancingScript = Dancing_Script({subsets: ['latin']})
 
 export default function Home() {
-  const [isNavdrawerOpen, setNavdrawerOpen] = React.useState(false)
+  // const [isNavdrawerOpen, setNavdrawerOpen] = React.useState(false)
 
-  const handleNavdrawerOpen = () => {
-    setNavdrawerOpen(!isNavdrawerOpen)
-  }
+  // const handleNavdrawerOpen = () => {
+  //   setNavdrawerOpen(!isNavdrawerOpen)
+  // }
 
   return (
     <Container>
       <Box left='0%' width={'100%'}>
-        <Navdrawer open={isNavdrawerOpen} setOpen={handleNavdrawerOpen}></Navdrawer>
-        <Navbar setOpen={handleNavdrawerOpen} position='fixed' sx={{zIndex: (theme) => theme.zIndex.drawer + 1}}></Navbar>
+        <Navbar position='fixed'></Navbar>
       </Box>
       <main className={styles.main}>
         
