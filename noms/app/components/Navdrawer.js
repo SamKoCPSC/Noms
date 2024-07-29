@@ -21,6 +21,7 @@ export default function TemporaryDrawer(props) {
 
   const DrawerList = (
     <Box sx={{ width: 250 }} role="presentation" onClick={props.setOpen}>
+      <Box height={'56px'}></Box>  
       <List>
         {['Inbox', 'Starred', 'Send email', 'Drafts'].map((text, index) => (
           <ListItem key={text} disablePadding>
@@ -50,11 +51,11 @@ export default function TemporaryDrawer(props) {
   );
 
   return (
-    <div>
+    <Box>
       {/* <Button onClick={toggleDrawer(true)}>Open drawer</Button> */}
       <Drawer open={props.open} onClose={props.setOpen}>
         {DrawerList}
       </Drawer>
-    </div>
+    </Box>
   );
 }
