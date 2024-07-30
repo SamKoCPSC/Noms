@@ -24,7 +24,7 @@ export default function Home() {
       <main className={styles.main}>
         
         <Box> 
-          <Typography sx={{fontFamily: dancingScript.style.fontFamily, fontSize: '150px'}}>
+          <Typography sx={{fontFamily: dancingScript.style.fontFamily, fontSize: '150px', ":hover": {cursor: 'default'}}}>
             NOMS
           </Typography>
         </Box>

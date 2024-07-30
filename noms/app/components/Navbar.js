@@ -1,5 +1,6 @@
 'use client'
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { styled, alpha } from '@mui/material/styles';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
@@ -18,6 +19,7 @@ import NotificationsIcon from '@mui/icons-material/Notifications';
 import MoreIcon from '@mui/icons-material/MoreVert';
 import { Dancing_Script } from "next/font/google";
 import Navdrawer from './Navdrawer'
+import { Router } from 'next/router';
 
 const dancingScript = Dancing_Script({subsets: ['latin']})
 
@@ -65,6 +67,8 @@ export default function PrimarySearchAppBar(props) {
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState(null);
   const [isNavdrawerOpen, setNavdrawerOpen] = React.useState(false)
+
+  const router = useRouter()
 
   const isMenuOpen = Boolean(anchorEl);
   const isMobileMenuOpen = Boolean(mobileMoreAnchorEl);
@@ -183,7 +187,8 @@ export default function PrimarySearchAppBar(props) {
             variant="h6"
             noWrap
             component="div"
-            sx={{ display: { xs: 'none', sm: 'block', fontFamily: dancingScript.style.fontFamily } }}
+            sx={{ display: { xs: 'none', sm: 'block', fontFamily: dancingScript.style.fontFamily, ":hover": {cursor: 'pointer'} } }}
+            onClick={() => router.push('/')}
           >
             NOMS
           </Typography>
