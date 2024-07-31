@@ -26,7 +26,7 @@ export default function TemporaryDrawer(props) {
     <Box sx={{ width: 250 }} role="presentation" onClick={props.setOpen}>
       <Box height={'56px'}></Box>  
       <List>
-        {['Create New Recipe'].map((text, index) => (
+        {['Create A Nom'].map((text, index) => (
           <ListItem key={text} disablePadding>
             <ListItemButton onClick={() => router.push(`/${['create'][index]}`)}>
               <ListItemIcon>
@@ -39,7 +39,7 @@ export default function TemporaryDrawer(props) {
       </List>
       <Divider />
       <List>
-        {['Recipes'].map((text, index) => (
+        {['Noms'].map((text, index) => (
           <ListItem key={text} disablePadding>
             <ListItemButton>
               <ListItemIcon>

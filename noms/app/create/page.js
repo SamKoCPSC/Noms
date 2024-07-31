@@ -4,13 +4,12 @@ import styles from "../page.module.css";
 import * as React from 'react';
 import { useFormik } from "formik";
 import Navbar from '../components/Navbar'
-import {Box, Container, Divider, Typography} from "@mui/material";
+import {Box, Container, Divider, Stack, TextField, Typography, Button} from "@mui/material";
 
 export default function Create() {
   const formik = useFormik({
     initialValues: {
-        
-
+        title: ""
     }
   })
 
@@ -21,16 +20,28 @@ export default function Create() {
       </Box>
       <main className={styles.main}>
         
-        <Box width='800px' sx={{backgroundColor: 'green'}}> 
+        <Box width='800px' sx={{}}> 
           <Typography fontSize={'50px'}>
-            Create New Recipe
+            Create A Nom
           </Typography>
-          <Divider></Divider>
-          <Typography>Title:</Typography>
-          <Typography>Ingredients:</Typography>
-          <Typography>Instructions:</Typography>
-          <Divider></Divider>
-          <Typography>Notes:</Typography>
+          <Divider sx={{margin: '10px'}}></Divider>
+          <Stack direction='row'>
+            <Typography fontSize="25px">Name:</Typography>
+            <TextField variant="outlined" fullWidth></TextField>
+          </Stack>
+          <Box>
+            <Typography fontSize="25px">Ingredients:</Typography>
+            <Button >+ Add Ingredient</Button>
+          </Box>
+          <Box>
+            <Typography fontSize="25px">Instructions:</Typography>
+            <TextField variant="outlined" fullWidth></TextField>
+          </Box>
+          <Divider sx={{margin: '10px'}}></Divider>
+          <Box>
+            <Typography fontSize='25px'>Notes:</Typography>
+            <TextField variant="outlined" fullWidth></TextField>
+          </Box>
         </Box>
       </main>
     </Container>
