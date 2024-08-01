@@ -4,14 +4,22 @@ import styles from "../page.module.css";
 import * as React from 'react';
 import { useFormik } from "formik";
 import Navbar from '../components/Navbar'
-import {Box, Container, Divider, Stack, TextField, Typography, Button} from "@mui/material";
+import {Box, Container, Divider, Stack, TextField, Typography, Button, MenuItem} from "@mui/material";
+
+const units = ['g', 'mL']
 
 export default function Create() {
+  const [addIngredientMode, setIngredientMode] = React.useState(false)
+
   const formik = useFormik({
     initialValues: {
         title: ""
     }
   })
+
+  const handleIngredientMode = () => {
+    setIngredientMode(!addIngredientMode)
+  }
 
   return (
     <Container>
@@ -31,7 +39,20 @@ export default function Create() {
           </Stack>
           <Box>
             <Typography fontSize="25px">Ingredients:</Typography>
-            <Button >+ Add Ingredient</Button>
+            {addIngredientMode ? 
+                <Box display="flex">
+                    <Typography>Ingredient Name</Typography>
+                    <TextField></TextField>
+                    <Typography>Quantity</Typography>
+                    <TextField></TextField>
+                    <TextField select>
+                        {units.map((unit) => (
+                            <MenuItem key={unit} value={unit}>{unit}</MenuItem>
+                        ))}
+                    </TextField>
+                </Box> : 
+            <></>}
+            <Button onClick={() => handleIngredientMode()}>{addIngredientMode ? 'Confirm' : '+ Add Ingredient'}</Button>
           </Box>
           <Box>
             <Typography fontSize="25px">Instructions:</Typography>
