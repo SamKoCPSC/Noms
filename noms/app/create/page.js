@@ -10,7 +10,7 @@ const units = ['g', 'mL']
 
 export default function Create() {
   const [addIngredientMode, setIngredientMode] = React.useState(false)
-  const [ingredients, setIngredients] = React.useState([{quantity: 2, unit: 'g', name: 'Salt'}])
+  const [ingredients, setIngredients] = React.useState([])
 
   const ingredientFormik = useFormik({
     initialValues: {
@@ -18,8 +18,10 @@ export default function Create() {
         unit: '', 
         name: ''
     },
-    onSubmit: (values) => {
-        console.log('hi')
+    onSubmit: (values, actions) => {
+        console.log(values)
+        setIngredients([...ingredients, {quantity: values.quantity, unit: values.unit, name: values.name}])
+        ingredientFormik.resetForm()
     }
   })
 
@@ -51,8 +53,8 @@ export default function Create() {
           </Stack>
           <Box>
             <Typography fontSize="25px">Ingredients:</Typography>
-            {ingredients.map((ingredient) => (
-                <Typography>{ingredient.quantity + ingredient.unit + ' ' + ingredient.name}</Typography>
+            {ingredients.map((ingredient, index) => (
+                <Typography key={index}>{ingredient.quantity + ingredient.unit + ' ' + ingredient.name}</Typography>
             ))}
             {addIngredientMode ? 
                 <Box display="flex">
@@ -61,6 +63,7 @@ export default function Create() {
                         sx={{margin: '5px'}} 
                         value={ingredientFormik.values.name}
                         id="name"
+                        name="name"
                         onChange={ingredientFormik.handleChange}>
                     </TextField>
                     <Typography>Quantity</Typography>
@@ -68,6 +71,7 @@ export default function Create() {
                         sx={{margin: '5px'}} 
                         value={ingredientFormik.values.quantity}
                         id="quantity"
+                        name="quantity"
                         onChange={ingredientFormik.handleChange}>
                     </TextField>
                     <Typography>Unit</Typography>
@@ -76,6 +80,7 @@ export default function Create() {
                         sx={{margin: '5px'}} 
                         value={ingredientFormik.values.unit}
                         id="unit"
+                        name="unit"
                         onChange={ingredientFormik.handleChange('unit')}>
                             {units.map((unit) => (
                                 <MenuItem key={unit} value={unit}>{unit}</MenuItem>
@@ -89,15 +94,13 @@ export default function Create() {
                     <Button 
                         onClick={() => {
                             handleIngredientMode() 
-                            ingredientFormik.handleSubmit() 
-                            ingredientFormik.resetForm()}}
+                            ingredientFormik.handleSubmit()}}
                     >
                         Confirm
                     </Button>
                     <Button 
                         onClick={() => {
-                            handleIngredientMode()
-                            ingredientFormik.resetForm()}}
+                            handleIngredientMode()}}
                     >
                         Cancel
                     </Button>
