@@ -4,12 +4,14 @@ import styles from "../page.module.css";
 import * as React from 'react';
 import { useFormik } from "formik";
 import Navbar from '../components/Navbar'
+import EditIcon from '@mui/icons-material/Edit';
 import {Box, Container, Divider, Stack, TextField, Typography, Button, MenuItem} from "@mui/material";
 
 const units = ['g', 'mL']
 
 export default function Create() {
-  const [addIngredientMode, setIngredientMode] = React.useState(false)
+  const [addIngredientMode, setAddIngredientMode] = React.useState(false)
+  const [editIngredientMode, setEditIngredientMode] = React.useState(false)
   const [ingredients, setIngredients] = React.useState([])
 
   const ingredientFormik = useFormik({
@@ -31,10 +33,13 @@ export default function Create() {
     }
   })
 
-  const handleIngredientMode = () => {
-    setIngredientMode(!addIngredientMode)
+  const handleAddIngredientMode = () => {
+    setAddIngredientMode(!addIngredientMode)
   }
 
+  const handleEditIngredientMode = () => {
+    setEditIngredientMode(!editIngredientMode)
+  }
   return (
     <Container>
       <Box left='0%' width={'100%'}>
@@ -93,19 +98,23 @@ export default function Create() {
                 <Box>
                     <Button 
                         onClick={() => {
-                            handleIngredientMode() 
+                            handleAddIngredientMode() 
                             ingredientFormik.handleSubmit()}}
                     >
                         Confirm
                     </Button>
                     <Button 
                         onClick={() => {
-                            handleIngredientMode()}}
+                            handleAddIngredientMode()}}
                     >
                         Cancel
                     </Button>
                 </Box> : 
-                <Button onClick={() => handleIngredientMode()}>+ Add Ingredient</Button>
+                <Box>
+                  <Button onClick={() => handleAddIngredientMode()}>+ Add</Button>
+                  <Button onClick={() => handleEditIngredientMode()}>Edit</Button>
+                </Box>
+                
             }
           </Box>
           <Box>
