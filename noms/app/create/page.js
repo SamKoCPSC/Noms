@@ -6,6 +6,7 @@ import { useFormik } from "formik";
 import Navbar from '../components/Navbar'
 import EditIcon from '@mui/icons-material/Edit';
 import {Box, Container, Divider, Stack, TextField, Typography, Button, MenuItem} from "@mui/material";
+import { CheckBox } from "@mui/icons-material";
 
 const units = ['g', 'mL']
 
@@ -13,6 +14,7 @@ export default function Create() {
   const [addIngredientMode, setAddIngredientMode] = React.useState(false)
   const [editIngredientMode, setEditIngredientMode] = React.useState(false)
   const [ingredients, setIngredients] = React.useState([])
+  const [selectedIngredients, setSelectedIngredients] = React.useState([]);
 
   const ingredientFormik = useFormik({
     initialValues: {
@@ -59,6 +61,11 @@ export default function Create() {
           <Box>
             <Typography fontSize="25px">Ingredients:</Typography>
             {ingredients.map((ingredient, index) => (
+                editIngredientMode ? 
+                <Box display={"flex"} flexDirection={"row"}>
+                  <CheckBox></CheckBox>
+                  <Typography key={index}>{ingredient.quantity + ingredient.unit + ' ' + ingredient.name}</Typography>
+                </Box> : 
                 <Typography key={index}>{ingredient.quantity + ingredient.unit + ' ' + ingredient.name}</Typography>
             ))}
             {addIngredientMode ? 
