@@ -26,9 +26,9 @@ const dancingScript = Dancing_Script({subsets: ['latin']})
 const Search = styled('div')(({ theme }) => ({
   position: 'relative',
   borderRadius: theme.shape.borderRadius,
-  backgroundColor: alpha(theme.palette.common.white, 0.15),
+  backgroundColor: alpha(theme.palette.common.black, 0.15),
   '&:hover': {
-    backgroundColor: alpha(theme.palette.common.white, 0.25),
+    backgroundColor: alpha(theme.palette.common.black, 0.25),
   },
   marginRight: theme.spacing(2),
   marginLeft: 0,
@@ -171,7 +171,7 @@ export default function PrimarySearchAppBar(props) {
   return (
     <Box sx={{ flexGrow: 1 }}>
       <Navdrawer open={isNavdrawerOpen} setOpen={handleNavdrawerOpen}></Navdrawer>
-      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, bgcolor: '#ebebeb', color: 'black' }}>
         <Toolbar>
           <IconButton
             size="large"
