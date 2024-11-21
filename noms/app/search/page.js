@@ -1,10 +1,10 @@
 'use client'
 import Image from "next/image";
-import styles from "./page.module.css";
+import styles from "../page.module.css";
 import * as React from 'react';
-import Navbar from "./components/Navbar";
-import Navdrawer from "./components/Navdrawer";
-import RecipeCard from "./components/RecipeCard";
+import Navbar from "../components/Navbar";
+import Navdrawer from "../components/Navdrawer";
+import RecipeCard from "../components/RecipeCard";
 import {Box, Container, Typography} from "@mui/material";
 import { Dancing_Script } from "next/font/google";
 
