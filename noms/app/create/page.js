@@ -3,6 +3,7 @@ import Image from "next/image";
 import styles from "../page.module.css";
 import * as React from 'react';
 import { useFormik } from "formik";
+import axios from "axios";
 import Navbar from '../components/Navbar'
 import EditIcon from '@mui/icons-material/Edit';
 import {Box, Container, Divider, Stack, TextField, Typography, Button, MenuItem, Checkbox} from "@mui/material";
@@ -18,6 +19,7 @@ export default function Create() {
   const [editInstructionMode, setEditInstructionMode] = React.useState(false)
   const [instructions, setInstructions] = React.useState([])
   const [selectedInstructions, setSelectedInstructions] = React.useState([])
+  const [selectedImage, setSelectedImage] = React.useState()
 
   const ingredientFormik = useFormik({
     initialValues: {
@@ -191,6 +193,13 @@ export default function Create() {
     }
     setInstructions(newInstructions)
     setSelectedInstructions(newSelected)
+  }
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    const formData = new FormData();
+    formData.append('image', file);
+    console.log(formData)
   }
   return (
     <Container>
@@ -368,7 +377,10 @@ export default function Create() {
             <Typography fontSize='25px'>Notes:</Typography>
             <TextField variant="outlined" fullWidth></TextField>
           </Box>
-          <Button variant="filled" sx={{alignSelf: 'end', backgroundColor: 'lightblue'}}>Create</Button>
+          <Divider sx={{margin: '10px'}}></Divider>
+          <Typography fontSize="25px">Image:</Typography>
+          <TextField type="file" onChange={(event) => handleFileUpload(event)}/>
+          <Button variant="filled" sx={{alignSelf: 'end', backgroundColor: 'lightblue', top: '30px'}}>Create</Button>
         </Box>
       </main>
     </Container>
