@@ -13,7 +13,7 @@ const dancingScript = Dancing_Script({subsets: ['latin']})
 export default function Home() {
 
   return (
-    <Container maxWidth='false' sx={{background: 'blue', justifyItems: 'center'}}>
+    <Container maxWidth='false' sx={{justifyItems: 'center'}}>
       <Box left='0%' width={'100%'}>
         <Navbar position='fixed'></Navbar>
       </Box>
