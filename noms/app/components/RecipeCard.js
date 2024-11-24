@@ -14,6 +14,7 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import ShareIcon from '@mui/icons-material/Share';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { useRouter } from 'next/navigation';
 import { keyframes } from '@mui/material/styles';
 
 const shadowPopBr = keyframes`
@@ -79,6 +80,7 @@ const ExpandMore = styled((props) => {
 
 export default function RecipeReviewCard() {
   const [expanded, setExpanded] = React.useState(false);
+  const router = useRouter()
 
   const handleExpandClick = () => {
     setExpanded(!expanded);
@@ -102,6 +104,7 @@ export default function RecipeReviewCard() {
     }}
     // onMouseEnter={() => {setMouseHover(true)}}
     // onMouseLeave={() => {setMouseHover(false)}}
+    onClick = {() => router.push('/recipe')}
   >
       <CardHeader
         avatar={
