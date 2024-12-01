@@ -15,10 +15,11 @@ import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import MailIcon from '@mui/icons-material/Mail';
+import { Face } from '@mui/icons-material';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import MoreIcon from '@mui/icons-material/MoreVert';
 import { Dancing_Script } from "next/font/google";
-import { signIn } from "next-auth/react"
+import { signIn, useSession } from "next-auth/react"
 import Navdrawer from './Navdrawer'
 
 
@@ -65,6 +66,10 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 }));
 
 export default function PrimarySearchAppBar(props) {
+  const session = useSession()
+  const user = session.data?.user
+  console.log(user)
+
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState(null);
   const [isNavdrawerOpen, setNavdrawerOpen] = React.useState(false)
@@ -226,7 +231,8 @@ export default function PrimarySearchAppBar(props) {
               onClick={handleProfileMenuOpen}
               color="inherit"
             >
-              <AccountCircle />
+              {user ? <Face/> : <AccountCircle/>}
+              {/* <AccountCircle /> */}
             </IconButton>
           </Box>
           <Box sx={{ display: { xs: 'flex', md: 'none' } }}>
