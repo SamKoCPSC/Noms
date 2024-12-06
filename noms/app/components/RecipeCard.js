@@ -78,7 +78,7 @@ const ExpandMore = styled((props) => {
   ],
 }));
 
-export default function RecipeReviewCard() {
+export default function RecipeReviewCard({key, title, description, date, ingredients, instructions}) {
   const [expanded, setExpanded] = React.useState(false);
   const router = useRouter()
 
@@ -117,21 +117,19 @@ export default function RecipeReviewCard() {
             <MoreVertIcon />
           </IconButton>
         }
-        title="Shrimp and Chorizo Paella"
-        subheader="September 14, 2016"
+        title={title}
+        subheader={date}
       />
       <CardMedia
         component="img"
         height="194"
-        image="/paella.jpg"
+        image="/croissant1.jpg"
         src='img'
-        alt="Paella"
+        alt="Croissant"
       />
       <CardContent>
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          This impressive paella is a perfect party dish and a fun meal to cook
-          together with your guests. Add 1 cup of frozen peas along with the mussels,
-          if you like.
+          {description.substring(0,175)}{description.length >= 175 ? "..." : ""}
         </Typography>
       </CardContent>
       <CardActions disableSpacing>

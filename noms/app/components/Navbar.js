@@ -19,7 +19,7 @@ import { Face } from '@mui/icons-material';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import MoreIcon from '@mui/icons-material/MoreVert';
 import { Dancing_Script } from "next/font/google";
-import { signIn, useSession } from "next-auth/react"
+import { signIn, signOut, useSession } from "next-auth/react"
 import Navdrawer from './Navdrawer'
 
 
@@ -68,7 +68,6 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 export default function PrimarySearchAppBar(props) {
   const session = useSession()
   const user = session.data?.user
-  console.log(user)
 
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState(null);
@@ -117,7 +116,10 @@ export default function PrimarySearchAppBar(props) {
       open={isMenuOpen}
       onClose={handleMenuClose}
     >
-      <MenuItem onClick={() => signIn('google')}>Login</MenuItem>
+      {user ? 
+        <MenuItem onClick={() => signOut({callbackUrl: '/'})}>Logout</MenuItem> 
+        :
+        <MenuItem onClick={() => signIn('google')}>Login</MenuItem>}
     </Menu>
   );
 
