@@ -104,7 +104,7 @@ export default function RecipeReviewCard({key, title, description, date, ingredi
     }}
     // onMouseEnter={() => {setMouseHover(true)}}
     // onMouseLeave={() => {setMouseHover(false)}}
-    // onClick = {() => router.push('/recipe')}
+    onClick = {() => router.push('/recipe')}
   >
       <CardHeader
         avatar={

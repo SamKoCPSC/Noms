@@ -36,7 +36,16 @@ export default function Recipe() {
             <Navbar></Navbar>
             <Typography sx={{justifySelf: 'center', fontSize: '50px'}}>{recipeData.title}</Typography>
             <Typography sx={{justifySelf: 'center', fontSize: '20px'}}>{recipeData.description}</Typography>
-            <Box sx={{width: '600px', height: '350px', backgroundColor: '#efefef'}}></Box>
+            <Box 
+                component={'img'}
+                sx={{
+                    height: 400,
+                    width: 725,
+                }}
+                alt="Croissant"
+                src="/croissant1.jpg"
+            >
+            </Box>
             <Typography sx={{justifySelf: 'left', fontSize: '35px'}}>Ingredients</Typography>
             {recipeData.ingredients.map((ingredient) => {
                 return <Typography sx={{justifySelf: 'left', fontSize: '20px'}}>{ingredient.amount}{ingredient.unit} {ingredient.name}</Typography>
