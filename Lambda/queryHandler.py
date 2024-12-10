@@ -40,9 +40,12 @@ def queryHandler(event, context):
     sql = event['queryStringParameters']['sql']
     try:
         cursor.execute(sql)
-        result = cursor.fetchall()
-        logger.info(f"Query Result: {result}")
         connection.commit()
+        try:
+            result = cursor.fetchall()
+        except:
+            result = []
+        logger.info(f"Query Result: {result}")
         return {
             'statusCode': 200,
             "headers": {
