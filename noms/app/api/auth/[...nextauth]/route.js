@@ -1,5 +1,6 @@
 import NextAuth from "next-auth/next";
 import GoogleProvider from "next-auth/providers/google"
+import axios from 'axios'
 
 export const authOptions = {
     providers: [
@@ -15,7 +16,26 @@ export const authOptions = {
               }
         }),
     ],
-    secret: process.env.SECRET
+    secret: process.env.SECRET,
+    callbacks: {
+      async signIn({ user }) {
+        try {
+          await axios.get(`${process.env.NOMS_URL}/api/login`, {
+            params: {
+              name: user.name,
+              email: user.email,
+            },
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          })
+          return true
+        } catch (error) {
+          console.error('Failed to create user:', error)
+          return false
+        }
+      },
+    },
 }
 
 const handler = NextAuth(authOptions)
