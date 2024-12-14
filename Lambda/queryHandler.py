@@ -37,9 +37,11 @@ def get_connection():
 def queryHandler(event, context):
     connection = get_connection()
     cursor = connection.cursor(cursor_factory=RealDictCursor)
-    sql = event['queryStringParameters']['sql']
+    requestBody = json.loads(event.get('body'))
+    sql = requestBody['sql']
+    values = requestBody['values']
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, tuple(values))
         connection.commit()
         try:
             result = cursor.fetchall()
