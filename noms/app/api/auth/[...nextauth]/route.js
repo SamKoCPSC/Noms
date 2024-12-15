@@ -20,13 +20,15 @@ export const authOptions = {
     callbacks: {
       async signIn({ user }) {
         try {
-          await axios.get(`${process.env.NOMS_URL}/api/login`, {
-            params: {
+          await axios.post(
+            `${process.env.NOMS_URL}/api/login`,
+            {
               name: user.name,
               email: user.email,
             },
-            headers: {
-              'Content-Type': 'application/json',
+            {
+              headers: {
+                'Content-Type': 'application/json',
             }
           })
           return true

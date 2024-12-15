@@ -1,19 +1,21 @@
 import axios from "axios";
 
-export async function GET(req, res) {
-    const name = req.nextUrl.searchParams.get('name')
-    const email = req.nextUrl.searchParams.get('email')
+export async function POST(req, res) {
+    const data = await req.json()
+    const name = data.name
+    const email = data.email
 
-    return axios.get(
+    return axios.post(
         process.env.LAMBDA_API_URL,
         {
-            params: {
-                sql: `
-                    INSERT INTO users (name, email)
-                    VALUES ('${name}', '${email}')
-                    ON CONFLICT (email) DO NOTHING
-                `,
-            },
+            sql: `
+            INSERT INTO users (name, email)
+            VALUES (%s, %s)
+            ON CONFLICT (email) DO NOTHING
+            `,
+            values: [name, email]
+        },
+        {
             headers: {
                 'Content-Type': 'application/json',
                 'x-api-key': process.env.LAMBDA_API_KEY,
