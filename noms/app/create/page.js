@@ -6,14 +6,30 @@ import { useFormik } from "formik";
 import axios from "axios";
 import Navbar from '../components/Navbar'
 import EditIcon from '@mui/icons-material/Edit';
+import { CloudUpload } from "@mui/icons-material";
 import {Box, Container, Divider, Stack, TextField, Typography, Button, MenuItem, Checkbox} from "@mui/material";
+import { styled } from "@mui/material";
+import { useTheme } from "@emotion/react";
+
+const VisuallyHiddenInput = styled('input')({
+  clip: 'rect(0 0 0 0)',
+  clipPath: 'inset(50%)',
+  height: 1,
+  overflow: 'hidden',
+  position: 'absolute',
+  bottom: 0,
+  left: 0,
+  whiteSpace: 'nowrap',
+  width: 1,
+});
 
 const units = ['g', 'mL']
 
 export default function Create() {
+  const theme = useTheme()
   const [addIngredientMode, setAddIngredientMode] = React.useState(false)
   const [editIngredientMode, setEditIngredientMode] = React.useState(false)
-  const [ingredients, setIngredients] = React.useState([{name: 'one', quantity: '1', unit: 'g'}, {name: 'two', quantity: '2', unit: 'g'}, {name: 'three', quantity: '3', unit: 'g'}, {name: 'four', quantity: '4', unit: 'g'}])
+  const [ingredients, setIngredients] = React.useState([])
   const [selectedIngredients, setSelectedIngredients] = React.useState([])
   const [addInstructionMode, setAddInstructionMode] = React.useState(false)
   const [editInstructionMode, setEditInstructionMode] = React.useState(false)
@@ -48,6 +64,7 @@ export default function Create() {
   const recipeFormik = useFormik({
     initialValues: {
         name: '',
+        description: '',
         ingredients: [],
         instructions: [],
         notes: '',
@@ -208,17 +225,30 @@ export default function Create() {
       </Box>
       <main className={styles.main}>
         
-        <Box width='800px' display={"flex"} flexDirection={'column'} sx={{gap: '10px'}}> 
-          <Typography fontSize={'50px'}>
-            Create A Nom
+        <Box width='800px' display={"flex"} flexDirection={'column'}
+        sx={{
+          borderColor: 'rgb(230, 228, 215)',
+          borderStyle: 'solid',
+          borderWidth: 2,
+          boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
+          gap: '20px', 
+          backgroundColor: 'white',
+          borderRadius: '30px',
+          padding: '40px'
+        }}> 
+          <Typography fontSize={'60px'}>
+            Create A Recipe
           </Typography>
-          <Divider sx={{margin: '10px'}}></Divider>
+          <Divider sx={{margin: '15px'}}></Divider>
           <Stack direction='row'>
-            <Typography fontSize="25px">Name:</Typography>
+            <Typography fontSize="30px">Name:</Typography>
             <TextField variant="outlined" fullWidth sx={{margin: '5px'}}></TextField>
           </Stack>
+          <Typography fontSize="30px">Description:</Typography>
+          <TextField variant="outlined" fullWidth multiline sx={{margin: '5px'}}></TextField>
+          <Divider sx={{margin: '15px'}}></Divider>
           <Box>
-            <Typography fontSize="25px">Ingredients:</Typography>
+            <Typography fontSize="30px">Ingredients:</Typography>
             {ingredients.map((ingredient, index) => (
                 editIngredientMode ? 
                 <Box key={index}>
@@ -233,11 +263,15 @@ export default function Create() {
                     </Checkbox>
                     {ingredient.quantity + ingredient.unit + ' ' + ingredient.name}
                   </Typography>
-                </Box> : 
-                <Typography key={index}>{ingredient.quantity + ingredient.unit + ' ' + ingredient.name}</Typography>
+                </Box> :
+                <Stack direction={'row'} sx={{marginLeft: '8px'}}> 
+                  <Typography key={index} sx={{margin: '4px', fontSize: '16px', fontWeight: '400'}}>{ingredient.quantity + ingredient.unit}</Typography>
+                  <Typography key={index} sx={{margin: '4px', fontSize: '16px', fontWeight: '300'}}>{ingredient.name}</Typography>
+
+                </Stack> 
             ))}
             {addIngredientMode ? 
-                <Box display="flex">
+                <Box display="flex" sx={{gap: '8px'}}>
                     <Typography>Ingredient</Typography>
                     <TextField 
                         sx={{margin: '5px'}} 
@@ -272,6 +306,7 @@ export default function Create() {
             {addIngredientMode ? 
                 <Box>
                     <Button 
+                        variant="contained" color="primary"
                         onClick={() => {
                             handleAddIngredientMode() 
                             ingredientFormik.handleSubmit()}}
@@ -279,6 +314,7 @@ export default function Create() {
                         Confirm
                     </Button>
                     <Button 
+                        variant="contained" color="warning"
                         onClick={() => {
                             handleAddIngredientMode()}}
                     >
@@ -287,20 +323,20 @@ export default function Create() {
                 </Box> :
                   editIngredientMode ? 
                   <Box>
-                    <Button onClick={() => handleDeleteIngredients()}>Delete</Button>
-                    <Button onClick={() => handleMoveUpIngredients()}>Move Up</Button>
-                    <Button onClick={() => handleMoveDownIngredients()}>Move Down</Button>
-                    <Button onClick={() => handleEditIngredientMode()}>Cancel</Button>
+                    <Button variant="contained" color="error" onClick={() => handleDeleteIngredients()}>Delete</Button>
+                    <Button variant="contained" color="info" onClick={() => handleMoveUpIngredients()}>Move Up</Button>
+                    <Button variant="contained" color="info" onClick={() => handleMoveDownIngredients()}>Move Down</Button>
+                    <Button variant="contained" color="primary" onClick={() => handleEditIngredientMode()}>Done</Button>
                   </Box>:
                   <Box>
-                    <Button onClick={() => handleAddIngredientMode()}>+ Add</Button>
-                    <Button onClick={() => handleEditIngredientMode()}>Edit</Button>
+                    <Button variant="contained" color="secondary" onClick={() => handleAddIngredientMode()}>+ Add</Button>
+                    <Button variant="contained" color="secondary" onClick={() => handleEditIngredientMode()}>Edit</Button>
                   </Box>
                 
             }
           </Box>
           <Box>
-            <Typography fontSize={'25px'}>Instructions:</Typography>
+            <Typography fontSize={'30px'}>Instructions:</Typography>
             {instructions.map((instruction, index) => (
                 editInstructionMode ? 
                 <Box key={index}>
@@ -316,7 +352,10 @@ export default function Create() {
                     {instruction.title + ' - ' + instruction.instruction}
                   </Typography>
                 </Box> : 
-                <Typography key={index} sx={{whiteSpace: 'pre-line'}}>{instruction.title + "\n" + instruction.instruction}</Typography>
+                <Stack sx={{marginLeft: '16px'}}>
+                  <Typography key={index} sx={{whiteSpace: 'pre-line', marginTop: '8px', fontSize: '16px', fontWeight: '400'}}>{instruction.title}</Typography>
+                  <Typography key={index} sx={{whiteSpace: 'pre-line', marginLeft: '8px', fontSize: '16px', fontWeight: '300'}}>{instruction.instruction}</Typography>
+                </Stack>
             ))}
             {addInstructionMode ? 
                 <Box display="flex" flexDirection='column'>
@@ -345,6 +384,7 @@ export default function Create() {
             {addInstructionMode ? 
                   <Box>
                       <Button 
+                          variant="contained" color="primary"
                           onClick={() => {
                               handleAddInstructionMode() 
                               instructionsFormik.handleSubmit()}}
@@ -352,6 +392,7 @@ export default function Create() {
                           Confirm
                       </Button>
                       <Button 
+                          variant="contained" color="warning"
                           onClick={() => {
                               handleAddInstructionMode()}}
                       >
@@ -360,27 +401,43 @@ export default function Create() {
                   </Box> :
                     editInstructionMode ? 
                     <Box>
-                      <Button onClick={() => handleDeleteInstructions()}>Delete</Button>
-                      <Button onClick={() => handleMoveUpInstructions()}>Move Up</Button>
-                      <Button onClick={() => handleMoveDownInstructions()}>Move Down</Button>
-                      <Button onClick={() => handleEditInstructionMode()}>Cancel</Button>
+                      <Button variant="contained" color="error" onClick={() => handleDeleteInstructions()}>Delete</Button>
+                      <Button variant="contained" color="info" onClick={() => handleMoveUpInstructions()}>Move Up</Button>
+                      <Button variant="contained" color="info" onClick={() => handleMoveDownInstructions()}>Move Down</Button>
+                      <Button variant="contained" color="primary" onClick={() => handleEditInstructionMode()}>Done</Button>
                     </Box>:
                     <Box>
-                      <Button onClick={() => handleAddInstructionMode()}>+ Add</Button>
-                      <Button onClick={() => handleEditInstructionMode()}>Edit</Button>
+                      <Button variant="contained" color="secondary" onClick={() => handleAddInstructionMode()}>+ Add</Button>
+                      <Button variant="contained" color="secondary" onClick={() => handleEditInstructionMode()}>Edit</Button>
                     </Box>
                   
               }
           </Box>
-          <Divider sx={{margin: '10px'}}></Divider>
+          <Divider sx={{margin: '15px'}}></Divider>
           <Box>
-            <Typography fontSize='25px'>Notes:</Typography>
-            <TextField variant="outlined" fullWidth></TextField>
+            <Typography fontSize='30px'>Notes:</Typography>
+            <TextField variant="outlined" fullWidth multiline></TextField>
           </Box>
-          <Divider sx={{margin: '10px'}}></Divider>
-          <Typography fontSize="25px">Image:</Typography>
-          <TextField type="file" onChange={(event) => handleFileUpload(event)}/>
-          <Button variant="filled" sx={{alignSelf: 'end', backgroundColor: 'lightblue', top: '30px'}}>Create</Button>
+          <Divider sx={{margin: '15px'}}></Divider>
+          <Stack direction={'row'}>
+            <Typography fontSize="30px">Image:</Typography>
+            <Button
+              component="label"
+              role={undefined}
+              variant="contained"
+              tabIndex={-1}
+              startIcon={<CloudUpload/>}
+            >
+              Upload Images
+              <VisuallyHiddenInput
+                type="file"
+                onChange={(event) => handleFileUpload(event)}
+                multiple
+              />
+            </Button>
+          </Stack>
+          <Divider sx={{margin: '15px'}}></Divider>
+          <Button variant="contained" sx={{alignSelf: 'end', top: '30px'}}>Create</Button>
         </Box>
       </main>
     </Container>
