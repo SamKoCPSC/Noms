@@ -23,6 +23,11 @@ const VisuallyHiddenInput = styled('input')({
   width: 1,
 });
 
+const SubText = styled('p')( {
+  fontSize: '11px',
+  color: 'grey',
+})
+
 const units = ['g', 'mL']
 
 export default function Create() {
@@ -231,7 +236,7 @@ export default function Create() {
           borderStyle: 'solid',
           borderWidth: 2,
           boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
-          gap: '20px', 
+          // gap: '20px', 
           backgroundColor: 'white',
           borderRadius: '30px',
           padding: '40px'
@@ -239,16 +244,17 @@ export default function Create() {
           <Typography fontSize={'60px'}>
             Create A Recipe
           </Typography>
-          <Divider sx={{margin: '15px'}}></Divider>
-          <Stack direction='row'>
-            <Typography fontSize="30px">Name:</Typography>
-            <TextField variant="outlined" fullWidth sx={{margin: '5px'}}></TextField>
-          </Stack>
+          <Divider sx={{marginY: '30px'}}></Divider>
+          <Typography fontSize="30px">Name:</Typography>
+          <SubText>Give your recipe an identifiable name. The name will be used for searches and does not have to be unique.</SubText>
+          <TextField variant="outlined" fullWidth sx={{margin: '5px'}}></TextField>
           <Typography fontSize="30px">Description:</Typography>
+          <SubText>Briefly describe your recipe. Include any interesting information or elements that make your recipe special.</SubText>
           <TextField variant="outlined" fullWidth multiline sx={{margin: '5px'}}></TextField>
-          <Divider sx={{margin: '15px'}}></Divider>
+          <Divider sx={{marginY: '30px'}}></Divider>
           <Box>
             <Typography fontSize="30px">Ingredients:</Typography>
+            <SubText>Specify each ingredient's quantity along with it's unit of measurement. Additional recipe iterations can be added later.</SubText>  
             {ingredients.map((ingredient, index) => (
                 editIngredientMode ? 
                 <Box key={index}>
@@ -337,6 +343,7 @@ export default function Create() {
           </Box>
           <Box>
             <Typography fontSize={'30px'}>Instructions:</Typography>
+            <SubText>Give each step a descriptive title and describe in detail the instructions required to replicate the recipe.</SubText>
             {instructions.map((instruction, index) => (
                 editInstructionMode ? 
                 <Box key={index}>
@@ -413,31 +420,36 @@ export default function Create() {
                   
               }
           </Box>
-          <Divider sx={{margin: '15px'}}></Divider>
+          <Divider sx={{margin: '30px'}}></Divider>
           <Box>
             <Typography fontSize='30px'>Notes:</Typography>
+            <SubText>Add any non-instructional information, describe the recipe in more detail, and include your experiences. (Optional)</SubText>
             <TextField variant="outlined" fullWidth multiline></TextField>
           </Box>
-          <Divider sx={{margin: '15px'}}></Divider>
-          <Stack direction={'row'}>
-            <Typography fontSize="30px">Image:</Typography>
-            <Button
-              component="label"
-              role={undefined}
-              variant="contained"
-              tabIndex={-1}
-              startIcon={<CloudUpload/>}
-            >
-              Upload Images
-              <VisuallyHiddenInput
-                type="file"
-                onChange={(event) => handleFileUpload(event)}
-                multiple
-              />
-            </Button>
+          <Divider sx={{margin: '30px'}}></Divider>
+          <Typography fontSize="30px">Images</Typography>
+          <SubText>Include images of your recipe. The first image will be the main thumbnail that can be seen when searched.</SubText>
+          <Button
+            component="label"
+            role={undefined}
+            variant="contained"
+            tabIndex={-1}
+            startIcon={<CloudUpload/>}
+            sx={{width: '150px'}}
+          >
+            Upload Images
+            <VisuallyHiddenInput
+              type="file"
+              onChange={(event) => handleFileUpload(event)}
+              multiple
+            />
+          </Button>
+          <Divider sx={{margin: '30px'}}></Divider>
+          <Stack direction={'row'} sx={{justifyContent: 'end'}}>
+            <Button variant="contained" color="error" sx={{top: '30px'}}>Cancel</Button>
+            <Button variant="contained" color="secondary" sx={{top: '30px'}}>Save</Button>
+            <Button variant="contained" sx={{top: '30px'}}>Create</Button>
           </Stack>
-          <Divider sx={{margin: '15px'}}></Divider>
-          <Button variant="contained" sx={{alignSelf: 'end', top: '30px'}}>Create</Button>
         </Box>
       </main>
     </Container>
