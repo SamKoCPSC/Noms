@@ -15,6 +15,7 @@ export default function Home() {
 const recipeData = {
   title: 'Croissant',
   description: 'This classic croissant recipe produces golden, buttery, and flaky pastries that melt in your mouth. Perfectly laminated layers of dough are crafted with patience and care, filled with rich butter, and baked to perfection. Enjoy these delectable croissants fresh from the oven as a breakfast treat or a delightful snack.',
+  author: 'Sam Ko',
   date: "December 6, 2024",
   ingredients: [
     {name: 'Flour', unit: 'g', amount: '400'},
@@ -36,7 +37,7 @@ const recipeData = {
       <Box left='0%' width={'100%'}>
         <Navbar position='fixed'></Navbar>
       </Box>
-      <Typography sx={{fontFamily: dancingScript.style.fontFamily, fontSize: '150px', ":hover": {cursor: 'pointer'}}}>
+      <Typography sx={{marginTop: '50px', fontFamily: dancingScript.style.fontFamily, fontSize: '150px', ":hover": {cursor: 'pointer'}}}>
         NOMS
       </Typography>
       <Box display={'flex'} flexDirection={'row'} flexWrap={'wrap'} sx={{justifyContent: 'center', gap:'20px'}}>
@@ -45,6 +46,7 @@ const recipeData = {
             key={index}
             title={recipeData.title}
             description={recipeData.description}
+            author={recipeData.author}
             date={recipeData.date}
             ingredients={recipeData.ingredients}
             instructions={recipeData.instructions}

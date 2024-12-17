@@ -14,6 +14,7 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import ShareIcon from '@mui/icons-material/Share';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { ThumbUp } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { keyframes } from '@mui/material/styles';
 
@@ -78,7 +79,7 @@ const ExpandMore = styled((props) => {
   ],
 }));
 
-export default function RecipeReviewCard({key, title, description, date, ingredients, instructions}) {
+export default function RecipeReviewCard({key, title, description, author, date, ingredients, instructions}) {
   const [expanded, setExpanded] = React.useState(false);
   const router = useRouter()
 
@@ -93,7 +94,7 @@ export default function RecipeReviewCard({key, title, description, date, ingredi
       width: '350px',
       height: '420px',
       backgroundColor: 'white',
-      borderRadius: '10 px',
+      borderRadius: '25px',
       animation: `${shadowUnPopBr} 0.15s ease-out both`,
       "&:hover": {
           backgroundColor: '#f0f0f0',
@@ -117,15 +118,17 @@ export default function RecipeReviewCard({key, title, description, date, ingredi
             <MoreVertIcon />
           </IconButton>
         }
+        titleTypographyProps={{fontSize:'20px' }}
+        subheaderTypographyProps={{fontSize:'12px' }}
         title={title}
-        subheader={date}
+        subheader={author + ' - ' + date}
       />
       <CardMedia
         component="img"
         height="194"
         image="/croissant1.jpg"
         src='img'
-        alt="Croissant"
+        alt="Image not available"
       />
       <CardContent>
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
@@ -133,20 +136,28 @@ export default function RecipeReviewCard({key, title, description, date, ingredi
         </Typography>
       </CardContent>
       <CardActions disableSpacing>
-        <IconButton aria-label="add to favorites">
+        <IconButton aria-label="add to favorites" 
+          onClick={(e) => {
+            e.stopPropagation()
+            router.push('/create')
+          }}
+        >
           <FavoriteIcon />
+        </IconButton>
+        <IconButton aria-label='like'>
+          <ThumbUp/>
         </IconButton>
         <IconButton aria-label="share">
           <ShareIcon />
         </IconButton>
-        <ExpandMore
+        {/* <ExpandMore
           expand={expanded}
           onClick={handleExpandClick}
           aria-expanded={expanded}
           aria-label="show more"
         >
           <ExpandMoreIcon />
-        </ExpandMore>
+        </ExpandMore> */}
       </CardActions>
       <Collapse in={expanded} timeout="auto" unmountOnExit>
         <CardContent>
