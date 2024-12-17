@@ -7,7 +7,7 @@ import axios from "axios";
 import Navbar from '../components/Navbar'
 import EditIcon from '@mui/icons-material/Edit';
 import { CloudUpload } from "@mui/icons-material";
-import {Box, Container, Divider, Stack, TextField, Typography, Button, MenuItem, Checkbox} from "@mui/material";
+import {Box, Container, Divider, Stack, TextField, Typography, Button, MenuItem, Checkbox, ImageList, ImageListItem} from "@mui/material";
 import { styled } from "@mui/material";
 import { useTheme } from "@emotion/react";
 
@@ -40,7 +40,8 @@ export default function Create() {
   const [editInstructionMode, setEditInstructionMode] = React.useState(false)
   const [instructions, setInstructions] = React.useState([])
   const [selectedInstructions, setSelectedInstructions] = React.useState([])
-  const [selectedImage, setSelectedImage] = React.useState()
+  const [images, setImages] = React.useState([])
+  const [selectedImages, setSelectedImages] = React.useState()
 
   const ingredientFormik = useFormik({
     initialValues: {
@@ -49,7 +50,6 @@ export default function Create() {
         name: ''
     },
     onSubmit: (values, actions) => {
-        console.log(values)
         setIngredients([...ingredients, {quantity: values.quantity, unit: values.unit, name: values.name}])
         ingredientFormik.resetForm()
     }
@@ -70,9 +70,17 @@ export default function Create() {
     initialValues: {
         name: '',
         description: '',
-        ingredients: [],
-        instructions: [],
         notes: '',
+    },
+    onSubmit: (values) => {
+      const data = {
+        name: values.name,
+        description: values.description,
+        ingredients: ingredients,
+        instructions: instructions,
+        notes: values.notes,
+      }
+      console.log(data)
     }
   })
 
@@ -217,6 +225,24 @@ export default function Create() {
     setSelectedInstructions(newSelected)
   }
 
+  const handleAddImages = (event) => {
+    // const previewURLs = [...event.target.files].map((file) => {
+    //   if(file) {
+    //     return URL.createObjectURL(file);
+    //   }
+    // })
+    // setImages([...images, ...previewURLs])
+    setImages([...images, ...Array.from(event.target.files)])
+  }
+
+  const handleDeleteImages = () => {
+
+  }
+
+  const handleCreate = () => {
+
+  }
+
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     const formData = new FormData();
@@ -270,9 +296,9 @@ export default function Create() {
                     {ingredient.quantity + ingredient.unit + ' ' + ingredient.name}
                   </Typography>
                 </Box> :
-                <Stack direction={'row'} sx={{marginLeft: '8px'}}> 
-                  <Typography key={index} sx={{margin: '4px', fontSize: '16px', fontWeight: '400'}}>{ingredient.quantity + ingredient.unit}</Typography>
-                  <Typography key={index} sx={{margin: '4px', fontSize: '16px', fontWeight: '300'}}>{ingredient.name}</Typography>
+                <Stack key={index} direction={'row'} sx={{marginLeft: '8px'}}> 
+                  <Typography sx={{margin: '4px', fontSize: '16px', fontWeight: '400'}}>{ingredient.quantity + ingredient.unit}</Typography>
+                  <Typography sx={{margin: '4px', fontSize: '16px', fontWeight: '300'}}>{ingredient.name}</Typography>
 
                 </Stack> 
             ))}
@@ -359,9 +385,9 @@ export default function Create() {
                     {instruction.title + ' - ' + instruction.instruction}
                   </Typography>
                 </Box> : 
-                <Stack sx={{marginLeft: '16px'}}>
-                  <Typography key={index} sx={{whiteSpace: 'pre-line', marginTop: '8px', fontSize: '16px', fontWeight: '400'}}>{instruction.title}</Typography>
-                  <Typography key={index} sx={{whiteSpace: 'pre-line', marginLeft: '8px', fontSize: '16px', fontWeight: '300'}}>{instruction.instruction}</Typography>
+                <Stack key={index} sx={{marginLeft: '16px'}}>
+                  <Typography sx={{whiteSpace: 'pre-line', marginTop: '8px', fontSize: '16px', fontWeight: '400'}}>{instruction.title}</Typography>
+                  <Typography sx={{whiteSpace: 'pre-line', marginLeft: '8px', fontSize: '16px', fontWeight: '300'}}>{instruction.instruction}</Typography>
                 </Stack>
             ))}
             {addInstructionMode ? 
@@ -440,15 +466,28 @@ export default function Create() {
             Upload Images
             <VisuallyHiddenInput
               type="file"
-              onChange={(event) => handleFileUpload(event)}
+              onChange={(event) => handleAddImages(event)}
               multiple
             />
           </Button>
+          <ImageList cols={4} gap={8} sx={{marginTop: '20px'}}>
+              {images.map((image, index) => {
+                const previewURL = URL.createObjectURL(image)
+                return (
+                  <ImageListItem key={index}>
+                    <img
+                      src={previewURL}
+                      loading="lazy"
+                    />
+                  </ImageListItem>
+                )
+              })}
+          </ImageList>
           <Divider sx={{margin: '30px'}}></Divider>
           <Stack direction={'row'} sx={{justifyContent: 'end'}}>
             <Button variant="contained" color="error" sx={{top: '30px'}}>Cancel</Button>
             <Button variant="contained" color="secondary" sx={{top: '30px'}}>Save</Button>
-            <Button variant="contained" sx={{top: '30px'}}>Create</Button>
+            <Button variant="contained" sx={{top: '30px'}} onClick={() => {recipeFormik.handleSubmit()}}>Create</Button>
           </Stack>
         </Box>
       </main>
