@@ -51,6 +51,7 @@ export default function Create() {
     },
     onSubmit: (values, actions) => {
         setIngredients([...ingredients, {quantity: values.quantity, unit: values.unit, name: values.name}])
+        recipeFormik.setFieldValue("ingredients", [...ingredients, {quantity: values.quantity, unit: values.unit, name: values.name}])
         ingredientFormik.resetForm()
     }
   })
@@ -62,6 +63,7 @@ export default function Create() {
     },
     onSubmit: (values, actions) => {
       setInstructions([...instructions, {title: values.title, instruction: values.instruction}])
+      recipeFormik.setFieldValue('instructions', [...instructions, {title: values.title, instruction: values.instruction}])
       instructionsFormik.resetForm()
     },
   })
@@ -70,17 +72,13 @@ export default function Create() {
     initialValues: {
         name: '',
         description: '',
+        ingredients: [],
+        instructions: [],
         notes: '',
+        images: [],
     },
     onSubmit: (values) => {
-      const data = {
-        name: values.name,
-        description: values.description,
-        ingredients: ingredients,
-        instructions: instructions,
-        notes: values.notes,
-      }
-      console.log(data)
+      console.log(recipeFormik)
     }
   })
 
@@ -128,9 +126,11 @@ export default function Create() {
   }
 
   const handleDeleteIngredients = () => {
-    setIngredients(ingredients.filter((element, index) => {
+    let newIngredients = ingredients.filter((element, index) => {
       return !selectedIngredients[index]
-    }))
+    })
+    setIngredients(newIngredients)
+    recipeFormik.setFieldValue('ingredients', newIngredients)
     setSelectedIngredients(selectedIngredients.filter((element) => {
       return !element
     }))
@@ -153,6 +153,7 @@ export default function Create() {
       }
     }
     setIngredients(newIngredients)
+    recipeFormik.setFieldValue('ingredients', newIngredients)
     setSelectedIngredients(newSelected)
   }
 
@@ -173,13 +174,16 @@ export default function Create() {
       }
     }
     setIngredients(newIngredients)
+    recipeFormik.setFieldValue('ingredients', newIngredients)
     setSelectedIngredients(newSelected)
   }
 
   const handleDeleteInstructions = () => {
-    setInstructions(instructions.filter((element, index) => {
+    let newInstructions = instructions.filter((element, index) => {
       return !selectedInstructions[index]
-    }))
+    })
+    setInstructions(newInstructions)
+    recipeFormik.setFieldValue('instructions', newInstructions)
     setSelectedInstructions(selectedInstructions.filter((element) => {
       return !element
     }))
@@ -202,6 +206,7 @@ export default function Create() {
       }
     }
     setInstructions(newInstructions)
+    recipeFormik.setFieldValue('instructions', newInstructions)
     setSelectedInstructions(newSelected)
   }
 
@@ -222,6 +227,7 @@ export default function Create() {
       }
     }
     setInstructions(newInstructions)
+    recipeFormik.setFieldValue('instructions', newInstructions)
     setSelectedInstructions(newSelected)
   }
 
@@ -233,6 +239,7 @@ export default function Create() {
     // })
     // setImages([...images, ...previewURLs])
     setImages([...images, ...Array.from(event.target.files)])
+    recipeFormik.setFieldValue("images", [...images, ...Array.from(event.target.files)])
   }
 
   const handleDeleteImages = () => {
@@ -273,10 +280,27 @@ export default function Create() {
           <Divider sx={{marginY: '30px'}}></Divider>
           <Typography fontSize="30px">Name:</Typography>
           <SubText>Give your recipe an identifiable name. The name will be used for searches and does not have to be unique.</SubText>
-          <TextField variant="outlined" fullWidth sx={{margin: '5px'}}></TextField>
+          <TextField 
+            variant="outlined" 
+            fullWidth
+            name="name"
+            id="name"
+            value={recipeFormik.name}
+            onChange={recipeFormik.handleChange}
+          >
+          </TextField>
           <Typography fontSize="30px">Description:</Typography>
           <SubText>Briefly describe your recipe. Include any interesting information or elements that make your recipe special.</SubText>
-          <TextField variant="outlined" fullWidth multiline sx={{margin: '5px'}}></TextField>
+          <TextField 
+            variant="outlined" 
+            fullWidth 
+            multiline 
+            name="description"
+            id="description"
+            value={recipeFormik.description}
+            onChange={recipeFormik.handleChange}
+          >
+          </TextField>
           <Divider sx={{marginY: '30px'}}></Divider>
           <Box>
             <Typography fontSize="30px">Ingredients:</Typography>
@@ -450,7 +474,16 @@ export default function Create() {
           <Box>
             <Typography fontSize='30px'>Notes:</Typography>
             <SubText>Add any non-instructional information, describe the recipe in more detail, and include your experiences. (Optional)</SubText>
-            <TextField variant="outlined" fullWidth multiline></TextField>
+            <TextField 
+              variant="outlined" 
+              fullWidth 
+              multiline
+              name="notes"
+              id="notes"
+              value={recipeFormik.notes}
+              onChange={recipeFormik.handleChange}
+            >
+            </TextField>
           </Box>
           <Divider sx={{margin: '30px'}}></Divider>
           <Typography fontSize="30px">Images</Typography>
