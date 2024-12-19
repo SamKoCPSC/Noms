@@ -5,8 +5,7 @@ import * as React from 'react';
 import { useFormik } from "formik";
 import axios from "axios";
 import Navbar from '../components/Navbar'
-import EditIcon from '@mui/icons-material/Edit';
-import { CloudUpload } from "@mui/icons-material";
+import { Edit, Add, CloudUpload } from "@mui/icons-material";
 import {Box, Container, Divider, Stack, TextField, Typography, Button, MenuItem, Checkbox, ImageList, ImageListItem} from "@mui/material";
 import { styled } from "@mui/material";
 import { useTheme } from "@emotion/react";
@@ -32,16 +31,19 @@ const units = ['g', 'mL']
 
 export default function Create() {
   const theme = useTheme()
+  const [ingredients, setIngredients] = React.useState([])
   const [addIngredientMode, setAddIngredientMode] = React.useState(false)
   const [editIngredientMode, setEditIngredientMode] = React.useState(false)
-  const [ingredients, setIngredients] = React.useState([])
   const [selectedIngredients, setSelectedIngredients] = React.useState([])
+
+  const [instructions, setInstructions] = React.useState([])
   const [addInstructionMode, setAddInstructionMode] = React.useState(false)
   const [editInstructionMode, setEditInstructionMode] = React.useState(false)
-  const [instructions, setInstructions] = React.useState([])
   const [selectedInstructions, setSelectedInstructions] = React.useState([])
+
   const [images, setImages] = React.useState([])
-  const [selectedImages, setSelectedImages] = React.useState()
+  const [editImageMode, setEditImageMode] = React.useState(false)
+  const [selectedImages, setSelectedImages] = React.useState([])
 
   const ingredientFormik = useFormik({
     initialValues: {
@@ -78,158 +80,14 @@ export default function Create() {
         images: [],
     },
     onSubmit: (values) => {
-      console.log(recipeFormik)
+      let imageData = images.map((image) => {
+        const formData = new FormData()
+        formData.append('file', image);
+        return formData;
+      })
+      console.log(imageData)
     }
   })
-
-  const handleAddIngredientMode = () => {
-    setAddIngredientMode(!addIngredientMode)
-  }
-
-  const handleAddInstructionMode = () => {
-    setAddInstructionMode(!addInstructionMode)
-  }
-  const handleEditIngredientMode = () => {
-    if(editIngredientMode) {
-      setSelectedIngredients(new Array(0))
-    } else {
-      setSelectedIngredients(new Array(ingredients.length).fill(false))
-    }
-    setEditIngredientMode(!editIngredientMode)
-  }
-
-  const handleEditInstructionMode = () => {
-    if(editInstructionMode) {
-      setSelectedInstructions(new Array(0))
-    } else {
-      setSelectedInstructions(new Array(instructions.length).fill(false))
-    }
-    setEditInstructionMode(!editInstructionMode)
-  }
-  
-  const handleSelectedIngredients = (isSelected, ingredientIndex) => {
-    setSelectedIngredients(selectedIngredients.map((element, index) => {
-      if(index === ingredientIndex) {
-        return isSelected
-      }
-      return element
-    }))
-  }
-
-  const handleSelectedInstructions = (isSelected, instructionIndex) => {
-  setSelectedInstructions(selectedInstructions.map((element, index) => {
-      if(index === instructionIndex) {
-        return isSelected
-      }
-      return element
-    }))
-  }
-
-  const handleDeleteIngredients = () => {
-    let newIngredients = ingredients.filter((element, index) => {
-      return !selectedIngredients[index]
-    })
-    setIngredients(newIngredients)
-    recipeFormik.setFieldValue('ingredients', newIngredients)
-    setSelectedIngredients(selectedIngredients.filter((element) => {
-      return !element
-    }))
-  }
-
-  const handleMoveUpIngredients = () => {
-    let newIngredients = new Array(ingredients.length)
-    newIngredients = structuredClone(ingredients)
-    let newSelected = new Array(selectedIngredients.length)
-    newSelected = structuredClone(selectedIngredients)
-    for(let i = 1; i < newIngredients.length; i++) {
-      if(selectedIngredients[i]) {
-        let temp = newIngredients[i-1]
-        newIngredients[i-1] = newIngredients[i]
-        newIngredients[i] = temp
-        
-        temp = newSelected[i-1]
-        newSelected[i-1] = newSelected[i]
-        newSelected[i] = temp
-      }
-    }
-    setIngredients(newIngredients)
-    recipeFormik.setFieldValue('ingredients', newIngredients)
-    setSelectedIngredients(newSelected)
-  }
-
-  const handleMoveDownIngredients = () => {
-    let newIngredients = new Array(ingredients.length)
-    newIngredients = structuredClone(ingredients)
-    let newSelected = new Array(selectedIngredients.length)
-    newSelected = structuredClone(selectedIngredients)
-    for(let i = newIngredients.length-2; i >= 0; i--) {
-      if(selectedIngredients[i]) {
-        let temp = newIngredients[i+1]
-        newIngredients[i+1] = newIngredients[i]
-        newIngredients[i] = temp
-        
-        temp = newSelected[i+1]
-        newSelected[i+1] = newSelected[i]
-        newSelected[i] = temp
-      }
-    }
-    setIngredients(newIngredients)
-    recipeFormik.setFieldValue('ingredients', newIngredients)
-    setSelectedIngredients(newSelected)
-  }
-
-  const handleDeleteInstructions = () => {
-    let newInstructions = instructions.filter((element, index) => {
-      return !selectedInstructions[index]
-    })
-    setInstructions(newInstructions)
-    recipeFormik.setFieldValue('instructions', newInstructions)
-    setSelectedInstructions(selectedInstructions.filter((element) => {
-      return !element
-    }))
-  }
-
-  const handleMoveUpInstructions = () => {
-    let newInstructions = new Array(instructions.length)
-    newInstructions = structuredClone(instructions)
-    let newSelected = new Array(selectedInstructions.length)
-    newSelected = structuredClone(selectedInstructions)
-    for(let i = 1; i < newInstructions.length; i++) {
-      if(selectedInstructions[i]) {
-        let temp = newInstructions[i-1]
-        newInstructions[i-1] = newInstructions[i]
-        newInstructions[i] = temp
-        
-        temp = newSelected[i-1]
-        newSelected[i-1] = newSelected[i]
-        newSelected[i] = temp
-      }
-    }
-    setInstructions(newInstructions)
-    recipeFormik.setFieldValue('instructions', newInstructions)
-    setSelectedInstructions(newSelected)
-  }
-
-  const handleMoveDownInstructions = () => {
-    let newInstructions = new Array(instructions.length)
-    newInstructions = structuredClone(instructions)
-    let newSelected = new Array(selectedInstructions.length)
-    newSelected = structuredClone(selectedInstructions)
-    for(let i = newInstructions.length-2; i >= 0; i--) {
-      if(selectedInstructions[i]) {
-        let temp = newInstructions[i+1]
-        newInstructions[i+1] = newInstructions[i]
-        newInstructions[i] = temp
-        
-        temp = newSelected[i+1]
-        newSelected[i+1] = newSelected[i]
-        newSelected[i] = temp
-      }
-    }
-    setInstructions(newInstructions)
-    recipeFormik.setFieldValue('instructions', newInstructions)
-    setSelectedInstructions(newSelected)
-  }
 
   const handleAddImages = (event) => {
     // const previewURLs = [...event.target.files].map((file) => {
@@ -242,20 +100,85 @@ export default function Create() {
     recipeFormik.setFieldValue("images", [...images, ...Array.from(event.target.files)])
   }
 
-  const handleDeleteImages = () => {
+  const handleSelectedItems = (isSelected, itemIndex, selectedItems, setSelectedItems) => {
+    setSelectedItems(selectedItems.map((element, index) => {
+      if(index === itemIndex) {
+        return isSelected
+      }
+      return element
+    }))
+  }
 
+  const handleAddItemMode = (addItemMode, setAddItemMode) => {
+    setAddItemMode(!addItemMode)
+  }
+
+  const handleEditItemMode = (item, editItemMode, setSelectedItems, setEditItemMode) => {
+    if(editItemMode) {
+      setSelectedItems(new Array(0))
+    } else {
+      setSelectedItems(new Array(item.length).fill(false))
+    }
+    setEditItemMode(!editItemMode)
+  }
+
+  const handleDeleteItems = (items, selectedItems, setItems, setSelectedItems, formikValue) => {
+    let newItems = items.filter((element, index) => {
+      return !selectedItems[index]
+    })
+    setItems(newItems)
+    recipeFormik.setFieldValue(formikValue, newItems)
+    setSelectedItems(selectedItems.filter((element) => {
+      return !element
+    }))
+  }
+
+  const handleMoveUpItems = (items, selectedItems, setItems, setSelectedItems, formikValue) => {
+    let newItems = new Array(items.length)
+    newItems = structuredClone(items)
+    let newSelected = new Array(selectedItems.length)
+    newSelected = structuredClone(selectedItems)
+    for(let i = 1; i < newItems.length; i++) {
+      if(selectedItems[i]) {
+        let temp = newItems[i-1]
+        newItems[i-1] = newItems[i]
+        newItems[i] = temp
+        
+        temp = newSelected[i-1]
+        newSelected[i-1] = newSelected[i]
+        newSelected[i] = temp
+      }
+    }
+    setItems(newItems)
+    recipeFormik.setFieldValue(formikValue, newItems)
+    setSelectedItems(newSelected)
+  }
+
+  const handleMoveDownItems = (items, selectedItems, setItems, setSelectedItems, formikValue) => {
+    let newItems = new Array(items.length)
+    newItems = structuredClone(items)
+    let newSelected = new Array(selectedItems.length)
+    newSelected = structuredClone(selectedItems)
+    for(let i = newItems.length-2; i >= 0; i--) {
+      if(selectedItems[i]) {
+        let temp = newItems[i+1]
+        newItems[i+1] = newItems[i]
+        newItems[i] = temp
+        
+        temp = newSelected[i+1]
+        newSelected[i+1] = newSelected[i]
+        newSelected[i] = temp
+      }
+    }
+    setItems(newItems)
+    recipeFormik.setFieldValue(formikValue, newItems)
+    setSelectedItems(newSelected)
   }
 
   const handleCreate = () => {
 
   }
 
-  const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    const formData = new FormData();
-    formData.append('image', file);
-    console.log(formData)
-  }
   return (
     <Container>
       <Box left='0%' width={'100%'}>
@@ -313,7 +236,7 @@ export default function Create() {
                       checked={selectedIngredients[index]}
                       sx={{padding: '0px'}}
                       onChange={(event) => {
-                        handleSelectedIngredients(event.target.checked, index)
+                        handleSelectedItems(event.target.checked, index, selectedIngredients, setSelectedIngredients)
                       }}
                     >
                     </Checkbox>
@@ -364,7 +287,7 @@ export default function Create() {
                     <Button 
                         variant="contained" color="primary"
                         onClick={() => {
-                            handleAddIngredientMode() 
+                            handleAddItemMode(addIngredientMode, setAddIngredientMode) 
                             ingredientFormik.handleSubmit()}}
                     >
                         Confirm
@@ -372,21 +295,21 @@ export default function Create() {
                     <Button 
                         variant="contained" color="warning"
                         onClick={() => {
-                            handleAddIngredientMode()}}
+                          handleAddItemMode(addIngredientMode, setAddIngredientMode)}}
                     >
                         Cancel
                     </Button>
                 </Box> :
                   editIngredientMode ? 
                   <Box>
-                    <Button variant="contained" color="error" onClick={() => handleDeleteIngredients()}>Delete</Button>
-                    <Button variant="contained" color="info" onClick={() => handleMoveUpIngredients()}>Move Up</Button>
-                    <Button variant="contained" color="info" onClick={() => handleMoveDownIngredients()}>Move Down</Button>
-                    <Button variant="contained" color="primary" onClick={() => handleEditIngredientMode()}>Done</Button>
+                    <Button variant="contained" color="error" onClick={() => handleDeleteItems(ingredients, selectedIngredients, setIngredients, setSelectedIngredients, "ingredients")}>Delete</Button>
+                    <Button variant="contained" color="info" onClick={() => handleMoveUpItems(ingredients, selectedIngredients, setIngredients, setSelectedIngredients, "ingredients")}>Move Up</Button>
+                    <Button variant="contained" color="info" onClick={() => handleMoveDownItems(ingredients, selectedIngredients, setIngredients, setSelectedIngredients, "ingredients")}>Move Down</Button>
+                    <Button variant="contained" color="primary" onClick={() => handleEditItemMode(ingredients, editIngredientMode, setSelectedIngredients, setEditIngredientMode)}>Done</Button>
                   </Box>:
                   <Box>
-                    <Button variant="contained" color="secondary" onClick={() => handleAddIngredientMode()}>+ Add</Button>
-                    <Button variant="contained" color="secondary" onClick={() => handleEditIngredientMode()}>Edit</Button>
+                    <Button variant="contained" onClick={() => handleAddItemMode(addIngredientMode, setAddIngredientMode)}><Add/>Add</Button>
+                    <Button disabled={ingredients.length === 0} variant="contained" color="secondary" onClick={() => handleEditItemMode(ingredients, editIngredientMode, setSelectedIngredients, setEditIngredientMode)}><Edit/>Edit</Button>
                   </Box>
                 
             }
@@ -402,7 +325,7 @@ export default function Create() {
                       checked={selectedInstructions[index]}
                       sx={{padding: '0px'}}
                       onChange={(event) => {
-                        handleSelectedInstructions(event.target.checked, index)
+                        handleSelectedItems(event.target.checked, index, selectedInstructions, setSelectedInstructions)
                       }}
                     >
                     </Checkbox>
@@ -443,7 +366,7 @@ export default function Create() {
                       <Button 
                           variant="contained" color="primary"
                           onClick={() => {
-                              handleAddInstructionMode() 
+                              handleAddItemMode(addInstructionMode, setAddInstructionMode)
                               instructionsFormik.handleSubmit()}}
                       >
                           Confirm
@@ -451,21 +374,21 @@ export default function Create() {
                       <Button 
                           variant="contained" color="warning"
                           onClick={() => {
-                              handleAddInstructionMode()}}
+                            handleAddItemMode(addInstructionMode, setAddInstructionMode)}}
                       >
                           Cancel
                       </Button>
                   </Box> :
                     editInstructionMode ? 
                     <Box>
-                      <Button variant="contained" color="error" onClick={() => handleDeleteInstructions()}>Delete</Button>
-                      <Button variant="contained" color="info" onClick={() => handleMoveUpInstructions()}>Move Up</Button>
-                      <Button variant="contained" color="info" onClick={() => handleMoveDownInstructions()}>Move Down</Button>
-                      <Button variant="contained" color="primary" onClick={() => handleEditInstructionMode()}>Done</Button>
+                      <Button variant="contained" color="error" onClick={() => handleDeleteItems(instructions, selectedInstructions, setInstructions, setSelectedInstructions, "instructions")}>Delete</Button>
+                      <Button variant="contained" color="info" onClick={() => handleMoveUpItems(instructions, selectedInstructions, setInstructions, setSelectedInstructions, "instructions")}>Move Up</Button>
+                      <Button variant="contained" color="info" onClick={() => handleMoveDownItems(instructions, selectedInstructions, setInstructions, setSelectedInstructions, "instructions")}>Move Down</Button>
+                      <Button variant="contained" color="primary" onClick={() => handleEditItemMode(instructions, editInstructionMode, setSelectedInstructions, setEditInstructionMode)}>Done</Button>
                     </Box>:
                     <Box>
-                      <Button variant="contained" color="secondary" onClick={() => handleAddInstructionMode()}>+ Add</Button>
-                      <Button variant="contained" color="secondary" onClick={() => handleEditInstructionMode()}>Edit</Button>
+                      <Button variant="contained" onClick={() => handleAddItemMode(addInstructionMode, setAddInstructionMode)}><Add/>Add</Button>
+                      <Button disabled={instructions.length===0} variant="contained" color="secondary" onClick={() => handleEditItemMode(instructions, editInstructionMode, setSelectedInstructions, setEditInstructionMode)}><Edit/>Edit</Button>
                     </Box>
                   
               }
@@ -488,30 +411,59 @@ export default function Create() {
           <Divider sx={{margin: '30px'}}></Divider>
           <Typography fontSize="30px">Images</Typography>
           <SubText>Include images of your recipe. The first image will be the main thumbnail that can be seen when searched.</SubText>
-          <Button
-            component="label"
-            role={undefined}
-            variant="contained"
-            tabIndex={-1}
-            startIcon={<CloudUpload/>}
-            sx={{width: '150px'}}
-          >
-            Upload Images
-            <VisuallyHiddenInput
-              type="file"
-              onChange={(event) => handleAddImages(event)}
-              multiple
-            />
-          </Button>
+          <Box>
+            {editImageMode ?
+            <Box>
+              <Button variant="contained" color="error" onClick={() => handleDeleteItems(images, selectedImages, setImages, setSelectedImages, "images")}>Delete</Button>
+              <Button variant="contained" color="info" onClick={() => handleMoveUpItems(images, selectedImages, setImages, setSelectedImages, "images")}>Move Up</Button>
+              <Button variant="contained" color="info" onClick={() => handleMoveDownItems(images, selectedImages, setImages, setSelectedImages, "images")}>Move Down</Button>
+              <Button variant="contained" color="warning" onClick={() => handleEditItemMode(images, editImageMode, setSelectedImages, setEditImageMode)}>Done</Button>
+            </Box> 
+            : 
+              <Box>
+                <Button
+                  component="label"
+                  role={undefined}
+                  variant="contained"
+                  tabIndex={-1}
+                  startIcon={<CloudUpload/>}
+                >
+                  Upload
+                  <VisuallyHiddenInput
+                    type="file"
+                    onChange={(event) => handleAddImages(event)}
+                    multiple
+                  />
+                </Button>
+                <Button disabled={images.length===0} variant="contained" color="secondary" onClick={() => handleEditItemMode(images, editImageMode, setSelectedImages, setEditImageMode)}><Edit/>Edit</Button>
+              </Box>
+            }
+          </Box>
           <ImageList cols={4} gap={8} sx={{marginTop: '20px'}}>
               {images.map((image, index) => {
                 const previewURL = URL.createObjectURL(image)
                 return (
                   <ImageListItem key={index}>
+                    {editImageMode ?
+                      <Checkbox 
+                        checked={selectedImages[index]}
+                        sx={{
+                          position: 'absolute',
+                          color: 'white',
+                        }}
+                        onChange={(event) => {
+                          handleSelectedItems(event.target.checked, index, selectedImages, setSelectedImages)
+                        }}
+                      />
+                    :
+                      <Box/>
+                    }
                     <img
                       src={previewURL}
                       loading="lazy"
+                      style={{width: '100%', height: '120px'}}
                     />
+                  
                   </ImageListItem>
                 )
               })}

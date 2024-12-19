@@ -41,11 +41,15 @@ const theme = createTheme({
                 margin: '8px',
                 textTransform: 'none',
                 fontWeight: 500,
+                fontSize: '16px',
                 borderRadius: 8,
                 transition: 'transform 0.2s ease-in-out',
                 '&:hover': {
                     transform: 'scale(1.05)',
                     backgroundColor: darken(theme.palette[ownerState.color]?.main, 0.1),
+                },
+                '&.Mui-disabled': {
+                  backgroundColor: theme.palette[ownerState.color]?.main,
                 },
             }),
         },
