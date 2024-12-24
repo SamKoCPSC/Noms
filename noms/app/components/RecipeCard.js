@@ -79,7 +79,7 @@ const ExpandMore = styled((props) => {
   ],
 }));
 
-export default function RecipeReviewCard({key, title, description, author, date, ingredients, instructions}) {
+export default function RecipeCard({title, description, author, date, ingredients, instructions}) {
   const [expanded, setExpanded] = React.useState(false);
   const router = useRouter()
 

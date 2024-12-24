@@ -79,13 +79,38 @@ export default function Create() {
         notes: '',
         images: [],
     },
-    onSubmit: (values) => {
-      let imageData = images.map((image) => {
-        const formData = new FormData()
-        formData.append('file', image);
-        return formData;
+    onSubmit: async (values) => {
+      // let imageData = images.map((image) => {
+      //   const formData = new FormData()
+      //   formData.append('file', image);
+      //   return formData;
+      // })
+      // console.log(imageData)
+      const formData = new FormData()
+      formData.append('file', images[0])
+      const presignedURL = await axios.get(
+        '/api/presignedURL',
+      ).then((response) => {
+        return response.data.url
+      }).catch((error) => {
+          return Response.json(
+            error,
+            {status: 500}
+          )
       })
-      console.log(imageData)
+      await axios.put(
+        presignedURL,
+        formData.get('file'),
+        {
+          headers: {
+            "Content-Type": "image/jpeg"
+          }
+        }
+      ).then(() => {
+        console.log('file upload success')
+      }).catch(() => {
+        console.log('file upload failed')
+      })
     }
   })
 

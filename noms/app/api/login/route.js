@@ -22,15 +22,11 @@ export async function POST(req, res) {
             }
         }
     ).then((response) => {
-        console.log(req)
-        console.log(response)
         return Response.json(
             response.data,
             {status: response.status}
         )
     }).catch((error) => {
-        console.log(req)
-        console.error(error.response)
         return Response.json(
             error.response.data,
             {status: error.response.status}
