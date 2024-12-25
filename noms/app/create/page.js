@@ -9,6 +9,7 @@ import { Edit, Add, CloudUpload } from "@mui/icons-material";
 import {Box, Container, Divider, Stack, TextField, Typography, Button, MenuItem, Checkbox, ImageList, ImageListItem} from "@mui/material";
 import { styled } from "@mui/material";
 import { useTheme } from "@emotion/react";
+import { useSession } from "next-auth/react";
 
 const VisuallyHiddenInput = styled('input')({
   clip: 'rect(0 0 0 0)',
@@ -31,6 +32,7 @@ const units = ['g', 'mL']
 
 export default function Create() {
   const theme = useTheme()
+  const {data: session, status} = useSession()
   const [ingredients, setIngredients] = React.useState([])
   const [addIngredientMode, setAddIngredientMode] = React.useState(false)
   const [editIngredientMode, setEditIngredientMode] = React.useState(false)
@@ -497,7 +499,7 @@ export default function Create() {
           <Stack direction={'row'} sx={{justifyContent: 'end'}}>
             <Button variant="contained" color="error" sx={{top: '30px'}}>Cancel</Button>
             <Button variant="contained" color="secondary" sx={{top: '30px'}}>Save</Button>
-            <Button variant="contained" sx={{top: '30px'}} onClick={() => {recipeFormik.handleSubmit()}}>Create</Button>
+            <Button disabled={status !== "authenticated"} variant="contained" sx={{top: '30px'}} onClick={() => {recipeFormik.handleSubmit()}}>Create</Button>
           </Stack>
         </Box>
       </main>
