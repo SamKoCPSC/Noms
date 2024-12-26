@@ -5,8 +5,9 @@ import * as React from 'react';
 import Navbar from "./components/Navbar";
 import Navdrawer from "./components/Navdrawer";
 import RecipeCard from "./components/RecipeCard";
-import {Box, Container, Typography} from "@mui/material";
+import {Box, Button, Container, Typography} from "@mui/material";
 import { Dancing_Script } from "next/font/google";
+import { SnackBarContext } from "./layout";
 
 const dancingScript = Dancing_Script({subsets: ['latin']})
 
@@ -31,7 +32,6 @@ const recipeData = {
     {step: 'Shape the Croissants', details: ["Mix flour, sugar, salt, yeast, and milk to form a soft dough. Knead until smooth", "Cover and let it rise until it doubles in size"]},
   ]
 }
-
   return (
     <Container maxWidth='false' sx={{justifyItems: 'center'}}>
       <Box left='0%' width={'100%'}>

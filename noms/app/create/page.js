@@ -10,6 +10,8 @@ import {Box, Container, Divider, Stack, TextField, Typography, Button, MenuItem,
 import { styled } from "@mui/material";
 import { useTheme } from "@emotion/react";
 import { useSession } from "next-auth/react";
+import { SnackBarContext } from "../layout";
+import { useRouter } from "next/navigation";
 
 const VisuallyHiddenInput = styled('input')({
   clip: 'rect(0 0 0 0)',
@@ -32,6 +34,8 @@ const units = ['g', 'mL']
 
 export default function Create() {
   const theme = useTheme()
+  const router = useRouter()
+  const handleSnackBar = React.useContext(SnackBarContext)
   const {data: session, status} = useSession()
   const [ingredients, setIngredients] = React.useState([])
   const [addIngredientMode, setAddIngredientMode] = React.useState(false)
@@ -105,9 +109,11 @@ export default function Create() {
                 }
               }
             ).then(() => {
-              console.log('s3 upload succeeded')
+              router.push('/')
+              handleSnackBar('Images Uploaded Successfully')
+
             }).catch(() => {
-              console.log('s3 upload failed')
+              handleSnackBar('Image Upload Failed')
             })
           })         
       }).catch(() => {
