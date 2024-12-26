@@ -82,35 +82,35 @@ export default function Create() {
         images: [],
     },
     onSubmit: async (values) => {
-      // let imageData = images.map((image) => {
-      //   const formData = new FormData()
-      //   formData.append('file', image);
-      //   return formData;
-      // })
-      // console.log(imageData)
-      const formData = new FormData()
-      formData.append('file', images[0])
+      let imageData = images.map((image) => {
+        const formData = new FormData()
+        formData.append('file', image);
+        return formData;
+      })
       axios.get(
-        '/api/presignedURL',
-        {params: {
-          recipeName: recipeFormik.values.name,
-          fileName: formData.get('file').name
-        }}
+        '/api/presignedURL', {
+            params: {
+            recipeName: recipeFormik.values.name,
+            fileNames: imageData.map((image) => {return image.get('file').name})
+          }
+        },
       ).then((response) => {
-          axios.put(
-            response.data.presignedURL,
-            formData.get('file'),
-            {
-              headers: {
-                "Content-Type": "image/jpeg"
+          response.data.presignedURLs.forEach((presignedURL, index) => {
+            axios.put(
+              presignedURL,
+              imageData[index].get('file'),
+              {
+                headers: {
+                  "Content-Type": "image/jpeg"
+                }
               }
-            }
-          ).then((response) => {
-            console.log('s3 upload succeeded')
-          }).catch(() => {
-            console.log('s3 upload failed')
-          })
-      }).catch((error) => {
+            ).then(() => {
+              console.log('s3 upload succeeded')
+            }).catch(() => {
+              console.log('s3 upload failed')
+            })
+          })         
+      }).catch(() => {
           console.log('presigned URL failed')
       })
     }
