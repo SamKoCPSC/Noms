@@ -5,6 +5,10 @@ import { authOptions } from "../auth/[...nextauth]/route";
 
 export async function GET(req, res) {
     const session = await getServerSession(authOptions)
+    const recipeName = req.nextUrl.searchParams.get('recipeName')
+    const fileName = req.nextUrl.searchParams.get('fileName')
+    const date = new Date()
+    const baseURL = session.user.email + '/' + recipeName + '/' + date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + '_' + date.getHours() + '-' + date.getMinutes() + '-' + date.getSeconds() + '-' + date.getMilliseconds() + '-' + fileName
     if(!session) {
         return Response.json(
             {message: 'Missing authentication, you must be logged in'},
@@ -20,15 +24,15 @@ export async function GET(req, res) {
     })
     const putObjectCommand = new PutObjectCommand({
         Bucket: process.env.S3_BUCKET,
-        Key: 'test.jpg',
+        Key: baseURL,
     })
     return getSignedUrl(
         s3Client, 
         putObjectCommand, 
         {expiresIn: 4}
-    ).then((url) => {
+    ).then((responseURL) => {
         return Response.json(
-            {url: url},
+            {presignedURL: responseURL, baseURL: baseURL},
             {status: 200}
         )
     }).catch((error) => {
@@ -37,4 +41,4 @@ export async function GET(req, res) {
             {status: error.response.status}
         )
     })
-}
+} 

@@ -47,18 +47,20 @@ export default function Recipe() {
             >
             </Box>
             <Typography sx={{justifySelf: 'left', fontSize: '35px'}}>Ingredients</Typography>
-            {recipeData.ingredients.map((ingredient) => {
+            {recipeData.ingredients.map((ingredient, index) => {
                 return <Typography sx={{justifySelf: 'left', fontSize: '20px'}}>{ingredient.amount}{ingredient.unit} {ingredient.name}</Typography>
             })}
             <Typography sx={{justifySelf: 'left', fontSize: '35px'}}>Instructions</Typography>
             {recipeData.instructions.map((instruction) => {
                 return (
-                    <Typography sx={{justifySelf: 'left', fontSize: '25px'}}>
-                        {instruction.step}
+                    <Box sx={{justifySelf: 'left'}}>
+                        <Typography sx={{justifySelf: 'left', fontSize: '25px'}}>
+                            {instruction.step}
+                        </Typography>
                         {instruction.details.map((subInstruction) => {
                             return <Typography sx={{justifySelf: 'left', fontSize: '20px'}}>-{subInstruction}</Typography>
                         })}
-                    </Typography>
+                    </Box>
                 )
             })} 
         </Container>

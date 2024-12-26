@@ -126,7 +126,7 @@ export default function RecipeCard({title, description, author, date, ingredient
       <CardMedia
         component="img"
         height="194"
-        image="/croissant1.jpg"
+        image="https://noms-s3-bucket.s3.us-east-2.amazonaws.com/test.jpg"
         src='img'
         alt="Image not available"
       />

@@ -90,28 +90,28 @@ export default function Create() {
       // console.log(imageData)
       const formData = new FormData()
       formData.append('file', images[0])
-      const presignedURL = await axios.get(
+      axios.get(
         '/api/presignedURL',
+        {params: {
+          recipeName: recipeFormik.values.name,
+          fileName: formData.get('file').name
+        }}
       ).then((response) => {
-        return response.data.url
+          axios.put(
+            response.data.presignedURL,
+            formData.get('file'),
+            {
+              headers: {
+                "Content-Type": "image/jpeg"
+              }
+            }
+          ).then((response) => {
+            console.log('s3 upload succeeded')
+          }).catch(() => {
+            console.log('s3 upload failed')
+          })
       }).catch((error) => {
-          return Response.json(
-            error,
-            {status: 500}
-          )
-      })
-      await axios.put(
-        presignedURL,
-        formData.get('file'),
-        {
-          headers: {
-            "Content-Type": "image/jpeg"
-          }
-        }
-      ).then(() => {
-        console.log('file upload success')
-      }).catch(() => {
-        console.log('file upload failed')
+          console.log('presigned URL failed')
       })
     }
   })
