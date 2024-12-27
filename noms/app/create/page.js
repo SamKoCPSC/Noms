@@ -47,6 +47,11 @@ export default function Create() {
   const [editInstructionMode, setEditInstructionMode] = React.useState(false)
   const [selectedInstructions, setSelectedInstructions] = React.useState([])
 
+  const [additionalInfo, setAdditionalInfo] = React.useState([])
+  const [addInfoMode, setAddInfoMode] = React.useState(false)
+  const [editInfoMode, setEditInfoMode] = React.useState(false)
+  const [selectedInfo, setSelectedInfo] = React.useState([])
+
   const [images, setImages] = React.useState([])
   const [editImageMode, setEditImageMode] = React.useState(false)
   const [selectedImages, setSelectedImages] = React.useState([])
@@ -76,49 +81,62 @@ export default function Create() {
     },
   })
 
+  const additionalInfoFormik = useFormik({
+    initialValues: {
+      title: '',
+      info: '',
+    },
+    onSubmit: (values, actions) => {
+      setAdditionalInfo([...additionalInfo, {title: values.title, info: values.info}])
+      recipeFormik.setFieldValue('additionalInfo', [...additionalInfo, {title: values.title, info: values.info}])
+      additionalInfoFormik.resetForm()
+    },
+  })
+
   const recipeFormik = useFormik({
     initialValues: {
         name: '',
         description: '',
         ingredients: [],
         instructions: [],
-        notes: '',
+        additionalInfo: [],
         images: [],
     },
     onSubmit: async (values) => {
-      let imageData = images.map((image) => {
-        const formData = new FormData()
-        formData.append('file', image);
-        return formData;
-      })
-      axios.get(
-        '/api/presignedURL', {
-            params: {
-            recipeName: recipeFormik.values.name,
-            fileNames: imageData.map((image) => {return image.get('file').name})
-          }
-        },
-      ).then((response) => {
-          response.data.presignedURLs.forEach((presignedURL, index) => {
-            axios.put(
-              presignedURL,
-              imageData[index].get('file'),
-              {
-                headers: {
-                  "Content-Type": "image/jpeg"
-                }
-              }
-            ).then(() => {
-              router.push('/')
-              handleSnackBar('Images Uploaded Successfully')
+      
+      // let imageData = images.map((image) => {
+      //   const formData = new FormData()
+      //   formData.append('file', image);
+      //   return formData;
+      // })
+      // axios.get(
+      //   '/api/presignedURL', {
+      //       params: {
+      //       recipeName: recipeFormik.values.name,
+      //       fileNames: imageData.map((image) => {return image.get('file').name})
+      //     }
+      //   },
+      // ).then((response) => {
+      //     response.data.presignedURLs.forEach((presignedURL, index) => {
+      //       axios.put(
+      //         presignedURL,
+      //         imageData[index].get('file'),
+      //         {
+      //           headers: {
+      //             "Content-Type": "image/jpeg"
+      //           }
+      //         }
+      //       ).then(() => {
+      //         router.push('/')
+      //         handleSnackBar('Images Uploaded Successfully')
 
-            }).catch(() => {
-              handleSnackBar('Image Upload Failed')
-            })
-          })         
-      }).catch(() => {
-          console.log('presigned URL failed')
-      })
+      //       }).catch(() => {
+      //         handleSnackBar('Image Upload Failed')
+      //       })
+      //     })         
+      // }).catch(() => {
+      //     console.log('presigned URL failed')
+      // })
     }
   })
 
@@ -428,18 +446,84 @@ export default function Create() {
           </Box>
           <Divider sx={{margin: '30px'}}></Divider>
           <Box>
-            <Typography fontSize='30px'>Notes:</Typography>
+            <Typography fontSize='30px'>Additional Information:</Typography>
             <SubText>Add any non-instructional information, describe the recipe in more detail, and include your experiences. (Optional)</SubText>
-            <TextField 
-              variant="outlined" 
-              fullWidth 
-              multiline
-              name="notes"
-              id="notes"
-              value={recipeFormik.notes}
-              onChange={recipeFormik.handleChange}
-            >
-            </TextField>
+            {additionalInfo.map((info, index) => (
+                editInfoMode ? 
+                <Box key={index}>
+                  <Typography>
+                    <Checkbox 
+                      checked={selectedInfo[index]}
+                      sx={{padding: '0px'}}
+                      onChange={(event) => {
+                        handleSelectedItems(event.target.checked, index, selectedInfo, setSelectedInfo)
+                      }}
+                    >
+                    </Checkbox>
+                    {info.title + ' - ' + info.info}
+                  </Typography>
+                </Box> : 
+                <Stack key={index} sx={{marginLeft: '16px'}}>
+                  <Typography sx={{whiteSpace: 'pre-line', marginTop: '8px', fontSize: '16px', fontWeight: '400'}}>{info.title}</Typography>
+                  <Typography sx={{whiteSpace: 'pre-line', marginLeft: '8px', fontSize: '16px', fontWeight: '300'}}>{info.info}</Typography>
+                </Stack>
+            ))}
+            {addInfoMode ? 
+                <Box display="flex" flexDirection='column'>
+                  <Box display={'flex'}>
+                    <Typography>Title</Typography>
+                    <TextField 
+                        sx={{margin: '5px'}} 
+                        value={additionalInfoFormik.values.title}
+                        id="title"
+                        name="title"
+                        onChange={additionalInfoFormik.handleChange}>
+                    </TextField>
+                  </Box>
+                  <Typography>Details</Typography>
+                  <TextField 
+                        sx={{margin: '5px'}} 
+                        value={additionalInfoFormik.values.info}
+                        id="info"
+                        name="info"
+                        onChange={additionalInfoFormik.handleChange}
+                        multiline>
+                    </TextField>
+                </Box> : 
+                <></>
+            }
+            {addInfoMode ? 
+                  <Box>
+                      <Button 
+                          variant="contained" color="primary"
+                          onClick={() => {
+                              handleAddItemMode(addInfoMode, setAddInfoMode)
+                              additionalInfoFormik.handleSubmit()}}
+                      >
+                          Confirm
+                      </Button>
+                      <Button 
+                          variant="contained" color="warning"
+                          onClick={() => {
+                            handleAddItemMode(addInfoMode, setAddInfoMode)}}
+                      >
+                          Cancel
+                      </Button>
+                  </Box> :
+                    editInfoMode ? 
+                    <Box>
+                      <Button variant="contained" color="error" onClick={() => handleDeleteItems(additionalInfo, selectedInfo, setAdditionalInfo, setSelectedInfo, "additionalInfo")}>Delete</Button>
+                      <Button variant="contained" color="info" onClick={() => handleMoveUpItems(additionalInfo, selectedInfo, setAdditionalInfo, setSelectedInfo, "additionalInfo")}>Move Up</Button>
+                      <Button variant="contained" color="info" onClick={() => handleMoveDownItems(additionalInfo, selectedInfo, setAdditionalInfo, setSelectedInfo, "additionalInfo")}>Move Down</Button>
+                      <Button variant="contained" color="primary" onClick={() => handleEditItemMode(additionalInfo, editInfoMode, setSelectedInfo, setEditInfoMode)}>Done</Button>
+                    </Box>:
+                    <Box>
+                      <Button variant="contained" onClick={() => handleAddItemMode(addInfoMode, setAddInfoMode)}><Add/>Add</Button>
+                      <Button disabled={additionalInfo.length===0} variant="contained" color="secondary" onClick={() => handleEditItemMode(additionalInfo, editInfoMode, setSelectedInfo, setEditInfoMode)}><Edit/>Edit</Button>
+                    </Box>
+                  
+              }
+            
           </Box>
           <Divider sx={{margin: '30px'}}></Divider>
           <Typography fontSize="30px">Images</Typography>
