@@ -14,9 +14,11 @@ export const SnackBarContext = React.createContext(null)
 export default function RootLayout({ children }) {
   const [isSnackBarOpen, setSnackBarOpen] = React.useState(false)
   const [snackBarMessage, setSnackBarMessage] = React.useState("")
-  const handleSnackBar = (message) => {
+  const [snackBarVariant, setSnackBarVariant] = React.useState()
+  const handleSnackBar = (message, variant) => {
     setSnackBarOpen(true)
     setSnackBarMessage(message)
+    setSnackBarVariant(variant)
   }
   const closeSnackBar = () => {
     setSnackBarOpen(false)
@@ -26,10 +28,11 @@ export default function RootLayout({ children }) {
       <body className={inter.className}>
         <Snackbar 
           open={isSnackBarOpen}
-          autoHideDuration={3000}
+          autoHideDuration={6000}
           onClose={closeSnackBar}
           anchorOrigin={{vertical: 'top', horizontal: 'center'}}
           message={snackBarMessage}
+          ContentProps={{sx: {background: snackBarVariant}}}
         />
         <SessionProvider>
           <ThemeProvider theme={theme}>

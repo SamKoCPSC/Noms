@@ -37,7 +37,7 @@ export async function GET(req, res) {
         )
     })).then((responseURLs) => {
         return Response.json(
-            {presignedURLs: responseURLs, baseURL: baseURL},
+            {presignedURLs: responseURLs, imageURLs: fileNames.map(fileName => 'https://' + process.env.S3_BUCKET + '.s3.' + process.env.S3_REGION + '.amazonaws.com/' + baseURL + '/' + fileName)},
             {status: 200}
         )
     }).catch(() => {
