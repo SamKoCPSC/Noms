@@ -60,6 +60,9 @@ export default function Create() {
   const [selectedImages, setSelectedImages] = React.useState([])
 
   const [isSubmitAttempted, setSubmitAttempted] = React.useState(false)
+  const [isInstructionAttempted, setInstructionAttempted] = React.useState(false)
+  const [isIngredientAttempted, setIngredientAttempted] = React.useState(false)
+  const [isAdditionalInfoAttempted, setAdditionalInfoAttempted] = React.useState(false)
 
   const ingredientFormik = useFormik({
     initialValues: {
@@ -67,9 +70,16 @@ export default function Create() {
         unit: '', 
         name: ''
     },
+    initialErrors: {name: 'This is just to ensure errors is not null'},
+    validationSchema: Yup.object().shape({
+      name: Yup.string().required('Ingredient name is required'),
+      quantity: Yup.number().typeError('Quantity must be a number').required('Ingredient quantity is required'),
+      unit: Yup.string().required('Unit of measurement is required')
+    }),
     onSubmit: (values, actions) => {
         setIngredients([...ingredients, {quantity: values.quantity, unit: values.unit, name: values.name}])
         recipeFormik.setFieldValue("ingredients", [...ingredients, {quantity: values.quantity, unit: values.unit, name: values.name}])
+        setIngredientAttempted(false)
         ingredientFormik.resetForm()
     }
   })
@@ -79,9 +89,15 @@ export default function Create() {
       title: '',
       instruction: '',
     },
+    initialErrors: {title: 'This is just to ensure errors is not null'},
+    validationSchema: Yup.object().shape({
+      title: Yup.string().required('Instruction title is required'),
+      instruction: Yup.string().required('Instruction details are required')
+    }),
     onSubmit: (values, actions) => {
       setInstructions([...instructions, {title: values.title, instruction: values.instruction}])
       recipeFormik.setFieldValue('instructions', [...instructions, {title: values.title, instruction: values.instruction}])
+      setInstructionAttempted(false)
       instructionsFormik.resetForm()
     },
   })
@@ -91,9 +107,14 @@ export default function Create() {
       title: '',
       info: '',
     },
+    initialErrors: {info: 'This just ensures that errors is not null'},
+    validationSchema: Yup.object().shape({
+      info: Yup.string().required('Details is required')
+    }),
     onSubmit: (values, actions) => {
       setAdditionalInfo([...additionalInfo, {title: values.title, info: values.info}])
       recipeFormik.setFieldValue('additionalInfo', [...additionalInfo, {title: values.title, info: values.info}])
+      setAdditionalInfoAttempted(false)
       additionalInfoFormik.resetForm()
     },
   })
@@ -362,11 +383,24 @@ export default function Create() {
             }
             {addIngredientMode ? 
                 <Box>
+                    {!ingredientFormik.isValid && isIngredientAttempted &&
+                      <Box>
+                        {Object.keys(ingredientFormik.errors).map(key =>
+                          <Stack direction={'row'}>
+                            <ErrorOutlineIcon color="error"/>
+                            <Typography color={theme.palette.error.main}>{ingredientFormik.errors[key]}</Typography>
+                          </Stack>
+                        )}
+                      </Box>
+                    }
                     <Button 
                         variant="contained" color="primary"
+                        disabled={isIngredientAttempted && !ingredientFormik.isValid}
                         onClick={() => {
-                            handleAddItemMode(addIngredientMode, setAddIngredientMode) 
-                            ingredientFormik.handleSubmit()}}
+                            ingredientFormik.handleSubmit()
+                            if(ingredientFormik.isValid) {handleAddItemMode(addIngredientMode, setAddIngredientMode)}
+                            else {setIngredientAttempted(true)}
+                        }}
                     >
                         Confirm
                     </Button>
@@ -436,6 +470,16 @@ export default function Create() {
                         onChange={instructionsFormik.handleChange}
                         multiline>
                     </TextField>
+                    {!instructionsFormik.isValid && isInstructionAttempted &&
+                      <Box>
+                        {Object.keys(instructionsFormik.errors).map(key =>
+                          <Stack direction={'row'}>
+                            <ErrorOutlineIcon color="error"/>
+                            <Typography color={theme.palette.error.main}>{instructionsFormik.errors[key]}</Typography>
+                          </Stack>
+                        )}
+                      </Box>
+                    }
                 </Box> : 
                 <></>
             }
@@ -443,9 +487,12 @@ export default function Create() {
                   <Box>
                       <Button 
                           variant="contained" color="primary"
+                          disabled={isInstructionAttempted && !instructionsFormik.isValid}
                           onClick={() => {
-                              handleAddItemMode(addInstructionMode, setAddInstructionMode)
-                              instructionsFormik.handleSubmit()}}
+                              instructionsFormik.handleSubmit()
+                              if(instructionsFormik.isValid) {handleAddItemMode(addInstructionMode, setAddInstructionMode)}
+                              else {setInstructionAttempted(true)}
+                          }}
                       >
                           Confirm
                       </Button>
@@ -515,7 +562,17 @@ export default function Create() {
                         name="info"
                         onChange={additionalInfoFormik.handleChange}
                         multiline>
-                    </TextField>
+                  </TextField>
+                  {!additionalInfoFormik.isValid && isAdditionalInfoAttempted &&
+                      <Box>
+                        {Object.keys(additionalInfoFormik.errors).map(key =>
+                          <Stack direction={'row'}>
+                            <ErrorOutlineIcon color="error"/>
+                            <Typography color={theme.palette.error.main}>{additionalInfoFormik.errors[key]}</Typography>
+                          </Stack>
+                        )}
+                      </Box>
+                    }
                 </Box> : 
                 <></>
             }
@@ -523,9 +580,12 @@ export default function Create() {
                   <Box>
                       <Button 
                           variant="contained" color="primary"
+                          disabled={isAdditionalInfoAttempted && !additionalInfoFormik.isValid}
                           onClick={() => {
-                              handleAddItemMode(addInfoMode, setAddInfoMode)
-                              additionalInfoFormik.handleSubmit()}}
+                              additionalInfoFormik.handleSubmit()
+                              if(additionalInfoFormik.isValid) {handleAddItemMode(addInfoMode, setAddInfoMode)}
+                              else{setAdditionalInfoAttempted(true)}
+                          }}
                       >
                           Confirm
                       </Button>
