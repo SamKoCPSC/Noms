@@ -2,7 +2,8 @@
 import Image from "next/image";
 import styles from "../page.module.css";
 import * as React from 'react';
-import { useFormik } from "formik";
+import { useFormik, validateYupSchema } from "formik";
+import * as Yup from 'yup';
 import axios from "axios";
 import Navbar from '../components/Navbar'
 import { Edit, Add, CloudUpload } from "@mui/icons-material";
@@ -12,6 +13,8 @@ import { useTheme } from "@emotion/react";
 import { useSession } from "next-auth/react";
 import { SnackBarContext } from "../layout";
 import { useRouter } from "next/navigation";
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 
 const VisuallyHiddenInput = styled('input')({
   clip: 'rect(0 0 0 0)',
@@ -55,6 +58,8 @@ export default function Create() {
   const [images, setImages] = React.useState([])
   const [editImageMode, setEditImageMode] = React.useState(false)
   const [selectedImages, setSelectedImages] = React.useState([])
+
+  const [isSubmitAttempted, setSubmitAttempted] = React.useState(false)
 
   const ingredientFormik = useFormik({
     initialValues: {
@@ -102,6 +107,14 @@ export default function Create() {
         additionalInfo: [],
         images: [],
     },
+    initialErrors: {name: 'This just ensures that errors is not null so the error message is triggered'},
+    validationSchema: Yup.object().shape({
+      name: Yup.string().max(255, 'Name must be less than 255 characters').required('Name is required'),
+      description: Yup.string().max(1000, 'Description must be less than 1000 characters').required('Description is required'),
+      ingredients: Yup.array().min(1,'Must have at least one ingredient'),
+      instructions: Yup.array().min(1,'Must have at least one instruction'),
+      images: Yup.array().min(1,'Must add at least one image')
+    }),
     onSubmit: async (values) => {
       let imageData = images.map((image) => {
         const formData = new FormData()
@@ -242,10 +255,6 @@ export default function Create() {
     setItems(newItems)
     recipeFormik.setFieldValue(formikValue, newItems)
     setSelectedItems(newSelected)
-  }
-
-  const handleCreate = () => {
-
   }
 
   return (
@@ -604,10 +613,30 @@ export default function Create() {
               })}
           </ImageList>
           <Divider sx={{margin: '30px'}}></Divider>
+          {isSubmitAttempted && recipeFormik.errors && 
+            Object.keys(recipeFormik.errors).map(key => 
+              <Stack key={key} direction={'row'}>
+                <ErrorOutlineIcon color="error"/>
+                <Typography color={theme.palette.error.main}>{recipeFormik.errors[key]}</Typography>
+              </Stack>        
+            )
+          }
+          {isSubmitAttempted && Object.keys(recipeFormik.errors).length === 0 &&
+            <Stack direction={'row'}>
+              <CheckCircleOutlineIcon color='success'/>
+              <Typography color={theme.palette.success.main}>All required fields completed</Typography>
+            </Stack>
+          }
           <Stack direction={'row'} sx={{justifyContent: 'end'}}>
             <Button variant="contained" color="error" sx={{top: '30px'}}>Cancel</Button>
             <Button variant="contained" color="secondary" sx={{top: '30px'}}>Save</Button>
-            <Button disabled={status !== "authenticated"} variant="contained" sx={{top: '30px'}} onClick={() => {recipeFormik.handleSubmit()}}>Create</Button>
+            <Button disabled={status !== "authenticated" || (isSubmitAttempted && Object.keys(recipeFormik.errors).length > 0)} variant="contained" sx={{top: '30px'}} 
+              onClick={() => {
+                setSubmitAttempted(true)
+                recipeFormik.handleSubmit()
+                if(Object.keys(recipeFormik.errors).length > 0) {handleSnackBar('Error: Please complete all required fields', theme.palette.error.main)}
+              }}
+            >Create</Button>
           </Stack>
         </Box>
       </main>
