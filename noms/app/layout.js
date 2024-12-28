@@ -6,6 +6,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import theme from "./theme";
 import { SessionProvider } from "next-auth/react";
 import { Box, Snackbar } from "@mui/material";
+import Navbar from "./components/Navbar";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -36,6 +37,9 @@ export default function RootLayout({ children }) {
         />
         <SessionProvider>
           <ThemeProvider theme={theme}>
+            <Box left='0%' width={'100%'}>
+              <Navbar></Navbar>
+            </Box>
             <SnackBarContext.Provider value={handleSnackBar}>{children}</SnackBarContext.Provider>
           </ThemeProvider>
         </SessionProvider>

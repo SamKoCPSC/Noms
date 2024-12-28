@@ -170,7 +170,6 @@ export default function Create() {
                   instructions: values.instructions,
                   additionalInfo: values.additionalInfo,
                   imageUrls: response.data.imageURLs,
-                  status: 'public'
                 },
                 {
                   headers: {
@@ -280,9 +279,6 @@ export default function Create() {
 
   return (
     <Container>
-      <Box left='0%' width={'100%'}>
-        <Navbar></Navbar>
-      </Box>
       <main className={styles.main}>
         
         <Box width='800px' display={"flex"} flexDirection={'column'}

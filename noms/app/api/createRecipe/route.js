@@ -10,7 +10,7 @@ export async function POST(req, res) {
     const instructions = JSON.stringify(data.instructions)
     const additionalInfo = JSON.stringify(data.additionalInfo)
     const imageUrls = data.imageUrls
-    const status = data.status
+    const status = 'public'
     const ingredients = data.ingredients
     const ingredientNames = ingredients.map(i => `'${i.name}'`).join(", ")
     const ingredientNamesWithBrackets = ingredients.map(i => `('${i.name}')`).join(", ")

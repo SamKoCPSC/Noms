@@ -8,10 +8,25 @@ import RecipeCard from "./components/RecipeCard";
 import {Box, Button, Container, Typography} from "@mui/material";
 import { Dancing_Script } from "next/font/google";
 import { SnackBarContext } from "./layout";
+import axios from "axios";
+import { useEffect } from "react";
 
 const dancingScript = Dancing_Script({subsets: ['latin']})
 
 export default function Home() {
+
+  useEffect(() => {
+    axios.post(
+      '/api/getRecipes',
+      {
+        numOfResults: 10
+      },
+    ).then((response) => {
+      console.log(response.data.result)
+    }).catch((error) => {
+      console.log(error)
+    })
+  }, [])
 
 const recipeData = {
   title: 'Croissant',
@@ -34,10 +49,7 @@ const recipeData = {
 }
   return (
     <Container maxWidth='false' sx={{justifyItems: 'center'}}>
-      <Box left='0%' width={'100%'}>
-        <Navbar position='fixed'></Navbar>
-      </Box>
-      <Typography sx={{marginTop: '50px', fontFamily: dancingScript.style.fontFamily, fontSize: '150px', ":hover": {cursor: 'pointer'}}}>
+      <Typography sx={{marginTop: '75px', fontFamily: dancingScript.style.fontFamily, fontSize: '200px', ":hover": {cursor: 'pointer'}}}>
         NOMS
       </Typography>
       <Box display={'flex'} flexDirection={'row'} flexWrap={'wrap'} sx={{justifyContent: 'center', gap:'20px'}}>
