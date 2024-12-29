@@ -5,12 +5,13 @@ import * as React from 'react';
 import Navbar from "./components/Navbar";
 import Navdrawer from "./components/Navdrawer";
 import RecipeCard from "./components/RecipeCard";
-import {Box, Button, Container, TextField, Typography, InputAdornment} from "@mui/material";
+import {Box, Button, Container, TextField, Typography, InputAdornment, Stack} from "@mui/material";
 import { Dancing_Script } from "next/font/google";
 import { Search } from "@mui/icons-material";
 import { SnackBarContext } from "./layout";
 import axios from "axios";
-import { useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 const dancingScript = Dancing_Script({subsets: ['latin']})
@@ -31,13 +32,14 @@ function formatTimestamp(timestamp) {
 
 export default function Home() {
   const {data: session, status} = useSession()
+  const router = useRouter()
   const [randomRecipes, setRandomRecipes] = React.useState([])
 
   useEffect(() => {
     axios.post(
       '/api/getRecipes',
       {
-        numOfResults: 10
+        numOfResults: 4
       },
     ).then((response) => {
       console.log(response.data.result)
@@ -50,12 +52,18 @@ export default function Home() {
 
   return (
     <Container maxWidth='false' sx={{justifyItems: 'center'}}>
-      <Typography sx={{marginTop: '75px', fontFamily: dancingScript.style.fontFamily, fontSize: '200px', ":hover": {cursor: 'pointer'}}}>
-        NOMS
-      </Typography>
-      <Box display={'flex'} flexDirection={'column'} justifyItems={'center'} gap={'30px'}
-      sx={{marginBottom: '50px', marginTop: '-20px'}}>
-        <Typography sx={{fontSize: '18px'}}>Create, Share, and Manage Your Recipes</Typography>
+      <Box display={'flex'} flexDirection={'column'} alignItems={'center'} gap={'30px'}
+      sx={{
+        marginBottom: '75px', 
+        background: 'linear-gradient(to bottom right, rgb(250, 215, 160), rgb(240, 238, 225))', 
+        width: '100vw', 
+        padding: '75px',
+        clipPath: 'polygon(0 0, 100% 0, 100% 90%, 50% 100%, 0 90%)'
+      }}>
+        <Typography sx={{fontFamily: dancingScript.style.fontFamily, fontSize: '200px', ":hover": {cursor: 'pointer'}}}>
+          NOMS
+        </Typography>
+        <Typography sx={{fontSize: '18px', marginTop: '-75px', marginBottom: '20px'}}>Create, Share, and Manage Your Recipes</Typography>
         <TextField 
           variant="outlined"
           placeholder="Search for recipes"
@@ -72,9 +80,19 @@ export default function Home() {
           sx={{
             '& .MuiOutlinedInput-root': {
               borderRadius: '25px',
-            }
+            },
+            width: '500px'
           }}
         />
+        {status === 'unauthenticated' &&
+          <Button variant="contained" onClick={() => signIn('google')} sx={{borderRadius: '40px', width: '200px', marginTop: '-15px'}}>Login or Sign-up</Button>
+        }
+        {status === 'authenticated' &&
+          <Stack direction={'row'} sx={{marginTop: '-15px'}}>
+            <Button variant="contained" onClick={() => router.push('/create')} sx={{borderRadius: '40px', width: '200px'}}>Create A Recipe</Button>
+            <Button variant="contained" color="secondary" onClick={() => router.push('/create')} sx={{borderRadius: '40px', width: '200px'}}>Go To Your Recipes</Button>
+          </Stack>
+        }
       </Box>
       <Box display={'flex'} flexDirection={'row'} flexWrap={'wrap'} sx={{justifyContent: 'center', gap:'40px'}}>
         {randomRecipes.map((recipe, index) => (
