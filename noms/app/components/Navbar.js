@@ -175,17 +175,19 @@ export default function PrimarySearchAppBar(props) {
     </Menu>
   );
 
+  const contentColor = 'white'
+
   return (
     <Box sx={{ flexGrow: 1 }}>
       <Navdrawer open={isNavdrawerOpen} setOpen={handleNavdrawerOpen}></Navdrawer>
-      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, bgcolor: '#ebebeb', color: 'black' }}>
+      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, bgcolor: 'rgb(93, 64, 55)', color: 'black' }}>
         <Toolbar>
           <IconButton
             size="large"
             edge="start"
             color="inherit" 
             aria-label="open drawer"
-            sx={{ mr: 2 }}
+            sx={{ mr: 2, color: contentColor }}
             onClick={() => {setNavdrawerOpen(true)}}
           >
             <MenuIcon />
@@ -194,17 +196,17 @@ export default function PrimarySearchAppBar(props) {
             variant="h6"
             noWrap
             component="div"
-            sx={{ display: { xs: 'none', sm: 'block', fontFamily: dancingScript.style.fontFamily, ":hover": {cursor: 'pointer'} } }}
+            sx={{ color: contentColor, display: { xs: 'none', sm: 'block', fontFamily: dancingScript.style.fontFamily, ":hover": {cursor: 'pointer'} } }}
             onClick={() => router.push('/')}
           >
             NOMS
           </Typography>
-          <Search>
+          <Search sx={{color: contentColor}}>
             <SearchIconWrapper>
-              <SearchIcon />
+              <SearchIcon sx={{color: contentColor}}/>
             </SearchIconWrapper>
             <StyledInputBase
-              placeholder="Search…"
+              placeholder="Search for recipes"
               inputProps={{ 'aria-label': 'search' }}
             />
           </Search>
@@ -212,7 +214,7 @@ export default function PrimarySearchAppBar(props) {
           <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
             <IconButton size="large" aria-label="show 4 new mails" color="inherit">
               <Badge badgeContent={4} color="error">
-                <MailIcon />
+                <MailIcon sx={{color: contentColor}} />
               </Badge>
             </IconButton>
             <IconButton
@@ -221,7 +223,7 @@ export default function PrimarySearchAppBar(props) {
               color="inherit"
             >
               <Badge badgeContent={17} color="error">
-                <NotificationsIcon />
+                <NotificationsIcon sx={{color: contentColor}}/>
               </Badge>
             </IconButton>
             <IconButton
@@ -233,8 +235,7 @@ export default function PrimarySearchAppBar(props) {
               onClick={handleProfileMenuOpen}
               color="inherit"
             >
-              {user ? <Face/> : <AccountCircle/>}
-              {/* <AccountCircle /> */}
+              {user ? <Face sx={{color: contentColor}}/> : <AccountCircle sx={{color: contentColor}}/>}
             </IconButton>
           </Box>
           <Box sx={{ display: { xs: 'flex', md: 'none' } }}>
