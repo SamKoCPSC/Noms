@@ -79,7 +79,7 @@ const ExpandMore = styled((props) => {
   ],
 }));
 
-export default function RecipeCard({title, description, author, date, ingredients, instructions}) {
+export default function RecipeCard({name, description, author, date, ingredients, imageURL}) {
   const [expanded, setExpanded] = React.useState(false);
   const router = useRouter()
 
@@ -120,13 +120,13 @@ export default function RecipeCard({title, description, author, date, ingredient
         }
         titleTypographyProps={{fontSize:'20px' }}
         subheaderTypographyProps={{fontSize:'12px' }}
-        title={title}
+        title={name}
         subheader={author + ' - ' + date}
       />
       <CardMedia
         component="img"
         height="194"
-        image="https://noms-s3-bucket.s3.us-east-2.amazonaws.com/test.jpg"
+        image={imageURL}
         src='img'
         alt="Image not available"
       />

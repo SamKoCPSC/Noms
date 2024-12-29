@@ -98,14 +98,12 @@ export default function Home() {
         {randomRecipes.map((recipe, index) => (
           <RecipeCard 
             key={index}
-            title={recipe.name}
+            name={recipe.name}
             description={recipe.description}
             author={recipe.author}
             date={formatTimestamp(recipe.datecreated)}
             ingredients={recipe.ingredients}
-            instructions={recipe.instructions}
-            additionalInfo={recipe.additionalInfo}
-            imageURLs={recipe.imageurls}
+            imageURL={recipe.imageurls[0]}
           >
           </RecipeCard>
         ))}
