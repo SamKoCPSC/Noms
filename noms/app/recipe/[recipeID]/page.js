@@ -1,7 +1,7 @@
 'use client'
 
 import { Box, Container, Typography } from "@mui/material"
-import Navbar from '../components/Navbar'
+import Navbar from '../../components/Navbar'
 
 export default function Recipe() {
     const recipeData = {

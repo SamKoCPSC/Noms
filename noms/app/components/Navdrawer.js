@@ -12,6 +12,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import InboxIcon from '@mui/icons-material/MoveToInbox';
 import MailIcon from '@mui/icons-material/Mail';
+import { Create, CollectionsBookmark } from '@mui/icons-material';
 
 export default function TemporaryDrawer(props) {
   const [open, setOpen] = React.useState(false);
@@ -22,32 +23,27 @@ export default function TemporaryDrawer(props) {
     setOpen(newOpen);
   };
 
+  const drawerItemList = [
+    {label: 'Create A Recipe', link: '/create', icon: <Create/>, divider: true},
+    {label: 'My Recipes', link: '/', icon: <CollectionsBookmark/>}
+  ]
+
   const DrawerList = (
     <Box sx={{ width: 250 }} role="presentation" onClick={props.setOpen}>
       <Box height={'56px'}></Box>  
       <List>
-        {['Create A Recipe'].map((text, index) => (
-          <ListItem key={text} disablePadding>
-            <ListItemButton onClick={() => router.push(`/${['create'][index]}`)}>
-              <ListItemIcon>
-                {index % 2 === 0 ? <InboxIcon /> : <MailIcon />}
-              </ListItemIcon>
-              <ListItemText primary={text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-      <Divider />
-      <List>
-        {['My Recipes'].map((text, index) => (
-          <ListItem key={text} disablePadding>
-            <ListItemButton>
-              <ListItemIcon>
-                {index % 2 === 0 ? <InboxIcon /> : <MailIcon />}
-              </ListItemIcon>
-              <ListItemText primary={text} />
-            </ListItemButton>
-          </ListItem>
+        {drawerItemList.map((drawerItem) => (
+          <Box key={drawerItem.label}>
+            <ListItem disablePadding>
+              <ListItemButton onClick={() => router.push(`${drawerItem.link}`)}>
+                <ListItemIcon>
+                  {drawerItem.icon}
+                </ListItemIcon>
+                <ListItemText primary={drawerItem.label} />
+              </ListItemButton>
+            </ListItem>
+            {drawerItem.divider && <Divider/>}
+          </Box>
         ))}
       </List>
     </Box>
