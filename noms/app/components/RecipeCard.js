@@ -79,7 +79,7 @@ const ExpandMore = styled((props) => {
   ],
 }));
 
-export default function RecipeCard({name, description, author, date, ingredients, imageURL}) {
+export default function RecipeCard({id, name, description, author, date, ingredients, imageURL}) {
   const [expanded, setExpanded] = React.useState(false);
   const router = useRouter()
 
@@ -105,7 +105,7 @@ export default function RecipeCard({name, description, author, date, ingredients
     }}
     // onMouseEnter={() => {setMouseHover(true)}}
     // onMouseLeave={() => {setMouseHover(false)}}
-    onClick = {() => router.push('/recipe')}
+    onClick = {() => router.push(`/recipe/${id}`)}
   >
       <CardHeader
         avatar={

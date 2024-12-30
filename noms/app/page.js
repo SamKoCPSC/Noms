@@ -42,11 +42,26 @@ export default function Home() {
         numOfResults: 4
       },
     ).then((response) => {
-      console.log(response.data.result)
       setRandomRecipes(response.data.result)
     }).catch((error) => {
       console.log(error)
     })
+    const test = fetch(
+      `/api/getRecipe?id=1`
+    ).then((response) => {
+        if(!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`)
+        }
+        return response.json()
+    }).then((data) => {
+        console.log(data.result)
+        return data
+    })
+    .catch((error) => {
+        console.error(error)
+        return {message: 'error'}
+    })
+  console.log(test)
   }, [])
 
 
@@ -98,6 +113,7 @@ export default function Home() {
         {randomRecipes.map((recipe, index) => (
           <RecipeCard 
             key={index}
+            id={recipe.id}
             name={recipe.name}
             description={recipe.description}
             author={recipe.author}
