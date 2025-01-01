@@ -13,6 +13,7 @@ import axios from "axios";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import Carousel from "./components/Carousel";
 
 const dancingScript = Dancing_Script({subsets: ['latin']})
 

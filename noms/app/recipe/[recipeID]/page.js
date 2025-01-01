@@ -1,8 +1,5 @@
-import axios from "axios";
-
-import { Box, Container, Typography } from "@mui/material"
-import Navbar from '../../components/Navbar'
-import { ReceiptOutlined } from "@mui/icons-material";
+import Carousel from "@/app/components/Carousel";
+import { Box, Container, Divider, Typography } from "@mui/material"
 
 export async function generateStaticParams() {
     const recipeIDs = ['1']
@@ -33,45 +30,99 @@ async function getRecipeData(id) {
 export default async function Recipe({ params }) {
     const recipeData = await getRecipeData(params.recipeID)
 
+    const textStyle = {
+        recipeTitleSize: '4.5rem',
+        sectionTitleSize: '3.125rem',
+        listItemSize: '2rem',
+        paragraphSize: '1.25rem'
+    }
+
     return (
         <Container
             sx={{
             marginTop: '65px',
             width: '70%',
             justifyItems: 'center',
-            backgroundColor: '#d1d1d1'
             }}
         >
-            <Navbar></Navbar>
-            <Typography sx={{justifySelf: 'center', fontSize: '50px'}}>{recipeData.name}</Typography>
-            <Typography sx={{justifySelf: 'center', fontSize: '20px'}}>{recipeData.description}</Typography>
-            <Box 
-                component={'img'}
-                sx={{
-                    height: 400,
-                    width: 725,
-                }}
-                alt="Croissant"
-                src={recipeData.imageurls[0]}
-            >
-            </Box>
-            <Typography sx={{justifySelf: 'left', fontSize: '35px'}}>Ingredients</Typography>
-            {recipeData.ingredients?.map((ingredient) => {
-                return <Typography sx={{justifySelf: 'left', fontSize: '20px'}}>{ingredient.quantity}{ingredient.unit} {ingredient.name}</Typography>
-            })}
-            <Typography sx={{justifySelf: 'left', fontSize: '35px'}}>Instructions</Typography>
-            {recipeData.instructions?.map((instruction) => {
+            <Divider sx={{marginY: '30px', width: '100%'}}/>
+            <Divider sx={{marginTop: '30px', width: '100%'}}/>
+            <Typography sx={{justifySelf: 'center', fontSize: textStyle.recipeTitleSize}}>{recipeData.name}</Typography>
+            <Typography sx={{justifySelf: 'center', fontSize: textStyle.paragraphSize, textAlign: 'center'}}>{recipeData.description}</Typography>
+            <Divider sx={{marginY: '30px', width: '100%'}}/>
+            <Carousel 
+            slides={recipeData.imageurls.map((imageurl, index) => {
                 return (
-                    <Box sx={{justifySelf: 'left'}}>
-                        <Typography sx={{justifySelf: 'left', fontSize: '25px'}}>
+                    <Box 
+                        key={index}
+                        component={'img'}
+                        alt="image"
+                        src={imageurl}
+                        height='90%'
+                    /> 
+                )
+            })}
+            slidesPerView={1}
+            height='500px'
+            />
+            <Box 
+            sx={{
+                backgroundColor: 'white', 
+                width: '100%', 
+                padding: '20px',
+                marginTop: '30px',
+                borderRadius: '30px',
+                borderColor: 'rgb(230, 228, 215)',
+                borderStyle: 'solid',
+                borderWidth: 2,
+                boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
+            }}>
+            <Typography sx={{justifySelf: 'left', fontSize: textStyle.sectionTitleSize}}>Ingredients</Typography>
+            {recipeData.ingredients?.map((ingredient, index) => {
+                return <Typography key={index} sx={{justifySelf: 'left', fontSize: textStyle.paragraphSize, marginBottom: '5px'}}>{ingredient.quantity}{ingredient.unit} {ingredient.name}</Typography>
+            })}
+            </Box>
+            <Box
+            sx={{
+                backgroundColor: 'white', 
+                width: '100%', 
+                padding: '20px',
+                marginTop: '30px',
+                borderRadius: '30px',
+                borderColor: 'rgb(230, 228, 215)',
+                borderStyle: 'solid',
+                borderWidth: 2,
+                boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
+            }}>
+            <Typography sx={{justifySelf: 'left', fontSize: textStyle.sectionTitleSize}}>Instructions</Typography>
+            {recipeData.instructions?.map((instruction, index) => {
+                return (
+                    <Box key={index} display={'flex'} flexDirection={'column'} sx={{justifySelf: 'left'}}>
+                        <Typography sx={{justifySelf: 'left', fontSize: textStyle.listItemSize}}>
                             {instruction.title}
                         </Typography>
-                        <Typography sx={{justifySelf: 'left', fontSize: '16px'}}>
+                        <Typography sx={{justifySelf: 'left', fontSize: textStyle.paragraphSize, marginBottom: '15px'}}>
                             {instruction.instruction}
                         </Typography>
                     </Box>
                 )
             })} 
+            </Box>
+            <Divider sx={{marginY: '30px', width: '100%'}}/>
+            <Typography sx={{justifySelf: 'left', fontSize: textStyle.sectionTitleSize}}>Additional Info</Typography>
+            {recipeData.additionalinfo?.map((info, index) => {
+                return (
+                    <Box key={index} display={'flex'} flexDirection={'column'} sx={{justifySelf: 'left'}}>
+                        <Typography sx={{justifySelf: 'left', fontSize: textStyle.listItemSize}}>
+                            {info.title}
+                        </Typography>
+                        <Typography sx={{justifySelf: 'left', fontSize: textStyle.paragraphSize, marginBottom: '15px'}}>
+                            {info.info}
+                        </Typography>
+                    </Box>
+                )
+            })} 
+            <Divider sx={{marginY: '30px', width: '100%'}}/>
         </Container>
     )
 }
