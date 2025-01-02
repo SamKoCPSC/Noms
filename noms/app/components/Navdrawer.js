@@ -25,7 +25,7 @@ export default function TemporaryDrawer(props) {
 
   const drawerItemList = [
     {label: 'Create A Recipe', link: '/create', icon: <Create/>, divider: true},
-    {label: 'My Recipes', link: '/', icon: <CollectionsBookmark/>}
+    {label: 'My Recipes', link: '/myRecipes/1', icon: <CollectionsBookmark/>}
   ]
 
   const DrawerList = (

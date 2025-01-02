@@ -21,6 +21,8 @@ import MoreIcon from '@mui/icons-material/MoreVert';
 import { Dancing_Script } from "next/font/google";
 import { signIn, signOut, useSession } from "next-auth/react"
 import Navdrawer from './Navdrawer'
+import { Avatar } from '@mui/material';
+import theme from '../theme';
 
 
 const dancingScript = Dancing_Script({subsets: ['latin']})
@@ -188,7 +190,7 @@ export default function PrimarySearchAppBar(props) {
             color="inherit" 
             aria-label="open drawer"
             sx={{ mr: 2, color: contentColor }}
-            onClick={() => {setNavdrawerOpen(true)}}
+            onClick={() => {handleNavdrawerOpen()}}
           >
             <MenuIcon />
           </IconButton>
@@ -212,7 +214,7 @@ export default function PrimarySearchAppBar(props) {
           </Search>
           <Box sx={{ flexGrow: 1 }} />
           <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
-            <IconButton size="large" aria-label="show 4 new mails" color="inherit">
+            {/* <IconButton size="large" aria-label="show 4 new mails" color="inherit">
               <Badge badgeContent={4} color="error">
                 <MailIcon sx={{color: contentColor}} />
               </Badge>
@@ -225,7 +227,7 @@ export default function PrimarySearchAppBar(props) {
               <Badge badgeContent={17} color="error">
                 <NotificationsIcon sx={{color: contentColor}}/>
               </Badge>
-            </IconButton>
+            </IconButton> */}
             <IconButton
               size="large"
               edge="end"
@@ -235,7 +237,7 @@ export default function PrimarySearchAppBar(props) {
               onClick={handleProfileMenuOpen}
               color="inherit"
             >
-              {user ? <Face sx={{color: contentColor}}/> : <AccountCircle sx={{color: contentColor}}/>}
+              {user ? <Avatar sx={{bgcolor: theme.palette.primary.main}}>{user.firstName.charAt(0)+user.lastName.charAt(0)}</Avatar> : <AccountCircle sx={{color: contentColor}}/>}
             </IconButton>
           </Box>
           <Box sx={{ display: { xs: 'flex', md: 'none' } }}>

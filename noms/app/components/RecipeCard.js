@@ -1,3 +1,4 @@
+'use client'
 import * as React from 'react';
 import { styled } from '@mui/material/styles';
 import Card from '@mui/material/Card';
@@ -94,6 +95,10 @@ export default function RecipeCard({id, name, description, author, date, ingredi
       width: '350px',
       height: '420px',
       backgroundColor: 'white',
+      borderColor: 'rgb(230, 228, 215)',
+      borderStyle: 'solid',
+      borderWidth: 2,
+      boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
       borderRadius: '25px',
       animation: `${shadowUnPopBr} 0.15s ease-out both`,
       "&:hover": {

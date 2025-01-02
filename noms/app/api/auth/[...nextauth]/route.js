@@ -37,6 +37,12 @@ export const authOptions = {
           return false
         }
       },
+      async session({ session, token, user }) {
+        // Use given_name and family_name if you want structured data
+        session.user.firstName = token.given_name || session.user.name?.split(" ")[0];
+        session.user.lastName = token.family_name || session.user.name?.split(" ")[1] || "";
+        return session;
+      },
     },
 }
 

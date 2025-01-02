@@ -3,8 +3,6 @@ import { Box, Container, Divider, Typography } from "@mui/material"
 
 export async function generateStaticParams() {
     const recipeIDs = ['1']
-  
-    // Return an array of params objects
     return recipeIDs.map((id) => {
       return {recipeID: id}
     });
@@ -109,7 +107,6 @@ export default async function Recipe({ params }) {
             })} 
             </Box>
             <Divider sx={{marginY: '30px', width: '100%'}}/>
-            <Typography sx={{justifySelf: 'left', fontSize: textStyle.sectionTitleSize}}>Additional Info</Typography>
             {recipeData.additionalinfo?.map((info, index) => {
                 return (
                     <Box key={index} display={'flex'} flexDirection={'column'} sx={{justifySelf: 'left'}}>
