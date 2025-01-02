@@ -12,7 +12,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import InboxIcon from '@mui/icons-material/MoveToInbox';
 import MailIcon from '@mui/icons-material/Mail';
-import { Create, CollectionsBookmark } from '@mui/icons-material';
+import { Create, CollectionsBookmark, AccountBox } from '@mui/icons-material';
 
 export default function TemporaryDrawer(props) {
   const [open, setOpen] = React.useState(false);
@@ -25,7 +25,8 @@ export default function TemporaryDrawer(props) {
 
   const drawerItemList = [
     {label: 'Create A Recipe', link: '/create', icon: <Create/>, divider: true},
-    {label: 'My Recipes', link: '/myRecipes/1', icon: <CollectionsBookmark/>}
+    {label: 'My Recipes', link: '/myRecipes/1', icon: <CollectionsBookmark/>},
+    {label: 'Account', link: '/account/1', icon: <AccountBox/>}
   ]
 
   const DrawerList = (
