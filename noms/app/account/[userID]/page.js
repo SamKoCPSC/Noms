@@ -1,4 +1,5 @@
 import { Typography, Container, Box, Divider } from "@mui/material";
+import { styled } from "@mui/material";
 
 export async function generateStaticParams() {
     const userIDs = ['1']
@@ -39,7 +40,7 @@ function formatTimestamp(timestamp) {
 }
 
 export default async function({ params }) {
-    const userData = await getUserData(params.id)
+    const userData = await getUserData(params.userID)
 
     const textStyle = {
         recipeTitleSize: '4.5rem',
@@ -62,14 +63,22 @@ export default async function({ params }) {
                     padding: '40px'
                     }}
                 > 
-                <Typography fontSize={'60px'}>Profile</Typography>
+                <Typography fontSize={'4rem'}>Your Account</Typography>
                 <Divider sx={{marginY: '30px'}}/>
-                <Typography fontSize='1.375rem'>Name: {userData.name}</Typography>
-                <Typography fontSize='1.375rem'>Email: {userData.email}</Typography>
-                <Typography fontSize='1.375rem'>User ID: {userData.id}</Typography>
-                <Typography fontSize='1.375rem'>Account Created: {userData.datecreated}</Typography>
-                <Typography fontSize='1.375rem'>Headline</Typography>
-                <Typography fontSize='1.375rem'>Bio</Typography>
+                <Typography sx={{fontSize: '0.68rem', color: 'gray'}}>Your display name which appears on your public profile and can be changed at any time</Typography>
+                <Typography fontSize='1.5rem'>Name: {userData.name}</Typography>
+                <Divider sx={{marginTop: '30px'}}/>
+                <Typography fontSize='2rem' >Account Information</Typography>
+                <Typography sx={{fontSize: '0.68rem', color: 'gray', marginBottom: '15px'}}>Emails and User IDs are unique identifiers for your account and cannot be changed</Typography>
+                <Typography fontSize='1.5rem'>Email: {userData.email}</Typography>
+                <Typography fontSize='1.5rem'>User ID: {userData.id}</Typography>
+                <Typography fontSize='1.5rem'>Account Created: {formatTimestamp(userData.datecreated)}</Typography>
+                <Divider sx={{marginTop: '30px'}}/>
+                <Typography fontSize='2rem' >Profile</Typography>
+                <Typography sx={{fontSize: '0.68rem', color: 'gray', marginBottom: '15px'}}>Content that appears on your public profile page</Typography>
+                <Typography fontSize='1.5rem'>Image</Typography>
+                <Typography fontSize='1.5rem'>Headline</Typography>
+                <Typography fontSize='1.5rem'>Bio</Typography>
                 </Box>
             </Box>
         </Container>

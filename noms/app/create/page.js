@@ -77,8 +77,17 @@ export default function Create() {
       unit: Yup.string().required('Unit of measurement is required')
     }),
     onSubmit: (values, actions) => {
-        setIngredients([...ingredients, {quantity: values.quantity, unit: values.unit, name: values.name}])
-        recipeFormik.setFieldValue("ingredients", [...ingredients, {quantity: values.quantity, unit: values.unit, name: values.name}])
+        const indexSelected = selectedIngredients.indexOf(true)
+        const newIngredient = {quantity: values.quantity, unit: values.unit, name: values.name}
+        let newArray
+        if(indexSelected === -1) {
+          newArray = [...ingredients, newIngredient]
+        } else {
+          newArray = [...ingredients.slice(0,indexSelected), newIngredient, ...ingredients.slice(indexSelected+1)]
+          setSelectedIngredients([...selectedIngredients.slice(0,indexSelected), false, ...selectedIngredients.slice(indexSelected+1)])
+        }
+        setIngredients(newArray)
+        recipeFormik.setFieldValue("ingredients", newArray)
         setIngredientAttempted(false)
         ingredientFormik.resetForm()
     }
@@ -95,8 +104,17 @@ export default function Create() {
       instruction: Yup.string().required('Instruction details are required')
     }),
     onSubmit: (values, actions) => {
-      setInstructions([...instructions, {title: values.title, instruction: values.instruction}])
-      recipeFormik.setFieldValue('instructions', [...instructions, {title: values.title, instruction: values.instruction}])
+      const indexSelected = selectedInstructions.indexOf(true)
+      const newInstruction = {title: values.title, instruction: values.instruction}
+      let newArray
+      if(indexSelected === -1) {
+        newArray = [...instructions, newInstruction]
+      } else {
+        newArray = [...instructions.slice(0,indexSelected), newInstruction, ...instructions.slice(indexSelected+1)]
+        setSelectedInstructions([...selectedInstructions.slice(0,indexSelected), false, ...selectedInstructions.slice(indexSelected+1)])
+      }
+      setInstructions(newArray)
+      recipeFormik.setFieldValue('instructions', newArray)
       setInstructionAttempted(false)
       instructionsFormik.resetForm()
     },
@@ -112,8 +130,17 @@ export default function Create() {
       info: Yup.string().required('Details is required')
     }),
     onSubmit: (values, actions) => {
-      setAdditionalInfo([...additionalInfo, {title: values.title, info: values.info}])
-      recipeFormik.setFieldValue('additionalInfo', [...additionalInfo, {title: values.title, info: values.info}])
+      const indexSelected = selectedInfo.indexOf(true)
+      const newInfo = {title: values.title, info: values.info}
+      let newArray
+      if(indexSelected === -1) {
+        newArray = [...additionalInfo, newInfo]
+      } else {
+        newArray = [...additionalInfo.slice(0,indexSelected), newInfo, ...additionalInfo.slice(indexSelected+1)]
+        setSelectedInfo([...selectedInfo.slice(0,indexSelected), false, ...selectedInfo.slice(indexSelected+1)])
+      }
+      setAdditionalInfo(newArray)
+      recipeFormik.setFieldValue('additionalInfo', newArray)
       setAdditionalInfoAttempted(false)
       additionalInfoFormik.resetForm()
     },
@@ -277,6 +304,16 @@ export default function Create() {
     setSelectedItems(newSelected)
   }
 
+  const handleModifyItems = (items, selectedItems, setAddItemMode, formik) => {
+    const indexOfSelected = selectedItems.indexOf(true)
+    if(indexOfSelected !== -1) {
+      setAddItemMode(true)
+      Object.keys(formik.values).forEach((key) => {
+        formik.setFieldValue(key, items[indexOfSelected][key])
+      })
+    }
+  }
+
   return (
     <Container>
       <main className={styles.main}>
@@ -413,6 +450,7 @@ export default function Create() {
                     <Button variant="contained" color="error" onClick={() => handleDeleteItems(ingredients, selectedIngredients, setIngredients, setSelectedIngredients, "ingredients")}>Delete</Button>
                     <Button variant="contained" color="info" onClick={() => handleMoveUpItems(ingredients, selectedIngredients, setIngredients, setSelectedIngredients, "ingredients")}>Move Up</Button>
                     <Button variant="contained" color="info" onClick={() => handleMoveDownItems(ingredients, selectedIngredients, setIngredients, setSelectedIngredients, "ingredients")}>Move Down</Button>
+                    <Button variant="contained" color="secondary" onClick={() => {handleModifyItems(ingredients, selectedIngredients, setAddIngredientMode, ingredientFormik)}}>Modify</Button>
                     <Button variant="contained" color="primary" onClick={() => handleEditItemMode(ingredients, editIngredientMode, setSelectedIngredients, setEditIngredientMode)}>Done</Button>
                   </Box>:
                   <Box>
@@ -505,6 +543,7 @@ export default function Create() {
                       <Button variant="contained" color="error" onClick={() => handleDeleteItems(instructions, selectedInstructions, setInstructions, setSelectedInstructions, "instructions")}>Delete</Button>
                       <Button variant="contained" color="info" onClick={() => handleMoveUpItems(instructions, selectedInstructions, setInstructions, setSelectedInstructions, "instructions")}>Move Up</Button>
                       <Button variant="contained" color="info" onClick={() => handleMoveDownItems(instructions, selectedInstructions, setInstructions, setSelectedInstructions, "instructions")}>Move Down</Button>
+                      <Button variant="contained" color="secondary" onClick={() => {handleModifyItems(instructions, selectedInstructions, setAddInstructionMode, instructionsFormik)}}>Modify</Button>
                       <Button variant="contained" color="primary" onClick={() => handleEditItemMode(instructions, editInstructionMode, setSelectedInstructions, setEditInstructionMode)}>Done</Button>
                     </Box>:
                     <Box>
@@ -598,6 +637,7 @@ export default function Create() {
                       <Button variant="contained" color="error" onClick={() => handleDeleteItems(additionalInfo, selectedInfo, setAdditionalInfo, setSelectedInfo, "additionalInfo")}>Delete</Button>
                       <Button variant="contained" color="info" onClick={() => handleMoveUpItems(additionalInfo, selectedInfo, setAdditionalInfo, setSelectedInfo, "additionalInfo")}>Move Up</Button>
                       <Button variant="contained" color="info" onClick={() => handleMoveDownItems(additionalInfo, selectedInfo, setAdditionalInfo, setSelectedInfo, "additionalInfo")}>Move Down</Button>
+                      <Button variant="contained" color="secondary" onClick={() => {handleModifyItems(additionalInfo, selectedInfo, setAddInfoMode, additionalInfoFormik)}}>Modify</Button>
                       <Button variant="contained" color="primary" onClick={() => handleEditItemMode(additionalInfo, editInfoMode, setSelectedInfo, setEditInfoMode)}>Done</Button>
                     </Box>:
                     <Box>
