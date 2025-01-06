@@ -197,6 +197,7 @@ export default function Create() {
                   instructions: values.instructions,
                   additionalInfo: values.additionalInfo,
                   imageUrls: response.data.imageURLs,
+                  status: 'public',
                 },
                 {
                   headers: {
@@ -217,14 +218,121 @@ export default function Create() {
       })
     }
   })
+  
+  const handleSave = async () => {
+    const values = recipeFormik.values
+    let imageData = images.map((image) => {
+      const formData = new FormData()
+      formData.append('file', image);
+      return formData;
+    })
+    let imageURLs
+    let noImageUploadErrors = true
+    if(imageData.length > 0) {
+      axios.get(
+        '/api/presignedURL', {
+            params: {
+            recipeName: recipeFormik.values.name || 'untitled',
+            fileNames: imageData.map((image) => {return image.get('file').name})
+          }
+        },
+      ).then((response) => {
+        Promise.all(response.data.presignedURLs.map((presignedURL, index) => {
+          axios.put(
+            presignedURL,
+            imageData[index].get('file'),
+            {
+              headers: {
+                "Content-Type": "image/jpeg"
+              }
+            }
+          )
+        })).then(() => {
+          imageURLs = response.data.imageURLs
+        }).catch(() => {
+          handleSnackBar('One or more images failed to upload', theme.palette.error.main)
+          noImageUploadErrors = false
+        })  
+      }).catch(() => {
+        handleSnackBar('Failed to authorize image upload', theme.palette.error.main)
+        noImageUploadErrors = false
+      })
+    } 
+    if(noImageUploadErrors) {
+      axios.post(
+        '/api/createRecipe',
+        {
+          name: values.name,
+          description: values.description,
+          ingredients: values.ingredients,
+          instructions: values.instructions,
+          additionalInfo: values.additionalInfo,
+          imageUrls: imageURLs,
+          status: 'draft',
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      ).then(() => {
+        router.push('/')
+        handleSnackBar('Recipe has been successfully saved!', theme.palette.success.main)
+      }).catch(() => {
+        handleSnackBar('Failed to save recipe', theme.palette.error.main)
+      })
+    }
+    //////
+    // axios.get(
+    //   '/api/presignedURL', {
+    //       params: {
+    //       recipeName: recipeFormik.values.name,
+    //       fileNames: imageData.map((image) => {return image.get('file').name})
+    //     }
+    //   },
+    // ).then((response) => {
+    //     Promise.all(response.data.presignedURLs.map((presignedURL, index) => {
+    //       axios.put(
+    //         presignedURL,
+    //         imageData[index].get('file'),
+    //         {
+    //           headers: {
+    //             "Content-Type": "image/jpeg"
+    //           }
+    //         }
+    //       )
+    //     })).then(() => {
+    //         axios.post(
+    //           '/api/createRecipe',
+    //           {
+    //             name: values.name,
+    //             description: values.description,
+    //             ingredients: values.ingredients,
+    //             instructions: values.instructions,
+    //             additionalInfo: values.additionalInfo,
+    //             imageUrls: response.data.imageURLs,
+    //             status: 'public',
+    //           },
+    //           {
+    //             headers: {
+    //               'Content-Type': 'application/json',
+    //             }
+    //           }
+    //         ).then(() => {
+    //           router.push('/')
+    //           handleSnackBar('Recipe has been successfully created!', theme.palette.success.main)
+    //         }).catch(() => {
+    //           handleSnackBar('Failed to create recipe', theme.palette.error.main)
+    //         })
+    //     }).catch(() => {
+    //       handleSnackBar('One or more images failed to upload', theme.palette.error.main)
+    //     })        
+    // }).catch(() => {
+    //     handleSnackBar('Failed to authorize image upload', theme.palette.error.main)
+    // })
+  }
 
   const handleAddImages = (event) => {
-    // const previewURLs = [...event.target.files].map((file) => {
-    //   if(file) {
-    //     return URL.createObjectURL(file);
-    //   }
-    // })
-    // setImages([...images, ...previewURLs])
     setImages([...images, ...Array.from(event.target.files)])
     recipeFormik.setFieldValue("images", [...images, ...Array.from(event.target.files)])
   }
@@ -724,8 +832,8 @@ export default function Create() {
             </Stack>
           }
           <Stack direction={'row'} sx={{justifyContent: 'end'}}>
-            <Button variant="contained" color="error" sx={{top: '30px'}}>Cancel</Button>
-            <Button variant="contained" color="secondary" sx={{top: '30px'}}>Save</Button>
+            <Button variant="contained" color="error" sx={{top: '30px'}} onClick={() => router.push('/')}>Cancel</Button>
+            <Button variant="contained" color="secondary" sx={{top: '30px'}} onClick={() => handleSave()}>Save</Button>
             <Button disabled={status !== "authenticated" || (isSubmitAttempted && Object.keys(recipeFormik.errors).length > 0)} variant="contained" sx={{top: '30px'}} 
               onClick={() => {
                 setSubmitAttempted(true)

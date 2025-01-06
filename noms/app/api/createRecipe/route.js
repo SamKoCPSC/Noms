@@ -10,7 +10,7 @@ export async function POST(req, res) {
     const instructions = JSON.stringify(data.instructions)
     const additionalInfo = JSON.stringify(data.additionalInfo)
     const imageUrls = data.imageUrls
-    const status = 'public'
+    const status = data.status
     const ingredients = data.ingredients
     const ingredientNames = ingredients.map(i => `'${i.name}'`).join(", ")
     const ingredientNamesWithBrackets = ingredients.map(i => `('${i.name}')`).join(", ")
@@ -19,7 +19,8 @@ export async function POST(req, res) {
     return axios.post(
         process.env.LAMBDA_API_URL,
         {
-            sql: `
+            sql: ingredients.length > 0 ? 
+                `
                 WITH newRecipe AS (
                     INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status)
                     VALUES (%s, %s, %s, (SELECT id FROM users WHERE email=%s LIMIT 1), %s, %s, %s)
@@ -54,7 +55,12 @@ export async function POST(req, res) {
                         ${ingredientUnitsCase}
                     END AS unit
                 FROM newRecipe, allIngredients
-            `,
+                ` 
+                :
+                `
+                INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status)
+                VALUES (%s, %s, %s, (SELECT id FROM users WHERE email=%s LIMIT 1), %s, %s, %s)
+                `,
             values: [name, description, instructions, session.user.email, additionalInfo, imageUrls, status]
         },
         {
