@@ -40,7 +40,7 @@ export default function Home() {
     axios.post(
       '/api/getRecipes',
       {
-        numOfResults: 4
+        numOfResults: 8
       },
     ).then((response) => {
       setRandomRecipes(response.data.result)

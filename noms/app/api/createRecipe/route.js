@@ -70,6 +70,7 @@ export async function POST(req, res) {
             }
         }
     ).then((response) => {
+        // res.revalidate('/myRecipes/1')
         return Response.json(
             response.data,
             {status: response.status}
