@@ -1,6 +1,7 @@
 import axios from "axios"
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
+import { revalidatePath } from "next/cache";
 
 export async function POST(req, res) {
     const session = await getServerSession(authOptions)
@@ -70,7 +71,7 @@ export async function POST(req, res) {
             }
         }
     ).then((response) => {
-        // res.revalidate('/myRecipes/1')
+        revalidatePath('/myRecipes/1')
         return Response.json(
             response.data,
             {status: response.status}
