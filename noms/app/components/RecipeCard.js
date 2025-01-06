@@ -124,7 +124,7 @@ export default function RecipeCard({id, name, description, author, date, ingredi
         }
         titleTypographyProps={{fontSize:'20px' }}
         subheaderTypographyProps={{fontSize:'12px' }}
-        title={name}
+        title={name || 'untitled'}
         subheader={author + ' - ' + date}
       />
       <CardMedia
@@ -132,11 +132,11 @@ export default function RecipeCard({id, name, description, author, date, ingredi
         height="194"
         image={imageURL}
         src='img'
-        alt="Image not available"
+        alt="No Image"
       />
       <CardContent>
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          {description.substring(0,175)}{description.length >= 175 ? "..." : ""}
+          {description?.substring(0,175)}{description?.length >= 175 ? "..." : ""}
         </Typography>
       </CardContent>
       <CardActions disableSpacing>
