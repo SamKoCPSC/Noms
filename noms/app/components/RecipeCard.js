@@ -18,6 +18,7 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { ThumbUp } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { keyframes } from '@mui/material/styles';
+import theme from '../theme';
 
 const shadowPopBr = keyframes`
     0% {
@@ -114,9 +115,7 @@ export default function RecipeCard({id, name, description, author, date, ingredi
   >
       <CardHeader
         avatar={
-          <Avatar sx={{ bgcolor: red[500] }} aria-label="recipe">
-            R
-          </Avatar>
+          <Avatar sx={{bgcolor: theme.palette.primary.main}}>{author.charAt(0)+author.split(' ')[1]?.charAt(0)}</Avatar>
         }
         action={
           <IconButton aria-label="settings">

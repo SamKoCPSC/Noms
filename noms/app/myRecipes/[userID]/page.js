@@ -1,5 +1,8 @@
 import RecipeCard from "@/app/components/RecipeCard";
 import { Container, Typography, Box } from "@mui/material";
+import AccessDenied from "@/app/components/AccessDenied";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function generateStaticParams() {
     const userIDs = ['1']
@@ -41,12 +44,19 @@ function formatTimestamp(timestamp) {
 
 export default async function({ params }) {
     const userRecipes = await getUserRecipeData(params.userID)
+    const session = await getServerSession(authOptions)
 
     const textStyle = {
         recipeTitleSize: '4.5rem',
         sectionTitleSize: '3.125rem',
         listItemSize: '2rem',
         paragraphSize: '1.25rem'
+    }
+
+    if(!session || userRecipes[0].email !== session.user.email) {
+        return (
+            <AccessDenied/>
+        )
     }
 
     return(

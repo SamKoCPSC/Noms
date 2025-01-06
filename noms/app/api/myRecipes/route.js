@@ -15,7 +15,8 @@ export async function GET(req, res) {
                     r.additionalinfo,
                     r.imageurls,
                     r.status,
-                    u.name AS author
+                    u.name AS author,
+                    u.email
                 FROM 
                     recipes r
                 JOIN 

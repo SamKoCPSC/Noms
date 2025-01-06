@@ -1,5 +1,8 @@
 import { Typography, Container, Box, Divider } from "@mui/material";
+import AccessDenied from "@/app/components/AccessDenied";
 import { styled } from "@mui/material";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function generateStaticParams() {
     const userIDs = ['1']
@@ -41,6 +44,7 @@ function formatTimestamp(timestamp) {
 
 export default async function({ params }) {
     const userData = await getUserData(params.userID)
+    const session = await getServerSession(authOptions)
 
     const textStyle = {
         recipeTitleSize: '4.5rem',
@@ -48,6 +52,13 @@ export default async function({ params }) {
         listItemSize: '2rem',
         paragraphSize: '1.25rem'
     }
+
+    if(!session || userData.email !==  session.user.email) {
+        return (
+            <AccessDenied/>
+        )
+    }
+
     return (
         <Container maxWidth='false' sx={{justifyItems: 'center', width: '70%'}}>
             <Box display={'flex'} flexDirection={'column'} flexWrap={'wrap'} sx={{width: '100%',alignItems: 'center', gap:'40px', marginTop: '100px'}}>
@@ -67,13 +78,13 @@ export default async function({ params }) {
                 <Divider sx={{marginY: '30px'}}/>
                 <Typography sx={{fontSize: '0.68rem', color: 'gray'}}>Your display name which appears on your public profile and can be changed at any time</Typography>
                 <Typography fontSize='1.5rem'>Name: {userData.name}</Typography>
-                <Divider sx={{marginTop: '30px'}}/>
+                <Divider sx={{marginY: '30px'}}/>
                 <Typography fontSize='2rem' >Account Information</Typography>
                 <Typography sx={{fontSize: '0.68rem', color: 'gray', marginBottom: '15px'}}>Emails and User IDs are unique identifiers for your account and cannot be changed</Typography>
                 <Typography fontSize='1.5rem'>Email: {userData.email}</Typography>
                 <Typography fontSize='1.5rem'>User ID: {userData.id}</Typography>
                 <Typography fontSize='1.5rem'>Account Created: {formatTimestamp(userData.datecreated)}</Typography>
-                <Divider sx={{marginTop: '30px'}}/>
+                <Divider sx={{marginY: '30px'}}/>
                 <Typography fontSize='2rem' >Profile</Typography>
                 <Typography sx={{fontSize: '0.68rem', color: 'gray', marginBottom: '15px'}}>Content that appears on your public profile page</Typography>
                 <Typography fontSize='1.5rem'>Image</Typography>
