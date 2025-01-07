@@ -30,6 +30,8 @@ export const authOptions = {
               headers: {
                 'Content-Type': 'application/json',
             }
+          }).then((response) => {
+            user.id = response.data.result[0]['id']
           })
           return true
         } catch (error) {
@@ -37,10 +39,17 @@ export const authOptions = {
           return false
         }
       },
+      async jwt({ token, user }) {
+        if(user) {
+          token.id = user.id
+        }
+        return token
+      },
       async session({ session, token, user }) {
         // Use given_name and family_name if you want structured data
         session.user.firstName = token.given_name || session.user.name?.split(" ")[0];
-        session.user.lastName = token.family_name || session.user.name?.split(" ")[1] || "";
+        session.user.lastName = token.family_name || session.user.name?.split(" ")[1] || ""
+        session.user.id = token.id
         return session;
       },
     },

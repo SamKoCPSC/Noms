@@ -11,7 +11,8 @@ export async function POST(req, res) {
             sql: `
             INSERT INTO users (name, email)
             VALUES (%s, %s)
-            ON CONFLICT (email) DO NOTHING
+            ON CONFLICT (email) DO UPDATE set email = EXCLUDED.email
+            RETURNING id
             `,
             values: [name, email]
         },

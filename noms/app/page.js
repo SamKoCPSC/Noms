@@ -47,22 +47,6 @@ export default function Home() {
     }).catch((error) => {
       console.log(error)
     })
-    const test = fetch(
-      `/api/getRecipe?id=1`
-    ).then((response) => {
-        if(!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`)
-        }
-        return response.json()
-    }).then((data) => {
-        console.log(data.result)
-        return data
-    })
-    .catch((error) => {
-        console.error(error)
-        return {message: 'error'}
-    })
-  console.log(test)
   }, [])
 
 
