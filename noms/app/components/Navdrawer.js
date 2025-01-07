@@ -13,8 +13,10 @@ import ListItemText from '@mui/material/ListItemText';
 import InboxIcon from '@mui/icons-material/MoveToInbox';
 import MailIcon from '@mui/icons-material/Mail';
 import { Create, CollectionsBookmark, AccountBox } from '@mui/icons-material';
+import { useSession } from 'next-auth/react';
 
 export default function TemporaryDrawer(props) {
+  const {data: session, status} = useSession()
   const [open, setOpen] = React.useState(false);
 
   const router = useRouter()
@@ -25,8 +27,8 @@ export default function TemporaryDrawer(props) {
 
   const drawerItemList = [
     {label: 'Create A Recipe', link: '/create', icon: <Create/>, divider: true},
-    {label: 'My Recipes', link: '/myRecipes/1', icon: <CollectionsBookmark/>},
-    {label: 'Account', link: '/account/1', icon: <AccountBox/>}
+    {label: 'My Recipes', link: status === 'authenticated' ? `/myRecipes/${session.user.id}` : '/', icon: <CollectionsBookmark/>},
+    {label: 'Account', link: status === 'authenticated' ? `/account/${session.user.id}` : '/', icon: <AccountBox/>},
   ]
 
   const DrawerList = (
