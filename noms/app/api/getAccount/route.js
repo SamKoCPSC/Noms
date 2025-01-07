@@ -1,16 +1,24 @@
 import axios from "axios";
 
 export async function GET(req, res) {
-    const userID = req.nextUrl.searchParams.get('id')
+    const userID = req.nextUrl.searchParams.get('id') || undefined
+    const userEmail = req.nextUrl.searchParams.get('email') || undefined
     return axios.post(
         process.env.LAMBDA_API_URL,
         {
-            sql: `
+            sql: userID &&
+            `
                 SELECT * 
                 FROM users 
                 WHERE id = %s;
-            `,
-            values: [userID]
+            ` || userEmail &&
+            `
+                SELECT * 
+                FROM users 
+                WHERE email = %s;
+            ` 
+            ,
+            values: [userID || userEmail]
         },
         {
             headers: {
