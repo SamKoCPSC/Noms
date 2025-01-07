@@ -1,5 +1,5 @@
 import RecipeCard from "@/app/components/RecipeCard";
-import { Container, Typography, Box } from "@mui/material";
+import { Container, Typography, Box, Divider } from "@mui/material";
 import AccessDenied from "@/app/components/AccessDenied";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
@@ -47,36 +47,63 @@ export default async function({ params }) {
     const session = await getServerSession(authOptions)
 
     const textStyle = {
-        recipeTitleSize: '4.5rem',
+        titleSize: '4.5rem',
         sectionTitleSize: '3.125rem',
         listItemSize: '2rem',
         paragraphSize: '1.25rem'
     }
 
-    if(!session || userRecipes[0].email !== session.user.email) {
+    if(!session || 1 !== session.user.id) {
         return (
             <AccessDenied/>
         )
     }
 
     return(
-        <Container maxWidth='false' sx={{justifyItems: 'center', width: '70%'}}>
-            <Box display={'flex'} flexDirection={'column'} flexWrap={'wrap'} sx={{width: '100%',alignItems: 'center', gap:'40px', marginTop: '100px'}}>
-                <Typography sx={{alignSelf: 'start', fontSize: textStyle.sectionTitleSize}}>My Recipes</Typography>
-                {userRecipes.map((recipe, index) => {
-                    return (
-                        <RecipeCard
-                            key={index}
-                            id={recipe.id}
-                            name={recipe.name}
-                            description={recipe.description}
-                            author={recipe.author}
-                            date={formatTimestamp(recipe.datecreated)}
-                            ingredients={recipe.ingredients}
-                            imageURL={recipe.imageurls && recipe.imageurls[0]}
-                        />
-                    )
-                })}
+        <Container maxWidth='false' sx={{justifyItems: 'center'}}>
+            <Box display={'flex'} flexDirection={'column'} sx={{width: '100%',alignItems: 'center', gap:'40px', marginTop: '100px'}}>
+                <Typography sx={{alignSelf: 'start', fontSize: textStyle.titleSize, marginLeft: '150px'}}>My Recipes</Typography>
+                <Divider width='90%'/>
+                <Typography sx={{alignSelf: 'start', fontSize: textStyle.sectionTitleSize, marginLeft: '200px'}}>Personal Recipes</Typography>
+                <Box display={'flex'} flexDirection={'row'} flexWrap={'wrap'} sx={{justifyContent: 'center', gap:'40px'}}>
+                    {userRecipes.map((recipe, index) => { 
+                        if(recipe.status === 'public') {
+                            return (
+                                <RecipeCard
+                                    key={index}
+                                    id={recipe.id}
+                                    name={recipe.name}
+                                    description={recipe.description}
+                                    author={recipe.author}
+                                    date={formatTimestamp(recipe.datecreated)}
+                                    ingredients={recipe.ingredients}
+                                    imageURL={recipe.imageurls && recipe.imageurls[0]}
+                                />
+                            )
+                        }  
+                    })}
+                </Box>
+                <Divider width='90%'/>
+                <Typography sx={{alignSelf: 'start', fontSize: textStyle.sectionTitleSize, marginLeft: '200px'}}>Drafts</Typography>
+                <Box display={'flex'} flexDirection={'row'} flexWrap={'wrap'} sx={{justifyContent: 'center', gap:'40px'}}>
+                    {userRecipes.map((recipe, index) => { 
+                        if(recipe.status === 'draft') {
+                            return (
+                                <RecipeCard
+                                    key={index}
+                                    id={recipe.id}
+                                    name={recipe.name}
+                                    description={recipe.description}
+                                    author={recipe.author}
+                                    date={formatTimestamp(recipe.datecreated)}
+                                    ingredients={recipe.ingredients}
+                                    imageURL={recipe.imageurls &&  recipe.imageurls[0]}
+                                    status={recipe.status}
+                                />
+                            )
+                        }  
+                    })}
+                </Box>
             </Box>
         </Container>
     )
