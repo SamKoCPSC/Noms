@@ -23,8 +23,8 @@ export async function POST(req, res) {
             sql: ingredients.length > 0 ? 
                 `
                 WITH newRecipe AS (
-                    INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status)
-                    VALUES (%s, %s, %s, (SELECT id FROM users WHERE email=%s LIMIT 1), %s, %s, %s)
+                    INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status, baseid, version)
+                    VALUES (%s, %s, %s, (SELECT id FROM users WHERE email=%s LIMIT 1), %s, %s, %s, currval('recipes_id_seq'), 1)
                     RETURNING id
                 ),
                 existingIngredients AS (

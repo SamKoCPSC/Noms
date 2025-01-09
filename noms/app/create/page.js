@@ -35,7 +35,7 @@ const SubText = styled('p')( {
 
 const units = ['g', 'mL']
 
-export default function Create() {
+export default function Create({params}) {
   const theme = useTheme()
   const router = useRouter()
   const handleSnackBar = React.useContext(SnackBarContext)
@@ -63,6 +63,8 @@ export default function Create() {
   const [isInstructionAttempted, setInstructionAttempted] = React.useState(false)
   const [isIngredientAttempted, setIngredientAttempted] = React.useState(false)
   const [isAdditionalInfoAttempted, setAdditionalInfoAttempted] = React.useState(false)
+
+  const {testParam} = params
 
   const ingredientFormik = useFormik({
     initialValues: {

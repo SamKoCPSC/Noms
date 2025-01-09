@@ -22,7 +22,7 @@ export async function POST(req, res) {
                 LEFT JOIN recipe_ingredients ri ON r.id = ri.recipeid
                 LEFT JOIN ingredients i ON ri.ingredientid = i.id
                 LEFT JOIN users u ON r.userid = u.id
-                GROUP BY r.id, r.name, r.datecreated, r.description, r.instructions, r.userid, r.additionalInfo, r.imageURLs, r.status, u.name;
+                GROUP BY r.id, r.name, r.datecreated, r.description, r.instructions, r.userid, r.additionalInfo, r.imageURLs, r.status, r.baseid, r.version, r.notes, u.name;
             `,
             values: [numOfResults]
         },
