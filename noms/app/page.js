@@ -40,7 +40,7 @@ export default function Home() {
     axios.post(
       '/api/getRecipes',
       {
-        numOfResults: 8
+        numOfResults: 24
       },
     ).then((response) => {
       setRandomRecipes(response.data.result)
@@ -104,7 +104,12 @@ export default function Home() {
             author={recipe.author}
             date={formatTimestamp(recipe.datecreated)}
             ingredients={recipe.ingredients}
-            imageURL={recipe.imageurls && recipe.imageurls[0]}
+            instructions={recipe.instructions}
+            additionalInfo={recipe.additionalinfo}
+            imageURLs={recipe.imageurls}
+            status={recipe.status}
+            baseid={recipe.baseid}
+            version={recipe.version}
           >
           </RecipeCard>
         ))}

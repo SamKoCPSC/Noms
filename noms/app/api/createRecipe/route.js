@@ -12,6 +12,7 @@ export async function POST(req, res) {
     const additionalInfo = JSON.stringify(data.additionalInfo)
     const imageUrls = data.imageUrls
     const status = data.status
+    const baseid = data.baseid || `currval('recipes_id_seq')`
     const ingredients = data.ingredients
     const ingredientNames = ingredients.map(i => `'${i.name}'`).join(", ")
     const ingredientNamesWithBrackets = ingredients.map(i => `('${i.name}')`).join(", ")
@@ -24,7 +25,7 @@ export async function POST(req, res) {
                 `
                 WITH newRecipe AS (
                     INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status, baseid, version)
-                    VALUES (%s, %s, %s, (SELECT id FROM users WHERE email=%s LIMIT 1), %s, %s, %s, currval('recipes_id_seq'), 1)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, ${baseid}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseid}), 1))
                     RETURNING id
                 ),
                 existingIngredients AS (
@@ -59,10 +60,10 @@ export async function POST(req, res) {
                 ` 
                 :
                 `
-                INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status)
-                VALUES (%s, %s, %s, (SELECT id FROM users WHERE email=%s LIMIT 1), %s, %s, %s)
+                INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status, baseid, version)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, ${baseid}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseid}), 1))
                 `,
-            values: [name, description, instructions, session.user.email, additionalInfo, imageUrls, status]
+            values: [name, description, instructions, session.user.id, additionalInfo, imageUrls, status]
         },
         {
             headers: {

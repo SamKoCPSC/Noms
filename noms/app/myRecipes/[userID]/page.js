@@ -77,7 +77,12 @@ export default async function({ params }) {
                                     author={recipe.author}
                                     date={formatTimestamp(recipe.datecreated)}
                                     ingredients={recipe.ingredients}
-                                    imageURL={recipe.imageurls && recipe.imageurls[0]}
+                                    instructions={recipe.instructions}
+                                    additionalInfo={recipe.additionalinfo}
+                                    imageURLs={recipe.imageurls}
+                                    status={recipe.status}
+                                    baseid={recipe.baseid}
+                                    version={recipe.version}
                                 />
                             )
                         }  
@@ -99,6 +104,8 @@ export default async function({ params }) {
                                     ingredients={recipe.ingredients}
                                     imageURL={recipe.imageurls &&  recipe.imageurls[0]}
                                     status={recipe.status}
+                                    baseid={recipe.baseid}
+                                    version={recipe.version}
                                 />
                             )
                         }  

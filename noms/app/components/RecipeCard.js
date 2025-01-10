@@ -81,7 +81,7 @@ const ExpandMore = styled((props) => {
   ],
 }));
 
-export default function RecipeCard({id, name, description, author, date, ingredients, imageURL, status}) {
+export default function RecipeCard({id, name, description, author, date, ingredients, instructions, additionalInfo, imageURLs, status, baseid, version}) {
   const [expanded, setExpanded] = React.useState(false);
   const router = useRouter()
 
@@ -113,9 +113,10 @@ export default function RecipeCard({id, name, description, author, date, ingredi
     // onMouseLeave={() => {setMouseHover(false)}}
     onClick = {() => {
       if(status === 'draft') {
-        router.push('/create')
+        router.push(`/create?name=${name}&description=${description}`)
       } else {
-        router.push(`/recipe/${id}`)
+        // router.push(`/recipe/${id}`)
+        router.push(`/create?name=${name}&description=${description}&ingredients=${JSON.stringify(ingredients)}&instructions=${JSON.stringify(instructions)}&additionalInfo=${JSON.stringify(additionalInfo)}&imageURLs=${JSON.stringify(imageURLs)}&baseid=${baseid}`)
       }
     }}
   >
@@ -136,7 +137,7 @@ export default function RecipeCard({id, name, description, author, date, ingredi
       <CardMedia
         component="img"
         height="194"
-        image={imageURL}
+        image={imageURLs[0]}
         alt="No Image"
       />
       <CardContent>

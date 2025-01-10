@@ -12,7 +12,7 @@ import { styled } from "@mui/material";
 import { useTheme } from "@emotion/react";
 import { useSession } from "next-auth/react";
 import { SnackBarContext } from "../layout";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 
@@ -35,36 +35,47 @@ const SubText = styled('p')( {
 
 const units = ['g', 'mL']
 
-export default function Create({params}) {
+const replaceNonStrings = (originalArray, replacementArray) => {
+  let replacementIndex = 0
+  return originalArray.map(item => {
+    if(typeof item !== 'string') {
+      const replacement = replacementArray[replacementIndex]
+      replacementIndex += 1
+      return replacement
+    }
+    return item
+  })
+}
+
+export default function Create({searchParams}) {
   const theme = useTheme()
   const router = useRouter()
+  // const searchParams = useSearchParams()
   const handleSnackBar = React.useContext(SnackBarContext)
   const {data: session, status} = useSession()
-  const [ingredients, setIngredients] = React.useState([])
+  const [ingredients, setIngredients] = React.useState(JSON.parse(searchParams.ingredients || '[]'))
   const [addIngredientMode, setAddIngredientMode] = React.useState(false)
   const [editIngredientMode, setEditIngredientMode] = React.useState(false)
   const [selectedIngredients, setSelectedIngredients] = React.useState([])
 
-  const [instructions, setInstructions] = React.useState([])
+  const [instructions, setInstructions] = React.useState(JSON.parse(searchParams.instructions || '[]'))
   const [addInstructionMode, setAddInstructionMode] = React.useState(false)
   const [editInstructionMode, setEditInstructionMode] = React.useState(false)
   const [selectedInstructions, setSelectedInstructions] = React.useState([])
 
-  const [additionalInfo, setAdditionalInfo] = React.useState([])
+  const [additionalInfo, setAdditionalInfo] = React.useState(JSON.parse(searchParams.additionalInfo  || '[]'))
   const [addInfoMode, setAddInfoMode] = React.useState(false)
   const [editInfoMode, setEditInfoMode] = React.useState(false)
   const [selectedInfo, setSelectedInfo] = React.useState([])
 
-  const [images, setImages] = React.useState([])
+  const [images, setImages] = React.useState(JSON.parse(searchParams.imageURLs  || '[]'))
   const [editImageMode, setEditImageMode] = React.useState(false)
-  const [selectedImages, setSelectedImages] = React.useState([])
+  const [selectedImages, setSelectedImages] = React.useState([]) 
 
   const [isSubmitAttempted, setSubmitAttempted] = React.useState(false)
   const [isInstructionAttempted, setInstructionAttempted] = React.useState(false)
   const [isIngredientAttempted, setIngredientAttempted] = React.useState(false)
   const [isAdditionalInfoAttempted, setAdditionalInfoAttempted] = React.useState(false)
-
-  const {testParam} = params
 
   const ingredientFormik = useFormik({
     initialValues: {
@@ -150,12 +161,12 @@ export default function Create({params}) {
 
   const recipeFormik = useFormik({
     initialValues: {
-        name: '',
-        description: '',
-        ingredients: [],
-        instructions: [],
-        additionalInfo: [],
-        images: [],
+        name: searchParams.name,
+        description: searchParams.description,
+        ingredients: ingredients,
+        instructions: instructions,
+        additionalInfo: additionalInfo,
+        images: images,
     },
     initialErrors: {name: 'This just ensures that errors is not null so the error message is triggered'},
     validationSchema: Yup.object().shape({
@@ -166,7 +177,12 @@ export default function Create({params}) {
       images: Yup.array().min(1,'Must add at least one image')
     }),
     onSubmit: async (values) => {
-      let imageData = images.map((image) => {
+      // let imageData = images.map((image) => {
+      //   const formData = new FormData()
+      //   formData.append('file', image);
+      //   return formData;
+      // })
+      let imageData = values.images.filter((image) => typeof image !== 'string').map((image) => {
         const formData = new FormData()
         formData.append('file', image);
         return formData;
@@ -198,8 +214,10 @@ export default function Create({params}) {
                   ingredients: values.ingredients,
                   instructions: values.instructions,
                   additionalInfo: values.additionalInfo,
-                  imageUrls: response.data.imageURLs,
+                  // imageUrls: response.data.imageURLs,
+                  imageUrls: replaceNonStrings(values.images, response.data.imageURLs ),
                   status: 'public',
+                  baseid: searchParams.baseid || undefined
                 },
                 {
                   headers: {
@@ -379,7 +397,6 @@ export default function Create({params}) {
   return (
     <Container>
       <main className={styles.main}>
-        
         <Box width='800px' display={"flex"} flexDirection={'column'}
         sx={{
           borderColor: 'rgb(230, 228, 215)',
@@ -402,7 +419,7 @@ export default function Create({params}) {
             fullWidth
             name="name"
             id="name"
-            value={recipeFormik.name}
+            value={recipeFormik.values.name}
             onChange={recipeFormik.handleChange}
           >
           </TextField>
@@ -414,7 +431,7 @@ export default function Create({params}) {
             multiline 
             name="description"
             id="description"
-            value={recipeFormik.description}
+            value={recipeFormik.values.description}
             onChange={recipeFormik.handleChange}
           >
           </TextField>
@@ -743,7 +760,7 @@ export default function Create({params}) {
           </Box>
           <ImageList cols={4} gap={8} sx={{marginTop: '20px'}}>
               {images.map((image, index) => {
-                const previewURL = URL.createObjectURL(image)
+                const previewURL = typeof image === 'string' ? image : URL.createObjectURL(image)
                 return (
                   <ImageListItem key={index}>
                     {editImageMode ?
@@ -787,14 +804,14 @@ export default function Create({params}) {
           }
           <Stack direction={'row'} sx={{justifyContent: 'end'}}>
             <Button variant="contained" color="error" sx={{top: '30px'}} onClick={() => router.push('/')}>Cancel</Button>
-            <Button variant="contained" color="secondary" sx={{top: '30px'}} onClick={() => handleSave()}>Save</Button>
+            {Object.keys(searchParams).length === 0 && <Button variant="contained" color="secondary" sx={{top: '30px'}} onClick={() => handleSave()}>Save As Draft</Button>}
             <Button disabled={status !== "authenticated" || (isSubmitAttempted && Object.keys(recipeFormik.errors).length > 0)} variant="contained" sx={{top: '30px'}} 
               onClick={() => {
                 setSubmitAttempted(true)
                 recipeFormik.handleSubmit()
                 if(Object.keys(recipeFormik.errors).length > 0) {handleSnackBar('Error: Please complete all required fields', theme.palette.error.main)}
               }}
-            >Create</Button>
+            >Create And Publish</Button>
           </Stack>
         </Box>
       </main>
