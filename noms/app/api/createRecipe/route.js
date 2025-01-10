@@ -28,7 +28,7 @@ export async function POST(req, res) {
                 `
                 WITH newRecipe AS (
                     INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status, baseid, version, branchid, branchbase)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, ${baseidSQL}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseidSQL}${branchbase ? ' AND 1 = 2' : ''}), 1), COALESCE((SELECT MAX(branchid) + 1 FROM recipes WHERE branchbase = %s), 0), %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, ${baseidSQL}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseidSQL}${branchbase ? ' AND 1 = 2' : ''}), 1), COALESCE((SELECT MAX(branchid) + 1 FROM recipes WHERE branchbase = %s), 0${branchbase ? '+1' : ''}), %s)
                     RETURNING id
                 ),
                 existingIngredients AS (
