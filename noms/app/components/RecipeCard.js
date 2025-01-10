@@ -109,14 +109,13 @@ export default function RecipeCard({id, name, description, author, date, ingredi
       },
 
     }}
-    // onMouseEnter={() => {setMouseHover(true)}}
-    // onMouseLeave={() => {setMouseHover(false)}}
     onClick = {() => {
       if(status === 'draft') {
         router.push(`/create?name=${name}&description=${description}`)
       } else {
         // router.push(`/recipe/${id}`)
-        router.push(`/create?name=${name}&description=${description}&ingredients=${JSON.stringify(ingredients)}&instructions=${JSON.stringify(instructions)}&additionalInfo=${JSON.stringify(additionalInfo)}&imageURLs=${JSON.stringify(imageURLs)}&baseid=${baseid}`)
+        //router.push(`/create?name=${name}&description=${description}&ingredients=${JSON.stringify(ingredients)}&instructions=${JSON.stringify(instructions)}&additionalInfo=${JSON.stringify(additionalInfo)}&imageURLs=${JSON.stringify(imageURLs)}&baseid=${baseid}`)
+        router.push(`/create?name=${name}&description=${description}&ingredients=${JSON.stringify(ingredients)}&instructions=${JSON.stringify(instructions)}&additionalInfo=${JSON.stringify(additionalInfo)}&imageURLs=${JSON.stringify(imageURLs)}&baseid=${baseid}&branchbase=${id}`)
       }
     }}
   >
@@ -137,7 +136,7 @@ export default function RecipeCard({id, name, description, author, date, ingredi
       <CardMedia
         component="img"
         height="194"
-        image={imageURLs[0]}
+        image={imageURLs ? imageURLs[0] : undefined}
         alt="No Image"
       />
       <CardContent>

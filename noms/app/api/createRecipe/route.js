@@ -12,7 +12,10 @@ export async function POST(req, res) {
     const additionalInfo = JSON.stringify(data.additionalInfo)
     const imageUrls = data.imageUrls
     const status = data.status
-    const baseid = data.baseid || `currval('recipes_id_seq')`
+    const baseid = data.baseid
+    const baseidSQL = baseid ? '%s' : `currval('recipes_id_seq')`
+    const baseidValue = baseid ? [baseid, baseid] : []
+    const branchbase = data.branchbase
     const ingredients = data.ingredients
     const ingredientNames = ingredients.map(i => `'${i.name}'`).join(", ")
     const ingredientNamesWithBrackets = ingredients.map(i => `('${i.name}')`).join(", ")
@@ -24,8 +27,8 @@ export async function POST(req, res) {
             sql: ingredients.length > 0 ? 
                 `
                 WITH newRecipe AS (
-                    INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status, baseid, version)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, ${baseid}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseid}), 1))
+                    INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status, baseid, version, branchid, branchbase)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, ${baseidSQL}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseidSQL}${branchbase ? ' AND 1 = 2' : ''}), 1), COALESCE((SELECT MAX(branchid) + 1 FROM recipes WHERE branchbase = %s), 0), %s)
                     RETURNING id
                 ),
                 existingIngredients AS (
@@ -61,9 +64,9 @@ export async function POST(req, res) {
                 :
                 `
                 INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status, baseid, version)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, ${baseid}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseid}), 1))
+                VALUES (%s, %s, %s, %s, %s, %s, %s, ${baseidSQL}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseidSQL}), 1))
                 `,
-            values: [name, description, instructions, session.user.id, additionalInfo, imageUrls, status]
+            values: [name, description, instructions, session.user.id, additionalInfo, imageUrls, status].concat(baseidValue).concat([branchbase, branchbase])
         },
         {
             headers: {

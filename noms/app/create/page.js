@@ -217,7 +217,8 @@ export default function Create({searchParams}) {
                   // imageUrls: response.data.imageURLs,
                   imageUrls: replaceNonStrings(values.images, response.data.imageURLs ),
                   status: 'public',
-                  baseid: searchParams.baseid || undefined
+                  baseid: searchParams.baseid || undefined,
+                  branchbase: searchParams.branchbase || undefined
                 },
                 {
                   headers: {
