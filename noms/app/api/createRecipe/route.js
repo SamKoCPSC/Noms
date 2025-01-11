@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 
 export async function POST(req, res) {
     // none = new original
-    // baseid = new main version
+    // baseid + branchid = new version
     // baseid + branchbase = new branch
     // baseid + branchbase + branchid = new branched version
     const session = await getServerSession(authOptions)
@@ -33,7 +33,7 @@ export async function POST(req, res) {
                 `
                 WITH newRecipe AS (
                     INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status, baseid, version, branchid, branchbase)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, ${baseidSQL}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseidSQL}${branchid ? ` AND branchid = ${branchid}` : ''}${branchbase && branchid === 0 ? ' AND 1 = 2' : ''}), 1), ${branchid ? '%s' : `COALESCE((SELECT MAX(branchid) + 1 FROM recipes WHERE branchbase = %s), 0${branchbase ? '+1' : ''})`}, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, ${baseidSQL}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseidSQL} ${branchid ? `AND branchid = ${branchid}` : ''} ${branchbase && !branchid ? 'AND 1 = 2' : ''}), 1), ${branchid ? '%s' : `COALESCE((SELECT MAX(branchid) + 1 FROM recipes WHERE branchbase = %s), 0${branchbase ? '+1' : ''})`}, %s)
                     RETURNING id
                 ),
                 existingIngredients AS (
