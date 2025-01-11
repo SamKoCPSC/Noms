@@ -218,6 +218,8 @@ export default function Create({searchParams}) {
                   imageUrls: replaceNonStrings(values.images, response.data.imageURLs ),
                   status: 'public',
                   baseid: searchParams.baseid || undefined,
+                  branchbase: searchParams.branchbase || undefined,
+                  branchid: searchParams.branchid || undefined,
                   branchbase: searchParams.branchbase || undefined
                 },
                 {

@@ -81,7 +81,7 @@ const ExpandMore = styled((props) => {
   ],
 }));
 
-export default function RecipeCard({id, name, description, author, date, ingredients, instructions, additionalInfo, imageURLs, status, baseid, version}) {
+export default function RecipeCard({id, name, description, author, date, ingredients, instructions, additionalInfo, imageURLs, status, baseid, version, branchid, branchbase}) {
   const [expanded, setExpanded] = React.useState(false);
   const router = useRouter()
 
@@ -115,7 +115,7 @@ export default function RecipeCard({id, name, description, author, date, ingredi
       } else {
         // router.push(`/recipe/${id}`)
         //router.push(`/create?name=${name}&description=${description}&ingredients=${JSON.stringify(ingredients)}&instructions=${JSON.stringify(instructions)}&additionalInfo=${JSON.stringify(additionalInfo)}&imageURLs=${JSON.stringify(imageURLs)}&baseid=${baseid}`)
-        router.push(`/create?name=${name}&description=${description}&ingredients=${JSON.stringify(ingredients)}&instructions=${JSON.stringify(instructions)}&additionalInfo=${JSON.stringify(additionalInfo)}&imageURLs=${JSON.stringify(imageURLs)}&baseid=${baseid}&branchbase=${id}`)
+        router.push(`/create?name=${name}&description=${description}&ingredients=${JSON.stringify(ingredients)}&instructions=${JSON.stringify(instructions)}&additionalInfo=${JSON.stringify(additionalInfo)}&imageURLs=${JSON.stringify(imageURLs)}&baseid=${baseid}&branchbase=${branchbase}&branchid=${branchid}`)
       }
     }}
   >

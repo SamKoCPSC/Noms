@@ -110,6 +110,8 @@ export default function Home() {
             status={recipe.status}
             baseid={recipe.baseid}
             version={recipe.version}
+            branchid = {recipe.branchid}
+            branchbase = {recipe.branchbase}
           >
           </RecipeCard>
         ))}
