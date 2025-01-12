@@ -1,5 +1,5 @@
 import Carousel from "@/app/components/Carousel";
-import { Box, Container, Divider, Typography } from "@mui/material"
+import { Box, Button, Container, Divider, Typography } from "@mui/material"
 
 export async function generateStaticParams() {
     const recipeIDs = ['1']
@@ -43,7 +43,11 @@ export default async function Recipe({ params }) {
             justifyItems: 'center',
             }}
         >
-            <Divider sx={{marginY: '30px', width: '100%'}}/>
+            <Box display={'flex'} flexDirection={'row'} sx={{width: '100%', justifyContent: 'end'}}>
+                <Button variant="contained">View All Versions</Button>
+                <Button variant="contained">New Branch</Button>
+                <Button variant="contained">New Version</Button>
+            </Box>
             <Divider sx={{marginTop: '30px', width: '100%'}}/>
             <Typography sx={{justifySelf: 'center', fontSize: textStyle.recipeTitleSize}}>{recipeData.name}</Typography>
             <Typography sx={{justifySelf: 'center', fontSize: textStyle.paragraphSize, textAlign: 'center'}}>{recipeData.description}</Typography>
