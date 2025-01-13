@@ -1,5 +1,7 @@
 import Carousel from "@/app/components/Carousel";
 import { Box, Button, Container, Divider, Typography } from "@mui/material"
+import { revalidatePath } from "next/cache";
+import Link from "next/link";
 
 export async function generateStaticParams() {
     const recipeIDs = ['1']
@@ -45,8 +47,16 @@ export default async function Recipe({ params }) {
         >
             <Box display={'flex'} flexDirection={'row'} sx={{width: '100%', justifyContent: 'end'}}>
                 <Button variant="contained">View All Versions</Button>
-                <Button variant="contained">New Branch</Button>
-                <Button variant="contained">New Version</Button>
+                <Link href={`/create?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&baseid=${recipeData.baseid}&branchbase=${recipeData.recipeid}`}>
+                    <Button variant="contained">
+                        New Branch
+                    </Button>
+                </Link>
+                <Link href={`/create?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&baseid=${recipeData.baseid}${recipeData.branchbase ? `&branchbase=${recipeData.branchbase}` : ''}&branchid=${recipeData.branchid}`}>
+                    <Button variant="contained">
+                        New Version
+                    </Button>
+                </Link>
             </Box>
             <Divider sx={{marginTop: '30px', width: '100%'}}/>
             <Typography sx={{justifySelf: 'center', fontSize: textStyle.recipeTitleSize}}>{recipeData.name}</Typography>

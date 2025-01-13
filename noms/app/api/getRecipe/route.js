@@ -7,7 +7,7 @@ export async function GET(req, res) {
         {
             sql: `
                 SELECT 
-                    r.id AS recipe_id,
+                    r.id AS recipeid,
                     r.name AS name,
                     r.description,
                     r.instructions,
@@ -16,6 +16,11 @@ export async function GET(req, res) {
                     r.imageurls,
                     r.status,
                     r.datecreated,
+                    r.baseid,
+                    r.version,
+                    r.branchid,
+                    r.branchbase,
+                    r.notes,
                     u.name AS author,
                     json_agg(
                         json_build_object(

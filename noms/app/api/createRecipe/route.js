@@ -4,10 +4,9 @@ import { authOptions } from "../auth/[...nextauth]/route";
 import { revalidatePath } from "next/cache";
 
 export async function POST(req, res) {
-    // none = new original
-    // baseid + branchid = new version
-    // baseid + branchbase = new branch
-    // baseid + branchbase + branchid = new branched version
+    // none = new original recipe
+    // baseid + branchbase = new branch from branchbase
+    // baseid + branchbase + branchid = new version for branch
     const session = await getServerSession(authOptions)
     const data = await req.json()
     const name = data.name

@@ -114,7 +114,7 @@ export default function RecipeCard({id, name, description, author, date, ingredi
         router.push(`/create?name=${name}&description=${description}`)
       } else {
         router.push(`/recipe/${id}`)
-        //router.push(`/create?name=${name}&description=${description}&ingredients=${JSON.stringify(ingredients)}&instructions=${JSON.stringify(instructions)}&additionalInfo=${JSON.stringify(additionalInfo)}&imageURLs=${JSON.stringify(imageURLs)}&baseid=${baseid}`)
+        //router.push(`/create?name=${name}&description=${description}&ingredients=${JSON.stringify(ingredients)}&instructions=${JSON.stringify(instructions)}&additionalInfo=${JSON.stringify(additionalInfo)}&imageURLs=${JSON.stringify(imageURLs)}&baseid=${baseid}&branchid=${branchid}`)
         //router.push(`/create?name=${name}&description=${description}&ingredients=${JSON.stringify(ingredients)}&instructions=${JSON.stringify(instructions)}&additionalInfo=${JSON.stringify(additionalInfo)}&imageURLs=${JSON.stringify(imageURLs)}&baseid=${baseid}&branchbase=${branchbase}&branchid=${branchid}`)
       }
     }}
