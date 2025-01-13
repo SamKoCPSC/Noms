@@ -45,8 +45,23 @@ export default async function Recipe({ params }) {
             justifyItems: 'center',
             }}
         >
-            <Box display={'flex'} flexDirection={'row'} sx={{width: '100%', justifyContent: 'end'}}>
-                <Button variant="contained">View All Versions</Button>
+            <Box display={'flex'} flexDirection={'row'} 
+                sx={{
+                    width: '100%',
+                    justifyContent: 'end',
+                    backgroundColor: 'white', 
+                    padding: '20px',
+                    margin: '30px',
+                    borderRadius: '30px',
+                    borderColor: 'rgb(230, 228, 215)',
+                    borderStyle: 'solid',
+                    borderWidth: 2,
+                    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
+                }}>
+                <Box display={'flex'} flexDirection={'column'} sx={{width: '75%', gap: '20px'}}>
+                    <Typography>Version: {recipeData.version} {recipeData.baseid !== recipeData.recipeid && `- Based On Recipe: ${recipeData.baseid}`} {recipeData.branchbase && `- Branched From Recipe: ${recipeData.branchbase}`}</Typography>
+                    <Typography>Notes: {recipeData.notes ? recipeData.notes : 'None'}</Typography>
+                </Box>
                 <Link href={`/create?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&baseid=${recipeData.baseid}&branchbase=${recipeData.recipeid}`}>
                     <Button variant="contained">
                         New Branch

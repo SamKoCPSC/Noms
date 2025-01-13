@@ -167,6 +167,7 @@ export default function Create({searchParams}) {
         instructions: instructions,
         additionalInfo: additionalInfo,
         images: images,
+        notes: '',
     },
     initialErrors: {name: 'This just ensures that errors is not null so the error message is triggered'},
     validationSchema: Yup.object().shape({
@@ -217,6 +218,7 @@ export default function Create({searchParams}) {
                   // imageUrls: response.data.imageURLs,
                   imageUrls: replaceNonStrings(values.images, response.data.imageURLs ),
                   status: 'public',
+                  notes: values.notes,
                   baseid: searchParams.baseid || undefined,
                   branchbase: searchParams.branchbase || undefined,
                   branchid: searchParams.branchid || undefined,
@@ -292,6 +294,11 @@ export default function Create({searchParams}) {
           additionalInfo: values.additionalInfo,
           imageUrls: imageURLs,
           status: 'draft',
+          notes: values.notes,
+          baseid: searchParams.baseid || undefined,
+          branchbase: searchParams.branchbase || undefined,
+          branchid: searchParams.branchid || undefined,
+          branchbase: searchParams.branchbase || undefined
         },
         {
           headers: {
@@ -790,6 +797,19 @@ export default function Create({searchParams}) {
                 )
               })}
           </ImageList>
+          <Divider sx={{margin: '30px'}}></Divider>
+          <Typography fontSize="30px">Notes</Typography>
+          <SubText>Document any observations, discoveries, or interesting details. Notes can be edited later without creating a new recipe.</SubText>
+          <TextField 
+            variant="outlined" 
+            fullWidth 
+            multiline 
+            name="notes"
+            id="notes"
+            value={recipeFormik.values.notes}
+            onChange={recipeFormik.handleChange}
+          >
+          </TextField>
           <Divider sx={{margin: '30px'}}></Divider>
           {isSubmitAttempted && recipeFormik.errors && 
             Object.keys(recipeFormik.errors).map(key => 

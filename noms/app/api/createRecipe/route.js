@@ -5,8 +5,9 @@ import { revalidatePath } from "next/cache";
 
 export async function POST(req, res) {
     // none = new original recipe
+    // baseid + branchid = new version on main
     // baseid + branchbase = new branch from branchbase
-    // baseid + branchbase + branchid = new version for branch
+    // baseid + branchbase + branchid = new version on branch
     const session = await getServerSession(authOptions)
     const data = await req.json()
     const name = data.name
@@ -15,6 +16,7 @@ export async function POST(req, res) {
     const additionalInfo = JSON.stringify(data.additionalInfo)
     const imageUrls = data.imageUrls
     const status = data.status
+    const notes = data.notes
     const baseid = data.baseid
     const baseidSQL = baseid ? '%s' : `currval('recipes_id_seq')`
     const baseidValue = baseid ? [baseid, baseid] : []
@@ -31,8 +33,8 @@ export async function POST(req, res) {
             sql: ingredients.length > 0 ? 
                 `
                 WITH newRecipe AS (
-                    INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status, baseid, version, branchid, branchbase)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, ${baseidSQL}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseidSQL} ${branchid ? `AND branchid = ${branchid}` : ''} ${branchbase && !branchid ? 'AND 1 = 2' : ''}), 1), ${branchid ? '%s' : `COALESCE((SELECT MAX(branchid) + 1 FROM recipes WHERE branchbase = %s), 0${branchbase ? '+1' : ''})`}, %s)
+                    INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status, notes, baseid, version, branchid, branchbase)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, ${baseidSQL}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseidSQL} ${branchid ? `AND branchid = ${branchid}` : ''} ${branchbase && !branchid ? 'AND 1 = 2' : ''}), 1), ${branchid ? '%s' : `COALESCE((SELECT MAX(branchid) + 1 FROM recipes WHERE branchbase = %s), 0${branchbase ? '+1' : ''})`}, %s)
                     RETURNING id
                 ),
                 existingIngredients AS (
@@ -64,13 +66,15 @@ export async function POST(req, res) {
                         ${ingredientUnitsCase}
                     END AS unit
                 FROM newRecipe, allIngredients
+                RETURNING recipeId
                 ` 
                 :
                 `
-                INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status, baseid, version)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, ${baseidSQL}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseidSQL}), 1))
+                INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status, notes, baseid, version, branchid, branchbase)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, ${baseidSQL}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseidSQL} ${branchid ? `AND branchid = ${branchid}` : ''} ${branchbase && !branchid ? 'AND 1 = 2' : ''}), 1), ${branchid ? '%s' : `COALESCE((SELECT MAX(branchid) + 1 FROM recipes WHERE branchbase = %s), 0${branchbase ? '+1' : ''})`}, %s)
+                
                 `,
-            values: [name, description, instructions, session.user.id, additionalInfo, imageUrls, status].concat(baseidValue).concat([branchid ? branchid : branchbase, branchbase])
+            values: [name, description, instructions, session.user.id, additionalInfo, imageUrls, status, notes].concat(baseidValue).concat([branchid ? branchid : branchbase, branchbase])
         },
         {
             headers: {
@@ -79,7 +83,8 @@ export async function POST(req, res) {
             }
         }
     ).then((response) => {
-        revalidatePath('/myRecipes/1')
+        revalidatePath(`/myRecipes/${session.user.id}`)
+        revalidatePath(`/recipe/${response.data.result[0].recipeid}`)
         return Response.json(
             response.data,
             {status: response.status}
