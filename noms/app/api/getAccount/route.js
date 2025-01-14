@@ -16,9 +16,13 @@ export async function GET(req, res) {
                 SELECT * 
                 FROM users 
                 WHERE email = %s;
-            ` 
+            ` || !userID && !userEmail &&
+            `
+                SELECT *
+                FROM users
+            `
             ,
-            values: [userID || userEmail]
+            values: userID || userEmail ? [userID || userEmail] : []
         },
         {
             headers: {

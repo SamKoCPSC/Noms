@@ -1,4 +1,5 @@
 import axios from "axios";
+import { revalidatePath } from "next/cache";
 
 export async function POST(req, res) {
     const data = await req.json()
@@ -23,6 +24,8 @@ export async function POST(req, res) {
             }
         }
     ).then((response) => {
+        revalidatePath(`/account/${response.data.result[0].id}`)
+        revalidatePath(`/myRecipes/${response.data.result[0].id}`)
         return Response.json(
             response.data,
             {status: response.status}

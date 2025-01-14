@@ -5,10 +5,22 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function generateStaticParams() {
-    const userIDs = ['1']
-    return userIDs.map((id) => {
-      return {userID: id}
-    });
+    return fetch(
+        `${process.env.NOMS_URL}/api/getAccount`
+    ).then((response) => {
+        if(!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`)
+        }
+        return response.json()
+    }).then((data) => {
+        return data.result.map((user) => {
+            return user.id
+        })
+    })
+    .catch((error) => {
+        console.error(error)
+        return {message: 'error'}
+    })
 }
 
 async function getUserData(id) {
