@@ -12,7 +12,7 @@ export async function generateStaticParams() {
 
 async function getRecipeData(id) {
     return fetch(
-        `http://localhost:3000/api/getRecipe?id=${id}`
+        `${process.env.NOMS_URL}/api/getRecipe?id=${id}`
     ).then((response) => {
         if(!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`)
