@@ -73,8 +73,8 @@ export async function POST(req, res) {
                 :
                 `
                 INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status, notes, baseid, version, branchid, branchbase)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, ${baseidSQL}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseidSQL} ${branchid ? `AND branchid = ${branchid}` : ''} ${branchbase && !branchid ? 'AND 1 = 2' : ''}), 1), ${branchid ? '%s' : `COALESCE((SELECT MAX(branchid) + 1 FROM recipes WHERE branchbase = %s), 0${branchbase ? '+1' : ''})`}, %s)
-                
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, ${baseidSQL}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseidSQL} ${branchid ? `AND branchid = ${branchid}` : ''} ${branchbase && !branchid ? 'AND 1 = 2' : ''}), 1), ${branchid ? '%s' : `COALESCE((SELECT MAX(branchid) + 1 FROM recipes WHERE branchbase = %s), 0${branchbase ? '+1' : ''})`}, ${branchbaseSQL})
+                RETURNING recipeId
                 `,
             values: [name, description, instructions, session.user.id, additionalInfo, imageUrls, status, notes].concat(baseidValue).concat([branchid ? branchid : branchbase]).concat(branchbaseValue)
         },
@@ -87,7 +87,7 @@ export async function POST(req, res) {
     ).then((response) => {
         revalidatePath(`/myRecipes/${session.user.id}`)
         revalidatePath(`/recipe/${response.data.result[0].recipeid}`)
-        // revalidatePath(`/branch/`)
+        revalidatePath(`/branch/${branchbase || baseid || response.data.result[0].recipeid}/${branchid ? branchid : branchbase ? '1' : '0'}`)
         return Response.json(
             response.data,
             {status: response.status}

@@ -24,7 +24,7 @@ export async function generateStaticParams() {
 
 async function getBranchRecipes(branchbase, branchid) {
     return fetch(
-        `${process.env.NOMS_URL}/api/getRecipeBranch?branchbase=25&branchid=1`
+        `${process.env.NOMS_URL}/api/getRecipeBranch?branchbase=${branchbase}&branchid=${branchid}`
     ).then((response) => {
         if(!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`)
