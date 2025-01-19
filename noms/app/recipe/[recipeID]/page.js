@@ -62,6 +62,11 @@ export default async function Recipe({ params }) {
                     <Typography>Version: {recipeData.version} {recipeData.baseid !== recipeData.recipeid && `- Based On Recipe: ${recipeData.baseid}`} {recipeData.branchbase && `- Branched From Recipe: ${recipeData.branchbase}`}</Typography>
                     <Typography>Notes: {recipeData.notes ? recipeData.notes : 'None'}</Typography>
                 </Box>
+                <Link href={`/tree/${recipeData.baseid}`}>
+                    <Button variant="contained">
+                        View Tree
+                    </Button>
+                </Link>
                 <Link href={`/branch/${recipeData.branchbase}/${recipeData.branchid}`}>
                     <Button variant="contained">
                         View Branch

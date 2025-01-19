@@ -22,9 +22,9 @@ export async function generateStaticParams() {
     });
 }
 
-async function getBranchRecipes(branchbase, branchid) {
+async function getTreeRecipes(baseid) {
     return fetch(
-        `${process.env.NOMS_URL}/api/getRecipeBranch?branchbase=${branchbase}&branchid=${branchid}`
+        `${process.env.NOMS_URL}/api/getRecipeTree?baseid=${baseid}`
     ).then((response) => {
         if(!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`)
@@ -40,7 +40,7 @@ async function getBranchRecipes(branchbase, branchid) {
 }
 
 export default async function Recipe({ params }) {
-    const branchRecipes = await getBranchRecipes(params.branchbase, params.branchid)
+    const treeRecipes = await getTreeRecipes(params.baseid)
 
     const textStyle = {
         titleSize: '4.5rem',
@@ -53,9 +53,9 @@ export default async function Recipe({ params }) {
         // <Typography>{JSON.stringify(branchRecipes)}</Typography>
         <Container maxWidth='false' sx={{justifyItems: 'center'}}>
             <Box display={'flex'} flexDirection={'column'} sx={{width: '100%',alignItems: 'center', gap:'40px', marginTop: '100px'}}>
-                <Typography sx={{alignSelf: 'start', fontSize: textStyle.titleSize, marginLeft: '150px'}}>Branch</Typography>
+                <Typography sx={{alignSelf: 'start', fontSize: textStyle.titleSize, marginLeft: '150px'}}>Tree</Typography>
                 <Box display={'flex'} flexDirection={'row'} flexWrap={'wrap'} sx={{justifyContent: 'center', gap:'40px'}}>
-                    {branchRecipes.map((recipe, index) => { 
+                    {treeRecipes.map((recipe, index) => { 
                         if(recipe.status === 'public') {
                             return (
                                 <RecipeCard
