@@ -21,6 +21,8 @@ export async function POST(req, res) {
     const baseidSQL = baseid ? '%s' : `currval('recipes_id_seq')`
     const baseidValue = baseid ? [baseid, baseid] : []
     const branchbase = data.branchbase
+    const branchbaseSQL = branchbase || baseid ? '%s' : `currval('recipes_id_seq')`
+    const branchbaseValue = branchbase ? [branchbase] : baseid ? [baseid] : []
     const branchid = data.branchid
     const ingredients = data.ingredients
     const ingredientNames = ingredients.map(i => `'${i.name}'`).join(", ")
@@ -34,7 +36,7 @@ export async function POST(req, res) {
                 `
                 WITH newRecipe AS (
                     INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status, notes, baseid, version, branchid, branchbase)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, ${baseidSQL}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseidSQL} ${branchid ? `AND branchid = ${branchid}` : ''} ${branchbase && !branchid ? 'AND 1 = 2' : ''}), 1), ${branchid ? '%s' : `COALESCE((SELECT MAX(branchid) + 1 FROM recipes WHERE branchbase = %s), 0${branchbase ? '+1' : ''})`}, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, ${baseidSQL}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseidSQL} ${branchid ? `AND branchid = ${branchid}` : ''} ${branchbase && !branchid ? 'AND 1 = 2' : ''}), 1), ${branchid ? '%s' : `COALESCE((SELECT MAX(branchid) + 1 FROM recipes WHERE branchbase = %s), 0${branchbase ? '+1' : ''})`}, ${branchbaseSQL})
                     RETURNING id
                 ),
                 existingIngredients AS (
@@ -74,7 +76,7 @@ export async function POST(req, res) {
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, ${baseidSQL}, COALESCE((SELECT MAX(version) + 1 FROM recipes WHERE baseid = ${baseidSQL} ${branchid ? `AND branchid = ${branchid}` : ''} ${branchbase && !branchid ? 'AND 1 = 2' : ''}), 1), ${branchid ? '%s' : `COALESCE((SELECT MAX(branchid) + 1 FROM recipes WHERE branchbase = %s), 0${branchbase ? '+1' : ''})`}, %s)
                 
                 `,
-            values: [name, description, instructions, session.user.id, additionalInfo, imageUrls, status, notes].concat(baseidValue).concat([branchid ? branchid : branchbase, branchbase])
+            values: [name, description, instructions, session.user.id, additionalInfo, imageUrls, status, notes].concat(baseidValue).concat([branchid ? branchid : branchbase]).concat(branchbaseValue)
         },
         {
             headers: {
@@ -85,6 +87,7 @@ export async function POST(req, res) {
     ).then((response) => {
         revalidatePath(`/myRecipes/${session.user.id}`)
         revalidatePath(`/recipe/${response.data.result[0].recipeid}`)
+        // revalidatePath(`/branch/`)
         return Response.json(
             response.data,
             {status: response.status}
