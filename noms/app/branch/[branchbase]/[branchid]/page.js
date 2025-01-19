@@ -62,7 +62,7 @@ export default async function Recipe({ params }) {
                             return (
                                 <RecipeCard
                                     key={index}
-                                    id={recipe.id}
+                                    id={recipe.recipeid}
                                     name={recipe.name}
                                     description={recipe.description}
                                     author={recipe.author}
@@ -74,6 +74,8 @@ export default async function Recipe({ params }) {
                                     status={recipe.status}
                                     baseid={recipe.baseid}
                                     version={recipe.version}
+                                    branchid = {recipe.branchid}
+                                    branchbase = {recipe.branchbase}
                                 />
                             )
                         }  
