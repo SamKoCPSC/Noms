@@ -6,9 +6,36 @@ export async function GET(req, res) {
         process.env.LAMBDA_API_URL,
         {
             sql: `
-                SELECT *
-                FROM recipes
-                WHERE name ILIKE %s
+                SELECT 
+                    r.id AS recipeid,
+                    r.name AS name,
+                    r.description,
+                    r.instructions,
+                    r.userid,
+                    r.additionalinfo,
+                    r.imageurls,
+                    r.status,
+                    r.datecreated,
+                    r.baseid,
+                    r.version,
+                    r.branchid,
+                    r.branchbase,
+                    r.notes,
+                    u.name AS author,
+                    json_agg(
+                        json_build_object(
+                            'id', i.id,
+                            'name', i.name,
+                            'quantity', ri.quantity,
+                            'unit', ri.unit
+                        )
+                    ) AS ingredients
+                FROM recipes r
+                LEFT JOIN users u ON r.userid = u.id
+                LEFT JOIN recipe_ingredients ri ON r.id = ri.recipeid
+                LEFT JOIN ingredients i ON ri.ingredientid = i.id
+                WHERE r.name ILIKE %s
+                GROUP BY r.id, u.name;
             `,
             values: [name]
         },

@@ -12,6 +12,20 @@ import { useEffect } from "react";
 
 const dancingScript = Dancing_Script({subsets: ['latin']})
 
+function formatTimestamp(timestamp) {
+  const isoTimestamp = timestamp.replace(" ", "T");
+  const date = new Date(isoTimestamp);
+  if (isNaN(date.getTime())) {
+      throw new Error("Invalid PostgreSQL timestamp format.");
+  }
+  const options = {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+  };
+  return date.toLocaleDateString(undefined, options);
+}
+
 export default function Home() {
   const searchParams = useSearchParams()
   const [recipes, setRecipes] = React.useState([])
@@ -19,7 +33,7 @@ export default function Home() {
   useEffect(() => {
     const name = searchParams.get('name')
     fetch(
-      `/api/search?name=fries`
+      `/api/search?name=${name}`
     ).then((response) => {
         if(!response.ok) {
             console.error(response)
@@ -37,12 +51,31 @@ export default function Home() {
 
   return (
     <Container maxWidth='false' sx={{justifyItems: 'center'}}>
-      <Typography sx={{marginTop: '100px'}}>{JSON.stringify(recipes)}</Typography>
-      {/* <Box display={'flex'} flexDirection={'row'} flexWrap={'wrap'} sx={{justifyContent: 'center', gap:'20px'}}>
-        {[...Array(100)].map((element, index) => (
-          <RecipeCard key={index}></RecipeCard>
-        ))}
-      </Box> */}
+      <Box display={'flex'} flexDirection={'row'} flexWrap={'wrap'} sx={{justifyContent: 'center', gap:'40px'}}>
+          {recipes.map((recipe, index) => { 
+              if(recipe.status === 'public') {
+                  return (
+                      <RecipeCard
+                          key={index}
+                          id={recipe.recipeid}
+                          name={recipe.name}
+                          description={recipe.description}
+                          author={recipe.author}
+                          date={formatTimestamp(recipe.datecreated)}
+                          ingredients={recipe.ingredients}
+                          instructions={recipe.instructions}
+                          additionalInfo={recipe.additionalinfo}
+                          imageURLs={recipe.imageurls}
+                          status={recipe.status}
+                          baseid={recipe.baseid}
+                          version={recipe.version}
+                          branchid={recipe.branchid}
+                          branchbase={recipe.branchbase}
+                      />
+                  )
+              }  
+          })}
+      </Box>
     </Container>
     
   );

@@ -180,7 +180,7 @@ export default function PrimarySearchAppBar(props) {
   const contentColor = 'white'
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
+    <Box sx={{ flexGrow: 1, marginBottom: '100px' }}>
       <Navdrawer open={isNavdrawerOpen} setOpen={handleNavdrawerOpen}></Navdrawer>
       <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, bgcolor: 'rgb(93, 64, 55)', color: 'black' }}>
         <Toolbar>
