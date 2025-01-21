@@ -5,7 +5,7 @@ import * as React from 'react';
 import Navbar from "./components/Navbar";
 import Navdrawer from "./components/Navdrawer";
 import RecipeCard from "./components/RecipeCard";
-import {Box, Button, Container, TextField, Typography, InputAdornment, Stack} from "@mui/material";
+import {Box, Button, Container, TextField, Typography, InputAdornment, Stack, IconButton} from "@mui/material";
 import { Dancing_Script } from "next/font/google";
 import { Search } from "@mui/icons-material";
 import { SnackBarContext } from "./layout";
@@ -49,6 +49,11 @@ export default function Home() {
     })
   }, [])
 
+  const handleSearch = (event) => {
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget)
+    router.push(`/search?name=${formData.get('search')}`)
+  }
 
   return (
     <Container maxWidth='false' sx={{justifyItems: 'center'}}>
@@ -64,26 +69,31 @@ export default function Home() {
           NOMS
         </Typography>
         <Typography sx={{fontSize: '18px', marginTop: '-75px', marginBottom: '20px'}}>Create, Share, and Manage Your Recipes</Typography>
-        <TextField 
-          variant="outlined"
-          placeholder="Search for recipes"
-          InputProps={{
-            style: {
-              backgroundColor: 'rgb(255, 255, 255)'
-            },
-            endAdornment: (
-              <InputAdornment position="end">
-                <Search />
-              </InputAdornment>
-            ),
-          }}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              borderRadius: '25px',
-            },
-            width: '500px'
-          }}
-        />
+        <form onSubmit={handleSearch}>
+          <TextField 
+            name="search"
+            variant="outlined"
+            placeholder="Search for recipes"
+            InputProps={{
+              style: {
+                backgroundColor: 'rgb(255, 255, 255)'
+              },
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton type="submit">
+                    <Search />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '25px',
+              },
+              width: '500px'
+            }}
+          />
+        </form>
         {status === 'unauthenticated' &&
           <Button variant="contained" onClick={() => signIn('google')} sx={{borderRadius: '40px', width: '200px', marginTop: '-15px'}}>Login or Sign-up</Button>
         }

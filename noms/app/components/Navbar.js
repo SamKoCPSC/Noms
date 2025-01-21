@@ -12,7 +12,7 @@ import Badge from '@mui/material/Badge';
 import MenuItem from '@mui/material/MenuItem';
 import Menu from '@mui/material/Menu';
 import MenuIcon from '@mui/icons-material/Menu';
-import SearchIcon from '@mui/icons-material/Search';
+import { Search } from '@mui/icons-material';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import MailIcon from '@mui/icons-material/Mail';
 import { Face } from '@mui/icons-material';
@@ -21,27 +21,27 @@ import MoreIcon from '@mui/icons-material/MoreVert';
 import { Dancing_Script } from "next/font/google";
 import { signIn, signOut, useSession } from "next-auth/react"
 import Navdrawer from './Navdrawer'
-import { Avatar } from '@mui/material';
+import { Avatar, TextField, InputAdornment } from '@mui/material';
 import theme from '../theme';
 
 
 const dancingScript = Dancing_Script({subsets: ['latin']})
 
-const Search = styled('div')(({ theme }) => ({
-  position: 'relative',
-  borderRadius: theme.shape.borderRadius,
-  backgroundColor: alpha(theme.palette.common.black, 0.15),
-  '&:hover': {
-    backgroundColor: alpha(theme.palette.common.black, 0.25),
-  },
-  marginRight: theme.spacing(2),
-  marginLeft: 0,
-  width: '100%',
-  [theme.breakpoints.up('sm')]: {
-    marginLeft: theme.spacing(3),
-    width: 'auto',
-  },
-}));
+// const Search = styled('div')(({ theme }) => ({
+//   position: 'relative',
+//   borderRadius: theme.shape.borderRadius,
+//   backgroundColor: alpha(theme.palette.common.black, 0.15),
+//   '&:hover': {
+//     backgroundColor: alpha(theme.palette.common.black, 0.25),
+//   },
+//   marginRight: theme.spacing(2),
+//   marginLeft: 0,
+//   width: '100%',
+//   [theme.breakpoints.up('sm')]: {
+//     marginLeft: theme.spacing(3),
+//     width: 'auto',
+//   },
+// }));
 
 const SearchIconWrapper = styled('div')(({ theme }) => ({
   padding: theme.spacing(0, 2),
@@ -98,8 +98,14 @@ export default function PrimarySearchAppBar(props) {
   };
 
   const handleNavdrawerOpen = () => {
-      setNavdrawerOpen(!isNavdrawerOpen)
-    }
+    setNavdrawerOpen(!isNavdrawerOpen)
+  }
+
+  const handleSearch = (event) => {
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget)
+    router.push(`/search?name=${formData.get('search')}`)
+  }
 
   const menuId = 'primary-search-account-menu';
   const renderMenu = (
@@ -180,7 +186,7 @@ export default function PrimarySearchAppBar(props) {
   const contentColor = 'white'
 
   return (
-    <Box sx={{ flexGrow: 1, marginBottom: '100px' }}>
+    <Box sx={{ flexGrow: 1, marginBottom: '60px' }}>
       <Navdrawer open={isNavdrawerOpen} setOpen={handleNavdrawerOpen}></Navdrawer>
       <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, bgcolor: 'rgb(93, 64, 55)', color: 'black' }}>
         <Toolbar>
@@ -198,12 +204,37 @@ export default function PrimarySearchAppBar(props) {
             variant="h6"
             noWrap
             component="div"
-            sx={{ color: contentColor, display: { xs: 'none', sm: 'block', fontFamily: dancingScript.style.fontFamily, ":hover": {cursor: 'pointer'} } }}
+            sx={{ marginRight: '30px', fontSize: '30px', color: contentColor, display: { xs: 'none', sm: 'block', fontFamily: dancingScript.style.fontFamily, ":hover": {cursor: 'pointer'} } }}
             onClick={() => router.push('/')}
           >
             NOMS
           </Typography>
-          <Search sx={{color: contentColor}}>
+          <form onSubmit={handleSearch}>
+            <TextField 
+              name="search"
+              variant="outlined"
+              placeholder="Search for recipes"
+              InputProps={{
+                style: {
+                  backgroundColor: 'rgb(255, 255, 255)'
+                },
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton type="submit">
+                      <Search />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '25px',
+                },
+                width: '500px'
+              }}
+            />
+          </form>
+          {/* <Search sx={{color: contentColor}}>
             <SearchIconWrapper>
               <SearchIcon sx={{color: contentColor}}/>
             </SearchIconWrapper>
@@ -211,7 +242,7 @@ export default function PrimarySearchAppBar(props) {
               placeholder="Search for recipes"
               inputProps={{ 'aria-label': 'search' }}
             />
-          </Search>
+          </Search> */}
           <Box sx={{ flexGrow: 1 }} />
           <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
             {/* <IconButton size="large" aria-label="show 4 new mails" color="inherit">
