@@ -26,8 +26,8 @@ export async function generateStaticParams() {
     }).then((data) => {
         return data.result.map((branch) => {
             return {
-                branchbase: branch.branchbase,
-                branchid: branch.branchid
+                branchbase: branch.branchbase.toString(),
+                branchid: branch.branchid.toString()
             }
         })
     })
