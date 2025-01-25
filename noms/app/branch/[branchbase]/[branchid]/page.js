@@ -16,10 +16,25 @@ function formatTimestamp(timestamp) {
 }
 
 export async function generateStaticParams() {
-    const recipeIDs = ['1']
-    return recipeIDs.map((id) => {
-      return {recipeID: id}
-    });
+    return fetch(
+        `${process.env.NOMS_URL}/api/getUniqueBaseAndBranch`
+    ).then((response) => {
+        if(!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`)
+        }
+        return response.json()
+    }).then((data) => {
+        return data.result.map((branch) => {
+            return {
+                branchbase: branch.branchbase,
+                branchid: branch.branchid
+            }
+        })
+    })
+    .catch((error) => {
+        console.error(error)
+        return {message: 'error'}
+    })
 }
 
 async function getBranchRecipes(branchbase, branchid) {
