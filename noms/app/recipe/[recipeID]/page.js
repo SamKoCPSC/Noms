@@ -4,10 +4,24 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 
 export async function generateStaticParams() {
-    const recipeIDs = ['1']
-    return recipeIDs.map((id) => {
-      return {recipeID: id}
-    });
+    return fetch(
+        `${process.env.NOMS_URL}/api/getAllRecipeIDs`
+    ).then((response) => {
+        if(!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`)
+        }
+        return response.json()
+    }).then((data) => {
+        return data.result.map((id) => {
+            return {
+                id: id.id
+            }
+        })
+    })
+    .catch((error) => {
+        console.error(error)
+        return {message: 'error'}
+    })
 }
 
 async function getRecipeData(id) {

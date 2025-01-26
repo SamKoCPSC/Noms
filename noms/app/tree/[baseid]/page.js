@@ -16,10 +16,22 @@ function formatTimestamp(timestamp) {
 }
 
 export async function generateStaticParams() {
-    const recipeIDs = ['1']
-    return recipeIDs.map((id) => {
-      return {recipeID: id}
-    });
+    return fetch(
+        `${process.env.NOMS_URL}/api/getAllBaseIDs`
+    ).then((response) => {
+        if(!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`)
+        }
+        return response.json()
+    }).then((data) => {
+        return data.result.map((base) => {
+            return base.baseid.toString()
+        })
+    })
+    .catch((error) => {
+        console.error(error)
+        return {message: 'error'}
+    })
 }
 
 async function getTreeRecipes(baseid) {
@@ -50,7 +62,6 @@ export default async function Recipe({ params }) {
     }
 
     return (
-        // <Typography>{JSON.stringify(branchRecipes)}</Typography>
         <Container maxWidth='false' sx={{justifyItems: 'center'}}>
             <Box display={'flex'} flexDirection={'column'} sx={{width: '100%',alignItems: 'center', gap:'40px', marginTop: '100px'}}>
                 <Typography sx={{alignSelf: 'start', fontSize: textStyle.titleSize, marginLeft: '150px'}}>Tree</Typography>

@@ -14,7 +14,7 @@ export async function generateStaticParams() {
         return response.json()
     }).then((data) => {
         return data.result.map((user) => {
-            return user.id
+            return user.id.toString()
         })
     })
     .catch((error) => {
