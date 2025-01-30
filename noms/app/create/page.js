@@ -827,7 +827,7 @@ export default function Create({searchParams}) {
           }
           <Stack direction={'row'} sx={{justifyContent: 'end'}}>
             <Button variant="contained" color="error" sx={{top: '30px'}} onClick={() => router.push('/')}>Cancel</Button>
-            {Object.keys(searchParams).length === 0 && <Button variant="contained" color="secondary" sx={{top: '30px'}} onClick={() => handleSave()}>Save As Draft</Button>}
+            {/* {Object.keys(searchParams).length === 0 && <Button variant="contained" color="secondary" sx={{top: '30px'}} onClick={() => handleSave()}>Save As Draft</Button>} */}
             <Button disabled={status !== "authenticated" || (isSubmitAttempted && Object.keys(recipeFormik.errors).length > 0)} variant="contained" sx={{top: '30px'}} 
               onClick={() => {
                 setSubmitAttempted(true)
