@@ -4,9 +4,20 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 
 export async function generateStaticParams() {
-    return fetch(
-        `${process.env.NOMS_URL}/api/getAllRecipeIDs`
-    ).then((response) => {
+    return fetch(process.env.LAMBDA_API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            'x-api-key': process.env.LAMBDA_API_KEY,
+        },
+        body: JSON.stringify({
+            sql: `
+                SELECT id
+                FROM recipes;
+            `,
+            values: []
+        })
+    }).then((response) => {
         if(!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`)
         }
@@ -25,9 +36,48 @@ export async function generateStaticParams() {
 }
 
 async function getRecipeData(id) {
-    return fetch(
-        `${process.env.NOMS_URL}/api/getRecipe?id=${id}`
-    ).then((response) => {
+    return fetch(process.env.LAMBDA_API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            'x-api-key': process.env.LAMBDA_API_KEY,
+        },
+        body: JSON.stringify({
+            sql: `
+                SELECT 
+                    r.id AS recipeid,
+                    r.name AS name,
+                    r.description,
+                    r.instructions,
+                    r.userid,
+                    r.additionalinfo,
+                    r.imageurls,
+                    r.status,
+                    r.datecreated,
+                    r.baseid,
+                    r.version,
+                    r.branchid,
+                    r.branchbase,
+                    r.notes,
+                    u.name AS author,
+                    json_agg(
+                        json_build_object(
+                            'id', i.id,
+                            'name', i.name,
+                            'quantity', ri.quantity,
+                            'unit', ri.unit
+                        )
+                    ) AS ingredients
+                FROM recipes r
+                LEFT JOIN users u ON r.userid = u.id
+                LEFT JOIN recipe_ingredients ri ON r.id = ri.recipeid
+                LEFT JOIN ingredients i ON ri.ingredientid = i.id
+                WHERE r.id = %s
+                GROUP BY r.id, u.name;
+            `,
+            values: [id]
+        })
+    }).then((response) => {
         if(!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`)
         }

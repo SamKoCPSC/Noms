@@ -5,9 +5,20 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function generateStaticParams() {
-    return fetch(
-        `${process.env.NOMS_URL}/api/getAccount`
-    ).then((response) => {
+    return fetch(process.env.LAMBDA_API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            'x-api-key': process.env.LAMBDA_API_KEY,
+        },
+        body: JSON.stringify({
+            sql: `
+                SELECT *
+                FROM users
+            `,
+            values: []
+        })
+    }).then((response) => {
         if(!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`)
         }
@@ -24,9 +35,35 @@ export async function generateStaticParams() {
 }
 
 async function getUserRecipeData(id) {
-    return fetch(
-        `${process.env.NOMS_URL}/api/myRecipes?id=${id}`
-    ).then((response) => {
+    return fetch(process.env.LAMBDA_API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            'x-api-key': process.env.LAMBDA_API_KEY,
+        },
+        body: JSON.stringify({
+            sql: `
+                SELECT 
+                    r.id AS id,
+                    r.name AS name,
+                    r.description,
+                    r.instructions,
+                    r.datecreated,
+                    r.additionalinfo,
+                    r.imageurls,
+                    r.status,
+                    u.name AS author,
+                    u.email
+                FROM 
+                    recipes r
+                JOIN 
+                    users u ON r.userid = u.id
+                WHERE 
+                    u.id = %s;
+            `,
+            values: [id]
+        })
+    }).then((response) => {
         if(!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`)
         }

@@ -16,9 +16,20 @@ function formatTimestamp(timestamp) {
 }
 
 export async function generateStaticParams() {
-    return fetch(
-        `${process.env.NOMS_URL}/api/getAllBaseIDs`
-    ).then((response) => {
+    return fetch(process.env.LAMBDA_API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            'x-api-key': process.env.LAMBDA_API_KEY,
+        },
+        body: JSON.stringify({
+            sql: `
+                SELECT DISTINCT baseid
+                FROM recipes;
+            `,
+            values: []
+        })
+    }).then((response) => {
         if(!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`)
         }
@@ -35,9 +46,68 @@ export async function generateStaticParams() {
 }
 
 async function getTreeRecipes(baseid) {
-    return fetch(
-        `${process.env.NOMS_URL}/api/getRecipeTree?baseid=${baseid}`
-    ).then((response) => {
+    return fetch(process.env.LAMBDA_API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            'x-api-key': process.env.LAMBDA_API_KEY,
+        },
+        body: JSON.stringify({
+            sql: `
+            SELECT 
+                r.id AS recipeid,
+                r.name AS name,
+                r.description,
+                r.instructions,
+                r.userid,
+                r.additionalinfo,
+                r.imageurls,
+                r.status,
+                r.datecreated,
+                r.baseid,
+                r.version,
+                r.branchid,
+                r.branchbase,
+                r.notes,
+                u.name AS author,
+                json_agg(
+                    json_build_object(
+                        'id', i.id,
+                        'name', i.name,
+                        'quantity', ri.quantity,
+                        'unit', ri.unit
+                    )
+                ) AS ingredients
+            FROM 
+                recipes r
+            JOIN 
+                (
+                    SELECT 
+                        branchid,
+                        branchbase, 
+                        baseid, 
+                        MAX(version) AS max_version
+                    FROM 
+                        recipes
+                    WHERE
+                        baseid = %s
+                    GROUP BY 
+                        branchid, branchbase, baseid
+                ) latest
+            ON 
+                r.branchid = latest.branchid 
+                AND r.branchbase = latest.branchbase 
+                AND r.baseid = latest.baseid 
+                AND r.version = latest.max_version
+            LEFT JOIN users u ON r.userid = u.id
+            LEFT JOIN recipe_ingredients ri ON r.id = ri.recipeid
+            LEFT JOIN ingredients i ON ri.ingredientid = i.id
+            GROUP BY r.id, u.name
+            ORDER BY r.branchbase ASC, r.branchid ASC
+            `,
+            values: [baseid]
+        })
+    }).then((response) => {
         if(!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`)
         }

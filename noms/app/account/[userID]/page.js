@@ -5,38 +5,61 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function generateStaticParams() {
-    return fetch(
-        `${process.env.NOMS_URL}/api/getAccount`
-    ).then((response) => {
+    return fetch(process.env.LAMBDA_API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            'x-api-key': process.env.LAMBDA_API_KEY,
+        },
+        body: JSON.stringify({
+            sql: `
+                SELECT *
+                FROM users
+            `,
+            values: []
+        })
+    }).then((response) => {
         if(!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`)
         }
         return response.json()
-    }).then((data) => {
-        return data.result.map((user) => ({
+    }).then((response) => {
+        return response.result.map((user) => ({
             userID: user.id.toString()
         }))
     })
     .catch((error) => {
         console.error(error)
-        return {message: 'error'}
+        return []
     })
 }
 
 async function getUserData(id) {
-    return fetch(
-        `${process.env.NOMS_URL}/api/getAccount?id=${id}`
-    ).then((response) => {
+    return fetch(process.env.LAMBDA_API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            'x-api-key': process.env.LAMBDA_API_KEY,
+        },
+        body: JSON.stringify({
+            sql: `
+                SELECT * 
+                FROM users 
+                WHERE id = %s;
+            `,
+            values: [id]
+        })
+    }).then((response) => {
         if(!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`)
         }
         return response.json()
-    }).then((data) => {
-        return data.result[0]
+    }).then((response) => {
+        return response.result[0]
     })
     .catch((error) => {
         console.error(error)
-        return {message: 'error'}
+        return []
     })
 }
 

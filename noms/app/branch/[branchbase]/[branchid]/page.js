@@ -16,9 +16,20 @@ function formatTimestamp(timestamp) {
 }
 
 export async function generateStaticParams() {
-    return fetch(
-        `${process.env.NOMS_URL}/api/getUniqueBaseAndBranch`
-    ).then((response) => {
+    return fetch(process.env.LAMBDA_API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            'x-api-key': process.env.LAMBDA_API_KEY,
+        },
+        body: JSON.stringify({
+            sql: `
+                SELECT DISTINCT branchbase, branchid
+                FROM recipes
+            `,
+            values: []
+        })
+    }).then((response) => {
         if(!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`)
         }
@@ -30,14 +41,55 @@ export async function generateStaticParams() {
         }))
     })
     .catch((error) => {
+        console.error(error)
         return []
     })
 }
 
 async function getBranchRecipes(branchbase, branchid) {
-    return fetch(
-        `${process.env.NOMS_URL}/api/getRecipeBranch?branchbase=${branchbase}&branchid=${branchid}`
-    ).then((response) => {
+    return fetch(process.env.LAMBDA_API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            'x-api-key': process.env.LAMBDA_API_KEY,
+        },
+        body: JSON.stringify({
+            sql: `
+                SELECT 
+                    r.id AS recipeid,
+                    r.name AS name,
+                    r.description,
+                    r.instructions,
+                    r.userid,
+                    r.additionalinfo,
+                    r.imageurls,
+                    r.status,
+                    r.datecreated,
+                    r.baseid,
+                    r.version,
+                    r.branchid,
+                    r.branchbase,
+                    r.notes,
+                    u.name AS author,
+                    json_agg(
+                        json_build_object(
+                            'id', i.id,
+                            'name', i.name,
+                            'quantity', ri.quantity,
+                            'unit', ri.unit
+                        )
+                    ) AS ingredients
+                FROM recipes r
+                LEFT JOIN users u ON r.userid = u.id
+                LEFT JOIN recipe_ingredients ri ON r.id = ri.recipeid
+                LEFT JOIN ingredients i ON ri.ingredientid = i.id
+                WHERE r.branchbase = %s AND r.branchid = %s OR r.id = %s
+                GROUP BY r.id, u.name
+                ORDER BY r.id ASC
+            `,
+            values: [branchbase, branchid, branchbase]
+        })
+    }).then((response) => {
         if(!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`)
         }
@@ -47,7 +99,7 @@ async function getBranchRecipes(branchbase, branchid) {
     })
     .catch((error) => {
         console.error(error)
-        return {message: 'error'}
+        return []
     })
 }
 
