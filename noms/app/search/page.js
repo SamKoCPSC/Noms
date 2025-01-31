@@ -9,6 +9,7 @@ import {Box, Container, Typography} from "@mui/material";
 import { Dancing_Script } from "next/font/google";
 import { useSearchParams } from "next/navigation";
 import { useEffect } from "react";
+import { Suspense } from "react";
 
 const dancingScript = Dancing_Script({subsets: ['latin']})
 

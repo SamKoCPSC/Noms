@@ -20,7 +20,7 @@ export async function generateStaticParams() {
     })
     .catch((error) => {
         console.error(error)
-        return {message: 'error'}
+        return []
     })
 }
 

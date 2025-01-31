@@ -1,5 +1,5 @@
 'use client'
-import React from "react";
+import React, { Suspense } from "react";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@mui/material/styles";
@@ -40,7 +40,11 @@ export default function RootLayout({ children }) {
             <Box left='0%' width={'100%'}>
               <Navbar></Navbar>
             </Box>
-            <SnackBarContext.Provider value={handleSnackBar}>{children}</SnackBarContext.Provider>
+            <SnackBarContext.Provider value={handleSnackBar}>
+              <Suspense>
+                {children}
+              </Suspense>
+            </SnackBarContext.Provider>
           </ThemeProvider>
         </SessionProvider>
       </body>

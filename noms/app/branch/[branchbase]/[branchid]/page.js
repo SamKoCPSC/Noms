@@ -24,16 +24,13 @@ export async function generateStaticParams() {
         }
         return response.json()
     }).then((data) => {
-        return data.result.map((branch) => {
-            return {
-                branchbase: branch.branchbase.toString(),
-                branchid: branch.branchid.toString()
-            }
-        })
+        return data.result.map((branch) => ({
+            branchbase: branch.branchbase.toString(),
+            branchid: branch.branchid.toString(),
+        }))
     })
     .catch((error) => {
-        console.error(error)
-        return {message: 'error'}
+        return []
     })
 }
 
@@ -65,7 +62,6 @@ export default async function Recipe({ params }) {
     }
 
     return (
-        // <Typography>{JSON.stringify(branchRecipes)}</Typography>
         <Container maxWidth='false' sx={{justifyItems: 'center'}}>
             <Box display={'flex'} flexDirection={'column'} sx={{width: '100%',alignItems: 'center', gap:'40px', marginTop: '100px'}}>
                 <Typography sx={{alignSelf: 'start', fontSize: textStyle.titleSize, marginLeft: '150px'}}>Branch</Typography>

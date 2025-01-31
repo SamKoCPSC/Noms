@@ -13,9 +13,9 @@ export async function generateStaticParams() {
         }
         return response.json()
     }).then((data) => {
-        return data.result.map((user) => {
-            return user.id
-        })
+        return data.result.map((user) => ({
+            userID: user.id.toString()
+        }))
     })
     .catch((error) => {
         console.error(error)
@@ -25,7 +25,7 @@ export async function generateStaticParams() {
 
 async function getUserData(id) {
     return fetch(
-        `http://localhost:3000/api/getAccount?id=${id}`
+        `${process.env.NOMS_URL}/api/getAccount?id=${id}`
     ).then((response) => {
         if(!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`)

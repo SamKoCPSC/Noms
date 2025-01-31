@@ -13,9 +13,9 @@ export async function generateStaticParams() {
         }
         return response.json()
     }).then((data) => {
-        return data.result.map((user) => {
-            return user.id.toString()
-        })
+        return data.result.map((user) => ({
+            userID: user.id.toString()
+        }))
     })
     .catch((error) => {
         console.error(error)
@@ -36,7 +36,7 @@ async function getUserRecipeData(id) {
     })
     .catch((error) => {
         console.error(error)
-        return {message: 'error'}
+        return []
     })
 }
 
