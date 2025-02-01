@@ -1,17 +1,19 @@
 version: 1
-frontend:
-  phases:
-    preBuild:
-      commands:
-        - cd noms
-        - npm i
-    build:
-      commands:
-        - npm run build
-  artifacts:
-    baseDirectory: noms/.next
-    files:
-      - "**/*"
-  cache:
-    paths:
-      - noms/node_modules/**/*  
+applications:
+  - appRoot: noms
+  frontend:
+    phases:
+      preBuild:
+        commands:
+          - cd noms
+          - npm i
+      build:
+        commands:
+          - npm run build
+    artifacts:
+      baseDirectory: noms/.next
+      files:
+        - "**/*"
+    cache:
+      paths:
+        - noms/node_modules/**/*  
