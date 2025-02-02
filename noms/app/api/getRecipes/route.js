@@ -8,10 +8,10 @@ export async function POST(req, res) {
         {
             sql: `
                 WITH random_recipes AS (
-                    SELECT *
+                    SELECT DISTINCT ON (branchbase) *
                     FROM recipes
                     WHERE status = 'public'
-                    ORDER BY RANDOM()
+                    ORDER BY branchbase, version DESC
                     LIMIT %s
                 )
                 SELECT 
