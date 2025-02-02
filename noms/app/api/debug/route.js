@@ -1,3 +1,7 @@
-export default function handler(req, res) {
-    res.status(200).json({ apiUrl: process.env.LAMBDA_API_URL });
+import { NextResponse } from "next/server";
+
+export async function GET() {
+    return NextResponse.json({
+        apiUrl: process.env.LAMBDA_API_URL,
+    })
 }
