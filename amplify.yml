@@ -5,21 +5,21 @@ applications:
       phases:
         preBuild:
           commands:
+            - echo GOOGLE_CLIENT_ID = $GOOGLE_CLIENT_ID >> .env.local
+            - echo GOOGLE_CLIENT_SECRET = $GOOGLE_CLIENT_SECRET >> .env.local
+            - echo LAMBDA_API_KEY = $LAMBDA_API_KEY >> .env.local
+            - echo LAMBDA_API_URL = $LAMBDA_API_URL >> .env.local
+            - echo NEXTAUTH_SECRET = $NEXTAUTH_SECRET >> .env.local
+            - echo NEXTAUTH_URL = $NEXTAUTH_URL >> .env.local
+            - echo NOMS_URL = $NOMS_URL >> .env.local
+            - echo S3_ACCESS = $S3_ACCESS >> .env.local
+            - echo S3_BUCKET = $S3_BUCKET >> .env.local
+            - echo S3_REGION = $S3_REGION >> .env.local
+            - echo S3_SECRET = $S3_SECRET >> .env.local
             - npm i
         build:
           commands:
             - npm run build
-            - GOOGLE_CLIENT_ID = $GOOGLE_CLIENT_ID
-            - GOOGLE_CLIENT_SECRET = $GOOGLE_CLIENT_SECRET
-            - LAMBDA_API_KEY = $LAMBDA_API_KEY
-            - LAMBDA_API_URL = $LAMBDA_API_URL
-            - NEXTAUTH_SECRET = $NEXTAUTH_SECRET
-            - NEXTAUTH_URL = $NEXTAUTH_URL
-            - NOMS_URL = $NOMS_URL
-            - S3_ACCESS = $S3_ACCESS
-            - S3_BUCKET = $S3_BUCKET
-            - S3_REGION = $S3_REGION
-            - S3_SECRET = $S3_SECRET
       artifacts:
         baseDirectory: .next
         files:
