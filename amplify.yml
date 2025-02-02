@@ -9,7 +9,6 @@ applications:
         build:
           commands:
             - npm run build
-            - AMPLIFY_MONOREPO_APP_ROOT = $AMPLIFY_MONOREPO_APP_ROOT
             - GOOGLE_CLIENT_ID = $GOOGLE_CLIENT_ID
             - GOOGLE_CLIENT_SECRET = $GOOGLE_CLIENT_SECRET
             - LAMBDA_API_KEY = $LAMBDA_API_KEY
