@@ -115,7 +115,7 @@ export default async function Recipe({ params }) {
             <Box display={'flex'} flexDirection={'row'} 
                 sx={{
                     width: '100%',
-                    justifyContent: 'end',
+                    justifyContent: 'space-between',
                     backgroundColor: 'white', 
                     padding: '20px',
                     margin: '30px',
@@ -125,30 +125,32 @@ export default async function Recipe({ params }) {
                     borderWidth: 2,
                     boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
                 }}>
-                <Box display={'flex'} flexDirection={'column'} sx={{width: '60%', gap: '20px'}}>
+                <Box display={'flex'} flexDirection={'column'} sx={{ gap: '20px'}}>
                     <Typography>Version: {recipeData.version} {recipeData.baseid !== recipeData.recipeid && `- Based On Recipe: ${recipeData.baseid}`} {recipeData.branchbase && `- Branched From Recipe: ${recipeData.branchbase}`}</Typography>
                     <Typography>Notes: {recipeData.notes ? recipeData.notes : 'None'}</Typography>
                 </Box>
-                <Link href={`/tree/${recipeData.baseid}`}>
-                    <Button variant="contained">
-                        View Tree
-                    </Button>
-                </Link>
-                <Link href={`/branch/${recipeData.branchbase}/${recipeData.branchid}`}>
-                    <Button variant="contained">
-                        View Branch
-                    </Button>
-                </Link>
-                <Link href={session ? `/create?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&baseid=${recipeData.baseid}&branchbase=${recipeData.recipeid}` : '/signInRequired'}>
-                    <Button variant="contained">
-                        New Branch
-                    </Button>
-                </Link>
-                <Link href={session ? `/create?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&baseid=${recipeData.baseid}${recipeData.branchbase ? `&branchbase=${recipeData.branchbase}` : ''}&branchid=${recipeData.branchid}` : '/signInRequired'}>
-                    <Button variant="contained">
-                        New Version
-                    </Button>
-                </Link>
+                <Box display={'flex'} flexDirection={'row'} sx={{}}>
+                    <Link href={`/tree/${recipeData.baseid}`}>
+                        <Button variant="contained" color='secondary'>
+                            View Tree
+                        </Button>
+                    </Link>
+                    <Link href={`/branch/${recipeData.branchbase}/${recipeData.branchid}`}>
+                        <Button variant="contained" color='secondary'>
+                            View Branch
+                        </Button>
+                    </Link>
+                    <Link href={session ? `/create?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&baseid=${recipeData.baseid}&branchbase=${recipeData.recipeid}` : '/signInRequired'}>
+                        <Button variant="contained">
+                            New Branch
+                        </Button>
+                    </Link>
+                    <Link href={session ? `/create?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&baseid=${recipeData.baseid}${recipeData.branchbase ? `&branchbase=${recipeData.branchbase}` : ''}&branchid=${recipeData.branchid}` : '/signInRequired'}>
+                        <Button variant="contained">
+                            New Version
+                        </Button>
+                    </Link>
+                </Box>
             </Box>
             <Divider sx={{marginTop: '30px', width: '100%'}}/>
             <Typography sx={{justifySelf: 'center', fontSize: textStyle.recipeTitleSize}}>{recipeData.name}</Typography>
