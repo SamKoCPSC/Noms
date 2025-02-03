@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import IngredientsCalculator from "@/app/components/IngredientsCalculator"
 
 export async function generateStaticParams() {
     return fetch(process.env.LAMBDA_API_URL, {
@@ -171,23 +172,30 @@ export default async function Recipe({ params }) {
             slidesPerView={1}
             height='500px'
             />
-            <Box 
+            <IngredientsCalculator ingredientsProps={recipeData.ingredients}/>
+            {/* <Box display={'flex'} flexDirection={'row'}
             sx={{
                 backgroundColor: 'white', 
                 width: '100%', 
                 padding: '20px',
                 marginTop: '30px',
+                justifyContent: 'space-between',
                 borderRadius: '30px',
                 borderColor: 'rgb(230, 228, 215)',
                 borderStyle: 'solid',
                 borderWidth: 2,
                 boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
             }}>
-            <Typography sx={{justifySelf: 'left', fontSize: textStyle.sectionTitleSize}}>Ingredients</Typography>
-            {recipeData.ingredients?.map((ingredient, index) => {
-                return <Typography key={index} sx={{justifySelf: 'left', fontSize: textStyle.paragraphSize, marginBottom: '5px'}}>{ingredient.quantity}{ingredient.unit} {ingredient.name}</Typography>
-            })}
-            </Box>
+                <Box>
+                    <Typography sx={{justifySelf: 'left', fontSize: textStyle.sectionTitleSize}}>Ingredients</Typography>
+                    {recipeData.ingredients?.map((ingredient, index) => {
+                        return <Typography key={index} sx={{justifySelf: 'left', fontSize: textStyle.paragraphSize, marginBottom: '5px'}}>{ingredient.quantity}{ingredient.unit} {ingredient.name}</Typography>
+                    })}
+                </Box>
+                <Box display={'flex'} flexDirection={'row'}>
+                    <Button variant="contained" sx={{height: '50px'}}>Scale</Button>
+                </Box>
+            </Box> */}
             <Box
             sx={{
                 backgroundColor: 'white', 
