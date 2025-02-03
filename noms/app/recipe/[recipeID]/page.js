@@ -2,6 +2,8 @@ import Carousel from "@/app/components/Carousel";
 import { Box, Button, Container, Divider, Typography } from "@mui/material"
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function generateStaticParams() {
     return fetch(process.env.LAMBDA_API_URL, {
@@ -92,6 +94,7 @@ async function getRecipeData(id) {
 }
 
 export default async function Recipe({ params }) {
+    const session = await getServerSession(authOptions)
     const recipeData = await getRecipeData(params.recipeID)
 
     const textStyle = {
@@ -136,12 +139,12 @@ export default async function Recipe({ params }) {
                         View Branch
                     </Button>
                 </Link>
-                <Link href={`/create?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&baseid=${recipeData.baseid}&branchbase=${recipeData.recipeid}`}>
+                <Link href={session ? `/create?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&baseid=${recipeData.baseid}&branchbase=${recipeData.recipeid}` : '/signInRequired'}>
                     <Button variant="contained">
                         New Branch
                     </Button>
                 </Link>
-                <Link href={`/create?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&baseid=${recipeData.baseid}${recipeData.branchbase ? `&branchbase=${recipeData.branchbase}` : ''}&branchid=${recipeData.branchid}`}>
+                <Link href={session ? `/create?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&baseid=${recipeData.baseid}${recipeData.branchbase ? `&branchbase=${recipeData.branchbase}` : ''}&branchid=${recipeData.branchid}` : '/signInRequired'}>
                     <Button variant="contained">
                         New Version
                     </Button>

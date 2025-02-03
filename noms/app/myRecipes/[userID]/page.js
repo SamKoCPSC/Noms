@@ -102,7 +102,7 @@ export default async function({ params }) {
         paragraphSize: '1.25rem'
     }
 
-    if(!session || 1 !== session.user.id) {
+    if(!session || params.userID !== session.user.id) {
         return (
             <AccessDenied/>
         )

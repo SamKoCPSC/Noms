@@ -1,18 +1,16 @@
 'use client'
-import Image from "next/image";
 import styles from "../page.module.css";
 import * as React from 'react';
 import { useFormik, validateYupSchema } from "formik";
 import * as Yup from 'yup';
 import axios from "axios";
-import Navbar from '../components/Navbar'
 import { Edit, Add, CloudUpload } from "@mui/icons-material";
 import {Box, Container, Divider, Stack, TextField, Typography, Button, MenuItem, Checkbox, ImageList, ImageListItem} from "@mui/material";
 import { styled } from "@mui/material";
 import { useTheme } from "@emotion/react";
 import { useSession } from "next-auth/react";
 import { SnackBarContext } from "../layout";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 
