@@ -10,10 +10,10 @@ import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import InboxIcon from '@mui/icons-material/MoveToInbox';
-import MailIcon from '@mui/icons-material/Mail';
+import { Login, Logout } from '@mui/icons-material';
 import { Create, CollectionsBookmark, AccountBox } from '@mui/icons-material';
 import { useSession } from 'next-auth/react';
+import { signIn, signOut } from 'next-auth/react';
 
 export default function TemporaryDrawer(props) {
   const {data: session, status} = useSession()
@@ -48,6 +48,18 @@ export default function TemporaryDrawer(props) {
             {drawerItem.divider && <Divider/>}
           </Box>
         ))}
+          <Divider/>
+          <Box>
+            <ListItem disablePadding>
+              <ListItemButton onClick={() => status === 'authenticated' ? signOut({callbackUrl: '/'}) : signIn('google') }>
+                <ListItemIcon>
+                  {status === 'authenticated' ? <Logout/> : <Login/> }
+                </ListItemIcon>
+                <ListItemText primary={status === 'authenticated' ? 'Logout' : 'Login'} />
+              </ListItemButton>
+            </ListItem>
+          </Box>
+          <Divider/>
       </List>
     </Box>
   );
