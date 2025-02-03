@@ -31,7 +31,7 @@ const SubText = styled('p')( {
   color: 'grey',
 })
 
-const units = ['g', 'kg', 'oz', 'lb', 'mL', 'L', 'tsp', 'tbsp', 'c', 'fl. oz']
+const units = ['g', 'kg', 'oz', 'lb', 'mL', 'L', 'tsp', 'tbsp', 'c', 'fl. oz'] 
 
 const replaceNonStrings = (originalArray, replacementArray) => {
   let replacementIndex = 0

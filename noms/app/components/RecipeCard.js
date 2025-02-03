@@ -143,7 +143,7 @@ export default function RecipeCard({id, name, description, author, date, ingredi
         </Typography>
       </CardContent>
       <CardActions disableSpacing>
-        <IconButton aria-label="add to favorites" 
+        {/* <IconButton aria-label="add to favorites" 
           onClick={(e) => {
             e.stopPropagation()
             router.push('/create')
@@ -156,7 +156,7 @@ export default function RecipeCard({id, name, description, author, date, ingredi
         </IconButton>
         <IconButton aria-label="share">
           <ShareIcon />
-        </IconButton>
+        </IconButton> */}
         {/* <ExpandMore
           expand={expanded}
           onClick={handleExpandClick}
