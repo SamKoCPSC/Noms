@@ -102,7 +102,7 @@ export default async function({ params }) {
         paragraphSize: '1.25rem'
     }
 
-    if(!session || params.userID !== session.user.id) {
+    if(!session || params.userID !== session.user.id.toString()) {
         return (
             <AccessDenied/>
         )
@@ -137,7 +137,7 @@ export default async function({ params }) {
                         }  
                     })}
                 </Box>
-                <Divider width='90%'/>
+                {/* <Divider width='90%'/>
                 <Typography sx={{alignSelf: 'start', fontSize: textStyle.sectionTitleSize, marginLeft: '200px'}}>Drafts</Typography>
                 <Box display={'flex'} flexDirection={'row'} flexWrap={'wrap'} sx={{justifyContent: 'center', gap:'40px'}}>
                     {userRecipes.map((recipe, index) => { 
@@ -159,7 +159,7 @@ export default async function({ params }) {
                             )
                         }  
                     })}
-                </Box>
+                </Box> */}
             </Box>
         </Container>
     )
