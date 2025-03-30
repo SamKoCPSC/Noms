@@ -95,7 +95,7 @@ async function getRecipeData(id) {
 }
 
 export default async function Recipe({ params }) {
-    const session = await getServerSession(authOptions)
+    // const session = await getServerSession(authOptions)
     const recipeData = await getRecipeData(params.recipeID)
 
     const textStyle = {
@@ -141,12 +141,12 @@ export default async function Recipe({ params }) {
                             View Branch
                         </Button>
                     </Link>
-                    <Link href={session ? `/create?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&baseid=${recipeData.baseid}&branchbase=${recipeData.recipeid}` : '/signInRequired'}>
+                    <Link href={`/create?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&baseid=${recipeData.baseid}&branchbase=${recipeData.recipeid}`}>
                         <Button variant="contained">
                             New Branch
                         </Button>
                     </Link>
-                    <Link href={session ? `/create?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&baseid=${recipeData.baseid}${recipeData.branchbase ? `&branchbase=${recipeData.branchbase}` : ''}&branchid=${recipeData.branchid}` : '/signInRequired'}>
+                    <Link href={`/create?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&baseid=${recipeData.baseid}${recipeData.branchbase ? `&branchbase=${recipeData.branchbase}` : ''}&branchid=${recipeData.branchid}`}>
                         <Button variant="contained">
                             New Version
                         </Button>
