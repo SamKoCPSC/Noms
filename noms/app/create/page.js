@@ -160,7 +160,7 @@ export default function Create({searchParams}) {
   const recipeFormik = useFormik({
     initialValues: {
         name: searchParams.name,
-        description: searchParams.description,
+        description: searchParams.description || '',
         ingredients: ingredients,
         instructions: instructions,
         additionalInfo: additionalInfo,
@@ -170,17 +170,12 @@ export default function Create({searchParams}) {
     initialErrors: {name: 'This just ensures that errors is not null so the error message is triggered'},
     validationSchema: Yup.object().shape({
       name: Yup.string().max(255, 'Name must be less than 255 characters').required('Name is required'),
-      description: Yup.string().max(1000, 'Description must be less than 1000 characters').required('Description is required'),
-      ingredients: Yup.array().min(1,'Must have at least one ingredient'),
-      instructions: Yup.array().min(1,'Must have at least one instruction'),
-      images: Yup.array().min(1,'Must add at least one image')
+      // description: Yup.string().max(1000, 'Description must be less than 1000 characters').required('Description is required'),
+      // ingredients: Yup.array().min(1,'Must have at least one ingredient'),
+      // instructions: Yup.array().min(1,'Must have at least one instruction'),
+      // images: Yup.array().min(1,'Must add at least one image')
     }),
     onSubmit: async (values) => {
-      // let imageData = images.map((image) => {
-      //   const formData = new FormData()
-      //   formData.append('file', image);
-      //   return formData;
-      // })
       let imageData = values.images.filter((image) => typeof image !== 'string').map((image) => {
         const formData = new FormData()
         formData.append('file', image);
@@ -213,7 +208,6 @@ export default function Create({searchParams}) {
                   ingredients: values.ingredients,
                   instructions: values.instructions,
                   additionalInfo: values.additionalInfo,
-                  // imageUrls: response.data.imageURLs,
                   imageUrls: replaceNonStrings(values.images, response.data.imageURLs ),
                   status: 'public',
                   notes: values.notes,
