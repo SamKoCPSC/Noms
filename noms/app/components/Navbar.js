@@ -23,6 +23,7 @@ import { signIn, signOut, useSession } from "next-auth/react"
 import Navdrawer from './Navdrawer'
 import { Avatar, TextField, InputAdornment } from '@mui/material';
 import theme from '../theme';
+import { useTheme } from '@emotion/react';
 
 
 const dancingScript = Dancing_Script({subsets: ['latin']})
@@ -68,6 +69,7 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 }));
 
 export default function PrimarySearchAppBar(props) {
+  const theme = useTheme()
   const session = useSession()
   const user = session.data?.user
 
@@ -204,13 +206,19 @@ export default function PrimarySearchAppBar(props) {
             variant="h6"
             noWrap
             component="div"
-            sx={{ marginRight: '30px', fontSize: '30px', color: contentColor, display: { xs: 'none', sm: 'block', fontFamily: dancingScript.style.fontFamily, ":hover": {cursor: 'pointer'} } }}
+            sx={{ 
+              marginRight: '30px', 
+              fontSize: '30px', 
+              color: contentColor, 
+              display: { sm: 'block', fontFamily: dancingScript.style.fontFamily, ":hover": {cursor: 'pointer'} },
+              [theme.breakpoints.down('544')]: {display: 'none'},
+            }}
             onClick={() => router.push('/')}
           >
             NOMS
           </Typography>
-          <form onSubmit={handleSearch}>
-            <TextField 
+          <form onSubmit={handleSearch} style={{flexGrow: 1}}>
+            <TextField
               name="search"
               variant="outlined"
               placeholder="Search for recipes"
@@ -227,10 +235,12 @@ export default function PrimarySearchAppBar(props) {
                 ),
               }}
               sx={{
+                flexGrow: 1,
                 '& .MuiOutlinedInput-root': {
                   borderRadius: '25px',
                 },
-                width: '500px'
+                width: '500px',
+                [theme.breakpoints.down('760')]: {width: '100%'},
               }}
             />
           </form>
@@ -243,8 +253,8 @@ export default function PrimarySearchAppBar(props) {
               inputProps={{ 'aria-label': 'search' }}
             />
           </Search> */}
-          <Box sx={{ flexGrow: 1 }} />
-          <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
+          {/* <Box sx={{ flexGrow: 1}}/> */}
+          <Box sx={{ display: 'flex' }}>
             {/* <IconButton size="large" aria-label="show 4 new mails" color="inherit">
               <Badge badgeContent={4} color="error">
                 <MailIcon sx={{color: contentColor}} />
@@ -271,7 +281,7 @@ export default function PrimarySearchAppBar(props) {
               {user ? <Avatar sx={{bgcolor: theme.palette.primary.main}}>{user.firstName.charAt(0)+user.lastName.charAt(0)}</Avatar> : <AccountCircle sx={{color: contentColor}}/>}
             </IconButton>
           </Box>
-          <Box sx={{ display: { xs: 'flex', md: 'none' } }}>
+          {/* <Box sx={{ display: { xs: 'flex', md: 'none' } }}>
             <IconButton
               size="large"
               aria-label="show more"
@@ -282,10 +292,10 @@ export default function PrimarySearchAppBar(props) {
             >
               <MoreIcon />
             </IconButton>
-          </Box>
+          </Box> */}
         </Toolbar>
       </AppBar>
-      {renderMobileMenu}
+      {/* {renderMobileMenu} */}
       {renderMenu}
     </Box>
   );
