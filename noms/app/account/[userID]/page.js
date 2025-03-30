@@ -3,6 +3,7 @@ import AccessDenied from "@/app/components/AccessDenied";
 import { styled } from "@mui/material";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { useTheme } from "@emotion/react";
 
 export async function generateStaticParams() {
     return fetch(process.env.LAMBDA_API_URL, {
@@ -95,9 +96,9 @@ export default async function({ params }) {
     }
 
     return (
-        <Container maxWidth='false' sx={{justifyItems: 'center', width: '70%'}}>
-            <Box display={'flex'} flexDirection={'column'} flexWrap={'wrap'} sx={{width: '100%',alignItems: 'center', gap:'40px', marginTop: '100px'}}>
-                <Box width='800px' display={"flex"} flexDirection={'column'}
+        <Container maxWidth='false' sx={{justifyItems: 'center'}}>
+            <Box display={'flex'} flexDirection={'column'} flexWrap={'wrap'} sx={{width: {md: '800px', sm: '100%', xs: '100%'}, alignItems: 'center', gap:'40px', marginTop: '100px'}}>
+                <Box width={'100%'} display={"flex"} flexDirection={'column'}
                     sx={{
                     borderColor: 'rgb(230, 228, 215)',
                     borderStyle: 'solid',
@@ -109,7 +110,7 @@ export default async function({ params }) {
                     padding: '40px'
                     }}
                 > 
-                <Typography fontSize={'4rem'}>Your Account</Typography>
+                <Typography fontSize={{sm: '4rem', xs: '3rem'}}>Your Account</Typography>
                 <Divider sx={{marginY: '30px'}}/>
                 <Typography sx={{fontSize: '0.68rem', color: 'gray'}}>Your display name which appears on your public profile and can be changed at any time</Typography>
                 <Typography fontSize='1.5rem'>Name: {userData.name}</Typography>
