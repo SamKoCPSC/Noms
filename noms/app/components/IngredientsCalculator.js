@@ -28,7 +28,7 @@ export default function IngredientsCalculator({ ingredientsProps }) {
     }
 
     return (
-        <Box display={'flex'} flexDirection={'row'}
+        <Box display={'flex'} flexDirection={{width470: 'row', xs: 'column'}}
         sx={{
             backgroundColor: 'white', 
             width: '100%', 
@@ -50,6 +50,7 @@ export default function IngredientsCalculator({ ingredientsProps }) {
             {scaleMode ? 
                 <Box display={'flex'} flexDirection={'column'}>
                     <TextField
+                        sx={{width: '190px'}}
                         onChange={(event) => setScalingFactor(event.target.value)}
                     />
                     <Box display={'flex'} flexDirection={'row'}>

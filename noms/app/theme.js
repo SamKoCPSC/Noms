@@ -25,6 +25,7 @@ const theme = createTheme({
       xl: 1536,
       width800: 800,
       width550: 550,
+      width470: 470,
     },
   },
   palette: {
