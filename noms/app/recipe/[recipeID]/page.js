@@ -174,7 +174,7 @@ export default async function Recipe({ params }) {
                 )
             })}
             slidesPerView={1}
-            height='500px'
+            height={{width800: '500px', width550: '400px', xs: '300px'}}
             />
             <IngredientsCalculator ingredientsProps={recipeData.ingredients}/>
             {/* <Box display={'flex'} flexDirection={'row'}
