@@ -111,9 +111,9 @@ export default async function({ params }) {
     return(
         <Container maxWidth='false' sx={{justifyItems: 'center'}}>
             <Box display={'flex'} flexDirection={'column'} sx={{width: '100%',alignItems: 'center', gap:'40px', marginTop: '100px'}}>
-                <Typography sx={{alignSelf: 'start', fontSize: textStyle.titleSize, marginLeft: '150px'}}>My Recipes</Typography>
+                <Typography sx={{alignSelf: {width800: 'start', xs: 'center'}, fontSize: textStyle.titleSize, marginLeft: {width800: '150px', xs: '0px'}}}>My Recipes</Typography>
                 <Divider width='90%'/>
-                <Typography sx={{alignSelf: 'start', fontSize: textStyle.sectionTitleSize, marginLeft: '200px'}}>Personal Recipes</Typography>
+                <Typography sx={{alignSelf: {width800: 'start', xs: 'center'}, fontSize: textStyle.sectionTitleSize, marginLeft: {width800: '200px', xs: '0px'}}}>Personal Recipes</Typography>
                 <Box display={'flex'} flexDirection={'row'} flexWrap={'wrap'} sx={{justifyContent: 'center', gap:'40px'}}>
                     {userRecipes.map((recipe, index) => { 
                         if(recipe.status === 'public') {
