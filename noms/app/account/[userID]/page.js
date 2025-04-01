@@ -120,12 +120,12 @@ export default async function({ params }) {
                 <Typography fontSize='1.5rem'>Email: {userData.email}</Typography>
                 <Typography fontSize='1.5rem'>User ID: {userData.id}</Typography>
                 <Typography fontSize='1.5rem'>Account Created: {formatTimestamp(userData.datecreated)}</Typography>
-                <Divider sx={{marginY: '30px'}}/>
+                {/* <Divider sx={{marginY: '30px'}}/>
                 <Typography fontSize='2rem' >Profile</Typography>
                 <Typography sx={{fontSize: '0.68rem', color: 'gray', marginBottom: '15px'}}>Content that appears on your public profile page</Typography>
                 <Typography fontSize='1.5rem'>Image</Typography>
                 <Typography fontSize='1.5rem'>Headline</Typography>
-                <Typography fontSize='1.5rem'>Bio</Typography>
+                <Typography fontSize='1.5rem'>Bio</Typography> */}
                 </Box>
             </Box>
         </Container>
