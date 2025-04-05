@@ -170,7 +170,7 @@ export default function Create({searchParams}) {
     initialErrors: {name: 'This just ensures that errors is not null so the error message is triggered'},
     validationSchema: Yup.object().shape({
       name: Yup.string().max(255, 'Name must be less than 255 characters').required('Name is required'),
-      // description: Yup.string().max(1000, 'Description must be less than 1000 characters').required('Description is required'),
+      description: Yup.string().max(1000, 'Description must be less than 1000 characters'),
       // ingredients: Yup.array().min(1,'Must have at least one ingredient'),
       // instructions: Yup.array().min(1,'Must have at least one instruction'),
       // images: Yup.array().min(1,'Must add at least one image')

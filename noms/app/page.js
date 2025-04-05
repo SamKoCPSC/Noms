@@ -113,7 +113,7 @@ export default function Home() {
         }
         {status === 'authenticated' &&
           <Stack direction={{ xs: "column", sm: "row" }} sx={{marginTop: '-15px'}}>
-            <Button variant="contained" onClick={() => router.push('/create')} sx={{borderRadius: '40px', width: '200px'}}>Create A Recipe</Button>
+            <Button variant="contained" onClick={() => router.push('/createRecipe')} sx={{borderRadius: '40px', width: '200px'}}>Create A Recipe</Button>
             <Button variant="contained" color="secondary" onClick={() => router.push('/create')} sx={{borderRadius: '40px', width: '200px'}}>Go To Your Recipes</Button>
           </Stack>
         }
