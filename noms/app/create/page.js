@@ -478,27 +478,32 @@ export default function Create({searchParams}) {
             </Stack> 
         ))}
         {addIngredientMode ? 
-            <Box display="flex" sx={{gap: '8px'}}>
+            <Box display="flex" flexDirection={{width550: 'row', xs: 'column'}} sx={{gap: '8px'}}>
+              <Box display={'flex'} flexDirection={'column'}>
                 <Typography>Ingredient</Typography>
                 <TextField 
-                    sx={{margin: '5px'}} 
+                    sx={{margin: '5px', width: '280px'}} 
                     value={ingredientFormik.values.name}
                     id="name"
                     name="name"
                     onChange={ingredientFormik.handleChange}>
                 </TextField>
+              </Box>
+              <Box display={'flex'} flexDirection={'column'}>
                 <Typography>Quantity</Typography>
                 <TextField 
-                    sx={{margin: '5px'}} 
+                    sx={{margin: '5px', width: '80px'}} 
                     value={ingredientFormik.values.quantity}
                     id="quantity"
                     name="quantity"
                     onChange={ingredientFormik.handleChange}>
                 </TextField>
+              </Box>
+              <Box display={'flex'} flexDirection={'column'}>
                 <Typography>Unit</Typography>
                 <TextField 
                     select 
-                    sx={{margin: '5px'}} 
+                    sx={{margin: '5px', width: '75px'}} 
                     value={ingredientFormik.values.unit}
                     id="unit"
                     name="unit"
@@ -507,6 +512,7 @@ export default function Create({searchParams}) {
                             <MenuItem key={unit} value={unit}>{unit}</MenuItem>
                         ))}
                 </TextField>
+              </Box>
             </Box> : 
             <></>
         }
