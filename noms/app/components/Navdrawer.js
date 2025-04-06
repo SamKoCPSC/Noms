@@ -11,7 +11,7 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import { Login, Logout } from '@mui/icons-material';
-import { Create, CollectionsBookmark, AccountBox } from '@mui/icons-material';
+import { Create, CollectionsBookmark, AccountBox, Info } from '@mui/icons-material';
 import { useSession } from 'next-auth/react';
 import { signIn, signOut } from 'next-auth/react';
 
@@ -28,7 +28,8 @@ export default function TemporaryDrawer(props) {
   const drawerItemList = [
     {label: 'Create A Recipe', link: status === 'authenticated' ? `/createRecipe` : '/signInRequired', icon: <Create/>, divider: true},
     {label: 'My Recipes', link: status === 'authenticated' ? `/myRecipes/${session.user.id}` : '/signInRequired', icon: <CollectionsBookmark/>},
-    {label: 'Account', link: status === 'authenticated' ? `/account/${session.user.id}` : '/signInRequired', icon: <AccountBox/>},
+    {label: 'Account', link: status === 'authenticated' ? `/account/${session.user.id}` : '/signInRequired', icon: <AccountBox/>, divider: true},
+    {label: 'About', link: '/about', icon: <Info/>},
   ]
 
   const DrawerList = (
