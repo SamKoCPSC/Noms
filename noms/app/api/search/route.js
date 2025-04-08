@@ -2,6 +2,7 @@ import axios from "axios";
 
 export async function GET(req, res) {
     const name = `%${req.nextUrl.searchParams.get('name')}%`
+    const ingredients = ['%potato%', '%flour%']
     return axios.post(
         process.env.LAMBDA_API_URL,
         {
@@ -31,13 +32,17 @@ export async function GET(req, res) {
                         )
                     ) AS ingredients
                 FROM recipes r
+                JOIN recipe_ingredients ri ON r.id = ri.recipeid
+				JOIN ingredients i ON i.id = ri.ingredientid
                 LEFT JOIN users u ON r.userid = u.id
-                LEFT JOIN recipe_ingredients ri ON r.id = ri.recipeid
-                LEFT JOIN ingredients i ON ri.ingredientid = i.id
-                WHERE r.name ILIKE %s
+                LEFT JOIN recipe_ingredients ON r.id = ri.recipeid
+                LEFT JOIN ingredients ON ri.ingredientid = i.id
+                WHERE r.name ILIKE %s and LOWER(i.name) LIKE ANY (ARRAY[
+				  ${'%s,'.repeat(ingredients.length).slice(0, -1)}
+				])
                 GROUP BY r.id, u.name;
             `,
-            values: [name]
+            values: [name].concat(ingredients)
         },
         {
             headers: {

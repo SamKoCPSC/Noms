@@ -70,6 +70,7 @@ export default function Home() {
                           status={recipe.status}
                           baseid={recipe.baseid}
                           version={recipe.version}
+                          notes={recipe.notes}
                           branchid={recipe.branchid}
                           branchbase={recipe.branchbase}
                       />
