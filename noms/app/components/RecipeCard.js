@@ -10,6 +10,7 @@ import Collapse from '@mui/material/Collapse';
 import Avatar from '@mui/material/Avatar';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
+import { Box, Divider } from '@mui/material';
 import { red } from '@mui/material/colors';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import ShareIcon from '@mui/icons-material/Share';
@@ -81,7 +82,7 @@ const ExpandMore = styled((props) => {
   ],
 }));
 
-export default function RecipeCard({id, name, description, author, date, ingredients, instructions, additionalInfo, imageURLs, status, baseid, version, branchid, branchbase}) {
+export default function RecipeCard({id, name, description, author, date, ingredients, instructions, additionalInfo, imageURLs, status, baseid, version, notes, branchid, branchbase}) {
   const [expanded, setExpanded] = React.useState(false);
   const router = useRouter()
 
@@ -129,7 +130,7 @@ export default function RecipeCard({id, name, description, author, date, ingredi
         titleTypographyProps={{fontSize:'20px' }}
         subheaderTypographyProps={{fontSize:'12px' }}
         title={name || 'untitled'}
-        subheader={author + ' - ' + date}
+        subheader={author + ' - ' + date + ' | Version: ' + version}
       />
       <CardMedia
         component="img"
@@ -138,9 +139,19 @@ export default function RecipeCard({id, name, description, author, date, ingredi
         alt="No Image"
       />
       <CardContent>
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          {description?.substring(0,175)}{description?.length >= 175 ? "..." : ""}
-        </Typography>
+        <Box display={'flex'} flexDirection={'column'} sx={{height: '78px'}}>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            {description?.substring(0,170)}{description?.length >= 170 ? "..." : ""}
+          </Typography>
+          {notes && 
+            <>
+              <Divider/>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Notes: {notes.substring(0,40)}{notes.length >= 40 ? "..." : ""}
+              </Typography>
+            </>
+          }
+        </Box>
       </CardContent>
       <CardActions disableSpacing>
         {/* <IconButton aria-label="add to favorites" 
