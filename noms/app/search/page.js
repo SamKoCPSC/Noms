@@ -33,8 +33,9 @@ export default function Home() {
 
   useEffect(() => {
     const name = searchParams.get('name')
+    const ingredients = searchParams.get('ingredients')
     fetch(
-      `/api/search?name=${name}`
+      `/api/search?name=${name}&ingredients=${ingredients}`
     ).then((response) => {
         if(!response.ok) {
             console.error(response)

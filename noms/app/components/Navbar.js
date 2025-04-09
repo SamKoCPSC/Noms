@@ -11,17 +11,20 @@ import InputBase from '@mui/material/InputBase';
 import Badge from '@mui/material/Badge';
 import MenuItem from '@mui/material/MenuItem';
 import Menu from '@mui/material/Menu';
+import Modal from '@mui/material/Modal';
+import Chip from '@mui/material/Chip';
 import MenuIcon from '@mui/icons-material/Menu';
 import { Search } from '@mui/icons-material';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import MailIcon from '@mui/icons-material/Mail';
 import { Face } from '@mui/icons-material';
 import NotificationsIcon from '@mui/icons-material/Notifications';
+import { Tune } from '@mui/icons-material';
 import MoreIcon from '@mui/icons-material/MoreVert';
 import { Dancing_Script } from "next/font/google";
 import { signIn, signOut, useSession } from "next-auth/react"
 import Navdrawer from './Navdrawer'
-import { Avatar, TextField, InputAdornment } from '@mui/material';
+import { Avatar, TextField, InputAdornment, Button } from '@mui/material';
 import theme from '../theme';
 import { useTheme } from '@emotion/react';
 
@@ -76,6 +79,8 @@ export default function PrimarySearchAppBar(props) {
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState(null);
   const [isNavdrawerOpen, setNavdrawerOpen] = React.useState(false)
+  const [isFilterOpen, setFilterOpen] = React.useState(false)
+  const [includedIngredients, setIncludedIngredients] = React.useState([])
 
   const router = useRouter()
 
@@ -106,7 +111,7 @@ export default function PrimarySearchAppBar(props) {
   const handleSearch = (event) => {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
-    router.push(`/search?name=${formData.get('search')}`)
+    router.push(`/search?name=${formData.get('name')}`)
   }
 
   const menuId = 'primary-search-account-menu';
@@ -190,6 +195,59 @@ export default function PrimarySearchAppBar(props) {
   return (
     <Box sx={{ flexGrow: 1, marginBottom: '60px' }}>
       <Navdrawer open={isNavdrawerOpen} setOpen={handleNavdrawerOpen}></Navdrawer>
+      <Modal open={isFilterOpen} onClose={() => setFilterOpen(false)}>
+        <Box display={'flex'} flexDirection={'column'} sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '500px',
+          height: '600px',
+          bgcolor: 'background.paper',
+          border: '2px solid #000',
+          borderRadius: '30px',
+          boxShadow: 24,
+          pt: 2,
+          px: 4,
+          pb: 3,
+          alignItems: 'center'
+        }}>
+          <Typography fontSize={'2rem'}>Filter By Ingredients</Typography>
+          <Box display={'flex'} flexWrap={'wrap'} sx={{gap: '5px'}}>
+            {includedIngredients.map((ingredient) => {
+              return <Chip label={ingredient} variant='outlined' 
+                onDelete={() => {
+                  setIncludedIngredients(includedIngredients.filter((element) => element !== ingredient))
+                }}/>
+            })}
+          </Box>
+          <form 
+            onSubmit={(event) => {
+              event.preventDefault()
+              const formData = new FormData(event.currentTarget)
+              setIncludedIngredients(includedIngredients.concat(formData.get('includedIngredients')))
+              event.target.reset()
+          }}>
+            <TextField
+              name="includedIngredients"
+              variant="outlined"
+              placeholder="Include Ingredients"
+              sx={{
+                marginY: '5px',
+                width: '250px',
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '25px',
+                },
+              }}
+              inputProps={{
+                style: {
+                  backgroundColor: 'rgb(255,255,255)'
+                }
+              }}
+            />
+          </form>
+        </Box>
+      </Modal>
       <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, bgcolor: 'rgb(93, 64, 55)', color: 'black' }}>
         <Toolbar>
           <IconButton
@@ -219,13 +277,20 @@ export default function PrimarySearchAppBar(props) {
           </Typography>
           <form onSubmit={handleSearch} style={{flexGrow: 1}}>
             <TextField
-              name="search"
+              name="name"
               variant="outlined"
               placeholder="Search for recipes"
               InputProps={{
                 style: {
                   backgroundColor: 'rgb(255, 255, 255)'
                 },
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <IconButton onClick={() => setFilterOpen(true)}>
+                      <Tune />
+                    </IconButton>
+                  </InputAdornment>
+                ),
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton type="submit">
