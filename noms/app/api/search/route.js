@@ -2,8 +2,8 @@ import axios from "axios";
 
 export async function GET(req, res) {
     const name = `%${req.nextUrl.searchParams.get('name')}%`
-    const includedIngredients = ['%']
-    const excludedIngredients = []
+    const includedIngredients = JSON.parse(req.nextUrl.searchParams.get('includedIngredients')).length > 0 ? JSON.parse(req.nextUrl.searchParams.get('includedIngredients')) : ['%']
+    const excludedIngredients = JSON.parse(req.nextUrl.searchParams.get('excludedIngredients'))
     return axios.post(
         process.env.LAMBDA_API_URL,
         {

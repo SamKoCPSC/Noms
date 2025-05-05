@@ -81,6 +81,8 @@ export default function PrimarySearchAppBar(props) {
   const [isNavdrawerOpen, setNavdrawerOpen] = React.useState(false)
   const [isFilterOpen, setFilterOpen] = React.useState(false)
   const [includedIngredients, setIncludedIngredients] = React.useState([])
+  const [excludedIngredients, setExcludedIngredients] = React.useState([])
+
 
   const router = useRouter()
 
@@ -111,7 +113,7 @@ export default function PrimarySearchAppBar(props) {
   const handleSearch = (event) => {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
-    router.push(`/search?name=${formData.get('name')}`)
+    router.push(`/search?name=${formData.get('name')}&includedIngredients=${JSON.stringify(includedIngredients)}&excludedIngredients=${JSON.stringify(excludedIngredients)}`)
   }
 
   const menuId = 'primary-search-account-menu';
@@ -214,8 +216,8 @@ export default function PrimarySearchAppBar(props) {
         }}>
           <Typography fontSize={'2rem'}>Filter By Ingredients</Typography>
           <Box display={'flex'} flexWrap={'wrap'} sx={{gap: '5px'}}>
-            {includedIngredients.map((ingredient) => {
-              return <Chip label={ingredient} variant='outlined' 
+            {includedIngredients.map((ingredient, index) => {
+              return <Chip key={index} label={ingredient} variant='outlined' 
                 onDelete={() => {
                   setIncludedIngredients(includedIngredients.filter((element) => element !== ingredient))
                 }}/>
@@ -232,6 +234,39 @@ export default function PrimarySearchAppBar(props) {
               name="includedIngredients"
               variant="outlined"
               placeholder="Include Ingredients"
+              sx={{
+                marginY: '5px',
+                width: '250px',
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '25px',
+                },
+              }}
+              inputProps={{
+                style: {
+                  backgroundColor: 'rgb(255,255,255)'
+                }
+              }}
+            />
+          </form>
+          <Box display={'flex'} flexWrap={'wrap'} sx={{gap: '5px'}}>
+            {excludedIngredients.map((ingredient, index) => {
+              return <Chip key={index} label={ingredient} variant='outlined' 
+                onDelete={() => {
+                  setExcludedIngredients(excludedIngredients.filter((element) => element !== ingredient))
+                }}/>
+            })}
+          </Box>
+          <form 
+            onSubmit={(event) => {
+              event.preventDefault()
+              const formData = new FormData(event.currentTarget)
+              setExcludedIngredients(excludedIngredients.concat(formData.get('excludedIngredients')))
+              event.target.reset()
+          }}>
+            <TextField
+              name="excludedIngredients"
+              variant="outlined"
+              placeholder="Exclude Ingredients"
               sx={{
                 marginY: '5px',
                 width: '250px',
