@@ -191,31 +191,12 @@ export default function IngredientsCalculator({ ingredientsProps }) {
                         </Box>
                     )
                 })}
-                {showBakersPercentages && availableBaseIngredients.length > 0 && (
-                    <Box display="flex" alignItems="center" gap={2} marginBottom={1}>
-                        <Typography variant="body2">Base ingredient for BP:</Typography>
-                        <Select
-                            value={baseIngredientId}
-                            onChange={(e) => setBaseIngredientId(e.target.value)}
-                            displayEmpty
-                            size="small"
-                            sx={{ minWidth: 150 }}
-                        >
-                            <MenuItem value="">Select Base</MenuItem>
-                            {availableBaseIngredients.map((ingredient) => (
-                                <MenuItem key={ingredient.id} value={ingredient.id}>
-                                    {ingredient.name}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </Box>
-                )}
-                <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-                    <Typography>
-                        Total Weight: {ingredients
-                            .filter(ing => unitToGrams[ing.unit.toLowerCase()])
-                            .reduce((sum, ing) => sum + ing.quantity * unitToGrams[ing.unit.toLowerCase()], 0).toFixed(1)}g
-                    </Typography>
+                <Typography sx={{mb: '10px'}}>
+                    Total Weight: {ingredients
+                        .filter(ing => unitToGrams[ing.unit.toLowerCase()])
+                        .reduce((sum, ing) => sum + ing.quantity * unitToGrams[ing.unit.toLowerCase()], 0).toFixed(1)}g
+                </Typography>
+                <Box display="flex" alignItems="center" flexWrap="wrap">
                     <Button 
                         variant="contained" 
                         size="small"
@@ -233,6 +214,25 @@ export default function IngredientsCalculator({ ingredientsProps }) {
                         Ratios
                     </Button>
                 </Box>
+                {showBakersPercentages && availableBaseIngredients.length > 0 && (
+                    <Box display="flex" alignItems="center" gap={2} marginBottom={1}>
+                        <Typography variant="body2">Main ingredient:</Typography>
+                        <Select
+                            value={baseIngredientId}
+                            onChange={(e) => setBaseIngredientId(e.target.value)}
+                            displayEmpty
+                            size="small"
+                            sx={{ minWidth: 150 }}
+                        >
+                            <MenuItem value="">Select Base</MenuItem>
+                            {availableBaseIngredients.map((ingredient) => (
+                                <MenuItem key={ingredient.id} value={ingredient.id}>
+                                    {ingredient.name}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </Box>
+                )}
             </Box>
             {scaleMode ? 
                 <Box display={'flex'} flexDirection={'column'} alignItems={'end'}>

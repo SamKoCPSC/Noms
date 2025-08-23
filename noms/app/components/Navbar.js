@@ -82,12 +82,33 @@ export default function PrimarySearchAppBar(props) {
   const [isFilterOpen, setFilterOpen] = React.useState(false)
   const [includedIngredients, setIncludedIngredients] = React.useState([])
   const [excludedIngredients, setExcludedIngredients] = React.useState([])
+  const [navbarHeight, setNavbarHeight] = React.useState(56)
+  const appBarRef = React.useRef(null)
 
 
   const router = useRouter()
 
   const isMenuOpen = Boolean(anchorEl);
   const isMobileMenuOpen = Boolean(mobileMoreAnchorEl);
+
+  // Measure navbar height dynamically
+  React.useEffect(() => {
+    const measureHeight = () => {
+      if (appBarRef.current) {
+        const height = appBarRef.current.offsetHeight;
+        setNavbarHeight(height);
+      }
+    };
+
+    // Measure height after render
+    measureHeight();
+
+    // Add resize listener to handle responsive changes
+    window.addEventListener('resize', measureHeight);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', measureHeight);
+  }, [isFilterOpen, includedIngredients, excludedIngredients]); // Re-measure when filter state or ingredients change
 
   const handleProfileMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -196,94 +217,8 @@ export default function PrimarySearchAppBar(props) {
 
   return (
     <Box sx={{ flexGrow: 1, marginBottom: '60px' }}>
-      <Navdrawer open={isNavdrawerOpen} setOpen={handleNavdrawerOpen}></Navdrawer>
-      <Modal open={isFilterOpen} onClose={() => setFilterOpen(false)}>
-        <Box display={'flex'} flexDirection={'column'} sx={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '500px',
-          height: '600px',
-          bgcolor: 'background.paper',
-          border: '2px solid #000',
-          borderRadius: '30px',
-          boxShadow: 24,
-          pt: 2,
-          px: 4,
-          pb: 3,
-          alignItems: 'center'
-        }}>
-          <Typography fontSize={'2rem'}>Filter By Ingredients</Typography>
-          <Box display={'flex'} flexWrap={'wrap'} sx={{gap: '5px'}}>
-            {includedIngredients.map((ingredient, index) => {
-              return <Chip key={index} label={ingredient} variant='outlined' 
-                onDelete={() => {
-                  setIncludedIngredients(includedIngredients.filter((element) => element !== ingredient))
-                }}/>
-            })}
-          </Box>
-          <form 
-            onSubmit={(event) => {
-              event.preventDefault()
-              const formData = new FormData(event.currentTarget)
-              setIncludedIngredients(includedIngredients.concat(formData.get('includedIngredients')))
-              event.target.reset()
-          }}>
-            <TextField
-              name="includedIngredients"
-              variant="outlined"
-              placeholder="Include Ingredients"
-              sx={{
-                marginY: '5px',
-                width: '250px',
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '25px',
-                },
-              }}
-              inputProps={{
-                style: {
-                  backgroundColor: 'rgb(255,255,255)'
-                }
-              }}
-            />
-          </form>
-          <Box display={'flex'} flexWrap={'wrap'} sx={{gap: '5px'}}>
-            {excludedIngredients.map((ingredient, index) => {
-              return <Chip key={index} label={ingredient} variant='outlined' 
-                onDelete={() => {
-                  setExcludedIngredients(excludedIngredients.filter((element) => element !== ingredient))
-                }}/>
-            })}
-          </Box>
-          <form 
-            onSubmit={(event) => {
-              event.preventDefault()
-              const formData = new FormData(event.currentTarget)
-              setExcludedIngredients(excludedIngredients.concat(formData.get('excludedIngredients')))
-              event.target.reset()
-          }}>
-            <TextField
-              name="excludedIngredients"
-              variant="outlined"
-              placeholder="Exclude Ingredients"
-              sx={{
-                marginY: '5px',
-                width: '250px',
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '25px',
-                },
-              }}
-              inputProps={{
-                style: {
-                  backgroundColor: 'rgb(255,255,255)'
-                }
-              }}
-            />
-          </form>
-        </Box>
-      </Modal>
-      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, bgcolor: '#d9d7ce', color: 'black' }}>
+      <Navdrawer open={isNavdrawerOpen} setOpen={handleNavdrawerOpen} navbarHeight={navbarHeight}></Navdrawer>
+      <AppBar ref={appBarRef} position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, bgcolor: '#d9d7ce', color: 'black' }}>
         <Toolbar>
           <IconButton
             size="large"
@@ -321,7 +256,7 @@ export default function PrimarySearchAppBar(props) {
                 },
                 startAdornment: (
                   <InputAdornment position="start">
-                    <IconButton onClick={() => setFilterOpen(true)}>
+                    <IconButton onClick={() => setFilterOpen(!isFilterOpen)}>
                       <Tune />
                     </IconButton>
                   </InputAdornment>
@@ -394,6 +329,109 @@ export default function PrimarySearchAppBar(props) {
             </IconButton>
           </Box> */}
         </Toolbar>
+        {isFilterOpen && (
+          <Box sx={{ 
+            bgcolor: '#d9d7ce', 
+            color: 'black', 
+            px: 3, 
+            py: 1,
+            borderTop: '1px solid rgba(0, 0, 0, 0.12)'
+          }}>
+            <Box display="flex" flexDirection="row" alignItems="center" gap={3} flexWrap="wrap">
+              {/* Included Ingredients Section */}
+              <Box display="flex" alignItems="center" gap={1}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 'fit-content' }}>
+                  Include:
+                </Typography>
+                <form 
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    const formData = new FormData(event.currentTarget)
+                    const newIngredient = formData.get('includedIngredients')
+                    if (newIngredient && newIngredient.trim()) {
+                      setIncludedIngredients([...includedIngredients, newIngredient.trim()])
+                      event.target.reset()
+                    }
+                  }}
+                >
+                  <TextField
+                    name="includedIngredients"
+                    variant="outlined"
+                    placeholder="Add ingredient"
+                    size="small"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '15px',
+                        bgcolor: 'white',
+                        height: '32px'
+                      },
+                      width: '130px'
+                    }}
+                  />
+                </form>
+                <Box display="flex" flexWrap="wrap" gap={0.5}>
+                  {includedIngredients.map((ingredient, index) => (
+                    <Chip 
+                      key={index} 
+                      label={ingredient} 
+                      color="primary"
+                      size="small"
+                      onDelete={() => {
+                        setIncludedIngredients(includedIngredients.filter((element) => element !== ingredient))
+                      }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+
+              {/* Excluded Ingredients Section */}
+              <Box display="flex" alignItems="center" gap={1}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 'fit-content' }}>
+                  Exclude:
+                </Typography>
+                <form 
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    const formData = new FormData(event.currentTarget)
+                    const newIngredient = formData.get('excludedIngredients')
+                    if (newIngredient && newIngredient.trim()) {
+                      setExcludedIngredients([...excludedIngredients, newIngredient.trim()])
+                      event.target.reset()
+                    }
+                  }}
+                >
+                  <TextField
+                    name="excludedIngredients"
+                    variant="outlined"
+                    placeholder="Add ingredient"
+                    size="small"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '15px',
+                        bgcolor: 'white',
+                        height: '32px'
+                      },
+                      width: '130px'
+                    }}
+                  />
+                </form>
+                <Box display="flex" flexWrap="wrap" gap={0.5}>
+                  {excludedIngredients.map((ingredient, index) => (
+                    <Chip 
+                      key={index} 
+                      label={ingredient} 
+                      color="error"
+                      size="small"
+                      onDelete={() => {
+                        setExcludedIngredients(excludedIngredients.filter((element) => element !== ingredient))
+                      }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+        )}
       </AppBar>
       {/* {renderMobileMenu} */}
       {renderMenu}

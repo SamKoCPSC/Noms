@@ -20,6 +20,9 @@ export default function TemporaryDrawer(props) {
   const [open, setOpen] = React.useState(false);
 
   const router = useRouter()
+  
+  // Use the dynamic navbar height passed from parent
+  const spacerHeight = `${props.navbarHeight || 56}px`;
 
   const toggleDrawer = (newOpen) => () => {
     setOpen(newOpen);
@@ -34,7 +37,7 @@ export default function TemporaryDrawer(props) {
 
   const DrawerList = (
     <Box sx={{ width: 250 }} role="presentation" onClick={props.setOpen}>
-      <Box height={'56px'}></Box>  
+      <Box height={spacerHeight}></Box>  
       <List>
         {drawerItemList.map((drawerItem) => (
           <Box key={drawerItem.label}>
