@@ -11,6 +11,9 @@ export default function IngredientsCalculator({ ingredientsProps }) {
     const [selectedIngredient, setSelectedIngredient] = useState('');
     const [targetQuantity, setTargetQuantity] = useState('');
     const [targetTotalWeight, setTargetTotalWeight] = useState('');
+    const [showPercentages, setShowPercentages] = useState(false);
+    const [showBakersPercentages, setShowBakersPercentages] = useState(false);
+    const [baseIngredientId, setBaseIngredientId] = useState('');
 
     const handleMultiplierScale = () => {
         setIngredients(ingredients.map((ingredient) => {
@@ -84,6 +87,75 @@ export default function IngredientsCalculator({ ingredientsProps }) {
         lb: 453.592,
       };
 
+    const calculatePercentages = () => {
+        const totalWeightInGrams = ingredients
+            .filter(ing => unitToGrams[ing.unit.toLowerCase()])
+            .reduce((sum, ing) => sum + ing.quantity * unitToGrams[ing.unit.toLowerCase()], 0);
+        
+        return ingredients.map(ingredient => {
+            if (unitToGrams[ingredient.unit.toLowerCase()]) {
+                const weightInGrams = ingredient.quantity * unitToGrams[ingredient.unit.toLowerCase()];
+                const percentage = totalWeightInGrams > 0 ? (weightInGrams / totalWeightInGrams) * 100 : 0;
+                return { ...ingredient, percentage: percentage.toFixed(1) };
+            }
+            return { ...ingredient, percentage: null };
+        });
+    };
+
+    const calculateBakersPercentages = () => {
+        if (!baseIngredientId) {
+            return ingredients.map(ingredient => ({ ...ingredient, bakersPercentage: null }));
+        }
+
+        // Find the selected base ingredient
+        const baseIngredient = ingredients.find(ingredient => 
+            ingredient.id === baseIngredientId && unitToGrams[ingredient.unit.toLowerCase()]
+        );
+
+        if (!baseIngredient) {
+            return ingredients.map(ingredient => ({ ...ingredient, bakersPercentage: null }));
+        }
+
+        // Calculate base ingredient weight in grams
+        const baseWeightInGrams = baseIngredient.quantity * unitToGrams[baseIngredient.unit.toLowerCase()];
+
+        if (baseWeightInGrams === 0) {
+            return ingredients.map(ingredient => ({ ...ingredient, bakersPercentage: null }));
+        }
+
+        return ingredients.map(ingredient => {
+            if (unitToGrams[ingredient.unit.toLowerCase()]) {
+                const weightInGrams = ingredient.quantity * unitToGrams[ingredient.unit.toLowerCase()];
+                const bakersPercentage = (weightInGrams / baseWeightInGrams) * 100;
+                return { ...ingredient, bakersPercentage: bakersPercentage.toFixed(1) };
+            }
+            return { ...ingredient, bakersPercentage: null };
+        });
+    };
+
+    const ingredientsWithPercentages = calculatePercentages();
+    const ingredientsWithBakersPercentages = calculateBakersPercentages();
+    
+    // Combine both percentage calculations
+    const ingredientsWithAllPercentages = ingredients.map((ingredient, index) => ({
+        ...ingredient,
+        percentage: ingredientsWithPercentages[index]?.percentage,
+        bakersPercentage: ingredientsWithBakersPercentages[index]?.bakersPercentage
+    }));
+
+    // Get ingredients that can be used as base (gravimetric units only)
+    const availableBaseIngredients = ingredients.filter(ingredient => 
+        unitToGrams[ingredient.unit.toLowerCase()]
+    );
+
+    // Auto-set base ingredient to first available if not set and BP is being shown
+    if (showBakersPercentages && !baseIngredientId && availableBaseIngredients.length > 0) {
+        setBaseIngredientId(availableBaseIngredients[0].id);
+    }
+
+    // Check if baker's percentages are available (has base ingredient selected)
+    const hasBakersPercentages = baseIngredientId && ingredientsWithBakersPercentages.some(ing => ing.bakersPercentage !== null);
+
     return (
         <Box display={'flex'} flexDirection={{width470: 'row', xs: 'column'}}
         sx={{
@@ -99,15 +171,68 @@ export default function IngredientsCalculator({ ingredientsProps }) {
             boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
         }}>
             <Box>
-                <Typography sx={{justifySelf: 'left', fontSize: textStyle.sectionTitleSize}}>Ingredients</Typography>
-                {ingredients?.map((ingredient, index) => {
-                    return <Typography key={index} sx={{justifySelf: 'left', fontSize: textStyle.paragraphSize, marginBottom: '5px'}}>{Number(ingredient.quantity.toFixed(3))}{ingredient.unit} {ingredient.name}</Typography>
+                <Typography sx={{justifySelf: 'left', fontSize: textStyle.sectionTitleSize, marginBottom: 2}}>Ingredients</Typography>
+                {ingredientsWithAllPercentages?.map((ingredient, index) => {
+                    return (
+                        <Box key={index} display="flex" alignItems="center" marginBottom="5px">
+                            <Typography sx={{fontSize: textStyle.paragraphSize, marginRight: '10px'}}>
+                                {Number(ingredient.quantity.toFixed(3))}{ingredient.unit} {ingredient.name}
+                            </Typography>
+                            {showPercentages && ingredient.percentage !== null && (
+                                <Typography sx={{fontSize: textStyle.paragraphSize, color: 'gray', fontStyle: 'italic', marginRight: '10px'}}>
+                                    ({ingredient.percentage}%)
+                                </Typography>
+                            )}
+                            {showBakersPercentages && ingredient.bakersPercentage !== null && (
+                                <Typography sx={{fontSize: textStyle.paragraphSize, color: theme.palette.info.main, fontStyle: 'italic'}}>
+                                    [BP: {ingredient.bakersPercentage}%]
+                                </Typography>
+                            )}
+                        </Box>
+                    )
                 })}
-                <Typography>
-                    Total Weight: {ingredients
-                        .filter(ing => unitToGrams[ing.unit.toLowerCase()])
-                        .reduce((sum, ing) => sum + ing.quantity * unitToGrams[ing.unit.toLowerCase()], 0)}g
-                </Typography>
+                {showBakersPercentages && availableBaseIngredients.length > 0 && (
+                    <Box display="flex" alignItems="center" gap={2} marginBottom={1}>
+                        <Typography variant="body2">Base ingredient for BP:</Typography>
+                        <Select
+                            value={baseIngredientId}
+                            onChange={(e) => setBaseIngredientId(e.target.value)}
+                            displayEmpty
+                            size="small"
+                            sx={{ minWidth: 150 }}
+                        >
+                            <MenuItem value="">Select Base</MenuItem>
+                            {availableBaseIngredients.map((ingredient) => (
+                                <MenuItem key={ingredient.id} value={ingredient.id}>
+                                    {ingredient.name}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </Box>
+                )}
+                <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                    <Typography>
+                        Total Weight: {ingredients
+                            .filter(ing => unitToGrams[ing.unit.toLowerCase()])
+                            .reduce((sum, ing) => sum + ing.quantity * unitToGrams[ing.unit.toLowerCase()], 0).toFixed(1)}g
+                    </Typography>
+                    <Button 
+                        variant="contained" 
+                        size="small"
+                        onClick={() => setShowPercentages(!showPercentages)}
+                        disabled={!isAllGravimetric}
+                    >
+                        Proportions
+                    </Button>
+                    <Button 
+                        variant="contained" 
+                        size="small"
+                        onClick={() => setShowBakersPercentages(!showBakersPercentages)}
+                        disabled={availableBaseIngredients.length === 0}
+                    >
+                        Ratios
+                    </Button>
+                </Box>
             </Box>
             {scaleMode ? 
                 <Box display={'flex'} flexDirection={'column'} alignItems={'end'}>
