@@ -101,7 +101,7 @@ export default function RecipeCard({id, name, description, author, date, ingredi
       borderStyle: 'solid',
       borderWidth: 2,
       boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
-      borderRadius: '25px',
+      borderRadius: '10px',
       animation: `${shadowUnPopBr} 0.15s ease-out both`,
       "&:hover": {
           backgroundColor: '#f0f0f0',

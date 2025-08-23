@@ -192,7 +192,7 @@ export default function PrimarySearchAppBar(props) {
     </Menu>
   );
 
-  const contentColor = 'white'
+  const contentColor = 'black'
 
   return (
     <Box sx={{ flexGrow: 1, marginBottom: '60px' }}>
@@ -283,7 +283,7 @@ export default function PrimarySearchAppBar(props) {
           </form>
         </Box>
       </Modal>
-      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, bgcolor: 'rgb(93, 64, 55)', color: 'black' }}>
+      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, bgcolor: '#d9d7ce', color: 'black' }}>
         <Toolbar>
           <IconButton
             size="large"
