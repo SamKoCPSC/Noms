@@ -33,11 +33,12 @@ export default function Home() {
 
   useEffect(() => {
     const name = searchParams.get('name')
-    const includedIngredients = searchParams.get('includedIngredients')
-    const excludedIngredients = searchParams.get('excludedIngredients')
+    const includedIngredients = searchParams.get('includedIngredients') || '[]'
+    const excludedIngredients = searchParams.get('excludedIngredients') || '[]'
+    const requiredIngredients = searchParams.get('requiredIngredients') || '[]'
 
     fetch(
-      `/api/search?name=${name}&includedIngredients=${includedIngredients}&excludedIngredients=${excludedIngredients}`
+      `/api/search?name=${name}&includedIngredients=${includedIngredients}&excludedIngredients=${excludedIngredients}&requiredIngredients=${requiredIngredients}`
     ).then((response) => {
         if(!response.ok) {
             console.error(response)

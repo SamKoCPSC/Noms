@@ -82,6 +82,7 @@ export default function PrimarySearchAppBar(props) {
   const [isFilterOpen, setFilterOpen] = React.useState(false)
   const [includedIngredients, setIncludedIngredients] = React.useState([])
   const [excludedIngredients, setExcludedIngredients] = React.useState([])
+  const [requiredIngredients, setRequiredIngredients] = React.useState([])
   const [navbarHeight, setNavbarHeight] = React.useState(56)
   const appBarRef = React.useRef(null)
 
@@ -108,7 +109,7 @@ export default function PrimarySearchAppBar(props) {
     
     // Cleanup
     return () => window.removeEventListener('resize', measureHeight);
-  }, [isFilterOpen, includedIngredients, excludedIngredients]); // Re-measure when filter state or ingredients change
+  }, [isFilterOpen, includedIngredients, excludedIngredients, requiredIngredients]); // Re-measure when filter state or ingredients change
 
   const handleProfileMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -134,7 +135,7 @@ export default function PrimarySearchAppBar(props) {
   const handleSearch = (event) => {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
-    router.push(`/search?name=${formData.get('name')}&includedIngredients=${JSON.stringify(includedIngredients)}&excludedIngredients=${JSON.stringify(excludedIngredients)}`)
+    router.push(`/search?name=${formData.get('name')}&includedIngredients=${JSON.stringify(includedIngredients)}&excludedIngredients=${JSON.stringify(excludedIngredients)}&requiredIngredients=${JSON.stringify(requiredIngredients)}`)
   }
 
   const menuId = 'primary-search-account-menu';
@@ -338,7 +339,7 @@ export default function PrimarySearchAppBar(props) {
             borderTop: '1px solid rgba(0, 0, 0, 0.12)'
           }}>
             <Box display="flex" flexDirection="row" alignItems="center" gap={3} flexWrap="wrap">
-              {/* Included Ingredients Section */}
+              {/* Included Ingredients Section (OR logic) */}
               <Box display="flex" alignItems="center" gap={1}>
                 <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 'fit-content' }}>
                   Include:
@@ -378,6 +379,52 @@ export default function PrimarySearchAppBar(props) {
                       size="small"
                       onDelete={() => {
                         setIncludedIngredients(includedIngredients.filter((element) => element !== ingredient))
+                      }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+
+              {/* Required Ingredients Section (AND logic) */}
+              <Box display="flex" alignItems="center" gap={1}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 'fit-content' }}>
+                  Require:
+                </Typography>
+                <form 
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    const formData = new FormData(event.currentTarget)
+                    const newIngredient = formData.get('requiredIngredients')
+                    if (newIngredient && newIngredient.trim()) {
+                      setRequiredIngredients([...requiredIngredients, newIngredient.trim()])
+                      event.target.reset()
+                    }
+                  }}
+                >
+                  <TextField
+                    name="requiredIngredients"
+                    variant="outlined"
+                    placeholder="Add ingredient"
+                    size="small"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '15px',
+                        bgcolor: 'white',
+                        height: '32px'
+                      },
+                      width: '130px'
+                    }}
+                  />
+                </form>
+                <Box display="flex" flexWrap="wrap" gap={0.5}>
+                  {requiredIngredients.map((ingredient, index) => (
+                    <Chip 
+                      key={index} 
+                      label={ingredient} 
+                      color="success"
+                      size="small"
+                      onDelete={() => {
+                        setRequiredIngredients(requiredIngredients.filter((element) => element !== ingredient))
                       }}
                     />
                   ))}
