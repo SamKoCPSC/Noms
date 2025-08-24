@@ -26,7 +26,7 @@ export default function RootLayout({ children }) {
   }
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={inter.className} style={{ paddingTop: '60px'}}>
         <Snackbar 
           open={isSnackBarOpen}
           autoHideDuration={6000}
@@ -37,9 +37,7 @@ export default function RootLayout({ children }) {
         />
         <SessionProvider>
           <ThemeProvider theme={theme}>
-            <Box left='0%' width={'100%'}>
-              <Navbar></Navbar>
-            </Box>
+            <Navbar></Navbar>
             <SnackBarContext.Provider value={handleSnackBar}>
               <Suspense>
                 {children}
