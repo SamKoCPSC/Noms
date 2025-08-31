@@ -16,6 +16,10 @@ export async function POST(req, res) {
   const notes = data.notes
   const ingredients = data.ingredients
 
+  // NEW: branch metadata, defaulting to "main" / "The main branch"
+  const branchName = data.branchName?.trim() || "main"
+  const branchDescription = data.branchDescription?.trim() || "The main branch"
+
   const ingredientNames = ingredients.map(i => `'${i.name}'`).join(", ")
   const ingredientNamesWithBrackets = ingredients.map(i => `('${i.name}')`).join(", ")
   const ingredientQuantitiesCase = ingredients.map(i => `WHEN '${i.name}' THEN ${i.quantity}`).join(" ")
@@ -48,24 +52,48 @@ export async function POST(req, res) {
             SELECT id, name FROM existingIngredients
             UNION ALL
             SELECT id, name FROM newIngredients
+          ),
+          insertedIngredients AS (
+            INSERT INTO recipe_ingredients (recipeId, ingredientId, quantity, unit)
+            SELECT 
+              newRecipe.id, 
+              allIngredients.id, 
+              CASE allIngredients.name 
+                ${ingredientQuantitiesCase}
+              END AS quantity,
+              CASE allIngredients.name 
+                ${ingredientUnitsCase}
+              END AS unit
+            FROM newRecipe, allIngredients
+            RETURNING recipeId
+          ),
+          newBranch AS (
+            INSERT INTO branches (name, description, ownerid, baserecipeid, headrecipeid)
+            SELECT %s, %s, %s, id, id
+            FROM newRecipe
+            RETURNING id, baserecipeid
           )
-          INSERT INTO recipe_ingredients (recipeId, ingredientId, quantity, unit)
-          SELECT 
-            newRecipe.id, 
-            allIngredients.id, 
-            CASE allIngredients.name 
-              ${ingredientQuantitiesCase}
-            END AS quantity,
-            CASE allIngredients.name 
-              ${ingredientUnitsCase}
-            END AS unit
-          FROM newRecipe, allIngredients
-          RETURNING recipeId
+          INSERT INTO recipe_branches (recipeid, branchid, position)
+          SELECT nr.id, nb.id, 1
+          FROM newRecipe nr, newBranch nb
+          RETURNING recipeid
         `
         : `
-          INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status, notes)
-          VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-          RETURNING id
+          WITH newRecipe AS (
+            INSERT INTO recipes (name, description, instructions, userid, additionalInfo, imageurls, status, notes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+          ),
+          newBranch AS (
+            INSERT INTO branches (name, description, ownerid, baserecipeid, headrecipeid)
+            SELECT %s, %s, %s, id, id
+            FROM newRecipe
+            RETURNING id, baserecipeid
+          )
+          INSERT INTO recipe_branches (recipeid, branchid, position)
+          SELECT nr.id, nb.id, 1
+          FROM newRecipe nr, newBranch nb
+          RETURNING recipeid
         `,
       values: [
         name,
@@ -76,6 +104,9 @@ export async function POST(req, res) {
         imageUrls,
         status,
         notes,
+        branchName,
+        branchDescription,
+        session.user.id,
       ],
     },
     {

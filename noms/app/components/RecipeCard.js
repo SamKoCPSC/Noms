@@ -82,7 +82,7 @@ const ExpandMore = styled((props) => {
   ],
 }));
 
-export default function RecipeCard({id, name, description, author, date, ingredients, instructions, additionalInfo, imageURLs, status, baseid, version, notes, branchid, branchbase}) {
+export default function RecipeCard({id, name, description, author, date, ingredients, instructions, additionalInfo, imageURLs, status, baseid, notes, branchid, branchbase}) {
   const [expanded, setExpanded] = React.useState(false);
   const router = useRouter()
 
@@ -130,7 +130,7 @@ export default function RecipeCard({id, name, description, author, date, ingredi
         titleTypographyProps={{fontSize:'20px' }}
         subheaderTypographyProps={{fontSize:'12px' }}
         title={name || 'untitled'}
-        subheader={author + ' - ' + date + ' | Version: ' + version}
+        subheader={author + ' - ' + date}
       />
       <CardMedia
         component="img"
