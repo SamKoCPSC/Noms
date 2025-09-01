@@ -16,7 +16,6 @@ export async function POST(req, res) {
   const notes = data.notes
   const ingredients = data.ingredients
 
-  // NEW: branch metadata, defaulting to "main" / "The main branch"
   const branchName = data.branchName?.trim() || "main"
   const branchDescription = data.branchDescription?.trim() || "The main branch"
 

@@ -166,14 +166,13 @@ export default function Create({searchParams}) {
         additionalInfo: additionalInfo,
         images: images,
         notes: '',
+        branchName: 'Main',
+        branchDescription: 'The Main Branch'
     },
     initialErrors: {name: 'This just ensures that errors is not null so the error message is triggered'},
     validationSchema: Yup.object().shape({
       name: Yup.string().max(255, 'Name must be less than 255 characters').required('Name is required'),
       description: Yup.string().max(1000, 'Description must be less than 1000 characters'),
-      // ingredients: Yup.array().min(1,'Must have at least one ingredient'),
-      // instructions: Yup.array().min(1,'Must have at least one instruction'),
-      // images: Yup.array().min(1,'Must add at least one image')
     }),
     onSubmit: async (values) => {
       let imageData = values.images.filter((image) => typeof image !== 'string').map((image) => {
@@ -211,6 +210,8 @@ export default function Create({searchParams}) {
                   imageUrls: replaceNonStrings(values.images, response.data.imageURLs ),
                   status: 'public',
                   notes: values.notes,
+                  branchName: values.branchName,
+                  branchDescription: values.branchDescription,
                   baseid: searchParams.baseid || undefined,
                   branchbase: searchParams.branchbase || undefined,
                   branchid: searchParams.branchid || undefined,
@@ -824,6 +825,30 @@ export default function Create({searchParams}) {
       >
       </TextField>
       <Divider sx={{margin: '30px'}}></Divider>
+      <Typography fontSize="30px">Branch Name:</Typography>
+      <SubText>Give your recipe's branch a name. A branch tracks the history of any changes made to the recipe. Set to "Main" if left blank.</SubText>
+      <TextField 
+        variant="outlined" 
+        fullWidth
+        name="branchName"
+        id="branchName"
+        value={recipeFormik.values.branchName}
+        onChange={recipeFormik.handleChange}
+      >
+      </TextField>
+      <Typography fontSize="30px">Branch Description:</Typography>
+      <SubText>Give the recipe's branch a description that describes the primary feature of that branch. Set to "The Main Branch" if left blank.</SubText>
+      <TextField 
+        variant="outlined" 
+        fullWidth 
+        multiline 
+        name="branchDescription"
+        id="branchDescription"
+        value={recipeFormik.values.branchDescription}
+        onChange={recipeFormik.handleChange}
+      >
+      </TextField>
+      <Divider sx={{marginY: '30px'}}></Divider>
       {isSubmitAttempted && recipeFormik.errors && 
         Object.keys(recipeFormik.errors).map(key => 
           <Stack key={key} direction={'row'}>
