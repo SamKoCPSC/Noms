@@ -1,10 +1,8 @@
 import Carousel from "@/app/components/Carousel";
 import { Box, Button, Container, Divider, Typography } from "@mui/material"
-import { revalidatePath } from "next/cache";
 import Link from "next/link";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import IngredientsCalculator from "@/app/components/IngredientsCalculator"
+import BranchSelector from "@/app/components/BranchSelector";
 
 export async function generateStaticParams() {
     return fetch(process.env.LAMBDA_API_URL, {
@@ -46,7 +44,7 @@ async function getRecipeData(id) {
             'x-api-key': process.env.LAMBDA_API_KEY,
         },
         body: JSON.stringify({
-            sql: `
+            sql:  `
                 SELECT 
                     r.id AS recipeid,
                     r.name AS name,
@@ -57,24 +55,38 @@ async function getRecipeData(id) {
                     r.imageurls,
                     r.status,
                     r.datecreated,
-                    r.baseid,
-                    r.version,
-                    r.branchid,
-                    r.branchbase,
                     r.notes,
                     u.name AS author,
-                    json_agg(
-                        json_build_object(
-                            'id', i.id,
-                            'name', i.name,
-                            'quantity', ri.quantity,
-                            'unit', ri.unit
+                    -- Aggregate ingredients separately
+                    (
+                        SELECT json_agg(
+                            json_build_object(
+                                'id', i.id,
+                                'name', i.name,
+                                'quantity', ri.quantity,
+                                'unit', ri.unit
+                            )
                         )
-                    ) AS ingredients
+                        FROM recipe_ingredients ri
+                        JOIN ingredients i ON ri.ingredientid = i.id
+                        WHERE ri.recipeid = r.id
+                    ) AS ingredients,
+                    -- Aggregate branches separately
+                    (
+                        SELECT json_agg(
+                            json_build_object(
+                                'branchid', rb.branchid,
+                                'branchname', b.name,
+                                'position', rb.position,
+                                'created_at', rb.created_at
+                            ) ORDER BY rb.created_at
+                        )
+                        FROM recipe_branches rb
+                        JOIN branches b ON rb.branchid = b.id
+                        WHERE rb.recipeid = r.id
+                    ) AS branches
                 FROM recipes r
                 LEFT JOIN users u ON r.userid = u.id
-                LEFT JOIN recipe_ingredients ri ON r.id = ri.recipeid
-                LEFT JOIN ingredients i ON ri.ingredientid = i.id
                 WHERE r.id = %s
                 GROUP BY r.id, u.name;
             `,
@@ -95,7 +107,6 @@ async function getRecipeData(id) {
 }
 
 export default async function Recipe({ params }) {
-    // const session = await getServerSession(authOptions)
     const recipeData = await getRecipeData(params.recipeID)
 
     const textStyle = {
@@ -127,29 +138,30 @@ export default async function Recipe({ params }) {
                     boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
                 }}>
                 <Box display={'flex'} flexDirection={'column'} sx={{ gap: '20px'}}>
-                    <Typography>Version: {recipeData.version} {recipeData.baseid !== recipeData.recipeid && `- Based On Recipe: ${recipeData.baseid}`} {recipeData.branchbase && `- Branched From Recipe: ${recipeData.branchbase}`}</Typography>
+                    <Typography>Iteration: {recipeData.branches[0].position}</Typography>
                     <Typography>Notes: {recipeData.notes ? recipeData.notes : 'None'}</Typography>
                 </Box>
                 <Box display={'flex'} flexDirection={{width550: 'row', xs: 'column'}} sx={{justifyContent: 'center'}}>
                     <Box display={'flex'} sx={{justifyContent: 'center'}}>
-                        <Link href={`/tree/${recipeData.baseid}`}>
+                        {/* <Link href={`/tree/${recipeData.baseid}`}>
                             <Button variant="contained" color='secondary'>
                                 View Tree
                             </Button>
-                        </Link>
-                        <Link href={`/branch/${recipeData.branchbase}/${recipeData.branchid}`}>
-                            <Button variant="contained" color='secondary'>
+                        </Link> */}
+                        {/* <Link key={recipeData.branches[0].branchid} href={`/branch/${recipeData.branches[0].branchid}`} passHref>
+                            <Button variant="contained" color="secondary">
                                 View Branch
                             </Button>
-                        </Link>
+                        </Link> */}
+                        <BranchSelector branches={recipeData.branches}/>
                     </Box>
                     <Box display={'flex'} sx={{justifyContent: 'center'}}>
-                        <Link href={`/createRecipe?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&baseid=${recipeData.baseid}&branchbase=${recipeData.recipeid}`}>
+                        <Link href={`/createRecipe?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}`}>
                             <Button variant="contained">
                                 New Branch
                             </Button>
                         </Link>
-                        <Link href={`/createRecipe?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&baseid=${recipeData.baseid}${recipeData.branchbase ? `&branchbase=${recipeData.branchbase}` : ''}&branchid=${recipeData.branchid}`}>
+                        <Link href={`/createRecipe?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&branchid=${recipeData.branches[0].branchid}`}>
                             <Button variant="contained">
                                 New Version
                             </Button>

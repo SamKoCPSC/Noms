@@ -48,7 +48,7 @@ const replaceNonStrings = (originalArray, replacementArray) => {
 export default function Create({searchParams}) {
   const theme = useTheme()
   const router = useRouter()
-  // const searchParams = useSearchParams()
+
   const handleSnackBar = React.useContext(SnackBarContext)
   const {data: session, status} = useSession()
   const [ingredients, setIngredients] = React.useState(JSON.parse(searchParams.ingredients || '[]'))
@@ -200,7 +200,7 @@ export default function Create({searchParams}) {
             )
           })).then(() => {
               axios.post(
-                '/api/createRecipe',
+                searchParams.branchid != null ? `/api/createRecipeVersion/${searchParams.branchid}` : `/api/createRecipe`,
                 {
                   name: values.name,
                   description: values.description,
@@ -212,10 +212,6 @@ export default function Create({searchParams}) {
                   notes: values.notes,
                   branchName: values.branchName,
                   branchDescription: values.branchDescription,
-                  baseid: searchParams.baseid || undefined,
-                  branchbase: searchParams.branchbase || undefined,
-                  branchid: searchParams.branchid || undefined,
-                  branchbase: searchParams.branchbase || undefined
                 },
                 {
                   headers: {
@@ -237,75 +233,77 @@ export default function Create({searchParams}) {
     }
   })
   
-  const handleSave = async () => {
-    const values = recipeFormik.values
-    let imageData = images.map((image) => {
-      const formData = new FormData()
-      formData.append('file', image);
-      return formData;
-    })
-    let imageURLs
-    let noImageUploadErrors = true
-    if(imageData.length > 0) {
-      axios.get(
-        '/api/presignedURL', {
-            params: {
-            recipeName: recipeFormik.values.name || 'untitled',
-            fileNames: imageData.map((image) => {return image.get('file').name})
-          }
-        },
-      ).then((response) => {
-        Promise.all(response.data.presignedURLs.map((presignedURL, index) => {
-          axios.put(
-            presignedURL,
-            imageData[index].get('file'),
-            {
-              headers: {
-                "Content-Type": "image/jpeg"
-              }
-            }
-          )
-        })).then(() => {
-          imageURLs = response.data.imageURLs
-        }).catch(() => {
-          handleSnackBar('One or more images failed to upload', theme.palette.error.main)
-          noImageUploadErrors = false
-        })  
-      }).catch(() => {
-        handleSnackBar('Failed to authorize image upload', theme.palette.error.main)
-        noImageUploadErrors = false
-      })
-    } 
-    if(noImageUploadErrors) {
-      axios.post(
-        '/api/createRecipe',
-        {
-          name: values.name,
-          description: values.description,
-          ingredients: values.ingredients,
-          instructions: values.instructions,
-          additionalInfo: values.additionalInfo,
-          imageUrls: imageURLs,
-          status: 'draft',
-          notes: values.notes,
-          baseid: searchParams.baseid || undefined,
-          branchbase: searchParams.branchbase || undefined,
-          branchid: searchParams.branchid || undefined,
-          branchbase: searchParams.branchbase || undefined
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
-      ).then(() => {
-        router.push('/')
-        handleSnackBar('Recipe has been successfully saved!', theme.palette.success.main)
-      }).catch(() => {
-        handleSnackBar('Failed to save recipe', theme.palette.error.main)
-      })
-    }
-  }
+  // const handleSave = async () => {
+  //   const values = recipeFormik.values
+  //   let imageData = images.map((image) => {
+  //     const formData = new FormData()
+  //     formData.append('file', image);
+  //     return formData;
+  //   })
+  //   let imageURLs
+  //   let noImageUploadErrors = true
+  //   if(imageData.length > 0) {
+  //     axios.get(
+  //       '/api/presignedURL', {
+  //           params: {
+  //           recipeName: recipeFormik.values.name || 'untitled',
+  //           fileNames: imageData.map((image) => {return image.get('file').name})
+  //         }
+  //       },
+  //     ).then((response) => {
+  //       Promise.all(response.data.presignedURLs.map((presignedURL, index) => {
+  //         axios.put(
+  //           presignedURL,
+  //           imageData[index].get('file'),
+  //           {
+  //             headers: {
+  //               "Content-Type": "image/jpeg"
+  //             }
+  //           }
+  //         )
+  //       })).then(() => {
+  //         imageURLs = response.data.imageURLs
+  //       }).catch(() => {
+  //         handleSnackBar('One or more images failed to upload', theme.palette.error.main)
+  //         noImageUploadErrors = false
+  //       })  
+  //     }).catch(() => {
+  //       handleSnackBar('Failed to authorize image upload', theme.palette.error.main)
+  //       noImageUploadErrors = false
+  //     })
+  //   } 
+  //   if(noImageUploadErrors) {
+  //     axios.post(
+  //       searchParams.branchid != null
+  //         ? `/api/createRecipeVersion/${searchParams.branchid}`
+  //         : `/api/createRecipe`,
+  //       {
+  //         name: values.name,
+  //         description: values.description,
+  //         ingredients: values.ingredients,
+  //         instructions: values.instructions,
+  //         additionalInfo: values.additionalInfo,
+  //         imageUrls: imageURLs,
+  //         status: 'draft',
+  //         notes: values.notes,
+  //         baseid: searchParams.baseid || undefined,
+  //         branchbase: searchParams.branchbase || undefined,
+  //         branchid: searchParams.branchid || undefined,
+  //         branchbase: searchParams.branchbase || undefined
+  //       },
+  //       {
+  //         headers: {
+  //           'Content-Type': 'application/json',
+  //         }
+  //       }
+  //     ).then(() => {
+  //       router.push('/')
+  //       handleSnackBar('Recipe has been successfully saved!', theme.palette.success.main)
+  //     }).catch(() => {
+  //       handleSnackBar('Failed to save recipe', theme.palette.error.main)
+  //     })
+  //   }
+  // }
 
   const handleAddImages = (event) => {
     setImages([...images, ...Array.from(event.target.files)])

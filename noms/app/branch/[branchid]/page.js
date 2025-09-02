@@ -46,7 +46,7 @@ export async function generateStaticParams() {
     })
 }
 
-async function getBranchRecipes(branchbase, branchid) {
+async function getBranchRecipes(branchid) {
     return fetch(process.env.LAMBDA_API_URL, {
         method: "POST",
         headers: {
@@ -65,12 +65,12 @@ async function getBranchRecipes(branchbase, branchid) {
                     r.imageurls,
                     r.status,
                     r.datecreated,
-                    r.baseid,
-                    r.version,
-                    r.branchid,
-                    r.branchbase,
                     r.notes,
                     u.name AS author,
+                    b.id AS branchid,
+                    b.name AS branchname,
+                    rb.position,
+                    rb.created_at,
                     json_agg(
                         json_build_object(
                             'id', i.id,
@@ -79,15 +79,17 @@ async function getBranchRecipes(branchbase, branchid) {
                             'unit', ri.unit
                         )
                     ) AS ingredients
-                FROM recipes r
+                FROM recipe_branches rb
+                INNER JOIN recipes r ON rb.recipeid = r.id
+                INNER JOIN branches b ON rb.branchid = b.id
                 LEFT JOIN users u ON r.userid = u.id
                 LEFT JOIN recipe_ingredients ri ON r.id = ri.recipeid
                 LEFT JOIN ingredients i ON ri.ingredientid = i.id
-                WHERE r.branchbase = %s AND r.branchid = %s OR r.id = %s
-                GROUP BY r.id, u.name
-                ORDER BY r.id ASC
+                WHERE rb.branchid = %s
+                GROUP BY r.id, u.name, b.id, rb.position, rb.created_at
+                ORDER BY rb.position ASC, rb.created_at ASC
             `,
-            values: [branchbase, branchid, branchbase]
+            values: [branchid]
         })
     }).then((response) => {
         if(!response.ok) {
@@ -104,7 +106,7 @@ async function getBranchRecipes(branchbase, branchid) {
 }
 
 export default async function Recipe({ params }) {
-    const branchRecipes = await getBranchRecipes(params.branchbase, params.branchid)
+    const branchRecipes = await getBranchRecipes(params.branchid)
 
     const textStyle = {
         titleSize: '4.5rem',
@@ -133,10 +135,7 @@ export default async function Recipe({ params }) {
                                     additionalInfo={recipe.additionalinfo}
                                     imageURLs={recipe.imageurls}
                                     status={recipe.status}
-                                    baseid={recipe.baseid}
-                                    version={recipe.version}
                                     branchid = {recipe.branchid}
-                                    branchbase = {recipe.branchbase}
                                 />
                             )
                         }  
