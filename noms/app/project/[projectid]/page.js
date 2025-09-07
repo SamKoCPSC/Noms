@@ -1,19 +1,6 @@
 import { Typography, Container, Divider, Box, Avatar } from "@mui/material";
 import RecipeCard from "@/app/components/RecipeCard";
-
-function formatTimestamp(timestamp) {
-    const isoTimestamp = timestamp.replace(" ", "T");
-    const date = new Date(isoTimestamp);
-    if (isNaN(date.getTime())) {
-        throw new Error("Invalid PostgreSQL timestamp format.");
-    }
-    const options = {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-    };
-    return date.toLocaleDateString(undefined, options);
-}
+import formatTimestamp from "@/app/function/formatTimestamp";
 
 export async function generateStaticParams() {
     return fetch(process.env.LAMBDA_API_URL, {
@@ -22,7 +9,7 @@ export async function generateStaticParams() {
             "Content-Type": "application/json",
             'x-api-key': process.env.LAMBDA_API_KEY,
         },
-        body: JSON.stringify({
+        body: JSON.stringify({ 
             sql: `
                 SELECT DISTINCT baseid
                 FROM recipes;
@@ -45,7 +32,7 @@ export async function generateStaticParams() {
     })
 }
 
-async function getTreeRecipes(baseid) {
+async function getProject(projectid) {
     return fetch(process.env.LAMBDA_API_URL, {
         method: "POST",
         headers: {
@@ -55,57 +42,49 @@ async function getTreeRecipes(baseid) {
         body: JSON.stringify({
             sql: `
             SELECT 
-                r.id AS recipeid,
-                r.name AS name,
-                r.description,
-                r.instructions,
-                r.userid,
-                r.additionalinfo,
-                r.imageurls,
-                r.status,
-                r.datecreated,
-                r.baseid,
-                r.version,
-                r.branchid,
-                r.branchbase,
-                r.notes,
-                u.name AS author,
-                json_agg(
-                    json_build_object(
-                        'id', i.id,
-                        'name', i.name,
-                        'quantity', ri.quantity,
-                        'unit', ri.unit
-                    )
-                ) AS ingredients
-            FROM 
-                recipes r
-            JOIN 
+                p.id,
+                p.name,
+                p.description,
+                p.ownerid,
+                u.name AS ownername,
+                p.created_at,
                 (
-                    SELECT 
-                        branchid,
-                        branchbase, 
-                        baseid, 
-                        MAX(version) AS max_version
-                    FROM 
-                        recipes
-                    WHERE
-                        baseid = %s
-                    GROUP BY 
-                        branchid, branchbase, baseid
-                ) latest
-            ON 
-                r.branchid = latest.branchid 
-                AND r.branchbase = latest.branchbase 
-                AND r.baseid = latest.baseid 
-                AND r.version = latest.max_version
-            LEFT JOIN users u ON r.userid = u.id
-            LEFT JOIN recipe_ingredients ri ON r.id = ri.recipeid
-            LEFT JOIN ingredients i ON ri.ingredientid = i.id
-            GROUP BY r.id, u.name
-            ORDER BY r.branchbase ASC, r.branchid ASC
+                    SELECT json_agg(
+                        json_build_object(
+                            'id', b.id,
+                            'name', b.name,
+                            'description', b.description,
+                            'ownerid', b.ownerid,
+                            'baserecipeid', b.baserecipeid,
+                            'headrecipeid', b.headrecipeid,
+                            'created_at', b.created_at,
+                            'recipes', (
+                                SELECT json_agg(
+                                    json_build_object(
+                                        'id', r.id,
+                                        'name', r.name,
+                                        'description', r.description,
+                                        'status', r.status,
+                                        'datecreated', r.datecreated,
+                                        'imageurls', r.imageurls,
+                                        'position', rb.position
+                                    )
+                                )
+                                FROM recipe_branches rb
+                                JOIN recipes r ON rb.recipeid = r.id
+                                WHERE rb.branchid = b.id
+                            )
+                        ) ORDER BY b.created_at
+                    )
+                    FROM branches b
+                    WHERE b.projectid = p.id
+                ) AS branches
+            FROM projects p
+            JOIN users u ON p.ownerid = u.id
+            WHERE p.id = %s
+            GROUP BY p.id, u.name;
             `,
-            values: [baseid]
+            values: [projectid]
         })
     }).then((response) => {
         if(!response.ok) {
@@ -117,12 +96,12 @@ async function getTreeRecipes(baseid) {
     })
     .catch((error) => {
         console.error(error)
-        return {message: 'error'}
+        return {message: error.message}
     })
 }
 
 export default async function Recipe({ params }) {
-    const treeRecipes = await getTreeRecipes(params.baseid)
+    const project = await getProject(params.projectid)
 
     const textStyle = {
         titleSize: '4.5rem',
@@ -132,11 +111,105 @@ export default async function Recipe({ params }) {
     }
 
     return (
-        <Container maxWidth='false' sx={{justifyItems: 'center'}}>
-            <Box display={'flex'} flexDirection={'column'} sx={{width: '100%',alignItems: 'center', gap:'40px', marginTop: '100px'}}>
-                <Typography sx={{alignSelf: 'start', fontSize: textStyle.titleSize, marginLeft: '150px'}}>Tree</Typography>
+        <Container sx={{justifyItems: 'center', width: '100%'}}>
+            <Box 
+                display="flex"
+                alignItems="flex-start"
+                sx={{
+                    width: '100%',
+                    backgroundColor: 'white',
+                    padding: '20px',
+                    margin: '30px',
+                    borderRadius: '30px',
+                    borderColor: 'rgb(230, 228, 215)',
+                    borderStyle: 'solid',
+                    borderWidth: 2,
+                    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)'
+                }}
+            >
+                <Box sx={{ flex: 1 }}>
+                    <Typography
+                        sx={{ 
+                            fontSize: textStyle.sectionTitleSize,
+                            marginBottom: '0px',
+                            textAlign: 'left'
+                        }}
+                    >
+                        {project[0]?.name || 'Project Name'}
+                    </Typography>
+                    <Typography
+                        sx={{ 
+                            fontSize: '0.9rem',
+                            marginBottom: '10px',
+                            textAlign: 'left'
+                        }}
+                    >
+                        By: {project[0]?.ownername || 'Project Owner'} | Created: {formatTimestamp(project[0]?.created_at)}
+                    </Typography>
+                    <Typography
+                        sx={{ 
+                            fontSize: textStyle.paragraphSize,
+                            textAlign: 'left',
+                            lineHeight: 1.5
+                        }}
+                    >
+                        {project[0]?.description || 'No description available'}
+                    </Typography>
+                </Box>
+                <Box 
+                    display="flex" 
+                    flexDirection="row" 
+                    alignItems="flex-end"
+                    sx={{ gap: '15px' }}
+                >
+                    <Box display="flex" flexDirection="column" alignItems="center" sx={{ minWidth: '80px' }}>
+                        <Typography 
+                            variant="h4" 
+                            sx={{ 
+                                fontSize: textStyle.sectionTitleSize,
+                                fontWeight: 'bold',
+                                color: 'primary.main'
+                            }}
+                        >
+                            {project[0]?.branches?.length || 0}
+                        </Typography>
+                        <Typography 
+                            variant="body2" 
+                            sx={{ 
+                                fontSize: textStyle.paragraphSize,
+                                color: 'text.secondary'
+                            }}
+                        >
+                            Branches
+                        </Typography>
+                    </Box>
+                    <Box display="flex" flexDirection="column" alignItems="center" sx={{ minWidth: '80px' }}>
+                        <Typography 
+                            variant="h4" 
+                            sx={{ 
+                                fontSize: textStyle.sectionTitleSize,
+                                fontWeight: 'bold',
+                                color: 'secondary.main'
+                            }}
+                        >
+                            {project[0]?.branches?.reduce((total, branch) => total + (branch.recipes?.length || 0), 0) || 0}
+                        </Typography>
+                        <Typography 
+                            variant="body2" 
+                            sx={{ 
+                                fontSize: textStyle.paragraphSize,
+                                color: 'text.secondary'
+                            }}
+                        >
+                            Recipes
+                        </Typography>
+                    </Box>
+                </Box>
+            </Box>
+
+            <Box display={'flex'} flexDirection={'column'} sx={{width: '100%',alignItems: 'center', gap:'40px'}}>
                 <Box display={'flex'} flexDirection={'row'} flexWrap={'wrap'} sx={{justifyContent: 'center', gap:'40px'}}>
-                    {treeRecipes.map((recipe, index) => { 
+                    {/* {treeRecipes.map((recipe, index) => { 
                         if(recipe.status === 'public') {
                             return (
                                 <RecipeCard
@@ -158,7 +231,7 @@ export default async function Recipe({ params }) {
                                 />
                             )
                         }  
-                    })}
+                    })} */}
                 </Box>
             </Box>
         </Container>

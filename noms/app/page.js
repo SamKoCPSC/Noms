@@ -1,36 +1,17 @@
 'use client'
-import Image from "next/image";
-import styles from "./page.module.css";
 import * as React from 'react';
-import Navbar from "./components/Navbar";
-import Navdrawer from "./components/Navdrawer";
 import RecipeCard from "./components/RecipeCard";
 import {Box, Button, Container, TextField, Typography, InputAdornment, Stack, IconButton} from "@mui/material";
 import { Dancing_Script } from "next/font/google";
 import { Search } from "@mui/icons-material";
-import { SnackBarContext } from "./layout";
 import axios from "axios";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useTheme } from "@emotion/react";
-import Carousel from "./components/Carousel";
+import formatTimestamp from "./function/formatTimestamp";
 
 const dancingScript = Dancing_Script({subsets: ['latin']})
-
-function formatTimestamp(timestamp) {
-    const isoTimestamp = timestamp.replace(" ", "T");
-    const date = new Date(isoTimestamp);
-    if (isNaN(date.getTime())) {
-        throw new Error("Invalid PostgreSQL timestamp format.");
-    }
-    const options = {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-    };
-    return date.toLocaleDateString(undefined, options);
-}
 
 export default function Home() {
   const theme = useTheme()
