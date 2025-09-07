@@ -166,8 +166,10 @@ export default function Create({searchParams}) {
         additionalInfo: additionalInfo,
         images: images,
         notes: '',
-        branchName: 'Main',
-        branchDescription: 'The Main Branch'
+        branchName: 'Original',
+        branchDescription: '',
+        projectName: 'My Project',
+        projectDescription: ''
     },
     initialErrors: {name: 'This just ensures that errors is not null so the error message is triggered'},
     validationSchema: Yup.object().shape({
@@ -212,6 +214,8 @@ export default function Create({searchParams}) {
                   notes: values.notes,
                   branchName: values.branchName,
                   branchDescription: values.branchDescription,
+                  projectName: values.projectName,
+                  projectDescription: values.projectDescription
                 },
                 {
                   headers: {
@@ -824,7 +828,7 @@ export default function Create({searchParams}) {
       </TextField>
       <Divider sx={{margin: '30px'}}></Divider>
       <Typography fontSize="30px">Branch Name:</Typography>
-      <SubText>Give your recipe's branch a name. A branch tracks the history of any changes made to the recipe. Set to "Main" if left blank.</SubText>
+      <SubText>Give your recipe's branch a name. A branch tracks the history of any changes made to the recipe. Set to "Original" if left blank. Every branch within a project must have a unique name.</SubText>
       <TextField 
         variant="outlined" 
         fullWidth
@@ -835,7 +839,7 @@ export default function Create({searchParams}) {
       >
       </TextField>
       <Typography fontSize="30px">Branch Description:</Typography>
-      <SubText>Give the recipe's branch a description that describes the primary feature of that branch. Set to "The Main Branch" if left blank.</SubText>
+      <SubText>Give the recipe's branch a description that describes the primary feature or variation of that branch.</SubText>
       <TextField 
         variant="outlined" 
         fullWidth 
@@ -843,6 +847,29 @@ export default function Create({searchParams}) {
         name="branchDescription"
         id="branchDescription"
         value={recipeFormik.values.branchDescription}
+        onChange={recipeFormik.handleChange}
+      >
+      </TextField>
+      <Typography fontSize="30px">Project Name:</Typography>
+      <SubText>Give your recipe's project a name. A project contains all the branches of a recipe. Set to "My Project" if left blank. Every project within an account must have a unique name.</SubText>
+      <TextField 
+        variant="outlined" 
+        fullWidth
+        name="projectName"
+        id="projectName"
+        value={recipeFormik.values.projectName}
+        onChange={recipeFormik.handleChange}
+      >
+      </TextField>
+      <Typography fontSize="30px">Project Description:</Typography>
+      <SubText>Give the recipe's project a description that describes the general details of the recipe.</SubText>
+      <TextField 
+        variant="outlined" 
+        fullWidth 
+        multiline 
+        name="projectDescription"
+        id="projectDescription"
+        value={recipeFormik.values.projectDescription}
         onChange={recipeFormik.handleChange}
       >
       </TextField>

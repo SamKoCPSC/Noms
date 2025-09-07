@@ -44,7 +44,18 @@ export async function GET(req, res) {
                         FROM recipe_branches rb
                         JOIN branches b ON rb.branchid = b.id
                         WHERE rb.recipeid = r.id
-                    ) AS branches
+                    ) AS branches,
+                    (
+                        SELECT json_build_object(
+                            'id', p.id,
+                            'name', p.name
+                        )
+                        FROM branches b
+                        LEFT JOIN projects p ON b.projectid = p.id
+                        JOIN recipe_branches rb ON rb.branchid = b.id
+                        WHERE rb.recipeid = r.id
+                        LIMIT 1
+                    ) AS project
                 FROM recipes r
                 LEFT JOIN users u ON r.userid = u.id
                 WHERE r.id = %s

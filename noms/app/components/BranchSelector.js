@@ -15,7 +15,7 @@ export default function BranchSelector({ branches }) {
   };
 
   return (
-    <Box display="flex" alignItems="center">
+    <Box display="flex" alignItems="start">
         <Button
             variant="contained"
             color="secondary"
@@ -24,7 +24,7 @@ export default function BranchSelector({ branches }) {
         >
             View Branch
         </Button>
-        <FormControl size="small" sx={{ minWidth: 150 }}>
+        <FormControl alignItems="center" justifyContent="center" sx={{ minWidth: 150 }}>
             <InputLabel id="branch-select-label">Select Branch</InputLabel>
             <Select
             labelId="branch-select-label"

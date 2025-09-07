@@ -1,7 +1,7 @@
 import axios from "axios"
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
-import { revalidatePath } from "next/cache";
+import { getServerSession } from "next-auth"
+import { authOptions } from "../auth/[...nextauth]/route"
+import { revalidatePath } from "next/cache"
 
 export async function POST(req, res) {
   const session = await getServerSession(authOptions)
@@ -16,8 +16,11 @@ export async function POST(req, res) {
   const notes = data.notes
   const ingredients = data.ingredients
 
-  const branchName = data.branchName?.trim() || "main"
-  const branchDescription = data.branchDescription?.trim() || "The main branch"
+  const branchName = data.branchName?.trim() || "Original"
+  const branchDescription = data.branchDescription?.trim() || ""
+
+  const projectName = data.projectName?.trim() || "My Project"
+  const projectDescription = data.projectDescription?.trim() || ""
 
   const ingredientNames = ingredients.map(i => `'${i.name}'`).join(", ")
   const ingredientNamesWithBrackets = ingredients.map(i => `('${i.name}')`).join(", ")
@@ -66,10 +69,15 @@ export async function POST(req, res) {
             FROM newRecipe, allIngredients
             RETURNING recipeId
           ),
+          newProject AS (
+            INSERT INTO projects (ownerid, name, description)
+            VALUES (%s, %s, %s)
+            RETURNING id
+          ),
           newBranch AS (
-            INSERT INTO branches (name, description, ownerid, baserecipeid, headrecipeid)
-            SELECT %s, %s, %s, id, id
-            FROM newRecipe
+            INSERT INTO branches (name, description, ownerid, baserecipeid, headrecipeid, projectid)
+            SELECT %s, %s, %s, nr.id, nr.id, np.id
+            FROM newRecipe nr, newProject np
             RETURNING id, baserecipeid
           )
           INSERT INTO recipe_branches (recipeid, branchid, position)
@@ -83,10 +91,15 @@ export async function POST(req, res) {
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
           ),
+          newProject AS (
+            INSERT INTO projects (ownerid, name, description)
+            VALUES (%s, %s, %s)
+            RETURNING id
+          ),
           newBranch AS (
-            INSERT INTO branches (name, description, ownerid, baserecipeid, headrecipeid)
-            SELECT %s, %s, %s, id, id
-            FROM newRecipe
+            INSERT INTO branches (name, description, ownerid, baserecipeid, headrecipeid, projectid)
+            SELECT %s, %s, %s, nr.id, nr.id, np.id
+            FROM newRecipe nr, newProject np
             RETURNING id, baserecipeid
           )
           INSERT INTO recipe_branches (recipeid, branchid, position)
@@ -103,6 +116,9 @@ export async function POST(req, res) {
         imageUrls,
         status,
         notes,
+        session.user.id,
+        projectName,
+        projectDescription,
         branchName,
         branchDescription,
         session.user.id,
