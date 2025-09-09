@@ -70,6 +70,7 @@ async function getProject(projectid) {
                                         'imageurls', r.imageurls,
                                         'position', rb.position
                                     )
+                                    ORDER by rb.position
                                 )
                                 FROM recipe_branches rb
                                 JOIN recipes r ON rb.recipeid = r.id
@@ -238,9 +239,33 @@ export default async function Recipe({ params }) {
                 </Typography>
                 {project[0]?.branches.map((branch) => {
                     return (
-                        <Box key={branch.id} width={'100%'} sx={{paddingX: '20px', paddingY: '5px', borderTopStyle: 'solid', borderTopWidth: 1}}>
+                        <Box key={branch.id} width={'100%'} sx={{
+                            paddingRight: '20px', 
+                            paddingBottom: '5px', 
+                            borderTopStyle: 'solid', 
+                            borderTopWidth: 1,
+                            transition: 'background-color 0.15s ease-in-out',
+                            '&:hover': {
+                                backgroundColor: 'rgba(0,0,0,0.08)', // or any theme color
+                            },
+                        }}>
                             <Link href={`/branch/${branch.id}`}>
                                 <Box display={'flex'} flexDirection={'row'} width={'100%'}>
+                                    {branch.recipes && branch.recipes.length > 0 && (
+                                        <Box 
+                                            component="img"
+                                            src={branch.recipes
+                                                .sort((a, b) => new Date(b.datecreated) - new Date(a.datecreated))[0]
+                                                ?.imageurls?.[0] || "/fallback.png"}
+                                            alt={`${branch.name} preview`}
+                                            sx={{
+                                                width: 190,
+                                                height: 'auto',
+                                                objectFit: "cover",
+                                                marginRight: '5px'
+                                            }}
+                                        />
+                                    )}
                                     <Box display={'flex'} flexDirection={'column'} width={'100%'}>
                                         <Typography sx={{fontSize: '1.3rem'}}>{branch.name}</Typography>
                                         <Typography sx={{fontSize: '0.9rem', marginBottom: '10px'}}>Created: {formatTimestamp(branch.created_at)}</Typography>
@@ -281,6 +306,7 @@ export default async function Recipe({ params }) {
                     )
                 })}
             </Box>
+            <Typography>{JSON.stringify(project[0].branches[0].recipes.length)}</Typography>
         </Container>
     )
 }
