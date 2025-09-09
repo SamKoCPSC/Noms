@@ -1,6 +1,7 @@
-import { Typography, Container, Divider, Box, Avatar } from "@mui/material";
+import { Typography, Container, Divider, Box } from "@mui/material";
 import RecipeCard from "@/app/components/RecipeCard";
 import formatTimestamp from "@/app/function/formatTimestamp";
+import Link from "next/link";
 
 export async function generateStaticParams() {
     return fetch(process.env.LAMBDA_API_URL, {
@@ -120,7 +121,7 @@ export default async function Recipe({ params }) {
                     backgroundColor: 'white',
                     padding: '20px',
                     margin: '30px',
-                    borderRadius: '30px',
+                    borderRadius: '15px',
                     borderColor: 'rgb(230, 228, 215)',
                     borderStyle: 'solid',
                     borderWidth: 2,
@@ -207,32 +208,78 @@ export default async function Recipe({ params }) {
                 </Box>
             </Box>
 
-            <Box display={'flex'} flexDirection={'column'} sx={{width: '100%',alignItems: 'center', gap:'40px'}}>
-                <Box display={'flex'} flexDirection={'row'} flexWrap={'wrap'} sx={{justifyContent: 'center', gap:'40px'}}>
-                    {/* {treeRecipes.map((recipe, index) => { 
-                        if(recipe.status === 'public') {
-                            return (
-                                <RecipeCard
-                                    key={index}
-                                    id={recipe.recipeid}
-                                    name={recipe.name}
-                                    description={recipe.description}
-                                    author={recipe.author}
-                                    date={formatTimestamp(recipe.datecreated)}
-                                    ingredients={recipe.ingredients}
-                                    instructions={recipe.instructions}
-                                    additionalInfo={recipe.additionalinfo}
-                                    imageURLs={recipe.imageurls}
-                                    status={recipe.status}
-                                    baseid={recipe.baseid}
-                                    version={recipe.version}
-                                    branchid = {recipe.branchid}
-                                    branchbase = {recipe.branchbase}
-                                />
-                            )
-                        }  
-                    })} */}
-                </Box>
+            <Box 
+                display="flex"
+                flexDirection={'column'}
+                alignItems="flex-start"
+                sx={{
+                    width: '100%',
+                    backgroundColor: 'white',
+                    paddingTop: '20px',
+                    paddingBottom: '5px',
+                    margin: '30px',
+                    borderRadius: '15px',
+                    borderColor: 'rgb(230, 228, 215)',
+                    borderStyle: 'solid',
+                    borderWidth: 2,
+                    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)'
+                }}
+            >
+                <Typography
+                    sx={{ 
+                        fontSize: '1.7rem',
+                        textAlign: 'left',
+                        lineHeight: 1.5,
+                        marginLeft: '20px',
+                        marginBottom: '10px',
+                    }}
+                >
+                    Branches
+                </Typography>
+                {project[0]?.branches.map((branch) => {
+                    return (
+                        <Box key={branch.id} width={'100%'} sx={{paddingX: '20px', paddingY: '5px', borderTopStyle: 'solid', borderTopWidth: 1}}>
+                            <Link href={`/branch/${branch.id}`}>
+                                <Box display={'flex'} flexDirection={'row'} width={'100%'}>
+                                    <Box display={'flex'} flexDirection={'column'} width={'100%'}>
+                                        <Typography sx={{fontSize: '1.3rem'}}>{branch.name}</Typography>
+                                        <Typography sx={{fontSize: '0.9rem', marginBottom: '10px'}}>Created: {formatTimestamp(branch.created_at)}</Typography>
+                                        <Typography sx={{fontSize: '1rem'}}>{branch.description}</Typography>
+
+                                    </Box>
+                                    <Box 
+                                        display="flex" 
+                                        flexDirection="row" 
+                                        alignItems="flex-end"
+                                        sx={{ gap: '15px' }}
+                                    >
+                                        <Box display="flex" flexDirection="column" alignItems="center" sx={{ minWidth: '80px' }}>
+                                            <Typography 
+                                                variant="h4" 
+                                                sx={{ 
+                                                    fontSize: textStyle.sectionTitleSize,
+                                                    fontWeight: 'bold',
+                                                    color: 'secondary.main'
+                                                }}
+                                            >
+                                                {branch.recipes?.length || 0}
+                                            </Typography>
+                                            <Typography 
+                                                variant="body2" 
+                                                sx={{ 
+                                                    fontSize: textStyle.paragraphSize,
+                                                    color: 'text.secondary'
+                                                }}
+                                            >
+                                                Recipes
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                </Box>
+                            </Link>
+                        </Box>
+                    )
+                })}
             </Box>
         </Container>
     )
