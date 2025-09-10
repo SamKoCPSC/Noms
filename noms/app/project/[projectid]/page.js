@@ -259,8 +259,8 @@ export default async function Recipe({ params }) {
                                                 ?.imageurls?.[0] || "/fallback.png"}
                                             alt={`${branch.name} preview`}
                                             sx={{
-                                                width: 190,
-                                                height: 'auto',
+                                                width: '160px',
+                                                height: '90px',
                                                 objectFit: "cover",
                                                 marginRight: '5px'
                                             }}
@@ -306,7 +306,6 @@ export default async function Recipe({ params }) {
                     )
                 })}
             </Box>
-            <Typography>{JSON.stringify(project[0].branches[0].recipes.length)}</Typography>
         </Container>
     )
 }

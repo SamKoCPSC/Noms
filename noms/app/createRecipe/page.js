@@ -202,7 +202,11 @@ export default function Create({searchParams}) {
             )
           })).then(() => {
               axios.post(
-                searchParams.branchid != null ? `/api/createRecipeVersion/${searchParams.branchid}` : `/api/createRecipe`,
+                searchParams.branchid != null ? 
+                  `/api/createRecipeVersion/${searchParams.branchid}` : 
+                  searchParams.recipeid != null ?
+                    `/api/createRecipeBranch/${searchParams.recipeid}` :
+                    `/api/createRecipe`,
                 {
                   name: values.name,
                   description: values.description,
