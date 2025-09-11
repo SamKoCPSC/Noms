@@ -87,7 +87,7 @@ export async function POST(req, { params }) {
           SET headRecipeId = nr.id
           FROM newRecipe nr
           WHERE branches.id = %s AND branches.ownerId = %s
-          RETURNING nr.id as recipeId;
+          RETURNING nr.id as recipeId, branches.id as branchId, branches.projectId as projectId;
         `
         : `
           WITH branchInfo AS (
@@ -118,7 +118,7 @@ export async function POST(req, { params }) {
           SET headRecipeId = nr.id
           FROM newRecipe nr
           WHERE branches.id = %s AND branches.ownerId = %s
-          RETURNING nr.id as recipeId;
+          RETURNING nr.id as recipeId, branches.id as branchId, branches.projectId as projectId;
         `,
       values: [
         branchId,
@@ -150,8 +150,9 @@ export async function POST(req, { params }) {
       }
 
       revalidatePath(`/myRecipes/${session.user.id}`);
-      revalidatePath(`/branch/${branchId}`);
-
+      revalidatePath(`/project/${response.data.result[0].projectid}`);
+      revalidatePath(`/branch/${response.data.result[0].branchid}`);
+      revalidatePath(`/recipe/${response.data.result[0].recipeid}`);
       return Response.json(response.data, { status: response.status });
     })
     .catch((error) => {

@@ -95,8 +95,8 @@ export async function POST(req, { params }) {
             FROM newrecipe nr
             RETURNING recipeid
           )
-          SELECT nr.id AS recipeid, nb.id AS branchid
-          FROM newrecipe nr, newbranch nb;
+          SELECT nr.id AS recipeid, nb.id AS branchid, bb.projectid
+          FROM newrecipe nr, newbranch nb, basebranch bb;
         `
         : `
           WITH basebranch AS (
@@ -131,8 +131,8 @@ export async function POST(req, { params }) {
             FROM newrecipe nr
             RETURNING recipeid
           )
-          SELECT nr.id AS recipeid, nb.id AS branchid
-          FROM newrecipe nr, newbranch nb;
+          SELECT nr.id AS recipeid, nb.id AS branchid, bb.projectid
+          FROM newrecipe nr, newbranch nb, basebranch bb;
         `,
       values: ingredients.length > 0
         ? [
@@ -181,6 +181,9 @@ export async function POST(req, { params }) {
       }
 
       revalidatePath(`/myRecipes/${session.user.id}`);
+      revalidatePath(`/project/${response.data.result[0].projectid}`);
+      revalidatePath(`/branch/${response.data.result[0].branchid}`);
+      revalidatePath(`/recipe/${response.data.result[0].recipeid}`);
       return Response.json(response.data, { status: response.status });
     })
     .catch((error) => {
