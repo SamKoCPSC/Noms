@@ -1,3 +1,4 @@
+//export const revalidate = 10
 import { Typography, Container, Divider, Box } from "@mui/material";
 import RecipeCard from "@/app/components/RecipeCard";
 import formatTimestamp from "@/app/function/formatTimestamp";
@@ -239,9 +240,9 @@ export default async function Recipe({ params }) {
                 </Typography>
                 {project[0]?.branches.map((branch) => {
                     return (
-                        <Box key={branch.id} width={'100%'} sx={{
+                        <Box key={branch.id} sx={{
+                            width: '100%',
                             paddingRight: '20px', 
-                            paddingBottom: '5px', 
                             borderTopStyle: 'solid', 
                             borderTopWidth: 1,
                             transition: 'background-color 0.15s ease-in-out',
@@ -250,7 +251,7 @@ export default async function Recipe({ params }) {
                             },
                         }}>
                             <Link href={`/branch/${branch.id}`}>
-                                <Box display={'flex'} flexDirection={'row'} width={'100%'}>
+                                <Box display={'flex'} flexDirection={'row'} sx={{width: '100%'}}>
                                     {branch.recipes && branch.recipes.length > 0 && (
                                         <Box 
                                             component="img"
@@ -266,10 +267,24 @@ export default async function Recipe({ params }) {
                                             }}
                                         />
                                     )}
-                                    <Box display={'flex'} flexDirection={'column'} width={'100%'}>
-                                        <Typography sx={{fontSize: '1.3rem'}}>{branch.name}</Typography>
+                                    <Box display={'flex'} flexDirection={'column'} sx={{flex: 1, minWidth: 0}}>
+                                        <Typography sx={{
+                                            fontSize: '1.3rem',
+                                            textOverflow: 'ellipsis',
+                                            overflow: 'hidden',
+                                            whiteSpace: 'nowrap',
+                                        }}>
+                                            {branch.name}
+                                        </Typography>
                                         <Typography sx={{fontSize: '0.9rem', marginBottom: '10px'}}>Created: {formatTimestamp(branch.created_at)}</Typography>
-                                        <Typography sx={{fontSize: '1rem'}}>{branch.description}</Typography>
+                                        <Typography sx={{
+                                            fontSize: '0.9rem', 
+                                            textOverflow: 'ellipsis',
+                                            overflow: 'hidden',
+                                            whiteSpace: 'nowrap',
+                                        }}>
+                                            {branch.description}
+                                        </Typography>
 
                                     </Box>
                                     <Box 
