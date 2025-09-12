@@ -56,38 +56,35 @@ async function getBranchRecipes(branchid) {
         body: JSON.stringify({
             sql: `
                 SELECT 
-                    r.id AS recipeid,
-                    r.name AS name,
-                    r.description,
-                    r.instructions,
-                    r.userid,
-                    r.additionalinfo,
-                    r.imageurls,
-                    r.status,
-                    r.datecreated,
-                    r.notes,
-                    u.name AS author,
-                    b.id AS branchid,
-                    b.name AS branchname,
-                    rb.position,
-                    rb.created_at,
-                    json_agg(
-                        json_build_object(
-                            'id', i.id,
-                            'name', i.name,
-                            'quantity', ri.quantity,
-                            'unit', ri.unit
+                    b.id,
+                    b.name,
+                    b.description,
+                    b.ownerid,
+                    u.name AS ownername,
+                    b.baserecipeid,
+                    b.headrecipeid,
+                    b.projectid,
+                    b.created_at,
+                    (
+                        SELECT json_agg(
+                            json_build_object(
+                                'id', r.id,
+                                'name', r.name,
+                                'description', r.description,
+                                'status', r.status,
+                                'datecreated', r.datecreated,
+                                'imageurls', r.imageurls,
+                                'position', rb.position
+                            ) ORDER BY rb.position
                         )
-                    ) AS ingredients
-                FROM recipe_branches rb
-                INNER JOIN recipes r ON rb.recipeid = r.id
-                INNER JOIN branches b ON rb.branchid = b.id
-                LEFT JOIN users u ON r.userid = u.id
-                LEFT JOIN recipe_ingredients ri ON r.id = ri.recipeid
-                LEFT JOIN ingredients i ON ri.ingredientid = i.id
-                WHERE rb.branchid = %s
-                GROUP BY r.id, u.name, b.id, rb.position, rb.created_at
-                ORDER BY rb.position ASC, rb.created_at ASC
+                        FROM recipe_branches rb
+                        JOIN recipes r ON rb.recipeid = r.id
+                        WHERE rb.branchid = b.id
+                    ) AS recipes
+                FROM branches b
+                JOIN users u ON b.ownerid = u.id
+                WHERE b.id = %s
+                GROUP BY b.id, u.name;
             `,
             values: [branchid]
         })
@@ -106,7 +103,7 @@ async function getBranchRecipes(branchid) {
 }
 
 export default async function Recipe({ params }) {
-    const branchRecipes = await getBranchRecipes(params.branchid)
+    const variant = await getBranchRecipes(params.branchid)
 
     const textStyle = {
         titleSize: '4.5rem',
@@ -116,30 +113,78 @@ export default async function Recipe({ params }) {
     }
 
     return (
-        <Container maxWidth='false' sx={{justifyItems: 'center'}}>
-            <Box display={'flex'} flexDirection={'column'} sx={{width: '100%',alignItems: 'center', gap:'40px', marginTop: '100px'}}>
-                <Typography sx={{alignSelf: 'start', fontSize: textStyle.titleSize, marginLeft: '150px'}}>Branch</Typography>
-                <Box display={'flex'} flexDirection={'row'} flexWrap={'wrap'} sx={{justifyContent: 'center', gap:'40px'}}>
-                    {branchRecipes.map((recipe, index) => { 
-                        if(recipe.status === 'public') {
-                            return (
-                                <RecipeCard
-                                    key={index}
-                                    id={recipe.recipeid}
-                                    name={recipe.name}
-                                    description={recipe.description}
-                                    author={recipe.author}
-                                    date={formatTimestamp(recipe.datecreated)}
-                                    ingredients={recipe.ingredients}
-                                    instructions={recipe.instructions}
-                                    additionalInfo={recipe.additionalinfo}
-                                    imageURLs={recipe.imageurls}
-                                    status={recipe.status}
-                                    branchid = {recipe.branchid}
-                                />
-                            )
-                        }  
-                    })}
+        <Container sx={{justifyItems: 'center', width: '100%'}}>
+            <Box 
+                display="flex"
+                alignItems="flex-start"
+                sx={{
+                    width: '100%',
+                    backgroundColor: 'white',
+                    padding: '20px',
+                    margin: '30px',
+                    borderRadius: '15px',
+                    borderColor: 'rgb(230, 228, 215)',
+                    borderStyle: 'solid',
+                    borderWidth: 2,
+                    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)'
+                }}
+            >
+                <Box sx={{ flex: 1 }}>
+                    <Typography
+                        sx={{ 
+                            fontSize: textStyle.sectionTitleSize,
+                            marginBottom: '0px',
+                            textAlign: 'left'
+                        }}
+                    >
+                        {variant[0]?.name || 'Variation Name'}
+                    </Typography>
+                    <Typography
+                        sx={{ 
+                            fontSize: '0.9rem',
+                            marginBottom: '10px',
+                            textAlign: 'left'
+                        }}
+                    >
+                        By: {variant[0]?.ownername || 'Variant Owner'} | Created: {formatTimestamp(variant[0]?.created_at)}
+                    </Typography>
+                    <Typography
+                        sx={{ 
+                            fontSize: textStyle.paragraphSize,
+                            textAlign: 'left',
+                            lineHeight: 1.5
+                        }}
+                    >
+                        {variant[0]?.description || 'No description available'}
+                    </Typography>
+                </Box>
+                <Box 
+                    display="flex" 
+                    flexDirection="row" 
+                    alignItems="flex-end"
+                    sx={{ gap: '15px' }}
+                >
+                    <Box display="flex" flexDirection="column" alignItems="center" sx={{ minWidth: '80px' }}>
+                        <Typography 
+                            variant="h4" 
+                            sx={{ 
+                                fontSize: textStyle.sectionTitleSize,
+                                fontWeight: 'bold',
+                                color: 'secondary.main'
+                            }}
+                        >
+                            {variant[0]?.recipes.length || 0}
+                        </Typography>
+                        <Typography 
+                            variant="body2" 
+                            sx={{ 
+                                fontSize: textStyle.paragraphSize,
+                                color: 'text.secondary'
+                            }}
+                        >
+                            Versions
+                        </Typography>
+                    </Box>
                 </Box>
             </Box>
         </Container>

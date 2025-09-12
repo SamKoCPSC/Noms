@@ -83,7 +83,7 @@ export async function POST(req, res) {
           INSERT INTO recipe_branches (recipeid, branchid, position)
           SELECT nr.id, nb.id, 1
           FROM newRecipe nr, newBranch nb
-          RETURNING recipeid
+          RETURNING nr.id as recipeid, nb.id as branchid, np.id as projectid
         `
         : `
           WITH newRecipe AS (
@@ -105,7 +105,7 @@ export async function POST(req, res) {
           INSERT INTO recipe_branches (recipeid, branchid, position)
           SELECT nr.id, nb.id, 1
           FROM newRecipe nr, newBranch nb
-          RETURNING recipeid
+          RETURNING nr.id as recipeid, nb.id as branchid, np.id as projectid
         `,
       values: [
         name,
@@ -133,8 +133,9 @@ export async function POST(req, res) {
   )
     .then((response) => {
       revalidatePath(`/myRecipes/${session.user.id}`)
-      revalidatePath(`/recipe/${response.data.result[0].recipeid}`)
-
+      revalidatePath(`/project/${response.data.result[0].projectid}`);
+      revalidatePath(`/branch/${response.data.result[0].branchid}`);
+      revalidatePath(`/recipe/${response.data.result[0].recipeid}`);
       return Response.json(response.data, { status: response.status })
     })
     .catch((error) => {
