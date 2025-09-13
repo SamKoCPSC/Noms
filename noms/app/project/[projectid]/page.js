@@ -250,7 +250,7 @@ export default async function Recipe({ params }) {
                                 backgroundColor: 'rgba(0,0,0,0.08)', // or any theme color
                             },
                         }}>
-                            <Link href={`/branch/${branch.id}`}>
+                            <Link href={`/variant/${branch.id}`}>
                                 <Box display={'flex'} flexDirection={'row'} sx={{width: '100%'}}>
                                     {branch.recipes && branch.recipes.length > 0 && (
                                         <Box 

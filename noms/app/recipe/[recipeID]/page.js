@@ -169,7 +169,7 @@ export default async function Recipe({ params }) {
                     <Box display={'flex'} sx={{justifyContent: 'center'}}>
                         <Link href={`/createRecipe?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&recipeid=${params.recipeID}`}>
                             <Button variant="contained">
-                                New Branch
+                                New Variant
                             </Button>
                         </Link>
                         <Link href={`/createRecipe?name=${recipeData.name}&description=${recipeData.description}&ingredients=${JSON.stringify(recipeData.ingredients)}&instructions=${JSON.stringify(recipeData.instructions)}&additionalInfo=${JSON.stringify(recipeData.additionalinfo)}&imageURLs=${JSON.stringify(recipeData.imageurls)}&branchid=${recipeData.branches[0].branchid}`}>

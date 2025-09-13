@@ -10,7 +10,7 @@ export default function BranchSelector({ branches }) {
 
   const handleViewBranch = () => {
     if (selectedBranch) {
-      router.push(`/branch/${selectedBranch}`);
+      router.push(`/variant/${selectedBranch}`);
     }
   };
 
@@ -22,14 +22,14 @@ export default function BranchSelector({ branches }) {
             disabled={!selectedBranch}
             onClick={handleViewBranch}
         >
-            View Branch
+            View Variant
         </Button>
         <FormControl sx={{ minWidth: 150 }}>
-            <InputLabel id="branch-select-label">Select Branch</InputLabel>
+            <InputLabel id="branch-select-label">Select Variant</InputLabel>
             <Select
-            labelId="branch-select-label"
+            labelId="variant-select-label"
             value={selectedBranch}
-            label="Select Branch"
+            label="Select Variant"
             onChange={(e) => setSelectedBranch(e.target.value)}
             >
             {branches?.map((branch) => (

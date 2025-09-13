@@ -1,6 +1,7 @@
-import { Typography, Container, Divider, Box, Avatar } from "@mui/material";
+import { Typography, Container, Box, Button} from "@mui/material";
 import RecipeCard from "@/app/components/RecipeCard";
 import formatTimestamp from "@/app/function/formatTimestamp";
+import Link from "next/link";
 
 export async function generateStaticParams() {
     return fetch(process.env.LAMBDA_API_URL, {
@@ -61,8 +62,23 @@ async function getBranchRecipes(branchid) {
                                 'status', r.status,
                                 'author', ru.name,
                                 'datecreated', r.datecreated,
+                                'instructions', r.instructions,
+                                'additionalinfo', r.additionalinfo,
+                                'notes', r.notes,
                                 'imageurls', r.imageurls,
-                                'position', rb.position
+                                'position', rb.position,
+                                'ingredients', (
+                                    SELECT json_agg(
+                                        json_build_object(
+                                            'name', i.name,
+                                            'quantity', ri.quantity,
+                                            'unit', ri.unit
+                                        ) ORDER BY i.name
+                                    )
+                                    FROM recipe_ingredients ri
+                                    JOIN ingredients i ON ri.ingredientid = i.id
+                                    WHERE ri.recipeid = r.id
+                                )
                             ) ORDER BY rb.position
                         )
                         FROM recipe_branches rb
@@ -196,6 +212,11 @@ export default async function Recipe({ params }) {
                         >
                             Versions
                         </Typography>
+                        <Link href={`/createRecipe?name=${latestVersion.name}&description=${latestVersion.description}&ingredients=${JSON.stringify(latestVersion.ingredients)}&instructions=${JSON.stringify(latestVersion.instructions)}&additionalInfo=${JSON.stringify(latestVersion.additionalinfo)}&imageURLs=${JSON.stringify(latestVersion.imageurls)}&branchid=${variant[0].id}`}>
+                            <Button variant="contained">
+                                Create New Version
+                            </Button>
+                        </Link>
                     </Box>
                 </Box>
             </Box>
@@ -284,7 +305,113 @@ export default async function Recipe({ params }) {
                 </Box>
                 
             )}
-            
+            <Box 
+                display="flex"
+                flexDirection={'column'}
+                alignItems="flex-start"
+                sx={{
+                    width: '100%',
+                    backgroundColor: 'white',
+                    paddingTop: '20px',
+                    paddingBottom: '5px',
+                    margin: '30px',
+                    borderRadius: '15px',
+                    borderColor: 'rgb(230, 228, 215)',
+                    borderStyle: 'solid',
+                    borderWidth: 2,
+                    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)'
+                }}
+            >
+                <Typography
+                    sx={{ 
+                        fontSize: '1.7rem',
+                        textAlign: 'left',
+                        lineHeight: 1.5,
+                        marginLeft: '20px',
+                        marginBottom: '10px',
+                    }}
+                >
+                    Version History
+                </Typography>
+                {variant[0]?.recipes.map((recipe) => {
+                    return (
+                        <Box key={recipe.id} sx={{
+                            width: '100%',
+                            paddingRight: '20px', 
+                            borderTopStyle: 'solid', 
+                            borderTopWidth: 1,
+                            transition: 'background-color 0.15s ease-in-out',
+                            '&:hover': {
+                                backgroundColor: 'rgba(0,0,0,0.08)', // or any theme color
+                            },
+                        }}>
+                            <Link href={`/recipe/${recipe.id}`}>
+                                <Box display={'flex'} flexDirection={'row'} sx={{width: '100%'}}>
+                                    <Box 
+                                        component="img"
+                                        src={recipe.imageurls[0] || "/fallback.png"}
+                                        alt={`${recipe.name} preview`}
+                                        sx={{
+                                            width: '160px',
+                                            height: '90px',
+                                            objectFit: "cover",
+                                            marginRight: '5px'
+                                        }}
+                                    />
+                                    <Box display={'flex'} flexDirection={'column'} sx={{flex: 1, minWidth: 0}}>
+                                        <Typography sx={{
+                                            fontSize: '1.3rem',
+                                            textOverflow: 'ellipsis',
+                                            overflow: 'hidden',
+                                            whiteSpace: 'nowrap',
+                                        }}>
+                                            {recipe.name}
+                                        </Typography>
+                                        <Typography sx={{fontSize: '0.9rem', marginBottom: '10px'}}>Created: {formatTimestamp(recipe.datecreated)}</Typography>
+                                        <Typography sx={{
+                                            fontSize: '0.9rem', 
+                                            textOverflow: 'ellipsis',
+                                            overflow: 'hidden',
+                                            whiteSpace: 'nowrap',
+                                        }}>
+                                            {recipe.description}
+                                        </Typography>
+
+                                    </Box>
+                                    <Box 
+                                        display="flex" 
+                                        flexDirection="row" 
+                                        alignItems="flex-end"
+                                        sx={{ gap: '15px' }}
+                                    >
+                                        {/* <Box display="flex" flexDirection="column" alignItems="center" sx={{ minWidth: '80px' }}>
+                                            <Typography 
+                                                variant="h4" 
+                                                sx={{ 
+                                                    fontSize: textStyle.sectionTitleSize,
+                                                    fontWeight: 'bold',
+                                                    color: 'secondary.main'
+                                                }}
+                                            >
+                                                {recipe.recipes?.length || 0}
+                                            </Typography>
+                                            <Typography 
+                                                variant="body2" 
+                                                sx={{ 
+                                                    fontSize: textStyle.paragraphSize,
+                                                    color: 'text.secondary'
+                                                }}
+                                            >
+                                                Recipes
+                                            </Typography>
+                                        </Box> */}
+                                    </Box>
+                                </Box>
+                            </Link>
+                        </Box>
+                    )
+                })}
+            </Box>
         </Container>
     )
 }
