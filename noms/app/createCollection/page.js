@@ -1,5 +1,6 @@
 'use client'
 import * as React from 'react';
+import axios from 'axios';
 import { Box, Typography, Divider, TextField, Stack, Button } from "@mui/material"
 import theme from "../theme"
 import { useTheme } from "@emotion/react"
@@ -24,8 +25,9 @@ export default function CreateCollection() {
 
     const collectionFormik = useFormik({
         initialValues: {
-            nameh: '',
+            name: '',
             description: '',
+
         },
         initialErrors: {name: 'This just ensures that errors is not null so the error message is triggered'},
         validationSchema: Yup.object().shape({
@@ -33,6 +35,23 @@ export default function CreateCollection() {
             description: Yup.string().max(1000, 'Description must be less than 1000 characters').required('Description is required'),
         }),
         onSubmit: (values) => {
+            axios.post(
+                `/api/createCollection`,
+                {
+                    name: values.name,
+                    description: values.description,
+                },
+                {
+                    headers: {
+                    'Content-Type': 'application/json',
+                    }
+                }
+            ).then(() => {
+                router.push('/')
+                handleSnackBar('Collection has been successfully created!', theme.palette.success.main)
+            }).catch(() => {
+                handleSnackBar('Failed to create collection', theme.palette.error.main)
+            })
         },
     })
     

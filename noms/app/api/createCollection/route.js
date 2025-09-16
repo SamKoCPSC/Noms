@@ -9,42 +9,34 @@ export async function POST(req, res) {
 
     const name = data.name
     const description = data.description || null
-    const items = data.items || [] 
-    // items = [{ type: "recipe", id: 123, position: 1 }, { type: "collection", id: 456, position: 2 }]
+    const variantIds = data.variantIds || []
 
     return axios.post(
         process.env.LAMBDA_API_URL,
         {
             sql: `
                 WITH new_collection AS (
-                    INSERT INTO collections (name, description, userid)
+                    INSERT INTO collections (ownerid, name, description)
                     VALUES (%s, %s, %s)
                     RETURNING id
+                ),
+                branch_values AS (
+                    SELECT unnest(%s::uuid[]) AS branchid
+                ),
+                insert_branches AS (
+                    INSERT INTO collection_branches (collectionid, branchid, position)
+                    SELECT nc.id, bv.branchid, row_number() OVER ()
+                    FROM new_collection nc
+                    JOIN branch_values bv ON TRUE
                 )
-                ${items.length > 0 ? `
-                , inserted_items AS (
-                    INSERT INTO collection_items (parent_collection_id, item_type, recipe_id, child_collection_id, position)
-                    SELECT 
-                        new_collection.id,
-                        i.item_type,
-                        CASE WHEN i.item_type = 'recipe' THEN i.item_id ELSE NULL END,
-                        CASE WHEN i.item_type = 'collection' THEN i.item_id ELSE NULL END,
-                        i.position
-                    FROM new_collection,
-                         (VALUES ${items.map((_, idx) => 
-                            `(%s, %s, %s)`
-                         ).join(", ")}) 
-                         AS i(item_type, item_id, position)
-                    RETURNING id
-                )
-                SELECT new_collection.id FROM new_collection
-                ` : `
-                SELECT id FROM new_collection
-                `}
+                SELECT id
+                FROM new_collection;
             `,
             values: [
-                name, description, session.user.id,
-                ...items.flatMap(i => [i.type, i.id, i.position])
+                session.user.id,
+                name,
+                description,
+                variantIds
             ]
         },
         {
@@ -56,8 +48,6 @@ export async function POST(req, res) {
     )
     .then((response) => {
         const newCollectionId = response.data.result[0].id
-
-        revalidatePath(`/myCollections/${session.user.id}`)
         revalidatePath(`/collection/${newCollectionId}`)
 
         return Response.json(
