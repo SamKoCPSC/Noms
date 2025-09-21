@@ -1,3 +1,4 @@
+export const revalidate = 10
 import { Container, Typography, Box, Button } from "@mui/material";
 import AccessDenied from "@/app/components/AccessDenied";
 import { getServerSession } from "next-auth";
@@ -35,7 +36,7 @@ export async function generateStaticParams() {
     })
 }
 
-async function getUserRecipeData(id) {
+async function getUserCollectionData(id) {
     return fetch(process.env.LAMBDA_API_URL, {
         method: "POST",
         headers: {
@@ -48,7 +49,7 @@ async function getUserRecipeData(id) {
                     c.id,
                     c.name,
                     c.description,
-                    c.userid,
+                    c.ownerid,
                     c.created_at,
                     (
                         SELECT json_agg(
@@ -67,7 +68,7 @@ async function getUserRecipeData(id) {
                         WHERE cb.collectionid = c.id
                     ) AS branches
                 FROM collections c
-                WHERE c.userid = %s
+                WHERE c.ownerid = %s
                 ORDER BY c.created_at DESC;
             `,
             values: [id]
@@ -87,7 +88,7 @@ async function getUserRecipeData(id) {
 }
 
 export default async function({ params }) {
-    const collection = await getUserRecipeData(params.userId)
+    const collections = await getUserCollectionData(params.userId)
     const session = await getServerSession(authOptions)
 
     const textStyle = {
@@ -123,21 +124,21 @@ export default async function({ params }) {
                 <Box sx={{ flex: 1 }}>
                     <Typography
                         sx={{ 
-                            fontSize: textStyle.sectionTitleSize,
+                            fontSize: textStyle.titleSize,
                             marginBottom: '0px',
                             textAlign: 'left'
                         }}
                     >
-                        {collection[0]?.name || 'Collection Name'}
+                        {"My Collections"}
                     </Typography>
-                    <Typography
+                    {/* <Typography
                         sx={{ 
                             fontSize: '0.9rem',
                             marginBottom: '10px',
                             textAlign: 'left'
                         }}
                     >
-                        Created: {collection.length && formatTimestamp(collection[0]?.created_at)}
+                        Created: {collections.length && formatTimestamp(collections[0]?.created_at)}
                     </Typography>
                     <Typography
                         sx={{ 
@@ -146,8 +147,8 @@ export default async function({ params }) {
                             lineHeight: 1.5
                         }}
                     >
-                        {collection[0]?.description || 'No description available'}
-                    </Typography>
+                        {collections[0]?.description || 'No description available'}
+                    </Typography> */}
                 </Box>
                 <Box 
                     display="flex" 
@@ -164,7 +165,7 @@ export default async function({ params }) {
                                 color: 'secondary.main'
                             }}
                         >
-                            {collection[0]?.length || 0}
+                            {collections.length || 0}
                         </Typography>
                         <Typography 
                             variant="body2" 
@@ -173,15 +174,126 @@ export default async function({ params }) {
                                 color: 'text.secondary'
                             }}
                         >
-                            Variants
+                            Collections
                         </Typography>
                         <Link href={`/`}>
                             <Button variant="contained">
-                                Add Variant
+                                Add Collection
                             </Button>
                         </Link>
                     </Box>
                 </Box>
+            </Box>
+            <Box 
+                display="flex"
+                flexDirection={'column'}
+                alignItems="flex-start"
+                sx={{
+                    width: '100%',
+                    backgroundColor: 'white',
+                    paddingTop: '20px',
+                    paddingBottom: '5px',
+                    margin: '30px',
+                    borderRadius: '15px',
+                    borderColor: 'rgb(230, 228, 215)',
+                    borderStyle: 'solid',
+                    borderWidth: 2,
+                    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)'
+                }}
+            >
+                <Typography
+                    sx={{ 
+                        fontSize: '1.7rem',
+                        textAlign: 'left',
+                        lineHeight: 1.5,
+                        marginLeft: '20px',
+                        marginBottom: '10px',
+                    }}
+                >
+                    Collections
+                </Typography>
+                {collections?.map((collection) => {
+                    return (
+                        <Box key={collection.id} sx={{
+                            width: '100%',
+                            paddingRight: '20px', 
+                            borderTopStyle: 'solid', 
+                            borderTopWidth: 1,
+                            transition: 'background-color 0.15s ease-in-out',
+                            '&:hover': {
+                                backgroundColor: 'rgba(0,0,0,0.08)', // or any theme color
+                            },
+                        }}>
+                            <Link href={`/`}>
+                                <Box display={'flex'} flexDirection={'row'} sx={{width: '100%'}}>
+                                    {/* {collections && collections.length > 0 && (
+                                        <Box 
+                                            component="img"
+                                            src={branch.recipes
+                                                .sort((a, b) => new Date(b.datecreated) - new Date(a.datecreated))[0]
+                                                ?.imageurls?.[0] || "/fallback.png"}
+                                            alt={`${branch.name} preview`}
+                                            sx={{
+                                                width: '160px',
+                                                height: '90px',
+                                                objectFit: "cover",
+                                                marginRight: '5px'
+                                            }}
+                                        />
+                                    )} */}
+                                    <Box display={'flex'} flexDirection={'column'} sx={{flex: 1, minWidth: 0}}>
+                                        <Typography sx={{
+                                            fontSize: '1.3rem',
+                                            textOverflow: 'ellipsis',
+                                            overflow: 'hidden',
+                                            whiteSpace: 'nowrap',
+                                        }}>
+                                            {collection.name}
+                                        </Typography>
+                                        <Typography sx={{fontSize: '0.9rem', marginBottom: '10px'}}>Created: {formatTimestamp(collection.created_at)}</Typography>
+                                        <Typography sx={{
+                                            fontSize: '0.9rem', 
+                                            textOverflow: 'ellipsis',
+                                            overflow: 'hidden',
+                                            whiteSpace: 'nowrap',
+                                        }}>
+                                            {collection.description}
+                                        </Typography>
+
+                                    </Box>
+                                    <Box 
+                                        display="flex" 
+                                        flexDirection="row" 
+                                        alignItems="flex-end"
+                                        sx={{ gap: '15px' }}
+                                    >
+                                        <Box display="flex" flexDirection="column" alignItems="center" sx={{ minWidth: '80px' }}>
+                                            <Typography 
+                                                variant="h4" 
+                                                sx={{ 
+                                                    fontSize: textStyle.sectionTitleSize,
+                                                    fontWeight: 'bold',
+                                                    color: 'secondary.main'
+                                                }}
+                                            >
+                                                {collection.branches?.length || 0}
+                                            </Typography>
+                                            <Typography 
+                                                variant="body2" 
+                                                sx={{ 
+                                                    fontSize: textStyle.paragraphSize,
+                                                    color: 'text.secondary'
+                                                }}
+                                            >
+                                                Recipes
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                </Box>
+                            </Link>
+                        </Box>
+                    )
+                })}
             </Box>
         </Container>
     )
