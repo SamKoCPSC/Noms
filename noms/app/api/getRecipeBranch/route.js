@@ -1,7 +1,8 @@
 import axios from "axios";
 
-export async function GET(req, { params }) {
-    const { branchid } = params;
+export async function GET(req) {
+    const { searchParams } = new URL(req.url);
+    const branchid = searchParams.get("branchid");
 
     return axios
         .post(
