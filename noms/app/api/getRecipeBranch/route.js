@@ -43,7 +43,7 @@ export async function GET(req) {
                     GROUP BY r.id, u.name, b.id, rb.position, rb.created_at
                     ORDER BY rb.position ASC, rb.created_at ASC
                 `,
-                values: [branchid],
+                values: [branchid]
             },
             {
                 headers: {

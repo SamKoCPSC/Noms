@@ -48,7 +48,7 @@ export async function POST(req, res) {
     )
     .then((response) => {
         const newCollectionId = response.data.result[0].id
-        revalidatePath(`/collection/${newCollectionId}`)
+        revalidatePath(`/collection/${session.user.id}`)
 
         return Response.json(
             response.data,

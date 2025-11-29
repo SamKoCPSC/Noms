@@ -241,7 +241,7 @@ export default async function({ params }) {
                                             }}
                                         />
                                     )} */}
-                                    <Box display={'flex'} flexDirection={'column'} sx={{flex: 1, minWidth: 0}}>
+                                    <Box display={'flex'} flexDirection={'column'} sx={{flex: 1, minWidth: 0, ml: '20px'}}>
                                         <Typography sx={{
                                             fontSize: '1.3rem',
                                             textOverflow: 'ellipsis',
