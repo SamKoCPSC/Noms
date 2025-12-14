@@ -63,176 +63,22 @@ export default function CreateCollection() {
 
     const handleSearch = (event) => {
         event.preventDefault()
-        setSearchResults([
-            {
-                latestRecipeName: "Chocolate Chip Cookies",
-                variantName: "variant name",
-                variantId: "17ae5cae-aabd-442d-86cc-667e4b97b501",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Chocolate%20Chip%20Cookies/2025-1-6_1-42-1-439/cookie.jpg"
-            },
-            {
-                latestRecipeName: "Fried Chicken",
-                variantName: "variant name",
-                variantId: "897303ae-d0e5-4fd3-8f15-074d55d5e41b",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Fried%20Chicken/2025-1-6_1-33-47-969/fried_chicken3.jpg"
-            },
-            {
-                latestRecipeName: "Chocolate Chip Cookies",
-                variantName: "variant name",
-                variantId: "17ae5cae-aabd-442d-86cc-667e4b97b501",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Chocolate%20Chip%20Cookies/2025-1-6_1-42-1-439/cookie.jpg"
-            },
-            {
-                latestRecipeName: "Fried Chicken",
-                variantName: "variant name",
-                variantId: "897303ae-d0e5-4fd3-8f15-074d55d5e41b",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Fried%20Chicken/2025-1-6_1-33-47-969/fried_chicken3.jpg"
-            },
-            {
-                latestRecipeName: "Chocolate Chip Cookies",
-                variantName: "variant name",
-                variantId: "17ae5cae-aabd-442d-86cc-667e4b97b501",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Chocolate%20Chip%20Cookies/2025-1-6_1-42-1-439/cookie.jpg"
-            },
-            {
-                latestRecipeName: "Fried Chicken",
-                variantName: "variant name",
-                variantId: "897303ae-d0e5-4fd3-8f15-074d55d5e41b",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Fried%20Chicken/2025-1-6_1-33-47-969/fried_chicken3.jpg"
-            },
-            {
-                latestRecipeName: "Chocolate Chip Cookies",
-                variantName: "variant name",
-                variantId: "17ae5cae-aabd-442d-86cc-667e4b97b501",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Chocolate%20Chip%20Cookies/2025-1-6_1-42-1-439/cookie.jpg"
-            },
-            {
-                latestRecipeName: "Fried Chicken",
-                variantName: "variant name",
-                variantId: "897303ae-d0e5-4fd3-8f15-074d55d5e41b",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Fried%20Chicken/2025-1-6_1-33-47-969/fried_chicken3.jpg"
-            },
-            {
-                latestRecipeName: "Chocolate Chip Cookies",
-                variantName: "variant name",
-                variantId: "17ae5cae-aabd-442d-86cc-667e4b97b501",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Chocolate%20Chip%20Cookies/2025-1-6_1-42-1-439/cookie.jpg"
-            },
-            {
-                latestRecipeName: "Fried Chicken",
-                variantName: "variant name",
-                variantId: "897303ae-d0e5-4fd3-8f15-074d55d5e41b",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Fried%20Chicken/2025-1-6_1-33-47-969/fried_chicken3.jpg"
-            },
-            {
-                latestRecipeName: "Chocolate Chip Cookies",
-                variantName: "variant name",
-                variantId: "17ae5cae-aabd-442d-86cc-667e4b97b501",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Chocolate%20Chip%20Cookies/2025-1-6_1-42-1-439/cookie.jpg"
-            },
-            {
-                latestRecipeName: "Fried Chicken",
-                variantName: "variant name",
-                variantId: "897303ae-d0e5-4fd3-8f15-074d55d5e41b",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Fried%20Chicken/2025-1-6_1-33-47-969/fried_chicken3.jpg"
-            },
-            {
-                latestRecipeName: "Chocolate Chip Cookies",
-                variantName: "variant name",
-                variantId: "17ae5cae-aabd-442d-86cc-667e4b97b501",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Chocolate%20Chip%20Cookies/2025-1-6_1-42-1-439/cookie.jpg"
-            },
-            {
-                latestRecipeName: "Fried Chicken",
-                variantName: "variant name",
-                variantId: "897303ae-d0e5-4fd3-8f15-074d55d5e41b",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Fried%20Chicken/2025-1-6_1-33-47-969/fried_chicken3.jpg"
-            },
-            {
-                latestRecipeName: "Chocolate Chip Cookies",
-                variantName: "variant name",
-                variantId: "17ae5cae-aabd-442d-86cc-667e4b97b501",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Chocolate%20Chip%20Cookies/2025-1-6_1-42-1-439/cookie.jpg"
-            },
-            {
-                latestRecipeName: "Fried Chicken",
-                variantName: "variant name",
-                variantId: "897303ae-d0e5-4fd3-8f15-074d55d5e41b",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Fried%20Chicken/2025-1-6_1-33-47-969/fried_chicken3.jpg"
-            },
-            {
-                latestRecipeName: "Chocolate Chip Cookies",
-                variantName: "variant name",
-                variantId: "17ae5cae-aabd-442d-86cc-667e4b97b501",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Chocolate%20Chip%20Cookies/2025-1-6_1-42-1-439/cookie.jpg"
-            },
-            {
-                latestRecipeName: "Fried Chicken",
-                variantName: "variant name",
-                variantId: "897303ae-d0e5-4fd3-8f15-074d55d5e41b",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Fried%20Chicken/2025-1-6_1-33-47-969/fried_chicken3.jpg"
-            },
-            {
-                latestRecipeName: "Chocolate Chip Cookies",
-                variantName: "variant name",
-                variantId: "17ae5cae-aabd-442d-86cc-667e4b97b501",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Chocolate%20Chip%20Cookies/2025-1-6_1-42-1-439/cookie.jpg"
-            },
-            {
-                latestRecipeName: "Fried Chicken",
-                variantName: "variant name",
-                variantId: "897303ae-d0e5-4fd3-8f15-074d55d5e41b",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Fried%20Chicken/2025-1-6_1-33-47-969/fried_chicken3.jpg"
-            },
-            {
-                latestRecipeName: "Chocolate Chip Cookies",
-                variantName: "variant name",
-                variantId: "17ae5cae-aabd-442d-86cc-667e4b97b501",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Chocolate%20Chip%20Cookies/2025-1-6_1-42-1-439/cookie.jpg"
-            },
-            {
-                latestRecipeName: "Fried Chicken",
-                variantName: "variant name",
-                variantId: "897303ae-d0e5-4fd3-8f15-074d55d5e41b",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Fried%20Chicken/2025-1-6_1-33-47-969/fried_chicken3.jpg"
-            },
-            {
-                latestRecipeName: "Chocolate Chip Cookies",
-                variantName: "variant name",
-                variantId: "17ae5cae-aabd-442d-86cc-667e4b97b501",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Chocolate%20Chip%20Cookies/2025-1-6_1-42-1-439/cookie.jpg"
-            },
-            {
-                latestRecipeName: "Fried Chicken",
-                variantName: "variant name",
-                variantId: "897303ae-d0e5-4fd3-8f15-074d55d5e41b",
-                ownerName: "Sam Ko",
-                latestImageURL: "https://noms-s3-bucket.s3.us-east-2.amazonaws.com/samk3180@gmail.com/Fried%20Chicken/2025-1-6_1-33-47-969/fried_chicken3.jpg"
-            },
-        ])
+        const formData = new FormData(event.currentTarget)
+        fetch(
+        `/api/searchVariants?variantName=${formData.get('variantSearch')}`
+        ).then((response) => {
+            if(!response.ok) {
+                console.error(response)
+                throw new Error(`HTTP error! Status: ${response.status}`)
+            }
+            return response.json()
+        }).then((data) => {
+            setSearchResults(data.result)
+        })
+        .catch((error) => {
+            console.error(error)
+            return {message: 'error'}
+        })
     }
     
     return (
@@ -293,9 +139,21 @@ export default function CreateCollection() {
             <Divider sx={{marginY: '30px'}}></Divider>
             <Typography fontSize="30px">Recipes:</Typography>
             <SubText>Add recipe variants to the collection</SubText>
+            <Box display={'flex'} flexDirection={'row'} flexWrap={'wrap'} 
+                sx={{
+                    gap: '20px',
+                    maxHeight: '150px',
+                    overflowY: 'auto',
+                    padding: '5px',
+                    [theme.breakpoints.down('645')]: {justifyContent: 'center'}
+                }}>
+                {selectedVariants.map((result, index) => {
+                    return <RecipeCardMini key={index} name={result.latestrecipename} variantName={result.variantname} ownerName={result.ownername} imageURLs={result.latestimageurls}/>
+                })}
+            </Box>
             <form onSubmit={handleSearch} style={{flexGrow: 1}}>
                 <TextField
-                name="name"
+                name="variantSearch"
                 variant="outlined"
                 placeholder="Search for recipes"
                 InputProps={{
@@ -323,10 +181,11 @@ export default function CreateCollection() {
                     marginTop: '10px',
                     maxHeight: '450px',
                     overflowY: 'auto',
+                    padding: '5px',
                     [theme.breakpoints.down('645')]: {justifyContent: 'center'}
                 }}>
                 {searchResults.map((result, index) => {
-                    return <RecipeCardMini key={index} name={result.latestRecipeName} variantName={result.variantName} ownerName={result.ownerName} imageURL={result.latestImageURL}/>
+                    return <RecipeCardMini key={index} name={result.latestrecipename} variantName={result.variantname} ownerName={result.ownername} imageURLs={result.latestimageurls}/>
                 })}
             </Box>
             <Stack direction={'row'} sx={{justifyContent: 'end'}}>
