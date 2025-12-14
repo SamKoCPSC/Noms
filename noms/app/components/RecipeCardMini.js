@@ -39,9 +39,10 @@ const shadowUnPopBr = keyframes`
                 transform: scale(1);
     }`
 
-export default function RecipeCardMini({name, variantName, ownerName, imageURLs}) {
+export default function RecipeCardMini({id, name, variantName, ownerName, imageURLs, handleClick}) {
     return (
-        <Card sx={{
+        <Card 
+        sx={{
             height: '140px', 
             width: '160px',
             animation: `${shadowUnPopBr} 0.15s ease-out both`,
@@ -50,7 +51,17 @@ export default function RecipeCardMini({name, variantName, ownerName, imageURLs}
                 animation: `${shadowPopBr} 0.15s ease-in both`,
                 cursor: 'pointer'
             },
-        }}>
+        }}
+        onClick={() => {
+            handleClick({
+                branchid: id,
+                latestrecipename: name,
+                variantname: variantName,
+                ownername: ownerName,
+                latestimageurls: imageURLs,
+            })
+        }}
+        >
             <CardMedia
                 component="img"
                 height="100"

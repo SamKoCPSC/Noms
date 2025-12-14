@@ -27,6 +27,14 @@ export default function CreateCollection() {
     const [searchResults, setSearchResults] = React.useState([])
     const [selectedVariants, setSelectedVariants] = React.useState([])
 
+    const handleAddVariant = (variant) => {
+        setSelectedVariants([...selectedVariants, variant])
+    }
+
+    const handleRemoveVariant = (variant) => {
+        setSelectedVariants(selectedVariants.filter(selectedVariant => selectedVariant.branchid !== variant.branchid))
+    }
+
     const collectionFormik = useFormik({
         initialValues: {
             name: '',
@@ -148,7 +156,7 @@ export default function CreateCollection() {
                     [theme.breakpoints.down('645')]: {justifyContent: 'center'}
                 }}>
                 {selectedVariants.map((result, index) => {
-                    return <RecipeCardMini key={index} name={result.latestrecipename} variantName={result.variantname} ownerName={result.ownername} imageURLs={result.latestimageurls}/>
+                    return <RecipeCardMini key={index} id={result.branchid} name={result.latestrecipename} variantName={result.variantname} ownerName={result.ownername} imageURLs={result.latestimageurls} handleClick={handleRemoveVariant}/>
                 })}
             </Box>
             <form onSubmit={handleSearch} style={{flexGrow: 1}}>
@@ -185,7 +193,7 @@ export default function CreateCollection() {
                     [theme.breakpoints.down('645')]: {justifyContent: 'center'}
                 }}>
                 {searchResults.map((result, index) => {
-                    return <RecipeCardMini key={index} name={result.latestrecipename} variantName={result.variantname} ownerName={result.ownername} imageURLs={result.latestimageurls}/>
+                    return <RecipeCardMini key={index} id={result.branchid} name={result.latestrecipename} variantName={result.variantname} ownerName={result.ownername} imageURLs={result.latestimageurls} handleClick={handleAddVariant}/>
                 })}
             </Box>
             <Stack direction={'row'} sx={{justifyContent: 'end'}}>
