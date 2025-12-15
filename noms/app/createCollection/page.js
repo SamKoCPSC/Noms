@@ -53,7 +53,7 @@ export default function CreateCollection() {
                 {
                     name: values.name,
                     description: values.description,
-                    variantIds: values.variantIds
+                    variantIds: selectedVariants.map(variant => variant.branchid)
                 },
                 {
                     headers: {
