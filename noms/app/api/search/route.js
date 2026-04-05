@@ -17,10 +17,6 @@ export async function GET(req, res) {
             r.imageurls,
             r.status,
             r.datecreated,
-            r.baseid,
-            r.version,
-            r.branchid,
-            r.branchbase,
             r.notes,
             u.name AS author,
             json_agg(
