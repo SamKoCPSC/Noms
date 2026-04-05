@@ -1,3 +1,8 @@
+/**
+ * DEPRECATED API ROUTE
+ * /api/getRecipes is deprecated and may be removed in a future release.
+ * The homepage now fetches recipe data directly from Lambda in the server component.
+ */
 import axios from "axios";
 
 // export async function POST(req, res) {
@@ -46,6 +51,7 @@ import axios from "axios";
 // }
 
 export async function POST(req, res) {
+    console.warn('DEPRECATED: /api/getRecipes is deprecated and may be removed in a future release.');
     const data = await req.json()
     const numOfResults = data.numOfResults
     return axios.post(

@@ -1,6 +1,12 @@
+/**
+ * DEPRECATED API ROUTE
+ * /api/search is deprecated and may be removed in a future release.
+ * The search page now fetches search data directly from Lambda in the server component.
+ */
 import axios from "axios";
 
 export async function GET(req, res) {
+    console.warn('DEPRECATED: /api/search is deprecated and may be removed in a future release.');
     const name = `%${req.nextUrl.searchParams.get('name')}%`
     const includedIngredients = JSON.parse(req.nextUrl.searchParams.get('includedIngredients')).length > 0 ? JSON.parse(req.nextUrl.searchParams.get('includedIngredients')) : ['%']
     const excludedIngredients = JSON.parse(req.nextUrl.searchParams.get('excludedIngredients') || '[]')
