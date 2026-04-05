@@ -27,6 +27,7 @@ import Navdrawer from './Navdrawer'
 import { Avatar, TextField, InputAdornment, Button } from '@mui/material';
 import theme from '../theme';
 import { useTheme } from '@emotion/react';
+import useDebounce from '../hooks/useDebounce'
 
 
 const dancingScript = Dancing_Script({subsets: ['latin']})
@@ -83,6 +84,8 @@ export default function PrimarySearchAppBar(props) {
   const [includedIngredients, setIncludedIngredients] = React.useState([])
   const [excludedIngredients, setExcludedIngredients] = React.useState([])
   const [requiredIngredients, setRequiredIngredients] = React.useState([])
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const debouncedSearchQuery = useDebounce(searchQuery, 300)
   const [navbarHeight, setNavbarHeight] = React.useState(56)
   const appBarRef = React.useRef(null)
 
@@ -134,9 +137,17 @@ export default function PrimarySearchAppBar(props) {
 
   const handleSearch = (event) => {
     event.preventDefault()
-    const formData = new FormData(event.currentTarget)
-    router.push(`/search?name=${formData.get('name')}&includedIngredients=${JSON.stringify(includedIngredients)}&excludedIngredients=${JSON.stringify(excludedIngredients)}&requiredIngredients=${JSON.stringify(requiredIngredients)}`)
+    router.push(`/search?name=${encodeURIComponent(searchQuery)}&includedIngredients=${JSON.stringify(includedIngredients)}&excludedIngredients=${JSON.stringify(excludedIngredients)}&requiredIngredients=${JSON.stringify(requiredIngredients)}`)
   }
+
+  React.useEffect(() => {
+    const query = debouncedSearchQuery.trim()
+    const shouldPrefetch = query !== '' || includedIngredients.length > 0 || excludedIngredients.length > 0 || requiredIngredients.length > 0
+    if (!shouldPrefetch) return
+
+    const url = `/search?name=${encodeURIComponent(query)}&includedIngredients=${JSON.stringify(includedIngredients)}&excludedIngredients=${JSON.stringify(excludedIngredients)}&requiredIngredients=${JSON.stringify(requiredIngredients)}`
+    router.prefetch(url)
+  }, [debouncedSearchQuery, includedIngredients, excludedIngredients, requiredIngredients, router])
 
   const menuId = 'primary-search-account-menu';
   const renderMenu = (
@@ -249,6 +260,8 @@ export default function PrimarySearchAppBar(props) {
           <form onSubmit={handleSearch} style={{flexGrow: 1}}>
             <TextField
               name="name"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
               variant="outlined"
               placeholder="Search for recipes"
               InputProps={{

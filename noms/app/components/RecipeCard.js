@@ -17,7 +17,7 @@ import ShareIcon from '@mui/icons-material/Share';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { ThumbUp } from '@mui/icons-material';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { keyframes } from '@mui/material/styles';
 import theme from '../theme';
 
@@ -84,40 +84,37 @@ const ExpandMore = styled((props) => {
 
 export default function RecipeCard({id, name, description, author, date, ingredients, instructions, additionalInfo, imageURLs, status, baseid, notes, branchid, branchbase}) {
   const [expanded, setExpanded] = React.useState(false);
-  const router = useRouter()
+
+  const destination = status === 'draft'
+    ? `/create?name=${encodeURIComponent(name || '')}&description=${encodeURIComponent(description || '')}`
+    : `/recipe/${id}`;
 
   const handleExpandClick = () => {
     setExpanded(!expanded);
   };
 
   return (
-    <Card 
-    sx={{
-      href: '/product',
-      width: '350px',
-      height: '420px',
-      backgroundColor: 'white',
-      borderColor: 'rgb(230, 228, 215)',
-      borderStyle: 'solid',
-      borderWidth: 2,
-      boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
-      borderRadius: '10px',
-      animation: `${shadowUnPopBr} 0.15s ease-out both`,
-      "&:hover": {
+    <Card
+      component={Link}
+      href={destination}
+      prefetch={true}
+      sx={{
+        width: '350px',
+        height: '420px',
+        backgroundColor: 'white',
+        borderColor: 'rgb(230, 228, 215)',
+        borderStyle: 'solid',
+        borderWidth: 2,
+        boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
+        borderRadius: '10px',
+        animation: `${shadowUnPopBr} 0.15s ease-out both`,
+        '&:hover': {
           backgroundColor: '#f0f0f0',
           animation: `${shadowPopBr} 0.15s ease-in both`,
-          cursor: 'pointer'
-      },
-
-    }}
-    onClick = {() => {
-      if(status === 'draft') {
-        router.push(`/create?name=${name}&description=${description}`)
-      } else {
-        router.push(`/recipe/${id}`)
-      }
-    }}
-  >
+          cursor: 'pointer',
+        },
+      }}
+    >
       <CardHeader
         avatar={
           <Avatar sx={{bgcolor: theme.palette.primary.main}}>{author.charAt(0)+author.split(' ')[1]?.charAt(0)}</Avatar>

@@ -1,10 +1,12 @@
 'use client'
+import { useEffect, useState } from 'react'
 import { Box, Button, Container, TextField, Typography, InputAdornment, Stack, IconButton } from "@mui/material";
 import { Dancing_Script } from "next/font/google";
 import { Search } from "@mui/icons-material";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@emotion/react";
+import useDebounce from '../hooks/useDebounce'
 
 const dancingScript = Dancing_Script({subsets: ['latin']})
 
@@ -12,12 +14,18 @@ export default function HomeHeader() {
   const theme = useTheme()
   const {data: session, status} = useSession()
   const router = useRouter()
+  const [searchTerm, setSearchTerm] = useState('')
+  const debouncedSearchTerm = useDebounce(searchTerm, 300)
 
   const handleSearch = (event) => {
     event.preventDefault()
-    const formData = new FormData(event.currentTarget)
-    router.push(`/search?name=${formData.get('search')}`)
+    router.push(`/search?name=${encodeURIComponent(searchTerm)}`)
   }
+
+  useEffect(() => {
+    if (!debouncedSearchTerm.trim()) return
+    router.prefetch(`/search?name=${encodeURIComponent(debouncedSearchTerm)}`)
+  }, [debouncedSearchTerm, router])
 
   return (
     <Box display={'flex'} flexDirection={'column'} alignItems={'center'} gap={'30px'}
@@ -48,6 +56,8 @@ export default function HomeHeader() {
       <form onSubmit={handleSearch}>
         <TextField 
           name="search"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
           variant="outlined"
           placeholder="Search for recipes"
           InputProps={{
