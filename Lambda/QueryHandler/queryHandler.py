@@ -17,7 +17,7 @@ logger.setLevel(logging.INFO)
 connection = None
 
 def get_connection():
-# test lambda deploy action again
+# test lambda deploy action again again
     global connection
     if connection is None or connection.closed:
         try:
