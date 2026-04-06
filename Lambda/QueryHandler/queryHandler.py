@@ -17,6 +17,7 @@ logger.setLevel(logging.INFO)
 connection = None
 
 def get_connection():
+    # Adding a comment to see if the automated deploy succeeds with this change
     global connection
     if connection is None or connection.closed:
         try:
