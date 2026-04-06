@@ -17,6 +17,7 @@ logger.setLevel(logging.INFO)
 connection = None
 
 def get_connection():
+    #test
     global connection
     if connection is None or connection.closed:
         try:
