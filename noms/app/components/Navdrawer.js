@@ -1,6 +1,7 @@
 'use client'
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Box from '@mui/material/Box';
 import Drawer from '@mui/material/Drawer';
 import Button from '@mui/material/Button';
@@ -45,12 +46,14 @@ export default function TemporaryDrawer(props) {
         {drawerItemList.map((drawerItem) => (
           <Box key={drawerItem.label}>
             <ListItem disablePadding>
-              <ListItemButton onClick={() => router.push(`${drawerItem.link}`)}>
-                <ListItemIcon>
-                  {drawerItem.icon}
-                </ListItemIcon>
-                <ListItemText primary={drawerItem.label} />
-              </ListItemButton>
+              <Link href={`${drawerItem.link}`} prefetch={true}>
+                <ListItemButton component="div">
+                  <ListItemIcon>
+                    {drawerItem.icon}
+                  </ListItemIcon>
+                  <ListItemText primary={drawerItem.label} />
+                </ListItemButton>
+              </Link>
             </ListItem>
             {drawerItem.divider && <Divider/>}
           </Box>
