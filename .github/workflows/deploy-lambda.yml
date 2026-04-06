@@ -35,7 +35,7 @@ jobs:
 
     - name: Zip Lambda function
       run: |
-        cd Noms/Lambda/QueryHandler
+        cd Lambda/QueryHandler
         zip -r ../../../lambda-function.zip .
         cd ../../..
         
