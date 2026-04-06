@@ -159,17 +159,17 @@ export default function Create({searchParams}) {
 
   const recipeFormik = useFormik({
     initialValues: {
-        name: searchParams.name,
+        name: searchParams.name || '',
         description: searchParams.description || '',
         ingredients: ingredients,
         instructions: instructions,
         additionalInfo: additionalInfo,
         images: images,
-        notes: '',
-        branchName: 'Original',
-        branchDescription: '',
-        projectName: 'My Project',
-        projectDescription: ''
+        notes: searchParams.notes || '',
+        branchName: searchParams.branchName || 'Original',
+        branchDescription: searchParams.branchDescription || '',
+        projectName: searchParams.projectName || 'My Project',
+        projectDescription: searchParams.projectDescription || ''
     },
     initialErrors: {name: 'This just ensures that errors is not null so the error message is triggered'},
     validationSchema: Yup.object().shape({
@@ -241,77 +241,43 @@ export default function Create({searchParams}) {
     }
   })
   
-  // const handleSave = async () => {
-  //   const values = recipeFormik.values
-  //   let imageData = images.map((image) => {
-  //     const formData = new FormData()
-  //     formData.append('file', image);
-  //     return formData;
-  //   })
-  //   let imageURLs
-  //   let noImageUploadErrors = true
-  //   if(imageData.length > 0) {
-  //     axios.get(
-  //       '/api/presignedURL', {
-  //           params: {
-  //           recipeName: recipeFormik.values.name || 'untitled',
-  //           fileNames: imageData.map((image) => {return image.get('file').name})
-  //         }
-  //       },
-  //     ).then((response) => {
-  //       Promise.all(response.data.presignedURLs.map((presignedURL, index) => {
-  //         axios.put(
-  //           presignedURL,
-  //           imageData[index].get('file'),
-  //           {
-  //             headers: {
-  //               "Content-Type": "image/jpeg"
-  //             }
-  //           }
-  //         )
-  //       })).then(() => {
-  //         imageURLs = response.data.imageURLs
-  //       }).catch(() => {
-  //         handleSnackBar('One or more images failed to upload', theme.palette.error.main)
-  //         noImageUploadErrors = false
-  //       })  
-  //     }).catch(() => {
-  //       handleSnackBar('Failed to authorize image upload', theme.palette.error.main)
-  //       noImageUploadErrors = false
-  //     })
-  //   } 
-  //   if(noImageUploadErrors) {
-  //     axios.post(
-  //       searchParams.branchid != null
-  //         ? `/api/createRecipeVersion/${searchParams.branchid}`
-  //         : `/api/createRecipe`,
-  //       {
-  //         name: values.name,
-  //         description: values.description,
-  //         ingredients: values.ingredients,
-  //         instructions: values.instructions,
-  //         additionalInfo: values.additionalInfo,
-  //         imageUrls: imageURLs,
-  //         status: 'draft',
-  //         notes: values.notes,
-  //         baseid: searchParams.baseid || undefined,
-  //         branchbase: searchParams.branchbase || undefined,
-  //         branchid: searchParams.branchid || undefined,
-  //         branchbase: searchParams.branchbase || undefined
-  //       },
-  //       {
-  //         headers: {
-  //           'Content-Type': 'application/json',
-  //         }
-  //       }
-  //     ).then(() => {
-  //       router.push('/')
-  //       handleSnackBar('Recipe has been successfully saved!', theme.palette.success.main)
-  //     }).catch(() => {
-  //       handleSnackBar('Failed to save recipe', theme.palette.error.main)
-  //     })
-  //   }
-  // }
+  const handleSave = async () => {
+    const values = recipeFormik.values
+
+    // Generate URL with form data
+    const params = new URLSearchParams()
+    if (values.name) params.set('name', values.name)
+    if (values.description) params.set('description', values.description)
+    if (values.ingredients.length > 0) params.set('ingredients', JSON.stringify(values.ingredients))
+    if (values.instructions.length > 0) params.set('instructions', JSON.stringify(values.instructions))
+    if (values.additionalInfo.length > 0) params.set('additionalInfo', JSON.stringify(values.additionalInfo))
+    // Only include string URLs for images (not File objects)
+    const imageUrls = values.images.filter(img => typeof img === 'string')
+    if (imageUrls.length > 0) params.set('imageURLs', JSON.stringify(imageUrls))
+    if (values.notes) params.set('notes', values.notes)
+    if (values.branchName) params.set('branchName', values.branchName)
+    if (values.branchDescription) params.set('branchDescription', values.branchDescription)
+    if (values.projectName) params.set('projectName', values.projectName)
+    if (values.projectDescription) params.set('projectDescription', values.projectDescription)
+
+    const draftUrl = `/createRecipe?${params.toString()}`
+
+    try {
+      await axios.post(
+        '/api/recipeDrafts',
+        { url: draftUrl },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      )
+      router.push('/')
+      handleSnackBar('Draft saved successfully!', theme.palette.success.main)
+    } catch (error) {
+      handleSnackBar('Failed to save draft', theme.palette.error.main)
+    }
+  }
 
   const handleAddImages = (event) => {
     setImages([...images, ...Array.from(event.target.files)])
@@ -892,9 +858,9 @@ export default function Create({searchParams}) {
           <Typography color={theme.palette.success.main}>All required fields completed</Typography>
         </Stack>
       }
-      <Stack direction={'row'} sx={{justifyContent: 'end'}}>
+      <Stack direction={'row'} sx={{justifyContent: 'end', gap: 2}}>
         <Button variant="contained" color="error" sx={{top: '30px'}} onClick={() => router.push('/')}>Cancel</Button>
-        {/* {Object.keys(searchParams).length === 0 && <Button variant="contained" color="secondary" sx={{top: '30px'}} onClick={() => handleSave()}>Save As Draft</Button>} */}
+        <Button disabled={status !== "authenticated"} variant="contained" color="secondary" sx={{top: '30px'}} onClick={handleSave}>Save As Draft</Button>
         <Button disabled={status !== "authenticated" || (isSubmitAttempted && Object.keys(recipeFormik.errors).length > 0)} variant="contained" sx={{top: '30px'}} 
           onClick={() => {
             setSubmitAttempted(true)
