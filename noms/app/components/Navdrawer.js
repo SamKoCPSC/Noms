@@ -45,16 +45,16 @@ export default function TemporaryDrawer(props) {
       <List>
         {drawerItemList.map((drawerItem) => (
           <Box key={drawerItem.label}>
-            <ListItem disablePadding>
-              <Link href={`${drawerItem.link}`} prefetch={true}>
+            <Link href={`${drawerItem.link}`} prefetch={true}>
+              <ListItem disablePadding>
                 <ListItemButton component="div">
                   <ListItemIcon>
                     {drawerItem.icon}
                   </ListItemIcon>
                   <ListItemText primary={drawerItem.label} />
                 </ListItemButton>
-              </Link>
-            </ListItem>
+              </ListItem>
+            </Link>
             {drawerItem.divider && <Divider/>}
           </Box>
         ))}
