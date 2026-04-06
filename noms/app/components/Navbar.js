@@ -1,6 +1,7 @@
 'use client'
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { styled, alpha } from '@mui/material/styles';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
@@ -242,21 +243,22 @@ export default function PrimarySearchAppBar(props) {
           >
             <MenuIcon />
           </IconButton>
-          <Typography
-            variant="h6"
-            noWrap
-            component="div"
-            sx={{ 
-              marginRight: '30px', 
-              fontSize: '30px', 
-              color: contentColor, 
-              display: { sm: 'block', fontFamily: dancingScript.style.fontFamily, ":hover": {cursor: 'pointer'} },
-              [theme.breakpoints.down('544')]: {display: 'none'},
-            }}
-            onClick={() => router.push('/')}
-          >
-            NOMS
-          </Typography>
+          <Link href="/" prefetch={true}>
+            <Typography
+              variant="h6"
+              noWrap
+              component="div"
+              sx={{ 
+                marginRight: '30px', 
+                fontSize: '30px', 
+                color: contentColor, 
+                display: { sm: 'block', fontFamily: dancingScript.style.fontFamily, ":hover": {cursor: 'pointer'} },
+                [theme.breakpoints.down('544')]: {display: 'none'},
+              }}
+            >
+              NOMS
+            </Typography>
+          </Link>
           <form onSubmit={handleSearch} style={{flexGrow: 1}}>
             <TextField
               name="name"
