@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'Noms/Lambda/QueryHandler/**'
+      - 'Lambda/QueryHandler/**'
 
 env:
   AWS_DEFAULT_REGION: us-east-2
