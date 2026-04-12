@@ -31,12 +31,18 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.11'
 
     - name: Install dependencies
       run: |
         cd Lambda/QueryHandler
-        pip install psycopg2-binary -t .
+        pip install \
+          --platform manylinux2014_x86_64 \
+          --target dist \
+          --implementation cp \
+          --python-version 3.11 \
+          --only-binary=:all: \
+          aws-psycopg2-binary
 
     - name: Zip Lambda function
       run: |
