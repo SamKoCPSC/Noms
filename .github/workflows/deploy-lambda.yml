@@ -33,6 +33,11 @@ jobs:
       with:
         python-version: '3.9'
 
+    - name: Install dependencies
+      run: |
+        cd Lambda/QueryHandler
+        pip install psycopg2-binary -t .
+
     - name: Zip Lambda function
       run: |
         cd Lambda/QueryHandler
