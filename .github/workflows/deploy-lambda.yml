@@ -38,11 +38,11 @@ jobs:
         cd Lambda/QueryHandler
         pip install \
           --platform manylinux2014_x86_64 \
-          --target dist \
+          --target . \
           --implementation cp \
           --python-version 3.11 \
           --only-binary=:all: \
-          aws-psycopg2-binary
+          aws-psycopg2
 
     - name: Zip Lambda function
       run: |
