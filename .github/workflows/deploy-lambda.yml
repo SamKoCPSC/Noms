@@ -36,13 +36,8 @@ jobs:
     - name: Install dependencies
       run: |
         cd Lambda/QueryHandler
-        pip install \
-          --platform manylinux2014_x86_64 \
-          --target . \
-          --implementation cp \
-          --python-version 3.11 \
-          --only-binary=:all: \
-          aws-psycopg2
+        docker run --rm -v "$PWD":/var/task public.ecr.aws/lambda/python:3.11 \
+        pip install psycopg2-binary -t /var/task
 
     - name: Zip Lambda function
       run: |
