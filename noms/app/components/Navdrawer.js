@@ -33,6 +33,7 @@ export default function TemporaryDrawer(props) {
     {label: 'Create A Recipe', link: status === 'authenticated' ? `/createRecipe` : '/signInRequired', icon: <Create/>},
     {label: 'Create A Collection', link: status === 'authenticated' ? `/createCollection` : '/signInRequired', icon: <CollectionsBookmark/>, divider: true},
     {label: 'My Recipes', link: status === 'authenticated' ? `/myRecipes/${session.user.id}` : '/signInRequired', icon: <Folder/>},
+    {label: 'My Projects', link: status === 'authenticated' ? `/myProjects/${session.user.id}` : '/signInRequired', icon: <Folder/>},
     {label: 'Drafts', link: status === 'authenticated' ? `/drafts` : '/signInRequired', icon: <Drafts/>},
     {label: 'Collections', link: status === 'authenticated' ? `/collections/${session.user.id}` : '/signInRequired', icon: <LibraryBooks   />},
     {label: 'Account', link: status === 'authenticated' ? `/account/${session.user.id}` : '/signInRequired', icon: <AccountBox/>, divider: true},

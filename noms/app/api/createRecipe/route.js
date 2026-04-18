@@ -136,6 +136,7 @@ export async function POST(req, res) {
       revalidatePath(`/project/${response.data.result[0].projectid}`);
       revalidatePath(`/branch/${response.data.result[0].branchid}`);
       revalidatePath(`/recipe/${response.data.result[0].recipeid}`);
+      revalidatePath(`/myProjects/${session.user.id}`);
       return Response.json(response.data, { status: response.status })
     })
     .catch((error) => {
