@@ -12,6 +12,11 @@ const nextConfig = {
         S3_BUCKET: process.env.S3_BUCKET,
         S3_REGION: process.env.S3_REGION,
         S3_SECRET: process.env.S3_SECRET,
+        RDS_USER: process.env.RDS_USER,
+        RDS_PASSWORD: process.env.RDS_PASSWORD,
+        RDS_HOST: process.env.RDS_HOST,
+        RDS_PORT: process.env.RDS_PORT,
+        RDS_NAME: process.env.RDS_NAME,
       }, 
 };
 

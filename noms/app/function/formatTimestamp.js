@@ -1,13 +1,24 @@
 export default function formatTimestamp(timestamp) {
-    const isoTimestamp = timestamp.replace(" ", "T");
-    const date = new Date(isoTimestamp);
-    if (isNaN(date.getTime())) {
-        throw new Error("Invalid PostgreSQL timestamp format.");
-    }
-    const options = {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-    };
-    return date.toLocaleDateString(undefined, options);
+  let isoTimestamp;
+  
+  if (typeof timestamp === 'string') {
+    // If it's already a string, convert PostgreSQL format to ISO format
+    isoTimestamp = timestamp.replace(" ", "T");
+  } else if (timestamp instanceof Date) {
+    // If it's already a Date object, use it directly
+    return timestamp;
+  } else if (timestamp && typeof timestamp.toISOString === 'function') {
+    // If it's a date-like object with toISOString, use that
+    return timestamp;
+  } else {
+    // Handle null or undefined values
+    return 'Invalid date';
+  }
+  
+  const date = new Date(isoTimestamp);
+  if (isNaN(date.getTime())) {
+    throw new Error("Invalid PostgreSQL timestamp format.");
+  }
+  
+  return date;
 }
