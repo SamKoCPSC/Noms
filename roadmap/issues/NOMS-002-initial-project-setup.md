@@ -14,7 +14,7 @@ Establish the foundational codebase and external infrastructure so that subseque
 - [ ] Scaffold project using `dx init` with the fullstack template:
   ```bash
   cargo install dioxus-cli
-  dx init --template fullstack --vcs none
+  dx init --template fullstack --subtemplate Barebones --vcs none
   ```
   This produces a single-crate layout — one codebase that compiles to both native (SSR + server functions) and WASM (client):
   ```
