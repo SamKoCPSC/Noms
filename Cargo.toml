@@ -8,10 +8,27 @@ edition = "2021"
 
 [dependencies]
 dioxus = { version = "0.7.1", features = ["router", "fullstack"] }
+tracing = "0.1"
+
+# Server-only — never compiled into the WASM client
+sqlx             = { version = "0.8", features = ["runtime-tokio-rustls", "postgres"], optional = true }
+aws-sdk-s3       = { version = "1", optional = true }
+tracing-subscriber = { version = "0.3", features = ["json"], optional = true }
 
 [features]
 default = ["web"]
-web = ["dioxus/web"]
+web     = ["dioxus/web"]
 desktop = ["dioxus/desktop"]
-mobile = ["dioxus/mobile"]
-server = ["dioxus/server"]
+mobile  = ["dioxus/mobile"]
+server  = [
+    "dioxus/server",
+    "sqlx",
+    "aws-sdk-s3",
+    "tracing-subscriber",
+]
+
+[lints.rust]
+warnings = "deny"
+
+[lints.clippy]
+all = "warn"

@@ -46,7 +46,6 @@ Establish the foundational codebase and external infrastructure so that subseque
   ├── db/               # Database layer (SQLx types, queries — server-only via cfg)
   └── utils/            # Shared utilities
   ```
-- [ ] Remove stale skeleton directories (`packages/app/`, `packages/server/`, `packages/db/`)
 - [ ] Configure `rustfmt` and `clippy` at crate level (`Cargo.toml` `[lints]`)
 
 ### Railway Infrastructure
