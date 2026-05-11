@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: noms-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: noms
+      POSTGRES_PASSWORD: noms_local_pass
+      POSTGRES_DB: noms
+    volumes:
+      - noms-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U noms"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: noms-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web console
+    environment:
+      MINIO_ROOT_USER: noms-local-key
+      MINIO_ROOT_PASSWORD: noms-local-secret
+    volumes:
+      - noms-minio-data:/data
+
+  mock-oauth:
+    image: michalzaq128a/mock-oauth-server:latest
+    container_name: noms-mock-oauth
+    ports:
+      - "8082:8080"
+    environment:
+      - CONFIG_STRING=port:8080;clients:google:secret:localhost/callback;clients:github:secret:localhost/callback;clients:apple:secret:localhost/callback
+
+volumes:
+  noms-postgres-data:
+  noms-minio-data:
