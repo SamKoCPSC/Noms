@@ -2175,7 +2175,7 @@ mod tests {
 Integration tests live in a `tests/` directory at the crate root. They spin up ephemeral PostgreSQL containers via **testcontainers-rs** so each test gets a fresh, isolated database with zero cross-contamination between runs.
 
 ```
-crates/backend/tests/
+tests/
 ├── auth_flow.rs       # OAuth login → session creation → protected route access
 ├── recipe_crud.rs     # Full create → read → update → delete cycles
 └── follow_graph.rs    # Multi-user scenarios: following, unfollowing, feed generation
@@ -2188,7 +2188,7 @@ crates/backend/tests/
 - **Multi-user scenarios**: Two users following each other, recipe sharing permissions (public vs private visibility), concurrent edit handling.
 
 ```rust
-// crates/backend/tests/recipe_crud.rs
+// tests/recipe_crud.rs
 #[tokio::test]
 async fn create_recipe_persists_and_returns_id() {
     let db = PostgresContainer::start().await;
