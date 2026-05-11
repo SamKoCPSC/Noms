@@ -76,7 +76,9 @@ Establish the foundational codebase and external infrastructure so that subseque
   - `cargo check --target wasm32-unknown-unknown` — WASM client compilation
   - `cargo check --features server` — native server compilation
   - `cargo clippy` — linting (both targets)
+  - `cargo fmt --check` — formatting
   - `cargo test` — run tests (will be empty initially, native only)
+  - `cargo audit` — scan dependencies for known CVEs
 - [ ] Configure Railway deployment trigger on `main` branch pushes
 
 ### Development Ergonomics
