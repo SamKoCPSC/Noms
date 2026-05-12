@@ -1,6 +1,2 @@
 [build]
-commands = [
-    "rustup update stable",
-    "rustup default stable",
-    "cargo build --release"
-]
+buildCommand = "rustup update stable && rustup default stable && cargo build --release"
