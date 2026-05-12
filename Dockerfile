@@ -1,6 +1,7 @@
 FROM rust:slim
 
 RUN apt-get update && apt-get install -y pkg-config libssl-dev curl && rm -rf /var/lib/apt/lists/*
+RUN rustup component add rustfmt clippy
 
 WORKDIR /usr/src/app
 COPY . .
