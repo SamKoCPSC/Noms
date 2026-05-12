@@ -6,6 +6,12 @@ WORKDIR /usr/src/app
 COPY . .
 
 RUN cargo binstall dioxus-cli -y 2>/dev/null || cargo install dioxus-cli
+
+# Pre-build checks — fail the image if any don't pass
+RUN cargo fmt --check \
+    && cargo clippy --no-default-features --features server -- -D warnings \
+    && cargo test --no-default-features --features server
+
 RUN dx bundle --platform web --release
 
 FROM debian:bookworm-slim
