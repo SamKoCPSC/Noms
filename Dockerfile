@@ -10,7 +10,7 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM rust:slim AS builder
 RUN apt-get update && apt-get install -y pkg-config libssl-dev curl && rm -rf /var/lib/apt/lists/*
 RUN rustup component add rustfmt clippy
-RUN cargo binstall cargo-chef dioxus-cli -y 2>/dev/null || cargo install cargo-chef dioxus-cli
+RUN cargo install cargo-chef && cargo install dioxus-cli
 WORKDIR /usr/src/app
 COPY --from=planner /usr/src/app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
