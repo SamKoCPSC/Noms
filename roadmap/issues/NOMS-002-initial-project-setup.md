@@ -85,14 +85,29 @@ Establish the foundational codebase and external infrastructure so that subseque
   - Store `APPLE_SERVICES_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, and `APPLE_PRIVATE_KEY` (PEM contents) in Railway + `.env.local`
 
 ### Cloudflare Infrastructure
-- [ ] Create R2 bucket (`noms-media`) with structured prefix layout:
-  ```
-  noms-media/
-  ├── recipes/{user_id}/{image_uuid}.{ext}
-  └── avatars/{user_id}/avatar.{ext}
-  ```
-- [ ] Configure public access path for recipe images (needed for static pages + SEO)
-- [ ] Enable Cloudflare Images on-the-fly transformation for the project zone
+- [ ] Create R2 bucket (`noms-media`):
+  - Log in to Cloudflare Dashboard → R2 Object Storage → Create bucket
+  - Name: `noms-media`
+  - Structured prefix layout:
+    ```
+    noms-media/
+    ├── recipes/{user_id}/{image_uuid}.{ext}
+    └── avatars/{user_id}/avatar.{ext}
+    ```
+- [ ] Generate R2 API token:
+  - Dashboard → R2 → Manage R2 API tokens → Create API token
+  - Permission: **Object Read & Write**, scoped to `noms-media` bucket only
+  - Copy and store: `Access Key ID`, `Secret Access Key`, and `Endpoint URL` (`https://<ACCOUNT_ID>.r2.cloudflarestorage.com`)
+- [ ] Configure public access:
+  - R2 bucket → Settings → Public Access → Connect Domain
+  - Connect a subdomain (e.g. `media.noms.app`) for serving images
+  - Domain must be on Cloudflare with DNS managed there
+- [ ] Store credentials in Railway (per environment) + `.env.local`:
+  - `R2_ENDPOINT` — `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`
+  - `R2_ACCESS_KEY_ID`
+  - `R2_SECRET_ACCESS_KEY`
+  - `R2_ACCOUNT_ID`
+  - `R2_BUCKET` — `noms-media`
 
 ### CI/CD Skeleton
 - [x] Create `.github/workflows/ci.yml` with minimal pipeline:
