@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y pkg-config libssl-dev curl && rm -rf /v
 RUN cargo install cargo-chef
 WORKDIR /usr/src/app
 COPY Cargo.toml Cargo.lock clippy.toml ./
+COPY src/ ./src/
 RUN cargo chef prepare --recipe-path recipe.json
 
 # === Stage 2: Compile dependencies (cached across builds) ===
