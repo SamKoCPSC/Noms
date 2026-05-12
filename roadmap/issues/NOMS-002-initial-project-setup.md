@@ -1,6 +1,6 @@
 # NOMS-002: Initial Project Setup — Repository, Workspace & Infrastructure
 
-**Status:** 🟡 In Progress
+**Status:** 🟢 Done
 **Phase:** Pre-work
 **Created:** 2026-05-09
 
@@ -52,40 +52,36 @@ Establish the foundational codebase and external infrastructure so that subseque
 - [x] Create Railway project with two services:
   - **App service** — Single Dioxus Fullstack binary (SSR, server functions, and static serving)
   - **PostgreSQL database** — Railway managed Postgres instance
-- [ ] Create **staging** and **production** environments (trunk-based):
+- [x] Create **staging** and **production** environments (trunk-based):
   - **Staging** — auto-deploys on every push to `main`
   - **Production** — manual deploy via Railway "promote" from a staging build (preserves production config, swaps the binary)
   - Each environment has its own isolated PostgreSQL instance
-- [ ] Configure environment variables per environment:
+- [x] Configure environment variables per environment:
   - **Staging**: `DATABASE_URL` (staging Postgres), R2 credentials, OAuth credentials with staging redirect URIs, `SESSION_SECRET` (unique)
   - **Production**: `DATABASE_URL` (production Postgres), R2 credentials, OAuth credentials with production redirect URIs, `SESSION_SECRET` (unique)
 
 ### OAuth Provider Setup
-- [ ] Register **Google OAuth 2.0** credentials:
+- [x] Register **Google OAuth 2.0** credentials:
   - Create Google Cloud project (or use existing)
   - Enable Google+ API (for userinfo endpoint)
   - Create OAuth 2.0 Client ID (Web application type)
   - Configure authorized JavaScript origins and redirect URIs for all environments:
     - Local: `http://localhost:8080/api/auth/callback/google`
-    - Staging: `https://<staging-url>/api/auth/callback/google`
-    - Production: `https://<production-url>/api/auth/callback/google`
+    - Staging: `https://staging.nomsrecipes.com/api/auth/callback/google`
+    - Production: `https://nomsrecipes.com/api/auth/callback/google`
   - Store `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in Railway + `.env.local`
-- [ ] Register **GitHub OAuth App** credentials:
+- [x] Register **GitHub OAuth App** credentials:
   - Create GitHub OAuth App under repository Settings > Developer settings
   - Configure:
     - Homepage URL: production URL
     - Authorization callback URL: `<production-url>/api/auth/callback/github` (plus staging/local variants)
   - Generate client secret
   - Store `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` in Railway + `.env.local`
-- [ ] Register **Apple Sign In** credentials:
-  - Create App ID in Apple Developer portal with "Sign in with Apple" capability
-  - Configure Services ID (e.g., `IDENTIFIER.com.noms.auth`)
-  - Configure Return URLs and Domains for all environments
-  - Generate and download private key (`.p8` file)
-  - Store `APPLE_SERVICES_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, and `APPLE_PRIVATE_KEY` (PEM contents) in Railway + `.env.local`
+  - Note: GitHub requires separate OAuth apps per domain (staging + production)
+- [x] ~~Register **Apple Sign In** credentials~~ — deferred (requires Apple Developer account, $99/yr)
 
 ### Cloudflare Infrastructure
-- [ ] Create R2 bucket (`noms-media`):
+- [x] Create R2 bucket (`noms-media`):
   - Log in to Cloudflare Dashboard → R2 Object Storage → Create bucket
   - Name: `noms-media`
   - Structured prefix layout:
@@ -94,15 +90,15 @@ Establish the foundational codebase and external infrastructure so that subseque
     ├── recipes/{user_id}/{image_uuid}.{ext}
     └── avatars/{user_id}/avatar.{ext}
     ```
-- [ ] Generate R2 API token:
+- [x] Generate R2 API token:
   - Dashboard → R2 → Manage R2 API tokens → Create API token
   - Permission: **Object Read & Write**, scoped to `noms-media` bucket only
   - Copy and store: `Access Key ID`, `Secret Access Key`, and `Endpoint URL` (`https://<ACCOUNT_ID>.r2.cloudflarestorage.com`)
-- [ ] Configure public access:
+- [x] Configure public access:
   - R2 bucket → Settings → Public Access → Connect Domain
-  - Connect a subdomain (e.g. `media.noms.app`) for serving images
-  - Domain must be on Cloudflare with DNS managed there
-- [ ] Store credentials in Railway (per environment) + `.env.local`:
+  - Connected `media.nomsrecipes.com` for serving images
+  - Domain is on Cloudflare with DNS managed there
+- [x] Store credentials in Railway (per environment) + `.env.local`:
   - `R2_ENDPOINT` — `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`
   - `R2_ACCESS_KEY_ID`
   - `R2_SECRET_ACCESS_KEY`
@@ -117,7 +113,7 @@ Establish the foundational codebase and external infrastructure so that subseque
   - `cargo fmt --check` — formatting
   - `cargo test` — run tests (will be empty initially, native only)
   - `cargo audit` — scan dependencies for known CVEs
-- [ ] Configure Railway deployment trigger on `main` branch pushes
+- [x] Configure Railway deployment trigger on `main` branch pushes
 
 ### Development Ergonomics
 - [x] Add `.gitignore` tuned for Rust projects (`target/`, `.env.local`, IDE files)
@@ -135,9 +131,9 @@ Establish the foundational codebase and external infrastructure so that subseque
 - [x] `cargo test` runs (0 tests, command succeeds)
 - [x] Local PostgreSQL, MinIO, and Mock OAuth containers start via `docker-compose up` and accept connections
 - [x] Railway project exists with app service + database provisioned
-- [ ] OAuth credentials registered for Google, GitHub, and Apple and stored in Railway + `.env.local`
-- [ ] R2 bucket exists (staging/production); local development uses MinIO container for isolation
-- [ ] Pushing to `main` triggers CI pipeline on GitHub Actions (green checkmark)
+- [x] OAuth credentials registered for Google and GitHub and stored in Railway + `.env.local` (Apple deferred)
+- [x] R2 bucket exists (staging/production); local development uses MinIO container for isolation
+- [x] Pushing to `main` triggers CI pipeline on GitHub Actions (green checkmark)
 
 ## Outcome
 
