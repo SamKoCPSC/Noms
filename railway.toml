@@ -1,2 +1,2 @@
 [build]
-buildCommand = "cargo fmt --check & cargo clippy -- -D warnings & cargo test --features server & wait && cargo build --release --features server"
+buildCommand = "cargo fmt --check & cargo clippy --features server -- -D warnings & cargo test --features server & wait && cargo build --release --features server"
