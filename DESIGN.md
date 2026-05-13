@@ -167,7 +167,7 @@ struct ParsedStep {
 
 ### 2. Authentication & Session Management
 
-**Philosophy:** Delegate identity management to Google OAuth — we're building a recipe platform, not an auth provider. This eliminates password storage, breach risk, MFA implementation, and account recovery headaches. Users get a single click "Sign in with Google" experience that's familiar and trusted.
+**Philosophy:** Prefer OAuth providers (Google, GitHub) for frictionless login — they've already solved the hard problems (password storage, MFA, account recovery). But also support email/password for users without major provider accounts, maximizing accessibility. Both paths share the same session infrastructure.
 
 #### Strategy: Server-Side Sessions over JWTs
 
@@ -605,11 +605,91 @@ Adding another provider later (e.g., Facebook or Discord if demand exists) requi
 
 The architecture is built to scale — the only real change is adding a string to the enum and some config values.
 
+##### Email & Password Authentication (Deferred)
+
+**Decision:** Add email/password as an alternative login method alongside OAuth providers. This maximizes accessibility — not all users have a Google, Apple, or GitHub account, especially older demographics who are primary recipe app users.
+
+**Rationale:** OAuth covers ~95% of users, but the remaining 5% (no major provider account) are excluded entirely. Email/password has a lower barrier to entry and is universally understood.
+
+###### Rust Crate Dependencies
+
+| Crate | Purpose | Notes |
+|-------|---------|-------|
+| `argon2` | Password hashing | PHC winner, memory-hard, resists GPU attacks. ~0.5s per hash intentionally slows brute force. |
+| `lettre` | Email sending | SMTP client for verification links and password resets. |
+| `email_address` | Email validation | Prevents malformed emails at registration. |
+| `governor` | Rate limiting | Per-IP and per-account limits on login/register/reset endpoints. |
+
+###### Email Infrastructure
+
+Transactional email provider required for verification links and password resets:
+
+| Provider | Free tier | Recommendation |
+|---|---|---|
+| **Resend** | 3,000/month | Clean API, good deliverability, easy Railway integration |
+| **SendGrid** | 100/day | Well-known, straightforward setup |
+
+Requires domain DNS records (SPF, DKIM, DMARC) pointing to the email provider for deliverability.
+
+###### Database Schema Additions
+
+```sql
+-- Add email/password fields to users table
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255) UNIQUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;  -- NULL for OAuth-only users
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE;
+
+-- Password reset tokens (single-use, time-limited)
+CREATE TABLE password_reset_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL,           -- Hashed token, never store plaintext
+    expires_at TIMESTAMPTZ NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_password_reset_user ON password_reset_tokens(user_id);
+
+-- Email verification tokens (similar structure)
+CREATE TABLE email_verification_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+###### Security Considerations
+
+| Concern | Mitigation |
+|---------|------------|
+| **Credential stuffing** | Rate limiting per IP + per email, account lockout after N failed attempts |
+| **Brute force** | Argon2 is slow by design (~0.5s/hash), rate limiting on login endpoint |
+| **Account enumeration** | Same generic message + same response timing for "user not found" vs "wrong password" |
+| **Session fixation** | Always generate new session ID on login, invalidate old session |
+| **Password reset hijacking** | Cryptographically random tokens, single-use, 15-minute expiry, token hashed in DB |
+| **Database breach** | Argon2 with per-user salt, never store plaintext, tokens are hashed |
+| **Timing attacks** | Constant-time comparison for password verification (argon2 handles this) |
+
+###### Implementation Phases
+
+1. **Registration + Login** — Core flows: create account with email/password, verify password hash, create session. Skip email verification and password reset initially.
+2. **Email Verification** — Send verification email on registration, verify endpoint, block unverified accounts from sensitive actions.
+3. **Password Reset** — Request reset email, time-limited token, reset endpoint, token invalidation.
+4. **Account Management** — Change password, change email, session list/revoke, OAuth account linking.
+
+###### Account Linking
+
+Email/password accounts can later be linked to OAuth providers using the same email-based linking logic described above. An email/password user who later signs in with Google (same email) gets automatic linking.
+
 #### Open Questions Resolved
 
 | # | Question | Decision | Rationale |
 |---|----------|----------|-----------|
-| Auth strategy | **Google + Apple + GitHub Sign-In** ✅ | Covers virtually all users across consumer and developer demographics. All three use standard OAuth 2.0 flows; Apple is required for future iOS native app, GitHub welcomes open-source contributors. Eliminates password management entirely. Three providers = maximum reach without complexity overload. |
+| Auth strategy | **OAuth (Google + GitHub) + Email/Password** ✅ | OAuth covers the majority of users with zero friction. Email/password fills the gap for users without major provider accounts. Both share the same session infrastructure (server-side sessions, HTTP-only cookies). Apple Sign-In deferred until native iOS app is a consideration. |
 
 
 ### 3. Fork Graph Visualization & Lineage
