@@ -1,6 +1,6 @@
 # NOMS-002: Initial Project Setup — Repository, Workspace & Infrastructure
 
-**Status:** 🟢 Done
+**Status:** 🟡 In Progress
 **Phase:** Pre-work
 **Created:** 2026-05-09
 
@@ -125,6 +125,11 @@ Establish the foundational codebase and external infrastructure so that subseque
   - `just services-up` / `just services-down` — manage local Docker containers
 - [x] Add `docker-compose.yml` for local PostgreSQL (mirrors Railway Postgres version), MinIO (S3-compatible local storage mock for R2), and Mock OAuth (local offline auth flow)
 
+### Local Deployability
+- [ ] One-command local startup: `just up` starts all services (Postgres, MinIO, Mock OAuth) and launches the Dioxus dev server
+- [ ] One-command local teardown: `just down` stops services and shuts down the dev server
+- [ ] Verify end-to-end: `just up` results in a working app at `http://localhost:8080` with SSR rendering and server functions functional
+
 ## Acceptance Criteria
 
 - [x] `cargo check` passes with zero errors and zero warnings
@@ -134,6 +139,7 @@ Establish the foundational codebase and external infrastructure so that subseque
 - [x] OAuth credentials registered for Google and GitHub and stored in Railway + `.env.local` (Apple deferred)
 - [x] R2 bucket exists (staging/production); local development uses MinIO container for isolation
 - [x] Pushing to `main` triggers CI pipeline on GitHub Actions (green checkmark)
+- [ ] `just up` starts the full app locally with all services and serves at `http://localhost:8080`
 
 ## Outcome
 
