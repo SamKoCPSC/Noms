@@ -167,20 +167,69 @@ struct ParsedStep {
 
 ### 2. Authentication & Session Management
 
-**Philosophy:** Prefer OAuth providers (Google, GitHub) for frictionless login — they've already solved the hard problems (password storage, MFA, account recovery). But also support email/password for users without major provider accounts, maximizing accessibility. Both paths share the same session infrastructure.
+**Philosophy:** Prefer OAuth providers (Google, GitHub) for frictionless login — they've already solved the hard problems (password storage, MFA, account recovery). But also support email/password for users without major provider accounts, maximizing accessibility. Both paths share the same JWT-based auth infrastructure.
 
-#### Strategy: Server-Side Sessions over JWTs
+#### Strategy: JWT over Server-Side Sessions
 
-**Why sessions instead of JWTs?**
-- **Revocation:** We can instantly invalidate a session (important for logout, security incidents) without token rotation complexity
-- **Storage:** Server-side state means we control the lifecycle; no client-side secret management
-- **Size:** Session ID is small (~32 bytes UUID); no bloated JWT payloads in every request header
-- **Security:** HTTP-only cookies prevent XSS token theft; SameSite=Strict prevents CSRF
+**Why JWTs instead of server-side sessions?**
+- **Zero database calls per request:** JWT signature verification is entirely in-memory — no DB round-trip to validate identity on every request
+- **Stateless scaling:** No session store to manage, no cleanup jobs, no connection pool pressure from session lookups
+- **SSR integration:** JWT is carried in an HTTP-only cookie — available during server-side rendering, no flash of unauthenticated state
+- **Security:** HTTP-only cookies prevent XSS token theft; SameSite=Lax prevents CSRF; short-lived access tokens limit blast radius
 
-**Trade-off acknowledged:** Slightly more database reads per request to validate sessions, but PostgreSQL handles this trivially at our scale. The security benefits far outweigh the negligible performance cost.
+**Trade-off acknowledged:** Logout requires client-side cookie deletion only — the JWT remains valid until its `exp` claim expires. We mitigate this with short token lifetimes (15 minutes) and rely on natural expiry. Explicit logout is not a priority feature at launch.
 
 #### OAuth 2.0 Flow (Google)
 
+```
+┌──────────┐     ┌──────────────┐     ┌─────────────┐     ┌──────────┐
+│   User   │     │  Dioxus UI   │     │ Axum Backend │     │  Google  │
+└────┬─────┘     └──────┬───────┘     └──────┬──────┘     └────┬─────┘
+     │                  │                     │                 │
+     │ "Sign in with    │                     │                 │
+     │ Google" click    │                     │                 │
+     ├─────────────────►│                     │                 │
+     │                  │ Redirect to         │                 │
+     │                  │ /auth/google/start  │                 │
+     │                  ├────────────────────►│                 │
+     │                  │                     │ Generate        │
+     │                  │                     │ auth state      │
+     │                  │                     │ (CSRF nonce)    │
+     │                  │                     │ Store in DB     │
+     │                  │                     ├────────────────►│
+     │                  │                     │ Google OAuth URL│
+     │  Browser redirect │                     │                 │
+     │├─────────────────┤                     │                 │
+     │► Google Consent  │                     │                 │
+     │◄ Authorization   │                     │                 │
+     │ Code + State     │                     │                 │
+     ├─────────────────►│ /auth/google/callback│                │
+     │                  ├────────────────────►│                 │
+     │                  │                     │ Verify state    │
+     │                  │                     │ (CSRF check)    │
+     │                  │                     ├────────────────►│
+     │                  │                     │ Exchange code   │
+     │                  │                     │ for tokens      │
+     │                  │                     │ Access + ID     │
+     │                  │                     │ tokens          │
+     │                  │                     │◄────────────────┤
+     │                  │                     │                 │
+     │                  │                     │ Verify Google   │
+     │                  │                     │ ID token (JWT)  │
+     │                  │                     │                 │
+     │                  │                     │ Create/lookup   │
+     │                  │                     │ User record     │
+     │                  │                     │ (or link OAuth  │
+     │                  │                     │  account)       │
+     │                  │                     │                 │
+     │                  │                     │ Sign JWT        │
+     │                  │                     │ (user_id, exp)  │
+     │                  │                     │                 │
+     │ Set HTTP-only   │◄────────────────────┤                 │
+     │ cookie + redirect│                     │                 │
+     │ to /dashboard    │                     │                 │
+     │◄─────────────────┤                     │                 │
+     │                  │                     │                 │
 ```
 ┌──────────┐     ┌──────────────┐     ┌─────────────┐     ┌──────────┐
 │   User   │     │  Dioxus UI   │     │ Axum Backend │     │  Google  │
@@ -237,49 +286,27 @@ struct ParsedStep {
 |-------|---------|----------------|
 | `oauth2` | Standard OAuth 2.0 client | Well-maintained, async-compatible, Google provider support built-in |
 | `google-signin` (or manual verification) | Verify Google ID tokens | Validates JWT signature against Google's public keys, checks audience/issuer/expiry |
+| `jsonwebtoken` | Sign and verify our own JWTs | Industry-standard crate for JWT creation, signing (HS256/RS256), and verification |
 | `axum-extra` | Cookie management | Ergonomic HTTP-only cookie helpers integrated with Axum extractors |
-| `jsonwebtoken` | Parse and verify Google ID tokens | If not using a higher-level library like `google-signin` |
-| `uuid` | Session IDs, user IDs | Secure random UUID generation |
+| `uuid` | User IDs, auth state | Secure random UUID generation |
 
 #### Database Schema Additions
 
 ```sql
--- Extended User table for OAuth
-ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub VARCHAR(255) UNIQUE;  -- Google's unique user ID
-ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT TRUE;  -- Google emails are verified by default
-ALTER TABLE users ADD COLUMN IF NOT EXISTS last_sign_in_at TIMESTAMPTZ;
-
--- Session management (server-side)
-CREATE TABLE sessions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    expires_at TIMESTAMPTZ NOT NULL,  -- Absolute expiry (e.g., 30 days from creation)
-    last_active_at TIMESTAMPTZ DEFAULT NOW(),  -- Rolling "remember me" window
-    ip_address INET,  -- Optional: track login IP for security auditing
-    user_agent TEXT,  -- Optional: detect unusual client changes
-
-    CONSTRAINT valid_expiry CHECK (expires_at > created_at)
-);
-
-CREATE INDEX idx_sessions_user ON sessions(user_id);
-CREATE INDEX idx_sessions_expires ON sessions(expires_at);  -- For cleanup job
-
 -- Auth state store for OAuth CSRF protection (short-lived, ~10 min TTL)
 CREATE TABLE auth_states (
-    id VARCHAR(64) PRIMARY KEY,  -- The random state string sent to Google
+    id VARCHAR(64) PRIMARY KEY,  -- The random state string sent to OAuth provider
     redirect_uri TEXT NOT NULL,  -- Where user intended to go after login
     created_at TIMESTAMPTZ DEFAULT NOW(),
 
     CONSTRAINT state_expiry CHECK (NOW() < created_at + INTERVAL '10 minutes')
 );
 
--- Periodic cleanup of expired states and sessions
-CREATE OR REPLACE FUNCTION cleanup_expired_auth_data()
+-- Periodic cleanup of expired auth states
+CREATE OR REPLACE FUNCTION cleanup_expired_auth_states()
 RETURNS void AS $$
 BEGIN
     DELETE FROM auth_states WHERE created_at < NOW() - INTERVAL '10 minutes';
-    DELETE FROM sessions WHERE expires_at < NOW();
 END;
 $$ LANGUAGE plpgsql;
 
