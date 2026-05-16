@@ -37,7 +37,7 @@ up:
 	@source .env.local && pgmold apply --schema sql:migrations/schema.sql --database "$DATABASE_URL"
 	# Launch dev server; clean up Docker on Ctrl+C
 	@trap 'docker compose down --remove-orphans' INT TERM EXIT; \
-	dx serve --platform server; \
+	dx serve --platform web; \
 	trap - INT TERM EXIT; \
 	docker compose down --remove-orphans
 
@@ -51,7 +51,7 @@ migrate:
 
 # Start the Dioxus Fullstack dev server (hot reload + SSR)
 dev:
-	dx serve --platform server
+	dx serve --platform web
 
 # Format code
 fmt:

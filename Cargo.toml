@@ -14,6 +14,7 @@ tracing = "0.1"
 sqlx             = { version = "0.8", features = ["runtime-tokio-rustls", "postgres"], optional = true }
 aws-sdk-s3       = { version = "1", optional = true }
 tracing-subscriber = { version = "0.3", features = ["json"], optional = true }
+web-sys = { version = "0.3.98", features = ["Window", "Storage"] }
 
 [features]
 default = ["web"]

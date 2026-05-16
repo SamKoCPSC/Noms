@@ -1,38 +1,20 @@
-use dioxus::prelude::*;
+mod collection_detail;
+mod collection_list;
+mod dashboard;
+mod explore;
+mod home;
+mod login;
+mod recipe_detail;
+mod recipe_new;
+mod settings;
 
-use crate::components::{Echo, Hero};
-use crate::Route;
-
-/// Home page
-#[component]
-pub fn Home() -> Element {
-    rsx! {
-        Hero {}
-        Echo {}
-    }
-}
-
-/// Blog page
-#[component]
-pub fn Blog(id: i32) -> Element {
-    rsx! {
-        div {
-            id: "blog",
-
-            // Content
-            h1 { "This is blog #{id}!" }
-            p { "In blog #{id}, we show how the Dioxus router works and how URL parameters can be passed as props to our route components." }
-
-            // Navigation links
-            Link {
-                to: Route::Blog { id: id - 1 },
-                "Previous"
-            }
-            span { " <---> " }
-            Link {
-                to: Route::Blog { id: id + 1 },
-                "Next"
-            }
-        }
-    }
-}
+pub use collection_detail::CollectionDetail;
+pub use collection_list::CollectionList;
+pub use dashboard::Dashboard;
+pub use explore::Explore;
+pub use home::Home;
+pub use login::Login;
+pub use recipe_detail::RecipeDetail;
+pub use recipe_new::RecipeNew;
+pub use settings::SettingsAccounts;
+pub use settings::SettingsProfile;
