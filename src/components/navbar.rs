@@ -60,11 +60,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
                     // Theme toggle
                     button {
                         class: "navbar-theme-toggle touch-target",
-                        onclick: move |_| {
-                            let _ = document::eval("console.log('theme toggle clicked')");
-                            theme.toggle();
-                            let _ = document::eval(&format!("console.log('is_dark: {}')", theme.is_dark()));
-                        },
+                        onclick: move |_| theme.toggle(),
                         aria_label: "Toggle theme",
                         if theme.is_dark() {
                             "☀️"
