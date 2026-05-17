@@ -99,3 +99,53 @@ fn extract_initials(name: &str) -> String {
         .unwrap_or(first);
     format!("{}{}", first.to_uppercase(), second.to_uppercase())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::extract_initials;
+
+    #[test]
+    fn two_words() {
+        assert_eq!(extract_initials("John Doe"), "JD");
+    }
+
+    #[test]
+    fn single_word_doubles_first_letter() {
+        assert_eq!(extract_initials("Sam"), "SS");
+    }
+
+    #[test]
+    fn three_plus_words_uses_first_two() {
+        assert_eq!(extract_initials("John Michael Doe"), "JM");
+    }
+
+    #[test]
+    fn empty_string_returns_question_mark() {
+        assert_eq!(extract_initials(""), "?");
+    }
+
+    #[test]
+    fn whitespace_only_returns_question_mark() {
+        assert_eq!(extract_initials("   "), "?");
+    }
+
+    #[test]
+    fn trims_leading_and_trailing_whitespace() {
+        assert_eq!(extract_initials("  John Doe  "), "JD");
+    }
+
+    #[test]
+    fn handles_multiple_spaces_between_words() {
+        assert_eq!(extract_initials("John   Doe"), "JD");
+    }
+
+    #[test]
+    fn single_character_doubles_it() {
+        assert_eq!(extract_initials("A"), "AA");
+    }
+
+    #[test]
+    fn lowercased_input_is_uppercased() {
+        assert_eq!(extract_initials("john doe"), "JD");
+    }
+}

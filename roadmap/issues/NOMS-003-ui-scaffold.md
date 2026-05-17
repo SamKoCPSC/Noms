@@ -1,6 +1,6 @@
 # NOMS-003: UI Scaffold & Application Shell
 
-**Status:** ⚪ Backlog
+**Status:** ✅ Complete
 **Phase:** 1 — Foundation
 **Created:** 2026-05-15
 
@@ -106,9 +106,9 @@ Define both palettes in `main.css`. Every component references tokens only — n
 }
 ```
 
-**Dark mode** on `[data-theme="dark"]`:
+**Dark mode** on `.dark` (applied to `<html>`):
 ```css
-[data-theme="dark"] {
+.dark {
     --bg-base: #1E1C18;
     --surface: #242220;
     --shadow-light: #2E2B26;
@@ -123,37 +123,26 @@ Define both palettes in `main.css`. Every component references tokens only — n
     --text-primary: #EDE8DF;
     --text-secondary: #9E978C;
     --text-tertiary: #6B655D;
-}
-```
 
-**Background gradient tokens** (both modes):
-```css
-:root {
-    --bg-gradient-1: #FAF7F2;
-    --bg-gradient-2: #FFF3E8;
-    --bg-gradient-3: #F0F4EC;
-    --bg-gradient-4: #FBF0E6;
-}
-[data-theme="dark"] {
-    --bg-gradient-1: #1E1C18;
-    --bg-gradient-2: #221F1A;
-    --bg-gradient-3: #1A1D19;
-    --bg-gradient-4: #201C17;
+    --bg-gradient-1: #1A1814;
+    --bg-gradient-2: #221E18;
+    --bg-gradient-3: #181E20;
+    --bg-gradient-4: #1E1820;
 }
 ```
 
 #### Theme Toggle
 
-Implement a working dark/light toggle per the DESIGN.md strategy:
+Implement a working dark/light toggle:
 
 1. **`use_theme` hook** (`src/utils/theme.rs`):
-   - Reads initial preference from cookie (`theme=light|dark`)
-   - Falls back to `prefers-color-scheme` system preference
-   - Toggles `[data-theme="dark"]` attribute on `<body>` (instant CSS variable swap, GPU-composited)
-   - Persists choice to cookie for SSR consistency
+   - Reads initial preference from `localStorage.theme` (WASM-only; defaults to light on server)
+   - Toggles `.dark` class on `<html>` (instant CSS variable swap)
+   - Persists choice to `localStorage` for client-side reloads
 
 2. **Toggle button** in the navbar (sun/moon icon)
-3. **No flash of wrong theme** — SSR reads the cookie and sets the attribute server-side before the page renders
+
+**Decision log:** Cookie-based persistence and `prefers-color-scheme` fallback were removed from scope. localStorage is simpler and sufficient for client-side persistence. SSR theme awareness can be added later if needed.
 
 #### Neumorphic Utility Classes
 ```css
@@ -283,7 +272,7 @@ src/
 │   └── mod.rs                 # Unchanged
 └── utils/
     ├── mod.rs                 # Re-export theme
-    └── theme.rs               # use_theme hook — dark/light toggle with cookie persistence
+    └── theme.rs               # use_theme hook — dark/light toggle with localStorage persistence
 
 assets/
 ├── main.css                   # Replaced with design tokens + utilities
@@ -317,11 +306,10 @@ assets/
 - [ ] Navbar renders on every page with logo, nav links, auth slot, and theme toggle
 
 ### Dark Mode
-- [ ] `[data-theme="dark"]` attribute on `<body>` triggers dark palette (all CSS tokens swap)
+- [ ] `.dark` class on `<html>` triggers dark palette (all CSS tokens swap)
 - [ ] Theme toggle button in navbar visually indicates current mode (sun ☀️ / moon 🌙)
 - [ ] Clicking theme toggle switches between light and dark modes
-- [ ] Preference persists across page reload (cookie-based)
-- [ ] Initial render respects `prefers-color-scheme` system preference (no cookie = follow system)
+- [ ] Preference persists across page reload (localStorage-based)
 - [ ] All base components (Button, Card, Input, etc.) look correct in both modes
 - [ ] Background gradient tokens swap correctly between light and dark palettes
 
@@ -336,7 +324,7 @@ assets/
 
 ### Design System
 - [ ] All 15 light mode CSS variables defined on `:root` with correct warm earth-tone values
-- [ ] All 15 dark mode CSS variables defined under `[data-theme="dark"]` with correct values
+- [ ] All 15 dark mode CSS variables defined under `.dark` with correct values
 - [ ] Background gradient tokens defined for both modes
 - [ ] Neumorphic shadow classes (`.neumo-raised`, `.neumo-inset`, `.neumo-card`) produce visible raised/inset effects
 - [ ] Background gradient animates slowly (30s cycle)
