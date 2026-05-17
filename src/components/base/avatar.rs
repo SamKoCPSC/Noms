@@ -89,7 +89,13 @@ fn extract_initials(name: &str) -> String {
         return "?".to_string();
     }
     let parts: Vec<&str> = trimmed.split_whitespace().collect();
-    let first = parts.first().map(|s| s.chars().next().unwrap_or('?')).unwrap_or('?');
-    let second = parts.get(1).map(|s| s.chars().next().unwrap_or('?')).unwrap_or(first);
+    let first = parts
+        .first()
+        .map(|s| s.chars().next().unwrap_or('?'))
+        .unwrap_or('?');
+    let second = parts
+        .get(1)
+        .map(|s| s.chars().next().unwrap_or('?'))
+        .unwrap_or(first);
     format!("{}{}", first.to_uppercase(), second.to_uppercase())
 }

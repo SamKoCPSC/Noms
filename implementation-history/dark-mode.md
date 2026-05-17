@@ -43,8 +43,8 @@ a `ThemeProvider` with context-based state sharing. **Rejected** because:
 
 ### Attempted Fix: `GlobalSignal`
 We replaced `use_signal` with `Signal::global(|| false)` (Dioxus 0.7's built-in global
-state). This worked technically but was reverted because the team preferred a
-prop-based approach for explicit data flow.
+state). This approach **did not work** as expected (likely due to SSR/hydration
+incompatibilities or signal initialization timing) and was abandoned.
 
 ### Final Solution: Lift state + pass as prop
 `AppLayout` owns the signal (calls `use_theme()` once) and passes the resulting
@@ -260,3 +260,62 @@ explicitly add it with the `Window` and `Storage` features enabled.
 | **Inside events** | Use `move \|_\| async move { ... }` in event handlers |
 | **Never in component body** | Runs before DOM is mounted — will fail silently |
 | **No automatic return** | Use `return "value"` in JS, or `dioxus.send(value)` for async |
+
+---
+
+## Concepts Explained
+
+### What is a Signal?
+
+In Dioxus, a **Signal** is the fundamental unit of reactive state. Think of it as a
+smart container for a value that automatically tracks who is reading it and notifies
+them when it changes.
+
+*   **Fine-Grained Reactivity:** Unlike React's `useState` which triggers a re-render of
+    the entire component tree, Dioxus signals only update the specific parts of the UI
+    that actually read the signal.
+*   **`Copy` Semantics:** Signals implement the `Copy` trait, meaning you can pass them
+    around like integers without worrying about ownership or cloning. This makes them
+    ideal for props.
+*   **Lazy Subscriptions:** A component only subscribes to a signal when it *reads* the
+    value (e.g., `signal()`), not when it receives the signal as a prop. This allows you
+    to pass signals deep into the component tree without causing unnecessary re-renders
+    in intermediate components.
+
+```rust
+// Creating a signal
+let mut count = use_signal(|| 0);
+
+// Reading (subscribes the component)
+let current = count();
+
+// Writing (notifies subscribers)
+count.set(1);
+```
+
+### What is `PartialEq` and why did we need it?
+
+`PartialEq` is a standard Rust trait that defines how to check if two instances of a
+type are equal. In Dioxus, it plays a critical role in performance optimization.
+
+*   **Render Skipping:** When a component receives new props, Dioxus checks if the new
+    props are equal to the old props using `PartialEq`. If they are equal, Dioxus skips
+    re-rendering that component entirely.
+*   **The Requirement:** Every component prop in Dioxus must implement `PartialEq`. If
+    you pass a struct as a prop (like our `UseTheme`), that struct must derive or
+    implement `PartialEq`.
+
+In our case, `UseTheme` contains a `Signal<bool>` and a `Callback<()>`. Both of these
+types implement `PartialEq` in Dioxus 0.7, so we could simply add `PartialEq` to the
+derive macro:
+
+```rust
+#[derive(Clone, Copy, PartialEq)] // ← Added PartialEq here
+pub struct UseTheme {
+    dark: Signal<bool>,
+    toggle: Callback<()>,
+}
+```
+
+Without this, the code would not compile because Dioxus wouldn't know how to compare
+`UseTheme` instances to decide whether `Navbar` needs to update.

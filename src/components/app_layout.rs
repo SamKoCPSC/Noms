@@ -1,8 +1,8 @@
 use dioxus::prelude::*;
 
-use crate::Route;
 use crate::components::{Footer, Navbar};
 use crate::utils::theme::use_theme;
+use crate::Route;
 
 /// Shared application shell: Navbar → page content → Footer.
 #[component]

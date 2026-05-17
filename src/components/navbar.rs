@@ -1,8 +1,8 @@
 use dioxus::prelude::*;
 
-use crate::Route;
 use crate::components::base::{Avatar, AvatarSize};
 use crate::utils::theme::UseTheme;
+use crate::Route;
 
 /// Placeholder user for visual testing (not wired to real auth).
 struct MockUser {

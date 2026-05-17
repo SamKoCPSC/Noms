@@ -74,5 +74,8 @@ pub fn use_theme() -> UseTheme {
         is_dark.toggle();
     });
 
-    UseTheme { dark: is_dark, toggle }
+    UseTheme {
+        dark: is_dark,
+        toggle,
+    }
 }

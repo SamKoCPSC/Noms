@@ -7,8 +7,8 @@ mod utils;
 
 use components::{AppLayout, ErrorFallback};
 use pages::{
-    CollectionDetail, CollectionList, Dashboard, Explore, Home, Login,
-    RecipeDetail, RecipeNew, SettingsAccounts, SettingsProfile,
+    CollectionDetail, CollectionList, Dashboard, Explore, Home, Login, RecipeDetail, RecipeNew,
+    SettingsAccounts, SettingsProfile,
 };
 
 /// Application routes.
