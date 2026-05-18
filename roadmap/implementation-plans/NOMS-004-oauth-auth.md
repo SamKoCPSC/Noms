@@ -83,17 +83,29 @@ All gated behind `server` feature flag.
 
 **File:** `src/auth/linking.rs`
 
-- `resolve_user(provider, provider_user_id, email) -> (user_id, oauth_account_id, is_new)`
+- `resolve_user(provider, provider_user_id, email, display_name) -> (user_id, oauth_account_id, is_new)`
 - Single DB transaction (atomic):
   1. Query existing by `provider + provider_user_id` → return if found
   2. Query existing by `email` → insert new oauth_account row, return existing user
   3. No match → insert new user + oauth_account, return new IDs
+
+**Username generation (new users only):**
+- Derive from display name: lowercase, strip non-alphanumeric, hyphenate words, truncate to 22 chars
+- Append 4-char random hex suffix: `alice-smith-3f2a`
+- If that collides (unlikely), retry with a new suffix (max 3 attempts)
+- If all attempts collide, fall back to `user-{8hex}`: `user-a1b2c3d4`
+- User can change username later via Settings (deferred to NOMS-005+)
 
 **Verify:**
 - `cargo test --features server` — three test cases:
   - Existing provider login → no new rows
   - New provider, same email → oauth_account linked to existing user
   - New provider, new email → new user + new oauth_account
+- Unit tests for username generation:
+  - "Alice Smith" → `alice-smith-XXXX`
+  - "José García" → `jose-garcia-XXXX` (non-ASCII stripped)
+  - Very long name → truncated to 22 chars + suffix
+  - Collision retry produces different username
 
 **Risk:** Medium. Transaction logic must be atomic.
 
@@ -141,12 +153,13 @@ All gated behind `server` feature flag.
 - Dioxus provider + hook for consuming context
 - SSR initialization: read session cookie → verify JWT → query user from DB → populate context
 
-**Route Protection (Axum middleware):**
+**Route Protection (Axum layer):**
+- Implemented as an Axum `Layer`/`Middleware` that wraps the Dioxus fullstack router
 - Read + verify session cookie
-- If valid: inject user into request extensions, continue
-- If invalid/missing on protected route: redirect to `/login?redirect_uri=<current_path>`
-- If already authenticated visiting `/login`: redirect to `/dashboard`
-- Route grouping in Axum router: apply middleware only to protected route groups
+- If valid: inject user into request extensions, continue to Dioxus handler
+- If invalid/missing on protected path: return 302 redirect to `/login?redirect_uri=<current_path>` (before Dioxus sees the request)
+- If already authenticated visiting `/login`: return 302 redirect to `/dashboard`
+- Protected path list is a `HashSet<&'static str>` in the middleware — kept in sync with the `Route` enum by convention (no programmatic coupling to Dioxus routes)
 
 **Protected routes:**
 - `/dashboard`, `/recipes/new`, `/collections`, `/settings/*`
