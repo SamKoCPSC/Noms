@@ -39,7 +39,7 @@ Implement the full OAuth flow per DESIGN.md § Authentication & Session Manageme
 
 **Scopes:**
 - Google: `openid email profile`
-- GitHub: `read:user`
+- GitHub: `read:user user:email`
 
 ### 2. Session Management
 
