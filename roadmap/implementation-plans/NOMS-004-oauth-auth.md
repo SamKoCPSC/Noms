@@ -60,20 +60,22 @@ All gated behind `server` feature flag.
 - `insert_user()`, `insert_oauth_account()`, `update_oauth_last_used()`
 - `get_user_by_id()` — for building UserProfile
 
-**Migration runner:**
-- Embed `migrations/` directory into binary (compile-time)
-- On app startup: connect to DB → `Migrator::run(&pool)` → start serving
-- Idempotent: safe on every startup, only applies pending migrations
+**Schema migration:**
+- Use pgmold (existing tooling) — call `pgmold apply` on app startup before serving
+- Pass `migrations/schema.sql` and `DATABASE_URL` to pgmold
+- Idempotent: safe on every startup, declarative schema is always applied
 - Same behavior for local dev, staging, and production
 
-**Dockerfile changes:**
-- Copy `migrations/` into runtime stage so binary can access them
+**Startup sequence:**
+1. Create SQLx connection pool
+2. Run `pgmold apply` against the pool's database URL
+3. Start serving — if migration fails, app refuses to start (fail-fast)
 
 **Verify:**
 - `cargo test --features server` — insert/select/delete against local Postgres
-- App starts and runs migrations cleanly on fresh DB
+- App starts and runs pgmold cleanly on fresh DB
 
-**Risk:** Medium. Schema exists but queries are new. Migration runner is new infra.
+**Risk:** Medium. Schema exists but queries are new.
 
 ---
 
@@ -205,6 +207,24 @@ Each issuer gets its own token signing key. The mock server supports:
 
 ---
 
+## Local HTTPS Development
+
+The session cookie is always built with `Secure: true` — no environment-specific branching. Local development runs over HTTPS so the cookie is actually sent by the browser.
+
+**Self-signed certificate:**
+- Generated once by `just up` if `dev-cert.pem` / `dev-key.pem` don't exist:
+  ```
+  openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
+      -keyout dev-key.pem -out dev-cert.pem -days 365 -nodes -subj '/CN=localhost'
+  ```
+- Both files are `.gitignore`d — never committed
+- `dx serve` is invoked with `--http2` and the cert/key paths
+- First browser visit to `https://localhost:8080` shows a cert warning — user clicks "proceed" once
+
+**Application code:** No `cfg`, no env var checks, no conditional logic. Cookie is always `HttpOnly + Secure + SameSite=Lax`.
+
+---
+
 ## Dependencies Summary
 
 | Crate | Feature | Purpose |
@@ -213,7 +233,7 @@ Each issuer gets its own token signing key. The mock server supports:
 | `jsonwebtoken` | `server` | JWT sign/verify |
 | `axum-extra` | `server` | HTTP-only cookies |
 | `reqwest` | `server` | HTTP client (GitHub API) |
-| `sqlx` | `server` | Already present, add `migrate` feature |
+| `sqlx` | `server` | Already present, no changes needed |
 
 ## File Structure
 
