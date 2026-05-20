@@ -244,8 +244,12 @@ The session cookie is always built with `Secure: true` — no environment-specif
 |-------|---------|---------|
 | `oauth2` | `server` | OAuth 2.0 client |
 | `jsonwebtoken` | `server` | JWT sign/verify |
-| `axum-extra` | `server` | HTTP-only cookies |
-| `reqwest` | `server` | HTTP client (GitHub API) |
+| `axum-extra` | `server` (+ `cookie`) | Cookie jar extractor |
+| `cookie` | `server` | Cookie types + builder |
+| `reqwest` | `server` (+ `json`) | HTTP client (GitHub API) |
+| `uuid` | `server` (+ `v4`, `serde`) | User ID generation |
+| `serde` | `server` (+ `derive`) | JWT claims serialization |
+| `time` | `server` | Cookie max-age durations |
 | `sqlx` | `server` | Already present, no changes needed |
 
 ## File Structure

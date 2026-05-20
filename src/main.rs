@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
 
+mod auth;
 mod components;
 mod db;
 mod pages;
