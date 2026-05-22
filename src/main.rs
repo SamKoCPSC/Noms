@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 
 mod auth;
 mod components;
+#[cfg(feature = "server")]
 mod db;
 mod pages;
 mod utils;
@@ -45,6 +46,30 @@ const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
 const GOOGLE_FONTS: &str = "https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;500;600;700&display=swap";
 
+#[cfg(feature = "server")]
+fn main() {
+    // Validate database connectivity before starting the server.
+    // Uses a dedicated thread with its own runtime to avoid conflicting
+    // with Dioxus's own runtime management.
+    let result = std::thread::spawn(|| {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("failed to create tokio runtime");
+        rt.block_on(db::create_pool())
+    })
+    .join()
+    .expect("database initialization thread panicked");
+
+    if let Err(e) = result {
+        eprintln!("Fatal: {e}");
+        std::process::exit(1);
+    }
+
+    dioxus::launch(App);
+}
+
+#[cfg(not(feature = "server"))]
 fn main() {
     dioxus::launch(App);
 }

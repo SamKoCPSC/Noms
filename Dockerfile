@@ -26,9 +26,14 @@ RUN dx bundle --platform web --release
 # === Stage 4: Runtime ===
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/* \
-    && groupadd -r noms && useradd -r -g noms -d /usr/local/app -s /sbin/nologin noms
+    && groupadd -r noms && useradd -r -g noms -d /usr/local/app -s /sbin/nologin noms \
+    && curl -fsSL https://github.com/fmguerreiro/pgmold/releases/download/v0.34.12/pgmold-x86_64-unknown-linux-gnu.tar.gz | tar xz -C /usr/local/bin
+
 COPY --from=builder /usr/src/app/target/dx/noms/release/web/ /usr/local/app
-RUN chown -R noms:noms /usr/local/app
+COPY --from=builder /usr/src/app/migrations/ /usr/local/app/migrations/
+COPY entrypoint.sh /usr/local/app/entrypoint.sh
+RUN chmod +x /usr/local/app/entrypoint.sh \
+    && chown -R noms:noms /usr/local/app
 
 USER noms
 WORKDIR /usr/local/app
@@ -40,4 +45,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:8080/ || exit 1
 
-ENTRYPOINT ["/usr/local/app/server"]
+ENTRYPOINT ["/usr/local/app/entrypoint.sh"]

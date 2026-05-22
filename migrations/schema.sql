@@ -1,44 +1,60 @@
 -- NOMS Initial Schema
--- Applied by `just migrate` (local) or pgmold (CI/prod).
+-- Applied by pgmold: `just migrate` (local), entrypoint.sh (Docker/Railway).
 -- Additive-only: never DROP or ALTER existing columns.
+-- All statements are idempotent (IF NOT EXISTS) for safe repeated application.
 
--- Enable UUID extension (PostgreSQL only)
+-- Enable extensions
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "pg_cron";
 
 -- Core user table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(30) UNIQUE NOT NULL,
     display_name VARCHAR(100) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     avatar_url TEXT,
     bio TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- OAuth provider accounts linked to users
-CREATE TABLE oauth_accounts (
+CREATE TABLE IF NOT EXISTS oauth_accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     provider VARCHAR(20) NOT NULL CONSTRAINT valid_oauth_provider CHECK (provider IN ('google', 'apple', 'github')),
     provider_user_id VARCHAR(255) NOT NULL,
     email VARCHAR(255),
-    email_verified BOOLEAN DEFAULT FALSE,
+    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     profile_data JSONB,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    last_used_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_used_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     UNIQUE(provider, provider_user_id)
 );
 
-CREATE INDEX idx_oauth_accounts_email ON oauth_accounts(email);
+CREATE INDEX IF NOT EXISTS idx_oauth_accounts_email ON oauth_accounts(email);
 
 -- Short-lived auth state for OAuth CSRF protection (~10 min TTL)
-CREATE TABLE auth_states (
+-- Expiry is enforced application-side; pg_cron handles cleanup on supported DBs.
+CREATE TABLE IF NOT EXISTS auth_states (
     id VARCHAR(64) PRIMARY KEY,
     redirect_uri TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-
-    CONSTRAINT state_expiry CHECK (NOW() < created_at + INTERVAL '10 minutes')
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Schedule periodic cleanup of expired auth states (every 6 hours).
+-- No-op on environments where pg_cron isn't available.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+        IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'cleanup-auth-states') THEN
+            PERFORM cron.schedule(
+                'cleanup-auth-states',
+                '0 */6 * * *',
+                'DELETE FROM auth_states WHERE created_at < NOW() - INTERVAL ''10 minutes'''
+            );
+        END IF;
+    END IF;
+END $$;

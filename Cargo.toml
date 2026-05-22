@@ -11,7 +11,7 @@ dioxus = { version = "0.7.1", features = ["router", "fullstack"] }
 tracing = "0.1"
 
 # Server-only — never compiled into the WASM client
-sqlx             = { version = "0.8", features = ["runtime-tokio-rustls", "postgres"], optional = true }
+sqlx             = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"], optional = true }
 aws-sdk-s3       = { version = "1", optional = true }
 tracing-subscriber = { version = "0.3", features = ["json"], optional = true }
 oauth2           = { version = "5", optional = true }
@@ -20,8 +20,11 @@ axum-extra       = { version = "0.10", features = ["cookie"], optional = true }
 reqwest          = { version = "0.12", features = ["json"], optional = true }
 uuid             = { version = "1", features = ["v4", "serde"], optional = true }
 serde            = { version = "1", features = ["derive"], optional = true }
+serde_json       = { version = "1", optional = true }
 time             = { version = "0.3", optional = true }
 cookie           = { version = "0.18", optional = true }
+chrono           = { version = "0.4", features = ["serde"], optional = true }
+tokio            = { version = "1", features = ["rt-multi-thread", "macros"], optional = true }
 web-sys = { version = "0.3.98", features = ["Window", "Storage"] }
 
 [features]
@@ -40,8 +43,11 @@ server  = [
     "reqwest",
     "uuid",
     "serde",
+    "serde_json",
     "time",
     "cookie",
+    "chrono",
+    "tokio",
 ]
 
 [lints.rust]
