@@ -50,6 +50,9 @@ server  = [
     "tokio",
 ]
 
+[dev-dependencies]
+pgtemp = "0.7"
+
 [lints.rust]
 warnings = "deny"
 

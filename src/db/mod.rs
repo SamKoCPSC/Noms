@@ -262,18 +262,84 @@ pub async fn get_user_by_id(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pgtemp::PgTempDB;
 
-    /// Begin a transaction for testing. The transaction is never committed,
-    /// so all changes are rolled back when it is dropped.
-    async fn test_tx() -> sqlx::Transaction<'static, Postgres> {
-        let url =
-            std::env::var("DATABASE_URL").expect("DATABASE_URL must be set for tests");
-        let pool = PgPool::connect(&url)
+    /// Spawn a fresh temporary PostgreSQL database and apply the NOMS schema.
+    /// Each test gets its own isolated database — no shared state, no cleanup needed.
+    async fn setup_test_db() -> (PgTempDB, PgPool) {
+        let db = PgTempDB::async_new().await;
+        let pool = PgPool::connect(&db.connection_uri())
             .await
-            .expect("failed to connect to test database");
-        pool.begin()
+            .expect("failed to connect to temp database");
+        apply_test_schema(&pool).await;
+        (db, pool)
+    }
+
+    /// Create tables and extensions needed for tests.
+    /// Uses raw (non-macro) queries so this works without compile-time checking.
+    async fn apply_test_schema(pool: &PgPool) {
+        sqlx::query("CREATE EXTENSION IF NOT EXISTS pgcrypto")
+            .execute(pool)
             .await
-            .expect("failed to begin test transaction")
+            .expect("failed to create pgcrypto extension");
+
+        // pg_cron is optional — skip silently if the extension binary isn't installed.
+        let _ = sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_cron")
+            .execute(pool)
+            .await;
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS users (\
+             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\
+             username VARCHAR(30) UNIQUE NOT NULL,\
+             display_name VARCHAR(100) NOT NULL,\
+             email VARCHAR(255) UNIQUE NOT NULL,\
+             avatar_url TEXT,\
+             bio TEXT,\
+             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
+             updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
+             )",
+        )
+        .execute(pool)
+        .await
+        .expect("failed to create users table");
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS oauth_accounts (\
+             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\
+             user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,\
+             provider VARCHAR(20) NOT NULL,\
+             provider_user_id VARCHAR(255) NOT NULL,\
+             email VARCHAR(255),\
+             email_verified BOOLEAN NOT NULL DEFAULT FALSE,\
+             profile_data JSONB,\
+             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
+             last_used_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
+             UNIQUE(provider, provider_user_id),\
+             CONSTRAINT valid_oauth_provider CHECK (provider IN ('google', 'apple', 'github'))\
+             )",
+        )
+        .execute(pool)
+        .await
+        .expect("failed to create oauth_accounts table");
+
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_oauth_accounts_email ON oauth_accounts(email)",
+        )
+        .execute(pool)
+        .await
+        .expect("failed to create email index");
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS auth_states (\
+             id VARCHAR(64) PRIMARY KEY,\
+             redirect_uri TEXT NOT NULL,\
+             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
+             )",
+        )
+        .execute(pool)
+        .await
+        .expect("failed to create auth_states table");
     }
 
     /// Generate a unique suffix for test data to avoid duplicate key conflicts.
@@ -283,10 +349,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_insert_and_get_user() {
-        let mut tx = test_tx().await;
+        let (_db, pool) = setup_test_db().await;
         let u = uid();
         let user = insert_user(
-            &mut *tx,
+            &pool,
             &format!("testuser_{u}"),
             "Test User",
             &format!("test{u}@example.com"),
@@ -300,28 +366,28 @@ mod tests {
         assert!(user.bio.is_none());
 
         // Lookup by ID
-        let found = get_user_by_id(&mut *tx, user.id).await.unwrap();
+        let found = get_user_by_id(&pool, user.id).await.unwrap();
         assert!(found.is_some());
         assert_eq!(found.unwrap().id, user.id);
     }
 
     #[tokio::test]
     async fn test_get_nonexistent_user() {
-        let mut tx = test_tx().await;
+        let (_db, pool) = setup_test_db().await;
         let fake_id = Uuid::nil();
-        let result = get_user_by_id(&mut *tx, fake_id).await.unwrap();
+        let result = get_user_by_id(&pool, fake_id).await.unwrap();
         assert!(result.is_none());
     }
 
     #[tokio::test]
     async fn test_insert_and_get_auth_state() {
-        let mut tx = test_tx().await;
+        let (_db, pool) = setup_test_db().await;
         let state_id = format!("test-state-{}", uid());
-        insert_auth_state(&mut *tx, &state_id, "/dashboard")
+        insert_auth_state(&pool, &state_id, "/dashboard")
             .await
             .unwrap();
 
-        let state = get_auth_state(&mut *tx, &state_id).await.unwrap();
+        let state = get_auth_state(&pool, &state_id).await.unwrap();
         assert!(state.is_some());
         let state = state.unwrap();
         assert_eq!(state.id, state_id);
@@ -330,36 +396,32 @@ mod tests {
 
     #[tokio::test]
     async fn test_delete_auth_state() {
-        let mut tx = test_tx().await;
+        let (_db, pool) = setup_test_db().await;
         let state_id = format!("test-state-del-{}", uid());
-        insert_auth_state(&mut *tx, &state_id, "/login")
+        insert_auth_state(&pool, &state_id, "/login")
             .await
             .unwrap();
 
-        let deleted = delete_auth_state(&mut *tx, &state_id)
-            .await
-            .unwrap();
+        let deleted = delete_auth_state(&pool, &state_id).await.unwrap();
         assert!(deleted);
 
         // Should be gone
-        let state = get_auth_state(&mut *tx, &state_id).await.unwrap();
+        let state = get_auth_state(&pool, &state_id).await.unwrap();
         assert!(state.is_none());
 
         // Delete again should return false
-        let deleted_again = delete_auth_state(&mut *tx, &state_id)
-            .await
-            .unwrap();
+        let deleted_again = delete_auth_state(&pool, &state_id).await.unwrap();
         assert!(!deleted_again);
     }
 
     #[tokio::test]
     async fn test_insert_and_get_oauth_account() {
-        let mut tx = test_tx().await;
+        let (_db, pool) = setup_test_db().await;
         let u = uid();
 
         // Create a user first
         let user = insert_user(
-            &mut *tx,
+            &pool,
             &format!("oauthuser_{u}"),
             "OAuth User",
             &format!("oauth{u}@example.com"),
@@ -370,7 +432,7 @@ mod tests {
 
         // Link an OAuth account
         let account = insert_oauth_account(
-            &mut *tx,
+            &pool,
             user.id,
             "google",
             &format!("google-{u}"),
@@ -386,7 +448,7 @@ mod tests {
 
         // Lookup by provider
         let found =
-            get_oauth_account_by_provider(&mut *tx, "google", &format!("google-{u}"))
+            get_oauth_account_by_provider(&pool, "google", &format!("google-{u}"))
                 .await
                 .unwrap();
         assert!(found.is_some());
@@ -394,7 +456,7 @@ mod tests {
 
         // Lookup by email
         let found_by_email =
-            get_oauth_account_by_email(&mut *tx, &format!("oauth{u}@example.com"))
+            get_oauth_account_by_email(&pool, &format!("oauth{u}@example.com"))
                 .await
                 .unwrap();
         assert!(found_by_email.is_some());
@@ -402,11 +464,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_oauth_last_used() {
-        let mut tx = test_tx().await;
+        let (_db, pool) = setup_test_db().await;
         let u = uid();
 
         let user = insert_user(
-            &mut *tx,
+            &pool,
             &format!("updateuser_{u}"),
             "Update User",
             &format!("update{u}@example.com"),
@@ -416,7 +478,7 @@ mod tests {
         .unwrap();
 
         let account = insert_oauth_account(
-            &mut *tx,
+            &pool,
             user.id,
             "github",
             &format!("github-{u}"),
@@ -431,12 +493,10 @@ mod tests {
         // Small delay to ensure timestamp difference
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
 
-        update_oauth_last_used(&mut *tx, account.id)
-            .await
-            .unwrap();
+        update_oauth_last_used(&pool, account.id).await.unwrap();
 
         let updated =
-            get_oauth_account_by_provider(&mut *tx, "github", &format!("github-{u}"))
+            get_oauth_account_by_provider(&pool, "github", &format!("github-{u}"))
                 .await
                 .unwrap()
                 .unwrap();

@@ -9,7 +9,10 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 # === Stage 2: Compile dependencies (cached across builds) ===
 FROM rust:slim AS builder
-RUN apt-get update && apt-get install -y pkg-config libssl-dev curl && rm -rf /var/lib/apt/lists/*
+# Install build deps + PostgreSQL server binaries for pgtemp integration tests.
+RUN apt-get update && apt-get install -y pkg-config libssl-dev curl postgresql postgresql-client && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/lib/postgresql/*/bin/initdb /usr/local/bin/initdb \
+    && ln -sf /usr/lib/postgresql/*/bin/postgres /usr/local/bin/postgres
 RUN rustup component add rustfmt clippy
 RUN cargo install cargo-chef \
     && curl -fsSL https://github.com/DioxusLabs/dioxus/releases/download/v0.7.9/dx-x86_64-unknown-linux-gnu.tar.gz | tar xz -C /usr/local/bin

@@ -1,7 +1,7 @@
 set shell := ["bash", "-cu"]
 
 # NOMS — Local development commands
-# Prerequisites: docker, just, cargo/dx, pgmold
+# Prerequisites: docker, just, cargo/dx, pgmold, postgresql (for pgtemp test DBs)
 
 # One-command local startup: Docker services + schema + dev server
 up:

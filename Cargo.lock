@@ -4463,6 +4463,7 @@ dependencies = [
  "dioxus",
  "jsonwebtoken",
  "oauth2",
+ "pgtemp",
  "reqwest",
  "serde",
  "serde_json",
@@ -4893,6 +4894,18 @@ name = "percent-encoding"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
+
+[[package]]
+name = "pgtemp"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d6d35886f9448b0a12b24c9fee002332d19b5c021af45745fa1731f140eaf14e"
+dependencies = [
+ "libc",
+ "tempfile",
+ "tokio",
+ "url",
+]
 
 [[package]]
 name = "phf"
@@ -6923,7 +6936,9 @@ dependencies = [
  "bytes",
  "libc",
  "mio",
+ "parking_lot",
  "pin-project-lite",
+ "signal-hook-registry",
  "socket2 0.6.3",
  "tokio-macros",
  "windows-sys 0.61.2",
