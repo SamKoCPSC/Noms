@@ -60,10 +60,7 @@ thread_local! {
 /// Reads the session secret from the `SESSION_SECRET` environment variable.
 #[cfg(not(test))]
 fn read_secret() -> Result<Vec<u8>, SessionError> {
-    std::env::var("SESSION_SECRET").map_or(
-        Err(SessionError::MissingSecret),
-        |s| Ok(s.into_bytes()),
-    )
+    std::env::var("SESSION_SECRET").map_or(Err(SessionError::MissingSecret), |s| Ok(s.into_bytes()))
 }
 
 #[cfg(test)]
@@ -71,10 +68,7 @@ fn read_secret() -> Result<Vec<u8>, SessionError> {
     if let Some(secret) = TEST_SECRET.with(|f| f.borrow().clone()) {
         return Ok(secret);
     }
-    std::env::var("SESSION_SECRET").map_or(
-        Err(SessionError::MissingSecret),
-        |s| Ok(s.into_bytes()),
-    )
+    std::env::var("SESSION_SECRET").map_or(Err(SessionError::MissingSecret), |s| Ok(s.into_bytes()))
 }
 
 /// Current unix timestamp in seconds.
@@ -114,18 +108,16 @@ pub fn verify_session(token: &str) -> Result<Uuid, SessionError> {
     // Allow decoding expired tokens so we can return a specific error variant.
     validation.validate_exp = false;
 
-    let token_data = decode::<SessionClaims>(
-        token,
-        &DecodingKey::from_secret(&secret),
-        &validation,
-    )
-    .map_err(|e| {
-        if *e.kind() == jsonwebtoken::errors::ErrorKind::ExpiredSignature {
-            SessionError::Expired
-        } else {
-            SessionError::InvalidToken
-        }
-    })?;
+    let token_data =
+        decode::<SessionClaims>(token, &DecodingKey::from_secret(&secret), &validation).map_err(
+            |e| {
+                if *e.kind() == jsonwebtoken::errors::ErrorKind::ExpiredSignature {
+                    SessionError::Expired
+                } else {
+                    SessionError::InvalidToken
+                }
+            },
+        )?;
 
     // Manual expiry check with specific error variant
     let now = now_secs() as usize;
@@ -172,12 +164,9 @@ pub fn should_refresh(token: &str) -> Result<bool, SessionError> {
     let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
     validation.validate_exp = false;
 
-    let token_data = decode::<SessionClaims>(
-        token,
-        &DecodingKey::from_secret(&secret),
-        &validation,
-    )
-    .map_err(|_| SessionError::InvalidToken)?;
+    let token_data =
+        decode::<SessionClaims>(token, &DecodingKey::from_secret(&secret), &validation)
+            .map_err(|_| SessionError::InvalidToken)?;
 
     let now = now_secs() as usize;
     if token_data.claims.exp < now {
@@ -264,7 +253,12 @@ mod tests {
             exp: past + SESSION_LIFETIME_SECS as usize, // expired 60s ago
             iat: past,
         };
-        let token = encode(&Header::default(), &claims, &EncodingKey::from_secret(&secret)).unwrap();
+        let token = encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(&secret),
+        )
+        .unwrap();
 
         let result = verify_session(&token);
         assert!(result.is_err());
@@ -330,7 +324,12 @@ mod tests {
             exp: old_iat + SESSION_LIFETIME_SECS as usize,
             iat: old_iat,
         };
-        let token = encode(&Header::default(), &claims, &EncodingKey::from_secret(&secret)).unwrap();
+        let token = encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(&secret),
+        )
+        .unwrap();
 
         let needs_refresh = should_refresh(&token).unwrap();
         assert!(needs_refresh, "old token should need refresh");
@@ -354,7 +353,12 @@ mod tests {
             exp: past + SESSION_LIFETIME_SECS as usize,
             iat: past,
         };
-        let token = encode(&Header::default(), &claims, &EncodingKey::from_secret(&secret)).unwrap();
+        let token = encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(&secret),
+        )
+        .unwrap();
 
         let result = should_refresh(&token);
         assert!(result.is_err());

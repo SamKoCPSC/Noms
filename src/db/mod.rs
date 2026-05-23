@@ -48,9 +48,7 @@ impl std::error::Error for DbError {
 /// The caller is responsible for storing the returned pool (e.g., in Axum state).
 pub async fn create_pool() -> Result<PgPool, DbError> {
     let url = std::env::var("DATABASE_URL").map_err(|_| DbError::MissingUrl)?;
-    PgPool::connect(&url)
-        .await
-        .map_err(DbError::Connection)
+    PgPool::connect(&url).await.map_err(DbError::Connection)
 }
 
 // ── Rust types ──────────────────────────────────────────────────────────────
@@ -323,12 +321,10 @@ mod tests {
         .await
         .expect("failed to create oauth_accounts table");
 
-        sqlx::query(
-            "CREATE INDEX IF NOT EXISTS idx_oauth_accounts_email ON oauth_accounts(email)",
-        )
-        .execute(pool)
-        .await
-        .expect("failed to create email index");
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_oauth_accounts_email ON oauth_accounts(email)")
+            .execute(pool)
+            .await
+            .expect("failed to create email index");
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS auth_states (\
@@ -398,9 +394,7 @@ mod tests {
     async fn test_delete_auth_state() {
         let (_db, pool) = setup_test_db().await;
         let state_id = format!("test-state-del-{}", uid());
-        insert_auth_state(&pool, &state_id, "/login")
-            .await
-            .unwrap();
+        insert_auth_state(&pool, &state_id, "/login").await.unwrap();
 
         let deleted = delete_auth_state(&pool, &state_id).await.unwrap();
         assert!(deleted);
@@ -447,18 +441,16 @@ mod tests {
         assert_eq!(account.user_id, user.id);
 
         // Lookup by provider
-        let found =
-            get_oauth_account_by_provider(&pool, "google", &format!("google-{u}"))
-                .await
-                .unwrap();
+        let found = get_oauth_account_by_provider(&pool, "google", &format!("google-{u}"))
+            .await
+            .unwrap();
         assert!(found.is_some());
         assert_eq!(found.unwrap().id, account.id);
 
         // Lookup by email
-        let found_by_email =
-            get_oauth_account_by_email(&pool, &format!("oauth{u}@example.com"))
-                .await
-                .unwrap();
+        let found_by_email = get_oauth_account_by_email(&pool, &format!("oauth{u}@example.com"))
+            .await
+            .unwrap();
         assert!(found_by_email.is_some());
     }
 
@@ -495,11 +487,10 @@ mod tests {
 
         update_oauth_last_used(&pool, account.id).await.unwrap();
 
-        let updated =
-            get_oauth_account_by_provider(&pool, "github", &format!("github-{u}"))
-                .await
-                .unwrap()
-                .unwrap();
+        let updated = get_oauth_account_by_provider(&pool, "github", &format!("github-{u}"))
+            .await
+            .unwrap()
+            .unwrap();
         assert!(updated.last_used_at >= before);
     }
 }
