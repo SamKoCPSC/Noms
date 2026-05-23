@@ -9,8 +9,10 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 # === Stage 2: Compile dependencies (cached across builds) ===
 FROM rust:slim AS builder
-# Install build deps + PostgreSQL server binaries for pgtemp integration tests.
-RUN apt-get update && apt-get install -y pkg-config libssl-dev curl postgresql postgresql-client && rm -rf /var/lib/apt/lists/* \
+# Install build deps + PostgreSQL server binaries + sudo for pgtemp integration tests.
+# pgtemp detects Docker's root user and shells out to `sudo -u postgres` to
+# run initdb/postgres — sudo must be available or tests will panic.
+RUN apt-get update && apt-get install -y pkg-config libssl-dev curl postgresql postgresql-client sudo && rm -rf /var/lib/apt/lists/* \
     && ln -sf /usr/lib/postgresql/*/bin/initdb /usr/local/bin/initdb \
     && ln -sf /usr/lib/postgresql/*/bin/postgres /usr/local/bin/postgres
 RUN rustup component add rustfmt clippy
@@ -22,9 +24,9 @@ RUN cargo chef cook --release --recipe-path recipe.json
 
 # === Stage 3: Checks + final build ===
 COPY . .
-RUN cargo fmt --check \
-    && cargo clippy --no-default-features --features server -- -D warnings \
-    && cargo test --no-default-features --features server
+RUN cargo fmt --check
+RUN cargo clippy --no-default-features --features server -- -D warnings
+RUN cargo test --no-default-features --features server
 RUN dx bundle --platform web --release
 
 # === Stage 4: Runtime ===
