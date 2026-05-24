@@ -16,11 +16,23 @@
 # developers to use the additive pattern instead (add new column → backfill
 # → update code → later drop old column).
 #
-# IMPORTANT: The JSON field names and structure below are based on pgschema's
-# plan output format. Verify against your installed version by running:
-#   pgschema plan --output-json test-plan.json --file schema.sql \
-#     --host localhost --db noms --user noms --password <pass> --schema public
-# Then inspect test-plan.json to confirm field names match.
+# Verified against pgschema v1.9.0 JSON output format:
+#   {
+#     "groups": [
+#       {
+#         "steps": [
+#           {
+#             "sql": "ALTER TABLE users DROP COLUMN bio;",
+#             "type": "table.column",
+#             "operation": "drop",
+#             "path": "public.users.bio"
+#           }
+#         ]
+#       }
+#     ]
+#   }
+#
+# If the plan has no changes, "groups" is null.
 # ---------------------------------------------------------------------------
 
 set -euo pipefail
@@ -32,45 +44,27 @@ if [ ! -f "$PLAN_FILE" ]; then
     exit 1
 fi
 
-# --- Check 1: Reject DROP operations ---
-# pgschema plan JSON uses a "changes" array where each change has a "type" field.
-# Destructive types include: drop_table, drop_column, drop_index, drop_constraint
-# Adjust the field names below if pgschema's JSON schema differs.
-DROPS=$(jq '
-    [.changes[] | select(
-        .type == "drop_table" or
-        .type == "drop_column" or
-        .type == "drop_index" or
-        .type == "drop_constraint" or
-        .type == "drop_enum"
-    )] | length
-' "$PLAN_FILE" 2>/dev/null || echo "parse_error")
-
-if [ "$DROPS" = "parse_error" ]; then
-    echo "⚠️  Warning: Could not parse plan JSON for destructive changes."
-    echo "   This may indicate an empty plan or an incompatible pgschema version."
-    echo "   Inspect the plan file manually: $PLAN_FILE"
-    echo ""
-    echo "   If the plan is empty (no changes), this is expected and safe."
-    echo "   To verify, run: cat $PLAN_FILE | jq '.'"
-
-    # Check if the plan is empty (no changes) — that's safe
-    HAS_CHANGES=$(jq '.changes | length' "$PLAN_FILE" 2>/dev/null || echo "error")
-    if [ "$HAS_CHANGES" = "0" ] || [ "$HAS_CHANGES" = "error" ]; then
-        echo "✅ Plan is empty (no changes to apply). Safe to proceed."
-        exit 0
-    fi
-
-    echo "❌ Cannot determine safety of the plan. Failing to be safe."
+# --- Validate JSON structure ---
+# Ensure the file is valid JSON and has the expected top-level keys.
+if ! jq -e '.version and (.groups == null or (.groups | type == "array"))' "$PLAN_FILE" >/dev/null 2>&1; then
+    echo "❌ Error: Plan file is not valid pgschema JSON or has unexpected structure."
+    echo "   File: $PLAN_FILE"
+    echo "   Inspect manually: jq '.' $PLAN_FILE"
     exit 1
 fi
+
+# --- Check 1: Reject DROP operations ---
+# pgschema plan JSON uses .groups[].steps[] with .operation field.
+# Destructive operations have .operation == "drop".
+# The ? operator safely handles null groups (empty plan → 0 drops).
+DROPS=$(jq '[.groups[]?.steps[]? | select(.operation == "drop")] | length' "$PLAN_FILE")
 
 if [ "$DROPS" -gt 0 ]; then
     echo ""
     echo "❌ Destructive schema changes detected: $DROPS drop(s) found in plan."
     echo ""
     echo "   The following operations would destroy data:"
-    jq -r '.changes[] | select(.type == "drop_table" or .type == "drop_column" or .type == "drop_index" or .type == "drop_constraint" or .type == "drop_enum") | "   - \(.type): \(.object // .table // "unknown")"' "$PLAN_FILE" 2>/dev/null || echo "   (details unavailable — inspect $PLAN_FILE manually)"
+    jq -r '.groups[]?.steps[]? | select(.operation == "drop") | "   - \(.type): \(.path)"' "$PLAN_FILE"
     echo ""
     echo "   Use the additive pattern instead:"
     echo "   1. Add new column → backfill data → update code → drop old column later"
@@ -83,18 +77,31 @@ if [ "$DROPS" -gt 0 ]; then
     exit 1
 fi
 
-# --- Check 2: Warn about type narrowing (informational, not blocking) ---
-# Type narrowing (e.g., VARCHAR(200) → VARCHAR(10)) can truncate data
-# but is not always destructive. pgschema may flag these or handle them.
-# We warn but don't block here — blocking should be a manual review decision.
-TYPE_CHANGES=$(jq '
-    [.changes[] | select(.type == "alter_column_type" or .type == "modify_column")] | length
-' "$PLAN_FILE" 2>/dev/null || echo "0")
+# --- Check 2: Warn about ALTER operations (informational, not blocking) ---
+# ALTER operations (e.g., column type changes) can truncate data but are
+# not always destructive. We warn but don't block here — blocking should be
+# a manual review decision.
+ALTERS=$(jq '[.groups[]?.steps[]? | select(.operation == "alter")] | length' "$PLAN_FILE")
 
-if [ "$TYPE_CHANGES" != "0" ] && [ "$TYPE_CHANGES" != "parse_error" ]; then
-    echo "⚠️  Warning: $TYPE_CHANGES column type change(s) detected."
-    echo "   Review manually to ensure no data truncation risk."
-    echo "   Inspect the plan file: $PLAN_FILE"
+if [ "$ALTERS" -gt 0 ]; then
+    echo ""
+    echo "⚠️  Warning: $ALTERS ALTER operation(s) detected."
+    echo "   Review manually to ensure no data truncation or breaking change risk."
+    jq -r '.groups[]?.steps[]? | select(.operation == "alter") | "   - \(.type): \(.path)"' "$PLAN_FILE"
+    echo "   Inspect the full plan file: $PLAN_FILE"
+fi
+
+# --- Check 3: Verify plan is not unexpectedly malformed ---
+# If there are groups but we didn't catch any drops or alters, that's fine
+# (create operations are additive and safe). But if the plan has steps with
+# unknown operations, that's worth noting.
+UNKNOWN_OPS=$(jq '[.groups[]?.steps[]? | select(.operation != "create" and .operation != "alter" and .operation != "drop")] | length' "$PLAN_FILE")
+
+if [ "$UNKNOWN_OPS" -gt 0 ]; then
+    echo ""
+    echo "⚠️  Warning: $UNKNOWN_OPS step(s) with unrecognized operation(s) detected."
+    jq -r '.groups[]?.steps[]? | select(.operation != "create" and .operation != "alter" and .operation != "drop") | "   - \(.operation): \(.type) \(.path)"' "$PLAN_FILE"
+    echo "   Review manually: $PLAN_FILE"
 fi
 
 echo "✅ No destructive changes detected in plan. Safe to proceed."

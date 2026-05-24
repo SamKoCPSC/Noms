@@ -82,3 +82,12 @@ check:
 # Run tests
 test:
 	cargo test --features server
+
+# Run CI gate script tests
+schema-check-test:
+	@bash scripts/tests/test-check-schema-plan.sh
+
+# Run all checks and tests (mirrors what CI does)
+ci: fmt check lint test schema-check-test
+	@echo ""
+	@echo "✅ All checks passed."
