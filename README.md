@@ -24,7 +24,7 @@ Built with **Rust** and **Dioxus**, Noms compiles to a single codebase that runs
 | [Rust](https://rustup.rs/) | Language | Follow rustup.rs installer |
 | [Dioxus CLI](https://dioxuslabs.com/) (`dx`) | Dev server + hot reload | `cargo install dioxus-cli` |
 | [just](https://just.systems/) | Dev commands (`just up`, `just lint`, etc.) | `cargo install just` · Windows: `winget install just` |
-| [pgmold](https://crates.io/crates/pgmold) | Declarative database schema management | `cargo install pgmold` |
+| [pgschema](https://github.com/bytebase/pgschema) | Declarative database schema management | See [pgschema docs](https://github.com/bytebase/pgschema) for install options |
 | [Docker](https://docker.com/) or [Rancher Desktop](https://rancherdesktop.io/) | Local Postgres, MinIO, Mock OAuth | Windows: Docker Desktop installer |
 | `jq` | JSON parsing (used by health checks) | Arch: `sudo pacman -S jq` · Ubuntu: `sudo apt install jq` · macOS: `brew install jq` |
 
@@ -54,7 +54,7 @@ This command will:
 1. Check that Docker is running (start Docker Desktop or Rancher Desktop first if needed)
 2. Launch local infrastructure services (Postgres, MinIO, Mock OAuth)
 3. Wait for all services to become healthy
-4. Apply the database schema using `pgmold`
+4. Apply the database extensions and schema using `pgschema`
 5. Start the Dioxus dev server with hot reload
 
 Stop everything with `Ctrl+C` (this also tears down the Docker containers).
@@ -84,10 +84,10 @@ The `docker-compose.yml` file provides three services for local development:
 
 ## Database Schema
 
-The database schema is managed declaratively with `pgmold`. The source of truth is `migrations/schema.sql`.
+The database schema is managed declaratively with `pgschema`. The source of truth is `migrations/schema.sql`.
 
 To add a new table or column:
 1. Edit `migrations/schema.sql`
 2. Run `just migrate` (or `just up` to restart everything)
 
-`pgmold` will automatically detect the diff and apply the necessary `ALTER` statements.
+`pgschema` will automatically detect the diff and apply the necessary `ALTER` statements.

@@ -2455,37 +2455,58 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Install pgmold
+      - name: Install pgschema
         if: steps.schema-changed.outputs.changed == 'true'
-        run: cargo install pgmold --locked
+        run: |
+          curl -sSL https://github.com/bytebase/pgschema/releases/latest/download/pgschema_linux_amd64.tar.gz | \
+            tar xz -C /usr/local/bin pgschema
 
-      - name: Plan migration against staging DB
+      - name: Parse DATABASE_URL for pgschema
         if: steps.schema-changed.outputs.changed == 'true'
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: |
-          pgmold plan \
-            -s sql:migrations/schema.sql \
-            -d "$DATABASE_URL" \
-            --json > /tmp/migration-plan.json
+          # Extract PG* from DATABASE_URL (same logic as entrypoint.sh)
+          REST="${DATABASE_URL#postgres://}"
+          USERPASS="${REST%%@*}"
+          PGUSER="${USERPASS%%:*}"
+          PGPASSWORD="${USERPASS#*:}"
+          HOSTDB="${REST#*@}"
+          HOSTPORT="${HOSTDB%%/*}"
+          PGHOST="${HOSTPORT%%:*}"
+          PGPORT="${HOSTPORT#*:}"
+          PGPORT="${PGPORT%%/*}"
+          [ "$PGPORT" = "$PGHOST" ] && PGPORT="5432"
+          PGDATABASE="${HOSTDB#*/}"
+          PGDATABASE="${PGDATABASE%%\?*}"
+          echo "PGHOST=$PGHOST" >> "$GITHUB_ENV"
+          echo "PGPORT=$PGPORT" >> "$GITHUB_ENV"
+          echo "PGDATABASE=$PGDATABASE" >> "$GITHUB_ENV"
+          echo "PGUSER=$PGUSER" >> "$GITHUB_ENV"
+          echo "PGPASSWORD=$PGPASSWORD" >> "$GITHUB_ENV"
+
+      - name: Apply extensions
+        if: steps.schema-changed.outputs.changed == 'true'
+        run: psql "postgres://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/$PGDATABASE" -f migrations/extensions.sql
+
+      - name: Plan migration against staging DB
+        if: steps.schema-changed.outputs.changed == 'true'
+        run: |
+          pgschema plan \
+            --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" \
+            --user "$PGUSER" --password "$PGPASSWORD" \
+            --file migrations/schema.sql --schema public \
+            --output-json /tmp/migration-plan.json
 
           # Print human-readable plan for PR review context
           echo "### Migration Plan" >> $GITHUB_STEP_SUMMARY
-          jq -r '.statements[]?.sql // empty' /tmp/migration-plan.json \
+          jq -r '.changes[]? | .sql // .statement // empty' /tmp/migration-plan.json \
             | while read -r sql; do echo "\`\`\`sql\n$sql\n\`\`\`" >> $GITHUB_STEP_SUMMARY; done
 
       - name: Reject destructive changes
         if: steps.schema-changed.outputs.changed == 'true'
         run: |
-          DROPS=$(jq '.summary.drops // 0' /tmp/migration-plan.json)
-          RENAMES=$(jq '.summary.renames // 0' /tmp/migration-plan.json)
-          if [ "$DROPS" -gt 0 ] || [ "$RENAMES" -gt 0 ]; then
-            echo ""
-            echo "❌ Destructive schema changes detected:"
-            echo "   Drops: $DROPS, Renames: $RENAMES"
-            echo "   Use the additive pattern instead (add new column → backfill → update code → later drop old)."
-            exit 1
-          fi
+          ./scripts/check-schema-plan.sh /tmp/migration-plan.json
 
       - name: Post migration plan as PR comment
         if: steps.schema-changed.outputs.changed == 'true'
@@ -2507,83 +2528,96 @@ In the `noms-prod` Railway project, we configure a **Tag Deployment** rule. Prod
 
 #### 4. Database Migration Strategy — Declarative Schema, Non-Destructive by Default
 
-We will adopt a **declarative, state-based** database management strategy using a single `schema.sql` file that represents the exact, complete desired state of our PostgreSQL database at all times. There are no incremental migration scripts to hunt through — just one source of truth. We use **[pgmold](https://github.com/fmguerreiro/pgmold)** (Rust-native) as our diff-and-apply engine.
+We will adopt a **declarative, state-based** database management strategy using a single `schema.sql` file that represents the exact, complete desired state of our PostgreSQL database at all times. There are no incremental migration scripts to hunt through — just one source of truth. We use **[pgschema](https://github.com/bytebase/pgschema)** (Go-native, backed by Bytebase) as our diff-and-apply engine.
 
 ```
 migrations/
+├── extensions.sql   # PostgreSQL extensions (pgcrypto, pg_cron) — applied via psql before pgschema
 ├── schema.sql       # Single source of truth — complete desired database state
 └── seed.sql         # Reference data (tags master list, default settings) — idempotent inserts
 ```
 
-##### Why pgmold
+> **Note:** `extensions.sql` is applied separately via `psql` because pgschema does not manage `CREATE EXTENSION` statements. This file runs first — before any schema operations — to ensure required extensions like `pgcrypto` (for `gen_random_uuid()`) and `pg_cron` are available.
 
-pgmold is a Rust-native CLI that performs Terraform-style declarative schema management for PostgreSQL. It takes our `schema.sql` as input, diffs it against the live database, and generates safe migration SQL automatically. Key properties:
+##### Why pgschema
 
-- **Rust-native** — single binary via `cargo install pgmold`, no Go/JVM dependency
+pgschema is a Go-native CLI (backed by Bytebase) that performs Terraform-style declarative schema management for PostgreSQL. It takes our `schema.sql` as input, diffs it against the live database, and generates migration SQL automatically. Key properties:
+
+- **Bytebase-backed** — sustainable project with corporate backing vs. single-maintainer risk
 - **Native SQL format** — no HCL or DSL; standard PostgreSQL DDL is the schema language
-- **Safety linting built-in** — destructive operations blocked by default with a configurable safety layer
-- **Production mode** — blocks table drops entirely; lock hazard warnings prevent downtime-causing changes
-- **Transactional apply** — all migrations run in a single transaction; if anything fails, nothing changes
-- **JSON output** — machine-readable plan for CI gates (`--json` flag)
-- **Drift detection** — `pgmold drift` compares live DB against schema and exits non-zero on mismatch
-- **PostgreSQL-only focus** — handles RLS policies, partitioned tables, grants, row-level security as first-class citizens
+- **Safe DDL generation** — automatically generates `CREATE INDEX CONCURRENTLY` and `NOT VALID` + `VALIDATE CONSTRAINT` for online-safe migrations
+- **Plan + Apply workflow** — `pgschema plan` shows what will change; `pgschema apply` executes it
+- **JSON output** — machine-readable plan for CI gates (`--output-json` flag)
+- **Drift detection** — `pgschema plan --output-json` against a fresh temp DB reveals whether schema.sql matches production
+- **Go binary** — single static binary, no runtime dependencies, cross-compiled easily for Docker
+
+**What pgschema does NOT have (vs. pgmold):** pgschema lacks built-in destructive-operation blocking (pgmold's `--allow-destructive` flag and `PGMOLD_PROD=1` mode). To enforce an additive-only migration policy, we use a custom CI gate script (`scripts/check-schema-plan.sh`) that parses pgschema's plan JSON and rejects any destructive operation (DROP TABLE, DROP COLUMN, etc.).
 
 ##### How It Works — Three Phases Per Deployment
 
-**Phase 1: Plan** — pgmold introspects the live database, compares it against `schema.sql`, and computes the exact delta. Output is a dependency-ordered set of migration statements with lock hazard annotations.
+**Phase 1: Plan** — pgschema introspects the live database, compares it against `schema.sql`, and computes the exact delta. Output is a dependency-ordered set of migration statements.
 
 ```bash
-# Preview what would change (non-destructive only):
-pgmold plan \
-  -s sql:migrations/schema.sql \
-  -d "$DATABASE_URL"
+# Preview what would change (human-readable):
+just migrate-plan
+  # or equivalently:
+  pgschema plan \
+    --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" \
+    --user "$PGUSER" --password "$PGPASSWORD" \
+    --file migrations/schema.sql --schema public \
+    --output-human stdout
 ```
 
-**Phase 2: Gate** — By default, pgmold's safety layer blocks destructive operations (`DROP TABLE`, `DROP COLUMN`, type narrowing). If the plan contains any blocked operation, it exits non-zero with a clear error listing exactly what was rejected. In CI we parse the JSON output to enforce this programmatically.
+**Phase 2: Gate** — Because pgschema does not have built-in destructive-operation blocking, we enforce safety via a custom CI gate script. The script parses pgschema's JSON plan output and exits non-zero if any destructive operation (DROP TABLE, DROP COLUMN, DROP INDEX, DROP CONSTRAINT, type narrowing) is detected. This forces developers to use the additive pattern instead.
 
 ```bash
 # JSON plan for automated gating:
-pgmold plan \
-  -s sql:migrations/schema.sql \
-  -d "$DATABASE_URL" \
-  --json > /tmp/migration-plan.json
+pgschema plan \
+    --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" \
+    --user "$PGUSER" --password "$PGPASSWORD" \
+    --file migrations/schema.sql --schema public \
+    --output-json /tmp/migration-plan.json
 
-# Fail if any destructive changes exist:
-if jq -e '.summary | select(.drops > 0 or .renames > 0)' /tmp/migration-plan.json; then
-    echo "❌ Destructive schema changes detected — use additive pattern instead" >&2
-    exit 1
-fi
+# Run CI gate script — rejects if any destructive changes found:
+./scripts/check-schema-plan.sh /tmp/migration-plan.json
 ```
 
-**Phase 3: Apply** — Approved statements are executed in a single transaction. All-or-nothing: if any statement fails, the entire migration rolls back and the previous version remains live. pgmold also handles idempotency internally (`CREATE TABLE IF NOT EXISTS`, `IF NOT EXISTS` on indexes, etc.) so re-running the same plan is safe.
+The gate script (`scripts/check-schema-plan.sh`) inspects the plan JSON for operations like `drop_table`, `drop_column`, `drop_index`, `drop_constraint`, and `drop_enum`, exiting with code 1 if any are found.
+
+**Phase 3: Apply** — Approved statements are executed. pgschema generates idempotent DDL (`CREATE TABLE IF NOT EXISTS`, `IF NOT EXISTS` on indexes) and safe DDL (`CREATE INDEX CONCURRENTLY`, `ALTER TABLE ... ADD CONSTRAINT ... NOT VALID` then `VALIDATE CONSTRAINT`) automatically.
 
 ```bash
-# Apply non-destructive migrations (default behavior):
-pgmold apply \
-  -s sql:migrations/schema.sql \
-  -d "$DATABASE_URL"
+# Apply the declarative schema (additive changes only by policy):
+just migrate
+  # or equivalently:
+  pgschema apply \
+    --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" \
+    --user "$PGUSER" --password "$PGPASSWORD" \
+    --file migrations/schema.sql --schema public \
+    --auto-approve
 ```
 
 ##### Allowed vs Blocked Operations
 
-pgmold operates strictly on **DDL** (schema structure — tables, columns, indexes, constraints). It never executes arbitrary data-level statements (**DML**: `DELETE`, `TRUNCATE`, bulk `UPDATE`). DML outside of seed scripts is not part of the migration pipeline at all. This section covers both categories:
+pgschema operates strictly on **DDL** (schema structure — tables, columns, indexes, constraints). It never executes arbitrary data-level statements (**DML**: `DELETE`, `TRUNCATE`, bulk `UPDATE`). DML outside of seed scripts is not part of the migration pipeline at all. This section covers both categories:
 
 | Operation | Status | Rationale |
 |-----------|--------|-----------|
-| `CREATE TABLE` | ✅ **Allowed** | New table, no existing data affected. pgmold uses `IF NOT EXISTS`. |
+| `CREATE TABLE` | ✅ **Allowed** | New table, no existing data affected. pgschema uses `IF NOT EXISTS`. |
 | `ALTER TABLE ADD COLUMN` (with safe default) | ✅ **Allowed** | Adds optional column. Existing rows get the default value (`NULL`, `''`, `FALSE`). Zero downtime. |
-| `ALTER TABLE ADD CONSTRAINT` (foreign key, check) | ✅ **Allowed** | Validates existing data on apply; if validation fails, deployment halts before any change is committed. Safe fail-fast. pgmold uses online constraint building (`NOT VALID` then `VALIDATE`) to avoid table locks. |
-| `CREATE INDEX` | ✅ **Allowed** | Purely additive performance improvement. Uses `IF NOT EXISTS`. Built concurrently (`CONCURRENTLY`) to avoid table locks. |
+| `ALTER TABLE ADD CONSTRAINT` (foreign key, check) | ✅ **Allowed** | Validates existing data on apply; if validation fails, deployment halts before any change is committed. Safe fail-fast. pgschema generates `NOT VALID` + `VALIDATE CONSTRAINT` to avoid table locks. |
+| `CREATE INDEX` | ✅ **Allowed** | Purely additive performance improvement. Uses `IF NOT EXISTS`. pgschema generates `CREATE INDEX CONCURRENTLY` to avoid table locks. |
 | `ALTER TABLE ALTER COLUMN SET DEFAULT` | ✅ **Allowed** | Changes default for future inserts only; existing data untouched. |
 | `ALTER TABLE ADD FOREIGN KEY` | ✅ **Allowed** | Validates referential integrity on apply; safe fail-fast if orphaned rows exist. |
 | Column type widening (`VARCHAR(50)` → `VARCHAR(200)`) | ✅ **Allowed** | Existing values fit in the new width. No data loss possible. |
 | `INSERT` (seed data via upsert) | ✅ **Allowed** | Idempotent reference data using `ON CONFLICT DO UPDATE`. Runs after schema migration from `seed.sql`. Safe to repeat. |
-| `DROP TABLE` | ❌ **Blocked** | Irreversible data destruction. Requires manual destructive override (see below). pgmold's production mode blocks this entirely by default. |
+| `CREATE EXTENSION` | ✅ **Allowed** (separate file) | Extensions (pgcrypto, pg_cron) live in `migrations/extensions.sql`, applied via `psql` before pgschema runs. pgschema does not manage extensions. |
+| `DROP TABLE` | ❌ **Blocked** | Irreversible data destruction. CI gate script rejects this. Manual destructive override requires two-person approval (see below). |
 | `DROP COLUMN` | ❌ **Blocked** | Same as above — data is gone forever. Column remains until explicit cleanup. |
 | `ALTER TABLE DROP CONSTRAINT` | ❌ **Blocked** | Removes safety guarantees. If the constraint is unwanted, leave it; add a new one if needed. |
-| `ALTER COLUMN TYPE` (narrowing or incompatible) | ❌ **Blocked** | `INTEGER` → `SMALLINT` could truncate data. `TEXT` → `VARCHAR(10)` could reject existing rows. pgmold flags this as a lock hazard and blocks it under our safety config. |
+| `ALTER COLUMN TYPE` (narrowing or incompatible) | ❌ **Blocked** | `INTEGER` → `SMALLINT` could truncate data. `TEXT` → `VARCHAR(10)` could reject existing rows. CI gate script flags type-narrowing operations. |
 | **Column / Table renames** (`RENAME TO`) | ❌ **Blocked** | Non-destructive at the database level, but creates a coordination gap: every query, struct field, and JOIN referencing the old name must change atomically with the rename. If you miss one reference (and there are always missed references), your app runs silently against a schema it doesn't know about. And because drops are blocked, the old column can't be cleaned up to force discovery of broken queries. Result: two columns coexisting indefinitely with nobody sure which is canonical. |
-| `DELETE FROM ...` | ❌ **Not in scope** | pgmold does not execute DML statements. Data deletion happens through application code (API endpoints, server functions), never through migration scripts. If you need to clean up data during a transition, write an idempotent application-level script — don't bake `DELETE` into the schema pipeline. |
+| `DELETE FROM ...` | ❌ **Not in scope** | pgschema does not execute DML statements. Data deletion happens through application code (API endpoints, server functions), never through migration scripts. If you need to clean up data during a transition, write an idempotent application-level script — don't bake `DELETE` into the schema pipeline. |
 | `TRUNCATE TABLE ...` | ❌ **Not in scope** | Same as above. Truncating a table wipes every row instantly with no undo. This is strictly a local-development-only operation (see `local-reset-db.sh`). Never appears in migration or seed scripts. |
 | Bulk `UPDATE ... SET ... WHERE ...` | ⚠️ **Manual only** | Data backfills during column transitions (e.g., populating a new column from an old one) are one-time operations run manually or via a server function — not part of the automated pipeline. They're safe when scoped correctly, but should never live in `schema.sql` or `seed.sql`. |
 
@@ -2594,7 +2628,7 @@ To "rename" a column safely under this policy, follow the additive pattern:
 ```
 Step 1: Deploy new column alongside old column (in schema.sql):
   ALTER TABLE recipes ADD COLUMN display_name VARCHAR(200);
-  → pgmold apply (non-destructive, safe)
+  → pgschema apply (non-destructive, safe)
 
 Step 2: Backfill data (one-time migration script, run manually or via server function):
   UPDATE recipes SET display_name = title WHERE display_name IS NULL;
@@ -2613,32 +2647,34 @@ This path is more steps but eliminates the coordination gap entirely. At every i
 
 ##### Manual Destructive Override — When You Actually Need to Drop Something
 
-Sometimes a column has served its purpose and needs cleanup. We support this via an **explicit opt-in** using pgmold's `--allow-destructive` flag:
+Sometimes a column has served its purpose and needs cleanup. Because pgschema does not have built-in destructive-operation blocking, we enforce this via the CI gate script. To perform a destructive migration in production:
 
 ```bash
-# Normal deployment (non-destructive only) — this is the default:
-pgmold apply \
-  -s sql:migrations/schema.sql \
-  -d "$DATABASE_URL"
+# Normal deployment (additive only) — the CI gate enforces this:
+just migrate
+  # The CI gate script prevents any DROP operations from merging
 
-# Destructive override — explicit opt-in, must be run manually:
-pgmold apply \
-  -s sql:migrations/schema.sql \
-  -d "$DATABASE_URL" \
-  --allow-destructive \
-  --production-mode=false
+# Manual destructive override — bypass CI, run directly against the database:
+# 1. Remove the old column/table from schema.sql
+# 2. Run pgschema apply directly (not through CI):
+pgschema apply \
+  --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" \
+  --user "$PGUSER" --password "$PGPASSWORD" \
+  --file migrations/schema.sql --schema public \
+  --auto-approve
 ```
 
 The destructive override path requires:
 1. **Two-person approval** — the deploying developer gets explicit sign-off from another team member via a shared channel (e.g., Slack/PR comment)
-2. **Audit log** — pgmold's JSON plan is captured and appended to `docs/migration-audit.md` before execution for traceability:
+2. **Audit log** — pgschema's JSON plan is captured and appended to `docs/migration-audit.md` before execution for traceability:
 
 ```bash
 # Capture audit trail before applying destructive changes:
-pgmold plan \
-  -s sql:migrations/schema.sql \
-  -d "$DATABASE_URL" \
-  --json > /tmp/destructive-plan.json
+pgschema plan \
+  --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" \
+  --user "$PGUSER" --password "$PGPASSWORD" \
+  --file migrations/schema.sql --schema public \
+  --output-json /tmp/destructive-plan.json
 
 echo "## $(date -u +%Y-%m-%dT%H:%M:%SZ) — Destructive Migration by @<author>" >> docs/migration-audit.md
 jq '.' /tmp/destructive-plan.json >> docs/migration-audit.md
@@ -2649,77 +2685,106 @@ This ensures destructive migrations are: **intentional, visible, auditable, and 
 
 ##### CI Gate — Catch Destructive Changes Before Merge
 
-The GitHub Actions CI pipeline includes a pgmold-based schema check that runs on every pull request modifying `migrations/schema.sql`:
+The GitHub Actions CI pipeline includes a schema check that runs on every pull request modifying `migrations/schema.sql`. Because pgschema lacks built-in destructive-op blocking, we use a custom gate script (`scripts/check-schema-plan.sh`) to parse the plan JSON and reject destructive operations:
 
 ```yaml
   # Schema safety gate in .github/workflows/ci.yml
-  - name: Install pgmold
-    run: cargo install pgmold --locked
+  - name: Install pgschema
+    run: |
+      curl -sSL https://github.com/bytebase/pgschema/releases/latest/download/pgschema_linux_amd64.tar.gz | \
+        tar xz -C /usr/local/bin pgschema
+
+  - name: Apply Extensions
+    run: psql "$DATABASE_URL" -f migrations/extensions.sql
 
   - name: Check Schema for Destructive Changes
     env:
       DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: noms
+      PGUSER: noms
+      PGPASSWORD: noms
     run: |
-      pgmold plan \
-        -s sql:migrations/schema.sql \
-        -d "$DATABASE_URL" \
-        --json > /tmp/migration-plan.json
+      pgschema plan \
+        --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" \
+        --user "$PGUSER" --password "$PGPASSWORD" \
+        --file migrations/schema.sql --schema public \
+        --output-json /tmp/migration-plan.json
 
-      # Print human-readable plan for PR review context
-      cat /tmp/migration-plan.json | jq '.statements[]?.sql'
-
-      # Fail if any destructive changes exist
-      DROPS=$(jq '.summary.drops // 0' /tmp/migration-plan.json)
-      RENAMES=$(jq '.summary.renames // 0' /tmp/migration-plan.json)
-      if [ "$DROPS" -gt 0 ] || [ "$RENAMES" -gt 0 ]; then
-        echo ""
-        echo "❌ Destructive schema changes detected:"
-        echo "   Drops: $DROPS, Renames: $RENAMES"
-        echo "   Use the additive pattern instead (add new column → backfill → update code → later drop old)."
-        exit 1
-      fi
+      # Run custom CI gate script to reject destructive changes:
+      ./scripts/check-schema-plan.sh /tmp/migration-plan.json
 
   # Drift detection — runs on schedule to alert if live DB diverges from schema.sql
   - name: Detect Schema Drift (Staging)
     env:
       DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
     run: |
-      pgmold drift \
-        -s sql:migrations/schema.sql \
-        -d "$DATABASE_URL" \
-        --json || { echo "⚠️ Schema drift detected between schema.sql and staging DB"; exit 1; }
+      # Parse DATABASE_URL into PG* vars (same logic as entrypoint.sh)
+      REST="${DATABASE_URL#postgres://}"
+      USERPASS="${REST%%@*}"
+      PGUSER="${USERPASS%%:*}"
+      PGPASSWORD="${USERPASS#*:}"
+      HOSTDB="${REST#*@}"
+      HOSTPORT="${HOSTDB%%/*}"
+      PGHOST="${HOSTPORT%%:*}"
+      PGPORT="${HOSTPORT#*:}"
+      PGPORT="${PGPORT%%/*}"
+      [ "$PGPORT" = "$PGHOST" ] && PGPORT="5432"
+      PGDATABASE="${HOSTDB#*/}"
+      PGDATABASE="${PGDATABASE%%\?*}"
+
+      pgschema plan \
+        --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" \
+        --user "$PGUSER" --password "$PGPASSWORD" \
+        --file migrations/schema.sql --schema public \
+        --output-json /tmp/drift-plan.json
+
+      # If the plan has any changes, there's drift:
+      CHANGES=$(jq '.changes | length' /tmp/drift-plan.json)
+      if [ "$CHANGES" -gt 0 ]; then
+        echo "⚠️ Schema drift detected: schema.sql differs from staging DB"
+        echo "   Changes detected: $CHANGES"
+        jq '.' /tmp/drift-plan.json
+        exit 1
+      fi
 ```
 
-This catches destructive changes at review time — before they reach staging or production. The PR author sees exactly what pgmold flagged and can either:
+This catches destructive changes at review time — before they reach staging or production. The PR author sees exactly what the gate script flagged and can either:
 - Switch to the additive pattern (add new column, deprecate old one)
 - Intentionally request a destructive override for the eventual cleanup deployment (manual process only)
 
 ##### Local Development Workflow
 
-Local development uses pgmold for incremental changes and `docker compose` + raw SQL for nuclear resets:
+Local development uses pgschema for incremental changes and `docker compose` + raw SQL for nuclear resets:
 
 ```bash
 # First time setup — spin up local Postgres via Docker Compose:
-docker compose up -d postgres
+just up
 
-# Bootstrap schema from scratch (drops everything, recreates from schema.sql):
+# Or bootstrap schema from scratch (drops everything, recreates from extensions + schema):
 ./scripts/local-reset-db.sh
   # This script runs: DROP SCHEMA public CASCADE; CREATE SCHEMA public;
+  # Then: psql "$LOCAL_DB_URL" < migrations/extensions.sql
   # Then: psql "$LOCAL_DB_URL" < migrations/schema.sql
   # Fast, safe locally, guarantees exact match.
 
-# On subsequent dev sessions — apply incremental changes only (non-destructive):
-pgmold apply \
-  -s sql:migrations/schema.sql \
-  -d "postgres://localhost:5432/noms_dev"
+# On subsequent dev sessions — apply incremental changes only (additive):
+just migrate
+  # or equivalently:
+  source .env.local && pgschema apply \
+    --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" \
+    --user "$PGUSER" --password "$PGPASSWORD" \
+    --file migrations/schema.sql --schema public --auto-approve
 
 # Preview what would change before applying:
-pgmold plan \
-  -s sql:migrations/schema.sql \
-  -d "postgres://localhost:5432/noms_dev"
+just migrate-plan
+
+# Apply extensions + schema together:
+just migrate-full
 ```
 
-`local-reset-db.sh` is the nuclear option for development — it drops and recreates everything from `schema.sql`. It's fast, it's safe locally (your laptop), and it guarantees your dev database exactly matches the declared schema. For day-to-day work, `pgmold apply` adds new tables/columns/indexes without touching existing data.
+`local-reset-db.sh` is the nuclear option for development — it drops and recreates everything from `schema.sql`. It's fast, it's safe locally (your laptop), and it guarantees your dev database exactly matches the declared schema. For day-to-day work, `just migrate` (which runs `pgschema apply`) adds new tables/columns/indexes without touching existing data.
 
 ##### Seed Data
 
@@ -2735,24 +2800,28 @@ INSERT INTO tags (name, category) VALUES
 ON CONFLICT (name) DO UPDATE SET category = EXCLUDED.category;
 ```
 
-Every seed statement uses `INSERT ... ON CONFLICT DO UPDATE` so it's safe to run repeatedly. Applied as part of the deploy pipeline immediately after pgmold finishes schema migration:
+Every seed statement uses `INSERT ... ON CONFLICT DO UPDATE` so it's safe to run repeatedly. Applied as part of the deploy pipeline immediately after pgschema finishes schema migration:
 
 ```bash
 # Deploy script sequence:
-pgmold apply -s sql:migrations/schema.sql -d "$DATABASE_URL" && \
+pgschema apply \
+  --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" \
+  --user "$PGUSER" --password "$PGPASSWORD" \
+  --file migrations/schema.sql --schema public --auto-approve && \
   psql "$DATABASE_URL" < migrations/seed.sql
 ```
 
 ##### Summary — Why This Approach Wins
 
-| Concern | Traditional ORM Migrations | Our Declarative + pgmold Approach |
-|---------|---------------------------|-----------------------------------|
+| Concern | Traditional ORM Migrations | Our Declarative + pgschema Approach |
+|---------|---------------------------|--------------------------------------|
 | **Onboarding** | Read 47 incremental files to understand current state | Open `schema.sql` — done in 30 seconds |
-| **Drift risk** | Migration file forgets a column → silent schema/code mismatch | `pgmold drift` detects divergence automatically; CI alerts on schedule |
-| **Data safety** | A DROP in a migration file = gone forever (unless you notice in review) | pgmold blocks drops by default. Explicit `--allow-destructive` required with audit trail. Production mode blocks table drops entirely. |
-| **Idempotency** | Each migration runs once; re-running breaks things | pgmold generates idempotent DDL (`IF NOT EXISTS`, transactional apply). Safe to retry on failure. |
+| **Drift risk** | Migration file forgets a column → silent schema/code mismatch | `pgschema plan` against a temp DB reveals divergence; CI alerts on schedule |
+| **Data safety** | A DROP in a migration file = gone forever (unless you notice in review) | CI gate script blocks destructive operations (DROP TABLE, DROP COLUMN, etc.). Manual destructive override requires two-person approval + audit trail. |
+| **Idempotency** | Each migration runs once; re-running breaks things | pgschema generates idempotent DDL (`IF NOT EXISTS`, `CONCURRENTLY`). Safe to retry on failure. |
 | **Rollback** | Need explicit "down" migrations (often forgotten) | Nothing to roll back — old columns/tables just stay until cleaned up manually |
-| **Lock hazards** | Developer must know PostgreSQL internals to avoid blocking | pgmold warns about lock hazards inline; uses concurrent index builds and online constraint validation by default |
+| **Lock hazards** | Developer must know PostgreSQL internals to avoid blocking | pgschema generates `CREATE INDEX CONCURRENTLY` and `NOT VALID` / `VALIDATE CONSTRAINT` by default to avoid table locks |
+| **Extensions** | Typically handled by migration files or manual psql | `extensions.sql` applied via `psql` before pgschema — clean separation of concerns |
 
 #### 5. Secrets Management
 Environment-specific secrets are managed directly within each Railway project's dashboard:

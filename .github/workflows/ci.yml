@@ -117,9 +117,9 @@ jobs:
           # RUSTSEC-2024-0414  gdkx11-sys 0.18.2      Unmaintained — dioxus-desktop -> tao -> GTK3
           # RUSTSEC-2024-0415  gtk 0.18.2             Unmaintained — dioxus-desktop -> wry -> GTK3
           # RUSTSEC-2024-0416  atk-sys 0.18.2         Unmaintained — dioxus-desktop -> wry -> GTK3
-          # RUSTSEC-2024-0418  gdk-sys 0.18.2         Unmaintained — dioxus-desktop -> wry -> GTK3
-          # RUSTSEC-2024-0419  gtk3-macros 0.18.2     Unmaintained — dioxus-desktop -> wry -> GTK3
-          # RUSTSEC-2024-0420  gtk-sys 0.18.2         Unmaintained — dioxus-desktop -> wry -> GTK3
+          # RUSTSEC-2024-0418  gdk-sys 0.18.2         Unmaintained — dioxus-desktop -> tao -> GTK3
+          # RUSTSEC-2024-0419  gtk-sys 0.18.2         Unmaintained — dioxus-desktop -> wry -> GTK3
+          # RUSTSEC-2024-0420  gtk3-macros 0.18.2     Unmaintained — dioxus-desktop -> wry -> GTK3
           # RUSTSEC-2024-0429  glib 0.18.5            Unsound iterator — dioxus-desktop -> wry -> GTK3
           # RUSTSEC-2024-0436  paste 1.0.15           Unmaintained — dioxus-desktop -> image -> ravif
           # RUSTSEC-2025-0057  fxhash 0.2.1           Unmaintained — dioxus-desktop -> kuchikiki
@@ -143,3 +143,75 @@ jobs:
             RUSTSEC-2025-0057
             RUSTSEC-2026-0002
             RUSTSEC-2026-0097
+
+  # Schema drift detection and destructive change blocking.
+  # Runs on PRs that modify migrations/schema.sql or migrations/extensions.sql.
+  # Uses pgschema to generate a plan against the staging database, then
+  # checks the plan for destructive operations (DROP TABLE, DROP COLUMN, etc.)
+  # using scripts/check-schema-plan.sh.
+  schema-check:
+    runs-on: ubuntu-latest
+    # Only run on pull requests (not pushes to branches without a PR)
+    if: github.event_name == 'pull_request'
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: noms_ci
+          POSTGRES_PASSWORD: noms_ci_pass
+          POSTGRES_DB: noms_ci_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if schema files changed
+        id: schema-changed
+        run: |
+          if git diff --name-only "${{ github.event.pull_request.base.sha }}..HEAD" \
+             | grep -qE "^migrations/(schema|extensions)\.sql$"; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install pgschema
+        if: steps.schema-changed.outputs.changed == 'true'
+        run: go install github.com/pgplex/pgschema@latest
+
+      - name: Apply extensions to test database
+        if: steps.schema-changed.outputs.changed == 'true'
+        env:
+          PGPASSWORD: noms_ci_pass
+        run: |
+          psql -h localhost -p 5432 -d noms_ci_test -U noms_ci \
+            -f migrations/extensions.sql
+
+      - name: Generate migration plan
+        if: steps.schema-changed.outputs.changed == 'true'
+        run: |
+          pgschema plan \
+            --host localhost \
+            --port 5432 \
+            --db noms_ci_test \
+            --user noms_ci \
+            --password noms_ci_pass \
+            --schema public \
+            --file migrations/schema.sql \
+            --output-human stdout \
+            --output-json /tmp/migration-plan.json
+
+      - name: Reject destructive changes
+        if: steps.schema-changed.outputs.changed == 'true'
+        run: bash scripts/check-schema-plan.sh /tmp/migration-plan.json
+
+      - name: Post migration plan as PR comment
+        if: steps.schema-changed.outputs.changed == 'true'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: /tmp/migration-plan.json

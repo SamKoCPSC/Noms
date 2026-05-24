@@ -61,19 +61,19 @@ All gated behind `server` feature flag.
 - `get_user_by_id()` — for building UserProfile
 
 **Schema migration:**
-- Use pgmold (existing tooling) — call `pgmold apply` on app startup before serving
-- Pass `migrations/schema.sql` and `DATABASE_URL` to pgmold
+- Use pgschema (existing tooling) — call `pgschema apply` on app startup before serving
+- Apply `migrations/extensions.sql` via `psql` first (pgcrypto, pg_cron), then `migrations/schema.sql` via pgschema
 - Idempotent: safe on every startup, declarative schema is always applied
 - Same behavior for local dev, staging, and production
 
 **Startup sequence:**
 1. Create SQLx connection pool
-2. Run `pgmold apply` against the pool's database URL
+2. Run `psql < extensions.sql` then `pgschema apply` against the pool's database
 3. Start serving — if migration fails, app refuses to start (fail-fast)
 
 **Verify:**
 - `cargo test --features server` — insert/select/delete against local Postgres
-- App starts and runs pgmold cleanly on fresh DB
+- App starts and runs pgschema cleanly on fresh DB
 
 **Risk:** Medium. Schema exists but queries are new.
 

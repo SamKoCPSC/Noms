@@ -1,11 +1,10 @@
--- NOMS Initial Schema
--- Applied by pgmold: `just migrate` (local), entrypoint.sh (Docker/Railway).
+-- NOMS Schema
+-- Applied by pgschema: `just migrate` (local), entrypoint.sh (Docker/Railway).
 -- Additive-only: never DROP or ALTER existing columns.
 -- All statements are idempotent (IF NOT EXISTS) for safe repeated application.
-
--- Enable extensions
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-CREATE EXTENSION IF NOT EXISTS "pg_cron";
+--
+-- PREREQUISITES: Run migrations/extensions.sql first to install required extensions
+-- (pgcrypto, pg_cron). This file only manages schema objects that pgschema tracks.
 
 -- Core user table
 CREATE TABLE IF NOT EXISTS users (
@@ -37,24 +36,9 @@ CREATE TABLE IF NOT EXISTS oauth_accounts (
 CREATE INDEX IF NOT EXISTS idx_oauth_accounts_email ON oauth_accounts(email);
 
 -- Short-lived auth state for OAuth CSRF protection (~10 min TTL)
--- Expiry is enforced application-side; pg_cron handles cleanup on supported DBs.
+-- Expiry is enforced application-side; pg_cron handles periodic cleanup.
 CREATE TABLE IF NOT EXISTS auth_states (
     id VARCHAR(64) PRIMARY KEY,
     redirect_uri TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
--- Schedule periodic cleanup of expired auth states (every 6 hours).
--- No-op on environments where pg_cron isn't available.
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
-        IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'cleanup-auth-states') THEN
-            PERFORM cron.schedule(
-                'cleanup-auth-states',
-                '0 */6 * * *',
-                'DELETE FROM auth_states WHERE created_at < NOW() - INTERVAL ''10 minutes'''
-            );
-        END IF;
-    END IF;
-END $$;

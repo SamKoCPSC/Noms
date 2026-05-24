@@ -22,6 +22,10 @@ WORKDIR /usr/src/app
 COPY --from=planner /usr/src/app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 
+# === Stage 2b: Build pgschema ===
+FROM golang:1.24-bookworm AS pgschema-builder
+RUN go install github.com/pgplex/pgschema@latest
+
 # === Stage 3: Checks + final build ===
 COPY . .
 RUN cargo fmt --check
@@ -31,10 +35,11 @@ RUN dx bundle --platform web --release
 
 # === Stage 4: Runtime ===
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/* \
+RUN apt-get update && apt-get install -y curl postgresql-client && rm -rf /var/lib/apt/lists/* \
     && groupadd -r noms && useradd -r -g noms -d /usr/local/app -s /sbin/nologin noms \
-    && curl -fsSL https://github.com/fmguerreiro/pgmold/releases/download/v0.34.12/pgmold-x86_64-unknown-linux-gnu.tar.gz | tar xz -C /usr/local/bin
+    && mkdir -p /usr/local/bin
 
+COPY --from=pgschema-builder /go/bin/pgschema /usr/local/bin/pgschema
 COPY --from=builder /usr/src/app/target/dx/noms/release/web/ /usr/local/app
 COPY --from=builder /usr/src/app/migrations/ /usr/local/app/migrations/
 COPY entrypoint.sh /usr/local/app/entrypoint.sh

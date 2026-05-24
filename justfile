@@ -1,9 +1,9 @@
 set shell := ["bash", "-cu"]
 
 # NOMS — Local development commands
-# Prerequisites: docker, just, cargo/dx, pgmold, postgresql (for pgtemp test DBs)
+# Prerequisites: docker, just, cargo/dx, pgschema, psql (postgresql client)
 
-# One-command local startup: Docker services + schema + dev server
+# One-command local startup: Docker services + extensions + schema + dev server
 up:
 	# Ensure Docker is running (auto-start if possible for the platform)
 	@if ! docker info > /dev/null 2>&1; then \
@@ -22,7 +22,7 @@ up:
 				echo "Starting Docker Desktop..."; cmd.exe /c start Docker & \
 				;; \
 			*) \
-				echo "Error: Docker is not running. Please start Docker Desktop and try again."; exit 1 \
+				echo "Error: Docker is not running. Please start Docker and try again."; exit 1 \
 				;; \
 		esac; \
 	fi
@@ -33,8 +33,8 @@ up:
 	@until [ "$(docker inspect $(docker compose ps -q postgres) | jq -r '.[0].State.Health.Status')" == "healthy" ]; do echo "Waiting for postgres to be healthy..."; sleep 2; done
 	@until [ "$(docker inspect $(docker compose ps -q minio) | jq -r '.[0].State.Health.Status')" == "healthy" ]; do echo "Waiting for minio to be healthy..."; sleep 2; done
 	@until [ "$(docker inspect $(docker compose ps -q mock-oauth) | jq -r '.[0].State.Health.Status')" == "healthy" ]; do echo "Waiting for mock-oauth to be healthy..."; sleep 2; done
-	# Apply database schema
-	@source .env.local && pgmold apply --schema sql:migrations/schema.sql --database "$DATABASE_URL"
+	# Apply database extensions and schema
+	@source .env.local && psql "$DATABASE_URL" -f migrations/extensions.sql && pgschema apply --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" --user "$PGUSER" --password "$PGPASSWORD" --file migrations/schema.sql --schema public --auto-approve
 	# Launch dev server; clean up Docker on Ctrl+C
 	@trap 'docker compose down --remove-orphans' INT TERM EXIT; \
 	dx serve --platform web; \
@@ -45,9 +45,20 @@ up:
 down:
 	docker compose down --remove-orphans
 
-# Apply the declarative database schema
+# Apply database extensions only (pgcrypto, pg_cron, etc.)
+migrate-extensions:
+	@source .env.local && psql "$DATABASE_URL" -f migrations/extensions.sql
+
+# Apply the declarative database schema (run after modifying migrations/schema.sql)
 migrate:
-	@source .env.local && pgmold apply --schema sql:migrations/schema.sql --database "$DATABASE_URL"
+	@source .env.local && pgschema apply --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" --user "$PGUSER" --password "$PGPASSWORD" --file migrations/schema.sql --schema public --auto-approve
+
+# Preview what would change (dry run)
+migrate-plan:
+	@source .env.local && pgschema plan --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" --user "$PGUSER" --password "$PGPASSWORD" --file migrations/schema.sql --schema public --output-human stdout
+
+# Apply extensions + schema in one go
+migrate-full: migrate-extensions migrate
 
 # Start the Dioxus Fullstack dev server (hot reload + SSR)
 dev:
