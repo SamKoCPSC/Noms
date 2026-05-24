@@ -6,9 +6,11 @@
 # need it in our application database so that CREATE EXTENSION pg_cron works.
 # ALTER SYSTEM writes to postgresql.auto.conf which persists across restarts.
 #
-# Also sets shared_preload_libraries as a safety net for existing data volumes
-# where the postgresql.conf.sample copy didn't include pg_cron. This requires
-# a server restart, which the entrypoint handles automatically after init.
+# shared_preload_libraries is set via ALTER SYSTEM (overwrite, not append).
+# This script is the sole authority on which libraries are loaded.
+# If you need additional libraries, add them here explicitly.
+# The Dockerfile also bakes this setting into postgresql.conf.sample, but the
+# init script's ALTER SYSTEM takes precedence on first init.
 set -e
 
 # Wait for the temporary server to be ready
