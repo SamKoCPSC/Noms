@@ -27,6 +27,9 @@ FROM golang:1.24-bookworm AS pgschema-builder
 RUN go install github.com/pgplex/pgschema@latest
 
 # === Stage 3: Checks + final build ===
+# Must switch back to the Rust builder context — the pgschema-builder stage
+# uses a Go image which has no cargo toolchain.
+FROM builder AS build-check
 COPY . .
 RUN cargo fmt --check
 RUN cargo clippy --no-default-features --features server -- -D warnings
@@ -40,8 +43,8 @@ RUN apt-get update && apt-get install -y curl postgresql-client && rm -rf /var/l
     && mkdir -p /usr/local/bin
 
 COPY --from=pgschema-builder /go/bin/pgschema /usr/local/bin/pgschema
-COPY --from=builder /usr/src/app/target/dx/noms/release/web/ /usr/local/app
-COPY --from=builder /usr/src/app/migrations/ /usr/local/app/migrations/
+COPY --from=build-check /usr/src/app/target/dx/noms/release/web/ /usr/local/app
+COPY --from=build-check /usr/src/app/migrations/ /usr/local/app/migrations/
 COPY entrypoint.sh /usr/local/app/entrypoint.sh
 RUN chmod +x /usr/local/app/entrypoint.sh \
     && chown -R noms:noms /usr/local/app
