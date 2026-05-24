@@ -35,6 +35,9 @@ CREATE TABLE IF NOT EXISTS oauth_accounts (
 
 CREATE INDEX IF NOT EXISTS idx_oauth_accounts_email ON oauth_accounts(email);
 
+-- Foreign key lookup + CASCADE delete performance
+CREATE INDEX IF NOT EXISTS idx_oauth_accounts_user_id ON oauth_accounts(user_id);
+
 -- Short-lived auth state for OAuth CSRF protection (~10 min TTL)
 -- Expiry is enforced application-side; pg_cron handles periodic cleanup.
 CREATE TABLE IF NOT EXISTS auth_states (
@@ -42,3 +45,6 @@ CREATE TABLE IF NOT EXISTS auth_states (
     redirect_uri TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Index for periodic cleanup of expired auth states (pg_cron DELETE WHERE created_at < ...)
+CREATE INDEX IF NOT EXISTS idx_auth_states_created_at ON auth_states(created_at);
