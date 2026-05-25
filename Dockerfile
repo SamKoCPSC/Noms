@@ -1,5 +1,5 @@
 # === Stage 1: Prepare dependency recipe ===
-FROM rust:slim AS planner
+FROM rust:1-slim-bookworm AS planner
 RUN apt-get update && apt-get install -y pkg-config libssl-dev curl && rm -rf /var/lib/apt/lists/*
 RUN cargo install cargo-chef
 WORKDIR /usr/src/app
@@ -8,7 +8,7 @@ COPY src/ ./src/
 RUN cargo chef prepare --recipe-path recipe.json
 
 # === Stage 2: Compile dependencies (cached across builds) ===
-FROM rust:slim AS builder
+FROM rust:1-slim-bookworm AS builder
 # Install build deps + PostgreSQL server binaries + sudo for pgtemp integration tests.
 # pgtemp detects Docker's root user and shells out to `sudo -u postgres` to
 # run initdb/postgres — sudo must be available or tests will panic.
