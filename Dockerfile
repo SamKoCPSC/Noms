@@ -16,8 +16,8 @@ RUN apt-get update && apt-get install -y pkg-config libssl-dev curl postgresql p
     && ln -sf /usr/lib/postgresql/*/bin/initdb /usr/local/bin/initdb \
     && ln -sf /usr/lib/postgresql/*/bin/postgres /usr/local/bin/postgres
 RUN rustup component add rustfmt clippy
-RUN cargo install cargo-chef \
-    && curl -fsSL https://github.com/DioxusLabs/dioxus/releases/download/v0.7.9/dx-x86_64-unknown-linux-gnu.tar.gz | tar xz -C /usr/local/bin
+RUN cargo install cargo-chef
+RUN cargo install dioxus-cli@0.7.9 --locked
 WORKDIR /usr/src/app
 COPY --from=planner /usr/src/app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
