@@ -38,7 +38,7 @@ RUN dx bundle --platform web --release
 
 # === Stage 4: Runtime ===
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y curl postgresql-client && rm -rf /var/lib/apt/lists/* \
+RUN apt-get update && apt-get install -y curl postgresql-client perl && rm -rf /var/lib/apt/lists/* \
     && groupadd -r noms && useradd -r -g noms -d /usr/local/app -s /sbin/nologin noms \
     && mkdir -p /usr/local/bin
 
