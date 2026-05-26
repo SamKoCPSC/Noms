@@ -286,6 +286,20 @@ mod tests {
             .execute(pool)
             .await;
 
+        // timescaledb, pg_trgm, vector, and pg_search are optional in tests — skip silently if not installed.
+        let _ = sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+            .execute(pool)
+            .await;
+        let _ = sqlx::query("CREATE EXTENSION IF NOT EXISTS vector")
+            .execute(pool)
+            .await;
+        let _ = sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_search")
+            .execute(pool)
+            .await;
+        let _ = sqlx::query("CREATE EXTENSION IF NOT EXISTS timescaledb")
+            .execute(pool)
+            .await;
+
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS users (\
              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\

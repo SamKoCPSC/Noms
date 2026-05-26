@@ -46,7 +46,7 @@ pub fn use_theme() -> UseTheme {
     let mut is_dark = use_signal(|| {
         #[cfg(target_arch = "wasm32")]
         {
-            return read_saved_theme();
+            read_saved_theme()
         }
         #[cfg(not(target_arch = "wasm32"))]
         {

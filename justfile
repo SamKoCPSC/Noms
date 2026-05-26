@@ -72,16 +72,16 @@ fmt:
 lint:
 	cargo fmt
 	cargo clippy --target wasm32-unknown-unknown -- -D warnings
-	cargo clippy --features server -- -D warnings
+	SQLX_OFFLINE=true cargo clippy --features server -- -D warnings
 
 # Check compilation (both targets)
 check:
 	cargo check --target wasm32-unknown-unknown
-	cargo check --features server
+	SQLX_OFFLINE=true cargo check --features server
 
-# Run tests
+# Run tests (uses SQLx offline mode so no live DB is needed at compile time)
 test:
-	cargo test --features server
+	SQLX_OFFLINE=true cargo test --features server
 
 # Run CI gate script tests
 schema-check-test:
