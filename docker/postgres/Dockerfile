@@ -1,5 +1,12 @@
 FROM postgres:17-bookworm
 
+# Use a subdirectory under the persistent volume mount point for PGDATA.
+# Railway (and other orchestrators) mount storage at /var/lib/postgresql/data,
+# which contains a "lost+found" directory from the ext4 filesystem. initdb
+# refuses to run on a non-empty directory, so we nest the actual data dir
+# one level deeper to avoid this conflict.
+ENV PGDATA=/var/lib/postgresql/data/pgdata
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl ca-certificates gnupg \
     && curl -fsSL https://packagecloud.io/timescale/timescaledb/gpgkey \
