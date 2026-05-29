@@ -95,12 +95,19 @@ parse_database_url() {
 }
 
 # Apply database extensions (pgcrypto, pg_cron) before schema.
-# We use the raw DATABASE_URL here because psql uses libpq, which has a
-# proper URL parser that handles special characters and percent-decoding
-# natively. Only pgschema needs the individual PG* flags.
+# We use the parsed PG* variables instead of the raw DATABASE_URL because:
+#   1. Railway passwords often contain special characters (@, #, :, =)
+#   2. psql with a URL can fail to extract the password correctly, prompting
+#      interactively and crashing the container
+#   3. The PG* variables are already percent-decoded by parse_database_url
 apply_extensions() {
     echo "Applying database extensions..."
-    psql "$DATABASE_URL" \
+    PGPASSWORD="$PGPASSWORD" psql \
+        -h "$PGHOST" \
+        -p "$PGPORT" \
+        -U "$PGUSER" \
+        -d "$PGDATABASE" \
+        -w \
         -f /usr/local/app/migrations/extensions.sql
     echo "Extensions applied."
 }
