@@ -97,6 +97,7 @@ pub async fn apply_test_schema(pool: &PgPool) {
         "CREATE TABLE IF NOT EXISTS auth_states (\
          id VARCHAR(64) PRIMARY KEY,\
          redirect_uri TEXT NOT NULL,\
+         provider TEXT NOT NULL,\
          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
          )",
     )

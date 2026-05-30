@@ -1,4 +1,6 @@
 use dioxus::prelude::*;
+#[cfg(feature = "server")]
+use dioxus::server::{DioxusRouterExt, ServeConfig};
 
 mod auth;
 mod components;
@@ -50,10 +52,10 @@ const GOOGLE_FONTS: &str = "https://fonts.googleapis.com/css2?family=Fredoka:wgh
 
 #[cfg(feature = "server")]
 fn main() {
-    // Validate database connectivity before starting the server.
+    // Create and validate the database connection pool.
     // Uses a dedicated thread with its own runtime to avoid conflicting
     // with Dioxus's own runtime management.
-    let result = std::thread::spawn(|| {
+    let pool = std::thread::spawn(|| {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
@@ -61,14 +63,43 @@ fn main() {
         rt.block_on(db::create_pool())
     })
     .join()
-    .expect("database initialization thread panicked");
+    .expect("database initialization thread panicked")
+    .expect("Failed to create database pool");
 
-    if let Err(e) = result {
-        eprintln!("Fatal: {e}");
-        std::process::exit(1);
-    }
+    let base_url =
+        std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
+    let (google_client, github_client) = auth::oauth::build_oauth_clients(&base_url);
 
-    dioxus::launch(App);
+    let state = auth::oauth::AppState {
+        pool,
+        google_client,
+        github_client,
+        http_client: reqwest::Client::new(),
+    };
+
+    // Build a custom Axum Router with OAuth routes and the Dioxus application.
+    // The Dioxus router handles all non-API routes (SSR), and our OAuth routes
+    // handle /auth/{provider}/start and /auth/{provider}/callback.
+    dioxus::server::serve(move || {
+        let state = state.clone();
+        async move {
+            let dioxus_router =
+                axum::Router::new().serve_dioxus_application(ServeConfig::new(), App);
+
+            let oauth_router = axum::Router::new()
+                .route(
+                    "/auth/{provider}/start",
+                    axum::routing::get(auth::oauth::start_handler),
+                )
+                .route(
+                    "/auth/{provider}/callback",
+                    axum::routing::get(auth::oauth::callback_handler),
+                )
+                .with_state(state);
+
+            Ok(dioxus_router.merge(oauth_router))
+        }
+    });
 }
 
 #[cfg(not(feature = "server"))]

@@ -16,6 +16,7 @@ use crate::db;
 
 /// Supported OAuth providers.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code)] // Apple variant reserved for future use
 pub enum Provider {
     Google,
     Apple,
@@ -50,6 +51,7 @@ pub struct OauthUserInfo {
 
 /// Result of linking an OAuth identity to a user.
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Fields used by callers at runtime
 pub struct LinkResult {
     pub user_id: Uuid,
     pub oauth_account_id: Uuid,

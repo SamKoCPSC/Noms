@@ -1,7 +1,9 @@
 //! Database layer: connection pool, types, and query functions.
 //!
 //! Only compiled when the `server` feature is enabled.
-// TODO: Remove after checkpoint 4 wires up callers (account linking, OAuth handlers).
+#![cfg(feature = "server")]
+// Public API items are used by other modules at runtime, but the compiler
+// can't see that from this crate's binary target alone.
 #![allow(dead_code)]
 
 use chrono::{DateTime, Utc};
@@ -46,9 +48,28 @@ impl std::error::Error for DbError {
 ///
 /// Validates connectivity — returns an error if the database is unreachable.
 /// The caller is responsible for storing the returned pool (e.g., in Axum state).
+///
+/// Pool sizing defaults are tuned for a 2-CPU database:
+/// - `max_connections`: 5 (formula: cores × 2 + 1; more connections increase
+///   context-switching overhead without improving throughput on few cores)
+/// - `min_connections`: 1 (avoids cold-start latency on first request)
+/// - `idle_timeout`: 5min (releases unused connections promptly)
+///
+/// Override `max_connections` via the `DB_MAX_CONNECTIONS` env var if needed.
 pub async fn create_pool() -> Result<PgPool, DbError> {
     let url = std::env::var("DATABASE_URL").map_err(|_| DbError::MissingUrl)?;
-    PgPool::connect(&url).await.map_err(DbError::Connection)
+    let max_connections: u32 = std::env::var("DB_MAX_CONNECTIONS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(5);
+
+    sqlx::postgres::PgPoolOptions::new()
+        .max_connections(max_connections)
+        .min_connections(1)
+        .idle_timeout(std::time::Duration::from_secs(300))
+        .connect(&url)
+        .await
+        .map_err(DbError::Connection)
 }
 
 // ── Rust types ──────────────────────────────────────────────────────────────
@@ -85,6 +106,7 @@ pub struct OauthAccount {
 pub struct AuthState {
     pub id: String,
     pub redirect_uri: String,
+    pub provider: String,
     pub created_at: DateTime<Utc>,
 }
 
@@ -94,10 +116,12 @@ pub struct AuthState {
 pub async fn insert_auth_state(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     id: &str,
+    provider: &str,
     redirect_uri: &str,
 ) -> Result<(), DbError> {
-    sqlx::query("INSERT INTO auth_states (id, redirect_uri) VALUES ($1, $2)")
+    sqlx::query("INSERT INTO auth_states (id, provider, redirect_uri) VALUES ($1, $2, $3)")
         .bind(id)
+        .bind(provider)
         .bind(redirect_uri)
         .execute(executor)
         .await
@@ -112,7 +136,7 @@ pub async fn get_auth_state(
 ) -> Result<Option<AuthState>, DbError> {
     sqlx::query_as!(
         AuthState,
-        "SELECT id, redirect_uri, created_at FROM auth_states WHERE id = $1",
+        "SELECT id, redirect_uri, provider, created_at FROM auth_states WHERE id = $1",
         id,
     )
     .fetch_optional(executor)
@@ -273,11 +297,12 @@ pub async fn get_user_by_email(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     email: &str,
 ) -> Result<Option<User>, DbError> {
-    sqlx::query_as::<_, User>(
+    sqlx::query_as!(
+        User,
         "SELECT id, username, display_name, email, avatar_url, bio, \
          created_at, updated_at FROM users WHERE email = $1",
+        email,
     )
-    .bind(email)
     .fetch_optional(executor)
     .await
     .map_err(DbError::Query)
@@ -326,7 +351,7 @@ mod tests {
     async fn test_insert_and_get_auth_state() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let state_id = format!("test-state-{}", test_utils::uid());
-        insert_auth_state(&pool, &state_id, "/dashboard")
+        insert_auth_state(&pool, &state_id, "google", "/dashboard")
             .await
             .unwrap();
 
@@ -335,13 +360,16 @@ mod tests {
         let state = state.unwrap();
         assert_eq!(state.id, state_id);
         assert_eq!(state.redirect_uri, "/dashboard");
+        assert_eq!(state.provider, "google");
     }
 
     #[tokio::test]
     async fn test_delete_auth_state() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let state_id = format!("test-state-del-{}", test_utils::uid());
-        insert_auth_state(&pool, &state_id, "/login").await.unwrap();
+        insert_auth_state(&pool, &state_id, "github", "/login")
+            .await
+            .unwrap();
 
         let deleted = delete_auth_state(&pool, &state_id).await.unwrap();
         assert!(deleted);

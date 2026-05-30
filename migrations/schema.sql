@@ -43,6 +43,7 @@ CREATE INDEX IF NOT EXISTS idx_oauth_accounts_user_id ON oauth_accounts(user_id)
 CREATE TABLE IF NOT EXISTS auth_states (
     id VARCHAR(64) PRIMARY KEY,
     redirect_uri TEXT NOT NULL,
+    provider TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

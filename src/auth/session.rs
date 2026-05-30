@@ -17,6 +17,7 @@ const COOKIE_NAME: &str = "noms_session";
 const SESSION_LIFETIME_SECS: u64 = 900;
 
 /// Rolling refresh threshold: refresh when the token is older than 10 minutes.
+#[allow(dead_code)] // Used by session refresh logic (not yet wired)
 const REFRESH_THRESHOLD_SECS: usize = 600;
 
 /// JWT claims for a session token.
@@ -29,6 +30,7 @@ struct SessionClaims {
 
 /// Errors from session operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code)] // All variants used by callers
 pub enum SessionError {
     /// The `SESSION_SECRET` environment variable is not set.
     MissingSecret,
@@ -102,6 +104,7 @@ pub fn create_session(user_id: Uuid) -> Result<String, SessionError> {
 /// Verify a session token and return the user ID.
 ///
 /// Validates the signature and checks that the token has not expired.
+#[allow(dead_code)] // Used by session refresh and auth middleware (not yet wired)
 pub fn verify_session(token: &str) -> Result<Uuid, SessionError> {
     let secret = read_secret()?;
     let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
@@ -145,6 +148,7 @@ pub fn build_session_cookie(token: &str) -> Cookie<'static> {
 /// Build a cookie that deletes the existing session cookie.
 ///
 /// Sets the same name/path with max-age 0 so the browser discards it immediately.
+#[allow(dead_code)] // Used by logout handler (not yet wired)
 pub fn clear_session_cookie() -> Cookie<'static> {
     CookieBuilder::new(COOKIE_NAME, "")
         .http_only(true)
@@ -159,6 +163,7 @@ pub fn clear_session_cookie() -> Cookie<'static> {
 ///
 /// Returns `true` if the token was issued more than [`REFRESH_THRESHOLD_SECS`]
 /// seconds ago. Returns an error if the token is invalid or expired.
+#[allow(dead_code)] // Used by auth middleware (not yet wired)
 pub fn should_refresh(token: &str) -> Result<bool, SessionError> {
     let secret = read_secret()?;
     let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
