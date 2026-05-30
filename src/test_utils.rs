@@ -88,12 +88,10 @@ pub async fn apply_test_schema(pool: &PgPool) {
         .await
         .expect("failed to create email index");
 
-    sqlx::query(
-        "CREATE INDEX IF NOT EXISTS idx_oauth_accounts_user_id ON oauth_accounts(user_id)",
-    )
-    .execute(pool)
-    .await
-    .expect("failed to create user_id index");
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_oauth_accounts_user_id ON oauth_accounts(user_id)")
+        .execute(pool)
+        .await
+        .expect("failed to create user_id index");
 
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS auth_states (\
@@ -106,12 +104,10 @@ pub async fn apply_test_schema(pool: &PgPool) {
     .await
     .expect("failed to create auth_states table");
 
-    sqlx::query(
-        "CREATE INDEX IF NOT EXISTS idx_auth_states_created_at ON auth_states(created_at)",
-    )
-    .execute(pool)
-    .await
-    .expect("failed to create auth_states created_at index");
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_auth_states_created_at ON auth_states(created_at)")
+        .execute(pool)
+        .await
+        .expect("failed to create auth_states created_at index");
 }
 
 /// Generate a unique 8-character suffix for test data to avoid duplicate key conflicts.

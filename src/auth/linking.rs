@@ -230,8 +230,14 @@ pub async fn link_or_create(pool: &PgPool, info: OauthUserInfo) -> Result<LinkRe
         }
     };
     let avatar_url = info.avatar_url.as_deref();
-    let user = db::insert_user(tx.deref_mut(), &username, &info.display_name, email, avatar_url)
-        .await?;
+    let user = db::insert_user(
+        tx.deref_mut(),
+        &username,
+        &info.display_name,
+        email,
+        avatar_url,
+    )
+    .await?;
     let account = db::insert_oauth_account(
         tx.deref_mut(),
         user.id,
@@ -433,7 +439,10 @@ mod tests {
         assert!(result.is_new_user);
 
         // Verify user was created
-        let user = db::get_user_by_id(&pool, result.user_id).await.unwrap().unwrap();
+        let user = db::get_user_by_id(&pool, result.user_id)
+            .await
+            .unwrap()
+            .unwrap();
         assert!(user.username.starts_with("new-user"));
         assert_eq!(user.email, format!("new{u}@example.com"));
     }
@@ -460,13 +469,19 @@ mod tests {
             .unwrap();
 
             assert!(result.is_new_user);
-            let user = db::get_user_by_id(&pool, result.user_id).await.unwrap().unwrap();
+            let user = db::get_user_by_id(&pool, result.user_id)
+                .await
+                .unwrap()
+                .unwrap();
             assert!(user.username.starts_with("same-name-"));
             usernames.push(user.username);
         }
 
         // All usernames should be unique
-        let unique_count = usernames.iter().collect::<std::collections::HashSet<_>>().len();
+        let unique_count = usernames
+            .iter()
+            .collect::<std::collections::HashSet<_>>()
+            .len();
         assert_eq!(unique_count, 3, "usernames should be unique: {usernames:?}");
     }
 
@@ -491,7 +506,10 @@ mod tests {
         assert!(result.is_new_user);
 
         // Verify user was created with a placeholder email
-        let user = db::get_user_by_id(&pool, result.user_id).await.unwrap().unwrap();
+        let user = db::get_user_by_id(&pool, result.user_id)
+            .await
+            .unwrap()
+            .unwrap();
         assert!(
             user.email.starts_with("noreply+"),
             "email should start with noreply+: {}",
@@ -509,14 +527,11 @@ mod tests {
         );
 
         // Verify OAuth account email is None
-        let oauth = db::get_oauth_account_by_provider(
-            &pool,
-            "github",
-            &format!("github-noemail-{u}"),
-        )
-        .await
-        .unwrap()
-        .unwrap();
+        let oauth =
+            db::get_oauth_account_by_provider(&pool, "github", &format!("github-noemail-{u}"))
+                .await
+                .unwrap()
+                .unwrap();
         assert!(oauth.email.is_none(), "OAuth account email should be None");
     }
 
@@ -545,7 +560,10 @@ mod tests {
             .unwrap();
 
             assert!(result.is_new_user);
-            let user = db::get_user_by_id(&pool, result.user_id).await.unwrap().unwrap();
+            let user = db::get_user_by_id(&pool, result.user_id)
+                .await
+                .unwrap()
+                .unwrap();
             assert!(
                 user.username.starts_with("collision-test-") || user.username.starts_with("user-"),
                 "unexpected username: {}",
@@ -555,10 +573,12 @@ mod tests {
         }
 
         // All usernames should be unique even with the same display name
-        let unique_count = usernames.iter().collect::<std::collections::HashSet<_>>().len();
+        let unique_count = usernames
+            .iter()
+            .collect::<std::collections::HashSet<_>>()
+            .len();
         assert_eq!(
-            unique_count,
-            10,
+            unique_count, 10,
             "usernames should be unique: {usernames:?}"
         );
     }
