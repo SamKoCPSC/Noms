@@ -255,126 +255,47 @@ pub async fn get_user_by_id(
     .map_err(DbError::Query)
 }
 
+/// Check whether a username already exists.
+pub async fn get_user_by_username(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    username: &str,
+) -> Result<bool, DbError> {
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)",
+    )
+    .bind(username)
+    .fetch_one(executor)
+    .await
+    .map_err(DbError::Query)?;
+    Ok(exists)
+}
+
+/// Get a user by email address.
+pub async fn get_user_by_email(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    email: &str,
+) -> Result<Option<User>, DbError> {
+    sqlx::query_as::<_, User>(
+        "SELECT id, username, display_name, email, avatar_url, bio, \
+         created_at, updated_at FROM users WHERE email = $1",
+    )
+    .bind(email)
+    .fetch_optional(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pgtemp::PgTempDB;
-
-    /// Spawn a fresh temporary PostgreSQL database and apply the NOMS schema.
-    /// Each test gets its own isolated database — no shared state, no cleanup needed.
-    async fn setup_test_db() -> (PgTempDB, PgPool) {
-        let db = PgTempDB::async_new().await;
-        let pool = PgPool::connect(&db.connection_uri())
-            .await
-            .expect("failed to connect to temp database");
-        apply_test_schema(&pool).await;
-        (db, pool)
-    }
-
-    /// Create tables and extensions needed for tests.
-    /// Uses raw (non-macro) queries so this works without compile-time checking.
-    async fn apply_test_schema(pool: &PgPool) {
-        sqlx::query("CREATE EXTENSION IF NOT EXISTS pgcrypto")
-            .execute(pool)
-            .await
-            .expect("failed to create pgcrypto extension");
-
-        // pg_cron is optional — skip silently if the extension binary isn't installed.
-        let _ = sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_cron")
-            .execute(pool)
-            .await;
-
-        // timescaledb, pg_trgm, vector, and pg_search are optional in tests — skip silently if not installed.
-        let _ = sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_trgm")
-            .execute(pool)
-            .await;
-        let _ = sqlx::query("CREATE EXTENSION IF NOT EXISTS vector")
-            .execute(pool)
-            .await;
-        let _ = sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_search")
-            .execute(pool)
-            .await;
-        let _ = sqlx::query("CREATE EXTENSION IF NOT EXISTS timescaledb")
-            .execute(pool)
-            .await;
-
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS users (\
-             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\
-             username VARCHAR(30) UNIQUE NOT NULL,\
-             display_name VARCHAR(100) NOT NULL,\
-             email VARCHAR(255) UNIQUE NOT NULL,\
-             avatar_url TEXT,\
-             bio TEXT,\
-             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
-             updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
-             )",
-        )
-        .execute(pool)
-        .await
-        .expect("failed to create users table");
-
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS oauth_accounts (\
-             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\
-             user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,\
-             provider VARCHAR(20) NOT NULL,\
-             provider_user_id VARCHAR(255) NOT NULL,\
-             email VARCHAR(255),\
-             email_verified BOOLEAN NOT NULL DEFAULT FALSE,\
-             profile_data JSONB,\
-             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
-             last_used_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
-             UNIQUE(provider, provider_user_id),\
-             CONSTRAINT valid_oauth_provider CHECK (provider IN ('google', 'apple', 'github'))\
-             )",
-        )
-        .execute(pool)
-        .await
-        .expect("failed to create oauth_accounts table");
-
-        sqlx::query("CREATE INDEX IF NOT EXISTS idx_oauth_accounts_email ON oauth_accounts(email)")
-            .execute(pool)
-            .await
-            .expect("failed to create email index");
-
-        sqlx::query(
-            "CREATE INDEX IF NOT EXISTS idx_oauth_accounts_user_id ON oauth_accounts(user_id)",
-        )
-        .execute(pool)
-        .await
-        .expect("failed to create user_id index");
-
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS auth_states (\
-             id VARCHAR(64) PRIMARY KEY,\
-             redirect_uri TEXT NOT NULL,\
-             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
-             )",
-        )
-        .execute(pool)
-        .await
-        .expect("failed to create auth_states table");
-
-        sqlx::query(
-            "CREATE INDEX IF NOT EXISTS idx_auth_states_created_at ON auth_states(created_at)",
-        )
-        .execute(pool)
-        .await
-        .expect("failed to create auth_states created_at index");
-    }
-
-    /// Generate a unique suffix for test data to avoid duplicate key conflicts.
-    fn uid() -> String {
-        Uuid::new_v4().to_string()[..8].to_string()
-    }
+    use crate::test_utils;
 
     #[tokio::test]
     async fn test_insert_and_get_user() {
-        let (_db, pool) = setup_test_db().await;
-        let u = uid();
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
         let user = insert_user(
             &pool,
             &format!("testuser_{u}"),
@@ -397,7 +318,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_nonexistent_user() {
-        let (_db, pool) = setup_test_db().await;
+        let (_db, pool) = test_utils::setup_test_db().await;
         let fake_id = Uuid::nil();
         let result = get_user_by_id(&pool, fake_id).await.unwrap();
         assert!(result.is_none());
@@ -405,8 +326,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_insert_and_get_auth_state() {
-        let (_db, pool) = setup_test_db().await;
-        let state_id = format!("test-state-{}", uid());
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let state_id = format!("test-state-{}", test_utils::uid());
         insert_auth_state(&pool, &state_id, "/dashboard")
             .await
             .unwrap();
@@ -420,8 +341,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_delete_auth_state() {
-        let (_db, pool) = setup_test_db().await;
-        let state_id = format!("test-state-del-{}", uid());
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let state_id = format!("test-state-del-{}", test_utils::uid());
         insert_auth_state(&pool, &state_id, "/login").await.unwrap();
 
         let deleted = delete_auth_state(&pool, &state_id).await.unwrap();
@@ -438,8 +359,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_insert_and_get_oauth_account() {
-        let (_db, pool) = setup_test_db().await;
-        let u = uid();
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
 
         // Create a user first
         let user = insert_user(
@@ -484,8 +405,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_oauth_last_used() {
-        let (_db, pool) = setup_test_db().await;
-        let u = uid();
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
 
         let user = insert_user(
             &pool,

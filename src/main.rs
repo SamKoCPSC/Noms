@@ -5,6 +5,8 @@ mod components;
 #[cfg(feature = "server")]
 mod db;
 mod pages;
+#[cfg(all(feature = "server", test))]
+mod test_utils;
 mod utils;
 
 use components::{AppLayout, ErrorFallback};

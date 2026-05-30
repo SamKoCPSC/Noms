@@ -3,4 +3,5 @@
 #![cfg(feature = "server")]
 #![allow(dead_code)]
 
+pub mod linking;
 pub mod session;
