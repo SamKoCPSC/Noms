@@ -20,7 +20,10 @@ pub fn Navbar(theme: UseTheme) -> Element {
         .as_ref()
         .map(|u| u.username.clone())
         .unwrap_or_else(|| "User".to_string());
-    let avatar_src = auth.current_user.as_ref().and_then(|u| u.avatar_url.clone());
+    let avatar_src = auth
+        .current_user
+        .as_ref()
+        .and_then(|u| u.avatar_url.clone());
 
     rsx! {
         nav {

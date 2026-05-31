@@ -165,7 +165,9 @@ mod tests {
         assert!(!is_safe_redirect_uri("//evil.com/phishing"));
 
         // Data URIs
-        assert!(!is_safe_redirect_uri("data:text/html,<script>alert(1)</script>"));
+        assert!(!is_safe_redirect_uri(
+            "data:text/html,<script>alert(1)</script>"
+        ));
 
         // JavaScript URIs
         assert!(!is_safe_redirect_uri("javascript:alert(document.cookie)"));
@@ -190,9 +192,15 @@ mod tests {
 
     #[test]
     fn parse_redirect_uri_invalid_falls_back() {
-        assert_eq!(parse_redirect_uri("redirect_uri=https://evil.com"), "/dashboard");
+        assert_eq!(
+            parse_redirect_uri("redirect_uri=https://evil.com"),
+            "/dashboard"
+        );
         assert_eq!(parse_redirect_uri("redirect_uri=//evil.com"), "/dashboard");
-        assert_eq!(parse_redirect_uri("redirect_uri=javascript:alert(1)"), "/dashboard");
+        assert_eq!(
+            parse_redirect_uri("redirect_uri=javascript:alert(1)"),
+            "/dashboard"
+        );
         assert_eq!(parse_redirect_uri("redirect_uri="), "/dashboard");
         assert_eq!(parse_redirect_uri("foo=bar"), "/dashboard");
     }

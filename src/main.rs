@@ -89,9 +89,8 @@ fn main() {
             let dioxus_router = axum::Router::new()
                 .layer(axum::middleware::from_fn(middleware::auth::handle_auth))
                 .serve_dioxus_application(
-                    ServeConfig::new().context_provider(|| {
-                        auth::context::build_context_from_fullstack()
-                    }),
+                    ServeConfig::new()
+                        .context_provider(auth::context::build_context_from_fullstack),
                     App,
                 );
 

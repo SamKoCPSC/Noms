@@ -34,9 +34,8 @@ static PROTECTED_PATHS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
 });
 
 /// Routes that redirect authenticated users away.
-static REDIRECT_IF_AUTHED_PATHS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
-    ["/login"].into_iter().collect()
-});
+static REDIRECT_IF_AUTHED_PATHS: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| ["/login"].into_iter().collect());
 
 /// Axum middleware handler for route protection.
 ///
@@ -44,10 +43,7 @@ static REDIRECT_IF_AUTHED_PATHS: LazyLock<HashSet<&'static str>> = LazyLock::new
 /// - Injects `AuthUser` into request extensions for downstream handlers
 /// - Returns a 302 redirect to `/login` for unauthenticated users on protected paths
 /// - Returns a 302 redirect to `/dashboard` for authenticated users on `/login`
-pub async fn handle_auth(
-    mut req: Request<Body>,
-    next: Next,
-) -> Response<Body> {
+pub async fn handle_auth(mut req: Request<Body>, next: Next) -> Response<Body> {
     let path = req.uri().path().to_string();
 
     // Extract session cookie from headers
@@ -55,8 +51,8 @@ pub async fn handle_auth(
 
     // Check for valid session
     let session_token = jar.get(session::COOKIE_NAME);
-    let verified_user_id = session_token
-        .and_then(|cookie| session::verify_session(cookie.value()).ok());
+    let verified_user_id =
+        session_token.and_then(|cookie| session::verify_session(cookie.value()).ok());
 
     let is_authenticated = verified_user_id.is_some();
 
@@ -71,11 +67,9 @@ pub async fn handle_auth(
 
     // Redirect unauthenticated users from protected paths to login
     if !is_authenticated && is_protected {
-        let encoded = percent_encoding::utf8_percent_encode(
-            &path,
-            percent_encoding::NON_ALPHANUMERIC,
-        )
-        .to_string();
+        let encoded =
+            percent_encoding::utf8_percent_encode(&path, percent_encoding::NON_ALPHANUMERIC)
+                .to_string();
         let location = format!("/login?redirect_uri={encoded}");
         return redirect_to(&location);
     }
@@ -94,7 +88,9 @@ fn redirect_to(location: &str) -> Response<Body> {
     let mut headers = axum::http::HeaderMap::new();
     headers.insert(
         axum::http::header::LOCATION,
-        location.parse().expect("redirect location must be a valid HeaderValue"),
+        location
+            .parse()
+            .expect("redirect location must be a valid HeaderValue"),
     );
     (StatusCode::FOUND, headers, Body::empty()).into_response()
 }
