@@ -1,25 +1,26 @@
 use dioxus::prelude::*;
 
+use crate::auth::context::use_auth;
 use crate::components::base::{Avatar, AvatarSize};
 use crate::utils::theme::UseTheme;
 use crate::Route;
 
-/// Placeholder user for visual testing (not wired to real auth).
-struct MockUser {
-    username: &'static str,
-}
-
 /// Top navigation bar with glassmorphic styling.
 ///
 /// Responsive: collapses to a hamburger menu on screens < 768px.
+/// Auth state is read from the `AuthContext` provided by the server.
 #[component]
 pub fn Navbar(theme: UseTheme) -> Element {
     let mut menu_open = use_signal(|| false);
+    let auth = use_auth();
 
-    // Hardcoded mock user for visual testing
-    let mock_user: Option<MockUser> = None;
-    // Toggle to `Some` to test the signed-in state:
-    // let mock_user: Option<MockUser> = Some(MockUser { username: "Chef" });
+    let is_signed_in = auth.is_authenticated;
+    let display_name = auth
+        .current_user
+        .as_ref()
+        .map(|u| u.username.clone())
+        .unwrap_or_else(|| "User".to_string());
+    let avatar_src = auth.current_user.as_ref().and_then(|u| u.avatar_url.clone());
 
     rsx! {
         nav {
@@ -41,13 +42,14 @@ pub fn Navbar(theme: UseTheme) -> Element {
 
                 // Right side: auth + theme toggle (desktop)
                 div { class: "navbar-actions",
-                    if let Some(ref user) = mock_user {
+                    if is_signed_in {
                         div { class: "navbar-user",
                             Avatar {
                                 size: AvatarSize::Small,
-                                username: user.username.to_string(),
+                                src: avatar_src.clone(),
+                                username: display_name.clone(),
                             }
-                            span { class: "navbar-username", "{user.username}" }
+                            span { class: "navbar-username", "{display_name}" }
                         }
                     } else {
                         Link {
@@ -117,11 +119,13 @@ pub fn Navbar(theme: UseTheme) -> Element {
                                 onclick: move |_| menu_open.set(false),
                                 "New Recipe"
                             }
-                            Link {
-                                to: Route::Login {},
-                                class: "navbar-drawer-link",
-                                onclick: move |_| menu_open.set(false),
-                                "Sign In"
+                            if !is_signed_in {
+                                Link {
+                                    to: Route::Login {},
+                                    class: "navbar-drawer-link",
+                                    onclick: move |_| menu_open.set(false),
+                                    "Sign In"
+                                }
                             }
                         }
 

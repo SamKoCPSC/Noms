@@ -37,6 +37,8 @@ pub struct UserProfile {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AuthContext {
     pub current_user_id: Option<Uuid>,
+    /// Full user profile when available (populated via async fetch in future).
+    pub current_user: Option<UserProfile>,
     pub is_authenticated: bool,
 }
 
@@ -46,7 +48,6 @@ pub struct AuthContext {
 /// the context is populated per-request from the auth middleware's
 /// request extensions via `FullstackContext::extension`. On the client,
 /// it hydrates from the server-rendered initial state.
-#[allow(dead_code)] // Consumed by Dioxus page components
 pub fn use_auth() -> AuthContext {
     use_context::<AuthContext>()
 }
@@ -75,6 +76,7 @@ pub fn build_context_from_fullstack() -> AuthContext {
 
     AuthContext {
         current_user_id: Some(auth_user.user_id),
+        current_user: None, // TODO: fetch full profile via async server fn
         is_authenticated: true,
     }
 }
