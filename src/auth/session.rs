@@ -11,7 +11,7 @@ use time::Duration as TimeDuration;
 use uuid::Uuid;
 
 /// Cookie name for the session token.
-const COOKIE_NAME: &str = "noms_session";
+pub const COOKIE_NAME: &str = "noms_session";
 
 /// Session lifetime: 15 minutes.
 const SESSION_LIFETIME_SECS: u64 = 900;

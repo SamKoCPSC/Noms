@@ -1,7 +1,10 @@
 //! Authentication module.
-//! Only compiled when the `server` feature is enabled.
-#![cfg(feature = "server")]
 
+pub mod context;
+
+#[cfg(feature = "server")]
 pub mod linking;
+#[cfg(feature = "server")]
 pub mod oauth;
+#[cfg(feature = "server")]
 pub mod session;

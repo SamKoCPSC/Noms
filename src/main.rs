@@ -6,6 +6,8 @@ mod auth;
 mod components;
 #[cfg(feature = "server")]
 mod db;
+#[cfg(feature = "server")]
+mod middleware;
 mod pages;
 #[cfg(all(feature = "server", test))]
 mod test_utils;
@@ -80,11 +82,18 @@ fn main() {
     // Build a custom Axum Router with OAuth routes and the Dioxus application.
     // The Dioxus router handles all non-API routes (SSR), and our OAuth routes
     // handle /auth/{provider}/start and /auth/{provider}/callback.
+    // Auth middleware protects routes and injects user into request extensions.
     dioxus::server::serve(move || {
         let state = state.clone();
         async move {
-            let dioxus_router =
-                axum::Router::new().serve_dioxus_application(ServeConfig::new(), App);
+            let dioxus_router = axum::Router::new()
+                .layer(axum::middleware::from_fn(middleware::auth::handle_auth))
+                .serve_dioxus_application(
+                    ServeConfig::new().context_provider(|| {
+                        auth::context::build_context_from_fullstack()
+                    }),
+                    App,
+                );
 
             let oauth_router = axum::Router::new()
                 .route(
