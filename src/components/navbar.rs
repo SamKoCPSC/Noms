@@ -18,7 +18,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
     let display_name = auth
         .current_user
         .as_ref()
-        .map(|u| u.username.clone())
+        .map(|u| u.display_name.clone())
         .unwrap_or_else(|| "User".to_string());
     let avatar_src = auth
         .current_user

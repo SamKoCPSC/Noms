@@ -300,10 +300,31 @@ pub async fn get_user_by_email(
     sqlx::query_as!(
         User,
         "SELECT id, username, display_name, email, avatar_url, bio, \
-         created_at, updated_at FROM users WHERE email = $1",
+          created_at, updated_at FROM users WHERE email = $1",
         email,
     )
     .fetch_optional(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Update a user's display name and bio. Returns the updated user record.
+pub async fn update_user_profile(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    user_id: Uuid,
+    display_name: &str,
+    bio: Option<&str>,
+) -> Result<User, DbError> {
+    sqlx::query_as!(
+        User,
+        "UPDATE users SET display_name = $2, bio = $3, updated_at = NOW() \
+         WHERE id = $1 \
+         RETURNING id, username, display_name, email, avatar_url, bio, created_at, updated_at",
+        user_id,
+        display_name,
+        bio,
+    )
+    .fetch_one(executor)
     .await
     .map_err(DbError::Query)
 }
@@ -467,5 +488,64 @@ mod tests {
             .unwrap()
             .unwrap();
         assert!(updated.last_used_at >= before);
+    }
+
+    #[tokio::test]
+    async fn test_update_user_profile() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("profileuser_{u}"),
+            "Original Name",
+            &format!("profile{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let updated = update_user_profile(&pool, user.id, "New Name", Some("Hello world"))
+            .await
+            .unwrap();
+
+        assert_eq!(updated.id, user.id);
+        assert_eq!(updated.display_name, "New Name");
+        assert_eq!(updated.bio, Some("Hello world".to_string()));
+
+        // Verify persisted
+        let found = get_user_by_id(&pool, user.id).await.unwrap().unwrap();
+        assert_eq!(found.display_name, "New Name");
+        assert_eq!(found.bio, Some("Hello world".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_update_user_profile_clears_bio() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("clearbio_{u}"),
+            "Clear Bio User",
+            &format!("clearbio{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let updated = update_user_profile(&pool, user.id, "Still Name", None)
+            .await
+            .unwrap();
+
+        assert_eq!(updated.bio, None);
+    }
+
+    #[tokio::test]
+    async fn test_update_user_profile_nonexistent() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let fake_id = Uuid::nil();
+        let result = update_user_profile(&pool, fake_id, "No One", None).await;
+        assert!(result.is_err());
     }
 }

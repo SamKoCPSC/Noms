@@ -8,15 +8,18 @@ use std::collections::HashSet;
 use std::sync::LazyLock;
 
 use axum::body::Body;
+use axum::extract::State;
 use axum::http::Request;
 use axum::http::Response;
 use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::IntoResponse;
 use axum_extra::extract::cookie::CookieJar;
+use sqlx::PgPool;
 
-use crate::auth::context::AuthUser;
+use crate::auth::context::{AuthUser, AuthUserProfile, UserProfile};
 use crate::auth::session;
+use crate::db;
 
 /// Protected routes that require authentication.
 ///
@@ -40,10 +43,14 @@ static REDIRECT_IF_AUTHED_PATHS: LazyLock<HashSet<&'static str>> =
 /// Axum middleware handler for route protection.
 ///
 /// Reads the session cookie, verifies the JWT, and either:
-/// - Injects `AuthUser` into request extensions for downstream handlers
+/// - Injects `AuthUser` and `AuthUserProfile` into request extensions for downstream handlers
 /// - Returns a 302 redirect to `/login` for unauthenticated users on protected paths
 /// - Returns a 302 redirect to `/dashboard` for authenticated users on `/login`
-pub async fn handle_auth(mut req: Request<Body>, next: Next) -> Response<Body> {
+pub async fn handle_auth(
+    State(pool): State<PgPool>,
+    mut req: Request<Body>,
+    next: Next,
+) -> Response<Body> {
     let path = req.uri().path().to_string();
 
     // Extract session cookie from headers
@@ -77,6 +84,16 @@ pub async fn handle_auth(mut req: Request<Body>, next: Next) -> Response<Body> {
     // Inject user into extensions if authenticated
     if let Some(user_id) = verified_user_id {
         req.extensions_mut().insert(AuthUser { user_id });
+        if let Ok(Some(user)) = db::get_user_by_id(&pool, user_id).await {
+            let profile = UserProfile {
+                id: user.id,
+                username: user.username,
+                display_name: user.display_name,
+                avatar_url: user.avatar_url,
+                bio: user.bio,
+            };
+            req.extensions_mut().insert(AuthUserProfile { profile });
+        }
     }
 
     // Continue to the next handler

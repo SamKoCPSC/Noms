@@ -20,6 +20,16 @@ pub struct AuthUser {
     pub user_id: Uuid,
 }
 
+/// User profile extension injected into request extensions by the auth middleware.
+///
+/// Contains the full user profile fetched from the database. Read by
+/// `build_context_from_fullstack()` to populate the Dioxus `AuthContext`.
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+pub struct AuthUserProfile {
+    pub profile: UserProfile,
+}
+
 /// User profile exposed to Dioxus components.
 ///
 /// Populated by a server function that fetches the full user record from the
@@ -31,6 +41,7 @@ pub struct UserProfile {
     pub username: String,
     pub display_name: String,
     pub avatar_url: Option<String>,
+    pub bio: Option<String>,
 }
 
 /// Authentication context consumed by Dioxus components via [`use_auth`].
@@ -74,9 +85,17 @@ pub fn build_context_from_fullstack() -> AuthContext {
         return AuthContext::default();
     };
 
+    let Some(profile_ext) = fsc.extension::<AuthUserProfile>() else {
+        return AuthContext {
+            current_user_id: Some(auth_user.user_id),
+            current_user: None,
+            is_authenticated: true,
+        };
+    };
+
     AuthContext {
         current_user_id: Some(auth_user.user_id),
-        current_user: None, // TODO: fetch full profile via async server fn
+        current_user: Some(profile_ext.profile),
         is_authenticated: true,
     }
 }

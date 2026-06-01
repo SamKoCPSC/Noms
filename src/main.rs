@@ -73,7 +73,7 @@ fn main() {
     let (google_client, github_client) = auth::oauth::build_oauth_clients(&base_url);
 
     let state = auth::oauth::AppState {
-        pool,
+        pool: pool.clone(),
         google_client,
         github_client,
         http_client: reqwest::Client::new(),
@@ -85,9 +85,14 @@ fn main() {
     // Auth middleware protects routes and injects user into request extensions.
     dioxus::server::serve(move || {
         let state = state.clone();
+        let pool = pool.clone();
         async move {
             let dioxus_router = axum::Router::new()
-                .layer(axum::middleware::from_fn(middleware::auth::handle_auth))
+                .layer(axum::Extension(pool.clone()))
+                .layer(axum::middleware::from_fn_with_state(
+                    pool.clone(),
+                    middleware::auth::handle_auth,
+                ))
                 .serve_dioxus_application(
                     ServeConfig::new()
                         .context_provider(auth::context::build_context_from_fullstack),
