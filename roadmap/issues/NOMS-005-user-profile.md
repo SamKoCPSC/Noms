@@ -59,6 +59,19 @@ NOMS-004 delivered functional OAuth authentication but deferred several items:
 - [ ] Middleware auto-issues a refreshed token and sets a new cookie in the response
 - [ ] User is not logged out mid-session due to token expiry
 
+### AC6: Account deletion with 3-layer confirmation
+
+- [ ] "Delete Account" section at bottom of `/settings/profile` with Danger-styled button
+- [ ] 3-layer confirmation flow:
+  1. Initial confirmation dialog: "Are you sure? This will permanently delete your account and all associated data."
+  2. Typed confirmation: user must type exactly `delete <username>` to proceed (input validated in real-time)
+  3. Final confirmation: "This cannot be undone. Delete now?" with explicit Delete button
+- [ ] Server function `delete_account()` deletes the user row from `users` table
+- [ ] All associated data is deleted: `oauth_accounts` rows cascade via `ON DELETE CASCADE`
+- [ ] Session cookie is invalidated on successful deletion (set expired `Set-Cookie`)
+- [ ] User is redirected to `/` after deletion with unauthenticated state
+- [ ] Error handling: if deletion fails, dialog closes with error message displayed inline
+
 ## Technical Details
 
 ### Database Schema (existing, no changes needed)
@@ -100,6 +113,7 @@ CREATE TABLE oauth_accounts (
 | `get_oauth_accounts_by_user(user_id)` | List linked accounts |
 | `delete_oauth_account(id, user_id)` | Unlink account |
 | `count_oauth_accounts(user_id)` | Block unlink if it's the last account |
+| `delete_user(id)` | Delete user (oauth_accounts cascade via FK) |
 
 ### New server functions
 
@@ -111,6 +125,7 @@ CREATE TABLE oauth_accounts (
 | `get_linked_accounts(user_id)` | GET | Fetch OAuth accounts for settings page |
 | `unlink_account(account_id)` | POST | Delete OAuth account link |
 | `logout()` | POST | Clear session cookie |
+| `delete_account()` | POST | Delete user + cascade, invalidate session, redirect |
 
 ### AuthContext changes
 
@@ -148,7 +163,7 @@ The tricky part: `context_provider` runs synchronously during SSR. Options:
 | Component | Change |
 |-----------|--------|
 | `Navbar` | Replace "User" fallback with real `current_user` data; add logout dropdown |
-| `SettingsProfile` | Wire form to server functions; show current values; handle save/error states |
+| `SettingsProfile` | Wire form to server functions; handle save/error states; add Danger Zone section with 3-layer account deletion flow |
 | `SettingsAccounts` | Fetch and display linked accounts; wire connect/unlink buttons |
 | `Login` | (deferred) email/password form — out of scope for this issue |
 
@@ -157,7 +172,7 @@ The tricky part: `context_provider` runs synchronously during SSR. Options:
 - Email/password authentication (separate issue)
 - Avatar upload (requires S3/R2 integration — Phase 2)
 - Two-factor authentication
-- Account deletion / GDPR data export
+- GDPR data export
 - Email verification flow
 - Password reset flow
 - Session management UI (active sessions list, revoke all)
@@ -173,10 +188,11 @@ The tricky part: `context_provider` runs synchronously during SSR. Options:
 | 5 | Account linking & unlinking | Connect new providers via OAuth flow; unlink with confirmation; block last account removal |
 | 6 | Logout | Sign-out button, session cookie clearing, redirect to home |
 | 7 | Session refresh | Auto-refresh expired-but-valid tokens in middleware; no mid-session logouts |
+| 8 | Account deletion | 3-layer confirmation dialog, user + oauth_accounts deletion, session invalidation, redirect to home |
 
 ## Success Metrics
 
-- User can sign in via OAuth → see their real name in navbar → edit profile → see linked accounts → sign out
-- All 7 checkpoints pass with tests (unit + integration)
+- User can sign in via OAuth → see their real name in navbar → edit profile → see linked accounts → delete account or sign out
+- All 8 checkpoints pass with tests (unit + integration)
 - Zero clippy warnings on both wasm32 and x86_64 targets
 - No unhandled error paths in server functions
