@@ -146,18 +146,12 @@ pub fn build_oauth_clients(base_url: &str) -> (ConfiguredClient, ConfiguredClien
         "mock-google-client-secret",
     )))
     .set_auth_uri(
-        AuthUrl::new(env_or(
-            "GOOGLE_AUTH_URL",
-            "http://localhost:8082/google/authorize",
-        ))
-        .expect("invalid Google auth URL"),
+        AuthUrl::new(env_or("GOOGLE_AUTH_URL", "http://localhost:8082/authorize"))
+            .expect("invalid Google auth URL"),
     )
     .set_token_uri(
-        TokenUrl::new(env_or(
-            "GOOGLE_TOKEN_URL",
-            "http://localhost:8082/google/token",
-        ))
-        .expect("invalid Google token URL"),
+        TokenUrl::new(env_or("GOOGLE_TOKEN_URL", "http://localhost:8082/token"))
+            .expect("invalid Google token URL"),
     )
     .set_redirect_uri(
         RedirectUrl::new(format!("{}/auth/google/callback", base_url))
@@ -173,18 +167,12 @@ pub fn build_oauth_clients(base_url: &str) -> (ConfiguredClient, ConfiguredClien
         "mock-github-client-secret",
     )))
     .set_auth_uri(
-        AuthUrl::new(env_or(
-            "GITHUB_AUTH_URL",
-            "http://localhost:8082/github/authorize",
-        ))
-        .expect("invalid GitHub auth URL"),
+        AuthUrl::new(env_or("GITHUB_AUTH_URL", "http://localhost:8082/authorize"))
+            .expect("invalid GitHub auth URL"),
     )
     .set_token_uri(
-        TokenUrl::new(env_or(
-            "GITHUB_TOKEN_URL",
-            "http://localhost:8082/github/token",
-        ))
-        .expect("invalid GitHub token URL"),
+        TokenUrl::new(env_or("GITHUB_TOKEN_URL", "http://localhost:8082/token"))
+            .expect("invalid GitHub token URL"),
     )
     .set_redirect_uri(
         RedirectUrl::new(format!("{}/auth/github/callback", base_url))

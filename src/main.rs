@@ -15,7 +15,6 @@ mod utils;
 
 use auth::context::{build_context_from_fullstack, AuthContext};
 use components::{AppLayout, ErrorFallback};
-use dioxus::prelude::provide_context;
 use pages::{
     CollectionDetail, CollectionList, Dashboard, Explore, Home, Login, RecipeDetail, RecipeNew,
     SettingsAccounts, SettingsProfile,
@@ -42,6 +41,8 @@ pub enum Route {
         CollectionDetail { id: i32 },
         #[route("/explore")]
         Explore {},
+        #[redirect("/settings", || Route::SettingsProfile {})]
+        #[route("/settings/profile")]
         #[route("/settings/profile")]
         SettingsProfile {},
         #[route("/settings/accounts")]
@@ -56,49 +57,48 @@ const GOOGLE_FONTS: &str = "https://fonts.googleapis.com/css2?family=Fredoka:wgh
 
 #[cfg(feature = "server")]
 fn main() {
-    // Create and validate the database connection pool.
-    // Uses a dedicated thread with its own runtime to avoid conflicting
-    // with Dioxus's own runtime management.
-    let pool = std::thread::spawn(|| {
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .expect("failed to create tokio runtime");
-        rt.block_on(db::create_pool())
-    })
-    .join()
-    .expect("database initialization thread panicked")
-    .expect("Failed to create database pool");
-
     let base_url =
-        std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
+        std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:8080".to_string());
     let (google_client, github_client) = auth::oauth::build_oauth_clients(&base_url);
-
-    let state = auth::oauth::AppState {
-        pool: pool.clone(),
-        google_client,
-        github_client,
-        http_client: reqwest::Client::new(),
-    };
 
     // Build a custom Axum Router with OAuth routes and the Dioxus application.
     // The Dioxus router handles all non-API routes (SSR), and our OAuth routes
     // handle /auth/{provider}/start and /auth/{provider}/callback.
     // Auth middleware protects routes and injects user into request extensions.
     dioxus::server::serve(move || {
-        let state = state.clone();
-        let pool = pool.clone();
+        let google_client = google_client.clone();
+        let github_client = github_client.clone();
         async move {
+            // Create pool lazily on Dioxus's runtime
+            static POOL: tokio::sync::OnceCell<sqlx::PgPool> = tokio::sync::OnceCell::const_new();
+            let pool = POOL
+                .get_or_init(|| async {
+                    db::create_pool()
+                        .await
+                        .expect("Failed to create database pool")
+                })
+                .await
+                .clone();
+            eprintln!("Database pool initialized");
+
+            let state = auth::oauth::AppState {
+                pool: pool.clone(),
+                google_client,
+                github_client,
+                http_client: reqwest::Client::new(),
+            };
             let dioxus_router = axum::Router::new()
                 .layer(axum::Extension(pool.clone()))
                 .layer(axum::middleware::from_fn_with_state(
                     pool.clone(),
                     middleware::auth::handle_auth,
                 ))
-                .serve_dioxus_application(
-                    ServeConfig::new().context_provider(build_context_from_fullstack),
-                    App,
-                );
+                .route(
+                    "/api/user_profile",
+                    axum::routing::get(auth::user_profile::handle_user_profile),
+                )
+                .with_state(auth::user_profile::UserProfileState { pool: pool.clone() })
+                .serve_dioxus_application(ServeConfig::new(), App);
 
             let oauth_router = axum::Router::new()
                 .route(
@@ -115,7 +115,7 @@ fn main() {
                 )
                 .with_state(state);
 
-            Ok(dioxus_router.merge(oauth_router))
+            Ok(oauth_router.merge(dioxus_router))
         }
     });
 }
@@ -127,11 +127,29 @@ fn main() {
 
 #[component]
 fn App() -> Element {
-    // Provide AuthContext at the root of the component tree so it's available
+    // Provide AuthContext as a signal at the root of the component tree so it's available
     // on both server (SSR) and client (hydration + client-side navigation).
-    // On the server, build_context_from_fullstack reads the middleware-injected
-    // extensions. On the client, it returns a default unauthenticated context.
-    use_hook(|| provide_context::<AuthContext>(build_context_from_fullstack()));
+    // We use a signal so we can update the context after fetching user profile.
+    let auth_context = use_signal(build_context_from_fullstack);
+    provide_context(auth_context);
+
+    // On client, fetch user profile after hydration to update AuthContext
+    use_hook(move || {
+        let mut ctx = auth_context;
+        spawn(async move {
+            let res = gloo_net::http::Request::get("/api/user_profile")
+                .send()
+                .await;
+            if let Ok(response) = res {
+                if response.ok() {
+                    let body = response.text().await.unwrap_or_default();
+                    if let Ok(user_ctx) = serde_json::from_str::<AuthContext>(&body) {
+                        ctx.set(user_ctx);
+                    }
+                }
+            }
+        });
+    });
 
     rsx! {
         // Document head

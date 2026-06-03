@@ -65,7 +65,7 @@ pub async fn create_pool() -> Result<PgPool, DbError> {
 
     sqlx::postgres::PgPoolOptions::new()
         .max_connections(max_connections)
-        .min_connections(1)
+        .acquire_timeout(std::time::Duration::from_secs(10))
         .idle_timeout(std::time::Duration::from_secs(300))
         .connect(&url)
         .await

@@ -10,3 +10,5 @@ pub mod logout;
 pub mod oauth;
 #[cfg(feature = "server")]
 pub mod session;
+#[cfg(feature = "server")]
+pub mod user_profile;

@@ -157,6 +157,19 @@ pub fn clear_session_cookie() -> Cookie<'static> {
         .build()
 }
 
+/// Extract the authenticated user ID from request headers.
+///
+/// Reads the session cookie from the `Cookie` header, verifies the JWT,
+/// and returns the user ID if valid. Returns `None` if no valid session.
+#[cfg(feature = "server")]
+pub fn extract_user_id_from_headers(headers: &axum::http::HeaderMap) -> Option<uuid::Uuid> {
+    use axum_extra::extract::cookie::CookieJar;
+
+    let jar = CookieJar::from_headers(headers);
+    let session_token = jar.get(COOKIE_NAME)?;
+    verify_session(session_token.value()).ok()
+}
+
 /// Check if a valid session token is old enough to warrant a rolling refresh.
 ///
 /// Returns `true` if the token was issued more than [`REFRESH_THRESHOLD_SECS`]

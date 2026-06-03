@@ -19,7 +19,13 @@ pub fn Navbar(theme: UseTheme) -> Element {
     let display_name = auth
         .current_user
         .as_ref()
-        .map(|u| u.display_name.clone())
+        .map(|u| {
+            if u.display_name.is_empty() {
+                u.username.clone()
+            } else {
+                u.display_name.clone()
+            }
+        })
         .unwrap_or_else(|| "User".to_string());
     let avatar_src = auth
         .current_user

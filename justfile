@@ -38,7 +38,8 @@ up:
 	# Regenerate .sqlx/ offline query cache so sqlx::query_as! macros stay in sync
 	@source .env.local && DATABASE_URL="$DATABASE_URL" cargo sqlx prepare -- --features server
 	# Launch dev server; clean up Docker on Ctrl+C
-	@trap 'docker compose down --remove-orphans' INT TERM EXIT; \
+	@set -a; source .env.local; set +a; \
+	trap 'docker compose down --remove-orphans' INT TERM EXIT; \
 	dx serve --platform web; \
 	trap - INT TERM EXIT; \
 	docker compose down --remove-orphans

@@ -60,7 +60,7 @@ pub struct AuthContext {
 /// request extensions via `FullstackContext::extension`. On the client,
 /// it hydrates from the server-rendered initial state.
 pub fn use_auth() -> AuthContext {
-    use_context::<AuthContext>()
+    use_context::<Signal<AuthContext>>().read().clone()
 }
 
 // ── Context builder (server + client) ────────────────────────────────────────

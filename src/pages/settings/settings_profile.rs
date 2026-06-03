@@ -1,7 +1,5 @@
 use dioxus::prelude::*;
 
-#[cfg(feature = "server")]
-use crate::auth::context::AuthUser;
 use crate::auth::context::{use_auth, UserProfile};
 use crate::components::base::{Button, ButtonVariant, Card, Input, PageHeader};
 
@@ -26,8 +24,19 @@ pub async fn delete_account() -> Result<(), ServerFnError> {
     use dioxus::server::axum::Extension;
     use sqlx::PgPool;
 
-    let Extension(AuthUser { user_id }): Extension<AuthUser> = FullstackContext::extract().await?;
-    let Extension(pool): Extension<PgPool> = FullstackContext::extract().await?;
+    let fsc = FullstackContext::current().ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let (user_id, pool) = {
+        let parts = fsc.parts_mut();
+        let user_id = crate::auth::session::extract_user_id_from_headers(&parts.headers)
+            .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+        let pool = parts
+            .extensions
+            .get::<Extension<PgPool>>()
+            .ok_or_else(|| ServerFnError::new("Database pool not available"))?
+            .0
+            .clone();
+        (user_id, pool)
+    };
 
     crate::db::delete_user(&pool, user_id)
         .await
@@ -46,8 +55,20 @@ pub async fn save_profile(
     use dioxus::server::axum::Extension;
     use sqlx::PgPool;
 
-    let Extension(AuthUser { user_id }): Extension<AuthUser> = FullstackContext::extract().await?;
-    let Extension(pool): Extension<PgPool> = FullstackContext::extract().await?;
+    let fsc = FullstackContext::current().ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let user_id = {
+        let parts = fsc.parts_mut();
+        crate::auth::session::extract_user_id_from_headers(&parts.headers)
+            .ok_or_else(|| ServerFnError::new("Not authenticated"))?
+    };
+
+    let pool = fsc
+        .parts_mut()
+        .extensions
+        .get::<Extension<PgPool>>()
+        .ok_or_else(|| ServerFnError::new("Database pool not available"))?
+        .0
+        .clone();
 
     let trimmed_name = display_name.trim().to_string();
     if trimmed_name.len() < 2 || trimmed_name.len() > 30 {
