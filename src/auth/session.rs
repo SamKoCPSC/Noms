@@ -133,11 +133,13 @@ pub fn verify_session(token: &str) -> Result<Uuid, SessionError> {
 /// Build an HttpOnly, Secure session cookie from a JWT token.
 ///
 /// The cookie is set to `/`, has `SameSite=Lax`, and a max-age matching
-/// the session lifetime.
+/// the session lifetime. In local development (detected via `NOMS_ENV=local`),
+/// the `Secure` flag is disabled so cookies work over HTTP.
 pub fn build_session_cookie(token: &str) -> Cookie<'static> {
+    let is_local = std::env::var("NOMS_ENV").ok() == Some("local".to_string());
     CookieBuilder::new(COOKIE_NAME, token.to_owned())
         .http_only(true)
-        .secure(true)
+        .secure(!is_local)
         .path("/")
         .max_age(TimeDuration::seconds(SESSION_LIFETIME_SECS as i64))
         .same_site(SameSite::Lax)
@@ -148,20 +150,60 @@ pub fn build_session_cookie(token: &str) -> Cookie<'static> {
 ///
 /// Sets the same name/path with max-age 0 so the browser discards it immediately.
 pub fn clear_session_cookie() -> Cookie<'static> {
+    let is_local = std::env::var("NOMS_ENV").ok() == Some("local".to_string());
     CookieBuilder::new(COOKIE_NAME, "")
         .http_only(true)
-        .secure(true)
+        .secure(!is_local)
         .path("/")
         .max_age(TimeDuration::ZERO)
         .same_site(SameSite::Lax)
         .build()
 }
 
-/// Extract the authenticated user ID from request headers.
+/// Extract the authenticated user ID from `FullstackContext` request headers.
+///
+/// Reads the session cookie from the `Cookie` header of the current request,
+/// verifies the JWT, and returns the user ID if valid.
+/// Returns `None` if no valid session is found.
+///
+/// This is the reliable way to authenticate inside server functions, since
+/// `FullstackContext::extension::<AuthUser>()` may not propagate extensions
+/// from the auth middleware correctly.
+#[cfg(feature = "server")]
+pub fn extract_user_id_from_fullstack() -> Option<uuid::Uuid> {
+    use dioxus::fullstack::FullstackContext;
+
+    let fsc = FullstackContext::current()?;
+    let parts = fsc.parts_mut();
+    let cookie_header = parts.headers.get(axum::http::header::COOKIE)?;
+    let cookie_str = cookie_header.to_str().ok()?;
+
+    // Parse cookies manually to find our session cookie
+    let session_token = parse_cookie_value(cookie_str, COOKIE_NAME)?;
+    verify_session(session_token).ok()
+}
+
+/// Parse a specific cookie value from a `Cookie` header string.
+///
+/// Cookie header format: `name1=value1; name2=value2; ...`
+fn parse_cookie_value<'a>(cookie_header: &'a str, name: &str) -> Option<&'a str> {
+    for pair in cookie_header.split(';') {
+        let pair = pair.trim();
+        if let Some((k, v)) = pair.split_once('=') {
+            if k.trim() == name {
+                return Some(v.trim());
+            }
+        }
+    }
+    None
+}
+
+/// Extract the authenticated user ID from request headers (legacy).
 ///
 /// Reads the session cookie from the `Cookie` header, verifies the JWT,
 /// and returns the user ID if valid. Returns `None` if no valid session.
 #[cfg(feature = "server")]
+#[allow(dead_code)] // Kept for potential future use
 pub fn extract_user_id_from_headers(headers: &axum::http::HeaderMap) -> Option<uuid::Uuid> {
     use axum_extra::extract::cookie::CookieJar;
 
@@ -378,5 +420,41 @@ mod tests {
         let result = should_refresh(&token);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), SessionError::Expired);
+    }
+
+    #[test]
+    fn parse_cookie_value_finds_single_cookie() {
+        let val = parse_cookie_value("noms_session=abc123", "noms_session");
+        assert_eq!(val, Some("abc123"));
+    }
+
+    #[test]
+    fn parse_cookie_value_finds_among_multiple() {
+        let val = parse_cookie_value(
+            "other=val; noms_session=abc123; another=x",
+            "noms_session",
+        );
+        assert_eq!(val, Some("abc123"));
+    }
+
+    #[test]
+    fn parse_cookie_value_handles_spaces() {
+        let val = parse_cookie_value(
+            "  other = val ;  noms_session = abc123 ; ",
+            "noms_session",
+        );
+        assert_eq!(val, Some("abc123"));
+    }
+
+    #[test]
+    fn parse_cookie_value_missing_returns_none() {
+        let val = parse_cookie_value("other=val; another=x", "noms_session");
+        assert_eq!(val, None);
+    }
+
+    #[test]
+    fn parse_cookie_value_empty_header_returns_none() {
+        let val = parse_cookie_value("", "noms_session");
+        assert_eq!(val, None);
     }
 }

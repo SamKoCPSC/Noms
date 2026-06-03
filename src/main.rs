@@ -69,17 +69,9 @@ fn main() {
         let google_client = google_client.clone();
         let github_client = github_client.clone();
         async move {
-            // Create pool lazily on Dioxus's runtime
-            static POOL: tokio::sync::OnceCell<sqlx::PgPool> = tokio::sync::OnceCell::const_new();
-            let pool = POOL
-                .get_or_init(|| async {
-                    db::create_pool()
-                        .await
-                        .expect("Failed to create database pool")
-                })
-                .await
-                .clone();
-            eprintln!("Database pool initialized");
+            // Initialize pool lazily on Dioxus's runtime
+            db::init_pool().await;
+            let pool = db::get_pool();
 
             let state = auth::oauth::AppState {
                 pool: pool.clone(),

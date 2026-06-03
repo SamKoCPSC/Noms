@@ -72,6 +72,32 @@ pub async fn create_pool() -> Result<PgPool, DbError> {
         .map_err(DbError::Connection)
 }
 
+/// Global pool instance, initialized lazily on first access.
+///
+/// Used by server functions to access the database without relying on
+/// axum request extensions (which don't propagate to FullstackContext).
+static POOL: tokio::sync::OnceCell<PgPool> = tokio::sync::OnceCell::const_new();
+
+/// Initialize the global pool. Call once during application startup.
+pub async fn init_pool() {
+    POOL.set(
+        create_pool()
+            .await
+            .expect("Failed to create database pool"),
+    )
+    .expect("Pool already initialized");
+    eprintln!("Database pool initialized");
+}
+
+/// Get a clone of the global database pool.
+///
+/// Panics if the pool has not been initialized via [`init_pool`].
+pub fn get_pool() -> PgPool {
+    POOL.get()
+        .expect("Database pool not initialized. Call db::init_pool() first.")
+        .clone()
+}
+
 // ── Rust types ──────────────────────────────────────────────────────────────
 
 /// A user of the application.

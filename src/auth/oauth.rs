@@ -227,11 +227,8 @@ pub async fn start_handler(
     // Build the authorization URL with our state parameter.
     let mut req = client.authorize_url(|| CsrfToken::new(csrf_state.clone()));
 
-    // Google requires the `openid` scope for OpenID Connect flows.
-    if matches!(prov, linking::Provider::Google) {
-        req = req.add_scope(Scope::new("openid".to_string()));
-    }
     req = req
+        .add_scope(Scope::new("openid".to_string()))
         .add_scope(Scope::new("email".to_string()))
         .add_scope(Scope::new("profile".to_string()));
 

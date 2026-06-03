@@ -24,23 +24,9 @@ pub struct LinkedAccount {
 /// Fetch all OAuth accounts linked to the current user.
 #[server]
 pub async fn get_linked_accounts() -> Result<Vec<LinkedAccount>, ServerFnError> {
-    use dioxus::fullstack::FullstackContext;
-    use dioxus::server::axum::Extension;
-    use sqlx::PgPool;
-
-    let fsc = FullstackContext::current().ok_or_else(|| ServerFnError::new("Not authenticated"))?;
-    let (user_id, pool) = {
-        let parts = fsc.parts_mut();
-        let user_id = crate::auth::session::extract_user_id_from_headers(&parts.headers)
-            .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
-        let pool = parts
-            .extensions
-            .get::<Extension<PgPool>>()
-            .ok_or_else(|| ServerFnError::new("Database pool not available"))?
-            .0
-            .clone();
-        (user_id, pool)
-    };
+    let user_id = crate::auth::session::extract_user_id_from_fullstack()
+        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let pool = crate::db::get_pool();
 
     let rows = crate::db::get_oauth_accounts_by_user(&pool, user_id)
         .await
@@ -63,23 +49,9 @@ pub async fn get_linked_accounts() -> Result<Vec<LinkedAccount>, ServerFnError> 
 /// would be the last remaining linked account.
 #[server]
 pub async fn unlink_account(account_id: Uuid) -> Result<(), ServerFnError> {
-    use dioxus::fullstack::FullstackContext;
-    use dioxus::server::axum::Extension;
-    use sqlx::PgPool;
-
-    let fsc = FullstackContext::current().ok_or_else(|| ServerFnError::new("Not authenticated"))?;
-    let (user_id, pool) = {
-        let parts = fsc.parts_mut();
-        let user_id = crate::auth::session::extract_user_id_from_headers(&parts.headers)
-            .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
-        let pool = parts
-            .extensions
-            .get::<Extension<PgPool>>()
-            .ok_or_else(|| ServerFnError::new("Database pool not available"))?
-            .0
-            .clone();
-        (user_id, pool)
-    };
+    let user_id = crate::auth::session::extract_user_id_from_fullstack()
+        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let pool = crate::db::get_pool();
 
     // Guard: must have at least one account remaining after deletion
     let count = crate::db::count_oauth_accounts(&pool, user_id)
