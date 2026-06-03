@@ -32,7 +32,10 @@ mod tests {
 
     /// Build a minimal router exposing the logout handler for testing.
     fn make_router() -> axum::Router {
-        axum::Router::new().route("/auth/logout", axum::routing::post(handle_logout))
+        axum::Router::new().route(
+            "/auth/logout",
+            axum::routing::get(handle_logout).post(handle_logout),
+        )
     }
 
     #[tokio::test]
@@ -83,5 +86,33 @@ mod tests {
         assert!(cookie_str.contains("noms_session"));
         // Max-Age should be 0 (deleting the cookie)
         assert!(cookie_str.contains("Max-Age=0"));
+    }
+
+    #[tokio::test]
+    async fn logout_get_returns_302_with_redirect() {
+        let app = make_router();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/auth/logout")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FOUND);
+        assert_eq!(
+            response
+                .headers()
+                .get(axum::http::header::LOCATION)
+                .unwrap(),
+            "/"
+        );
+        // Also verify Set-Cookie is present
+        assert!(response
+            .headers()
+            .contains_key(axum::http::header::SET_COOKIE));
     }
 }

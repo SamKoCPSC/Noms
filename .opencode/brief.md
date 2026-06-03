@@ -1,76 +1,86 @@
-# Task Brief - Issue #6: Profile Form Initialization
+# Task Brief
 
 ## Task Description
-Profile form fields (username, display name, bio) appear empty on initial page load even though the navbar shows the correct user data. This was partially addressed during Issue #2 but needs verification that it's fully resolved.
+Fix 3 issues found during NOMS-005 acceptance testing:
+
+**Issue 1 (High): Logout doesn't clear session cookie**
+- Navbar sign-out handler uses XHR POST to /auth/logout, but browser ignores Set-Cookie headers from XHR responses
+- Session cookie persists after logout, user remains authenticated
+- Affects: navbar.rs sign-out handler and settings_profile.rs account deletion flow
+- Fix: Replace XHR POST with full-page navigation to /auth/logout (allow GET on logout endpoint)
+
+**Issue 2 (Medium): Navbar dropdown doesn't close on outside click**
+- dropdown_open signal has no document-level click listener
+- Dropdown stays open when clicking anywhere in main content area
+- Fix: Add use_effect with document-level click listener via web_sys to close dropdown
+
+**Issue 3 (High): Protected routes accessible after logout**
+- Cascading from Issue 1 — no code change needed, resolves when Issue 1 is fixed
 
 ## Phase 0: Implementation Blueprint
-<!-- written by @develop-architect -->
-Issue verified as fixed during Issue #2 (NOMS-005). The fix was delivered across two commits:
-- `5805be1`: Initial profile fetch in auth middleware + settings page rewrite with reactive signals
-- `4d0e91f`: Switched AuthContext to signal-based provider, added `/api/user_profile` endpoint for client-side hydration, and added `use_effect` with `initialized` guard in `settings_profile.rs`
+
+### Architecture Overview
+Dioxus 0.7.1 fullstack app with SSR + hydration, Axum 0.8 backend, JWT session cookies.
+
+### Issue 1 — Logout Cookie Fix
+**Root Cause:** Browser ignores `Set-Cookie` from XHR/fetch (same-origin policy). The `window.location().set_href("/")` redirect doesn't help because the cookie is still in the jar.
+
+**Fix Strategy:** Allow GET on `/auth/logout` endpoint (logout is idempotent — safe for GET per RFC 9110). Replace XHR POST with `window.location().set_href("/auth/logout")` for a full-page navigation that processes the `Set-Cookie` header.
+
+**Files to Change:**
+- `src/main.rs:104-107` — Route registration: change `.post()` to `.get().post()` on `/auth/logout`
+- `src/auth/logout.rs` — Handler already works with both methods (it only reads the cookie jar, doesn't check method). Add GET test to `make_router()`.
+- `src/components/navbar.rs:36-46` — Replace `gloo_net::http::Request::post("/auth/logout").send()` with `web_sys::window().unwrap().location().set_href("/auth/logout").unwrap()`
+- `src/pages/settings/settings_profile.rs:327-345` — Same replacement in the account deletion final step
+
+**Dependencies:** Add `web-sys` features: `Document`, `MouseEvent`, `Element`, `Node`, `Location`, `Window` (already partially present, add missing ones)
+
+### Issue 2 — Dropdown Close on Outside Click
+**Fix Strategy:** Add a `use_hook_with_cleanup` that registers a document-level "click" listener via `web_sys`. When the click target is outside the dropdown container, set `dropdown_open.set(false)`.
+
+**Files to Change:**
+- `src/components/navbar.rs:15` — Add a `use_ref()` for the dropdown container element
+- `src/components/navbar.rs:68-109` — Wrap dropdown in a `div` with `id="user-dropdown"` for easy DOM lookup
+- `src/components/navbar.rs` (new effect) — `use_hook_with_cleanup` to register/unregister `document.addEventListener("click", ...)` that checks if `event.target` is inside `#user-dropdown`
+
+**Implementation Pattern:**
+```rust
+use_hook_with_cleanup(|| {
+    let closure = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
+        let target = event.target().unwrap();
+        let dropdown = web_sys::window().unwrap().document().unwrap().get_element_by_id("user-dropdown").unwrap();
+        if !dropdown.contains(&target) {
+            dropdown_open.set(false);
+        }
+    }) as Box<dyn FnMut(_)>);
+    document.add_event_listener_with_callback("click", closure.refrence().unchecked_ref()).unwrap();
+    // Cleanup: remove listener
+    Box::new(move || {
+        document.remove_event_listener_with_callback("click", closure.refrence().unchecked_ref()).unwrap();
+        closure.forget(); // Prevent double-free
+    });
+});
+```
+
+### Issue 3 — Protected Routes After Logout
+No code change needed. Resolves automatically once Issue 1 clears the cookie.
+
+### Dependencies
+- `Cargo.toml`: Add `wasm-bindgen` if not present, expand `web-sys` features to include `Document`, `MouseEvent`, `Element`, `Node`, `Location`, `Window`
+
+### Testing Plan
+1. `cargo check` — verify compilation
+2. `cargo test` — verify all existing tests pass (especially logout tests in `src/auth/logout.rs`)
+3. `just up` + Chrome DevTools:
+   - Issue 1: Login → click Sign Out → check Application tab → `noms_session` cookie is gone → navigate to /dashboard → redirects to /
+   - Issue 2: Click avatar → dropdown opens → click anywhere outside → dropdown closes
+   - Issue 3: After logout → /settings/profile → redirects to /
 
 ## Phase 1: Implementation Details
 <!-- written by @develop-implement -->
-Implementation delivered during NOMS-005 (Issue #2). Key files:
-- `src/main.rs`: Signal-based `AuthContext` provider + client-side `/api/user_profile` fetch
-- `src/auth/user_profile.rs`: `/api/user_profile` endpoint (session cookie → JWT verify → DB fetch → JSON response)
-- `src/pages/settings/settings_profile.rs`: `use_effect` with `initialized` guard to populate form from auth signal
-- `src/auth/context.rs`: `AuthContext` struct with `Serialize, Deserialize` for JSON round-trip
 
 ## Phase 2: Review Verdict
 <!-- written by @develop-review -->
-
-### Verdict: PASS
-
-### UI Verification Results
-
-Tested via Chrome DevTools MCP on `http://localhost:8080/settings/profile`:
-
-1. **Display Name field**: Shows "New Display Name" ✅
-2. **Username field**: Shows "finalusername" ✅
-3. **Bio field**: Shows "Updated bio text" ✅
-4. **Email field**: Shows correct email (read-only) ✅
-5. **`/api/user_profile` network request**: Returns 200 with correct JSON payload ✅
-6. **No console errors or warnings**: Clean ✅
-7. **Fresh navigation test** (`/` → `/settings/profile`): All fields populate correctly ✅
-
-### How the Fix Works
-
-The fix addresses the root cause: form signals were initialized to empty strings, and the auth context was not reactive, so the async user profile data never triggered a re-render of the form.
-
-Three coordinated changes resolve the issue:
-
-1. **Signal-based AuthContext** (`main.rs`): `AuthContext` is now provided as a `Signal<AuthContext>` instead of a plain value. On the client, a `use_hook` fetches `/api/user_profile` and updates the signal, triggering reactive re-renders downstream.
-
-2. **`/api/user_profile` endpoint** (`src/auth/user_profile.rs`): A dedicated JSON endpoint that reads the session cookie, verifies the JWT, fetches the full user record from the database, and returns it as `AuthContext`.
-
-3. **Reactive form initialization** (`settings_profile.rs`, lines 141-157): A `use_effect` subscribes to the `auth_context` signal. When the signal updates with user data, the effect populates the form signals (`username`, `display_name`, `bio`). An `initialized` guard prevents re-population on subsequent re-renders.
-
-### Positive Findings
-
-- **Well-designed reactive pattern**: The `use_effect` + `initialized` guard pattern correctly handles the async data loading race condition without causing infinite re-render loops.
-- **Proper rollback mechanism**: The save handler captures committed values from the auth context for reliable rollback on server errors.
-- **Optimistic UI updates**: Form values are applied immediately on save, with server-authoritative values applied on success.
-- **Clean separation of concerns**: The `/api/user_profile` endpoint is a standalone handler, not mixed into the Dioxus routing.
-- **No console errors**: Clean runtime behavior confirmed.
-
-### No Issues Found
-
-The implementation is clean, well-commented, and handles the async data loading correctly. No blockers, warnings, or suggestions.
-
-### Requirements Coverage
-
-| Requirement | Status |
-|---|---|
-| Username field shows current username | ✅ Verified |
-| Display name field shows current display name | ✅ Verified |
-| Bio field shows current bio | ✅ Verified |
-| `/api/user_profile` returns data | ✅ Verified (200, correct JSON) |
-| Works after fresh navigation | ✅ Verified |
-
-### Summary
-
-The fix is well-implemented and thoroughly tested. The signal-based AuthContext approach with reactive `use_effect` initialization is the correct pattern for this SSR + hydration architecture.
 
 ## Phase 3: Synthesis
 <!-- written by @develop-synthesize -->

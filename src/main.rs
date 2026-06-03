@@ -103,7 +103,8 @@ fn main() {
                 )
                 .route(
                     "/auth/logout",
-                    axum::routing::post(auth::logout::handle_logout),
+                    axum::routing::get(auth::logout::handle_logout)
+                        .post(auth::logout::handle_logout),
                 )
                 .with_state(state);
 

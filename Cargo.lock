@@ -4512,6 +4512,7 @@ dependencies = [
  "tracing-subscriber",
  "unicode-normalization",
  "uuid",
+ "wasm-bindgen",
  "web-sys",
  "wiremock",
 ]

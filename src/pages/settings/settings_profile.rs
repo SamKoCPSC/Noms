@@ -327,10 +327,10 @@ pub fn SettingsProfile() -> Element {
         spawn(async move {
             match delete_account().await {
                 Ok(()) => {
-                    // Logout to clear session cookie, then hard-navigate home
-                    let _ = gloo_net::http::Request::post("/auth/logout").send().await;
+                    // Full-page navigation to logout endpoint (clears cookie + redirects to /)
+                    // Browsers ignore Set-Cookie from XHR, so we navigate directly
                     if let Some(window) = web_sys::window() {
-                        let _ = window.location().set_href("/");
+                        let _ = window.location().set_href("/auth/logout");
                     }
                 }
                 Err(e) => {
