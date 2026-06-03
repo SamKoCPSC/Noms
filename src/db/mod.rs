@@ -21,6 +21,8 @@ pub enum DbError {
     Connection(sqlx::Error),
     /// A query failed.
     Query(sqlx::Error),
+    /// The requested username is already taken by another user.
+    UsernameTaken,
 }
 
 impl std::fmt::Display for DbError {
@@ -29,6 +31,7 @@ impl std::fmt::Display for DbError {
             DbError::MissingUrl => write!(f, "DATABASE_URL not set"),
             DbError::Connection(e) => write!(f, "database connection failed: {e}"),
             DbError::Query(e) => write!(f, "database query failed: {e}"),
+            DbError::UsernameTaken => write!(f, "username is already taken"),
         }
     }
 }
@@ -38,6 +41,7 @@ impl std::error::Error for DbError {
         match self {
             DbError::MissingUrl => None,
             DbError::Connection(e) | DbError::Query(e) => Some(e),
+            DbError::UsernameTaken => None,
         }
     }
 }
@@ -430,6 +434,43 @@ pub async fn update_user_profile(
         display_name,
         bio,
     )
+   .fetch_one(executor)
+        .await
+        .map_err(DbError::Query)
+}
+
+/// Update a user's username. Checks uniqueness first (excluding the current user).
+///
+/// Returns the updated user record on success.
+/// Returns `DbError::UsernameTaken` if the username is already taken by another user.
+/// Returns `DbError::Query` if the user doesn't exist or another DB error occurs.
+pub async fn update_username(
+    executor: impl sqlx::Executor<'_, Database = Postgres> + Clone,
+    user_id: Uuid,
+    new_username: &str,
+) -> Result<User, DbError> {
+    // Check uniqueness (exclude the current user's own username)
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1 AND id != $2)",
+    )
+    .bind(new_username)
+    .bind(user_id)
+    .fetch_one(executor.clone())
+    .await
+    .map_err(DbError::Query)?;
+
+    if exists {
+        return Err(DbError::UsernameTaken);
+    }
+
+    sqlx::query_as!(
+        User,
+        "UPDATE users SET username = $2, updated_at = NOW() \
+         WHERE id = $1 \
+         RETURNING id, username, display_name, email, avatar_url, bio, created_at, updated_at",
+        user_id,
+        new_username,
+    )
     .fetch_one(executor)
     .await
     .map_err(DbError::Query)
@@ -652,6 +693,95 @@ mod tests {
         let (_db, pool) = test_utils::setup_test_db().await;
         let fake_id = Uuid::nil();
         let result = update_user_profile(&pool, fake_id, "No One", None).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_update_username_success() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("user_{u}"),
+            "Test User",
+            &format!("test{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let new_username = format!("newuser_{u}");
+        let updated = update_username(&pool, user.id, &new_username)
+            .await
+            .unwrap();
+
+        assert_eq!(updated.username, new_username);
+        assert_eq!(updated.id, user.id);
+
+        // Verify persisted
+        let found = get_user_by_id(&pool, user.id).await.unwrap().unwrap();
+        assert_eq!(found.username, new_username);
+    }
+
+    #[tokio::test]
+    async fn test_update_username_taken() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user1 = insert_user(
+            &pool,
+            &format!("user1_{u}"),
+            "User One",
+            &format!("user1{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let user2 = insert_user(
+            &pool,
+            &format!("user2_{u}"),
+            "User Two",
+            &format!("user2{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // user2 tries to take user1's username
+        let result = update_username(&pool, user2.id, &user1.username).await;
+        assert!(matches!(result, Err(DbError::UsernameTaken)));
+    }
+
+    #[tokio::test]
+    async fn test_update_username_same_as_current() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("same_{u}"),
+            "Same User",
+            &format!("same{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Setting username to the same value should succeed (no-op)
+        let updated = update_username(&pool, user.id, &user.username)
+            .await
+            .unwrap();
+
+        assert_eq!(updated.username, user.username);
+    }
+
+    #[tokio::test]
+    async fn test_update_username_nonexistent_user() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let fake_id = Uuid::nil();
+        let result = update_username(&pool, fake_id, "nonexistent").await;
         assert!(result.is_err());
     }
 

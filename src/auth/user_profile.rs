@@ -46,6 +46,7 @@ pub async fn handle_user_profile(
                 id: user.id,
                 username: user.username,
                 display_name: user.display_name,
+                email: user.email,
                 avatar_url: user.avatar_url,
                 bio: user.bio,
             };

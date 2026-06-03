@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::auth::context::use_auth;
 use crate::components::base::{
-    Button, ButtonVariant, Card, EmptyState, LoadingSpinner, PageHeader,
+    Button, ButtonVariant, Card, EmptyState, LoadingSpinner, PageHeader, SettingsTab, SettingsTabs,
 };
 
 // ── Serializable response type ───────────────────────────────────────────────
@@ -152,7 +152,11 @@ pub fn SettingsAccounts() -> Element {
                     accounts_clone.restart();
                 }
                 Err(e) => {
-                    error.set(Some(e.to_string()));
+                    let msg = match &e {
+                        ServerFnError::ServerError { message, .. } => message.clone(),
+                        _ => e.to_string(),
+                    };
+                    error.set(Some(msg));
                 }
             }
             unlinking_id.set(None);
@@ -259,7 +263,7 @@ pub fn SettingsAccounts() -> Element {
                                             p {
                                                 font_size: "14px",
                                                 color: "var(--text-secondary)",
-                                                "{email}"
+                                                "Associated email: {email}"
                                             }
                                         }
                                         span {
@@ -338,6 +342,9 @@ pub fn SettingsAccounts() -> Element {
         div { class: "container",
             PageHeader {
                 title: "Linked Accounts",
+            }
+            SettingsTabs {
+                active: SettingsTab::Accounts,
             }
 
             // Error message

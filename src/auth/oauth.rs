@@ -5,6 +5,7 @@
 //! - `callback_handler` — exchanges the auth code, extracts user info, creates a session
 
 use axum::extract::{Path, Query, State};
+use axum_extra::extract::cookie::CookieJar;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Redirect};
 use chrono::Utc;
@@ -246,6 +247,7 @@ pub async fn callback_handler(
     State(state): State<AppState>,
     Path(provider): Path<String>,
     Query(params): Query<CallbackQuery>,
+    jar: CookieJar,
 ) -> Result<impl IntoResponse, OAuthError> {
     let prov = validate_provider(&provider)?;
 
@@ -279,6 +281,11 @@ pub async fn callback_handler(
         return Err(OAuthError::StateNotFound);
     }
 
+    // Check if there's an existing authenticated session
+    let existing_user_id = jar
+        .get(session::COOKIE_NAME)
+        .and_then(|cookie| session::verify_session(cookie.value()).ok());
+
     // Select the appropriate OAuth client.
     let client = match prov {
         linking::Provider::Google => &state.google_client,
@@ -305,7 +312,7 @@ pub async fn callback_handler(
     };
 
     // Link the OAuth identity to a user (or create a new one).
-    let link_result = linking::link_or_create(&state.pool, user_info)
+    let link_result = linking::link_or_create(&state.pool, user_info, existing_user_id)
         .await
         .map_err(|e| OAuthError::LinkError(e.to_string()))?;
 
@@ -513,6 +520,89 @@ mod tests {
                 .signed_duration_since(state.created_at)
                 .num_seconds();
             assert!(elapsed < CSRF_STATE_TTL_SECS);
+        }
+
+        /// Verify that a valid session cookie causes link_or_create to link
+        /// the new OAuth provider to the existing user, rather than creating
+        /// a new user. This is the core fix for Issue #1.
+        #[tokio::test]
+        async fn test_callback_links_to_existing_session() {
+            use axum_extra::extract::cookie::CookieJar;
+
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let u = test_utils::uid();
+
+            // Set up a test session secret via env var so we can create/verify tokens
+            std::env::set_var("SESSION_SECRET", "test-secret-32-bytes-long-enough!!");
+
+            // Create a user with a Google account
+            let user = db::insert_user(
+                &pool,
+                &format!("sessionlink_{u}"),
+                "Session Link User",
+                &format!("sessionlink{u}@example.com"),
+                None,
+            )
+            .await
+            .unwrap();
+
+            db::insert_oauth_account(
+                &pool,
+                user.id,
+                "google",
+                &format!("google-sessionlink-{u}"),
+                Some(&format!("sessionlink{u}@example.com")),
+                None,
+            )
+            .await
+            .unwrap();
+
+            // Create a valid session JWT for this user
+            let jwt = session::create_session(user.id).unwrap();
+
+            // Build a CookieJar with the session cookie
+            let cookie = session::build_session_cookie(&jwt);
+            let jar = CookieJar::new().add(cookie);
+
+            // Extract the user ID from the session cookie (simulating callback_handler logic)
+            let existing_user_id = jar
+                .get(session::COOKIE_NAME)
+                .and_then(|cookie| session::verify_session(cookie.value()).ok());
+
+            // Verify the session was read correctly
+            assert_eq!(existing_user_id, Some(user.id));
+
+            // Now call link_or_create with the extracted user ID (simulating GitHub callback)
+            let result = linking::link_or_create(
+                &pool,
+                linking::OauthUserInfo {
+                    provider: linking::Provider::GitHub,
+                    provider_uid: format!("github-sessionlink-{u}"),
+                    email: Some(format!("sessionlink{u}@example.com")),
+                    display_name: "Session Link User".to_string(),
+                    avatar_url: None,
+                },
+                existing_user_id,
+            )
+            .await
+            .unwrap();
+
+            // Should link to the existing user
+            assert_eq!(result.user_id, user.id);
+            assert!(!result.is_new_user);
+
+            // Verify the GitHub account was created and linked to the existing user
+            let github_account =
+                db::get_oauth_account_by_provider(&pool, "github", &format!("github-sessionlink-{u}"))
+                    .await
+                    .unwrap()
+                    .unwrap();
+            assert_eq!(github_account.user_id, user.id);
+
+            // Verify no new user was created (only one user exists)
+            let user_count: i64 =
+                sqlx::query_scalar("SELECT COUNT(*) FROM users").fetch_one(&pool).await.unwrap();
+            assert_eq!(user_count, 1);
         }
     }
 }

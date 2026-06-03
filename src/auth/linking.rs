@@ -177,11 +177,40 @@ async fn generate_unique_username(
 /// Link an OAuth identity to a user, creating a new user if necessary.
 ///
 /// Runs inside a single atomic transaction:
+/// 0. If `existing_user_id` is provided → link directly to that user.
 /// 1. Existing provider login → update `last_used_at` and return.
 /// 2. Existing user by email  → link new OAuth account to that user.
 /// 3. Brand-new user          → create user + OAuth account.
-pub async fn link_or_create(pool: &PgPool, info: OauthUserInfo) -> Result<LinkResult, LinkError> {
+pub async fn link_or_create(
+    pool: &PgPool,
+    info: OauthUserInfo,
+    existing_user_id: Option<Uuid>,
+) -> Result<LinkResult, LinkError> {
     let mut tx = pool.begin().await.map_err(db::DbError::Connection)?;
+
+    // (0) If called with an authenticated user, link directly to that user
+    if let Some(user_id) = existing_user_id {
+        let user = db::get_user_by_id(tx.deref_mut(), user_id)
+            .await?
+            .ok_or(LinkError::Db(db::DbError::Query(sqlx::Error::RowNotFound)))?;
+
+        let account = db::insert_oauth_account(
+            tx.deref_mut(),
+            user.id,
+            info.provider.as_str(),
+            &info.provider_uid,
+            info.email.as_deref(),
+            None,
+        )
+        .await?;
+
+        tx.commit().await.map_err(db::DbError::Connection)?;
+        return Ok(LinkResult {
+            user_id: user.id,
+            oauth_account_id: account.id,
+            is_new_user: false,
+        });
+    }
 
     // (a) Check for existing oauth account by provider+provider_uid
     if let Some(account) = db::get_oauth_account_by_provider(
@@ -370,6 +399,7 @@ mod tests {
                 display_name: "Test User".to_string(),
                 avatar_url: None,
             },
+            None,
         )
         .await
         .unwrap();
@@ -405,6 +435,7 @@ mod tests {
                 display_name: "Test User".to_string(),
                 avatar_url: None,
             },
+            None,
         )
         .await
         .unwrap();
@@ -434,6 +465,7 @@ mod tests {
                 display_name: "New User".to_string(),
                 avatar_url: None,
             },
+            None,
         )
         .await
         .unwrap();
@@ -466,6 +498,7 @@ mod tests {
                     display_name: "Same Name".to_string(),
                     avatar_url: None,
                 },
+                None,
             )
             .await
             .unwrap();
@@ -501,6 +534,7 @@ mod tests {
                 display_name: "No Email User".to_string(),
                 avatar_url: None,
             },
+            None,
         )
         .await
         .unwrap();
@@ -557,6 +591,7 @@ mod tests {
                     display_name: "Collision Test".to_string(),
                     avatar_url: None,
                 },
+                None,
             )
             .await
             .unwrap();
@@ -583,5 +618,116 @@ mod tests {
             unique_count, 10,
             "usernames should be unique: {usernames:?}"
         );
+    }
+
+    // -- Tests for session-aware linking (Issue #1) --
+
+    #[tokio::test]
+    async fn test_link_provider_to_existing_session() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        // Create a user with a Google account
+        let user = db::insert_user(
+            &pool,
+            &format!("linkuser_{u}"),
+            "Link User",
+            &format!("link{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        db::insert_oauth_account(
+            &pool,
+            user.id,
+            "google",
+            &format!("google-{u}"),
+            Some(&format!("link{u}@example.com")),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Now link a GitHub account with the existing user's ID
+        let result = link_or_create(
+            &pool,
+            OauthUserInfo {
+                provider: Provider::GitHub,
+                provider_uid: format!("github-{u}"),
+                email: Some(format!("link{u}@example.com")),
+                display_name: "Link User".to_string(),
+                avatar_url: None,
+            },
+            Some(user.id),
+        )
+        .await
+        .unwrap();
+
+        // Should link to the existing user, not create a new one
+        assert_eq!(result.user_id, user.id);
+        assert!(!result.is_new_user);
+
+        // Verify the GitHub account was created and linked to the existing user
+        let github_account =
+            db::get_oauth_account_by_provider(&pool, "github", &format!("github-{u}"))
+                .await
+                .unwrap()
+                .unwrap();
+        assert_eq!(github_account.user_id, user.id);
+
+        // Verify no new user was created (only one user exists)
+        let user_count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM users").fetch_one(&pool).await.unwrap();
+        assert_eq!(user_count, 1);
+    }
+
+    #[tokio::test]
+    async fn test_link_provider_without_session_creates_new_user() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        // Create a user with a Google account
+        let user = db::insert_user(
+            &pool,
+            &format!("nosession_{u}"),
+            "No Session User",
+            &format!("nosession{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        db::insert_oauth_account(
+            &pool,
+            user.id,
+            "google",
+            &format!("google-nosession-{u}"),
+            Some(&format!("nosession{u}@example.com")),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Link a GitHub account WITHOUT passing an existing user ID
+        // (simulates no session cookie present)
+        let result = link_or_create(
+            &pool,
+            OauthUserInfo {
+                provider: Provider::GitHub,
+                provider_uid: format!("github-nosession-{u}"),
+                email: Some(format!("nosession{u}@example.com")),
+                display_name: "No Session User".to_string(),
+                avatar_url: None,
+            },
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Without existing_user_id, the email match path (b) kicks in
+        // and links to the existing user — existing behavior preserved
+        assert_eq!(result.user_id, user.id);
+        assert!(!result.is_new_user);
     }
 }

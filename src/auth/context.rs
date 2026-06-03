@@ -34,12 +34,12 @@ pub struct AuthUserProfile {
 ///
 /// Populated by a server function that fetches the full user record from the
 /// database. Currently defined for future use (login page, profile display).
-#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UserProfile {
     pub id: Uuid,
     pub username: String,
     pub display_name: String,
+    pub email: String,
     pub avatar_url: Option<String>,
     pub bio: Option<String>,
 }

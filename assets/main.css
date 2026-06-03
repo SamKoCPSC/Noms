@@ -738,3 +738,48 @@ a:hover {
     font-size: 13px;
     color: var(--text-primary);
 }
+
+/* ============================================================
+   Settings Tabs
+   ============================================================ */
+.settings-tabs {
+    display: flex;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-lg);
+    background: var(--surface);
+    border-radius: var(--radius-md);
+    padding: var(--space-xs);
+    box-shadow: inset 3px 3px 8px var(--shadow-dark), inset -3px -3px 8px var(--shadow-light);
+    width: fit-content;
+    max-width: 100%;
+}
+
+.settings-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.settings-tab:hover {
+    color: var(--accent);
+    background: var(--glass-fill);
+}
+
+.settings-tab-active {
+    color: var(--accent);
+    background: var(--bg-base);
+    box-shadow: 3px 3px 8px var(--shadow-dark), -3px -3px 8px var(--shadow-light);
+}
+
+.settings-tab-active:hover {
+    color: var(--accent-hover);
+}
