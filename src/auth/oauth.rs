@@ -5,9 +5,9 @@
 //! - `callback_handler` — exchanges the auth code, extracts user info, creates a session
 
 use axum::extract::{Path, Query, State};
-use axum_extra::extract::cookie::CookieJar;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Redirect};
+use axum_extra::extract::cookie::CookieJar;
 use chrono::Utc;
 use oauth2::basic::BasicClient;
 use oauth2::{
@@ -592,16 +592,21 @@ mod tests {
             assert!(!result.is_new_user);
 
             // Verify the GitHub account was created and linked to the existing user
-            let github_account =
-                db::get_oauth_account_by_provider(&pool, "github", &format!("github-sessionlink-{u}"))
-                    .await
-                    .unwrap()
-                    .unwrap();
+            let github_account = db::get_oauth_account_by_provider(
+                &pool,
+                "github",
+                &format!("github-sessionlink-{u}"),
+            )
+            .await
+            .unwrap()
+            .unwrap();
             assert_eq!(github_account.user_id, user.id);
 
             // Verify no new user was created (only one user exists)
-            let user_count: i64 =
-                sqlx::query_scalar("SELECT COUNT(*) FROM users").fetch_one(&pool).await.unwrap();
+            let user_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
             assert_eq!(user_count, 1);
         }
     }

@@ -1,7 +1,9 @@
 use dioxus::prelude::*;
 
 use crate::auth::context::{use_auth, AuthContext, UserProfile};
-use crate::components::base::{Button, ButtonVariant, Card, Input, PageHeader, SettingsTab, SettingsTabs};
+use crate::components::base::{
+    Button, ButtonVariant, Card, Input, PageHeader, SettingsTab, SettingsTabs,
+};
 
 /// Steps in the 3-layer account deletion confirmation flow.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -48,13 +50,18 @@ pub async fn save_profile(
         if username.len() < 3 || username.len() > 30 {
             return Err(ServerFnError::new("Username must be 3-30 characters"));
         }
-        if !username.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
-            return Err(ServerFnError::new("Username can only contain letters, numbers, hyphens, and underscores"));
-        }
-        if username.starts_with(['-', '_'])
-            || username.ends_with(['-', '_'])
+        if !username
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
         {
-            return Err(ServerFnError::new("Username cannot start or end with a hyphen or underscore"));
+            return Err(ServerFnError::new(
+                "Username can only contain letters, numbers, hyphens, and underscores",
+            ));
+        }
+        if username.starts_with(['-', '_']) || username.ends_with(['-', '_']) {
+            return Err(ServerFnError::new(
+                "Username cannot start or end with a hyphen or underscore",
+            ));
         }
     }
 
@@ -188,14 +195,20 @@ pub fn SettingsProfile() -> Element {
                 error.set(Some("Username must be 3-30 characters".to_string()));
                 return;
             }
-            if !trimmed_username.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
-                error.set(Some("Username can only contain letters, numbers, hyphens, and underscores".to_string()));
+            if !trimmed_username
+                .chars()
+                .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+            {
+                error.set(Some(
+                    "Username can only contain letters, numbers, hyphens, and underscores"
+                        .to_string(),
+                ));
                 return;
             }
-            if trimmed_username.starts_with(['-', '_'])
-                || trimmed_username.ends_with(['-', '_'])
-            {
-                error.set(Some("Username cannot start or end with a hyphen or underscore".to_string()));
+            if trimmed_username.starts_with(['-', '_']) || trimmed_username.ends_with(['-', '_']) {
+                error.set(Some(
+                    "Username cannot start or end with a hyphen or underscore".to_string(),
+                ));
                 return;
             }
         }
@@ -280,11 +293,16 @@ pub fn SettingsProfile() -> Element {
         // Username validity: if changed, must meet constraints; if unchanged, always valid.
         // Read current username from auth context FRESH (not captured at render time). (Issue #4)
         let username_valid = {
-            let current = auth_context.read().current_user.as_ref().map(|u| u.username.clone());
+            let current = auth_context
+                .read()
+                .current_user
+                .as_ref()
+                .map(|u| u.username.clone());
             if current.as_ref().is_some_and(|cu| cu.as_str() != u.as_str()) {
                 u.len() >= 3
                     && u.len() <= 30
-                    && u.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+                    && u.chars()
+                        .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
                     && !u.starts_with(['-', '_'])
                     && !u.ends_with(['-', '_'])
             } else {

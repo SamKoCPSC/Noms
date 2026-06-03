@@ -28,7 +28,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
         // Store the closure for cleanup in use_drop
         let closure_signal = use_signal(|| None::<Closure<dyn FnMut(web_sys::MouseEvent)>>);
 
-          use_hook({
+        use_hook({
             let mut closure_sig = closure_signal;
             move || {
                 let window = web_sys::window().expect("no window");
@@ -37,15 +37,16 @@ pub fn Navbar(theme: UseTheme) -> Element {
                 // Clone document for use inside the closure (Document is a thin JS wrapper)
                 let doc_for_closure = document.clone();
 
-                let closure: Closure<dyn FnMut(web_sys::MouseEvent)> = Closure::wrap(Box::new(
-                    move |event: web_sys::MouseEvent| {
+                let closure: Closure<dyn FnMut(web_sys::MouseEvent)> =
+                    Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
                         // If dropdown is not open, nothing to do
                         if !dropdown_signal() {
                             return;
                         }
 
                         // Find the dropdown container in the DOM
-                        let Some(dropdown_el) = doc_for_closure.get_element_by_id(dropdown_id) else {
+                        let Some(dropdown_el) = doc_for_closure.get_element_by_id(dropdown_id)
+                        else {
                             return;
                         };
 
@@ -62,8 +63,8 @@ pub fn Navbar(theme: UseTheme) -> Element {
                                 dropdown_signal.set(false);
                             }
                         }
-                    },
-                ) as Box<dyn FnMut(web_sys::MouseEvent)>);
+                    })
+                        as Box<dyn FnMut(web_sys::MouseEvent)>);
 
                 document
                     .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
@@ -81,11 +82,10 @@ pub fn Navbar(theme: UseTheme) -> Element {
                 if let Some(closure) = closure_sig.take() {
                     if let Some(window) = web_sys::window() {
                         if let Some(document) = window.document() {
-                            let _ = document
-                                .remove_event_listener_with_callback(
-                                    "click",
-                                    closure.as_ref().unchecked_ref(),
-                                );
+                            let _ = document.remove_event_listener_with_callback(
+                                "click",
+                                closure.as_ref().unchecked_ref(),
+                            );
                         }
                     }
                 }

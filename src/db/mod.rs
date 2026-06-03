@@ -84,12 +84,8 @@ static POOL: tokio::sync::OnceCell<PgPool> = tokio::sync::OnceCell::const_new();
 
 /// Initialize the global pool. Call once during application startup.
 pub async fn init_pool() {
-    POOL.set(
-        create_pool()
-            .await
-            .expect("Failed to create database pool"),
-    )
-    .expect("Pool already initialized");
+    POOL.set(create_pool().await.expect("Failed to create database pool"))
+        .expect("Pool already initialized");
     eprintln!("Database pool initialized");
 }
 
@@ -434,9 +430,9 @@ pub async fn update_user_profile(
         display_name,
         bio,
     )
-   .fetch_one(executor)
-        .await
-        .map_err(DbError::Query)
+    .fetch_one(executor)
+    .await
+    .map_err(DbError::Query)
 }
 
 /// Update a user's username. Checks uniqueness first (excluding the current user).
@@ -450,14 +446,13 @@ pub async fn update_username(
     new_username: &str,
 ) -> Result<User, DbError> {
     // Check uniqueness (exclude the current user's own username)
-    let exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1 AND id != $2)",
-    )
-    .bind(new_username)
-    .bind(user_id)
-    .fetch_one(executor.clone())
-    .await
-    .map_err(DbError::Query)?;
+    let exists: bool =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1 AND id != $2)")
+            .bind(new_username)
+            .bind(user_id)
+            .fetch_one(executor.clone())
+            .await
+            .map_err(DbError::Query)?;
 
     if exists {
         return Err(DbError::UsernameTaken);

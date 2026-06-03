@@ -430,19 +430,13 @@ mod tests {
 
     #[test]
     fn parse_cookie_value_finds_among_multiple() {
-        let val = parse_cookie_value(
-            "other=val; noms_session=abc123; another=x",
-            "noms_session",
-        );
+        let val = parse_cookie_value("other=val; noms_session=abc123; another=x", "noms_session");
         assert_eq!(val, Some("abc123"));
     }
 
     #[test]
     fn parse_cookie_value_handles_spaces() {
-        let val = parse_cookie_value(
-            "  other = val ;  noms_session = abc123 ; ",
-            "noms_session",
-        );
+        let val = parse_cookie_value("  other = val ;  noms_session = abc123 ; ", "noms_session");
         assert_eq!(val, Some("abc123"));
     }
 

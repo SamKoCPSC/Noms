@@ -677,8 +677,10 @@ mod tests {
         assert_eq!(github_account.user_id, user.id);
 
         // Verify no new user was created (only one user exists)
-        let user_count: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM users").fetch_one(&pool).await.unwrap();
+        let user_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
         assert_eq!(user_count, 1);
     }
 
