@@ -110,6 +110,18 @@ pub struct AuthState {
     pub created_at: DateTime<Utc>,
 }
 
+/// Display-oriented row for listing OAuth accounts on the settings page.
+/// Omits `email_verified` and `profile_data` which are not needed for display.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct OauthAccountRow {
+    pub id: Uuid,
+    pub provider: String,
+    pub provider_user_id: String,
+    pub email: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub last_used_at: DateTime<Utc>,
+}
+
 // ── Auth state queries ──────────────────────────────────────────────────────
 
 /// Insert an auth state for OAuth CSRF protection.
@@ -212,6 +224,57 @@ pub async fn update_oauth_last_used(
     Ok(())
 }
 
+/// Get all OAuth accounts linked to a user, for display on the settings page.
+pub async fn get_oauth_accounts_by_user(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    user_id: Uuid,
+) -> Result<Vec<OauthAccountRow>, DbError> {
+    sqlx::query_as!(
+        OauthAccountRow,
+        "SELECT id, provider, provider_user_id, email, created_at, last_used_at \
+         FROM oauth_accounts \
+         WHERE user_id = $1 \
+         ORDER BY provider",
+        user_id,
+    )
+    .fetch_all(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Delete a single OAuth account, guarded by user_id to prevent cross-user deletion.
+pub async fn delete_oauth_account(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    account_id: Uuid,
+    user_id: Uuid,
+) -> Result<(), DbError> {
+    let rows = sqlx::query("DELETE FROM oauth_accounts WHERE id = $1 AND user_id = $2")
+        .bind(account_id)
+        .bind(user_id)
+        .execute(executor)
+        .await
+        .map_err(DbError::Query)?
+        .rows_affected();
+
+    if rows == 0 {
+        return Err(DbError::Query(sqlx::Error::RowNotFound));
+    }
+    Ok(())
+}
+
+/// Count the number of OAuth accounts linked to a user.
+pub async fn count_oauth_accounts(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    user_id: Uuid,
+) -> Result<i64, DbError> {
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM oauth_accounts WHERE user_id = $1")
+        .bind(user_id)
+        .fetch_one(executor)
+        .await
+        .map_err(DbError::Query)?;
+    Ok(count)
+}
+
 // ── User queries ────────────────────────────────────────────────────────────
 
 /// Insert a new user. Returns the created user with the generated ID.
@@ -306,6 +369,23 @@ pub async fn get_user_by_email(
     .fetch_optional(executor)
     .await
     .map_err(DbError::Query)
+}
+
+/// Delete a user by ID. OAuth accounts cascade automatically via `ON DELETE CASCADE`.
+pub async fn delete_user(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    user_id: Uuid,
+) -> Result<(), DbError> {
+    let rows = sqlx::query("DELETE FROM users WHERE id = $1")
+        .bind(user_id)
+        .execute(executor)
+        .await
+        .map_err(DbError::Query)?
+        .rows_affected();
+    if rows == 0 {
+        return Err(DbError::Query(sqlx::Error::RowNotFound));
+    }
+    Ok(())
 }
 
 /// Update a user's display name and bio. Returns the updated user record.
@@ -546,6 +626,239 @@ mod tests {
         let (_db, pool) = test_utils::setup_test_db().await;
         let fake_id = Uuid::nil();
         let result = update_user_profile(&pool, fake_id, "No One", None).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_get_oauth_accounts_by_user() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("listuser_{u}"),
+            "List User",
+            &format!("list{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Initially empty
+        let accounts = get_oauth_accounts_by_user(&pool, user.id).await.unwrap();
+        assert!(accounts.is_empty());
+
+        // Insert two accounts
+        insert_oauth_account(
+            &pool,
+            user.id,
+            "google",
+            &format!("google-{u}"),
+            Some(&format!("list{u}@google.com")),
+            None,
+        )
+        .await
+        .unwrap();
+        insert_oauth_account(
+            &pool,
+            user.id,
+            "github",
+            &format!("github-{u}"),
+            Some(&format!("list{u}@github.com")),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Should return both, ordered by provider
+        let accounts = get_oauth_accounts_by_user(&pool, user.id).await.unwrap();
+        assert_eq!(accounts.len(), 2);
+        assert_eq!(accounts[0].provider, "github");
+        assert_eq!(accounts[1].provider, "google");
+        assert_eq!(accounts[0].email, Some(format!("list{u}@github.com")));
+        assert_eq!(accounts[1].email, Some(format!("list{u}@google.com")));
+    }
+
+    #[tokio::test]
+    async fn test_delete_oauth_account() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("deluser_{u}"),
+            "Del User",
+            &format!("del{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let account = insert_oauth_account(
+            &pool,
+            user.id,
+            "google",
+            &format!("google-{u}"),
+            Some(&format!("del{u}@example.com")),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Delete succeeds
+        delete_oauth_account(&pool, account.id, user.id)
+            .await
+            .unwrap();
+
+        // Verify it's gone
+        let accounts = get_oauth_accounts_by_user(&pool, user.id).await.unwrap();
+        assert!(accounts.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_delete_oauth_account_wrong_user() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("wronguser_{u}"),
+            "Wrong User",
+            &format!("wrong{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let account = insert_oauth_account(
+            &pool,
+            user.id,
+            "google",
+            &format!("google-{u}"),
+            Some(&format!("wrong{u}@example.com")),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Try deleting with a different user_id — should fail
+        let wrong_user_id = Uuid::new_v4();
+        let result = delete_oauth_account(&pool, account.id, wrong_user_id).await;
+        assert!(result.is_err());
+
+        // Account should still exist
+        let accounts = get_oauth_accounts_by_user(&pool, user.id).await.unwrap();
+        assert_eq!(accounts.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_count_oauth_accounts() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("countuser_{u}"),
+            "Count User",
+            &format!("count{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Initially zero
+        let count = count_oauth_accounts(&pool, user.id).await.unwrap();
+        assert_eq!(count, 0);
+
+        // Insert one
+        insert_oauth_account(
+            &pool,
+            user.id,
+            "google",
+            &format!("google-{u}"),
+            Some(&format!("count{u}@example.com")),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let count = count_oauth_accounts(&pool, user.id).await.unwrap();
+        assert_eq!(count, 1);
+
+        // Insert another
+        insert_oauth_account(
+            &pool,
+            user.id,
+            "github",
+            &format!("github-{u}"),
+            Some(&format!("count{u}@github.com")),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let count = count_oauth_accounts(&pool, user.id).await.unwrap();
+        assert_eq!(count, 2);
+    }
+
+    #[tokio::test]
+    async fn test_delete_user_cascades_oauth_accounts() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("cascade_{u}"),
+            "Cascade User",
+            &format!("cascade{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Insert two OAuth accounts
+        insert_oauth_account(
+            &pool,
+            user.id,
+            "google",
+            &format!("google-{u}"),
+            Some(&format!("cascade{u}@google.com")),
+            None,
+        )
+        .await
+        .unwrap();
+        insert_oauth_account(
+            &pool,
+            user.id,
+            "github",
+            &format!("github-{u}"),
+            Some(&format!("cascade{u}@github.com")),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Verify both exist
+        let accounts = get_oauth_accounts_by_user(&pool, user.id).await.unwrap();
+        assert_eq!(accounts.len(), 2);
+
+        // Delete the user
+        delete_user(&pool, user.id).await.unwrap();
+
+        // User should be gone
+        let found = get_user_by_id(&pool, user.id).await.unwrap();
+        assert!(found.is_none());
+
+        // OAuth accounts should have been cascaded
+        let accounts = get_oauth_accounts_by_user(&pool, user.id).await.unwrap();
+        assert!(accounts.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_delete_nonexistent_user() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let fake_id = Uuid::nil();
+        let result = delete_user(&pool, fake_id).await;
         assert!(result.is_err());
     }
 }

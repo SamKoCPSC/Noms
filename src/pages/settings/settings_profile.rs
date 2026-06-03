@@ -5,6 +5,37 @@ use crate::auth::context::AuthUser;
 use crate::auth::context::{use_auth, UserProfile};
 use crate::components::base::{Button, ButtonVariant, Card, Input, PageHeader};
 
+/// Steps in the 3-layer account deletion confirmation flow.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum DeleteStep {
+    /// Layer 1: Initial confirmation dialog.
+    Confirming,
+    /// Layer 2: Typed confirmation ("delete <username>").
+    Typing,
+    /// Layer 3: Final confirmation ("This cannot be undone").
+    Final,
+}
+
+/// Delete the authenticated user's account.
+///
+/// Deletes the user row from the database (oauth_accounts cascade automatically).
+/// On the client side, the caller is responsible for logging out and redirecting.
+#[server]
+pub async fn delete_account() -> Result<(), ServerFnError> {
+    use dioxus::fullstack::FullstackContext;
+    use dioxus::server::axum::Extension;
+    use sqlx::PgPool;
+
+    let Extension(AuthUser { user_id }): Extension<AuthUser> = FullstackContext::extract().await?;
+    let Extension(pool): Extension<PgPool> = FullstackContext::extract().await?;
+
+    crate::db::delete_user(&pool, user_id)
+        .await
+        .map_err(|e| ServerFnError::new(e.to_string()))?;
+
+    Ok(())
+}
+
 /// Save user profile via server function.
 #[server]
 pub async fn save_profile(
@@ -56,6 +87,19 @@ pub fn SettingsProfile() -> Element {
     let mut is_saving = use_signal(|| false);
     let mut error = use_signal(|| Option::<String>::None);
     let mut saved_message = use_signal(|| Option::<String>::None);
+
+    // Delete account state
+    let mut delete_step = use_signal(|| None::<DeleteStep>);
+    let mut delete_input = use_signal(String::new);
+    let mut deleting = use_signal(|| false);
+    let mut delete_error = use_signal(|| Option::<String>::None);
+
+    // Extract username for typed confirmation (before use_hook consumes auth.current_user)
+    let username = auth
+        .current_user
+        .as_ref()
+        .map(|u| u.username.clone())
+        .unwrap_or_default();
 
     // Load profile from auth context on mount (use_hook runs once, not every render)
     use_hook(move || {
@@ -123,6 +167,52 @@ pub fn SettingsProfile() -> Element {
     let is_valid = display_name().trim().len() >= 2
         && display_name().trim().len() <= 30
         && bio().trim().len() <= 160;
+
+    // Current username for typed confirmation
+    let expected_confirm = format!("delete {}", username);
+    let input_matches = delete_input() == expected_confirm;
+
+    // Delete account handlers
+    let on_delete_confirm = move |_| {
+        delete_step.set(Some(DeleteStep::Typing));
+        delete_input.set(String::new());
+        delete_error.set(None);
+    };
+
+    let on_delete_cancel = move |_| {
+        delete_step.set(None);
+        delete_input.set(String::new());
+        delete_error.set(None);
+    };
+
+    let on_delete_continue = move |_| {
+        delete_step.set(Some(DeleteStep::Final));
+    };
+
+    let on_delete_go_back = move |_| {
+        delete_step.set(Some(DeleteStep::Typing));
+    };
+
+    let on_delete_final = move |_| {
+        deleting.set(true);
+        delete_error.set(None);
+
+        spawn(async move {
+            match delete_account().await {
+                Ok(()) => {
+                    // Logout to clear session cookie, then hard-navigate home
+                    let _ = gloo_net::http::Request::post("/auth/logout").send().await;
+                    if let Some(window) = web_sys::window() {
+                        let _ = window.location().set_href("/");
+                    }
+                }
+                Err(e) => {
+                    delete_error.set(Some(e.to_string()));
+                    deleting.set(false);
+                }
+            }
+        });
+    };
 
     rsx! {
         div { class: "container",
@@ -226,6 +316,178 @@ pub fn SettingsProfile() -> Element {
                                 "Saving..."
                             } else {
                                 "Save Changes"
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Danger Zone ──────────────────────────────────────────────
+            div {
+                class: "danger-zone",
+                margin_top: "var(--space-xl)",
+                max_width: "500px",
+                Card {
+                    div {
+                        display: "flex",
+                        flex_direction: "column",
+                        gap: "var(--space-sm)",
+                        h3 {
+                            color: "var(--error)",
+                            font_size: "16px",
+                            "Danger Zone"
+                        }
+                        p {
+                            font_size: "14px",
+                            color: "var(--text-secondary)",
+                            "Permanently delete your account and all associated data."
+                        }
+                        Button {
+                            variant: ButtonVariant::Danger,
+                            onclick: move |_| {
+                                delete_step.set(Some(DeleteStep::Confirming));
+                                delete_error.set(None);
+                            },
+                            "Delete Account"
+                        }
+                    }
+                }
+            }
+
+            // ── Modal Overlays ───────────────────────────────────────────
+            if let Some(step) = delete_step() {
+                div {
+                    class: "modal-overlay",
+                    onclick: move |_| {
+                        // Close on backdrop click (only for Confirming and Final steps)
+                        if step == DeleteStep::Confirming || step == DeleteStep::Final {
+                            delete_step.set(None);
+                        }
+                    },
+
+                    // Layer 1: Initial Confirmation
+                    if step == DeleteStep::Confirming {
+                        div {
+                            class: "modal-card",
+                            onclick: move |evt| evt.stop_propagation(),
+                            display: "flex",
+                            flex_direction: "column",
+                            gap: "var(--space-md)",
+                            h2 {
+                                "Are you sure?"
+                            }
+                            p {
+                                font_size: "14px",
+                                color: "var(--text-secondary)",
+                                "This will permanently delete your account and all associated data."
+                            }
+                            div {
+                                display: "flex",
+                                justify_content: "flex-end",
+                                gap: "var(--space-sm)",
+                                Button {
+                                    variant: ButtonVariant::Ghost,
+                                    onclick: on_delete_cancel,
+                                    "Cancel"
+                                }
+                                Button {
+                                    variant: ButtonVariant::Danger,
+                                    onclick: on_delete_confirm,
+                                    "Confirm"
+                                }
+                            }
+                        }
+                    }
+
+                    // Layer 2: Typed Confirmation
+                    if step == DeleteStep::Typing {
+                        div {
+                            class: "modal-card",
+                            onclick: move |evt| evt.stop_propagation(),
+                            display: "flex",
+                            flex_direction: "column",
+                            gap: "var(--space-md)",
+                            p {
+                                font_size: "14px",
+                                color: "var(--text-secondary)",
+                                "Type "
+                                code {
+                                    "`delete {username}`"
+                                }
+                                " to continue"
+                            }
+                            Input {
+                                value: delete_input().clone(),
+                                placeholder: "delete ...",
+                                oninput: move |v| {
+                                    delete_input.set(v);
+                                    delete_error.set(None);
+                                },
+                            }
+                            div {
+                                display: "flex",
+                                justify_content: "flex-end",
+                                gap: "var(--space-sm)",
+                                Button {
+                                    variant: ButtonVariant::Ghost,
+                                    onclick: on_delete_cancel,
+                                    "Cancel"
+                                }
+                                Button {
+                                    variant: ButtonVariant::Danger,
+                                    disabled: !input_matches,
+                                    onclick: on_delete_continue,
+                                    "Continue"
+                                }
+                            }
+                        }
+                    }
+
+                    // Layer 3: Final Confirmation
+                    if step == DeleteStep::Final {
+                        div {
+                            class: "modal-card",
+                            onclick: move |evt| evt.stop_propagation(),
+                            display: "flex",
+                            flex_direction: "column",
+                            gap: "var(--space-md)",
+                            h2 {
+                                "This cannot be undone"
+                            }
+                            p {
+                                font_size: "14px",
+                                color: "var(--text-secondary)",
+                                "All your data will be permanently deleted."
+                            }
+                            if let Some(err) = delete_error() {
+                                div {
+                                    padding: "var(--space-sm) var(--space-md)",
+                                    background_color: "var(--error-bg)",
+                                    border_radius: "var(--radius-md)",
+                                    color: "var(--error)",
+                                    font_size: "14px",
+                                    "{err}"
+                                }
+                            }
+                            div {
+                                display: "flex",
+                                justify_content: "flex-end",
+                                gap: "var(--space-sm)",
+                                Button {
+                                    variant: ButtonVariant::Ghost,
+                                    onclick: on_delete_go_back,
+                                    "Go Back"
+                                }
+                                Button {
+                                    variant: ButtonVariant::Danger,
+                                    disabled: deleting(),
+                                    onclick: on_delete_final,
+                                    if deleting() {
+                                        "Deleting..."
+                                    } else {
+                                        "Delete My Account"
+                                    }
+                                }
                             }
                         }
                     }

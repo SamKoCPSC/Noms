@@ -97,7 +97,26 @@ pub async fn handle_auth(
     }
 
     // Continue to the next handler
-    let response: Response<Body> = next.run(req).await;
+    let mut response: Response<Body> = next.run(req).await;
+
+    // Rolling session refresh: if token is old but still valid, issue a new one
+    if let Some(user_id) = verified_user_id {
+        if let Some(cookie) = session_token {
+            if session::should_refresh(cookie.value()).unwrap_or(false) {
+                if let Ok(new_token) = session::create_session(user_id) {
+                    let new_cookie = session::build_session_cookie(&new_token);
+                    response.headers_mut().insert(
+                        axum::http::header::SET_COOKIE,
+                        new_cookie
+                            .to_string()
+                            .parse()
+                            .expect("cookie string is valid HeaderValue"),
+                    );
+                }
+            }
+        }
+    }
+
     response
 }
 

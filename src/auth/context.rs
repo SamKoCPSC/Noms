@@ -63,7 +63,7 @@ pub fn use_auth() -> AuthContext {
     use_context::<AuthContext>()
 }
 
-// ── Server-side context provider ─────────────────────────────────────────────
+// ── Context builder (server + client) ────────────────────────────────────────
 
 /// Build an `AuthContext` from the current `FullstackContext`.
 ///
@@ -71,31 +71,39 @@ pub fn use_auth() -> AuthContext {
 /// the request. Returns an unauthenticated context if no extension is found
 /// (graceful degradation — the page still renders, just without the user).
 ///
-/// This is called synchronously from `ServeConfig::context_provider`, which
-/// runs during SSR rendering when `FullstackContext::current()` is available.
-#[cfg(feature = "server")]
+/// On the server: `FullstackContext::current()` returns `Some`, so the
+/// middleware-injected extensions are available.
+/// On the client: `FullstackContext::current()` returns `None`, so a
+/// default unauthenticated context is returned.
 pub fn build_context_from_fullstack() -> AuthContext {
-    use dioxus_fullstack::FullstackContext;
+    #[cfg(feature = "server")]
+    {
+        use dioxus_fullstack::FullstackContext;
 
-    let Some(fsc) = FullstackContext::current() else {
-        return AuthContext::default();
-    };
-
-    let Some(auth_user) = fsc.extension::<AuthUser>() else {
-        return AuthContext::default();
-    };
-
-    let Some(profile_ext) = fsc.extension::<AuthUserProfile>() else {
-        return AuthContext {
-            current_user_id: Some(auth_user.user_id),
-            current_user: None,
-            is_authenticated: true,
+        let Some(fsc) = FullstackContext::current() else {
+            return AuthContext::default();
         };
-    };
 
-    AuthContext {
-        current_user_id: Some(auth_user.user_id),
-        current_user: Some(profile_ext.profile),
-        is_authenticated: true,
+        let Some(auth_user) = fsc.extension::<AuthUser>() else {
+            return AuthContext::default();
+        };
+
+        let Some(profile_ext) = fsc.extension::<AuthUserProfile>() else {
+            return AuthContext {
+                current_user_id: Some(auth_user.user_id),
+                current_user: None,
+                is_authenticated: true,
+            };
+        };
+
+        AuthContext {
+            current_user_id: Some(auth_user.user_id),
+            current_user: Some(profile_ext.profile),
+            is_authenticated: true,
+        }
+    }
+    #[cfg(not(feature = "server"))]
+    {
+        AuthContext::default()
     }
 }

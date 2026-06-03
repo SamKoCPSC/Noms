@@ -12,6 +12,7 @@ use crate::Route;
 #[component]
 pub fn Navbar(theme: UseTheme) -> Element {
     let mut menu_open = use_signal(|| false);
+    let mut dropdown_open = use_signal(|| false);
     let auth = use_auth();
 
     let is_signed_in = auth.is_authenticated;
@@ -24,6 +25,19 @@ pub fn Navbar(theme: UseTheme) -> Element {
         .current_user
         .as_ref()
         .and_then(|u| u.avatar_url.clone());
+
+    // Sign out handler: POST to /auth/logout, then navigate to "/"
+    let on_sign_out = move |_evt: dioxus::prelude::Event<dioxus::prelude::MouseData>| {
+        spawn(async {
+            // POST to /auth/logout to clear the session cookie on the server
+            let _ = gloo_net::http::Request::post("/auth/logout").send().await;
+
+            // Full page reload to clear auth context on the client side
+            if let Some(window) = web_sys::window() {
+                let _ = window.location().set_href("/");
+            }
+        });
+    };
 
     rsx! {
         nav {
@@ -46,13 +60,46 @@ pub fn Navbar(theme: UseTheme) -> Element {
                 // Right side: auth + theme toggle (desktop)
                 div { class: "navbar-actions",
                     if is_signed_in {
-                        div { class: "navbar-user",
+                        // User dropdown trigger
+                        div {
+                            class: "navbar-user-dropdown",
+                            onclick: move |evt| {
+                                evt.stop_propagation();
+                                dropdown_open.set(!dropdown_open());
+                            },
                             Avatar {
                                 size: AvatarSize::Small,
                                 src: avatar_src.clone(),
                                 username: display_name.clone(),
                             }
                             span { class: "navbar-username", "{display_name}" }
+                        }
+
+                        // User dropdown menu
+                        if dropdown_open() {
+                            div {
+                                class: "navbar-dropdown-menu",
+                                onclick: move |evt| evt.stop_propagation(),
+                                div { class: "navbar-dropdown-header",
+                                    "{display_name}"
+                                }
+                                div { class: "navbar-dropdown-divider" }
+                                Link {
+                                    to: Route::SettingsProfile {},
+                                    class: "navbar-dropdown-item",
+                                    onclick: move |_| dropdown_open.set(false),
+                                    "Settings"
+                                }
+                                button {
+                                    class: "navbar-dropdown-item navbar-dropdown-item-danger",
+                                    onclick: move |evt| {
+                                        evt.stop_propagation();
+                                        dropdown_open.set(false);
+                                        on_sign_out(evt);
+                                    },
+                                    "Sign Out"
+                                }
+                            }
                         }
                     } else {
                         Link {
@@ -122,7 +169,22 @@ pub fn Navbar(theme: UseTheme) -> Element {
                                 onclick: move |_| menu_open.set(false),
                                 "New Recipe"
                             }
-                            if !is_signed_in {
+                            if is_signed_in {
+                                Link {
+                                    to: Route::SettingsProfile {},
+                                    class: "navbar-drawer-link",
+                                    onclick: move |_| menu_open.set(false),
+                                    "Settings"
+                                }
+                                button {
+                                    class: "navbar-drawer-link navbar-drawer-link-danger",
+                                    onclick: move |evt| {
+                                        menu_open.set(false);
+                                        on_sign_out(evt);
+                                    },
+                                    "Sign Out"
+                                }
+                            } else {
                                 Link {
                                     to: Route::Login {},
                                     class: "navbar-drawer-link",

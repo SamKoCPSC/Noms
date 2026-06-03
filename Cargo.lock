@@ -4496,6 +4496,7 @@ dependencies = [
  "chrono",
  "cookie",
  "dioxus",
+ "gloo-net",
  "jsonwebtoken",
  "oauth2",
  "percent-encoding",

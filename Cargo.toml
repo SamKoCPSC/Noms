@@ -25,10 +25,11 @@ percent-encoding = "2"
 serde_json       = { version = "1", optional = true }
 time             = { version = "0.3", optional = true }
 cookie           = { version = "0.18", optional = true }
-chrono           = { version = "0.4", features = ["serde"], optional = true }
+chrono           = { version = "0.4", features = ["serde"] }
 tokio            = { version = "1", features = ["rt-multi-thread", "macros"], optional = true }
 unicode-normalization = { version = "0.1", optional = true }
-  web-sys = { version = "0.3.98", features = ["Window", "Storage"] }
+ web-sys = { version = "0.3.98", features = ["Window", "Storage", "Location"] }
+gloo-net = { version = "0.6", features = ["http"] }
 
 [features]
 default = ["web"]
@@ -48,7 +49,6 @@ server  = [
     "serde_json",
     "time",
     "cookie",
-    "chrono",
     "tokio",
     "unicode-normalization",
 ]

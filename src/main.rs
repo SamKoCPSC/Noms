@@ -13,7 +13,9 @@ mod pages;
 mod test_utils;
 mod utils;
 
+use auth::context::{build_context_from_fullstack, AuthContext};
 use components::{AppLayout, ErrorFallback};
+use dioxus::prelude::provide_context;
 use pages::{
     CollectionDetail, CollectionList, Dashboard, Explore, Home, Login, RecipeDetail, RecipeNew,
     SettingsAccounts, SettingsProfile,
@@ -94,8 +96,7 @@ fn main() {
                     middleware::auth::handle_auth,
                 ))
                 .serve_dioxus_application(
-                    ServeConfig::new()
-                        .context_provider(auth::context::build_context_from_fullstack),
+                    ServeConfig::new().context_provider(build_context_from_fullstack),
                     App,
                 );
 
@@ -107,6 +108,10 @@ fn main() {
                 .route(
                     "/auth/{provider}/callback",
                     axum::routing::get(auth::oauth::callback_handler),
+                )
+                .route(
+                    "/auth/logout",
+                    axum::routing::post(auth::logout::handle_logout),
                 )
                 .with_state(state);
 
@@ -122,6 +127,12 @@ fn main() {
 
 #[component]
 fn App() -> Element {
+    // Provide AuthContext at the root of the component tree so it's available
+    // on both server (SSR) and client (hydration + client-side navigation).
+    // On the server, build_context_from_fullstack reads the middleware-injected
+    // extensions. On the client, it returns a default unauthenticated context.
+    use_hook(|| provide_context::<AuthContext>(build_context_from_fullstack()));
+
     rsx! {
         // Document head
         document::Link { rel: "icon", href: FAVICON }

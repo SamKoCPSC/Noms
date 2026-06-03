@@ -17,7 +17,6 @@ pub const COOKIE_NAME: &str = "noms_session";
 const SESSION_LIFETIME_SECS: u64 = 900;
 
 /// Rolling refresh threshold: refresh when the token is older than 10 minutes.
-#[allow(dead_code)] // Used by session refresh logic (not yet wired)
 const REFRESH_THRESHOLD_SECS: usize = 600;
 
 /// JWT claims for a session token.
@@ -56,7 +55,7 @@ impl std::error::Error for SessionError {}
 // When set, takes precedence over the environment variable.
 #[cfg(test)]
 thread_local! {
-    static TEST_SECRET: std::cell::RefCell<Option<Vec<u8>>> = std::cell::RefCell::new(None);
+    static TEST_SECRET: std::cell::RefCell<Option<Vec<u8>>> = const { std::cell::RefCell::new(None) };
 }
 
 /// Reads the session secret from the `SESSION_SECRET` environment variable.
@@ -148,7 +147,6 @@ pub fn build_session_cookie(token: &str) -> Cookie<'static> {
 /// Build a cookie that deletes the existing session cookie.
 ///
 /// Sets the same name/path with max-age 0 so the browser discards it immediately.
-#[allow(dead_code)] // Used by logout handler (not yet wired)
 pub fn clear_session_cookie() -> Cookie<'static> {
     CookieBuilder::new(COOKIE_NAME, "")
         .http_only(true)
@@ -163,7 +161,6 @@ pub fn clear_session_cookie() -> Cookie<'static> {
 ///
 /// Returns `true` if the token was issued more than [`REFRESH_THRESHOLD_SECS`]
 /// seconds ago. Returns an error if the token is invalid or expired.
-#[allow(dead_code)] // Used by auth middleware (not yet wired)
 pub fn should_refresh(token: &str) -> Result<bool, SessionError> {
     let secret = read_secret()?;
     let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
@@ -288,7 +285,7 @@ mod tests {
         assert_eq!(cookie.value(), token);
         assert!(cookie.http_only().unwrap_or(false));
         assert!(cookie.secure().unwrap_or(false));
-        assert!(cookie.path().map_or(false, |p| p == "/"));
+        assert!(cookie.path() == Some("/"));
         assert_eq!(
             cookie.max_age(),
             Some(TimeDuration::seconds(SESSION_LIFETIME_SECS as i64))

@@ -61,8 +61,10 @@ a:hover {
     --accent: #D9735A;
     --accent-hover: #C4613F;
     --success: #5A9E6F;
+    --success-bg: rgba(90, 158, 111, 0.10);
     --warning: #D4923B;
     --error: #C4504A;
+    --error-bg: rgba(196, 80, 74, 0.10);
 
     /* Text */
     --text-primary: #2D2A26;
@@ -107,8 +109,10 @@ a:hover {
     --accent: #E8896E;
     --accent-hover: #F0A08C;
     --success: #72B886;
+    --success-bg: rgba(114, 184, 134, 0.15);
     --warning: #E5A54E;
     --error: #D96B63;
+    --error-bg: rgba(217, 107, 99, 0.15);
     --text-primary: #EDE8DF;
     --text-secondary: #9E978C;
     --text-tertiary: #6B655D;
@@ -401,6 +405,105 @@ a:hover {
     color: var(--text-primary);
 }
 
+/* User dropdown trigger */
+.navbar-user-dropdown {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    cursor: pointer;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-md);
+    transition: background 0.2s ease;
+}
+
+.navbar-user-dropdown:hover {
+    background: var(--glass-fill);
+}
+
+/* User dropdown menu */
+.navbar-dropdown-menu {
+    position: absolute;
+    top: 60px;
+    right: var(--space-md);
+    background: var(--bg-base);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    padding: var(--space-sm);
+    min-width: 200px;
+    z-index: 150;
+    animation: dropdown-fade-in 0.15s ease;
+}
+
+@keyframes dropdown-fade-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.navbar-dropdown-header {
+    padding: var(--space-sm) var(--space-md);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.navbar-dropdown-divider {
+    height: 1px;
+    background: var(--glass-border);
+    margin: var(--space-xs) 0;
+}
+
+.navbar-dropdown-item {
+    display: block;
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-decoration: none;
+    background: none;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.navbar-dropdown-item:hover {
+    background: var(--surface);
+    color: var(--accent);
+}
+
+.navbar-dropdown-item-danger {
+    color: var(--error);
+}
+
+.navbar-dropdown-item-danger:hover {
+    background: var(--error);
+    color: white;
+}
+
+/* Mobile drawer danger link */
+.navbar-drawer-link-danger {
+    color: var(--error);
+    background: none;
+    border: none;
+    font-family: var(--font-body);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.navbar-drawer-link-danger:hover {
+    background: var(--surface);
+}
+
 .navbar-theme-toggle {
     background: none;
     border: none;
@@ -575,4 +678,63 @@ a:hover {
 
 .error-fallback p {
     margin-bottom: var(--space-lg);
+}
+
+/* ============================================================
+    Danger Zone
+    ============================================================ */
+.danger-zone .neumo-card {
+    border: 2px solid var(--error);
+    background: var(--error-bg);
+}
+
+/* ============================================================
+    Modal Overlay
+    ============================================================ */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    animation: fade-in 0.2s ease;
+    padding: var(--space-md);
+}
+
+.modal-card {
+    background: var(--bg-base);
+    border-radius: var(--radius-lg);
+    box-shadow: 8px 8px 20px var(--shadow-dark), -8px -8px 20px var(--shadow-light);
+    padding: var(--space-xl);
+    max-width: 440px;
+    width: 100%;
+    animation: modal-slide-in 0.2s ease;
+}
+
+@keyframes modal-slide-in {
+    from { opacity: 0; transform: scale(0.95) translateY(-8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-card h2 {
+    font-size: 18px;
+    color: var(--text-primary);
+}
+
+.modal-card p {
+    margin: 0;
+}
+
+.modal-card code {
+    background: var(--surface);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-family: monospace;
+    font-size: 13px;
+    color: var(--text-primary);
 }
