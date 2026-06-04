@@ -117,7 +117,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
     // ignore Set-Cookie headers from XHR/fetch responses.
     let on_sign_out = move |_evt: dioxus::prelude::Event<dioxus::prelude::MouseData>| {
         if let Some(window) = web_sys::window() {
-            let _ = window.location().set_href("/auth/logout");
+            let _ = window.location().set_href("/auth/logout?redirect_uri=/");
         }
     };
 

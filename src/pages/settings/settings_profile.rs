@@ -349,7 +349,7 @@ pub fn SettingsProfile() -> Element {
                     // Full-page navigation to logout endpoint (clears cookie + redirects to /)
                     // Browsers ignore Set-Cookie from XHR, so we navigate directly
                     if let Some(window) = web_sys::window() {
-                        let _ = window.location().set_href("/auth/logout");
+                        let _ = window.location().set_href("/auth/logout?redirect_uri=/");
                     }
                 }
                 Err(e) => {

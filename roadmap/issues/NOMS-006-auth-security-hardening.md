@@ -28,32 +28,46 @@ A thorough security audit of the auth flow identified 14 findings across 4 sever
 - [ ] Existing tests updated to reflect new flow
 - [ ] No regression in normal OAuth callback flow
 
-### AC2: GET logout CSRF protection (CRITICAL-2)
+### AC2: GET logout CSRF protection (CRITICAL-2) ✅ DONE
 
-- [ ] Logout endpoint requires `redirect_uri` query parameter on GET requests
-- [ ] `redirect_uri` is validated against allowed paths (same validation as OAuth start)
-- [ ] Unauthorized redirect targets default to `/`
-- [ ] Full-page navigation logout still works (cookie clearing via `Set-Cookie`)
-- [ ] POST logout remains unchanged (for programmatic use)
+- [x] Logout endpoint requires `redirect_uri` query parameter on GET requests
+- [x] `redirect_uri` is validated against allowed paths (same validation as OAuth start)
+- [x] Unauthorized redirect targets default to `/`
+- [x] Full-page navigation logout still works (cookie clearing via `Set-Cookie`)
+- [x] POST logout remains unchanged (for programmatic use)
 
-### AC3: JWT tokens have `jti` for revocation (HIGH-1)
+### AC3: Refactor to server-side sessions (HIGH-1)
 
-- [ ] `SessionClaims` includes `jti: String` field (UUIDv4)
-- [ ] `create_session` generates and embeds `jti` in every new token
-- [ ] In-memory revocation list: `Arc<DashSet<String>>` with TTL-based cleanup
-- [ ] `verify_session` checks revocation list before accepting token
-- [ ] Logout adds the current token's `jti` to the revocation list
-- [ ] Revocation list cleanup runs on a timer (e.g., every 5 minutes, remove entries older than 15 minutes)
-- [ ] Stolen tokens become invalid immediately after logout
+- [ ] Create `sessions` table: `id UUID`, `user_id UUID`, `created_at TIMESTAMPTZ`, `expires_at TIMESTAMPTZ`, `refreshed_at TIMESTAMPTZ`, `revoked BOOLEAN DEFAULT FALSE`
+- [ ] JWT token becomes a session ID reference (claims: `sub` = session_id, `exp`, `iat`)
+- [ ] `verify_session` looks up session in `sessions` table (checks exists, not revoked, not expired)
+- [ ] `create_session` inserts row into `sessions` table, returns JWT referencing the session
+- [ ] Logout sets `revoked = TRUE` on the session row (instant revocation, no in-memory list)
+- [ ] Session refresh updates `refreshed_at` and `expires_at` on the session row
+- [ ] Rolling refresh: if token is within last 10 minutes of expiry, issue new token with extended expiry
+- [ ] Cleanup: expired + revoked sessions purged by pg_cron job (every hour, delete older than 24 hours)
+- [ ] Remove in-memory revocation list entirely
+- [ ] Migration backfills active sessions from current JWT state (or accepts clean start)
 
-### AC4: Error messages are sanitized (HIGH-2)
+#### Files requiring modification
 
-- [ ] All `INTERNAL_SERVER_ERROR` responses return generic message: "An internal error occurred. Please try again later."
-- [ ] Full error details are logged server-side with `tracing::error!()`
-- [ ] `OAuthError` variants: `TokenExchange`, `UserInfoExtraction`, `DbError`, `SessionError`, `LinkError` all sanitized
-- [ ] `SessionError::MissingSecret` no longer exposes "SESSION_SECRET not set" to clients
-- [ ] `Display` impl retains detailed messages for logging purposes
-- [ ] No regression in server-side error visibility
+| File | Change | Impact |
+|------|--------|--------|
+| **`session.rs`** | `create_session(user_id)` → `create_session(pool, user_id) async`; `verify_session(token)` → `verify_session(pool, token) async`; new `revoke_session()` and `refresh_session()` | **High** — core API change, ~18 existing tests need updating |
+| **`middleware/auth.rs`** | Must become async to access `PgPool`; passes pool to `verify_session` and `create_session` (refresh path) | **High** — critical path, every protected request goes through here |
+| **`logout.rs`** | Must revoke session in DB before clearing cookie: `verify_session` → extract session_id → `revoke_session` | **Medium** — new DB call required, otherwise token remains valid until expiry |
+| **`user_profile.rs`** | Add `pool` parameter to `verify_session` call (already async, already has pool in State) | **Low** — one line change |
+| **`oauth.rs`** | Add `pool` parameter to `verify_session` (line 330) and `create_session` (line 363) calls; update tests | **Low** — already async, already has pool |
+| **`context.rs`** | `extract_user_from_request()` (line 219) calls `verify_session` — needs pool parameter; check if used in sync contexts (SSR) | **Unknown** — depends on SSR usage |
+
+### AC4: Error messages are sanitized (HIGH-2) ✅ DONE
+
+- [x] All `INTERNAL_SERVER_ERROR` responses return generic message: "An internal error occurred. Please try again later."
+- [x] Full error details are logged server-side with `tracing::error!()`
+- [x] `OAuthError` variants: `TokenExchange`, `UserInfoExtraction`, `DbError`, `SessionError`, `LinkError` all sanitized
+- [x] `SessionError::MissingSecret` no longer exposes "SESSION_SECRET not set" to clients
+- [x] `Display` impl retains detailed messages for logging purposes
+- [x] No regression in server-side error visibility
 
 ### AC5: Rate limiting on OAuth endpoints (HIGH-3)
 
@@ -73,23 +87,23 @@ A thorough security audit of the auth flow identified 14 findings across 4 sever
 - [ ] Migration adds `code_challenge TEXT` column to `auth_states`
 - [ ] Existing tests updated to include PKCE flow
 
-### AC7: Redirect URI length validation (MEDIUM-1)
+### AC7: Redirect URI length validation (MEDIUM-1) ✅ DONE
 
-- [ ] `validate_redirect_uri` enforces maximum length of 2048 characters
-- [ ] Over-length URIs return `InvalidRedirectUri` error with 400 status
-- [ ] Test covers boundary conditions (2047 OK, 2048 OK, 2049 rejected)
+- [x] `validate_redirect_uri` enforces maximum length of 2048 characters
+- [x] Over-length URIs return `InvalidRedirectUri` error with 400 status
+- [x] Test covers boundary conditions (2047 OK, 2048 OK, 2049 rejected)
 
-### AC8: User profile enforces GET method (MEDIUM-2)
+### AC8: User profile enforces GET method (MEDIUM-2) ✅ DONE
 
-- [ ] `handle_user_profile` rejects non-GET methods with `405 Method Not Allowed`
-- [ ] Route registration in `main.rs` already uses `.get()` only, but handler adds defense in depth
+- [x] `handle_user_profile` rejects non-GET methods with `405 Method Not Allowed`
+- [x] Route registration in `main.rs` already uses `.get()` only, but handler adds defense in depth
 
-### AC9: Cookie Domain attribute (MEDIUM-3)
+### AC9: Cookie Domain attribute (MEDIUM-3) ✅ DONE
 
-- [ ] `build_session_cookie` reads domain from `COOKIE_DOMAIN` environment variable
-- [ ] If `COOKIE_DOMAIN` is set, cookie includes `.domain(domain)` attribute
-- [ ] If `COOKIE_DOMAIN` is not set, behavior is unchanged (no domain attribute)
-- [ ] Document the env var in `.env.local.example`
+- [x] `build_session_cookie` reads domain from `COOKIE_DOMAIN` environment variable
+- [x] If `COOKIE_DOMAIN` is set, cookie includes `.domain(domain)` attribute
+- [x] If `COOKIE_DOMAIN` is not set, behavior is unchanged (no domain attribute)
+- [x] Document the env var in `.env.local.example`
 
 ### AC10: Auth states cleanup (MEDIUM-4)
 
@@ -118,6 +132,20 @@ A thorough security audit of the auth flow identified 14 findings across 4 sever
 ### Database Migrations
 
 ```sql
+-- Sessions table (for server-side session storage)
+CREATE TABLE sessions (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at    TIMESTAMPTZ NOT NULL,
+    refreshed_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    revoked       BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+-- Index for fast session lookups by token sub claim
+CREATE INDEX idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX idx_sessions_revoked_expires ON sessions(revoked, expires_at) WHERE revoked = TRUE;
+
 -- Add code_challenge to auth_states (for PKCE)
 ALTER TABLE auth_states ADD COLUMN IF NOT EXISTS code_challenge TEXT;
 
@@ -134,6 +162,13 @@ RETURNS TABLE (
 ) AS $$
     DELETE FROM auth_states WHERE id = state_id RETURNING id, redirect_uri, provider, created_at;
 $$ LANGUAGE sql;
+
+-- Cleanup expired/revoked sessions (pg_cron)
+SELECT cron.schedule(
+    'cleanup-sessions',
+    '0 * * * *',  -- every hour
+    'DELETE FROM sessions WHERE revoked = TRUE AND expires_at < NOW() - INTERVAL ''24 hours'''
+);
 ```
 
 ### New Dependencies
@@ -141,7 +176,6 @@ $$ LANGUAGE sql;
 | Crate | Purpose |
 |-------|---------|
 | `governor = "0.6"` | Rate limiting middleware (optional — can use custom implementation) |
-| `dashmap = "6"` | Thread-safe in-memory revocation list |
 | `tracing` | Structured error logging (if not already present) |
 
 ### Rate Limiting Implementation
@@ -182,23 +216,66 @@ pub async fn rate_limit_middleware(
 }
 ```
 
-### JWT Revocation List
+### Server-Side Session Flow
 
 ```rust
-// src/auth/session.rs additions
-use dashmap::DashSet;
-use std::sync::Arc;
+// src/auth/session.rs — new flow
 
-pub struct RevocationList {
-    revoked: Arc<DashSet<String>>,
-    cleanup_interval: tokio::task::JoinHandle<()>,
+// JWT claims: session_id (sub), exp, iat
+// The token itself carries no user data — just a reference to the DB row
+
+pub async fn create_session(pool: &PgPool, user_id: Uuid) -> Result<String, SessionError> {
+    let session_id = Uuid::new_v4();
+    let expires_at = now_secs() + SESSION_LIFETIME_SECS;
+    
+    // Insert session row
+    sqlx::query("INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)")
+        .bind(session_id).bind(user_id).bind(expires_at)
+        .execute(pool).await?;
+    
+    // Build JWT referencing the session
+    let claims = SessionClaims {
+        sub: session_id.to_string(),
+        exp: expires_at,
+        iat: now_secs(),
+    };
+    encode_jwt(&claims, &secret)
 }
 
-impl RevocationList {
-    pub fn new(max_age_secs: u64) -> Self { ... }
-    pub fn revoke(&self, jti: String) { ... }
-    pub fn is_revoked(&self, jti: &str) -> bool { ... }
-    // Background task: cleanup entries older than max_age_secs
+pub async fn verify_session(pool: &PgPool, token: &str) -> Result<Uuid, SessionError> {
+    // 1. Verify JWT signature and expiry (fast fail)
+    let claims = decode_jwt(token, &secret)?;
+    
+    // 2. Look up session in database
+    let session = sqlx::query_as::<_, SessionRow>(
+        "SELECT user_id, expires_at, revoked FROM sessions WHERE id = $1"
+    ).bind(claims.sub).fetch_one(pool).await?;
+    
+    // 3. Check not revoked and not expired
+    if session.revoked {
+        return Err(SessionError::Revoked);
+    }
+    if now_secs() > session.expires_at {
+        return Err(SessionError::Expired);
+    }
+    
+    Ok(session.user_id)
+}
+
+pub async fn revoke_session(pool: &PgPool, session_id: Uuid) -> Result<(), SessionError> {
+    sqlx::query("UPDATE sessions SET revoked = TRUE WHERE id = $1")
+        .bind(session_id).execute(pool).await?;
+    Ok(())
+}
+
+pub async fn refresh_session(pool: &PgPool, session_id: Uuid) -> Result<String, SessionError> {
+    // Extend expiry by SESSION_LIFETIME_SECS from now
+    let new_expires = now_secs() + SESSION_LIFETIME_SECS;
+    sqlx::query("UPDATE sessions SET expires_at = $1, refreshed_at = NOW() WHERE id = $2")
+        .bind(new_expires).bind(session_id).execute(pool).await?;
+    
+    // Return new JWT with extended expiry
+    encode_jwt(&SessionClaims { sub: session_id, exp: new_expires, iat: now_secs() }, &secret)
 }
 ```
 
@@ -224,7 +301,7 @@ let auth_state = db::delete_auth_state_atomic(&pool, &params.state).await?;
 | 3 | AC8 (method enforcement) | Quick, low risk, standalone |
 | 4 | AC1 (TOCTOU fix) | Medium, requires migration + handler changes |
 | 5 | AC6 (PKCE) | Medium, requires migration + flow changes |
-| 6 | AC3 (JWT jti) | Medium, requires session changes + revocation list |
+| 6 | AC3 (server-side sessions) | Medium, refactoring — migration + session flow rewrite |
 | 7 | AC5 (rate limiting) | Medium, new middleware |
 | 8 | AC10 (auth_states cleanup) | Quick, cron job |
 | 9 | AC2 (logout CSRF) | Medium, requires redirect validation |
@@ -234,8 +311,11 @@ let auth_state = db::delete_auth_state_atomic(&pool, &params.state).await?;
 ## Testing Plan
 
 ### Unit Tests
-- [ ] `verify_session` rejects revoked `jti`
-- [ ] `create_session` includes valid `jti` in claims
+- [ ] `verify_session` rejects revoked sessions (revoked = TRUE)
+- [ ] `verify_session` rejects expired sessions (expires_at < now)
+- [ ] `create_session` inserts row into sessions table and returns valid JWT
+- [ ] `revoke_session` sets revoked = TRUE on session row
+- [ ] `refresh_session` extends expires_at and updates refreshed_at
 - [ ] `validate_redirect_uri` rejects over-length URIs
 - [ ] `handle_user_profile` rejects non-GET methods
 - [ ] Rate limiter allows requests under limit
@@ -244,9 +324,11 @@ let auth_state = db::delete_auth_state_atomic(&pool, &params.state).await?;
 - [ ] Atomic state delete returns correct data
 
 ### Integration Tests
-- [ ] Full OAuth flow with PKCE (start → callback → session)
+- [ ] Full OAuth flow with PKCE (start → callback → session row created)
 - [ ] Concurrent callback requests with same state (only one succeeds)
-- [ ] Logout → token revocation → token rejected by middleware
+- [ ] Logout → session revoked in DB → token rejected by middleware
+- [ ] Session refresh → new token issued with extended expiry
+- [ ] Account deletion → cascading session deletion (ON DELETE CASCADE)
 - [ ] Account deletion → OAuth token revocation calls
 - [ ] Rate limit enforcement on OAuth endpoints
 
@@ -273,10 +355,11 @@ let auth_state = db::delete_auth_state_atomic(&pool, &params.state).await?;
 |---|------------|-------------|
 | 1 | Quick wins (AC4, AC7, AC8) | Error sanitization, redirect_uri length, method enforcement; tests pass |
 | 2 | OAuth flow hardening (AC1, AC6) | Atomic state consumption, PKCE; migration applied; tests pass |
-| 3 | Token revocation (AC3, AC11) | JWT `jti`, in-memory revocation list, OAuth token revocation on deletion; tests pass |
+| 3 | Server-side sessions (AC3) | sessions table, DB-backed verify/create/revoke/refresh; tests pass |
 | 4 | Rate limiting (AC5) | Rate limiter middleware on OAuth endpoints; tests pass |
-| 5 | Cleanup and config (AC9, AC10) | Cookie domain env var, pg_cron cleanup job; verified |
+| 5 | Cleanup and config (AC9, AC10) | Cookie domain env var, pg_cron cleanup jobs; verified |
 | 6 | Logout CSRF fix (AC2) | Redirect validation on GET logout; tests pass |
+| 7 | OAuth token revocation (AC11) | Provider API revocation on account deletion; tests pass |
 
 ## Success Metrics
 
@@ -285,5 +368,6 @@ let auth_state = db::delete_auth_state_atomic(&pool, &params.state).await?;
 - All existing auth tests pass (no regressions)
 - Security audit re-check: 0 CRITICAL, 0 HIGH, 0 MEDIUM findings remaining
 - OAuth flow works end-to-end with PKCE
-- Logout immediately invalidates session token
+- Logout immediately invalidates session (DB row revoked, token rejected)
+- Session refresh extends expiry transparently
 - Rate limiting blocks excessive requests with 429
