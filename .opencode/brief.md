@@ -100,6 +100,22 @@ Created an `AuthRequired` wrapper component that gates protected page content be
 - `cargo check --features web` — compiles cleanly
 - `cargo test` — all 13 existing tests pass
 
+<!-- written by @develop-implement -->
+
+## Phase 1a: Post-Review Fixes
+
+### Summary
+Two quick fixes addressing Phase 2 review issues #3 (parameterized routes) and #4 (emoji accessibility).
+
+### Files Modified
+- **`src/middleware/auth.rs`** — Replaced the `PROTECTED_PATHS` `LazyLock<HashSet<&str>>` with a function-based `is_protected_path()` that handles both exact matches (`/dashboard`, `/recipes/new`, `/collections`, `/settings/profile`, `/settings/accounts`, `/explore`) and parameterized routes (`/recipes/:id`, `/collections/:id`) via a helper `is_numeric_id_route()`. The helper validates the suffix is a single numeric segment with no trailing path. Also added `/explore` which was missing from the original HashSet.
+- **`src/components/auth_required.rs`** — Added `aria-hidden: "true"` to the lock emoji `span` (line 30) so screen readers skip the decorative emoji.
+
+### Verification
+- `cargo check --features server` — compiles cleanly
+- `cargo check --features web` — compiles cleanly
+- `cargo test` — all 18 tests pass (no regressions)
+
 ## Phase 2: Review Verdict
 
 **Verdict: PASS** (with suggestions)

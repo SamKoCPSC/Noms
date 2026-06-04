@@ -28,6 +28,7 @@ pub fn AuthRequired(props: AuthRequiredProps) -> Element {
                     class: "inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 mb-6",
                     span {
                         class: "text-3xl",
+                        aria_hidden: "true",
                         "🔒"
                     }
                 }

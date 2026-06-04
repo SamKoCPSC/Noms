@@ -21,20 +21,31 @@ use crate::auth::context::{AuthUser, AuthUserProfile, UserProfile};
 use crate::auth::session;
 use crate::db;
 
-/// Protected routes that require authentication.
+/// Check if a path matches a protected route pattern.
 ///
-/// Kept in sync with the `Route` enum in `main.rs` by convention.
-static PROTECTED_PATHS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
-    [
-        "/dashboard",
-        "/recipes/new",
-        "/collections",
-        "/settings/profile",
-        "/settings/accounts",
-    ]
-    .into_iter()
-    .collect()
-});
+/// Handles both exact matches and parameterized routes like `/recipes/:id`.
+fn is_protected_path(path: &str) -> bool {
+    matches!(
+        path,
+        "/dashboard"
+            | "/recipes/new"
+            | "/collections"
+            | "/settings/profile"
+            | "/settings/accounts"
+            | "/explore"
+    ) || is_numeric_id_route(path, "/recipes/")
+        || is_numeric_id_route(path, "/collections/")
+}
+
+/// Check if a path is a numeric-id parameterized route (e.g. `/recipes/42`).
+fn is_numeric_id_route(path: &str, prefix: &str) -> bool {
+    if !path.starts_with(prefix) {
+        return false;
+    }
+    let id_part = &path[prefix.len()..];
+    // Must be exactly one segment (no trailing slash or extra path)
+    id_part.contains('/') == false && id_part.parse::<i32>().is_ok()
+}
 
 /// Routes that redirect authenticated users away.
 static REDIRECT_IF_AUTHED_PATHS: LazyLock<HashSet<&'static str>> =
@@ -64,7 +75,7 @@ pub async fn handle_auth(
     let is_authenticated = verified_user_id.is_some();
 
     // Check if path is protected
-    let is_protected = PROTECTED_PATHS.contains(path.as_str());
+    let is_protected = is_protected_path(&path);
     let is_redirect_if_authed = REDIRECT_IF_AUTHED_PATHS.contains(path.as_str());
 
     // Redirect authenticated users away from login
