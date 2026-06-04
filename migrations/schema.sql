@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS oauth_accounts (
     email VARCHAR(255),
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     profile_data JSONB,
+    refresh_token TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_used_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 

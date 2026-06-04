@@ -287,7 +287,14 @@ pub async fn start_handler(
 
     let (auth_url, _csrf_token) = req.url();
 
-    Ok(Redirect::temporary(auth_url.as_ref()))
+    // Google requires access_type=offline to return a refresh token
+    let auth_url = if prov == linking::Provider::Google {
+        format!("{auth_url}&access_type=offline")
+    } else {
+        auth_url.to_string()
+    };
+
+    Ok(Redirect::temporary(&auth_url))
 }
 
 /// GET /auth/:provider/callback — process the OAuth callback.
@@ -369,8 +376,13 @@ pub async fn callback_handler(
         _ => unreachable!(),
     };
 
+    // Extract the refresh token from the token response (if present).
+    let refresh_token = token_response
+        .refresh_token()
+        .map(|rt| rt.secret().to_string());
+
     // Link the OAuth identity to a user (or create a new one).
-    let link_result = linking::link_or_create(&state.pool, user_info, existing_user_id)
+    let link_result = linking::link_or_create(&state.pool, user_info, existing_user_id, refresh_token)
         .await
         .map_err(|e| OAuthError::LinkError(e.to_string()))?;
 
@@ -814,6 +826,7 @@ mod tests {
                 &format!("google-sessionlink-{u}"),
                 Some(&format!("sessionlink{u}@example.com")),
                 None,
+                None,
             )
             .await
             .unwrap();
@@ -844,6 +857,7 @@ mod tests {
                     avatar_url: None,
                 },
                 existing_user_id,
+                None,
             )
             .await
             .unwrap();

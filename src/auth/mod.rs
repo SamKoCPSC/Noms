@@ -12,3 +12,5 @@ pub mod oauth;
 pub mod session;
 #[cfg(feature = "server")]
 pub mod user_profile;
+#[cfg(feature = "server")]
+pub mod revoke;

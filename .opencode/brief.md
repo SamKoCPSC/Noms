@@ -1,605 +1,758 @@
 # Task Brief
 
 ## Task Description
-Implement AC6 from NOMS-006: PKCE (Proof Key for Code Exchange) for OAuth flow.
-
-**AC6: PKCE for OAuth flow (HIGH-2)**
-- OAuth authorization requests include `code_challenge` and `code_challenge_method=S256`
-- Token exchange includes `code_verifier`
-- `code_verifier` is random, 43-128 chars, stored in `auth_states` alongside CSRF state
-- `code_challenge` = `BASE64URL(SHA256(code_verifier))`
-- Both Google and GitHub providers support PKCE
-- No impact on existing OAuth flows
+Implement AC11 from NOMS-006: OAuth token revocation on account deletion. Store `refresh_token` in `oauth_accounts` table, call provider revocation endpoints when a user unlinks an OAuth account or deletes their account. Google supports revocation via API; GitHub does not (document limitation). Revocation failures are logged but don't block deletion. 5-second timeout on revocation requests.
 
 ## Phase 0: Implementation Blueprint
+## Objectives
+- Store `refresh_token` in `oauth_accounts` table during OAuth callback flow.
+- Call provider-specific revocation endpoints when a user unlinks an OAuth account or deletes their account.
+- Google revocation via `POST https://oauth2.googleapis.com/revoke?token=...` with a 5-second timeout.
+- GitHub has no revocation API — log a warning via `tracing`.
+- Revocation failures are logged but never block deletion.
+- Add unit tests for the revocation utility.
+
 ## Research Findings
 
-### OAuth2 crate (v5) — Native PKCE Support Confirmed
-- **Crate**: `oauth2 = "5"` (Cargo.toml line 17, server feature)
-- `PkceCodeChallenge::new_random_sha256()` returns `(PkceCodeChallenge, PkceCodeVerifier)` — no manual SHA-256/base64url needed
-- `AuthorizationRequest::set_pkce_challenge(pkce_code_challenge)` attaches `code_challenge` + `code_challenge_method=S256` to the auth URL
-- `CodeTokenRequest::set_pkce_verifier(pkce_code_verifier)` attaches `code_verifier` to the token exchange request
-- `PkceCodeVerifier::new(String)` reconstructs from stored string; `PkceCodeVerifier::secret()` extracts `&str`
-- `PkceCodeChallenge::as_str()` extracts `&str` for the challenge
-- Verifier length: 43–128 chars, ASCII alphanumeric + `-._~` (RFC 7636 compliant)
+### Provider Revocation Endpoints
+| Provider | Endpoint | Method | Auth | Notes |
+|----------|----------|--------|------|-------|
+| Google | `https://oauth2.googleapis.com/revoke` | POST form-encoded `token=...` | None | Returns 200 on success. Accepts both access and refresh tokens. |
+| GitHub | N/A | — | — | GitHub OAuth 2.0 has no revocation API. Tokens expire after ~8 years. Log warning. |
 
-### Provider PKCE Support
-- **Google**: Supports PKCE with `S256` since 2019. Web app clients still require `client_secret` alongside PKCE (already handled by existing `set_client_secret` in `build_oauth_clients`). No code change needed for Google.
-- **GitHub**: Added PKCE support July 2025 (changelog: `github.blog/changelog/2025-07-14-pkce-support-for-oauth-and-github-app-authentication/`). Only `S256` supported. Strongly recommended by GitHub docs.
+Sources:
+- Google: https://developers.google.com/identity/protocols/oauth2/offline-access#token-revoke
+- GitHub: https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/refreshing-user-access-tokens (no revoke endpoint documented)
 
-### Key Architectural Decision: Store `code_verifier` in `auth_states`
-The `code_verifier` must survive the redirect to the OAuth provider and back. The existing pattern already stores CSRF state + redirect_uri + provider in `auth_states` with a 10-minute TTL. Adding `code_verifier` as a new column follows this exact pattern. The state ID serves as the lookup key in the callback handler.
+### `oauth2` Crate v5 Revocation Types
+The `oauth2` crate provides `StandardRevocableToken`, `BasicRevocationErrorResponse`, and a `HasRevocationUrl` typestate. However, using these would require changing `GoogleAuthClient` from `BasicClient` to a typestate variant, which adds complexity for a single Google provider. **Decision: Use `reqwest` directly for revocation** — it's already a dependency, simpler, and avoids typestate changes.
 
----
+### Google Requires `access_type=offline`
+Google only returns a refresh token when `access_type=offline` is set in the authorization request. The `oauth2` crate does not expose a method to add arbitrary query parameters to the authorization URL. **Workaround: Append `&access_type=offline` to the generated auth URL string for Google.**
+
+### Database Schema Impact
+The `oauth_accounts` table currently has no `refresh_token` column. Adding it requires:
+1. A new migration file.
+2. Updating `OauthAccount` struct in `src/db/mod.rs`.
+3. Updating all SQL queries that touch `oauth_accounts` (SELECT, INSERT).
+
+### Existing Deletion Call Sites
+| Function | File | Line | Called From |
+|----------|------|------|-------------|
+| `delete_oauth_account` | `src/db/mod.rs:443` | `settings_accounts.rs:137` (unlink) | Unlink flow |
+| `delete_user` | `src/db/mod.rs:498` | `settings_profile.rs:166` (delete account) | Delete flow |
+
+Both functions are in `src/db/mod.rs` and have CASCADE deletes on `oauth_accounts`. We must revoke tokens **before** calling these DB functions.
 
 ## Files to Modify
 
-### 1. `migrations/schema.sql` — Add `code_verifier` column
+### 1. `migrations/schema.sql`
+**Add `refresh_token TEXT` column to `oauth_accounts` table.**
 
-**Location**: lines 42–48 (auth_states table)
-
-**Change**: Add a nullable `code_verifier TEXT` column to the existing `auth_states` table definition. Use `ALTER TABLE` (additive-only, per schema convention at line 3).
-
+After line 44 (`created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()`), insert:
 ```sql
--- Add code_verifier column for PKCE support (nullable for backward compat)
-ALTER TABLE auth_states ADD COLUMN IF NOT EXISTS code_verifier TEXT;
+refresh_token TEXT,
 ```
 
-This is placed AFTER the existing `CREATE TABLE IF NOT EXISTS auth_states` block (after line 48). The column is nullable because:
-- Existing rows (if any) won't have a value
-- The application will always populate it for new flows
+This column is nullable for backward compatibility (existing rows without refresh tokens).
 
-### 2. `src/test_utils.rs` — Update test schema
+### 2. `src/db/mod.rs`
 
-**Location**: lines 96–106 (auth_states CREATE TABLE)
-
-**Change**: Add `code_verifier TEXT` to the inline test schema definition.
-
+#### 2a. `OauthAccount` struct (line 63)
+Add field:
 ```rust
-// Before (line 96-102):
-"CREATE TABLE IF NOT EXISTS auth_states (\
- id VARCHAR(64) PRIMARY KEY,\
- redirect_uri TEXT NOT NULL,\
- provider TEXT NOT NULL,\
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
- )",
-
-// After:
-"CREATE TABLE IF NOT EXISTS auth_states (\
- id VARCHAR(64) PRIMARY KEY,\
- redirect_uri TEXT NOT NULL,\
- provider TEXT NOT NULL,\
- code_verifier TEXT,\
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
- )",
+pub refresh_token: Option<String>,
 ```
 
-### 3. `src/db/mod.rs` — Update AuthState struct and queries
-
-**Location**: `AuthState` struct at lines 131–137
-
-**Change**: Add `code_verifier: Option<String>` field.
-
+Updated struct:
 ```rust
-// Before:
-#[derive(Debug, Clone, sqlx::FromRow)]
-pub struct AuthState {
-    pub id: String,
-    pub redirect_uri: String,
+pub struct OauthAccount {
+    pub id: i32,
+    pub user_id: i32,
     pub provider: String,
-    pub created_at: DateTime<Utc>,
-}
-
-// After:
-#[derive(Debug, Clone, sqlx::FromRow)]
-pub struct AuthState {
-    pub id: String,
-    pub redirect_uri: String,
-    pub provider: String,
-    pub code_verifier: Option<String>,
-    pub created_at: DateTime<Utc>,
+    pub provider_user_id: String,
+    pub email: String,
+    pub email_verified: bool,
+    pub profile_data: Option<String>,
+    pub refresh_token: Option<String>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub last_used_at: chrono::DateTime<chrono::Utc>,
 }
 ```
 
-**Location**: `insert_auth_state` at lines 154–168
-
-**Change**: Add `code_verifier` parameter and include it in the INSERT.
-
+#### 2b. `insert_oauth_account` function (line 270)
+Change signature from:
 ```rust
-// Before:
-pub async fn insert_auth_state(
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
-    id: &str,
-    provider: &str,
-    redirect_uri: &str,
-) -> Result<(), DbError> {
-    sqlx::query("INSERT INTO auth_states (id, provider, redirect_uri) VALUES ($1, $2, $3)")
-        .bind(id)
-        .bind(provider)
-        .bind(redirect_uri)
-        .execute(executor)
-        .await
-        .map_err(DbError::Query)?;
-    Ok(())
-}
+pub async fn insert_oauth_account(pool, user_id, provider, provider_user_id, email, email_verified, profile_data)
+```
+To:
+```rust
+pub async fn insert_oauth_account(pool, user_id, provider, provider_user_id, email, email_verified, profile_data, refresh_token)
+```
 
-// After:
-pub async fn insert_auth_state(
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
-    id: &str,
-    provider: &str,
-    redirect_uri: &str,
-    code_verifier: &str,
-) -> Result<(), DbError> {
-    sqlx::query("INSERT INTO auth_states (id, provider, redirect_uri, code_verifier) VALUES ($1, $2, $3, $4)")
-        .bind(id)
-        .bind(provider)
-        .bind(redirect_uri)
-        .bind(code_verifier)
-        .execute(executor)
-        .await
-        .map_err(DbError::Query)?;
-    Ok(())
+Add `refresh_token: Option<String>` parameter. Update SQL query to include `refresh_token` in INSERT and VALUES.
+
+#### 2c. `get_oauth_account_by_provider` function (line 203)
+Update the `query_as!` column list to include `refresh_token`. The SELECT already selects `*` via `query_as!`, so adding the column to the struct is sufficient.
+
+#### 2d. `get_user_oauth_accounts` function (line 217)
+Same as above — the struct change covers it.
+
+#### 2e. New helper: `get_oauth_accounts_by_user_id` function
+Add a new function to fetch all OAuth accounts for a user (for account deletion revocation):
+```rust
+pub async fn get_oauth_accounts_by_user_id(pool: &PgPool, user_id: i32) -> Result<Vec<OauthAccount>, AppError> {
+    sqlx::query_as!(
+        OauthAccount,
+        r#"SELECT id, user_id, provider, provider_user_id, email, email_verified,
+                  profile_data, refresh_token, created_at, last_used_at
+           FROM oauth_accounts WHERE user_id = $1"#,
+        user_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Database(format!("Failed to fetch OAuth accounts: {}", e)))
 }
 ```
 
-**Location**: `get_auth_state` at lines 171–183
+### 3. `src/auth/oauth.rs`
 
-**Change**: Include `code_verifier` in the SELECT.
-
+#### 3a. `start_handler` — add `access_type=offline` for Google (line 103)
+After the authorization URL is generated, append `&access_type=offline` for Google:
 ```rust
-// Before:
-sqlx::query_as!(
-    AuthState,
-    "SELECT id, redirect_uri, provider, created_at FROM auth_states WHERE id = $1",
-    id,
-)
+let auth_url = req.request_url(authorization_url);
 
-// After:
-sqlx::query_as!(
-    AuthState,
-    "SELECT id, redirect_uri, provider, code_verifier, created_at FROM auth_states WHERE id = $1",
-    id,
-)
-```
-
-**Note on `sqlx::query_as!` macro**: The macro validates column names at compile time against the struct fields. The `code_verifier` column name must match the struct field name exactly. Since `code_verifier` is `Option<String>`, sqlx will correctly map SQL NULL to `None`.
-
-### 4. `src/auth/oauth.rs` — PKCE in start_handler and callback_handler
-
-**Location**: Imports at lines 12–16
-
-**Change**: Add `PkceCodeChallenge` and `PkceCodeVerifier` to the oauth2 imports.
-
-```rust
-// Before:
-use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, EndpointNotSet, EndpointSet,
-    RedirectUrl, Scope, TokenResponse, TokenUrl,
-};
-
-// After:
-use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, EndpointNotSet, EndpointSet,
-    PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, Scope, TokenResponse, TokenUrl,
+// Google requires access_type=offline to return a refresh token
+let auth_url = if provider == "google" {
+    format!("{}&access_type=offline", auth_url)
+} else {
+    auth_url.to_string()
 };
 ```
 
-**Location**: `start_handler` at lines 246–284
+#### 3b. `callback_handler` — extract and store `refresh_token` (line 184)
+After `exchange_code` returns `token_response`, extract the refresh token:
+```rust
+let refresh_token = token_response
+    .refresh_token()
+    .map(rt => rt.secret().to_string());
+```
 
-**Change**: Generate PKCE pair, store verifier in DB, attach challenge to auth URL.
+Update `insert_oauth_account` call (line 197) to pass `refresh_token`:
+```rust
+insert_oauth_account(
+    &pool, user_id, provider.clone(), provider_user_id.clone(),
+    email.clone(), email_verified, profile_data, refresh_token
+).await?;
+```
+
+### 4. `src/auth/mod.rs`
+Add `pub mod revoke;` after line 4.
+
+### 5. `src/auth/revoke.rs` (NEW FILE)
+New module for token revocation logic.
 
 ```rust
-// Before (lines 254-281):
-    let csrf_state = Uuid::new_v4().to_string();
+use axum::async_trait;
+use chrono::{DateTime, Utc};
+use sqlx::PgPool;
+use std::time::Duration;
+use tracing::{error, warn};
 
-    db::insert_auth_state(
-        &state.pool,
-        &csrf_state,
-        prov.as_str(),
-        &params.redirect_uri,
-    )
-    .await
-    .map_err(|e| OAuthError::DbError(e.to_string()))?;
+use crate::auth::linking::Provider;
+use crate::db::OauthAccount;
 
-    let client = match prov {
-        linking::Provider::Google => &state.google_client,
-        linking::Provider::GitHub => &state.github_client,
-        _ => return Err(OAuthError::InvalidProvider(provider)),
+/// Revocation result for testing/logging
+pub enum RevokeResult {
+    Success,
+    NotSupported { provider: String },
+    Timeout,
+    NetworkError(String),
+    HttpError(String),
+    NoRefreshToken,
+}
+
+/// Revoke an OAuth token for a single account.
+/// Returns RevokeResult for logging. Never returns Err.
+pub async fn revoke_account(pool: &PgPool, account: &OauthAccount) -> RevokeResult {
+    let refresh_token = match &account.refresh_token {
+        Some(rt) if !rt.is_empty() => rt.clone(),
+        _ => return RevokeResult::NoRefreshToken,
     };
 
-    let mut req = client.authorize_url(|| CsrfToken::new(csrf_state.clone()));
-
-    req = req
-        .add_scope(Scope::new("openid".to_string()))
-        .add_scope(Scope::new("email".to_string()))
-        .add_scope(Scope::new("profile".to_string()));
-
-    let (auth_url, _csrf_token) = req.url();
-
-// After:
-    let csrf_state = Uuid::new_v4().to_string();
-
-    // Generate PKCE code verifier and challenge (S256 method).
-    // The verifier is stored server-side; the challenge is sent to the provider.
-    let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
-
-    db::insert_auth_state(
-        &state.pool,
-        &csrf_state,
-        prov.as_str(),
-        &params.redirect_uri,
-        pkce_verifier.secret(),
-    )
-    .await
-    .map_err(|e| OAuthError::DbError(e.to_string()))?;
-
-    let client = match prov {
-        linking::Provider::Google => &state.google_client,
-        linking::Provider::GitHub => &state.github_client,
-        _ => return Err(OAuthError::InvalidProvider(provider)),
+    let provider = match account.provider.parse::<Provider>() {
+        Ok(p) => p,
+        Err(_) => {
+            warn!("Unknown provider '{}', skipping revocation", account.provider);
+            return RevokeResult::HttpError(format!("unknown provider: {}", account.provider));
+        }
     };
 
-    let mut req = client
-        .authorize_url(|| CsrfToken::new(csrf_state.clone()))
-        .set_pkce_challenge(pkce_challenge);
+    revoke_token(&refresh_token, provider).await
+}
 
-    req = req
-        .add_scope(Scope::new("openid".to_string()))
-        .add_scope(Scope::new("email".to_string()))
-        .add_scope(Scope::new("profile".to_string()));
+/// Revoke a token for a specific provider.
+/// 5-second timeout. Failures are logged, never propagated.
+pub async fn revoke_token(refresh_token: &str, provider: Provider) -> RevokeResult {
+    let result = match provider {
+        Provider::Google => revoke_google(refresh_token).await,
+        Provider::GitHub => {
+            warn!(provider = "github", "GitHub has no token revocation API; token will expire naturally");
+            return RevokeResult::NotSupported { provider: "github".to_string() };
+        }
+    };
 
-    let (auth_url, _csrf_token) = req.url();
+    match &result {
+        RevokeResult::Success => {
+            tracing::info!(provider = ?provider, "Token revoked successfully");
+        }
+        other => {
+            error!(provider = ?provider, result = ?other, "Token revocation failed");
+        }
+    }
+
+    result
+}
+
+/// Revoke a Google OAuth token.
+/// POST https://oauth2.googleapis.com/revoke?token=...
+/// No auth header required. Returns 200 on success.
+async fn revoke_google(refresh_token: &str) -> RevokeResult {
+    let client = match reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => return RevokeResult::NetworkError(format!("Failed to build HTTP client: {}", e)),
+    };
+
+    let url = format!("https://oauth2.googleapis.com/revoke?token={}", refresh_token);
+
+    let response = match client.post(&url).send().await {
+        Ok(r) => r,
+        Err(e) => {
+            if e.is_timeout() {
+                return RevokeResult::Timeout;
+            }
+            return RevokeResult::NetworkError(e.to_string());
+        }
+    };
+
+    if response.status().is_success() {
+        RevokeResult::Success
+    } else {
+        RevokeResult::HttpError(format!(
+            "HTTP {}: {}",
+            response.status(),
+            response.text().await.unwrap_or_default()
+        ))
+    }
+}
+
+/// Revoke tokens for all OAuth accounts of a user.
+/// Used in account deletion flow.
+pub async fn revoke_all_user_tokens(pool: &PgPool, user_id: i32) {
+    use crate::db::get_oauth_accounts_by_user_id;
+
+    let accounts = match get_oauth_accounts_by_user_id(pool, user_id).await {
+        Ok(accs) => accs,
+        Err(e) => {
+            error!(user_id = user_id, "Failed to fetch OAuth accounts for revocation: {}", e);
+            return;
+        }
+    };
+
+    for account in accounts {
+        let result = revoke_account(pool, &account).await;
+        match result {
+            RevokeResult::Success => {
+                tracing::info!(
+                    user_id = user_id,
+                    provider = %account.provider,
+                    "Token revoked"
+                );
+            }
+            RevokeResult::NoRefreshToken => {
+                tracing::debug!(
+                    user_id = user_id,
+                    provider = %account.provider,
+                    "No refresh token to revoke"
+                );
+            }
+            other => {
+                warn!(
+                    user_id = user_id,
+                    provider = %account.provider,
+                    result = ?other,
+                    "Token revocation failed (non-fatal)"
+                );
+            }
+        }
+    }
+}
 ```
 
-Key detail: `.set_pkce_challenge(pkce_challenge)` is called on the `AuthorizationRequest` builder, which adds both `code_challenge=<value>` and `code_challenge_method=S256` to the authorization URL query string.
+### 6. `src/db/mod.rs` — update `delete_oauth_account` (line 443)
+Add revocation call before DB deletion. Current function:
+```rust
+pub async fn delete_oauth_account(pool, user_id, provider) -> Result<(), AppError>
+```
 
-**Location**: `callback_handler` at lines 342–346
+Update to:
+```rust
+use crate::auth::revoke::{revoke_account, RevokeResult};
 
-**Change**: Attach `code_verifier` to the token exchange request.
+// ...
+
+pub async fn delete_oauth_account(pool: &PgPool, user_id: i32, provider: &str) -> Result<(), AppError> {
+    // Fetch account for revocation before deletion
+    if let Ok(account) = get_oauth_account_by_provider(pool, user_id, provider).await {
+        let result = revoke_account(pool, &account).await;
+        match result {
+            RevokeResult::Success => {
+                tracing::info!(user_id = user_id, provider = provider, "Token revoked before unlink");
+            }
+            RevokeResult::NoRefreshToken => {
+                tracing::debug!(user_id = user_id, provider = provider, "No refresh token to revoke");
+            }
+            other => {
+                warn!(user_id = user_id, provider = provider, result = ?other, "Token revocation failed (non-fatal)");
+            }
+        }
+    }
+
+    sqlx::query("DELETE FROM oauth_accounts WHERE user_id = $1 AND provider = $2")
+        .bind(user_id)
+        .bind(provider)
+        .execute(pool)
+        .await
+        .map(|_| ())
+        .map_err(|e| AppError::Database(format!("Failed to delete OAuth account: {}", e)))
+}
+```
+
+### 7. `src/db/mod.rs` — update `delete_user` (line 498)
+Add revocation call before DB deletion. Current function:
+```rust
+pub async fn delete_user(pool, user_id) -> Result<(), AppError>
+```
+
+Update to:
+```rust
+use crate::auth::revoke::revoke_all_user_tokens;
+
+// ...
+
+pub async fn delete_user(pool: &PgPool, user_id: i32) -> Result<(), AppError> {
+    // Revoke all OAuth tokens before deletion
+    revoke_all_user_tokens(pool, user_id).await;
+
+    sqlx::query("DELETE FROM users WHERE id = $1")
+        .bind(user_id)
+        .execute(pool)
+        .await
+        .map(|_| ())
+        .map_err(|e| AppError::Database(format!("Failed to delete user: {}", e)))
+}
+```
+
+### 8. `Cargo.toml` — add `wiremock` dev-dependency
+Under `[dev-dependencies]` (add section if missing), add:
+```toml
+wiremock = "0.6"
+```
+
+### 9. `src/auth/revoke_tests.rs` (NEW FILE) or inline `#[cfg(test)]` module in `revoke.rs`
+Unit tests for revocation logic:
 
 ```rust
-// Before (lines 342-346):
-    let token_response = client
-        .exchange_code(AuthorizationCode::new(params.code.clone()))
-        .request_async(&state.http_client)
-        .await
-        .map_err(|e| OAuthError::TokenExchange(e.to_string()))?;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wiremock::MockServer;
+    use wiremock::matchers::{method, path, request};
+    use wiremock::ResponseTemplate;
 
-// After:
-    // Reconstruct the PKCE code verifier from the stored value.
-    let code_verifier = auth_state.code_verifier
-        .ok_or_else(|| OAuthError::TokenExchange("PKCE code_verifier not found in auth state".to_string()))?;
+    #[tokio::test]
+    async fn test_revoke_google_success() {
+        let server = MockServer::start().await;
+        let base_url = server.uri();
 
-    let token_response = client
-        .exchange_code(AuthorizationCode::new(params.code.clone()))
-        .set_pkce_verifier(PkceCodeVerifier::new(code_verifier))
-        .request_async(&state.http_client)
-        .await
-        .map_err(|e| OAuthError::TokenExchange(e.to_string()))?;
+        // Mock Google revoke endpoint
+        Mock::given(request(method("POST"), path_regex(r"^/revoke\?token=.*")))
+            .respond_with(ResponseTemplate::new(200).set_body_string("{}"))
+            .mount(&server)
+            .await;
+
+        // Patch: We need to test with the mock server URL instead of Google's real URL.
+        // Strategy: Extract the core HTTP logic into a testable function that accepts the URL.
+        // Alternatively, test via integration test with real Google endpoint disabled.
+        // For now, test the Provider::GitHub path and error handling.
+    }
+
+    #[tokio::test]
+    async fn test_revoke_github_logs_warning() {
+        // GitHub has no revocation API — should return NotSupported
+        let result = revoke_token("dummy_token", Provider::GitHub).await;
+        assert!(matches!(result, RevokeResult::NotSupported { .. }));
+    }
+
+    #[tokio::test]
+    async fn test_revoke_google_timeout() {
+        let server = MockServer::start().await;
+
+        // Mock a slow endpoint (never responds)
+        Mock::given(method("POST"))
+            .respond_with(ResponseTemplate::new(200).set_delay(std::time::Duration::from_secs(10)))
+            .mount(&server)
+            .await;
+
+        // We need a way to test with custom URL. Add `revoke_token_with_url` for testing.
+        // Or: test that timeout is configured correctly by checking the client builder.
+    }
+
+    #[tokio::test]
+    async fn test_revoke_google_network_error() {
+        // Test against an unreachable URL
+        let result = revoke_token("dummy_token", Provider::Google).await;
+        // This will actually hit Google's real endpoint — skip in CI or use a mock.
+        // Better: refactor to accept base_url parameter for testing.
+    }
+}
 ```
 
-Key detail: The `auth_state` is retrieved BEFORE deletion (line 300), so `auth_state.code_verifier` is available at the point of token exchange (line 342). The state is deleted at line 322, which is after the verifier is read but before the token exchange. We need to ensure the verifier is captured before the state deletion. Looking at the current flow:
-
-1. Line 300: `get_auth_state` — retrieves state (including `code_verifier`)
-2. Lines 306-318: expiry + provider checks
-3. Lines 322-327: `delete_auth_state` — consumes the state
-4. Lines 342-346: token exchange
-
-The `auth_state` variable is still in scope at line 342 (it's a `let` binding from line 300). So `auth_state.code_verifier` is accessible. No reordering needed.
-
-### 5. `src/auth/oauth.rs` — Update existing tests
-
-**Location**: `test_utils` calls to `db::insert_auth_state` in oauth.rs tests (lines 605-607, 620-622, 635-637)
-
-**Change**: All calls to `db::insert_auth_state` now require a 5th argument (`code_verifier`). Use a dummy verifier for tests that don't exercise the full PKCE flow.
-
+**Refinement for testability:** Extract the HTTP call into a function that accepts the base URL:
 ```rust
-// Before:
-db::insert_auth_state(&pool, &state_id, "google", "/dashboard").await.unwrap();
+/// Internal: revoke with configurable base URL (for testing)
+async fn revoke_google_with_url(base_url: &str, refresh_token: &str) -> RevokeResult {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()
+        .map_err(|e| RevokeResult::NetworkError(e.to_string()))?;
 
-// After:
-db::insert_auth_state(&pool, &state_id, "google", "/dashboard", "dummy-verifier-that-is-long-enough-43-chars-min").await.unwrap();
+    let url = format!("{}/revoke?token={}", base_url, refresh_token);
+    // ... same logic
+}
+
+async fn revoke_google(refresh_token: &str) -> RevokeResult {
+    revoke_google_with_url("https://oauth2.googleapis.com", refresh_token).await
+}
 ```
 
-### 6. `src/db/mod.rs` — Update existing tests
+### 10. `src/test_utils.rs` — no changes needed
+The existing `pgtemp` setup is sufficient for integration tests. The revocation unit tests use `wiremock` for HTTP mocking, not the test database.
 
-**Location**: All calls to `db::insert_auth_state` in db/mod.rs tests (lines 531-532, 548-549, 570-571, 575-576)
+## Implementation Order
 
-**Change**: Same as above — add dummy `code_verifier` argument.
+### Phase 1: Database & Data Model
+1. **`migrations/schema.sql`** — Add `refresh_token TEXT` column.
+2. **`src/db/mod.rs`** — Update `OauthAccount` struct, `insert_oauth_account` signature, and SQL queries.
 
----
+### Phase 2: Capture Refresh Token
+3. **`src/auth/oauth.rs`** — Add `access_type=offline` for Google in `start_handler`, extract `refresh_token` in `callback_handler`, pass to `insert_oauth_account`.
 
-## Test Plan
+### Phase 3: Revocation Logic
+4. **`src/auth/mod.rs`** — Add `pub mod revoke;`.
+5. **`src/auth/revoke.rs`** — Create new module with `revoke_account`, `revoke_token`, `revoke_google`, `revoke_all_user_tokens`.
 
-### Unit Tests (no DB, in `src/auth/oauth.rs`)
+### Phase 4: Wire into Deletion Flows
+6. **`src/db/mod.rs`** — Update `delete_oauth_account` to call `revoke_account` before DB delete.
+7. **`src/db/mod.rs`** — Update `delete_user` to call `revoke_all_user_tokens` before DB delete.
 
-1. **`test_pkce_challenge_verifier_generation`** — Verify `PkceCodeChallenge::new_random_sha256()` produces valid-length outputs.
-2. **`test_pkce_challenge_in_auth_url`** — Build an auth URL with PKCE and verify the URL contains `code_challenge=` and `code_challenge_method=S256` query params.
-3. **`test_pkce_verifier_reconstruction`** — Verify `PkceCodeVerifier::new(stored_string)` round-trips correctly.
+### Phase 5: Tests
+8. **`Cargo.toml`** — Add `wiremock = "0.6"` dev-dependency.
+9. **`src/auth/revoke.rs`** — Add `#[cfg(test)]` module with unit tests for:
+   - `revoke_token` → `Provider::GitHub` returns `NotSupported`
+   - `revoke_google_with_url` → success (200 response from mock)
+   - `revoke_google_with_url` → timeout (slow mock endpoint)
+   - `revoke_google_with_url` → network error (unreachable URL)
+   - `revoke_account` → `NoRefreshToken` when `refresh_token` is `None`
 
-### Integration Tests (with DB, in `src/auth/oauth.rs` mod db_tests)
+## Architectural Decisions & Trade-offs
 
-4. **`test_auth_state_stores_code_verifier`** — Insert auth state with a verifier, retrieve it, assert `code_verifier` is `Some(expected)`.
-5. **`test_callback_retrieves_verifier_before_delete`** — Verify the callback flow reads `code_verifier` from `auth_state` before the state is deleted.
+| Decision | Rationale | Alternative |
+|----------|-----------|-------------|
+| Use `reqwest` directly instead of `oauth2` crate's revocation types | Simpler, avoids typestate changes to `GoogleAuthClient`, `reqwest` already a dependency | Use `oauth2::HasRevocationUrl` typestate — more type-safe but requires refactoring client types |
+| 5-second timeout via `reqwest::Client::builder().timeout()` | Simple, covers both connect and read timeouts | Use `tokio::time::timeout()` wrapper — more control but more code |
+| Revocation in `delete_oauth_account` / `delete_user` (DB layer) rather than page handlers | Single point of revocation logic, page handlers don't need to know about revocation | Revocation in page handlers — more explicit but duplicates logic |
+| `refresh_token` column is nullable | Backward compatible with existing rows | NOT NULL with default — breaks existing data |
+| Append `&access_type=offline` to auth URL string | Simple workaround for `oauth2` crate limitation | Use a different OAuth library or manual URL construction |
 
-### Integration Tests (with DB, in `src/db/mod.rs`)
+## Test Strategy
 
-6. **`test_insert_and_get_auth_state_with_verifier`** — Replace existing `test_insert_and_get_auth_state` to include verifier.
-7. **`test_cleanup_expired_auth_states_with_verifier`** — Same as existing cleanup test, just with 5-arg `insert_auth_state`.
+### Unit Tests (in `src/auth/revoke.rs`)
+| Test | What it verifies |
+|------|-----------------|
+| `revoke_github_not_supported` | `Provider::GitHub` returns `NotSupported` |
+| `revoke_google_success` | Mock server returns 200 → `Success` |
+| `revoke_google_timeout` | Mock server delays > 5s → `Timeout` |
+| `revoke_google_network_error` | Unreachable URL → `NetworkError` |
+| `revoke_google_http_error` | Mock server returns 400 → `HttpError` |
+| `revoke_account_no_refresh_token` | `refresh_token: None` → `NoRefreshToken` |
 
----
+### Integration Tests (existing test infrastructure)
+The existing `pgtemp`-based integration tests can verify the end-to-end flow:
+1. Create user, link Google account (with mock refresh token in DB).
+2. Call `delete_oauth_account` → verify revocation is attempted (via mock).
+3. Call `delete_user` → verify all tokens are revoked (via mock).
 
-## Step-by-Step Implementation Order
+## Gaps & Areas for Follow-up
+1. **Google token format**: The revocation endpoint accepts both access tokens and refresh tokens. We're storing only the refresh token. This is correct per Google docs.
+2. **Token rotation**: Google may rotate refresh tokens on each use. Our implementation stores the initial refresh token from the OAuth callback. If Google rotates it, the stored token may become invalid. **Mitigation**: The revocation endpoint still accepts old tokens for revocation, so this is not a blocking issue.
+3. **GitHub token expiry**: GitHub tokens expire after ~8 years. Document this as a known limitation.
+4. **Rate limiting**: Google's revocation endpoint may have rate limits. With a 5-second timeout and per-account revocation, this should not be an issue for typical usage.
+5. **Testing against real Google endpoint**: Unit tests use `wiremock`. Integration tests against the real Google endpoint are not feasible in CI. Consider a manual test checklist.
 
-1. **Migration**: Add `ALTER TABLE auth_states ADD COLUMN IF NOT EXISTS code_verifier TEXT;` to `migrations/schema.sql` (after line 48).
-2. **Test schema**: Update `src/test_utils.rs` auth_states CREATE TABLE to include `code_verifier TEXT` (line 96-106).
-3. **DB struct**: Add `code_verifier: Option<String>` to `AuthState` in `src/db/mod.rs` (line 131-137).
-4. **DB insert**: Update `insert_auth_state` signature and query in `src/db/mod.rs` (lines 154-168).
-5. **DB select**: Update `get_auth_state` query in `src/db/mod.rs` (lines 171-183).
-6. **OAuth imports**: Add `PkceCodeChallenge, PkceCodeVerifier` to `src/auth/oauth.rs` (lines 12-16).
-7. **start_handler**: Add PKCE generation + storage + `.set_pkce_challenge()` in `src/auth/oauth.rs` (lines 254-281).
-8. **callback_handler**: Add `.set_pkce_verifier()` to token exchange in `src/auth/oauth.rs` (lines 342-346).
-9. **Fix all test call sites**: Update every `db::insert_auth_state(...)` call in `src/auth/oauth.rs` tests and `src/db/mod.rs` tests to include the new `code_verifier` argument.
-10. **Add new tests**: Add PKCE-specific tests as listed above.
-
----
-
-## Backward Compatibility Notes
-
-- The `code_verifier` column is nullable (`TEXT`, not `TEXT NOT NULL`). This ensures the migration is safe even if applied to a running database with existing auth_states rows.
-- The `AuthState.code_verifier` field is `Option<String>`. In `callback_handler`, we treat `None` as an error (`TokenExchange`), which is correct — any new auth flow will always have a verifier.
-- The `insert_auth_state` signature change is a breaking change for callers, but all callers are within this crate (oauth.rs and tests), so no external API is affected.
-- No changes to `delete_auth_state` or `cleanup_expired_auth_states` are needed — they operate on the state `id` only.
+## Dependencies
+- `reqwest` (already a dependency with `json` feature) — used for HTTP revocation calls.
+- `wiremock = "0.6"` (new dev-dependency) — used for mocking HTTP endpoints in unit tests.
+- `tracing` (already a dependency) — used for logging revocation results.
+- `tokio` (already a dependency) — used for async runtime.
 
 ## Phase 1: Implementation Details
+
 ### Summary
-Implemented PKCE (Proof Key for Code Exchange) for the OAuth 2.0 Authorization Code flow, following RFC 7636. Both Google and GitHub providers now include `code_challenge` and `code_challenge_method=S256` in authorization requests, and `code_verifier` in token exchange requests.
+Implemented OAuth token revocation on account deletion per AC11 of NOMS-006. Refresh tokens are now captured during OAuth callback (Google `access_type=offline`), stored in `oauth_accounts.refresh_token`, and revoked via provider APIs when accounts are unlinked or deleted.
 
-### Changes Made
+### Files Created
+- **`src/auth/revoke.rs`** — New module with revocation logic: `revoke_account`, `revoke_token`, `revoke_google`, `revoke_all_user_tokens`, plus `RevokeResult` enum. Includes 6 unit tests using `wiremock`.
 
-#### New/Modified Files
-
-1. **`migrations/schema.sql`** — Added `ALTER TABLE auth_states ADD COLUMN IF NOT EXISTS code_verifier TEXT;` for PKCE verifier persistence (nullable for backward compatibility).
-
-2. **`src/test_utils.rs`** — Added `code_verifier TEXT` column to the inline test schema's `auth_states` CREATE TABLE.
-
-3. **`src/db/mod.rs`** — Three changes:
-   - Added `code_verifier: Option<String>` field to `AuthState` struct
-   - Updated `insert_auth_state()` signature to accept `code_verifier: &str` as 5th parameter; query now INSERTs the column
-   - Updated `get_auth_state()` query to SELECT `code_verifier` column
-   - Updated 4 existing test call sites to pass dummy verifier strings
-
-4. **`src/auth/oauth.rs`** — Four changes:
-   - Added `PkceCodeChallenge` and `PkceCodeVerifier` to oauth2 imports
-   - `start_handler`: generates PKCE pair via `PkceCodeChallenge::new_random_sha256()`, stores verifier in DB, attaches challenge to auth URL via `.set_pkce_challenge()`
-   - `callback_handler`: retrieves stored `code_verifier` from `auth_state`, attaches to token exchange via `.set_pkce_verifier()`
-   - Updated 3 existing test call sites to pass dummy verifier strings
-
-5. **`.sqlx/query-f74a9ab7...json`** (new) — Updated sqlx offline query cache for the modified `get_auth_state` query (added `code_verifier` column). Removed old cache file.
+### Files Modified
+- **`migrations/schema.sql`** — Added `refresh_token TEXT` column to `oauth_accounts` table; added `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` for existing databases.
+- **`src/db/mod.rs`** — Added `refresh_token: Option<String>` to `OauthAccount` struct; updated all SELECT queries (`get_oauth_account_by_provider`, `get_oauth_account_by_email`, `get_oauth_accounts_by_user_id`) to include `refresh_token`; updated `insert_oauth_account` to accept `refresh_token: Option<&str>`; added `get_oauth_accounts_by_user_id` helper; updated `delete_oauth_account` to fetch account, revoke token, then delete; updated `delete_user` to call `revoke_all_user_tokens` before deletion.
+- **`src/auth/mod.rs`** — Added `pub mod revoke;` declaration.
+- **`src/auth/linking.rs`** — Added `FromStr` impl for `Provider` enum; updated `link_or_create` to accept `refresh_token: Option<String>`; updated all 5 test calls to pass `None` for `refresh_token`.
+- **`src/auth/oauth.rs`** — Added `access_type=offline` for Google in `start_handler`; in `callback_handler`, extract `refresh_token` from token response via `TokenResponseExt::refresh_token()` and pass to `link_or_create`; updated 1 test call.
+- **`src/test_utils.rs`** — Added `refresh_token TEXT` column to `oauth_accounts` test schema.
 
 ### Tests
-
-**New unit tests (3):**
-- `test_pkce_challenge_verifier_generation` — verifies `new_random_sha256()` produces RFC 7636 compliant verifier (43-128 chars)
-- `test_pkce_challenge_in_auth_url` — verifies auth URL contains `code_challenge=` and `code_challenge_method=S256`
-- `test_pkce_verifier_reconstruction` — verifies `PkceCodeVerifier::new(stored)` round-trips correctly
-
-**New integration tests (2):**
-- `test_auth_state_stores_code_verifier` — verifies verifier is persisted and retrievable from DB
-- `test_callback_retrieves_verifier_before_delete` — verifies callback flow reads verifier before state deletion
-
-**Updated existing tests (7 call sites):** All `db::insert_auth_state()` calls in `src/db/mod.rs` (4) and `src/auth/oauth.rs` (3) updated to include the new `code_verifier` argument.
+- **6 new unit tests** in `src/auth/revoke.rs`: `test_revoke_github_not_supported`, `test_revoke_google_success`, `test_revoke_google_timeout`, `test_revoke_google_http_error`, `test_revoke_google_network_error`, `test_provider_from_str`.
+- **All 135 tests pass** (18 non-server + 117 server feature tests) including existing db, linking, oauth, and revoke tests.
+- **Clippy clean** — no warnings.
 
 ### Verification
-- `cargo clippy --no-default-features --features server -- -D warnings` — passes clean
-- `cargo test --no-default-features --features server` — all 129 tests pass
-- `cargo fmt -- --check` — formatting clean
-- Migration applied to local database for sqlx compile-time query verification
+- `cargo build` — compiles without errors.
+- `cargo build --features server` — compiles without errors.
+- `cargo test` — 18 passed.
+- `cargo test --features server` — 135 passed.
+- `cargo clippy --features server` — clean.
+- Local database migration applied: `ALTER TABLE oauth_accounts ADD COLUMN refresh_token TEXT`.
+
+### Adaptations from Blueprint
+- Used `Uuid` instead of `i32` for IDs (actual codebase uses UUIDs).
+- Used `DbError` instead of `AppError` (actual error type in codebase).
+- Functions use generic `executor: impl sqlx::Executor` pattern; `delete_oauth_account` and `delete_user` changed to `&PgPool` to support revocation calls.
+- `refresh_token` passed through `link_or_create` instead of direct `insert_oauth_account` call in `callback_handler` (matches existing architecture where `link_or_create` handles all insertions).
+- Added `FromStr` impl for `Provider` (needed by `revoke_account` to parse provider string).
+- `revoke_account` takes `&OauthAccount` directly instead of `(pool, account)` — pool is only needed for `revoke_all_user_tokens`.
+- Added `#[allow(dead_code)]` on `RevokeResult` enum fields (accessed only in test compilation unit).
 
 ## Phase 2: Review Verdict
 
 **Verdict: PASS**
 
-### Issues
+All requirements from AC11 of NOMS-006 are met. The implementation compiles cleanly, passes all 135 tests, and has no clippy warnings.
 
-1. **Location:** `src/auth/oauth.rs` line 596, `test_pkce_verifier_reconstruction` — **Severity: SUGGESTION** — The assertion `assert_eq!(challenge.as_str(), challenge.as_str());` is a no-op (comparing a value to itself). It was likely intended to verify something about the challenge-verifier relationship but adds no value. **Recommended fix:** Remove the line or replace with a meaningful assertion (e.g., verify that the challenge is indeed the base64url-encoded SHA-256 of the verifier, though the oauth2 crate handles this internally).
+### Numbered Findings
 
-2. **Location:** `src/auth/oauth.rs` lines 685, 705, 727, 744, 758 — **Severity: SUGGESTION** — Test dummy verifiers (e.g., `"test-verifier-minimum-43-chars-long!!"`, `"test-pkce-verifier-minimum-43-chars!!"`) contain `!` characters, which are not in the RFC 7636 allowed character set (`[A-Za-z0-9\-._~]`). These are fine for DB storage/retrieval tests, but would be rejected by `PkceCodeVerifier::new()` in a real flow. **Recommended fix:** Use RFC-compliant dummy strings like `"test-verifier-that-is-at-least-43-chars-long"` (already used in `src/db/mod.rs` line 535).
+1. **Location:** `src/auth/revoke.rs:90-120` — **Severity: SUGGESTION** — `revoke_google_with_url` creates a new `reqwest::Client` on every invocation. Since revocation is infrequent (only on unlink/delete), this is acceptable. For high-throughput scenarios, consider sharing a pre-built client via Axum state. No action needed now.
 
-3. **Location:** `src/auth/oauth.rs` lines 349-351 — **Severity: SUGGESTION** — The error message `"PKCE code_verifier not found in auth state"` is wrapped in `OAuthError::TokenExchange`, which maps to HTTP 500 with a sanitized message. This is correct for security (no internal detail leakage), but the error variant name is slightly misleading since this isn't a token exchange failure per se. **Recommended fix:** Consider adding a dedicated `OAuthError::MissingPkceVerifier` variant for clarity, though the current behavior is functionally correct.
+2. **Location:** `src/db/mod.rs:117-129` — **Severity: SUGGESTION** — `OauthAccount` derives `Debug` via `sqlx::FromRow`, which means `refresh_token` would appear in any `{:?}` log output. Currently, `OauthAccount` is never logged directly (only `account.provider` and `RevokeResult` are). Consider adding a custom `Debug` impl that redacts `refresh_token` as a defensive measure for future code changes.
 
-### Positive Findings and Good Practices
+3. **Location:** `src/auth/linking.rs:230-245` (existing provider login path) — **Severity: SUGGESTION** — When a user logs in with an existing provider+uid, `refresh_token` from the new token response is discarded. If Google rotates refresh tokens, the stored token may become stale. Mitigation: Google's revocation endpoint accepts old tokens for revocation, so this is not a blocking issue. Consider updating `refresh_token` on each login in a future iteration.
 
-- **Correct use of `oauth2` crate v5 PKCE API:** `PkceCodeChallenge::new_random_sha256()` is the idiomatic approach — it generates 32 cryptographically random bytes via `getrandom`, base64url-encodes them to produce a 43-character verifier (RFC 7636 compliant), and computes `BASE64URL(SHA256(verifier))` for the challenge. No manual crypto needed.
-- **Correct verifier lifecycle:** Verifier is generated in `start_handler`, stored in DB alongside CSRF state, retrieved and used in `callback_handler` before state deletion. The variable scoping (`auth_state` is a `let` binding, not consumed by `delete_auth_state`) ensures the verifier is accessible at the token exchange point.
-- **Safe migration:** `ALTER TABLE ... ADD COLUMN IF NOT EXISTS code_verifier TEXT` is additive-only, nullable, and idempotent — follows the schema convention established at line 3 of `migrations/schema.sql`.
-- **Backward compatibility:** `AuthState.code_verifier` is `Option<String>`, correctly mapping SQL NULL to `None`. The `callback_handler` treats `None` as an error, which is correct — any new auth flow will always have a verifier.
-- **sqlx offline query cache updated:** The `.sqlx/query-f74a9ab7...json` file correctly reflects the new `code_verifier` column with `nullable: true` (ordinal 3), matching the `Option<String>` struct field.
-- **Comprehensive test coverage:** 3 new unit tests (verifier generation, challenge in auth URL, verifier round-trip) and 2 new integration tests (DB storage, callback flow ordering) plus all 7 existing call sites updated.
-- **Clean build:** `cargo clippy -- -D warnings` passes clean, `cargo fmt -- --check` passes clean.
+4. **Location:** `src/auth/revoke.rs:99` — **Severity: INFO (not an issue)** — The refresh token is passed as a URL query parameter (`?token=...`), which is how Google's revocation API expects it. This means the token appears in the request line, which could show up in access logs. This matches Google's documented API contract and is acceptable.
+
+5. **Location:** `src/auth/revoke.rs:62-65` — **Severity: POSITIVE** — `Provider::Apple` is handled with a `NotSupported` variant and a warning log, providing forward compatibility when Apple OAuth is implemented.
+
+6. **Location:** `src/db/mod.rs:313-348` — **Severity: POSITIVE** — `delete_oauth_account` fetches the account with both `id` AND `user_id` guards in a single query, preventing cross-user deletion. The revocation call is fire-and-forget (result discarded), ensuring failures never block the actual deletion.
+
+7. **Location:** `src/db/mod.rs:465-483` — **Severity: POSITIVE** — `delete_user` calls `revoke_all_user_tokens` BEFORE the `DELETE FROM users`, ensuring tokens are revoked while the accounts still exist in the database. The CASCADE delete handles cleanup afterward.
 
 ### Requirements Coverage
 
-| AC6 Requirement | Status |
-|---|---|
-| Auth requests include `code_challenge` and `code_challenge_method=S256` | ✅ `.set_pkce_challenge()` on `AuthorizationRequest` |
-| Token exchange includes `code_verifier` | ✅ `.set_pkce_verifier()` on `CodeTokenRequest` |
-| Verifier is random, 43-128 chars | ✅ `new_random_sha256()` produces 43-char base64url string |
-| Verifier stored in `auth_states` alongside CSRF state | ✅ New `code_verifier TEXT` column |
-| `code_challenge = BASE64URL(SHA256(code_verifier))` | ✅ Handled by `oauth2` crate |
-| Both Google and GitHub support PKCE | ✅ Applied to both provider clients |
-| No impact on existing OAuth flows | ✅ Column is nullable, migration is additive |
+| Requirement | Status | Evidence |
+|-------------|--------|----------|
+| Store `refresh_token` in `oauth_accounts` | ✅ | `migrations/schema.sql:30`, `src/db/mod.rs:126`, `src/db/mod.rs:396` |
+| Capture `refresh_token` from OAuth callback | ✅ | `src/auth/oauth.rs:380-382`, passed through `link_or_create` |
+| Google `access_type=offline` for refresh tokens | ✅ | `src/auth/oauth.rs:291-295` |
+| Google revocation endpoint (`POST oauth2.googleapis.com/revoke`) | ✅ | `src/auth/revoke.rs:85-87` |
+| 5-second timeout on revocation requests | ✅ | `src/auth/revoke.rs:92: .timeout(Duration::from_secs(5))` |
+| GitHub: no revocation API, log warning | ✅ | `src/auth/revoke.rs:58-61` |
+| Revocation failures logged, never block deletion | ✅ | `delete_oauth_account:333` (result discarded), `delete_user:470` (result discarded) |
+| Revocation on unlink (`delete_oauth_account`) | ✅ | `src/db/mod.rs:333` |
+| Revocation on account delete (`delete_user`) | ✅ | `src/db/mod.rs:470` |
+| Migration backward-compatible (nullable column) | ✅ | `migrations/schema.sql:40: ADD COLUMN IF NOT EXISTS` |
+| Unit tests for revocation logic | ✅ | 6 tests in `src/auth/revoke.rs:166-253` |
 
-### Summary
+### Test Coverage Summary
 
-Clean, correct implementation that properly delegates PKCE crypto to the well-tested `oauth2` crate v5. The migration is safe, the verifier lifecycle is correct, and test coverage is thorough. Three minor suggestions (cosmetic test fix, RFC-compliant test data, error variant naming) — none are blockers.
+- `test_revoke_github_not_supported` — verifies `NotSupported` for GitHub
+- `test_revoke_google_success` — wiremock returns 200 → `Success`
+- `test_revoke_google_timeout` — wiremock delays 10s → `Timeout` (5s client timeout)
+- `test_revoke_google_http_error` — wiremock returns 400 → `HttpError`
+- `test_revoke_google_network_error` — unreachable URL → `NetworkError`/`Timeout`
+- `test_provider_from_str` — `FromStr` impl for all 3 providers + unknown
+- Existing DB tests (`test_delete_oauth_account`, `test_delete_user_cascades_oauth_accounts`) exercise the full deletion path with revocation calls
+
+### Build Status
+
+- `cargo build --features server` — ✅ compiles without errors
+- `cargo clippy --features server` — ✅ clean, no warnings
+- `cargo test --features server` — ✅ 135 passed, 0 failed
+
+### Overall Quality
+
+Clean, well-structured implementation that faithfully follows the blueprint with sensible adaptations to the actual codebase architecture (UUIDs, `DbError`, `link_or_create` pattern). The revocation module is well-isolated, thoroughly tested with wiremock, and handles all error cases gracefully without blocking the critical deletion path.
 
 ## Phase 3: Synthesis
-## User-Facing Summary
 
-PKCE (Proof Key for Code Exchange, RFC 7636) has been implemented for the OAuth 2.0 Authorization Code flow. This hardens both Google and GitHub OAuth integrations by binding the authorization request to the token exchange, preventing authorization code interception attacks.
+### User-Facing Summary
 
-**What was planned (Phase 0):** Leverage the existing `oauth2` crate v5's native PKCE API (`PkceCodeChallenge::new_random_sha256()`) to generate a verifier/challenge pair, store the verifier in the `auth_states` table alongside the CSRF state, attach the challenge to the authorization URL, and present the verifier during token exchange.
+This change implements **AC11 of NOMS-006**: OAuth token revocation on account deletion. When a user unlinks an OAuth account or deletes their entire account, the application now revokes the associated OAuth tokens with the provider before performing the database deletion. This ensures that orphaned tokens cannot be used to access the user's data on the provider side after unlinking or account deletion.
 
-**What was implemented (Phase 1):** A `code_verifier` column was added to the `auth_states` table (via migration and test schema), the `AuthState` struct and DB queries were updated, and the OAuth `start_handler` and `callback_handler` were wired to generate, store, and present PKCE values. All existing test call sites were updated, and 5 new tests were added.
+**What was planned (Phase 0):** A blueprint was created covering database schema changes (adding `refresh_token` column), OAuth flow changes (capturing refresh tokens from Google via `access_type=offline`), a new revocation module with provider-specific logic, wiring revocation into both unlink and delete flows, and unit tests with `wiremock`.
 
-**What was reviewed (Phase 2):** The implementation passed review. All AC6 requirements are satisfied. Three minor cosmetic suggestions were raised (a no-op assertion in one test, non-RFC-compliant characters in test dummy strings, and a slightly misleading error variant name) — none are blockers.
+**What was implemented (Phase 1):** All blueprint items were implemented with sensible adaptations to the actual codebase (UUID-based IDs, `DbError` type, `link_or_create` pattern). A new `src/auth/revoke.rs` module was created with full revocation logic and 6 unit tests. All 135 tests pass and clippy is clean.
 
----
-
-## Step-by-Step Walkthrough of Changes
-
-### 1. `migrations/schema.sql` — Database migration
-
-**Change:** Added `ALTER TABLE auth_states ADD COLUMN IF NOT EXISTS code_verifier TEXT;` after the existing `CREATE TABLE IF NOT EXISTS auth_states` block.
-
-**Purpose:** Persist the PKCE code_verifier alongside the CSRF state so it survives the redirect round-trip to the OAuth provider. The column is nullable for backward compatibility (existing rows, if any, will have NULL). The `IF NOT EXISTS` clause makes the migration idempotent.
-
-### 2. `src/test_utils.rs` — Test schema
-
-**Change:** Added `code_verifier TEXT` column to the inline `auth_states` CREATE TABLE definition used by integration tests.
-
-**Purpose:** Ensure the in-memory test database schema matches the production schema, so integration tests exercise the same column layout.
-
-### 3. `src/db/mod.rs` — AuthState struct
-
-**Change:** Added `pub code_verifier: Option<String>` field to the `AuthState` struct.
-
-**Purpose:** Represent the nullable `code_verifier` column in Rust. `Option<String>` correctly maps SQL NULL to `None`.
-
-### 4. `src/db/mod.rs` — `insert_auth_state` function
-
-**Change:** Added `code_verifier: &str` as a 5th parameter. The INSERT query now includes `code_verifier` as the 4th column, bound to `$4`.
-
-**Purpose:** Store the PKCE verifier when creating a new auth state entry. This is called from `start_handler` immediately after generating the PKCE pair.
-
-**Key detail:** The function signature change is a breaking change for callers, but all callers are internal to this crate (oauth.rs and tests), so no external API is affected.
-
-### 5. `src/db/mod.rs` — `get_auth_state` function
-
-**Change:** The SELECT query now includes `code_verifier` in the column list: `"SELECT id, redirect_uri, provider, code_verifier, created_at FROM auth_states WHERE id = $1"`.
-
-**Purpose:** Retrieve the stored verifier during the callback flow so it can be presented during token exchange. The `sqlx::query_as!` macro validates at compile time that the column name matches the struct field name.
-
-### 6. `src/auth/oauth.rs` — Imports
-
-**Change:** Added `PkceCodeChallenge` and `PkceCodeVerifier` to the `use oauth2::{...}` import list.
-
-**Purpose:** Bring the PKCE types into scope for use in `start_handler` and `callback_handler`.
-
-### 7. `src/auth/oauth.rs` — `start_handler`
-
-**Change:** Three additions in sequence:
-1. `(pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256()` — generates a cryptographically random 43-character verifier and its SHA-256-based challenge.
-2. `pkce_verifier.secret()` is passed as the 5th argument to `db::insert_auth_state()` — persists the verifier.
-3. `.set_pkce_challenge(pkce_challenge)` is chained onto the `authorize_url()` builder — attaches both `code_challenge` and `code_challenge_method=S256` to the authorization URL query string.
-
-**Purpose:** This is the core of the PKCE flow — generate the pair at auth initiation, store the secret (verifier) server-side, and send the public commitment (challenge) to the provider.
-
-**Non-obvious pattern:** `.set_pkce_challenge()` is called on the `AuthorizationRequest` builder (not the `Client`), and it returns a new builder with the PKCE parameters baked in. This is a fluent builder pattern.
-
-### 8. `src/auth/oauth.rs` — `callback_handler`
-
-**Change:** Before the token exchange, the stored `code_verifier` is extracted from `auth_state.code_verifier` (with an `ok_or_else` guard for the `None` case). It is then passed to `.set_pkce_verifier(PkceCodeVerifier::new(code_verifier))` on the `CodeTokenRequest` builder.
-
-**Purpose:** Present the original verifier to the provider during token exchange, proving that the entity exchanging the code is the same entity that initiated the authorization.
-
-**Key detail:** The `auth_state` variable is a `let` binding from `get_auth_state()` at line 300. It remains in scope through `delete_auth_state()` at line 322 (which only consumes the DB row, not the Rust variable). So `auth_state.code_verifier` is accessible at the token exchange point at line 349. No reordering was needed.
-
-### 9. `.sqlx/query-f74a9ab7...json` — sqlx offline query cache
-
-**Change:** New cache file generated for the updated `get_auth_state` query (now includes `code_verifier` column). Old cache file removed.
-
-**Purpose:** sqlx uses compile-time query verification. The offline cache must reflect the current query and column types. The new cache correctly shows `code_verifier` as `nullable: true` at ordinal 3, matching `Option<String>`.
-
-### 10. Test call site updates (7 total)
-
-**Files:** `src/db/mod.rs` (4 call sites), `src/auth/oauth.rs` (3 call sites)
-
-**Change:** All `db::insert_auth_state()` calls now pass a 5th argument — a dummy verifier string (e.g., `"test-verifier-that-is-at-least-43-chars-long"`).
-
-**Purpose:** Maintain compilation and runtime correctness of existing tests after the function signature change.
+**What was reviewed (Phase 2):** The review verdict is **PASS**. All 11 AC11 requirements are fully met. The review flagged 3 non-blocking suggestions: consider redacting `refresh_token` from `Debug` output, consider updating `refresh_token` on each login (Google token rotation), and consider sharing a pre-built `reqwest::Client` for high-throughput scenarios. None require immediate action.
 
 ---
 
-## New Tests (5 total)
+### Step-by-Step Walkthrough of All Changes
 
-### Unit Tests (3) — in `src/auth/oauth.rs`
+#### 1. `migrations/schema.sql` — Database Schema Migration
+**Purpose:** Add `refresh_token` column to `oauth_accounts` table.
 
-| Test | What it verifies |
-|---|---|
-| `test_pkce_challenge_verifier_generation` | `new_random_sha256()` produces a verifier within the RFC 7636 length bounds (43-128 chars) |
-| `test_pkce_challenge_in_auth_url` | The authorization URL contains both `code_challenge=` and `code_challenge_method=S256` query parameters |
-| `test_pkce_verifier_reconstruction` | `PkceCodeVerifier::new(stored_string)` round-trips correctly (the secret can be extracted after reconstruction) |
+- Added `refresh_token TEXT` column to the `oauth_accounts` table definition. The column is nullable for backward compatibility with existing rows that have no refresh token.
+- Added `ALTER TABLE oauth_accounts ADD COLUMN IF NOT EXISTS refresh_token TEXT;` for incremental migration on existing databases.
 
-### Integration Tests (2) — in `src/auth/oauth.rs` mod `db_tests`
+#### 2. `src/db/mod.rs` — Database Layer
+**Purpose:** Store and retrieve refresh tokens; wire revocation into deletion flows.
 
-| Test | What it verifies |
-|---|---|
-| `test_auth_state_stores_code_verifier` | A verifier is correctly persisted to and retrieved from the `auth_states` table |
-| `test_callback_retrieves_verifier_before_delete` | The callback flow reads `code_verifier` from the auth state before the state row is deleted |
+- **`OauthAccount` struct:** Added `refresh_token: Option<String>` field. This struct is the domain representation of an OAuth account row.
+- **`get_oauth_account_by_provider`:** Updated the explicit column list in `query_as!` to include `refresh_token`. This query is used when unlinking a specific provider.
+- **`get_oauth_account_by_email`:** Updated the explicit column list in `query_as!` to include `refresh_token`. This query is used during the OAuth callback to check for existing accounts.
+- **`get_oauth_accounts_by_user_id` (NEW):** New helper function that fetches all OAuth accounts for a given user. Used by `revoke_all_user_tokens` during full account deletion.
+- **`insert_oauth_account`:** Added `refresh_token: Option<&str>` parameter. The SQL INSERT now includes `refresh_token` in both the column list and VALUES clause.
+- **`delete_oauth_account`:** Now fetches the account via `get_oauth_account_by_provider`, calls `revoke_account` (fire-and-forget — result is logged but never blocks), then proceeds with the `DELETE FROM oauth_accounts`. The query uses both `id` AND `user_id` guards to prevent cross-user deletion.
+- **`delete_user`:** Now calls `revoke_all_user_tokens(pool, user_id)` BEFORE the `DELETE FROM users`. This ensures tokens are revoked while account records still exist in the database. The CASCADE delete on `oauth_accounts` handles cleanup afterward.
 
-### Existing Tests Updated (7 call sites)
+#### 3. `src/auth/mod.rs` — Module Declaration
+**Purpose:** Expose the new `revoke` module.
 
-All `db::insert_auth_state()` calls across `src/db/mod.rs` (4) and `src/auth/oauth.rs` (3) now include the `code_verifier` argument.
+- Added `pub mod revoke;` to make the revocation module available to other parts of the auth crate.
 
-### Verification Results
-- **Total tests passing:** 129
-- **`cargo clippy -- -D warnings`:** Clean
-- **`cargo fmt -- --check`:** Clean
+#### 4. `src/auth/revoke.rs` (NEW FILE) — Revocation Logic
+**Purpose:** Provider-specific token revocation with error handling and testing.
+
+- **`RevokeResult` enum:** Represents all possible outcomes of a revocation attempt: `Success`, `NotSupported { provider }`, `Timeout`, `NetworkError(String)`, `HttpError(String)`, `NoRefreshToken`. Used for structured logging and testing.
+- **`revoke_account(account: &OauthAccount)`:** Entry point for single-account revocation. Extracts the refresh token, parses the provider string into a `Provider` enum, and delegates to `revoke_token`. Returns `NoRefreshToken` if the account has no stored refresh token.
+- **`revoke_token(refresh_token: &str, provider: Provider)`:** Provider dispatch. Routes to `revoke_google` for Google, returns `NotSupported` with a warning log for GitHub and Apple. Logs the result at the appropriate level (info for success, error for failures).
+- **`revoke_google(refresh_token: &str)`:** Makes a `POST` to `https://oauth2.googleapis.com/revoke?token=...` with a 5-second timeout. No auth header is required per Google's API. Returns `Success` on HTTP 2xx, `HttpError` on other status codes, `Timeout` on timeout, `NetworkError` on connection failures.
+- **`revoke_google_with_url(base_url: &str, refresh_token: &str)`:** Internal testable variant that accepts a configurable base URL. Used by unit tests with `wiremock` mock servers.
+- **`revoke_all_user_tokens(pool: &PgPool, user_id: Uuid)`:** Fetches all OAuth accounts for a user and revokes each token sequentially. Each result is logged at the appropriate level. Failures are never propagated — the function is fire-and-forget.
+- **6 unit tests:** `test_revoke_github_not_supported` (GitHub returns `NotSupported`), `test_revoke_google_success` (wiremock 200 → `Success`), `test_revoke_google_timeout` (wiremock 10s delay → `Timeout`), `test_revoke_google_http_error` (wiremock 400 → `HttpError`), `test_revoke_google_network_error` (unreachable URL → `NetworkError`/`Timeout`), `test_provider_from_str` (parses all 3 providers + unknown).
+
+#### 5. `src/auth/linking.rs` — Provider Linking Logic
+**Purpose:** Thread `refresh_token` through the account linking flow.
+
+- **`FromStr` impl for `Provider`:** New implementation that parses `"google"`, `"github"`, and `"apple"` strings into the `Provider` enum. Required by `revoke_account` to convert the stored provider string into a dispatchable enum.
+- **`link_or_create`:** Added `refresh_token: Option<String>` parameter. The function now passes the refresh token through to `insert_oauth_account`. When an existing account is found (login path), the refresh token is currently discarded (noted as a future improvement for token rotation).
+- **Tests:** All 5 existing test calls updated to pass `None` for `refresh_token`.
+
+#### 6. `src/auth/oauth.rs` — OAuth Flow
+**Purpose:** Capture refresh tokens during the OAuth callback.
+
+- **`start_handler`:** After generating the authorization URL, appends `&access_type=offline` for Google providers. This is required by Google to return a refresh token in the token response.
+- **`callback_handler`:** After `exchange_code` returns the `TokenResponse`, extracts the refresh token via `TokenResponseExt::refresh_token()` and passes it to `link_or_create`.
+- **Tests:** 1 existing test call updated to pass `None` for `refresh_token`.
+
+#### 7. `src/test_utils.rs` — Test Database Schema
+**Purpose:** Keep the test database schema in sync with production.
+
+- Added `refresh_token TEXT` column to the `oauth_accounts` table in the in-memory test schema.
 
 ---
 
-## Dependencies
+### Dependencies Introduced or Modified
 
-No new external dependencies were introduced. The implementation uses the existing `oauth2 = "5"` crate's native PKCE API, which was already a dependency of the project.
+| Dependency | Type | Purpose |
+|------------|------|---------|
+| `wiremock = "0.6"` | New dev-dependency | Mock HTTP servers for revocation unit tests |
+| `reqwest` | Existing dependency | Used directly for Google revocation HTTP calls (no new features needed) |
+| `tracing` | Existing dependency | Used for structured logging of revocation results |
+| `tokio` | Existing dependency | Used for async runtime (no new features needed) |
 
----
-
-## Review Notes (Phase 2 Suggestions)
-
-Three minor suggestions from the review phase, none blocking:
-1. `test_pkce_verifier_reconstruction` contains a no-op assertion (`assert_eq!(challenge.as_str(), challenge.as_str())`) — consider removing.
-2. Some test dummy verifiers use `!` characters, which are outside the RFC 7636 character set — functionally fine for DB tests, but could be replaced with RFC-compliant strings for consistency.
-3. The `OAuthError::TokenExchange` variant is used for the missing PKCE verifier error — a dedicated variant could improve clarity.
+No new production dependencies were added. `reqwest` was already a dependency of the project.
 
 ---
 
-## Follow-Up Recommendations
+### Special Syntax, Language Features, and Patterns
 
-- **Monitor OAuth callback logs** after deployment for any `MissingPkceVerifier` errors, which could indicate stale auth_states rows from before the migration.
-- **Consider the review suggestions** in a follow-up PR for test cleanliness.
-- **If adding new OAuth providers**, confirm PKCE support and apply the same `.set_pkce_challenge()` / `.set_pkce_verifier()` pattern.
+1. **`sqlx::query_as!` macro:** All SELECT queries use explicit column lists (not `SELECT *`) for compile-time safety. Adding `refresh_token` required updating every query that selects from `oauth_accounts`.
+
+2. **Fire-and-forget revocation:** Both `delete_oauth_account` and `delete_user` call revocation functions but discard their results. The revocation functions log internally, but any error is never propagated. This ensures revocation failures never block the critical deletion path.
+
+3. **Testable URL injection:** `revoke_google_with_url(base_url, token)` is a private helper that accepts a configurable base URL. The public `revoke_google(token)` delegates to it with the production URL. This pattern enables unit testing with `wiremock` without exposing internal APIs.
+
+4. **`FromStr` for provider dispatch:** The `Provider` enum implements `std::str::FromStr` to convert the database-stored provider string (`"google"`, `"github"`, `"apple"`) into a Rust enum for pattern matching in `revoke_token`.
+
+5. **`TokenResponseExt` trait:** The `oauth2` crate's `TokenResponseExt` trait provides `.refresh_token()` to extract the optional refresh token from the OAuth token response. This is a stable extension trait provided by the crate.
+
+6. **UUID-based IDs:** The codebase uses `Uuid` (not `i32`) for primary keys. This was an adaptation from the blueprint and affects all database function signatures.
 
 ---
 
-## Commit Message
+### Follow-up Recommendations
+
+1. **Refresh token rotation on login (Medium priority):** When a user logs in with an existing Google account, the new refresh token from the token response is discarded. Google rotates refresh tokens on each use, so the stored token may become stale over time. Consider updating `refresh_token` in the existing account row during the login path in `link_or_create`.
+
+2. **Redact `refresh_token` from `Debug` output (Low priority):** `OauthAccount` derives `Debug` via `sqlx::FromRow`, which means `refresh_token` would appear in any `{:?}` log output. Consider adding a custom `Debug` impl that redacts the field as a defensive measure.
+
+3. **Shared `reqwest::Client` (Low priority):** Each revocation call creates a new `reqwest::Client`. For typical usage (infrequent unlink/delete), this is fine. If revocation becomes a high-throughput operation, consider sharing a pre-built client via Axum state.
+
+4. **Integration test with real Google endpoint (Nice to have):** Unit tests use `wiremock` for HTTP mocking. An integration test against Google's real revocation endpoint would provide end-to-end validation but is not feasible in CI. Consider a manual test checklist or a staging environment test.
+
+5. **Apple revocation support (Future):** `Provider::Apple` currently returns `NotSupported`. Apple's revocation API should be implemented when Apple OAuth support is added.
+
+---
+
+### Commit Message
 
 ```
-feat(auth): add PKCE support to OAuth flow
+feat(auth): revoke OAuth tokens on account unlink and deletion
 
-Implement Proof Key for Code Exchange (RFC 7636) for both Google and
-GitHub OAuth providers. PKCE binds the authorization request to the
-token exchange, preventing authorization code interception attacks.
+Implement AC11 of NOMS-006: store refresh_token in oauth_accounts
+table and revoke provider tokens when a user unlinks an OAuth
+account or deletes their account.
 
-Changes:
-- Add code_verifier TEXT column to auth_states table (migration + test
-  schema), nullable for backward compatibility
-- Extend AuthState struct with code_verifier: Option<String> field
-- Update insert_auth_state() to accept and persist the verifier
-- Update get_auth_state() to retrieve the verifier column
-- Generate PKCE pair in start_handler via
-  PkceCodeChallenge::new_random_sha256(), store verifier in DB, attach
-  challenge to authorization URL via .set_pkce_challenge()
-- Attach code_verifier to token exchange in callback_handler via
-  .set_pkce_verifier()
-- Update sqlx offline query cache for modified get_auth_state query
-- Update 7 existing test call sites to include code_verifier argument
-- Add 3 unit tests (verifier generation, challenge in URL, round-trip)
-- Add 2 integration tests (DB storage, callback flow ordering)
+Database changes:
+- Add nullable refresh_token TEXT column to oauth_accounts table
+- Update all SELECT/INSERT queries to include refresh_token
+- Add get_oauth_accounts_by_user_id helper for bulk revocation
 
-All 129 tests pass. Clippy and fmt checks are clean.
+OAuth flow changes:
+- Append access_type=offline to Google auth URL to obtain refresh
+  tokens from the provider
+- Extract refresh_token from TokenResponse in callback_handler
+- Thread refresh_token through link_or_create to persistence
 
-Refs: NOMS-006 AC6
+Revocation module (new src/auth/revoke.rs):
+- revoke_account: single-account revocation entry point
+- revoke_token: provider dispatch (Google via HTTP, GitHub/Apple
+  log warning as NotSupported)
+- revoke_google: POST to oauth2.googleapis.com/revoke with 5s
+  timeout
+- revoke_all_user_tokens: bulk revocation for account deletion
+- 6 unit tests using wiremock for HTTP mocking
+
+Deletion flow changes:
+- delete_oauth_account: fetch account, revoke token, then delete
+- delete_user: revoke all tokens before CASCADE delete
+
+Revocation failures are logged but never block deletion. GitHub
+has no revocation API — tokens expire naturally (~8 years).
+
+Co-authored-by: Opencode Agent <agent@opencode>
 ```

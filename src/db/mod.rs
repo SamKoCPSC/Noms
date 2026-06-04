@@ -123,6 +123,7 @@ pub struct OauthAccount {
     pub email: Option<String>,
     pub email_verified: bool,
     pub profile_data: Option<serde_json::Value>,
+    pub refresh_token: Option<String>,
     pub created_at: DateTime<Utc>,
     pub last_used_at: DateTime<Utc>,
 }
@@ -225,7 +226,7 @@ pub async fn get_oauth_account_by_provider(
     sqlx::query_as!(
         OauthAccount,
         "SELECT id, user_id, provider, provider_user_id, email, email_verified, \
-         profile_data, created_at, last_used_at \
+         profile_data, refresh_token, created_at, last_used_at \
          FROM oauth_accounts \
          WHERE provider = $1 AND provider_user_id = $2",
         provider,
@@ -244,7 +245,7 @@ pub async fn get_oauth_account_by_email(
     sqlx::query_as!(
         OauthAccount,
         "SELECT id, user_id, provider, provider_user_id, email, email_verified, \
-         profile_data, created_at, last_used_at \
+         profile_data, refresh_token, created_at, last_used_at \
          FROM oauth_accounts \
          WHERE email = $1 \
          LIMIT 1",
@@ -286,16 +287,56 @@ pub async fn get_oauth_accounts_by_user(
     .map_err(DbError::Query)
 }
 
-/// Delete a single OAuth account, guarded by user_id to prevent cross-user deletion.
-pub async fn delete_oauth_account(
+/// Get all OAuth accounts for a user (full records including refresh tokens).
+/// Used by the revocation flow before account deletion.
+pub async fn get_oauth_accounts_by_user_id(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
+    user_id: Uuid,
+) -> Result<Vec<OauthAccount>, DbError> {
+    sqlx::query_as!(
+        OauthAccount,
+        "SELECT id, user_id, provider, provider_user_id, email, email_verified, \
+         profile_data, refresh_token, created_at, last_used_at \
+         FROM oauth_accounts \
+         WHERE user_id = $1",
+        user_id,
+    )
+    .fetch_all(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Delete a single OAuth account, guarded by user_id to prevent cross-user deletion.
+///
+/// Revokes the OAuth token with the provider before deletion. Revocation
+/// failures are logged but never block deletion.
+pub async fn delete_oauth_account(
+    pool: &PgPool,
     account_id: Uuid,
     user_id: Uuid,
 ) -> Result<(), DbError> {
+    // Fetch the account first to get the refresh token for revocation
+    let account = sqlx::query_as!(
+        OauthAccount,
+        "SELECT id, user_id, provider, provider_user_id, email, email_verified, \
+         profile_data, refresh_token, created_at, last_used_at \
+         FROM oauth_accounts WHERE id = $1 AND user_id = $2",
+        account_id,
+        user_id,
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(DbError::Query)?
+    .ok_or_else(|| DbError::Query(sqlx::Error::RowNotFound))?;
+
+    // Revoke the token before deletion (non-blocking — failures are logged)
+    crate::auth::revoke::revoke_account(&account).await;
+
+    // Now delete the account
     let rows = sqlx::query("DELETE FROM oauth_accounts WHERE id = $1 AND user_id = $2")
         .bind(account_id)
         .bind(user_id)
-        .execute(executor)
+        .execute(pool)
         .await
         .map_err(DbError::Query)?
         .rows_affected();
@@ -352,18 +393,20 @@ pub async fn insert_oauth_account(
     provider_user_id: &str,
     email: Option<&str>,
     profile_data: Option<&serde_json::Value>,
+    refresh_token: Option<&str>,
 ) -> Result<OauthAccount, DbError> {
     sqlx::query_as!(
         OauthAccount,
-        "INSERT INTO oauth_accounts (user_id, provider, provider_user_id, email, profile_data) \
-         VALUES ($1, $2, $3, $4, $5) \
+        "INSERT INTO oauth_accounts (user_id, provider, provider_user_id, email, profile_data, refresh_token) \
+         VALUES ($1, $2, $3, $4, $5, $6) \
          RETURNING id, user_id, provider, provider_user_id, email, email_verified, \
-         profile_data, created_at, last_used_at",
+         profile_data, refresh_token, created_at, last_used_at",
         user_id,
         provider,
         provider_user_id,
         email,
         profile_data,
+        refresh_token,
     )
     .fetch_one(executor)
     .await
@@ -416,13 +459,20 @@ pub async fn get_user_by_email(
 }
 
 /// Delete a user by ID. OAuth accounts cascade automatically via `ON DELETE CASCADE`.
+///
+/// Revokes all OAuth tokens with providers before deletion. Revocation
+/// failures are logged but never block deletion.
 pub async fn delete_user(
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    pool: &PgPool,
     user_id: Uuid,
 ) -> Result<(), DbError> {
+    // Revoke all OAuth tokens before deletion (non-blocking — failures are logged)
+    crate::auth::revoke::revoke_all_user_tokens(pool, user_id).await;
+
+    // Now delete the user (oauth_accounts cascade automatically)
     let rows = sqlx::query("DELETE FROM users WHERE id = $1")
         .bind(user_id)
-        .execute(executor)
+        .execute(pool)
         .await
         .map_err(DbError::Query)?
         .rows_affected();
@@ -651,6 +701,7 @@ mod tests {
             &format!("google-{u}"),
             Some(&format!("oauth{u}@example.com")),
             None,
+            None,
         )
         .await
         .unwrap();
@@ -694,6 +745,7 @@ mod tests {
             "github",
             &format!("github-{u}"),
             Some(&format!("update{u}@example.com")),
+            None,
             None,
         )
         .await
@@ -888,6 +940,7 @@ mod tests {
             &format!("google-{u}"),
             Some(&format!("list{u}@google.com")),
             None,
+            None,
         )
         .await
         .unwrap();
@@ -897,6 +950,7 @@ mod tests {
             "github",
             &format!("github-{u}"),
             Some(&format!("list{u}@github.com")),
+            None,
             None,
         )
         .await
@@ -933,6 +987,7 @@ mod tests {
             &format!("google-{u}"),
             Some(&format!("del{u}@example.com")),
             None,
+            None,
         )
         .await
         .unwrap();
@@ -968,6 +1023,7 @@ mod tests {
             "google",
             &format!("google-{u}"),
             Some(&format!("wrong{u}@example.com")),
+            None,
             None,
         )
         .await
@@ -1010,6 +1066,7 @@ mod tests {
             &format!("google-{u}"),
             Some(&format!("count{u}@example.com")),
             None,
+            None,
         )
         .await
         .unwrap();
@@ -1024,6 +1081,7 @@ mod tests {
             "github",
             &format!("github-{u}"),
             Some(&format!("count{u}@github.com")),
+            None,
             None,
         )
         .await
@@ -1056,6 +1114,7 @@ mod tests {
             &format!("google-{u}"),
             Some(&format!("cascade{u}@google.com")),
             None,
+            None,
         )
         .await
         .unwrap();
@@ -1065,6 +1124,7 @@ mod tests {
             "github",
             &format!("github-{u}"),
             Some(&format!("cascade{u}@github.com")),
+            None,
             None,
         )
         .await

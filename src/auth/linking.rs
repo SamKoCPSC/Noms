@@ -40,6 +40,19 @@ impl std::fmt::Display for Provider {
     }
 }
 
+impl std::str::FromStr for Provider {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "google" => Ok(Provider::Google),
+            "github" => Ok(Provider::GitHub),
+            "apple" => Ok(Provider::Apple),
+            other => Err(format!("Unknown provider: {other}")),
+        }
+    }
+}
+
 /// OAuth user info received from an external provider.
 pub struct OauthUserInfo {
     pub provider: Provider,
@@ -185,6 +198,7 @@ pub async fn link_or_create(
     pool: &PgPool,
     info: OauthUserInfo,
     existing_user_id: Option<Uuid>,
+    refresh_token: Option<String>,
 ) -> Result<LinkResult, LinkError> {
     let mut tx = pool.begin().await.map_err(db::DbError::Connection)?;
 
@@ -201,6 +215,7 @@ pub async fn link_or_create(
             &info.provider_uid,
             info.email.as_deref(),
             None,
+            refresh_token.as_deref(),
         )
         .await?;
 
@@ -239,6 +254,7 @@ pub async fn link_or_create(
                 &info.provider_uid,
                 Some(email),
                 None,
+                refresh_token.as_deref(),
             )
             .await?;
             tx.commit().await.map_err(db::DbError::Connection)?;
@@ -276,6 +292,7 @@ pub async fn link_or_create(
         &info.provider_uid,
         info.email.as_deref(),
         None,
+        refresh_token.as_deref(),
     )
     .await?;
     tx.commit().await.map_err(db::DbError::Connection)?;
@@ -385,6 +402,7 @@ mod tests {
             &format!("google-{u}"),
             Some(&format!("test{u}@example.com")),
             None,
+            None,
         )
         .await
         .unwrap();
@@ -399,6 +417,7 @@ mod tests {
                 display_name: "Test User".to_string(),
                 avatar_url: None,
             },
+            None,
             None,
         )
         .await
@@ -436,6 +455,7 @@ mod tests {
                 avatar_url: None,
             },
             None,
+            None,
         )
         .await
         .unwrap();
@@ -465,6 +485,7 @@ mod tests {
                 display_name: "New User".to_string(),
                 avatar_url: None,
             },
+            None,
             None,
         )
         .await
@@ -498,6 +519,7 @@ mod tests {
                     display_name: "Same Name".to_string(),
                     avatar_url: None,
                 },
+                None,
                 None,
             )
             .await
@@ -534,6 +556,7 @@ mod tests {
                 display_name: "No Email User".to_string(),
                 avatar_url: None,
             },
+            None,
             None,
         )
         .await
@@ -592,6 +615,7 @@ mod tests {
                     avatar_url: None,
                 },
                 None,
+                None,
             )
             .await
             .unwrap();
@@ -645,6 +669,7 @@ mod tests {
             &format!("google-{u}"),
             Some(&format!("link{u}@example.com")),
             None,
+            None,
         )
         .await
         .unwrap();
@@ -660,6 +685,7 @@ mod tests {
                 avatar_url: None,
             },
             Some(user.id),
+            None,
         )
         .await
         .unwrap();
@@ -707,6 +733,7 @@ mod tests {
             &format!("google-nosession-{u}"),
             Some(&format!("nosession{u}@example.com")),
             None,
+            None,
         )
         .await
         .unwrap();
@@ -722,6 +749,7 @@ mod tests {
                 display_name: "No Session User".to_string(),
                 avatar_url: None,
             },
+            None,
             None,
         )
         .await
