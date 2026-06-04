@@ -47,6 +47,8 @@ pub struct AppState {
     /// Shared HTTP client used for token exchange and user-info endpoints.
     /// Reusing a single client preserves the internal connection pool.
     pub http_client: reqwest::Client,
+    /// Shared rate limit state for OAuth endpoint protection.
+    pub rate_limit: crate::middleware::rate_limit::RateLimitState,
 }
 
 // ── Query parameter types ──────────────────────────────────────────────────

@@ -73,11 +73,14 @@ fn main() {
             db::init_pool().await;
             let pool = db::get_pool();
 
+            let rate_limit = middleware::rate_limit::RateLimitState::default();
+
             let state = auth::oauth::AppState {
                 pool: pool.clone(),
                 google_client,
                 github_client,
                 http_client: reqwest::Client::new(),
+                rate_limit: rate_limit.clone(),
             };
             let dioxus_router = axum::Router::new()
                 .layer(axum::Extension(pool.clone()))
@@ -106,7 +109,25 @@ fn main() {
                     axum::routing::get(auth::logout::handle_logout)
                         .post(auth::logout::handle_logout),
                 )
+                .layer(axum::middleware::from_fn_with_state(
+                    state.clone(),
+                    middleware::rate_limit::rate_limit_middleware,
+                ))
                 .with_state(state);
+
+            // Spawn background cleanup task for rate limit state.
+            // Runs every 60 seconds, removing stale entries to prevent memory growth.
+            // Dropped on server shutdown.
+            {
+                let rl = rate_limit;
+                tokio::spawn(async move {
+                    let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
+                    loop {
+                        interval.tick().await;
+                        rl.cleanup();
+                    }
+                });
+            }
 
             Ok(oauth_router.merge(dioxus_router))
         }

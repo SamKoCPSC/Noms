@@ -69,14 +69,14 @@ A thorough security audit of the auth flow identified 14 findings across 4 sever
 - [x] `Display` impl retains detailed messages for logging purposes
 - [x] No regression in server-side error visibility
 
-### AC5: Rate limiting on OAuth endpoints (HIGH-3)
+### AC5: Rate limiting on OAuth endpoints (HIGH-3) ✅ DONE
 
-- [ ] Rate limiting middleware applied to `/auth/{provider}/start` and `/auth/{provider}/callback`
-- [ ] Limits: 10 starts/minute per IP, 5 callbacks/minute per IP
-- [ ] Exceeded limit returns `429 Too Many Requests` with `Retry-After` header
-- [ ] Implementation uses sliding window (`Arc<DashMap<IpAddr, Vec<Instant>>>`) or `governor` crate
-- [ ] Rate limit state is cleaned up periodically to prevent memory growth
-- [ ] No impact on legitimate user flows
+- [x] Rate limiting middleware applied to `/auth/{provider}/start` and `/auth/{provider}/callback`
+- [x] Limits: 10 starts/minute per IP, 5 callbacks/minute per IP
+- [x] Exceeded limit returns `429 Too Many Requests` with `Retry-After` header
+- [x] Implementation uses sliding window (`Arc<DashMap<IpAddr, Vec<Instant>>>`) or `governor` crate
+- [x] Rate limit state is cleaned up periodically to prevent memory growth
+- [x] No impact on legitimate user flows
 
 ### AC6: PKCE for OAuth flow (HIGH-4)
 
