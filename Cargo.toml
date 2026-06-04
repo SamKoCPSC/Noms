@@ -57,6 +57,8 @@ server  = [
 pgtemp = "0.7"
 wiremock = "0.6"
 tower = { version = "0.5", features = ["util"] }
+dioxus-ssr = "0.7"
+dioxus-core = "0.7"
 
 [lints.rust]
 warnings = "deny"

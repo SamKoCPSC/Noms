@@ -4,6 +4,7 @@ use crate::auth::context::{use_auth, AuthContext, UserProfile};
 use crate::components::base::{
     Button, ButtonVariant, Card, Input, PageHeader, SettingsTab, SettingsTabs,
 };
+use crate::components::AuthRequired;
 
 /// Steps in the 3-layer account deletion confirmation flow.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -364,7 +365,8 @@ pub fn SettingsProfile() -> Element {
     };
 
     rsx! {
-        div { class: "container",
+        AuthRequired {
+            div { class: "container",
             PageHeader {
                 title: "Profile Settings",
             }
@@ -704,6 +706,7 @@ pub fn SettingsProfile() -> Element {
                     }
                 }
             }
+        }
         }
     }
 }

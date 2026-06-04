@@ -7,6 +7,7 @@ use crate::auth::context::use_auth;
 use crate::components::base::{
     Button, ButtonVariant, Card, EmptyState, LoadingSpinner, PageHeader, SettingsTab, SettingsTabs,
 };
+use crate::components::AuthRequired;
 
 // ── Serializable response type ───────────────────────────────────────────────
 
@@ -339,7 +340,8 @@ pub fn SettingsAccounts() -> Element {
     };
 
     rsx! {
-        div { class: "container",
+        AuthRequired {
+            div { class: "container",
             PageHeader {
                 title: "Linked Accounts",
             }
@@ -437,6 +439,7 @@ pub fn SettingsAccounts() -> Element {
                     }
                 }
             }
+        }
         }
     }
 }

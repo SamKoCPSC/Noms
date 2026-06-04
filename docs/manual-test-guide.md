@@ -33,7 +33,7 @@
 | 14 | Account deletion (3-layer confirmation) | | |
 | 15 | Logout clears session cookie | **FIXED** | Issue #1 |
 | 16 | Logout redirects to home | **FIXED** | Issue #1 |
-| 17 | Protected routes redirect after logout | **NOT FIXED** | Issue #3 (residual) |
+| 17 | Protected routes show login prompt when unauthenticated | **FIXED** | Issue #3 — AuthRequired component |
 | 18 | Server functions blocked when unauthenticated | | |
 | 19 | Session token refresh | | |
 | 20 | Concurrent request handling | | |
@@ -285,25 +285,55 @@
 
 ---
 
-### TC-17: Protected Routes Redirect After Logout (**NOT FIXED - Issue #3**)
+### TC-17: Protected Routes Show Login Prompt When Unauthenticated (**FIXED - Issue #3**)
 
 **Steps:**
 1. Log out
 2. Clear cookies (ensure clean state)
-3. Navigate directly to `/dashboard` or `/settings/profile`
+3. Navigate directly to `/dashboard`, `/settings/profile`, `/recipes/new`, `/collections`, `/explore`, or any other protected route
 
-**Expected (Current Behavior - BUG):**
-- Page loads with full HTML (200 OK)
-- Protected content rendered by Dioxus SSR
-- User sees page despite being unauthenticated
+**Expected:**
+- The page does NOT render empty forms or protected content
+- Instead, a centered login prompt appears with:
+  - A lock icon
+  - "Sign in to continue" heading
+  - A brief description explaining the page requires authentication
+  - A "Sign In" button linking to `/login`
+  - A "Go Home" button linking to `/`
+- No console errors
+- No network errors for protected API calls
 
-**Expected (Correct Behavior):**
-- Redirect to `/login` (302 Found)
-- Or show unauthenticated state/error
+**Implementation:** `AuthRequired` component wraps all protected pages, checking `use_auth().is_authenticated` before rendering children. Applied to 8 protected pages: dashboard, recipe_new, recipe_detail, collection_list, collection_detail, explore, settings_profile, settings_accounts.
 
-**Root Cause:** `serve_dioxus_application` renders HTML regardless of auth middleware redirect response. Middleware sets 302 redirect but Dioxus SSR overrides with page HTML.
+---
 
-**Recommended Fix:** Client-side auth guard component in Dioxus routing tree that checks authentication state before rendering protected pages.
+### TC-17b: AuthRequired Component Behavior
+
+**Steps:**
+1. Log out and clear cookies
+2. Visit each protected route individually:
+   - `/dashboard`
+   - `/recipes/new`
+   - `/recipes/1` (or any valid recipe ID)
+   - `/collections`
+   - `/collections/1` (or any valid collection ID)
+   - `/explore`
+   - `/settings/profile`
+   - `/settings/accounts`
+
+**Expected (for each route):**
+- The login prompt appears with consistent styling across all routes
+- No protected page content is visible behind or around the prompt
+- The "Sign In" link navigates to `/login`
+- The "Go Home" link navigates to `/`
+
+**Steps (authenticated):**
+1. Log in
+2. Visit the same protected routes
+
+**Expected (for each route):**
+- The full page content renders normally (no login prompt visible)
+- Navigation and functionality work as expected
 
 ---
 
@@ -364,7 +394,7 @@
 |-------|--------|-------------|--------------|
 | #1 | FIXED | Logout cookie not cleared | `navbar.rs` + `logout.rs` |
 | #2 | FIXED | Dropdown not closing on outside click | `navbar.rs` |
-| #3 | OPEN | Protected routes render after logout | `main.rs` (middleware) + needs client-side guard |
+| #3 | FIXED | Protected routes show login prompt when unauthenticated | `auth_required.rs` — AuthRequired component wraps all protected pages |
 
 ---
 
@@ -379,6 +409,7 @@ Run these after any code change:
 - [ ] Profile validation works
 - [ ] Account deletion flow works
 - [ ] Logout clears cookie and redirects
+- [ ] AuthRequired prompt appears on protected routes when logged out
 - [ ] Unauthenticated users cannot access server functions
 
 ---
