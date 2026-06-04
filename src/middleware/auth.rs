@@ -44,7 +44,7 @@ fn is_numeric_id_route(path: &str, prefix: &str) -> bool {
     }
     let id_part = &path[prefix.len()..];
     // Must be exactly one segment (no trailing slash or extra path)
-    id_part.contains('/') == false && id_part.parse::<i32>().is_ok()
+    !id_part.contains('/') && id_part.parse::<i32>().is_ok()
 }
 
 /// Routes that redirect authenticated users away.
