@@ -196,6 +196,21 @@ pub async fn delete_auth_state(
     Ok(rows > 0)
 }
 
+/// Delete all auth states older than 15 minutes.
+///
+/// Used by the application-level fallback cleanup task when pg_cron is
+/// unavailable. Also callable directly for testing.
+pub async fn cleanup_expired_auth_states(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+) -> Result<u64, DbError> {
+    let result =
+        sqlx::query("DELETE FROM auth_states WHERE created_at < NOW() - INTERVAL '15 minutes'")
+            .execute(executor)
+            .await
+            .map_err(DbError::Query)?;
+    Ok(result.rows_affected())
+}
+
 // ── OAuth account queries ───────────────────────────────────────────────────
 
 /// Get an OAuth account by provider and provider user ID.
@@ -544,6 +559,49 @@ mod tests {
         // Delete again should return false
         let deleted_again = delete_auth_state(&pool, &state_id).await.unwrap();
         assert!(!deleted_again);
+    }
+
+    #[tokio::test]
+    async fn test_cleanup_expired_auth_states() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+
+        // Insert a fresh state — should NOT be deleted
+        let fresh_id = format!("test-state-fresh-{}", test_utils::uid());
+        insert_auth_state(&pool, &fresh_id, "google", "/dashboard")
+            .await
+            .unwrap();
+
+        // Insert a "stale" state by backdating its created_at via raw SQL
+        let stale_id = format!("test-state-stale-{}", test_utils::uid());
+        insert_auth_state(&pool, &stale_id, "github", "/login")
+            .await
+            .unwrap();
+        sqlx::query(
+            "UPDATE auth_states SET created_at = NOW() - INTERVAL '20 minutes' WHERE id = $1",
+        )
+        .bind(&stale_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        // Run cleanup
+        let deleted = cleanup_expired_auth_states(&pool).await.unwrap();
+        assert_eq!(deleted, 1);
+
+        // Fresh state should still exist
+        let fresh = get_auth_state(&pool, &fresh_id).await.unwrap();
+        assert!(fresh.is_some());
+
+        // Stale state should be gone
+        let stale = get_auth_state(&pool, &stale_id).await.unwrap();
+        assert!(stale.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_cleanup_expired_auth_states_empty_table() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let deleted = cleanup_expired_auth_states(&pool).await.unwrap();
+        assert_eq!(deleted, 0);
     }
 
     #[tokio::test]

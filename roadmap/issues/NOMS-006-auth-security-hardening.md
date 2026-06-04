@@ -105,9 +105,9 @@ A thorough security audit of the auth flow identified 14 findings across 4 sever
 - [x] If `COOKIE_DOMAIN` is not set, behavior is unchanged (no domain attribute)
 - [x] Document the env var in `.env.local.example`
 
-### AC10: Auth states cleanup (MEDIUM-4)
+### AC10: Auth states cleanup (MEDIUM-4) ✅ DONE
 
-- [ ] `pg_cron` job added to `migrations/extensions.sql`:
+- [x] `pg_cron` job added to `migrations/extensions.sql`:
   ```sql
   SELECT cron.schedule(
       'cleanup-auth-states',
@@ -115,8 +115,8 @@ A thorough security audit of the auth flow identified 14 findings across 4 sever
       'DELETE FROM auth_states WHERE created_at < NOW() - INTERVAL ''15 minutes'''
   );
   ```
-- [ ] Fallback: application-level cleanup task on startup (tokio timer) if pg_cron unavailable
-- [ ] Old auth states are purged within 15 minutes of creation
+- [x] Fallback: application-level cleanup task on startup (tokio timer) if pg_cron unavailable
+- [x] Old auth states are purged within 15 minutes of creation
 
 ### AC11: OAuth token revocation on account deletion (MEDIUM-5)
 
