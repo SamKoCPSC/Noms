@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, redirect_uri, provider, created_at FROM auth_states WHERE id = $1",
+  "query": "SELECT id, redirect_uri, provider, code_verifier, created_at FROM auth_states WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -20,6 +20,11 @@
       },
       {
         "ordinal": 3,
+        "name": "code_verifier",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
         "name": "created_at",
         "type_info": "Timestamptz"
       }
@@ -33,8 +38,9 @@
       false,
       false,
       false,
+      true,
       false
     ]
   },
-  "hash": "e7ff1ec97d5df7906ee957b28375414f0879f7b85840090e1c63d78b6f04f06c"
+  "hash": "f74a9ab7757b7d61ba29e070d3bf3c9c5715d81552905f2b288da6771d6d65a7"
 }

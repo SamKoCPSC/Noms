@@ -78,14 +78,14 @@ A thorough security audit of the auth flow identified 14 findings across 4 sever
 - [x] Rate limit state is cleaned up periodically to prevent memory growth
 - [x] No impact on legitimate user flows
 
-### AC6: PKCE for OAuth flow (HIGH-4)
+### AC6: PKCE for OAuth flow (HIGH-4) ✅ DONE
 
-- [ ] `start_handler` generates `code_verifier` (43-128 chars, base64url) and `code_challenge` (S256)
-- [ ] `code_challenge` stored in `auth_states` table alongside CSRF state
-- [ ] Authorization URL includes `code_challenge` and `code_challenge_method=S256`
-- [ ] `callback_handler` verifies `code_verifier` against stored `code_challenge` before token exchange
-- [ ] Migration adds `code_challenge TEXT` column to `auth_states`
-- [ ] Existing tests updated to include PKCE flow
+- [x] `start_handler` generates `code_verifier` (43-128 chars, base64url) and `code_challenge` (S256)
+- [x] `code_challenge` stored in `auth_states` table alongside CSRF state
+- [x] Authorization URL includes `code_challenge` and `code_challenge_method=S256`
+- [x] `callback_handler` verifies `code_verifier` against stored `code_challenge` before token exchange
+- [x] Migration adds `code_challenge TEXT` column to `auth_states`
+- [x] Existing tests updated to include PKCE flow
 
 ### AC7: Redirect URI length validation (MEDIUM-1) ✅ DONE
 

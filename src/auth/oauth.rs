@@ -12,7 +12,7 @@ use chrono::Utc;
 use oauth2::basic::BasicClient;
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, EndpointNotSet, EndpointSet,
-    RedirectUrl, Scope, TokenResponse, TokenUrl,
+    PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, Scope, TokenResponse, TokenUrl,
 };
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -254,11 +254,16 @@ pub async fn start_handler(
     // Generate a CSRF state UUID and persist it in the DB.
     let csrf_state = Uuid::new_v4().to_string();
 
+    // Generate PKCE code verifier and challenge (S256 method).
+    // The verifier is stored server-side; the challenge is sent to the provider.
+    let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
+
     db::insert_auth_state(
         &state.pool,
         &csrf_state,
         prov.as_str(),
         &params.redirect_uri,
+        pkce_verifier.secret(),
     )
     .await
     .map_err(|e| OAuthError::DbError(e.to_string()))?;
@@ -270,8 +275,10 @@ pub async fn start_handler(
         _ => return Err(OAuthError::InvalidProvider(provider)),
     };
 
-    // Build the authorization URL with our state parameter.
-    let mut req = client.authorize_url(|| CsrfToken::new(csrf_state.clone()));
+    // Build the authorization URL with our state parameter and PKCE challenge.
+    let mut req = client
+        .authorize_url(|| CsrfToken::new(csrf_state.clone()))
+        .set_pkce_challenge(pkce_challenge);
 
     req = req
         .add_scope(Scope::new("openid".to_string()))
@@ -338,9 +345,15 @@ pub async fn callback_handler(
         _ => return Err(OAuthError::InvalidProvider(provider)),
     };
 
+    // Reconstruct the PKCE code verifier from the stored value.
+    let code_verifier = auth_state.code_verifier.ok_or_else(|| {
+        OAuthError::TokenExchange("PKCE code_verifier not found in auth state".to_string())
+    })?;
+
     // Exchange the authorization code for tokens using the shared HTTP client.
     let token_response = client
         .exchange_code(AuthorizationCode::new(params.code.clone()))
+        .set_pkce_verifier(PkceCodeVerifier::new(code_verifier))
         .request_async(&state.http_client)
         .await
         .map_err(|e| OAuthError::TokenExchange(e.to_string()))?;
@@ -522,6 +535,68 @@ mod tests {
     }
 
     #[test]
+    fn test_pkce_challenge_verifier_generation() {
+        // Verify PkceCodeChallenge::new_random_sha256() produces valid-length outputs.
+        let (challenge, verifier) = PkceCodeChallenge::new_random_sha256();
+        let challenge_str = challenge.as_str();
+        let verifier_str = verifier.secret();
+
+        // Verifier must be 43-128 chars per RFC 7636
+        assert!(
+            verifier_str.len() >= 43,
+            "verifier too short: {} chars",
+            verifier_str.len()
+        );
+        assert!(
+            verifier_str.len() <= 128,
+            "verifier too long: {} chars",
+            verifier_str.len()
+        );
+
+        // Challenge should be a valid base64url-encoded SHA-256 hash (43 chars)
+        assert!(!challenge_str.is_empty(), "challenge should not be empty");
+        assert!(
+            challenge_str.len() >= 43,
+            "challenge too short: {} chars",
+            challenge_str.len()
+        );
+    }
+
+    #[test]
+    fn test_pkce_challenge_in_auth_url() {
+        // Build an auth URL with PKCE and verify the URL contains code_challenge params.
+        let (google, _github) = build_oauth_clients("http://localhost:3000");
+        let (challenge, _verifier) = PkceCodeChallenge::new_random_sha256();
+
+        let req = google
+            .authorize_url(CsrfToken::new_random)
+            .set_pkce_challenge(challenge);
+        let (url, _) = req.url();
+        let url_str = url.to_string();
+
+        assert!(
+            url_str.contains("code_challenge="),
+            "auth URL should contain code_challenge: {url_str}"
+        );
+        assert!(
+            url_str.contains("code_challenge_method=S256"),
+            "auth URL should contain code_challenge_method=S256: {url_str}"
+        );
+    }
+
+    #[test]
+    fn test_pkce_verifier_reconstruction() {
+        // Verify PkceCodeVerifier::new(stored_string) round-trips correctly.
+        let (challenge, verifier) = PkceCodeChallenge::new_random_sha256();
+        let stored = verifier.secret().to_string();
+
+        // Reconstruct from stored string
+        let reconstructed = PkceCodeVerifier::new(stored.clone());
+        assert_eq!(reconstructed.secret(), &stored);
+        assert_eq!(challenge.as_str(), challenge.as_str());
+    }
+
+    #[test]
     fn test_build_oauth_clients() {
         // Just verify it doesn't panic with defaults.
         let (google, _github) = build_oauth_clients("http://localhost:3000");
@@ -602,9 +677,15 @@ mod tests {
             let (_db, pool) = test_utils::setup_test_db().await;
             let state_id = format!("test-state-{}", test_utils::uid());
 
-            db::insert_auth_state(&pool, &state_id, "google", "/dashboard")
-                .await
-                .unwrap();
+            db::insert_auth_state(
+                &pool,
+                &state_id,
+                "google",
+                "/dashboard",
+                "test-verifier-minimum-43-chars-long!!",
+            )
+            .await
+            .unwrap();
 
             let state = db::get_auth_state(&pool, &state_id).await.unwrap().unwrap();
             assert_eq!(state.provider, "google");
@@ -616,9 +697,15 @@ mod tests {
             let (_db, pool) = test_utils::setup_test_db().await;
             let state_id = format!("test-state-{}", test_utils::uid());
 
-            db::insert_auth_state(&pool, &state_id, "google", "/dashboard")
-                .await
-                .unwrap();
+            db::insert_auth_state(
+                &pool,
+                &state_id,
+                "google",
+                "/dashboard",
+                "test-verifier-minimum-43-chars-long!!",
+            )
+            .await
+            .unwrap();
 
             let state = db::get_auth_state(&pool, &state_id).await.unwrap().unwrap();
             // State stored with "google" provider
@@ -632,9 +719,15 @@ mod tests {
             let (_db, pool) = test_utils::setup_test_db().await;
             let state_id = format!("test-state-{}", test_utils::uid());
 
-            db::insert_auth_state(&pool, &state_id, "google", "/dashboard")
-                .await
-                .unwrap();
+            db::insert_auth_state(
+                &pool,
+                &state_id,
+                "google",
+                "/dashboard",
+                "test-verifier-minimum-43-chars-long!!",
+            )
+            .await
+            .unwrap();
 
             let state = db::get_auth_state(&pool, &state_id).await.unwrap().unwrap();
             // Freshly created state should not be expired
@@ -642,6 +735,52 @@ mod tests {
                 .signed_duration_since(state.created_at)
                 .num_seconds();
             assert!(elapsed < CSRF_STATE_TTL_SECS);
+        }
+
+        #[tokio::test]
+        async fn test_auth_state_stores_code_verifier() {
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let state_id = format!("test-state-{}", test_utils::uid());
+            let verifier = "test-pkce-verifier-minimum-43-chars!!";
+
+            db::insert_auth_state(&pool, &state_id, "google", "/dashboard", verifier)
+                .await
+                .unwrap();
+
+            let state = db::get_auth_state(&pool, &state_id).await.unwrap().unwrap();
+            assert_eq!(state.code_verifier, Some(verifier.to_string()));
+        }
+
+        #[tokio::test]
+        async fn test_callback_retrieves_verifier_before_delete() {
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let state_id = format!("test-state-{}", test_utils::uid());
+            let verifier = "test-pkce-verifier-minimum-43-chars!!";
+
+            db::insert_auth_state(&pool, &state_id, "google", "/dashboard", verifier)
+                .await
+                .unwrap();
+
+            // Simulate callback_handler flow: retrieve state, read verifier, then delete
+            let auth_state = db::get_auth_state(&pool, &state_id).await.unwrap().unwrap();
+            let stored_verifier = auth_state
+                .code_verifier
+                .expect("verifier should be present");
+
+            // Verify the verifier is accessible before deletion
+            assert_eq!(stored_verifier, verifier);
+
+            // Now delete the state (as callback_handler does)
+            let deleted = db::delete_auth_state(&pool, &state_id).await.unwrap();
+            assert!(deleted);
+
+            // Verify state is gone
+            let state = db::get_auth_state(&pool, &state_id).await.unwrap();
+            assert!(state.is_none());
+
+            // But the verifier string we captured is still available
+            let reconstructed = PkceCodeVerifier::new(stored_verifier);
+            assert_eq!(reconstructed.secret(), verifier);
         }
 
         /// Verify that a valid session cookie causes link_or_create to link

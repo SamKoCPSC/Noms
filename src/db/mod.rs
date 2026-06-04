@@ -133,6 +133,7 @@ pub struct AuthState {
     pub id: String,
     pub redirect_uri: String,
     pub provider: String,
+    pub code_verifier: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -156,11 +157,13 @@ pub async fn insert_auth_state(
     id: &str,
     provider: &str,
     redirect_uri: &str,
+    code_verifier: &str,
 ) -> Result<(), DbError> {
-    sqlx::query("INSERT INTO auth_states (id, provider, redirect_uri) VALUES ($1, $2, $3)")
+    sqlx::query("INSERT INTO auth_states (id, provider, redirect_uri, code_verifier) VALUES ($1, $2, $3, $4)")
         .bind(id)
         .bind(provider)
         .bind(redirect_uri)
+        .bind(code_verifier)
         .execute(executor)
         .await
         .map_err(DbError::Query)?;
@@ -174,7 +177,7 @@ pub async fn get_auth_state(
 ) -> Result<Option<AuthState>, DbError> {
     sqlx::query_as!(
         AuthState,
-        "SELECT id, redirect_uri, provider, created_at FROM auth_states WHERE id = $1",
+        "SELECT id, redirect_uri, provider, code_verifier, created_at FROM auth_states WHERE id = $1",
         id,
     )
     .fetch_optional(executor)
@@ -529,7 +532,8 @@ mod tests {
     async fn test_insert_and_get_auth_state() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let state_id = format!("test-state-{}", test_utils::uid());
-        insert_auth_state(&pool, &state_id, "google", "/dashboard")
+        let verifier = "test-verifier-that-is-at-least-43-chars-long!";
+        insert_auth_state(&pool, &state_id, "google", "/dashboard", verifier)
             .await
             .unwrap();
 
@@ -539,15 +543,22 @@ mod tests {
         assert_eq!(state.id, state_id);
         assert_eq!(state.redirect_uri, "/dashboard");
         assert_eq!(state.provider, "google");
+        assert_eq!(state.code_verifier, Some(verifier.to_string()));
     }
 
     #[tokio::test]
     async fn test_delete_auth_state() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let state_id = format!("test-state-del-{}", test_utils::uid());
-        insert_auth_state(&pool, &state_id, "github", "/login")
-            .await
-            .unwrap();
+        insert_auth_state(
+            &pool,
+            &state_id,
+            "github",
+            "/login",
+            "dummy-verifier-minimum-43-chars-long!!",
+        )
+        .await
+        .unwrap();
 
         let deleted = delete_auth_state(&pool, &state_id).await.unwrap();
         assert!(deleted);
@@ -567,15 +578,27 @@ mod tests {
 
         // Insert a fresh state — should NOT be deleted
         let fresh_id = format!("test-state-fresh-{}", test_utils::uid());
-        insert_auth_state(&pool, &fresh_id, "google", "/dashboard")
-            .await
-            .unwrap();
+        insert_auth_state(
+            &pool,
+            &fresh_id,
+            "google",
+            "/dashboard",
+            "fresh-verifier-minimum-43-chars-long!!",
+        )
+        .await
+        .unwrap();
 
         // Insert a "stale" state by backdating its created_at via raw SQL
         let stale_id = format!("test-state-stale-{}", test_utils::uid());
-        insert_auth_state(&pool, &stale_id, "github", "/login")
-            .await
-            .unwrap();
+        insert_auth_state(
+            &pool,
+            &stale_id,
+            "github",
+            "/login",
+            "stale-verifier-minimum-43-chars-long!!",
+        )
+        .await
+        .unwrap();
         sqlx::query(
             "UPDATE auth_states SET created_at = NOW() - INTERVAL '20 minutes' WHERE id = $1",
         )
