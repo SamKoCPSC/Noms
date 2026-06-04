@@ -51,11 +51,16 @@ impl std::fmt::Display for SessionError {
 
 impl std::error::Error for SessionError {}
 
-// Thread-local override for the session secret (used in tests).
-// When set, takes precedence over the environment variable.
+// Thread-local overrides for test isolation (used in tests).
+// When set, takes precedence over the environment variables.
 #[cfg(test)]
 thread_local! {
     static TEST_SECRET: std::cell::RefCell<Option<Vec<u8>>> = const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(test)]
+thread_local! {
+    static TEST_COOKIE_DOMAIN: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
 }
 
 /// Reads the session secret from the `SESSION_SECRET` environment variable.
@@ -70,6 +75,25 @@ fn read_secret() -> Result<Vec<u8>, SessionError> {
         return Ok(secret);
     }
     std::env::var("SESSION_SECRET").map_or(Err(SessionError::MissingSecret), |s| Ok(s.into_bytes()))
+}
+
+/// Reads the cookie domain from the `COOKIE_DOMAIN` environment variable.
+/// Returns `None` if not set or if the value is empty/whitespace-only.
+#[cfg(not(test))]
+fn read_cookie_domain() -> Option<String> {
+    std::env::var("COOKIE_DOMAIN")
+        .ok()
+        .filter(|d| !d.trim().is_empty())
+}
+
+#[cfg(test)]
+fn read_cookie_domain() -> Option<String> {
+    if let Some(domain) = TEST_COOKIE_DOMAIN.with(|f| f.borrow().clone()) {
+        return Some(domain).filter(|d| !d.trim().is_empty());
+    }
+    std::env::var("COOKIE_DOMAIN")
+        .ok()
+        .filter(|d| !d.trim().is_empty())
 }
 
 /// Current unix timestamp in seconds.
@@ -137,13 +161,19 @@ pub fn verify_session(token: &str) -> Result<Uuid, SessionError> {
 /// the `Secure` flag is disabled so cookies work over HTTP.
 pub fn build_session_cookie(token: &str) -> Cookie<'static> {
     let is_local = std::env::var("NOMS_ENV").ok() == Some("local".to_string());
-    CookieBuilder::new(COOKIE_NAME, token.to_owned())
+    let domain = read_cookie_domain();
+    let mut builder = CookieBuilder::new(COOKIE_NAME, token.to_owned())
         .http_only(true)
         .secure(!is_local)
         .path("/")
         .max_age(TimeDuration::seconds(SESSION_LIFETIME_SECS as i64))
-        .same_site(SameSite::Lax)
-        .build()
+        .same_site(SameSite::Lax);
+
+    if let Some(d) = domain {
+        builder = builder.domain(d);
+    }
+
+    builder.build()
 }
 
 /// Build a cookie that deletes the existing session cookie.
@@ -151,13 +181,19 @@ pub fn build_session_cookie(token: &str) -> Cookie<'static> {
 /// Sets the same name/path with max-age 0 so the browser discards it immediately.
 pub fn clear_session_cookie() -> Cookie<'static> {
     let is_local = std::env::var("NOMS_ENV").ok() == Some("local".to_string());
-    CookieBuilder::new(COOKIE_NAME, "")
+    let domain = read_cookie_domain();
+    let mut builder = CookieBuilder::new(COOKIE_NAME, "")
         .http_only(true)
         .secure(!is_local)
         .path("/")
         .max_age(TimeDuration::ZERO)
-        .same_site(SameSite::Lax)
-        .build()
+        .same_site(SameSite::Lax);
+
+    if let Some(d) = domain {
+        builder = builder.domain(d);
+    }
+
+    builder.build()
 }
 
 /// Extract the authenticated user ID from `FullstackContext` request headers.
@@ -357,6 +393,85 @@ mod tests {
         assert_eq!(cookie.max_age(), Some(TimeDuration::ZERO));
         assert!(cookie.http_only().unwrap_or(false));
         assert!(cookie.secure().unwrap_or(false));
+    }
+
+    /// Set the thread-local cookie domain. Each test thread gets its own value.
+    fn with_cookie_domain(domain: &'static str) {
+        super::TEST_COOKIE_DOMAIN.with(|f| {
+            *f.borrow_mut() = Some(domain.to_string());
+        });
+    }
+
+    /// Clear the thread-local cookie domain.
+    fn without_cookie_domain() {
+        super::TEST_COOKIE_DOMAIN.with(|f| {
+            *f.borrow_mut() = None;
+        });
+        std::env::remove_var("COOKIE_DOMAIN");
+    }
+
+    #[test]
+    fn session_cookie_includes_domain_when_set() {
+        with_secret(TEST_SECRET);
+        with_cookie_domain(".example.com");
+        let token = create_session(test_user_id()).unwrap();
+        let cookie = build_session_cookie(&token);
+
+        assert_eq!(cookie.domain(), Some("example.com"));
+        without_cookie_domain();
+    }
+
+    #[test]
+    fn session_cookie_has_no_domain_when_unset() {
+        with_secret(TEST_SECRET);
+        without_cookie_domain();
+        let token = create_session(test_user_id()).unwrap();
+        let cookie = build_session_cookie(&token);
+
+        assert_eq!(cookie.domain(), None);
+    }
+
+    #[test]
+    fn clear_cookie_includes_domain_when_set() {
+        with_secret(TEST_SECRET);
+        with_cookie_domain(".example.com");
+        let cookie = clear_session_cookie();
+
+        assert_eq!(cookie.domain(), Some("example.com"));
+        assert_eq!(cookie.max_age(), Some(TimeDuration::ZERO));
+        without_cookie_domain();
+    }
+
+    #[test]
+    fn clear_cookie_has_no_domain_when_unset() {
+        with_secret(TEST_SECRET);
+        without_cookie_domain();
+        let cookie = clear_session_cookie();
+
+        assert_eq!(cookie.domain(), None);
+        assert_eq!(cookie.max_age(), Some(TimeDuration::ZERO));
+    }
+
+    #[test]
+    fn cookie_domain_empty_string_is_treated_as_unset() {
+        with_secret(TEST_SECRET);
+        with_cookie_domain("");
+        let token = create_session(test_user_id()).unwrap();
+        let cookie = build_session_cookie(&token);
+
+        assert_eq!(cookie.domain(), None);
+        without_cookie_domain();
+    }
+
+    #[test]
+    fn cookie_domain_whitespace_only_is_treated_as_unset() {
+        with_secret(TEST_SECRET);
+        with_cookie_domain("   ");
+        let token = create_session(test_user_id()).unwrap();
+        let cookie = build_session_cookie(&token);
+
+        assert_eq!(cookie.domain(), None);
+        without_cookie_domain();
     }
 
     #[test]

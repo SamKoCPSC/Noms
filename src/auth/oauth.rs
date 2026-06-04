@@ -20,6 +20,7 @@ use uuid::Uuid;
 
 use crate::auth::{linking, session};
 use crate::db;
+use tracing;
 
 // ── Type alias for fully-configured OAuth clients ───────────────────────────
 //
@@ -94,20 +95,56 @@ impl std::fmt::Display for OAuthError {
     }
 }
 
+impl OAuthError {
+    /// Return a client-safe error message.
+    ///
+    /// For client errors (4xx), returns the detailed message via `Display`.
+    /// For internal server errors (5xx), returns a generic message that
+    /// does not leak internal implementation details.
+    pub fn sanitized_message(&self) -> String {
+        match self {
+            // Client errors — safe to expose details
+            Self::InvalidProvider(_)
+            | Self::InvalidRedirectUri(_)
+            | Self::StateNotFound
+            | Self::StateExpired
+            | Self::ProviderMismatch => self.to_string(),
+
+            // Internal errors — generic message only
+            Self::TokenExchange(_)
+            | Self::UserInfoExtraction(_)
+            | Self::DbError(_)
+            | Self::SessionError(_)
+            | Self::LinkError(_) => {
+                "An internal error occurred. Please try again later.".to_string()
+            }
+        }
+    }
+}
+
 impl IntoResponse for OAuthError {
     fn into_response(self) -> axum::response::Response {
-        let (status, message) = match &self {
-            Self::InvalidProvider(_) => (StatusCode::BAD_REQUEST, self.to_string()),
-            Self::InvalidRedirectUri(_) => (StatusCode::BAD_REQUEST, self.to_string()),
-            Self::StateNotFound => (StatusCode::UNAUTHORIZED, self.to_string()),
-            Self::StateExpired => (StatusCode::UNAUTHORIZED, self.to_string()),
-            Self::ProviderMismatch => (StatusCode::BAD_REQUEST, self.to_string()),
-            Self::TokenExchange(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
-            Self::UserInfoExtraction(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
-            Self::DbError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
-            Self::SessionError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
-            Self::LinkError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+        let status = match &self {
+            Self::InvalidProvider(_) => StatusCode::BAD_REQUEST,
+            Self::InvalidRedirectUri(_) => StatusCode::BAD_REQUEST,
+            Self::StateNotFound => StatusCode::UNAUTHORIZED,
+            Self::StateExpired => StatusCode::UNAUTHORIZED,
+            Self::ProviderMismatch => StatusCode::BAD_REQUEST,
+            Self::TokenExchange(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::UserInfoExtraction(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::DbError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::SessionError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::LinkError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
+
+        // Log detailed error server-side for all errors
+        if status.is_server_error() {
+            tracing::error!(error = %self, status = ?status, "Internal server error");
+        } else {
+            tracing::warn!(error = %self, status = ?status, "Client error");
+        }
+
+        let message = self.sanitized_message();
         (status, message).into_response()
     }
 }
@@ -128,6 +165,9 @@ fn validate_provider(provider: &str) -> Result<linking::Provider, OAuthError> {
 /// Must start with `/` and must not contain `://` (i.e., no absolute URLs)
 /// and must not start with `//` (i.e., no protocol-relative URLs).
 fn validate_redirect_uri(uri: &str) -> Result<(), OAuthError> {
+    if uri.len() > REDIRECT_URI_MAX_LEN {
+        return Err(OAuthError::InvalidRedirectUri(uri.to_string()));
+    }
     if !uri.starts_with('/') || uri.starts_with("//") || uri.contains("://") {
         return Err(OAuthError::InvalidRedirectUri(uri.to_string()));
     }
@@ -190,6 +230,9 @@ fn env_or(key: &str, default: &str) -> String {
 
 /// CSRF state lifetime in seconds (10 minutes).
 const CSRF_STATE_TTL_SECS: i64 = 600;
+
+/// Maximum allowed length for redirect_uri parameter.
+const REDIRECT_URI_MAX_LEN: usize = 2048;
 
 // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -462,12 +505,89 @@ mod tests {
     }
 
     #[test]
+    fn test_validate_redirect_uri_too_long() {
+        let long_uri = format!("/{}", "a".repeat(2048));
+        assert!(matches!(
+            validate_redirect_uri(&long_uri),
+            Err(OAuthError::InvalidRedirectUri(_))
+        ));
+    }
+
+    #[test]
+    fn test_validate_redirect_uri_at_max_length() {
+        let exact_uri = format!("/{}", "a".repeat(2047));
+        assert!(validate_redirect_uri(&exact_uri).is_ok());
+    }
+
+    #[test]
     fn test_build_oauth_clients() {
         // Just verify it doesn't panic with defaults.
         let (google, _github) = build_oauth_clients("http://localhost:3000");
         // Verify the client was created and can generate an auth URL.
         let url = google.authorize_url(CsrfToken::new_random).url();
         assert!(!url.0.to_string().is_empty());
+    }
+
+    #[test]
+    fn test_sanitized_message_client_errors_preserved() {
+        assert_eq!(
+            OAuthError::InvalidProvider("facebook".to_string()).sanitized_message(),
+            "Invalid provider: facebook"
+        );
+        assert_eq!(
+            OAuthError::InvalidRedirectUri("https://evil.com".to_string()).sanitized_message(),
+            "Invalid redirect_uri: https://evil.com"
+        );
+        assert_eq!(
+            OAuthError::StateNotFound.sanitized_message(),
+            "CSRF state not found"
+        );
+        assert_eq!(
+            OAuthError::StateExpired.sanitized_message(),
+            "CSRF state expired"
+        );
+        assert_eq!(
+            OAuthError::ProviderMismatch.sanitized_message(),
+            "Provider mismatch"
+        );
+    }
+
+    #[test]
+    fn test_sanitized_message_server_errors_generic() {
+        let generic = "An internal error occurred. Please try again later.";
+        assert_eq!(
+            OAuthError::TokenExchange("connection refused".to_string()).sanitized_message(),
+            generic
+        );
+        assert_eq!(
+            OAuthError::UserInfoExtraction("parse error".to_string()).sanitized_message(),
+            generic
+        );
+        assert_eq!(
+            OAuthError::DbError("connection timeout".to_string()).sanitized_message(),
+            generic
+        );
+        assert_eq!(
+            OAuthError::SessionError("SESSION_SECRET not set".to_string()).sanitized_message(),
+            generic
+        );
+        assert_eq!(
+            OAuthError::LinkError("database error: query failed".to_string()).sanitized_message(),
+            generic
+        );
+    }
+
+    #[test]
+    fn test_display_still_detailed_for_logging() {
+        // Verify Display still produces detailed messages (for logging)
+        let err = OAuthError::DbError("PG error: relation does not exist".to_string());
+        let display_msg = err.to_string();
+        assert!(
+            display_msg.contains("PG error"),
+            "Display should contain details for logging: {display_msg}"
+        );
+        // But sanitized message should be generic
+        assert!(!err.sanitized_message().contains("PG error"));
     }
 
     /// Integration tests requiring a database (use `pgtemp`).
