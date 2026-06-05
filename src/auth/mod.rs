@@ -9,8 +9,8 @@ pub mod logout;
 #[cfg(feature = "server")]
 pub mod oauth;
 #[cfg(feature = "server")]
+pub mod revoke;
+#[cfg(feature = "server")]
 pub mod session;
 #[cfg(feature = "server")]
 pub mod user_profile;
-#[cfg(feature = "server")]
-pub mod revoke;

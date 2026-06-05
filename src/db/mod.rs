@@ -171,33 +171,22 @@ pub async fn insert_auth_state(
     Ok(())
 }
 
-/// Get an auth state by ID.
-pub async fn get_auth_state(
+/// Atomically delete an auth state by ID and return the deleted row.
+///
+/// Uses `DELETE ... RETURNING *` so the first caller consumes the state.
+/// Concurrent callers with the same ID will get `None` (row already deleted).
+pub async fn delete_auth_state(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     id: &str,
 ) -> Result<Option<AuthState>, DbError> {
     sqlx::query_as!(
         AuthState,
-        "SELECT id, redirect_uri, provider, code_verifier, created_at FROM auth_states WHERE id = $1",
+        "DELETE FROM auth_states WHERE id = $1 RETURNING id, redirect_uri, provider, code_verifier, created_at",
         id,
     )
     .fetch_optional(executor)
     .await
     .map_err(DbError::Query)
-}
-
-/// Delete an auth state by ID. Returns `true` if a row was deleted.
-pub async fn delete_auth_state(
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
-    id: &str,
-) -> Result<bool, DbError> {
-    let rows = sqlx::query("DELETE FROM auth_states WHERE id = $1")
-        .bind(id)
-        .execute(executor)
-        .await
-        .map_err(DbError::Query)?
-        .rows_affected();
-    Ok(rows > 0)
 }
 
 /// Delete all auth states older than 15 minutes.
@@ -462,10 +451,7 @@ pub async fn get_user_by_email(
 ///
 /// Revokes all OAuth tokens with providers before deletion. Revocation
 /// failures are logged but never block deletion.
-pub async fn delete_user(
-    pool: &PgPool,
-    user_id: Uuid,
-) -> Result<(), DbError> {
+pub async fn delete_user(pool: &PgPool, user_id: Uuid) -> Result<(), DbError> {
     // Revoke all OAuth tokens before deletion (non-blocking — failures are logged)
     crate::auth::revoke::revoke_all_user_tokens(pool, user_id).await;
 
@@ -587,7 +573,7 @@ mod tests {
             .await
             .unwrap();
 
-        let state = get_auth_state(&pool, &state_id).await.unwrap();
+        let state = delete_auth_state(&pool, &state_id).await.unwrap();
         assert!(state.is_some());
         let state = state.unwrap();
         assert_eq!(state.id, state_id);
@@ -611,15 +597,17 @@ mod tests {
         .unwrap();
 
         let deleted = delete_auth_state(&pool, &state_id).await.unwrap();
-        assert!(deleted);
+        assert!(deleted.is_some());
+        let deleted_state = deleted.unwrap();
+        assert_eq!(deleted_state.id, state_id);
 
-        // Should be gone
-        let state = get_auth_state(&pool, &state_id).await.unwrap();
-        assert!(state.is_none());
+        // Should be gone (second delete returns None)
+        let gone = delete_auth_state(&pool, &state_id).await.unwrap();
+        assert!(gone.is_none());
 
-        // Delete again should return false
+        // Delete again should return None
         let deleted_again = delete_auth_state(&pool, &state_id).await.unwrap();
-        assert!(!deleted_again);
+        assert!(deleted_again.is_none());
     }
 
     #[tokio::test]
@@ -662,11 +650,11 @@ mod tests {
         assert_eq!(deleted, 1);
 
         // Fresh state should still exist
-        let fresh = get_auth_state(&pool, &fresh_id).await.unwrap();
+        let fresh = delete_auth_state(&pool, &fresh_id).await.unwrap();
         assert!(fresh.is_some());
 
         // Stale state should be gone
-        let stale = get_auth_state(&pool, &stale_id).await.unwrap();
+        let stale = delete_auth_state(&pool, &stale_id).await.unwrap();
         assert!(stale.is_none());
     }
 

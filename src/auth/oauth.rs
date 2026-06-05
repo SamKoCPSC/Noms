@@ -310,34 +310,24 @@ pub async fn callback_handler(
 ) -> Result<impl IntoResponse, OAuthError> {
     let prov = validate_provider(&provider)?;
 
-    // Retrieve the stored CSRF state.
-    let auth_state = db::get_auth_state(&state.pool, &params.state)
+    // Atomically consume the CSRF state. First caller gets the row;
+    // concurrent callers get None and are rejected.
+    let auth_state = db::delete_auth_state(&state.pool, &params.state)
         .await
         .map_err(|e| OAuthError::DbError(e.to_string()))?
         .ok_or(OAuthError::StateNotFound)?;
 
-    // Check expiry (10 min TTL).
+    // Check expiry (10 min TTL) — state is already consumed, no cleanup needed.
     let elapsed = Utc::now()
         .signed_duration_since(auth_state.created_at)
         .num_seconds();
     if elapsed > CSRF_STATE_TTL_SECS {
-        let _ = db::delete_auth_state(&state.pool, &params.state).await;
         return Err(OAuthError::StateExpired);
     }
 
-    // Verify provider matches.
+    // Verify provider matches — state is already consumed, no cleanup needed.
     if auth_state.provider != prov.as_str() {
-        let _ = db::delete_auth_state(&state.pool, &params.state).await;
         return Err(OAuthError::ProviderMismatch);
-    }
-
-    // Consume the state so it cannot be reused.
-    // If delete returns Ok(false), the state was already consumed — treat as not found.
-    let deleted = db::delete_auth_state(&state.pool, &params.state)
-        .await
-        .map_err(|e| OAuthError::DbError(e.to_string()))?;
-    if !deleted {
-        return Err(OAuthError::StateNotFound);
     }
 
     // Check if there's an existing authenticated session
@@ -382,9 +372,10 @@ pub async fn callback_handler(
         .map(|rt| rt.secret().to_string());
 
     // Link the OAuth identity to a user (or create a new one).
-    let link_result = linking::link_or_create(&state.pool, user_info, existing_user_id, refresh_token)
-        .await
-        .map_err(|e| OAuthError::LinkError(e.to_string()))?;
+    let link_result =
+        linking::link_or_create(&state.pool, user_info, existing_user_id, refresh_token)
+            .await
+            .map_err(|e| OAuthError::LinkError(e.to_string()))?;
 
     // Create a session JWT.
     let jwt = session::create_session(link_result.user_id)
@@ -699,7 +690,7 @@ mod tests {
             .await
             .unwrap();
 
-            let state = db::get_auth_state(&pool, &state_id).await.unwrap().unwrap();
+            let state = db::delete_auth_state(&pool, &state_id).await.unwrap().unwrap();
             assert_eq!(state.provider, "google");
             assert_eq!(state.redirect_uri, "/dashboard");
         }
@@ -719,7 +710,7 @@ mod tests {
             .await
             .unwrap();
 
-            let state = db::get_auth_state(&pool, &state_id).await.unwrap().unwrap();
+            let state = db::delete_auth_state(&pool, &state_id).await.unwrap().unwrap();
             // State stored with "google" provider
             assert_eq!(state.provider, "google");
             // If callback comes for "github", it won't match
@@ -741,7 +732,7 @@ mod tests {
             .await
             .unwrap();
 
-            let state = db::get_auth_state(&pool, &state_id).await.unwrap().unwrap();
+            let state = db::delete_auth_state(&pool, &state_id).await.unwrap().unwrap();
             // Freshly created state should not be expired
             let elapsed = Utc::now()
                 .signed_duration_since(state.created_at)
@@ -759,7 +750,7 @@ mod tests {
                 .await
                 .unwrap();
 
-            let state = db::get_auth_state(&pool, &state_id).await.unwrap().unwrap();
+            let state = db::delete_auth_state(&pool, &state_id).await.unwrap().unwrap();
             assert_eq!(state.code_verifier, Some(verifier.to_string()));
         }
 
@@ -773,24 +764,22 @@ mod tests {
                 .await
                 .unwrap();
 
-            // Simulate callback_handler flow: retrieve state, read verifier, then delete
-            let auth_state = db::get_auth_state(&pool, &state_id).await.unwrap().unwrap();
+            // Simulate new atomic flow: delete_auth_state returns the row
+            let auth_state = db::delete_auth_state(&pool, &state_id).await.unwrap();
+            assert!(auth_state.is_some());
+            let auth_state = auth_state.unwrap();
             let stored_verifier = auth_state
                 .code_verifier
                 .expect("verifier should be present");
 
-            // Verify the verifier is accessible before deletion
+            // Verify the verifier is accessible from the returned row
             assert_eq!(stored_verifier, verifier);
 
-            // Now delete the state (as callback_handler does)
-            let deleted = db::delete_auth_state(&pool, &state_id).await.unwrap();
-            assert!(deleted);
-
-            // Verify state is gone
-            let state = db::get_auth_state(&pool, &state_id).await.unwrap();
+            // State is now gone (second delete returns None)
+            let state = db::delete_auth_state(&pool, &state_id).await.unwrap();
             assert!(state.is_none());
 
-            // But the verifier string we captured is still available
+            // The verifier string we captured is still available
             let reconstructed = PkceCodeVerifier::new(stored_verifier);
             assert_eq!(reconstructed.secret(), verifier);
         }
@@ -883,6 +872,197 @@ mod tests {
                 .await
                 .unwrap();
             assert_eq!(user_count, 1);
+        }
+
+        /// Verify that concurrent requests with the same state parameter
+        /// cannot both succeed — the first caller atomically consumes the state.
+        /// Uses 16 concurrent tasks via tokio::spawn for high-contention testing.
+        #[tokio::test]
+        async fn test_concurrent_state_consumption() {
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let state_id = format!("test-concurrent-{}", test_utils::uid());
+            let verifier = "test-pkce-verifier-minimum-43-chars!!";
+
+            db::insert_auth_state(&pool, &state_id, "google", "/dashboard", verifier)
+                .await
+                .unwrap();
+
+            // Spawn 16 concurrent delete attempts to exercise high-contention scenario.
+            // Only one should succeed due to atomic DELETE ... RETURNING semantics.
+            const NUM_CONCURRENT: usize = 16;
+            let mut handles = Vec::with_capacity(NUM_CONCURRENT);
+
+            for i in 0..NUM_CONCURRENT {
+                let pool = pool.clone();
+                let state_id = state_id.clone();
+                let handle = tokio::spawn(async move {
+                    let result = db::delete_auth_state(&pool, &state_id).await;
+                    (i, result)
+                });
+                handles.push(handle);
+            }
+
+            // Collect all results
+            let mut results = Vec::with_capacity(NUM_CONCURRENT);
+            for handle in handles {
+                let (idx, result) = handle.await.expect("task should not panic");
+                let state = result.expect("db operation should not fail");
+                results.push((idx, state));
+            }
+
+            // Count successes and failures
+            let successes: Vec<_> = results.iter().filter(|(_, s)| s.is_some()).collect();
+            let failures: Vec<_> = results.iter().filter(|(_, s)| s.is_none()).collect();
+
+            // Exactly one should succeed
+            assert_eq!(
+                successes.len(),
+                1,
+                "exactly one caller should get the state, got {} successes: {:?}",
+                successes.len(),
+                successes.iter().map(|(i, _)| *i).collect::<Vec<_>>()
+            );
+
+            // All others should get None
+            assert_eq!(
+                failures.len(),
+                NUM_CONCURRENT - 1,
+                "remaining {} callers should get None, got {} failures",
+                NUM_CONCURRENT - 1,
+                failures.len()
+            );
+
+            // The winner should have correct data
+            let winner = successes[0].1.as_ref().unwrap();
+            assert_eq!(winner.id, state_id);
+            assert_eq!(winner.provider, "google");
+            assert_eq!(winner.code_verifier, Some(verifier.to_string()));
+        }
+
+        /// Verify that an expired state is still consumed by delete_auth_state,
+        /// and the elapsed time exceeds the TTL — matching the StateExpired path
+        /// in callback_handler's validation-after-delete flow.
+        #[tokio::test]
+        async fn test_expired_state_returns_state_expired() {
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let state_id = format!("test-expired-{}", test_utils::uid());
+
+            // Insert state with "google" provider
+            db::insert_auth_state(
+                &pool,
+                &state_id,
+                "google",
+                "/dashboard",
+                "test-verifier-minimum-43-chars-long!!",
+            )
+            .await
+            .unwrap();
+
+            // Backdate the state to 20 minutes ago (exceeds 600s TTL)
+            sqlx::query(
+                "UPDATE auth_states SET created_at = NOW() - INTERVAL '20 minutes' WHERE id = $1",
+            )
+            .bind(&state_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+            // Simulate callback_handler flow: delete_auth_state consumes the state
+            let auth_state = db::delete_auth_state(&pool, &state_id)
+                .await
+                .unwrap()
+                .expect("state should exist for delete");
+
+            // State was consumed — now check expiry (this is the validation-after-delete path)
+            let elapsed = Utc::now()
+                .signed_duration_since(auth_state.created_at)
+                .num_seconds();
+            assert!(
+                elapsed > CSRF_STATE_TTL_SECS,
+                "state should be expired: elapsed={}s, ttl={}s",
+                elapsed,
+                CSRF_STATE_TTL_SECS
+            );
+
+            // Verify state is gone (consumed) even though it was expired
+            let still_exists = db::delete_auth_state(&pool, &state_id).await.unwrap();
+            assert!(
+                still_exists.is_none(),
+                "expired state should still be consumed"
+            );
+        }
+
+        /// Verify that a provider mismatch is detected after the state is consumed,
+        /// matching the ProviderMismatch path in callback_handler's validation-after-delete flow.
+        #[tokio::test]
+        async fn test_provider_mismatch_after_delete() {
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let state_id = format!("test-mismatch-{}", test_utils::uid());
+
+            // Insert state with "google" provider
+            db::insert_auth_state(
+                &pool,
+                &state_id,
+                "google",
+                "/dashboard",
+                "test-verifier-minimum-43-chars-long!!",
+            )
+            .await
+            .unwrap();
+
+            // Simulate callback_handler: state consumed via delete_auth_state
+            let auth_state = db::delete_auth_state(&pool, &state_id)
+                .await
+                .unwrap()
+                .expect("state should exist for delete");
+
+            // Callback comes in for "github" — provider mismatch
+            let callback_provider = linking::Provider::GitHub;
+            assert_ne!(
+                auth_state.provider,
+                callback_provider.as_str(),
+                "stored provider '{}' should not match callback provider '{}'",
+                auth_state.provider,
+                callback_provider.as_str()
+            );
+
+            // Verify the mismatch error message is client-safe
+            let err = OAuthError::ProviderMismatch;
+            assert_eq!(err.sanitized_message(), "Provider mismatch");
+            let response = err.into_response();
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        }
+
+        /// Verify that a second delete_auth_state call returns None, triggering
+        /// StateNotFound — matching the first guard in callback_handler.
+        #[tokio::test]
+        async fn test_state_not_found_after_double_delete() {
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let state_id = format!("test-doubl-del-{}", test_utils::uid());
+
+            db::insert_auth_state(
+                &pool,
+                &state_id,
+                "google",
+                "/dashboard",
+                "test-verifier-minimum-43-chars-long!!",
+            )
+            .await
+            .unwrap();
+
+            // First delete consumes the state
+            let first = db::delete_auth_state(&pool, &state_id).await.unwrap();
+            assert!(first.is_some(), "first delete should succeed");
+
+            // Second delete returns None — triggers StateNotFound in callback_handler
+            let second = db::delete_auth_state(&pool, &state_id).await.unwrap();
+            assert!(second.is_none(), "second delete should return None");
+
+            // Verify the error mapping matches callback_handler behavior
+            let err = OAuthError::StateNotFound;
+            assert_eq!(err.sanitized_message(), "CSRF state not found");
+            let response = err.into_response();
+            assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
         }
     }
 }

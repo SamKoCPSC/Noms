@@ -13,6 +13,7 @@ use crate::db::OauthAccount;
 
 /// Result of a revocation attempt, for logging purposes.
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum RevokeResult {
     /// Token was revoked successfully.
     Success,
@@ -55,12 +56,22 @@ pub async fn revoke_token(refresh_token: &str, provider: Provider) -> RevokeResu
     let result = match provider {
         Provider::Google => revoke_google(refresh_token).await,
         Provider::GitHub => {
-            warn!(provider = "github", "GitHub has no token revocation API; token will expire naturally (~8 years)");
-            return RevokeResult::NotSupported { provider: "github".to_string() };
+            warn!(
+                provider = "github",
+                "GitHub has no token revocation API; token will expire naturally (~8 years)"
+            );
+            return RevokeResult::NotSupported {
+                provider: "github".to_string(),
+            };
         }
         Provider::Apple => {
-            warn!(provider = "apple", "Apple token revocation not yet implemented");
-            return RevokeResult::NotSupported { provider: "apple".to_string() };
+            warn!(
+                provider = "apple",
+                "Apple token revocation not yet implemented"
+            );
+            return RevokeResult::NotSupported {
+                provider: "apple".to_string(),
+            };
         }
     };
 
@@ -165,8 +176,8 @@ pub async fn revoke_all_user_tokens(pool: &sqlx::PgPool, user_id: uuid::Uuid) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wiremock::MockServer;
     use wiremock::matchers::{method, path};
+    use wiremock::MockServer;
     use wiremock::ResponseTemplate;
 
     #[tokio::test]

@@ -1,758 +1,448 @@
 # Task Brief
 
 ## Task Description
-Implement AC11 from NOMS-006: OAuth token revocation on account deletion. Store `refresh_token` in `oauth_accounts` table, call provider revocation endpoints when a user unlinks an OAuth account or deletes their account. Google supports revocation via API; GitHub does not (document limitation). Revocation failures are logged but don't block deletion. 5-second timeout on revocation requests.
+Remove `get_auth_state` entirely from `src/db/mod.rs` and update/remove all associated test code. Tests that used `get_auth_state` for read-back verification should be refactored to use `delete_auth_state` (which returns `Option<AuthState>` via `DELETE ... RETURNING *`) instead.
 
 ## Phase 0: Implementation Blueprint
-## Objectives
-- Store `refresh_token` in `oauth_accounts` table during OAuth callback flow.
-- Call provider-specific revocation endpoints when a user unlinks an OAuth account or deletes their account.
-- Google revocation via `POST https://oauth2.googleapis.com/revoke?token=...` with a 5-second timeout.
-- GitHub has no revocation API — log a warning via `tracing`.
-- Revocation failures are logged but never block deletion.
-- Add unit tests for the revocation utility.
 
-## Research Findings
+### Overview
 
-### Provider Revocation Endpoints
-| Provider | Endpoint | Method | Auth | Notes |
-|----------|----------|--------|------|-------|
-| Google | `https://oauth2.googleapis.com/revoke` | POST form-encoded `token=...` | None | Returns 200 on success. Accepts both access and refresh tokens. |
-| GitHub | N/A | — | — | GitHub OAuth 2.0 has no revocation API. Tokens expire after ~8 years. Log warning. |
+Remove the `get_auth_state` function (currently at `src/db/mod.rs` lines 175-188, gated with `#[cfg(test)]`) and refactor all 10 test call sites across two files to use `delete_auth_state` instead.
 
-Sources:
-- Google: https://developers.google.com/identity/protocols/oauth2/offline-access#token-revoke
-- GitHub: https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/refreshing-user-access-tokens (no revoke endpoint documented)
+`delete_auth_state` already returns `Option<AuthState>` via `DELETE ... RETURNING *`, making it a perfect drop-in replacement: `Some(row)` means the state existed (and is now consumed), `None` means it didn't exist. This matches every test's verification intent.
 
-### `oauth2` Crate v5 Revocation Types
-The `oauth2` crate provides `StandardRevocableToken`, `BasicRevocationErrorResponse`, and a `HasRevocationUrl` typestate. However, using these would require changing `GoogleAuthClient` from `BasicClient` to a typestate variant, which adds complexity for a single Google provider. **Decision: Use `reqwest` directly for revocation** — it's already a dependency, simpler, and avoids typestate changes.
+### Key Research Findings
 
-### Google Requires `access_type=offline`
-Google only returns a refresh token when `access_type=offline` is set in the authorization request. The `oauth2` crate does not expose a method to add arbitrary query parameters to the authorization URL. **Workaround: Append `&access_type=offline` to the generated auth URL string for Google.**
+- **`get_auth_state`** (`src/db/mod.rs:175-188`): Already gated with `#[cfg(test)]` — it is test-only and has zero production call sites. The production callback handler at `src/auth/oauth.rs:315` uses `delete_auth_state`.
+- **`AuthState` struct** (`src/db/mod.rs:132-139`): Derives `sqlx::FromRow`; used by both `get_auth_state` and `delete_auth_state`. No changes needed.
+- **Test infrastructure** (`src/test_utils.rs`): Each test gets a fresh temporary PostgreSQL database via `pgtemp`. No shared state between tests.
+- **Total call sites**: 1 function definition + 10 test usages = 11 locations to modify.
 
-### Database Schema Impact
-The `oauth_accounts` table currently has no `refresh_token` column. Adding it requires:
-1. A new migration file.
-2. Updating `OauthAccount` struct in `src/db/mod.rs`.
-3. Updating all SQL queries that touch `oauth_accounts` (SELECT, INSERT).
+### Complete Call Site Inventory
 
-### Existing Deletion Call Sites
-| Function | File | Line | Called From |
-|----------|------|------|-------------|
-| `delete_oauth_account` | `src/db/mod.rs:443` | `settings_accounts.rs:137` (unlink) | Unlink flow |
-| `delete_user` | `src/db/mod.rs:498` | `settings_profile.rs:166` (delete account) | Delete flow |
+#### File: `src/db/mod.rs` (3 tests, 6 call sites)
 
-Both functions are in `src/db/mod.rs` and have CASCADE deletes on `oauth_accounts`. We must revoke tokens **before** calling these DB functions.
+| Line | Test | What `get_auth_state` does | Replacement strategy |
+|------|------|---------------------------|---------------------|
+| 175-188 | *(definition)* | Function body | **Delete entirely** (lines 174-189 including doc comment and blank line) |
+| 592 | `test_insert_and_get_auth_state` | Read back inserted state to verify fields | Replace with `delete_auth_state`; assert on returned `AuthState` fields |
+| 621 | `test_delete_auth_state` | Verify row is gone after `delete_auth_state` | Replace with `delete_auth_state(&pool, &state_id)`; assert `.is_none()` |
+| 669 | `test_cleanup_expired_auth_states` | Verify fresh state still exists after cleanup | Replace with `delete_auth_state`; assert `.is_some()` |
+| 673 | `test_cleanup_expired_auth_states` | Verify stale state was deleted by cleanup | Replace with `delete_auth_state`; assert `.is_none()` |
 
-## Files to Modify
+#### File: `src/auth/oauth.rs` (6 tests, 6 call sites)
 
-### 1. `migrations/schema.sql`
-**Add `refresh_token TEXT` column to `oauth_accounts` table.**
+| Line | Test | What `get_auth_state` does | Replacement strategy |
+|------|------|---------------------------|---------------------|
+| 693 | `test_insert_auth_state_with_provider` | Read back to verify provider + redirect_uri | Replace with `db::delete_auth_state`; assert on returned fields |
+| 713 | `test_provider_mismatch_detection` | Read back to verify provider stored as "google" | Replace with `db::delete_auth_state`; assert on `.provider` |
+| 735 | `test_state_expiry_check` | Read back to verify `created_at` is recent | Replace with `db::delete_auth_state`; assert on elapsed time |
+| 753 | `test_auth_state_stores_code_verifier` | Read back to verify `code_verifier` field | Replace with `db::delete_auth_state`; assert on `.code_verifier` |
+| 779 | `test_callback_retrieves_verifier_before_delete` | Verify state is gone after first `delete_auth_state` | Replace with `db::delete_auth_state`; assert `.is_none()` |
+| 988 | `test_expired_state_returns_state_expired` | Verify expired state was consumed by `delete_auth_state` | Replace with `db::delete_auth_state`; assert `.is_none()` |
 
-After line 44 (`created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()`), insert:
-```sql
-refresh_token TEXT,
-```
+### Detailed Step-by-Step Implementation
 
-This column is nullable for backward compatibility (existing rows without refresh tokens).
+#### Step 1: Remove `get_auth_state` from `src/db/mod.rs`
 
-### 2. `src/db/mod.rs`
+**File:** `src/db/mod.rs`
+**Action:** Delete lines 174-189 (the blank line, doc comment, `#[cfg(test)]` attribute, and full function body).
 
-#### 2a. `OauthAccount` struct (line 63)
-Add field:
+The section to remove:
 ```rust
-pub refresh_token: Option<String>,
-```
 
-Updated struct:
-```rust
-pub struct OauthAccount {
-    pub id: i32,
-    pub user_id: i32,
-    pub provider: String,
-    pub provider_user_id: String,
-    pub email: String,
-    pub email_verified: bool,
-    pub profile_data: Option<String>,
-    pub refresh_token: Option<String>,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub last_used_at: chrono::DateTime<chrono::Utc>,
-}
-```
-
-#### 2b. `insert_oauth_account` function (line 270)
-Change signature from:
-```rust
-pub async fn insert_oauth_account(pool, user_id, provider, provider_user_id, email, email_verified, profile_data)
-```
-To:
-```rust
-pub async fn insert_oauth_account(pool, user_id, provider, provider_user_id, email, email_verified, profile_data, refresh_token)
-```
-
-Add `refresh_token: Option<String>` parameter. Update SQL query to include `refresh_token` in INSERT and VALUES.
-
-#### 2c. `get_oauth_account_by_provider` function (line 203)
-Update the `query_as!` column list to include `refresh_token`. The SELECT already selects `*` via `query_as!`, so adding the column to the struct is sufficient.
-
-#### 2d. `get_user_oauth_accounts` function (line 217)
-Same as above — the struct change covers it.
-
-#### 2e. New helper: `get_oauth_accounts_by_user_id` function
-Add a new function to fetch all OAuth accounts for a user (for account deletion revocation):
-```rust
-pub async fn get_oauth_accounts_by_user_id(pool: &PgPool, user_id: i32) -> Result<Vec<OauthAccount>, AppError> {
-    sqlx::query_as!(
-        OauthAccount,
-        r#"SELECT id, user_id, provider, provider_user_id, email, email_verified,
-                  profile_data, refresh_token, created_at, last_used_at
-           FROM oauth_accounts WHERE user_id = $1"#,
-        user_id
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(|e| AppError::Database(format!("Failed to fetch OAuth accounts: {}", e)))
-}
-```
-
-### 3. `src/auth/oauth.rs`
-
-#### 3a. `start_handler` — add `access_type=offline` for Google (line 103)
-After the authorization URL is generated, append `&access_type=offline` for Google:
-```rust
-let auth_url = req.request_url(authorization_url);
-
-// Google requires access_type=offline to return a refresh token
-let auth_url = if provider == "google" {
-    format!("{}&access_type=offline", auth_url)
-} else {
-    auth_url.to_string()
-};
-```
-
-#### 3b. `callback_handler` — extract and store `refresh_token` (line 184)
-After `exchange_code` returns `token_response`, extract the refresh token:
-```rust
-let refresh_token = token_response
-    .refresh_token()
-    .map(rt => rt.secret().to_string());
-```
-
-Update `insert_oauth_account` call (line 197) to pass `refresh_token`:
-```rust
-insert_oauth_account(
-    &pool, user_id, provider.clone(), provider_user_id.clone(),
-    email.clone(), email_verified, profile_data, refresh_token
-).await?;
-```
-
-### 4. `src/auth/mod.rs`
-Add `pub mod revoke;` after line 4.
-
-### 5. `src/auth/revoke.rs` (NEW FILE)
-New module for token revocation logic.
-
-```rust
-use axum::async_trait;
-use chrono::{DateTime, Utc};
-use sqlx::PgPool;
-use std::time::Duration;
-use tracing::{error, warn};
-
-use crate::auth::linking::Provider;
-use crate::db::OauthAccount;
-
-/// Revocation result for testing/logging
-pub enum RevokeResult {
-    Success,
-    NotSupported { provider: String },
-    Timeout,
-    NetworkError(String),
-    HttpError(String),
-    NoRefreshToken,
-}
-
-/// Revoke an OAuth token for a single account.
-/// Returns RevokeResult for logging. Never returns Err.
-pub async fn revoke_account(pool: &PgPool, account: &OauthAccount) -> RevokeResult {
-    let refresh_token = match &account.refresh_token {
-        Some(rt) if !rt.is_empty() => rt.clone(),
-        _ => return RevokeResult::NoRefreshToken,
-    };
-
-    let provider = match account.provider.parse::<Provider>() {
-        Ok(p) => p,
-        Err(_) => {
-            warn!("Unknown provider '{}', skipping revocation", account.provider);
-            return RevokeResult::HttpError(format!("unknown provider: {}", account.provider));
-        }
-    };
-
-    revoke_token(&refresh_token, provider).await
-}
-
-/// Revoke a token for a specific provider.
-/// 5-second timeout. Failures are logged, never propagated.
-pub async fn revoke_token(refresh_token: &str, provider: Provider) -> RevokeResult {
-    let result = match provider {
-        Provider::Google => revoke_google(refresh_token).await,
-        Provider::GitHub => {
-            warn!(provider = "github", "GitHub has no token revocation API; token will expire naturally");
-            return RevokeResult::NotSupported { provider: "github".to_string() };
-        }
-    };
-
-    match &result {
-        RevokeResult::Success => {
-            tracing::info!(provider = ?provider, "Token revoked successfully");
-        }
-        other => {
-            error!(provider = ?provider, result = ?other, "Token revocation failed");
-        }
-    }
-
-    result
-}
-
-/// Revoke a Google OAuth token.
-/// POST https://oauth2.googleapis.com/revoke?token=...
-/// No auth header required. Returns 200 on success.
-async fn revoke_google(refresh_token: &str) -> RevokeResult {
-    let client = match reqwest::Client::builder()
-        .timeout(Duration::from_secs(5))
-        .build()
-    {
-        Ok(c) => c,
-        Err(e) => return RevokeResult::NetworkError(format!("Failed to build HTTP client: {}", e)),
-    };
-
-    let url = format!("https://oauth2.googleapis.com/revoke?token={}", refresh_token);
-
-    let response = match client.post(&url).send().await {
-        Ok(r) => r,
-        Err(e) => {
-            if e.is_timeout() {
-                return RevokeResult::Timeout;
-            }
-            return RevokeResult::NetworkError(e.to_string());
-        }
-    };
-
-    if response.status().is_success() {
-        RevokeResult::Success
-    } else {
-        RevokeResult::HttpError(format!(
-            "HTTP {}: {}",
-            response.status(),
-            response.text().await.unwrap_or_default()
-        ))
-    }
-}
-
-/// Revoke tokens for all OAuth accounts of a user.
-/// Used in account deletion flow.
-pub async fn revoke_all_user_tokens(pool: &PgPool, user_id: i32) {
-    use crate::db::get_oauth_accounts_by_user_id;
-
-    let accounts = match get_oauth_accounts_by_user_id(pool, user_id).await {
-        Ok(accs) => accs,
-        Err(e) => {
-            error!(user_id = user_id, "Failed to fetch OAuth accounts for revocation: {}", e);
-            return;
-        }
-    };
-
-    for account in accounts {
-        let result = revoke_account(pool, &account).await;
-        match result {
-            RevokeResult::Success => {
-                tracing::info!(
-                    user_id = user_id,
-                    provider = %account.provider,
-                    "Token revoked"
-                );
-            }
-            RevokeResult::NoRefreshToken => {
-                tracing::debug!(
-                    user_id = user_id,
-                    provider = %account.provider,
-                    "No refresh token to revoke"
-                );
-            }
-            other => {
-                warn!(
-                    user_id = user_id,
-                    provider = %account.provider,
-                    result = ?other,
-                    "Token revocation failed (non-fatal)"
-                );
-            }
-        }
-    }
-}
-```
-
-### 6. `src/db/mod.rs` — update `delete_oauth_account` (line 443)
-Add revocation call before DB deletion. Current function:
-```rust
-pub async fn delete_oauth_account(pool, user_id, provider) -> Result<(), AppError>
-```
-
-Update to:
-```rust
-use crate::auth::revoke::{revoke_account, RevokeResult};
-
-// ...
-
-pub async fn delete_oauth_account(pool: &PgPool, user_id: i32, provider: &str) -> Result<(), AppError> {
-    // Fetch account for revocation before deletion
-    if let Ok(account) = get_oauth_account_by_provider(pool, user_id, provider).await {
-        let result = revoke_account(pool, &account).await;
-        match result {
-            RevokeResult::Success => {
-                tracing::info!(user_id = user_id, provider = provider, "Token revoked before unlink");
-            }
-            RevokeResult::NoRefreshToken => {
-                tracing::debug!(user_id = user_id, provider = provider, "No refresh token to revoke");
-            }
-            other => {
-                warn!(user_id = user_id, provider = provider, result = ?other, "Token revocation failed (non-fatal)");
-            }
-        }
-    }
-
-    sqlx::query("DELETE FROM oauth_accounts WHERE user_id = $1 AND provider = $2")
-        .bind(user_id)
-        .bind(provider)
-        .execute(pool)
-        .await
-        .map(|_| ())
-        .map_err(|e| AppError::Database(format!("Failed to delete OAuth account: {}", e)))
-}
-```
-
-### 7. `src/db/mod.rs` — update `delete_user` (line 498)
-Add revocation call before DB deletion. Current function:
-```rust
-pub async fn delete_user(pool, user_id) -> Result<(), AppError>
-```
-
-Update to:
-```rust
-use crate::auth::revoke::revoke_all_user_tokens;
-
-// ...
-
-pub async fn delete_user(pool: &PgPool, user_id: i32) -> Result<(), AppError> {
-    // Revoke all OAuth tokens before deletion
-    revoke_all_user_tokens(pool, user_id).await;
-
-    sqlx::query("DELETE FROM users WHERE id = $1")
-        .bind(user_id)
-        .execute(pool)
-        .await
-        .map(|_| ())
-        .map_err(|e| AppError::Database(format!("Failed to delete user: {}", e)))
-}
-```
-
-### 8. `Cargo.toml` — add `wiremock` dev-dependency
-Under `[dev-dependencies]` (add section if missing), add:
-```toml
-wiremock = "0.6"
-```
-
-### 9. `src/auth/revoke_tests.rs` (NEW FILE) or inline `#[cfg(test)]` module in `revoke.rs`
-Unit tests for revocation logic:
-
-```rust
+/// Get an auth state by ID.
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use wiremock::MockServer;
-    use wiremock::matchers::{method, path, request};
-    use wiremock::ResponseTemplate;
-
-    #[tokio::test]
-    async fn test_revoke_google_success() {
-        let server = MockServer::start().await;
-        let base_url = server.uri();
-
-        // Mock Google revoke endpoint
-        Mock::given(request(method("POST"), path_regex(r"^/revoke\?token=.*")))
-            .respond_with(ResponseTemplate::new(200).set_body_string("{}"))
-            .mount(&server)
-            .await;
-
-        // Patch: We need to test with the mock server URL instead of Google's real URL.
-        // Strategy: Extract the core HTTP logic into a testable function that accepts the URL.
-        // Alternatively, test via integration test with real Google endpoint disabled.
-        // For now, test the Provider::GitHub path and error handling.
-    }
-
-    #[tokio::test]
-    async fn test_revoke_github_logs_warning() {
-        // GitHub has no revocation API — should return NotSupported
-        let result = revoke_token("dummy_token", Provider::GitHub).await;
-        assert!(matches!(result, RevokeResult::NotSupported { .. }));
-    }
-
-    #[tokio::test]
-    async fn test_revoke_google_timeout() {
-        let server = MockServer::start().await;
-
-        // Mock a slow endpoint (never responds)
-        Mock::given(method("POST"))
-            .respond_with(ResponseTemplate::new(200).set_delay(std::time::Duration::from_secs(10)))
-            .mount(&server)
-            .await;
-
-        // We need a way to test with custom URL. Add `revoke_token_with_url` for testing.
-        // Or: test that timeout is configured correctly by checking the client builder.
-    }
-
-    #[tokio::test]
-    async fn test_revoke_google_network_error() {
-        // Test against an unreachable URL
-        let result = revoke_token("dummy_token", Provider::Google).await;
-        // This will actually hit Google's real endpoint — skip in CI or use a mock.
-        // Better: refactor to accept base_url parameter for testing.
-    }
+pub async fn get_auth_state(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    id: &str,
+) -> Result<Option<AuthState>, DbError> {
+    sqlx::query_as!(
+        AuthState,
+        "SELECT id, redirect_uri, provider, code_verifier, created_at FROM auth_states WHERE id = $1",
+        id,
+    )
+    .fetch_optional(executor)
+    .await
+    .map_err(DbError::Query)
 }
 ```
 
-**Refinement for testability:** Extract the HTTP call into a function that accepts the base URL:
+After removal, the `insert_auth_state` function (ending at line 172) should be followed directly by the `delete_auth_state` function (starting at line 190).
+
+#### Step 2: Refactor `test_insert_and_get_auth_state` in `src/db/mod.rs`
+
+**File:** `src/db/mod.rs`, lines 583-599
+**What the test verifies:** `insert_auth_state` correctly persists all fields (id, redirect_uri, provider, code_verifier).
+**Refactoring:** Replace `get_auth_state` with `delete_auth_state`. The test name can stay the same (it still tests insert + read-back), or be renamed to `test_insert_and_delete_auth_state` for accuracy.
+
+Change line 592 from:
 ```rust
-/// Internal: revoke with configurable base URL (for testing)
-async fn revoke_google_with_url(base_url: &str, refresh_token: &str) -> RevokeResult {
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(5))
-        .build()
-        .map_err(|e| RevokeResult::NetworkError(e.to_string()))?;
+let state = get_auth_state(&pool, &state_id).await.unwrap();
+```
+to:
+```rust
+let state = delete_auth_state(&pool, &state_id).await.unwrap();
+```
+The rest of the assertions (lines 593-598) remain unchanged since `delete_auth_state` returns the same `Option<AuthState>` type.
 
-    let url = format!("{}/revoke?token={}", base_url, refresh_token);
-    // ... same logic
-}
+#### Step 3: Refactor `test_delete_auth_state` in `src/db/mod.rs`
 
-async fn revoke_google(refresh_token: &str) -> RevokeResult {
-    revoke_google_with_url("https://oauth2.googleapis.com", refresh_token).await
-}
+**File:** `src/db/mod.rs`, lines 601-627
+**What the test verifies:** `delete_auth_state` returns the row on first call, then `None` on second call, and the row is actually gone.
+**Refactoring:** Replace the `get_auth_state` call on line 621 with a second `delete_auth_state` call.
+
+Change lines 620-622 from:
+```rust
+        // Should be gone
+        let state = get_auth_state(&pool, &state_id).await.unwrap();
+        assert!(state.is_none());
+```
+to:
+```rust
+        // Should be gone (second delete returns None)
+        let gone = delete_auth_state(&pool, &state_id).await.unwrap();
+        assert!(gone.is_none());
+```
+Note: The subsequent `deleted_again` check on lines 624-626 already uses `delete_auth_state` and remains unchanged.
+
+#### Step 4: Refactor `test_cleanup_expired_auth_states` in `src/db/mod.rs`
+
+**File:** `src/db/mod.rs`, lines 629-675
+**What the test verifies:** `cleanup_expired_auth_states` deletes only stale rows, preserving fresh ones.
+**Refactoring:** Replace both `get_auth_state` calls with `delete_auth_state`.
+
+Change lines 668-670 from:
+```rust
+        // Fresh state should still exist
+        let fresh = get_auth_state(&pool, &fresh_id).await.unwrap();
+        assert!(fresh.is_some());
+```
+to:
+```rust
+        // Fresh state should still exist
+        let fresh = delete_auth_state(&pool, &fresh_id).await.unwrap();
+        assert!(fresh.is_some());
 ```
 
-### 10. `src/test_utils.rs` — no changes needed
-The existing `pgtemp` setup is sufficient for integration tests. The revocation unit tests use `wiremock` for HTTP mocking, not the test database.
+Change lines 672-674 from:
+```rust
+        // Stale state should be gone
+        let stale = get_auth_state(&pool, &stale_id).await.unwrap();
+        assert!(stale.is_none());
+```
+to:
+```rust
+        // Stale state should be gone
+        let stale = delete_auth_state(&pool, &stale_id).await.unwrap();
+        assert!(stale.is_none());
+```
 
-## Implementation Order
+#### Step 5: Refactor `test_insert_auth_state_with_provider` in `src/auth/oauth.rs`
 
-### Phase 1: Database & Data Model
-1. **`migrations/schema.sql`** — Add `refresh_token TEXT` column.
-2. **`src/db/mod.rs`** — Update `OauthAccount` struct, `insert_oauth_account` signature, and SQL queries.
+**File:** `src/auth/oauth.rs`, lines 678-696
+**What the test verifies:** `insert_auth_state` correctly stores provider and redirect_uri.
+**Refactoring:** Replace `db::get_auth_state` with `db::delete_auth_state`.
 
-### Phase 2: Capture Refresh Token
-3. **`src/auth/oauth.rs`** — Add `access_type=offline` for Google in `start_handler`, extract `refresh_token` in `callback_handler`, pass to `insert_oauth_account`.
+Change line 693 from:
+```rust
+let state = db::get_auth_state(&pool, &state_id).await.unwrap().unwrap();
+```
+to:
+```rust
+let state = db::delete_auth_state(&pool, &state_id).await.unwrap().unwrap();
+```
 
-### Phase 3: Revocation Logic
-4. **`src/auth/mod.rs`** — Add `pub mod revoke;`.
-5. **`src/auth/revoke.rs`** — Create new module with `revoke_account`, `revoke_token`, `revoke_google`, `revoke_all_user_tokens`.
+#### Step 6: Refactor `test_provider_mismatch_detection` in `src/auth/oauth.rs`
 
-### Phase 4: Wire into Deletion Flows
-6. **`src/db/mod.rs`** — Update `delete_oauth_account` to call `revoke_account` before DB delete.
-7. **`src/db/mod.rs`** — Update `delete_user` to call `revoke_all_user_tokens` before DB delete.
+**File:** `src/auth/oauth.rs`, lines 698-718
+**What the test verifies:** Provider is stored correctly and can be compared for mismatch detection.
+**Refactoring:** Replace `db::get_auth_state` with `db::delete_auth_state`.
 
-### Phase 5: Tests
-8. **`Cargo.toml`** — Add `wiremock = "0.6"` dev-dependency.
-9. **`src/auth/revoke.rs`** — Add `#[cfg(test)]` module with unit tests for:
-   - `revoke_token` → `Provider::GitHub` returns `NotSupported`
-   - `revoke_google_with_url` → success (200 response from mock)
-   - `revoke_google_with_url` → timeout (slow mock endpoint)
-   - `revoke_google_with_url` → network error (unreachable URL)
-   - `revoke_account` → `NoRefreshToken` when `refresh_token` is `None`
+Change line 713 from:
+```rust
+let state = db::get_auth_state(&pool, &state_id).await.unwrap().unwrap();
+```
+to:
+```rust
+let state = db::delete_auth_state(&pool, &state_id).await.unwrap().unwrap();
+```
 
-## Architectural Decisions & Trade-offs
+#### Step 7: Refactor `test_state_expiry_check` in `src/auth/oauth.rs`
 
-| Decision | Rationale | Alternative |
-|----------|-----------|-------------|
-| Use `reqwest` directly instead of `oauth2` crate's revocation types | Simpler, avoids typestate changes to `GoogleAuthClient`, `reqwest` already a dependency | Use `oauth2::HasRevocationUrl` typestate — more type-safe but requires refactoring client types |
-| 5-second timeout via `reqwest::Client::builder().timeout()` | Simple, covers both connect and read timeouts | Use `tokio::time::timeout()` wrapper — more control but more code |
-| Revocation in `delete_oauth_account` / `delete_user` (DB layer) rather than page handlers | Single point of revocation logic, page handlers don't need to know about revocation | Revocation in page handlers — more explicit but duplicates logic |
-| `refresh_token` column is nullable | Backward compatible with existing rows | NOT NULL with default — breaks existing data |
-| Append `&access_type=offline` to auth URL string | Simple workaround for `oauth2` crate limitation | Use a different OAuth library or manual URL construction |
+**File:** `src/auth/oauth.rs`, lines 720-741
+**What the test verifies:** A freshly created auth state has a `created_at` timestamp that is recent (not expired).
+**Refactoring:** Replace `db::get_auth_state` with `db::delete_auth_state`.
 
-## Test Strategy
+Change line 735 from:
+```rust
+let state = db::get_auth_state(&pool, &state_id).await.unwrap().unwrap();
+```
+to:
+```rust
+let state = db::delete_auth_state(&pool, &state_id).await.unwrap().unwrap();
+```
 
-### Unit Tests (in `src/auth/revoke.rs`)
-| Test | What it verifies |
-|------|-----------------|
-| `revoke_github_not_supported` | `Provider::GitHub` returns `NotSupported` |
-| `revoke_google_success` | Mock server returns 200 → `Success` |
-| `revoke_google_timeout` | Mock server delays > 5s → `Timeout` |
-| `revoke_google_network_error` | Unreachable URL → `NetworkError` |
-| `revoke_google_http_error` | Mock server returns 400 → `HttpError` |
-| `revoke_account_no_refresh_token` | `refresh_token: None` → `NoRefreshToken` |
+#### Step 8: Refactor `test_auth_state_stores_code_verifier` in `src/auth/oauth.rs`
 
-### Integration Tests (existing test infrastructure)
-The existing `pgtemp`-based integration tests can verify the end-to-end flow:
-1. Create user, link Google account (with mock refresh token in DB).
-2. Call `delete_oauth_account` → verify revocation is attempted (via mock).
-3. Call `delete_user` → verify all tokens are revoked (via mock).
+**File:** `src/auth/oauth.rs`, lines 743-755
+**What the test verifies:** The PKCE `code_verifier` field is stored and retrievable.
+**Refactoring:** Replace `db::get_auth_state` with `db::delete_auth_state`.
 
-## Gaps & Areas for Follow-up
-1. **Google token format**: The revocation endpoint accepts both access tokens and refresh tokens. We're storing only the refresh token. This is correct per Google docs.
-2. **Token rotation**: Google may rotate refresh tokens on each use. Our implementation stores the initial refresh token from the OAuth callback. If Google rotates it, the stored token may become invalid. **Mitigation**: The revocation endpoint still accepts old tokens for revocation, so this is not a blocking issue.
-3. **GitHub token expiry**: GitHub tokens expire after ~8 years. Document this as a known limitation.
-4. **Rate limiting**: Google's revocation endpoint may have rate limits. With a 5-second timeout and per-account revocation, this should not be an issue for typical usage.
-5. **Testing against real Google endpoint**: Unit tests use `wiremock`. Integration tests against the real Google endpoint are not feasible in CI. Consider a manual test checklist.
+Change line 753 from:
+```rust
+let state = db::get_auth_state(&pool, &state_id).await.unwrap().unwrap();
+```
+to:
+```rust
+let state = db::delete_auth_state(&pool, &state_id).await.unwrap().unwrap();
+```
 
-## Dependencies
-- `reqwest` (already a dependency with `json` feature) — used for HTTP revocation calls.
-- `wiremock = "0.6"` (new dev-dependency) — used for mocking HTTP endpoints in unit tests.
-- `tracing` (already a dependency) — used for logging revocation results.
-- `tokio` (already a dependency) — used for async runtime.
+#### Step 9: Refactor `test_callback_retrieves_verifier_before_delete` in `src/auth/oauth.rs`
 
-## Phase 1: Implementation Details
+**File:** `src/auth/oauth.rs`, lines 757-785
+**What the test verifies:** The atomic flow — `delete_auth_state` returns the row (including verifier), and subsequent reads return None.
+**Refactoring:** This test already uses `delete_auth_state` for the primary flow. Only the final verification on line 779 uses `get_auth_state`.
 
-### Summary
-Implemented OAuth token revocation on account deletion per AC11 of NOMS-006. Refresh tokens are now captured during OAuth callback (Google `access_type=offline`), stored in `oauth_accounts.refresh_token`, and revoked via provider APIs when accounts are unlinked or deleted.
+Change lines 778-780 from:
+```rust
+            // State is now gone
+            let state = db::get_auth_state(&pool, &state_id).await.unwrap();
+            assert!(state.is_none());
+```
+to:
+```rust
+            // State is now gone (second delete returns None)
+            let state = db::delete_auth_state(&pool, &state_id).await.unwrap();
+            assert!(state.is_none());
+```
 
-### Files Created
-- **`src/auth/revoke.rs`** — New module with revocation logic: `revoke_account`, `revoke_token`, `revoke_google`, `revoke_all_user_tokens`, plus `RevokeResult` enum. Includes 6 unit tests using `wiremock`.
+#### Step 10: Refactor `test_expired_state_returns_state_expired` in `src/auth/oauth.rs`
 
-### Files Modified
-- **`migrations/schema.sql`** — Added `refresh_token TEXT` column to `oauth_accounts` table; added `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` for existing databases.
-- **`src/db/mod.rs`** — Added `refresh_token: Option<String>` to `OauthAccount` struct; updated all SELECT queries (`get_oauth_account_by_provider`, `get_oauth_account_by_email`, `get_oauth_accounts_by_user_id`) to include `refresh_token`; updated `insert_oauth_account` to accept `refresh_token: Option<&str>`; added `get_oauth_accounts_by_user_id` helper; updated `delete_oauth_account` to fetch account, revoke token, then delete; updated `delete_user` to call `revoke_all_user_tokens` before deletion.
-- **`src/auth/mod.rs`** — Added `pub mod revoke;` declaration.
-- **`src/auth/linking.rs`** — Added `FromStr` impl for `Provider` enum; updated `link_or_create` to accept `refresh_token: Option<String>`; updated all 5 test calls to pass `None` for `refresh_token`.
-- **`src/auth/oauth.rs`** — Added `access_type=offline` for Google in `start_handler`; in `callback_handler`, extract `refresh_token` from token response via `TokenResponseExt::refresh_token()` and pass to `link_or_create`; updated 1 test call.
-- **`src/test_utils.rs`** — Added `refresh_token TEXT` column to `oauth_accounts` test schema.
+**File:** `src/auth/oauth.rs`, lines 942-993
+**What the test verifies:** An expired state is still consumed by `delete_auth_state`, and subsequent reads confirm it's gone.
+**Refactoring:** Replace the final `db::get_auth_state` call with `db::delete_auth_state`.
 
-### Tests
-- **6 new unit tests** in `src/auth/revoke.rs`: `test_revoke_github_not_supported`, `test_revoke_google_success`, `test_revoke_google_timeout`, `test_revoke_google_http_error`, `test_revoke_google_network_error`, `test_provider_from_str`.
-- **All 135 tests pass** (18 non-server + 117 server feature tests) including existing db, linking, oauth, and revoke tests.
-- **Clippy clean** — no warnings.
+Change lines 987-991 from:
+```rust
+            // Verify state is gone (consumed) even though it was expired
+            let still_exists = db::get_auth_state(&pool, &state_id).await.unwrap();
+            assert!(
+                still_exists.is_none(),
+                "expired state should still be consumed"
+            );
+```
+to:
+```rust
+            // Verify state is gone (consumed) even though it was expired
+            let still_exists = db::delete_auth_state(&pool, &state_id).await.unwrap();
+            assert!(
+                still_exists.is_none(),
+                "expired state should still be consumed"
+            );
+```
+
+### Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/db/mod.rs` | Remove `get_auth_state` function (13 lines), refactor 3 tests (5 call sites) |
+| `src/auth/oauth.rs` | Refactor 6 tests (6 call sites) |
+
+### Files NOT Modified
+
+| File | Reason |
+|------|--------|
+| `src/test_utils.rs` | No changes needed; test infrastructure unchanged |
+| `src/auth/session.rs` | No `get_auth_state` usage |
+| `src/auth/linking.rs` | No `get_auth_state` usage |
+| `roadmap/implementation-plans/NOMS-004-oauth-auth.md` | Historical documentation; mentions `get_auth_state` in passing but is not code |
+
+### No New Files, Dependencies, or Schema Changes
+
+- No new files to create.
+- No new dependencies to install.
+- No database schema changes — `delete_auth_state` already uses the existing `auth_states` table.
+- The `AuthState` struct remains unchanged.
+
+### Implementation Order
+
+1. **Step 1** — Remove the function definition first (cleanest to do before test changes).
+2. **Steps 2-4** — Refactor the three tests in `src/db/mod.rs`.
+3. **Steps 5-10** — Refactor the six tests in `src/auth/oauth.rs`.
+
+All changes are independent of each other (each test uses its own isolated temp database), so steps 2-10 can technically be done in any order after step 1.
 
 ### Verification
-- `cargo build` — compiles without errors.
-- `cargo build --features server` — compiles without errors.
-- `cargo test` — 18 passed.
-- `cargo test --features server` — 135 passed.
-- `cargo clippy --features server` — clean.
-- Local database migration applied: `ALTER TABLE oauth_accounts ADD COLUMN refresh_token TEXT`.
 
-### Adaptations from Blueprint
-- Used `Uuid` instead of `i32` for IDs (actual codebase uses UUIDs).
-- Used `DbError` instead of `AppError` (actual error type in codebase).
-- Functions use generic `executor: impl sqlx::Executor` pattern; `delete_oauth_account` and `delete_user` changed to `&PgPool` to support revocation calls.
-- `refresh_token` passed through `link_or_create` instead of direct `insert_oauth_account` call in `callback_handler` (matches existing architecture where `link_or_create` handles all insertions).
-- Added `FromStr` impl for `Provider` (needed by `revoke_account` to parse provider string).
-- `revoke_account` takes `&OauthAccount` directly instead of `(pool, account)` — pool is only needed for `revoke_all_user_tokens`.
-- Added `#[allow(dead_code)]` on `RevokeResult` enum fields (accessed only in test compilation unit).
+After all changes:
+- `grep -r "get_auth_state" src/` should return zero results.
+- `cargo test --features server` should pass all existing tests with no behavior change.
+- The production `callback_handler` in `src/auth/oauth.rs:315` already uses `delete_auth_state` and is unaffected.
+
+### Architectural Notes
+
+- `get_auth_state` was already `#[cfg(test)]` — it was never part of the production API. Removing it has zero runtime impact.
+- Using `delete_auth_state` for test verification is semantically correct: it confirms the row exists (via `Some`) or doesn't (via `None`), which is exactly what all the tests need. The destructive nature (deleting the row) is irrelevant in test context since each test gets a fresh temporary database.
+- The concurrent test (`test_concurrent_state_consumption` in `src/auth/oauth.rs:880-940`) already exclusively uses `delete_auth_state` and requires no changes.
+
+## Phase 1: Implementation Details
+<!-- written by @develop-implement -->
+
+### Summary
+
+Removed the `get_auth_state` function (13 lines including doc comment and `#[cfg(test)]` attribute) from `src/db/mod.rs` and replaced all 10 test call sites with `delete_auth_state` across two files. `delete_auth_state` returns the same `Option<AuthState>` type via `DELETE ... RETURNING *`, making it a drop-in replacement for read-back verification in tests.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `src/db/mod.rs` | Deleted `get_auth_state` function (lines 174-189). Refactored 3 tests: `test_insert_and_get_auth_state` (line 592), `test_delete_auth_state` (line 621), and `test_cleanup_expired_auth_states` (lines 669, 673) — all `get_auth_state` calls replaced with `delete_auth_state`. |
+| `src/auth/oauth.rs` | Refactored 6 tests: `test_insert_auth_state_with_provider` (line 693), `test_provider_mismatch_detection` (line 713), `test_state_expiry_check` (line 735), `test_auth_state_stores_code_verifier` (line 753), `test_callback_retrieves_verifier_before_delete` (line 779), and `test_expired_state_returns_state_expired` (line 988) — all `db::get_auth_state` calls replaced with `db::delete_auth_state`. |
+
+### Tests
+
+- **No new tests written** — all existing tests were refactored in place.
+- **Verification:** `cargo test --features server` — **139 passed, 0 failed**.
+- Post-edit `grep` confirms zero remaining `get_auth_state` call sites (only the test function name `test_insert_and_get_auth_state` remains, which is intentional per the blueprint).
+
+### No New Files, Dependencies, or Schema Changes
+
+As planned: no new files created, no new dependencies added, no database schema changes. The `AuthState` struct and `delete_auth_state` function remain unchanged.
 
 ## Phase 2: Review Verdict
 
 **Verdict: PASS**
 
-All requirements from AC11 of NOMS-006 are met. The implementation compiles cleanly, passes all 135 tests, and has no clippy warnings.
-
-### Numbered Findings
-
-1. **Location:** `src/auth/revoke.rs:90-120` — **Severity: SUGGESTION** — `revoke_google_with_url` creates a new `reqwest::Client` on every invocation. Since revocation is infrequent (only on unlink/delete), this is acceptable. For high-throughput scenarios, consider sharing a pre-built client via Axum state. No action needed now.
-
-2. **Location:** `src/db/mod.rs:117-129` — **Severity: SUGGESTION** — `OauthAccount` derives `Debug` via `sqlx::FromRow`, which means `refresh_token` would appear in any `{:?}` log output. Currently, `OauthAccount` is never logged directly (only `account.provider` and `RevokeResult` are). Consider adding a custom `Debug` impl that redacts `refresh_token` as a defensive measure for future code changes.
-
-3. **Location:** `src/auth/linking.rs:230-245` (existing provider login path) — **Severity: SUGGESTION** — When a user logs in with an existing provider+uid, `refresh_token` from the new token response is discarded. If Google rotates refresh tokens, the stored token may become stale. Mitigation: Google's revocation endpoint accepts old tokens for revocation, so this is not a blocking issue. Consider updating `refresh_token` on each login in a future iteration.
-
-4. **Location:** `src/auth/revoke.rs:99` — **Severity: INFO (not an issue)** — The refresh token is passed as a URL query parameter (`?token=...`), which is how Google's revocation API expects it. This means the token appears in the request line, which could show up in access logs. This matches Google's documented API contract and is acceptable.
-
-5. **Location:** `src/auth/revoke.rs:62-65` — **Severity: POSITIVE** — `Provider::Apple` is handled with a `NotSupported` variant and a warning log, providing forward compatibility when Apple OAuth is implemented.
-
-6. **Location:** `src/db/mod.rs:313-348` — **Severity: POSITIVE** — `delete_oauth_account` fetches the account with both `id` AND `user_id` guards in a single query, preventing cross-user deletion. The revocation call is fire-and-forget (result discarded), ensuring failures never block the actual deletion.
-
-7. **Location:** `src/db/mod.rs:465-483` — **Severity: POSITIVE** — `delete_user` calls `revoke_all_user_tokens` BEFORE the `DELETE FROM users`, ensuring tokens are revoked while the accounts still exist in the database. The CASCADE delete handles cleanup afterward.
-
 ### Requirements Coverage
 
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Store `refresh_token` in `oauth_accounts` | ✅ | `migrations/schema.sql:30`, `src/db/mod.rs:126`, `src/db/mod.rs:396` |
-| Capture `refresh_token` from OAuth callback | ✅ | `src/auth/oauth.rs:380-382`, passed through `link_or_create` |
-| Google `access_type=offline` for refresh tokens | ✅ | `src/auth/oauth.rs:291-295` |
-| Google revocation endpoint (`POST oauth2.googleapis.com/revoke`) | ✅ | `src/auth/revoke.rs:85-87` |
-| 5-second timeout on revocation requests | ✅ | `src/auth/revoke.rs:92: .timeout(Duration::from_secs(5))` |
-| GitHub: no revocation API, log warning | ✅ | `src/auth/revoke.rs:58-61` |
-| Revocation failures logged, never block deletion | ✅ | `delete_oauth_account:333` (result discarded), `delete_user:470` (result discarded) |
-| Revocation on unlink (`delete_oauth_account`) | ✅ | `src/db/mod.rs:333` |
-| Revocation on account delete (`delete_user`) | ✅ | `src/db/mod.rs:470` |
-| Migration backward-compatible (nullable column) | ✅ | `migrations/schema.sql:40: ADD COLUMN IF NOT EXISTS` |
-| Unit tests for revocation logic | ✅ | 6 tests in `src/auth/revoke.rs:166-253` |
+All objectives from the Task Description are met:
 
-### Test Coverage Summary
+- `get_auth_state` is fully removed from `src/db/mod.rs` — the function definition (including doc comment, `#[cfg(test)]` attribute, and body) is gone.
+- All 10 test call sites across two files are refactored to use `delete_auth_state`.
+- `grep -r "get_auth_state" src/` returns zero code references (only the test function name `test_insert_and_get_auth_state` remains, which is intentional per the blueprint).
+- Historical documentation (`roadmap/implementation-plans/NOMS-004-oauth-auth.md`) mentions `get_auth_state` in passing but is non-code and was correctly left untouched.
 
-- `test_revoke_github_not_supported` — verifies `NotSupported` for GitHub
-- `test_revoke_google_success` — wiremock returns 200 → `Success`
-- `test_revoke_google_timeout` — wiremock delays 10s → `Timeout` (5s client timeout)
-- `test_revoke_google_http_error` — wiremock returns 400 → `HttpError`
-- `test_revoke_google_network_error` — unreachable URL → `NetworkError`/`Timeout`
-- `test_provider_from_str` — `FromStr` impl for all 3 providers + unknown
-- Existing DB tests (`test_delete_oauth_account`, `test_delete_user_cascades_oauth_accounts`) exercise the full deletion path with revocation calls
+### Issue Analysis
 
-### Build Status
+No issues found. All 10 call sites were correctly refactored:
 
-- `cargo build --features server` — ✅ compiles without errors
-- `cargo clippy --features server` — ✅ clean, no warnings
-- `cargo test --features server` — ✅ 135 passed, 0 failed
+**`src/db/mod.rs` (3 tests, 5 call sites):**
 
-### Overall Quality
+1. `test_insert_and_get_auth_state` (line 576) — `delete_auth_state` replaces `get_auth_state` for read-back verification. All field assertions (`id`, `redirect_uri`, `provider`, `code_verifier`) remain identical. ✓
+2. `test_delete_auth_state` (line 605) — second `delete_auth_state` call replaces `get_auth_state` for "should be gone" check. Asserts `.is_none()`. ✓
+3. `test_cleanup_expired_auth_states` (lines 653, 657) — both `get_auth_state` calls replaced. Fresh state asserts `.is_some()`, stale asserts `.is_none()`. ✓
 
-Clean, well-structured implementation that faithfully follows the blueprint with sensible adaptations to the actual codebase architecture (UUIDs, `DbError`, `link_or_create` pattern). The revocation module is well-isolated, thoroughly tested with wiremock, and handles all error cases gracefully without blocking the critical deletion path.
+**`src/auth/oauth.rs` (6 tests, 5 call sites):**
+
+4. `test_insert_auth_state_with_provider` (line 693) — asserts `provider` and `redirect_uri` on returned row. ✓
+5. `test_provider_mismatch_detection` (line 713) — asserts `provider` equality/inequality. ✓
+6. `test_state_expiry_check` (line 735) — asserts `created_at` elapsed time. ✓
+7. `test_auth_state_stores_code_verifier` (line 753) — asserts `code_verifier` field. ✓
+8. `test_callback_retrieves_verifier_before_delete` (line 779) — second `delete_auth_state` replaces `get_auth_state` for "state is gone" check. ✓
+9. `test_expired_state_returns_state_expired` (line 988) — second `delete_auth_state` replaces `get_auth_state` for consumed-state verification. ✓
+
+### Behavior Change Analysis
+
+The key concern with switching from a read-only `get_auth_state` to a destructive `delete_auth_state` is whether any test reads the same state row multiple times and expects it to persist between reads. After reviewing all 10 call sites:
+
+- **Single-read tests** (6 of 10): `test_insert_and_get_auth_state`, `test_insert_auth_state_with_provider`, `test_provider_mismatch_detection`, `test_state_expiry_check`, `test_auth_state_stores_code_verifier`, and the "fresh state" check in `test_cleanup_expired_auth_states` — each reads the row exactly once. No behavior change.
+- **Multi-delete tests** (4 remaining calls): In `test_delete_auth_state`, `test_callback_retrieves_verifier_before_delete`, `test_expired_state_returns_state_expired`, and the "stale state" check in `test_cleanup_expired_auth_states` — the second call already expects `None`. The old `get_auth_state` would return `None` (row gone); the new `delete_auth_state` also returns `None` (row already deleted). Behavior is identical.
+
+**No test behaves differently after the refactoring.**
+
+### Verification
+
+- **Compilation:** `cargo check --features server` — clean, zero warnings.
+- **Test suite:** `cargo test --features server` — **139 passed, 0 failed**.
+
+### Positive Findings
+
+- The transition from `insert_auth_state` (line 172) to `delete_auth_state` (line 174) is clean: one blank line, no orphaned code or artifacts.
+- The `AuthState` struct and `delete_auth_state` function were correctly left unchanged — the refactoring only touched call sites.
+- Each test uses an isolated temporary database via `pgtemp`, so the destructive nature of `delete_auth_state` has no cross-test contamination risk.
+- The production `callback_handler` (line 315) already uses `delete_auth_state` and is unaffected.
+- The concurrent test (`test_concurrent_state_consumption`) already exclusively used `delete_auth_state` and required no changes, confirming the design was sound.
+
+### Summary
+
+Clean, surgical refactoring. All 10 call sites correctly updated, zero dangling references, all invariants preserved, full test suite passes.
 
 ## Phase 3: Synthesis
 
-### User-Facing Summary
+### Summary
 
-This change implements **AC11 of NOMS-006**: OAuth token revocation on account deletion. When a user unlinks an OAuth account or deletes their entire account, the application now revokes the associated OAuth tokens with the provider before performing the database deletion. This ensures that orphaned tokens cannot be used to access the user's data on the provider side after unlinking or account deletion.
+The test-only `get_auth_state` function was removed from `src/db/mod.rs` and all 10 of its test call sites were refactored to use `delete_auth_state` instead. This is a cleanup refactoring with zero production impact: `get_auth_state` was already gated behind `#[cfg(test)]` and never called by production code. The production `callback_handler` already uses `delete_auth_state`, which returns `Option<AuthState>` via PostgreSQL's `DELETE ... RETURNING *` — making it a semantically correct drop-in replacement for read-back verification in tests.
 
-**What was planned (Phase 0):** A blueprint was created covering database schema changes (adding `refresh_token` column), OAuth flow changes (capturing refresh tokens from Google via `access_type=offline`), a new revocation module with provider-specific logic, wiring revocation into both unlink and delete flows, and unit tests with `wiremock`.
+**Result:** 13 lines removed, 10 call sites updated, 139 tests pass, zero warnings.
 
-**What was implemented (Phase 1):** All blueprint items were implemented with sensible adaptations to the actual codebase (UUID-based IDs, `DbError` type, `link_or_create` pattern). A new `src/auth/revoke.rs` module was created with full revocation logic and 6 unit tests. All 135 tests pass and clippy is clean.
+### Files Modified
 
-**What was reviewed (Phase 2):** The review verdict is **PASS**. All 11 AC11 requirements are fully met. The review flagged 3 non-blocking suggestions: consider redacting `refresh_token` from `Debug` output, consider updating `refresh_token` on each login (Google token rotation), and consider sharing a pre-built `reqwest::Client` for high-throughput scenarios. None require immediate action.
+| File | Changes |
+|------|---------|
+| `src/db/mod.rs` | Deleted `get_auth_state` function definition (13 lines: blank line, doc comment, `#[cfg(test)]` attribute, function body). Refactored 3 tests (`test_insert_and_get_auth_state`, `test_delete_auth_state`, `test_cleanup_expired_auth_states`) — 5 `get_auth_state` calls replaced with `delete_auth_state`. |
+| `src/auth/oauth.rs` | Refactored 6 tests — 5 `db::get_auth_state` calls replaced with `db::delete_auth_state`. |
 
----
+### Step-by-Step Walkthrough
 
-### Step-by-Step Walkthrough of All Changes
+#### `src/db/mod.rs`
 
-#### 1. `migrations/schema.sql` — Database Schema Migration
-**Purpose:** Add `refresh_token` column to `oauth_accounts` table.
+1. **Removed `get_auth_state` function** (previously lines 174-189). This was a `#[cfg(test)]`-gated async function that ran `SELECT ... FROM auth_states WHERE id = $1` and returned `Result<Option<AuthState>, DbError>`. After removal, `insert_auth_state` is followed directly by `delete_auth_state` with one blank line between them.
 
-- Added `refresh_token TEXT` column to the `oauth_accounts` table definition. The column is nullable for backward compatibility with existing rows that have no refresh token.
-- Added `ALTER TABLE oauth_accounts ADD COLUMN IF NOT EXISTS refresh_token TEXT;` for incremental migration on existing databases.
+2. **`test_insert_and_get_auth_state`** — The read-back call `get_auth_state(&pool, &state_id)` was replaced with `delete_auth_state(&pool, &state_id)`. All field assertions (`id`, `redirect_uri`, `provider`, `code_verifier`) remain unchanged because both functions return `Option<AuthState>` with identical struct fields.
 
-#### 2. `src/db/mod.rs` — Database Layer
-**Purpose:** Store and retrieve refresh tokens; wire revocation into deletion flows.
+3. **`test_delete_auth_state`** — The "should be gone" verification (third call in the test) was changed from `get_auth_state` to a second `delete_auth_state`. The test now calls `delete_auth_state` three times total: first returns `Some(row)`, second returns `None`, third also returns `None`.
 
-- **`OauthAccount` struct:** Added `refresh_token: Option<String>` field. This struct is the domain representation of an OAuth account row.
-- **`get_oauth_account_by_provider`:** Updated the explicit column list in `query_as!` to include `refresh_token`. This query is used when unlinking a specific provider.
-- **`get_oauth_account_by_email`:** Updated the explicit column list in `query_as!` to include `refresh_token`. This query is used during the OAuth callback to check for existing accounts.
-- **`get_oauth_accounts_by_user_id` (NEW):** New helper function that fetches all OAuth accounts for a given user. Used by `revoke_all_user_tokens` during full account deletion.
-- **`insert_oauth_account`:** Added `refresh_token: Option<&str>` parameter. The SQL INSERT now includes `refresh_token` in both the column list and VALUES clause.
-- **`delete_oauth_account`:** Now fetches the account via `get_oauth_account_by_provider`, calls `revoke_account` (fire-and-forget — result is logged but never blocks), then proceeds with the `DELETE FROM oauth_accounts`. The query uses both `id` AND `user_id` guards to prevent cross-user deletion.
-- **`delete_user`:** Now calls `revoke_all_user_tokens(pool, user_id)` BEFORE the `DELETE FROM users`. This ensures tokens are revoked while account records still exist in the database. The CASCADE delete on `oauth_accounts` handles cleanup afterward.
+4. **`test_cleanup_expired_auth_states`** — Both verification calls replaced. The fresh-state check now uses `delete_auth_state` and asserts `.is_some()`. The stale-state check now uses `delete_auth_state` and asserts `.is_none()`.
 
-#### 3. `src/auth/mod.rs` — Module Declaration
-**Purpose:** Expose the new `revoke` module.
+#### `src/auth/oauth.rs`
 
-- Added `pub mod revoke;` to make the revocation module available to other parts of the auth crate.
+5. **`test_insert_auth_state_with_provider`** — `db::get_auth_state` → `db::delete_auth_state`. Asserts `provider` and `redirect_uri` on the returned row.
 
-#### 4. `src/auth/revoke.rs` (NEW FILE) — Revocation Logic
-**Purpose:** Provider-specific token revocation with error handling and testing.
+6. **`test_provider_mismatch_detection`** — `db::get_auth_state` → `db::delete_auth_state`. Asserts `provider` equality/inequality.
 
-- **`RevokeResult` enum:** Represents all possible outcomes of a revocation attempt: `Success`, `NotSupported { provider }`, `Timeout`, `NetworkError(String)`, `HttpError(String)`, `NoRefreshToken`. Used for structured logging and testing.
-- **`revoke_account(account: &OauthAccount)`:** Entry point for single-account revocation. Extracts the refresh token, parses the provider string into a `Provider` enum, and delegates to `revoke_token`. Returns `NoRefreshToken` if the account has no stored refresh token.
-- **`revoke_token(refresh_token: &str, provider: Provider)`:** Provider dispatch. Routes to `revoke_google` for Google, returns `NotSupported` with a warning log for GitHub and Apple. Logs the result at the appropriate level (info for success, error for failures).
-- **`revoke_google(refresh_token: &str)`:** Makes a `POST` to `https://oauth2.googleapis.com/revoke?token=...` with a 5-second timeout. No auth header is required per Google's API. Returns `Success` on HTTP 2xx, `HttpError` on other status codes, `Timeout` on timeout, `NetworkError` on connection failures.
-- **`revoke_google_with_url(base_url: &str, refresh_token: &str)`:** Internal testable variant that accepts a configurable base URL. Used by unit tests with `wiremock` mock servers.
-- **`revoke_all_user_tokens(pool: &PgPool, user_id: Uuid)`:** Fetches all OAuth accounts for a user and revokes each token sequentially. Each result is logged at the appropriate level. Failures are never propagated — the function is fire-and-forget.
-- **6 unit tests:** `test_revoke_github_not_supported` (GitHub returns `NotSupported`), `test_revoke_google_success` (wiremock 200 → `Success`), `test_revoke_google_timeout` (wiremock 10s delay → `Timeout`), `test_revoke_google_http_error` (wiremock 400 → `HttpError`), `test_revoke_google_network_error` (unreachable URL → `NetworkError`/`Timeout`), `test_provider_from_str` (parses all 3 providers + unknown).
+7. **`test_state_expiry_check`** — `db::get_auth_state` → `db::delete_auth_state`. Asserts `created_at` elapsed time is recent.
 
-#### 5. `src/auth/linking.rs` — Provider Linking Logic
-**Purpose:** Thread `refresh_token` through the account linking flow.
+8. **`test_auth_state_stores_code_verifier`** — `db::get_auth_state` → `db::delete_auth_state`. Asserts `code_verifier` field matches.
 
-- **`FromStr` impl for `Provider`:** New implementation that parses `"google"`, `"github"`, and `"apple"` strings into the `Provider` enum. Required by `revoke_account` to convert the stored provider string into a dispatchable enum.
-- **`link_or_create`:** Added `refresh_token: Option<String>` parameter. The function now passes the refresh token through to `insert_oauth_account`. When an existing account is found (login path), the refresh token is currently discarded (noted as a future improvement for token rotation).
-- **Tests:** All 5 existing test calls updated to pass `None` for `refresh_token`.
+9. **`test_callback_retrieves_verifier_before_delete`** — The final "state is gone" check changed from `db::get_auth_state` to `db::delete_auth_state`. Asserts `.is_none()`.
 
-#### 6. `src/auth/oauth.rs` — OAuth Flow
-**Purpose:** Capture refresh tokens during the OAuth callback.
+10. **`test_expired_state_returns_state_expired`** — The final "state is consumed" check changed from `db::get_auth_state` to `db::delete_auth_state`. Asserts `.is_none()`.
 
-- **`start_handler`:** After generating the authorization URL, appends `&access_type=offline` for Google providers. This is required by Google to return a refresh token in the token response.
-- **`callback_handler`:** After `exchange_code` returns the `TokenResponse`, extracts the refresh token via `TokenResponseExt::refresh_token()` and passes it to `link_or_create`.
-- **Tests:** 1 existing test call updated to pass `None` for `refresh_token`.
+### Key Patterns and Notes
 
-#### 7. `src/test_utils.rs` — Test Database Schema
-**Purpose:** Keep the test database schema in sync with production.
+- **`DELETE ... RETURNING *`**: The `delete_auth_state` function uses PostgreSQL's `RETURNING` clause to atomically delete and return the row. This is the same pattern used by the production `callback_handler` and is the correct approach for OAuth state tokens (which are single-use by design).
+- **`#[cfg(test)]` gating**: `get_auth_state` was compile-time excluded from production builds. Removing it has zero runtime or binary-size impact on production artifacts.
+- **Isolated test databases**: Each test gets a fresh temporary PostgreSQL instance via `pgtemp`. The destructive nature of `delete_auth_state` has no cross-test contamination risk.
+- **No behavior change**: The review confirmed that no test reads the same row multiple times expecting it to persist between reads. Tests that verify "row is gone" already expect `None`, which both `get_auth_state` (row deleted by prior `delete_auth_state`) and `delete_auth_state` (row already deleted) return identically.
+- **Test name preserved**: `test_insert_and_get_auth_state` retains its name despite the implementation change, as noted in the blueprint. This is intentional — renaming was considered but deemed unnecessary.
 
-- Added `refresh_token TEXT` column to the `oauth_accounts` table in the in-memory test schema.
+### Follow-Up Recommendations
 
----
-
-### Dependencies Introduced or Modified
-
-| Dependency | Type | Purpose |
-|------------|------|---------|
-| `wiremock = "0.6"` | New dev-dependency | Mock HTTP servers for revocation unit tests |
-| `reqwest` | Existing dependency | Used directly for Google revocation HTTP calls (no new features needed) |
-| `tracing` | Existing dependency | Used for structured logging of revocation results |
-| `tokio` | Existing dependency | Used for async runtime (no new features needed) |
-
-No new production dependencies were added. `reqwest` was already a dependency of the project.
-
----
-
-### Special Syntax, Language Features, and Patterns
-
-1. **`sqlx::query_as!` macro:** All SELECT queries use explicit column lists (not `SELECT *`) for compile-time safety. Adding `refresh_token` required updating every query that selects from `oauth_accounts`.
-
-2. **Fire-and-forget revocation:** Both `delete_oauth_account` and `delete_user` call revocation functions but discard their results. The revocation functions log internally, but any error is never propagated. This ensures revocation failures never block the critical deletion path.
-
-3. **Testable URL injection:** `revoke_google_with_url(base_url, token)` is a private helper that accepts a configurable base URL. The public `revoke_google(token)` delegates to it with the production URL. This pattern enables unit testing with `wiremock` without exposing internal APIs.
-
-4. **`FromStr` for provider dispatch:** The `Provider` enum implements `std::str::FromStr` to convert the database-stored provider string (`"google"`, `"github"`, `"apple"`) into a Rust enum for pattern matching in `revoke_token`.
-
-5. **`TokenResponseExt` trait:** The `oauth2` crate's `TokenResponseExt` trait provides `.refresh_token()` to extract the optional refresh token from the OAuth token response. This is a stable extension trait provided by the crate.
-
-6. **UUID-based IDs:** The codebase uses `Uuid` (not `i32`) for primary keys. This was an adaptation from the blueprint and affects all database function signatures.
-
----
-
-### Follow-up Recommendations
-
-1. **Refresh token rotation on login (Medium priority):** When a user logs in with an existing Google account, the new refresh token from the token response is discarded. Google rotates refresh tokens on each use, so the stored token may become stale over time. Consider updating `refresh_token` in the existing account row during the login path in `link_or_create`.
-
-2. **Redact `refresh_token` from `Debug` output (Low priority):** `OauthAccount` derives `Debug` via `sqlx::FromRow`, which means `refresh_token` would appear in any `{:?}` log output. Consider adding a custom `Debug` impl that redacts the field as a defensive measure.
-
-3. **Shared `reqwest::Client` (Low priority):** Each revocation call creates a new `reqwest::Client`. For typical usage (infrequent unlink/delete), this is fine. If revocation becomes a high-throughput operation, consider sharing a pre-built client via Axum state.
-
-4. **Integration test with real Google endpoint (Nice to have):** Unit tests use `wiremock` for HTTP mocking. An integration test against Google's real revocation endpoint would provide end-to-end validation but is not feasible in CI. Consider a manual test checklist or a staging environment test.
-
-5. **Apple revocation support (Future):** `Provider::Apple` currently returns `NotSupported`. Apple's revocation API should be implemented when Apple OAuth support is added.
-
----
+- **Monitor**: No specific monitoring needed. This is a pure test refactoring with no production code changes.
+- **Consider**: If desired in a future cleanup, `test_insert_and_get_auth_state` could be renamed to `test_insert_and_delete_auth_state` for naming accuracy, but this is cosmetic.
+- **Documentation**: The historical doc `roadmap/implementation-plans/NOMS-004-oauth-auth.md` mentions `get_auth_state` in passing. It was correctly left untouched as it is non-code documentation, but could be updated in a separate docs pass.
 
 ### Commit Message
 
 ```
-feat(auth): revoke OAuth tokens on account unlink and deletion
+refactor(test): remove get_auth_state, use delete_auth_state for verification
 
-Implement AC11 of NOMS-006: store refresh_token in oauth_accounts
-table and revoke provider tokens when a user unlinks an OAuth
-account or deletes their account.
+The get_auth_state function was a #[cfg(test)]-only helper that performed
+a SELECT on auth_states for read-back verification in tests. It has been
+removed entirely and all 10 test call sites now use delete_auth_state
+instead, which returns Option<AuthState> via DELETE ... RETURNING *.
 
-Database changes:
-- Add nullable refresh_token TEXT column to oauth_accounts table
-- Update all SELECT/INSERT queries to include refresh_token
-- Add get_oauth_accounts_by_user_id helper for bulk revocation
+This is semantically correct for OAuth state tokens (single-use by
+design) and matches the production callback_handler pattern. Each test
+uses an isolated temporary database, so the destructive nature of
+delete_auth_state has no cross-test impact.
 
-OAuth flow changes:
-- Append access_type=offline to Google auth URL to obtain refresh
-  tokens from the provider
-- Extract refresh_token from TokenResponse in callback_handler
-- Thread refresh_token through link_or_create to persistence
+Changes:
+- src/db/mod.rs: Deleted get_auth_state function (13 lines). Refactored
+  3 tests (5 call sites) to use delete_auth_state.
+- src/auth/oauth.rs: Refactored 6 tests (5 call sites) to use
+  db::delete_auth_state.
 
-Revocation module (new src/auth/revoke.rs):
-- revoke_account: single-account revocation entry point
-- revoke_token: provider dispatch (Google via HTTP, GitHub/Apple
-  log warning as NotSupported)
-- revoke_google: POST to oauth2.googleapis.com/revoke with 5s
-  timeout
-- revoke_all_user_tokens: bulk revocation for account deletion
-- 6 unit tests using wiremock for HTTP mocking
-
-Deletion flow changes:
-- delete_oauth_account: fetch account, revoke token, then delete
-- delete_user: revoke all tokens before CASCADE delete
-
-Revocation failures are logged but never block deletion. GitHub
-has no revocation API — tokens expire naturally (~8 years).
-
-Co-authored-by: Opencode Agent <agent@opencode>
+All 139 tests pass. Zero production code impact.
 ```
