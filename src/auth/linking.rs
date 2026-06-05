@@ -208,6 +208,35 @@ pub async fn link_or_create(
             .await?
             .ok_or(LinkError::Db(db::DbError::Query(sqlx::Error::RowNotFound)))?;
 
+        // Check if this provider is already linked to this user (re-login case)
+        if let Some(account) = db::get_oauth_account_by_provider(
+            tx.deref_mut(),
+            info.provider.as_str(),
+            &info.provider_uid,
+        )
+        .await?
+        {
+            if account.user_id == user.id {
+                // Same user re-linking the same provider — just update last_used
+                db::update_oauth_last_used(tx.deref_mut(), account.id).await?;
+                tx.commit().await.map_err(db::DbError::Connection)?;
+                return Ok(LinkResult {
+                    user_id: user.id,
+                    oauth_account_id: account.id,
+                    is_new_user: false,
+                });
+            }
+            // Provider already linked to a different user — link to that user instead
+            // (user may have logged in via a different provider earlier in this session)
+            db::update_oauth_last_used(tx.deref_mut(), account.id).await?;
+            tx.commit().await.map_err(db::DbError::Connection)?;
+            return Ok(LinkResult {
+                user_id: account.user_id,
+                oauth_account_id: account.id,
+                is_new_user: false,
+            });
+        }
+
         let account = db::insert_oauth_account(
             tx.deref_mut(),
             user.id,
