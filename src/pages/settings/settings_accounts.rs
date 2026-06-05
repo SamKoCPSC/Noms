@@ -26,6 +26,7 @@ pub struct LinkedAccount {
 #[server]
 pub async fn get_linked_accounts() -> Result<Vec<LinkedAccount>, ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
+        .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
     let pool = crate::db::get_pool();
 
@@ -51,6 +52,7 @@ pub async fn get_linked_accounts() -> Result<Vec<LinkedAccount>, ServerFnError> 
 #[server]
 pub async fn unlink_account(account_id: Uuid) -> Result<(), ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
+        .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
     let pool = crate::db::get_pool();
 

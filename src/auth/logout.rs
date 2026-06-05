@@ -1,11 +1,20 @@
-//! Logout handler: clears the session cookie and redirects to home.
+//! Logout handler: revokes the session in the database, clears the session
+//! cookie, and redirects to home (or a validated `redirect_uri`).
 
 use axum::extract::Query;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use axum_extra::extract::cookie::CookieJar;
 use serde::Deserialize;
 
+#[cfg(test)]
+use axum::routing::get;
+#[cfg(test)]
+use sqlx::PgPool;
+
+use crate::auth::oauth::AppState;
 use crate::auth::session;
+use tracing;
 
 /// Maximum allowed length for redirect_uri parameter on logout.
 const REDIRECT_URI_MAX_LEN: usize = 2048;
@@ -41,8 +50,20 @@ fn validate_redirect_uri(uri: &str) -> Option<String> {
 /// If valid, redirects to that URI. If missing or invalid, defaults to `/`.
 /// For POST requests: always redirects to `/` (unchanged behavior).
 ///
-/// Clears the session cookie by setting it with `max-age=0`.
-pub async fn handle_logout(Query(params): Query<LogoutQuery>) -> Response {
+/// Revokes the session in the database (sets `revoked = TRUE`), then clears
+/// the session cookie by setting it with `max-age=0`.
+pub async fn handle_logout(
+    state: axum::extract::State<AppState>,
+    jar: CookieJar,
+    Query(params): Query<LogoutQuery>,
+) -> Response {
+    // Revoke the session in the database if a valid token is present
+    if let Some(cookie) = jar.get(session::COOKIE_NAME) {
+        if let Err(e) = session::revoke_session(&state.pool, cookie.value()).await {
+            tracing::warn!(error = %e, "Failed to revoke session during logout");
+        }
+    }
+
     let clear_cookie = session::clear_session_cookie();
     let cookie_header = clear_cookie.encoded().to_string();
 
@@ -65,24 +86,38 @@ pub async fn handle_logout(Query(params): Query<LogoutQuery>) -> Response {
     (StatusCode::FOUND, headers, ()).into_response()
 }
 
+/// Build a minimal router exposing the logout handler for testing.
+/// Requires a `PgPool` as state (wrapped in `AppState`).
+#[cfg(test)]
+fn make_router(pool: PgPool) -> axum::Router {
+    let (_google, _github) = crate::auth::oauth::build_oauth_clients("http://localhost:3000");
+    let state = AppState {
+        pool,
+        google_client: _google,
+        github_client: _github,
+        http_client: reqwest::Client::new(),
+        rate_limit: crate::middleware::rate_limit::RateLimitState::default(),
+    };
+    axum::Router::new()
+        .route(
+            "/auth/logout",
+            get(handle_logout).post(handle_logout),
+        )
+        .with_state(state)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils;
     use axum::body::Body;
     use axum::http::Request;
     use tower::ServiceExt;
 
-    /// Build a minimal router exposing the logout handler for testing.
-    fn make_router() -> axum::Router {
-        axum::Router::new().route(
-            "/auth/logout",
-            axum::routing::get(handle_logout).post(handle_logout),
-        )
-    }
-
     #[tokio::test]
     async fn logout_post_returns_302_with_redirect() {
-        let app = make_router();
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let app = make_router(pool);
         let response = app
             .oneshot(
                 Request::builder()
@@ -106,7 +141,8 @@ mod tests {
 
     #[tokio::test]
     async fn logout_sets_clear_cookie_header() {
-        let app = make_router();
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let app = make_router(pool);
         let response = app
             .oneshot(
                 Request::builder()
@@ -132,7 +168,8 @@ mod tests {
 
     #[tokio::test]
     async fn logout_get_no_params_redirects_to_home() {
-        let app = make_router();
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let app = make_router(pool);
         let response = app
             .oneshot(
                 Request::builder()
@@ -162,7 +199,8 @@ mod tests {
 
     #[tokio::test]
     async fn logout_get_valid_redirect_uri() {
-        let app = make_router();
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let app = make_router(pool);
         let response = app
             .oneshot(
                 Request::builder()
@@ -189,7 +227,8 @@ mod tests {
 
     #[tokio::test]
     async fn logout_get_redirect_uri_with_query_string() {
-        let app = make_router();
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let app = make_router(pool);
         let response = app
             .oneshot(
                 Request::builder()
@@ -213,7 +252,8 @@ mod tests {
 
     #[tokio::test]
     async fn logout_get_invalid_redirect_external_url_defaults_to_home() {
-        let app = make_router();
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let app = make_router(pool);
         let response = app
             .oneshot(
                 Request::builder()
@@ -238,7 +278,8 @@ mod tests {
 
     #[tokio::test]
     async fn logout_get_invalid_redirect_protocol_relative_defaults_to_home() {
-        let app = make_router();
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let app = make_router(pool);
         let response = app
             .oneshot(
                 Request::builder()
@@ -262,7 +303,8 @@ mod tests {
 
     #[tokio::test]
     async fn logout_get_invalid_redirect_no_leading_slash_defaults_to_home() {
-        let app = make_router();
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let app = make_router(pool);
         let response = app
             .oneshot(
                 Request::builder()
@@ -286,7 +328,8 @@ mod tests {
 
     #[tokio::test]
     async fn logout_get_empty_redirect_uri_defaults_to_home() {
-        let app = make_router();
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let app = make_router(pool);
         let response = app
             .oneshot(
                 Request::builder()
@@ -314,7 +357,8 @@ mod tests {
         let encoded =
             percent_encoding::utf8_percent_encode(&long_uri, percent_encoding::NON_ALPHANUMERIC)
                 .to_string();
-        let app = make_router();
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let app = make_router(pool);
         let response = app
             .oneshot(
                 Request::builder()
@@ -334,5 +378,53 @@ mod tests {
                 .unwrap(),
             "/"
         );
+    }
+
+    // ── DB-backed revoke tests ─────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn logout_revokes_session_in_db() {
+        use crate::auth::session as sess;
+
+        // Set thread-local secret for session module
+        sess::set_test_secret("test-secret-32-bytes-long-enough!!");
+
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+        let user = crate::db::insert_user(
+            &pool,
+            &format!("logout_{u}"),
+            "Logout User",
+            &format!("logout{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Create a session
+        let token = sess::create_session(&pool, user.id).await.unwrap();
+
+        // Verify session is active
+        let verified = sess::verify_session(&pool, &token).await.unwrap();
+        assert_eq!(verified, user.id);
+
+        // Build a router and call logout with the session cookie
+        let app = make_router(pool.clone());
+        let _response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/auth/logout")
+                    .header("Cookie", format!("noms_session={}", token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        // Session should now be revoked
+        let result = sess::verify_session(&pool, &token).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), sess::SessionError::SessionInvalid);
     }
 }

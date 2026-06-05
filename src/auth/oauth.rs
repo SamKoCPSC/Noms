@@ -331,9 +331,12 @@ pub async fn callback_handler(
     }
 
     // Check if there's an existing authenticated session
-    let existing_user_id = jar
-        .get(session::COOKIE_NAME)
-        .and_then(|cookie| session::verify_session(cookie.value()).ok());
+    // NOTE: We need to verify the session before consuming it for the new login.
+    let existing_user_id = if let Some(cookie) = jar.get(session::COOKIE_NAME) {
+        session::verify_session(&state.pool, cookie.value()).await.ok()
+    } else {
+        None
+    };
 
     // Select the appropriate OAuth client.
     let client = match prov {
@@ -378,7 +381,8 @@ pub async fn callback_handler(
             .map_err(|e| OAuthError::LinkError(e.to_string()))?;
 
     // Create a session JWT.
-    let jwt = session::create_session(link_result.user_id)
+    let jwt = session::create_session(&state.pool, link_result.user_id)
+        .await
         .map_err(|e| OAuthError::SessionError(e.to_string()))?;
 
     // Build the session cookie.
@@ -833,16 +837,18 @@ mod tests {
             .unwrap();
 
             // Create a valid session JWT for this user
-            let jwt = session::create_session(user.id).unwrap();
+            let jwt = session::create_session(&pool, user.id).await.unwrap();
 
             // Build a CookieJar with the session cookie
             let cookie = session::build_session_cookie(&jwt);
             let jar = CookieJar::new().add(cookie);
 
             // Extract the user ID from the session cookie (simulating callback_handler logic)
-            let existing_user_id = jar
-                .get(session::COOKIE_NAME)
-                .and_then(|cookie| session::verify_session(cookie.value()).ok());
+            let existing_user_id = if let Some(cookie) = jar.get(session::COOKIE_NAME) {
+                session::verify_session(&pool, cookie.value()).await.ok()
+            } else {
+                None
+            };
 
             // Verify the session was read correctly
             assert_eq!(existing_user_id, Some(user.id));

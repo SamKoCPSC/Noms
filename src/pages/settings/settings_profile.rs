@@ -24,6 +24,7 @@ enum DeleteStep {
 #[server]
 pub async fn delete_account() -> Result<(), ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
+        .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
     let pool = crate::db::get_pool();
 
@@ -42,6 +43,7 @@ pub async fn save_profile(
     new_username: Option<String>,
 ) -> Result<UserProfile, ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
+        .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
     let pool = crate::db::get_pool();
 

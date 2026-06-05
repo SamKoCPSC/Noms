@@ -69,8 +69,11 @@ pub async fn handle_auth(
 
     // Check for valid session
     let session_token = jar.get(session::COOKIE_NAME);
-    let verified_user_id =
-        session_token.and_then(|cookie| session::verify_session(cookie.value()).ok());
+    let verified_user_id = if let Some(cookie) = session_token {
+        session::verify_session(&pool, cookie.value()).await.ok()
+    } else {
+        None
+    };
 
     let is_authenticated = verified_user_id.is_some();
 
@@ -112,10 +115,13 @@ pub async fn handle_auth(
     let mut response: Response<Body> = next.run(req).await;
 
     // Rolling session refresh: if token is old but still valid, issue a new one
-    if let Some(user_id) = verified_user_id {
+    if let Some(_user_id) = verified_user_id {
         if let Some(cookie) = session_token {
-            if session::should_refresh(cookie.value()).unwrap_or(false) {
-                if let Ok(new_token) = session::create_session(user_id) {
+            if session::should_refresh(&pool, cookie.value())
+                .await
+                .unwrap_or(false)
+            {
+                if let Ok(new_token) = session::refresh_session(&pool, cookie.value()).await {
                     let new_cookie = session::build_session_cookie(&new_token);
                     response.headers_mut().insert(
                         axum::http::header::SET_COOKIE,

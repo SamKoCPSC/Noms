@@ -1,11 +1,14 @@
 //! Session management: JWT creation, verification, cookie building.
 //!
-//! Pure logic — no database dependency. All functions read the session secret
-//! from the `SESSION_SECRET` environment variable at first use.
+//! All session operations are backed by the `sessions` database table.
+//! The JWT `sub` claim is the session ID (UUID of a row in `sessions`),
+//! not the user ID. `verify_session` looks up the DB row to get the `user_id`
+//! and check `revoked` / `expires_at`.
 
 use cookie::{Cookie, CookieBuilder, SameSite};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 use std::time::{SystemTime, UNIX_EPOCH};
 use time::Duration as TimeDuration;
 use uuid::Uuid;
@@ -20,6 +23,9 @@ const SESSION_LIFETIME_SECS: u64 = 900;
 const REFRESH_THRESHOLD_SECS: usize = 600;
 
 /// JWT claims for a session token.
+///
+/// The `sub` field is the **session ID** (UUID of a row in the `sessions` table),
+/// NOT the user ID. To get the user ID, look up the session in the database.
 #[derive(Debug, Serialize, Deserialize)]
 struct SessionClaims {
     sub: Uuid,
@@ -37,6 +43,10 @@ pub enum SessionError {
     InvalidToken,
     /// The token has expired.
     Expired,
+    /// The session was not found in the database, revoked, or expired.
+    SessionInvalid,
+    /// Database error during session operation.
+    DbError(String),
 }
 
 impl std::fmt::Display for SessionError {
@@ -45,6 +55,8 @@ impl std::fmt::Display for SessionError {
             SessionError::MissingSecret => write!(f, "SESSION_SECRET not set"),
             SessionError::InvalidToken => write!(f, "invalid session token"),
             SessionError::Expired => write!(f, "session token expired"),
+            SessionError::SessionInvalid => write!(f, "session is invalid, revoked, or expired"),
+            SessionError::DbError(e) => write!(f, "database error: {e}"),
         }
     }
 }
@@ -61,6 +73,23 @@ thread_local! {
 #[cfg(test)]
 thread_local! {
     static TEST_COOKIE_DOMAIN: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Set the thread-local test secret. Used by tests outside this module.
+#[cfg(test)]
+pub fn set_test_secret(secret: &'static str) {
+    TEST_SECRET.with(|f| {
+        *f.borrow_mut() = Some(secret.as_bytes().to_vec());
+    });
+}
+
+/// Clear the thread-local test secret. Used by tests outside this module.
+#[cfg(test)]
+#[allow(dead_code)]
+pub fn clear_test_secret() {
+    TEST_SECRET.with(|f| {
+        *f.borrow_mut() = None;
+    });
 }
 
 /// Reads the session secret from the `SESSION_SECRET` environment variable.
@@ -107,14 +136,27 @@ fn now_secs() -> u64 {
 
 /// Create a signed JWT session token for the given user.
 ///
-/// Returns a compact JWT string valid for [`SESSION_LIFETIME_SECS`] seconds.
-pub fn create_session(user_id: Uuid) -> Result<String, SessionError> {
+/// Inserts a row into the `sessions` table, then returns a compact JWT
+/// with `sub = session_id`. The JWT is valid for [`SESSION_LIFETIME_SECS`] seconds.
+pub async fn create_session(
+    pool: &PgPool,
+    user_id: Uuid,
+) -> Result<String, SessionError> {
     let secret = read_secret()?;
-    let now = now_secs() as usize;
+    let now = chrono::Utc::now();
+    let expires_at = now + chrono::Duration::seconds(SESSION_LIFETIME_SECS as i64);
+
+    // Insert session row into DB
+    let session_row = crate::db::insert_session(pool, user_id, expires_at)
+        .await
+        .map_err(|e| SessionError::DbError(e.to_string()))?;
+
+    let session_id = session_row.id;
+    let now_secs = now_secs() as usize;
     let claims = SessionClaims {
-        sub: user_id,
-        exp: now + SESSION_LIFETIME_SECS as usize,
-        iat: now,
+        sub: session_id, // <-- session_id, NOT user_id
+        exp: now_secs + SESSION_LIFETIME_SECS as usize,
+        iat: now_secs,
     };
     encode(
         &Header::default(),
@@ -126,9 +168,14 @@ pub fn create_session(user_id: Uuid) -> Result<String, SessionError> {
 
 /// Verify a session token and return the user ID.
 ///
-/// Validates the signature and checks that the token has not expired.
-#[allow(dead_code)] // Used by session refresh and auth middleware (not yet wired)
-pub fn verify_session(token: &str) -> Result<Uuid, SessionError> {
+/// Decodes the JWT to get the session_id (`sub` claim), then looks up the
+/// session in the database. Returns the `user_id` from the DB row if the
+/// session exists, is not revoked, and is not expired.
+#[allow(dead_code)] // Used by session refresh and auth middleware
+pub async fn verify_session(
+    pool: &PgPool,
+    token: &str,
+) -> Result<Uuid, SessionError> {
     let secret = read_secret()?;
     let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
     // Allow decoding expired tokens so we can return a specific error variant.
@@ -145,13 +192,20 @@ pub fn verify_session(token: &str) -> Result<Uuid, SessionError> {
             },
         )?;
 
-    // Manual expiry check with specific error variant
+    // Manual expiry check
     let now = now_secs() as usize;
     if token_data.claims.exp < now {
         return Err(SessionError::Expired);
     }
 
-    Ok(token_data.claims.sub)
+    // Look up session in DB
+    let session_id = token_data.claims.sub;
+    let session_row = crate::db::get_active_session(pool, session_id)
+        .await
+        .map_err(|e| SessionError::DbError(e.to_string()))?
+        .ok_or(SessionError::SessionInvalid)?;
+
+    Ok(session_row.user_id)
 }
 
 /// Build an HttpOnly, Secure session cookie from a JWT token.
@@ -206,17 +260,22 @@ pub fn clear_session_cookie() -> Cookie<'static> {
 /// `FullstackContext::extension::<AuthUser>()` may not propagate extensions
 /// from the auth middleware correctly.
 #[cfg(feature = "server")]
-pub fn extract_user_id_from_fullstack() -> Option<uuid::Uuid> {
+pub async fn extract_user_id_from_fullstack() -> Option<uuid::Uuid> {
     use dioxus::fullstack::FullstackContext;
 
-    let fsc = FullstackContext::current()?;
-    let parts = fsc.parts_mut();
-    let cookie_header = parts.headers.get(axum::http::header::COOKIE)?;
-    let cookie_str = cookie_header.to_str().ok()?;
+    // Extract cookie data synchronously to avoid holding the FullstackContext
+    // mutex guard across the .await point below. Clone the token to own the
+    // string since the references into the headers don't outlive this block.
+    let session_token = {
+        let fsc = FullstackContext::current()?;
+        let parts = fsc.parts_mut();
+        let cookie_header = parts.headers.get(axum::http::header::COOKIE)?;
+        let cookie_str = cookie_header.to_str().ok()?;
+        parse_cookie_value(cookie_str, COOKIE_NAME)?.to_string()
+    };
 
-    // Parse cookies manually to find our session cookie
-    let session_token = parse_cookie_value(cookie_str, COOKIE_NAME)?;
-    verify_session(session_token).ok()
+    let pool = crate::db::get_pool();
+    verify_session(&pool, &session_token).await.ok()
 }
 
 /// Parse a specific cookie value from a `Cookie` header string.
@@ -240,19 +299,26 @@ fn parse_cookie_value<'a>(cookie_header: &'a str, name: &str) -> Option<&'a str>
 /// and returns the user ID if valid. Returns `None` if no valid session.
 #[cfg(feature = "server")]
 #[allow(dead_code)] // Kept for potential future use
-pub fn extract_user_id_from_headers(headers: &axum::http::HeaderMap) -> Option<uuid::Uuid> {
+pub async fn extract_user_id_from_headers(
+    pool: &PgPool,
+    headers: &axum::http::HeaderMap,
+) -> Option<uuid::Uuid> {
     use axum_extra::extract::cookie::CookieJar;
 
     let jar = CookieJar::from_headers(headers);
     let session_token = jar.get(COOKIE_NAME)?;
-    verify_session(session_token.value()).ok()
+    verify_session(pool, session_token.value()).await.ok()
 }
 
 /// Check if a valid session token is old enough to warrant a rolling refresh.
 ///
-/// Returns `true` if the token was issued more than [`REFRESH_THRESHOLD_SECS`]
-/// seconds ago. Returns an error if the token is invalid or expired.
-pub fn should_refresh(token: &str) -> Result<bool, SessionError> {
+/// Decodes the JWT to get the session_id, looks up the session in the DB,
+/// and checks if the session is within the last 10 minutes of expiry.
+/// Returns `true` if refresh is needed.
+pub async fn should_refresh(
+    pool: &PgPool,
+    token: &str,
+) -> Result<bool, SessionError> {
     let secret = read_secret()?;
     let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
     validation.validate_exp = false;
@@ -266,8 +332,79 @@ pub fn should_refresh(token: &str) -> Result<bool, SessionError> {
         return Err(SessionError::Expired);
     }
 
-    let age = now.saturating_sub(token_data.claims.iat);
-    Ok(age >= REFRESH_THRESHOLD_SECS)
+    // Look up session in DB to check actual DB-side expiry
+    let session_id = token_data.claims.sub;
+    let session_row = crate::db::get_active_session(pool, session_id)
+        .await
+        .map_err(|e| SessionError::DbError(e.to_string()))?
+        .ok_or(SessionError::SessionInvalid)?;
+
+    // Check if within last 10 minutes of expiry
+    let now_utc = chrono::Utc::now();
+    let time_until_expiry = session_row.expires_at.signed_duration_since(now_utc);
+    Ok(time_until_expiry.num_seconds() <= REFRESH_THRESHOLD_SECS as i64)
+}
+
+/// Revoke a session by extracting the session_id from the JWT and setting
+/// `revoked = TRUE` in the database.
+pub async fn revoke_session(
+    pool: &PgPool,
+    token: &str,
+) -> Result<(), SessionError> {
+    let secret = read_secret()?;
+    let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
+    validation.validate_exp = false;
+
+    let token_data =
+        decode::<SessionClaims>(token, &DecodingKey::from_secret(&secret), &validation)
+            .map_err(|_| SessionError::InvalidToken)?;
+
+    let session_id = token_data.claims.sub;
+    crate::db::revoke_session(pool, session_id)
+        .await
+        .map_err(|e| SessionError::DbError(e.to_string()))?;
+
+    Ok(())
+}
+
+/// Refresh a session: extend its expiry and return a new JWT.
+///
+/// Updates the DB row (`expires_at`, `refreshed_at`), then creates a new JWT.
+#[allow(dead_code)] // Public API - used by auth middleware rolling refresh path
+pub async fn refresh_session(
+    pool: &PgPool,
+    token: &str,
+) -> Result<String, SessionError> {
+    let secret = read_secret()?;
+    let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
+    validation.validate_exp = false;
+
+    let token_data =
+        decode::<SessionClaims>(token, &DecodingKey::from_secret(&secret), &validation)
+            .map_err(|_| SessionError::InvalidToken)?;
+
+    let session_id = token_data.claims.sub;
+
+    // Update DB row
+    let new_expires_at = chrono::Utc::now() + chrono::Duration::seconds(SESSION_LIFETIME_SECS as i64);
+    let _session_row = crate::db::refresh_session(pool, session_id, new_expires_at)
+        .await
+        .map_err(|e| SessionError::DbError(e.to_string()))?
+        .ok_or(SessionError::SessionInvalid)?;
+
+    // Create new JWT with same session_id but new expiry
+    let now_secs = now_secs() as usize;
+    let claims = SessionClaims {
+        sub: session_id,
+        exp: now_secs + SESSION_LIFETIME_SECS as usize,
+        iat: now_secs,
+    };
+    encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(&secret),
+    )
+    .map_err(|_| SessionError::InvalidToken)
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────
@@ -275,12 +412,9 @@ pub fn should_refresh(token: &str) -> Result<bool, SessionError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils;
 
     const TEST_SECRET: &str = "test-secret-32-bytes-long-enough!!";
-
-    fn test_user_id() -> Uuid {
-        Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap()
-    }
 
     /// Set the thread-local secret. Each test thread gets its own value.
     fn with_secret(secret: &'static str) {
@@ -298,79 +432,254 @@ mod tests {
         std::env::remove_var("SESSION_SECRET");
     }
 
-    #[test]
-    fn create_and_verify_session() {
+    // ── DB-backed session tests ──────────────────────────────────────────
+
+    #[tokio::test]
+    async fn create_and_verify_session() {
         with_secret(TEST_SECRET);
-        let user_id = test_user_id();
-        let token = create_session(user_id).unwrap();
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        // Create a test user
+        let user = crate::db::insert_user(
+            &pool,
+            &format!("sessionuser_{u}"),
+            "Session User",
+            &format!("session{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Create session
+        let token = create_session(&pool, user.id).await.unwrap();
 
         // Token is a non-empty string (3 base64url segments separated by dots)
         assert!(token.len() > 10);
         assert_eq!(token.matches('.').count(), 2);
 
-        let verified_id = verify_session(&token).unwrap();
-        assert_eq!(verified_id, user_id);
+        // Verify returns the user ID
+        let verified_id = verify_session(&pool, &token).await.unwrap();
+        assert_eq!(verified_id, user.id);
     }
 
-    #[test]
-    fn verify_rejects_wrong_secret() {
+    #[tokio::test]
+    async fn create_session_inserts_db_row() {
         with_secret(TEST_SECRET);
-        let user_id = test_user_id();
-        let token = create_session(user_id).unwrap();
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = crate::db::insert_user(
+            &pool,
+            &format!("dbrow_{u}"),
+            "DB Row User",
+            &format!("dbrow{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let _token = create_session(&pool, user.id).await.unwrap();
+
+        // Verify a row exists in the sessions table
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM sessions WHERE user_id = $1")
+            .bind(user.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[tokio::test]
+    async fn verify_rejects_wrong_secret() {
+        with_secret(TEST_SECRET);
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = crate::db::insert_user(
+            &pool,
+            &format!("wrongsec_{u}"),
+            "Wrong Secret User",
+            &format!("wrongsec{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let token = create_session(&pool, user.id).await.unwrap();
 
         // Switch to a different secret on this thread
         with_secret("different-secret-for-testing!!!");
-        let result = verify_session(&token);
+        let result = verify_session(&pool, &token).await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), SessionError::InvalidToken);
     }
 
-    #[test]
-    fn verify_rejects_malformed_token() {
+    #[tokio::test]
+    async fn verify_rejects_malformed_token() {
         with_secret(TEST_SECRET);
-        let result = verify_session("not.a.valid.token");
+        let (_db, pool) = test_utils::setup_test_db().await;
+
+        let result = verify_session(&pool, "not.a.valid.token").await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), SessionError::InvalidToken);
     }
 
-    #[test]
-    fn verify_rejects_expired_token() {
+    #[tokio::test]
+    async fn verify_rejects_expired_token() {
         with_secret(TEST_SECRET);
-        let user_id = test_user_id();
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
 
-        // Manually create an expired token
-        let secret = read_secret().unwrap();
-        let past = (now_secs() - SESSION_LIFETIME_SECS - 60) as usize;
-        let claims = SessionClaims {
-            sub: user_id,
-            exp: past + SESSION_LIFETIME_SECS as usize, // expired 60s ago
-            iat: past,
-        };
-        let token = encode(
-            &Header::default(),
-            &claims,
-            &EncodingKey::from_secret(&secret),
+        let user = crate::db::insert_user(
+            &pool,
+            &format!("expired_{u}"),
+            "Expired User",
+            &format!("expired{u}@example.com"),
+            None,
         )
+        .await
         .unwrap();
 
-        let result = verify_session(&token);
+        // Create a session
+        let token = create_session(&pool, user.id).await.unwrap();
+
+        // Backdate the session in the DB to make it expired
+        sqlx::query("UPDATE sessions SET expires_at = NOW() - INTERVAL '1 hour' WHERE user_id = $1")
+            .bind(user.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let result = verify_session(&pool, &token).await;
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), SessionError::Expired);
+        assert_eq!(result.unwrap_err(), SessionError::SessionInvalid);
+    }
+
+    #[tokio::test]
+    async fn verify_rejects_revoked_session() {
+        with_secret(TEST_SECRET);
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = crate::db::insert_user(
+            &pool,
+            &format!("revoked_{u}"),
+            "Revoked User",
+            &format!("revoked{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let token = create_session(&pool, user.id).await.unwrap();
+
+        // Verify it works first
+        let verified = verify_session(&pool, &token).await.unwrap();
+        assert_eq!(verified, user.id);
+
+        // Revoke the session
+        revoke_session(&pool, &token).await.unwrap();
+
+        // Now verify should fail
+        let result = verify_session(&pool, &token).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), SessionError::SessionInvalid);
+    }
+
+    #[tokio::test]
+    async fn test_revoke_session() {
+        with_secret(TEST_SECRET);
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = crate::db::insert_user(
+            &pool,
+            &format!("revoke_{u}"),
+            "Revoke User",
+            &format!("revoke{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let token = create_session(&pool, user.id).await.unwrap();
+
+        // Revoke
+        revoke_session(&pool, &token).await.unwrap();
+
+        // Check DB: session should be revoked
+        let session = crate::db::get_active_session(
+            &pool,
+            Uuid::parse_str(
+                &jsonwebtoken::decode::<SessionClaims>(
+                    &token,
+                    &DecodingKey::from_secret(TEST_SECRET.as_bytes()),
+                    &Validation::new(jsonwebtoken::Algorithm::HS256),
+                )
+                .unwrap()
+                .claims
+                .sub
+                .to_string(),
+            )
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+        assert!(session.is_none(), "revoked session should not be found as active");
+    }
+
+    #[tokio::test]
+    async fn test_refresh_session_updates_db() {
+        with_secret(TEST_SECRET);
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = crate::db::insert_user(
+            &pool,
+            &format!("refresh_{u}"),
+            "Refresh User",
+            &format!("refresh{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let token = create_session(&pool, user.id).await.unwrap();
+
+        // Refresh the session
+        let new_token = refresh_session(&pool, &token).await.unwrap();
+
+        // New token should be valid
+        let verified = verify_session(&pool, &new_token).await.unwrap();
+        assert_eq!(verified, user.id);
+
+        // Only one session row should exist (refresh updates in place)
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM sessions WHERE user_id = $1")
+            .bind(user.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 1);
     }
 
     #[test]
     fn missing_secret_returns_error() {
         without_secret();
-        let result = create_session(test_user_id());
+        // create_session requires a PgPool, so we can't call it without a runtime.
+        // But we can verify the read_secret path directly.
+        let result = read_secret();
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), SessionError::MissingSecret);
     }
 
+    // ── Cookie tests (no DB needed) ──────────────────────────────────────
+
     #[test]
     fn session_cookie_has_correct_attributes() {
         with_secret(TEST_SECRET);
-        let token = create_session(test_user_id()).unwrap();
-        let cookie = build_session_cookie(&token);
+        let token = "test-jwt-token-string";
+        let cookie = build_session_cookie(token);
 
         assert_eq!(cookie.name(), COOKIE_NAME);
         assert_eq!(cookie.value(), token);
@@ -414,8 +723,7 @@ mod tests {
     fn session_cookie_includes_domain_when_set() {
         with_secret(TEST_SECRET);
         with_cookie_domain(".example.com");
-        let token = create_session(test_user_id()).unwrap();
-        let cookie = build_session_cookie(&token);
+        let cookie = build_session_cookie("test-token");
 
         assert_eq!(cookie.domain(), Some("example.com"));
         without_cookie_domain();
@@ -425,8 +733,7 @@ mod tests {
     fn session_cookie_has_no_domain_when_unset() {
         with_secret(TEST_SECRET);
         without_cookie_domain();
-        let token = create_session(test_user_id()).unwrap();
-        let cookie = build_session_cookie(&token);
+        let cookie = build_session_cookie("test-token");
 
         assert_eq!(cookie.domain(), None);
     }
@@ -456,8 +763,7 @@ mod tests {
     fn cookie_domain_empty_string_is_treated_as_unset() {
         with_secret(TEST_SECRET);
         with_cookie_domain("");
-        let token = create_session(test_user_id()).unwrap();
-        let cookie = build_session_cookie(&token);
+        let cookie = build_session_cookie("test-token");
 
         assert_eq!(cookie.domain(), None);
         without_cookie_domain();
@@ -467,75 +773,76 @@ mod tests {
     fn cookie_domain_whitespace_only_is_treated_as_unset() {
         with_secret(TEST_SECRET);
         with_cookie_domain("   ");
-        let token = create_session(test_user_id()).unwrap();
-        let cookie = build_session_cookie(&token);
+        let cookie = build_session_cookie("test-token");
 
         assert_eq!(cookie.domain(), None);
         without_cookie_domain();
     }
 
-    #[test]
-    fn fresh_token_does_not_need_refresh() {
+    // ── DB-backed refresh tests ──────────────────────────────────────────
+
+    #[tokio::test]
+    async fn fresh_token_does_not_need_refresh() {
         with_secret(TEST_SECRET);
-        let token = create_session(test_user_id()).unwrap();
-        let needs_refresh = should_refresh(&token).unwrap();
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = crate::db::insert_user(
+            &pool,
+            &format!("fresh_{u}"),
+            "Fresh User",
+            &format!("fresh{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let token = create_session(&pool, user.id).await.unwrap();
+        let needs_refresh = should_refresh(&pool, &token).await.unwrap();
         assert!(!needs_refresh, "fresh token should not need refresh");
     }
 
-    #[test]
-    fn old_token_needs_refresh() {
+    #[tokio::test]
+    async fn should_refresh_rejects_invalid_token() {
         with_secret(TEST_SECRET);
-        let user_id = test_user_id();
+        let (_db, pool) = test_utils::setup_test_db().await;
 
-        // Create a token that was issued just past the refresh threshold
-        let secret = read_secret().unwrap();
-        let now = now_secs() as usize;
-        let old_iat = now - (REFRESH_THRESHOLD_SECS + 1);
-        let claims = SessionClaims {
-            sub: user_id,
-            exp: old_iat + SESSION_LIFETIME_SECS as usize,
-            iat: old_iat,
-        };
-        let token = encode(
-            &Header::default(),
-            &claims,
-            &EncodingKey::from_secret(&secret),
-        )
-        .unwrap();
-
-        let needs_refresh = should_refresh(&token).unwrap();
-        assert!(needs_refresh, "old token should need refresh");
-    }
-
-    #[test]
-    fn should_refresh_rejects_invalid_token() {
-        with_secret(TEST_SECRET);
-        let result = should_refresh("garbage");
+        let result = should_refresh(&pool, "garbage").await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), SessionError::InvalidToken);
     }
 
-    #[test]
-    fn should_refresh_rejects_expired_token() {
+    #[tokio::test]
+    async fn should_refresh_rejects_expired_token() {
         with_secret(TEST_SECRET);
-        let secret = read_secret().unwrap();
-        let past = (now_secs() - SESSION_LIFETIME_SECS - 60) as usize;
-        let claims = SessionClaims {
-            sub: test_user_id(),
-            exp: past + SESSION_LIFETIME_SECS as usize,
-            iat: past,
-        };
-        let token = encode(
-            &Header::default(),
-            &claims,
-            &EncodingKey::from_secret(&secret),
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = crate::db::insert_user(
+            &pool,
+            &format!("srefresh_{u}"),
+            "Should Refresh User",
+            &format!("srefresh{u}@example.com"),
+            None,
         )
+        .await
         .unwrap();
 
-        let result = should_refresh(&token);
+        let token = create_session(&pool, user.id).await.unwrap();
+
+        // Backdate the session in the DB to make it expired
+        sqlx::query("UPDATE sessions SET expires_at = NOW() - INTERVAL '1 hour' WHERE user_id = $1")
+            .bind(user.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let result = should_refresh(&pool, &token).await;
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), SessionError::Expired);
+        assert_eq!(result.unwrap_err(), SessionError::SessionInvalid);
     }
+
+    // ── Cookie parsing tests (no DB needed) ──────────────────────────────
 
     #[test]
     fn parse_cookie_value_finds_single_cookie() {

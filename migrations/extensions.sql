@@ -44,3 +44,12 @@ SELECT cron.schedule(
     '*/5 * * * *',
     'DELETE FROM auth_states WHERE created_at < NOW() - INTERVAL ''15 minutes'''
 );
+
+-- Schedule cleanup of expired + revoked sessions (every hour).
+-- Deletes sessions that are revoked AND older than 24 hours, or
+-- sessions that expired more than 24 hours ago and are revoked.
+SELECT cron.schedule(
+    'cleanup-expired-sessions',
+    '0 * * * *',
+    'DELETE FROM sessions WHERE (revoked = TRUE OR expires_at < NOW()) AND created_at < NOW() - INTERVAL ''24 hours'''
+);

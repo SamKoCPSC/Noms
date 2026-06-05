@@ -23,6 +23,8 @@ pub enum DbError {
     Query(sqlx::Error),
     /// The requested username is already taken by another user.
     UsernameTaken,
+    /// The session was not found, revoked, or expired.
+    SessionInvalid,
 }
 
 impl std::fmt::Display for DbError {
@@ -32,6 +34,7 @@ impl std::fmt::Display for DbError {
             DbError::Connection(e) => write!(f, "database connection failed: {e}"),
             DbError::Query(e) => write!(f, "database query failed: {e}"),
             DbError::UsernameTaken => write!(f, "username is already taken"),
+            DbError::SessionInvalid => write!(f, "session is invalid, revoked, or expired"),
         }
     }
 }
@@ -42,6 +45,7 @@ impl std::error::Error for DbError {
             DbError::MissingUrl => None,
             DbError::Connection(e) | DbError::Query(e) => Some(e),
             DbError::UsernameTaken => None,
+            DbError::SessionInvalid => None,
         }
     }
 }
@@ -128,7 +132,7 @@ pub struct OauthAccount {
     pub last_used_at: DateTime<Utc>,
 }
 
-/// Short-lived state for OAuth CSRF protection.
+  /// Short-lived state for OAuth CSRF protection.
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct AuthState {
     pub id: String,
@@ -136,6 +140,17 @@ pub struct AuthState {
     pub provider: String,
     pub code_verifier: Option<String>,
     pub created_at: DateTime<Utc>,
+}
+
+/// A server-side session row.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct Session {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub expires_at: DateTime<Utc>,
+    pub refreshed_at: Option<DateTime<Utc>>,
+    pub revoked: bool,
 }
 
 /// Display-oriented row for listing OAuth accounts on the settings page.
@@ -201,6 +216,101 @@ pub async fn cleanup_expired_auth_states(
             .execute(executor)
             .await
             .map_err(DbError::Query)?;
+    Ok(result.rows_affected())
+}
+
+// ── Session queries ─────────────────────────────────────────────────────────
+
+/// Insert a new session row and return it.
+pub async fn insert_session(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    user_id: Uuid,
+    expires_at: DateTime<Utc>,
+) -> Result<Session, DbError> {
+    sqlx::query_as!(
+        Session,
+        "INSERT INTO sessions (user_id, expires_at) VALUES ($1, $2)
+         RETURNING id, user_id, created_at, expires_at, refreshed_at, revoked",
+        user_id,
+        expires_at,
+    )
+    .fetch_one(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Get an active (non-revoked, non-expired) session by its ID.
+///
+/// Used by `verify_session` to validate the JWT's `sub` claim against the DB.
+/// Returns `None` if the session doesn't exist, is revoked, or is expired.
+pub async fn get_active_session(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    session_id: Uuid,
+) -> Result<Option<Session>, DbError> {
+    sqlx::query_as!(
+        Session,
+        "SELECT id, user_id, created_at, expires_at, refreshed_at, revoked
+         FROM sessions
+         WHERE id = $1 AND revoked = FALSE AND expires_at > NOW()",
+        session_id,
+    )
+    .fetch_optional(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Revoke a session by ID. Returns `true` if a row was updated.
+pub async fn revoke_session(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    session_id: Uuid,
+) -> Result<bool, DbError> {
+    let rows = sqlx::query("UPDATE sessions SET revoked = TRUE WHERE id = $1")
+        .bind(session_id)
+        .execute(executor)
+        .await
+        .map_err(DbError::Query)?
+        .rows_affected();
+    Ok(rows > 0)
+}
+
+/// Refresh a session: extend `expires_at` and set `refreshed_at`.
+///
+/// Only refreshes if the session is active (not revoked, not expired).
+/// Returns the updated session on success, or `None` if the session is gone.
+pub async fn refresh_session(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    session_id: Uuid,
+    new_expires_at: DateTime<Utc>,
+) -> Result<Option<Session>, DbError> {
+    sqlx::query_as!(
+        Session,
+        "UPDATE sessions
+         SET expires_at = $2, refreshed_at = NOW()
+         WHERE id = $1 AND revoked = FALSE AND expires_at > NOW()
+         RETURNING id, user_id, created_at, expires_at, refreshed_at, revoked",
+        session_id,
+        new_expires_at,
+    )
+    .fetch_optional(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Delete expired + revoked sessions older than a given age.
+///
+/// Used by the pg_cron cleanup job (and testable directly).
+/// Returns the number of rows deleted.
+pub async fn cleanup_expired_sessions(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    older_than: &str, // e.g. "24 hours"
+) -> Result<u64, DbError> {
+    let result = sqlx::query(
+        "DELETE FROM sessions WHERE (revoked = TRUE OR expires_at < NOW()) AND created_at < NOW() - INTERVAL $1",
+    )
+    .bind(older_than)
+    .execute(executor)
+    .await
+    .map_err(DbError::Query)?;
     Ok(result.rows_affected())
 }
 

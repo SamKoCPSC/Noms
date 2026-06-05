@@ -51,3 +51,25 @@ CREATE TABLE IF NOT EXISTS auth_states (
 
 -- Index for periodic cleanup of expired auth states (pg_cron DELETE WHERE created_at < ...)
 CREATE INDEX IF NOT EXISTS idx_auth_states_created_at ON auth_states(created_at);
+
+-- Server-side sessions: JWT token is a reference to this table row.
+-- The JWT `sub` claim is the session `id`; `verify_session` looks up the row
+-- to get the `user_id` and check `revoked` / `expires_at`.
+CREATE TABLE IF NOT EXISTS sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '15 minutes'),
+    refreshed_at TIMESTAMPTZ,
+    revoked BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+-- Lookup by session id (from JWT `sub` claim)
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+
+-- Cleanup of expired + revoked sessions (pg_cron)
+-- Note: partial index with NOW() is not allowed (NOW() is STABLE, not IMMUTABLE).
+-- The pg_cron cleanup query uses: WHERE (revoked = TRUE OR expires_at < NOW()) AND created_at < NOW() - INTERVAL '24 hours'
+-- This index covers the revoked=true case efficiently.
+CREATE INDEX IF NOT EXISTS idx_sessions_cleanup ON sessions(expires_at, revoked)
+    WHERE revoked = TRUE;

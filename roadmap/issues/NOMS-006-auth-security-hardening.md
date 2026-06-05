@@ -1,6 +1,6 @@
 # NOMS-006: Auth Security Hardening
 
-**Status:** ⚪ Backlog  
+**Status:** ✅ DONE  
 **Phase:** Phase 1.5 (security fixes before production)  
 **Depends on:** NOMS-004 (OAuth authentication), NOMS-005 (user profile)
 
@@ -20,13 +20,13 @@ A thorough security audit of the auth flow identified 14 findings across 4 sever
 
 ## Acceptance Criteria
 
-### AC1: OAuth state consumption is atomic (CRITICAL-1)
+### AC1: OAuth state consumption is atomic (CRITICAL-1) ✅ DONE
 
-- [ ] `delete_auth_state` uses `DELETE ... RETURNING *` for atomic consumption
-- [ ] `callback_handler` restructured: delete state first, then validate returned state
-- [ ] Concurrent requests with the same `state` parameter cannot both succeed
-- [ ] Existing tests updated to reflect new flow
-- [ ] No regression in normal OAuth callback flow
+- [x] `delete_auth_state` uses `DELETE ... RETURNING *` for atomic consumption
+- [x] `callback_handler` restructured: delete state first, then validate returned state
+- [x] Concurrent requests with the same `state` parameter cannot both succeed
+- [x] Existing tests updated to reflect new flow
+- [x] No regression in normal OAuth callback flow
 
 ### AC2: GET logout CSRF protection (CRITICAL-2) ✅ DONE
 
@@ -36,18 +36,18 @@ A thorough security audit of the auth flow identified 14 findings across 4 sever
 - [x] Full-page navigation logout still works (cookie clearing via `Set-Cookie`)
 - [x] POST logout remains unchanged (for programmatic use)
 
-### AC3: Refactor to server-side sessions (HIGH-1)
+### AC3: Refactor to server-side sessions (HIGH-1) ✅ DONE
 
-- [ ] Create `sessions` table: `id UUID`, `user_id UUID`, `created_at TIMESTAMPTZ`, `expires_at TIMESTAMPTZ`, `refreshed_at TIMESTAMPTZ`, `revoked BOOLEAN DEFAULT FALSE`
-- [ ] JWT token becomes a session ID reference (claims: `sub` = session_id, `exp`, `iat`)
-- [ ] `verify_session` looks up session in `sessions` table (checks exists, not revoked, not expired)
-- [ ] `create_session` inserts row into `sessions` table, returns JWT referencing the session
-- [ ] Logout sets `revoked = TRUE` on the session row (instant revocation, no in-memory list)
-- [ ] Session refresh updates `refreshed_at` and `expires_at` on the session row
-- [ ] Rolling refresh: if token is within last 10 minutes of expiry, issue new token with extended expiry
-- [ ] Cleanup: expired + revoked sessions purged by pg_cron job (every hour, delete older than 24 hours)
-- [ ] Remove in-memory revocation list entirely
-- [ ] Migration backfills active sessions from current JWT state (or accepts clean start)
+- [x] Create `sessions` table: `id UUID`, `user_id UUID`, `created_at TIMESTAMPTZ`, `expires_at TIMESTAMPTZ`, `refreshed_at TIMESTAMPTZ`, `revoked BOOLEAN DEFAULT FALSE`
+- [x] JWT token becomes a session ID reference (claims: `sub` = session_id, `exp`, `iat`)
+- [x] `verify_session` looks up session in `sessions` table (checks exists, not revoked, not expired)
+- [x] `create_session` inserts row into `sessions` table, returns JWT referencing the session
+- [x] Logout sets `revoked = TRUE` on the session row (instant revocation, no in-memory list)
+- [x] Session refresh updates `refreshed_at` and `expires_at` on the session row
+- [x] Rolling refresh: if token is within last 10 minutes of expiry, issue new token with extended expiry
+- [x] Cleanup: expired + revoked sessions purged by pg_cron job (every hour, delete older than 24 hours)
+- [x] Remove in-memory revocation list entirely
+- [x] Migration backfills active sessions from current JWT state (or accepts clean start)
 
 #### Files requiring modification
 
@@ -118,14 +118,14 @@ A thorough security audit of the auth flow identified 14 findings across 4 sever
 - [x] Fallback: application-level cleanup task on startup (tokio timer) if pg_cron unavailable
 - [x] Old auth states are purged within 15 minutes of creation
 
-### AC11: OAuth token revocation on account deletion (MEDIUM-5)
+### AC11: OAuth token revocation on account deletion (MEDIUM-5) ✅ DONE
 
-- [ ] `oauth_accounts` table stores `refresh_token TEXT` (migration adds column)
-- [ ] On account deletion, call provider revocation endpoints:
+- [x] `oauth_accounts` table stores `refresh_token TEXT` (migration adds column)
+- [x] On account deletion, call provider revocation endpoints:
   - Google: `POST https://oauth2.googleapis.com/revoke?token={refresh_token}`
   - GitHub: Document limitation (GitHub doesn't support token revocation API)
-- [ ] Revocation failures are logged but don't block account deletion
-- [ ] Timeout on revocation requests: 5 seconds max
+- [x] Revocation failures are logged but don't block account deletion
+- [x] Timeout on revocation requests: 5 seconds max
 
 ## Technical Details
 
