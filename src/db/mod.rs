@@ -132,7 +132,7 @@ pub struct OauthAccount {
     pub last_used_at: DateTime<Utc>,
 }
 
-  /// Short-lived state for OAuth CSRF protection.
+/// Short-lived state for OAuth CSRF protection.
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct AuthState {
     pub id: String,

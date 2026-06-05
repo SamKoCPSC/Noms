@@ -86,7 +86,7 @@ mod tests {
             })
         });
 
-        provide_context(auth_signal.read().clone());
+        provide_context(*auth_signal.read());
         rsx! { {&props.children} }
     }
 

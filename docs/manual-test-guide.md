@@ -37,6 +37,16 @@
 | 18 | Server functions blocked when unauthenticated | | |
 | 19 | Session token refresh | | |
 | 20 | Concurrent request handling | | |
+| 21 | Rate limiting on OAuth endpoints | | |
+| 22 | Account linking flow (2nd provider) | | |
+| 23 | Cross-tab session revocation | | |
+| 24 | Logout redirect URI validation | | |
+| 25 | HTTP method enforcement on APIs | | |
+| 26 | Theme toggle (dark/light mode) | | |
+| 27 | Responsive navbar (mobile) | | |
+| 28 | OAuth connect buttons from settings | | |
+| 29 | 404 handling for unknown routes | | |
+| 30 | Settings tabs navigation | | |
 
 ---
 
@@ -149,7 +159,7 @@
 
 **Expected:**
 - Optimistic UI update shows immediately
-- Success toast/notification appears
+- Inline success message appears (green background, "Profile updated successfully")
 - Data persists on page reload
 - No console errors
 
@@ -215,8 +225,9 @@
 
 **Expected:**
 - Lists all linked OAuth providers
-- Shows provider name, email, and link status
+- Shows provider name, associated email, and "Last used" timestamp (relative: "Just now", "X minutes ago", etc.)
 - "Unlink" button available for each account
+- "Connect additional accounts" section shows buttons for unlinked providers
 - No console errors
 
 ---
@@ -229,10 +240,10 @@
 3. Confirm unlink dialog
 
 **Expected:**
-- Confirmation dialog appears
+- Confirmation dialog appears with provider name and "You will need to sign in again with your remaining accounts."
 - After confirmation, provider is removed from list
-- Success notification appears
-- If last provider, warn about account access loss
+- Inline success message appears (green background, "{Provider} account unlinked successfully")
+- If last provider, action is blocked entirely with error: "You must have at least one linked account"
 
 ---
 
@@ -388,6 +399,301 @@
 
 ---
 
+### TC-21: Rate Limiting on OAuth Endpoints
+
+**Config:** 10 `/start` requests per IP per 60s; 5 `/callback` requests per IP per 60s.
+
+**Steps (Start):**
+1. Open Chrome DevTools Network tab
+2. Repeatedly navigate to `/auth/google/start` (or use `curl` / console)
+3. Send 11 requests within 60 seconds
+
+**Expected (Start):**
+- First 10 requests return 302 (redirect to OAuth provider)
+- 11th request returns 429 Too Many Requests
+- Response includes `Retry-After` header (value between 1 and 60 seconds)
+- Response body is plain text: "Too Many Requests"
+
+**Steps (Callback):**
+1. Wait for rate limit window to reset (60 seconds)
+2. Repeatedly navigate to `/auth/google/callback?code=fake&state=fake`
+3. Send 6 requests within 60 seconds
+
+**Expected (Callback):**
+- First 5 requests process normally (may show error page, but not 429)
+- 6th request returns 429 Too Many Requests
+
+**Steps (Non-OAuth):**
+1. Send 20+ requests to `/auth/logout`
+2. Send 20+ requests to `/api/user_profile`
+
+**Expected (Non-OAuth):**
+- All requests process normally — no rate limiting on non-OAuth endpoints
+
+**Verification:** Check `src/middleware/rate_limit.rs` for sliding-window implementation with `DashMap` per-IP tracking.
+
+---
+
+### TC-22: Account Linking Flow (2nd Provider)
+
+**Steps:**
+1. Log in with Google (TC-02)
+2. Navigate to `/settings/accounts`
+3. Verify only Google is listed
+4. Click "Connect GitHub" in the "Connect additional accounts" section
+5. Complete mock OAuth2 flow for GitHub at `localhost:8082`
+
+**Expected:**
+- Redirect to GitHub OAuth flow via mock server
+- After authorization, redirect back to `/settings/accounts`
+- Both Google and GitHub appear in the linked accounts list
+- "Connect additional accounts" section shows no buttons (both linked)
+- User remains logged in — no session interruption
+- Navbar still shows user avatar/dropdown
+
+**Steps (Email Match):**
+1. Log out
+2. Log in with GitHub (same email address)
+
+**Expected:**
+- User is logged into the same account (not a new account)
+- Profile data is preserved (display name, username from original Google login)
+- Both providers still listed on `/settings/accounts`
+
+**Verification:** Check `src/auth/linking.rs` for `link_or_create` function — handles existing provider login, email match, and new user creation in a single transaction.
+
+---
+
+### TC-23: Cross-Tab Session Revocation
+
+**Steps:**
+1. Log in via any provider
+2. Open the app in a second browser tab
+3. Verify both tabs show authenticated state (user avatar in navbar)
+4. In Tab A, click "Sign Out"
+5. In Tab B, refresh the page or navigate to `/settings/profile`
+
+**Expected:**
+- Tab A: redirected to home, shows "Sign In" button
+- Tab B: after refresh, shows "Sign In" button (session revoked)
+- Tab B: no protected content visible — AuthRequired login prompt appears on protected routes
+- Session cookie in Tab B is still present in browser, but server rejects it (DB `revoked = TRUE`)
+
+**Verification:** Check `src/auth/logout.rs` for `session::revoke_session()` call — sets `revoked = TRUE` on the session row in the database.
+
+---
+
+### TC-24: Logout Redirect URI Validation
+
+**Steps (Valid):**
+1. Log in
+2. Navigate to `/auth/logout?redirect_uri=/dashboard`
+
+**Expected (Valid):**
+- Session cleared, cookie expired
+- Redirected to `/dashboard` (which shows AuthRequired prompt since logged out)
+
+**Steps (Invalid — External URL):**
+1. Log in
+2. Navigate to `/auth/logout?redirect_uri=https://evil.com/phish`
+
+**Expected (Invalid):**
+- Session cleared, cookie expired
+- Redirected to `/` (default home, NOT the external URL)
+
+**Steps (Invalid — Protocol-Relative):**
+1. Log in
+2. Navigate to `/auth/logout?redirect_uri=//evil.com/phish`
+
+**Expected (Invalid):**
+- Redirected to `/` (default home)
+
+**Steps (Invalid — No Leading Slash):**
+1. Log in
+2. Navigate to `/auth/logout?redirect_uri=dashboard`
+
+**Expected (Invalid):**
+- Redirected to `/` (default home)
+
+**Steps (Valid — Query String):**
+1. Log in
+2. Navigate to `/auth/logout?redirect_uri=/dashboard%3Ftab%3Drecipes`
+
+**Expected (Valid):**
+- Redirected to `/dashboard?tab=recipes`
+
+**Verification:** Check `src/auth/logout.rs` for `validate_redirect_uri()` — rejects URLs containing `://`, starting with `//`, or not starting with `/`. Max length 2048 chars.
+
+---
+
+### TC-25: HTTP Method Enforcement on APIs
+
+**Steps:**
+1. Log in
+2. Open Chrome DevTools Network tab
+3. Send a `POST` request to `/api/user_profile`
+4. Send a `PUT` request to `/api/user_profile`
+5. Send a `DELETE` request to `/api/user_profile`
+
+**Expected:**
+- `POST` returns 405 Method Not Allowed
+- `PUT` returns 405 Method Not Allowed
+- `DELETE` returns 405 Method Not Allowed
+- Only `GET` returns 200 with user profile JSON
+
+**Verification:** Check `src/main.rs` — `/api/user_profile` route uses `axum::routing::get()` only.
+
+---
+
+### TC-26: Theme Toggle (Dark/Light Mode)
+
+**Steps:**
+1. Log in
+2. Locate the theme toggle button in the navbar (🌙 for light mode, ☀️ for dark mode)
+3. Click the toggle button
+
+**Expected:**
+- Icon changes (🌙 ↔ ☀️)
+- Page background, text colors, and card styles switch between light and dark themes
+- `document.documentElement` has `dark` class added/removed
+- `localStorage.theme` is set to `"dark"` or `"light"`
+
+**Steps (Persistence):**
+1. Set theme to dark
+2. Refresh the page
+
+**Expected:**
+- Dark theme persists after page reload
+- Theme preference survives navigation between pages
+
+**Steps (Mobile Drawer):**
+1. Resize viewport to mobile width (< 768px)
+2. Open hamburger menu
+3. Tap "☀️ Light Mode" or "🌙 Dark Mode" in the drawer
+
+**Expected:**
+- Theme toggles correctly
+- Drawer closes after theme change
+
+**Verification:** Check `src/utils/theme.rs` for `use_theme()` hook — reads from `localStorage.theme`, syncs `<html>` class and localStorage on change.
+
+---
+
+### TC-27: Responsive Navbar (Mobile)
+
+**Steps:**
+1. Log in
+2. Resize browser viewport to mobile width (< 768px)
+
+**Expected:**
+- Desktop nav links ("Dashboard", "Explore", "New Recipe") are hidden
+- Hamburger menu button (3 horizontal lines) appears
+- Theme toggle button remains visible
+
+**Steps (Drawer):**
+1. Click hamburger menu button
+
+**Expected:**
+- Slide-out drawer appears from the right
+- Drawer contains: Dashboard, Explore, New Recipe, Settings, Sign Out
+- Drawer has a close button (✕)
+- Clicking outside drawer content closes it
+- Clicking a nav link navigates and closes drawer
+
+**Steps (Authenticated vs Unauthenticated):**
+1. Log out
+2. Open hamburger menu
+
+**Expected:**
+- Drawer shows "Sign In" instead of "Settings" + "Sign Out"
+
+**Verification:** Check `src/components/navbar.rs` — `navbar-links` class for desktop, `navbar-hamburger` and `navbar-drawer` for mobile.
+
+---
+
+### TC-28: OAuth Connect Buttons from Settings
+
+**Steps (No Accounts):**
+1. Log in with Google
+2. Navigate to `/settings/accounts`
+3. Unlink Google (should be blocked — last provider)
+4. Instead, from a fresh account with only Google linked:
+
+**Steps (One Provider Linked):**
+1. Log in with Google only
+2. Navigate to `/settings/accounts`
+3. Scroll to "Connect additional accounts" section
+
+**Expected:**
+- "Connect Google" button is NOT shown (already linked)
+- "Connect GitHub" button IS shown
+- Clicking "Connect GitHub" redirects to `/auth/github/start?redirect_uri=/settings/accounts`
+- After completing GitHub OAuth, redirected back to `/settings/accounts`
+- Both Google and GitHub now listed
+- "Connect additional accounts" section shows no buttons
+
+**Steps (Both Providers Linked):**
+1. With both providers linked, verify "Connect additional accounts" section
+
+**Expected:**
+- No "Connect" buttons visible (both already linked)
+
+**Verification:** Check `src/pages/settings/settings_accounts.rs` — `linked_providers` HashSet controls visibility of connect buttons.
+
+---
+
+### TC-29: 404 Handling for Unknown Routes
+
+**Steps:**
+1. Navigate to a non-existent route: `/nonexistent`
+2. Navigate to `/some/random/deep/path`
+
+**Expected:**
+- Application does not crash
+- Page shows either:
+  - A 404 error page, OR
+  - The home page (Dioxus default fallback behavior)
+- Navbar is still visible and functional
+- No console errors
+- No JavaScript errors in console
+
+**Verification:** Check `src/main.rs` — Dioxus routing handles unknown routes; `ErrorBoundary` wraps all routes to catch rendering errors.
+
+---
+
+### TC-30: Settings Tabs Navigation
+
+**Steps:**
+1. Log in
+2. Navigate to `/settings/profile`
+
+**Expected:**
+- Tab bar shows "Profile" and "Accounts"
+- "Profile" tab has active styling (different background/border)
+- Profile form is displayed
+
+**Steps:**
+1. Click "Accounts" tab
+
+**Expected:**
+- Navigates to `/settings/accounts`
+- "Accounts" tab has active styling
+- Linked accounts list is displayed
+- URL changes to `/settings/accounts`
+
+**Steps:**
+1. Click "Profile" tab
+
+**Expected:**
+- Navigates to `/settings/profile`
+- "Profile" tab has active styling
+- Profile form is displayed
+- URL changes to `/settings/profile`
+
+**Verification:** Check `src/components/base/settings_tabs.rs` — `SettingsTabs` component with `SettingsTab::Profile` and `SettingsTab::Accounts` variants, active class applied based on `active` prop.
+
+---
+
 ## Known Issues Summary
 
 | Issue | Status | Description | Fix Location |
@@ -411,6 +717,9 @@ Run these after any code change:
 - [ ] Logout clears cookie and redirects
 - [ ] AuthRequired prompt appears on protected routes when logged out
 - [ ] Unauthenticated users cannot access server functions
+- [ ] Account linking works (2nd provider)
+- [ ] Theme toggle persists across reload
+- [ ] Mobile hamburger menu works
 
 ---
 

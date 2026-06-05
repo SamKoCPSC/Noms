@@ -333,7 +333,9 @@ pub async fn callback_handler(
     // Check if there's an existing authenticated session
     // NOTE: We need to verify the session before consuming it for the new login.
     let existing_user_id = if let Some(cookie) = jar.get(session::COOKIE_NAME) {
-        session::verify_session(&state.pool, cookie.value()).await.ok()
+        session::verify_session(&state.pool, cookie.value())
+            .await
+            .ok()
     } else {
         None
     };

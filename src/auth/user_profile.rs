@@ -51,7 +51,9 @@ pub async fn handle_user_profile(
     // Check for valid session
     let session_token = jar.get(session::COOKIE_NAME);
     let verified_user_id = if let Some(cookie) = session_token {
-        session::verify_session(&state.pool, cookie.value()).await.ok()
+        session::verify_session(&state.pool, cookie.value())
+            .await
+            .ok()
     } else {
         None
     };

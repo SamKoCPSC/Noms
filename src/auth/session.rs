@@ -138,10 +138,7 @@ fn now_secs() -> u64 {
 ///
 /// Inserts a row into the `sessions` table, then returns a compact JWT
 /// with `sub = session_id`. The JWT is valid for [`SESSION_LIFETIME_SECS`] seconds.
-pub async fn create_session(
-    pool: &PgPool,
-    user_id: Uuid,
-) -> Result<String, SessionError> {
+pub async fn create_session(pool: &PgPool, user_id: Uuid) -> Result<String, SessionError> {
     let secret = read_secret()?;
     let now = chrono::Utc::now();
     let expires_at = now + chrono::Duration::seconds(SESSION_LIFETIME_SECS as i64);
@@ -172,10 +169,7 @@ pub async fn create_session(
 /// session in the database. Returns the `user_id` from the DB row if the
 /// session exists, is not revoked, and is not expired.
 #[allow(dead_code)] // Used by session refresh and auth middleware
-pub async fn verify_session(
-    pool: &PgPool,
-    token: &str,
-) -> Result<Uuid, SessionError> {
+pub async fn verify_session(pool: &PgPool, token: &str) -> Result<Uuid, SessionError> {
     let secret = read_secret()?;
     let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
     // Allow decoding expired tokens so we can return a specific error variant.
@@ -315,10 +309,7 @@ pub async fn extract_user_id_from_headers(
 /// Decodes the JWT to get the session_id, looks up the session in the DB,
 /// and checks if the session is within the last 10 minutes of expiry.
 /// Returns `true` if refresh is needed.
-pub async fn should_refresh(
-    pool: &PgPool,
-    token: &str,
-) -> Result<bool, SessionError> {
+pub async fn should_refresh(pool: &PgPool, token: &str) -> Result<bool, SessionError> {
     let secret = read_secret()?;
     let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
     validation.validate_exp = false;
@@ -347,10 +338,7 @@ pub async fn should_refresh(
 
 /// Revoke a session by extracting the session_id from the JWT and setting
 /// `revoked = TRUE` in the database.
-pub async fn revoke_session(
-    pool: &PgPool,
-    token: &str,
-) -> Result<(), SessionError> {
+pub async fn revoke_session(pool: &PgPool, token: &str) -> Result<(), SessionError> {
     let secret = read_secret()?;
     let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
     validation.validate_exp = false;
@@ -371,10 +359,7 @@ pub async fn revoke_session(
 ///
 /// Updates the DB row (`expires_at`, `refreshed_at`), then creates a new JWT.
 #[allow(dead_code)] // Public API - used by auth middleware rolling refresh path
-pub async fn refresh_session(
-    pool: &PgPool,
-    token: &str,
-) -> Result<String, SessionError> {
+pub async fn refresh_session(pool: &PgPool, token: &str) -> Result<String, SessionError> {
     let secret = read_secret()?;
     let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
     validation.validate_exp = false;
@@ -386,7 +371,8 @@ pub async fn refresh_session(
     let session_id = token_data.claims.sub;
 
     // Update DB row
-    let new_expires_at = chrono::Utc::now() + chrono::Duration::seconds(SESSION_LIFETIME_SECS as i64);
+    let new_expires_at =
+        chrono::Utc::now() + chrono::Duration::seconds(SESSION_LIFETIME_SECS as i64);
     let _session_row = crate::db::refresh_session(pool, session_id, new_expires_at)
         .await
         .map_err(|e| SessionError::DbError(e.to_string()))?
@@ -545,11 +531,13 @@ mod tests {
         let token = create_session(&pool, user.id).await.unwrap();
 
         // Backdate the session in the DB to make it expired
-        sqlx::query("UPDATE sessions SET expires_at = NOW() - INTERVAL '1 hour' WHERE user_id = $1")
-            .bind(user.id)
-            .execute(&pool)
-            .await
-            .unwrap();
+        sqlx::query(
+            "UPDATE sessions SET expires_at = NOW() - INTERVAL '1 hour' WHERE user_id = $1",
+        )
+        .bind(user.id)
+        .execute(&pool)
+        .await
+        .unwrap();
 
         let result = verify_session(&pool, &token).await;
         assert!(result.is_err());
@@ -626,7 +614,10 @@ mod tests {
         )
         .await
         .unwrap();
-        assert!(session.is_none(), "revoked session should not be found as active");
+        assert!(
+            session.is_none(),
+            "revoked session should not be found as active"
+        );
     }
 
     #[tokio::test]
@@ -831,11 +822,13 @@ mod tests {
         let token = create_session(&pool, user.id).await.unwrap();
 
         // Backdate the session in the DB to make it expired
-        sqlx::query("UPDATE sessions SET expires_at = NOW() - INTERVAL '1 hour' WHERE user_id = $1")
-            .bind(user.id)
-            .execute(&pool)
-            .await
-            .unwrap();
+        sqlx::query(
+            "UPDATE sessions SET expires_at = NOW() - INTERVAL '1 hour' WHERE user_id = $1",
+        )
+        .bind(user.id)
+        .execute(&pool)
+        .await
+        .unwrap();
 
         let result = should_refresh(&pool, &token).await;
         assert!(result.is_err());

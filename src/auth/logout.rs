@@ -99,10 +99,7 @@ fn make_router(pool: PgPool) -> axum::Router {
         rate_limit: crate::middleware::rate_limit::RateLimitState::default(),
     };
     axum::Router::new()
-        .route(
-            "/auth/logout",
-            get(handle_logout).post(handle_logout),
-        )
+        .route("/auth/logout", get(handle_logout).post(handle_logout))
         .with_state(state)
 }
 
