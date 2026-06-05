@@ -127,6 +127,15 @@ A thorough security audit of the auth flow identified 14 findings across 4 sever
 - [x] Revocation failures are logged but don't block account deletion
 - [x] Timeout on revocation requests: 5 seconds max
 
+### AC12: Account conflict warning on OAuth link (ENHANCEMENT)
+
+- [ ] When user attempts to link a provider that is already linked to a different user account, the callback detects the conflict
+- [ ] Callback redirects to `/settings/accounts?error=account_already_linked&provider={provider}` preserving the current user's session
+- [ ] Frontend displays an error notification: **"This {provider} account is already linked to another user. That account will need to be deleted before you can link this provider."**
+- [ ] User remains signed in as their current account (no session change)
+- [ ] The OAuth flow is discarded (no new account created, no linking attempted)
+- [ ] Linking the same provider to the current user still works when no conflict exists
+
 ## Technical Details
 
 ### Database Migrations
