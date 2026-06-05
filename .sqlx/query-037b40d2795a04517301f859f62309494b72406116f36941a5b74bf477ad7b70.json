@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, user_id, provider, provider_user_id, email, email_verified, profile_data, created_at, last_used_at FROM oauth_accounts WHERE provider = $1 AND provider_user_id = $2",
+  "query": "SELECT id, user_id, provider, provider_user_id, email, email_verified, profile_data, refresh_token, created_at, last_used_at FROM oauth_accounts WHERE user_id = $1",
   "describe": {
     "columns": [
       {
@@ -40,19 +40,23 @@
       },
       {
         "ordinal": 7,
+        "name": "refresh_token",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "last_used_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Text",
-        "Text"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -63,9 +67,10 @@
       true,
       false,
       true,
+      true,
       false,
       false
     ]
   },
-  "hash": "8278aa3bde5f20afcae80c91eda5e10329248cc24caa6a9e6ed7a28808ce1a32"
+  "hash": "037b40d2795a04517301f859f62309494b72406116f36941a5b74bf477ad7b70"
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, redirect_uri, provider, code_verifier, created_at FROM auth_states WHERE id = $1",
+  "query": "DELETE FROM auth_states WHERE id = $1 RETURNING id, redirect_uri, provider, code_verifier, created_at",
   "describe": {
     "columns": [
       {
@@ -42,5 +42,5 @@
       false
     ]
   },
-  "hash": "f74a9ab7757b7d61ba29e070d3bf3c9c5715d81552905f2b288da6771d6d65a7"
+  "hash": "158493df500113111b8787bb67064190aed219d3f2dd35fda12fe21d37b75880"
 }
