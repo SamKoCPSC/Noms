@@ -690,7 +690,10 @@ mod tests {
             .await
             .unwrap();
 
-            let state = db::delete_auth_state(&pool, &state_id).await.unwrap().unwrap();
+            let state = db::delete_auth_state(&pool, &state_id)
+                .await
+                .unwrap()
+                .unwrap();
             assert_eq!(state.provider, "google");
             assert_eq!(state.redirect_uri, "/dashboard");
         }
@@ -710,7 +713,10 @@ mod tests {
             .await
             .unwrap();
 
-            let state = db::delete_auth_state(&pool, &state_id).await.unwrap().unwrap();
+            let state = db::delete_auth_state(&pool, &state_id)
+                .await
+                .unwrap()
+                .unwrap();
             // State stored with "google" provider
             assert_eq!(state.provider, "google");
             // If callback comes for "github", it won't match
@@ -732,7 +738,10 @@ mod tests {
             .await
             .unwrap();
 
-            let state = db::delete_auth_state(&pool, &state_id).await.unwrap().unwrap();
+            let state = db::delete_auth_state(&pool, &state_id)
+                .await
+                .unwrap()
+                .unwrap();
             // Freshly created state should not be expired
             let elapsed = Utc::now()
                 .signed_duration_since(state.created_at)
@@ -750,7 +759,10 @@ mod tests {
                 .await
                 .unwrap();
 
-            let state = db::delete_auth_state(&pool, &state_id).await.unwrap().unwrap();
+            let state = db::delete_auth_state(&pool, &state_id)
+                .await
+                .unwrap()
+                .unwrap();
             assert_eq!(state.code_verifier, Some(verifier.to_string()));
         }
 
