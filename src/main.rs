@@ -16,7 +16,7 @@ mod utils;
 use auth::context::{build_context_from_fullstack, AuthContext};
 use components::{AppLayout, ErrorFallback};
 use pages::{
-    CollectionDetail, CollectionList, Dashboard, Explore, Home, Login, RecipeDetail, RecipeNew,
+    CollectionDetail, CollectionList, Dashboard, Explore, Home, Login, NotFound, RecipeDetail, RecipeNew,
     SettingsAccounts, SettingsProfile,
 };
 
@@ -47,6 +47,9 @@ pub enum Route {
         SettingsProfile {},
         #[route("/settings/accounts")]
         SettingsAccounts {},
+        // Catch-all: matches any route not defined above
+        #[route("/:..segments")]
+        NotFound { segments: Vec<String> },
 }
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
