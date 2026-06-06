@@ -71,6 +71,39 @@ to be public for future community recipe browsing.
 **Files:**
 - `src/pages/explore.rs`
 
+### [x] Navbar dropdown: Position beneath avatar trigger
+
+Dropdown menu appeared offset from the avatar trigger, floating
+away from the user menu area.
+
+**Fix:** Added `.navbar-user-menu { position: relative }` as the
+positioning container, changed dropdown from absolute offsets
+(`top: 60px; right: var(--space-md)`) to `top: calc(100% + var(--space-xs));
+right: 0` so it anchors directly beneath the trigger.
+
+**Files:**
+- `assets/main.css`
+
+### [x] Navbar glassmorphism: Fix backdrop-filter stripped by CSS minifier
+
+The frosted glass blur effect on the navbar was not rendering.
+Dioxus uses Lightning CSS for minification, which drops
+`backdrop-filter` when `-webkit-backdrop-filter` is present
+(seeing them as duplicates). Chrome and Firefox ignore the
+`-webkit-` prefixed version, so the blur was lost entirely.
+
+**Fix:** Disabled CSS minification via
+`CssAssetOptions::new().with_minify(false)` on both CSS assets
+in `src/main.rs`. Removed JS injection workaround from
+`navbar.rs`. Added `--glass-blur` CSS custom property to `:root`
+and `.dark` scopes. Increased navbar background opacity to
+`0.65` (light) and `0.75` (dark) for visible blur effect.
+
+**Files:**
+- `src/main.rs`
+- `src/components/navbar.rs`
+- `assets/main.css`
+
 ---
 
 ## Acceptance Criteria

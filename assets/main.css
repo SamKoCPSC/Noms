@@ -56,6 +56,7 @@ a:hover {
     /* Glassmorphism */
     --glass-fill: rgba(255, 255, 255, 0.20);
     --glass-border: rgba(255, 255, 255, 0.30);
+    --glass-blur: blur(16px) saturate(180%);
 
     /* Accent palette */
     --accent: #D9735A;
@@ -106,6 +107,7 @@ a:hover {
     --shadow-dark: #141310;
     --glass-fill: rgba(30, 28, 24, 0.50);
     --glass-border: rgba(255, 255, 255, 0.10);
+    --glass-blur: blur(16px) saturate(150%);
     --accent: #E8896E;
     --accent-hover: #F0A08C;
     --success: #72B886;
@@ -169,8 +171,8 @@ a:hover {
    ============================================================ */
 .glass {
     background: var(--glass-fill);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: var(--glass-blur) !important;
+    -webkit-backdrop-filter: var(--glass-blur) !important;
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
 }
@@ -321,16 +323,23 @@ a:hover {
 /* ============================================================
     Navbar
     ============================================================ */
-.navbar {
+  .navbar {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     z-index: 100;
-    background: var(--glass-fill);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: var(--glass-blur) !important;
+    -webkit-backdrop-filter: var(--glass-blur) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.40);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.dark .navbar {
+    background: rgba(30, 28, 24, 0.75);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.20);
 }
 
 .navbar-inner {
