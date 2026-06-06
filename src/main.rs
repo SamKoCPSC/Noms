@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
-use manganis::CssAssetOptions;
 #[cfg(feature = "server")]
 use dioxus::server::{DioxusRouterExt, ServeConfig};
+use manganis::CssAssetOptions;
 
 mod auth;
 mod components;
@@ -54,8 +54,14 @@ pub enum Route {
 }
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
-const MAIN_CSS: Asset = asset!("/assets/main.css", CssAssetOptions::new().with_minify(false));
-const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css", CssAssetOptions::new().with_minify(false));
+const MAIN_CSS: Asset = asset!(
+    "/assets/main.css",
+    CssAssetOptions::new().with_minify(false)
+);
+const TAILWIND_CSS: Asset = asset!(
+    "/assets/tailwind.css",
+    CssAssetOptions::new().with_minify(false)
+);
 
 const GOOGLE_FONTS: &str = "https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;500;600;700&display=swap";
 

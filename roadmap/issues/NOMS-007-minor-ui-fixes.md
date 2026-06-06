@@ -9,8 +9,11 @@
 
 ## Description
 
-Address 4 minor UI, routing, and access-control issues identified
-during systematic code review and manual testing.
+Address minor UI, routing, access-control, and styling issues
+identified during systematic code review and manual testing.
+Includes 404 handling, public explore page, profile avatar,
+dropdown positioning, navbar glassmorphism, neumorphic depth,
+container width, and unauthorized page styling.
 
 ---
 
@@ -103,6 +106,43 @@ and `.dark` scopes. Increased navbar background opacity to
 - `src/main.rs`
 - `src/components/navbar.rs`
 - `assets/main.css`
+
+### [ ] Restyle buttons and text fields: Increase neumorphic depth
+
+Buttons and text inputs use a subtle neumorphic (soft shadow)
+style that lacks visual depth. The raised/inset effect is too
+flat to clearly convey interactive state.
+
+**Plan:** Increase shadow contrast and layering on `.btn`,
+`.btn--primary`, `.btn--secondary`, `.btn--danger`, and input
+elements to make the depth more apparent.
+
+**Files:**
+- `assets/main.css`
+
+### [ ] Increase UI container width for 16:9 screens
+
+The main content container is constrained to a narrow max-width
+that leaves large empty margins on typical 16:9 displays.
+
+**Plan:** Increase the `max-width` on `.container` (and any
+related layout constraints) so content stretches to fill more
+of the screen width on widescreen resolutions.
+
+**Files:**
+- `assets/main.css`
+
+### [ ] Restyle buttons on unauthorized page
+
+The unauthorized/forbidden page has buttons that don't match
+the current button styling or lack proper visual hierarchy.
+
+**Plan:** Update button styles on the unauthorized page to match
+the restyled button components.
+
+**Files:**
+- `assets/main.css`
+- Unauthorized page component (TBD)
 
 ---
 
