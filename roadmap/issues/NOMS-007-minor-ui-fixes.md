@@ -9,9 +9,8 @@
 
 ## Description
 
-Address minor UI inconsistencies and missing edge-case handling
-identified during systematic code review of all 38 manual test
-scenarios (TC-01 through TC-37).
+Address 4 minor UI, routing, and access-control issues identified
+during systematic code review and manual testing.
 
 ---
 
@@ -56,6 +55,18 @@ profile.
 
 **Files:**
 - `src/pages/settings/settings_profile.rs`
+
+### [x] Explore page: Make public (unauthenticated access)
+
+Explore page was wrapped in AuthRequired, blocking unauthenticated
+users. This was intentional as a placeholder, but the page is meant
+to be public for future community recipe browsing.
+
+**Fix:** Removed AuthRequired wrapper and unused import from
+`src/pages/explore.rs`. Page now renders directly inside AppLayout.
+
+**Files:**
+- `src/pages/explore.rs`
 
 ---
 

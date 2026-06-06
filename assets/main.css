@@ -405,6 +405,11 @@ a:hover {
     color: var(--text-primary);
 }
 
+/* User menu container */
+.navbar-user-menu {
+    position: relative;
+}
+
 /* User dropdown trigger */
 .navbar-user-dropdown {
     display: flex;
@@ -423,8 +428,8 @@ a:hover {
 /* User dropdown menu */
 .navbar-dropdown-menu {
     position: absolute;
-    top: 60px;
-    right: var(--space-md);
+    top: calc(100% + var(--space-xs));
+    right: 0;
     background: var(--bg-base);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);

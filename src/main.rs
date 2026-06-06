@@ -16,8 +16,8 @@ mod utils;
 use auth::context::{build_context_from_fullstack, AuthContext};
 use components::{AppLayout, ErrorFallback};
 use pages::{
-    CollectionDetail, CollectionList, Dashboard, Explore, Home, Login, NotFound, RecipeDetail, RecipeNew,
-    SettingsAccounts, SettingsProfile,
+    CollectionDetail, CollectionList, Dashboard, Explore, Home, Login, NotFound, RecipeDetail,
+    RecipeNew, SettingsAccounts, SettingsProfile,
 };
 
 /// Application routes.
