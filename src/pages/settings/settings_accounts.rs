@@ -9,6 +9,39 @@ use crate::components::base::{
 };
 use crate::components::AuthRequired;
 
+/// Extract a query parameter from the current URL.
+///
+/// On WASM, reads from `window.location.search`. On the server, reads
+/// from the `FullstackContext` request URI.
+fn extract_query_param(name: &str) -> Option<String> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        if let Some(window) = web_sys::window() {
+            if let Ok(search) = window.location().search() {
+                // Parse query string manually (avoids url crate dependency)
+                for param in search.trim_start_matches('?').split('&') {
+                    if let Some(value) = param.strip_prefix(&format!("{name}=")) {
+                        return Some(value.to_string());
+                    }
+                }
+            }
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        if let Some(fsc) = dioxus_fullstack::FullstackContext::current() {
+            if let Some(query) = fsc.parts_mut().uri.query() {
+                for param in query.split('&') {
+                    if let Some(value) = param.strip_prefix(&format!("{name}=")) {
+                        return Some(value.to_string());
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
 // ── Serializable response type ───────────────────────────────────────────────
 
 /// A linked OAuth account, serializable for server functions.
@@ -91,6 +124,65 @@ pub fn SettingsAccounts() -> Element {
     let mut error = use_signal(|| Option::<String>::None);
     let mut success = use_signal(|| Option::<String>::None);
     let mut show_confirm = use_signal(|| Option::<(Uuid, String)>::None);
+
+    // Extract error params from URL for OAuth conflict notification
+    let error_type = use_hook(|| extract_query_param("error"));
+    let error_provider = use_hook(|| extract_query_param("provider"));
+
+    // Closure to clear error params from the URL (WASM only)
+    let clear_error_params = move || {
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(window) = web_sys::window() {
+                let _ = window.location().set_href("/settings/accounts");
+            }
+        }
+    };
+
+    // Clone signals for use in async spawn (avoids borrow conflicts with use_effect)
+    let error_for_spawn = error;
+    let clear_for_spawn = clear_error_params;
+
+    // Show error notification for OAuth account conflict
+    use_effect(move || {
+        if let (Some(ref error_type_val), Some(ref provider)) = (&error_type, &error_provider) {
+            if error_type_val == "account_already_linked" {
+                // Capitalize first letter of provider name
+                let provider_display: String = provider
+                    .chars()
+                    .enumerate()
+                    .map(|(i, c)| {
+                        if i == 0 {
+                            c.to_uppercase().collect()
+                        } else {
+                            format!("{c}")
+                        }
+                    })
+                    .collect();
+
+                error.set(Some(format!(
+                    "This {provider_display} account is already linked to another user. That account will need to be deleted before you can link this provider.",
+                )));
+
+              // Auto-dismiss after 10 seconds and clear URL params
+                let err_signal = error_for_spawn;
+                let clear = clear_for_spawn;
+                spawn(async move {
+                    let mut err_signal = err_signal;
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        gloo_timers::future::sleep(std::time::Duration::from_secs(10)).await;
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        // Server-side: skip auto-dismiss (no persistent state)
+                    }
+                    clear();
+                    err_signal.set(None);
+                });
+            }
+        }
+    });
 
     // Build OAuth connect URLs
     let google_url = "/auth/google/start?redirect_uri=/settings/accounts";
@@ -360,7 +452,26 @@ pub fn SettingsAccounts() -> Element {
                     color: "var(--error)",
                     font_size: "14px",
                     margin_bottom: "var(--space-md)",
-                    "{err}"
+                    display: "flex",
+                    align_items: "flex-start",
+                    gap: "var(--space-sm)",
+                    span { flex: "1", "{err}" }
+                    button {
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--error)",
+                        cursor: "pointer",
+                        font_size: "18px",
+                        line_height: "1",
+                        padding: "0",
+                        margin_left: "auto",
+                        flex_shrink: "0",
+                        onclick: move |_| {
+                            clear_error_params();
+                            error.set(None);
+                        },
+                        "×"
+                    }
                 }
             }
 

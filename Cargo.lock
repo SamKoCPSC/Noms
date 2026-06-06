@@ -4500,6 +4500,7 @@ dependencies = [
  "dioxus-core",
  "dioxus-ssr",
  "gloo-net",
+ "gloo-timers",
  "jsonwebtoken",
  "oauth2",
  "percent-encoding",

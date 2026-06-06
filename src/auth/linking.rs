@@ -78,6 +78,8 @@ pub enum LinkError {
     Db(db::DbError),
     /// All attempts to generate a unique username failed.
     UsernameGenerationFailed,
+    /// OAuth account is already linked to a different user.
+    AccountAlreadyLinked(Provider),
 }
 
 impl std::fmt::Display for LinkError {
@@ -86,6 +88,9 @@ impl std::fmt::Display for LinkError {
             LinkError::Db(e) => write!(f, "database error: {e}"),
             LinkError::UsernameGenerationFailed => {
                 write!(f, "failed to generate a unique username after all attempts")
+            }
+            LinkError::AccountAlreadyLinked(provider) => {
+                write!(f, "The {provider} account is already linked to another user")
             }
         }
     }
@@ -96,6 +101,7 @@ impl std::error::Error for LinkError {
         match self {
             LinkError::Db(e) => Some(e),
             LinkError::UsernameGenerationFailed => None,
+            LinkError::AccountAlreadyLinked(_) => None,
         }
     }
 }
@@ -226,15 +232,10 @@ pub async fn link_or_create(
                     is_new_user: false,
                 });
             }
-            // Provider already linked to a different user — link to that user instead
-            // (user may have logged in via a different provider earlier in this session)
-            db::update_oauth_last_used(tx.deref_mut(), account.id).await?;
-            tx.commit().await.map_err(db::DbError::Connection)?;
-            return Ok(LinkResult {
-                user_id: account.user_id,
-                oauth_account_id: account.id,
-                is_new_user: false,
-            });
+            // Provider already linked to a different user — this is a conflict.
+            // Use info.provider directly (already the correct enum from the caller)
+            // instead of reconstructing from the DB string.
+            return Err(LinkError::AccountAlreadyLinked(info.provider.clone()));
         }
 
         let account = db::insert_oauth_account(
@@ -788,5 +789,196 @@ mod tests {
         // and links to the existing user — existing behavior preserved
         assert_eq!(result.user_id, user.id);
         assert!(!result.is_new_user);
+    }
+
+    // -- Tests for account conflict detection (AC12 / NOMS-006) --
+
+    #[tokio::test]
+    async fn test_link_or_create_conflict_different_user() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        // Create two users
+        let user_a = db::insert_user(
+            &pool,
+            &format!("user_a_{u}"),
+            "User A",
+            &format!("user_a_{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let user_b = db::insert_user(
+            &pool,
+            &format!("user_b_{u}"),
+            "User B",
+            &format!("user_b_{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Link Google account to user A
+        db::insert_oauth_account(
+            &pool,
+            user_a.id,
+            "google",
+            &format!("google-conflict-{u}"),
+            Some(&format!("user_a_{u}@example.com")),
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+
+        // User B attempts to link the same Google account — should error
+        let result = link_or_create(
+            &pool,
+            OauthUserInfo {
+                provider: Provider::Google,
+                provider_uid: format!("google-conflict-{u}"),
+                email: Some(format!("user_b_{u}@example.com")),
+                display_name: "User B".to_string(),
+                avatar_url: None,
+            },
+            Some(user_b.id),
+            None,
+        )
+        .await;
+
+        assert!(
+            matches!(result, Err(LinkError::AccountAlreadyLinked(Provider::Google))),
+            "expected AccountAlreadyLinked(Google), got: {result:?}"
+        );
+
+        // Verify no new oauth account was created for user B
+        let oauth_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM oauth_accounts WHERE user_id = $1 AND provider = 'google'",
+        )
+        .bind(user_b.id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(oauth_count, 0, "user B should have no google accounts");
+
+        // Verify user A still has the original account
+        let oauth_count_a: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM oauth_accounts WHERE user_id = $1 AND provider = 'google'",
+        )
+        .bind(user_a.id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(oauth_count_a, 1, "user A should still have the google account");
+    }
+
+    #[tokio::test]
+    async fn test_link_or_create_same_user_no_conflict() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        // Create a user with a Google account
+        let user = db::insert_user(
+            &pool,
+            &format!("sameuser_{u}"),
+            "Same User",
+            &format!("sameuser_{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let account = db::insert_oauth_account(
+            &pool,
+            user.id,
+            "google",
+            &format!("google-sameuser-{u}"),
+            Some(&format!("sameuser_{u}@example.com")),
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Same user re-links the same provider — should succeed (re-login case)
+        let result = link_or_create(
+            &pool,
+            OauthUserInfo {
+                provider: Provider::Google,
+                provider_uid: format!("google-sameuser-{u}"),
+                email: Some(format!("sameuser_{u}@example.com")),
+                display_name: "Same User".to_string(),
+                avatar_url: None,
+            },
+            Some(user.id),
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(result.user_id, user.id);
+        assert_eq!(result.oauth_account_id, account.id);
+        assert!(!result.is_new_user);
+    }
+
+    #[tokio::test]
+    async fn test_link_or_create_conflict_github() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        // Create two users
+        let user_a = db::insert_user(
+            &pool,
+            &format!("gh_user_a_{u}"),
+            "GH User A",
+            &format!("gh_a_{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let user_b = db::insert_user(
+            &pool,
+            &format!("gh_user_b_{u}"),
+            "GH User B",
+            &format!("gh_b_{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Link GitHub account to user A
+        db::insert_oauth_account(
+            &pool,
+            user_a.id,
+            "github",
+            &format!("github-conflict-{u}"),
+            Some(&format!("gh_a_{u}@example.com")),
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+
+        // User B attempts to link the same GitHub account — should error
+        let result = link_or_create(
+            &pool,
+            OauthUserInfo {
+                provider: Provider::GitHub,
+                provider_uid: format!("github-conflict-{u}"),
+                email: Some(format!("gh_b_{u}@example.com")),
+                display_name: "GH User B".to_string(),
+                avatar_url: None,
+            },
+            Some(user_b.id),
+            None,
+        )
+        .await;
+
+        assert!(
+            matches!(result, Err(LinkError::AccountAlreadyLinked(Provider::GitHub))),
+            "expected AccountAlreadyLinked(GitHub), got: {result:?}"
+        );
     }
 }

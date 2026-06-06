@@ -78,6 +78,9 @@ pub enum OAuthError {
     DbError(String),
     SessionError(String),
     LinkError(String),
+    /// OAuth account is already linked to a different user.
+    #[allow(dead_code)] // Used by OAuthError::AccountAlreadyLinked for IntoResponse redirect and testability
+    AccountAlreadyLinked(String), // provider name for redirect URL
 }
 
 impl std::fmt::Display for OAuthError {
@@ -93,6 +96,9 @@ impl std::fmt::Display for OAuthError {
             Self::DbError(e) => write!(f, "Database error: {e}"),
             Self::SessionError(e) => write!(f, "Session error: {e}"),
             Self::LinkError(e) => write!(f, "Link error: {e}"),
+            Self::AccountAlreadyLinked(provider) => {
+                write!(f, "The {provider} account is already linked to another user")
+            }
         }
     }
 }
@@ -110,7 +116,8 @@ impl OAuthError {
             | Self::InvalidRedirectUri(_)
             | Self::StateNotFound
             | Self::StateExpired
-            | Self::ProviderMismatch => self.to_string(),
+            | Self::ProviderMismatch
+            | Self::AccountAlreadyLinked(_) => self.to_string(),
 
             // Internal errors — generic message only
             Self::TokenExchange(_)
@@ -126,6 +133,24 @@ impl OAuthError {
 
 impl IntoResponse for OAuthError {
     fn into_response(self) -> axum::response::Response {
+        // Special case: AccountAlreadyLinked returns a redirect with error params
+        if let Self::AccountAlreadyLinked(provider) = &self {
+            let redirect_uri = format!(
+                "/settings/accounts?error=account_already_linked&provider={}",
+                provider
+            );
+            tracing::warn!(
+                error = %self,
+                provider = %provider,
+                "Account already linked conflict — redirecting with error"
+            );
+            return (
+                StatusCode::SEE_OTHER,
+                [("location", redirect_uri.as_str())],
+            )
+                .into_response();
+        }
+
         let status = match &self {
             Self::InvalidProvider(_) => StatusCode::BAD_REQUEST,
             Self::InvalidRedirectUri(_) => StatusCode::BAD_REQUEST,
@@ -137,6 +162,7 @@ impl IntoResponse for OAuthError {
             Self::DbError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::SessionError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::LinkError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::AccountAlreadyLinked(_) => unreachable!(), // handled above
         };
 
         // Log detailed error server-side for all errors
@@ -376,11 +402,34 @@ pub async fn callback_handler(
         .refresh_token()
         .map(|rt| rt.secret().to_string());
 
+    // Capture existing session cookie value to preserve on conflict redirect.
+    // This ensures the user stays logged in as their current account.
+    let existing_cookie_value = jar
+        .get(session::COOKIE_NAME)
+        .map(|c| c.to_string());
+
     // Link the OAuth identity to a user (or create a new one).
-    let link_result =
-        linking::link_or_create(&state.pool, user_info, existing_user_id, refresh_token)
-            .await
-            .map_err(|e| OAuthError::LinkError(e.to_string()))?;
+    let link_result = match linking::link_or_create(&state.pool, user_info, existing_user_id, refresh_token).await {
+        Ok(result) => result,
+        Err(linking::LinkError::AccountAlreadyLinked(provider)) => {
+            // Conflict: this provider is linked to a different user.
+            // Redirect to settings with error params, preserving the existing session.
+            let redirect_uri = format!(
+                "/settings/accounts?error=account_already_linked&provider={}",
+                provider
+            );
+            // Preserve existing session cookie so user stays logged in
+            let cookie_header = existing_cookie_value.unwrap_or_default();
+            return Ok((
+                StatusCode::SEE_OTHER,
+                [
+                    ("location", redirect_uri),
+                    ("set-cookie", cookie_header),
+                ],
+            ));
+        }
+        Err(e) => return Err(OAuthError::LinkError(e.to_string())),
+    };
 
     // Create a session JWT.
     let jwt = session::create_session(&state.pool, link_result.user_id)
@@ -436,6 +485,8 @@ async fn extract_google_user_info(
         .await
         .map_err(|e| OAuthError::UserInfoExtraction(format!("Google userinfo parse error: {e}")))?;
 
+    tracing::warn!("GOOGLE USERINFO RESPONSE: {:?}", resp);
+
     Ok(linking::OauthUserInfo {
         provider: linking::Provider::Google,
         provider_uid: resp["sub"].as_str().unwrap_or("").to_string(),
@@ -445,35 +496,61 @@ async fn extract_google_user_info(
     })
 }
 
-/// Extract user info from GitHub by calling the /user API endpoint.
+/// Extract user info from GitHub by calling the userinfo endpoint.
 ///
-/// Uses the access token from the OAuth token response.
+/// Uses GITHUB_USERINFO_URL if set (for mock server in dev), otherwise
+/// falls back to GitHub's API.
 async fn extract_github_user_info(
     token_response: &oauth2::basic::BasicTokenResponse,
     http_client: &reqwest::Client,
 ) -> Result<linking::OauthUserInfo, OAuthError> {
     let access_token = token_response.access_token().secret();
 
-    let github_api_url = env_or("GITHUB_API_URL", "https://api.github.com");
+    // Prefer GITHUB_USERINFO_URL (standard OIDC endpoint, used by mock server).
+    // Fall back to GITHUB_API_URL + /user (GitHub-specific API).
+    let userinfo_url = if let Ok(url) = std::env::var("GITHUB_USERINFO_URL") {
+        url
+    } else {
+        let api_url = env_or("GITHUB_API_URL", "https://api.github.com");
+        format!("{}/user", api_url)
+    };
 
     let resp: serde_json::Value = http_client
-        .get(format!("{}/user", github_api_url))
+        .get(&userinfo_url)
         .header("Authorization", format!("Bearer {}", access_token))
         .header("User-Agent", "noms-app")
         .header("Accept", "application/json")
         .send()
         .await
-        .map_err(|e| OAuthError::UserInfoExtraction(format!("GitHub API request failed: {e}")))?
+        .map_err(|e| OAuthError::UserInfoExtraction(format!("GitHub userinfo request failed: {e}")))?
         .json()
         .await
-        .map_err(|e| OAuthError::UserInfoExtraction(format!("GitHub API parse error: {e}")))?;
+        .map_err(|e| OAuthError::UserInfoExtraction(format!("GitHub userinfo parse error: {e}")))?;
 
+    tracing::warn!("GITHUB USERINFO RESPONSE: {:?}", resp);
+    tracing::warn!("GITHUB provider_uid candidates - email: {:?}, id: {:?}, sub: {:?}",
+        resp.get("email"), resp.get("id"), resp.get("sub"));
+
+    // Handle both OIDC claims (sub, name, picture) and GitHub API fields (id, login, avatar_url)
     Ok(linking::OauthUserInfo {
         provider: linking::Provider::GitHub,
-        provider_uid: resp["id"].to_string(),
+        // Use email as primary UID when available (mock servers often return
+        // a fixed 'sub' equal to the client_id). Fall back to id (GitHub API)
+        // or sub (OIDC) for production providers.
+        provider_uid: resp["email"].as_str()
+            .map(|s| s.to_string())
+            .or_else(|| resp["id"].as_i64().map(|n| n.to_string()))
+            .or_else(|| resp["id"].as_str().map(|s| s.to_string()))
+            .or_else(|| resp["sub"].as_str().map(|s| s.to_string()))
+            .unwrap_or_default(),
         email: resp["email"].as_str().map(|s| s.to_string()),
-        display_name: resp["login"].as_str().unwrap_or("").to_string(),
-        avatar_url: resp["avatar_url"].as_str().map(|s| s.to_string()),
+        display_name: resp["login"].as_str()
+            .or_else(|| resp["name"].as_str())
+            .unwrap_or("")
+            .to_string(),
+        avatar_url: resp["avatar_url"].as_str()
+            .or_else(|| resp["picture"].as_str())
+            .map(|s| s.to_string()),
     })
 }
 
@@ -636,6 +713,10 @@ mod tests {
             OAuthError::ProviderMismatch.sanitized_message(),
             "Provider mismatch"
         );
+        assert_eq!(
+            OAuthError::AccountAlreadyLinked("google".to_string()).sanitized_message(),
+            "The google account is already linked to another user"
+        );
     }
 
     #[test]
@@ -674,6 +755,29 @@ mod tests {
         );
         // But sanitized message should be generic
         assert!(!err.sanitized_message().contains("PG error"));
+    }
+
+    #[test]
+    fn test_account_already_linked_into_response_redirects() {
+        let err = OAuthError::AccountAlreadyLinked("github".to_string());
+        let response = err.into_response();
+        assert_eq!(response.status(), StatusCode::SEE_OTHER);
+
+        // Check the location header contains the redirect URL with error params
+        let headers = response.headers();
+        let location = headers
+            .get(axum::http::header::LOCATION)
+            .expect("should have location header")
+            .to_str()
+            .unwrap();
+        assert!(
+            location.contains("error=account_already_linked"),
+            "redirect URL should contain error param: {location}"
+        );
+        assert!(
+            location.contains("provider=github"),
+            "redirect URL should contain provider param: {location}"
+        );
     }
 
     /// Integration tests requiring a database (use `pgtemp`).
