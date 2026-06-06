@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::auth::context::{use_auth, AuthContext, UserProfile};
 use crate::components::base::{
-    Button, ButtonVariant, Card, Input, PageHeader, SettingsTab, SettingsTabs,
+    Avatar, AvatarSize, Button, ButtonVariant, Card, Input, PageHeader, SettingsTab, SettingsTabs,
 };
 use crate::components::AuthRequired;
 
@@ -144,6 +144,22 @@ pub fn SettingsProfile() -> Element {
         .as_ref()
         .map(|u| u.email.clone())
         .unwrap_or_default();
+
+    // Extract avatar URL for display
+    let avatar_url = auth
+        .current_user
+        .as_ref()
+        .and_then(|u| u.avatar_url.clone());
+
+    // Avatar name: use display_name, fall back to username if empty
+    let avatar_name = {
+        let dn = display_name();
+        if dn.trim().is_empty() {
+            username()
+        } else {
+            dn
+        }
+    };
 
     // Hold a reference to the auth context signal for updating after save (Issue #5)
     let mut auth_context = use_context::<Signal<AuthContext>>();
@@ -382,6 +398,30 @@ pub fn SettingsProfile() -> Element {
                         display: "flex",
                         flex_direction: "column",
                         gap: "var(--space-md)",
+                        // Avatar section
+                        div {
+                            display: "flex",
+                            flex_direction: "column",
+                            align_items: "center",
+                            gap: "var(--space-sm)",
+                            label {
+                                font_size: "14px",
+                                font_weight: "600",
+                                color: "var(--text-secondary)",
+                                align_self: "flex-start",
+                                "Avatar"
+                            }
+                            Avatar {
+                                size: AvatarSize::Large,
+                                src: avatar_url.clone(),
+                                username: avatar_name.clone(),
+                            }
+                            span {
+                                font_size: "12px",
+                                color: "var(--text-tertiary)",
+                                "Provided by your OAuth provider"
+                            }
+                        }
                         div {
                             display: "flex",
                             flex_direction: "column",

@@ -43,15 +43,18 @@ class.
 **Files:**
 - `src/pages/not_found.rs`
 
-### [ ] TC-07: Add avatar to profile settings page
+### [x] TC-07: Add avatar to profile settings page
 
 Avatar renders in navbar but not on `/settings/profile` page itself.
 User has no visual identity cue on the page where they edit their
 profile.
 
-**Fix:** Add `Avatar` component to profile page header, below
-`PageHeader`, using `auth_context.current_user.avatar_url` and
-`display_name` for initials fallback.
+**Fix:** Added centered `Avatar` component (Large, 64px) at the top
+of the profile form, above the display name field. Uses
+`auth.current_user.avatar_url` for image source, falls back to
+initials from `display_name` signal (with `username` as secondary
+fallback when display name is empty). Shows "Provided by your OAuth
+provider" hint text.
 
 **Files:**
 - `src/pages/settings/settings_profile.rs`
