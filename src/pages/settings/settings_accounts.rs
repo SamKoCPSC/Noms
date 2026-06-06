@@ -164,7 +164,7 @@ pub fn SettingsAccounts() -> Element {
                     "This {provider_display} account is already linked to another user. That account will need to be deleted before you can link this provider.",
                 )));
 
-              // Auto-dismiss after 10 seconds and clear URL params
+                // Auto-dismiss after 10 seconds and clear URL params
                 let err_signal = error_for_spawn;
                 let clear = clear_for_spawn;
                 spawn(async move {

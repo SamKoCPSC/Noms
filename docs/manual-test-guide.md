@@ -39,14 +39,21 @@
 | 20 | Concurrent request handling | | |
 | 21 | Rate limiting on OAuth endpoints | | |
 | 22 | Account linking flow (2nd provider) | | |
-| 23 | Cross-tab session revocation | | |
-| 24 | Logout redirect URI validation | | |
-| 25 | HTTP method enforcement on APIs | | |
-| 26 | Theme toggle (dark/light mode) | | |
-| 27 | Responsive navbar (mobile) | | |
-| 28 | OAuth connect buttons from settings | | |
-| 29 | 404 handling for unknown routes | | |
-| 30 | Settings tabs navigation | | |
+| 23 | Mock OAuth issuer separation (distinct identities) | | |
+| 24 | Account linking with distinct provider identities | | |
+| 25 | Unlink one provider (keep other linked) | | |
+| 26 | Linking same provider twice (blocked) | | |
+| 27 | Link provider owned by different account (collision) | | |
+| 28 | Provider available after account deletion | | |
+| 29 | OAuth callback URL verification (issuer-prefixed) | | |
+| 30 | Cross-tab session revocation | | |
+| 31 | Logout redirect URI validation | | |
+| 32 | HTTP method enforcement on APIs | | |
+| 33 | Theme toggle (dark/light mode) | | |
+| 34 | Responsive navbar (mobile) | | |
+| 35 | OAuth connect buttons from settings | | |
+| 36 | 404 handling for unknown routes | | |
+| 37 | Settings tabs navigation | | |
 
 ---
 
@@ -464,7 +471,261 @@
 
 ---
 
-### TC-23: Cross-Tab Session Revocation
+### TC-23: Mock OAuth Issuer Separation (Google vs GitHub Distinct Identities)
+
+**Background:** The mock OAuth2 server uses issuer-prefixed URLs (`/google/*`, `/github/*`) to return different user identities per provider. This test verifies the separation works correctly.
+
+**Steps (Verify Google Identity):**
+1. Open Chrome DevTools Network tab
+2. Navigate to `http://localhost:8082/google/.well-known/openid-configuration`
+3. Check the response JSON
+
+**Expected (Google):**
+- `issuer`: `http://localhost:8082/google`
+- `authorization_endpoint`: `http://localhost:8082/google/authorize`
+- `token_endpoint`: `http://localhost:8082/google/token`
+- `userinfo_endpoint`: `http://localhost:8082/google/userinfo`
+
+**Steps (Verify GitHub Identity):**
+1. Navigate to `http://localhost:8082/github/.well-known/openid-configuration`
+
+**Expected (GitHub):**
+- `issuer`: `http://localhost:8082/github`
+- `authorization_endpoint`: `http://localhost:8082/github/authorize`
+- `token_endpoint`: `http://localhost:8082/github/token`
+- `userinfo_endpoint`: `http://localhost:8082/github/userinfo`
+
+**Steps (Verify Distinct User Claims):**
+1. Log in with Google, note the email shown in profile (should be `google-user@example.com`)
+2. Log out, clear cookies
+3. Log in with GitHub, note the email shown in profile (should be `github-user@example.com`)
+
+**Expected:**
+- Google login creates user with `google-user@example.com`
+- GitHub login creates user with `github-user@example.com`
+- These are two different accounts (different `provider_uid` values: `google-user-123` vs `github-user-456`)
+
+**Verification:** Check `docker-compose.yml` `JSON_CONFIG` — `tokenCallbacks` defines separate claims per issuer:
+```json
+{
+  "tokenCallbacks": {
+    "google": { "sub": "google-user-123", "email": "google-user@example.com" },
+    "github": { "sub": "github-user-456", "email": "github-user@example.com" }
+  }
+}
+```
+
+---
+
+### TC-24: Account Linking with Distinct Provider Identities
+
+**Steps:**
+1. Clear cookies and storage
+2. Log in with Google
+3. Navigate to `/settings/accounts`
+4. Verify Google account is listed with email `google-user@example.com`
+5. Click "Connect GitHub"
+6. Complete mock OAuth2 flow for GitHub (enter any username, click Sign-in)
+7. Observe redirect back to `/settings/accounts`
+
+**Expected:**
+- Both Google and GitHub appear in linked accounts
+- Google shows `google-user@example.com`
+- GitHub shows `github-user@example.com`
+- Different emails confirm distinct provider identities are linked to the same Noms account
+- "Connect additional accounts" section is empty (no buttons)
+
+**Steps (Verify Linking in Database):**
+1. Open Chrome DevTools Network tab
+2. Refresh `/settings/accounts`
+3. Find the `GET /api/user_profile` request
+4. Check the response JSON
+
+**Expected:**
+- Response contains both linked providers with distinct `provider_uid` values
+- `provider_uid` for Google starts with or contains `google-user-123`
+- `provider_uid` for GitHub starts with or contains `github-user-456`
+
+---
+
+### TC-25: Unlink One Provider (Keep Other Linked)
+
+**Prerequisites:** Both Google and GitHub linked (from TC-24).
+
+**Steps:**
+1. Navigate to `/settings/accounts`
+2. Click "Unlink" on the GitHub account
+3. Confirm unlink dialog
+
+**Expected:**
+- GitHub account is removed from the list
+- Google account remains linked
+- Success message: "GitHub account unlinked successfully"
+- User remains logged in (Google account still active)
+- "Connect additional accounts" section shows "Connect GitHub" button again
+
+**Steps (Verify Can Still Login with Remaining Provider):**
+1. Log out
+2. Log in with Google
+3. Navigate to `/settings/accounts`
+
+**Expected:**
+- Only Google is listed
+- User is logged into the same account (profile data preserved)
+- GitHub is shown as available to connect
+
+---
+
+### TC-26: Linking Same Provider Twice (Should Be Blocked)
+
+**Steps:**
+1. Clear cookies and storage
+2. Log in with Google
+3. Navigate to `/settings/accounts`
+4. Verify "Connect Google" button is NOT shown (already linked)
+5. Try to directly navigate to `/auth/google/start?redirect_uri=/settings/accounts`
+
+**Expected:**
+- "Connect Google" button hidden on settings page (already linked)
+- If navigating directly to `/auth/google/start`, the system recognizes the existing Google link
+- User is either redirected back to settings, or the existing session is reused
+- No duplicate provider link is created in the database
+
+**Verification:** Check `src/auth/linking.rs` — `link_or_create` checks for existing `provider_uid` before creating new link. If user already exists with that provider, returns existing user instead of creating duplicate.
+
+---
+
+### TC-27: Link Provider Already Owned by Different Account (Cross-Account Collision)
+
+**Background:** If User A (logged in via Google) tries to link a GitHub account that's already the primary login for User B, the system must reject the link. Accounts should never be silently merged.
+
+**Setup (Create Two Separate Accounts):**
+1. Clear cookies and storage
+2. Log in with Google → creates **Account A** (email: `google-user@example.com`)
+3. Update display name to "Google User" so you can identify this account later
+4. Log out, clear cookies
+5. Log in with GitHub → creates **Account B** (email: `github-user@example.com`)
+6. Update display name to "GitHub User"
+7. Log out, clear cookies
+
+**Steps (Attempt Cross-Account Link):**
+1. Log in with Google (Account A)
+2. Navigate to `/settings/accounts`
+3. Verify only Google is listed, display name is "Google User"
+4. Click "Connect GitHub"
+5. Complete mock OAuth2 flow for GitHub
+
+**Expected:**
+- The system detects that the GitHub `provider_uid` (`github-user-456`) is already linked to Account B
+- Linking is **rejected** — GitHub does NOT appear in Account A's linked accounts
+- Error message displayed: account already belongs to another user, or similar warning
+- Account A still only has Google linked
+- Account B is unaffected (GitHub still linked to "GitHub User")
+
+**Steps (Verify Account B Is Unchanged):**
+1. Log out, clear cookies
+2. Log in with GitHub
+3. Navigate to `/settings/profile`
+
+**Expected:**
+- Display name is still "GitHub User" (Account B)
+- Not merged with Account A
+- `/settings/accounts` shows only GitHub linked
+
+**Verification:** Check `src/auth/linking.rs` — `link_or_create` must check if the `provider_uid` exists and belongs to a **different** `user_id`. If so, return an error instead of creating a duplicate link or merging accounts. The key logic:
+```
+1. Look up provider_uid in oauth_accounts table
+2. If found AND belongs to current user → return existing user (normal login)
+3. If found AND belongs to different user → ERROR, reject link
+4. If not found → create new link (normal linking)
+```
+
+---
+
+### TC-28: Provider Becomes Available After Account Deletion
+
+**Background:** When Account B (from TC-27) is deleted, its OAuth provider links are removed. Account A should then be able to link that provider since the collision no longer exists.
+
+**Prerequisites:** Two separate accounts exist from TC-27 setup:
+- **Account A**: Google only, display name "Google User"
+- **Account B**: GitHub only, display name "GitHub User"
+
+**Steps (Delete Account B):**
+1. Log in with GitHub (Account B)
+2. Navigate to `/settings/profile`
+3. Scroll to danger zone, click "Delete Account"
+4. Complete 3-layer confirmation (confirm dialog → type "delete githubuser" → final warning)
+5. Verify redirect to home page, logged out
+
+**Expected (Deletion):**
+- Account B and all its data are deleted
+- GitHub `provider_uid` (`github-user-456`) is removed from `oauth_accounts` table
+- Session is cleared
+
+**Steps (Link Freed Provider to Account A):**
+1. Clear cookies
+2. Log in with Google (Account A)
+3. Navigate to `/settings/accounts`
+4. Verify display name is "Google User", only Google is linked
+5. Click "Connect GitHub"
+6. Complete mock OAuth2 flow for GitHub
+
+**Expected (Linking):**
+- Linking **succeeds** — the GitHub provider is no longer blocked
+- Both Google and GitHub appear in Account A's linked accounts
+- GitHub shows `github-user@example.com`
+- Account A now owns the GitHub `provider_uid` that previously belonged to deleted Account B
+- "Connect additional accounts" section is empty
+
+**Steps (Verify Deleted Account Cannot Login Again):**
+1. Log out, clear cookies
+2. Try to log in with GitHub
+
+**Expected:**
+- User is logged into **Account A** (not a new account, not Account B)
+- Display name is "Google User"
+- `/settings/accounts` shows both Google and GitHub linked
+
+**Verification:** Check account deletion logic — must cascade-delete rows from `oauth_accounts` table when user is deleted. The `oauth_accounts` table should have a foreign key with `ON DELETE CASCADE` to the `users` table, or the deletion code must explicitly clean up OAuth links before deleting the user.
+
+---
+
+### TC-29: OAuth Callback URL Verification (Issuer-Prefixed)
+
+**Steps:**
+1. Clear cookies and storage
+2. Open Chrome DevTools Network tab
+3. Click "Sign In" > "Continue with Google"
+4. Observe the redirect URL in the Network tab
+
+**Expected (Google):**
+- Authorization redirect goes to: `http://localhost:8082/google/authorize?...`
+- Callback URL in query params: `redirect_uri=http://localhost:8080/auth/google/callback`
+- After mock login, callback hits: `http://localhost:8080/auth/google/callback?code=...&state=...`
+
+**Steps (GitHub):**
+1. Log out, clear cookies
+2. Click "Sign In" > "Continue with GitHub"
+3. Observe the redirect URL
+
+**Expected (GitHub):**
+- Authorization redirect goes to: `http://localhost:8082/github/authorize?...`
+- Callback URL in query params: `redirect_uri=http://localhost:8080/auth/github/callback`
+- After mock login, callback hits: `http://localhost:8080/auth/github/callback?code=...&state=...`
+
+**Verification:** Check `.env.local` — URLs must use issuer prefixes:
+```
+GOOGLE_AUTH_URL=http://localhost:8082/google/authorize
+GOOGLE_TOKEN_URL=http://localhost:8082/google/token
+GOOGLE_USERINFO_URL=http://localhost:8082/google/userinfo
+GITHUB_AUTH_URL=http://localhost:8082/github/authorize
+GITHUB_TOKEN_URL=http://localhost:8082/github/token
+GITHUB_USERINFO_URL=http://localhost:8082/github/userinfo
+```
+
+---
+
+### TC-30: Cross-Tab Session Revocation
 
 **Steps:**
 1. Log in via any provider
@@ -483,7 +744,7 @@
 
 ---
 
-### TC-24: Logout Redirect URI Validation
+### TC-31: Logout Redirect URI Validation
 
 **Steps (Valid):**
 1. Log in
@@ -526,7 +787,7 @@
 
 ---
 
-### TC-25: HTTP Method Enforcement on APIs
+### TC-32: HTTP Method Enforcement on APIs
 
 **Steps:**
 1. Log in
@@ -545,7 +806,7 @@
 
 ---
 
-### TC-26: Theme Toggle (Dark/Light Mode)
+### TC-33: Theme Toggle (Dark/Light Mode)
 
 **Steps:**
 1. Log in
@@ -579,7 +840,7 @@
 
 ---
 
-### TC-27: Responsive Navbar (Mobile)
+### TC-34: Responsive Navbar (Mobile)
 
 **Steps:**
 1. Log in
@@ -611,7 +872,7 @@
 
 ---
 
-### TC-28: OAuth Connect Buttons from Settings
+### TC-35: OAuth Connect Buttons from Settings
 
 **Steps (No Accounts):**
 1. Log in with Google
@@ -642,7 +903,7 @@
 
 ---
 
-### TC-29: 404 Handling for Unknown Routes
+### TC-36: 404 Handling for Unknown Routes
 
 **Steps:**
 1. Navigate to a non-existent route: `/nonexistent`
@@ -661,7 +922,7 @@
 
 ---
 
-### TC-30: Settings Tabs Navigation
+### TC-37: Settings Tabs Navigation
 
 **Steps:**
 1. Log in
@@ -718,6 +979,12 @@ Run these after any code change:
 - [ ] AuthRequired prompt appears on protected routes when logged out
 - [ ] Unauthenticated users cannot access server functions
 - [ ] Account linking works (2nd provider)
+- [ ] Google and GitHub return distinct user identities (TC-23)
+- [ ] Linked accounts show different emails per provider (TC-24)
+- [ ] Can unlink one provider, keep other (TC-25)
+- [ ] Cannot link same provider twice (TC-26)
+- [ ] Cannot link provider owned by different account (TC-27)
+- [ ] Provider becomes linkable after account deletion (TC-28)
 - [ ] Theme toggle persists across reload
 - [ ] Mobile hamburger menu works
 

@@ -79,7 +79,8 @@ pub enum OAuthError {
     SessionError(String),
     LinkError(String),
     /// OAuth account is already linked to a different user.
-    #[allow(dead_code)] // Used by OAuthError::AccountAlreadyLinked for IntoResponse redirect and testability
+    #[allow(dead_code)]
+    // Used by OAuthError::AccountAlreadyLinked for IntoResponse redirect and testability
     AccountAlreadyLinked(String), // provider name for redirect URL
 }
 
@@ -97,7 +98,10 @@ impl std::fmt::Display for OAuthError {
             Self::SessionError(e) => write!(f, "Session error: {e}"),
             Self::LinkError(e) => write!(f, "Link error: {e}"),
             Self::AccountAlreadyLinked(provider) => {
-                write!(f, "The {provider} account is already linked to another user")
+                write!(
+                    f,
+                    "The {provider} account is already linked to another user"
+                )
             }
         }
     }
@@ -144,11 +148,7 @@ impl IntoResponse for OAuthError {
                 provider = %provider,
                 "Account already linked conflict — redirecting with error"
             );
-            return (
-                StatusCode::SEE_OTHER,
-                [("location", redirect_uri.as_str())],
-            )
-                .into_response();
+            return (StatusCode::SEE_OTHER, [("location", redirect_uri.as_str())]).into_response();
         }
 
         let status = match &self {
@@ -215,12 +215,18 @@ pub fn build_oauth_clients(base_url: &str) -> (ConfiguredClient, ConfiguredClien
         "mock-google-client-secret",
     )))
     .set_auth_uri(
-        AuthUrl::new(env_or("GOOGLE_AUTH_URL", "http://localhost:8082/authorize"))
-            .expect("invalid Google auth URL"),
+        AuthUrl::new(env_or(
+            "GOOGLE_AUTH_URL",
+            "http://localhost:8082/google/authorize",
+        ))
+        .expect("invalid Google auth URL"),
     )
     .set_token_uri(
-        TokenUrl::new(env_or("GOOGLE_TOKEN_URL", "http://localhost:8082/token"))
-            .expect("invalid Google token URL"),
+        TokenUrl::new(env_or(
+            "GOOGLE_TOKEN_URL",
+            "http://localhost:8082/google/token",
+        ))
+        .expect("invalid Google token URL"),
     )
     .set_redirect_uri(
         RedirectUrl::new(format!("{}/auth/google/callback", base_url))
@@ -236,12 +242,18 @@ pub fn build_oauth_clients(base_url: &str) -> (ConfiguredClient, ConfiguredClien
         "mock-github-client-secret",
     )))
     .set_auth_uri(
-        AuthUrl::new(env_or("GITHUB_AUTH_URL", "http://localhost:8082/authorize"))
-            .expect("invalid GitHub auth URL"),
+        AuthUrl::new(env_or(
+            "GITHUB_AUTH_URL",
+            "http://localhost:8082/github/authorize",
+        ))
+        .expect("invalid GitHub auth URL"),
     )
     .set_token_uri(
-        TokenUrl::new(env_or("GITHUB_TOKEN_URL", "http://localhost:8082/token"))
-            .expect("invalid GitHub token URL"),
+        TokenUrl::new(env_or(
+            "GITHUB_TOKEN_URL",
+            "http://localhost:8082/github/token",
+        ))
+        .expect("invalid GitHub token URL"),
     )
     .set_redirect_uri(
         RedirectUrl::new(format!("{}/auth/github/callback", base_url))
@@ -404,12 +416,17 @@ pub async fn callback_handler(
 
     // Capture existing session cookie value to preserve on conflict redirect.
     // This ensures the user stays logged in as their current account.
-    let existing_cookie_value = jar
-        .get(session::COOKIE_NAME)
-        .map(|c| c.to_string());
+    let existing_cookie_value = jar.get(session::COOKIE_NAME).map(|c| c.to_string());
 
     // Link the OAuth identity to a user (or create a new one).
-    let link_result = match linking::link_or_create(&state.pool, user_info, existing_user_id, refresh_token).await {
+    let link_result = match linking::link_or_create(
+        &state.pool,
+        user_info,
+        existing_user_id,
+        refresh_token,
+    )
+    .await
+    {
         Ok(result) => result,
         Err(linking::LinkError::AccountAlreadyLinked(provider)) => {
             // Conflict: this provider is linked to a different user.
@@ -422,10 +439,7 @@ pub async fn callback_handler(
             let cookie_header = existing_cookie_value.unwrap_or_default();
             return Ok((
                 StatusCode::SEE_OTHER,
-                [
-                    ("location", redirect_uri),
-                    ("set-cookie", cookie_header),
-                ],
+                [("location", redirect_uri), ("set-cookie", cookie_header)],
             ));
         }
         Err(e) => return Err(OAuthError::LinkError(e.to_string())),
@@ -468,7 +482,7 @@ async fn extract_google_user_info(
     let access_token = token_response.access_token().secret();
     let userinfo_url = env_or(
         "GOOGLE_USERINFO_URL",
-        "https://www.googleapis.com/oauth2/v3/userinfo",
+        "http://localhost:8082/google/userinfo",
     );
 
     // Use the shared HTTP client for the userinfo endpoint.
@@ -484,12 +498,18 @@ async fn extract_google_user_info(
         .json()
         .await
         .map_err(|e| OAuthError::UserInfoExtraction(format!("Google userinfo parse error: {e}")))?;
-
-    tracing::warn!("GOOGLE USERINFO RESPONSE: {:?}", resp);
+    tracing::error!(">>> GOOGLE USERINFO RAW: {} <<<", resp);
 
     Ok(linking::OauthUserInfo {
         provider: linking::Provider::Google,
-        provider_uid: resp["sub"].as_str().unwrap_or("").to_string(),
+        // Use email as primary UID when available (mock servers often return
+        // a fixed 'sub' equal to the client_id). Fall back to sub (OIDC standard)
+        // for production providers.
+        provider_uid: resp["email"]
+            .as_str()
+            .map(|s| s.to_string())
+            .or_else(|| resp["sub"].as_str().map(|s| s.to_string()))
+            .unwrap_or_default(),
         email: resp["email"].as_str().map(|s| s.to_string()),
         display_name: resp["name"].as_str().unwrap_or("").to_string(),
         avatar_url: resp["picture"].as_str().map(|s| s.to_string()),
@@ -522,14 +542,12 @@ async fn extract_github_user_info(
         .header("Accept", "application/json")
         .send()
         .await
-        .map_err(|e| OAuthError::UserInfoExtraction(format!("GitHub userinfo request failed: {e}")))?
+        .map_err(|e| {
+            OAuthError::UserInfoExtraction(format!("GitHub userinfo request failed: {e}"))
+        })?
         .json()
         .await
         .map_err(|e| OAuthError::UserInfoExtraction(format!("GitHub userinfo parse error: {e}")))?;
-
-    tracing::warn!("GITHUB USERINFO RESPONSE: {:?}", resp);
-    tracing::warn!("GITHUB provider_uid candidates - email: {:?}, id: {:?}, sub: {:?}",
-        resp.get("email"), resp.get("id"), resp.get("sub"));
 
     // Handle both OIDC claims (sub, name, picture) and GitHub API fields (id, login, avatar_url)
     Ok(linking::OauthUserInfo {
@@ -537,18 +555,21 @@ async fn extract_github_user_info(
         // Use email as primary UID when available (mock servers often return
         // a fixed 'sub' equal to the client_id). Fall back to id (GitHub API)
         // or sub (OIDC) for production providers.
-        provider_uid: resp["email"].as_str()
+        provider_uid: resp["email"]
+            .as_str()
             .map(|s| s.to_string())
             .or_else(|| resp["id"].as_i64().map(|n| n.to_string()))
             .or_else(|| resp["id"].as_str().map(|s| s.to_string()))
             .or_else(|| resp["sub"].as_str().map(|s| s.to_string()))
             .unwrap_or_default(),
         email: resp["email"].as_str().map(|s| s.to_string()),
-        display_name: resp["login"].as_str()
+        display_name: resp["login"]
+            .as_str()
             .or_else(|| resp["name"].as_str())
             .unwrap_or("")
             .to_string(),
-        avatar_url: resp["avatar_url"].as_str()
+        avatar_url: resp["avatar_url"]
+            .as_str()
             .or_else(|| resp["picture"].as_str())
             .map(|s| s.to_string()),
     })

@@ -90,7 +90,10 @@ impl std::fmt::Display for LinkError {
                 write!(f, "failed to generate a unique username after all attempts")
             }
             LinkError::AccountAlreadyLinked(provider) => {
-                write!(f, "The {provider} account is already linked to another user")
+                write!(
+                    f,
+                    "The {provider} account is already linked to another user"
+                )
             }
         }
     }
@@ -848,7 +851,10 @@ mod tests {
         .await;
 
         assert!(
-            matches!(result, Err(LinkError::AccountAlreadyLinked(Provider::Google))),
+            matches!(
+                result,
+                Err(LinkError::AccountAlreadyLinked(Provider::Google))
+            ),
             "expected AccountAlreadyLinked(Google), got: {result:?}"
         );
 
@@ -870,7 +876,10 @@ mod tests {
         .fetch_one(&pool)
         .await
         .unwrap();
-        assert_eq!(oauth_count_a, 1, "user A should still have the google account");
+        assert_eq!(
+            oauth_count_a, 1,
+            "user A should still have the google account"
+        );
     }
 
     #[tokio::test]
@@ -977,7 +986,10 @@ mod tests {
         .await;
 
         assert!(
-            matches!(result, Err(LinkError::AccountAlreadyLinked(Provider::GitHub))),
+            matches!(
+                result,
+                Err(LinkError::AccountAlreadyLinked(Provider::GitHub))
+            ),
             "expected AccountAlreadyLinked(GitHub), got: {result:?}"
         );
     }

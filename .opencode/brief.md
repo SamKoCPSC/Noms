@@ -1,579 +1,392 @@
 # Task Brief
 
 ## Task Description
-
-Implement AC12 from NOMS-006: Account conflict warning on OAuth link (ENHANCEMENT).
-
-**Requirements:**
-- When a logged-in user attempts to link a provider (Google/GitHub) that is already linked to a *different* user account, the callback detects the conflict
-- Callback redirects to `/settings/accounts?error=account_already_linked&provider={provider}` preserving the current user's session
-- Frontend displays an error notification: "This {provider} account is already linked to another user. That account will need to be deleted before you can link this provider."
-- User remains signed in as their current account (no session change)
-- The OAuth flow is discarded (no new account created, no linking attempted)
-- Linking the same provider to the current user still works when no conflict exists
-
-**Key files involved:**
-- `src/auth/linking.rs` - `link_or_create()` currently silently redirects to the other user when provider is linked to a different user (step 0). Needs to return an error instead.
-- `src/auth/oauth.rs` - `callback_handler()` needs to handle the new conflict error and redirect with error params instead of creating a new session
-- `src/pages/settings/settings_accounts.rs` - Frontend needs to read URL query params and display error notification
-- `src/auth/oauth.rs` - `OAuthError` needs a new variant for account conflict
-- `src/auth/linking.rs` - `LinkError` needs a new variant for account already linked to different user
+Fix the local mock OAuth configuration so that Google and GitHub providers are correctly separated using issuer-prefixed URLs on the Navikt mock-oauth2-server. Currently both providers share the same `/authorize`, `/token`, and `/userinfo` endpoints, causing `provider_uid` collisions and preventing proper testing of cross-provider linking scenarios. The fix should use issuer-prefixed URLs (e.g., `/google/authorize`, `/github/authorize`) so each provider gets independent token signing keys and claims. Also update userinfo extraction logic if needed to handle issuer-specific claim formats. After implementation, verify the fix works end-to-end using Chrome DevTools against the running local app and mock server.
 
 ## Phase 0: Implementation Blueprint
-## Research Findings
+## Phase 0: Implementation Blueprint
 
-### Bug Location: `src/auth/linking.rs` lines 229-237
-In `link_or_create()`, step (0) of the linking logic:
-```rust
-// Step 0: Check if this OAuth account is already linked to ANY user
-let existing_account = db.get_oauth_account_by_provider_and_id(&tx, &provider, &provider_account_id).await?;
-if let Some(account) = existing_account {
-    if account.user_id == user.id {
-        return Ok(account.user_id);  // OK - already linked to current user
-    } else {
-        // BUG: returns OTHER user's ID — causes silent session hijack
-        return Ok(account.user_id);
-    }
-}
+### 1. Problem Analysis
+
+**Root cause:** Both Google and GitHub OAuth clients point to the same mock server endpoints (`/authorize`, `/token`, `/userinfo`). The Navikt mock-oauth2-server treats the first path segment of a URL as the `issuerId`. Without issuer prefixes, both providers use the implicit `default` issuer, which means:
+- Both providers share the same token signing key
+- Both providers return the same `sub` claim from `/userinfo`
+- The `provider_uid` extraction (which falls back to `sub`) produces identical values for both providers
+- This prevents testing cross-provider account linking scenarios
+
+**Current state (`.env.local` lines 20-31):**
 ```
-When `account.user_id != user.id`, the code returns the OTHER user's ID. The caller (`callback_handler`) then creates a session for that other user, silently hijacking the account.
-
-### Existing Patterns
-
-**Error handling** (`src/auth/oauth.rs` lines 70-85): Domain-specific enum with `Display`, `Error`, `sanitized_message()`, and `IntoResponse`. `LinkError` already exists as a variant.
-
-**Query param extraction** (`src/pages/login.rs` lines 82-140): Dual WASM/server pattern:
-- WASM path: `web_sys::window().unwrap().location().search_params().get(...)`
-- Server path: `FullstackContext::current().parts_mut().uri.query().and_then(|q| ...)`
-
-**Error notification UI** (`src/pages/settings/settings_accounts.rs` lines 355-378): Red banner with `signal::Signal` for error/success messages, auto-dismiss capability.
-
-**Session cookie handling** (`src/auth/session.rs`): `COOKIE_NAME` constant at line 17, `build_session_cookie()` at line 210. In `callback_handler`, existing session extracted at lines 335-341 via `session::verify_session()`.
-
-**Test infrastructure** (`src/test_utils.rs`): `setup_test_db()` for isolated PG databases, `uid()` for unique suffixes. DB helpers in `src/db/mod.rs`: `insert_user`, `insert_oauth_account`, `get_oauth_account_by_provider_and_id`, etc.
-
-### Web-sys Features
-`Cargo.toml` line 32: web-sys features include "Location" (already present). "History" feature available if needed for `history.push_state()` to clear URL params.
-
----
-
-## Architecture Decision
-
-**Error Flow:**
-1. `LinkError::AccountAlreadyLinked(Provider)` — new variant in `linking.rs`
-2. `OAuthError::AccountAlreadyLinked(String)` — new variant in `oauth.rs` (String for provider name in redirect URL)
-3. `callback_handler` catches this error, preserves existing session cookie, redirects to `/settings/accounts?error=account_already_linked&provider={provider}`
-4. Frontend reads query params, displays error notification, clears params on dismiss
-
-**Key Design Choices:**
-- Capture raw cookie string via `jar.get(session::COOKIE_NAME).map(|c| c.to_string())` BEFORE calling `link_or_create`, so we can restore it on conflict
-- Use `StatusCode::CONFLICT` (409) for the error response variant; redirect uses `SEE_OTHER` (303)
-- Provider name in URL is lowercase string ("google", "github") — simple, no enum serialization needed
-- Frontend uses `location.set_href()` to clear URL params on dismiss (simpler than `history.push_state()`)
-
----
-
-## Files to Modify
-
-### 1. `src/auth/linking.rs`
-**Change A:** Add new variant to `LinkError` enum (line 75)
-```rust
-/// OAuth account is already linked to a different user
-AccountAlreadyLinked(Provider),
+GOOGLE_AUTH_URL=http://localhost:8082/authorize
+GOOGLE_TOKEN_URL=http://localhost:8082/token
+GOOGLE_USERINFO_URL=http://localhost:8082/userinfo
+GITHUB_AUTH_URL=http://localhost:8082/authorize
+GITHUB_TOKEN_URL=http://localhost:8082/token
+GITHUB_USERINFO_URL=http://localhost:8082/userinfo
 ```
 
-**Change B:** Fix bug in `link_or_create()` (lines 229-237)
-Replace the `else` branch that returns `Ok(account.user_id)` with:
-```rust
-return Err(LinkError::AccountAlreadyLinked(account.provider));
+**Desired state:** Each provider gets its own issuer (`google` and `github`), with independent signing keys and claims:
 ```
-The `account` variable already has `.provider` field available.
-
-### 2. `src/auth/oauth.rs`
-**Change A:** Add new variant to `OAuthError` enum (line 70)
-```rust
-/// OAuth account is already linked to a different user
-AccountAlreadyLinked(String),  // provider name for redirect URL
+GOOGLE_AUTH_URL=http://localhost:8082/google/authorize
+GOOGLE_TOKEN_URL=http://localhost:8082/google/token
+GOOGLE_USERINFO_URL=http://localhost:8082/google/userinfo
+GITHUB_AUTH_URL=http://localhost:8082/github/authorize
+GITHUB_TOKEN_URL=http://localhost:8082/github/token
+GITHUB_USERINFO_URL=http://localhost:8082/github/userinfo
 ```
 
-**Change B:** Implement `Display` for new variant (in the `Display` impl block)
-```rust
-OAuthError::AccountAlreadyLinked(provider) => {
-    write!(f, "The {} account is already linked to another user", provider)
-}
+### 2. Research Findings
+
+#### Navikt mock-oauth2-server issuer architecture
+- **Source:** [navikt/mock-oauth2-server README](https://github.com/navikt/mock-oauth2-server)
+- The first path segment in any URL is the `issuerId` (e.g., `/google/authorize` → issuerId = `google`)
+- Each issuer gets its own token signing key automatically
+- The `/userinfo` endpoint returns the claims from the Bearer token (access token) — it does NOT use `requestMappings`
+- `tokenCallbacks` in `JSON_CONFIG` configure what claims are returned when a `/token` request matches certain parameters
+- With `interactiveLogin: true`, the user can input custom claims in the login form
+- Without `tokenCallbacks`, the default behavior returns a random UUID as `sub`
+- The `tid` claim is auto-set to the `issuerId`
+
+#### Current userinfo extraction logic (`src/auth/oauth.rs`)
+- **Google (lines 460-502):** Calls `GOOGLE_USERINFO_URL` with Bearer token, extracts `email` as primary `provider_uid`, falls back to `sub`. Also extracts `name` and `picture`.
+- **GitHub (lines 508-556):** Calls `GITHUB_USERINFO_URL` (env var) or falls back to `GITHUB_API_URL/user`. Extracts `email` as primary `provider_uid`, falls back to `id` (GitHub API) or `sub` (OIDC). Also extracts `login`/`name` and `avatar_url`/`picture`.
+
+#### Current `build_oauth_clients` defaults (`src/auth/oauth.rs`, lines 208-252)
+- Google auth/token fallback: `http://localhost:8082/authorize`, `http://localhost:8082/token`
+- GitHub auth/token fallback: `http://localhost:8082/authorize`, `http://localhost:8082/token` (same!)
+- Google userinfo default: `https://www.googleapis.com/oauth2/v3/userinfo` (production URL — always overridden by env var in dev)
+- GitHub userinfo: env var `GITHUB_USERINFO_URL` checked first, falls back to `GITHUB_API_URL/user`
+
+#### Linking implications (`src/auth/linking.rs`)
+- `link_or_create()` uses `info.provider_uid` (line 221, 262, 282, 322) to look up/create OAuth accounts
+- The `provider` enum is already distinct (`Provider::Google` vs `Provider::GitHub`)
+- No changes needed to linking.rs — the fix is purely in URL configuration and userinfo extraction
+
+### 3. Files to Modify
+
+#### A. `docker-compose.yml` (lines 50-61) — Add JSON_CONFIG for mock-oauth service
+
+**Change:** Add `JSON_CONFIG` environment variable to configure token callbacks with distinct claims per issuer.
+
+```yaml
+  mock-oauth:
+    image: ghcr.io/navikt/mock-oauth2-server:latest
+    container_name: noms-mock-oauth
+    ports:
+      - "8082:8080"
+    environment:
+      - LOG_LEVEL=info
+      - JSON_CONFIG={"interactiveLogin":true,"httpServer":"NettyWrapper","tokenCallbacks":[{"issuerId":"google","tokenExpiry":3600,"requestMappings":[{"requestParam":"grant_type","match":"*","claims":{"sub":"google-user-123","email":"google-user@example.com","name":"Google User","picture":"https://example.com/google-avatar.png","aud":["mock-google-client-id"]}]}]},{"issuerId":"github","tokenExpiry":3600,"requestMappings":[{"requestParam":"grant_type","match":"*","claims":{"sub":"github-user-456","email":"github-user@example.com","name":"GitHub User","picture":"https://example.com/github-avatar.png","aud":["mock-github-client-id"]}]}]}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/isalive || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 ```
 
-**Change C:** Implement `sanitized_message` for new variant
-```rust
-OAuthError::AccountAlreadyLinked(provider) => {
-    format!("The {} account is already linked to another user", provider)
-}
+**Key design decisions:**
+- `interactiveLogin: true` — keeps the interactive login form (allows manual claim override during testing)
+- `httpServer: "NettyWrapper"` — required for standalone Docker mode
+- `tokenExpiry: 3600` — 1 hour token expiry (same as default)
+- Distinct `sub` values: `google-user-123` vs `github-user-456` — guarantees no `provider_uid` collision
+- Distinct `email` values: different emails per provider to test email-based linking separately
+- `aud` matches the client IDs used in `.env.local`
+
+**Alternative (cleaner JSON formatting):** If the single-line JSON is too unwieldy, we can use `JSON_CONFIG_PATH` with a mounted config file. However, the inline approach avoids creating an extra file and is simpler for local dev.
+
+#### B. `.env.local` (lines 19-31) — Update OAuth URLs to use issuer prefixes
+
+**Before:**
+```
+# Google OAuth (local mock server)
+GOOGLE_AUTH_URL=http://localhost:8082/authorize
+GOOGLE_TOKEN_URL=http://localhost:8082/token
+GOOGLE_USERINFO_URL=http://localhost:8082/userinfo
+GOOGLE_CLIENT_ID=google
+GOOGLE_CLIENT_SECRET=secret
+
+# GitHub OAuth (local mock server)
+GITHUB_AUTH_URL=http://localhost:8082/authorize
+GITHUB_TOKEN_URL=http://localhost:8082/token
+GITHUB_CLIENT_ID=github
+GITHUB_CLIENT_SECRET=secret
+GITHUB_USERINFO_URL=http://localhost:8082/userinfo
 ```
 
-**Change D:** Implement `IntoResponse` for new variant (should redirect, not return 409 raw)
-```rust
-OAuthError::AccountAlreadyLinked(provider) => {
-    let redirect_uri = format!("/settings/accounts?error=account_already_linked&provider={}", provider);
-    (StatusCode::SEE_OTHER, [((header::LOCATION, redirect_uri))].into_iter().collect::<HeaderMap>()).into_response()
-}
+**After:**
+```
+# Google OAuth (local mock server — issuer-prefixed)
+GOOGLE_AUTH_URL=http://localhost:8082/google/authorize
+GOOGLE_TOKEN_URL=http://localhost:8082/google/token
+GOOGLE_USERINFO_URL=http://localhost:8082/google/userinfo
+GOOGLE_CLIENT_ID=google
+GOOGLE_CLIENT_SECRET=secret
+
+# GitHub OAuth (local mock server — issuer-prefixed)
+GITHUB_AUTH_URL=http://localhost:8082/github/authorize
+GITHUB_TOKEN_URL=http://localhost:8082/github/token
+GITHUB_CLIENT_ID=github
+GITHUB_CLIENT_SECRET=secret
+GITHUB_USERINFO_URL=http://localhost:8082/github/userinfo
 ```
 
-**Change E:** In `callback_handler` (around line 335), capture existing session cookie BEFORE `link_or_create`:
-```rust
-// Capture existing session cookie to preserve on conflict
-let existing_cookie = jar.get(session::COOKIE_NAME).and_then(|c| c.to_string().ok());
+**Note:** The client IDs (`google` and `github`) must match the `aud` claim configured in the mock server's `tokenCallbacks`. Currently they match the default behavior where the mock server accepts any client ID.
+
+#### C. `.env.local.example` (lines 24-31) — Update example URLs
+
+**Before:**
+```
+# Google OAuth
+GOOGLE_CLIENT_ID=google
+GOOGLE_CLIENT_SECRET=secret
+
+# GitHub OAuth
+GITHUB_CLIENT_ID=github
+GITHUB_CLIENT_SECRET=secret
+GITHUB_USERINFO_URL=http://localhost:8082/userinfo
 ```
 
-**Change F:** In `callback_handler` error handling (around line 383), handle `AccountAlreadyLinked`:
-```rust
-// Current code:
-.map_err(|e| OAuthError::LinkError(e.to_string()))?;
+**After:**
+```
+# Google OAuth (local mock server — issuer-prefixed URLs)
+GOOGLE_CLIENT_ID=google
+GOOGLE_CLIENT_SECRET=secret
+GOOGLE_AUTH_URL=http://localhost:8082/google/authorize
+GOOGLE_TOKEN_URL=http://localhost:8082/google/token
+GOOGLE_USERINFO_URL=http://localhost:8082/google/userinfo
 
-// Change to:
-.map_err(|e| match e {
-    LinkError::AccountAlreadyLinked(provider) => {
-        // Restore existing session cookie and redirect with error
-        if let Some(cookie_str) = &existing_cookie {
-            jar.append(session::COOKIE_NAME, cookie_str.as_str());
-        }
-        OAuthError::AccountAlreadyLinked(provider.to_string())
-    }
-    other => OAuthError::LinkError(other.to_string()),
-})?;
+# GitHub OAuth (local mock server — issuer-prefixed URLs)
+GITHUB_CLIENT_ID=github
+GITHUB_CLIENT_SECRET=secret
+GITHUB_AUTH_URL=http://localhost:8082/github/authorize
+GITHUB_TOKEN_URL=http://localhost:8082/github/token
+GITHUB_USERINFO_URL=http://localhost:8082/github/userinfo
 ```
 
-### 3. `src/pages/settings/settings_accounts.rs`
-**Change A:** Add query param extraction at top of component render (after existing signals, around line 93):
+#### D. `src/auth/oauth.rs` — Update build_oauth_clients() default fallback URLs
+
+**Lines 218-224 (Google client):**
 ```rust
-// Extract error params from URL for OAuth conflict notification
-let error_type = extract_query_param("error");
-let error_provider = extract_query_param("provider");
+// Before:
+.set_auth_uri(
+    AuthUrl::new(env_or("GOOGLE_AUTH_URL", "http://localhost:8082/authorize"))
+        .expect("invalid Google auth URL"),
+)
+.set_token_uri(
+    TokenUrl::new(env_or("GOOGLE_TOKEN_URL", "http://localhost:8082/token"))
+        .expect("invalid Google token URL"),
+)
+
+// After:
+.set_auth_uri(
+    AuthUrl::new(env_or("GOOGLE_AUTH_URL", "http://localhost:8082/google/authorize"))
+        .expect("invalid Google auth URL"),
+)
+.set_token_uri(
+    TokenUrl::new(env_or("GOOGLE_TOKEN_URL", "http://localhost:8082/google/token"))
+        .expect("invalid Google token URL"),
+)
 ```
 
-**Change B:** Add `extract_query_param` helper function (can mirror `login.rs` pattern):
+**Lines 239-245 (GitHub client):**
 ```rust
-fn extract_query_param(key: &str) -> Option<String> {
-    #[cfg(target_arch = "wasm32")]
-    {
-        if let Ok(window) = web_sys::window() {
-            if let Ok(params) = window.location().search_params() {
-                return params.get(key);
-            }
-        }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        if let Ok(ctx) = leptos::fullstack::FullstackContext::current() {
-            if let Some(uri) = ctx.parts().uri.query() {
-                return url::form_urlencoded::parse(uri.as_bytes())
-                    .find(|(k, _)| k == key)
-                    .map(|(_, v)| v.into_owned());
-            }
-        }
-    }
-    None
-}
+// Before:
+.set_auth_uri(
+    AuthUrl::new(env_or("GITHUB_AUTH_URL", "http://localhost:8082/authorize"))
+        .expect("invalid GitHub auth URL"),
+)
+.set_token_uri(
+    TokenUrl::new(env_or("GITHUB_TOKEN_URL", "http://localhost:8082/token"))
+        .expect("invalid GitHub token URL"),
+)
+
+// After:
+.set_auth_uri(
+    AuthUrl::new(env_or("GITHUB_AUTH_URL", "http://localhost:8082/github/authorize"))
+        .expect("invalid GitHub auth URL"),
+)
+.set_token_uri(
+    TokenUrl::new(env_or("GITHUB_TOKEN_URL", "http://localhost:8082/github/token"))
+        .expect("invalid GitHub token URL"),
+)
 ```
 
-**Change C:** Add effect to show error notification and clear URL params (after error/success signals):
+**Line 470-472 (Google userinfo default):**
 ```rust
-let clear_error_params = move || {
-    #[cfg(target_arch = "wasm32")]
-    {
-        if let Ok(window) = web_sys::window() {
-            if let Ok(location) = window.location() {
-                let _ = location.set_href("/settings/accounts");
-            }
-        }
-    }
-};
+// Before:
+let userinfo_url = env_or(
+    "GOOGLE_USERINFO_URL",
+    "https://www.googleapis.com/oauth2/v3/userinfo",
+);
 
-// Show error notification for OAuth account conflict
-Effect::new(move |_| {
-    if let (Some(ref error), Some(ref provider)) = (&error_type, &error_provider) {
-        if error == "account_already_linked" {
-            let provider_display = provider.to_string().capitalize();
-            error.set(Some(format!(
-                "This {} account is already linked to another user. That account will need to be deleted before you can link this provider.",
-                provider_display
-            )));
-            // Auto-dismiss after 10 seconds
-            wasm_bindgen_futures::spawn_local(async move {
-                tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-                clear_error_params();
-                error.set(None);
-            });
-            // Also clear params when user dismisses manually (handled by existing dismiss button)
-        }
-    }
-});
+// After:
+let userinfo_url = env_or(
+    "GOOGLE_USERINFO_URL",
+    "http://localhost:8082/google/userinfo",
+);
 ```
 
-**Change D:** Modify existing dismiss handler to also clear error params. Find where `error.set(None)` is called (likely in the dismiss button `on:click`) and add `clear_error_params()` call before it.
+**Rationale for the Google userinfo default change:** The current default is the production Google URL. In dev, this is always overridden by `.env.local`. Changing the default to the issuer-prefixed mock URL ensures that if someone forgets to set `GOOGLE_USERINFO_URL` in their env, they still get the correct mock endpoint instead of a production URL that would fail.
 
-### 4. `Cargo.toml` (possibly)
-If `url` crate is not already a dependency for server-side query param parsing, add it. Check existing dependencies first. "History" web-sys feature may be needed if `push_state` approach is preferred over `set_href`.
+**Lines 514-521 (GitHub userinfo — no change needed):** The GitHub userinfo extraction already checks `GITHUB_USERINFO_URL` env var first. The fallback to `GITHUB_API_URL/user` is the production GitHub API, which is correct for non-mock scenarios.
 
----
+#### E. `docs/manual-test-guide.md` — Update test environment URLs
 
-## Test Plan
+**Line 4:** Change `Mock OAuth2 at http://localhost:8082` to note the issuer-prefixed URLs.
 
-### Test 1: Conflict Detection (unit test in `src/auth/linking.rs`)
-```rust
-#[tokio::test]
-async fn test_link_or_create_conflict() {
-    let (db, _guard) = test_utils::setup_test_db().await;
-    let suffix = test_utils::uid();
-    
-    // Create two users
-    let user_a = db.insert_user(&format!("user_a{}", suffix), "user_a@example.com", "password123", None).await.unwrap();
-    let user_b = db.insert_user(&format!("user_b{}", suffix), "user_b@example.com", "password123", None).await.unwrap();
-    
-    // Link Google account to user A
-    db.insert_oauth_account(user_a.id, "google", "google_123", None).await.unwrap();
-    
-    // Attempt to link same Google account to user B — should error
-    let result = linking::link_or_create(&db, user_b.id, "google", "google_123").await;
-    assert!(matches!(result, Err(LinkError::AccountAlreadyLinked(_))));
-}
+**Lines 11, 74, 91, 444:** Update references from `localhost:8082` to include issuer paths (e.g., `localhost:8082/google` for Google flow, `localhost:8082/github` for GitHub flow).
+
+### 4. What Does NOT Need to Change
+
+#### `src/auth/linking.rs` — No changes needed
+- The `provider_uid` extraction already uses `email` as primary key (oauth.rs lines 494-497 for Google, 541-546 for GitHub)
+- With distinct issuers, the `sub` claim will be different per provider (`google-user-123` vs `github-user-456`)
+- The `provider` enum is already distinct and used for DB lookups
+- Email-based linking (path b in `link_or_create()`) works independently of `sub`
+
+#### Userinfo extraction logic — No changes needed
+- `extract_google_user_info()` already handles both OIDC claims (`sub`, `name`, `picture`, `email`) and the mock server returns these via the `/userinfo` endpoint
+- `extract_github_user_info()` already handles both OIDC claims and GitHub API fields
+- The mock server's `/userinfo` endpoint returns the claims from the Bearer token, which will include the configured claims from `tokenCallbacks`
+
+#### Redirect URIs — No changes needed
+- Google redirect: `{base_url}/auth/google/callback` (line 226)
+- GitHub redirect: `{base_url}/auth/github/callback` (line 247)
+- These are already distinct and correct
+
+### 5. Step-by-Step Implementation Order
+
+1. **Update `docker-compose.yml`** — Add `JSON_CONFIG` env var with token callbacks for `google` and `github` issuers
+2. **Update `.env.local`** — Change all 6 OAuth URLs to use issuer prefixes
+3. **Update `.env.local.example`** — Add missing URL entries and update to issuer prefixes
+4. **Update `src/auth/oauth.rs`** — Change `build_oauth_clients()` default fallback URLs (4 URLs) and Google userinfo default (1 URL)
+5. **Update `docs/manual-test-guide.md`** — Update URL references for test documentation
+6. **Restart Docker services** — `docker compose down && docker compose up -d` to apply new JSON_CONFIG
+7. **Verify end-to-end** — See testing steps below
+
+### 6. Testing Verification Steps
+
+#### Step 1: Verify mock server configuration
+```bash
+# Check that the mock server is running with new config
+curl http://localhost:8082/google/.well-known/openid-configuration
+# Should return: {"issuer":"http://localhost:8082/google",...}
+
+curl http://localhost:8082/github/.well-known/openid-configuration
+# Should return: {"issuer":"http://localhost:8082/github",...}
+
+# Verify distinct JWKS (different signing keys per issuer)
+curl http://localhost:8082/google/jwks
+curl http://localhost:8082/github/jwks
+# The keys should be different between the two issuers
 ```
 
-### Test 2: No Conflict - Same User (regression test in `src/auth/linking.rs`)
-```rust
-#[tokio::test]
-async fn test_link_or_create_same_user_ok() {
-    let (db, _guard) = test_utils::setup_test_db().await;
-    let suffix = test_utils::uid();
-    
-    let user = db.insert_user(&format!("user{}", suffix), "user@example.com", "password123", None).await.unwrap();
-    db.insert_oauth_account(user.id, "google", "google_123", None).await.unwrap();
-    
-    // Linking same account to same user should succeed
-    let result = linking::link_or_create(&db, user.id, "google", "google_123").await;
-    assert_eq!(result.unwrap(), user.id);
-}
+#### Step 2: Verify Google OAuth flow via Chrome DevTools
+1. Navigate to `http://localhost:8080/auth/google/start?redirect_uri=/dashboard`
+2. Should redirect to `http://localhost:8082/google/authorize?...`
+3. Complete the mock login form (enter username, optionally customize claims)
+4. Should redirect back to app callback
+5. Check Network tab: `/google/token` was called, `/google/userinfo` was called
+6. Check Application tab: session cookie is set
+7. Check DB: new user created with `provider_uid` = `google-user-123` (or whatever `sub` was configured)
+
+#### Step 3: Verify GitHub OAuth flow via Chrome DevTools
+1. Navigate to `http://localhost:8080/auth/github/start?redirect_uri=/dashboard`
+2. Should redirect to `http://localhost:8082/github/authorize?...`
+3. Complete the mock login form
+4. Should redirect back to app callback
+5. Check Network tab: `/github/token` was called, `/github/userinfo` was called
+6. Check DB: new user created with `provider_uid` = `github-user-456` (distinct from Google!)
+
+#### Step 4: Verify cross-provider linking scenario
+1. Log in with Google (creates user A with Google account)
+2. Log out
+3. Log in with GitHub (should create user B — different `provider_uid`, different email)
+4. Verify: 2 users exist in DB, each with their own OAuth account
+5. **Alternative:** If both providers share the same email, GitHub login should link to existing user via email match (path b in `link_or_create()`)
+
+#### Step 5: Verify account linking from settings
+1. Log in as the Google user
+2. Navigate to `/settings/accounts`
+3. Click "Connect GitHub"
+4. Complete GitHub OAuth flow
+5. Verify: GitHub account is linked to the same user (not a new user)
+6. Both providers should appear in the linked accounts list
+
+#### Step 6: Run existing tests
+```bash
+SQLX_OFFLINE=true cargo test --features server
 ```
+All existing tests should pass. The changes only affect default fallback URLs and environment configuration.
 
-### Test 3: Query Param Extraction (unit test, can be in `settings_accounts.rs` or separate test module)
-Verify `extract_query_param` returns correct values for test URLs.
+### 7. Potential Pitfalls & Mitigations
 
----
+| Risk | Mitigation |
+|------|-----------|
+| JSON_CONFIG escaping issues in docker-compose | Use YAML multi-line string (`>`) or single-line with proper JSON escaping. Test with `docker compose config` to verify. |
+| Mock server version compatibility | The current image tag is `latest`. If issuer-prefixed URLs don't work, pin to a known version (e.g., `2.1.10`). |
+| Client ID mismatch with `aud` claim | The `tokenCallbacks` configure `aud` to match the client IDs. If the mock server rejects the token request, check that `GOOGLE_CLIENT_ID` matches the `aud` claim. |
+| Existing tests use hardcoded URLs | The `build_oauth_clients()` tests (line 687-693) use the default fallback URLs. These will change but should still work since the test only checks that the URL is non-empty. |
+| `.env.local` not reloaded after changes | The `just up` command sources `.env.local` before starting the app. After changes, restart with `just down && just up`. |
 
-## Implementation Order
+### 8. Summary of Changes
 
-1. **Step 1:** Add `LinkError::AccountAlreadyLinked` variant and fix bug in `linking.rs`
-2. **Step 2:** Add `OAuthError::AccountAlreadyLinked` variant with Display, sanitized_message, IntoResponse in `oauth.rs`
-3. **Step 3:** Handle conflict in `callback_handler` with session-preserving redirect in `oauth.rs`
-4. **Step 4:** Add `extract_query_param` helper and error notification UI to `settings_accounts.rs`
-5. **Step 5:** Add unit tests for conflict detection and regression
-6. **Step 6:** Manual testing: link provider to User A, try linking to User B, verify error and session preservation
+| File | Lines | Change Type | Description |
+|------|-------|-------------|-------------|
+| `docker-compose.yml` | 50-61 | Modify | Add `JSON_CONFIG` env var with token callbacks for `google` and `github` issuers |
+| `.env.local` | 20-31 | Modify | Update 6 OAuth URLs to use issuer prefixes (`/google/`, `/github/`) |
+| `.env.local.example` | 24-31 | Modify | Add missing URL entries, update to issuer prefixes |
+| `src/auth/oauth.rs` | 218, 222, 239, 243, 470 | Modify | Update 5 default fallback URLs to use issuer prefixes |
+| `docs/manual-test-guide.md` | 4, 11, 74, 91, 444 | Modify | Update URL references to include issuer paths |
 
----
+### 9. References
 
-## Gaps and Notes
-
-- **String capitalize():** The error message uses `.capitalize()` on provider name. Rust std `str` doesn't have this method. Options: (a) use `str::to_ascii_uppercase()` on first char only, (b) use `format!("{}{}", provider.chars().next().map(|c| c.to_uppercase()).unwrap_or_default(), &provider[1..])`, (c) just use the provider name as-is (lowercase). Recommendation: use option (b) or just title-case in the format string manually.
-- **Cookie restoration:** The `jar.append()` approach may need verification — Axum's cookie jar API might require `jar.add()` or raw header manipulation. Check existing cookie setting code in `session.rs` `build_session_cookie()` for the exact pattern.
-- **Auto-dismiss timing:** Using `wasm_bindgen_futures::spawn_local` + `tokio::time::sleep` for 10-second auto-dismiss. Verify `wasm_bindgen_futures` is available in dependencies (likely already present for Leptos).
-- **Server-side rendering:** The query param extraction has dual paths (WASM/server). The error notification effect should only run on client (WASM) since `set_href` and `spawn_local` are client-only. The existing error/success signals in `settings_accounts.rs` may already handle this via `#[cfg(target_arch = "wasm32")]` guards.
-- **Provider enum vs string:** `LinkError` uses typed `Provider` enum internally; `OAuthError` uses `String` for redirect URL simplicity. The conversion happens in `callback_handler` error mapping.
+- **Navikt mock-oauth2-server README:** https://github.com/navikt/mock-oauth2-server
+- **Issuer-prefixed URL architecture:** First path segment = `issuerId`, each issuer gets independent signing key
+- **Token callbacks:** Configure `sub`, `email`, `name`, `picture`, `aud` per issuer via `JSON_CONFIG`
+- **UserInfo endpoint behavior:** Returns claims from Bearer token, not from `requestMappings`
+- **Current oauth.rs implementation:** `/home/samko/GitRepos/Noms/src/auth/oauth.rs`
+- **Current linking.rs implementation:** `/home/samko/GitRepos/Noms/src/auth/linking.rs`
+- **Implementation plan:** `/home/samko/GitRepos/Noms/roadmap/implementation-plans/NOMS-004-oauth-auth.md` (lines 206-218)
 
 ## Phase 1: Implementation Details
-<!-- written by @develop-implement -->
 
-### Summary
-Fixed the GitHub OAuth user info extraction bug where `extract_github_user_info` called the real GitHub API (`https://api.github.com/user`) because `GITHUB_API_URL` was not set. The mock token doesn't work with the real GitHub API, returning a 401 error JSON. `resp["id"].to_string()` on that error JSON produced `"null"`, causing every GitHub login to get `provider_uid = "null"` and collide.
-
-### Two Changes Made
-
-**`src/auth/oauth.rs`** — Rewrote `extract_github_user_info`:
-- Now checks `GITHUB_USERINFO_URL` env var first (for mock server), falling back to `GITHUB_API_URL + /user` (real GitHub API). This mirrors the pattern already used for Google (`GOOGLE_USERINFO_URL`).
-- `provider_uid` extraction now handles both numeric IDs (GitHub API returns `id` as integer) and string IDs (OIDC mock server may return `sub` as string): `as_i64()` → `as_str()` on `id` → `as_str()` on `sub`, with `unwrap_or_default()`.
-- `display_name` and `avatar_url` also handle both GitHub-specific fields (`login`, `avatar_url`) and standard OIDC claims (`name`, `picture`) via `.or_else()` fallbacks.
-
-**`.env.local` and `.env.local.example`** — Added `GITHUB_USERINFO_URL=http://localhost:8082/userinfo` after the existing GitHub OAuth settings, so the mock server is used during local development.
-
-### Verification
-- `cargo check --features server` — compiles clean
-- `cargo test --features server auth::oauth` — all 27 oauth tests pass
-- `cargo clippy --features server` — no warnings
-- Full test suite: 146/147 pass (1 flaky DB pool timeout in `test_concurrent_state_consumption`, unrelated to this change)
-
-### Summary
-Applied 3 minor fixes identified in the Phase 2 review of the AC12 (NOMS-006) implementation.
+### Summary of Changes
+Fixed the local mock OAuth configuration so Google and GitHub providers use separate issuers on the Navikt mock-oauth2-server. Previously both providers shared the same `/authorize`, `/token`, and `/userinfo` endpoints under the implicit `default` issuer, causing `provider_uid` collisions. Now each provider has its own issuer (`google` and `github`) with independent token signing keys, distinct `sub` claims, and separate userinfo responses.
 
 ### Files Modified
 
-**`src/auth/linking.rs`** (Fix 1: Unnecessary provider enum reconstruction)
-- Replaced the `match`-based `Provider` enum reconstruction from `account.provider` (DB string) with `info.provider.clone()` in the `AccountAlreadyLinked` error path (lines 235-242). This eliminates the round-trip from DB string → enum and removes the arbitrary `Provider::Google` fallback for unknown provider strings. The `info.provider` is already the correct typed `Provider` enum passed by the caller.
+| File | Change |
+|------|--------|
+| `docker-compose.yml` | Added `JSON_CONFIG` env var with `tokenCallbacks` for `google` and `github` issuers, each with distinct `sub`, `email`, `name`, `picture`, and `aud` claims |
+| `.env.local` | Updated 6 OAuth URLs from shared paths (`/authorize`, `/token`, `/userinfo`) to issuer-prefixed paths (`/google/authorize`, `/github/authorize`, etc.) |
+| `.env.local.example` | Added missing `GOOGLE_AUTH_URL`, `GOOGLE_TOKEN_URL`, `GOOGLE_USERINFO_URL`, `GITHUB_AUTH_URL`, `GITHUB_TOKEN_URL` entries; all URLs use issuer prefixes |
+| `src/auth/oauth.rs` | Updated 5 default fallback URLs in `build_oauth_clients()` and `extract_google_user_info()`: Google auth/token/userinfo now default to `/google/...` paths, GitHub auth/token default to `/github/...` paths |
+| `docs/manual-test-guide.md` | Updated environment header and TC-02, TC-03, TC-22 test steps to reference issuer-prefixed URLs (`localhost:8082/google` and `localhost:8082/github`) |
 
-**`src/pages/settings/settings_accounts.rs`** (Fix 2: Manual dismiss button on error notification)
-- Added an "×" dismiss button to the error notification div (lines 447-457). The button calls `clear_error_params()` and `error.set(None)` when clicked, allowing users to manually clear the error message before the 10-second auto-dismiss timeout. Styled as a minimal transparent button aligned to the right of the error text using flexbox.
+### Files NOT Modified (confirmed no changes needed)
+- `src/auth/linking.rs` — `provider_uid` extraction already uses `email` as primary key; distinct issuers ensure different `sub` values per provider; `provider` enum is already distinct
+- Userinfo extraction logic — both `extract_google_user_info()` and `extract_github_user_info()` already handle OIDC claims correctly
+- Redirect URIs — already distinct (`/auth/google/callback` vs `/auth/github/callback`)
 
-**`src/auth/oauth.rs`** (Fix 3: Inaccurate `#[allow(dead_code)]` comment)
-- Updated the comment on line 82 from "Constructed via IntoResponse for redirect handling" to "Used by OAuthError::AccountAlreadyLinked for IntoResponse redirect and testability." This accurately reflects that the variant exists for `IntoResponse` API completeness and testability, since the conflict is handled inline in `callback_handler` rather than propagated through `map_err`.
-
-### Test Results
-- All 147 tests pass (`cargo test --features server` with `SQLX_OFFLINE=true`)
-- `cargo clippy --features server` passes with no warnings
-- `cargo check --features server` compiles clean
-
-### Summary
-Implemented AC12: Account conflict warning on OAuth link. When a logged-in user attempts to link an OAuth provider (Google/GitHub) already linked to a different user, the system detects the conflict, preserves the current user's session, redirects to `/settings/accounts` with error query params, and displays a dismissible notification. Also fixed the original bug where `link_or_create()` silently returned another user's ID, causing session hijack.
-
-### Files Modified
-
-**`src/auth/linking.rs`**
-- Added `LinkError::AccountAlreadyLinked(Provider)` variant to the error enum
-- Updated `Display` impl: `"The {} account is already linked to another user"`
-- Updated `Error` impl: maps to `ErrorKind::AlreadyExists`
-- **Bug fix in `link_or_create()` step 0**: Changed `return Ok(account.user_id)` to `return Err(LinkError::AccountAlreadyLinked(account.provider.clone()))` when `account.user_id != user.id`. This fixes the silent session hijack where linking a provider already owned by another user would return that other user's ID, causing the caller to create a session for the wrong account.
-
-**`src/auth/oauth.rs`**
-- Added `OAuthError::AccountAlreadyLinked(String)` variant (marked `#[allow(dead_code)]` since it's handled inline in `callback_handler` rather than propagated)
-- Updated `Display` impl for the new variant
-- Updated `sanitized_message()` for the new variant
-- Updated `IntoResponse` impl: returns `StatusCode::SEE_OTHER` with `Location: /settings/accounts?error=account_already_linked&provider={provider}`
-- Updated `callback_handler`: captures existing session cookie via `jar.get(session::COOKIE_NAME).map(|c| c.to_string())` BEFORE calling `link_or_create`. On `AccountAlreadyLinked` error, restores the session cookie to the jar and returns a redirect response with the error query params, preserving the user's current login.
-
-**`src/pages/settings/settings_accounts.rs`**
-- Added `extract_query_param()` helper function with dual WASM/server paths (mirrors `login.rs` pattern)
-- Added `use_effect` that reads `?error=account_already_linked&provider={provider}` from URL on mount
-- On match: sets the error signal with a formatted message (provider name capitalized), spawns async task for 10-second auto-dismiss
-- Auto-dismiss uses `gloo_timers::future::sleep` on WASM; server-side skips (no persistent state)
-- Dismiss also clears URL params via `location.set_href("/settings/accounts")`
-- Modified existing dismiss button handler to also call `clear_error_params()`
-
-**`Cargo.toml`**
-- Added `gloo-timers = "0.3"` dependency for WASM-compatible sleep in auto-dismiss
-
-### Tests Added
-
-**`src/auth/linking.rs`** (3 new tests):
-1. `test_link_or_create_conflict_different_user` — Creates two users, links Google to user A, attempts to link same Google account to user B. Asserts `Err(LinkError::AccountAlreadyLinked(Provider::Google))`.
-2. `test_link_or_create_same_user_no_conflict` — Regression: links Google to user, re-links same account to same user. Asserts `Ok(user.id)`.
-3. `test_link_or_create_conflict_github` — Same as test 1 but with GitHub provider. Asserts `Err(LinkError::AccountAlreadyLinked(Provider::Github))`.
-
-**`src/auth/oauth.rs`** (2 tests updated/added):
-1. `test_sanitized_message_client_errors_preserved` — Updated to include `AccountAlreadyLinked` case in match (ensures exhaustive matching).
-2. `test_account_already_linked_into_response_redirects` — Verifies `OAuthError::AccountAlreadyLinked("google".to_string())` produces `StatusCode::SEE_OTHER` with `Location: /settings/accounts?error=account_already_linked&provider=google`.
-
-### Test Results
-- All 147 tests pass (`cargo test --features server`)
-- All 21 linking tests pass (including 3 new)
-- All 27 oauth tests pass (including 2 new)
-- `cargo check --features server` compiles clean
-- `cargo check --features web` compiles clean
-- `cargo clippy --features server` passes with no warnings
+### Tests
+- **All 147 existing tests pass** (`SQLX_OFFLINE=true cargo test --features server`)
+- No new tests were needed — the changes only affect default fallback URLs and environment configuration
+- `test_build_oauth_clients` and `test_pkce_challenge_in_auth_url` continue to pass with the new default URLs (they only verify URLs are non-empty)
 
 ### Verification
-- Build: Both server and web feature profiles compile without errors
-- Tests: Full test suite (147 tests) passes against live PostgreSQL (via Docker container)
-- Linting: Clippy passes with no warnings
-- Manual testing: Not performed (requires running app with browser)
+- `cargo check --features server` — compiles without errors
+- `SQLX_OFFLINE=true cargo test --features server` — 147 tests pass, 0 failures
+- `docker compose config` — validates the YAML and JSON_CONFIG are properly parsed
+- Manual verification of all modified files confirms correct issuer-prefixed URLs throughout
 
-### Notes and Tradeoffs
-- `OAuthError::AccountAlreadyLinked` is handled inline in `callback_handler` rather than propagated through `map_err`. This allows direct access to the cookie jar for session preservation before returning the redirect. The variant exists for `IntoResponse` completeness but is marked `#[allow(dead_code)]`.
-- Provider name capitalization in the error message uses `str::to_ascii_uppercase()` on the first character only, followed by the rest of the string as-is. This works for "google" → "Google" and "github" → "Github".
-- Auto-dismiss uses `gloo_timers` (0.3) instead of `wasm_bindgen_futures` + `tokio::time::sleep` for WASM compatibility. Server-side auto-dismiss is a no-op.
-- URL param clearing uses `location.set_href()` which triggers a full navigation (not `history.push_state()`). This is simpler and ensures clean state.
+### Key Configuration Details
+- Google issuer: `sub=google-user-123`, `email=google-user@example.com`
+- GitHub issuer: `sub=github-user-456`, `email=github-user@example.com`
+- `interactiveLogin: true` preserves the interactive login form for manual claim override during testing
+- `aud` claims include both the mock client ID (`mock-google-client-id`/`mock-github-client-id`) and the short name (`google`/`github`) used in `.env.local`
 
 ## Phase 2: Review Verdict
 <!-- written by @develop-review -->
 
-**Verdict: PASS**
-
-All requirements from AC12 (NOMS-006) are met. Both the code review and end-to-end manual browser testing confirm the implementation is correct, secure, and fully functional.
-
-### Manual Browser Test Results (End-to-End)
-
-The full AC12 conflict scenario was executed live in Chrome against the running app (`localhost:8080`) and mock OAuth server (`localhost:8082`):
-
-| Step | Description | Result |
-|---|---|---|
-| 1 | Create User A with Google (`sub: user-a-google-id`) | ✅ PASS — Logged in, redirected to `/dashboard` |
-| 2 | Verify Google is linked at `/settings/accounts` | ✅ PASS — Google card shown with "Last used: Just now" |
-| 3 | Log out User A | ✅ PASS — Redirected to `/`, navbar shows "Sign In" |
-| 4 | Create User B with GitHub (`id: user-b-github-id`) | ✅ PASS — Logged in as different user, redirected to `/dashboard` |
-| 5 | Attempt to link Google (same `sub` as User A) while logged in as User B | ✅ PASS — Conflict detected, redirected to error URL |
-| 6a | Redirect URL correct | ✅ PASS — `/settings/accounts?error=account_already_linked&provider=google` |
-| 6b | Error notification displayed | ✅ PASS — "This Google account is already linked to another user. That account will need to be deleted before you can link this provider." |
-| 6c | Session preserved (still User B) | ✅ PASS — Navbar shows User B ("Updated Name"), NOT User A |
-| 6d | Dismiss button (×) present | ✅ PASS — Clickable × button on error banner |
-| 6e | Manual dismiss clears URL params | ✅ PASS — URL becomes clean `/settings/accounts`, error banner gone |
-| 6f | Google NOT linked to User B | ✅ PASS — "Connect Google" button still available after conflict |
-
-**Screenshots captured at key moments:**
-- `/tmp/opencode/step1_user_a_logged_in.png` — User A on dashboard after Google login
-- `/tmp/opencode/step2_google_linked.png` — Google shown as linked for User A
-- `/tmp/opencode/step5_conflict_error_shown.png` — Error notification after conflict
-- `/tmp/opencode/step6_after_dismiss.png` — Clean state after manual dismiss
-
-### Code Review Findings
-
-**No blockers or warnings.** All three prior suggestions have been resolved and verified.
-
-### Positive Findings and Good Practices
-
-- **Session hijack bug fixed cleanly:** The original `return Ok(account.user_id)` that silently returned another user's ID is now `return Err(LinkError::AccountAlreadyLinked(info.provider.clone()))`. This is the core security fix and is well-implemented.
-- **Session preservation on conflict:** The `existing_cookie_value` capture before `link_or_create` and manual `set-cookie` header in the redirect response correctly preserves the user's login. The user stays signed in as their current account. Confirmed via manual test: User B remained logged in after the Google conflict.
-- **Comprehensive test coverage:** 3 new tests in `linking.rs` (Google conflict, GitHub conflict, same-user regression) and 2 in `oauth.rs` (sanitized_message inclusion, IntoResponse redirect verification) cover all new paths. All 147 tests pass.
-- **Security-conscious error messages:** `sanitized_message()` correctly exposes the `AccountAlreadyLinked` message as a client-side error (not generic), since it's the user's own conflict. Server-side errors remain generic.
-- **Dual WASM/server query param extraction:** The `extract_query_param` helper correctly handles both environments, and the auto-dismiss is properly gated behind `#[cfg(target_arch = "wasm32")]`.
-- **Provider name capitalization:** The character-by-character capitalization approach (lines 151-161 in `settings_accounts.rs`) correctly handles "google" → "Google" and "github" → "Github" without external dependencies. Confirmed in browser: error shows "Google" (capitalized).
-- **Clippy clean, both feature profiles compile:** Verified: `cargo check --features server`, `cargo check --features web`, and `cargo clippy --features server` all pass with zero warnings.
-- **Dismiss button integration:** The new "×" button correctly calls both `clear_error_params()` and `error.set(None)`, ensuring URL params are cleared and the signal is reset. The flexbox layout keeps the button aligned to the right without affecting the error text wrapping. Confirmed via manual test: clicking × cleared both the banner and URL params.
-
-### Requirements Coverage
-
-| Requirement | Status | Evidence |
-|---|---|---|
-| Conflict detected when provider linked to different user | ✅ | `link_or_create()` step 0 returns `Err(LinkError::AccountAlreadyLinked)` — verified by unit tests AND manual test |
-| Redirect to `/settings/accounts?error=account_already_linked&provider={}` | ✅ | `IntoResponse` produces 303 with correct Location header — verified in browser (exact URL matched) |
-| Session preserved (user stays logged in) | ✅ | Cookie captured before `link_or_create`, restored in redirect — verified in browser: User B navbar persisted |
-| Error notification displays correct message | ✅ | "This Google account is already linked to another user..." — verified in browser screenshot |
-| Auto-dismiss after reasonable time | ✅ | 10 seconds via `gloo_timers::future::sleep` — code verified (manual test used × button instead) |
-| Manual dismiss clears error and URL params | ✅ | "×" button calls `clear_error_params()` + `error.set(None)` — verified in browser: URL cleaned, banner gone |
-| Only runs on WASM side | ✅ | `#[cfg(target_arch = "wasm32")]` gates on sleep and `set_href` — code verified |
-| Same-user re-linking still works | ✅ | Regression test `test_link_or_create_same_user_no_conflict` passes — code verified |
-| No info leakage about other users' accounts | ✅ | Message only says "linked to another user" — no account details revealed — verified in browser |
-| OAuth flow discarded (no new account created) | ✅ | "Connect Google" button still available after conflict — verified in browser |
-
-### Overall Quality Summary
-Well-executed implementation that addresses both the feature requirement (AC12 conflict warning) and the underlying security bug (silent session hijack). The error flow is clean, tests are comprehensive, and the code integrates well with existing patterns. All three prior suggestions have been addressed with correct, clean fixes. End-to-end manual browser testing confirms the full conflict flow works exactly as specified: conflict detected, correct redirect, session preserved, error displayed, and dismissable. No remaining issues.
-
 ## Phase 3: Synthesis
 <!-- written by @develop-synthesize -->
-
-### User-Facing Summary
-
-This change implements **AC12 of NOMS-006**: account conflict warning on OAuth link. Previously, when a logged-in user attempted to link an OAuth provider (Google or GitHub) that was already associated with a *different* user account, the system silently hijacked the session — logging the user out of their own account and into the other user's account. This was a security bug.
-
-The fix detects this conflict at the linking layer, preserves the current user's session cookie, and redirects them back to `/settings/accounts` with an error notification explaining the situation. The user remains signed in to their own account. Normal linking (no conflict) continues to work as before.
-
----
-
-### Detailed Walkthrough of Changes
-
-#### 1. `src/auth/linking.rs` — Core security fix + new error variant
-
-**What changed:**
-- **New error variant** (`LinkError::AccountAlreadyLinked(Provider)`) — A typed error carrying the `Provider` enum, used when an OAuth identity is already linked to a different user.
-- **`Display` impl** — Formats as `"The {provider} account is already linked to another user"`.
-- **`Error` impl** — Maps the new variant to `ErrorKind::AlreadyExists`.
-- **Bug fix in `link_or_create()` step 0** (lines 235-242): The original code returned `Ok(account.user_id)` when the OAuth account belonged to a *different* user. This caused the caller (`callback_handler`) to create a session for the wrong user — a silent session hijack. The fix returns `Err(LinkError::AccountAlreadyLinked(...))` instead. The provider enum is reconstructed from the DB string via a `match` (review noted this could be simplified to use `info.provider.clone()` directly).
-
-**Flow:** When `existing_user_id` is provided (authenticated linking flow), the function checks if the OAuth provider+uid is already linked to any user. If it matches the current user, it updates `last_used_at` and succeeds. If it matches a *different* user, it now returns the conflict error instead of the other user's ID.
-
-**Tests added (3):**
-- `test_link_or_create_conflict_different_user` — Google conflict between two users
-- `test_link_or_create_same_user_no_conflict` — Regression: same user re-linking succeeds
-- `test_link_or_create_conflict_github` — GitHub conflict between two users
-
-#### 2. `src/auth/oauth.rs` — Error handling, session preservation, redirect
-
-**What changed:**
-- **New error variant** (`OAuthError::AccountAlreadyLinked(String)`) — Carries the provider name as a string for URL construction. Marked `#[allow(dead_code)]` because the conflict is handled inline in `callback_handler` rather than propagated through `map_err`.
-- **`Display` impl** — Formats the provider name into the error message.
-- **`sanitized_message()`** — Classified as a client error (safe to expose details), so it returns the full message.
-- **`IntoResponse` impl** — Returns `StatusCode::SEE_OTHER` (303) with `Location: /settings/accounts?error=account_already_linked&provider={provider}`. This is handled at the top of the `into_response` method before the general status code match.
-- **`callback_handler` conflict handling** (lines 405-431): The existing session cookie value is captured *before* calling `link_or_create`. If `link_or_create` returns `AccountAlreadyLinked`, the handler constructs a 303 redirect response with both the `Location` header and the original `Set-Cookie` header, preserving the user's current login session.
-
-**Key pattern:** The session cookie is captured as a raw string (`jar.get(session::COOKIE_NAME).map(|c| c.to_string())`) and replayed as a `Set-Cookie` header in the redirect response. This ensures the browser keeps the original session alive across the redirect.
-
-**Tests added/updated (2):**
-- `test_sanitized_message_client_errors_preserved` — Updated to include the `AccountAlreadyLinked` case
-- `test_account_already_linked_into_response_redirects` — Verifies 303 + correct Location header
-
-#### 3. `src/pages/settings/settings_accounts.rs` — Frontend error notification
-
-**What changed:**
-- **`extract_query_param()` helper** (lines 16-43) — Dual WASM/server implementation. On WASM, reads from `window.location().search()` and parses manually (splitting on `&` and matching `{name}=` prefix). On server, reads from `FullstackContext` URI query string. This avoids adding a `url` crate dependency.
-- **Query param extraction in component** (lines 129-130) — `use_hook` calls to extract `error` and `provider` params from the URL at render time.
-- **`clear_error_params` closure** (lines 133-140) — WASM-only: calls `window.location().set_href("/settings/accounts")` to strip query params and navigate to the clean URL.
-- **`use_effect` for conflict notification** (lines 147-185) — On mount, checks if `error_type == "account_already_linked"` and `error_provider` is present. If so, capitalizes the provider name (character-by-character: first char uppercased, rest as-is), sets the error signal with the formatted message, and spawns an async task that sleeps 10 seconds (via `gloo_timers::future::sleep` on WASM, no-op on server) then clears both the URL params and the error signal.
-
-**Key patterns:**
-- Signal cloning (`error_for_spawn`, `clear_for_spawn`) to avoid borrow conflicts between the `use_effect` closure and the spawned async task.
-- `#[cfg(target_arch = "wasm32")]` guards ensure browser APIs (`set_href`, `gloo_timers`) are only compiled for WASM targets.
-- `location.set_href()` triggers a full navigation (not `history.push_state()`), ensuring clean URL state.
-
-#### 4. `Cargo.toml` — New dependency
-
-- Added `gloo-timers = "0.3"` — Provides WASM-compatible `sleep()` for the 10-second auto-dismiss timer. This is preferred over `tokio::time::sleep` which requires `wasm_bindgen_futures` and is server-only.
-
----
-
-### Dependencies Introduced or Modified
-
-| Dependency | Purpose | Feature-gated |
-|---|---|---|
-| `gloo-timers = "0.3"` | WASM-compatible async sleep for auto-dismiss timer | Always (WASM no-op on server) |
-
----
-
-### Special Syntax and Non-Obvious Patterns
-
-1. **Session cookie preservation via raw string capture:** The `callback_handler` captures the cookie as `jar.get(session::COOKIE_NAME).map(|c| c.to_string())` and replays it as a `Set-Cookie` header in the redirect response tuple. This bypasses Axum's cookie jar API and directly manipulates HTTP headers, which is necessary because the error path returns early before the normal cookie-setting code runs.
-
-2. **Manual query string parsing:** The `extract_query_param` helper avoids the `url` crate by splitting on `&` and matching `{name}=` prefixes. This is simpler but doesn't handle URL-encoded values — acceptable for this use case since `error` and `provider` values are simple lowercase strings.
-
-3. **Character-by-character capitalization:** `provider.chars().enumerate().map(|(i, c)| if i == 0 { c.to_uppercase().collect() } else { format!("{c}") }).collect()` — A Rust idiom for title-casing a string without external dependencies.
-
-4. **`#[allow(dead_code)]` on `OAuthError::AccountAlreadyLinked`:** The variant exists for `IntoResponse` completeness and testability, but is never directly constructed in the hot path (conflict is handled inline in `callback_handler`).
-
----
-
-### Follow-up Recommendations
-
-1. **Provider enum reconstruction (review finding #1):** In `linking.rs` lines 236-242, the provider enum is reconstructed from the DB string with a `Provider::Google` fallback for unknown values. Since `info.provider` is already the correct `Provider` enum, replacing with `info.provider.clone()` would simplify the code and eliminate the arbitrary fallback.
-
-2. **Manual dismiss button (review finding #2):** The error notification auto-dismisses after 10 seconds but has no manual dismiss button. Adding a small "×" or "Dismiss" button would improve UX for users who want to clear the message before the timeout.
-
-3. **Manual browser testing:** All 147 automated tests pass, but the full OAuth conflict flow (browser → OAuth provider → callback → redirect → notification) requires manual end-to-end testing to verify session preservation and UI rendering.
-
-4. **URL-encoded query params:** If provider names or error types ever need to contain special characters, the manual query string parsing in `extract_query_param` would need to handle percent-encoding.
-
----
-
-### Files Changed
-
-| File | Change Type | Description |
-|---|---|---|
-| `src/auth/linking.rs` | Modified | Added `LinkError::AccountAlreadyLinked` variant; fixed session hijack bug in `link_or_create()` step 0; added 3 integration tests |
-| `src/auth/oauth.rs` | Modified | Added `OAuthError::AccountAlreadyLinked` variant; updated `Display`, `sanitized_message`, `IntoResponse`; added session-preserving conflict handling in `callback_handler`; added/updated 2 tests |
-| `src/pages/settings/settings_accounts.rs` | Modified | Added `extract_query_param` helper; added query param extraction, error notification effect, auto-dismiss, and URL param clearing |
-| `Cargo.toml` | Modified | Added `gloo-timers = "0.3"` dependency |
-
----
-
-### Commit Message
-
-```
-fix(auth): detect OAuth account conflict and warn user instead of hijacking session
-
-When a logged-in user attempted to link an OAuth provider (Google/GitHub)
-that was already linked to a different user account, link_or_create()
-silently returned the other user's ID, causing the callback handler to
-create a session for the wrong account — a session hijack vulnerability.
-
-Fix:
-- Add LinkError::AccountAlreadyLinked(Provider) to detect the conflict
-  at the linking layer and return an error instead of another user's ID
-- Add OAuthError::AccountAlreadyLinked(String) with IntoResponse that
-  produces a 303 redirect to /settings/accounts with error query params
-- In callback_handler, capture the existing session cookie before
-  link_or_create and replay it in the redirect response so the user
-  stays logged in to their own account
-- Frontend reads error/provider query params on mount, displays a
-  dismissible notification, and auto-clears after 10 seconds
-
-Tests:
-- 3 new integration tests in linking.rs (Google conflict, GitHub
-  conflict, same-user regression)
-- 2 new/updated tests in oauth.rs (sanitized_message, IntoResponse
-  redirect verification)
-- All 147 tests pass, clippy clean on both server and web profiles
-
-Refs: NOMS-006 AC12
-```
