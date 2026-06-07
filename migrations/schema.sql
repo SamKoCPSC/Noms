@@ -46,7 +46,8 @@ CREATE TABLE IF NOT EXISTS auth_states (
     redirect_uri TEXT NOT NULL,
     provider TEXT NOT NULL,
     code_verifier TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    user_id UUID
 );
 
 -- Index for periodic cleanup of expired auth states (pg_cron DELETE WHERE created_at < ...)

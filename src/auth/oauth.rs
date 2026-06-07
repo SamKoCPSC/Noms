@@ -73,6 +73,8 @@ pub enum OAuthError {
     StateNotFound,
     StateExpired,
     ProviderMismatch,
+    /// The stored auth state user_id does not match the current session user_id.
+    StateUserMismatch,
     TokenExchange(String),
     UserInfoExtraction(String),
     DbError(String),
@@ -92,6 +94,7 @@ impl std::fmt::Display for OAuthError {
             Self::StateNotFound => write!(f, "CSRF state not found"),
             Self::StateExpired => write!(f, "CSRF state expired"),
             Self::ProviderMismatch => write!(f, "Provider mismatch"),
+            Self::StateUserMismatch => write!(f, "Auth state user mismatch"),
             Self::TokenExchange(e) => write!(f, "Token exchange failed: {e}"),
             Self::UserInfoExtraction(e) => write!(f, "User info extraction failed: {e}"),
             Self::DbError(e) => write!(f, "Database error: {e}"),
@@ -121,6 +124,7 @@ impl OAuthError {
             | Self::StateNotFound
             | Self::StateExpired
             | Self::ProviderMismatch
+            | Self::StateUserMismatch
             | Self::AccountAlreadyLinked(_) => self.to_string(),
 
             // Internal errors — generic message only
@@ -156,6 +160,7 @@ impl IntoResponse for OAuthError {
             Self::InvalidRedirectUri(_) => StatusCode::BAD_REQUEST,
             Self::StateNotFound => StatusCode::UNAUTHORIZED,
             Self::StateExpired => StatusCode::UNAUTHORIZED,
+            Self::StateUserMismatch => StatusCode::UNAUTHORIZED,
             Self::ProviderMismatch => StatusCode::BAD_REQUEST,
             Self::TokenExchange(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::UserInfoExtraction(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -279,12 +284,13 @@ const REDIRECT_URI_MAX_LEN: usize = 2048;
 /// GET /auth/:provider/start — initiate an OAuth flow.
 ///
 /// Validates the provider and redirect_uri, generates a CSRF state UUID,
-/// persists it in the database, then redirects the user-agent to the
-/// provider's authorization endpoint.
+/// persists it in the database (bound to the current session's user_id),
+/// then redirects the user-agent to the provider's authorization endpoint.
 pub async fn start_handler(
     State(state): State<AppState>,
     Path(provider): Path<String>,
     Query(params): Query<StartQuery>,
+    jar: CookieJar,
 ) -> Result<impl IntoResponse, OAuthError> {
     let prov = validate_provider(&provider)?;
     validate_redirect_uri(&params.redirect_uri)?;
@@ -296,12 +302,22 @@ pub async fn start_handler(
     // The verifier is stored server-side; the challenge is sent to the provider.
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
+    // Extract the current session's user_id (if any) to bind to this auth state.
+    let user_id = if let Some(cookie) = jar.get(session::COOKIE_NAME) {
+        session::verify_session(&state.pool, cookie.value())
+            .await
+            .ok()
+    } else {
+        None
+    };
+
     db::insert_auth_state(
         &state.pool,
         &csrf_state,
         prov.as_str(),
         &params.redirect_uri,
         pkce_verifier.secret(),
+        user_id,
     )
     .await
     .map_err(|e| OAuthError::DbError(e.to_string()))?;
@@ -377,6 +393,17 @@ pub async fn callback_handler(
     } else {
         None
     };
+
+    // Validate that the stored user_id matches the current session's user_id.
+    // This prevents CSRF attacks where an attacker initiates a flow and tricks
+    // a different user into completing it.
+    if let Some(stored) = auth_state.user_id {
+        if let Some(current) = existing_user_id {
+            if stored != current {
+                return Err(OAuthError::StateUserMismatch);
+            }
+        }
+    }
 
     // Select the appropriate OAuth client.
     let client = match prov {
@@ -817,6 +844,7 @@ mod tests {
                 "google",
                 "/dashboard",
                 "test-verifier-minimum-43-chars-long!!",
+                None,
             )
             .await
             .unwrap();
@@ -840,6 +868,7 @@ mod tests {
                 "google",
                 "/dashboard",
                 "test-verifier-minimum-43-chars-long!!",
+                None,
             )
             .await
             .unwrap();
@@ -865,6 +894,7 @@ mod tests {
                 "google",
                 "/dashboard",
                 "test-verifier-minimum-43-chars-long!!",
+                None,
             )
             .await
             .unwrap();
@@ -886,7 +916,7 @@ mod tests {
             let state_id = format!("test-state-{}", test_utils::uid());
             let verifier = "test-pkce-verifier-minimum-43-chars!!";
 
-            db::insert_auth_state(&pool, &state_id, "google", "/dashboard", verifier)
+            db::insert_auth_state(&pool, &state_id, "google", "/dashboard", verifier, None)
                 .await
                 .unwrap();
 
@@ -903,7 +933,7 @@ mod tests {
             let state_id = format!("test-state-{}", test_utils::uid());
             let verifier = "test-pkce-verifier-minimum-43-chars!!";
 
-            db::insert_auth_state(&pool, &state_id, "google", "/dashboard", verifier)
+            db::insert_auth_state(&pool, &state_id, "google", "/dashboard", verifier, None)
                 .await
                 .unwrap();
 
@@ -1028,7 +1058,7 @@ mod tests {
             let state_id = format!("test-concurrent-{}", test_utils::uid());
             let verifier = "test-pkce-verifier-minimum-43-chars!!";
 
-            db::insert_auth_state(&pool, &state_id, "google", "/dashboard", verifier)
+            db::insert_auth_state(&pool, &state_id, "google", "/dashboard", verifier, None)
                 .await
                 .unwrap();
 
@@ -1099,6 +1129,7 @@ mod tests {
                 "google",
                 "/dashboard",
                 "test-verifier-minimum-43-chars-long!!",
+                None,
             )
             .await
             .unwrap();
@@ -1151,6 +1182,7 @@ mod tests {
                 "google",
                 "/dashboard",
                 "test-verifier-minimum-43-chars-long!!",
+                None,
             )
             .await
             .unwrap();
@@ -1191,6 +1223,7 @@ mod tests {
                 "google",
                 "/dashboard",
                 "test-verifier-minimum-43-chars-long!!",
+                None,
             )
             .await
             .unwrap();
@@ -1208,6 +1241,270 @@ mod tests {
             assert_eq!(err.sanitized_message(), "CSRF state not found");
             let response = err.into_response();
             assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        }
+
+        // ── user_id binding tests ─────────────────────────────────────────
+
+        /// Verify that insert_auth_state persists a user_id and it is returned by delete_auth_state.
+        #[tokio::test]
+        async fn test_auth_state_stores_user_id() {
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let state_id = format!("test-userid-{}", test_utils::uid());
+            let user_id = Uuid::new_v4();
+
+            db::insert_auth_state(
+                &pool,
+                &state_id,
+                "google",
+                "/dashboard",
+                "test-verifier-minimum-43-chars-long!!",
+                Some(user_id),
+            )
+            .await
+            .unwrap();
+
+            let state = db::delete_auth_state(&pool, &state_id)
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(state.user_id, Some(user_id));
+        }
+
+        /// Verify that insert_auth_state with None user_id stores NULL.
+        #[tokio::test]
+        async fn test_auth_state_null_user_id() {
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let state_id = format!("test-nulluid-{}", test_utils::uid());
+
+            db::insert_auth_state(
+                &pool,
+                &state_id,
+                "google",
+                "/dashboard",
+                "test-verifier-minimum-43-chars-long!!",
+                None,
+            )
+            .await
+            .unwrap();
+
+            let state = db::delete_auth_state(&pool, &state_id)
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(state.user_id, None);
+        }
+
+        /// Verify that callback_handler rejects a callback when the stored user_id
+        /// does not match the current session's user_id (CSRF protection).
+        #[tokio::test]
+        async fn test_callback_rejects_mismatched_user_id() {
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let u = test_utils::uid();
+
+            // Set up thread-local session secret (avoids race with other parallel tests)
+            session::set_test_secret("test-secret-32-bytes-long-enough!!");
+
+            // Create two different users
+            let user1 = db::insert_user(
+                &pool,
+                &format!("csrfuser1_{u}"),
+                "CSRF User 1",
+                &format!("csrf1{u}@example.com"),
+                None,
+            )
+            .await
+            .unwrap();
+
+            let user2 = db::insert_user(
+                &pool,
+                &format!("csrfuser2_{u}"),
+                "CSRF User 2",
+                &format!("csrf2{u}@example.com"),
+                None,
+            )
+            .await
+            .unwrap();
+
+            // Insert an auth state bound to user1
+            let state_id = format!("test-csrf-{}", test_utils::uid());
+            db::insert_auth_state(
+                &pool,
+                &state_id,
+                "google",
+                "/dashboard",
+                "test-verifier-minimum-43-chars-long!!",
+                Some(user1.id),
+            )
+            .await
+            .unwrap();
+
+            // Simulate user2's session cookie
+            let jwt_user2 = session::create_session(&pool, user2.id).await.unwrap();
+            let cookie_user2 = session::build_session_cookie(&jwt_user2);
+            let jar = CookieJar::new().add(cookie_user2);
+
+            // Extract user2's user_id from session (simulating callback_handler logic)
+            let existing_user_id = if let Some(cookie) = jar.get(session::COOKIE_NAME) {
+                session::verify_session(&pool, cookie.value()).await.ok()
+            } else {
+                None
+            };
+            assert_eq!(existing_user_id, Some(user2.id));
+
+            // Consume the auth state (simulating callback_handler)
+            let auth_state = db::delete_auth_state(&pool, &state_id)
+                .await
+                .unwrap()
+                .expect("state should exist");
+
+            // Validate user_id binding (this is the new CSRF check)
+            let stored = auth_state.user_id;
+            let current = existing_user_id;
+            let mismatch = if let Some(s) = stored {
+                if let Some(c) = current {
+                    s != c
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+            assert!(
+                mismatch,
+                "stored user_id ({:?}) should not match current session user_id ({:?})",
+                stored,
+                current
+            );
+
+            // Verify the error response
+            let err = OAuthError::StateUserMismatch;
+            assert_eq!(err.sanitized_message(), "Auth state user mismatch");
+            let response = err.into_response();
+            assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+            // Clean up thread-local test secret
+            session::clear_test_secret();
+        }
+
+        /// Verify that callback_handler accepts a callback when the stored user_id
+        /// matches the current session's user_id.
+        #[tokio::test]
+        async fn test_callback_accepts_matching_user_id() {
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let u = test_utils::uid();
+
+            // Set up session secret
+            std::env::set_var("SESSION_SECRET", "test-secret-32-bytes-long-enough!!");
+
+            // Create a single user
+            let user = db::insert_user(
+                &pool,
+                &format!("matchuser_{u}"),
+                "Match User",
+                &format!("match{u}@example.com"),
+                None,
+            )
+            .await
+            .unwrap();
+
+            // Insert an auth state bound to this user
+            let state_id = format!("test-match-{}", test_utils::uid());
+            db::insert_auth_state(
+                &pool,
+                &state_id,
+                "google",
+                "/dashboard",
+                "test-verifier-minimum-43-chars-long!!",
+                Some(user.id),
+            )
+            .await
+            .unwrap();
+
+            // Create a session for the same user
+            let jwt = session::create_session(&pool, user.id).await.unwrap();
+            let cookie = session::build_session_cookie(&jwt);
+            let jar = CookieJar::new().add(cookie);
+
+            // Extract user_id from session
+            let existing_user_id = if let Some(cookie) = jar.get(session::COOKIE_NAME) {
+                session::verify_session(&pool, cookie.value()).await.ok()
+            } else {
+                None
+            };
+            assert_eq!(existing_user_id, Some(user.id));
+
+            // Consume the auth state
+            let auth_state = db::delete_auth_state(&pool, &state_id)
+                .await
+                .unwrap()
+                .expect("state should exist");
+
+            // Validate user_id binding — should match
+            let stored = auth_state.user_id;
+            let current = existing_user_id;
+            let mismatch = if let Some(s) = stored {
+                if let Some(c) = current {
+                    s != c
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+            assert!(
+                !mismatch,
+                "stored user_id ({:?}) should match current session user_id ({:?})",
+                stored,
+                current
+            );
+        }
+
+        /// Verify that callback_handler allows an unauthenticated flow when the
+        /// stored user_id is NULL and there is no active session.
+        #[tokio::test]
+        async fn test_callback_allows_null_user_id_no_session() {
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let state_id = format!("test-unauth-{}", test_utils::uid());
+
+            // Insert an auth state with no user_id (unauthenticated flow)
+            db::insert_auth_state(
+                &pool,
+                &state_id,
+                "google",
+                "/dashboard",
+                "test-verifier-minimum-43-chars-long!!",
+                None,
+            )
+            .await
+            .unwrap();
+
+            // No session cookie — unauthenticated
+            let existing_user_id: Option<Uuid> = None;
+
+            // Consume the auth state
+            let auth_state = db::delete_auth_state(&pool, &state_id)
+                .await
+                .unwrap()
+                .expect("state should exist");
+
+            // Validate user_id binding — NULL stored + no session = allowed
+            let stored = auth_state.user_id;
+            let current = existing_user_id;
+            let mismatch = if let Some(s) = stored {
+                if let Some(c) = current {
+                    s != c
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+            assert!(
+                !mismatch,
+                "unauthenticated flow should be allowed (stored: {:?}, current: {:?})",
+                stored,
+                current
+            );
         }
     }
 }

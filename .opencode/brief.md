@@ -1,186 +1,326 @@
 # Task Brief
 
 ## Task Description
-Implement a fix for the mobile hamburger menu background, as described in the NOMS-007.md document.
+Fix CSRF vulnerability in OAuth flow: the `auth_states` table does not store the initiating user's session ID, so the state parameter in the OAuth callback is not bound to the browser session that started the flow. An attacker can initiate an OAuth flow and trick a victim into completing it, causing the victim's OAuth account to be linked to an attacker-controlled account.
 
-Specifically: "Hamburger menu drawer: Fix transparent background" — The mobile hamburger menu drawer has a completely transparent background, making it unreadable and visually broken. Plan: Add proper background color (likely `var(--surface)` or `var(--bg-base)`) to the drawer container so content is visible.
+The fix requires:
+1. Adding a `user_id` column (nullable UUID) to the `auth_states` table via a migration
+2. Updating the `AuthState` Rust struct to include `user_id: Option<Uuid>`
+3. Updating `insert_auth_state()` and `delete_auth_state()` DB functions
+4. Updating `start_handler` to extract and store the current session's user ID
+5. Updating `callback_handler` to validate the stored user_id matches the current session's user_id
+6. Updating all tests that use `insert_auth_state` directly
 
 ## Phase 0: Implementation Blueprint
 <!-- written by @develop-architect -->
 
-### Analysis
+### Research Findings
 
-**Current State:**
-- The mobile drawer is defined in `src/components/navbar.rs` with two key elements:
-  - `div.navbar-drawer` — the full-screen overlay (backdrop)
-  - `div.navbar-drawer-content` — the slide-in panel from the right
-- In `assets/main.css`, `.navbar-drawer-content` already has `background: var(--bg-base)` defined.
-- CSS minification is already disabled (`CssAssetOptions::new().with_minify(false)`) in `src/main.rs`.
+**Migration System**: Uses `pgschema` (declarative schema), NOT numbered migrations. Single file `migrations/schema.sql`, additive-only via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`. Applied via `just migrate` or `entrypoint.sh`. Test schema duplicated in `src/test_utils.rs` lines 97-108.
 
-**Root Cause Investigation:**
-The CSS declares `background: var(--bg-base)` on `.navbar-drawer-content`, but the issue reports a "completely transparent background". Possible causes:
+**sqlx offline cache**: `.sqlx/` directory has compiled query metadata. `delete_auth_state` cached at `.sqlx/query-158493df...json`. Regenerate via `just sqlx-prepare` after changes.
 
-1. **Missing overflow/scroll handling**: The drawer content has no `overflow-y` property, so if content exceeds the viewport, it overflows invisibly.
-2. **Missing z-index on drawer content**: `.navbar-drawer` has `z-index: 200`, but `.navbar-drawer-content` (a child with `position: fixed`) may not stack correctly in all browsers.
-3. **No scrollbar styling**: On mobile, the drawer panel needs `overflow-y: auto` to be scrollable when content exceeds the viewport height.
+**Session pattern** (from callback_handler lines 372-379):
+```rust
+let existing_user_id = if let Some(cookie) = jar.get(session::COOKIE_NAME) {
+    session::verify_session(&state.pool, cookie.value()).await.ok()
+} else { None };
+```
 
-### Implementation Plan
+### Key Files
 
-**File to modify:** `assets/main.css`
+| File | Lines | Content |
+|------|-------|---------|
+| `migrations/schema.sql` | 44-50 | `auth_states` table DDL |
+| `src/db/mod.rs` | 137-143 | `AuthState` struct |
+| `src/db/mod.rs` | 171-187 | `insert_auth_state()` |
+| `src/db/mod.rs` | 193-205 | `delete_auth_state()` |
+| `src/auth/oauth.rs` | 69-85 | `OAuthError` enum |
+| `src/auth/oauth.rs` | 284-336 | `start_handler` (NO CookieJar) |
+| `src/auth/oauth.rs` | 343-464 | `callback_handler` (HAS CookieJar) |
+| `src/auth/session.rs` | 17 | `COOKIE_NAME = "noms_session"` |
+| `src/test_utils.rs` | 97-108 | `auth_states` test DDL |
 
-**Changes to `.navbar-drawer-content`:**
-1. Ensure `background: var(--bg-base)` is present (already exists, keep it)
-2. Add `overflow-y: auto` so long content is scrollable within the drawer
-3. Add `z-index: 1` to ensure the content panel renders above the overlay backdrop in all browsers
-4. Add `overscroll-behavior: contain` to prevent pull-to-refresh interference on mobile
+### Step-by-Step Plan
 
-**Changes to `.navbar-drawer` (overlay):**
-- No changes needed; `background: rgba(0, 0, 0, 0.4)` is appropriate for a dimming overlay.
+**Step 1**: `migrations/schema.sql` — After line 50, add:
+```sql
+ALTER TABLE auth_states ADD COLUMN IF NOT EXISTS user_id UUID;
+```
+Nullable for backward compat + unauthenticated flows.
 
-### CSS Diff (conceptual)
+**Step 2**: `src/test_utils.rs` lines 97-108 — Add `user_id UUID,` to CREATE TABLE.
 
-```css
-.navbar-drawer-content {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 280px;
-    max-width: 85vw;
-    background: var(--bg-base);       /* already present */
-    z-index: 1;                        /* NEW: ensure stacking above overlay */
-    overflow-y: auto;                  /* NEW: scroll long content */
-    overscroll-behavior: contain;      /* NEW: prevent mobile bounce */
-    padding: var(--space-lg);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-lg);
-    animation: slide-in 0.3s ease;
-    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+**Step 3**: `src/db/mod.rs` line 137 — Add `pub user_id: Option<Uuid>,` to `AuthState` struct.
+
+**Step 4**: `src/db/mod.rs` line 171 — Update `insert_auth_state()`: add param `user_id: Option<Uuid>`, add `$5` to INSERT SQL, add `.bind(user_id)`.
+
+**Step 5**: `src/db/mod.rs` line 193 — Update `delete_auth_state()`: add `user_id` to RETURNING clause.
+
+**Step 6**: `src/auth/oauth.rs` line 69 — Add `StateUserMismatch` variant to `OAuthError`. Update Display impl, sanitized_message, and IntoResponse (401 UNAUTHORIZED).
+
+**Step 7**: `src/auth/oauth.rs` line 284 — Add `jar: CookieJar` param to `start_handler`. After PKCE generation, extract user_id using session pattern. Pass `user_id` to `insert_auth_state`.
+
+**Step 8**: `src/auth/oauth.rs` after line 379 — Add validation:
+```rust
+if let Some(stored) = auth_state.user_id {
+    if let Some(current) = existing_user_id {
+        if stored != current { return Err(OAuthError::StateUserMismatch); }
+    }
 }
 ```
 
-### Verification
-- Build the project and test on mobile viewport (< 768px)
-- Open the hamburger menu and verify the drawer panel has a solid background
-- Verify content is readable in both light and dark modes
-- Verify scrolling works when drawer content exceeds viewport height
+**Step 9**: Update ALL `insert_auth_state` calls in tests to append `, None`:
+- `src/db/mod.rs`: lines 682, 699, 729, 741 (4 calls)
+- `src/auth/oauth.rs`: lines 814, 837, 862, 889, 906, 1031, 1096, 1148, 1188 (9 calls)
+
+**Step 10**: Add 5 new tests to `src/auth/oauth.rs` db_tests:
+1. `test_auth_state_stores_user_id` — insert with Some(id), verify returned
+2. `test_auth_state_null_user_id` — insert with None, verify None returned
+3. `test_callback_rejects_mismatched_user_id` — two users, mismatch = error
+4. `test_callback_accepts_matching_user_id` — same user, proceeds
+5. `test_callback_allows_null_user_id_no_session` — unauthenticated flow works
+
+**Step 11**: Run `just sqlx-prepare` to regenerate `.sqlx/` cache.
+
+### Files to Modify
+
+| File | Changes |
+|------|---------|
+| `migrations/schema.sql` | Add ALTER TABLE for user_id column |
+| `src/test_utils.rs` | Add user_id to test DDL |
+| `src/db/mod.rs` | AuthState struct + insert/delete functions + 4 test calls |
+| `src/auth/oauth.rs` | Error enum + start_handler + callback_handler + 9 test calls + 5 new tests |
+| `.sqlx/` | Regenerate cache |
+
+### Implementation Order
+1. Schema migration (Step 1)
+2. Test schema (Step 2)
+3. db/mod.rs struct + functions (Steps 3-5)
+4. oauth.rs error enum (Step 6)
+5. oauth.rs handlers (Steps 7-8)
+6. All test call updates (Step 9)
+7. New tests (Step 10)
+8. sqlx cache regen (Step 11)
+
+### Architectural Decisions
+- **Nullable user_id**: Backward compat + supports unauthenticated OAuth flows
+- **No FK constraint**: Avoids circular deps, keeps migration simple
+- **Validation in callback only**: Mirrors existing state_id/provider pattern
+- **401 UNAUTHORIZED for mismatch**: Client-side error, aligns with StateExpired
 
 ## Phase 1: Implementation Details
 <!-- written by @develop-implement -->
 
 ### Summary
-Added three CSS properties to `.navbar-drawer-content` in `assets/main.css` to fix the mobile hamburger menu drawer: ensure proper stacking above the overlay, enable scrolling for long content, and prevent mobile pull-to-refresh interference.
+Added `user_id` column to `auth_states` table, binding each OAuth state to the session that created it. The `start_handler` now extracts the current session's user ID and stores it alongside the state. The `callback_handler` validates that the stored user ID matches the current session's user ID, rejecting cross-user state reuse (CSRF fix). A new `StateUserMismatch` error (401 UNAUTHORIZED) is returned when a mismatch is detected.
 
 ### Files Modified
-- **`assets/main.css`** — Added `z-index: 1`, `overflow-y: auto`, and `overscroll-behavior: contain` to `.navbar-drawer-content`.
 
-### Changes in Detail
-The `.navbar-drawer-content` class (line 609) already had `background: var(--bg-base)` but was missing:
-1. **`z-index: 1`** — The parent `.navbar-drawer` has `z-index: 200`, but the child `.navbar-drawer-content` uses `position: fixed`, which creates a new stacking context. Without an explicit `z-index`, the content panel may not render above the overlay backdrop consistently across browsers.
-2. **`overflow-y: auto`** — Without this, content exceeding the viewport height overflows invisibly. This makes the drawer scrollable when menu items are tall.
-3. **`overscroll-behavior: contain`** — Prevents the mobile browser's pull-to-refresh gesture from firing when the user scrolls to the top/bottom of the drawer content.
+| File | Changes |
+|------|---------|
+| `migrations/schema.sql` | Added `ALTER TABLE auth_states ADD COLUMN IF NOT EXISTS user_id UUID;` |
+| `src/test_utils.rs` | Added `user_id UUID,` to test `auth_states` CREATE TABLE DDL |
+| `src/db/mod.rs` | Added `user_id: Option<Uuid>` to `AuthState` struct; updated `insert_auth_state()` to accept and bind `user_id`; updated `delete_auth_state()` RETURNING to include `user_id`; updated 4 test calls to pass `None` |
+| `src/auth/oauth.rs` | Added `StateUserMismatch` to `OAuthError` + Display/sanitized_message/IntoResponse; updated `start_handler` to extract session `user_id` and pass to `insert_auth_state`; updated `callback_handler` to validate stored `user_id` matches current session; updated 9 test calls to pass `None`; added 5 new tests |
+| `.sqlx/` | Regenerated offline query cache via `just sqlx-prepare` |
+
+### Tests Added (5 new)
+1. **`test_auth_state_stores_user_id`** — Insert with `Some(user_id)`, verify returned row contains the UUID
+2. **`test_auth_state_null_user_id`** — Insert with `None`, verify returned row has `user_id = None`
+3. **`test_callback_rejects_mismatched_user_id`** — Two different users, state created by user A, callback by user B → `StateUserMismatch`
+4. **`test_callback_accepts_matching_user_id`** — Same user creates state and calls callback → proceeds to linking
+5. **`test_callback_allows_null_user_id_no_session`** — Unauthenticated flow (no session cookie) with `None` stored → proceeds normally
+
+### Test Results
+- **155 tests passed**, 0 failed
+- `cargo test --features server` — all green
+- `cargo clippy --features server -- -D warnings` — clean
+- `SQLX_OFFLINE=true cargo check --features server` — clean
 
 ### Verification
-- `cargo build` completes successfully with no errors or warnings.
+- Migration applied successfully via `just migrate` (ALTER TABLE executed)
+- sqlx cache regenerated via `just sqlx-prepare`
+- Build, lint, and all tests verified clean
+
+### Follow-up Fix: Flaky Test (Phase 2 Review)
+- **`src/auth/oauth.rs`**: Fixed `test_callback_rejects_mismatched_user_id` — replaced `std::env::set_var("SESSION_SECRET", ...)` with `session::set_test_secret(...)` (thread-local) and added `session::clear_test_secret()` cleanup. This eliminates the race condition with `test_missing_secret_returns_error` in `session.rs` that calls `std::env::remove_var("SESSION_SECRET")` during parallel test execution. Verified: 155 tests pass consistently.
 
 ## Phase 2: Review Verdict
 <!-- written by @develop-review -->
 
-### Verdict: PASS
+**Verdict: PASS**
 
 ### Issues
 
-**Issue 1: `z-index: 1` is redundant (SUGGESTION)**
-- **Location:** `assets/main.css`, line 617
-- **Severity:** SUGGESTION
-- **Description:** The `z-index: 1` on `.navbar-drawer-content` is harmless but does not meaningfully improve stacking. Per CSS spec (MDN Stacking Context), `.navbar-drawer` (`position: fixed; z-index: 200`) creates a stacking context. `.navbar-drawer-content` (`position: fixed; z-index: 1`) creates its own nested stacking context *within* the parent's context. Since `.navbar-drawer-content` is the only child of `.navbar-drawer`, there are no sibling elements to compete with in the stacking order. The content panel already renders on top of the parent's background by default DOM paint order. The brief's analysis ("creates its own stacking context relative to the viewport, not the parent") is partially correct for *positioning* (fixed elements are positioned relative to the viewport), but incorrect for *stacking* — the element still participates in its parent's stacking context for z-index resolution.
-- **Recommended Fix:** Consider removing `z-index: 1` for cleanliness, or keep it as defensive code with a clarifying comment. Not a blocker either way.
-
-**Issue 2: Original root cause analysis was incomplete (SUGGESTION)**
-- **Location:** Phase 0 brief analysis
-- **Severity:** SUGGESTION
-- **Description:** The original NOMS-007 issue stated the background was "completely transparent." However, `background: var(--bg-base)` already existed in the CSS. The real issue was likely that without `overflow-y: auto`, content overflowing the viewport made the drawer appear visually broken (content spilling outside the panel boundaries). The `z-index: 1` addition was not the primary fix for the reported issue — `overflow-y: auto` was. This is a documentation/analysis note, not a code issue.
-- **Recommended Fix:** N/A for code. Future briefs should more precisely diagnose "transparent background" reports when the background property already exists.
+None. The previously identified flaky test has been resolved (see Follow-up below).
 
 ### Positive Findings
 
-1. **`overflow-y: auto`** — Correct and necessary. Without it, content exceeding the viewport height would overflow the drawer panel invisibly, making the background appear broken. Works correctly on flex containers (scroll behavior is independent of flex layout).
-
-2. **`overscroll-behavior: contain`** — Good defensive addition for mobile UX. Prevents pull-to-refresh and scroll chaining from firing when the user scrolls to the top/bottom of the drawer. No side effects.
-
-3. **`background: var(--bg-base)` preserved** — Correctly uses the design system's base background variable, ensuring consistency across light and dark modes.
-
-4. **No regressions detected** — The three added properties are additive and non-conflicting. Existing flex layout, animation (`slide-in`), box-shadow, and padding are unaffected.
-
-5. **Clean CSS** — Properties are well-formed, properly scoped, and follow the existing codebase conventions.
+- **Migration is correct and backward compatible**: `ALTER TABLE auth_states ADD COLUMN IF NOT EXISTS user_id UUID;` is idempotent, nullable (supports unauthenticated flows), and uses no FK constraint (avoids circular deps, appropriate for short-lived tokens).
+- **`AuthState` struct, `insert_auth_state()`, and `delete_auth_state()` are all correctly updated**: The struct has `user_id: Option<Uuid>`, the INSERT binds `$5`, and the DELETE RETURNING includes `user_id`. sqlx offline cache is properly regenerated.
+- **`start_handler` correctly extracts session user_id**: Uses the same proven pattern as `callback_handler` (`jar.get()` → `session::verify_session()` → `.ok()`), stores `None` on failure/no cookie.
+- **`callback_handler` validation logic is correct and covers all four cases**:
+  - Stored=Some, Current=Some, mismatch → `StateUserMismatch` (the CSRF fix)
+  - Stored=Some, Current=Some, match → proceeds
+  - Stored=Some, Current=None → proceeds (user logged out during flow)
+  - Stored=None, Current=Any → proceeds (unauthenticated initiation)
+- **`StateUserMismatch` error handling is clean**: 401 UNAUTHORIZED status, sanitized message ("Auth state user mismatch") is client-safe and doesn't leak user IDs, properly logged as a warning server-side.
+- **All 13 existing `insert_auth_state` callers updated**: 4 in `src/db/mod.rs` tests + 9 in `src/auth/oauth.rs` tests, all passing `None` for backward compat.
+- **Test schema in `test_utils.rs` matches migration**: `user_id UUID` column added to `CREATE TABLE`.
+- **No dead code, no unused imports, clippy is clean**: `cargo clippy --features server -- -D warnings` passes.
+- **Flaky test fix is correct**: `test_callback_rejects_mismatched_user_id` now uses `session::set_test_secret()` (thread-local via `thread_local!` + `RefCell`) instead of `std::env::set_var()`, with proper `session::clear_test_secret()` cleanup. The `read_secret()` test-mode path checks the thread-local first, fully isolating this test from parallel test interference. Verified: the thread-local mechanism at `session.rs:80-93` correctly gates `TEST_SECRET` per thread.
 
 ### Requirements Coverage
 
 | Requirement | Status |
 |---|---|
-| Fix transparent background (NOMS-007) | Covered — `overflow-y: auto` contains content within the backgrounded panel |
-| Drawer content readable in light/dark mode | Covered — `var(--bg-base)` resolves correctly in both themes |
-| Scrolling for long content | Covered — `overflow-y: auto` |
-| Prevent mobile pull-to-refresh interference | Covered — `overscroll-behavior: contain` |
+| Add `user_id` column (nullable UUID) via migration | ✅ |
+| Update `AuthState` struct | ✅ |
+| Update `insert_auth_state()` and `delete_auth_state()` | ✅ |
+| `start_handler` extracts and stores session user_id | ✅ |
+| `callback_handler` validates stored user_id matches session | ✅ |
+| Update all existing test calls | ✅ (13 callers) |
+| New tests for user_id binding validation | ✅ (5 tests added) |
+| sqlx offline cache regenerated | ✅ |
 
-### Summary
-The implementation correctly addresses the hamburger menu drawer background issue. The core fix (`overflow-y: auto`) properly contains overflowing content within the backgrounded panel, resolving the visual bug. The additional properties (`overscroll-behavior: contain`, `z-index: 1`) are defensive improvements that add value without introducing regressions. One minor suggestion to clean up the redundant `z-index: 1`, but the implementation is solid overall.
+### Test Coverage Assessment
+
+The 5 new tests cover:
+- (a) Same user passes — `test_callback_accepts_matching_user_id` ✅
+- (b) Different user rejected — `test_callback_rejects_mismatched_user_id` ✅
+- (c) Unauthenticated flow works — `test_callback_allows_null_user_id_no_session` ✅
+- (d) Attacker-initiated flow rejected — covered by (b) scenario ✅
+
+**Gap**: No explicit test for "stored=NULL, current=Some(user)" — a user starts OAuth unauthenticated, then logs in before completing the callback. The code correctly allows this (no mismatch when stored is NULL), but it's not explicitly tested. Low priority.
+
+### Overall Quality Summary
+
+The implementation is well-structured, follows the existing codebase patterns, and correctly fixes the CSRF vulnerability. The validation logic handles all four user_id/session combinations correctly. The previously identified test flakiness (`std::env::set_var` in parallel tests) has been resolved by switching to `session::set_test_secret()` (thread-local), with proper cleanup via `session::clear_test_secret()`.
 
 ## Phase 3: Synthesis
 <!-- written by @develop-synthesize -->
 
-### Summary
+### What the Vulnerability Was
 
-This task addressed **NOMS-007**: the mobile hamburger menu drawer appeared visually broken with content spilling outside the panel boundaries, making the background seem transparent. The root cause was not a missing background color — `background: var(--bg-base)` was already declared — but rather the absence of scroll containment on the drawer panel. When content exceeded the viewport height, it overflowed invisibly, undermining the visual integrity of the drawer.
+The OAuth CSRF protection relied solely on a random `state` parameter stored in the `auth_states` table. However, that state was **not bound to the browser session** that initiated the flow. An attacker could:
 
-The fix was a targeted, single-file CSS change: three properties were added to `.navbar-drawer-content` in `assets/main.css`. The implementation passed review with no blockers. One minor suggestion was raised (the `z-index: 1` is redundant given the DOM structure), but the team chose to keep it as defensive code.
+1. Start an OAuth flow on behalf of a victim (e.g., by embedding a link or redirect).
+2. The `state` parameter is generated and stored in the database with no association to any user.
+3. The attacker tricks the victim into completing the OAuth callback (the victim's browser follows the redirect to the provider, authenticates, and is redirected back).
+4. Because the `state` is valid and not tied to a specific session, the callback succeeds — and the victim's OAuth account (Google, GitHub, etc.) gets linked to the attacker's account.
 
-### Walkthrough of Changes
+This is a classic **Cross-Site Request Forgery (CSRF)** attack against the OAuth linking flow.
 
-**File: `assets/main.css`** — `.navbar-drawer-content` rule (line ~609)
+### How the Fix Prevents the Attack
 
-Three properties were added to the existing rule:
+The fix binds each OAuth auth state to the **initiating user's session ID** (`user_id`). At callback time, the server validates that the stored `user_id` matches the current session's `user_id`. If they differ, the callback is rejected with a `StateUserMismatch` error (HTTP 401). The four cases handled:
 
-| Property | Purpose | Notes |
+| Stored `user_id` | Current Session `user_id` | Result |
 |---|---|---|
-| `overflow-y: auto` | **Primary fix.** Contains long content within the drawer panel and makes it scrollable. Without this, content exceeding the viewport height overflows the panel boundaries, making the background appear broken. | Works correctly on flex containers — scroll behavior is independent of flex layout. |
-| `overscroll-behavior: contain` | Prevents the mobile browser's pull-to-refresh gesture from firing when the user scrolls to the top or bottom of the drawer content. Also prevents scroll chaining to the parent page. | Purely additive; no side effects on desktop. |
-| `z-index: 1` | Ensures the content panel renders above the overlay backdrop in all browsers. | **Review note:** Technically redundant because `.navbar-drawer-content` is the only child of `.navbar-drawer` and already paints on top by default DOM order. Kept as defensive code. |
+| `Some(A)` | `Some(B)` where A ≠ B | **Rejected** — `StateUserMismatch` (the CSRF fix) |
+| `Some(A)` | `Some(A)` | **Allowed** — same user completing their own flow |
+| `Some(A)` | `None` | **Allowed** — user logged out during flow |
+| `None` | Any | **Allowed** — unauthenticated initiation (backward compat) |
 
-The existing `background: var(--bg-base)` was preserved unchanged. This variable resolves to the appropriate background color in both light and dark themes, ensuring cross-theme consistency.
+This ensures that even if an attacker obtains a valid `state` parameter, they cannot use it from a different session.
 
-No other files were modified. No dependencies were introduced or changed.
+### File-by-File Walkthrough
 
-### Non-Obvious Patterns / Language Features
+#### `migrations/schema.sql` (line 53)
+**Change**: Added `ALTER TABLE auth_states ADD COLUMN IF NOT EXISTS user_id UUID;`
 
-- **CSS `overscroll-behavior`** is a relatively modern property (widely supported in evergreen browsers) that controls what happens when a scroll boundary is reached. `contain` traps the overscroll within the element, preventing it from propagating to ancestor scroll containers (including the browser viewport, which would trigger pull-to-refresh on mobile).
-- **Stacking context interaction with `position: fixed`**: The review correctly noted that while `position: fixed` positions the element relative to the viewport, it still participates in its parent's stacking context for z-index resolution. The `z-index: 1` creates a nested stacking context within the parent's `z-index: 200` context, but since there are no sibling competitors, it has no practical effect.
+**Purpose**: Adds a nullable `user_id` column to the `auth_states` table. Nullable for backward compatibility with existing auth states and to support unauthenticated OAuth flows. No FK constraint is used to avoid circular dependencies and keep the migration simple (auth states are short-lived and cleaned up by pg_cron).
 
-### Follow-Up Recommendations
+#### `src/test_utils.rs` (lines 97–108)
+**Change**: Added `user_id UUID,` to the `CREATE TABLE auth_states` DDL in the test schema setup.
 
-1. **Consider removing `z-index: 1`** in a future cleanup pass if the codebase prefers minimal CSS. It is harmless but adds no functional value.
-2. **Monitor** for any edge cases on very old browsers (e.g., Safari < 15.4) where `overscroll-behavior` support may be incomplete. The property degrades gracefully (scrolling still works without it).
-3. **Future briefs** should more precisely diagnose "transparent background" reports when the background property already exists — the real issue is often overflow or stacking behavior, not the color itself.
+**Purpose**: Ensures the in-memory test database schema matches the production migration. Without this, tests would fail when the `AuthState` struct expects a `user_id` column.
+
+#### `src/db/mod.rs` (lines 137–208)
+**Changes**:
+1. **`AuthState` struct** (line 142): Added `pub user_id: Option<Uuid>,` field. The struct derives `sqlx::FromRow`, so the column is automatically mapped from query results.
+2. **`insert_auth_state()`** (lines 172–190): Added `user_id: Option<Uuid>` parameter. SQL now includes `user_id` as `$5` in the INSERT, with `.bind(user_id)`.
+3. **`delete_auth_state()`** (lines 193–208): The `RETURNING` clause now includes `user_id` so the deleted row's user_id is returned.
+4. **4 test calls** updated to pass `None` for the new `user_id` parameter.
+
+**Purpose**: The data layer now persists and retrieves the session binding for every auth state. The `Option<Uuid>` type allows NULL values for unauthenticated flows.
+
+#### `src/auth/oauth.rs` (multiple sections)
+**Changes**:
+
+1. **`OAuthError` enum** (line 77): Added `StateUserMismatch` variant with doc comment. This is the new error returned when the CSRF validation fails.
+
+2. **`Display` impl** (line 97): `StateUserMismatch` formats as `"Auth state user mismatch"` — a client-safe message that doesn't leak user IDs.
+
+3. **`sanitized_message()`** (line 127): `StateUserMismatch` is in the client-safe match arm, so the detailed message is returned to the client.
+
+4. **`IntoResponse` impl** (in the match arm for 4xx errors): `StateUserMismatch` returns HTTP 401 UNAUTHORIZED, consistent with other CSRF-related errors like `StateExpired`.
+
+5. **`start_handler`** (lines 289–352): Added `jar: CookieJar` parameter. After PKCE generation, extracts the current session's `user_id` using the established pattern (`jar.get()` → `session::verify_session()` → `.ok()`), then passes it to `insert_auth_state()`.
+
+6. **`callback_handler`** (lines 397–406): New validation block after session extraction and before token exchange. Uses nested `if let Some()` to check: if both stored and current user_id are `Some`, they must be equal; otherwise return `StateUserMismatch`.
+
+7. **9 test calls** updated to pass `None` for the new `user_id` parameter.
+
+8. **5 new tests** added (lines 1248–1508):
+   - `test_auth_state_stores_user_id`: Verifies `Some(user_id)` is persisted and returned.
+   - `test_auth_state_null_user_id`: Verifies `None` is persisted and returned as `None`.
+   - `test_callback_rejects_mismatched_user_id`: Creates two users, binds state to user A, simulates callback from user B's session → asserts mismatch is detected. Uses `session::set_test_secret()` (thread-local) to avoid flaky test race conditions.
+   - `test_callback_accepts_matching_user_id`: Same user creates state and calls callback → asserts no mismatch.
+   - `test_callback_allows_null_user_id_no_session`: Unauthenticated flow with `None` stored and no session cookie → asserts flow proceeds normally.
+
+#### `.sqlx/` (offline query cache)
+**Change**: Regenerated via `just sqlx-prepare`. The cached metadata for `delete_auth_state` and `insert_auth_state` now includes the `user_id` column/bind parameter.
+
+**Purpose**: sqlx's compile-time query verification requires the offline cache to match the actual database schema and query strings. Without regeneration, the build would fail with a cache mismatch error.
+
+### Dependencies Introduced or Modified
+
+- **No new crate dependencies**. The fix uses existing types (`Uuid` from `uuid`, `CookieJar` from `cookie`, `session` module).
+- **Function signature change**: `insert_auth_state()` now takes a 6th parameter (`user_id: Option<Uuid>`). All 13 existing callers (4 in `db/mod.rs` tests, 9 in `oauth.rs` tests) were updated.
+- **Handler signature change**: `start_handler()` now takes `jar: CookieJar`. This is handled by axum's extractor system — no routing change needed.
+
+### Special Syntax / Language Features
+
+- **`sqlx::query_as!` macro**: Used in `delete_auth_state()` to map query results to the `AuthState` struct. The `RETURNING` clause must list all struct fields explicitly.
+- **`Option<Uuid>` binding**: sqlx handles `Option<T>` by binding NULL when `None` and the actual value when `Some`.
+- **Thread-local test isolation**: `session::set_test_secret()` / `session::clear_test_secret()` use `thread_local!` + `RefCell` to avoid race conditions in parallel test execution. This was a follow-up fix identified during Phase 2 review.
+
+### Areas to Monitor
+
+- **Test coverage gap**: No explicit test for "stored=NULL, current=Some(user)" — a user starts OAuth while unauthenticated, then logs in before completing the callback. The code correctly allows this (stored is NULL, so the mismatch check is skipped), but it is not explicitly tested. Low priority.
+- **Migration idempotency**: The `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` is safe for repeated runs, but monitoring the migration log after deployment is recommended.
 
 ### Commit Message
 
 ```
-fix(ui): fix mobile hamburger drawer overflow and scroll containment
+fix(auth): bind OAuth auth state to user session to prevent CSRF
 
-The mobile hamburger menu drawer was visually broken because content
-exceeding the viewport height overflowed the panel boundaries, making
-the background appear transparent. The background property (var(--bg-base))
-was already correctly declared; the missing piece was scroll containment.
+The auth_states table did not store the initiating user's session ID,
+so the state parameter in the OAuth callback was not bound to the
+browser session that started the flow. An attacker could initiate an
+OAuth flow and trick a victim into completing it, causing the victim's
+OAuth account to be linked to an attacker-controlled account.
 
-Changes to assets/main.css (.navbar-drawer-content):
-- Add overflow-y: auto to contain long content and enable scrolling
-- Add overscroll-behavior: contain to prevent pull-to-refresh interference
-  on mobile when scrolling to drawer boundaries
-- Add z-index: 1 as defensive stacking context (redundant but harmless)
+Fix:
+- Add a nullable user_id column to auth_states via migration
+- Extract and store the current session's user_id in start_handler
+- Validate stored user_id matches current session in callback_handler
+- Reject mismatches with StateUserMismatch (HTTP 401)
 
-Existing background: var(--bg-base) preserved for light/dark theme support.
-No other files or dependencies modified.
+Files changed:
+- migrations/schema.sql: ALTER TABLE to add user_id UUID column
+- src/test_utils.rs: Add user_id to test auth_states CREATE TABLE DDL
+- src/db/mod.rs: Add user_id field to AuthState struct; update
+  insert_auth_state() to accept and bind user_id; update
+  delete_auth_state() RETURNING to include user_id; update 4 test calls
+- src/auth/oauth.rs: Add StateUserMismatch error variant with Display,
+  sanitized_message, and IntoResponse (401); update start_handler to
+  extract session user_id and pass to insert_auth_state; add validation
+  in callback_handler; update 9 test calls; add 5 new tests covering
+  user_id binding, mismatch rejection, match acceptance, and null flow
+- .sqlx/: Regenerate offline query cache via just sqlx-prepare
 
-Refs: NOMS-007
+All 155 tests pass. Clippy clean. SQLX offline check clean.
 ```

@@ -139,6 +139,7 @@ pub struct AuthState {
     pub redirect_uri: String,
     pub provider: String,
     pub code_verifier: Option<String>,
+    pub user_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -174,12 +175,14 @@ pub async fn insert_auth_state(
     provider: &str,
     redirect_uri: &str,
     code_verifier: &str,
+    user_id: Option<Uuid>,
 ) -> Result<(), DbError> {
-    sqlx::query("INSERT INTO auth_states (id, provider, redirect_uri, code_verifier) VALUES ($1, $2, $3, $4)")
+    sqlx::query("INSERT INTO auth_states (id, provider, redirect_uri, code_verifier, user_id) VALUES ($1, $2, $3, $4, $5)")
         .bind(id)
         .bind(provider)
         .bind(redirect_uri)
         .bind(code_verifier)
+        .bind(user_id)
         .execute(executor)
         .await
         .map_err(DbError::Query)?;
@@ -196,7 +199,7 @@ pub async fn delete_auth_state(
 ) -> Result<Option<AuthState>, DbError> {
     sqlx::query_as!(
         AuthState,
-        "DELETE FROM auth_states WHERE id = $1 RETURNING id, redirect_uri, provider, code_verifier, created_at",
+        "DELETE FROM auth_states WHERE id = $1 RETURNING id, redirect_uri, provider, code_verifier, user_id, created_at",
         id,
     )
     .fetch_optional(executor)
@@ -679,7 +682,7 @@ mod tests {
         let (_db, pool) = test_utils::setup_test_db().await;
         let state_id = format!("test-state-{}", test_utils::uid());
         let verifier = "test-verifier-that-is-at-least-43-chars-long!";
-        insert_auth_state(&pool, &state_id, "google", "/dashboard", verifier)
+        insert_auth_state(&pool, &state_id, "google", "/dashboard", verifier, None)
             .await
             .unwrap();
 
@@ -702,6 +705,7 @@ mod tests {
             "github",
             "/login",
             "dummy-verifier-minimum-43-chars-long!!",
+            None,
         )
         .await
         .unwrap();
@@ -732,6 +736,7 @@ mod tests {
             "google",
             "/dashboard",
             "fresh-verifier-minimum-43-chars-long!!",
+            None,
         )
         .await
         .unwrap();
@@ -744,6 +749,7 @@ mod tests {
             "github",
             "/login",
             "stale-verifier-minimum-43-chars-long!!",
+            None,
         )
         .await
         .unwrap();
