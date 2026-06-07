@@ -144,6 +144,17 @@ the restyled button components.
 - `assets/main.css`
 - Unauthorized page component (TBD)
 
+### [ ] Hamburger menu drawer: Fix transparent background
+
+The mobile hamburger menu drawer has a completely transparent
+background, making it unreadable and visually broken.
+
+**Plan:** Add proper background color (likely `var(--surface)` or
+`var(--bg-base)`) to the drawer container so content is visible.
+
+**Files:**
+- `assets/main.css`
+
 ---
 
 ## Acceptance Criteria

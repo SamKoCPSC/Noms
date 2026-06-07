@@ -614,6 +614,9 @@ a:hover {
     width: 280px;
     max-width: 85vw;
     background: var(--bg-base);
+    z-index: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: var(--space-lg);
     display: flex;
     flex-direction: column;
