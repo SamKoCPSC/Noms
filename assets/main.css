@@ -50,8 +50,8 @@ a:hover {
     --surface: #F5F0E8;
 
     /* Neumorphic shadows */
-    --shadow-light: #FFFFFF;
-    --shadow-dark: #DDD8CE;
+    --shadow-light: #FFFDF8;
+    --shadow-dark: #C8C1B4;
 
     /* Glassmorphism */
     --glass-fill: rgba(255, 255, 255, 0.20);
@@ -103,8 +103,8 @@ a:hover {
 .dark {
     --bg-base: #1E1C18;
     --surface: #242220;
-    --shadow-light: #2E2B26;
-    --shadow-dark: #141310;
+    --shadow-light: #33302A;
+    --shadow-dark: #0F0E0B;
     --glass-fill: rgba(30, 28, 24, 0.50);
     --glass-border: rgba(255, 255, 255, 0.10);
     --glass-blur: blur(16px) saturate(150%);
@@ -152,17 +152,17 @@ a:hover {
    Neumorphic Utility Classes
    ============================================================ */
 .neumo-raised {
-    box-shadow: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light);
+    box-shadow: 8px 8px 18px var(--shadow-dark), -8px -8px 18px var(--shadow-light);
     border-radius: var(--radius-md);
 }
 
 .neumo-inset {
-    box-shadow: inset 6px 6px 14px var(--shadow-dark), inset -6px -6px 14px var(--shadow-light);
+    box-shadow: inset 8px 8px 18px var(--shadow-dark), inset -8px -8px 18px var(--shadow-light);
     border-radius: var(--radius-md);
 }
 
 .neumo-card {
-    box-shadow: 8px 8px 20px var(--shadow-dark), -8px -8px 20px var(--shadow-light);
+    box-shadow: 10px 10px 24px var(--shadow-dark), -10px -10px 24px var(--shadow-light);
     border-radius: var(--radius-lg);
 }
 
@@ -209,6 +209,12 @@ a:hover {
     }
 }
 
+@media (min-width: 1920px) {
+    .container {
+        max-width: 1440px;
+    }
+}
+
 /* ============================================================
     Touch Target Minimum (WCAG / Apple HIG)
     ============================================================ */
@@ -244,27 +250,33 @@ a:hover {
 .btn-primary {
     background: var(--accent);
     color: white;
-    box-shadow: 4px 4px 10px var(--shadow-dark), -4px -4px 10px var(--shadow-light);
+    box-shadow: 6px 6px 16px var(--shadow-dark), -6px -6px 16px var(--shadow-light);
 }
 
 .btn-primary:hover:not(:disabled) {
     background: var(--accent-hover);
-    box-shadow: 2px 2px 6px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
+    box-shadow: 3px 3px 8px var(--shadow-dark), -3px -3px 8px var(--shadow-light);
 }
 
 .btn-primary:active:not(:disabled) {
-    box-shadow: inset 3px 3px 8px var(--shadow-dark), inset -3px -3px 8px var(--shadow-light);
+    box-shadow: inset 4px 4px 10px var(--shadow-dark), inset -4px -4px 10px var(--shadow-light);
 }
 
 .btn-secondary {
     background: var(--surface);
     color: var(--accent);
     border: 2px solid var(--accent);
+    box-shadow: 4px 4px 12px var(--shadow-dark), -4px -4px 12px var(--shadow-light);
 }
 
 .btn-secondary:hover:not(:disabled) {
     background: var(--accent);
     color: white;
+    box-shadow: 2px 2px 6px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
+}
+
+.btn-secondary:active:not(:disabled) {
+    box-shadow: inset 3px 3px 8px var(--shadow-dark), inset -3px -3px 8px var(--shadow-light);
 }
 
 .btn-ghost {
@@ -281,11 +293,15 @@ a:hover {
 .btn-danger {
     background: var(--error);
     color: white;
-    box-shadow: 4px 4px 10px var(--shadow-dark), -4px -4px 10px var(--shadow-light);
+    box-shadow: 6px 6px 16px var(--shadow-dark), -6px -6px 16px var(--shadow-light);
 }
 
 .btn-danger:hover:not(:disabled) {
-    filter: brightness(1.1);
+    box-shadow: 3px 3px 8px var(--shadow-dark), -3px -3px 8px var(--shadow-light);
+}
+
+.btn-danger:active:not(:disabled) {
+    box-shadow: inset 4px 4px 10px var(--shadow-dark), inset -4px -4px 10px var(--shadow-light);
 }
 
 /* ============================================================
@@ -297,7 +313,7 @@ a:hover {
 }
 
 .input:focus {
-    box-shadow: inset 6px 6px 14px var(--shadow-dark), inset -6px -6px 14px var(--shadow-light),
+    box-shadow: inset 8px 8px 18px var(--shadow-dark), inset -8px -8px 18px var(--shadow-light),
                 0 0 0 2px var(--accent);
 }
 
@@ -761,7 +777,7 @@ a:hover {
 .modal-card {
     background: var(--bg-base);
     border-radius: var(--radius-lg);
-    box-shadow: 8px 8px 20px var(--shadow-dark), -8px -8px 20px var(--shadow-light);
+    box-shadow: 10px 10px 24px var(--shadow-dark), -10px -10px 24px var(--shadow-light);
     padding: var(--space-xl);
     max-width: 440px;
     width: 100%;
@@ -801,7 +817,7 @@ a:hover {
     background: var(--surface);
     border-radius: var(--radius-md);
     padding: var(--space-xs);
-    box-shadow: inset 3px 3px 8px var(--shadow-dark), inset -3px -3px 8px var(--shadow-light);
+    box-shadow: inset 4px 4px 12px var(--shadow-dark), inset -4px -4px 12px var(--shadow-light);
     width: fit-content;
     max-width: 100%;
 }
@@ -829,7 +845,7 @@ a:hover {
 .settings-tab-active {
     color: var(--accent);
     background: var(--bg-base);
-    box-shadow: 3px 3px 8px var(--shadow-dark), -3px -3px 8px var(--shadow-light);
+    box-shadow: 4px 4px 12px var(--shadow-dark), -4px -4px 12px var(--shadow-light);
 }
 
 .settings-tab-active:hover {

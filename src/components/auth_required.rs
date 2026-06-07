@@ -44,12 +44,12 @@ pub fn AuthRequired(props: AuthRequiredProps) -> Element {
                     class: "flex flex-col sm:flex-row gap-3",
                     a {
                         href: "/login",
-                        class: "inline-flex items-center justify-center px-6 py-2.5 border border-transparent text-sm font-medium rounded-lg text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors",
+                        class: "btn btn-primary touch-target",
                         "Sign In"
                     }
                     a {
                         href: "/",
-                        class: "inline-flex items-center justify-center px-6 py-2.5 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors",
+                        class: "btn btn-secondary touch-target",
                         "Go Home"
                     }
                 }
