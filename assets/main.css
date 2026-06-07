@@ -250,12 +250,14 @@ a:hover {
 .btn-primary {
     background: var(--accent);
     color: white;
-    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
+    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
+                inset 0 0 0 5px var(--bg-base);
 }
 
 .btn-primary:hover:not(:disabled) {
     background: var(--accent-hover);
-    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
+    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
+                inset 0 0 0 5px var(--bg-base);
 }
 
 .btn-primary:active:not(:disabled) {
@@ -266,13 +268,15 @@ a:hover {
     background: var(--surface);
     color: var(--accent);
     border: 2px solid var(--accent);
-    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
+    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
+                inset 0 0 0 5px var(--bg-base);
 }
 
 .btn-secondary:hover:not(:disabled) {
     background: var(--accent);
     color: white;
-    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
+    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
+                inset 0 0 0 5px var(--bg-base);
 }
 
 .btn-secondary:active:not(:disabled) {
@@ -293,11 +297,13 @@ a:hover {
 .btn-danger {
     background: var(--error);
     color: white;
-    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
+    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
+                inset 0 0 0 5px var(--bg-base);
 }
 
 .btn-danger:hover:not(:disabled) {
-    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
+    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
+                inset 0 0 0 5px var(--bg-base);
 }
 
 .btn-danger:active:not(:disabled) {
