@@ -219,80 +219,82 @@ pub fn Navbar(theme: UseTheme) -> Element {
                     span { class: "hamburger-line" }
                 }
             }
+        }
 
-            // Mobile slide-out drawer
-            if menu_open() {
+        // Mobile slide-out drawer — rendered OUTSIDE the <nav> so that the
+        // navbar's backdrop-filter does not create a containing block that
+        // clips the drawer's `position: fixed; bottom: 0` to the navbar height.
+        if menu_open() {
+            div {
+                class: "navbar-drawer",
+                onclick: move |_| menu_open.set(false),
                 div {
-                    class: "navbar-drawer",
-                    onclick: move |_| menu_open.set(false),
-                    div {
-                        class: "navbar-drawer-content",
-                        onclick: move |evt| evt.stop_propagation(),
-                        // Close button
-                        button {
-                            class: "navbar-drawer-close touch-target",
+                    class: "navbar-drawer-content",
+                    onclick: move |evt| evt.stop_propagation(),
+                    // Close button
+                    button {
+                        class: "navbar-drawer-close touch-target",
+                        onclick: move |_| menu_open.set(false),
+                        aria_label: "Close menu",
+                        "✕"
+                    }
+
+                    // Drawer nav links
+                    div { class: "navbar-drawer-links",
+                        Link {
+                            to: Route::Dashboard {},
+                            class: "navbar-drawer-link",
                             onclick: move |_| menu_open.set(false),
-                            aria_label: "Close menu",
-                            "✕"
+                            "Dashboard"
                         }
-
-                        // Drawer nav links
-                        div { class: "navbar-drawer-links",
+                        Link {
+                            to: Route::Explore {},
+                            class: "navbar-drawer-link",
+                            onclick: move |_| menu_open.set(false),
+                            "Explore"
+                        }
+                        Link {
+                            to: Route::RecipeNew {},
+                            class: "navbar-drawer-link",
+                            onclick: move |_| menu_open.set(false),
+                            "New Recipe"
+                        }
+                        if is_signed_in {
                             Link {
-                                to: Route::Dashboard {},
+                                to: Route::SettingsProfile {},
                                 class: "navbar-drawer-link",
                                 onclick: move |_| menu_open.set(false),
-                                "Dashboard"
+                                "Settings"
                             }
+                            button {
+                                class: "navbar-drawer-link navbar-drawer-link-danger",
+                                onclick: move |evt| {
+                                    menu_open.set(false);
+                                    on_sign_out(evt);
+                                },
+                                "Sign Out"
+                            }
+                        } else {
                             Link {
-                                to: Route::Explore {},
+                                to: Route::Login {},
                                 class: "navbar-drawer-link",
                                 onclick: move |_| menu_open.set(false),
-                                "Explore"
-                            }
-                            Link {
-                                to: Route::RecipeNew {},
-                                class: "navbar-drawer-link",
-                                onclick: move |_| menu_open.set(false),
-                                "New Recipe"
-                            }
-                            if is_signed_in {
-                                Link {
-                                    to: Route::SettingsProfile {},
-                                    class: "navbar-drawer-link",
-                                    onclick: move |_| menu_open.set(false),
-                                    "Settings"
-                                }
-                                button {
-                                    class: "navbar-drawer-link navbar-drawer-link-danger",
-                                    onclick: move |evt| {
-                                        menu_open.set(false);
-                                        on_sign_out(evt);
-                                    },
-                                    "Sign Out"
-                                }
-                            } else {
-                                Link {
-                                    to: Route::Login {},
-                                    class: "navbar-drawer-link",
-                                    onclick: move |_| menu_open.set(false),
-                                    "Sign In"
-                                }
+                                "Sign In"
                             }
                         }
+                    }
 
-                        // Drawer theme toggle
-                        button {
-                            class: "navbar-drawer-theme touch-target",
-                            onclick: move |_| {
-                                theme.toggle();
-                                menu_open.set(false);
-                            },
-                            if theme.is_dark() {
-                                "☀️ Light Mode"
-                            } else {
-                                "🌙 Dark Mode"
-                            }
+                    // Drawer theme toggle
+                    button {
+                        class: "navbar-drawer-theme touch-target",
+                        onclick: move |_| {
+                            theme.toggle();
+                            menu_open.set(false);
+                        },
+                        if theme.is_dark() {
+                            "☀️ Light Mode"
+                        } else {
+                            "🌙 Dark Mode"
                         }
                     }
                 }
