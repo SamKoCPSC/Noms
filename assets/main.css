@@ -53,6 +53,9 @@ a:hover {
     --shadow-light: #FFFDF8;
     --shadow-dark: #C8C1B4;
 
+    /* Button edge color (inherits parent context) */
+    --btn-edge: var(--bg-base);
+
     /* Glassmorphism */
     --glass-fill: rgba(255, 255, 255, 0.20);
     --glass-border: rgba(255, 255, 255, 0.30);
@@ -162,6 +165,7 @@ a:hover {
 }
 
 .neumo-card {
+    --btn-edge: var(--surface);
     box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
     border-radius: var(--radius-lg);
 }
@@ -251,13 +255,13 @@ a:hover {
     background: var(--accent);
     color: white;
     box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
-                inset 0 0 0 5px var(--bg-base);
+                inset 0 0 0 5px var(--btn-edge);
 }
 
 .btn-primary:hover:not(:disabled) {
     background: var(--accent-hover);
     box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
-                inset 0 0 0 5px var(--bg-base);
+                inset 0 0 0 5px var(--btn-edge);
 }
 
 .btn-primary:active:not(:disabled) {
@@ -269,14 +273,14 @@ a:hover {
     color: var(--accent);
     border: 2px solid var(--accent);
     box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
-                inset 0 0 0 5px var(--bg-base);
+                inset 0 0 0 5px var(--btn-edge);
 }
 
 .btn-secondary:hover:not(:disabled) {
     background: var(--accent);
     color: white;
     box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
-                inset 0 0 0 5px var(--bg-base);
+                inset 0 0 0 5px var(--btn-edge);
 }
 
 .btn-secondary:active:not(:disabled) {
@@ -298,12 +302,12 @@ a:hover {
     background: var(--error);
     color: white;
     box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
-                inset 0 0 0 5px var(--bg-base);
+                inset 0 0 0 5px var(--btn-edge);
 }
 
 .btn-danger:hover:not(:disabled) {
     box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
-                inset 0 0 0 5px var(--bg-base);
+                inset 0 0 0 5px var(--btn-edge);
 }
 
 .btn-danger:active:not(:disabled) {
@@ -685,6 +689,7 @@ a:hover {
     Footer
     ============================================================ */
 .footer {
+    --btn-edge: var(--surface);
     background: var(--surface);
     border-top: 1px solid var(--glass-border);
     padding: var(--space-md) 0;
@@ -817,6 +822,7 @@ a:hover {
    Settings Tabs
    ============================================================ */
 .settings-tabs {
+    --btn-edge: var(--surface);
     display: flex;
     gap: var(--space-xs);
     margin-bottom: var(--space-lg);
