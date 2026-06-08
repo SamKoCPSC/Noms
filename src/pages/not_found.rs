@@ -80,14 +80,14 @@ mod tests {
 
     #[test]
     fn not_found_segments_single() {
-        let segments = vec!["foo".to_string()];
+        let segments = ["foo".to_string()];
         let path = format!("/{}", segments.join("/"));
         assert_eq!(path, "/foo");
     }
 
     #[test]
     fn not_found_segments_nested() {
-        let segments = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+        let segments = ["a".to_string(), "b".to_string(), "c".to_string()];
         let path = format!("/{}", segments.join("/"));
         assert_eq!(path, "/a/b/c");
     }

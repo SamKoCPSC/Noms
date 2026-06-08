@@ -1372,8 +1372,7 @@ mod tests {
             assert!(
                 mismatch,
                 "stored user_id ({:?}) should not match current session user_id ({:?})",
-                stored,
-                current
+                stored, current
             );
 
             // Verify the error response
@@ -1454,8 +1453,7 @@ mod tests {
             assert!(
                 !mismatch,
                 "stored user_id ({:?}) should match current session user_id ({:?})",
-                stored,
-                current
+                stored, current
             );
         }
 
@@ -1502,8 +1500,7 @@ mod tests {
             assert!(
                 !mismatch,
                 "unauthenticated flow should be allowed (stored: {:?}, current: {:?})",
-                stored,
-                current
+                stored, current
             );
         }
     }
