@@ -9,8 +9,8 @@
 
 use std::collections::VecDeque;
 use std::net::{IpAddr, SocketAddr};
-use std::sync::{Arc, LazyLock};
 use std::str::FromStr;
+use std::sync::{Arc, LazyLock};
 use std::time::Instant;
 
 use axum::body::Body;
@@ -74,7 +74,7 @@ impl TrustedProxyList {
             .filter_map(|s| IpNet::from_str(s).ok())
             .collect();
 
-        if let5g Ok(env_value) = std::env::var("TRUSTED_PROXIES") {
+        if let Ok(env_value) = std::env::var("TRUSTED_PROXIES") {
             for entry in env_value.split(',') {
                 let entry = entry.trim();
                 if entry.is_empty() {
@@ -97,7 +97,9 @@ impl TrustedProxyList {
             }
         }
 
-        Self { networks: Arc::new(networks) }
+        Self {
+            networks: Arc::new(networks),
+        }
     }
 }
 
@@ -632,10 +634,7 @@ mod tests {
         }
 
         /// Build a router with `MockConnectInfo` set to a specific address.
-        fn make_router_with_connect_info(
-            state: AppState,
-            mock_addr: SocketAddr,
-        ) -> axum::Router {
+        fn make_router_with_connect_info(state: AppState, mock_addr: SocketAddr) -> axum::Router {
             async fn passthrough_handler() -> &'static str {
                 "ok"
             }
@@ -643,17 +642,22 @@ mod tests {
             // Middleware that injects a ConnectInfo<SocketAddr> extension into the request.
             // This is needed because MockConnectInfo is an extractor layer that only
             // provides the value during route extraction, not during middleware processing.
-            let inject_mw = axum::middleware::from_fn(move |req: Request<Body>, next: Next| {
-                async move {
+            let inject_mw =
+                axum::middleware::from_fn(move |req: Request<Body>, next: Next| async move {
                     let mut req = req;
                     req.extensions_mut().insert(ConnectInfo(mock_addr));
                     next.run(req).await
-                }
-            });
+                });
 
             axum::Router::new()
-                .route("/auth/{provider}/start", axum::routing::get(passthrough_handler))
-                .route("/auth/{provider}/callback", axum::routing::get(passthrough_handler))
+                .route(
+                    "/auth/{provider}/start",
+                    axum::routing::get(passthrough_handler),
+                )
+                .route(
+                    "/auth/{provider}/callback",
+                    axum::routing::get(passthrough_handler),
+                )
                 .layer(axum::middleware::from_fn_with_state(
                     state.clone(),
                     rate_limit_middleware,
@@ -671,23 +675,37 @@ mod tests {
             let app = make_router_with_connect_info(state, attacker_ip);
 
             for _ in 0..START_LIMIT_PER_MIN {
-                let response = app.clone().oneshot(
-                    Request::builder()
-                        .method("GET").uri("/auth/google/start")
-                        .header(X_FORWARDED_FOR.as_str(), "198.51.100.1")
-                        .body(Body::empty()).unwrap(),
-                ).await.unwrap();
+                let response = app
+                    .clone()
+                    .oneshot(
+                        Request::builder()
+                            .method("GET")
+                            .uri("/auth/google/start")
+                            .header(X_FORWARDED_FOR.as_str(), "198.51.100.1")
+                            .body(Body::empty())
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
                 assert_eq!(response.status(), StatusCode::OK);
             }
             // Different spoofed XFF should still be 429 (keyed on TCP IP)
-            let response = app.oneshot(
-                Request::builder()
-                    .method("GET").uri("/auth/google/start")
-                    .header(X_FORWARDED_FOR.as_str(), "203.0.113.99")
-                    .body(Body::empty()).unwrap(),
-            ).await.unwrap();
-            assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS,
-                "spoofed XFF should not bypass rate limit");
+            let response = app
+                .oneshot(
+                    Request::builder()
+                        .method("GET")
+                        .uri("/auth/google/start")
+                        .header(X_FORWARDED_FOR.as_str(), "203.0.113.99")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(
+                response.status(),
+                StatusCode::TOO_MANY_REQUESTS,
+                "spoofed XFF should not bypass rate limit"
+            );
         }
 
         #[tokio::test]
@@ -700,32 +718,55 @@ mod tests {
             let real_client = "203.0.113.50";
 
             for _ in 0..START_LIMIT_PER_MIN {
-                let response = app.clone().oneshot(
-                    Request::builder()
-                        .method("GET").uri("/auth/google/start")
-                        .header(X_FORWARDED_FOR.as_str(), real_client)
-                        .body(Body::empty()).unwrap(),
-                ).await.unwrap();
+                let response = app
+                    .clone()
+                    .oneshot(
+                        Request::builder()
+                            .method("GET")
+                            .uri("/auth/google/start")
+                            .header(X_FORWARDED_FOR.as_str(), real_client)
+                            .body(Body::empty())
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
                 assert_eq!(response.status(), StatusCode::OK);
             }
             // Same client IP should be rate limited
-            let response = app.clone().oneshot(
-                Request::builder()
-                    .method("GET").uri("/auth/google/start")
-                    .header(X_FORWARDED_FOR.as_str(), real_client)
-                    .body(Body::empty()).unwrap(),
-            ).await.unwrap();
-            assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS,
-                "real client IP from trusted proxy should be rate limited");
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method("GET")
+                        .uri("/auth/google/start")
+                        .header(X_FORWARDED_FOR.as_str(), real_client)
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(
+                response.status(),
+                StatusCode::TOO_MANY_REQUESTS,
+                "real client IP from trusted proxy should be rate limited"
+            );
             // Different client IP via same proxy should NOT be limited
-            let response = app.oneshot(
-                Request::builder()
-                    .method("GET").uri("/auth/google/start")
-                    .header(X_FORWARDED_FOR.as_str(), "203.0.113.51")
-                    .body(Body::empty()).unwrap(),
-            ).await.unwrap();
-            assert_eq!(response.status(), StatusCode::OK,
-                "different client IP should have independent rate limit");
+            let response = app
+                .oneshot(
+                    Request::builder()
+                        .method("GET")
+                        .uri("/auth/google/start")
+                        .header(X_FORWARDED_FOR.as_str(), "203.0.113.51")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(
+                response.status(),
+                StatusCode::OK,
+                "different client IP should have independent rate limit"
+            );
         }
 
         #[tokio::test]
@@ -739,22 +780,36 @@ mod tests {
             let xff_value = "203.0.113.50, 172.17.0.1";
 
             for _ in 0..START_LIMIT_PER_MIN {
-                let response = app.clone().oneshot(
-                    Request::builder()
-                        .method("GET").uri("/auth/google/start")
-                        .header(X_FORWARDED_FOR.as_str(), xff_value)
-                        .body(Body::empty()).unwrap(),
-                ).await.unwrap();
+                let response = app
+                    .clone()
+                    .oneshot(
+                        Request::builder()
+                            .method("GET")
+                            .uri("/auth/google/start")
+                            .header(X_FORWARDED_FOR.as_str(), xff_value)
+                            .body(Body::empty())
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
                 assert_eq!(response.status(), StatusCode::OK);
             }
-            let response = app.oneshot(
-                Request::builder()
-                    .method("GET").uri("/auth/google/start")
-                    .header(X_FORWARDED_FOR.as_str(), xff_value)
-                    .body(Body::empty()).unwrap(),
-            ).await.unwrap();
-            assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS,
-                "unwound client IP should be rate limited");
+            let response = app
+                .oneshot(
+                    Request::builder()
+                        .method("GET")
+                        .uri("/auth/google/start")
+                        .header(X_FORWARDED_FOR.as_str(), xff_value)
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(
+                response.status(),
+                StatusCode::TOO_MANY_REQUESTS,
+                "unwound client IP should be rate limited"
+            );
         }
 
         #[tokio::test]
@@ -764,20 +819,34 @@ mod tests {
             let app = make_router(state); // No MockConnectInfo
 
             for _ in 0..START_LIMIT_PER_MIN {
-                let response = app.clone().oneshot(
-                    Request::builder()
-                        .method("GET").uri("/auth/google/start")
-                        .body(Body::empty()).unwrap(),
-                ).await.unwrap();
+                let response = app
+                    .clone()
+                    .oneshot(
+                        Request::builder()
+                            .method("GET")
+                            .uri("/auth/google/start")
+                            .body(Body::empty())
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
                 assert_eq!(response.status(), StatusCode::OK);
             }
-            let response = app.oneshot(
-                Request::builder()
-                    .method("GET").uri("/auth/google/start")
-                    .body(Body::empty()).unwrap(),
-            ).await.unwrap();
-            assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS,
-                "should be rate limited via 0.0.0.0 fallback");
+            let response = app
+                .oneshot(
+                    Request::builder()
+                        .method("GET")
+                        .uri("/auth/google/start")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(
+                response.status(),
+                StatusCode::TOO_MANY_REQUESTS,
+                "should be rate limited via 0.0.0.0 fallback"
+            );
         }
 
         #[tokio::test]
