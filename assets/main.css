@@ -50,11 +50,11 @@ a:hover {
     --surface: #F5F0E8;
 
     /* Neumorphic shadows */
-    --shadow-light: #FFFDF8;
+    --shadow-light: #FAF7F1;
     --shadow-dark: #C8C1B4;
 
     /* Button edge color (inherits parent context) */
-    --btn-edge: var(--bg-base);
+    --btn-edge: var(--surface);
 
     /* Glassmorphism */
     --glass-fill: rgba(255, 255, 255, 0.20);
@@ -202,7 +202,7 @@ a:hover {
    ============================================================ */
 .container {
     width: 100%;
-    max-width: 1200px;
+    max-width: 1600px;
     margin: 0 auto;
     padding: 0 var(--space-md);
 }
@@ -210,12 +210,6 @@ a:hover {
 @media (min-width: 1024px) {
     .container {
         padding: 0 var(--space-xl);
-    }
-}
-
-@media (min-width: 1920px) {
-    .container {
-        max-width: 1440px;
     }
 }
 
@@ -259,6 +253,7 @@ a:hover {
 }
 
 .btn-primary:hover:not(:disabled) {
+    color: white;
     background: var(--accent-hover);
     box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
                 inset 0 0 0 5px var(--btn-edge);
@@ -371,9 +366,30 @@ a:hover {
 .navbar-inner {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     height: 64px;
     gap: var(--space-md);
+}
+
+.navbar-drawer-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: var(--space-xs);
+    flex-shrink: 0;
+    transition: color 0.2s ease;
+}
+
+.navbar-drawer-toggle:hover {
+    color: var(--accent);
+}
+
+@media (min-width: 768px) {
+    .navbar-drawer-toggle {
+        display: block;
+    }
 }
 
 .navbar-logo {
@@ -393,6 +409,8 @@ a:hover {
     display: none;
     align-items: center;
     gap: var(--space-lg);
+    margin-left: auto;
+    margin-right: auto;
 }
 
 @media (min-width: 768px) {

@@ -125,6 +125,13 @@ pub fn Navbar(theme: UseTheme) -> Element {
         nav {
             class: "navbar",
             div { class: "navbar-inner container",
+                // Left drawer toggle (top left)
+                button {
+                    class: "navbar-drawer-toggle touch-target",
+                    aria_label: "Open sidebar",
+                    "☰"
+                }
+
                 // Logo (left)
                 Link {
                     to: Route::Home {},
@@ -134,6 +141,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
 
                 // Desktop nav links (center) — hidden on mobile
                 div { class: "navbar-links",
+                    Link { to: Route::Home {}, class: "navbar-link", "Home" }
                     Link { to: Route::Dashboard {}, class: "navbar-link", "Dashboard" }
                     Link { to: Route::Explore {}, class: "navbar-link", "Explore" }
                     Link { to: Route::RecipeNew {}, class: "navbar-link", "New Recipe" }
@@ -241,6 +249,12 @@ pub fn Navbar(theme: UseTheme) -> Element {
 
                     // Drawer nav links
                     div { class: "navbar-drawer-links",
+                        Link {
+                            to: Route::Home {},
+                            class: "navbar-drawer-link",
+                            onclick: move |_| menu_open.set(false),
+                            "Home"
+                        }
                         Link {
                             to: Route::Dashboard {},
                             class: "navbar-drawer-link",
