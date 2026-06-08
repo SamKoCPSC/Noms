@@ -144,6 +144,21 @@ the restyled button components.
 - `assets/main.css`
 - Unauthorized page component (TBD)
 
+### [x] Add left sidebar navigation drawer
+
+No persistent navigation sidebar existed for quick access to all
+pages. Users must rely on the top navbar links.
+
+**Fix:** Added ☰ toggle button to navbar (visible 768px+) that opens
+a left sidebar drawer with page links: Home, Dashboard, Explore,
+New Recipe, Collections. Shows Settings link when authenticated.
+Drawer slides in from left with fade overlay, closes via ✕ button,
+backdrop click, or link navigation.
+
+**Files:**
+- `src/components/navbar.rs`
+- `assets/main.css`
+
 ### [ ] Hamburger menu drawer: Fix transparent background
 
 The mobile hamburger menu drawer has a completely transparent

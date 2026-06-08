@@ -13,6 +13,7 @@ use crate::Route;
 pub fn Navbar(theme: UseTheme) -> Element {
     let mut menu_open = use_signal(|| false);
     let mut dropdown_open = use_signal(|| false);
+    let mut sidebar_open = use_signal(|| false);
 
     // Close dropdown when clicking outside — document-level listener via web_sys
     // Only runs on web platform; no-op on server (SSR)
@@ -129,6 +130,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
                 button {
                     class: "navbar-drawer-toggle touch-target",
                     aria_label: "Open sidebar",
+                    onclick: move |_| sidebar_open.set(!sidebar_open()),
                     "☰"
                 }
 
@@ -309,6 +311,69 @@ pub fn Navbar(theme: UseTheme) -> Element {
                             "☀️ Light Mode"
                         } else {
                             "🌙 Dark Mode"
+                        }
+                    }
+                }
+            }
+        }
+
+        // Left sidebar drawer — rendered OUTSIDE the <nav> so backdrop-filter
+        // does not create a containing block that clips the drawer.
+        if sidebar_open() {
+            div {
+                class: "sidebar-overlay",
+                onclick: move |_| sidebar_open.set(false),
+                div {
+                    class: "sidebar-drawer",
+                    onclick: move |evt| evt.stop_propagation(),
+                    // Close button
+                    button {
+                        class: "sidebar-close touch-target",
+                        onclick: move |_| sidebar_open.set(false),
+                        aria_label: "Close sidebar",
+                        "✕"
+                    }
+
+                    // Sidebar nav links
+                    div { class: "sidebar-links",
+                        Link {
+                            to: Route::Home {},
+                            class: "sidebar-link",
+                            onclick: move |_| sidebar_open.set(false),
+                            "Home"
+                        }
+                        Link {
+                            to: Route::Dashboard {},
+                            class: "sidebar-link",
+                            onclick: move |_| sidebar_open.set(false),
+                            "Dashboard"
+                        }
+                        Link {
+                            to: Route::Explore {},
+                            class: "sidebar-link",
+                            onclick: move |_| sidebar_open.set(false),
+                            "Explore"
+                        }
+                        Link {
+                            to: Route::RecipeNew {},
+                            class: "sidebar-link",
+                            onclick: move |_| sidebar_open.set(false),
+                            "New Recipe"
+                        }
+                        Link {
+                            to: Route::CollectionList {},
+                            class: "sidebar-link",
+                            onclick: move |_| sidebar_open.set(false),
+                            "Collections"
+                        }
+                        if is_signed_in {
+                            div { class: "sidebar-divider" }
+                            Link {
+                                to: Route::SettingsProfile {},
+                                class: "sidebar-link",
+                                onclick: move |_| sidebar_open.set(false),
+                                "Settings"
+                            }
                         }
                     }
                 }
