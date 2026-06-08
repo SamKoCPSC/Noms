@@ -10,6 +10,7 @@
 use std::collections::VecDeque;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, LazyLock};
+use std::str::FromStr;
 use std::time::Instant;
 
 use axum::body::Body;
@@ -20,6 +21,7 @@ use axum::http::{Request, Response, StatusCode};
 use axum::middleware::Next;
 use axum::response::IntoResponse;
 use dashmap::DashMap;
+use ipnet::IpNet;
 
 use crate::auth::oauth::AppState;
 
@@ -43,6 +45,64 @@ const WINDOW_SECS: u64 = 60;
 /// Entries with no timestamps within this window are removed by the cleanup
 /// task to prevent unbounded memory growth.
 const ENTRY_TTL_SECS: u64 = 300;
+
+/// Default trusted proxy addresses for local development.
+/// Always trusted regardless of the `TRUSTED_PROXIES` env var:
+/// - `127.0.0.1/32` -- IPv4 loopback
+/// - `::1/128`      -- IPv6 loopback
+/// - `172.17.0.1/32` -- Docker default gateway
+const DEFAULT_TRUSTED_PROXIES: [&str; 3] = ["127.0.0.1/32", "::1/128", "172.17.0.1/32"];
+
+/// A list of trusted proxy IP networks (single IPs or CIDR ranges).
+/// Thread-safe and cheap to clone (inner `Arc`). Initialized once at startup.
+#[derive(Clone, Debug)]
+struct TrustedProxyList {
+    networks: Arc<Vec<IpNet>>,
+}
+
+impl TrustedProxyList {
+    /// Check whether an IP address is in the trusted proxy list.
+    fn is_trusted(&self, ip: &IpAddr) -> bool {
+        self.networks.iter().any(|net| net.contains(ip))
+    }
+
+    /// Load from `TRUSTED_PROXIES` env var (comma-separated IPs or CIDRs).
+    /// Always includes `DEFAULT_TRUSTED_PROXIES`. Invalid entries logged + skipped.
+    fn load() -> Self {
+        let mut networks: Vec<IpNet> = DEFAULT_TRUSTED_PROXIES
+            .iter()
+            .filter_map(|s| IpNet::from_str(s).ok())
+            .collect();
+
+        if let5g Ok(env_value) = std::env::var("TRUSTED_PROXIES") {
+            for entry in env_value.split(',') {
+                let entry = entry.trim();
+                if entry.is_empty() {
+                    continue;
+                }
+                // Try parsing as CIDR first, then as bare IP
+                match entry.parse::<IpNet>() {
+                    Ok(net) => networks.push(net),
+                    Err(_) => {
+                        if let Ok(ip) = entry.parse::<IpAddr>() {
+                            networks.push(IpNet::from(ip));
+                        } else {
+                            tracing::warn!(
+                                trusted_proxy = %entry,
+                                "Failed to parse TRUSTED_PROXIES entry, skipping"
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        Self { networks: Arc::new(networks) }
+    }
+}
+
+/// Globally shared trusted proxy list, initialized once at first access.
+static TRUSTED_PROXIES: LazyLock<TrustedProxyList> = LazyLock::new(TrustedProxyList::load);
 
 // ── Endpoint categories ──────────────────────────────────────────────────────
 
@@ -172,29 +232,52 @@ impl RateLimitState {
 /// Extract the client IP address from the request.
 ///
 /// Priority:
-/// 1. `X-Forwarded-For` header (reverse proxy / load balancer).
-/// 2. `ConnectInfo<SocketAddr>` from request extensions (direct connection).
-/// 3. Fallback to `0.0.0.0`.
+/// 1. `ConnectInfo<SocketAddr>` from request extensions (TCP connection IP).
+/// 2. If the TCP connection IP is a trusted proxy, unwind `X-Forwarded-For` to find the
+///    rightmost non-proxy IP (the original client).
+/// 3. Fallback to `0.0.0.0` if no connection info is available.
+///
+/// Security: `X-Forwarded-For` is **never** trusted unless the direct TCP connection
+/// originates from a trusted proxy (see `TRUSTED_PROXIES`). This prevents IP spoofing
+/// by untrusted clients setting arbitrary XFF header values.
 fn extract_client_ip(req: &Request<Body>) -> IpAddr {
-    // 1. X-Forwarded-For (first entry is the client)
-    if let Some(xff) = req.headers().get(X_FORWARDED_FOR.as_str()) {
-        if let Ok(xff_str) = xff.to_str() {
-            // XFF is a comma-separated list; first entry is the original client
-            if let Some(first) = xff_str.split(',').next() {
-                if let Ok(ip) = first.trim().parse::<IpAddr>() {
-                    return ip;
+    // 1. Get the TCP connection IP from ConnectInfo
+    let connect_ip = match req.extensions().get::<ConnectInfo<SocketAddr>>() {
+        Some(info) => info.0.ip(),
+        None => return IpAddr::from([0, 0, 0, 0]),
+    };
+
+    // 2. If the connection is from a trusted proxy, check X-Forwarded-For
+    if TRUSTED_PROXIES.is_trusted(&connect_ip) {
+        if let Some(xff) = req.headers().get(X_FORWARDED_FOR.as_str()) {
+            if let Ok(xff_str) = xff.to_str() {
+                // XFF format: "client, proxy1, proxy2, ..."
+                // Unwind from right: skip trusted proxy IPs, return first non-proxy
+                let entries: Vec<&str> = xff_str.split(',').collect();
+                for entry in entries.iter().rev() {
+                    let trimmed = entry.trim();
+                    if let Ok(ip) = trimmed.parse::<IpAddr>() {
+                        if !TRUSTED_PROXIES.is_trusted(&ip) {
+                            return ip; // Found the original client IP
+                        }
+                        // Otherwise it is another trusted proxy, continue unwinding
+                    } else {
+                        // Malformed entry -- stop unwinding, fall through to connect_ip
+                        break;
+                    }
+                }
+                // All XFF entries were trusted proxies -- use the rightmost entry
+                if let Some(last) = entries.last() {
+                    if let Ok(ip) = last.trim().parse::<IpAddr>() {
+                        return ip;
+                    }
                 }
             }
         }
     }
 
-    // 2. ConnectInfo extension
-    if let Some(connect_info) = req.extensions().get::<ConnectInfo<SocketAddr>>() {
-        return connect_info.0.ip();
-    }
-
-    // 3. Fallback
-    IpAddr::from([0, 0, 0, 0])
+    // 3. Use TCP connection IP (direct connection or untrusted proxy)
+    connect_ip
 }
 
 /// Categorize a request path into an endpoint category, if applicable.
@@ -409,6 +492,99 @@ mod tests {
         assert_eq!(categorize_path("/auth/google"), None);
     }
 
+    // -- Trusted proxy tests --
+
+    #[test]
+    fn test_trusted_proxy_defaults_include_loopback() {
+        assert!(TRUSTED_PROXIES.is_trusted(&IpAddr::from([127, 0, 0, 1])));
+        assert!(TRUSTED_PROXIES.is_trusted(&IpAddr::from([0, 0, 0, 0, 0, 0, 0, 1])));
+        assert!(TRUSTED_PROXIES.is_trusted(&IpAddr::from([172, 17, 0, 1])));
+    }
+
+    #[test]
+    fn test_trusted_proxy_defaults_reject_external() {
+        assert!(!TRUSTED_PROXIES.is_trusted(&IpAddr::from([203, 0, 113, 1])));
+        assert!(!TRUSTED_PROXIES.is_trusted(&IpAddr::from([10, 0, 0, 1])));
+        assert!(!TRUSTED_PROXIES.is_trusted(&IpAddr::from([192, 168, 1, 1])));
+    }
+
+    #[test]
+    fn test_xff_unwind_single_client() {
+        // client(203.0.113.50) -> trusted_proxy(127.0.0.1)
+        // XFF: "203.0.113.50" -- not a proxy, returned immediately
+        let xff = "203.0.113.50";
+        let entries: Vec<&str> = xff.split(',').collect();
+        let mut result = None;
+        for entry in entries.iter().rev() {
+            if let Ok(ip) = entry.trim().parse::<IpAddr>() {
+                if !TRUSTED_PROXIES.is_trusted(&ip) {
+                    result = Some(ip);
+                    break;
+                }
+            }
+        }
+        assert_eq!(result, Some(IpAddr::from([203, 0, 113, 50])));
+    }
+
+    #[test]
+    fn test_xff_unwind_past_trusted_proxy() {
+        // XFF: "203.0.113.50, 172.17.0.1"
+        // 172.17.0.1 is trusted (Docker gateway) -- skip it
+        // 203.0.113.50 is not trusted -- return it
+        let xff = "203.0.113.50, 172.17.0.1";
+        let entries: Vec<&str> = xff.split(',').collect();
+        let mut result = None;
+        for entry in entries.iter().rev() {
+            if let Ok(ip) = entry.trim().parse::<IpAddr>() {
+                if !TRUSTED_PROXIES.is_trusted(&ip) {
+                    result = Some(ip);
+                    break;
+                }
+            }
+        }
+        assert_eq!(result, Some(IpAddr::from([203, 0, 113, 50])));
+    }
+
+    #[test]
+    fn test_xff_unwind_all_trusted_returns_rightmost() {
+        // XFF: "127.0.0.1, ::1" -- both trusted by default
+        // All trusted -- return rightmost (::1)
+        let xff = "127.0.0.1, ::1";
+        let entries: Vec<&str> = xff.split(',').collect();
+        let mut result = None;
+        let mut all_trusted = true;
+        for entry in entries.iter().rev() {
+            if let Ok(ip) = entry.trim().parse::<IpAddr>() {
+                if !TRUSTED_PROXIES.is_trusted(&ip) {
+                    result = Some(ip);
+                    all_trusted = false;
+                    break;
+                }
+            }
+        }
+        if all_trusted {
+            if let Some(last) = entries.last() {
+                result = last.trim().parse::<IpAddr>().ok();
+            }
+        }
+        assert_eq!(result, Some(IpAddr::from([0, 0, 0, 0, 0, 0, 0, 1])));
+    }
+
+    #[test]
+    fn test_ipnet_bare_ip_as_single_host() {
+        let net: IpNet = IpNet::from(IpAddr::from([10, 0, 0, 1]));
+        assert!(net.contains(&IpAddr::from([10, 0, 0, 1])));
+        assert!(!net.contains(&IpAddr::from([10, 0, 0, 2])));
+    }
+
+    #[test]
+    fn test_ipnet_cidr_range() {
+        let net: IpNet = "10.0.0.0/24".parse().unwrap();
+        assert!(net.contains(&IpAddr::from([10, 0, 0, 1])));
+        assert!(net.contains(&IpAddr::from([10, 0, 0, 254])));
+        assert!(!net.contains(&IpAddr::from([10, 0, 1, 1])));
+    }
+
     // ── Integration tests ────────────────────────────────────────────────────
 
     mod integration_tests {
@@ -453,6 +629,155 @@ mod tests {
                     rate_limit_middleware,
                 ))
                 .with_state(state)
+        }
+
+        /// Build a router with `MockConnectInfo` set to a specific address.
+        fn make_router_with_connect_info(
+            state: AppState,
+            mock_addr: SocketAddr,
+        ) -> axum::Router {
+            async fn passthrough_handler() -> &'static str {
+                "ok"
+            }
+
+            // Middleware that injects a ConnectInfo<SocketAddr> extension into the request.
+            // This is needed because MockConnectInfo is an extractor layer that only
+            // provides the value during route extraction, not during middleware processing.
+            let inject_mw = axum::middleware::from_fn(move |req: Request<Body>, next: Next| {
+                async move {
+                    let mut req = req;
+                    req.extensions_mut().insert(ConnectInfo(mock_addr));
+                    next.run(req).await
+                }
+            });
+
+            axum::Router::new()
+                .route("/auth/{provider}/start", axum::routing::get(passthrough_handler))
+                .route("/auth/{provider}/callback", axum::routing::get(passthrough_handler))
+                .layer(axum::middleware::from_fn_with_state(
+                    state.clone(),
+                    rate_limit_middleware,
+                ))
+                .layer(inject_mw)
+                .with_state(state)
+        }
+
+        #[tokio::test]
+        async fn test_spoofed_xff_does_not_bypass_rate_limit() {
+            // Untrusted client (192.0.2.1) sends spoofed XFF "198.51.100.1".
+            // Middleware should use TCP IP (192.0.2.1), not spoofed XFF.
+            let state = make_test_state().await;
+            let attacker_ip = SocketAddr::from(([192, 0, 2, 1], 54321));
+            let app = make_router_with_connect_info(state, attacker_ip);
+
+            for _ in 0..START_LIMIT_PER_MIN {
+                let response = app.clone().oneshot(
+                    Request::builder()
+                        .method("GET").uri("/auth/google/start")
+                        .header(X_FORWARDED_FOR.as_str(), "198.51.100.1")
+                        .body(Body::empty()).unwrap(),
+                ).await.unwrap();
+                assert_eq!(response.status(), StatusCode::OK);
+            }
+            // Different spoofed XFF should still be 429 (keyed on TCP IP)
+            let response = app.oneshot(
+                Request::builder()
+                    .method("GET").uri("/auth/google/start")
+                    .header(X_FORWARDED_FOR.as_str(), "203.0.113.99")
+                    .body(Body::empty()).unwrap(),
+            ).await.unwrap();
+            assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS,
+                "spoofed XFF should not bypass rate limit");
+        }
+
+        #[tokio::test]
+        async fn test_valid_xff_from_trusted_proxy_is_used() {
+            // Trusted proxy (127.0.0.1) forwards with XFF: "203.0.113.50".
+            // Middleware should use 203.0.113.50 as client IP.
+            let state = make_test_state().await;
+            let proxy_ip = SocketAddr::from(([127, 0, 0, 1], 8080));
+            let app = make_router_with_connect_info(state, proxy_ip);
+            let real_client = "203.0.113.50";
+
+            for _ in 0..START_LIMIT_PER_MIN {
+                let response = app.clone().oneshot(
+                    Request::builder()
+                        .method("GET").uri("/auth/google/start")
+                        .header(X_FORWARDED_FOR.as_str(), real_client)
+                        .body(Body::empty()).unwrap(),
+                ).await.unwrap();
+                assert_eq!(response.status(), StatusCode::OK);
+            }
+            // Same client IP should be rate limited
+            let response = app.clone().oneshot(
+                Request::builder()
+                    .method("GET").uri("/auth/google/start")
+                    .header(X_FORWARDED_FOR.as_str(), real_client)
+                    .body(Body::empty()).unwrap(),
+            ).await.unwrap();
+            assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS,
+                "real client IP from trusted proxy should be rate limited");
+            // Different client IP via same proxy should NOT be limited
+            let response = app.oneshot(
+                Request::builder()
+                    .method("GET").uri("/auth/google/start")
+                    .header(X_FORWARDED_FOR.as_str(), "203.0.113.51")
+                    .body(Body::empty()).unwrap(),
+            ).await.unwrap();
+            assert_eq!(response.status(), StatusCode::OK,
+                "different client IP should have independent rate limit");
+        }
+
+        #[tokio::test]
+        async fn test_xff_unwind_multiple_proxies_integration() {
+            // client(203.0.113.50) -> docker_gw(172.17.0.1) -> app
+            // Connection IP: 127.0.0.1 (trusted). XFF: "203.0.113.50, 172.17.0.1"
+            // 172.17.0.1 is trusted -- skip, 203.0.113.50 is not -- return it
+            let state = make_test_state().await;
+            let proxy_ip = SocketAddr::from(([127, 0, 0, 1], 8080));
+            let app = make_router_with_connect_info(state, proxy_ip);
+            let xff_value = "203.0.113.50, 172.17.0.1";
+
+            for _ in 0..START_LIMIT_PER_MIN {
+                let response = app.clone().oneshot(
+                    Request::builder()
+                        .method("GET").uri("/auth/google/start")
+                        .header(X_FORWARDED_FOR.as_str(), xff_value)
+                        .body(Body::empty()).unwrap(),
+                ).await.unwrap();
+                assert_eq!(response.status(), StatusCode::OK);
+            }
+            let response = app.oneshot(
+                Request::builder()
+                    .method("GET").uri("/auth/google/start")
+                    .header(X_FORWARDED_FOR.as_str(), xff_value)
+                    .body(Body::empty()).unwrap(),
+            ).await.unwrap();
+            assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS,
+                "unwound client IP should be rate limited");
+        }
+
+        #[tokio::test]
+        async fn test_no_connect_info_falls_back_to_zero_ip() {
+            // No ConnectInfo extension -- extract_client_ip returns 0.0.0.0
+            let state = make_test_state().await;
+            let app = make_router(state); // No MockConnectInfo
+
+            for _ in 0..START_LIMIT_PER_MIN {
+                let response = app.clone().oneshot(
+                    Request::builder()
+                        .method("GET").uri("/auth/google/start")
+                        .body(Body::empty()).unwrap(),
+                ).await.unwrap();
+                assert_eq!(response.status(), StatusCode::OK);
+            }
+            let response = app.oneshot(
+                Request::builder()
+                    .method("GET").uri("/auth/google/start")
+                    .body(Body::empty()).unwrap(),
+            ).await.unwrap();
+            assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS,
+                "should be rate limited via 0.0.0.0 fallback");
         }
 
         #[tokio::test]

@@ -16,7 +16,7 @@ A thorough security audit of the auth flow identified 14 findings across 4 sever
 |----------|-------|---------|
 | CRITICAL | 2 | TOCTOU race in OAuth state, CSRF-vulnerable GET logout |
 | HIGH | 4 | No JWT `jti`, error message leakage, no rate limiting, no PKCE |
-| MEDIUM | 5 | No redirect_uri length limit, no method enforcement, no cookie Domain, no auth_states cleanup, OAuth tokens not revoked on deletion |
+| MEDIUM | 6 | No redirect_uri length limit, no method enforcement, no cookie Domain, no auth_states cleanup, OAuth tokens not revoked on deletion, rate limit XFF spoofing bypass |
 
 ## Acceptance Criteria
 
@@ -135,6 +135,19 @@ A thorough security audit of the auth flow identified 14 findings across 4 sever
 - [ ] User remains signed in as their current account (no session change)
 - [ ] The OAuth flow is discarded (no new account created, no linking attempted)
 - [ ] Linking the same provider to the current user still works when no conflict exists
+
+### AC13: Rate limiting trusts only connection IP or trusted proxies (MEDIUM)
+
+- [ ] `extract_client_ip` uses `ConnectInfo<SocketAddr>` (TCP connection IP) as the primary source
+- [ ] `X-Forwarded-For` is only trusted when the TCP connection IP is in a configurable trusted proxy list
+- [ ] Trusted proxy list is configurable via `TRUSTED_PROXIES` environment variable (comma-separated IPs or CIDRs)
+- [ ] When `TRUSTED_PROXIES` is unset or empty, `X-Forwarded-For` is ignored entirely (secure default for direct deployment)
+- [ ] When XFF is trusted, the leftmost non-proxy IP is used as the client IP (standard XFF unwinding)
+- [ ] Loopback (`127.0.0.1`, `::1`) and Docker gateway (`172.17.0.1`) are trusted by default for local development behind a local proxy
+- [ ] Test: spoofed `X-Forwarded-For` from direct connection does not bypass rate limit
+- [ ] Test: valid `X-Forwarded-For` from trusted proxy IP is used correctly
+- [ ] Test: multiple XFF entries are unwound correctly (leftmost non-proxy IP selected)
+- [ ] No regression on existing rate limiting behavior (limits, sliding window, cleanup)
 
 ## Technical Details
 
@@ -366,6 +379,7 @@ let auth_state = db::delete_auth_state_atomic(&pool, &params.state).await?;
 | 2 | OAuth flow hardening (AC1, AC6) | Atomic state consumption, PKCE; migration applied; tests pass |
 | 3 | Server-side sessions (AC3) | sessions table, DB-backed verify/create/revoke/refresh; tests pass |
 | 4 | Rate limiting (AC5) | Rate limiter middleware on OAuth endpoints; tests pass |
+| 4b | Rate limiting hardening (AC13) | Trusted proxy model for XFF; spoofed XFF rejected; tests pass |
 | 5 | Cleanup and config (AC9, AC10) | Cookie domain env var, pg_cron cleanup jobs; verified |
 | 6 | Logout CSRF fix (AC2) | Redirect validation on GET logout; tests pass |
 | 7 | OAuth token revocation (AC11) | Provider API revocation on account deletion; tests pass |
