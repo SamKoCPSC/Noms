@@ -9,7 +9,9 @@ mod components;
 mod db;
 #[cfg(feature = "server")]
 mod middleware;
+mod api;
 mod pages;
+mod types;
 #[cfg(all(feature = "server", test))]
 mod test_utils;
 mod utils;
@@ -18,7 +20,7 @@ use auth::context::{build_context_from_fullstack, AuthContext};
 use components::{AppLayout, ErrorFallback};
 use pages::{
     CollectionDetail, CollectionList, Dashboard, Explore, Home, Login, NotFound, RecipeDetail,
-    RecipeNew, SettingsAccounts, SettingsProfile,
+    RecipeEdit, RecipeNew, SettingsAccounts, SettingsProfile,
 };
 
 /// Application routes.
@@ -35,7 +37,9 @@ pub enum Route {
         #[route("/recipes/new")]
         RecipeNew {},
         #[route("/recipes/:id")]
-        RecipeDetail { id: i32 },
+        RecipeDetail { id: String },
+        #[route("/recipes/:id/edit")]
+        RecipeEdit { id: String },
         #[route("/collections")]
         CollectionList {},
         #[route("/collections/:id")]
