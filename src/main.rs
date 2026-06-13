@@ -2,7 +2,10 @@ use dioxus::prelude::*;
 #[cfg(feature = "server")]
 use dioxus::server::{DioxusRouterExt, ServeConfig};
 use manganis::CssAssetOptions;
+use uuid::Uuid;
 
+#[cfg(feature = "server")]
+mod api;
 mod auth;
 mod components;
 #[cfg(feature = "server")]
@@ -18,7 +21,7 @@ use auth::context::{build_context_from_fullstack, AuthContext};
 use components::{AppLayout, ErrorFallback};
 use pages::{
     CollectionDetail, CollectionList, Dashboard, Explore, Home, Login, NotFound, RecipeDetail,
-    RecipeNew, SettingsAccounts, SettingsProfile,
+    RecipeEdit, RecipeNew, SettingsAccounts, SettingsProfile,
 };
 
 /// Application routes.
@@ -35,11 +38,13 @@ pub enum Route {
         #[route("/recipes/new")]
         RecipeNew {},
         #[route("/recipes/:id")]
-        RecipeDetail { id: i32 },
+        RecipeDetail { id: Uuid },
+        #[route("/recipes/:id/edit")]
+        RecipeEdit { id: Uuid },
         #[route("/collections")]
         CollectionList {},
         #[route("/collections/:id")]
-        CollectionDetail { id: i32 },
+        CollectionDetail { id: Uuid },
         #[route("/explore")]
         Explore {},
         #[redirect("/settings", || Route::SettingsProfile {})]
@@ -103,6 +108,50 @@ fn main() {
                     axum::routing::get(auth::user_profile::handle_user_profile),
                 )
                 .with_state(auth::user_profile::UserProfileState { pool: pool.clone() })
+                .merge(
+                    axum::Router::new()
+                        .route(
+                            "/api/recipes",
+                            axum::routing::get(api::recipe::list_my_recipes_api),
+                        )
+                        .route(
+                            "/api/recipes/{recipe_id}",
+                            axum::routing::get(api::recipe::get_recipe_api),
+                        )
+                        .route(
+                            "/api/recipes/drafts",
+                            axum::routing::post(api::recipe::save_draft_api),
+                        )
+                        .route(
+                            "/api/recipes/{recipe_id}/publish",
+                            axum::routing::post(api::recipe::publish_recipe_api),
+                        )
+                        .route(
+                            "/api/recipes/{recipe_id}/update",
+                            axum::routing::put(api::recipe::update_recipe),
+                        )
+                        .route(
+                            "/api/recipes/{recipe_id}/versions",
+                            axum::routing::get(api::recipe::get_recipe_versions_api),
+                        )
+                        .route(
+                            "/api/recipes/{recipe_id}/versions/{version_number}/reconstruct",
+                            axum::routing::get(api::recipe::reconstruct_version_api),
+                        )
+                        .route(
+                            "/api/recipes/{recipe_id}/versions/{version_number}/restore",
+                            axum::routing::post(api::recipe::restore_version_api),
+                        )
+                        .route(
+                            "/api/recipes/{recipe_id}/fork",
+                            axum::routing::post(api::recipe::fork_recipe_api),
+                        )
+                        .route(
+                            "/api/recipes/{recipe_id}/fork_info",
+                            axum::routing::get(api::recipe::get_fork_info_api),
+                        )
+                        .with_state(api::recipe::RecipeState { pool: pool.clone() }),
+                )
                 .serve_dioxus_application(ServeConfig::new(), App);
 
             let oauth_router = axum::Router::new()

@@ -74,3 +74,75 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 -- This index covers the revoked=true case efficiently.
 CREATE INDEX IF NOT EXISTS idx_sessions_cleanup ON sessions(expires_at, revoked)
     WHERE revoked = TRUE;
+
+-- Recipe (single row, denormalized latest version for O(1) reads)
+CREATE TABLE IF NOT EXISTS recipes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    is_public BOOLEAN NOT NULL DEFAULT FALSE,
+    is_draft BOOLEAN NOT NULL DEFAULT FALSE,
+    prep_time_min INTEGER,
+    cook_time_min INTEGER,
+    total_time_min INTEGER,
+    servings INTEGER,
+    ingredients JSONB NOT NULL DEFAULT '[]'::jsonb,
+    steps JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_recipes_owner_id ON recipes(owner_id);
+CREATE INDEX IF NOT EXISTS idx_recipes_updated_at ON recipes(updated_at DESC);
+
+-- Recipe tags (many-to-many, freeform text)
+CREATE TABLE IF NOT EXISTS recipe_tags (
+    recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+    tag TEXT NOT NULL,
+    PRIMARY KEY (recipe_id, tag)
+);
+
+-- Recipe versions (reverse-diff chain, latest is anchor)
+CREATE TABLE IF NOT EXISTS recipe_versions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+    version_number INTEGER NOT NULL,
+
+    -- Full snapshot data (populated for latest version only)
+    title VARCHAR(200),
+    description TEXT,
+    prep_time_min INTEGER,
+    cook_time_min INTEGER,
+    total_time_min INTEGER,
+    servings INTEGER,
+    ingredients JSONB,
+    steps JSONB,
+
+    -- Reverse diff: JSON Patch (RFC 6902) to apply to NEXT version to get THIS version
+    -- NULL for latest version, populated for all historical versions
+    reverse_diff JSONB,
+
+    notes TEXT,
+    is_latest BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    UNIQUE(recipe_id, version_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_recipe_versions_recipe ON recipe_versions(recipe_id, version_number DESC);
+CREATE INDEX IF NOT EXISTS idx_recipe_versions_latest ON recipe_versions(recipe_id, is_latest) WHERE is_latest = TRUE;
+
+-- Fork relationships (DAG of recipe lineage)
+CREATE TABLE IF NOT EXISTS fork_relationships (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    original_recipe_id UUID NOT NULL REFERENCES recipes(id),
+    forked_recipe_id UUID NOT NULL REFERENCES recipes(id),
+    forked_by UUID NOT NULL REFERENCES users(id),
+    forked_version_number INTEGER,
+    message TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_forks_original ON fork_relationships(original_recipe_id);
+CREATE INDEX IF NOT EXISTS idx_forks_result ON fork_relationships(forked_recipe_id);

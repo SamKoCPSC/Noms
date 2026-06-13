@@ -1,0 +1,100 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, owner_id, title, description, is_public, is_draft,\n               prep_time_min, cook_time_min, total_time_min, servings,\n               ingredients, steps, created_at, updated_at\n           FROM recipes WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "owner_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "title",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "is_public",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "is_draft",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "prep_time_min",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "cook_time_min",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "total_time_min",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "servings",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "ingredients",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 11,
+        "name": "steps",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 12,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 13,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d9ac3bcf26cabd5c446126f2c6f1e5d6a31fe5cd85c843a36eb465f374d82460"
+}

@@ -1,0 +1,106 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, recipe_id, version_number, title, description, prep_time_min,\n                   cook_time_min, total_time_min, servings, ingredients, steps,\n                   reverse_diff, notes, is_latest, created_at\n            FROM recipe_versions WHERE recipe_id = $1 ORDER BY version_number DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "recipe_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "version_number",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "title",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "prep_time_min",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "cook_time_min",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "total_time_min",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "servings",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "ingredients",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 10,
+        "name": "steps",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 11,
+        "name": "reverse_diff",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 12,
+        "name": "notes",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "is_latest",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 14,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "07e7518cc4c00dcc744e6e5d1ac29576f5d5a578281dbd759520a6ba981b0784"
+}

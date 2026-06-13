@@ -10,6 +10,8 @@ use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Postgres};
 use uuid::Uuid;
 
+pub mod diff;
+
 // ── Error type ──────────────────────────────────────────────────────────────
 
 /// Errors from database operations.
@@ -25,6 +27,14 @@ pub enum DbError {
     UsernameTaken,
     /// The session was not found, revoked, or expired.
     SessionInvalid,
+    /// The requested recipe was not found or the user lacks access.
+    RecipeNotFound,
+    /// The requested version was not found.
+    VersionNotFound,
+    /// A fork operation failed (e.g., source recipe inaccessible).
+    ForkError,
+    /// A diff computation or application failed.
+    DiffError(String),
 }
 
 impl std::fmt::Display for DbError {
@@ -35,6 +45,10 @@ impl std::fmt::Display for DbError {
             DbError::Query(e) => write!(f, "database query failed: {e}"),
             DbError::UsernameTaken => write!(f, "username is already taken"),
             DbError::SessionInvalid => write!(f, "session is invalid, revoked, or expired"),
+            DbError::RecipeNotFound => write!(f, "recipe not found"),
+            DbError::VersionNotFound => write!(f, "version not found"),
+            DbError::ForkError => write!(f, "fork operation failed"),
+            DbError::DiffError(msg) => write!(f, "diff error: {msg}"),
         }
     }
 }
@@ -46,6 +60,10 @@ impl std::error::Error for DbError {
             DbError::Connection(e) | DbError::Query(e) => Some(e),
             DbError::UsernameTaken => None,
             DbError::SessionInvalid => None,
+            DbError::RecipeNotFound => None,
+            DbError::VersionNotFound => None,
+            DbError::ForkError => None,
+            DbError::DiffError(_) => None,
         }
     }
 }
@@ -164,6 +182,63 @@ pub struct OauthAccountRow {
     pub email: Option<String>,
     pub created_at: DateTime<Utc>,
     pub last_used_at: DateTime<Utc>,
+}
+
+/// A versioned snapshot of a recipe's data.
+///
+/// Latest versions store a full snapshot; historical versions store only
+/// `reverse_diff` (JSON Patch to reconstruct from the next version).
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct RecipeVersion {
+    pub id: Uuid,
+    pub recipe_id: Uuid,
+    pub version_number: i32,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub prep_time_min: Option<i32>,
+    pub cook_time_min: Option<i32>,
+    pub total_time_min: Option<i32>,
+    pub servings: Option<i32>,
+    pub ingredients: Option<serde_json::Value>,
+    pub steps: Option<serde_json::Value>,
+    pub reverse_diff: Option<serde_json::Value>,
+    pub notes: Option<String>,
+    pub is_latest: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+/// A fork relationship linking a forked recipe to its source.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct ForkRelationship {
+    pub id: Uuid,
+    pub original_recipe_id: Uuid,
+    pub forked_recipe_id: Uuid,
+    pub forked_by: Uuid,
+    pub forked_version_number: Option<i32>,
+    pub message: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Full recipe record from the `recipes` table.
+///
+/// Maps to the core recipe table. Used for ownership verification
+/// and metadata updates in the versioned edit flow.
+#[derive(Debug, Clone, sqlx::FromRow, serde::Serialize)]
+pub struct Recipe {
+    pub id: Uuid,
+    pub owner_id: Uuid,
+    pub title: String,
+    pub description: Option<String>,
+    pub is_public: bool,
+    pub is_draft: bool,
+    pub prep_time_min: Option<i32>,
+    pub cook_time_min: Option<i32>,
+    pub total_time_min: Option<i32>,
+    pub servings: Option<i32>,
+    pub ingredients: Option<serde_json::Value>,
+    pub steps: Option<serde_json::Value>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 // ── Auth state queries ──────────────────────────────────────────────────────
@@ -636,6 +711,920 @@ pub async fn update_username(
     .fetch_one(executor)
     .await
     .map_err(DbError::Query)
+}
+
+// ── Recipe versioning query functions ────────────────────────────────────────
+
+/// Get the maximum version number for a recipe.
+/// Returns 0 if no versions exist.
+pub async fn get_max_version_number(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    recipe_id: Uuid,
+) -> Result<i32, DbError> {
+    sqlx::query_scalar!(
+        r#"SELECT COALESCE(MAX(version_number), 0) FROM recipe_versions WHERE recipe_id = $1"#,
+        recipe_id
+    )
+    .fetch_one(executor)
+    .await
+    .map(|v| v.unwrap_or(0))
+    .map_err(DbError::Query)
+}
+
+/// Get the latest version of a recipe (full snapshot).
+pub async fn get_latest_version(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    recipe_id: Uuid,
+) -> Result<RecipeVersion, DbError> {
+    sqlx::query_as!(
+        RecipeVersion,
+        r#"SELECT id, recipe_id, version_number, title, description, prep_time_min,
+                  cook_time_min, total_time_min, servings, ingredients, steps,
+                  reverse_diff, notes, is_latest, created_at
+           FROM recipe_versions WHERE recipe_id = $1 AND is_latest = TRUE"#,
+        recipe_id
+    )
+    .fetch_one(executor)
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => DbError::VersionNotFound,
+        other => DbError::Query(other),
+    })
+}
+
+/// Get a specific version by version number.
+pub async fn get_version_by_number(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    recipe_id: Uuid,
+    version_number: i32,
+) -> Result<RecipeVersion, DbError> {
+    sqlx::query_as!(
+        RecipeVersion,
+        r#"SELECT id, recipe_id, version_number, title, description, prep_time_min,
+                  cook_time_min, total_time_min, servings, ingredients, steps,
+                  reverse_diff, notes, is_latest, created_at
+           FROM recipe_versions WHERE recipe_id = $1 AND version_number = $2"#,
+        recipe_id,
+        version_number
+    )
+    .fetch_one(executor)
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => DbError::VersionNotFound,
+        other => DbError::Query(other),
+    })
+}
+
+/// Get all versions of a recipe, ordered newest to oldest.
+pub async fn get_all_versions(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    recipe_id: Uuid,
+) -> Result<Vec<RecipeVersion>, DbError> {
+    sqlx::query_as!(
+        RecipeVersion,
+        r#"SELECT id, recipe_id, version_number, title, description, prep_time_min,
+                   cook_time_min, total_time_min, servings, ingredients, steps,
+                   reverse_diff, notes, is_latest, created_at
+            FROM recipe_versions WHERE recipe_id = $1 ORDER BY version_number DESC"#,
+        recipe_id
+    )
+    .fetch_all(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Get all versions of a recipe, ordered oldest to newest (ascending version_number).
+///
+/// Used by the version history UI to display a chronological timeline.
+pub async fn get_recipe_versions(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    recipe_id: Uuid,
+) -> Result<Vec<RecipeVersion>, DbError> {
+    sqlx::query_as!(
+        RecipeVersion,
+        r#"SELECT id, recipe_id, version_number, title, description, prep_time_min,
+                   cook_time_min, total_time_min, servings, ingredients, steps,
+                   reverse_diff, notes, is_latest, created_at
+            FROM recipe_versions WHERE recipe_id = $1 ORDER BY version_number ASC"#,
+        recipe_id
+    )
+    .fetch_all(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Get reverse diffs for versions up to and including target_version.
+/// Returns diffs ordered from newest to oldest for chain reconstruction.
+pub async fn get_reverse_diffs(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    recipe_id: Uuid,
+    target_version: i32,
+) -> Result<Vec<serde_json::Value>, DbError> {
+    sqlx::query_scalar!(
+        r#"SELECT reverse_diff FROM recipe_versions
+           WHERE recipe_id = $1 AND version_number <= $2 AND reverse_diff IS NOT NULL
+           ORDER BY version_number DESC"#,
+        recipe_id,
+        target_version
+    )
+    .fetch_all(executor)
+    .await
+    .map(|v| v.into_iter().flatten().collect())
+    .map_err(DbError::Query)
+}
+
+/// Revoke `is_latest` flag from all versions of a recipe.
+pub async fn revoke_latest_version(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    recipe_id: Uuid,
+) -> Result<(), DbError> {
+    sqlx::query!(
+        r#"UPDATE recipe_versions SET is_latest = FALSE WHERE recipe_id = $1 AND is_latest = TRUE"#,
+        recipe_id
+    )
+    .execute(executor)
+    .await
+    .map(|_| ())
+    .map_err(DbError::Query)
+}
+
+/// Set a specific version as the latest.
+/// Call `revoke_latest_version` first to ensure single latest.
+pub async fn set_latest_version(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    recipe_id: Uuid,
+    version_number: i32,
+) -> Result<(), DbError> {
+    sqlx::query!(
+        r#"UPDATE recipe_versions SET is_latest = TRUE
+           WHERE recipe_id = $1 AND version_number = $2"#,
+        recipe_id,
+        version_number
+    )
+    .execute(executor)
+    .await
+    .map(|_| ())
+    .map_err(DbError::Query)
+}
+
+/// Insert a new version row (historical, with reverse_diff).
+/// Not marked as latest — call `set_latest_version` separately if needed.
+pub async fn insert_version(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    recipe_id: Uuid,
+    version_number: i32,
+    reverse_diff: Option<serde_json::Value>,
+    notes: Option<&str>,
+) -> Result<uuid::Uuid, DbError> {
+    sqlx::query_scalar!(
+        r#"INSERT INTO recipe_versions (recipe_id, version_number, reverse_diff, notes, is_latest)
+           VALUES ($1, $2, $3, $4, FALSE) RETURNING id"#,
+        recipe_id,
+        version_number,
+        reverse_diff,
+        notes
+    )
+    .fetch_one(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
+// ── CP3: Versioned edit flow query functions ────────────────────────────────
+
+/// Insert a new recipe and return it.
+///
+/// Used by tests and the recipe creation endpoint.
+#[allow(clippy::too_many_arguments)]
+pub async fn insert_recipe(
+    pool: &PgPool,
+    owner_id: Uuid,
+    title: &str,
+    description: Option<&str>,
+    is_public: bool,
+    is_draft: bool,
+    prep_time_min: Option<i32>,
+    cook_time_min: Option<i32>,
+    total_time_min: Option<i32>,
+    servings: Option<i32>,
+    ingredients: Option<serde_json::Value>,
+    steps: Option<serde_json::Value>,
+) -> Result<Recipe, DbError> {
+    sqlx::query_as!(
+        Recipe,
+        r#"INSERT INTO recipes
+           (owner_id, title, description, is_public, is_draft,
+            prep_time_min, cook_time_min, total_time_min, servings,
+            ingredients, steps)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+           RETURNING id, owner_id, title, description, is_public, is_draft,
+              prep_time_min, cook_time_min, total_time_min, servings,
+              ingredients, steps, created_at, updated_at"#,
+        owner_id,
+        title,
+        description,
+        is_public,
+        is_draft,
+        prep_time_min,
+        cook_time_min,
+        total_time_min,
+        servings,
+        ingredients,
+        steps,
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Get a recipe by ID and verify ownership.
+///
+/// Returns `DbError::RecipeNotFound` if the recipe doesn't exist or
+/// the user is not the owner.
+pub async fn get_recipe_by_id_and_owner(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    recipe_id: Uuid,
+    owner_id: Uuid,
+) -> Result<Recipe, DbError> {
+    sqlx::query_as!(
+        Recipe,
+        r#"SELECT id, owner_id, title, description, is_public, is_draft,
+               prep_time_min, cook_time_min, total_time_min, servings,
+               ingredients, steps, created_at, updated_at
+           FROM recipes
+           WHERE id = $1 AND owner_id = $2"#,
+        recipe_id,
+        owner_id,
+    )
+    .fetch_one(executor)
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => DbError::RecipeNotFound,
+        other => DbError::Query(other),
+    })
+}
+
+/// Update recipe metadata, syncing all mutable fields from the new version
+/// to the denormalized `recipes` table.
+///
+/// Note: `ingredients` and `steps` columns are `NOT NULL DEFAULT '[]'::jsonb`,
+/// so `None` values are converted to empty arrays.
+#[allow(clippy::too_many_arguments)]
+pub async fn update_recipe_metadata(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    recipe_id: Uuid,
+    title: &str,
+    description: Option<&str>,
+    prep_time_min: Option<i32>,
+    cook_time_min: Option<i32>,
+    total_time_min: Option<i32>,
+    servings: Option<i32>,
+    ingredients: Option<&serde_json::Value>,
+    steps: Option<&serde_json::Value>,
+) -> Result<(), DbError> {
+    // ingredients and steps are NOT NULL columns defaulting to '[]'::jsonb
+    let ingredients_val = ingredients.cloned().unwrap_or_else(|| serde_json::json!([]));
+    let steps_val = steps.cloned().unwrap_or_else(|| serde_json::json!([]));
+
+    sqlx::query!(
+        r#"UPDATE recipes SET title = $2, description = $3, prep_time_min = $4,
+           cook_time_min = $5, total_time_min = $6, servings = $7,
+           ingredients = $8, steps = $9, updated_at = NOW()
+           WHERE id = $1"#,
+        recipe_id,
+        title,
+        description,
+        prep_time_min,
+        cook_time_min,
+        total_time_min,
+        servings,
+        ingredients_val,
+        steps_val,
+    )
+    .execute(executor)
+    .await
+    .map(|_| ())
+    .map_err(DbError::Query)
+}
+
+/// Insert a new version as the latest full snapshot.
+#[allow(clippy::too_many_arguments)]
+pub async fn insert_latest_version(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    recipe_id: Uuid,
+    version_number: i32,
+    title: &str,
+    description: Option<&str>,
+    prep_time_min: Option<i32>,
+    cook_time_min: Option<i32>,
+    total_time_min: Option<i32>,
+    servings: Option<i32>,
+    ingredients: Option<&serde_json::Value>,
+    steps: Option<&serde_json::Value>,
+    notes: Option<&str>,
+) -> Result<(), DbError> {
+    sqlx::query!(
+        r#"INSERT INTO recipe_versions
+           (recipe_id, version_number, title, description, prep_time_min,
+            cook_time_min, total_time_min, servings, ingredients, steps,
+            reverse_diff, notes, is_latest)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULL, $11, TRUE)"#,
+        recipe_id,
+        version_number,
+        title,
+        description,
+        prep_time_min,
+        cook_time_min,
+        total_time_min,
+        servings,
+        ingredients,
+        steps,
+        notes,
+    )
+    .execute(executor)
+    .await
+    .map(|_| ())
+    .map_err(DbError::Query)
+}
+
+/// Update a recipe with versioning.
+///
+/// Transactional 8-step flow:
+/// 1. Verify ownership via `get_recipe_by_id_and_owner`
+/// 2. Get current latest version via `get_latest_version`
+/// 3. Serialize current version to JSON via `recipe_to_json`
+/// 4. Serialize new fields to JSON via `recipe_to_json_from_fields`
+/// 5. Compute forward diff (old -> new) via `compute_diff`
+/// 6. Compute reverse diff (new -> old) via `reverse_patch`
+/// 7. Mark current latest as historical: store reverse_diff, set is_latest = false
+/// 8. Insert new version as latest full snapshot (version_number + 1)
+/// 9. Update recipe metadata (title, updated_at)
+#[allow(clippy::too_many_arguments)]
+pub async fn update_recipe_versioned(
+    pool: &PgPool,
+    recipe_id: &Uuid,
+    owner_id: &Uuid,
+    title: &str,
+    description: Option<&str>,
+    prep_time_min: Option<i32>,
+    cook_time_min: Option<i32>,
+    total_time_min: Option<i32>,
+    servings: Option<i32>,
+    ingredients: &Option<serde_json::Value>,
+    steps: &Option<serde_json::Value>,
+    notes: Option<&str>,
+) -> Result<(Recipe, i32), DbError> {
+    // Step 1: Verify ownership
+    let _recipe = get_recipe_by_id_and_owner(pool, *recipe_id, *owner_id).await?;
+
+    // Step 2: Get current latest version
+    let latest = get_latest_version(pool, *recipe_id).await?;
+
+    // Step 3: Serialize current version to JSON
+    let old_json = diff::recipe_to_json(&latest)?;
+
+    // Step 4: Serialize new fields to JSON
+    let new_json = diff::recipe_to_json_from_fields(
+        title, description, prep_time_min, cook_time_min,
+        total_time_min, servings, ingredients, steps,
+    )?;
+
+    // Step 5: Compute forward diff (old -> new)
+    let forward_diff = diff::compute_diff(&old_json, &new_json)?;
+
+    // Step 6: Compute reverse diff (new -> old)
+    let reverse_diff_patch = diff::reverse_patch(&forward_diff, &old_json)?;
+    let reverse_diff: serde_json::Value =
+        serde_json::to_value(reverse_diff_patch).map_err(|e| DbError::DiffError(e.to_string()))?;
+
+    // Steps 7-9: Transactional update
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+
+    // Step 7a: Revoke latest from current version
+    revoke_latest_version(&mut *tx, *recipe_id).await?;
+
+    // Step 7b: Store reverse_diff on current version
+    sqlx::query!(
+        r#"UPDATE recipe_versions SET reverse_diff = $3
+           WHERE recipe_id = $1 AND version_number = $2"#,
+        recipe_id,
+        latest.version_number,
+        reverse_diff,
+    )
+    .execute(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+
+    // Step 8: Insert new version as latest full snapshot
+    let new_version_number = latest.version_number + 1;
+    insert_latest_version(
+        &mut *tx, *recipe_id, new_version_number, title, description,
+        prep_time_min, cook_time_min, total_time_min, servings,
+        ingredients.as_ref(), steps.as_ref(), notes,
+    )
+    .await?;
+
+    // Step 9: Update recipe metadata (sync all fields to denormalized recipes table)
+    update_recipe_metadata(
+        &mut *tx, *recipe_id, title, description,
+        prep_time_min, cook_time_min, total_time_min, servings,
+        ingredients.as_ref(), steps.as_ref(),
+    )
+    .await?;
+
+    // Fetch updated recipe
+    let updated_recipe = sqlx::query_as!(
+        Recipe,
+        r#"SELECT id, owner_id, title, description, is_public, is_draft,
+               prep_time_min, cook_time_min, total_time_min, servings,
+               ingredients, steps, created_at, updated_at
+           FROM recipes WHERE id = $1"#,
+        recipe_id,
+    )
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+
+    tx.commit().await.map_err(DbError::Query)?;
+
+    Ok((updated_recipe, new_version_number))
+}
+
+// ── Restore version ──────────────────────────────────────────────────────────
+
+/// Restore a historical version by reconstructing its data and saving as a new version.
+///
+/// The target version's data is reconstructed (either directly if it's the latest,
+/// or via reverse-diff chain), then saved as a new version with auto-notes.
+pub async fn restore_version(
+    pool: &PgPool,
+    recipe_id: &Uuid,
+    owner_id: &Uuid,
+    target_version_number: i32,
+) -> Result<(Recipe, i32), DbError> {
+    // 1. Verify ownership
+    let _recipe = get_recipe_by_id_and_owner(pool, *recipe_id, *owner_id).await?;
+
+    // 2. Get all versions (ASC order for chain reconstruction)
+    let versions = get_recipe_versions(pool, *recipe_id).await?;
+
+    // 3. Find target version
+    let target = versions
+        .iter()
+        .find(|v| v.version_number == target_version_number)
+        .ok_or(DbError::VersionNotFound)?;
+
+    // 4. Reconstruct target version's data
+    let (title, description, prep_time_min, cook_time_min, total_time_min, servings, ingredients, steps) =
+        if target.is_latest {
+            // Target IS latest — use data directly
+            (
+                target
+                    .title
+                    .clone()
+                    .ok_or_else(|| DbError::DiffError("version title is NULL".to_string()))?,
+                target.description.clone(),
+                target.prep_time_min,
+                target.cook_time_min,
+                target.total_time_min,
+                target.servings,
+                target.ingredients.clone(),
+                target.steps.clone(),
+            )
+        } else {
+            // Historical — reconstruct from reverse diff chain
+            let latest = versions.iter().find(|v| v.is_latest).ok_or(DbError::VersionNotFound)?;
+            let latest_json = diff::recipe_to_json(latest)?;
+
+            let reverse_diffs: Vec<serde_json::Value> = versions
+                .iter()
+                .filter(|v| v.version_number >= target_version_number && v.reverse_diff.is_some())
+                .map(|v| v.reverse_diff.clone().unwrap())
+                .rev()
+                .collect();
+
+            let reconstructed_json = diff::reconstruct_from_chain(&latest_json, &reverse_diffs)?;
+            let snapshot = diff::json_to_recipe(&reconstructed_json)?;
+
+            (
+                snapshot.title,
+                snapshot.description,
+                snapshot.prep_time_min,
+                snapshot.cook_time_min,
+                snapshot.total_time_min,
+                snapshot.servings,
+                Some(serde_json::Value::Array(snapshot.ingredients)),
+                Some(serde_json::Value::Array(snapshot.steps)),
+            )
+        };
+
+    // 5. Create new version from restored data (with auto-notes)
+    let notes = format!("Restored from v{target_version_number}");
+    update_recipe_versioned(
+        pool,
+        recipe_id,
+        owner_id,
+        &title,
+        description.as_deref(),
+        prep_time_min,
+        cook_time_min,
+        total_time_min,
+        servings,
+        &ingredients,
+        &steps,
+        Some(&notes),
+    )
+    .await
+}
+
+// ── Draft operations ────────────────────────────────────────────────────────
+
+/// Publish a draft recipe: set `is_draft = FALSE` and verify ownership.
+pub async fn publish_recipe(
+    pool: &PgPool,
+    recipe_id: Uuid,
+    owner_id: Uuid,
+) -> Result<Recipe, DbError> {
+    // Verify ownership first
+    get_recipe_by_id_and_owner(pool, recipe_id, owner_id).await?;
+
+    sqlx::query_as!(
+        Recipe,
+        r#"UPDATE recipes
+           SET is_draft = FALSE, updated_at = NOW()
+           WHERE id = $1 AND owner_id = $2
+           RETURNING id, owner_id, title, description, is_public, is_draft,
+              prep_time_min, cook_time_min, total_time_min, servings,
+              ingredients, steps, created_at, updated_at"#,
+        recipe_id,
+        owner_id,
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => DbError::RecipeNotFound,
+        other => DbError::Query(other),
+    })
+}
+
+/// Get recipes owned by a user, optionally filtering by draft status.
+///
+/// When `include_drafts` is `true`, returns all recipes (drafts + published).
+/// When `false`, returns only published recipes (`is_draft = FALSE`).
+pub async fn get_recipes_by_owner_with_draft_filter(
+    pool: &PgPool,
+    owner_id: Uuid,
+    include_drafts: bool,
+) -> Result<Vec<Recipe>, DbError> {
+    let recipes = if include_drafts {
+        sqlx::query_as!(
+            Recipe,
+            r#"SELECT id, owner_id, title, description, is_public, is_draft,
+                   prep_time_min, cook_time_min, total_time_min, servings,
+                   ingredients, steps, created_at, updated_at
+               FROM recipes
+               WHERE owner_id = $1
+               ORDER BY updated_at DESC"#,
+            owner_id,
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(DbError::Query)?
+    } else {
+        sqlx::query_as!(
+            Recipe,
+            r#"SELECT id, owner_id, title, description, is_public, is_draft,
+                   prep_time_min, cook_time_min, total_time_min, servings,
+                   ingredients, steps, created_at, updated_at
+               FROM recipes
+               WHERE owner_id = $1 AND is_draft = FALSE
+               ORDER BY updated_at DESC"#,
+            owner_id,
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(DbError::Query)?
+    };
+
+    Ok(recipes)
+}
+
+/// Create a new draft recipe with `is_draft = TRUE` and a v1 version entry.
+#[allow(clippy::too_many_arguments)]
+pub async fn create_draft_recipe(
+    pool: &PgPool,
+    owner_id: Uuid,
+    title: &str,
+    description: Option<&str>,
+    prep_time_min: Option<i32>,
+    cook_time_min: Option<i32>,
+    total_time_min: Option<i32>,
+    servings: Option<i32>,
+    ingredients: Option<&serde_json::Value>,
+    steps: Option<&serde_json::Value>,
+) -> Result<Recipe, DbError> {
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+
+    // Insert recipe row with is_draft = TRUE
+    let recipe = sqlx::query_as!(
+        Recipe,
+        r#"INSERT INTO recipes
+           (owner_id, title, description, is_public, is_draft,
+            prep_time_min, cook_time_min, total_time_min, servings,
+            ingredients, steps)
+           VALUES ($1, $2, $3, FALSE, TRUE, $4, $5, $6, $7, $8, $9)
+           RETURNING id, owner_id, title, description, is_public, is_draft,
+              prep_time_min, cook_time_min, total_time_min, servings,
+              ingredients, steps, created_at, updated_at"#,
+        owner_id,
+        title,
+        description,
+        prep_time_min,
+        cook_time_min,
+        total_time_min,
+        servings,
+        ingredients.cloned().unwrap_or_else(|| serde_json::json!([])),
+        steps.cloned().unwrap_or_else(|| serde_json::json!([])),
+    )
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+
+    // Backfill v1 version entry
+    insert_latest_version(
+        &mut *tx,
+        recipe.id,
+        1,
+        title,
+        description,
+        prep_time_min,
+        cook_time_min,
+        total_time_min,
+        servings,
+        ingredients,
+        steps,
+        None,
+    )
+    .await?;
+
+    tx.commit().await.map_err(DbError::Query)?;
+
+    Ok(recipe)
+}
+
+/// Update an existing draft recipe's metadata without creating a new version.
+///
+/// Used for auto-save during draft editing. Only updates the denormalized
+/// `recipes` table — does NOT create a new version entry.
+/// Both the metadata update and version snapshot update are wrapped in a
+/// transaction for atomicity.
+#[allow(clippy::too_many_arguments)]
+pub async fn update_draft(
+    pool: &PgPool,
+    recipe_id: Uuid,
+    owner_id: Uuid,
+    title: &str,
+    description: Option<&str>,
+    prep_time_min: Option<i32>,
+    cook_time_min: Option<i32>,
+    total_time_min: Option<i32>,
+    servings: Option<i32>,
+    ingredients: Option<&serde_json::Value>,
+    steps: Option<&serde_json::Value>,
+) -> Result<Recipe, DbError> {
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+
+    // Verify ownership first
+    get_recipe_by_id_and_owner(&mut *tx, recipe_id, owner_id).await?;
+
+    // Update metadata (ingredients and steps are NOT NULL columns)
+    let ingredients_val = ingredients.cloned().unwrap_or_else(|| serde_json::json!([]));
+    let steps_val = steps.cloned().unwrap_or_else(|| serde_json::json!([]));
+
+    let recipe = sqlx::query_as!(
+        Recipe,
+        r#"UPDATE recipes
+           SET title = $2, description = $3, prep_time_min = $4,
+               cook_time_min = $5, total_time_min = $6, servings = $7,
+               ingredients = $8, steps = $9, updated_at = NOW()
+           WHERE id = $1 AND owner_id = $10
+           RETURNING id, owner_id, title, description, is_public, is_draft,
+              prep_time_min, cook_time_min, total_time_min, servings,
+              ingredients, steps, created_at, updated_at"#,
+        recipe_id,
+        title,
+        description,
+        prep_time_min,
+        cook_time_min,
+        total_time_min,
+        servings,
+        ingredients_val,
+        steps_val,
+        owner_id,
+    )
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => DbError::RecipeNotFound,
+        other => DbError::Query(other),
+    })?;
+
+    // Also update the latest version's snapshot to keep it in sync
+    let latest = get_latest_version(&mut *tx, recipe_id).await.ok();
+    if let Some(latest) = latest {
+        sqlx::query!(
+            r#"UPDATE recipe_versions
+               SET title = $2, description = $3, prep_time_min = $4,
+                   cook_time_min = $5, total_time_min = $6, servings = $7,
+                   ingredients = $8, steps = $9
+               WHERE recipe_id = $1 AND version_number = $10"#,
+            recipe_id,
+            title,
+            description,
+            prep_time_min,
+            cook_time_min,
+            total_time_min,
+            servings,
+            ingredients.cloned().unwrap_or_else(|| serde_json::json!([])),
+            steps.cloned().unwrap_or_else(|| serde_json::json!([])),
+            latest.version_number,
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(DbError::Query)?;
+    }
+
+    tx.commit().await.map_err(DbError::Query)?;
+
+    Ok(recipe)
+}
+
+// ── Fork operations ─────────────────────────────────────────────────────────
+
+/// Get a recipe if it's public OR owned by the requesting user.
+///
+/// Returns `(recipe, owner_id)`. Returns `DbError::ForkError` if the recipe
+/// is not found or the user lacks access.
+pub async fn get_recipe_accessible(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    recipe_id: Uuid,
+    requesting_user_id: Uuid,
+) -> Result<Recipe, DbError> {
+    sqlx::query_as!(
+        Recipe,
+        r#"SELECT id, owner_id, title, description, is_public, is_draft,
+               prep_time_min, cook_time_min, total_time_min, servings,
+               ingredients, steps, created_at, updated_at
+           FROM recipes
+           WHERE id = $1 AND (is_public = TRUE OR owner_id = $2)"#,
+        recipe_id,
+        requesting_user_id,
+    )
+    .fetch_one(executor)
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => DbError::ForkError,
+        other => DbError::Query(other),
+    })
+}
+
+/// Insert a row into the fork_relationships table.
+pub async fn insert_fork_relationship(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    original_recipe_id: Uuid,
+    forked_recipe_id: Uuid,
+    forked_by: Uuid,
+    message: Option<String>,
+) -> Result<Uuid, DbError> {
+    sqlx::query_scalar!(
+        r#"INSERT INTO fork_relationships (original_recipe_id, forked_recipe_id, forked_by, message)
+           VALUES ($1, $2, $3, $4) RETURNING id"#,
+        original_recipe_id,
+        forked_recipe_id,
+        forked_by,
+        message,
+    )
+    .fetch_one(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Get fork attribution for a recipe.
+///
+/// Returns `(original_recipe_id, original_owner_id, message)` if this recipe
+/// is a fork of another recipe.
+pub async fn get_fork_info(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    forked_recipe_id: Uuid,
+) -> Result<Option<(Uuid, Uuid, Option<String>)>, DbError> {
+    #[derive(sqlx::FromRow)]
+    struct ForkInfoRow {
+        original_recipe_id: Uuid,
+        owner_id: Uuid,
+        message: Option<String>,
+    }
+
+    let row: Option<ForkInfoRow> = sqlx::query_as!(
+        ForkInfoRow,
+        r#"SELECT fr.original_recipe_id, r.owner_id, fr.message
+           FROM fork_relationships fr
+           JOIN recipes r ON fr.original_recipe_id = r.id
+           WHERE fr.forked_recipe_id = $1"#,
+        forked_recipe_id,
+    )
+    .fetch_optional(executor)
+    .await
+    .map_err(DbError::Query)?;
+
+    Ok(row.map(|r| (r.original_recipe_id, r.owner_id, r.message)))
+}
+
+/// Fork a recipe: create a new draft recipe based on an existing one.
+///
+/// The source recipe must be public or owned by the forking user.
+/// Returns `(new_recipe_id, original_recipe_id, original_title)`.
+pub async fn fork_recipe(
+    pool: &PgPool,
+    source_recipe_id: Uuid,
+    forking_user_id: Uuid,
+    message: Option<String>,
+) -> Result<(Uuid, Uuid, String), DbError> {
+    // Step 1: Verify access to source recipe
+    let source_recipe = get_recipe_accessible(pool, source_recipe_id, forking_user_id).await?;
+    let original_title = source_recipe.title.clone();
+
+    // Step 2: Get the source recipe's latest version snapshot
+    let latest = get_latest_version(pool, source_recipe_id).await?;
+
+    // Step 3: Parse snapshot fields
+    let title = latest
+        .title
+        .clone()
+        .ok_or_else(|| DbError::DiffError("source version title is NULL".to_string()))?;
+    let description = latest.description.clone();
+    let prep_time_min = latest.prep_time_min;
+    let cook_time_min = latest.cook_time_min;
+    let total_time_min = latest.total_time_min;
+    let servings = latest.servings;
+    let ingredients = latest.ingredients.clone();
+    let steps = latest.steps.clone();
+
+    // Step 4-7: Transactional creation
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+
+    // Step 4: Create new recipe (draft, owned by forking user)
+    let new_recipe_id = sqlx::query_scalar!(
+        r#"INSERT INTO recipes
+           (owner_id, title, description, is_public, is_draft,
+            prep_time_min, cook_time_min, total_time_min, servings,
+            ingredients, steps)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+           RETURNING id"#,
+        forking_user_id,
+        title,
+        description.as_deref(),
+        false, // is_public = false
+        true,  // is_draft = true
+        prep_time_min,
+        cook_time_min,
+        total_time_min,
+        servings,
+        ingredients.clone(),
+        steps.clone(),
+    )
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+
+    // Step 5: Create v1 with full snapshot
+    insert_latest_version(
+        &mut *tx,
+        new_recipe_id,
+        1,
+        &title,
+        description.as_deref(),
+        prep_time_min,
+        cook_time_min,
+        total_time_min,
+        servings,
+        ingredients.as_ref(),
+        steps.as_ref(),
+        None,
+    )
+    .await?;
+
+    // Step 6: Record fork relationship
+    insert_fork_relationship(
+        &mut *tx,
+        source_recipe_id,
+        new_recipe_id,
+        forking_user_id,
+        message,
+    )
+    .await?;
+
+    tx.commit().await.map_err(DbError::Query)?;
+
+    Ok((new_recipe_id, source_recipe_id, original_title))
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -1256,5 +2245,433 @@ mod tests {
         let fake_id = Uuid::nil();
         let result = delete_user(&pool, fake_id).await;
         assert!(result.is_err());
+    }
+
+    // ── CP3: Versioned edit flow tests ──────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_update_recipe_versioned() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let (user, recipe) = test_utils::create_test_user_and_recipe(&pool).await;
+
+        // Initial state: v1 exists
+        let v1 = get_latest_version(&pool, recipe.id).await.unwrap();
+        assert_eq!(v1.version_number, 1);
+        assert_eq!(v1.title.as_deref(), Some("Test Recipe"));
+
+        // Update the recipe with different content
+        let (updated, new_version) = update_recipe_versioned(
+            &pool,
+            &recipe.id,
+            &user.id,
+            "Updated Recipe",
+            Some("Updated description"),
+            Some(20),
+            Some(40),
+            Some(60),
+            Some(8),
+            &Some(serde_json::json!(["flour", "sugar", "eggs", "butter"])),
+            &Some(serde_json::json!(["Mix", "Bake", "Cool", "Serve"])),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Verify returned data
+        assert_eq!(new_version, 2);
+        assert_eq!(updated.title, "Updated Recipe");
+
+        // Verify recipes table is fully synced (denormalized latest)
+        assert_eq!(updated.description.as_deref(), Some("Updated description"));
+        assert_eq!(updated.prep_time_min, Some(20));
+        assert_eq!(updated.cook_time_min, Some(40));
+        assert_eq!(updated.total_time_min, Some(60));
+        assert_eq!(updated.servings, Some(8));
+        assert_eq!(
+            updated.ingredients.as_ref().unwrap(),
+            &serde_json::json!(["flour", "sugar", "eggs", "butter"])
+        );
+        assert_eq!(
+            updated.steps.as_ref().unwrap(),
+            &serde_json::json!(["Mix", "Bake", "Cool", "Serve"])
+        );
+
+        // Verify v2 is now latest
+        let v2 = get_latest_version(&pool, recipe.id).await.unwrap();
+        assert_eq!(v2.version_number, 2);
+        assert_eq!(v2.title.as_deref(), Some("Updated Recipe"));
+        assert!(v2.is_latest);
+
+        // Verify v1 is no longer latest and has reverse_diff
+        let all_versions = get_all_versions(&pool, recipe.id).await.unwrap();
+        assert_eq!(all_versions.len(), 2);
+
+        let v1_after = all_versions
+            .iter()
+            .find(|v| v.version_number == 1)
+            .unwrap();
+        assert!(!v1_after.is_latest);
+        assert!(v1_after.reverse_diff.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_version_chain() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let (user, recipe) = test_utils::create_test_user_and_recipe(&pool).await;
+
+        // Update to v2
+        let (_, v2_num) = update_recipe_versioned(
+            &pool,
+            &recipe.id,
+            &user.id,
+            "Version 2",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &Some(serde_json::json!(["bread", "butter"])),
+            &None,
+            None,
+        )
+        .await
+        .unwrap();
+        assert_eq!(v2_num, 2);
+
+        // Update to v3
+        let (_, v3_num) = update_recipe_versioned(
+            &pool,
+            &recipe.id,
+            &user.id,
+            "Version 3",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &Some(serde_json::json!(["cheese", "tomato"])),
+            &None,
+            None,
+        )
+        .await
+        .unwrap();
+        assert_eq!(v3_num, 3);
+
+        // Verify version chain
+        let all_versions = get_all_versions(&pool, recipe.id).await.unwrap();
+        assert_eq!(all_versions.len(), 3);
+
+        // v1: original, not latest, has reverse_diff
+        let v1 = all_versions.iter().find(|v| v.version_number == 1).unwrap();
+        assert!(!v1.is_latest);
+        assert!(v1.reverse_diff.is_some());
+
+        // v2: intermediate, not latest, has reverse_diff
+        let v2 = all_versions.iter().find(|v| v.version_number == 2).unwrap();
+        assert!(!v2.is_latest);
+        assert!(v2.reverse_diff.is_some());
+
+        // v3: latest, no reverse_diff
+        let v3 = all_versions.iter().find(|v| v.version_number == 3).unwrap();
+        assert!(v3.is_latest);
+        assert!(v3.reverse_diff.is_none());
+
+        // Verify chain reconstruction: v3 -> v2 -> v1
+        let v3_json = diff::recipe_to_json(v3).unwrap();
+        let v2_reverse: serde_json::Value = v2.reverse_diff.as_ref().unwrap().clone();
+        let v1_reverse: serde_json::Value = v1.reverse_diff.as_ref().unwrap().clone();
+
+        // Reconstruct v2 from v3
+        let v2_reconstructed =
+            diff::reconstruct_from_chain(&v3_json, std::slice::from_ref(&v2_reverse)).unwrap();
+        assert_eq!(
+            v2_reconstructed.get("title").unwrap().as_str().unwrap(),
+            "Version 2"
+        );
+
+        // Reconstruct v1 from v3 through v2
+        let v1_reconstructed =
+            diff::reconstruct_from_chain(&v3_json, &[v2_reverse, v1_reverse]).unwrap();
+        assert_eq!(
+            v1_reconstructed.get("title").unwrap().as_str().unwrap(),
+            "Test Recipe"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_update_recipe_wrong_owner() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let (_owner, recipe) = test_utils::create_test_user_and_recipe(&pool).await;
+        let u = test_utils::uid();
+        let imposter = insert_user(
+            &pool,
+            &format!("imposter_{u}"),
+            "Imposter",
+            &format!("imposter{u}@test.com"),
+            None,
+        )
+        .await
+        .unwrap();
+        let result = update_recipe_versioned(
+            &pool,
+            &recipe.id,
+            &imposter.id,
+            "Hacked",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &None,
+            &None,
+            None,
+        )
+        .await;
+        assert!(matches!(result, Err(DbError::RecipeNotFound)));
+    }
+
+    // ── CP5: Restore version tests ──────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_restore_version_creates_new_version() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let (user, recipe) = test_utils::create_test_user_and_recipe(&pool).await;
+
+        // v1: "Test Recipe" (created by create_test_user_and_recipe)
+        let v1 = get_latest_version(&pool, recipe.id).await.unwrap();
+        assert_eq!(v1.version_number, 1);
+        assert_eq!(v1.title.as_deref(), Some("Test Recipe"));
+
+        // Create v2 with different title
+        update_recipe_versioned(
+            &pool,
+            &recipe.id,
+            &user.id,
+            "Modified Recipe",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &Some(serde_json::json!(["bread", "butter"])),
+            &None,
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Create v3 with yet another title
+        update_recipe_versioned(
+            &pool,
+            &recipe.id,
+            &user.id,
+            "Latest Recipe",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &Some(serde_json::json!(["cheese", "tomato"])),
+            &None,
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Verify v3 is latest
+        let v3 = get_latest_version(&pool, recipe.id).await.unwrap();
+        assert_eq!(v3.version_number, 3);
+        assert_eq!(v3.title.as_deref(), Some("Latest Recipe"));
+
+        // Restore v1 — should create v4 with v1's data
+        let (restored_recipe, new_version) = restore_version(
+            &pool,
+            &recipe.id,
+            &user.id,
+            1,
+        )
+        .await
+        .unwrap();
+
+        // v4 is created
+        assert_eq!(new_version, 4);
+        assert_eq!(restored_recipe.title, "Test Recipe");
+
+        // Verify v4 is latest with correct data
+        let v4 = get_latest_version(&pool, recipe.id).await.unwrap();
+        assert_eq!(v4.version_number, 4);
+        assert_eq!(v4.title.as_deref(), Some("Test Recipe"));
+        assert!(v4.is_latest);
+        assert_eq!(
+            v4.notes.as_deref(),
+            Some("Restored from v1")
+        );
+
+        // Verify original versions still exist unchanged
+        let all_versions = get_all_versions(&pool, recipe.id).await.unwrap();
+        assert_eq!(all_versions.len(), 4);
+
+        let v1_after = all_versions.iter().find(|v| v.version_number == 1).unwrap();
+        assert!(!v1_after.is_latest);
+        assert_eq!(v1_after.title.as_deref(), Some("Test Recipe"));
+
+        let v2_after = all_versions.iter().find(|v| v.version_number == 2).unwrap();
+        assert!(!v2_after.is_latest);
+        assert_eq!(v2_after.title.as_deref(), Some("Modified Recipe"));
+
+        let v3_after = all_versions.iter().find(|v| v.version_number == 3).unwrap();
+        assert!(!v3_after.is_latest);
+        assert_eq!(v3_after.title.as_deref(), Some("Latest Recipe"));
+    }
+
+    #[tokio::test]
+    async fn test_restore_version_unauthorized() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let (_owner, recipe) = test_utils::create_test_user_and_recipe(&pool).await;
+
+        // Create a different user
+        let u = test_utils::uid();
+        let imposter = insert_user(
+            &pool,
+            &format!("imposter_{u}"),
+            "Imposter",
+            &format!("imposter{u}@test.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Imposter tries to restore v1
+        let result = restore_version(&pool, &recipe.id, &imposter.id, 1).await;
+        assert!(matches!(result, Err(DbError::RecipeNotFound)));
+    }
+
+    #[tokio::test]
+    async fn test_restore_version_not_found() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let (user, recipe) = test_utils::create_test_user_and_recipe(&pool).await;
+
+        // Try to restore a version that doesn't exist
+        let result = restore_version(&pool, &recipe.id, &user.id, 99).await;
+        assert!(matches!(result, Err(DbError::VersionNotFound)));
+    }
+
+  // ── CP7: Fork tests ─────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_fork_creates_new_draft() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let (_owner, recipe) = test_utils::create_test_user_and_recipe(&pool).await;
+
+        // Make recipe public so the forker can access it
+        sqlx::query("UPDATE recipes SET is_public = TRUE WHERE id = $1")
+            .bind(recipe.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let forker = insert_user(
+            &pool,
+            "forker_user",
+            "Forker",
+            "forker@test.com",
+            None,
+        )
+        .await
+        .unwrap();
+
+        let (new_id, orig_id, orig_title) = fork_recipe(&pool, recipe.id, forker.id, None)
+            .await
+            .unwrap();
+
+        // New recipe is different from original
+        assert_ne!(new_id, recipe.id);
+        assert_eq!(orig_id, recipe.id);
+        assert_eq!(orig_title, "Test Recipe");
+
+        // New recipe is owned by forker, is draft, not public
+        let new_recipe: Recipe = sqlx::query_as!(
+            Recipe,
+            r#"SELECT id, owner_id, title, description, is_public, is_draft,
+               prep_time_min, cook_time_min, total_time_min, servings,
+               ingredients, steps, created_at, updated_at
+               FROM recipes WHERE id = $1"#,
+            new_id,
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(new_recipe.owner_id, forker.id);
+        assert!(new_recipe.is_draft);
+        assert!(!new_recipe.is_public);
+        assert_eq!(new_recipe.title, "Test Recipe");
+
+        // New recipe has v1
+        let new_versions = get_all_versions(&pool, new_id).await.unwrap();
+        assert_eq!(new_versions.len(), 1);
+        assert_eq!(new_versions[0].version_number, 1);
+    }
+
+    #[tokio::test]
+    async fn test_fork_records_relationship() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let (owner, recipe) = test_utils::create_test_user_and_recipe(&pool).await;
+
+        // Make recipe public so the forker can access it
+        sqlx::query("UPDATE recipes SET is_public = TRUE WHERE id = $1")
+            .bind(recipe.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let forker = insert_user(
+            &pool,
+            "forker_rel",
+            "Forker Rel",
+            "forkerrel@test.com",
+            None,
+        )
+        .await
+        .unwrap();
+
+        let message = "Love this recipe!".to_string();
+        let (new_id, _orig_id, _orig_title) =
+            fork_recipe(&pool, recipe.id, forker.id, Some(message.clone()))
+                .await
+                .unwrap();
+
+        let fork_info = get_fork_info(&pool, new_id).await.unwrap();
+        assert!(fork_info.is_some());
+        let (orig_id, orig_owner, fork_message) = fork_info.unwrap();
+        assert_eq!(orig_id, recipe.id);
+        assert_eq!(orig_owner, owner.id);
+        assert_eq!(fork_message, Some(message));
+    }
+
+    #[tokio::test]
+    async fn test_fork_private_recipe_fails() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let (_owner, recipe) = test_utils::create_test_user_and_recipe(&pool).await;
+
+        // Set is_public = false via raw SQL (the test fixture creates a public recipe)
+        sqlx::query("UPDATE recipes SET is_public = FALSE WHERE id = $1")
+            .bind(recipe.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let forker = insert_user(
+            &pool,
+            "forker_private",
+            "Forker Private",
+            "forkerprivate@test.com",
+            None,
+        )
+        .await
+        .unwrap();
+
+        let result = fork_recipe(&pool, recipe.id, forker.id, None).await;
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), DbError::ForkError));
     }
 }

@@ -6,6 +6,8 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::db;
+
 /// Spawn a fresh temporary PostgreSQL database and apply the NOMS schema.
 ///
 /// Each call creates an isolated database — no shared state, no cleanup needed.
@@ -136,9 +138,200 @@ pub async fn apply_test_schema(pool: &PgPool) {
         .execute(pool)
         .await
         .expect("failed to create sessions cleanup index");
+
+    // ── Recipe tables ──────────────────────────────────────────────────────
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS recipes (\
+         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\
+         owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,\
+         title VARCHAR(200) NOT NULL,\
+         description TEXT,\
+         is_public BOOLEAN NOT NULL DEFAULT FALSE,\
+         is_draft BOOLEAN NOT NULL DEFAULT FALSE,\
+         prep_time_min INTEGER,\
+         cook_time_min INTEGER,\
+         total_time_min INTEGER,\
+         servings INTEGER,\
+         ingredients JSONB NOT NULL DEFAULT '[]'::jsonb,\
+         steps JSONB NOT NULL DEFAULT '[]'::jsonb,\
+         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
+         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
+         )",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create recipes table");
+
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_recipes_owner_id ON recipes(owner_id)")
+        .execute(pool)
+        .await
+        .expect("failed to create recipes owner_id index");
+
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_recipes_updated_at ON recipes(updated_at DESC)")
+        .execute(pool)
+        .await
+        .expect("failed to create recipes updated_at index");
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS recipe_tags (\
+         recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,\
+         tag TEXT NOT NULL,\
+         PRIMARY KEY (recipe_id, tag)\
+         )",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create recipe_tags table");
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS recipe_versions (\
+         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\
+         recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,\
+         version_number INTEGER NOT NULL,\
+         title VARCHAR(200),\
+         description TEXT,\
+         prep_time_min INTEGER,\
+         cook_time_min INTEGER,\
+         total_time_min INTEGER,\
+         servings INTEGER,\
+         ingredients JSONB,\
+         steps JSONB,\
+         reverse_diff JSONB,\
+         notes TEXT,\
+         is_latest BOOLEAN NOT NULL DEFAULT FALSE,\
+         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
+         UNIQUE(recipe_id, version_number)\
+         )",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create recipe_versions table");
+
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_recipe_versions_recipe ON recipe_versions(recipe_id, version_number DESC)")
+        .execute(pool)
+        .await
+        .expect("failed to create recipe_versions index");
+
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_recipe_versions_latest ON recipe_versions(recipe_id, is_latest) WHERE is_latest = TRUE")
+        .execute(pool)
+        .await
+        .expect("failed to create recipe_versions latest index");
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS fork_relationships (\
+         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\
+         original_recipe_id UUID NOT NULL REFERENCES recipes(id),\
+         forked_recipe_id UUID NOT NULL REFERENCES recipes(id),\
+         forked_by UUID NOT NULL REFERENCES users(id),\
+         forked_version_number INTEGER,\
+         message TEXT,\
+         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
+         )",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create fork_relationships table");
+
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_forks_original ON fork_relationships(original_recipe_id)")
+        .execute(pool)
+        .await
+        .expect("failed to create forks original index");
+
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_forks_result ON fork_relationships(forked_recipe_id)")
+        .execute(pool)
+        .await
+        .expect("failed to create forks result index");
 }
 
 /// Generate a unique 8-character suffix for test data to avoid duplicate key conflicts.
 pub fn uid() -> String {
     Uuid::new_v4().to_string()[..8].to_string()
+}
+
+/// Insert a test recipe for a given owner and return its ID.
+///
+/// Creates the recipe row AND a v1 version entry (full snapshot, is_latest = true).
+/// Uses minimal default data so tests can focus on versioning logic.
+#[allow(dead_code)]
+pub async fn insert_test_recipe(pool: &PgPool, owner_id: Uuid, title: &str) -> Uuid {
+    let recipe_id: Uuid = sqlx::query_scalar(
+        "INSERT INTO recipes (owner_id, title, ingredients, steps) \
+         VALUES ($1, $2, '[]'::jsonb, '[]'::jsonb) \
+         RETURNING id",
+    )
+    .bind(owner_id)
+    .bind(title)
+    .fetch_one(pool)
+    .await
+    .expect("failed to insert test recipe");
+
+    // Backfill v1 version
+    sqlx::query(
+        "INSERT INTO recipe_versions (recipe_id, version_number, title, ingredients, steps, is_latest) \
+         VALUES ($1, 1, $2, '[]'::jsonb, '[]'::jsonb, TRUE)",
+    )
+    .bind(recipe_id)
+    .bind(title)
+    .execute(pool)
+    .await
+    .expect("failed to insert test recipe v1");
+
+    recipe_id
+}
+
+/// Create a test user and recipe (with v1 version) in one call.
+///
+/// Returns `(User, Recipe)` so that CP3 tests can verify ownership
+/// and versioning in a single setup step.
+pub async fn create_test_user_and_recipe(
+    pool: &PgPool,
+) -> (db::User, db::Recipe) {
+    let u = uid();
+    let user = db::insert_user(
+        pool,
+        &format!("testuser_{u}"),
+        "Test User",
+        &format!("test{u}@example.com"),
+        None,
+    )
+    .await
+    .expect("failed to insert test user");
+
+    let recipe = db::insert_recipe(
+        pool,
+        user.id,
+        "Test Recipe",
+        Some("A test recipe"),
+        false,
+        false,
+        Some(10),
+        Some(20),
+        Some(30),
+        Some(4),
+        Some(serde_json::json!(["flour", "sugar", "eggs"])),
+        Some(serde_json::json!(["Mix", "Bake", "Cool"])),
+    )
+    .await
+    .expect("failed to insert test recipe");
+
+    // Backfill v1 version as latest
+    db::insert_latest_version(
+        pool,
+        recipe.id,
+        1,
+        "Test Recipe",
+        Some("A test recipe"),
+        Some(10),
+        Some(20),
+        Some(30),
+        Some(4),
+        Some(serde_json::json!(["flour", "sugar", "eggs"])).as_ref(),
+        Some(serde_json::json!(["Mix", "Bake", "Cool"])).as_ref(),
+        None,
+    )
+    .await
+    .expect("failed to insert test recipe v1");
+
+    (user, recipe)
 }

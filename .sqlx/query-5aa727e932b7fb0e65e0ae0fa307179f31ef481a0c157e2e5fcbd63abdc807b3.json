@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT reverse_diff FROM recipe_versions\n           WHERE recipe_id = $1 AND version_number <= $2 AND reverse_diff IS NOT NULL\n           ORDER BY version_number DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "reverse_diff",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "5aa727e932b7fb0e65e0ae0fa307179f31ef481a0c157e2e5fcbd63abdc807b3"
+}

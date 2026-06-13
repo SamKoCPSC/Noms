@@ -964,3 +964,142 @@ a:hover {
 .settings-tab-active:hover {
     color: var(--accent-hover);
 }
+
+/* ============================================================
+    Version Timeline
+    ============================================================ */
+.version-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.timeline-item {
+    transition: background 0.15s ease;
+}
+
+.timeline-item:last-child > div:first-child > div:last-child {
+    display: none;
+}
+
+/* ============================================================
+    Version Diff
+    ============================================================ */
+.version-diff {
+    display: flex;
+    flex-direction: column;
+}
+
+.diff-section {
+    --btn-edge: var(--surface);
+}
+
+/* ============================================================
+    Restore Button
+    ============================================================ */
+.restore-btn {
+    background: var(--surface);
+    color: var(--error);
+    border: 1px solid var(--error);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-family: var(--font-body);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.restore-btn:hover {
+    background: var(--error);
+    color: white;
+    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
+}
+
+/* ============================================================
+    Badges
+    ============================================================ */
+.badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--font-body);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+.badge-warning {
+    background: rgba(212, 146, 59, 0.15);
+    color: var(--warning);
+    border: 1px solid rgba(212, 146, 59, 0.30);
+}
+
+.badge-success {
+    background: var(--success-bg);
+    color: var(--success);
+    border: 1px solid rgba(90, 158, 111, 0.30);
+}
+
+/* ============================================================
+    Recipe Card Link
+    ============================================================ */
+.recipe-card-link {
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.recipe-card-link:hover {
+    transform: translateY(-2px);
+}
+
+.recipe-card-link:hover .neumo-card {
+    box-shadow: 8px 8px 6px var(--shadow-dark), -8px -8px 6px var(--shadow-light);
+}
+
+/* ============================================================
+    Save Status
+    ============================================================ */
+.save-status {
+    display: inline-block;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    font-style: italic;
+}
+
+/* ============================================================
+    Fork Attribution
+    ============================================================ */
+.fork-attribution {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
+    margin-bottom: var(--space-md);
+    background: var(--surface);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.fork-attribution__link {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.fork-attribution__link:hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+}
+
+.fork-attribution__message {
+    margin-left: auto;
+    font-style: italic;
+    color: var(--text-secondary);
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE recipe_versions SET is_latest = TRUE\n           WHERE recipe_id = $1 AND version_number = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8bbac044f9540c62eaefa8a0dbdb512398a112680f3c6c7d5d78a208feb83480"
+}

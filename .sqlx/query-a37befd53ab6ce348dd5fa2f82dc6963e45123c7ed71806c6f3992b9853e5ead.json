@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO recipe_versions (recipe_id, version_number, reverse_diff, notes, is_latest)\n           VALUES ($1, $2, $3, $4, FALSE) RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a37befd53ab6ce348dd5fa2f82dc6963e45123c7ed71806c6f3992b9853e5ead"
+}

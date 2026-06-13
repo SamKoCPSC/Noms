@@ -1,11 +1,12 @@
 use dioxus::prelude::*;
+use uuid::Uuid;
 
 use crate::components::base::{Card, LoadingSpinner, PageHeader};
 use crate::components::AuthRequired;
 
 /// Single collection view — placeholder.
 #[component]
-pub fn CollectionDetail(id: i32) -> Element {
+pub fn CollectionDetail(id: Uuid) -> Element {
     rsx! {
         AuthRequired {
             div { class: "container",

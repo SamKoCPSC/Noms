@@ -12,9 +12,9 @@ use crate::Route;
 /// Debounce interval for auto-save (milliseconds).
 const AUTO_SAVE_DELAY_MS: u32 = 2_000;
 
-/// Create recipe page with auto-save, draft creation, and publish.
+/// Edit existing recipe or draft with auto-save and publish.
 #[component]
-pub fn RecipeNew() -> Element {
+pub fn RecipeEdit(id: Uuid) -> Element {
     let mut title = use_signal(String::new);
     let mut description = use_signal(String::new);
     let mut prep_time = use_signal(String::new);
@@ -23,16 +23,118 @@ pub fn RecipeNew() -> Element {
     let mut servings = use_signal(String::new);
     let mut ingredients_text = use_signal(String::new);
     let mut steps_text = use_signal(String::new);
+    let mut version_notes = use_signal(String::new);
 
-    // Draft state
-    let draft_id = use_signal(|| Option::<Uuid>::None);
+    // State
+    let is_draft = use_signal(|| true);
+    let is_loading = use_signal(|| true);
     let is_saving = use_signal(|| false);
     let save_status = use_signal(String::new);
     let auto_save_timer = use_signal(|| Option::<Rc<RefCell<Option<Timeout>>>>::None);
+    let load_error = use_signal(|| Option::<String>::None);
+
+    // Load recipe on mount
+    use_effect(move || {
+        let mut title_sig = title;
+        let mut desc_sig = description;
+        let mut prep_sig = prep_time;
+        let mut cook_sig = cook_time;
+        let mut total_sig = total_time;
+        let mut servings_sig = servings;
+        let mut ing_sig = ingredients_text;
+        let mut steps_sig = steps_text;
+        let mut is_draft_sig = is_draft;
+        let mut is_loading_sig = is_loading;
+        let mut error_sig = load_error;
+        let id_val = id;
+
+        spawn(async move {
+            let res =
+                gloo_net::http::Request::get(&format!("/api/recipes/{id_val}/versions"))
+                    .send()
+                    .await;
+
+            match res {
+                Ok(resp) if resp.ok() => {
+                    let body = resp.text().await.unwrap_or_default();
+                    // Get the latest version from the versions list
+                    if let Ok(versions) =
+                        serde_json::from_str::<Vec<VersionSummaryApiResponse>>(&body)
+                    {
+                        if let Some(latest) = versions.iter().find(|v| v.is_latest) {
+                            title_sig.set(latest.title.clone().unwrap_or_default());
+                            // We need the full recipe for all fields — fetch from reconstruct endpoint
+                            let rec_res = gloo_net::http::Request::get(&format!(
+                                "/api/recipes/{}/versions/{}/reconstruct",
+                                id_val, latest.version_number
+                            ))
+                            .send()
+                            .await;
+
+                            if let Ok(rec_resp) = rec_res {
+                                if rec_resp.ok() {
+                                    let rec_body = rec_resp.text().await.unwrap_or_default();
+                                    if let Ok(rec) =
+                                        serde_json::from_str::<ReconstructedApiResponse>(&rec_body)
+                                    {
+                                        title_sig.set(rec.title);
+                                        desc_sig.set(rec.description.unwrap_or_default());
+                                        prep_sig.set(
+                                            rec.prep_time_min
+                                                .map(|v| v.to_string())
+                                                .unwrap_or_default(),
+                                        );
+                                        cook_sig.set(
+                                            rec.cook_time_min
+                                                .map(|v| v.to_string())
+                                                .unwrap_or_default(),
+                                        );
+                                        total_sig.set(
+                                            rec.total_time_min
+                                                .map(|v| v.to_string())
+                                                .unwrap_or_default(),
+                                        );
+                                        servings_sig.set(
+                                            rec.servings
+                                                .map(|v| v.to_string())
+                                                .unwrap_or_default(),
+                                        );
+                                        ing_sig.set(json_array_to_text(&rec.ingredients));
+                                        steps_sig.set(json_array_to_text(&rec.steps));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Ok(resp) => {
+                    error_sig.set(Some(format!("Failed to load recipe: {}", resp.status())));
+                }
+                Err(e) => {
+                    error_sig.set(Some(format!("Failed to load recipe: {}", e)));
+                }
+            }
+
+            // Also check if this is a draft by fetching the recipe list
+            let list_res =
+                gloo_net::http::Request::get("/api/recipes?include_drafts=true").send().await;
+            if let Ok(list_resp) = list_res {
+                if list_resp.ok() {
+                    let list_body = list_resp.text().await.unwrap_or_default();
+                    if let Ok(list) = serde_json::from_str::<ListRecipesApiResponse>(&list_body) {
+                        if let Some(r) = list.recipes.iter().find(|r| r.id == id_val) {
+                            is_draft_sig.set(r.is_draft);
+                        }
+                    }
+                }
+            }
+
+            is_loading_sig.set(false);
+        });
+    });
 
     // Debounced auto-save effect
     use_effect(move || {
-        let draft_id = draft_id;
         let is_saving = is_saving;
         let save_status = save_status;
         let mut timer = auto_save_timer;
@@ -44,6 +146,7 @@ pub fn RecipeNew() -> Element {
         let sv = servings;
         let ing = ingredients_text;
         let st = steps_text;
+        let id_val = id;
 
         // Clear any existing timer on re-render
         if let Some(old_timer_rc) = timer.write().take() {
@@ -52,32 +155,26 @@ pub fn RecipeNew() -> Element {
             }
         }
 
-        // Set up new debounced save
         let new_timer = Timeout::new(AUTO_SAVE_DELAY_MS, move || {
-            let draft_id_val = *draft_id.read();
             let title_val = t.read().clone();
             let desc_val = d.read().clone();
             let prep_val: Option<i32> = pt.read().parse().ok();
             let cook_val: Option<i32> = ct.read().parse().ok();
             let total_val: Option<i32> = tt.read().parse().ok();
             let servings_val: Option<i32> = sv.read().parse().ok();
-
-            // Parse ingredients as JSON array (one per line)
             let ingredients_json = parse_json_array(&ing.read());
             let steps_json = parse_json_array(&st.read());
 
-            // Don't save if title is empty
             if title_val.trim().is_empty() {
                 return;
             }
 
-            // Don't save if already saving
             if *is_saving.read() {
                 return;
             }
 
             let body = serde_json::json!({
-                "recipe_id": draft_id_val,
+                "recipe_id": id_val,
                 "title": title_val,
                 "description": if desc_val.is_empty() { serde_json::Value::Null } else { serde_json::json!(desc_val) },
                 "prep_time_min": prep_val,
@@ -90,7 +187,6 @@ pub fn RecipeNew() -> Element {
 
             let mut saving = is_saving;
             let mut status = save_status;
-            let mut tid = draft_id;
             let mut timer_sig = timer;
 
             spawn(async move {
@@ -112,15 +208,7 @@ pub fn RecipeNew() -> Element {
 
                 match res {
                     Ok(resp) if resp.ok() => {
-                        let body_text = resp.text().await.unwrap_or_default();
-                        if let Ok(response) =
-                            serde_json::from_str::<SaveDraftApiResponse>(&body_text)
-                        {
-                            tid.set(Some(response.recipe_id));
-                            status.set("Draft saved".to_string());
-                        } else {
-                            status.set("Save failed".to_string());
-                        }
+                        status.set("Draft saved".to_string());
                     }
                     Ok(resp) => {
                         status.set(format!("Save failed: {}", resp.status()));
@@ -130,7 +218,6 @@ pub fn RecipeNew() -> Element {
                     }
                 }
                 saving.set(false);
-                // Clear timer after save
                 timer_sig.write().take();
             });
         });
@@ -139,55 +226,12 @@ pub fn RecipeNew() -> Element {
         timer.set(Some(rc_timer.clone()));
     });
 
-    // Publish handler
-    let on_publish = use_callback(
-        move |_| {
-            let draft_id_val = *draft_id.read();
-            let mut status = save_status;
-            let mut is_saving_sig = is_saving;
-
-            let Some(id) = draft_id_val else {
-                status.set("Nothing to publish — save draft first.".to_string());
-                return;
-            };
-
-            is_saving_sig.set(true);
-            status.set("Publishing...".to_string());
-
-            spawn(async move {
-                let res = gloo_net::http::Request::post(&format!("/api/recipes/{id}/publish"))
-                    .send()
-                    .await;
-
-                match res {
-                    Ok(resp) if resp.ok() => {
-                        let _ = web_sys::window()
-                            .unwrap()
-                            .alert_with_message("Recipe published!");
-                        // Navigate to the recipe detail page
-                        let nav = dioxus::prelude::use_navigator();
-                        nav.push(Route::RecipeDetail { id });
-                    }
-                    Ok(resp) => {
-                        status.set(format!("Publish failed: {}", resp.status()));
-                        is_saving_sig.set(false);
-                    }
-                    Err(e) => {
-                        status.set(format!("Publish failed: {}", e));
-                        is_saving_sig.set(false);
-                    }
-                }
-            });
-        },
-    );
-
     // Manual save handler
     let on_save_draft = use_callback({
         let mut timer = auto_save_timer;
         move |_| {
             let mut status = save_status;
             let mut is_saving_sig = is_saving;
-            let mut draft_id_sig = draft_id;
             let t = title.read().clone();
             let d = description.read().clone();
             let pt: Option<i32> = prep_time.read().parse().ok();
@@ -196,7 +240,7 @@ pub fn RecipeNew() -> Element {
             let sv: Option<i32> = servings.read().parse().ok();
             let ing = parse_json_array(&ingredients_text.read());
             let st = parse_json_array(&steps_text.read());
-            let current_id = *draft_id.read();
+            let id_val = id;
 
             if t.trim().is_empty() {
                 status.set("Title is required".to_string());
@@ -207,7 +251,7 @@ pub fn RecipeNew() -> Element {
             status.set("Saving draft...".to_string());
 
             let body = serde_json::json!({
-                "recipe_id": current_id,
+                "recipe_id": id_val,
                 "title": t,
                 "description": if d.is_empty() { serde_json::Value::Null } else { serde_json::json!(d) },
                 "prep_time_min": pt,
@@ -233,15 +277,7 @@ pub fn RecipeNew() -> Element {
 
                 match res {
                     Ok(resp) if resp.ok() => {
-                        let body_text = resp.text().await.unwrap_or_default();
-                        if let Ok(response) =
-                            serde_json::from_str::<SaveDraftApiResponse>(&body_text)
-                        {
-                            draft_id_sig.set(Some(response.recipe_id));
-                            status.set("Draft saved".to_string());
-                        } else {
-                            status.set("Save failed".to_string());
-                        }
+                        status.set("Draft saved".to_string());
                     }
                     Ok(resp) => {
                         status.set(format!("Save failed: {}", resp.status()));
@@ -257,14 +293,83 @@ pub fn RecipeNew() -> Element {
         }
     });
 
+    // Publish handler
+    let on_publish = use_callback(move |_| {
+        let mut status = save_status;
+        let mut is_saving_sig = is_saving;
+        let id_val = id;
+
+        is_saving_sig.set(true);
+        status.set("Publishing...".to_string());
+
+        spawn(async move {
+            let res =
+                gloo_net::http::Request::post(&format!("/api/recipes/{id_val}/publish"))
+                    .send()
+                    .await;
+
+            match res {
+                Ok(resp) if resp.ok() => {
+                    let _ = web_sys::window()
+                        .unwrap()
+                        .alert_with_message("Recipe published!");
+                    let nav = dioxus::prelude::use_navigator();
+                    nav.push(Route::RecipeDetail { id: id_val });
+                }
+                Ok(resp) => {
+                    status.set(format!("Publish failed: {}", resp.status()));
+                    is_saving_sig.set(false);
+                }
+                Err(e) => {
+                    status.set(format!("Publish failed: {}", e));
+                    is_saving_sig.set(false);
+                }
+            }
+        });
+    });
+
+    // Loading state
+    if *is_loading.read() {
+        return rsx! {
+            AuthRequired {
+                div { class: "container",
+                    PageHeader { title: "Edit Recipe" }
+                    div {
+                        display: "flex",
+                        justify_content: "center",
+                        padding: "var(--space-xl)",
+                        "Loading..."
+                    }
+                }
+            }
+        };
+    }
+
+    // Error state
+    if let Some(err) = load_error.read().clone() {
+        return rsx! {
+            AuthRequired {
+                div { class: "container",
+                    PageHeader { title: "Edit Recipe" }
+                    div {
+                        color: "var(--error-color)",
+                        padding: "var(--space-lg)",
+                        {err}
+                    }
+                }
+            }
+        };
+    }
+
     let is_disabled = *is_saving.read();
+    let current_is_draft = *is_draft.read();
 
     rsx! {
         AuthRequired {
             div { class: "container",
                 PageHeader {
-                    title: if draft_id.read().is_some() { "Editing Draft" } else { "New Recipe" },
-                    action: if draft_id.read().is_some() {
+                    title: "Edit Recipe",
+                    action: if current_is_draft {
                         Some(rsx! {
                             span {
                                 class: "badge badge-warning",
@@ -274,7 +379,7 @@ pub fn RecipeNew() -> Element {
                     } else { None },
                 }
 
-                // Save status indicator
+                // Save status
                 if !save_status.read().is_empty() {
                     div {
                         class: "save-status",
@@ -304,7 +409,7 @@ pub fn RecipeNew() -> Element {
                         }
                         Input {
                             value: title.read().clone(),
-                            placeholder: "e.g. Grandma's Chocolate Chip Cookies",
+                            placeholder: "Recipe name",
                             oninput: move |v| title.set(v),
                         }
                     }
@@ -322,7 +427,7 @@ pub fn RecipeNew() -> Element {
                         }
                         textarea {
                             class: "neumo-inset input",
-                            placeholder: "Brief description of the recipe...",
+                            placeholder: "Description...",
                             rows: "4",
                             padding: "var(--space-sm) var(--space-md)",
                             font_family: "var(--font-body)",
@@ -426,7 +531,7 @@ pub fn RecipeNew() -> Element {
                         }
                         textarea {
                             class: "neumo-inset input",
-                            placeholder: "2 cups flour\n1 cup sugar\n3 eggs",
+                            placeholder: "One ingredient per line",
                             rows: "6",
                             padding: "var(--space-sm) var(--space-md)",
                             font_family: "var(--font-body)",
@@ -453,7 +558,7 @@ pub fn RecipeNew() -> Element {
                         }
                         textarea {
                             class: "neumo-inset input",
-                            placeholder: "Mix dry ingredients\nAdd wet ingredients\nBake at 350F",
+                            placeholder: "One step per line",
                             rows: "6",
                             padding: "var(--space-sm) var(--space-md)",
                             font_family: "var(--font-body)",
@@ -467,30 +572,64 @@ pub fn RecipeNew() -> Element {
                         }
                     }
 
+                    // Version notes (only shown for published recipes)
+                    if !current_is_draft {
+                        div {
+                            display: "flex",
+                            flex_direction: "column",
+                            gap: "var(--space-sm)",
+                            label {
+                                font_size: "14px",
+                                font_weight: "600",
+                                color: "var(--text-secondary)",
+                                "Version Notes"
+                            }
+                            textarea {
+                                class: "neumo-inset input",
+                                placeholder: "What changed in this version?",
+                                rows: "2",
+                                padding: "var(--space-sm) var(--space-md)",
+                                font_family: "var(--font-body)",
+                                font_size: "14px",
+                                color: "var(--text-primary)",
+                                background_color: "var(--surface)",
+                                outline: "none",
+                                resize: "vertical",
+                                value: version_notes.read().clone(),
+                                oninput: move |evt| version_notes.set(evt.value()),
+                            }
+                        }
+                    }
+
                     // Action buttons
                     div {
                         display: "flex",
                         gap: "var(--space-md)",
                         margin_top: "var(--space-md)",
-                        Button {
-                            variant: ButtonVariant::Primary,
-                            disabled: is_disabled,
-                            onclick: on_publish,
-                            "Publish Recipe"
+
+                        if current_is_draft {
+                            Button {
+                                variant: ButtonVariant::Primary,
+                                disabled: is_disabled,
+                                onclick: on_publish,
+                                "Publish Recipe"
+                            }
+
+                            Button {
+                                variant: ButtonVariant::Primary,
+                                disabled: is_disabled,
+                                onclick: on_save_draft,
+                                "Save Draft"
+                            }
                         }
-                        Button {
-                            variant: ButtonVariant::Secondary,
-                            disabled: is_disabled,
-                            onclick: on_save_draft,
-                            "Save Draft"
-                        }
+
                         Button {
                             variant: ButtonVariant::Ghost,
                             onclick: move |_| {
                                 let nav = dioxus::prelude::use_navigator();
-                                nav.push(Route::Dashboard {});
+                                nav.push(Route::RecipeDetail { id });
                             },
-                            "Cancel"
+                            "Back"
                         }
                     }
                 }
@@ -499,15 +638,7 @@ pub fn RecipeNew() -> Element {
     }
 }
 
-/// API response for save draft endpoint.
-#[derive(serde::Deserialize)]
-struct SaveDraftApiResponse {
-    recipe_id: Uuid,
-    #[allow(dead_code)]
-    is_draft: bool,
-}
-
-/// Parse multiline text into a JSON array of strings (one item per line).
+/// Parse multiline text into a JSON array of strings.
 fn parse_json_array(text: &str) -> serde_json::Value {
     let items: Vec<String> = text
         .lines()
@@ -515,4 +646,48 @@ fn parse_json_array(text: &str) -> serde_json::Value {
         .filter(|l| !l.is_empty())
         .collect();
     serde_json::json!(items)
+}
+
+/// Convert a JSON array value to multiline text.
+fn json_array_to_text(value: &Option<serde_json::Value>) -> String {
+    match value {
+        Some(serde_json::Value::Array(arr)) => arr
+            .iter()
+            .filter_map(|v| v.as_str())
+            .collect::<Vec<_>>()
+            .join("\n"),
+        _ => String::new(),
+    }
+}
+
+// ── API response types ──────────────────────────────────────────────────────
+
+#[derive(serde::Deserialize)]
+struct VersionSummaryApiResponse {
+    version_number: i32,
+    title: Option<String>,
+    is_latest: bool,
+}
+
+#[derive(serde::Deserialize)]
+struct ReconstructedApiResponse {
+    title: String,
+    description: Option<String>,
+    prep_time_min: Option<i32>,
+    cook_time_min: Option<i32>,
+    total_time_min: Option<i32>,
+    servings: Option<i32>,
+    ingredients: Option<serde_json::Value>,
+    steps: Option<serde_json::Value>,
+}
+
+#[derive(serde::Deserialize)]
+struct ListRecipesApiResponse {
+    recipes: Vec<RecipeListItem>,
+}
+
+#[derive(serde::Deserialize)]
+struct RecipeListItem {
+    id: Uuid,
+    is_draft: bool,
 }

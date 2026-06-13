@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO recipe_versions\n           (recipe_id, version_number, title, description, prep_time_min,\n            cook_time_min, total_time_min, servings, ingredients, steps,\n            reverse_diff, notes, is_latest)\n           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULL, $11, TRUE)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Varchar",
+        "Text",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Jsonb",
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "931cc53794992331ac1ae00c8a6e2c1e6637c9a9499c0a441764ffc6179523a3"
+}

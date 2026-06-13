@@ -6,6 +6,7 @@ mod home;
 mod login;
 mod not_found;
 mod recipe_detail;
+mod recipe_edit;
 mod recipe_new;
 mod settings;
 
@@ -17,6 +18,7 @@ pub use home::Home;
 pub use login::Login;
 pub use not_found::NotFound;
 pub use recipe_detail::RecipeDetail;
+pub use recipe_edit::RecipeEdit;
 pub use recipe_new::RecipeNew;
 pub use settings::SettingsAccounts;
 pub use settings::SettingsProfile;

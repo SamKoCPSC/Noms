@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE recipe_versions\n               SET title = $2, description = $3, prep_time_min = $4,\n                   cook_time_min = $5, total_time_min = $6, servings = $7,\n                   ingredients = $8, steps = $9\n               WHERE recipe_id = $1 AND version_number = $10",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Text",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Jsonb",
+        "Jsonb",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cbe26a43ad799756c903fea149898ac64b968ed4ff9d24815d4d6b8a284fb20e"
+}

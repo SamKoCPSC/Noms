@@ -54,6 +54,39 @@
 | 35 | OAuth connect buttons from settings | | |
 | 36 | 404 handling for unknown routes | | |
 | 37 | Settings tabs navigation | | |
+| 38 | Create recipe (minimal valid data) | | NOMS-008 AC2 |
+| 39 | Create recipe (full data) | | NOMS-008 AC2 |
+| 40 | Create recipe validation (missing title) | | NOMS-008 AC2 |
+| 41 | View recipe detail page | | NOMS-008 AC3 |
+| 42 | Dashboard recipe list | | NOMS-008 AC4 |
+| 43 | Edit recipe (creates new version) | | NOMS-008 AC5 + NOMS-009 AC2 |
+| 44 | Edit recipe auto-save | | NOMS-009 AC5 |
+| 45 | Delete recipe | | NOMS-008 AC6 |
+| 46 | Recipe ownership gating | | NOMS-008 AC3 |
+| 47 | Recipe UUID route handling | | NOMS-008 |
+| 48 | Dashboard empty state | | NOMS-008 AC4 |
+| 49 | Recipe detail loading state | | NOMS-008 AC3 |
+| 50 | Recipe detail error state | | NOMS-008 AC3 |
+| 51 | Version history timeline (single version) | | NOMS-009 AC3 |
+| 52 | Version history timeline (multiple versions) | | NOMS-009 AC3 |
+| 53 | Version reconstruction (reverse diff chain) | | NOMS-009 AC3 |
+| 54 | Restore version | | NOMS-009 AC4 |
+| 55 | Restore version (cancel) | | NOMS-009 AC4 |
+| 56 | Draft creation (new recipe) | | NOMS-009 AC5 |
+| 57 | Draft auto-save (edit page) | | NOMS-009 AC5 |
+| 58 | Publish draft recipe | | NOMS-009 AC5 |
+| 59 | Draft toggle (dashboard) | | NOMS-009 AC5 |
+| 60 | Fork recipe (same user — variant) | | NOMS-009 AC6 |
+| 61 | Fork recipe (cross-user) | | NOMS-009 AC6 |
+| 62 | Fork attribution display | | NOMS-009 AC6 |
+| 63 | Version API no polling loop | | NOMS-009 (bug fix) |
+| 64 | Switch between Details and History tabs | | NOMS-009 AC3 |
+| 65 | Version select and diff display | | NOMS-009 AC3 |
+| 66 | Draft recipe edit page | | NOMS-009 AC5 |
+| 67 | Published recipe edit page | | NOMS-008 AC5 |
+| 68 | Version history after multiple edits | | NOMS-009 AC2 |
+| 69 | Restore creates new version (not overwrite) | | NOMS-009 AC4 |
+| 70 | Recipe list API query parameters | | NOMS-009 (bug fix) |
 
 ---
 
@@ -955,6 +988,741 @@ GITHUB_USERINFO_URL=http://localhost:8082/github/userinfo
 
 ---
 
+---
+
+## NOMS-008: Recipe CRUD — Test Cases
+
+### TC-38: Create Recipe (Minimal Valid Data)
+
+**Prerequisites:** Logged in user.
+
+**Steps:**
+1. Navigate to `/recipes/new`
+2. Enter title: "Pancakes"
+3. Leave description empty
+4. Enter ingredients (one per line):
+   ```
+   2 cups flour
+   2 eggs
+   1 cup milk
+   ```
+5. Enter steps (one per line):
+   ```
+   Mix dry ingredients
+   Add eggs and milk
+   Cook on griddle
+   ```
+6. Leave all time fields empty
+7. Leave servings empty
+8. Click "Save Draft"
+
+**Expected:**
+- Recipe is created as a draft (`is_draft = true`)
+- Redirected to recipe detail or edit page
+- Recipe appears in dashboard with "DRAFT" badge when "Show drafts" is enabled
+- Version 1 created in `recipe_versions` table
+
+---
+
+### TC-39: Create Recipe (Full Data)
+
+**Prerequisites:** Logged in user.
+
+**Steps:**
+1. Navigate to `/recipes/new`
+2. Enter title: "Chocolate Chip Cookies"
+3. Enter description: "Classic homemade cookies"
+4. Set prep time: 15
+5. Set cook time: 12
+6. Set total time: 27
+7. Set servings: 24
+8. Enter ingredients:
+   ```
+   2.25 cups all-purpose flour
+   1 cup butter, softened
+   3/4 cup sugar
+   2 eggs
+   1 tsp vanilla extract
+   2 cups chocolate chips
+   ```
+9. Enter steps:
+   ```
+   Preheat oven to 375°F
+   Cream butter and sugar
+   Beat in eggs and vanilla
+   Mix in flour gradually
+   Fold in chocolate chips
+   Drop spoonfuls onto baking sheet
+   Bake 9-11 minutes
+   ```
+10. Click "Save Draft"
+11. Click "Publish Recipe"
+
+**Expected:**
+- Recipe saved as draft initially
+- Publishing sets `is_draft = false`
+- Recipe appears in dashboard without draft filter
+- All fields persisted correctly in database
+
+---
+
+### TC-40: Create Recipe Validation (Missing Title)
+
+**Steps:**
+1. Navigate to `/recipes/new`
+2. Leave title empty
+3. Fill in other fields
+4. Click "Save Draft"
+
+**Expected:**
+- Form validation prevents submission
+- Error message displayed near title field
+- Recipe is NOT created
+
+---
+
+### TC-41: View Recipe Detail Page
+
+**Prerequisites:** At least one recipe exists.
+
+**Steps:**
+1. Navigate to `/dashboard`
+2. Click on a recipe card
+
+**Expected:**
+- Redirected to `/recipes/{uuid}`
+- Details tab shows:
+  - Recipe title (h2 heading)
+  - Description (if present)
+  - Time cards: Prep Time, Cook Time, Total Time (if set)
+  - Servings card (if set)
+  - Ingredients list (bulleted)
+  - Steps list (numbered, "Step N:" prefix)
+- History tab shows version timeline
+- Fork button visible
+- No console errors
+
+---
+
+### TC-42: Dashboard Recipe List
+
+**Prerequisites:** At least 2 recipes exist (1 published, 1 draft).
+
+**Steps:**
+1. Navigate to `/dashboard`
+2. Observe recipe list with "Show drafts" unchecked
+
+**Expected (Drafts Hidden):**
+- Only published recipes appear
+- Draft recipe is NOT visible
+- Each card shows: title, description snippet, Edit button
+
+**Steps:**
+1. Check "Show drafts" checkbox
+
+**Expected (Drafts Visible):**
+- Both published and draft recipes appear
+- Draft recipe has "DRAFT" badge
+- Published recipe has no badge
+
+**Steps:**
+1. Uncheck "Show drafts"
+
+**Expected:**
+- Draft recipe disappears again
+- Toggle works bidirectionally
+
+---
+
+### TC-43: Edit Recipe (Creates New Version)
+
+**Prerequisites:** A published recipe exists.
+
+**Steps:**
+1. Navigate to recipe detail page
+2. Click "Edit" button (or navigate to `/recipes/{uuid}/edit`)
+3. Change title from "Pancakes" to "Fluffy Pancakes"
+4. Add a new ingredient: "1 tsp baking powder"
+5. Click "Save Draft" or "Publish Recipe"
+
+**Expected:**
+- Recipe updated in database
+- New version (v2) created in `recipe_versions` table
+- v1's `is_latest` set to false, `reverse_diff` populated
+- v2's `is_latest` set to true, full snapshot stored
+- `recipes` row updated to match v2
+- `updated_at` timestamp refreshed
+- Redirected back to detail page showing updated title
+
+**Verification (History Tab):**
+1. Click "History" tab
+2. Two versions should appear: v2 (Current) and v1
+3. Click v1 to reconstruct — should show original title "Pancakes"
+
+---
+
+### TC-44: Edit Recipe Page Auto-Save
+
+**Prerequisites:** A recipe exists.
+
+**Steps:**
+1. Navigate to `/recipes/{uuid}/edit`
+2. Change the title to "Auto-Save Test"
+3. Wait 3 seconds (auto-save triggers after 2s debounce)
+4. Open Chrome DevTools Network tab
+5. Observe `POST /api/recipes/{uuid}/draft` request
+
+**Expected:**
+- Auto-save fires after ~2 seconds of inactivity
+- Recipe saved as draft (or updated draft)
+- No user action required
+- Timer resets on each keystroke
+
+**Steps (Multiple Edits):**
+1. Immediately start typing again
+2. Wait 3 seconds
+3. Observe Network tab
+
+**Expected:**
+- Previous auto-save timer cancelled
+- New auto-save fires after 2s from last keystroke
+- Only ONE save request per burst of typing
+
+---
+
+### TC-45: Delete Recipe
+
+**Prerequisites:** A recipe exists.
+
+**Steps:**
+1. Navigate to recipe detail page
+2. Click "Delete" button (if visible — owner only)
+
+**Expected:**
+- Confirmation dialog appears: "Delete this recipe? This will permanently remove the recipe."
+- Click "OK" → recipe deleted, redirected to `/dashboard`
+- Recipe no longer appears in dashboard
+- Recipe no longer accessible at `/recipes/{uuid}` (404 or error)
+- Associated `recipe_tags` cascade-deleted
+- Associated `recipe_versions` cascade-deleted
+- Associated `fork_relationships` cascade-deleted (if any)
+
+**Steps (Cancel):**
+1. Create another recipe
+2. Navigate to detail page
+3. Click "Delete"
+4. Click "Cancel" in confirmation dialog
+
+**Expected:**
+- Dialog closes
+- Recipe still exists
+- No navigation occurs
+
+---
+
+### TC-46: Recipe Ownership Gating
+
+**Prerequisites:** Two accounts exist (Account A owns a recipe).
+
+**Steps:**
+1. Log in as Account A
+2. Create a recipe, note the UUID from URL
+3. Log out, clear cookies
+4. Log in as Account B (different OAuth provider)
+5. Navigate directly to `/recipes/{uuid}` (Account A's recipe)
+
+**Expected:**
+- Recipe detail page shows error: "Recipe not found" or "You don't have permission to view this recipe"
+- Recipe data is NOT displayed
+- Edit/Delete buttons NOT visible
+- API call `GET /api/recipes/{uuid}` returns 403 or 404
+
+---
+
+### TC-47: Recipe UUID Route Handling
+
+**Steps:**
+1. Log in
+2. Create a recipe
+3. Note the UUID from the URL (e.g., `/recipes/d99afd00-6322-43e5-9832-65034ec01731`)
+4. Navigate to `/recipes/invalid-uuid`
+
+**Expected:**
+- Application does not crash
+- Shows "Recipe not found" error state
+- No console errors
+
+---
+
+### TC-48: Dashboard Empty State
+
+**Prerequisites:** User has zero recipes.
+
+**Steps:**
+1. Log in as a new user (no recipes)
+2. Navigate to `/dashboard`
+
+**Expected:**
+- "No recipes yet" message displayed
+- "Create your first recipe" link visible, points to `/recipes/new`
+- No recipe cards shown
+- "Show drafts" toggle present but has no effect
+
+---
+
+### TC-49: Recipe Detail Loading State
+
+**Steps:**
+1. Log in
+2. Open Chrome DevTools Network tab
+3. Set network to "Slow 3G"
+4. Navigate to `/recipes/{uuid}`
+
+**Expected:**
+- Loading spinner displayed immediately
+- "Loading recipe..." text shown
+- No blank/empty page
+- Content appears after API response arrives
+
+---
+
+### TC-50: Recipe Detail Error State
+
+**Steps:**
+1. Log in
+2. Navigate to `/recipes/00000000-0000-0000-0000-000000000000` (non-existent UUID)
+
+**Expected:**
+- "Recipe not found" message displayed
+- No crash, no console errors
+- Page header still visible
+- Navigation still functional
+
+---
+
+## NOMS-009: Recipe Versioning, Drafts & Branching — Test Cases
+
+### TC-51: Version History Timeline (Single Version)
+
+**Prerequisites:** A recipe with 1 version exists.
+
+**Steps:**
+1. Navigate to recipe detail page
+2. Click "History" tab
+
+**Expected:**
+- "Version History" heading visible
+- One version entry: "v1"
+- "Current" badge on v1
+- Recipe title displayed
+- Timestamp shown (relative or absolute)
+- "View" button to select version
+- No polling loop in Network tab (only 1 request to `/api/recipes/{uuid}/versions`)
+
+---
+
+### TC-52: Version History Timeline (Multiple Versions)
+
+**Prerequisites:** A recipe with 3+ versions exists.
+
+**Steps:**
+1. Create a recipe (v1)
+2. Edit the recipe twice (v2, v3)
+3. Navigate to recipe detail page
+4. Click "History" tab
+
+**Expected:**
+- Three version entries: v3, v2, v1 (descending order)
+- "Current" badge on v3 (latest)
+- Each entry shows: version number, title, timestamp
+- Clicking v2 reconstructs and displays v2's data in diff panel
+- Clicking v1 reconstructs and displays v1's data in diff panel
+- Clicking v3 shows current version data
+
+---
+
+### TC-53: Version Reconstruction (Reverse Diff Chain)
+
+**Prerequisites:** A recipe with 3 versions exists.
+
+**Setup:**
+1. Create recipe: title "Original", ingredients: "flour", steps: "Mix"
+2. Edit: title "Updated", ingredients: "flour, sugar", steps: "Mix, Bake"
+3. Edit: title "Final", ingredients: "flour, sugar, eggs", steps: "Mix, Bake, Cool"
+
+**Steps:**
+1. Navigate to recipe detail page
+2. Click "History" tab
+3. Click "View" on v1
+
+**Expected (v1 Reconstruction):**
+- Diff panel shows reconstructed v1 data
+- Title: "Original"
+- Ingredients: "flour"
+- Steps: "Mix"
+- Reverse diff chain applied correctly: v3 → v2 → v1
+
+**Steps:**
+1. Click "View" on v2
+
+**Expected (v2 Reconstruction):**
+- Title: "Updated"
+- Ingredients: "flour, sugar"
+- Steps: "Mix, Bake"
+
+---
+
+### TC-54: Restore Version
+
+**Prerequisites:** A recipe with 2 versions exists.
+
+**Steps:**
+1. Navigate to recipe detail page
+2. Click "History" tab
+3. Click "Restore" on v1
+4. Confirm dialog: "Restore version 1? This will create a new version with the data from version 1."
+
+**Expected:**
+- New version (v3) created with v1's data
+- v3 is marked as `is_latest = true`
+- Original v1 and v2 unchanged
+- Timeline reloads showing v3, v2, v1
+- v3 has "Current" badge
+- Details tab shows v1's data (restored)
+
+**Verification:**
+1. Click "Details" tab
+2. Verify title and content match v1
+3. Click "History" tab
+4. Verify 3 versions listed
+
+---
+
+### TC-55: Restore Version (Cancel)
+
+**Steps:**
+1. Navigate to recipe detail page
+2. Click "History" tab
+3. Click "Restore" on v1
+4. Click "Cancel" in confirmation dialog
+
+**Expected:**
+- No new version created
+- Timeline unchanged
+- No navigation
+
+---
+
+### TC-56: Draft Creation (New Recipe)
+
+**Steps:**
+1. Navigate to `/recipes/new`
+2. Fill in title: "Draft Recipe"
+3. Fill in some ingredients
+4. Click "Save Draft"
+
+**Expected:**
+- Recipe created with `is_draft = true`
+- Recipe appears in dashboard ONLY when "Show drafts" is checked
+- "DRAFT" badge visible on recipe card
+- Recipe detail page accessible to owner
+
+---
+
+### TC-57: Draft Auto-Save (Edit Page)
+
+**Prerequisites:** A draft recipe exists.
+
+**Steps:**
+1. Navigate to `/recipes/{uuid}/edit`
+2. Observe "DRAFT" badge on page
+3. Change title to "Auto-Saved Title"
+4. Wait 3 seconds
+5. Open Chrome DevTools Network tab
+
+**Expected:**
+- `POST /api/recipes/{uuid}/draft` request visible
+- Recipe saved automatically
+- Timer resets on each keystroke
+- No duplicate saves
+
+**Steps (Verify Persistence):**
+1. Refresh the page
+2. Observe title field
+
+**Expected:**
+- Title shows "Auto-Saved Title" (persisted from auto-save)
+
+---
+
+### TC-58: Publish Draft Recipe
+
+**Prerequisites:** A draft recipe exists.
+
+**Steps:**
+1. Navigate to `/recipes/{uuid}/edit`
+2. Click "Publish Recipe"
+
+**Expected:**
+- `POST /api/recipes/{uuid}/publish` request sent
+- Recipe's `is_draft` set to `false`
+- Recipe appears in dashboard WITHOUT "Show drafts" filter
+- "DRAFT" badge removed from recipe card
+- Recipe visible in normal recipe list
+
+**Verification:**
+1. Navigate to `/dashboard`
+2. Uncheck "Show drafts"
+3. Recipe still visible (published)
+
+---
+
+### TC-59: Draft Toggle (Dashboard)
+
+**Prerequisites:** User has 2 published recipes and 2 draft recipes.
+
+**Steps:**
+1. Navigate to `/dashboard`
+2. "Show drafts" unchecked
+
+**Expected:**
+- Only 2 published recipes visible
+- Draft recipes hidden
+
+**Steps:**
+1. Check "Show drafts"
+
+**Expected:**
+- All 4 recipes visible
+- 2 drafts have "DRAFT" badge
+- 2 published recipes have no badge
+
+**Steps:**
+1. Uncheck "Show drafts"
+
+**Expected:**
+- Back to 2 published recipes only
+
+---
+
+### TC-60: Fork Recipe (Same User — Variant)
+
+**Prerequisites:** A published recipe exists.
+
+**Steps:**
+1. Navigate to recipe detail page
+2. Click "Fork" button
+
+**Expected:**
+- New recipe created owned by same user
+- New recipe is a draft (`is_draft = true`)
+- New recipe has version 1 with full snapshot of original's latest version
+- `fork_relationships` row created: original_recipe_id, forked_recipe_id, forked_by
+- Redirected to `/recipes/{new_uuid}/edit`
+- Fork attribution bar visible: "Forked from {original title}"
+
+**Verification:**
+1. Edit the forked recipe (change title)
+2. Save
+3. Navigate back to original recipe
+4. Original recipe unchanged
+5. Forked recipe shows modified title
+6. Fork attribution still visible on forked recipe
+
+---
+
+### TC-61: Fork Recipe (Cross-User)
+
+**Prerequisites:** Account A owns a recipe, Account B exists.
+
+**Steps:**
+1. Log in as Account A
+2. Create a recipe titled "Account A's Recipe"
+3. Log out, clear cookies
+4. Log in as Account B
+5. Navigate to Account A's recipe (if accessible — requires recipe to be accessible to Account B)
+
+**Note:** Currently recipes are private by default. Cross-user forking requires the recipe to be accessible. This test may require making recipes public or sharing (future feature).
+
+**Expected (if accessible):**
+- Fork button visible
+- Fork creates recipe owned by Account B
+- Fork attribution shows Account A's name
+- Forked recipe is independent of original
+
+---
+
+### TC-62: Fork Attribution Display
+
+**Prerequisites:** A forked recipe exists.
+
+**Steps:**
+1. Navigate to forked recipe detail page
+
+**Expected:**
+- Fork attribution bar visible at top of page
+- Shows: "Forked from {original title}"
+- Original owner name displayed
+- Fork message displayed (if provided during fork)
+- Attribution persists across edits
+
+---
+
+### TC-63: Version API No Polling Loop
+
+**Steps:**
+1. Navigate to recipe detail page
+2. Open Chrome DevTools Network tab
+3. Click "History" tab
+4. Wait 10 seconds
+5. Count requests to `/api/recipes/{uuid}/versions`
+
+**Expected:**
+- Exactly 1 request to `/api/recipes/{uuid}/versions`
+- No repeated polling
+- No infinite request loop
+- Network tab stable
+
+---
+
+### TC-64: Switch Between Details and History Tabs
+
+**Steps:**
+1. Navigate to recipe detail page
+2. Click "Details" tab
+3. Click "History" tab
+4. Click "Details" tab
+5. Click "History" tab
+
+**Expected:**
+- Tab switching works smoothly
+- Details tab shows recipe content
+- History tab shows version timeline
+- No duplicate API calls on re-switch (versions cached)
+- No console errors
+
+---
+
+### TC-65: Version Select and Diff Display
+
+**Prerequisites:** Recipe with 2+ versions.
+
+**Steps:**
+1. Navigate to recipe detail page
+2. Click "History" tab
+3. Click "View" on v1
+
+**Expected:**
+- Diff panel (right side) shows reconstructed v1 data
+- Title, description, times, servings, ingredients, steps all displayed
+- "Loading" state during reconstruction
+- No errors in diff panel
+
+**Steps:**
+1. Click "View" on v2 (current)
+
+**Expected:**
+- Diff panel updates to show v2 data
+- Smooth transition, no flicker
+
+---
+
+### TC-66: Draft Recipe Edit Page
+
+**Prerequisites:** A draft recipe exists.
+
+**Steps:**
+1. Navigate to `/recipes/{uuid}/edit`
+
+**Expected:**
+- "Edit Recipe" heading
+- "DRAFT" badge visible
+- All form fields pre-populated with draft data
+- "Publish Recipe" button visible
+- "Save Draft" button visible
+- "Back" button visible
+
+---
+
+### TC-67: Published Recipe Edit Page
+
+**Prerequisites:** A published recipe exists.
+
+**Steps:**
+1. Navigate to `/recipes/{uuid}/edit`
+
+**Expected:**
+- "Edit Recipe" heading
+- No "DRAFT" badge (or "PUBLISHED" badge)
+- All form fields pre-populated
+- "Publish Recipe" button visible (saves as new version)
+- "Save Draft" button visible
+- "Back" button visible
+
+---
+
+### TC-68: Version History After Multiple Edits
+
+**Prerequisites:** A recipe exists.
+
+**Steps:**
+1. Edit recipe 5 times, changing title each time: "v1", "v2", "v3", "v4", "v5"
+2. Navigate to recipe detail page
+3. Click "History" tab
+
+**Expected:**
+- 5 versions listed: v5, v4, v3, v2, v1
+- v5 has "Current" badge
+- Clicking each version reconstructs correct data
+- v1 shows title "v1"
+- v3 shows title "v3"
+- v5 shows title "v5"
+
+---
+
+### TC-69: Restore Creates New Version (Not Overwrite)
+
+**Prerequisites:** Recipe with 3 versions.
+
+**Steps:**
+1. Navigate to recipe detail page
+2. Click "History" tab
+3. Note v3 is current
+4. Restore v1
+5. Check version count
+
+**Expected:**
+- 4 versions now exist: v4 (restored v1 data), v3, v2, v1
+- v4 is "Current"
+- Original v1, v2, v3 unchanged
+- Restore creates NEW version, does not modify existing versions
+
+---
+
+### TC-70: Recipe List API Query Parameters
+
+**Steps:**
+1. Log in
+2. Open Chrome DevTools Network tab
+3. Navigate to `/dashboard`
+4. Observe `GET /api/recipes` request
+
+**Expected (No Query Params):**
+- Request: `GET /api/recipes` (no query string)
+- Response: 200 OK
+- Returns only published recipes
+
+**Steps:**
+1. Check "Show drafts"
+2. Observe new `GET /api/recipes` request
+
+**Expected (With Query Params):**
+- Request: `GET /api/recipes?include_drafts=true`
+- Response: 200 OK
+- Returns published + draft recipes
+
+---
+
 ## Known Issues Summary
 
 | Issue | Status | Description | Fix Location |
@@ -969,6 +1737,7 @@ GITHUB_USERINFO_URL=http://localhost:8082/github/userinfo
 
 Run these after any code change:
 
+### Auth & Profile (NOMS-004/005)
 - [ ] Login works (Google + GitHub)
 - [ ] Navbar shows correct auth state
 - [ ] Dropdown opens/closes properly
@@ -987,6 +1756,32 @@ Run these after any code change:
 - [ ] Provider becomes linkable after account deletion (TC-28)
 - [ ] Theme toggle persists across reload
 - [ ] Mobile hamburger menu works
+
+### Recipe CRUD (NOMS-008)
+- [ ] Create recipe saves to database (TC-38)
+- [ ] Recipe detail page displays all fields (TC-41)
+- [ ] Dashboard shows recipe list (TC-42)
+- [ ] Edit recipe updates database (TC-43)
+- [ ] Delete recipe removes from database (TC-45)
+- [ ] Recipe ownership gating works (TC-46)
+- [ ] Dashboard empty state for new users (TC-48)
+- [ ] Recipe detail loading/error states (TC-49, TC-50)
+
+### Recipe Versioning, Drafts & Forking (NOMS-009)
+- [ ] Version history timeline renders (TC-51)
+- [ ] Multiple versions displayed correctly (TC-52)
+- [ ] Version reconstruction works (TC-53)
+- [ ] Restore version creates new version (TC-54)
+- [ ] Draft creation works (TC-56)
+- [ ] Auto-save triggers after 2s debounce (TC-57)
+- [ ] Publish draft removes draft status (TC-58)
+- [ ] Draft toggle filters dashboard (TC-59)
+- [ ] Fork recipe creates independent copy (TC-60)
+- [ ] Fork attribution displayed (TC-62)
+- [ ] No API polling loops (TC-63)
+- [ ] Tab switching works smoothly (TC-64)
+- [ ] Version select shows diff (TC-65)
+- [ ] API query params work correctly (TC-70)
 
 ---
 
