@@ -136,6 +136,47 @@ pub async fn apply_test_schema(pool: &PgPool) {
         .execute(pool)
         .await
         .expect("failed to create sessions cleanup index");
+
+    // ── Recipe tables ──────────────────────────────────────────────────────
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS recipes (\
+         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\
+         user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,\
+         title VARCHAR(255) NOT NULL,\
+         description TEXT,\
+         prep_time_minutes INT,\
+         cook_time_minutes INT,\
+         servings INT,\
+         instructions TEXT,\
+         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
+         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
+         )",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create recipes table");
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS recipe_tags (\
+         recipe_id UUID REFERENCES recipes(id) ON DELETE CASCADE,\
+         tag VARCHAR(100) NOT NULL,\
+         PRIMARY KEY (recipe_id, tag)\
+         )",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create recipe_tags table");
+
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_recipes_user_id ON recipes(user_id)")
+        .execute(pool)
+        .await
+        .expect("failed to create recipes user_id index");
+
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_recipes_created_at ON recipes(created_at DESC)")
+        .execute(pool)
+        .await
+        .expect("failed to create recipes created_at index");
 }
 
 /// Generate a unique 8-character suffix for test data to avoid duplicate key conflicts.

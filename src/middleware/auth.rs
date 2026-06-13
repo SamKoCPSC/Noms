@@ -23,7 +23,7 @@ use crate::db;
 
 /// Check if a path matches a protected route pattern.
 ///
-/// Handles both exact matches and parameterized routes like `/recipes/:id`.
+/// Handles both exact matches and parameterized routes like `/recipes/:uuid`.
 fn is_protected_path(path: &str) -> bool {
     matches!(
         path,
@@ -33,11 +33,11 @@ fn is_protected_path(path: &str) -> bool {
             | "/settings/profile"
             | "/settings/accounts"
             | "/explore"
-    ) || is_numeric_id_route(path, "/recipes/")
+    ) || is_recipe_route(path)
         || is_numeric_id_route(path, "/collections/")
 }
 
-/// Check if a path is a numeric-id parameterized route (e.g. `/recipes/42`).
+/// Check if a path is a numeric-id parameterized route (e.g. `/collections/42`).
 fn is_numeric_id_route(path: &str, prefix: &str) -> bool {
     if !path.starts_with(prefix) {
         return false;
@@ -45,6 +45,39 @@ fn is_numeric_id_route(path: &str, prefix: &str) -> bool {
     let id_part = &path[prefix.len()..];
     // Must be exactly one segment (no trailing slash or extra path)
     !id_part.contains('/') && id_part.parse::<i32>().is_ok()
+}
+
+/// Check if path is a recipe route: `/recipes/{uuid}` or `/recipes/{uuid}/edit`.
+fn is_recipe_route(path: &str) -> bool {
+    if !path.starts_with("/recipes/") {
+        return false;
+    }
+    let rest = &path["/recipes/".len()..];
+    if rest.is_empty() || rest.starts_with('/') {
+        return false;
+    }
+    let first_segment = rest.split('/').next().unwrap_or("");
+    is_valid_uuid_string(first_segment)
+}
+
+/// Check if a string matches the UUID format (8-4-4-4-12 hex chars with dashes).
+fn is_valid_uuid_string(s: &str) -> bool {
+    if s.len() != 36 {
+        return false;
+    }
+    let parts: Vec<&str> = s.split('-').collect();
+    if parts.len() != 5 {
+        return false;
+    }
+    if parts[0].len() != 8
+        || parts[1].len() != 4
+        || parts[2].len() != 4
+        || parts[3].len() != 4
+        || parts[4].len() != 12
+    {
+        return false;
+    }
+    s.replace('-', "").chars().all(|c| c.is_ascii_hexdigit())
 }
 
 /// Routes that redirect authenticated users away.
