@@ -2,16 +2,18 @@
 //!
 //! Fetches recipe data and tags via server functions, parses the serialized
 //! instructions text back into ingredients and steps for display.
+//!
+//! Publicly accessible: tries `get_public_recipe` first (no auth needed),
+//! falls back to authenticated `get_recipe` for private/unlisted recipes.
 
 use chrono::{DateTime, Utc};
 use dioxus::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
 use crate::api::recipe::delete_recipe;
-use crate::api::recipe::{get_recipe, get_recipe_tags};
+use crate::api::recipe::{get_public_recipe, get_recipe, get_recipe_tags};
 use crate::auth::context::use_auth;
 use crate::components::base::{Button, ButtonVariant, Card, LoadingSpinner, PageHeader};
-use crate::components::AuthRequired;
 use crate::types::Recipe;
 
 // ── Parsed instruction types ─────────────────────────────────────────────────
@@ -140,6 +142,8 @@ fn format_relative_time(dt: DateTime<Utc>) -> String {
 // ── Component ────────────────────────────────────────────────────────────────
 
 /// Single recipe detail page.
+///
+/// Publicly accessible: tries public endpoint first, falls back to authenticated.
 #[component]
 pub fn RecipeDetail(id: String) -> Element {
     // ── Resources ────────────────────────────────────────────────────────
@@ -149,7 +153,14 @@ pub fn RecipeDetail(id: String) -> Element {
     let id_for_recipe = id.clone();
     let recipe_resource = use_resource(move || {
         let rid = id_for_recipe.clone();
-        async move { get_recipe(rid).await }
+        async move {
+            // Try public first (no auth needed)
+            if let Ok(r) = get_public_recipe(rid.clone()).await {
+                return Ok(r);
+            }
+            // Fall back to authenticated (requires login + ownership)
+            get_recipe(rid).await
+        }
     });
 
     let id_for_tags = id.clone();
@@ -183,15 +194,19 @@ pub fn RecipeDetail(id: String) -> Element {
             ServerFnError::ServerError { message, .. } => message.clone(),
             _ => e.to_string(),
         };
-        // Check for specific error types
-        if msg.contains("Not authenticated") {
-            None // AuthRequired handles this
-        } else {
-            Some(msg)
-        }
+        Some(msg)
     } else {
         None
     };
+
+    // ── Auth context for ownership check ─────────────────────────────────
+    let auth = use_auth();
+    let is_owner = recipe
+        .map(|r| auth.current_user_id == Some(r.user_id))
+        .unwrap_or(false);
+
+    // Username for display
+    let owner_username = auth.current_user.as_ref().map(|u| u.username.clone());
 
     // ── Delete handler ───────────────────────────────────────────────────
     // Clone id before the move closure (id was already moved into use_resource closures)
@@ -235,20 +250,18 @@ pub fn RecipeDetail(id: String) -> Element {
     // ── Render: loading ──────────────────────────────────────────────────
     if any_pending {
         return rsx! {
-            AuthRequired {
-                div { class: "container",
-                    div {
-                        display: "flex",
-                        flex_direction: "column",
-                        align_items: "center",
-                        justify_content: "center",
-                        min_height: "300px",
-                        LoadingSpinner {}
-                        p {
-                            margin_top: "var(--space-md)",
-                            color: "var(--text-secondary)",
-                            "Loading recipe..."
-                        }
+            div { class: "container",
+                div {
+                    display: "flex",
+                    flex_direction: "column",
+                    align_items: "center",
+                    justify_content: "center",
+                    min_height: "300px",
+                    LoadingSpinner {}
+                    p {
+                        margin_top: "var(--space-md)",
+                        color: "var(--text-secondary)",
+                        "Loading recipe..."
                     }
                 }
             }
@@ -258,26 +271,24 @@ pub fn RecipeDetail(id: String) -> Element {
     // ── Render: error ────────────────────────────────────────────────────
     if let Some(err_msg) = &error_message {
         return rsx! {
-            AuthRequired {
-                div { class: "container",
-                    Card {
-                        div {
-                            display: "flex",
-                            flex_direction: "column",
-                            align_items: "center",
-                            text_align: "center",
-                            gap: "var(--space-md)",
-                            p {
-                                color: "var(--error)",
-                                font_weight: "600",
-                                font_size: "18px",
-                                "{err_msg}"
-                            }
-                            Link {
-                                to: crate::Route::Dashboard {},
-                                class: "btn btn-secondary touch-target",
-                                "Back to Recipes"
-                            }
+            div { class: "container",
+                Card {
+                    div {
+                        display: "flex",
+                        flex_direction: "column",
+                        align_items: "center",
+                        text_align: "center",
+                        gap: "var(--space-md)",
+                        p {
+                            color: "var(--error)",
+                            font_weight: "600",
+                            font_size: "18px",
+                            "{err_msg}"
+                        }
+                        Link {
+                            to: crate::Route::Dashboard {},
+                            class: "btn btn-secondary touch-target",
+                            "Back to Recipes"
                         }
                     }
                 }
@@ -289,14 +300,12 @@ pub fn RecipeDetail(id: String) -> Element {
     let Some(recipe) = recipe else {
         // Should not reach here if logic is correct, but guard anyway
         return rsx! {
-            AuthRequired {
-                div { class: "container",
-                    Card {
-                        div {
-                            text_align: "center",
-                            color: "var(--error)",
-                            "Unable to load recipe."
-                        }
+            div { class: "container",
+                Card {
+                    div {
+                        text_align: "center",
+                        color: "var(--error)",
+                        "Unable to load recipe."
                     }
                 }
             }
@@ -310,22 +319,15 @@ pub fn RecipeDetail(id: String) -> Element {
         .map(parse_instructions)
         .unwrap_or_default();
 
-    // Auth context for username
-    let auth = use_auth();
-    let username = auth
-        .current_user
-        .as_ref()
-        .map(|u| u.username.clone())
-        .unwrap_or_else(|| "you".to_string());
     let relative_time = format_relative_time(recipe.created_at);
 
     rsx! {
-        AuthRequired {
-            div { class: "container",
-                // ── Header ──────────────────────────────────────────────────────
-                PageHeader {
-                    title: "{recipe.title}",
-                    action: rsx! {
+        div { class: "container",
+            // ── Header ──────────────────────────────────────────────────────
+            PageHeader {
+                title: "{recipe.title}",
+                action: if is_owner {
+                    Some(rsx! {
                         div {
                             display: "flex",
                             gap: "var(--space-sm)",
@@ -347,205 +349,211 @@ pub fn RecipeDetail(id: String) -> Element {
                                 }
                             }
                         }
-                    }
-                }
+                    })
+                } else {
+                    None
+                },
+            }
 
-                // ── Back link ───────────────────────────────────────────────────
-                div { margin_bottom: "var(--space-md)",
-                    Link {
-                        to: crate::Route::Dashboard {},
-                        style: "color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 500;",
-                        "← Back to Recipes"
-                    }
+            // ── Back link ───────────────────────────────────────────────────
+            div { margin_bottom: "var(--space-md)",
+                Link {
+                    to: crate::Route::Explore {},
+                    style: "color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 500;",
+                    "← Back to Explore"
                 }
+            }
 
-                // ── Delete error ────────────────────────────────────────────────
-                if let Some(del_err) = delete_error() {
-                    div {
-                        padding: "var(--space-sm) var(--space-md)",
-                        background_color: "var(--error-bg)",
-                        border_radius: "var(--radius-md)",
-                        color: "var(--error)",
-                        font_size: "14px",
-                        margin_bottom: "var(--space-md)",
-                        "{del_err}"
-                    }
-                }
-
-                // ── Tags ────────────────────────────────────────────────────────
-                if let Some(tag_list) = tags {
-                    if !tag_list.is_empty() {
-                        div {
-                            display: "flex",
-                            flex_wrap: "wrap",
-                            gap: "var(--space-xs)",
-                            margin_bottom: "var(--space-md)",
-                            for tag in tag_list {
-                                span {
-                                    display: "inline-block",
-                                    padding: "4px 12px",
-                                    border_radius: "var(--radius-full)",
-                                    background_color: "rgba(217, 115, 90, 0.10)",
-                                    color: "var(--accent)",
-                                    font_size: "13px",
-                                    font_weight: "500",
-                                    "{tag}"
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // ── Meta info row ───────────────────────────────────────────────
+            // ── Delete error ────────────────────────────────────────────────
+            if let Some(del_err) = delete_error() {
                 div {
-                    display: "flex",
-                    flex_wrap: "wrap",
-                    gap: "var(--space-md)",
+                    padding: "var(--space-sm) var(--space-md)",
+                    background_color: "var(--error-bg)",
+                    border_radius: "var(--radius-md)",
+                    color: "var(--error)",
+                    font_size: "14px",
                     margin_bottom: "var(--space-md)",
-                    padding: "var(--space-sm) 0",
-                    border_bottom: "1px solid var(--surface)",
-
-                    if let Some(prepare) = recipe.prep_time_minutes {
-                        span {
-                            font_size: "14px",
-                            color: "var(--text-secondary)",
-                            "⏱ Prep: {prepare} min"
-                        }
-                    }
-                    if let Some(cook) = recipe.cook_time_minutes {
-                        span {
-                            font_size: "14px",
-                            color: "var(--text-secondary)",
-                            "🔥 Cook: {cook} min"
-                        }
-                    }
-                    if let Some(serv) = recipe.servings {
-                        span {
-                            font_size: "14px",
-                            color: "var(--text-secondary)",
-                            "🍽 Servings: {serv}"
-                        }
-                    }
+                    "{del_err}"
                 }
+            }
 
-                // ── Description ─────────────────────────────────────────────────
-                if let Some(desc) = &recipe.description {
-                    if !desc.is_empty() {
-                        div {
-                            margin_bottom: "var(--space-md)",
-                            p {
-                                font_size: "15px",
-                                color: "var(--text-secondary)",
-                                line_height: "1.6",
-                                "{desc}"
+            // ── Tags ────────────────────────────────────────────────────────
+            if let Some(tag_list) = tags {
+                if !tag_list.is_empty() {
+                    div {
+                        display: "flex",
+                        flex_wrap: "wrap",
+                        gap: "var(--space-xs)",
+                        margin_bottom: "var(--space-md)",
+                        for tag in tag_list {
+                            span {
+                                display: "inline-block",
+                                padding: "4px 12px",
+                                border_radius: "var(--radius-full)",
+                                background_color: "rgba(217, 115, 90, 0.10)",
+                                color: "var(--accent)",
+                                font_size: "13px",
+                                font_weight: "500",
+                                "{tag}"
                             }
                         }
                     }
                 }
+            }
 
-                // ── Author line ─────────────────────────────────────────────────
+            // ── Meta info row ───────────────────────────────────────────────
+            div {
+                display: "flex",
+                flex_wrap: "wrap",
+                gap: "var(--space-md)",
+                margin_bottom: "var(--space-md)",
+                padding: "var(--space-sm) 0",
+                border_bottom: "1px solid var(--surface)",
+
+                if let Some(prepare) = recipe.prep_time_minutes {
+                    span {
+                        font_size: "14px",
+                        color: "var(--text-secondary)",
+                        "⏱ Prep: {prepare} min"
+                    }
+                }
+                if let Some(cook) = recipe.cook_time_minutes {
+                    span {
+                        font_size: "14px",
+                        color: "var(--text-secondary)",
+                        "🔥 Cook: {cook} min"
+                    }
+                }
+                if let Some(serv) = recipe.servings {
+                    span {
+                        font_size: "14px",
+                        color: "var(--text-secondary)",
+                        "🍽 Servings: {serv}"
+                    }
+                }
+            }
+
+            // ── Description ─────────────────────────────────────────────────
+            if let Some(desc) = &recipe.description {
+                if !desc.is_empty() {
+                    div {
+                        margin_bottom: "var(--space-md)",
+                        p {
+                            font_size: "15px",
+                            color: "var(--text-secondary)",
+                            line_height: "1.6",
+                            "{desc}"
+                        }
+                    }
+                }
+            }
+
+            // ── Author line ─────────────────────────────────────────────────
+            div {
+                margin_bottom: "var(--space-lg)",
+                font_size: "13px",
+                color: "var(--text-tertiary)",
+                if let Some(username) = &owner_username {
+                    "by @{username} • created {relative_time}"
+                } else {
+                    "created {relative_time}"
+                }
+            }
+
+            // ── Ingredients ─────────────────────────────────────────────────
+            if !parsed.ingredients.is_empty() {
                 div {
                     margin_bottom: "var(--space-lg)",
-                    font_size: "13px",
-                    color: "var(--text-tertiary)",
-                    "by @{username} • created {relative_time}"
-                }
-
-                // ── Ingredients ─────────────────────────────────────────────────
-                if !parsed.ingredients.is_empty() {
-                    div {
-                        margin_bottom: "var(--space-lg)",
-                        h2 {
-                            font_size: "20px",
-                            color: "var(--text-primary)",
-                            margin_bottom: "var(--space-sm)",
-                            padding_bottom: "var(--space-xs)",
-                            border_bottom: "2px solid var(--surface)",
-                            "Ingredients"
-                        }
-                        ul {
-                            list_style: "none",
-                            padding: "0",
-                            margin: "0",
-                            display: "flex",
-                            flex_direction: "column",
-                            gap: "var(--space-xs)",
-                            for ing in &parsed.ingredients {
-                                li {
-                                    padding: "var(--space-xs) var(--space-sm)",
-                                    font_size: "14px",
-                                    color: "var(--text-primary)",
-                                    if !ing.amount.is_empty() && !ing.unit.is_empty() {
-                                        "- {ing.amount} {ing.unit} {ing.name}"
-                                    } else if !ing.amount.is_empty() {
-                                        "- {ing.amount} {ing.name}"
-                                    } else {
-                                        "- {ing.name}"
-                                    }
+                    h2 {
+                        font_size: "20px",
+                        color: "var(--text-primary)",
+                        margin_bottom: "var(--space-sm)",
+                        padding_bottom: "var(--space-xs)",
+                        border_bottom: "2px solid var(--surface)",
+                        "Ingredients"
+                    }
+                    ul {
+                        list_style: "none",
+                        padding: "0",
+                        margin: "0",
+                        display: "flex",
+                        flex_direction: "column",
+                        gap: "var(--space-xs)",
+                        for ing in &parsed.ingredients {
+                            li {
+                                padding: "var(--space-xs) var(--space-sm)",
+                                font_size: "14px",
+                                color: "var(--text-primary)",
+                                if !ing.amount.is_empty() && !ing.unit.is_empty() {
+                                    "- {ing.amount} {ing.unit} {ing.name}"
+                                } else if !ing.amount.is_empty() {
+                                    "- {ing.amount} {ing.name}"
+                                } else {
+                                    "- {ing.name}"
                                 }
                             }
                         }
                     }
                 }
+            }
 
-                // ── Steps ───────────────────────────────────────────────────────
-                if !parsed.steps.is_empty() {
-                    div {
-                        margin_bottom: "var(--space-lg)",
-                        h2 {
-                            font_size: "20px",
-                            color: "var(--text-primary)",
-                            margin_bottom: "var(--space-sm)",
-                            padding_bottom: "var(--space-xs)",
-                            border_bottom: "2px solid var(--surface)",
-                            "Steps"
-                        }
-                        ol {
-                            padding_left: "var(--space-lg)",
-                            margin: "0",
-                            display: "flex",
-                            flex_direction: "column",
-                            gap: "var(--space-sm)",
-                            for step in &parsed.steps {
-                                li {
-                                    padding: "var(--space-xs) 0",
-                                    font_size: "14px",
-                                    color: "var(--text-primary)",
-                                    line_height: "1.6",
-                                    "{step}"
-                                }
+            // ── Steps ───────────────────────────────────────────────────────
+            if !parsed.steps.is_empty() {
+                div {
+                    margin_bottom: "var(--space-lg)",
+                    h2 {
+                        font_size: "20px",
+                        color: "var(--text-primary)",
+                        margin_bottom: "var(--space-sm)",
+                        padding_bottom: "var(--space-xs)",
+                        border_bottom: "2px solid var(--surface)",
+                        "Steps"
+                    }
+                    ol {
+                        padding_left: "var(--space-lg)",
+                        margin: "0",
+                        display: "flex",
+                        flex_direction: "column",
+                        gap: "var(--space-sm)",
+                        for step in &parsed.steps {
+                            li {
+                                padding: "var(--space-xs) 0",
+                                font_size: "14px",
+                                color: "var(--text-primary)",
+                                line_height: "1.6",
+                                "{step}"
                             }
                         }
                     }
                 }
+            }
 
-                // ── Raw instructions fallback ───────────────────────────────────
-                if parsed.ingredients.is_empty() && parsed.steps.is_empty() {
-                    if let Some(raw) = &parsed.raw {
-                        if !raw.is_empty() {
-                            div {
-                                margin_bottom: "var(--space-lg)",
-                                h2 {
-                                    font_size: "20px",
-                                    color: "var(--text-primary)",
-                                    margin_bottom: "var(--space-sm)",
-                                    padding_bottom: "var(--space-xs)",
-                                    border_bottom: "2px solid var(--surface)",
-                                    "Instructions"
-                                }
-                                pre {
-                                    background_color: "var(--surface)",
-                                    padding: "var(--space-md)",
-                                    border_radius: "var(--radius-md)",
-                                    font_size: "14px",
-                                    color: "var(--text-secondary)",
-                                    line_height: "1.6",
-                                    white_space: "pre-wrap",
-                                    word_wrap: "break-word",
-                                    margin: "0",
-                                    font_family: "var(--font-body)",
-                                    "{raw}"
-                                }
+            // ── Raw instructions fallback ───────────────────────────────────
+            if parsed.ingredients.is_empty() && parsed.steps.is_empty() {
+                if let Some(raw) = &parsed.raw {
+                    if !raw.is_empty() {
+                        div {
+                            margin_bottom: "var(--space-lg)",
+                            h2 {
+                                font_size: "20px",
+                                color: "var(--text-primary)",
+                                margin_bottom: "var(--space-sm)",
+                                padding_bottom: "var(--space-xs)",
+                                border_bottom: "2px solid var(--surface)",
+                                "Instructions"
+                            }
+                            pre {
+                                background_color: "var(--surface)",
+                                padding: "var(--space-md)",
+                                border_radius: "var(--radius-md)",
+                                font_size: "14px",
+                                color: "var(--text-secondary)",
+                                line_height: "1.6",
+                                white_space: "pre-wrap",
+                                word_wrap: "break-word",
+                                margin: "0",
+                                font_family: "var(--font-body)",
+                                "{raw}"
                             }
                         }
                     }

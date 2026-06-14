@@ -312,3 +312,17 @@ pub async fn get_user_public_recipes(
         has_more,
     })
 }
+
+/// Fetch distinct tags from all public recipes.
+/// No authentication required.
+#[server]
+pub async fn get_public_recipe_tags() -> Result<Vec<String>, ServerFnError> {
+    let pool = crate::db::get_pool();
+    let tags = crate::db::get_distinct_public_tags(&pool)
+        .await
+        .map_err(|e| {
+            tracing::error!(error = ?e, "Failed to fetch distinct public tags");
+            ServerFnError::new("Failed to fetch tags")
+        })?;
+    Ok(tags)
+}

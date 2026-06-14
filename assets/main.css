@@ -1057,3 +1057,51 @@ a:hover {
     font-size: 13px;
     margin-top: var(--space-md);
 }
+
+/* ============================================================
+   Explore Page (CP9)
+   ============================================================ */
+
+.explore-page {
+    padding-top: var(--space-lg);
+}
+
+.explore-search {
+    margin-bottom: var(--space-md);
+}
+
+.explore-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--surface);
+}
+
+.tag-chip {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    background-color: var(--surface);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    font-family: var(--font-body);
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 2px 2px 3px var(--shadow-dark), -2px -2px 3px var(--shadow-light);
+}
+
+.tag-chip:hover {
+    color: var(--accent);
+    box-shadow: 3px 3px 4px var(--shadow-dark), -3px -3px 4px var(--shadow-light);
+}
+
+.tag-chip--active {
+    background-color: var(--accent);
+    color: white;
+    box-shadow: inset 2px 2px 3px rgba(0, 0, 0, 0.15),
+                inset -2px -2px 3px rgba(255, 255, 255, 0.1);
+}

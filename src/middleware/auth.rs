@@ -27,12 +27,7 @@ use crate::db;
 fn is_protected_path(path: &str) -> bool {
     matches!(
         path,
-        "/dashboard"
-            | "/recipes/new"
-            | "/collections"
-            | "/settings/profile"
-            | "/settings/accounts"
-            | "/explore"
+        "/dashboard" | "/recipes/new" | "/collections" | "/settings/profile" | "/settings/accounts"
     ) || is_recipe_route(path)
         || is_numeric_id_route(path, "/collections/")
 }

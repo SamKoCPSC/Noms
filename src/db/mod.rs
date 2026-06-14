@@ -1013,6 +1013,21 @@ pub async fn count_user_public_recipes(
     Ok(count)
 }
 
+/// Get distinct tags from all public recipes, ordered alphabetically.
+pub async fn get_distinct_public_tags(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+) -> Result<Vec<String>, DbError> {
+    sqlx::query_scalar::<_, String>(
+        "SELECT DISTINCT tag FROM recipe_tags
+         INNER JOIN recipes ON recipe_tags.recipe_id = recipes.id
+         WHERE recipes.visibility = 'public'
+         ORDER BY tag",
+    )
+    .fetch_all(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -2346,6 +2361,131 @@ mod tests {
 
         let count = count_public_recipes(&pool).await.unwrap();
         assert_eq!(count, 2);
+    }
+
+    #[tokio::test]
+    async fn test_get_distinct_public_tags() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("dpt_{u}"),
+            "Distinct Tags User",
+            &format!("dpt{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Create two public recipes with overlapping and unique tags
+        let r1 = insert_recipe(
+            &pool,
+            user.id,
+            "Public Recipe 1",
+            None,
+            None,
+            None,
+            None,
+            None,
+            "public",
+        )
+        .await
+        .unwrap();
+        let r2 = insert_recipe(
+            &pool,
+            user.id,
+            "Public Recipe 2",
+            None,
+            None,
+            None,
+            None,
+            None,
+            "public",
+        )
+        .await
+        .unwrap();
+        // Private recipe — tags should NOT appear
+        let r_private = insert_recipe(
+            &pool,
+            user.id,
+            "Private Recipe",
+            None,
+            None,
+            None,
+            None,
+            None,
+            "private",
+        )
+        .await
+        .unwrap();
+
+        // Add tags: r1 gets "breakfast" and "quick", r2 gets "quick" and "dinner"
+        // Private recipe gets "secret"
+        {
+            let mut tx = pool.begin().await.unwrap();
+            insert_recipe_tags(
+                &mut tx,
+                r1.id,
+                &["breakfast".to_string(), "quick".to_string()],
+            )
+            .await
+            .unwrap();
+            insert_recipe_tags(&mut tx, r2.id, &["quick".to_string(), "dinner".to_string()])
+                .await
+                .unwrap();
+            insert_recipe_tags(
+                &mut tx,
+                r_private.id,
+                &["secret".to_string(), "breakfast".to_string()],
+            )
+            .await
+            .unwrap();
+            tx.commit().await.unwrap();
+        }
+
+        // Distinct public tags should be: breakfast, dinner, quick (alphabetical)
+        let tags = get_distinct_public_tags(&pool).await.unwrap();
+        assert_eq!(tags.len(), 3);
+        assert_eq!(tags[0], "breakfast");
+        assert_eq!(tags[1], "dinner");
+        assert_eq!(tags[2], "quick");
+        // "secret" from private recipe should NOT appear
+        assert!(!tags.contains(&"secret".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_get_distinct_public_tags_empty() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("dpte_{u}"),
+            "Empty Tags User",
+            &format!("dpte{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Only private recipes — no public tags
+        insert_recipe(
+            &pool,
+            user.id,
+            "Private Only",
+            None,
+            None,
+            None,
+            None,
+            None,
+            "private",
+        )
+        .await
+        .unwrap();
+
+        let tags = get_distinct_public_tags(&pool).await.unwrap();
+        assert!(tags.is_empty());
     }
 
     #[tokio::test]
