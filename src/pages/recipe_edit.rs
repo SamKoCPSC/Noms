@@ -152,6 +152,7 @@ pub fn RecipeEdit(id: String) -> Element {
     let mut ingredients = use_signal(Vec::<IngredientDraft>::new);
     let mut steps = use_signal(Vec::<StepDraft>::new);
     let mut tags_input = use_signal(String::new);
+    let mut visibility = use_signal(|| "private".to_string());
 
     // UI state
     let mut is_loading = use_signal(|| true);
@@ -209,6 +210,7 @@ pub fn RecipeEdit(id: String) -> Element {
                     if let Ok(tags) = get_recipe_tags(id).await {
                         tags_input.set(tags.join(", "))
                     }
+                    visibility.set(recipe.visibility);
                 }
                 Err(e) => {
                     let msg = match &e {
@@ -285,6 +287,7 @@ pub fn RecipeEdit(id: String) -> Element {
         };
 
         let recipe_id = id_for_submit.clone();
+        let vis = visibility().clone();
 
         spawn(async move {
             match update_recipe(
@@ -296,7 +299,7 @@ pub fn RecipeEdit(id: String) -> Element {
                 serv,
                 Some(instructions),
                 Some(tags),
-                None,
+                Some(vis),
             )
             .await
             {
@@ -696,6 +699,37 @@ pub fn RecipeEdit(id: String) -> Element {
                             font_size: "12px",
                             color: "var(--text-tertiary)",
                             "Comma-separated"
+                        }
+                    }
+
+                    // ── Visibility ──────────────────────────────────────
+                    div {
+                        display: "flex",
+                        flex_direction: "column",
+                        gap: "var(--space-sm)",
+                        label {
+                            font_size: "14px",
+                            font_weight: "600",
+                            color: "var(--text-secondary)",
+                            "Visibility"
+                        }
+                        select {
+                            class: "neumo-inset input",
+                            padding: "var(--space-sm) var(--space-md)",
+                            font_family: "var(--font-body)",
+                            font_size: "14px",
+                            color: "var(--text-primary)",
+                            background_color: "var(--surface)",
+                            outline: "none",
+                            border_radius: "var(--radius-md)",
+                            width: "100%",
+                            value: visibility().clone(),
+                            onchange: move |evt| {
+                                visibility.set(evt.value());
+                            },
+                            option { value: "private", "Private — only you can see this recipe" }
+                            option { value: "unlisted", "Unlisted — anyone with the link can view" }
+                            option { value: "public", "Public — appears in Explore and search" }
                         }
                     }
 

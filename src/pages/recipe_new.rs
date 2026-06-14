@@ -77,6 +77,9 @@ pub fn RecipeNew() -> Element {
     // Tags (comma-separated)
     let mut tags_input = use_signal(String::new);
 
+    // Visibility (default: private)
+    let mut visibility = use_signal(|| "private".to_string());
+
     // UI state
     let mut is_saving = use_signal(|| false);
     let mut error = use_signal(|| Option::<String>::None);
@@ -139,6 +142,7 @@ pub fn RecipeNew() -> Element {
             Some(description().trim().to_string())
         };
 
+        let vis = visibility().clone();
         spawn(async move {
             match create_recipe(
                 trimmed_title,
@@ -148,7 +152,7 @@ pub fn RecipeNew() -> Element {
                 serv,
                 Some(instructions),
                 tags,
-                "private".to_string(),
+                vis,
             )
             .await
             {
@@ -493,6 +497,37 @@ pub fn RecipeNew() -> Element {
                             font_size: "12px",
                             color: "var(--text-tertiary)",
                             "Comma-separated"
+                        }
+                    }
+
+                    // ── Visibility ──────────────────────────────────────
+                    div {
+                        display: "flex",
+                        flex_direction: "column",
+                        gap: "var(--space-sm)",
+                        label {
+                            font_size: "14px",
+                            font_weight: "600",
+                            color: "var(--text-secondary)",
+                            "Visibility"
+                        }
+                        select {
+                            class: "neumo-inset input",
+                            padding: "var(--space-sm) var(--space-md)",
+                            font_family: "var(--font-body)",
+                            font_size: "14px",
+                            color: "var(--text-primary)",
+                            background_color: "var(--surface)",
+                            outline: "none",
+                            border_radius: "var(--radius-md)",
+                            width: "100%",
+                            value: visibility().clone(),
+                            onchange: move |evt| {
+                                visibility.set(evt.value());
+                            },
+                            option { value: "private", "Private — only you can see this recipe" }
+                            option { value: "unlisted", "Unlisted — anyone with the link can view" }
+                            option { value: "public", "Public — appears in Explore and search" }
                         }
                     }
 
