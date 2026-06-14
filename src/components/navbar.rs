@@ -180,6 +180,12 @@ pub fn Navbar(theme: UseTheme) -> Element {
                                         "{display_name}"
                                     }
                                     div { class: "navbar-dropdown-divider" }
+                                    a {
+                                        href: format!("/u/{}", auth.current_user.as_ref().map(|u| u.username.clone()).unwrap_or_default()),
+                                        class: "navbar-dropdown-item",
+                                        onclick: move |_| dropdown_open.set(false),
+                                        "View Profile"
+                                    }
                                     Link {
                                         to: Route::SettingsProfile {},
                                         class: "navbar-dropdown-item",

@@ -9,6 +9,7 @@ mod recipe_detail;
 mod recipe_edit;
 mod recipe_new;
 mod settings;
+mod user_profile;
 
 pub use collection_detail::CollectionDetail;
 pub use collection_list::CollectionList;
@@ -22,3 +23,4 @@ pub use recipe_edit::RecipeEdit;
 pub use recipe_new::RecipeNew;
 pub use settings::SettingsAccounts;
 pub use settings::SettingsProfile;
+pub use user_profile::UserProfile;

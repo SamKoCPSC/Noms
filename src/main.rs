@@ -20,7 +20,7 @@ use auth::context::{build_context_from_fullstack, AuthContext};
 use components::{AppLayout, ErrorFallback};
 use pages::{
     CollectionDetail, CollectionList, Dashboard, Explore, Home, Login, NotFound, RecipeDetail,
-    RecipeEdit, RecipeNew, SettingsAccounts, SettingsProfile,
+    RecipeEdit, RecipeNew, SettingsAccounts, SettingsProfile, UserProfile,
 };
 
 /// Application routes.
@@ -46,6 +46,8 @@ pub enum Route {
         CollectionDetail { id: i32 },
         #[route("/explore")]
         Explore {},
+        #[route("/u/:username")]
+        UserProfile { username: String },
         #[redirect("/settings", || Route::SettingsProfile {})]
         #[route("/settings/profile")]
         #[route("/settings/profile")]
