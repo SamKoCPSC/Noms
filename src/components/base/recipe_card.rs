@@ -71,7 +71,11 @@ fn format_relative_time(dt: &chrono::DateTime<chrono::Utc>) -> String {
         format!("{} hour{} ago", hours, if hours == 1 { "" } else { "s" })
     } else if diff.num_minutes() > 0 {
         let minutes = diff.num_minutes();
-        format!("{} minute{} ago", minutes, if minutes == 1 { "" } else { "s" })
+        format!(
+            "{} minute{} ago",
+            minutes,
+            if minutes == 1 { "" } else { "s" }
+        )
     } else {
         "Just now".to_string()
     }

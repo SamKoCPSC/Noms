@@ -18,6 +18,7 @@ pub struct Recipe {
     pub cook_time_minutes: Option<i32>,
     pub servings: Option<i32>,
     pub instructions: Option<String>,
+    pub visibility: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -28,4 +29,15 @@ pub struct RecipeListResponse {
     pub recipes: Vec<Recipe>,
     pub total_count: i64,
     pub has_more: bool,
+}
+
+/// Public user profile with recipe count.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct UserProfile {
+    pub id: Uuid,
+    pub username: String,
+    pub display_name: String,
+    pub avatar_url: Option<String>,
+    pub bio: Option<String>,
+    pub public_recipe_count: i64,
 }

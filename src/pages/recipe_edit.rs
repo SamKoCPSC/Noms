@@ -46,10 +46,7 @@ struct ParsedInstructions {
 
 /// Combine ingredients and steps into a single markdown-style text block
 /// suitable for the `instructions` TEXT column.
-fn serialize_instructions(
-    ingredients: &[IngredientDraft],
-    steps: &[StepDraft],
-) -> String {
+fn serialize_instructions(ingredients: &[IngredientDraft], steps: &[StepDraft]) -> String {
     let mut text = String::new();
 
     if !ingredients.is_empty() {
@@ -119,7 +116,9 @@ fn parse_instructions(text: &str) -> ParsedInstructions {
                     } else {
                         String::new()
                     };
-                    result.ingredients.push(ParsedIngredient { amount, unit, name });
+                    result
+                        .ingredients
+                        .push(ParsedIngredient { amount, unit, name });
                 }
             }
             "steps" => {
@@ -150,8 +149,8 @@ pub fn RecipeEdit(id: String) -> Element {
     let mut prep_time = use_signal(String::new);
     let mut cook_time = use_signal(String::new);
     let mut servings = use_signal(String::new);
-    let mut ingredients = use_signal(|| Vec::<IngredientDraft>::new());
-    let mut steps = use_signal(|| Vec::<StepDraft>::new());
+    let mut ingredients = use_signal(Vec::<IngredientDraft>::new);
+    let mut steps = use_signal(Vec::<StepDraft>::new);
     let mut tags_input = use_signal(String::new);
 
     // UI state
@@ -169,8 +168,18 @@ pub fn RecipeEdit(id: String) -> Element {
                 Ok(recipe) => {
                     title.set(recipe.title.clone());
                     description.set(recipe.description.clone().unwrap_or_default());
-                    prep_time.set(recipe.prep_time_minutes.map(|v| v.to_string()).unwrap_or_default());
-                    cook_time.set(recipe.cook_time_minutes.map(|v| v.to_string()).unwrap_or_default());
+                    prep_time.set(
+                        recipe
+                            .prep_time_minutes
+                            .map(|v| v.to_string())
+                            .unwrap_or_default(),
+                    );
+                    cook_time.set(
+                        recipe
+                            .cook_time_minutes
+                            .map(|v| v.to_string())
+                            .unwrap_or_default(),
+                    );
                     servings.set(recipe.servings.map(|v| v.to_string()).unwrap_or_default());
 
                     // Parse instructions into ingredients/steps
@@ -197,9 +206,8 @@ pub fn RecipeEdit(id: String) -> Element {
                     }
 
                     // Fetch tags
-                    match get_recipe_tags(id).await {
-                        Ok(tags) => tags_input.set(tags.join(", ")),
-                        Err(_) => {}
+                    if let Ok(tags) = get_recipe_tags(id).await {
+                        tags_input.set(tags.join(", "))
                     }
                 }
                 Err(e) => {
@@ -288,13 +296,16 @@ pub fn RecipeEdit(id: String) -> Element {
                 serv,
                 Some(instructions),
                 Some(tags),
+                None,
             )
             .await
             {
                 Ok(_) => {
                     // Redirect to recipe detail page
                     if let Some(window) = web_sys::window() {
-                        let _ = window.location().set_href(&format!("/recipes/{}", recipe_id));
+                        let _ = window
+                            .location()
+                            .set_href(&format!("/recipes/{}", recipe_id));
                     }
                 }
                 Err(e) => {
@@ -312,7 +323,9 @@ pub fn RecipeEdit(id: String) -> Element {
     // ── Cancel handler ──────────────────────────────────────────────────
     let on_cancel = move |_| {
         if let Some(window) = web_sys::window() {
-            let _ = window.location().set_href(&format!("/recipes/{}", id_for_cancel));
+            let _ = window
+                .location()
+                .set_href(&format!("/recipes/{}", id_for_cancel));
         }
     };
 

@@ -1,14 +1,22 @@
-# NOMS-008: Recipe CRUD
+# NOMS-008: Recipe CRUD + Visibility & Discovery
 
 **Status:** 🔵 Ready  
-**Phase:** Phase 1 (core content creation)  
+**Phase:** Phase 1 (core content creation + discovery)  
 **Depends on:** NOMS-004 (OAuth authentication), NOMS-005 (user profile)
 
 ## Overview
 
-Implement the core recipe creation, viewing, editing, and deletion flows. Every recipe is a single row — edit overwrites the row. Versioning, drafts, and branching are deferred to NOMS-009.
+Implement the core recipe creation, viewing, editing, and deletion flows, plus a three-tier visibility model (private/unlisted/public) and community discovery features. Every recipe is a single row — edit overwrites the row. Versioning, drafts, and branching are deferred to NOMS-009.
 
-This is the foundational content feature — without it, the application has no core value proposition.
+This is the foundational content feature — without it, the application has no core value proposition. The visibility and discovery layer enables community sharing while respecting user privacy.
+
+### Visibility Model
+
+| Level | Who can view | Appears in |
+|---|---|---|
+| **Private** | Owner only | Owner's dashboard only |
+| **Unlisted** | Anyone with the link | Nowhere (no public listings) |
+| **Public** | Anyone (authenticated or not) | Explore page + owner's public profile |
 
 ## Context
 
@@ -95,8 +103,49 @@ The current codebase has authentication and user management working, but all rec
   - `delete_recipe()` — delete recipe (tags cascade)
   - `insert_recipe_tags()` — upsert tags for a recipe
   - `get_recipe_tags()` — fetch tags for a recipe
-- [ ] All queries guard by `owner_id` where appropriate
+- [ ] All mutation queries enforce `user_id` in WHERE clause (defense-in-depth)
 - [ ] Tests for each query function (using existing `test_utils` pattern)
+- [ ] Cross-user ownership tests: updating/deleting another user's recipe returns `RecipeNotFound`
+
+### AC8: Recipe visibility (public/unlisted/private)
+
+- [ ] `recipes.visibility` column: `VARCHAR(20)` with CHECK constraint (`'private'`, `'unlisted'`, `'public'`)
+- [ ] Default visibility: `'private'`
+- [ ] Create form includes visibility selector (radio/dropdown)
+- [ ] Edit form includes visibility selector (pre-populated)
+- [ ] `get_public_recipes_paginated()` — lists recipes where `visibility = 'public'`
+- [ ] `get_recipe_by_id_public()` — fetches recipe without ownership check (for public/unlisted viewing)
+- [ ] `get_user_public_recipes()` — lists user's public recipes for profile page
+- [ ] `get_user_by_username()` — lookup user by username for profile routing
+- [ ] Tests for visibility filtering and cross-user access
+
+### AC9: Explore page (public recipe discovery)
+
+- [ ] `/explore` route renders public recipe listing
+- [ ] Paginated grid of public recipes (same card component as dashboard)
+- [ ] Filter by tags (clickable tag chips)
+- [ ] Search by title (text input, client-side or server-side)
+- [ ] Recipe cards link to `/recipes/:id` detail page
+- [ ] Empty state when no public recipes exist
+- [ ] Non-authenticated users can browse (optional: require auth to view details)
+
+### AC10: User profile page (discover other users)
+
+- [ ] `/u/:username` route renders user's public profile
+- [ ] Shows: avatar, display name, bio, join date
+- [ ] Lists user's public recipes in a card grid (paginated)
+- [ ] "View Profile" link on recipe detail pages navigates to owner's `/u/:username`
+- [ ] 404 if username doesn't exist
+- [ ] Only public recipes shown (unlisted/private hidden)
+
+### AC11: Public recipe detail (view-only for non-owners)
+
+- [ ] `/recipes/:id` resolves for public/unlisted recipes without ownership check
+- [ ] Owner sees: full detail + "Edit" and "Delete" buttons
+- [ ] Non-owner sees: full detail + "View Owner's Profile" link (no edit/delete)
+- [ ] Private recipe accessed by non-owner: "Recipe not found" (no leakage that it exists)
+- [ ] Unlisted recipe: only accessible via direct link, not in any listing
+- [ ] Recipe detail shows owner attribution: avatar + username (linkable to `/u/:username`) + created date
 
 ## Technical Details
 
@@ -106,29 +155,46 @@ The current codebase has authentication and user management working, but all rec
 -- Recipe (single row, all data inline)
 CREATE TABLE IF NOT EXISTS recipes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    title VARCHAR(200) NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
     description TEXT,
-    is_public BOOLEAN NOT NULL DEFAULT FALSE,
-    prep_time_min INTEGER,
-    cook_time_min INTEGER,
-    total_time_min INTEGER,
-    servings INTEGER,
-    ingredients JSONB NOT NULL DEFAULT '[]'::jsonb,
-    steps JSONB NOT NULL DEFAULT '[]'::jsonb,
+    visibility VARCHAR(20) NOT NULL DEFAULT 'private'
+        CONSTRAINT valid_visibility CHECK (visibility IN ('private', 'unlisted', 'public')),
+    prep_time_minutes INT,
+    cook_time_minutes INT,
+    servings INT,
+    instructions TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_recipes_owner_id ON recipes(owner_id);
-CREATE INDEX IF NOT EXISTS idx_recipes_updated_at ON recipes(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_recipes_user_id ON recipes(user_id);
+CREATE INDEX IF NOT EXISTS idx_recipes_created_at ON recipes(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_recipes_visibility_created ON recipes(visibility, created_at DESC)
+    WHERE visibility = 'public';
 
 -- Recipe tags (many-to-many, freeform text)
 CREATE TABLE IF NOT EXISTS recipe_tags (
     recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
-    tag TEXT NOT NULL,
+    tag VARCHAR(100) NOT NULL,
     PRIMARY KEY (recipe_id, tag)
 );
+```
+
+### New queries for public access
+
+```sql
+-- Public recipes (for explore page)
+SELECT * FROM recipes WHERE visibility = 'public' ORDER BY created_at DESC LIMIT $1 OFFSET $2;
+
+-- User's public recipes (for profile page)
+SELECT * FROM recipes WHERE user_id = $1 AND visibility = 'public' ORDER BY created_at DESC LIMIT $2 OFFSET $3;
+
+-- Public recipe by ID (no ownership check)
+SELECT * FROM recipes WHERE id = $1 AND visibility IN ('public', 'unlisted');
+
+-- User by username (for profile routing)
+SELECT * FROM users WHERE username = $1;
 ```
 
 ### Ingredient JSONB structure
@@ -155,13 +221,18 @@ Each element in the `steps` JSONB array:
 
 ### Server functions
 
-| Function | Purpose |
-|----------|---------|
-| `create_recipe(title, description, prep_time, cook_time, total_time, servings, ingredients, steps, tags)` | Insert recipe row + tags |
-| `get_recipe(recipe_id, user_id)` | Fetch recipe (ownership-gated) |
-| `update_recipe(recipe_id, user_id, title, description, prep_time, cook_time, total_time, servings, ingredients, steps, tags)` | Overwrite recipe row + upsert tags |
-| `delete_recipe(recipe_id, user_id)` | Delete recipe (ownership-gated, tags cascade) |
-| `list_my_recipes(user_id, offset, limit)` | Paginated recipe list for dashboard |
+| Function | Purpose | Auth required? |
+|----------|---------|----------------|
+| `create_recipe(title, description, visibility, prep_time, cook_time, servings, instructions, tags)` | Insert recipe row + tags atomically | Yes |
+| `get_recipe(recipe_id)` | Fetch recipe (ownership-gated for private) | Yes |
+| `get_public_recipe(recipe_id)` | Fetch public/unlisted recipe (no ownership check) | No |
+| `update_recipe(recipe_id, user_id, title, description, visibility, prep_time, cook_time, servings, instructions, tags)` | Overwrite recipe row + upsert tags (ownership in WHERE) | Yes |
+| `delete_recipe(recipe_id, user_id)` | Delete recipe (ownership in WHERE clause, tags cascade) | Yes |
+| `list_my_recipes(user_id, offset, limit)` | Paginated recipe list for dashboard | Yes |
+| `get_public_recipes(offset, limit)` | Paginated public recipes for explore page | No |
+| `get_user_public_recipes(username, offset, limit)` | User's public recipes for profile page | No |
+| `get_user_profile(username)` | User info by username | No |
+| `get_recipe_tags(recipe_id)` | Fetch tags for a recipe | Yes |
 
 ### AuthContext changes
 
@@ -169,23 +240,27 @@ No changes needed. Recipe pages use the existing `current_user_id` from AuthCont
 
 ### Route protection changes
 
-- `/recipes/new` is already protected (in `PROTECTED_PATHS`)
-- `/recipes/:id` should be protected (add to `PROTECTED_PATHS` in auth middleware)
-- `/recipes/:id/edit` should be protected (add to `PROTECTED_PATHS` in auth middleware)
-- Recipe detail page enforces ownership at the application layer (query by `recipe_id + owner_id`)
+- `/recipes/new` is protected (auth required)
+- `/recipes/:id/edit` is protected (auth required)
+- `/recipes/:id` is **public** (no auth middleware) — ownership enforced at application layer:
+  - Private recipes: only owner can view
+  - Unlisted recipes: anyone with link can view
+  - Public recipes: anyone can view
+- `/explore` is **public** (no auth required)
+- `/u/:username` is **public** (no auth required)
 
 ### Component changes
 
 | Component | Change |
 |-----------|--------|
-| `RecipeNew` | Full form with dynamic ingredients/steps, wired to `create_recipe` server function |
-| `RecipeDetail` | Fetches recipe via server function, renders all fields, shows edit/delete |
-| `RecipeEdit` | New page, pre-populated `RecipeForm`, wired to `update_recipe` |
+| `RecipeNew` | Full form with visibility selector, wired to `create_recipe` server function |
+| `RecipeDetail` | Fetches recipe via server function, renders all fields, conditional edit/delete for owners |
+| `RecipeEdit` | Pre-populated form with visibility selector, wired to `update_recipe` |
 | `Dashboard` | Fetches user's recipes via `list_my_recipes`, renders card grid |
-| New: `RecipeForm` | Shared form component used by both create and edit pages |
-| New: `IngredientRow` | Single ingredient input row (amount, unit, name, note, remove button) |
-| New: `StepRow` | Single instruction step input row (text, reorder buttons, remove button) |
-| New: `RecipeCard` | Recipe preview card for dashboard grid |
+| `Explore` | Public recipe listing with tag filters and search |
+| `UserProfile` | User's public profile with recipe grid |
+| New: `RecipeCard` | Recipe preview card for dashboard/explore/profile grids |
+| New: `VisibilitySelector` | Radio/dropdown for private/unlisted/public |
 
 ## Out of Scope
 
@@ -194,30 +269,38 @@ No changes needed. Recipe pages use the existing `current_user_id` from AuthCont
 - Recipe forking/branching (NOMS-009)
 - Recipe images/hero photos (NOMS-011)
 - Recipe import from URLs (Phase 2)
-- Public recipe visibility (Phase 3)
-- Recipe sharing via link (Phase 3)
-- Recipe search and filtering (NOMS-012)
+- Advanced recipe search and full-text filtering (NOMS-012)
 - Recipe scaling UI (Phase 4)
 - Comments and likes (Phase 3)
 - Collections/folders (NOMS-010)
 - Nutritional information (Phase 6)
 - Print/PDF export (Phase 6)
+- Anonymous/guest access (auth required for all recipe views)
 
 ## Checkpoints
 
 | # | Checkpoint | Deliverable |
 |---|------------|-------------|
-| 1 | DB schema + queries | Migration applied, all 8 query functions working, tests pass |
-| 2 | Server functions | All 5 server functions compile and work end-to-end |
-| 3 | Create recipe form | `recipe_new.rs` fully functional, saves to DB, redirects to detail |
-| 4 | Recipe detail view | `recipe_detail.rs` fetches and displays recipe data |
+| 1 | DB schema + queries | Migration applied, all query functions working, tests pass |
+| 2 | Server functions (owner CRUD) | All owner CRUD server functions compile and work end-to-end |
+| 3 | Create recipe form | `recipe_new.rs` fully functional with visibility selector, saves to DB |
+| 4 | Recipe detail view | `recipe_detail.rs` fetches and displays recipe data, conditional owner controls |
 | 5 | Dashboard recipe list | Dashboard shows user's recipes in a card grid |
-| 6 | Edit recipe | Edit form pre-populates, overwrites row, redirects back |
+| 6 | Edit recipe | Edit form pre-populates with visibility, overwrites row, redirects back |
 | 7 | Delete recipe | Confirmation dialog, deletes recipe, redirects to dashboard |
+| 8 | DB + API for public access | Public queries, user lookup, visibility filtering, tests |
+| 9 | Explore page | `/explore` renders public recipe grid with tag filters |
+| 10 | User profile page | `/u/:username` shows user's public recipes and profile info |
+| 11 | Public recipe detail | Non-owner viewing, view-only mode, owner attribution |
 
 ## Success Metrics
 
 - User can sign in → create a recipe → see it on dashboard → view detail → edit it → delete it
-- All 7 checkpoints pass with tests
+- User can set recipe to public → another user can find it on Explore page → view it (read-only)
+- User can visit `/u/:username` → see that user's public recipes
+- Owner sees edit/delete on their recipes; non-owner sees "View Profile" link instead
+- Private recipes are invisible to non-owners; unlisted recipes only accessible via direct link
+- All 11 checkpoints pass with tests
 - Zero clippy warnings on both wasm32 and x86_64 targets
 - No unhandled error paths in server functions
+- Defense-in-depth: DB layer enforces ownership on mutations even if API layer forgets

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, created_at, updated_at FROM recipes WHERE user_id = $1 ORDER BY created_at DESC",
+  "query": "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, visibility, created_at, updated_at FROM recipes WHERE user_id = $1 ORDER BY created_at DESC",
   "describe": {
     "columns": [
       {
@@ -45,11 +45,16 @@
       },
       {
         "ordinal": 8,
+        "name": "visibility",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -69,8 +74,9 @@
       true,
       true,
       false,
+      false,
       false
     ]
   },
-  "hash": "880b076ba84c968cce5b614056b48bde370b240eea0e725bfcaa86b9ab36d278"
+  "hash": "c1eb786080ce85a27cda82a22942a01f368447f51829f8e81bd4d3108263cbbc"
 }

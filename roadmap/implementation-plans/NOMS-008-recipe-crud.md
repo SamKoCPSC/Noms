@@ -1,8 +1,9 @@
-# NOMS-008: Recipe CRUD — Implementation Plan
+# NOMS-008: Recipe CRUD + Visibility & Discovery — Implementation Plan
 
 **Issue:** [NOMS-008-recipe-crud.md](../issues/NOMS-008-recipe-crud.md)
 **Created:** 2026-06-08
-**Approach:** Bottom-up by dependency, 7 incremental checkpoints
+**Updated:** 2026-06-13 (expanded scope: visibility + discovery)
+**Approach:** Bottom-up by dependency, 11 incremental checkpoints
 
 ---
 
@@ -280,3 +281,145 @@ If any checkpoint reveals issues:
 - Schema tables can be dropped manually: `DROP TABLE recipe_tags, recipes CASCADE`
 - Code changes are isolated to new files + minimal modifications to existing files
 - Each checkpoint is independently reversible
+
+---
+
+## Checkpoint 8: DB + API for public access
+
+**Files:** `migrations/schema.sql`, `src/db/mod.rs`, `src/api/recipe.rs`
+
+**Schema changes** (append to `schema.sql`, additive-only):
+- Add `visibility` column: `ALTER TABLE recipes ADD COLUMN visibility VARCHAR(20) NOT NULL DEFAULT 'private'`
+- Add CHECK constraint: `ALTER TABLE recipes ADD CONSTRAINT valid_visibility CHECK (visibility IN ('private', 'unlisted', 'public'))`
+- Add partial index for public recipes: `CREATE INDEX IF NOT EXISTS idx_recipes_visibility_created ON recipes(visibility, created_at DESC) WHERE visibility = 'public'`
+- Update `insert_recipe()` to accept `visibility` parameter
+- Update `update_recipe()` to accept `visibility` parameter
+
+**New DB query functions** (4 total):
+- `get_public_recipes_paginated()` — `WHERE visibility = 'public' ORDER BY created_at DESC LIMIT/OFFSET`
+- `get_recipe_by_id_public()` — `WHERE id = $1 AND visibility IN ('public', 'unlisted')` (no ownership check)
+- `get_user_public_recipes()` — `WHERE user_id = $1 AND visibility = 'public' ORDER BY created_at DESC LIMIT/OFFSET`
+- `get_user_by_username()` — `WHERE username = $1` (for profile routing)
+
+**New server functions** (3 total):
+- `get_public_recipe(recipe_id)` — fetch public/unlisted recipe, no auth required
+- `get_public_recipes(offset, limit)` — paginated public recipes for explore page
+- `get_user_profile(username)` — user info + public recipe count
+
+**Updated server functions:**
+- `create_recipe()` — add `visibility` parameter
+- `update_recipe()` — add `visibility` parameter
+- `get_recipe()` — handle visibility: private requires ownership, public/unlisted allow any authenticated user
+
+**Verify:**
+- `cargo test --features server` — all new query functions tested
+- Public recipe visible to non-owner; private recipe returns error
+- Unlisted recipe only accessible via direct ID lookup
+- `cargo check --target wasm32-unknown-unknown` — zero errors
+
+**Risk:** Low. Straightforward query additions.
+
+---
+
+## Checkpoint 9: Explore page
+
+**Files:** `src/pages/explore.rs`, `src/main.rs` (route already exists)
+
+**`explore.rs` changes:**
+- Fetch public recipes via `get_public_recipes` server function
+- Render recipe card grid (reuse `RecipeCard` component)
+- Tag filter: clickable chips that filter recipes by tag (client-side or server-side)
+- Search input: filter by title (client-side for simplicity)
+- Pagination: "Load more" button
+- Empty state: "No public recipes yet. Be the first to share!"
+- No auth required to browse
+
+**Verify:**
+- Navigate to `/explore` → public recipes displayed
+- Private recipes do not appear
+- Tag filtering works
+- Search filtering works
+- "Load more" paginates correctly
+
+**Risk:** Low. Reuses existing card component and pagination pattern.
+
+---
+
+## Checkpoint 10: User profile page
+
+**Files:** `src/pages/user_profile.rs` (new), `src/main.rs` (new route)
+
+**Route addition:** `#[route("/u/:username")] UserProfile { username: String }`
+
+**`user_profile.rs`:**
+- Fetch user via `get_user_profile` server function on mount
+- Fetch user's public recipes via `get_user_public_recipes` server function
+- Render:
+  - User avatar, display name, bio, join date
+  - Public recipe grid (paginated)
+  - Empty state if user has no public recipes
+- 404 if username doesn't exist
+- No auth required to view
+
+**Verify:**
+- Navigate to `/u/username` → user profile renders
+- Only public recipes shown (unlisted/private hidden)
+- Invalid username shows 404
+- Recipe cards link to detail pages
+
+**Risk:** Low. Standard profile page pattern.
+
+---
+
+## Checkpoint 11: Public recipe detail
+
+**Files:** `src/pages/recipe_detail.rs`, `src/middleware/auth.rs`
+
+**Auth middleware change:**
+- Remove `/recipes/:id` from protected paths (allow public access)
+- Keep `/recipes/:id/edit` protected
+- Keep `/recipes/new` protected
+
+**`recipe_detail.rs` changes:**
+- Try `get_recipe()` first (ownership-gated); if fails, try `get_public_recipe()`
+- Owner mode: show "Edit" and "Delete" buttons
+- Non-owner mode: show "View Owner's Profile" link to `/u/:username`
+- Private recipe accessed by non-owner: "Recipe not found" (no existence leakage)
+- Unlisted recipe: renders normally when accessed via direct link
+- Owner attribution: avatar + username (linked to `/u/:username`) + created date
+
+**Verify:**
+- Owner visits own recipe → sees edit/delete buttons
+- Non-owner visits public recipe → sees view-only mode with profile link
+- Non-owner visits private recipe → sees "not found"
+- Unlisted recipe accessible via direct link only
+- Owner username links to their profile page
+
+**Risk:** Medium. Conditional rendering based on ownership requires careful state management.
+
+---
+
+## Updated File Structure
+
+```
+src/
+├── api/
+│   ├── mod.rs                    # Re-exports recipe module
+│   └── recipe.rs                 # Server functions + serialization types
+├── db/
+│   └── mod.rs                    # Recipe, RecipeTag types + all query functions
+├── components/
+│   └── base/
+│       ├── recipe_card.rs        # Recipe preview card for grids
+│       └── visibility_selector.rs # Visibility radio/dropdown
+├── middleware/
+│   └── auth.rs                   # Updated: /recipes/:id is public
+├── pages/
+│   ├── dashboard.rs              # Recipe card grid + list_my_recipes
+│   ├── explore.rs                # Public recipe discovery
+│   ├── recipe_detail.rs          # Full recipe view (owner + public modes)
+│   ├── recipe_edit.rs            # Edit page
+│   ├── recipe_new.rs             # Create page
+│   └── user_profile.rs           # User's public profile
+└── main.rs                       # Routes including /u/:username
+```

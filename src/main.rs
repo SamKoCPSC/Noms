@@ -3,17 +3,17 @@ use dioxus::prelude::*;
 use dioxus::server::{DioxusRouterExt, ServeConfig};
 use manganis::CssAssetOptions;
 
+mod api;
 mod auth;
 mod components;
 #[cfg(feature = "server")]
 mod db;
 #[cfg(feature = "server")]
 mod middleware;
-mod api;
 mod pages;
-mod types;
 #[cfg(all(feature = "server", test))]
 mod test_utils;
+mod types;
 mod utils;
 
 use auth::context::{build_context_from_fullstack, AuthContext};

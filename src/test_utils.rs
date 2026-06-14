@@ -145,12 +145,14 @@ pub async fn apply_test_schema(pool: &PgPool) {
          user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,\
          title VARCHAR(255) NOT NULL,\
          description TEXT,\
+         visibility VARCHAR(20) NOT NULL DEFAULT 'private',\
          prep_time_minutes INT,\
          cook_time_minutes INT,\
          servings INT,\
          instructions TEXT,\
          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
-         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
+         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
+         CONSTRAINT valid_recipe_visibility CHECK (visibility IN ('private', 'unlisted', 'public'))\
          )",
     )
     .execute(pool)

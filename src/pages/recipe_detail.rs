@@ -6,9 +6,9 @@
 use chrono::{DateTime, Utc};
 use dioxus::prelude::*;
 
-use crate::api::recipe::{get_recipe, get_recipe_tags};
 #[cfg(target_arch = "wasm32")]
 use crate::api::recipe::delete_recipe;
+use crate::api::recipe::{get_recipe, get_recipe_tags};
 use crate::auth::context::use_auth;
 use crate::components::base::{Button, ButtonVariant, Card, LoadingSpinner, PageHeader};
 use crate::components::AuthRequired;
@@ -87,7 +87,9 @@ fn parse_instructions(text: &str) -> ParsedInstructions {
                     } else {
                         String::new()
                     };
-                    result.ingredients.push(ParsedIngredient { amount, unit, name });
+                    result
+                        .ingredients
+                        .push(ParsedIngredient { amount, unit, name });
                 }
             }
             "steps" => {
@@ -168,10 +170,8 @@ pub fn RecipeDetail(id: String) -> Element {
     let any_pending = recipe_pending || tags_pending;
 
     // Read resource results to avoid borrow issues in rsx!
-    let recipe_result: Option<Result<Recipe, ServerFnError>> =
-        recipe_resource.read().clone();
-    let tags_result: Option<Result<Vec<String>, ServerFnError>> =
-        tags_resource.read().clone();
+    let recipe_result: Option<Result<Recipe, ServerFnError>> = recipe_resource.read().clone();
+    let tags_result: Option<Result<Vec<String>, ServerFnError>> = tags_resource.read().clone();
 
     // ── Derived state ────────────────────────────────────────────────────
     let recipe = recipe_result.as_ref().and_then(|r| r.as_ref().ok());
@@ -219,9 +219,7 @@ pub fn RecipeDetail(id: String) -> Element {
                             }
                             Err(e) => {
                                 let msg = match &e {
-                                    ServerFnError::ServerError { message, .. } => {
-                                        message.clone()
-                                    }
+                                    ServerFnError::ServerError { message, .. } => message.clone(),
                                     _ => e.to_string(),
                                 };
                                 delete_error.set(Some(msg));

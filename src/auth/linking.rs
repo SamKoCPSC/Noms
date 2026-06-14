@@ -179,7 +179,7 @@ async fn generate_unique_username(
         let suffix = &Uuid::new_v4().to_string()[..4];
         let candidate = format!("{base}-{suffix}");
 
-        if !db::get_user_by_username(tx.deref_mut(), &candidate).await? {
+        if !db::username_exists(tx.deref_mut(), &candidate).await? {
             return Ok(candidate);
         }
     }
@@ -187,7 +187,7 @@ async fn generate_unique_username(
     // Fallback: user-{8hex} with uniqueness check
     for _ in 0..3 {
         let fallback = format!("user-{}", &Uuid::new_v4().to_string()[..8]);
-        if !db::get_user_by_username(tx.deref_mut(), &fallback).await? {
+        if !db::username_exists(tx.deref_mut(), &fallback).await? {
             return Ok(fallback);
         }
     }

@@ -1,7 +1,9 @@
 use dioxus::prelude::*;
 
 use crate::api::recipe::list_my_recipes;
-use crate::components::base::{Button, ButtonVariant, EmptyState, LoadingSpinner, PageHeader, RecipeCard};
+use crate::components::base::{
+    Button, ButtonVariant, EmptyState, LoadingSpinner, PageHeader, RecipeCard,
+};
 use crate::components::AuthRequired;
 use crate::types::RecipeListResponse;
 use crate::Route;
@@ -23,8 +25,7 @@ pub fn Dashboard() -> Element {
 
     // Extract resource state to avoid borrow issues in rsx!
     let pending = recipes.pending();
-    let recipes_result: Option<Result<RecipeListResponse, ServerFnError>> =
-        recipes.read().clone();
+    let recipes_result: Option<Result<RecipeListResponse, ServerFnError>> = recipes.read().clone();
 
     // Derived state
     let response = recipes_result.as_ref().and_then(|r| r.as_ref().ok());

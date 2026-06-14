@@ -98,3 +98,16 @@ CREATE TABLE IF NOT EXISTS recipe_tags (
 
 CREATE INDEX IF NOT EXISTS idx_recipes_user_id ON recipes(user_id);
 CREATE INDEX IF NOT EXISTS idx_recipes_created_at ON recipes(created_at DESC);
+
+-- ── Recipe visibility (CP8: public access) ────────────────────────────────
+
+-- Add visibility column with default 'private' (additive-only, safe to re-run)
+ALTER TABLE recipes ADD COLUMN IF NOT EXISTS visibility VARCHAR(20) NOT NULL DEFAULT 'private';
+
+-- Add CHECK constraint for valid visibility values
+ALTER TABLE recipes ADD CONSTRAINT valid_recipe_visibility
+    CHECK (visibility IN ('private', 'unlisted', 'public'));
+
+-- Partial index for public recipe discovery (explore page)
+CREATE INDEX IF NOT EXISTS idx_recipes_visibility_created ON recipes(visibility, created_at DESC)
+    WHERE visibility = 'public';

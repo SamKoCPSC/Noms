@@ -29,10 +29,7 @@ struct StepDraft {
 
 /// Combine ingredients and steps into a single markdown-style text block
 /// suitable for the `instructions` TEXT column.
-fn serialize_instructions(
-    ingredients: &[IngredientDraft],
-    steps: &[StepDraft],
-) -> String {
+fn serialize_instructions(ingredients: &[IngredientDraft], steps: &[StepDraft]) -> String {
     let mut text = String::new();
 
     if !ingredients.is_empty() {
@@ -74,8 +71,8 @@ pub fn RecipeNew() -> Element {
     let mut servings = use_signal(String::new);
 
     // Dynamic lists
-    let mut ingredients = use_signal(|| Vec::<IngredientDraft>::new());
-    let mut steps = use_signal(|| Vec::<StepDraft>::new());
+    let mut ingredients = use_signal(Vec::<IngredientDraft>::new);
+    let mut steps = use_signal(Vec::<StepDraft>::new);
 
     // Tags (comma-separated)
     let mut tags_input = use_signal(String::new);
@@ -151,13 +148,16 @@ pub fn RecipeNew() -> Element {
                 serv,
                 Some(instructions),
                 tags,
+                "private".to_string(),
             )
             .await
             {
                 Ok(recipe) => {
                     // Navigate to recipe detail page
                     if let Some(window) = web_sys::window() {
-                        let _ = window.location().set_href(&format!("/recipes/{}", recipe.id));
+                        let _ = window
+                            .location()
+                            .set_href(&format!("/recipes/{}", recipe.id));
                     }
                 }
                 Err(e) => {

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO recipes (user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, created_at, updated_at",
+  "query": "INSERT INTO recipes (user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, visibility) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, visibility, created_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -45,11 +45,16 @@
       },
       {
         "ordinal": 8,
+        "name": "visibility",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -62,7 +67,8 @@
         "Int4",
         "Int4",
         "Int4",
-        "Text"
+        "Text",
+        "Varchar"
       ]
     },
     "nullable": [
@@ -75,8 +81,9 @@
       true,
       true,
       false,
+      false,
       false
     ]
   },
-  "hash": "902a1288005707ea0f33bf9347fd2d57ded380f634aea826761bcd7d8bea8c1d"
+  "hash": "bf896306b848a33e0579973b2e7ddeb2251aca9d77b94f2d02f5e45068a7272c"
 }

@@ -187,6 +187,7 @@ impl sqlx::FromRow<'_, sqlx::postgres::PgRow> for Recipe {
             cook_time_minutes: row.try_get("cook_time_minutes")?,
             servings: row.try_get("servings")?,
             instructions: row.try_get("instructions")?,
+            visibility: row.try_get("visibility")?,
             created_at: row.try_get("created_at")?,
             updated_at: row.try_get("updated_at")?,
         })
@@ -572,7 +573,7 @@ pub async fn get_user_by_id(
 }
 
 /// Check whether a username already exists.
-pub async fn get_user_by_username(
+pub async fn username_exists(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     username: &str,
 ) -> Result<bool, DbError> {
@@ -681,6 +682,7 @@ pub async fn update_username(
 // ── Recipe queries ──────────────────────────────────────────────────────────
 
 /// Insert a new recipe. Returns the created recipe with the generated ID.
+#[allow(clippy::too_many_arguments)]
 pub async fn insert_recipe(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     user_id: Uuid,
@@ -690,12 +692,13 @@ pub async fn insert_recipe(
     cook_time_minutes: Option<i32>,
     servings: Option<i32>,
     instructions: Option<&str>,
+    visibility: &str,
 ) -> Result<Recipe, DbError> {
     sqlx::query_as!(
         Recipe,
-        "INSERT INTO recipes (user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7) \
-         RETURNING id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, created_at, updated_at",
+        "INSERT INTO recipes (user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, visibility) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) \
+         RETURNING id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, visibility, created_at, updated_at",
         user_id,
         title,
         description,
@@ -703,6 +706,7 @@ pub async fn insert_recipe(
         cook_time_minutes,
         servings,
         instructions,
+        visibility,
     )
     .fetch_one(executor)
     .await
@@ -716,7 +720,7 @@ pub async fn get_recipe_by_id(
 ) -> Result<Option<Recipe>, DbError> {
     sqlx::query_as!(
         Recipe,
-        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, created_at, updated_at \
+        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, visibility, created_at, updated_at \
          FROM recipes WHERE id = $1",
         id,
     )
@@ -734,7 +738,7 @@ pub async fn get_recipe_by_id_and_owner(
 ) -> Result<Recipe, DbError> {
     sqlx::query_as!(
         Recipe,
-        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, created_at, updated_at \
+        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, visibility, created_at, updated_at \
          FROM recipes WHERE id = $1 AND user_id = $2",
         id,
         user_id,
@@ -754,7 +758,7 @@ pub async fn get_recipes_by_owner(
 ) -> Result<Vec<Recipe>, DbError> {
     sqlx::query_as!(
         Recipe,
-        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, created_at, updated_at \
+        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, visibility, created_at, updated_at \
          FROM recipes WHERE user_id = $1 \
          ORDER BY created_at DESC",
         user_id,
@@ -768,6 +772,7 @@ pub async fn get_recipes_by_owner(
 /// Returns `DbError::RecipeNotFound` if the recipe doesn't exist.
 /// Update a recipe, enforcing ownership via `user_id` in the WHERE clause.
 /// Returns `DbError::RecipeNotFound` if the recipe doesn't exist or doesn't belong to the user.
+#[allow(clippy::too_many_arguments)]
 pub async fn update_recipe(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     id: Uuid,
@@ -778,14 +783,17 @@ pub async fn update_recipe(
     cook_time_minutes: Option<i32>,
     servings: Option<i32>,
     instructions: Option<&str>,
+    visibility: Option<&str>,
 ) -> Result<Recipe, DbError> {
     sqlx::query_as!(
         Recipe,
         "UPDATE recipes \
          SET title = $3, description = $4, prep_time_minutes = $5, cook_time_minutes = $6, \
-             servings = $7, instructions = $8, updated_at = NOW() \
+             servings = $7, instructions = $8, \
+             visibility = COALESCE($9::VARCHAR, recipes.visibility), \
+             updated_at = NOW() \
          WHERE id = $1 AND user_id = $2 \
-         RETURNING id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, created_at, updated_at",
+         RETURNING id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, visibility, created_at, updated_at",
         id,
         user_id,
         title,
@@ -794,6 +802,7 @@ pub async fn update_recipe(
         cook_time_minutes,
         servings,
         instructions,
+        visibility,
     )
     .fetch_one(executor)
     .await
@@ -875,7 +884,7 @@ pub async fn get_recipes_by_owner_paginated(
 ) -> Result<Vec<Recipe>, DbError> {
     sqlx::query_as!(
         Recipe,
-        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, created_at, updated_at \
+        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, visibility, created_at, updated_at \
          FROM recipes WHERE user_id = $1 \
          ORDER BY created_at DESC \
          LIMIT $2 OFFSET $3",
@@ -898,6 +907,109 @@ pub async fn count_recipes_by_owner(
         .fetch_one(executor)
         .await
         .map_err(DbError::Query)?;
+    Ok(count)
+}
+
+// ── Public access queries (CP8) ──────────────────────────────────────────────
+
+/// Get a full user record by username. Returns `None` if not found.
+pub async fn get_user_by_username(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    username: &str,
+) -> Result<Option<User>, DbError> {
+    sqlx::query_as!(
+        User,
+        "SELECT id, username, display_name, email, avatar_url, bio, created_at, updated_at \
+         FROM users WHERE username = $1",
+        username,
+    )
+    .fetch_optional(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Get public recipes with pagination, ordered by most recently created first.
+pub async fn get_public_recipes_paginated(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<Recipe>, DbError> {
+    sqlx::query_as!(
+        Recipe,
+        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, visibility, created_at, updated_at \
+         FROM recipes WHERE visibility = 'public' \
+         ORDER BY created_at DESC \
+         LIMIT $1 OFFSET $2",
+        limit,
+        offset,
+    )
+    .fetch_all(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Count total public recipes (for pagination has_more calculation).
+pub async fn count_public_recipes(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+) -> Result<i64, DbError> {
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM recipes WHERE visibility = 'public'")
+        .fetch_one(executor)
+        .await
+        .map_err(DbError::Query)?;
+    Ok(count)
+}
+
+/// Get a recipe by ID for public/unlisted access (no ownership check).
+/// Returns `None` if the recipe doesn't exist or is private.
+pub async fn get_recipe_by_id_public(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    id: Uuid,
+) -> Result<Option<Recipe>, DbError> {
+    sqlx::query_as!(
+        Recipe,
+        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, visibility, created_at, updated_at \
+         FROM recipes WHERE id = $1 AND visibility IN ('public', 'unlisted')",
+        id,
+    )
+    .fetch_optional(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Get a user's public recipes with pagination, ordered by most recently created first.
+pub async fn get_user_public_recipes(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    user_id: Uuid,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<Recipe>, DbError> {
+    sqlx::query_as!(
+        Recipe,
+        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, visibility, created_at, updated_at \
+         FROM recipes WHERE user_id = $1 AND visibility = 'public' \
+         ORDER BY created_at DESC \
+         LIMIT $2 OFFSET $3",
+        user_id,
+        limit,
+        offset,
+    )
+    .fetch_all(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Count a user's public recipes (for profile page pagination).
+pub async fn count_user_public_recipes(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    user_id: Uuid,
+) -> Result<i64, DbError> {
+    let count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM recipes WHERE user_id = $1 AND visibility = 'public'",
+    )
+    .bind(user_id)
+    .fetch_one(executor)
+    .await
+    .map_err(DbError::Query)?;
     Ok(count)
 }
 
@@ -1547,17 +1659,24 @@ mod tests {
             Some(15),
             Some(4),
             Some("Mix batter, cook on griddle"),
+            "private",
         )
         .await
         .unwrap();
 
         assert_eq!(recipe.title, "Pancakes");
         assert_eq!(recipe.user_id, user.id);
-        assert_eq!(recipe.description, Some("Fluffy buttermilk pancakes".to_string()));
+        assert_eq!(
+            recipe.description,
+            Some("Fluffy buttermilk pancakes".to_string())
+        );
         assert_eq!(recipe.prep_time_minutes, Some(10));
         assert_eq!(recipe.cook_time_minutes, Some(15));
         assert_eq!(recipe.servings, Some(4));
-        assert_eq!(recipe.instructions, Some("Mix batter, cook on griddle".to_string()));
+        assert_eq!(
+            recipe.instructions,
+            Some("Mix batter, cook on griddle".to_string())
+        );
     }
 
     #[tokio::test]
@@ -1584,6 +1703,7 @@ mod tests {
             Some(5),
             None,
             None,
+            "private",
         )
         .await
         .unwrap();
@@ -1621,6 +1741,7 @@ mod tests {
             None,
             None,
             None,
+            "private",
         )
         .await
         .unwrap();
@@ -1662,13 +1783,17 @@ mod tests {
         assert!(recipes.is_empty());
 
         // Insert two recipes
-        insert_recipe(&pool, user.id, "Recipe A", None, None, None, None, None)
-            .await
-            .unwrap();
+        insert_recipe(
+            &pool, user.id, "Recipe A", None, None, None, None, None, "private",
+        )
+        .await
+        .unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-        insert_recipe(&pool, user.id, "Recipe B", None, None, None, None, None)
-            .await
-            .unwrap();
+        insert_recipe(
+            &pool, user.id, "Recipe B", None, None, None, None, None, "private",
+        )
+        .await
+        .unwrap();
 
         let recipes = get_recipes_by_owner(&pool, user.id).await.unwrap();
         assert_eq!(recipes.len(), 2);
@@ -1701,6 +1826,7 @@ mod tests {
             None,
             None,
             None,
+            "private",
         )
         .await
         .unwrap();
@@ -1718,6 +1844,7 @@ mod tests {
             Some(30),
             Some(6),
             Some("New instructions"),
+            None,
         )
         .await
         .unwrap();
@@ -1732,7 +1859,10 @@ mod tests {
 
         // Update nonexistent recipe
         let fake_id = Uuid::nil();
-        let result = update_recipe(&pool, fake_id, user.id, "X", None, None, None, None, None).await;
+        let result = update_recipe(
+            &pool, fake_id, user.id, "X", None, None, None, None, None, None,
+        )
+        .await;
         assert!(matches!(result, Err(DbError::RecipeNotFound(_))));
 
         // Update another user's recipe — should fail (ownership enforced at DB layer)
@@ -1745,7 +1875,19 @@ mod tests {
         )
         .await
         .unwrap();
-        let result = update_recipe(&pool, recipe.id, other_user.id, "Hacked", None, None, None, None, None).await;
+        let result = update_recipe(
+            &pool,
+            recipe.id,
+            other_user.id,
+            "Hacked",
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        .await;
         assert!(matches!(result, Err(DbError::RecipeNotFound(_))));
     }
 
@@ -1764,9 +1906,19 @@ mod tests {
         .await
         .unwrap();
 
-        let recipe = insert_recipe(&pool, user.id, "To Delete", None, None, None, None, None)
-            .await
-            .unwrap();
+        let recipe = insert_recipe(
+            &pool,
+            user.id,
+            "To Delete",
+            None,
+            None,
+            None,
+            None,
+            None,
+            "private",
+        )
+        .await
+        .unwrap();
 
         // Delete another user's recipe — should fail (ownership enforced at DB layer)
         let other_user = insert_user(
@@ -1808,16 +1960,30 @@ mod tests {
         .await
         .unwrap();
 
-        let recipe = insert_recipe(&pool, user.id, "Tagged Recipe", None, None, None, None, None)
-            .await
-            .unwrap();
+        let recipe = insert_recipe(
+            &pool,
+            user.id,
+            "Tagged Recipe",
+            None,
+            None,
+            None,
+            None,
+            None,
+            "private",
+        )
+        .await
+        .unwrap();
 
         // Initially no tags
         let tags = get_recipe_tags(&pool, recipe.id).await.unwrap();
         assert!(tags.is_empty());
 
         // Insert tags
-        let tags_to_insert = vec!["breakfast".to_string(), "quick".to_string(), "easy".to_string()];
+        let tags_to_insert = vec![
+            "breakfast".to_string(),
+            "quick".to_string(),
+            "easy".to_string(),
+        ];
         {
             let mut tx = pool.begin().await.unwrap();
             insert_recipe_tags(&mut tx, recipe.id, &tags_to_insert)
@@ -1850,9 +2016,7 @@ mod tests {
         // Empty tags clears all
         {
             let mut tx = pool.begin().await.unwrap();
-            insert_recipe_tags(&mut tx, recipe.id, &[])
-                .await
-                .unwrap();
+            insert_recipe_tags(&mut tx, recipe.id, &[]).await.unwrap();
             tx.commit().await.unwrap();
         }
 
@@ -1884,6 +2048,7 @@ mod tests {
             None,
             None,
             None,
+            "private",
         )
         .await
         .unwrap();
@@ -1891,9 +2056,7 @@ mod tests {
         let tags = vec!["tag1".to_string(), "tag2".to_string()];
         {
             let mut tx = pool.begin().await.unwrap();
-            insert_recipe_tags(&mut tx, recipe.id, &tags)
-                .await
-                .unwrap();
+            insert_recipe_tags(&mut tx, recipe.id, &tags).await.unwrap();
             tx.commit().await.unwrap();
         }
 
@@ -1926,9 +2089,19 @@ mod tests {
 
         // Insert 4 recipes with small delays for ordering
         for i in 1..=4 {
-            insert_recipe(&pool, user.id, &format!("Recipe {i}"), None, None, None, None, None)
-                .await
-                .unwrap();
+            insert_recipe(
+                &pool,
+                user.id,
+                &format!("Recipe {i}"),
+                None,
+                None,
+                None,
+                None,
+                None,
+                "private",
+            )
+            .await
+            .unwrap();
             tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         }
 
@@ -1975,12 +2148,16 @@ mod tests {
         assert_eq!(count, 0);
 
         // Insert two recipes
-        insert_recipe(&pool, user.id, "Count A", None, None, None, None, None)
-            .await
-            .unwrap();
-        insert_recipe(&pool, user.id, "Count B", None, None, None, None, None)
-            .await
-            .unwrap();
+        insert_recipe(
+            &pool, user.id, "Count A", None, None, None, None, None, "private",
+        )
+        .await
+        .unwrap();
+        insert_recipe(
+            &pool, user.id, "Count B", None, None, None, None, None, "private",
+        )
+        .await
+        .unwrap();
 
         let count = count_recipes_by_owner(&pool, user.id).await.unwrap();
         assert_eq!(count, 2);
@@ -1997,5 +2174,518 @@ mod tests {
         .unwrap();
         let other_count = count_recipes_by_owner(&pool, other_user.id).await.unwrap();
         assert_eq!(other_count, 0);
+    }
+
+    // ── Visibility tests (CP8) ──────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_insert_recipe_with_visibility() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("visuser_{u}"),
+            "Visibility User",
+            &format!("vis{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let r_public = insert_recipe(
+            &pool, user.id, "Public", None, None, None, None, None, "public",
+        )
+        .await
+        .unwrap();
+        assert_eq!(r_public.visibility, "public");
+
+        let r_unlisted = insert_recipe(
+            &pool, user.id, "Unlisted", None, None, None, None, None, "unlisted",
+        )
+        .await
+        .unwrap();
+        assert_eq!(r_unlisted.visibility, "unlisted");
+
+        let r_private = insert_recipe(
+            &pool, user.id, "Private", None, None, None, None, None, "private",
+        )
+        .await
+        .unwrap();
+        assert_eq!(r_private.visibility, "private");
+    }
+
+    #[tokio::test]
+    async fn test_get_public_recipes_paginated() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user_a = insert_user(
+            &pool,
+            &format!("puba_{u}"),
+            "Public A",
+            &format!("puba{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let user_b = insert_user(
+            &pool,
+            &format!("pubb_{u}"),
+            "Public B",
+            &format!("pubb{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // User A: 2 public + 1 private
+        insert_recipe(
+            &pool,
+            user_a.id,
+            "A Public 1",
+            None,
+            None,
+            None,
+            None,
+            None,
+            "public",
+        )
+        .await
+        .unwrap();
+        insert_recipe(
+            &pool,
+            user_a.id,
+            "A Public 2",
+            None,
+            None,
+            None,
+            None,
+            None,
+            "public",
+        )
+        .await
+        .unwrap();
+        insert_recipe(
+            &pool,
+            user_a.id,
+            "A Private",
+            None,
+            None,
+            None,
+            None,
+            None,
+            "private",
+        )
+        .await
+        .unwrap();
+
+        // User B: 1 public
+        insert_recipe(
+            &pool, user_b.id, "B Public", None, None, None, None, None, "public",
+        )
+        .await
+        .unwrap();
+
+        // All public: 3 recipes
+        let all = get_public_recipes_paginated(&pool, 10, 0).await.unwrap();
+        assert_eq!(all.len(), 3);
+        for r in &all {
+            assert_eq!(r.visibility, "public");
+        }
+
+        // Pagination: limit 2, offset 0
+        let page1 = get_public_recipes_paginated(&pool, 2, 0).await.unwrap();
+        assert_eq!(page1.len(), 2);
+
+        // Pagination: limit 2, offset 2
+        let page2 = get_public_recipes_paginated(&pool, 2, 2).await.unwrap();
+        assert_eq!(page2.len(), 1);
+
+        // Pagination: limit 2, offset 5 — empty
+        let page3 = get_public_recipes_paginated(&pool, 2, 5).await.unwrap();
+        assert!(page3.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_count_public_recipes() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("cpub_{u}"),
+            "Count Public",
+            &format!("cpub{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        insert_recipe(
+            &pool, user.id, "Pub 1", None, None, None, None, None, "public",
+        )
+        .await
+        .unwrap();
+        insert_recipe(
+            &pool, user.id, "Pub 2", None, None, None, None, None, "public",
+        )
+        .await
+        .unwrap();
+        insert_recipe(
+            &pool, user.id, "Priv 1", None, None, None, None, None, "private",
+        )
+        .await
+        .unwrap();
+        insert_recipe(
+            &pool, user.id, "Unlist 1", None, None, None, None, None, "unlisted",
+        )
+        .await
+        .unwrap();
+
+        let count = count_public_recipes(&pool).await.unwrap();
+        assert_eq!(count, 2);
+    }
+
+    #[tokio::test]
+    async fn test_get_recipe_by_id_public() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("gr_{u}"),
+            "Get Recipe",
+            &format!("gr{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let r_public = insert_recipe(
+            &pool, user.id, "Public", None, None, None, None, None, "public",
+        )
+        .await
+        .unwrap();
+        let r_unlisted = insert_recipe(
+            &pool, user.id, "Unlisted", None, None, None, None, None, "unlisted",
+        )
+        .await
+        .unwrap();
+        let r_private = insert_recipe(
+            &pool, user.id, "Private", None, None, None, None, None, "private",
+        )
+        .await
+        .unwrap();
+
+        // Public is accessible
+        let found = get_recipe_by_id_public(&pool, r_public.id).await.unwrap();
+        assert!(found.is_some());
+        assert_eq!(found.unwrap().title, "Public");
+
+        // Unlisted is accessible
+        let found = get_recipe_by_id_public(&pool, r_unlisted.id).await.unwrap();
+        assert!(found.is_some());
+        assert_eq!(found.unwrap().title, "Unlisted");
+
+        // Private is NOT accessible
+        let found = get_recipe_by_id_public(&pool, r_private.id).await.unwrap();
+        assert!(found.is_none());
+
+        // Non-existent ID returns None
+        let found = get_recipe_by_id_public(&pool, uuid::Uuid::new_v4())
+            .await
+            .unwrap();
+        assert!(found.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_get_user_public_recipes() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("gupr_{u}"),
+            "Get User Public",
+            &format!("gupr{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        insert_recipe(
+            &pool, user.id, "Pub 1", None, None, None, None, None, "public",
+        )
+        .await
+        .unwrap();
+        insert_recipe(
+            &pool, user.id, "Pub 2", None, None, None, None, None, "public",
+        )
+        .await
+        .unwrap();
+        insert_recipe(
+            &pool, user.id, "Priv 1", None, None, None, None, None, "private",
+        )
+        .await
+        .unwrap();
+
+        // Only public recipes returned
+        let recipes = get_user_public_recipes(&pool, user.id, 10, 0)
+            .await
+            .unwrap();
+        assert_eq!(recipes.len(), 2);
+
+        // Pagination
+        let page1 = get_user_public_recipes(&pool, user.id, 1, 0).await.unwrap();
+        assert_eq!(page1.len(), 1);
+
+        let page2 = get_user_public_recipes(&pool, user.id, 1, 1).await.unwrap();
+        assert_eq!(page2.len(), 1);
+
+        let page3 = get_user_public_recipes(&pool, user.id, 1, 2).await.unwrap();
+        assert!(page3.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_count_user_public_recipes() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("cupr_{u}"),
+            "Count User Public",
+            &format!("cupr{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        insert_recipe(
+            &pool, user.id, "Pub 1", None, None, None, None, None, "public",
+        )
+        .await
+        .unwrap();
+        insert_recipe(
+            &pool, user.id, "Priv 1", None, None, None, None, None, "private",
+        )
+        .await
+        .unwrap();
+        insert_recipe(
+            &pool, user.id, "Unlist 1", None, None, None, None, None, "unlisted",
+        )
+        .await
+        .unwrap();
+
+        let count = count_user_public_recipes(&pool, user.id).await.unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[tokio::test]
+    async fn test_get_user_by_username() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("gub_{u}"),
+            "Get User By",
+            &format!("gub{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Existing user is found
+        let found = get_user_by_username(&pool, &format!("gub_{u}"))
+            .await
+            .unwrap();
+        assert!(found.is_some());
+        let found = found.unwrap();
+        assert_eq!(found.id, user.id);
+        assert_eq!(found.display_name, "Get User By");
+
+        // Non-existent user returns None
+        let not_found = get_user_by_username(&pool, "nonexistent_user_xyz")
+            .await
+            .unwrap();
+        assert!(not_found.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_username_exists() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let username = format!("ue_{u}");
+        insert_user(
+            &pool,
+            &username,
+            "Exists User",
+            &format!("ue{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert!(username_exists(&pool, &username).await.unwrap());
+        assert!(!username_exists(&pool, "nonexistent_xyz").await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_update_recipe_visibility() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("urv_{u}"),
+            "Update Vis",
+            &format!("urv{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let recipe = insert_recipe(
+            &pool,
+            user.id,
+            "Vis Recipe",
+            None,
+            None,
+            None,
+            None,
+            None,
+            "private",
+        )
+        .await
+        .unwrap();
+        assert_eq!(recipe.visibility, "private");
+
+        // Update to public
+        let updated = update_recipe(
+            &pool,
+            recipe.id,
+            user.id,
+            "Vis Recipe",
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some("public"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(updated.visibility, "public");
+
+        // Update to unlisted
+        let updated = update_recipe(
+            &pool,
+            recipe.id,
+            user.id,
+            "Vis Recipe",
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some("unlisted"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(updated.visibility, "unlisted");
+
+        // Update with None — visibility unchanged
+        let updated = update_recipe(
+            &pool, recipe.id, user.id, "Renamed", None, None, None, None, None, None,
+        )
+        .await
+        .unwrap();
+        assert_eq!(updated.visibility, "unlisted");
+        assert_eq!(updated.title, "Renamed");
+    }
+
+    #[tokio::test]
+    async fn test_visibility_check_constraint() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("vcc_{u}"),
+            "Constraint Check",
+            &format!("vcc{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Invalid visibility should fail
+        let result = sqlx::query_scalar!(
+            "INSERT INTO recipes (user_id, title, visibility) VALUES ($1, $2, $3) RETURNING id",
+            user.id,
+            "Bad Recipe",
+            "invalid_visibility" as &str,
+        )
+        .fetch_one(&pool)
+        .await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_cross_user_public_access() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user_a = insert_user(
+            &pool,
+            &format!("cua_{u}"),
+            "Cross A",
+            &format!("cua{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let _user_b = insert_user(
+            &pool,
+            &format!("cub_{u}"),
+            "Cross B",
+            &format!("cub{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // User A creates public recipe — accessible via public lookup
+        let r_public = insert_recipe(
+            &pool, user_a.id, "Public", None, None, None, None, None, "public",
+        )
+        .await
+        .unwrap();
+        let found = get_recipe_by_id_public(&pool, r_public.id).await.unwrap();
+        assert!(found.is_some());
+
+        // User A creates private recipe — NOT accessible via public lookup
+        let r_private = insert_recipe(
+            &pool, user_a.id, "Private", None, None, None, None, None, "private",
+        )
+        .await
+        .unwrap();
+        let found = get_recipe_by_id_public(&pool, r_private.id).await.unwrap();
+        assert!(found.is_none());
+
+        // User A creates unlisted recipe — accessible via public lookup
+        let r_unlisted = insert_recipe(
+            &pool, user_a.id, "Unlisted", None, None, None, None, None, "unlisted",
+        )
+        .await
+        .unwrap();
+        let found = get_recipe_by_id_public(&pool, r_unlisted.id).await.unwrap();
+        assert!(found.is_some());
     }
 }
