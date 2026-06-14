@@ -48,10 +48,12 @@ pub fn Explore() -> Element {
         async move { get_public_recipes(off, PAGE_SIZE).await }
     });
 
-    // Accumulate recipes from resource into loaded_recipes signal
+    // Accumulate recipes from resource into loaded_recipes signal.
+    // We spawn the accumulation to avoid a circular dependency: reading
+    // loaded_recipes inside this effect would register it as a tracked
+    // dependency, and writing to it would re-trigger the effect infinitely.
     use_effect(move || {
         let res = recipes_resource.read().clone();
-        let mut loaded = loaded_recipes;
         let mut more = has_more;
         let mut loading = is_loading;
         let mut err = error;
@@ -59,9 +61,15 @@ pub fn Explore() -> Element {
         match res {
             Some(Ok(resp)) => {
                 let new_count = resp.recipes.len();
-                let mut current = loaded.read().clone();
-                current.extend(resp.recipes);
-                loaded.set(current);
+                // Accumulate in a spawn block to break the circular dependency
+                {
+                    let mut loaded = loaded_recipes;
+                    spawn(async move {
+                        loaded.with_mut(|current| {
+                            current.extend(resp.recipes);
+                        });
+                    });
+                }
                 more.set(resp.has_more);
                 if new_count == 0 && current_offset > 0 {
                     // No more recipes returned
