@@ -326,3 +326,43 @@ pub async fn get_public_recipe_tags() -> Result<Vec<String>, ServerFnError> {
         })?;
     Ok(tags)
 }
+
+/// Get tags for a specific public or unlisted recipe. No authentication required.
+/// Returns empty vec if recipe is private or doesn't exist.
+#[server]
+pub async fn get_public_recipe_tags_by_id(recipe_id: String) -> Result<Vec<String>, ServerFnError> {
+    let recipe_id = uuid::Uuid::parse_str(&recipe_id)
+        .map_err(|e| ServerFnError::new(format!("Invalid recipe ID: {e}")))?;
+    let pool = crate::db::get_pool();
+
+    let tags = crate::db::get_public_recipe_tags(&pool, recipe_id)
+        .await
+        .map_err(|e| ServerFnError::new(e.to_string()))?;
+
+    Ok(tags.into_iter().map(|t| t.tag).collect())
+}
+
+/// Get the owner's username for a public or unlisted recipe.
+/// No authentication required. Returns `None` if recipe is private or doesn't exist.
+#[server]
+pub async fn get_recipe_owner_username(recipe_id: String) -> Result<Option<String>, ServerFnError> {
+    let recipe_id = uuid::Uuid::parse_str(&recipe_id)
+        .map_err(|e| ServerFnError::new(format!("Invalid recipe ID: {e}")))?;
+    let pool = crate::db::get_pool();
+
+    // First verify the recipe is publicly accessible and get its user_id
+    let recipe = crate::db::get_recipe_by_id_public(&pool, recipe_id)
+        .await
+        .map_err(|e| ServerFnError::new(e.to_string()))?;
+
+    let Some(recipe) = recipe else {
+        return Ok(None); // Recipe not found or private
+    };
+
+    // Look up the owner's username using existing get_user_by_id
+    let user = crate::db::get_user_by_id(&pool, recipe.user_id)
+        .await
+        .map_err(|e| ServerFnError::new(e.to_string()))?;
+
+    Ok(user.map(|u| u.username))
+}

@@ -11,7 +11,10 @@ use dioxus::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
 use crate::api::recipe::delete_recipe;
-use crate::api::recipe::{get_public_recipe, get_recipe, get_recipe_tags};
+use crate::api::recipe::{
+    get_public_recipe, get_public_recipe_tags_by_id, get_recipe, get_recipe_owner_username,
+    get_recipe_tags,
+};
 use crate::auth::context::use_auth;
 use crate::components::base::{Button, ButtonVariant, Card, LoadingSpinner, PageHeader};
 use crate::types::Recipe;
@@ -163,10 +166,44 @@ pub fn RecipeDetail(id: String) -> Element {
         }
     });
 
-    let id_for_tags = id.clone();
-    let tags_resource = use_resource(move || {
-        let tid = id_for_tags.clone();
-        async move { get_recipe_tags(tid).await }
+    // Owner username resource
+    let id_for_owner = id.clone();
+    let owner_username_resource = use_resource(move || {
+        let oid = id_for_owner.clone();
+        async move { get_recipe_owner_username(oid).await }
+    });
+
+    // Tags (signal-based, loaded conditionally based on ownership)
+    let tags = use_signal(|| Option::<Vec<String>>::None);
+    let tags_error = use_signal(|| Option::<String>::None);
+
+    // Load tags once recipe is available
+    let id_for_tags_effect = id.clone();
+    use_effect(move || {
+        let recipe_result = recipe_resource.read().clone();
+        let Some(Ok(ref recipe)) = recipe_result else {
+            return;
+        };
+
+        let auth = use_auth();
+        let is_owner = auth.current_user_id == Some(recipe.user_id);
+        let rid = id_for_tags_effect.clone();
+        let mut tag_signal = tags;
+        let mut tag_err = tags_error;
+
+        spawn(async move {
+            if is_owner {
+                match get_recipe_tags(rid).await {
+                    Ok(t) => tag_signal.set(Some(t)),
+                    Err(e) => tag_err.set(Some(e.to_string())),
+                }
+            } else {
+                match get_public_recipe_tags_by_id(rid).await {
+                    Ok(t) => tag_signal.set(Some(t)),
+                    Err(e) => tag_err.set(Some(e.to_string())),
+                }
+            }
+        });
     });
 
     // ── Delete state ─────────────────────────────────────────────────────
@@ -177,16 +214,13 @@ pub fn RecipeDetail(id: String) -> Element {
 
     // ── Extract resource states ──────────────────────────────────────────
     let recipe_pending = recipe_resource.pending();
-    let tags_pending = tags_resource.pending();
-    let any_pending = recipe_pending || tags_pending;
+    let any_pending = recipe_pending;
 
     // Read resource results to avoid borrow issues in rsx!
     let recipe_result: Option<Result<Recipe, ServerFnError>> = recipe_resource.read().clone();
-    let tags_result: Option<Result<Vec<String>, ServerFnError>> = tags_resource.read().clone();
 
     // ── Derived state ────────────────────────────────────────────────────
     let recipe = recipe_result.as_ref().and_then(|r| r.as_ref().ok());
-    let tags = tags_result.as_ref().and_then(|r| r.as_ref().ok());
 
     // Determine error message (if any)
     let error_message = if let Some(Err(e)) = &recipe_result {
@@ -205,8 +239,17 @@ pub fn RecipeDetail(id: String) -> Element {
         .map(|r| auth.current_user_id == Some(r.user_id))
         .unwrap_or(false);
 
-    // Username for display
-    let owner_username = auth.current_user.as_ref().map(|u| u.username.clone());
+    // Owner username: use owner's own username if they're viewing,
+    // otherwise use the fetched owner username from the resource.
+    let owner_username = if is_owner {
+        auth.current_user.as_ref().map(|u| u.username.clone())
+    } else {
+        owner_username_resource
+            .read()
+            .clone()
+            .and_then(|r| r.ok())
+            .flatten()
+    };
 
     // ── Delete handler ───────────────────────────────────────────────────
     // Clone id before the move closure (id was already moved into use_resource closures)
@@ -357,10 +400,18 @@ pub fn RecipeDetail(id: String) -> Element {
 
             // ── Back link ───────────────────────────────────────────────────
             div { margin_bottom: "var(--space-md)",
-                Link {
-                    to: crate::Route::Explore {},
-                    style: "color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 500;",
-                    "← Back to Explore"
+                if is_owner {
+                    Link {
+                        to: crate::Route::Dashboard {},
+                        style: "color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 500;",
+                        "← Back to Dashboard"
+                    }
+                } else {
+                    Link {
+                        to: crate::Route::Explore {},
+                        style: "color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 500;",
+                        "← Back to Explore"
+                    }
                 }
             }
 
@@ -378,7 +429,7 @@ pub fn RecipeDetail(id: String) -> Element {
             }
 
             // ── Tags ────────────────────────────────────────────────────────
-            if let Some(tag_list) = tags {
+            if let Some(ref tag_list) = tags() {
                 if !tag_list.is_empty() {
                     div {
                         display: "flex",
@@ -454,7 +505,13 @@ pub fn RecipeDetail(id: String) -> Element {
                 font_size: "13px",
                 color: "var(--text-tertiary)",
                 if let Some(username) = &owner_username {
-                    "by @{username} • created {relative_time}"
+                    "by "
+                    Link {
+                        to: crate::Route::UserProfile { username: username.clone() },
+                        style: "color: var(--accent); text-decoration: none; font-weight: 500;",
+                        "@{username}"
+                    }
+                    " • created {relative_time}"
                 } else {
                     "created {relative_time}"
                 }

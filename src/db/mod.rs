@@ -1028,6 +1028,27 @@ pub async fn get_distinct_public_tags(
     .map_err(DbError::Query)
 }
 
+/// Get tags for a specific recipe that is public or unlisted.
+/// Joins with recipes table to verify visibility. Returns empty vec if recipe
+/// is private or doesn't exist (no existence leakage).
+pub async fn get_public_recipe_tags(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    recipe_id: Uuid,
+) -> Result<Vec<RecipeTag>, DbError> {
+    sqlx::query_as!(
+        RecipeTag,
+        "SELECT recipe_tags.recipe_id, recipe_tags.tag \
+         FROM recipe_tags \
+         INNER JOIN recipes ON recipe_tags.recipe_id = recipes.id \
+         WHERE recipe_tags.recipe_id = $1 AND recipes.visibility IN ('public', 'unlisted') \
+         ORDER BY recipe_tags.tag",
+        recipe_id,
+    )
+    .fetch_all(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -2827,5 +2848,118 @@ mod tests {
         .unwrap();
         let found = get_recipe_by_id_public(&pool, r_unlisted.id).await.unwrap();
         assert!(found.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_get_public_recipe_tags() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("gptr_{u}"),
+            "Public Tags User",
+            &format!("gptr{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Public recipe with 3 tags
+        let r_public = insert_recipe(
+            &pool,
+            user.id,
+            "Public Tags",
+            None,
+            None,
+            None,
+            None,
+            None,
+            "public",
+        )
+        .await
+        .unwrap();
+
+        // Unlisted recipe with 2 tags
+        let r_unlisted = insert_recipe(
+            &pool,
+            user.id,
+            "Unlisted Tags",
+            None,
+            None,
+            None,
+            None,
+            None,
+            "unlisted",
+        )
+        .await
+        .unwrap();
+
+        // Private recipe with 1 tag — should NOT be accessible
+        let r_private = insert_recipe(
+            &pool,
+            user.id,
+            "Private Tags",
+            None,
+            None,
+            None,
+            None,
+            None,
+            "private",
+        )
+        .await
+        .unwrap();
+
+        {
+            let mut tx = pool.begin().await.unwrap();
+            insert_recipe_tags(
+                &mut tx,
+                r_public.id,
+                &[
+                    "breakfast".to_string(),
+                    "quick".to_string(),
+                    "easy".to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+            insert_recipe_tags(
+                &mut tx,
+                r_unlisted.id,
+                &["dinner".to_string(), "quick".to_string()],
+            )
+            .await
+            .unwrap();
+            insert_recipe_tags(&mut tx, r_private.id, &["secret".to_string()])
+                .await
+                .unwrap();
+            tx.commit().await.unwrap();
+        }
+
+        // Public recipe tags — all 3 returned alphabetically
+        let tags = get_public_recipe_tags(&pool, r_public.id).await.unwrap();
+        assert_eq!(tags.len(), 3);
+        assert_eq!(tags[0].tag, "breakfast");
+        assert_eq!(tags[1].tag, "easy");
+        assert_eq!(tags[2].tag, "quick");
+
+        // Unlisted recipe tags — both returned
+        let tags = get_public_recipe_tags(&pool, r_unlisted.id).await.unwrap();
+        assert_eq!(tags.len(), 2);
+        assert_eq!(tags[0].tag, "dinner");
+        assert_eq!(tags[1].tag, "quick");
+
+        // Private recipe tags — empty (no existence leakage)
+        let tags = get_public_recipe_tags(&pool, r_private.id).await.unwrap();
+        assert!(tags.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_public_recipe_tags_missing() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+
+        // Non-existent recipe returns empty vec (no error, no existence leakage)
+        let tags = get_public_recipe_tags(&pool, Uuid::nil()).await.unwrap();
+        assert!(tags.is_empty());
     }
 }

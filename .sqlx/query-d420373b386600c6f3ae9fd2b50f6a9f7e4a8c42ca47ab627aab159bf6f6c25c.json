@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT recipe_tags.recipe_id, recipe_tags.tag FROM recipe_tags INNER JOIN recipes ON recipe_tags.recipe_id = recipes.id WHERE recipe_tags.recipe_id = $1 AND recipes.visibility IN ('public', 'unlisted') ORDER BY recipe_tags.tag",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "recipe_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "tag",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "d420373b386600c6f3ae9fd2b50f6a9f7e4a8c42ca47ab627aab159bf6f6c25c"
+}
