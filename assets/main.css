@@ -1160,3 +1160,135 @@ a:hover {
     color: var(--text-primary);
     margin-bottom: var(--space-md);
 }
+
+/* ============================================================
+   Recipe Scaler Widget (CP12)
+   ============================================================ */
+
+.recipe-scaler {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
+    overflow: hidden;
+}
+
+.recipe-scaler__toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    width: 100%;
+    padding: var(--space-md);
+    background: none;
+    border: none;
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.recipe-scaler__toggle:hover {
+    background: var(--glass-fill);
+}
+
+.recipe-scaler__badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--accent);
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: var(--radius-full);
+    font-family: var(--font-body);
+}
+
+.recipe-scaler__body {
+    padding: 0 var(--space-md) var(--space-md);
+}
+
+.recipe-scaler__input {
+    width: 80px;
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--surface);
+    border-radius: var(--radius-sm);
+    background: var(--bg-base);
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--text-primary);
+    text-align: center;
+    box-shadow: inset 2px 2px 3px var(--shadow-dark), inset -2px -2px 3px var(--shadow-light);
+}
+
+.recipe-scaler__input:focus {
+    outline: none;
+    box-shadow: inset 2px 2px 3px var(--shadow-dark), inset -2px -2px 3px var(--shadow-light),
+                0 0 0 2px var(--accent);
+}
+
+.recipe-scaler__presets {
+    display: flex;
+    gap: var(--space-xs);
+    margin-top: var(--space-sm);
+}
+
+.recipe-scaler__preset {
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--bg-base);
+    border: 1px solid var(--surface);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 2px 2px 3px var(--shadow-dark), -2px -2px 3px var(--shadow-light);
+}
+
+.recipe-scaler__preset:hover {
+    color: var(--accent);
+}
+
+.recipe-scaler__preset--active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    box-shadow: inset 2px 2px 3px rgba(0, 0, 0, 0.15),
+                inset -2px -2px 3px rgba(255, 255, 255, 0.1);
+}
+
+.recipe-scaler__select {
+    width: 100%;
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--surface);
+    border-radius: var(--radius-sm);
+    background: var(--bg-base);
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--text-primary);
+    box-shadow: inset 2px 2px 3px var(--shadow-dark), inset -2px -2px 3px var(--shadow-light);
+}
+
+.recipe-scaler__select:focus {
+    outline: none;
+    box-shadow: inset 2px 2px 3px var(--shadow-dark), inset -2px -2px 3px var(--shadow-light),
+                0 0 0 2px var(--accent);
+}
+
+.recipe-scaler__reset {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-family: var(--font-body);
+    cursor: pointer;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    margin-top: var(--space-sm);
+}
+
+.recipe-scaler__reset:hover {
+    background: var(--glass-fill);
+    color: var(--accent);
+}

@@ -15,6 +15,8 @@ use crate::api::recipe::{
     get_public_recipe, get_public_recipe_tags_by_id, get_recipe, get_recipe_owner_username,
     get_recipe_tags,
 };
+#[cfg(target_arch = "wasm32")]
+use crate::utils::recipe_scaler::{format_amount, parse_amount, IngredientRef, ScaleCalculator, ScaleMode, ScaledIngredient};
 use crate::auth::context::use_auth;
 use crate::components::base::{Button, ButtonVariant, Card, LoadingSpinner, PageHeader};
 use crate::types::Recipe;
@@ -22,7 +24,7 @@ use crate::types::Recipe;
 // ── Parsed instruction types ─────────────────────────────────────────────────
 
 /// A single parsed ingredient.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 struct ParsedIngredient {
     amount: String,
     unit: String,
@@ -139,6 +141,316 @@ fn format_relative_time(dt: DateTime<Utc>) -> String {
         format!("{} minutes ago", diff.num_minutes())
     } else {
         "Just now".to_string()
+    }
+}
+
+// ── Recipe Scaler Component (CP12) ───────────────────────────────────────────
+
+/// Collapsible recipe scaling widget.
+///
+/// Supports two modes:
+/// - Multiplier: user enters a direct multiplier (e.g. 2x, 0.5x)
+/// - Target Ingredient: user picks an ingredient and desired amount
+#[cfg(target_arch = "wasm32")]
+#[component]
+fn RecipeScaler(
+    ingredients: Vec<ParsedIngredient>,
+    prep_time_minutes: Option<i32>,
+    cook_time_minutes: Option<i32>,
+    servings: Option<i32>,
+) -> Element {
+    let mut is_expanded = use_signal(|| false);
+
+    // Convert ParsedIngredient -> IngredientRef for ScaleCalculator
+    let refs: Vec<IngredientRef> = ingredients
+        .iter()
+        .map(|ing| IngredientRef {
+            amount: ing.amount.clone(),
+            unit: ing.unit.clone(),
+            name: ing.name.clone(),
+        })
+        .collect();
+
+    let mut calculator = use_signal(|| {
+        ScaleCalculator::new(refs.clone(), prep_time_minutes, cook_time_minutes, servings)
+    });
+    let mut multiplier_input = use_signal(String::new);
+    let mut target_amount_input = use_signal(String::new);
+    let mut target_ingredient_idx = use_signal(|| 0_usize);
+
+    // Read calculator state early (clone to own the data)
+    let current_mode = calculator.read().mode().clone();
+    let current_multiplier = calculator.read().multiplier();
+
+    // Preset multipliers — pre-compute all data for rsx! (no `let` allowed inside rsx!)
+    let preset_data: Vec<(f64, &'static str, String)> = [(0.5, "½x"), (1.0, "1x"), (2.0, "2x"), (3.0, "3x"), (4.0, "4x")]
+        .iter()
+        .map(|(mult, label)| {
+            let is_active = matches!(current_mode, ScaleMode::Multiplier(_))
+                && (current_multiplier - mult).abs() < 0.001;
+            let class = if is_active {
+                "recipe-scaler__preset recipe-scaler__preset--active".to_string()
+            } else {
+                "recipe-scaler__preset".to_string()
+            };
+            (*mult, *label, class)
+        })
+        .collect();
+
+    // Mode toggle handler
+    let on_set_multiplier = move |_| {
+        let val = multiplier_input.read().clone();
+        if let Some(m) = parse_amount(&val) {
+            calculator.with_mut(|calc| calc.set_multiplier(m));
+        }
+    };
+
+    let on_set_target = move |_| {
+        let val = target_amount_input.read().clone();
+        if let Some(target) = parse_amount(&val) {
+            let idx = target_ingredient_idx();
+            calculator.with_mut(|calc| calc.set_target_ingredient(idx, target));
+        }
+    };
+
+    let on_select_ingredient = move |e: Event<dioxus::events::FormData>| {
+        if let Ok(idx) = e.value().parse::<usize>() {
+            target_ingredient_idx.set(idx);
+        }
+    };
+
+    let on_reset = move |_| {
+        multiplier_input.set(String::new());
+        target_amount_input.set(String::new());
+        target_ingredient_idx.set(0);
+        calculator.with_mut(|calc| calc.reset());
+    };
+
+    // Scaled ingredients — use ScaleCalculator's method (handles non-numeric correctly)
+    let scaled_ingredients: Vec<ScaledIngredient> = calculator.read().scaled_ingredients();
+    let scaled_servings = calculator.read().scaled_servings();
+    let scaled_prep = calculator.read().scaled_prep_time();
+    let scaled_cook = calculator.read().scaled_cook_time();
+    let show_scaled = (current_multiplier - 1.0).abs() > 0.001;
+
+    // Pre-compute display strings for scaled ingredients (rsx! can't handle multi-arg format strings)
+    let scaled_ingredient_display: Vec<String> = scaled_ingredients
+        .iter()
+        .map(|ing| {
+            if !ing.unit.is_empty() {
+                format!("- {} {} {}", ing.amount, ing.unit, ing.name)
+            } else if !ing.amount.is_empty() {
+                format!("- {} {}", ing.amount, ing.name)
+            } else {
+                format!("- {}", ing.name)
+            }
+        })
+        .collect();
+
+    // Pre-computed option labels for target ingredient select
+    let option_labels: Vec<String> = refs
+        .iter()
+        .map(|r| {
+            let amt = parse_amount(&r.amount).unwrap_or(0.0);
+            format!("- {} ({})", r.name, format_amount(amt))
+        })
+        .collect();
+
+    rsx! {
+        div { class: "recipe-scaler",
+            // Toggle button
+            button {
+                class: "recipe-scaler__toggle",
+                onclick: move |_| is_expanded.set(!is_expanded()),
+                if is_expanded() {
+                    "▼"
+                } else {
+                    "▶"
+                }
+                " Scale Recipe"
+                span {
+                    class: "recipe-scaler__badge",
+                    "×{current_multiplier:.1}"
+                }
+            }
+
+            // Collapsible body
+            if is_expanded() {
+                div { class: "recipe-scaler__body",
+                    // Mode: Multiplier
+                    div {
+                        label {
+                            display: "block",
+                            font_size: "13px",
+                            font_weight: "600",
+                            color: "var(--text-secondary)",
+                            margin_bottom: "var(--space-xs)",
+                            "Multiplier"
+                        }
+                        div {
+                            display: "flex",
+                            gap: "var(--space-sm)",
+                            align_items: "center",
+                            input {
+                                class: "recipe-scaler__input",
+                                r#type: "text",
+                                placeholder: "e.g. 2",
+                                value: multiplier_input.read().clone(),
+                                oninput: move |e| multiplier_input.set(e.value()),
+                            }
+                            Button {
+                                variant: ButtonVariant::Primary,
+                                onclick: on_set_multiplier,
+                                "Apply"
+                            }
+                        }
+                        // Presets
+                        div { class: "recipe-scaler__presets",
+                            for (mult, label, class) in &preset_data {
+                                button {
+                                    class: class.clone(),
+                                    onclick: {
+                                        let mult_val = *mult;
+                                        move |_| {
+                                            multiplier_input.set(format!("{mult_val}"));
+                                            calculator.with_mut(|calc| calc.set_multiplier(mult_val));
+                                        }
+                                    },
+                                    "{label}"
+                                }
+                            }
+                        }
+                    }
+
+                    // Mode: Target Ingredient
+                    div {
+                        margin_top: "var(--space-md)",
+                        label {
+                            display: "block",
+                            font_size: "13px",
+                            font_weight: "600",
+                            color: "var(--text-secondary)",
+                            margin_bottom: "var(--space-xs)",
+                            "Or scale by target ingredient"
+                        }
+                        select {
+                            class: "recipe-scaler__select",
+                            onchange: on_select_ingredient,
+                            for (idx, label) in option_labels.iter().enumerate() {
+                                option { value: idx.to_string(), "{label}" }
+                            }
+                        }
+                        div {
+                            display: "flex",
+                            gap: "var(--space-sm)",
+                            align_items: "center",
+                            margin_top: "var(--space-xs)",
+                            input {
+                                class: "recipe-scaler__input",
+                                r#type: "text",
+                                placeholder: "desired amount",
+                                value: target_amount_input.read().clone(),
+                                oninput: move |e| target_amount_input.set(e.value()),
+                            }
+                            Button {
+                                variant: ButtonVariant::Secondary,
+                                onclick: on_set_target,
+                                "Apply"
+                            }
+                        }
+                    }
+
+                    // Scaled meta info
+                    if show_scaled {
+                        div {
+                            margin_top: "var(--space-md)",
+                            padding_top: "var(--space-sm)",
+                            border_top: "1px solid var(--surface)",
+                            display: "flex",
+                            flex_wrap: "wrap",
+                            gap: "var(--space-sm)",
+                            font_size: "13px",
+                            color: "var(--text-secondary)",
+
+                            if let Some(s) = scaled_servings {
+                                span { "🍽 {s} servings" }
+                            }
+                            if let Some(p) = scaled_prep {
+                                span { "⏱ Prep: {p} min" }
+                            }
+                            if let Some(c) = scaled_cook {
+                                span { "🔥 Cook: {c} min" }
+                            }
+                        }
+                    }
+
+                    // Scaled ingredients
+                    if show_scaled {
+                        div {
+                            margin_top: "var(--space-md)",
+                            h3 {
+                                font_size: "16px",
+                                color: "var(--text-primary)",
+                                margin_bottom: "var(--space-xs)",
+                                "Scaled Ingredients"
+                            }
+                            ul {
+                                list_style: "none",
+                                padding: "0",
+                                margin: "0",
+                                display: "flex",
+                                flex_direction: "column",
+                                gap: "var(--space-xs)",
+                                for text in &scaled_ingredient_display {
+                                    li {
+                                        padding: "var(--space-xs) var(--space-sm)",
+                                        font_size: "14px",
+                                        color: "var(--text-primary)",
+                                        "{text}"
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Reset button
+                    button {
+                        class: "recipe-scaler__reset",
+                        onclick: on_reset,
+                        "Reset to original"
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── Helper: conditional RecipeScaler rendering ───────────────────────────────
+
+/// Render the RecipeScaler widget on WASM; empty element on server.
+fn render_recipe_scaler(
+    ingredients: &[ParsedIngredient],
+    #[allow(unused_variables)] prep_time_minutes: Option<i32>,
+    #[allow(unused_variables)] cook_time_minutes: Option<i32>,
+    #[allow(unused_variables)] servings: Option<i32>,
+) -> Element {
+    if ingredients.is_empty() {
+        return rsx! {};
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        rsx! {
+            RecipeScaler {
+                ingredients: ingredients.to_vec(),
+                prep_time_minutes,
+                cook_time_minutes,
+                servings,
+            }
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        rsx! {}
     }
 }
 
@@ -516,6 +828,9 @@ pub fn RecipeDetail(id: String) -> Element {
                     "created {relative_time}"
                 }
             }
+
+            // ── Recipe Scaler (CP12) ────────────────────────────────────────
+            {render_recipe_scaler(&parsed.ingredients, recipe.prep_time_minutes, recipe.cook_time_minutes, recipe.servings)}
 
             // ── Ingredients ─────────────────────────────────────────────────
             if !parsed.ingredients.is_empty() {
