@@ -399,6 +399,110 @@ If any checkpoint reveals issues:
 
 ---
 
+## Checkpoint 12: Recipe scaling calculator
+
+**Files:** `src/utils/recipe_scaler.rs` (new), `src/pages/recipe_detail.rs`
+
+**Overview:**
+A purely client-side recipe scaling widget on the recipe detail page. No server functions, no database changes, no new dependencies. All computation happens in WASM.
+
+**`src/utils/recipe_scaler.rs` (new module, `#[cfg(target_arch = "wasm32")]`):**
+
+**Fraction parsing (`parse_amount`):**
+- Input: `&str` — e.g. `"2"`, `"1/2"`, `"1 1/2"`, `"2.5"`, `"pinch"`
+- Output: `Option<f64>` — `Some(2.0)`, `Some(0.5)`, `Some(1.5)`, `Some(2.5)`, `None`
+- Supports:
+  - Plain integers: `"2"` → `2.0`
+  - Decimals: `"2.5"` → `2.5`
+  - Simple fractions: `"1/2"` → `0.5`
+  - Mixed numbers: `"1 1/2"` → `1.5`
+  - Whitespace tolerance: `" 1 / 2 "` → `0.5`
+- Returns `None` for non-numeric strings: `"pinch"`, `"to taste"`, `""`
+
+**Fraction formatting (`format_amount`):**
+- Input: `f64` — scaled amount
+- Output: `String` — cooking-friendly fraction representation
+- Rounds to nearest 1/8 precision
+- Common fractions: `0.125 → "1/8"`, `0.25 → "1/4"`, `0.333 → "1/3"`, `0.5 → "1/2"`, `0.667 → "2/3"`, `0.75 → "3/4"`, `0.875 → "7/8"`
+- Whole numbers: `2.0 → "2"`, `3.0 → "3"`
+- Mixed numbers: `1.5 → "1 1/2"`, `2.25 → "2 1/4"`
+- Edge cases: `0.0 → ""` (empty), negative → absolute value, very large → decimal fallback
+
+**Scaling logic (`ScaleCalculator` struct):**
+
+```rust
+pub struct ScaleCalculator {
+    original_ingredients: Vec<ParsedIngredient>,
+    original_servings: Option<i32>,
+    original_prep_time: Option<i32>,
+    original_cook_time: Option<i32>,
+    mode: ScaleMode,
+}
+
+pub enum ScaleMode {
+    None,
+    Multiplier(f64),
+    TargetIngredient { ingredient_index: usize, target_amount: f64 },
+}
+```
+
+**Methods:**
+- `new(ingredients, servings, prep_time, cook_time)` — constructor
+- `set_multiplier(m: f64)` — switch to multiplier mode
+- `set_target_ingredient(index: usize, target: f64)` — switch to target ingredient mode
+- `scaled_ingredients() -> Vec<ScaledIngredient>` — returns scaled ingredient list
+- `scaled_servings() -> Option<i32>` — scaled servings (rounded)
+- `scaled_prep_time() -> Option<i32>` — scaled prep time (rounded)
+- `scaled_cook_time() -> Option<i32>` — scaled cook time (rounded)
+- `reset()` — clear scaling, return to original values
+
+**`recipe_detail.rs` changes:**
+
+**New UI component (`RecipeScaler` inline component):**
+- Position: Above the Ingredients section, below the meta info row
+- Collapsible: "Scale Recipe" header with expand/collapse toggle
+- Default state: collapsed
+
+**Multiplier mode UI:**
+- Label: "Scale by:"
+- Input: numeric field (step: 0.25, min: 0.125), default: `1`
+- Suffix: "x"
+- Preset buttons: `0.5x`, `1x`, `2x`, `3x`, `4x`
+
+**Target ingredient mode UI:**
+- Toggle: "Or scale by ingredient" link/button
+- Dropdown: lists all ingredients by name
+- Input: numeric field for target amount
+- Label: "Set target amount for {ingredient_name}"
+
+**Scaled display:**
+- When scaling is active, the Ingredients list shows scaled amounts
+- Meta row shows scaled servings/time alongside originals: `"Servings: 2 → 4"`, `"Prep: 10 → 20 min"`
+- "Reset" button: clears scaling, restores original values
+
+**Error handling:**
+- Invalid multiplier (≤ 0): show error "Multiplier must be greater than 0"
+- Invalid target amount (≤ 0): show error "Amount must be greater than 0"
+- Ingredient with no amount: display unchanged with note "(unscaled)"
+
+**Verify:**
+- `cargo check --target wasm32-unknown-unknown` — zero errors
+- `cargo clippy --target wasm32-unknown-unknown` — zero warnings
+- Manual test: load recipe with known ingredients → scale by 2x → verify all amounts doubled
+- Manual test: scale by target ingredient → verify proportional scaling
+- Manual test: fractions display correctly (0.5 → "1/2", 1.5 → "1 1/2")
+- Manual test: reset button restores original amounts
+- Manual test: works on public recipe detail (non-owner view)
+
+**Risk:** Low. Purely client-side, no server changes. Fraction parsing/formatting is well-defined.
+
+**Testing:**
+- Unit tests for `parse_amount`: integers, decimals, fractions, mixed numbers, edge cases
+- Unit tests for `format_amount`: whole numbers, fractions, mixed numbers, edge cases
+- Unit tests for `ScaleCalculator`: multiplier mode, target ingredient mode, reset
+
+---
+
 ## Updated File Structure
 
 ```
@@ -417,9 +521,11 @@ src/
 ├── pages/
 │   ├── dashboard.rs              # Recipe card grid + list_my_recipes
 │   ├── explore.rs                # Public recipe discovery
-│   ├── recipe_detail.rs          # Full recipe view (owner + public modes)
+│   ├── recipe_detail.rs          # Full recipe view + scaling calculator
 │   ├── recipe_edit.rs            # Edit page
 │   ├── recipe_new.rs             # Create page
 │   └── user_profile.rs           # User's public profile
+├── utils/
+│   └── recipe_scaler.rs          # Fraction parsing, formatting, scaling logic
 └── main.rs                       # Routes including /u/:username
 ```

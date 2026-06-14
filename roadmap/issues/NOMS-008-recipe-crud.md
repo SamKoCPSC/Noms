@@ -147,6 +147,23 @@ The current codebase has authentication and user management working, but all rec
 - [ ] Unlisted recipe: only accessible via direct link, not in any listing
 - [ ] Recipe detail shows owner attribution: avatar + username (linkable to `/u/:username`) + created date
 
+### AC12: Recipe scaling calculator
+
+- [ ] Collapsible "Scale Recipe" widget appears above the Ingredients section on recipe detail page
+- [ ] **Multiplier mode**: User enters a numeric multiplier (e.g., 2, 0.5, 1.5); all ingredient amounts, servings, prep time, and cook time scale proportionally
+- [ ] **Target ingredient mode**: User selects a specific ingredient from a dropdown, enters a target amount for that ingredient; all other ingredients scale proportionally based on the ratio
+- [ ] Scaled amounts displayed using cooking-friendly fractions: 0.5 → "1/2", 1.5 → "1 1/2", 3.33 → "3 1/3"
+- [ ] Fraction precision: rounds to nearest 1/8 (supports 1/8, 1/4, 1/3, 1/2, 2/3, 3/4, 7/8)
+- [ ] Original amounts preserved — scaling is a view-only transformation (no DB writes)
+- [ ] "Reset" button restores original amounts
+- [ ] Handles edge cases gracefully:
+  - Ingredients with no amount (e.g., "pinch of salt") remain unchanged
+  - Non-numeric amounts display as-is
+  - Zero or negative multipliers show an error message
+- [ ] Scaled servings, prep time, and cook time displayed in the meta row alongside originals
+- [ ] Pure client-side feature — no server function or database changes required
+- [ ] Works for both owner and non-owner views (public recipe detail)
+
 ## Technical Details
 
 ### Database Schema (new tables)
@@ -270,7 +287,6 @@ No changes needed. Recipe pages use the existing `current_user_id` from AuthCont
 - Recipe images/hero photos (NOMS-011)
 - Recipe import from URLs (Phase 2)
 - Advanced recipe search and full-text filtering (NOMS-012)
-- Recipe scaling UI (Phase 4)
 - Comments and likes (Phase 3)
 - Collections/folders (NOMS-010)
 - Nutritional information (Phase 6)
@@ -292,6 +308,7 @@ No changes needed. Recipe pages use the existing `current_user_id` from AuthCont
 | 9 | Explore page | `/explore` renders public recipe grid with tag filters |
 | 10 | User profile page | `/u/:username` shows user's public recipes and profile info |
 | 11 | Public recipe detail | Non-owner viewing, view-only mode, owner attribution |
+| 12 | Recipe scaling calculator | Client-side scaler with multiplier + target ingredient modes, fraction display |
 
 ## Success Metrics
 
@@ -300,7 +317,8 @@ No changes needed. Recipe pages use the existing `current_user_id` from AuthCont
 - User can visit `/u/:username` → see that user's public recipes
 - Owner sees edit/delete on their recipes; non-owner sees "View Profile" link instead
 - Private recipes are invisible to non-owners; unlisted recipes only accessible via direct link
-- All 11 checkpoints pass with tests
+- User can scale a recipe by multiplier or target ingredient, seeing adjusted amounts as fractions
+- All 12 checkpoints pass with tests
 - Zero clippy warnings on both wasm32 and x86_64 targets
 - No unhandled error paths in server functions
 - Defense-in-depth: DB layer enforces ownership on mutations even if API layer forgets
