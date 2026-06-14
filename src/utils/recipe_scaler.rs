@@ -304,14 +304,14 @@ impl ScaleCalculator {
         self.original_servings.map(|s| (s as f64 * self.multiplier()).round() as i32)
     }
 
-    /// Return scaled prep time (rounded), or None if original is None.
+    /// Return original prep time (does not scale with recipe size).
     pub fn scaled_prep_time(&self) -> Option<i32> {
-        self.original_prep_time.map(|t| (t as f64 * self.multiplier()).round() as i32)
+        self.original_prep_time
     }
 
-    /// Return scaled cook time (rounded), or None if original is None.
+    /// Return original cook time (does not scale with recipe size).
     pub fn scaled_cook_time(&self) -> Option<i32> {
-        self.original_cook_time.map(|t| (t as f64 * self.multiplier()).round() as i32)
+        self.original_cook_time
     }
 
     /// Reset scaling back to None mode.
@@ -463,8 +463,9 @@ mod tests {
         assert_eq!(scaled[2].scaled, false);
 
         assert_eq!(calc.scaled_servings(), Some(8));
-        assert_eq!(calc.scaled_prep_time(), Some(30));
-        assert_eq!(calc.scaled_cook_time(), Some(60));
+        // Prep/cook times do not scale
+        assert_eq!(calc.scaled_prep_time(), Some(15));
+        assert_eq!(calc.scaled_cook_time(), Some(30));
     }
 
     #[test]
@@ -523,8 +524,9 @@ mod tests {
         let mut calc = ScaleCalculator::new(test_ingredients(), Some(3), Some(10), Some(20));
         calc.set_multiplier(1.5);
         assert_eq!(calc.scaled_servings(), Some(5)); // 3 * 1.5 = 4.5 → 5 (round)
-        assert_eq!(calc.scaled_prep_time(), Some(15)); // 10 * 1.5 = 15
-        assert_eq!(calc.scaled_cook_time(), Some(30)); // 20 * 1.5 = 30
+        // Prep/cook times do not scale
+        assert_eq!(calc.scaled_prep_time(), Some(10));
+        assert_eq!(calc.scaled_cook_time(), Some(20));
     }
 
     #[test]

@@ -172,7 +172,7 @@ fn RecipeScaler(
         .collect();
 
     let mut calculator = use_signal(|| {
-        ScaleCalculator::new(refs.clone(), prep_time_minutes, cook_time_minutes, servings)
+        ScaleCalculator::new(refs.clone(), servings, prep_time_minutes, cook_time_minutes)
     });
     let mut multiplier_input = use_signal(String::new);
     let mut target_amount_input = use_signal(String::new);
