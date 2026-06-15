@@ -35,10 +35,7 @@ pub fn RecipeCard(props: RecipeCardProps) -> Element {
         .map(|s| format!("{} servings", s))
         .unwrap_or_default();
 
-    let desc = recipe
-        .description
-        .as_deref()
-        .unwrap_or("No description");
+    let desc = recipe.description.as_deref().unwrap_or("No description");
 
     rsx! {
         div {
