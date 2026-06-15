@@ -454,6 +454,59 @@ fn render_recipe_scaler(
     }
 }
 
+// ── Helper: conditional Equipment rendering ────────────────────────────
+
+/// Render the equipment section if present.
+fn render_equipment(equipment: Option<&String>) -> Element {
+    let Some(eq) = equipment else {
+        return rsx! {};
+    };
+    let trimmed = eq.trim();
+    if trimmed.is_empty() {
+        return rsx! {};
+    }
+
+    let equip_items: Vec<String> = trimmed
+        .split(|c| [',', '\n'].contains(&c))
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    if equip_items.is_empty() {
+        return rsx! {};
+    }
+
+    rsx! {
+        div {
+            margin_bottom: "var(--space-lg)",
+            h2 {
+                font_size: "20px",
+                color: "var(--text-primary)",
+                margin_bottom: "var(--space-sm)",
+                padding_bottom: "var(--space-xs)",
+                border_bottom: "2px solid var(--surface)",
+                "Equipment"
+            }
+            ul {
+                list_style: "none",
+                padding: "0",
+                margin: "0",
+                display: "flex",
+                flex_direction: "column",
+                gap: "var(--space-xs)",
+                for item in equip_items {
+                    li {
+                        padding: "var(--space-xs) var(--space-sm)",
+                        font_size: "14px",
+                        color: "var(--text-primary)",
+                        "• {item}"
+                    }
+                }
+            }
+        }
+    }
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 /// Single recipe detail page.
@@ -831,6 +884,9 @@ pub fn RecipeDetail(id: String) -> Element {
 
             // ── Recipe Scaler (CP12) ────────────────────────────────────────
             {render_recipe_scaler(&parsed.ingredients, recipe.prep_time_minutes, recipe.cook_time_minutes, recipe.servings)}
+
+            // ── Equipment ───────────────────────────────────────────────────
+            {render_equipment(recipe.equipment.as_ref())}
 
             // ── Ingredients ─────────────────────────────────────────────────
             if !parsed.ingredients.is_empty() {

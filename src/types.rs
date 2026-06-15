@@ -18,6 +18,7 @@ pub struct Recipe {
     pub cook_time_minutes: Option<i32>,
     pub servings: Option<i32>,
     pub instructions: Option<String>,
+    pub equipment: Option<String>,
     pub visibility: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

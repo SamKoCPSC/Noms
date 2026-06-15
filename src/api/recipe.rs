@@ -19,6 +19,7 @@ pub async fn create_recipe(
     cook_time_minutes: Option<i32>,
     servings: Option<i32>,
     instructions: Option<String>,
+    equipment: Option<String>,
     tags: Vec<String>,
     visibility: String,
 ) -> Result<crate::types::Recipe, ServerFnError> {
@@ -43,6 +44,7 @@ pub async fn create_recipe(
         cook_time_minutes,
         servings,
         instructions.as_deref(),
+        equipment.as_deref(),
         &visibility,
     )
     .await
@@ -97,6 +99,7 @@ pub async fn update_recipe(
     cook_time_minutes: Option<i32>,
     servings: Option<i32>,
     instructions: Option<String>,
+    equipment: Option<String>,
     tags: Option<Vec<String>>,
     visibility: Option<String>,
 ) -> Result<crate::types::Recipe, ServerFnError> {
@@ -124,6 +127,7 @@ pub async fn update_recipe(
         cook_time_minutes,
         servings,
         instructions.as_deref(),
+        equipment.as_deref(),
         visibility.as_deref(),
     )
     .await

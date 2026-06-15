@@ -77,6 +77,9 @@ pub fn RecipeNew() -> Element {
     // Tags (comma-separated)
     let mut tags_input = use_signal(String::new);
 
+    // Equipment (one per line)
+    let mut equipment = use_signal(String::new);
+
     // Visibility (default: private)
     let mut visibility = use_signal(|| "private".to_string());
 
@@ -143,6 +146,11 @@ pub fn RecipeNew() -> Element {
         };
 
         let vis = visibility().clone();
+        let equip = if equipment().trim().is_empty() {
+            None
+        } else {
+            Some(equipment().trim().to_string())
+        };
         spawn(async move {
             match create_recipe(
                 trimmed_title,
@@ -151,6 +159,7 @@ pub fn RecipeNew() -> Element {
                 cook,
                 serv,
                 Some(instructions),
+                equip,
                 tags,
                 vis,
             )
@@ -497,6 +506,40 @@ pub fn RecipeNew() -> Element {
                             font_size: "12px",
                             color: "var(--text-tertiary)",
                             "Comma-separated"
+                        }
+                    }
+
+                    // ── Equipment ───────────────────────────────────────
+                    div {
+                        display: "flex",
+                        flex_direction: "column",
+                        gap: "var(--space-sm)",
+                        label {
+                            font_size: "14px",
+                            font_weight: "600",
+                            color: "var(--text-secondary)",
+                            "Equipment"
+                        }
+                        textarea {
+                            class: "neumo-inset input",
+                            padding: "var(--space-sm) var(--space-md)",
+                            font_family: "var(--font-body)",
+                            font_size: "14px",
+                            color: "var(--text-primary)",
+                            background_color: "var(--surface)",
+                            outline: "none",
+                            border_radius: "var(--radius-md)",
+                            width: "100%",
+                            min_height: "80px",
+                            resize: "vertical",
+                            placeholder: "mixing bowl, whisk, large pan",
+                            value: equipment().clone(),
+                            oninput: move |v| equipment.set(v.value()),
+                        }
+                        span {
+                            font_size: "12px",
+                            color: "var(--text-tertiary)",
+                            "One item per line or comma-separated"
                         }
                     }
 
