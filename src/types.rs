@@ -44,6 +44,8 @@ pub struct Recipe {
     pub visibility: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub author_username: String,
+    pub author_avatar_url: Option<String>,
 }
 
 /// Paginated recipe list response for server functions.

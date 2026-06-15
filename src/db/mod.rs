@@ -204,6 +204,8 @@ impl sqlx::FromRow<'_, sqlx::postgres::PgRow> for Recipe {
             visibility: row.try_get("visibility")?,
             created_at: row.try_get("created_at")?,
             updated_at: row.try_get("updated_at")?,
+            author_username: row.try_get("author_username")?,
+            author_avatar_url: row.try_get("author_avatar_url")?,
         })
     }
 }
@@ -717,7 +719,9 @@ pub async fn insert_recipe(
     let row = sqlx::query(
         "INSERT INTO recipes (user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility) \
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) \
-         RETURNING id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at",
+         RETURNING id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at, \
+            (SELECT username FROM users WHERE users.id = $1) AS author_username, \
+            (SELECT avatar_url FROM users WHERE users.id = $1) AS author_avatar_url",
     )
     .bind(user_id)
     .bind(title)
@@ -742,8 +746,8 @@ pub async fn get_recipe_by_id(
     id: Uuid,
 ) -> Result<Option<Recipe>, DbError> {
     let row = sqlx::query(
-        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at \
-         FROM recipes WHERE id = $1",
+        "SELECT r.id, r.user_id, r.title, r.description, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.id = $1",
     )
     .bind(id)
     .fetch_optional(executor)
@@ -763,8 +767,8 @@ pub async fn get_recipe_by_id_and_owner(
     user_id: Uuid,
 ) -> Result<Recipe, DbError> {
     let row = sqlx::query(
-        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at \
-         FROM recipes WHERE id = $1 AND user_id = $2",
+        "SELECT r.id, r.user_id, r.title, r.description, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.id = $1 AND r.user_id = $2",
     )
     .bind(id)
     .bind(user_id)
@@ -784,9 +788,9 @@ pub async fn get_recipes_by_owner(
     user_id: Uuid,
 ) -> Result<Vec<Recipe>, DbError> {
     let rows = sqlx::query(
-        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at \
-         FROM recipes WHERE user_id = $1 \
-         ORDER BY created_at DESC",
+        "SELECT r.id, r.user_id, r.title, r.description, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.user_id = $1 \
+         ORDER BY r.created_at DESC",
     )
     .bind(user_id)
     .fetch_all(executor)
@@ -829,7 +833,9 @@ pub async fn update_recipe(
              visibility = COALESCE($11::VARCHAR, recipes.visibility), \
              updated_at = NOW() \
          WHERE id = $1 AND user_id = $2 \
-         RETURNING id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at",
+         RETURNING id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at, \
+            (SELECT username FROM users WHERE users.id = $2) AS author_username, \
+            (SELECT avatar_url FROM users WHERE users.id = $2) AS author_avatar_url",
     )
     .bind(id)
     .bind(user_id)
@@ -923,9 +929,9 @@ pub async fn get_recipes_by_owner_paginated(
     offset: i64,
 ) -> Result<Vec<Recipe>, DbError> {
     let rows = sqlx::query(
-        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at \
-         FROM recipes WHERE user_id = $1 \
-         ORDER BY created_at DESC \
+        "SELECT r.id, r.user_id, r.title, r.description, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.user_id = $1 \
+         ORDER BY r.created_at DESC \
          LIMIT $2 OFFSET $3",
     )
     .bind(user_id)
@@ -979,9 +985,9 @@ pub async fn get_public_recipes_paginated(
     offset: i64,
 ) -> Result<Vec<Recipe>, DbError> {
     let rows = sqlx::query(
-        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at \
-         FROM recipes WHERE visibility = 'public' \
-         ORDER BY created_at DESC \
+        "SELECT r.id, r.user_id, r.title, r.description, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.visibility = 'public' \
+         ORDER BY r.created_at DESC \
          LIMIT $1 OFFSET $2",
     )
     .bind(limit)
@@ -1014,8 +1020,8 @@ pub async fn get_recipe_by_id_public(
     id: Uuid,
 ) -> Result<Option<Recipe>, DbError> {
     let row = sqlx::query(
-        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at \
-         FROM recipes WHERE id = $1 AND visibility IN ('public', 'unlisted')",
+        "SELECT r.id, r.user_id, r.title, r.description, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.id = $1 AND r.visibility IN ('public', 'unlisted')",
     )
     .bind(id)
     .fetch_optional(executor)
@@ -1035,9 +1041,9 @@ pub async fn get_user_public_recipes(
     offset: i64,
 ) -> Result<Vec<Recipe>, DbError> {
     let rows = sqlx::query(
-        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at \
-         FROM recipes WHERE user_id = $1 AND visibility = 'public' \
-         ORDER BY created_at DESC \
+        "SELECT r.id, r.user_id, r.title, r.description, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.user_id = $1 AND r.visibility = 'public' \
+         ORDER BY r.created_at DESC \
          LIMIT $2 OFFSET $3",
     )
     .bind(user_id)
