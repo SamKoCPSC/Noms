@@ -18,8 +18,9 @@ pub async fn create_recipe(
     prep_time_minutes: Option<i32>,
     cook_time_minutes: Option<i32>,
     servings: Option<i32>,
-    instructions: Option<String>,
-    equipment: Option<String>,
+    ingredients: Vec<crate::types::RecipeIngredient>,
+    instructions: Vec<crate::types::RecipeStep>,
+    equipment: Vec<crate::types::RecipeEquipment>,
     tags: Vec<String>,
     visibility: String,
 ) -> Result<crate::types::Recipe, ServerFnError> {
@@ -43,8 +44,9 @@ pub async fn create_recipe(
         prep_time_minutes,
         cook_time_minutes,
         servings,
-        instructions.as_deref(),
-        equipment.as_deref(),
+        &ingredients,
+        &instructions,
+        &equipment,
         &visibility,
     )
     .await
@@ -98,8 +100,9 @@ pub async fn update_recipe(
     prep_time_minutes: Option<i32>,
     cook_time_minutes: Option<i32>,
     servings: Option<i32>,
-    instructions: Option<String>,
-    equipment: Option<String>,
+    ingredients: Option<Vec<crate::types::RecipeIngredient>>,
+    instructions: Option<Vec<crate::types::RecipeStep>>,
+    equipment: Option<Vec<crate::types::RecipeEquipment>>,
     tags: Option<Vec<String>>,
     visibility: Option<String>,
 ) -> Result<crate::types::Recipe, ServerFnError> {
@@ -126,8 +129,9 @@ pub async fn update_recipe(
         prep_time_minutes,
         cook_time_minutes,
         servings,
-        instructions.as_deref(),
-        equipment.as_deref(),
+        ingredients.as_deref().unwrap_or(&[]),
+        instructions.as_deref().unwrap_or(&[]),
+        equipment.as_deref().unwrap_or(&[]),
         visibility.as_deref(),
     )
     .await

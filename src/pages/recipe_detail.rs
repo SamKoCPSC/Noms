@@ -1,7 +1,7 @@
 //! Single recipe detail page.
 //!
-//! Fetches recipe data and tags via server functions, parses the serialized
-//! instructions text back into ingredients and steps for display.
+//! Fetches recipe data and tags via server functions, renders typed vectors
+//! of ingredients, steps (with recursive sub-steps), and equipment directly.
 //!
 //! Publicly accessible: tries `get_public_recipe` first (no auth needed),
 //! falls back to authenticated `get_recipe` for private/unlisted recipes.
@@ -15,113 +15,13 @@ use crate::api::recipe::{
     get_public_recipe, get_public_recipe_tags_by_id, get_recipe, get_recipe_owner_username,
     get_recipe_tags,
 };
-#[cfg(target_arch = "wasm32")]
-use crate::utils::recipe_scaler::{format_amount, parse_amount, IngredientRef, ScaleCalculator, ScaleMode, ScaledIngredient};
 use crate::auth::context::use_auth;
 use crate::components::base::{Button, ButtonVariant, Card, LoadingSpinner, PageHeader};
-use crate::types::Recipe;
-
-// ── Parsed instruction types ─────────────────────────────────────────────────
-
-/// A single parsed ingredient.
-#[derive(Clone, Debug, PartialEq)]
-struct ParsedIngredient {
-    amount: String,
-    unit: String,
-    name: String,
-}
-
-/// Result of parsing the serialized instructions text.
-#[derive(Clone, Debug, Default)]
-struct ParsedInstructions {
-    ingredients: Vec<ParsedIngredient>,
-    steps: Vec<String>,
-    /// Fallback: original text if no structured sections were found.
-    raw: Option<String>,
-}
-
-// ── Parsing helper ────────────────────────────────────────────────────────────
-
-/// Parse the serialized instructions text back into ingredients and steps.
-///
-/// Reverses the format produced by `serialize_instructions()` in `recipe_new.rs`:
-/// ```text
-/// INGREDIENTS:
-/// - 2 cups flour
-/// - 1 tsp salt
-///
-/// STEPS:
-/// 1. Mix dry ingredients
-/// 2. Add wet ingredients
-/// ```
-fn parse_instructions(text: &str) -> ParsedInstructions {
-    let mut result = ParsedInstructions {
-        raw: Some(text.to_string()),
-        ..Default::default()
-    };
-
-    let mut section = ""; // "ingredients" or "steps"
-
-    for line in text.lines() {
-        let trimmed = line.trim();
-
-        if trimmed == "INGREDIENTS:" {
-            section = "ingredients";
-            continue;
-        }
-        if trimmed == "STEPS:" {
-            section = "steps";
-            continue;
-        }
-        if trimmed.is_empty() {
-            continue;
-        }
-
-        match section {
-            "ingredients" => {
-                // Parse: "- 2 cups flour" → { amount: "2", unit: "cups", name: "flour" }
-                if let Some(rest) = trimmed.strip_prefix('-').map(|s| s.trim()) {
-                    let parts: Vec<&str> = rest.split_whitespace().collect();
-                    if parts.is_empty() {
-                        continue;
-                    }
-                    // Heuristic: first token = amount, last token = name,
-                    // everything in between = unit.
-                    let amount = parts[0].to_string();
-                    let name = parts[parts.len() - 1].to_string();
-                    let unit = if parts.len() > 2 {
-                        parts[1..parts.len() - 1].join(" ")
-                    } else {
-                        String::new()
-                    };
-                    result
-                        .ingredients
-                        .push(ParsedIngredient { amount, unit, name });
-                }
-            }
-            "steps" => {
-                // Parse: "1. Mix dry ingredients" → "Mix dry ingredients"
-                // The format is "{number}. {text}\n"
-                if let Some(dot_pos) = trimmed.find('.') {
-                    let num_part = &trimmed[..dot_pos];
-                    let rest = trimmed[dot_pos + 1..].trim();
-                    // Verify the prefix is a number
-                    if num_part.parse::<u32>().is_ok() && !rest.is_empty() {
-                        result.steps.push(rest.to_string());
-                    }
-                }
-            }
-            _ => {}
-        }
-    }
-
-    // If we found nothing structured, keep raw as fallback
-    if result.ingredients.is_empty() && result.steps.is_empty() {
-        result.raw = Some(text.to_string());
-    }
-
-    result
-}
+use crate::types::{Recipe, RecipeEquipment, RecipeIngredient, RecipeStep};
+#[cfg(target_arch = "wasm32")]
+use crate::utils::recipe_scaler::{
+    format_amount, parse_amount, IngredientRef, ScaleCalculator, ScaleMode, ScaledIngredient,
+};
 
 // ── Date formatting helper ───────────────────────────────────────────────────
 
@@ -144,6 +44,80 @@ fn format_relative_time(dt: DateTime<Utc>) -> String {
     }
 }
 
+// ── Recursive Step Rendering ─────────────────────────────────────────────────
+
+/// Roman numeral for a given 1-based index (up to 10).
+fn roman_numeral(n: usize) -> String {
+    match n {
+        1 => "i".to_string(),
+        2 => "ii".to_string(),
+        3 => "iii".to_string(),
+        4 => "iv".to_string(),
+        5 => "v".to_string(),
+        6 => "vi".to_string(),
+        7 => "vii".to_string(),
+        8 => "viii".to_string(),
+        9 => "ix".to_string(),
+        10 => "x".to_string(),
+        _ => n.to_string(),
+    }
+}
+
+/// Build a hierarchical step label.
+/// Level 0: "1.", "2."
+/// Level 1: "1a.", "1b."
+/// Level 2+: "1a-i.", "1a-ii."
+fn build_step_label(path: &[usize]) -> String {
+    if path.is_empty() {
+        return String::new();
+    }
+    let mut parts: Vec<String> = Vec::new();
+    for (i, &idx) in path.iter().enumerate() {
+        let zero_idx = idx; // 0-based index from the parent's sub_steps vec
+        match i {
+            0 => parts.push(format!("{}", zero_idx + 1)),
+            1 => parts.push(format!("{}", ((b'a' as usize) + zero_idx) as u8 as char)),
+            _ => parts.push(roman_numeral(zero_idx + 1)),
+        }
+    }
+    format!("{}.", parts.join("-"))
+}
+
+/// Recursive component that renders a `RecipeStep` and its nested sub-steps
+/// with hierarchical numbering.
+#[component]
+fn StepNode(step: RecipeStep, path: Vec<usize>, level: usize) -> Element {
+    let label = build_step_label(&path);
+    let indent = if level == 0 {
+        0.0
+    } else {
+        (level - 1) as f64 * 20.0
+    };
+
+    rsx! {
+        li {
+            padding: "var(--space-xs) 0",
+            margin_left: "{indent}px",
+            font_size: "14px",
+            color: "var(--text-primary)",
+            line_height: "1.6",
+            strong { font_weight: "600", margin_right: "var(--space-xs)", "{label}" }
+            "{step.text}"
+
+            if !step.sub_steps.is_empty() {
+                ol {
+                    padding_left: "0",
+                    margin_top: "var(--space-xs)",
+                    list_style: "none",
+                    for (idx, sub) in step.sub_steps.iter().enumerate() {
+                        StepNode { step: sub.clone(), path: [path.clone(), vec![idx]].concat(), level: level + 1 }
+                    }
+                }
+            }
+        }
+    }
+}
+
 // ── Recipe Scaler Component (CP12) ───────────────────────────────────────────
 
 /// Collapsible recipe scaling widget.
@@ -154,14 +128,14 @@ fn format_relative_time(dt: DateTime<Utc>) -> String {
 #[cfg(target_arch = "wasm32")]
 #[component]
 fn RecipeScaler(
-    ingredients: Vec<ParsedIngredient>,
+    ingredients: Vec<RecipeIngredient>,
     prep_time_minutes: Option<i32>,
     cook_time_minutes: Option<i32>,
     servings: Option<i32>,
 ) -> Element {
     let mut is_expanded = use_signal(|| false);
 
-    // Convert ParsedIngredient -> IngredientRef for ScaleCalculator
+    // Convert RecipeIngredient -> IngredientRef for ScaleCalculator
     let refs: Vec<IngredientRef> = ingredients
         .iter()
         .map(|ing| IngredientRef {
@@ -183,19 +157,25 @@ fn RecipeScaler(
     let current_multiplier = calculator.read().multiplier();
 
     // Preset multipliers — pre-compute all data for rsx! (no `let` allowed inside rsx!)
-    let preset_data: Vec<(f64, &'static str, String)> = [(0.5, "½x"), (1.0, "1x"), (2.0, "2x"), (3.0, "3x"), (4.0, "4x")]
-        .iter()
-        .map(|(mult, label)| {
-            let is_active = matches!(current_mode, ScaleMode::Multiplier(_))
-                && (current_multiplier - mult).abs() < 0.001;
-            let class = if is_active {
-                "recipe-scaler__preset recipe-scaler__preset--active".to_string()
-            } else {
-                "recipe-scaler__preset".to_string()
-            };
-            (*mult, *label, class)
-        })
-        .collect();
+    let preset_data: Vec<(f64, &'static str, String)> = [
+        (0.5, "½x"),
+        (1.0, "1x"),
+        (2.0, "2x"),
+        (3.0, "3x"),
+        (4.0, "4x"),
+    ]
+    .iter()
+    .map(|(mult, label)| {
+        let is_active = matches!(current_mode, ScaleMode::Multiplier(_))
+            && (current_multiplier - mult).abs() < 0.001;
+        let class = if is_active {
+            "recipe-scaler__preset recipe-scaler__preset--active".to_string()
+        } else {
+            "recipe-scaler__preset".to_string()
+        };
+        (*mult, *label, class)
+    })
+    .collect();
 
     // Mode toggle handler
     let on_set_multiplier = move |_| {
@@ -429,7 +409,7 @@ fn RecipeScaler(
 
 /// Render the RecipeScaler widget on WASM; empty element on server.
 fn render_recipe_scaler(
-    ingredients: &[ParsedIngredient],
+    ingredients: &[RecipeIngredient],
     #[allow(unused_variables)] prep_time_minutes: Option<i32>,
     #[allow(unused_variables)] cook_time_minutes: Option<i32>,
     #[allow(unused_variables)] servings: Option<i32>,
@@ -457,22 +437,8 @@ fn render_recipe_scaler(
 // ── Helper: conditional Equipment rendering ────────────────────────────
 
 /// Render the equipment section if present.
-fn render_equipment(equipment: Option<&String>) -> Element {
-    let Some(eq) = equipment else {
-        return rsx! {};
-    };
-    let trimmed = eq.trim();
-    if trimmed.is_empty() {
-        return rsx! {};
-    }
-
-    let equip_items: Vec<String> = trimmed
-        .split(|c| [',', '\n'].contains(&c))
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .collect();
-
-    if equip_items.is_empty() {
+fn render_equipment(equipment: &[RecipeEquipment]) -> Element {
+    if equipment.is_empty() {
         return rsx! {};
     }
 
@@ -494,12 +460,12 @@ fn render_equipment(equipment: Option<&String>) -> Element {
                 display: "flex",
                 flex_direction: "column",
                 gap: "var(--space-xs)",
-                for item in equip_items {
+                for item in equipment {
                     li {
                         padding: "var(--space-xs) var(--space-sm)",
                         font_size: "14px",
                         color: "var(--text-primary)",
-                        "• {item}"
+                        "• {item.name}"
                     }
                 }
             }
@@ -720,13 +686,6 @@ pub fn RecipeDetail(id: String) -> Element {
         };
     };
 
-    // Parse instructions
-    let parsed = recipe
-        .instructions
-        .as_deref()
-        .map(parse_instructions)
-        .unwrap_or_default();
-
     let relative_time = format_relative_time(recipe.created_at);
 
     rsx! {
@@ -883,13 +842,13 @@ pub fn RecipeDetail(id: String) -> Element {
             }
 
             // ── Recipe Scaler (CP12) ────────────────────────────────────────
-            {render_recipe_scaler(&parsed.ingredients, recipe.prep_time_minutes, recipe.cook_time_minutes, recipe.servings)}
+            {render_recipe_scaler(&recipe.ingredients, recipe.prep_time_minutes, recipe.cook_time_minutes, recipe.servings)}
 
             // ── Equipment ───────────────────────────────────────────────────
-            {render_equipment(recipe.equipment.as_ref())}
+            {render_equipment(&recipe.equipment)}
 
             // ── Ingredients ─────────────────────────────────────────────────
-            if !parsed.ingredients.is_empty() {
+            if !recipe.ingredients.is_empty() {
                 div {
                     margin_bottom: "var(--space-lg)",
                     h2 {
@@ -907,7 +866,7 @@ pub fn RecipeDetail(id: String) -> Element {
                         display: "flex",
                         flex_direction: "column",
                         gap: "var(--space-xs)",
-                        for ing in &parsed.ingredients {
+                        for ing in &recipe.ingredients {
                             li {
                                 padding: "var(--space-xs) var(--space-sm)",
                                 font_size: "14px",
@@ -926,7 +885,7 @@ pub fn RecipeDetail(id: String) -> Element {
             }
 
             // ── Steps ───────────────────────────────────────────────────────
-            if !parsed.steps.is_empty() {
+            if !recipe.instructions.is_empty() {
                 div {
                     margin_bottom: "var(--space-lg)",
                     h2 {
@@ -943,46 +902,9 @@ pub fn RecipeDetail(id: String) -> Element {
                         display: "flex",
                         flex_direction: "column",
                         gap: "var(--space-sm)",
-                        for step in &parsed.steps {
-                            li {
-                                padding: "var(--space-xs) 0",
-                                font_size: "14px",
-                                color: "var(--text-primary)",
-                                line_height: "1.6",
-                                "{step}"
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ── Raw instructions fallback ───────────────────────────────────
-            if parsed.ingredients.is_empty() && parsed.steps.is_empty() {
-                if let Some(raw) = &parsed.raw {
-                    if !raw.is_empty() {
-                        div {
-                            margin_bottom: "var(--space-lg)",
-                            h2 {
-                                font_size: "20px",
-                                color: "var(--text-primary)",
-                                margin_bottom: "var(--space-sm)",
-                                padding_bottom: "var(--space-xs)",
-                                border_bottom: "2px solid var(--surface)",
-                                "Instructions"
-                            }
-                            pre {
-                                background_color: "var(--surface)",
-                                padding: "var(--space-md)",
-                                border_radius: "var(--radius-md)",
-                                font_size: "14px",
-                                color: "var(--text-secondary)",
-                                line_height: "1.6",
-                                white_space: "pre-wrap",
-                                word_wrap: "break-word",
-                                margin: "0",
-                                font_family: "var(--font-body)",
-                                "{raw}"
-                            }
+                        list_style: "none",
+                        for (idx, step) in recipe.instructions.iter().enumerate() {
+                            StepNode { step: step.clone(), path: vec![idx], level: 0 }
                         }
                     }
                 }

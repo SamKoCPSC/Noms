@@ -7,8 +7,13 @@
 #![allow(dead_code)]
 
 use chrono::{DateTime, Utc};
-use sqlx::{PgPool, Postgres, Row};
+use sqlx::{FromRow, PgPool, Postgres, Row};
 use uuid::Uuid;
+
+// Re-export typed recipe sub-structs for use in DB layer
+pub use crate::types::RecipeEquipment;
+pub use crate::types::RecipeIngredient;
+pub use crate::types::RecipeStep;
 
 // ── Error type ──────────────────────────────────────────────────────────────
 
@@ -27,6 +32,8 @@ pub enum DbError {
     SessionInvalid,
     /// The requested recipe was not found.
     RecipeNotFound(uuid::Uuid),
+    /// Failed to serialize or deserialize JSONB data.
+    SerdeJson(serde_json::Error),
 }
 
 impl std::fmt::Display for DbError {
@@ -38,6 +45,7 @@ impl std::fmt::Display for DbError {
             DbError::UsernameTaken => write!(f, "username is already taken"),
             DbError::SessionInvalid => write!(f, "session is invalid, revoked, or expired"),
             DbError::RecipeNotFound(id) => write!(f, "recipe not found: {id}"),
+            DbError::SerdeJson(e) => write!(f, "JSON serialization/deserialization failed: {e}"),
         }
     }
 }
@@ -50,6 +58,7 @@ impl std::error::Error for DbError {
             DbError::UsernameTaken => None,
             DbError::SessionInvalid => None,
             DbError::RecipeNotFound(_) => None,
+            DbError::SerdeJson(e) => Some(e),
         }
     }
 }
@@ -175,7 +184,7 @@ pub struct OauthAccountRow {
 /// Re-exported from `crate::types` for use in database queries.
 pub use crate::types::Recipe;
 
-/// Implement `sqlx::FromRow` for `Recipe` so it can be used with `query_as!`.
+/// Implement `sqlx::FromRow` for `Recipe` so it can be used with raw queries.
 impl sqlx::FromRow<'_, sqlx::postgres::PgRow> for Recipe {
     fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, sqlx::Error> {
         Ok(Self {
@@ -186,8 +195,12 @@ impl sqlx::FromRow<'_, sqlx::postgres::PgRow> for Recipe {
             prep_time_minutes: row.try_get("prep_time_minutes")?,
             cook_time_minutes: row.try_get("cook_time_minutes")?,
             servings: row.try_get("servings")?,
-            instructions: row.try_get("instructions")?,
-            equipment: row.try_get("equipment")?,
+            ingredients: serde_json::from_value(row.try_get("ingredients")?)
+                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
+            instructions: serde_json::from_value(row.try_get("instructions")?)
+                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
+            equipment: serde_json::from_value(row.try_get("equipment")?)
+                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
             visibility: row.try_get("visibility")?,
             created_at: row.try_get("created_at")?,
             updated_at: row.try_get("updated_at")?,
@@ -692,28 +705,35 @@ pub async fn insert_recipe(
     prep_time_minutes: Option<i32>,
     cook_time_minutes: Option<i32>,
     servings: Option<i32>,
-    instructions: Option<&str>,
-    equipment: Option<&str>,
+    ingredients: &[RecipeIngredient],
+    instructions: &[RecipeStep],
+    equipment: &[RecipeEquipment],
     visibility: &str,
 ) -> Result<Recipe, DbError> {
-    sqlx::query_as!(
-        Recipe,
-        "INSERT INTO recipes (user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, equipment, visibility) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) \
-         RETURNING id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, equipment, visibility, created_at, updated_at",
-        user_id,
-        title,
-        description,
-        prep_time_minutes,
-        cook_time_minutes,
-        servings,
-        instructions,
-        equipment,
-        visibility,
+    let ingredients_json = serde_json::to_value(ingredients).map_err(DbError::SerdeJson)?;
+    let instructions_json = serde_json::to_value(instructions).map_err(DbError::SerdeJson)?;
+    let equipment_json = serde_json::to_value(equipment).map_err(DbError::SerdeJson)?;
+
+    let row = sqlx::query(
+        "INSERT INTO recipes (user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) \
+         RETURNING id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at",
     )
+    .bind(user_id)
+    .bind(title)
+    .bind(description)
+    .bind(prep_time_minutes)
+    .bind(cook_time_minutes)
+    .bind(servings)
+    .bind(ingredients_json)
+    .bind(instructions_json)
+    .bind(equipment_json)
+    .bind(visibility)
     .fetch_one(executor)
     .await
-    .map_err(DbError::Query)
+    .map_err(DbError::Query)?;
+
+    Recipe::from_row(&row).map_err(DbError::Query)
 }
 
 /// Get a recipe by ID. Returns `None` if not found.
@@ -721,15 +741,18 @@ pub async fn get_recipe_by_id(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     id: Uuid,
 ) -> Result<Option<Recipe>, DbError> {
-    sqlx::query_as!(
-        Recipe,
-        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, equipment, visibility, created_at, updated_at \
+    let row = sqlx::query(
+        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at \
          FROM recipes WHERE id = $1",
-        id,
     )
+    .bind(id)
     .fetch_optional(executor)
     .await
-    .map_err(DbError::Query)
+    .map_err(DbError::Query)?;
+
+    row.map(|r| Recipe::from_row(&r))
+        .transpose()
+        .map_err(DbError::Query)
 }
 
 /// Get a recipe by ID, guarded by user_id to prevent cross-user access.
@@ -739,19 +762,20 @@ pub async fn get_recipe_by_id_and_owner(
     id: Uuid,
     user_id: Uuid,
 ) -> Result<Recipe, DbError> {
-    sqlx::query_as!(
-        Recipe,
-        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, equipment, visibility, created_at, updated_at \
+    let row = sqlx::query(
+        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at \
          FROM recipes WHERE id = $1 AND user_id = $2",
-        id,
-        user_id,
     )
+    .bind(id)
+    .bind(user_id)
     .fetch_one(executor)
     .await
     .map_err(|e| match e {
         sqlx::Error::RowNotFound => DbError::RecipeNotFound(id),
         other => DbError::Query(other),
-    })
+    })?;
+
+    Recipe::from_row(&row).map_err(DbError::Query)
 }
 
 /// Get all recipes for a user, ordered by most recently created first.
@@ -759,16 +783,20 @@ pub async fn get_recipes_by_owner(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     user_id: Uuid,
 ) -> Result<Vec<Recipe>, DbError> {
-    sqlx::query_as!(
-        Recipe,
-        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, equipment, visibility, created_at, updated_at \
+    let rows = sqlx::query(
+        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at \
          FROM recipes WHERE user_id = $1 \
          ORDER BY created_at DESC",
-        user_id,
     )
+    .bind(user_id)
     .fetch_all(executor)
     .await
-    .map_err(DbError::Query)
+    .map_err(DbError::Query)?;
+
+    rows.into_iter()
+        .map(|r| Recipe::from_row(&r))
+        .collect::<Result<_, _>>()
+        .map_err(DbError::Query)
 }
 
 /// Update a recipe's fields. Returns the updated recipe.
@@ -785,36 +813,43 @@ pub async fn update_recipe(
     prep_time_minutes: Option<i32>,
     cook_time_minutes: Option<i32>,
     servings: Option<i32>,
-    instructions: Option<&str>,
-    equipment: Option<&str>,
+    ingredients: &[RecipeIngredient],
+    instructions: &[RecipeStep],
+    equipment: &[RecipeEquipment],
     visibility: Option<&str>,
 ) -> Result<Recipe, DbError> {
-    sqlx::query_as!(
-        Recipe,
+    let ingredients_json = serde_json::to_value(ingredients).map_err(DbError::SerdeJson)?;
+    let instructions_json = serde_json::to_value(instructions).map_err(DbError::SerdeJson)?;
+    let equipment_json = serde_json::to_value(equipment).map_err(DbError::SerdeJson)?;
+
+    let row = sqlx::query(
         "UPDATE recipes \
          SET title = $3, description = $4, prep_time_minutes = $5, cook_time_minutes = $6, \
-             servings = $7, instructions = $8, equipment = $9, \
-             visibility = COALESCE($10::VARCHAR, recipes.visibility), \
+             servings = $7, ingredients = $8, instructions = $9, equipment = $10, \
+             visibility = COALESCE($11::VARCHAR, recipes.visibility), \
              updated_at = NOW() \
          WHERE id = $1 AND user_id = $2 \
-         RETURNING id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, equipment, visibility, created_at, updated_at",
-        id,
-        user_id,
-        title,
-        description,
-        prep_time_minutes,
-        cook_time_minutes,
-        servings,
-        instructions,
-        equipment,
-        visibility,
+         RETURNING id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at",
     )
+    .bind(id)
+    .bind(user_id)
+    .bind(title)
+    .bind(description)
+    .bind(prep_time_minutes)
+    .bind(cook_time_minutes)
+    .bind(servings)
+    .bind(ingredients_json)
+    .bind(instructions_json)
+    .bind(equipment_json)
+    .bind(visibility)
     .fetch_one(executor)
     .await
     .map_err(|e| match e {
         sqlx::Error::RowNotFound => DbError::RecipeNotFound(id),
         other => DbError::Query(other),
-    })
+    })?;
+
+    Recipe::from_row(&row).map_err(DbError::Query)
 }
 
 /// Delete a recipe, enforcing ownership via `user_id` in the WHERE clause.
@@ -887,19 +922,23 @@ pub async fn get_recipes_by_owner_paginated(
     limit: i64,
     offset: i64,
 ) -> Result<Vec<Recipe>, DbError> {
-    sqlx::query_as!(
-        Recipe,
-        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, equipment, visibility, created_at, updated_at \
+    let rows = sqlx::query(
+        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at \
          FROM recipes WHERE user_id = $1 \
          ORDER BY created_at DESC \
          LIMIT $2 OFFSET $3",
-        user_id,
-        limit,
-        offset,
     )
+    .bind(user_id)
+    .bind(limit)
+    .bind(offset)
     .fetch_all(executor)
     .await
-    .map_err(DbError::Query)
+    .map_err(DbError::Query)?;
+
+    rows.into_iter()
+        .map(|r| Recipe::from_row(&r))
+        .collect::<Result<_, _>>()
+        .map_err(DbError::Query)
 }
 
 /// Count total recipes for a user.
@@ -939,18 +978,22 @@ pub async fn get_public_recipes_paginated(
     limit: i64,
     offset: i64,
 ) -> Result<Vec<Recipe>, DbError> {
-    sqlx::query_as!(
-        Recipe,
-        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, equipment, visibility, created_at, updated_at \
+    let rows = sqlx::query(
+        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at \
          FROM recipes WHERE visibility = 'public' \
          ORDER BY created_at DESC \
          LIMIT $1 OFFSET $2",
-        limit,
-        offset,
     )
+    .bind(limit)
+    .bind(offset)
     .fetch_all(executor)
     .await
-    .map_err(DbError::Query)
+    .map_err(DbError::Query)?;
+
+    rows.into_iter()
+        .map(|r| Recipe::from_row(&r))
+        .collect::<Result<_, _>>()
+        .map_err(DbError::Query)
 }
 
 /// Count total public recipes (for pagination has_more calculation).
@@ -970,15 +1013,18 @@ pub async fn get_recipe_by_id_public(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     id: Uuid,
 ) -> Result<Option<Recipe>, DbError> {
-    sqlx::query_as!(
-        Recipe,
-        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, equipment, visibility, created_at, updated_at \
+    let row = sqlx::query(
+        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at \
          FROM recipes WHERE id = $1 AND visibility IN ('public', 'unlisted')",
-        id,
     )
+    .bind(id)
     .fetch_optional(executor)
     .await
-    .map_err(DbError::Query)
+    .map_err(DbError::Query)?;
+
+    row.map(|r| Recipe::from_row(&r))
+        .transpose()
+        .map_err(DbError::Query)
 }
 
 /// Get a user's public recipes with pagination, ordered by most recently created first.
@@ -988,19 +1034,23 @@ pub async fn get_user_public_recipes(
     limit: i64,
     offset: i64,
 ) -> Result<Vec<Recipe>, DbError> {
-    sqlx::query_as!(
-        Recipe,
-        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, instructions, equipment, visibility, created_at, updated_at \
+    let rows = sqlx::query(
+        "SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at \
          FROM recipes WHERE user_id = $1 AND visibility = 'public' \
          ORDER BY created_at DESC \
          LIMIT $2 OFFSET $3",
-        user_id,
-        limit,
-        offset,
     )
+    .bind(user_id)
+    .bind(limit)
+    .bind(offset)
     .fetch_all(executor)
     .await
-    .map_err(DbError::Query)
+    .map_err(DbError::Query)?;
+
+    rows.into_iter()
+        .map(|r| Recipe::from_row(&r))
+        .collect::<Result<_, _>>()
+        .map_err(DbError::Query)
 }
 
 /// Count a user's public recipes (for profile page pagination).
@@ -1699,8 +1749,12 @@ mod tests {
             Some(10),
             Some(15),
             Some(4),
-            Some("Mix batter, cook on griddle"),
-            None,
+            &[],
+            &[RecipeStep {
+                text: "Mix batter, cook on griddle".to_string(),
+                sub_steps: vec![],
+            }],
+            &[],
             "private",
         )
         .await
@@ -1715,9 +1769,13 @@ mod tests {
         assert_eq!(recipe.prep_time_minutes, Some(10));
         assert_eq!(recipe.cook_time_minutes, Some(15));
         assert_eq!(recipe.servings, Some(4));
+        assert_eq!(recipe.ingredients, Vec::<RecipeIngredient>::new());
         assert_eq!(
             recipe.instructions,
-            Some("Mix batter, cook on griddle".to_string())
+            vec![RecipeStep {
+                text: "Mix batter, cook on griddle".to_string(),
+                sub_steps: vec![]
+            }]
         );
     }
 
@@ -1744,8 +1802,9 @@ mod tests {
             None,
             Some(5),
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             "private",
         )
         .await
@@ -1783,8 +1842,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             "private",
         )
         .await
@@ -1828,13 +1888,33 @@ mod tests {
 
         // Insert two recipes
         insert_recipe(
-            &pool, user.id, "Recipe A", None, None, None, None, None, None, "private",
+            &pool,
+            user.id,
+            "Recipe A",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "private",
         )
         .await
         .unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         insert_recipe(
-            &pool, user.id, "Recipe B", None, None, None, None, None, None, "private",
+            &pool,
+            user.id,
+            "Recipe B",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "private",
         )
         .await
         .unwrap();
@@ -1869,8 +1949,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             "private",
         )
         .await
@@ -1888,8 +1969,12 @@ mod tests {
             Some(20),
             Some(30),
             Some(6),
-            Some("New instructions"),
-            None,
+            &[],
+            &[RecipeStep {
+                text: "New instructions".to_string(),
+                sub_steps: vec![],
+            }],
+            &[],
             None,
         )
         .await
@@ -1900,13 +1985,30 @@ mod tests {
         assert_eq!(updated.prep_time_minutes, Some(20));
         assert_eq!(updated.cook_time_minutes, Some(30));
         assert_eq!(updated.servings, Some(6));
-        assert_eq!(updated.instructions, Some("New instructions".to_string()));
+        assert_eq!(
+            updated.instructions,
+            vec![RecipeStep {
+                text: "New instructions".to_string(),
+                sub_steps: vec![]
+            }]
+        );
         assert!(updated.updated_at >= original_updated_at);
 
         // Update nonexistent recipe
         let fake_id = Uuid::nil();
         let result = update_recipe(
-            &pool, fake_id, user.id, "X", None, None, None, None, None, None, None,
+            &pool,
+            fake_id,
+            user.id,
+            "X",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            None,
         )
         .await;
         assert!(matches!(result, Err(DbError::RecipeNotFound(_))));
@@ -1930,8 +2032,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             None,
         )
         .await;
@@ -1961,8 +2064,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             "private",
         )
         .await
@@ -2016,8 +2120,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             "private",
         )
         .await
@@ -2096,8 +2201,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             "private",
         )
         .await
@@ -2147,8 +2253,9 @@ mod tests {
                 None,
                 None,
                 None,
-                None,
-                None,
+                &[],
+                &[],
+                &[],
                 "private",
             )
             .await
@@ -2200,12 +2307,32 @@ mod tests {
 
         // Insert two recipes
         insert_recipe(
-            &pool, user.id, "Count A", None, None, None, None, None, None, "private",
+            &pool,
+            user.id,
+            "Count A",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "private",
         )
         .await
         .unwrap();
         insert_recipe(
-            &pool, user.id, "Count B", None, None, None, None, None, None, "private",
+            &pool,
+            user.id,
+            "Count B",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "private",
         )
         .await
         .unwrap();
@@ -2245,21 +2372,51 @@ mod tests {
         .unwrap();
 
         let r_public = insert_recipe(
-            &pool, user.id, "Public", None, None, None, None, None, None, "public",
+            &pool,
+            user.id,
+            "Public",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "public",
         )
         .await
         .unwrap();
         assert_eq!(r_public.visibility, "public");
 
         let r_unlisted = insert_recipe(
-            &pool, user.id, "Unlisted", None, None, None, None, None, None, "unlisted",
+            &pool,
+            user.id,
+            "Unlisted",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "unlisted",
         )
         .await
         .unwrap();
         assert_eq!(r_unlisted.visibility, "unlisted");
 
         let r_private = insert_recipe(
-            &pool, user.id, "Private", None, None, None, None, None, None, "private",
+            &pool,
+            user.id,
+            "Private",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "private",
         )
         .await
         .unwrap();
@@ -2300,8 +2457,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             "public",
         )
         .await
@@ -2314,8 +2472,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             "public",
         )
         .await
@@ -2328,8 +2487,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             "private",
         )
         .await
@@ -2337,7 +2497,17 @@ mod tests {
 
         // User B: 1 public
         insert_recipe(
-            &pool, user_b.id, "B Public", None, None, None, None, None, None, "public",
+            &pool,
+            user_b.id,
+            "B Public",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "public",
         )
         .await
         .unwrap();
@@ -2378,22 +2548,62 @@ mod tests {
         .unwrap();
 
         insert_recipe(
-            &pool, user.id, "Pub 1", None, None, None, None, None, None, "public",
+            &pool,
+            user.id,
+            "Pub 1",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "public",
         )
         .await
         .unwrap();
         insert_recipe(
-            &pool, user.id, "Pub 2", None, None, None, None, None, None, "public",
+            &pool,
+            user.id,
+            "Pub 2",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "public",
         )
         .await
         .unwrap();
         insert_recipe(
-            &pool, user.id, "Priv 1", None, None, None, None, None, None, "private",
+            &pool,
+            user.id,
+            "Priv 1",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "private",
         )
         .await
         .unwrap();
         insert_recipe(
-            &pool, user.id, "Unlist 1", None, None, None, None, None, None, "unlisted",
+            &pool,
+            user.id,
+            "Unlist 1",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "unlisted",
         )
         .await
         .unwrap();
@@ -2426,8 +2636,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             "public",
         )
         .await
@@ -2440,8 +2651,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             "public",
         )
         .await
@@ -2455,8 +2667,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             "private",
         )
         .await
@@ -2520,8 +2733,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             "private",
         )
         .await
@@ -2547,17 +2761,47 @@ mod tests {
         .unwrap();
 
         let r_public = insert_recipe(
-            &pool, user.id, "Public", None, None, None, None, None, None, "public",
+            &pool,
+            user.id,
+            "Public",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "public",
         )
         .await
         .unwrap();
         let r_unlisted = insert_recipe(
-            &pool, user.id, "Unlisted", None, None, None, None, None, None, "unlisted",
+            &pool,
+            user.id,
+            "Unlisted",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "unlisted",
         )
         .await
         .unwrap();
         let r_private = insert_recipe(
-            &pool, user.id, "Private", None, None, None, None, None, None, "private",
+            &pool,
+            user.id,
+            "Private",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "private",
         )
         .await
         .unwrap();
@@ -2599,17 +2843,47 @@ mod tests {
         .unwrap();
 
         insert_recipe(
-            &pool, user.id, "Pub 1", None, None, None, None, None, None, "public",
+            &pool,
+            user.id,
+            "Pub 1",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "public",
         )
         .await
         .unwrap();
         insert_recipe(
-            &pool, user.id, "Pub 2", None, None, None, None, None, None, "public",
+            &pool,
+            user.id,
+            "Pub 2",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "public",
         )
         .await
         .unwrap();
         insert_recipe(
-            &pool, user.id, "Priv 1", None, None, None, None, None, None, "private",
+            &pool,
+            user.id,
+            "Priv 1",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "private",
         )
         .await
         .unwrap();
@@ -2647,17 +2921,47 @@ mod tests {
         .unwrap();
 
         insert_recipe(
-            &pool, user.id, "Pub 1", None, None, None, None, None, None, "public",
+            &pool,
+            user.id,
+            "Pub 1",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "public",
         )
         .await
         .unwrap();
         insert_recipe(
-            &pool, user.id, "Priv 1", None, None, None, None, None, None, "private",
+            &pool,
+            user.id,
+            "Priv 1",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "private",
         )
         .await
         .unwrap();
         insert_recipe(
-            &pool, user.id, "Unlist 1", None, None, None, None, None, None, "unlisted",
+            &pool,
+            user.id,
+            "Unlist 1",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "unlisted",
         )
         .await
         .unwrap();
@@ -2740,8 +3044,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             "private",
         )
         .await
@@ -2758,8 +3063,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             Some("public"),
         )
         .await
@@ -2776,8 +3082,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             Some("unlisted"),
         )
         .await
@@ -2786,7 +3093,18 @@ mod tests {
 
         // Update with None — visibility unchanged
         let updated = update_recipe(
-            &pool, recipe.id, user.id, "Renamed", None, None, None, None, None, None, None,
+            &pool,
+            recipe.id,
+            user.id,
+            "Renamed",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            None,
         )
         .await
         .unwrap();
@@ -2849,7 +3167,17 @@ mod tests {
 
         // User A creates public recipe — accessible via public lookup
         let r_public = insert_recipe(
-            &pool, user_a.id, "Public", None, None, None, None, None, None, "public",
+            &pool,
+            user_a.id,
+            "Public",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "public",
         )
         .await
         .unwrap();
@@ -2858,7 +3186,17 @@ mod tests {
 
         // User A creates private recipe — NOT accessible via public lookup
         let r_private = insert_recipe(
-            &pool, user_a.id, "Private", None, None, None, None, None, None, "private",
+            &pool,
+            user_a.id,
+            "Private",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "private",
         )
         .await
         .unwrap();
@@ -2867,7 +3205,17 @@ mod tests {
 
         // User A creates unlisted recipe — accessible via public lookup
         let r_unlisted = insert_recipe(
-            &pool, user_a.id, "Unlisted", None, None, None, None, None, None, "unlisted",
+            &pool,
+            user_a.id,
+            "Unlisted",
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "unlisted",
         )
         .await
         .unwrap();
@@ -2899,8 +3247,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             "public",
         )
         .await
@@ -2915,8 +3264,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             "unlisted",
         )
         .await
@@ -2931,8 +3281,9 @@ mod tests {
             None,
             None,
             None,
-            None,
-            None,
+            &[],
+            &[],
+            &[],
             "private",
         )
         .await

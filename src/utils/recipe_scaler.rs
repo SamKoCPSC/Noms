@@ -22,17 +22,20 @@ pub enum ScaleMode {
     #[default]
     None,
     Multiplier(f64),
-    TargetIngredient { ingredient_index: usize, target_amount: f64 },
+    TargetIngredient {
+        ingredient_index: usize,
+        target_amount: f64,
+    },
 }
 
 /// A scaled ingredient result.
 #[derive(Clone, Debug)]
 pub struct ScaledIngredient {
-    pub amount: String,       // formatted fraction string (may be empty)
+    pub amount: String, // formatted fraction string (may be empty)
     pub unit: String,
     pub name: String,
     #[allow(dead_code)]
-    pub scaled: bool,         // true if this ingredient was scaled (used in tests)
+    pub scaled: bool, // true if this ingredient was scaled (used in tests)
 }
 
 /// Recipe scaling calculator.
@@ -133,11 +136,7 @@ pub fn parse_amount(s: &str) -> Option<f64> {
 
 // ── Formatting ───────────────────────────────────────────────────────────────
 
-/// Format a numeric value as a cooking-friendly fraction string.
-///
-/// Rounds to nearest 1/8 precision. Uses common fractions:
-/// 1/8, 3/8, 1/4, 1/3, 1/2, 5/8, 2/3, 3/4, 7/8.
-/// Whole numbers render without fraction ("2" not "2 0/1").
+/// Format a numeric value as a decimal string truncated to 2 decimal places.
 /// Zero or near-zero returns empty string. Negative values use absolute value.
 pub fn format_amount(value: f64) -> String {
     let value = value.abs();
@@ -145,58 +144,16 @@ pub fn format_amount(value: f64) -> String {
         return String::new();
     }
 
-    // Check original value's fractional part for 1/3 and 2/3 detection
-    // before rounding, since 1/3 and 2/3 don't align with 1/8 rounding.
-    let orig_frac = value - (value as i64) as f64;
-    let is_third = (orig_frac - 1.0_f64 / 3.0).abs() < 0.04;
-    let is_two_thirds = (orig_frac - 2.0_f64 / 3.0).abs() < 0.04;
-
-    // Round to nearest 1/8
-    let rounded = (value * 8.0).round() / 8.0;
-    if rounded <= 0.0 {
+    // Truncate to 2 decimal places
+    let truncated = (value * 100.0).floor() / 100.0;
+    if truncated <= 0.0 {
         return String::new();
     }
 
-    let whole = rounded as i64;
-    let fractional = rounded - whole as f64;
-
-    // Below 1/16 threshold → whole number
-    if fractional < 0.015625 {
-        return whole.to_string();
-    }
-
-    // Match fractional to nearest common fraction.
-    // 1/8-based fractions are checked first (exact after rounding),
-    // then 1/3 and 2/3 as special cases for values that landed near those boundaries.
-    let fraction_str = match fractional {
-        f if (f - 0.125).abs() < 0.03 => "1/8",
-        f if (f - 0.25).abs() < 0.03 => "1/4",
-        f if (f - 0.375).abs() < 0.03 => {
-            if is_third { "1/3" } else { "3/8" }
-        }
-        f if (f - 0.5).abs() < 0.03 => "1/2",
-        f if (f - 0.625).abs() < 0.03 => {
-            if is_two_thirds { "2/3" } else { "5/8" }
-        }
-        f if (f - 0.75).abs() < 0.03 => "3/4",
-        f if (f - 0.875).abs() < 0.03 => "7/8",
-        _ => {
-            // Fallback: format as decimal, strip trailing zeros
-            let s = format!("{:.2}", fractional);
-            let s = s.trim_end_matches('0').trim_end_matches('.');
-            return if whole > 0 {
-                format!("{} {}", whole, s)
-            } else {
-                s.to_string()
-            };
-        }
-    };
-
-    if whole > 0 {
-        format!("{} {}", whole, fraction_str)
-    } else {
-        fraction_str.to_string()
-    }
+    // Format with up to 2 decimal places, stripping trailing zeros
+    let s = format!("{:.2}", truncated);
+    let s = s.trim_end_matches('0').trim_end_matches('.');
+    s.to_string()
 }
 
 // ── ScaleCalculator ──────────────────────────────────────────────────────────
@@ -229,9 +186,7 @@ impl ScaleCalculator {
     /// Validates ingredient_index < len and target_amount > 0.0.
     /// If the original amount for that ingredient cannot be parsed, does nothing.
     pub fn set_target_ingredient(&mut self, ingredient_index: usize, target_amount: f64) {
-        if target_amount <= 0.0
-            || ingredient_index >= self.original_ingredients.len()
-        {
+        if target_amount <= 0.0 || ingredient_index >= self.original_ingredients.len() {
             return;
         }
 
@@ -301,7 +256,8 @@ impl ScaleCalculator {
 
     /// Return scaled servings (rounded), or None if original is None.
     pub fn scaled_servings(&self) -> Option<i32> {
-        self.original_servings.map(|s| (s as f64 * self.multiplier()).round() as i32)
+        self.original_servings
+            .map(|s| (s as f64 * self.multiplier()).round() as i32)
     }
 
     /// Return original prep time (does not scale with recipe size).
@@ -381,25 +337,25 @@ mod tests {
     }
 
     #[test]
-    fn format_common_fractions() {
-        assert_eq!(format_amount(0.5), "1/2");
-        assert_eq!(format_amount(0.25), "1/4");
-        assert_eq!(format_amount(0.333), "1/3");
-        assert_eq!(format_amount(0.667), "2/3");
+    fn format_decimals() {
+        assert_eq!(format_amount(0.5), "0.5");
+        assert_eq!(format_amount(0.25), "0.25");
+        assert_eq!(format_amount(0.333), "0.33");
+        assert_eq!(format_amount(0.667), "0.66");
     }
 
     #[test]
     fn format_mixed_numbers() {
-        assert_eq!(format_amount(1.5), "1 1/2");
-        assert_eq!(format_amount(2.25), "2 1/4");
+        assert_eq!(format_amount(1.5), "1.5");
+        assert_eq!(format_amount(2.25), "2.25");
     }
 
     #[test]
-    fn format_eighths() {
-        assert_eq!(format_amount(0.125), "1/8");
-        assert_eq!(format_amount(0.375), "3/8");
-        assert_eq!(format_amount(0.625), "5/8");
-        assert_eq!(format_amount(0.875), "7/8");
+    fn format_truncation() {
+        assert_eq!(format_amount(0.125), "0.12");
+        assert_eq!(format_amount(0.375), "0.37");
+        assert_eq!(format_amount(0.625), "0.62");
+        assert_eq!(format_amount(0.875), "0.87");
     }
 
     #[test]
@@ -409,14 +365,15 @@ mod tests {
     }
 
     #[test]
-    fn format_rounding() {
-        assert_eq!(format_amount(3.33), "3 1/3");
-        assert_eq!(format_amount(1.875), "1 7/8");
+    fn format_truncation_not_rounding() {
+        assert_eq!(format_amount(3.339), "3.33");
+        assert_eq!(format_amount(1.875), "1.87");
     }
 
     #[test]
-    fn format_three_thirds() {
-        assert_eq!(format_amount(3.333), "3 1/3");
+    fn format_small_values() {
+        assert_eq!(format_amount(0.009), ""); // truncates to 0.00
+        assert_eq!(format_amount(0.015), "0.01");
     }
 
     // ── ScaleCalculator tests ──────────────────────────────────────────
@@ -475,7 +432,7 @@ mod tests {
         let scaled = calc.scaled_ingredients();
 
         assert_eq!(scaled[0].amount, "1");
-        assert_eq!(scaled[1].amount, "1/4");
+        assert_eq!(scaled[1].amount, "0.25");
         assert_eq!(calc.scaled_servings(), Some(2));
     }
 
@@ -524,7 +481,7 @@ mod tests {
         let mut calc = ScaleCalculator::new(test_ingredients(), Some(3), Some(10), Some(20));
         calc.set_multiplier(1.5);
         assert_eq!(calc.scaled_servings(), Some(5)); // 3 * 1.5 = 4.5 → 5 (round)
-        // Prep/cook times do not scale
+                                                     // Prep/cook times do not scale
         assert_eq!(calc.scaled_prep_time(), Some(10));
         assert_eq!(calc.scaled_cook_time(), Some(20));
     }

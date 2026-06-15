@@ -149,8 +149,9 @@ pub async fn apply_test_schema(pool: &PgPool) {
          prep_time_minutes INT,\
          cook_time_minutes INT,\
          servings INT,\
-         instructions TEXT,
-          equipment TEXT,\
+         ingredients JSONB DEFAULT '[]'::jsonb,\
+         instructions JSONB DEFAULT '[]'::jsonb,\
+         equipment JSONB DEFAULT '[]'::jsonb,\
          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
          CONSTRAINT valid_recipe_visibility CHECK (visibility IN ('private', 'unlisted', 'public'))\

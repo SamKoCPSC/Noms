@@ -7,6 +7,27 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+/// A single ingredient in a recipe.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct RecipeIngredient {
+    pub amount: String,
+    pub unit: String,
+    pub name: String,
+}
+
+/// A single step in a recipe (supports nested sub-steps).
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct RecipeStep {
+    pub text: String,
+    pub sub_steps: Vec<RecipeStep>,
+}
+
+/// A piece of equipment needed for a recipe.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct RecipeEquipment {
+    pub name: String,
+}
+
 /// A recipe saved by a user.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Recipe {
@@ -17,8 +38,9 @@ pub struct Recipe {
     pub prep_time_minutes: Option<i32>,
     pub cook_time_minutes: Option<i32>,
     pub servings: Option<i32>,
-    pub instructions: Option<String>,
-    pub equipment: Option<String>,
+    pub ingredients: Vec<RecipeIngredient>,
+    pub instructions: Vec<RecipeStep>,
+    pub equipment: Vec<RecipeEquipment>,
     pub visibility: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

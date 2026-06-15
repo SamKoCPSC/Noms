@@ -1,61 +1,73 @@
 //! Recipe creation form.
 //!
-//! Collects ingredients and steps in the UI, then serializes them into
-//! the `instructions` TEXT field on submit.
+//! Collects typed ingredients, steps (with depth for nesting), and equipment
+//! in the UI, then passes them directly to `create_recipe()`.
 
 use dioxus::prelude::*;
 
 use crate::api::recipe::create_recipe;
 use crate::components::base::{Button, ButtonVariant, Input, PageHeader};
 use crate::components::AuthRequired;
+use crate::types::{RecipeEquipment, RecipeIngredient, RecipeStep};
 
-// ── Draft types ──────────────────────────────────────────────────────────────
+// ── Local form types ─────────────────────────────────────────────────────────
 
-/// A single ingredient row in the form.
+/// A single step row in the flat form list.
+/// `depth` controls nesting level (0 = top-level, 1 = sub-step, etc.).
 #[derive(Clone, Debug)]
-struct IngredientDraft {
-    amount: String,
-    unit: String,
-    name: String,
-}
-
-/// A single step row in the form.
-#[derive(Clone, Debug)]
-struct StepDraft {
+struct StepForm {
     text: String,
+    depth: usize,
 }
 
-// ── Serialization helper ─────────────────────────────────────────────────────
+// ── Tree builder ─────────────────────────────────────────────────────────────
 
-/// Combine ingredients and steps into a single markdown-style text block
-/// suitable for the `instructions` TEXT column.
-fn serialize_instructions(ingredients: &[IngredientDraft], steps: &[StepDraft]) -> String {
-    let mut text = String::new();
-
-    if !ingredients.is_empty() {
-        text.push_str("INGREDIENTS:\n");
-        for ing in ingredients {
-            let mut parts = Vec::new();
-            if !ing.amount.is_empty() {
-                parts.push(ing.amount.clone());
-            }
-            if !ing.unit.is_empty() {
-                parts.push(ing.unit.clone());
-            }
-            parts.push(ing.name.clone());
-            text.push_str(&format!("- {}\n", parts.join(" ")));
-        }
-        text.push('\n');
+/// Convert a flat list of `StepForm` entries into a tree of `RecipeStep`s.
+///
+/// Uses a stack-based algorithm: each entry's `depth` determines where it
+/// attaches in the tree relative to previously seen entries.
+fn build_step_tree(steps: &[StepForm]) -> Vec<RecipeStep> {
+    if steps.is_empty() {
+        return Vec::new();
     }
 
-    if !steps.is_empty() {
-        text.push_str("STEPS:\n");
-        for (i, step) in steps.iter().enumerate() {
-            text.push_str(&format!("{}. {}\n", i + 1, step.text));
+    // Stack holds (depth, mutable reference into the current sub_steps Vec)
+    // We use a Vec of owned RecipeStep nodes and track parent indices.
+    let mut nodes: Vec<RecipeStep> = Vec::with_capacity(steps.len());
+    // Stack of (depth, node_index) — the node at that index is the current
+    // parent for children at depth+1.
+    let mut stack: Vec<(usize, usize)> = Vec::new();
+
+    for step in steps {
+        let node = RecipeStep {
+            text: step.text.clone(),
+            sub_steps: Vec::new(),
+        };
+        let idx = nodes.len();
+        nodes.push(node);
+
+        // Pop stack entries that are at >= current depth (they're siblings or
+        // ancestors that we've finished adding children to)
+        while let Some(&(d, _)) = stack.last() {
+            if d >= step.depth {
+                stack.pop();
+            } else {
+                break;
+            }
         }
+
+        if let Some(&(_, parent_idx)) = stack.last() {
+            // Attach as child of the top of stack
+            // Remove first (idx is always the last element) to avoid double mutable borrow
+            let node = nodes.remove(idx);
+            nodes[parent_idx].sub_steps.push(node);
+        }
+        // else: depth 0 or stack is empty → stays as root-level node
+
+        stack.push((step.depth, idx));
     }
 
-    text.trim_end().to_string()
+    nodes
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -70,15 +82,13 @@ pub fn RecipeNew() -> Element {
     let mut cook_time = use_signal(String::new);
     let mut servings = use_signal(String::new);
 
-    // Dynamic lists
-    let mut ingredients = use_signal(Vec::<IngredientDraft>::new);
-    let mut steps = use_signal(Vec::<StepDraft>::new);
+    // Dynamic lists — typed directly
+    let mut ingredients = use_signal(Vec::<RecipeIngredient>::new);
+    let mut steps = use_signal(Vec::<StepForm>::new);
+    let mut equipment = use_signal(Vec::<RecipeEquipment>::new);
 
     // Tags (comma-separated)
     let mut tags_input = use_signal(String::new);
-
-    // Equipment (one per line)
-    let mut equipment = use_signal(String::new);
 
     // Visibility (default: private)
     let mut visibility = use_signal(|| "private".to_string());
@@ -133,8 +143,8 @@ pub fn RecipeNew() -> Element {
             .filter(|t| !t.is_empty())
             .collect();
 
-        // ── Serialize instructions ──────────────────────────────────────
-        let instructions = serialize_instructions(&ings, &sts);
+        // ── Convert flat steps to tree ──────────────────────────────────
+        let instructions = build_step_tree(&sts);
 
         // ── Commit values and spawn async call ──────────────────────────
         is_saving.set(true);
@@ -146,11 +156,7 @@ pub fn RecipeNew() -> Element {
         };
 
         let vis = visibility().clone();
-        let equip = if equipment().trim().is_empty() {
-            None
-        } else {
-            Some(equipment().trim().to_string())
-        };
+        let equip = equipment();
         spawn(async move {
             match create_recipe(
                 trimmed_title,
@@ -158,7 +164,8 @@ pub fn RecipeNew() -> Element {
                 prep,
                 cook,
                 serv,
-                Some(instructions),
+                ings,
+                instructions,
                 equip,
                 tags,
                 vis,
@@ -196,7 +203,7 @@ pub fn RecipeNew() -> Element {
 
     // ── Ingredient helpers ──────────────────────────────────────────────
     let on_add_ingredient = move |_| {
-        ingredients.write().push(IngredientDraft {
+        ingredients.write().push(RecipeIngredient {
             amount: String::new(),
             unit: String::new(),
             name: String::new(),
@@ -205,8 +212,16 @@ pub fn RecipeNew() -> Element {
 
     // ── Step helpers ────────────────────────────────────────────────────
     let on_add_step = move |_| {
-        steps.write().push(StepDraft {
+        steps.write().push(StepForm {
             text: String::new(),
+            depth: 0,
+        });
+    };
+
+    // ── Equipment helpers ───────────────────────────────────────────────
+    let on_add_equipment = move |_| {
+        equipment.write().push(RecipeEquipment {
+            name: String::new(),
         });
     };
 
@@ -414,6 +429,9 @@ pub fn RecipeNew() -> Element {
                                 display: "flex",
                                 gap: "var(--space-sm)",
                                 align_items: "flex-start",
+                                // Indentation offset based on depth
+                                padding_left: format!("{}px", steps()[idx].depth * 24),
+
                                 // Step number
                                 span {
                                     font_weight: "600",
@@ -439,12 +457,30 @@ pub fn RecipeNew() -> Element {
                                         steps.write()[idx].text = evt.value();
                                     },
                                 }
-                                // Reorder + remove controls
+                                // Controls: indent/unindent + reorder + remove
                                 div {
                                     display: "flex",
                                     flex_direction: "column",
                                     gap: "var(--space-xs)",
                                     align_items: "center",
+                                    // Indent
+                                    Button {
+                                        variant: ButtonVariant::Ghost,
+                                        onclick: move |_| {
+                                            steps.write()[idx].depth += 1;
+                                        },
+                                        "→"
+                                    }
+                                    // Unindent
+                                    if steps()[idx].depth > 0 {
+                                        Button {
+                                            variant: ButtonVariant::Ghost,
+                                            onclick: move |_| {
+                                                steps.write()[idx].depth -= 1;
+                                            },
+                                            "←"
+                                        }
+                                    }
                                     // Move up
                                     if idx > 0 {
                                         Button {
@@ -520,26 +556,34 @@ pub fn RecipeNew() -> Element {
                             color: "var(--text-secondary)",
                             "Equipment"
                         }
-                        textarea {
-                            class: "neumo-inset input",
-                            padding: "var(--space-sm) var(--space-md)",
-                            font_family: "var(--font-body)",
-                            font_size: "14px",
-                            color: "var(--text-primary)",
-                            background_color: "var(--surface)",
-                            outline: "none",
-                            border_radius: "var(--radius-md)",
-                            width: "100%",
-                            min_height: "80px",
-                            resize: "vertical",
-                            placeholder: "mixing bowl, whisk, large pan",
-                            value: equipment().clone(),
-                            oninput: move |v| equipment.set(v.value()),
+
+                        for (idx, _eq) in equipment().iter().enumerate() {
+                            div {
+                                key: "{idx}",
+                                display: "flex",
+                                gap: "var(--space-sm)",
+                                align_items: "center",
+                                Input {
+                                    value: equipment()[idx].name.clone(),
+                                    placeholder: "e.g. mixing bowl",
+                                    oninput: move |v| {
+                                        equipment.write()[idx].name = v;
+                                    },
+                                }
+                                Button {
+                                    variant: ButtonVariant::Ghost,
+                                    onclick: move |_| {
+                                        equipment.write().remove(idx);
+                                    },
+                                    "✕"
+                                }
+                            }
                         }
-                        span {
-                            font_size: "12px",
-                            color: "var(--text-tertiary)",
-                            "One item per line or comma-separated"
+
+                        Button {
+                            variant: ButtonVariant::Secondary,
+                            onclick: on_add_equipment,
+                            "+ Add Equipment"
                         }
                     }
 

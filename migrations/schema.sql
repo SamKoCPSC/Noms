@@ -85,8 +85,9 @@ CREATE TABLE IF NOT EXISTS recipes (
     prep_time_minutes INT,
     cook_time_minutes INT,
     servings INT,
-    instructions TEXT,
-    equipment TEXT,
+    ingredients JSONB NOT NULL DEFAULT '[]'::jsonb,
+    instructions JSONB NOT NULL DEFAULT '[]'::jsonb,
+    equipment JSONB NOT NULL DEFAULT '[]'::jsonb,
     visibility VARCHAR(20) NOT NULL DEFAULT 'private'
         CONSTRAINT valid_recipe_visibility CHECK (visibility IN ('private', 'unlisted', 'public')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
