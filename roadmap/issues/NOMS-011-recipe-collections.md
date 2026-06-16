@@ -1,8 +1,8 @@
-# NOMS-010: Recipe Collections
+# NOMS-011: Recipe Collections
 
 **Status:** ⚪ Backlog  
 **Phase:** Phase 2 (organization)  
-**Depends on:** NOMS-008 (Recipe CRUD), NOMS-009 (Versioning & Drafts)
+**Depends on:** NOMS-008 (Recipe CRUD), NOMS-010 (Versioning & Drafts)
 
 ## Overview
 
@@ -12,7 +12,7 @@ This is a pure data organization feature — no storage backend, images, or exte
 
 ## Context
 
-After NOMS-008 and NOMS-009, users can create, edit, and version recipes. As their recipe count grows, the flat dashboard list becomes harder to navigate. Collections provide a way to group recipes by meal type, cuisine, season, or any user-defined category.
+After NOMS-008 and NOMS-010, users can create, edit, and version recipes. As their recipe count grows, the flat dashboard list becomes harder to navigate. Collections provide a way to group recipes by meal type, cuisine, season, or any user-defined category.
 
 ## Acceptance Criteria
 
@@ -183,7 +183,7 @@ For drag-and-drop: calculate target position, shift affected recipes up/down by 
 
 - Shared/public collections (Phase 3)
 - Collection-level visibility (private/public toggle)
-- Collection cover images (depends on NOMS-011 image uploads)
+- Collection cover images (depends on NOMS-009 image uploads)
 - Nested collections / sub-collections
 - Collection import/export
 - Auto-collections (e.g., "Recently Added", "Favorites")

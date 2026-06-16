@@ -6,7 +6,7 @@
 
 ## Overview
 
-Implement the core recipe creation, viewing, editing, and deletion flows, plus a three-tier visibility model (private/unlisted/public) and community discovery features. Every recipe is a single row — edit overwrites the row. Versioning, drafts, and branching are deferred to NOMS-009.
+Implement the core recipe creation, viewing, editing, and deletion flows, plus a three-tier visibility model (private/unlisted/public) and community discovery features. Every recipe is a single row — edit overwrites the row. Versioning, drafts, and branching are deferred to NOMS-010.
 
 This is the foundational content feature — without it, the application has no core value proposition. The visibility and discovery layer enables community sharing while respecting user privacy.
 
@@ -79,7 +79,7 @@ The current codebase has authentication and user management working, but all rec
 
 - [ ] "Edit" button on detail page navigates to edit form (reuses create form with pre-populated data)
 - [ ] Edit form loads the recipe's current data
-- [ ] Saving overwrites the existing `recipes` row (no versioning yet — NOMS-009)
+- [ ] Saving overwrites the existing `recipes` row (no versioning yet — NOMS-010)
 - [ ] Recipe's `updated_at` timestamp is refreshed on save
 - [ ] User is redirected back to detail page on success
 
@@ -281,14 +281,14 @@ No changes needed. Recipe pages use the existing `current_user_id` from AuthCont
 
 ## Out of Scope
 
-- Recipe versioning and history (NOMS-009)
-- Draft saving (NOMS-009)
-- Recipe forking/branching (NOMS-009)
-- Recipe images/hero photos (NOMS-011)
+- Recipe versioning and history (NOMS-010)
+- Draft saving (NOMS-010)
+- Recipe forking/branching (NOMS-010)
+- Recipe images/hero photos (NOMS-009)
 - Recipe import from URLs (Phase 2)
 - Advanced recipe search and full-text filtering (NOMS-012)
 - Comments and likes (Phase 3)
-- Collections/folders (NOMS-010)
+- Collections/folders (NOMS-011)
 - Nutritional information (Phase 6)
 - Print/PDF export (Phase 6)
 - Anonymous/guest access (auth required for all recipe views)

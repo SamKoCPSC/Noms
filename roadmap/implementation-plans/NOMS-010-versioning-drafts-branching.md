@@ -1,6 +1,6 @@
-# NOMS-009: Recipe Versioning, Drafts & Branching — Implementation Plan
+# NOMS-010: Recipe Versioning, Drafts & Branching — Implementation Plan
 
-**Issue:** [NOMS-009-versioning-drafts-branching.md](../issues/NOMS-009-versioning-drafts-branching.md)
+**Issue:** [NOMS-010-versioning-drafts-branching.md](../issues/NOMS-010-versioning-drafts-branching.md)
 **Created:** 2026-06-08
 **Depends on:** NOMS-008 (Recipe CRUD — must be implemented first)
 **Approach:** Bottom-up by dependency, 7 incremental checkpoints matching the issue spec
@@ -9,7 +9,7 @@
 
 ## Pre-requisites
 
-Before starting NOMS-009, NOMS-008 must be complete:
+Before starting NOMS-010, NOMS-008 must be complete:
 - `recipes` table with: id, owner_id, title, description, is_public, prep/cook/total_time_min, servings, ingredients JSONB, steps JSONB, created_at, updated_at
 - `recipe_tags` table exists
 - Rust types: Recipe, RecipeTag in src/db/mod.rs

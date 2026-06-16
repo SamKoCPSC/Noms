@@ -18,7 +18,7 @@ This is a read-only feature that layers on top of the existing `recipes` and `re
 
 ## Context
 
-After NOMS-008 (and NOMS-009), users can create, edit, and version recipes, but have no way to find a recipe by name or content beyond scrolling their dashboard. As recipe collections grow — both personal and public — search becomes essential for discovering recipes across the community.
+After NOMS-008 (and NOMS-010), users can create, edit, and version recipes, but have no way to find a recipe by name or content beyond scrolling their dashboard. As recipe collections grow — both personal and public — search becomes essential for discovering recipes across the community.
 
 `pg_search` (ParadeDB) provides Elasticsearch-like search inside PostgreSQL:
 

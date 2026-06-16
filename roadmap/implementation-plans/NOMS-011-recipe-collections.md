@@ -1,15 +1,15 @@
-# NOMS-010: Recipe Collections — Implementation Plan
+# NOMS-011: Recipe Collections — Implementation Plan
 
-**Issue:** [NOMS-010-recipe-collections.md](../issues/NOMS-010-recipe-collections.md)
+**Issue:** [NOMS-011-recipe-collections.md](../issues/NOMS-011-recipe-collections.md)
 **Created:** 2026-06-10
-**Depends on:** NOMS-008 (Recipe CRUD), NOMS-009 (Versioning & Drafts)
+**Depends on:** NOMS-008 (Recipe CRUD), NOMS-010 (Versioning & Drafts)
 **Approach:** Bottom-up by dependency, 7 incremental checkpoints matching the issue spec
 
 ---
 
 ## Pre-requisites
 
-Before starting NOMS-010, NOMS-008 and NOMS-009 must be complete:
+Before starting NOMS-011, NOMS-008 and NOMS-010 must be complete:
 - `recipes` table with: id, owner_id, title, description, is_public, is_draft, prep/cook/total_time_min, servings, ingredients JSONB, steps JSONB, created_at, updated_at
 - `recipe_tags` table exists
 - `recipe_versions` and `fork_relationships` tables exist
@@ -515,7 +515,7 @@ If any checkpoint reveals issues:
 
 | Checkpoint | Depends On | Can Parallelize With |
 |---|---|---|
-| 1 (Schema) | NOMS-008 + NOMS-009 complete | — |
+| 1 (Schema) | NOMS-008 + NOMS-010 complete | — |
 | 2 (Server functions) | 1 (types defined) | — |
 | 3 (CRUD pages) | 2 (server functions) | — |
 | 4 (Sidebar) | 2 (list_my_collections) | 5, 6 |

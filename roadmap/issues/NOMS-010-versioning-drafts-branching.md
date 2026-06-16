@@ -1,4 +1,4 @@
-# NOMS-009: Recipe Versioning, Drafts & Branching
+# NOMS-010: Recipe Versioning, Drafts & Branching
 
 **Status:** ⚪ Backlog  
 **Phase:** Phase 1 (core content creation)  
@@ -10,7 +10,7 @@ Add reverse-diff versioning, draft saving, and recipe forking on top of the basi
 
 ## Context
 
-After NOMS-008, recipes are single rows that get overwritten on edit. NOMS-009 adds:
+After NOMS-008, recipes are single rows that get overwritten on edit. NOMS-010 adds:
 
 | Feature | What it solves |
 |---------|----------------|

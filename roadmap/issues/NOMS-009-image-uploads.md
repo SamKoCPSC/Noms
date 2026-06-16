@@ -1,4 +1,4 @@
-# NOMS-011: Image Uploads
+# NOMS-009: Image Uploads
 
 **Status:** ⚪ Backlog  
 **Phase:** Phase 2 (media)  
