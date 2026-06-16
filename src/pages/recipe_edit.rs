@@ -488,7 +488,7 @@ pub fn RecipeEdit(id: String) -> Element {
                         }
                         div {
                             display: "flex",
-                            flex_direction: "column"
+                            flex_direction: "column",
                             gap: "var(--space-xs)",
                             label {
                                 font_size: "14px",

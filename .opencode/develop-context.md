@@ -419,6 +419,31 @@ The blueprint is thorough, accurate, and correctly cross-referenced against the 
 ## Phase 1: Implementation Details
 <!-- written by @develop-implement -->
 
+### Summary
+Moved the commentary section from the header card into its own separate Card, placed below the steps card at the bottom of the recipe detail page. The commentary card is conditionally rendered when `recipe.commentary` is `Some` and non-empty, using the existing `.recipe-detail__commentary` CSS class.
+
+### Card Order (before → after)
+**Before:**
+1. Header card (title + tags + meta + description + **commentary** + author)
+2. Equipment card
+3. Ingredients + Scaler card
+4. Steps card
+
+**After:**
+1. Header card (title + tags + meta + description + author) — commentary removed
+2. Equipment card
+3. Ingredients + Scaler card
+4. Steps card
+5. **Commentary card** (new, conditionally rendered at bottom)
+
+### Modified Files
+- `src/pages/recipe_detail.rs` — Removed commentary block (lines 731-736) from the header Card. Added new commentary Card (CARD 7) below the steps Card, wrapping the same `p { class: "recipe-detail__commentary", ... }` element inside a `<Card>`, with identical conditional rendering (`if let Some(comm) = &recipe.commentary { if !comm.is_empty() { ... } }`).
+- `src/pages/recipe_edit.rs` — Fixed pre-existing syntax error: missing comma after `flex_direction: "column"` on line 491 (unrelated to this task, but blocking `cargo check`).
+
+### Verification
+- `cargo check --features server` — passes
+- `cargo check --target wasm32-unknown-unknown` — passes
+
 **Summary:** Added `commentary: Option<String>` field to the Recipe model across all layers: database migration, Rust types, database queries, API server functions, UI forms (new + edit), detail page display, and CSS styling.
 
 **New Files:**

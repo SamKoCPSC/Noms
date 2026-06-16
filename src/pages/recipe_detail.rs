@@ -728,13 +728,6 @@ pub fn RecipeDetail(id: String) -> Element {
                     }
                 }
 
-                // Commentary
-                if let Some(comm) = &recipe.commentary {
-                    if !comm.is_empty() {
-                        p { class: "recipe-detail__commentary", "{comm}" }
-                    }
-                }
-
                 // Author line
                 div { class: "recipe-detail__author-line",
                     if let Some(username) = &owner_username {
@@ -796,6 +789,15 @@ pub fn RecipeDetail(id: String) -> Element {
                                 StepNode { step: step.clone(), path: vec![idx], level: 0 }
                             }
                         }
+                    }
+                }
+            }
+
+            // ── CARD 7: Commentary (conditional) ─────────────────────────
+            if let Some(comm) = &recipe.commentary {
+                if !comm.is_empty() {
+                    Card {
+                        p { class: "recipe-detail__commentary", "{comm}" }
                     }
                 }
             }
