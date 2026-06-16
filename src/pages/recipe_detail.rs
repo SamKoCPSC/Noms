@@ -443,30 +443,11 @@ fn render_equipment(equipment: &[RecipeEquipment]) -> Element {
     }
 
     rsx! {
-        div {
-            margin_bottom: "var(--space-lg)",
-            h2 {
-                font_size: "20px",
-                color: "var(--text-primary)",
-                margin_bottom: "var(--space-sm)",
-                padding_bottom: "var(--space-xs)",
-                border_bottom: "2px solid var(--surface)",
-                "Equipment"
-            }
-            ul {
-                list_style: "none",
-                padding: "0",
-                margin: "0",
-                display: "flex",
-                flex_direction: "column",
-                gap: "var(--space-xs)",
+        div { class: "recipe-detail__equipment-section",
+            h2 { class: "recipe-detail__section-title", "Equipment" }
+            ul { class: "recipe-detail__list",
                 for item in equipment {
-                    li {
-                        padding: "var(--space-xs) var(--space-sm)",
-                        font_size: "14px",
-                        color: "var(--text-primary)",
-                        "• {item.name}"
-                    }
+                    li { class: "recipe-detail__list-item", "• {item.name}" }
                 }
             }
         }
@@ -689,222 +670,124 @@ pub fn RecipeDetail(id: String) -> Element {
     let relative_time = format_relative_time(recipe.created_at);
 
     rsx! {
-        div { class: "container",
-            // ── Header ──────────────────────────────────────────────────────
-            PageHeader {
-                title: "{recipe.title}",
-                action: if is_owner {
-                    Some(rsx! {
-                        div {
-                            display: "flex",
-                            gap: "var(--space-sm)",
-                            // Edit button
-                            Link {
-                                to: crate::Route::RecipeEdit { id: recipe.id.to_string() },
-                                class: "btn btn-secondary touch-target",
-                                "Edit"
-                            }
-                            // Delete button
-                            Button {
-                                variant: ButtonVariant::Danger,
-                                disabled: is_deleting(),
-                                onclick: on_delete,
-                                if is_deleting() {
-                                    "Deleting..."
-                                } else {
-                                    "Delete"
+        div { class: "recipe-detail container",
+
+            // ── CARD: Header + Overview (all in one card) ────────────────
+            Card {
+                PageHeader {
+                    title: "{recipe.title}",
+                    action: if is_owner {
+                        Some(rsx! {
+                            div {
+                                display: "flex",
+                                gap: "var(--space-sm)",
+                                Link {
+                                    to: crate::Route::RecipeEdit { id: recipe.id.to_string() },
+                                    class: "btn btn-secondary touch-target",
+                                    "Edit"
+                                }
+                                Button {
+                                    variant: ButtonVariant::Danger,
+                                    disabled: is_deleting(),
+                                    onclick: on_delete,
+                                    if is_deleting() { "Deleting..." } else { "Delete" }
                                 }
                             }
-                        }
-                    })
-                } else {
-                    None
-                },
-            }
+                        })
+                    } else { None },
+                }
 
-            // ── Back link ───────────────────────────────────────────────────
-            div { margin_bottom: "var(--space-md)",
-                if is_owner {
-                    Link {
-                        to: crate::Route::Dashboard {},
-                        style: "color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 500;",
-                        "← Back to Dashboard"
+                // Tags
+                if let Some(ref tag_list) = tags() {
+                    if !tag_list.is_empty() {
+                        div { class: "recipe-detail__tags",
+                            for tag in tag_list {
+                                span { class: "recipe-detail__tag", "{tag}" }
+                            }
+                        }
                     }
-                } else {
-                    Link {
-                        to: crate::Route::Explore {},
-                        style: "color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 500;",
-                        "← Back to Explore"
+                }
+
+                // Meta row
+                div { class: "recipe-detail__meta-row",
+                    if let Some(prepare) = recipe.prep_time_minutes {
+                        span { class: "recipe-detail__meta-item", "⏱ Prep: {prepare} min" }
+                    }
+                    if let Some(cook) = recipe.cook_time_minutes {
+                        span { class: "recipe-detail__meta-item", "🔥 Cook: {cook} min" }
+                    }
+                    if let Some(serv) = recipe.servings {
+                        span { class: "recipe-detail__meta-item", "🍽 Servings: {serv}" }
+                    }
+                }
+
+                // Description
+                if let Some(desc) = &recipe.description {
+                    if !desc.is_empty() {
+                        p { class: "recipe-detail__description", "{desc}" }
+                    }
+                }
+
+                // Author line
+                div { class: "recipe-detail__author-line",
+                    if let Some(username) = &owner_username {
+                        "by "
+                        Link {
+                            to: crate::Route::UserProfile { username: username.clone() },
+                            class: "recipe-detail__author-link",
+                            "@{username}"
+                        }
+                        " • created {relative_time}"
+                    } else {
+                        "created {relative_time}"
                     }
                 }
             }
 
-            // ── Delete error ────────────────────────────────────────────────
+            // ── Delete error (NOT in a card — transient UI element) ──────
             if let Some(del_err) = delete_error() {
-                div {
-                    padding: "var(--space-sm) var(--space-md)",
-                    background_color: "var(--error-bg)",
-                    border_radius: "var(--radius-md)",
-                    color: "var(--error)",
-                    font_size: "14px",
-                    margin_bottom: "var(--space-md)",
-                    "{del_err}"
+                div { class: "recipe-detail__delete-error", "{del_err}" }
+            }
+
+            // ── CARD 4: Equipment (conditional) ──────────────────────────
+            if !recipe.equipment.is_empty() {
+                Card {
+                    {render_equipment(&recipe.equipment)}
                 }
             }
 
-            // ── Tags ────────────────────────────────────────────────────────
-            if let Some(ref tag_list) = tags() {
-                if !tag_list.is_empty() {
-                    div {
-                        display: "flex",
-                        flex_wrap: "wrap",
-                        gap: "var(--space-xs)",
-                        margin_bottom: "var(--space-md)",
-                        for tag in tag_list {
-                            span {
-                                display: "inline-block",
-                                padding: "4px 12px",
-                                border_radius: "var(--radius-full)",
-                                background_color: "rgba(217, 115, 90, 0.10)",
-                                color: "var(--accent)",
-                                font_size: "13px",
-                                font_weight: "500",
-                                "{tag}"
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ── Meta info row ───────────────────────────────────────────────
-            div {
-                display: "flex",
-                flex_wrap: "wrap",
-                gap: "var(--space-md)",
-                margin_bottom: "var(--space-md)",
-                padding: "var(--space-sm) 0",
-                border_bottom: "1px solid var(--surface)",
-
-                if let Some(prepare) = recipe.prep_time_minutes {
-                    span {
-                        font_size: "14px",
-                        color: "var(--text-secondary)",
-                        "⏱ Prep: {prepare} min"
-                    }
-                }
-                if let Some(cook) = recipe.cook_time_minutes {
-                    span {
-                        font_size: "14px",
-                        color: "var(--text-secondary)",
-                        "🔥 Cook: {cook} min"
-                    }
-                }
-                if let Some(serv) = recipe.servings {
-                    span {
-                        font_size: "14px",
-                        color: "var(--text-secondary)",
-                        "🍽 Servings: {serv}"
-                    }
-                }
-            }
-
-            // ── Description ─────────────────────────────────────────────────
-            if let Some(desc) = &recipe.description {
-                if !desc.is_empty() {
-                    div {
-                        margin_bottom: "var(--space-md)",
-                        p {
-                            font_size: "15px",
-                            color: "var(--text-secondary)",
-                            line_height: "1.6",
-                            "{desc}"
-                        }
-                    }
-                }
-            }
-
-            // ── Author line ─────────────────────────────────────────────────
-            div {
-                margin_bottom: "var(--space-lg)",
-                font_size: "13px",
-                color: "var(--text-tertiary)",
-                if let Some(username) = &owner_username {
-                    "by "
-                    Link {
-                        to: crate::Route::UserProfile { username: username.clone() },
-                        style: "color: var(--accent); text-decoration: none; font-weight: 500;",
-                        "@{username}"
-                    }
-                    " • created {relative_time}"
-                } else {
-                    "created {relative_time}"
-                }
-            }
-
-            // ── Recipe Scaler (CP12) ────────────────────────────────────────
-            {render_recipe_scaler(&recipe.ingredients, recipe.prep_time_minutes, recipe.cook_time_minutes, recipe.servings)}
-
-            // ── Equipment ───────────────────────────────────────────────────
-            {render_equipment(&recipe.equipment)}
-
-            // ── Ingredients ─────────────────────────────────────────────────
+            // ── CARD 5: Ingredients + Scaler (conditional) ───────────────
             if !recipe.ingredients.is_empty() {
-                div {
-                    margin_bottom: "var(--space-lg)",
-                    h2 {
-                        font_size: "20px",
-                        color: "var(--text-primary)",
-                        margin_bottom: "var(--space-sm)",
-                        padding_bottom: "var(--space-xs)",
-                        border_bottom: "2px solid var(--surface)",
-                        "Ingredients"
-                    }
-                    ul {
-                        list_style: "none",
-                        padding: "0",
-                        margin: "0",
-                        display: "flex",
-                        flex_direction: "column",
-                        gap: "var(--space-xs)",
-                        for ing in &recipe.ingredients {
-                            li {
-                                padding: "var(--space-xs) var(--space-sm)",
-                                font_size: "14px",
-                                color: "var(--text-primary)",
-                                if !ing.amount.is_empty() && !ing.unit.is_empty() {
-                                    "- {ing.amount} {ing.unit} {ing.name}"
-                                } else if !ing.amount.is_empty() {
-                                    "- {ing.amount} {ing.name}"
-                                } else {
-                                    "- {ing.name}"
+                Card {
+                    div { class: "recipe-detail__ingredients-section",
+                        h2 { class: "recipe-detail__section-title", "Ingredients" }
+                        ul { class: "recipe-detail__list",
+                            for ing in &recipe.ingredients {
+                                li { class: "recipe-detail__list-item",
+                                    if !ing.amount.is_empty() && !ing.unit.is_empty() {
+                                        "- {ing.amount} {ing.unit} {ing.name}"
+                                    } else if !ing.amount.is_empty() {
+                                        "- {ing.amount} {ing.name}"
+                                    } else {
+                                        "- {ing.name}"
+                                    }
                                 }
                             }
                         }
                     }
+                    {render_recipe_scaler(&recipe.ingredients, recipe.prep_time_minutes, recipe.cook_time_minutes, recipe.servings)}
                 }
             }
 
-            // ── Steps ───────────────────────────────────────────────────────
+            // ── CARD 6: Steps (conditional) ──────────────────────────────
             if !recipe.instructions.is_empty() {
-                div {
-                    margin_bottom: "var(--space-lg)",
-                    h2 {
-                        font_size: "20px",
-                        color: "var(--text-primary)",
-                        margin_bottom: "var(--space-sm)",
-                        padding_bottom: "var(--space-xs)",
-                        border_bottom: "2px solid var(--surface)",
-                        "Steps"
-                    }
-                    ol {
-                        padding_left: "var(--space-lg)",
-                        margin: "0",
-                        display: "flex",
-                        flex_direction: "column",
-                        gap: "var(--space-sm)",
-                        list_style: "none",
-                        for (idx, step) in recipe.instructions.iter().enumerate() {
-                            StepNode { step: step.clone(), path: vec![idx], level: 0 }
+                Card {
+                    div { class: "recipe-detail__steps-section",
+                        h2 { class: "recipe-detail__section-title", "Steps" }
+                        ol { class: "recipe-detail__steps-list",
+                            for (idx, step) in recipe.instructions.iter().enumerate() {
+                                StepNode { step: step.clone(), path: vec![idx], level: 0 }
+                            }
                         }
                     }
                 }

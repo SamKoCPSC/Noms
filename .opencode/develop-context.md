@@ -1,645 +1,932 @@
 # Develop Context
 
 ## Task Description
-Restyle recipe cards to a vertical orientation with:
-1. User's avatar and name at the top
-2. Placeholder image in 16:9 aspect ratio below (neumorphic inset style)
-3. Recipe title below the image
-4. Truncated description below the title
-5. Placeholder action buttons at the very bottom
+Redesign/restyle the recipe details page (src/pages/recipe_detail.rs) so that each individual section is on its own neumorphic raised card component.
 
-Add LEFT JOIN to recipe queries to fetch author data (username, avatar_url) from the users table.
-Action buttons are visual-only placeholders (no functionality yet).
+Sections (each as a separate raised card):
+1. **Header card** — PageHeader (title + edit/delete buttons) + back link
+2. **Overview card** — Tags, meta row (prep/cook/servings), description, author line
+3. **Scaler card** — Collapsible RecipeScaler widget (only if ingredients exist)
+4. **Equipment card** — Equipment list (only if equipment exists)
+5. **Ingredients card** — Ingredient list (only if ingredients exist)
+6. **Steps card** — Recursive step list (only if instructions exist)
 
-## Phase 0: Implementation Blueprint (Corrected — Verified Against Actual Files)
+Replace all inline styles with CSS classes in assets/main.css.
+Use existing Card component or .neumo-card class for the raised card styling.
+Keep consistent margin-bottom spacing between cards.
 
-## 1. Overview
+## Phase 0: Implementation Blueprint
 
-Restyle recipe cards to a vertical layout with author avatar, 16:9 image placeholder, title, description, and action buttons. Add LEFT JOIN to all recipe SELECT queries to fetch author data (username, avatar_url) from the users table. Use correlated subqueries for INSERT/UPDATE RETURNING clauses.
-
-**Scope**: 4 files to modify, no new files needed.
-
----
-
-## 2. Key Research Findings (Verified Against Actual Files)
-
-### Actual Recipe struct (`src/types.rs`, lines 32-47)
-```rust
-pub struct Recipe {
-    pub id: Uuid,
-    pub user_id: Uuid,
-    pub title: String,
-    pub description: Option<String>,
-    pub prep_time_minutes: Option<i32>,
-    pub cook_time_minutes: Option<i32>,
-    pub servings: Option<i32>,
-    pub ingredients: Vec<RecipeIngredient>,
-    pub instructions: Vec<RecipeStep>,
-    pub equipment: Vec<RecipeEquipment>,
-    pub visibility: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-```
-- Has `title` (NOT `name`), `description: Option<String>` (NOT `String`), `visibility` (NOT `is_public`), `ingredients/instructions/equipment` (NOT `difficulty/category`).
-- Must add `author_username: String` and `author_avatar_url: Option<String>`.
-
-### Actual RecipeCard component (`src/components/base/recipe_card.rs`, lines 20-59)
-- Uses `#[component]` macro: `pub fn RecipeCard(props: RecipeCardProps) -> Element`
-- NOT `impl Display for RecipeCard` — that pattern does not exist.
-- Uses `crate::Route::RecipeDetail { id }` for typed routing (line 38).
-- Helper function is `format_relative_time` (line 62), NOT `recipe_relative_time`.
-- Current RSX: `Link > div.recipe-card__content > h3.recipe-card__title + p.recipe-card__description + span.recipe-card__meta`
-- Description handling: `recipe.description.as_deref().unwrap_or("").chars().take(120).collect::<String>()`
-
-### Actual CSS (`assets/main.css`, lines 993-1044)
-- `.recipe-card` (line 993): Link wrapper — `display: block, text-decoration: none, color: inherit`
-- `.recipe-card__content` (line 1004): Neumorphic card — `background: var(--surface), border-radius: var(--radius-lg), padding: var(--space-lg), box-shadow, flex column, gap: var(--space-sm)`
-- `.recipe-card__title` (line 1020): `font-size: 18px, font-weight: 600, color: var(--text-primary)`
-- `.recipe-card__description` (line 1028): `font-size: 14px, color: var(--text-secondary), -webkit-line-clamp: 2`
-- `.recipe-card__meta` (line 1040): `font-size: 12px, color: var(--text-tertiary), margin-top: auto`
-- CSS variables: `--text-primary`, `--text-secondary`, `--text-tertiary` (NOT `--text-color` or `--text-muted`)
-- `--border-color` does NOT exist
-- Dark mode support via `.dark` selector (line 106)
-
-### Actual Database queries (`src/db/mod.rs`)
-All queries use `sqlx::query()` with `RETURNING` and then `Recipe::from_row(&row)`.
-
-**from_row** (lines 188-208): Manual `impl sqlx::FromRow` using `row.try_get("column_name")?` for each field.
-
-**INSERT** (lines 700-737): `sqlx::query(...RETURNING id, user_id, title, ...)`, then `Recipe::from_row(&row)`. Cannot add LEFT JOIN to RETURNING — must use correlated subqueries.
-
-**UPDATE** (lines 807-853): Same pattern — `sqlx::query(...RETURNING ...)`, then `Recipe::from_row(&row)`. Cannot add LEFT JOIN to RETURNING.
-
-**SELECT queries** (7 functions, lines 740-1054): All use `sqlx::query("SELECT id, user_id, title, ... FROM recipes ...")` then `Recipe::from_row(&r)`. These CAN use LEFT JOIN.
-
-Functions to modify with LEFT JOIN:
-| Function | Lines | Change |
-|---|---|---|
-| `get_recipe_by_id` | 740-756 | Add `FROM recipes r LEFT JOIN users u ON r.user_id = u.id` |
-| `get_recipe_by_id_and_owner` | 760-779 | Add `FROM recipes r LEFT JOIN users u ON r.user_id = u.id` |
-| `get_recipes_by_owner` | 782-800 | Add `FROM recipes r LEFT JOIN users u ON r.user_id = u.id` |
-| `get_recipes_by_owner_paginated` | 919-942 | Add `FROM recipes r LEFT JOIN users u ON r.user_id = u.id` |
-| `get_public_recipes_paginated` | 976-997 | Add `FROM recipes r LEFT JOIN users u ON r.user_id = u.id` |
-| `get_recipe_by_id_public` | 1012-1028 | Add `FROM recipes r LEFT JOIN users u ON r.user_id = u.id` |
-| `get_user_public_recipes` | 1031-1054 | Add `FROM recipes r LEFT JOIN users u ON r.user_id = u.id` |
-
-All SELECT queries add: `u.username AS author_username, u.avatar_url AS author_avatar_url` to SELECT list.
-All column references must be prefixed with `r.` since we're adding table alias.
-
-### Avatar component (`src/components/base/avatar.rs`, lines 35-83)
-- Props: `src: Option<String>`, `size: AvatarSize`, `username: String`
-- `AvatarSize::Small` = 32px
-- Renders `img` if src, else `span` with initials
-- Use `AvatarSize::Small` for recipe card author avatars
-
-### Pages calling RecipeCard
-- `src/pages/dashboard.rs`: `RecipeCard { recipe: recipe.clone() }`
-- `src/pages/explore.rs`: `RecipeCard { recipe: recipe.clone() }`
-- `src/pages/user_profile.rs`: `RecipeCard { recipe: recipe.clone() }`
-- No changes needed — callers pass Recipe by value, author data will be embedded.
-
-### Test schema (`src/test_utils.rs`, lines 52-62)
-- `users` table: `avatar_url TEXT` (nullable) — no schema changes needed
-- `recipes` table: `user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE` — no schema changes needed
+### Overview
+Refactor `src/pages/recipe_detail.rs` so each logical section is wrapped in its own `Card` component (neumorphic raised card), except the RecipeScaler which uses a plain div wrapper (`.recipe-detail__scaler-wrapper`) to avoid nested card-within-card shadows, since `.recipe-scaler` already provides its own neumorphic styling. All inline styles on section-level elements are extracted to CSS classes in `assets/main.css`. Loading/error states, `PageHeader` internals, `RecipeScaler` internals, and `StepNode` recursive rendering are untouched.
 
 ---
 
-## 3. Step-by-Step Implementation Order
+### Key Research Findings
 
-### Step 1: Update `src/types.rs` — Add author fields to Recipe struct
+| File | Lines | Key Observations |
+|------|-------|------------------|
+| `src/pages/recipe_detail.rs` | 914 | Main content RSX starts at line 691. Six distinct sections exist as bare `div`s with inline styles. `Card` is already imported (line 19). |
+| `src/components/base/card.rs` | 21 | Simple wrapper: `div.neumo-card` with `padding: var(--space-lg)` and `background_color: var(--surface)`. Takes only `children: Element`. |
+| `assets/main.css` | 1403 | `.neumo-card` at line 167 provides raised shadow + `--radius-lg`. All CSS variables (`--text-*`, `--surface`, `--accent`, `--shadow-*`, `--space-*`, `--radius-*`) are defined in `:root` (lines 47-101) and `.dark` (lines 106-129). |
+| `src/components/base/page_header.rs` | 34 | Has inline flex layout + `margin_bottom: var(--space-lg)`. **Do NOT modify.** |
+| `assets/main.css` line 1227 | `.recipe-scaler` | Has its own neumorphic shadow + `background: var(--surface)`. Wrapping in `Card` creates card-within-card visual. Use plain div wrapper instead. |
 
-**File**: `src/types.rs`
-**Location**: Lines 33-47 (Recipe struct)
+---
 
-Add two fields after `updated_at`:
+### 1. `src/pages/recipe_detail.rs` — Exact Changes
+
+#### 1a. New RSX Structure (replacing lines 691-913)
+
+The entire `rsx! { div { class: "container", ... } }` block at lines 691-913 is restructured into 6 Card-wrapped sections:
+
 ```rust
-    pub author_username: String,
-    pub author_avatar_url: Option<String>,
-```
+rsx! {
+    div { class: "recipe-detail container",
 
-Full struct after change:
-```rust
-pub struct Recipe {
-    pub id: Uuid,
-    pub user_id: Uuid,
-    pub title: String,
-    pub description: Option<String>,
-    pub prep_time_minutes: Option<i32>,
-    pub cook_time_minutes: Option<i32>,
-    pub servings: Option<i32>,
-    pub ingredients: Vec<RecipeIngredient>,
-    pub instructions: Vec<RecipeStep>,
-    pub equipment: Vec<RecipeEquipment>,
-    pub visibility: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    pub author_username: String,
-    pub author_avatar_url: Option<String>,
-}
-```
+        // ── CARD 1: Header (PageHeader + Back Link) ──────────────────
+        Card {
+            // PageHeader — unchanged from current code (lines 694-723)
+            PageHeader {
+                title: "{recipe.title}",
+                action: if is_owner {
+                    Some(rsx! {
+                        div {
+                            display: "flex",
+                            gap: "var(--space-sm)",
+                            Link {
+                                to: crate::Route::RecipeEdit { id: recipe.id.to_string() },
+                                class: "btn btn-secondary touch-target",
+                                "Edit"
+                            }
+                            Button {
+                                variant: ButtonVariant::Danger,
+                                disabled: is_deleting(),
+                                onclick: on_delete,
+                                if is_deleting() { "Deleting..." } else { "Delete" }
+                            }
+                        }
+                    })
+                } else { None },
+            }
 
-### Step 2: Update `src/db/mod.rs` — from_row mapping
+            // Back link — inline style replaced with class "recipe-detail__back-link"
+            div { class: "recipe-detail__back-link",
+                if is_owner {
+                    Link {
+                        to: crate::Route::Dashboard {},
+                        class: "recipe-detail__back-link",
+                        "← Back to Dashboard"
+                    }
+                } else {
+                    Link {
+                        to: crate::Route::Explore {},
+                        class: "recipe-detail__back-link",
+                        "← Back to Explore"
+                    }
+                }
+            }
+        }
 
-**File**: `src/db/mod.rs`
-**Location**: Lines 188-208 (`impl sqlx::FromRow for Recipe`)
+        // ── Delete error (NOT in a card — transient UI element) ──────
+        // Class "recipe-detail__delete-error" replaces inline styles
+        if let Some(del_err) = delete_error() {
+            div { class: "recipe-detail__delete-error", "{del_err}" }
+        }
 
-Add two `try_get` calls before `visibility`:
-```rust
-let author_username: String = row.try_get("author_username")?;
-let author_avatar_url: Option<String> = row.try_get("author_avatar_url")?;
-```
-And include them in the `Ok(Self { ... })` construction after `updated_at`.
+        // ── CARD 2: Overview (Tags + Meta + Description + Author) ────
+        Card {
+            div { class: "recipe-detail__overview",
 
-### Step 3: Update `src/db/mod.rs` — INSERT query (correlated subqueries)
+                // Tags — class "recipe-detail__tags" replaces inline flex wrapper
+                // Each tag span gets class "recipe-detail__tag"
+                if let Some(ref tag_list) = tags() {
+                    if !tag_list.is_empty() {
+                        div { class: "recipe-detail__tags",
+                            for tag in tag_list {
+                                span { class: "recipe-detail__tag", "{tag}" }
+                            }
+                        }
+                    }
+                }
 
-**File**: `src/db/mod.rs`
-**Location**: Lines 717-720 (INSERT RETURNING clause)
+                // Meta row — class "recipe-detail__meta-row" replaces inline flex
+                // Each meta span gets class "recipe-detail__meta-item"
+                div { class: "recipe-detail__meta-row",
+                    if let Some(prepare) = recipe.prep_time_minutes {
+                        span { class: "recipe-detail__meta-item", "⏱ Prep: {prepare} min" }
+                    }
+                    if let Some(cook) = recipe.cook_time_minutes {
+                        span { class: "recipe-detail__meta-item", "🔥 Cook: {cook} min" }
+                    }
+                    if let Some(serv) = recipe.servings {
+                        span { class: "recipe-detail__meta-item", "🍽 Servings: {serv}" }
+                    }
+                }
 
-Replace the RETURNING clause to use correlated subqueries for author data (LEFT JOIN cannot be used in INSERT RETURNING):
-```sql
-INSERT INTO recipes AS r (user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING r.id, r.user_id,
-          (SELECT username FROM users WHERE id = r.user_id) AS author_username,
-          (SELECT avatar_url FROM users WHERE id = r.user_id) AS author_avatar_url,
-          r.title, r.description, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at
-```
+                // Description — class "recipe-detail__description" replaces inline styles
+                if let Some(desc) = &recipe.description {
+                    if !desc.is_empty() {
+                        p { class: "recipe-detail__description", "{desc}" }
+                    }
+                }
 
-### Step 4: Update `src/db/mod.rs` — UPDATE query (correlated subqueries)
+                // Author line — class "recipe-detail__author-line" replaces inline styles
+                // Link inside gets class "recipe-detail__author-link"
+                div { class: "recipe-detail__author-line",
+                    if let Some(username) = &owner_username {
+                        "by "
+                        Link {
+                            to: crate::Route::UserProfile { username: username.clone() },
+                            class: "recipe-detail__author-link",
+                            "@{username}"
+                        }
+                        " • created {relative_time}"
+                    } else {
+                        "created {relative_time}"
+                    }
+                }
+            }
+        }
 
-**File**: `src/db/mod.rs`
-**Location**: Lines 825-832 (UPDATE RETURNING clause)
+        // ── SCALER: Plain wrapper (NOT Card — avoids nested card shadows) ─
+        // RecipeScaler renders its own neumorphic card via .recipe-scaler class
+        // (main.css line 1227: box-shadow + background: var(--surface)).
+        // Wrapping in Card would create card-within-card visual. Use plain div.
+        if !recipe.ingredients.is_empty() {
+            div { class: "recipe-detail__scaler-wrapper",
+                {render_recipe_scaler(&recipe.ingredients, recipe.prep_time_minutes, recipe.cook_time_minutes, recipe.servings)}
+            }
+        }
 
-Replace the RETURNING clause with correlated subqueries:
-```sql
-UPDATE recipes AS r
-SET title = $3, description = $4, prep_time_minutes = $5, cook_time_minutes = $6,
-    servings = $7, ingredients = $8, instructions = $9, equipment = $10,
-    visibility = COALESCE($11::VARCHAR, r.visibility),
-    updated_at = NOW()
-WHERE r.id = $1 AND r.user_id = $2
-RETURNING r.id, r.user_id,
-          (SELECT username FROM users WHERE id = r.user_id) AS author_username,
-          (SELECT avatar_url FROM users WHERE id = r.user_id) AS author_avatar_url,
-          r.title, r.description, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at
-```
+        // ── CARD 4: Equipment (conditional) ──────────────────────────
+        // Calls the refactored render_equipment() helper (see section 1c)
+        if !recipe.equipment.is_empty() {
+            Card {
+                {render_equipment(&recipe.equipment)}
+            }
+        }
 
-### Step 5: Update `src/db/mod.rs` — All 7 SELECT queries (LEFT JOIN)
+        // ── CARD 5: Ingredients (conditional) ────────────────────────
+        if !recipe.ingredients.is_empty() {
+            Card {
+                div { class: "recipe-detail__ingredients-section",
+                    h2 { class: "recipe-detail__section-title", "Ingredients" }
+                    ul { class: "recipe-detail__list",
+                        for ing in &recipe.ingredients {
+                            li { class: "recipe-detail__list-item",
+                                if !ing.amount.is_empty() && !ing.unit.is_empty() {
+                                    "- {ing.amount} {ing.unit} {ing.name}"
+                                } else if !ing.amount.is_empty() {
+                                    "- {ing.amount} {ing.name}"
+                                } else {
+                                    "- {ing.name}"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
-For each function, apply the same pattern:
-1. Add table alias `r` to `FROM recipes r`
-2. Add `LEFT JOIN users u ON r.user_id = u.id`
-3. Add `u.username AS author_username, u.avatar_url AS author_avatar_url` to SELECT list after `r.user_id`
-4. Prefix all existing column references with `r.`
-
-Example transformation for `get_recipe_by_id` (line 744):
-```sql
--- BEFORE:
-SELECT id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at
-FROM recipes WHERE id = $1
-
--- AFTER:
-SELECT r.id, r.user_id, u.username AS author_username, u.avatar_url AS author_avatar_url, r.title, r.description, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at
-FROM recipes r LEFT JOIN users u ON r.user_id = u.id
-WHERE r.id = $1
-```
-
-**Important**: All column references must be prefixed with `r.` since we're adding a table alias. The `from_row` function uses column names (not positional), so aliasing is fine.
-
-### Step 6: Update `src/components/base/recipe_card.rs` — RSX restructure
-
-**File**: `src/components/base/recipe_card.rs`
-**Location**: Lines 20-59 (component function body)
-
-1. Add import at top (after line 8): `use crate::components::base::avatar::{Avatar, AvatarSize};`
-
-2. Replace the RSX block (lines 36-58) with new structure containing:
-   - Author row: `Avatar` + author name + posted time
-   - Image placeholder: 16:9 neumorphic inset div
-   - Title: `h3.recipe-card__title` using `recipe.title` (NOT `recipe.name`)
-   - Description: conditional `p.recipe-card__description` (handle empty case)
-   - Action buttons: 3 placeholder buttons with `type="button"`
-
-3. Use typed route: `to: crate::Route::RecipeDetail { id }` (NOT string interpolation)
-
-4. Use helper: `format_relative_time` (NOT `recipe_relative_time`)
-
-5. Keep `format_relative_time` function (lines 62-82) and tests (lines 84-130) unchanged.
-
-6. Remove old `span.recipe-card__meta` element (replaced by author row).
-
-### Step 7: Update `assets/main.css` — New recipe card styles
-
-**File**: `assets/main.css`
-**Location**: After line 1044 (end of existing `.recipe-card__meta` styles)
-
-Add new styles. Use correct CSS variable names:
-- `--text-primary` for primary text
-- `--text-secondary` for secondary text
-- `--text-tertiary` for muted text
-- `--surface` for backgrounds
-- `--shadow-dark` / `--shadow-light` for neumorphic shadows
-- `--radius-md` (10px) for rounded elements
-- `--space-*` for spacing
-
-New classes to add:
-- `.recipe-card__author-row`: flex row with avatar + info
-- `.recipe-card__author-info`: column layout for name + time
-- `.recipe-card__author-name`: bold, small text, `--text-primary`
-- `.recipe-card__posted-time`: tiny text, `--text-tertiary`
-- `.recipe-card__image-placeholder`: 16:9 aspect ratio, neumorphic inset using `inset` box-shadow, `--bg-base` background
-- `.recipe-card__actions`: flex row with `border-top: 1px solid var(--surface)` (NOT `--border-color`)
-- `.recipe-card__action-btn`: neumorphic raised button with hover/active inset states
-
-**No changes needed to existing `.recipe-card__content`, `.recipe-card__title`, `.recipe-card__description` styles** — they already exist and work correctly. New elements are added as children alongside the existing h3 and p.
-
-**Remove `.recipe-card__meta` (line 1040-1044)**: This class is no longer used (replaced by `__author-row` + `__posted-time`).
-
-### Step 8: Verify callers need no changes
-
-- `src/pages/dashboard.rs`: `RecipeCard { recipe: recipe.clone() }` — OK, Recipe now carries author fields
-- `src/pages/explore.rs`: same — OK
-- `src/pages/user_profile.rs`: same — OK
-- `src/api/recipe.rs`: All server functions return `crate::types::Recipe` — OK, author fields are populated by DB layer
-
-### Step 9: Build and test
-
-```bash
-cargo check
-```
-Expected: compilation succeeds. Verify:
-- Recipe struct has 2 new fields
-- from_row extracts 2 new columns
-- All 9 queries return author columns
-- RecipeCard imports Avatar and AvatarSize
-
-```bash
-cargo test
-```
-Expected: existing tests pass. The test schema already has `users.avatar_url` so LEFT JOIN works.
-
-**New test to add** in `src/db/mod.rs` tests module:
-```rust
-#[tokio::test]
-async fn test_recipe_includes_author_data() {
-    let (_db, pool) = test_utils::setup_test_db().await;
-    let u = test_utils::uid();
-    let user = insert_user(&pool, &format!("author_{u}"), "Author", &format!("author{u}@example.com"), Some("https://example.com/avatar.png")).await.unwrap();
-    let recipe = insert_recipe(&pool, user.id, "Test Recipe", Some("A test"), None, None, None, &[], &[], &[], "public").await.unwrap();
-    assert_eq!(recipe.author_username, format!("author_{u}"));
-    assert_eq!(recipe.author_avatar_url, Some("https://example.com/avatar.png".to_string()));
-    // Also verify SELECT queries include author data
-    let found = get_recipe_by_id(&pool, recipe.id).await.unwrap().unwrap();
-    assert_eq!(found.author_username, format!("author_{u}"));
+        // ── CARD 6: Steps (conditional) ──────────────────────────────
+        if !recipe.instructions.is_empty() {
+            Card {
+                div { class: "recipe-detail__steps-section",
+                    h2 { class: "recipe-detail__section-title", "Steps" }
+                    ol { class: "recipe-detail__steps-list",
+                        for (idx, step) in recipe.instructions.iter().enumerate() {
+                            StepNode { step: step.clone(), path: vec![idx], level: 0 }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 ```
 
+#### 1b. Complete List of Inline Styles Replaced
+
+| Current Location (line) | Current Inline Style | Replaced By |
+|------------------------|---------------------|-------------|
+| 726 | `div { margin_bottom: "var(--space-md)"` (back link wrapper) | Removed (Card provides padding; `.recipe-detail` provides gap) |
+| 730 | `style: "color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 500;"` (owner back link) | `class: "recipe-detail__back-link"` |
+| 735 | `style: "color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 500;"` (non-owner back link) | `class: "recipe-detail__back-link"` |
+| 744-752 | `padding`, `background_color`, `border_radius`, `color`, `font_size`, `margin_bottom` (delete error div) | `class: "recipe-detail__delete-error"` |
+| 758-759 | `display: flex`, `flex_wrap: wrap`, `gap`, `margin_bottom` (tags wrapper) | `class: "recipe-detail__tags"` |
+| 764-772 | `display`, `padding`, `border_radius`, `background_color`, `color`, `font_size`, `font_weight` (each tag span) | `class: "recipe-detail__tag"` |
+| 780-786 | `display`, `flex_wrap`, `gap`, `margin_bottom`, `padding`, `border_bottom` (meta row) | `class: "recipe-detail__meta-row"` |
+| 789-791, 796-798, 803-805 | `font_size`, `color` (each meta span) | `class: "recipe-detail__meta-item"` |
+| 814-822 | `margin_bottom` on wrapper div; `font_size`, `color`, `line_height` on `<p>` (description) | `class: "recipe-detail__description"` on `<p>`; wrapper div removed |
+| 827-841 | `margin_bottom`, `font_size`, `color` (author line div); `style` on Link | `class: "recipe-detail__author-line"` on div; `class: "recipe-detail__author-link"` on Link |
+| 448-454 (render_equipment fn) | `font_size`, `color`, `margin_bottom`, `padding_bottom`, `border_bottom` (equipment h2) | `class: "recipe-detail__section-title"` |
+| 456-471 (render_equipment fn) | `list_style`, `padding`, `margin`, `display`, `flex_direction`, `gap` (equipment ul); `padding`, `font_size`, `color` (each li) | `class: "recipe-detail__list"` on ul; `class: "recipe-detail__list-item"` on li |
+| 447 (render_equipment fn) | `margin_bottom: "var(--space-lg)"` (equipment section wrapper) | Removed (Card + gap handles spacing) |
+| 854-859 | Same pattern as equipment (ingredients h2) | Same classes |
+| 860-883 | Same pattern as equipment (ingredients ul + li) | Same classes |
+| 852 | `margin_bottom: "var(--space-lg)"` (ingredients wrapper) | Removed |
+| 889-897 | Same h2 pattern (steps) | Same classes |
+| 898-909 | `padding_left`, `margin`, `display`, `flex_direction`, `gap`, `list_style` (steps ol) | `class: "recipe-detail__steps-list"` |
+| 889 | `margin_bottom: "var(--space-lg)"` (steps wrapper) | Removed |
+| 97-103 | StepNode `li` inline styles (`padding`, `margin_left`, `font_size`, `color`, `line_height`) | **KEEP INLINE** — `margin_left` is dynamic based on `indent` variable |
+| 109-111 | StepNode nested `ol` inline styles (`padding_left`, `margin_top`, `list_style`) | **KEEP INLINE** — part of recursive StepNode rendering |
+| 447-472 | `render_equipment` function inline styles | **REFACTORED** — replaced with CSS classes (see CARD 4 above) |
+
+#### 1c. Changes to `render_equipment` function (lines 440-474)
+
+Replace the entire function body's rsx! block. The conditional guard (`if equipment.is_empty()`) stays. New body:
+
+```rust
+fn render_equipment(equipment: &[RecipeEquipment]) -> Element {
+    if equipment.is_empty() {
+        return rsx! {};
+    }
+
+    rsx! {
+        div { class: "recipe-detail__equipment-section",
+            h2 { class: "recipe-detail__section-title", "Equipment" }
+            ul { class: "recipe-detail__list",
+                for item in equipment {
+                    li { class: "recipe-detail__list-item", "• {item.name}" }
+                }
+            }
+        }
+    }
+}
+```
+
+Note: The `margin_bottom: "var(--space-lg)"` on the outer div (line 447) is removed — spacing is handled by the `.recipe-detail` container gap and Card padding.
+
+#### 1d. Conditional Rendering — Preserved Exactly
+
+All conditional blocks remain identical in logic:
+- `if is_owner { ... } else { ... }` for back link destination (Dashboard vs Explore)
+- `if let Some(del_err) = delete_error()` for delete error
+- `if let Some(ref tag_list) = tags() { if !tag_list.is_empty() { ... } }` for tags
+- `if let Some(prepare) = recipe.prep_time_minutes` etc. for meta items
+- `if let Some(desc) = &recipe.description { if !desc.is_empty() { ... } }` for description
+- `if let Some(username) = &owner_username { ... } else { ... }` for author line
+- `if !recipe.ingredients.is_empty()` for scaler, equipment, ingredients cards
+- `if !recipe.instructions.is_empty()` for steps card
+- `if is_owner { Some(rsx!{...}) } else { None }` for PageHeader action
+
+#### 1e. What Does NOT Change in recipe_detail.rs
+
+- **Loading state** (lines 625-643): untouched
+- **Error state** (lines 646-671): untouched — already uses `Card`
+- **Guard state** (lines 674-687): untouched — already uses `Card`
+- **StepNode component** (lines 88-119): untouched — inline styles remain (dynamic `indent`)
+- **RecipeScaler component** (lines 129-406): untouched — internal layout preserved
+- **`render_recipe_scaler` helper** (lines 411-435): untouched — only the call site gets Card wrapper
+- **All resource loading, auth logic, delete handler**: untouched
+- **`format_relative_time` and `roman_numeral` helpers**: untouched
+
 ---
 
-## 4. File Change Summary
+### 2. `assets/main.css` — New CSS Classes
 
-| File | Action | What Changes |
-|---|---|---|
-| `src/types.rs` | Modify | Add `author_username: String` and `author_avatar_url: Option<String>` to Recipe struct (lines 33-47) |
-| `src/db/mod.rs` | Modify | from_row: add 2 try_get calls (lines 188-208); INSERT: subquery for author (lines 717-720); UPDATE: subquery for author (lines 825-832); 7 SELECT queries: add LEFT JOIN + author columns (lines 740-1054) |
-| `src/db/mod.rs` | Modify | Add test: `test_recipe_includes_author_data` (tests module) |
-| `src/components/base/recipe_card.rs` | Modify | Add Avatar import, restructure RSX with author row, image placeholder, action buttons (lines 1-59) |
-| `assets/main.css` | Modify | Add 6 new class rules for recipe card sub-elements; remove `.recipe-card__meta` (after line 1044) |
-| `src/pages/dashboard.rs` | No change | — |
-| `src/pages/explore.rs` | No change | — |
-| `src/pages/user_profile.rs` | No change | — |
-| `src/test_utils.rs` | No change | Schema already supports JOIN |
+Add the following block at the end of the file (after line 1403), as a new section:
+
+```css
+/* ============================================================
+   Recipe Detail Page — Card Layout
+   ============================================================ */
+
+.recipe-detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    padding-top: var(--space-lg);
+    padding-bottom: var(--space-xl);
+}
+
+/* ── Back Link ─────────────────────────────────────────────── */
+.recipe-detail__back-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.recipe-detail__back-link:hover {
+    color: var(--accent-hover);
+}
+
+/* ── Delete Error ──────────────────────────────────────────── */
+.recipe-detail__delete-error {
+    padding: var(--space-sm) var(--space-md);
+    background-color: var(--error-bg);
+    border-radius: var(--radius-md);
+    color: var(--error);
+    font-size: 14px;
+    margin-bottom: var(--space-md);
+}
+
+/* ── Overview Section ──────────────────────────────────────── */
+.recipe-detail__overview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+/* ── Tags ──────────────────────────────────────────────────── */
+.recipe-detail__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+}
+
+.recipe-detail__tag {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: var(--radius-full);
+    background-color: rgba(217, 115, 90, 0.10);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.dark .recipe-detail__tag {
+    background-color: rgba(232, 137, 110, 0.15);
+}
+
+/* ── Meta Row ──────────────────────────────────────────────── */
+.recipe-detail__meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--shadow-light);
+}
+
+.recipe-detail__meta-item {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* ── Description ───────────────────────────────────────────── */
+.recipe-detail__description {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* ── Author Line ───────────────────────────────────────────── */
+.recipe-detail__author-line {
+    font-size: 13px;
+    color: var(--text-tertiary);
+    margin-top: auto;
+}
+
+.recipe-detail__author-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.recipe-detail__author-link:hover {
+    color: var(--accent-hover);
+}
+
+/* ── Section Title (Equipment, Ingredients, Steps) ─────────── */
+.recipe-detail__section-title {
+    font-size: 20px;
+    color: var(--text-primary);
+    margin-bottom: var(--space-sm);
+    padding-bottom: var(--space-xs);
+    border-bottom: 2px solid var(--shadow-light);
+}
+
+/* ── Generic List (Equipment, Ingredients) ─────────────────── */
+.recipe-detail__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.recipe-detail__list-item {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+/* ── Scaler Wrapper (no shadow/background — RecipeScaler provides its own) ─ */
+.recipe-detail__scaler-wrapper {
+    /* No styles — plain container, spacing handled by .recipe-detail gap */
+}
+
+/* ── Steps List ────────────────────────────────────────────── */
+.recipe-detail__steps-list {
+    padding-left: var(--space-lg);
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    list-style: none;
+}
+```
+
+#### 2b. CSS Variable Usage Map
+
+All new classes use only existing CSS variables from `:root` (line 47) and `.dark` (line 106):
+
+| Variable | Used In | Purpose |
+|----------|---------|---------|
+| `--space-lg` | `.recipe-detail` gap, `.recipe-detail__steps-list` padding | Card spacing, steps indent |
+| `--space-xl` | `.recipe-detail` padding-bottom | Bottom padding |
+| `--space-md` | `.recipe-detail__overview` gap, `.recipe-detail__meta-row` gap, `.recipe-detail__delete-error` padding/margin | Medium spacing |
+| `--space-sm` | `.recipe-detail__meta-row` padding, `.recipe-detail__list-item` padding, `.recipe-detail__section-title` margin | Small spacing |
+| `--space-xs` | `.recipe-detail__tags` gap, `.recipe-detail__list` gap, `.recipe-detail__list-item` padding, `.recipe-detail__section-title` padding | Extra small spacing |
+| `--text-primary` | `.recipe-detail__section-title`, `.recipe-detail__list-item` | Primary text |
+| `--text-secondary` | `.recipe-detail__meta-item`, `.recipe-detail__description` | Secondary text |
+| `--text-tertiary` | `.recipe-detail__author-line` | Tertiary text |
+| `--shadow-light` | `.recipe-detail__meta-row` border, `.recipe-detail__section-title` border | Visible divider lines (contrasts against Card's `--surface` background) |
+| `--accent` | `.recipe-detail__back-link`, `.recipe-detail__tag`, `.recipe-detail__author-link` | Accent color |
+| `--accent-hover` | `.recipe-detail__back-link:hover`, `.recipe-detail__author-link:hover` | Hover state |
+| `--error` | `.recipe-detail__delete-error` color | Error text |
+| `--error-bg` | `.recipe-detail__delete-error` background | Error background |
+| `--radius-md` | `.recipe-detail__delete-error` | Border radius |
+| `--radius-full` | `.recipe-detail__tag` | Pill shape |
 
 ---
 
-## 5. Architectural Decisions
+### 3. What NOT to Change
 
-1. **Author data embedded in Recipe struct**: Instead of passing author separately, we embed `author_username` and `author_avatar_url` in the Recipe struct. This avoids changing every caller's props and keeps RecipeCard's API simple.
-
-2. **LEFT JOIN for SELECT queries**: Joining users at query time avoids N+1 queries. Since all recipe queries already filter by user_id or visibility, the JOIN on primary key is cheap.
-
-3. **Correlated subquery for INSERT/UPDATE**: Instead of complex `RETURNING ... FROM users u WHERE u.id = r.user_id` syntax (which requires table aliasing and may not work with `sqlx::query`), we use correlated subqueries `(SELECT username FROM users WHERE id = r.user_id) AS author_username`. This is clean, works with the existing `sqlx::query()` pattern, and avoids an extra round-trip.
-
-4. **Neumorphic inset for image placeholder**: Uses `inset` box-shadow matching the existing neumorphic design language. `aspect-ratio: 16/9` ensures consistent sizing.
-
-5. **Action buttons are visual-only**: Buttons render with `type="button"` and no `onclick` handlers. They use neumorphic raised style that presses on hover/active. Future work can wire them up.
-
-6. **Preserve existing `.recipe-card__content` styles**: The neumorphic card container already exists. New sub-elements are added as children, not replacing the container.
+| Component/Section | Location | Reason |
+|-------------------|----------|--------|
+| `PageHeader` internals | `src/components/base/page_header.rs` lines 15-33 | Out of scope; inline styles are part of its contract |
+| `RecipeScaler` internal layout | `recipe_detail.rs` lines 239-405 | Task says "RecipeScaler internal layout" must not change |
+| `StepNode` recursive rendering | `recipe_detail.rs` lines 88-119 | Dynamic `indent` variable requires inline `margin_left`; recursive `ol`/`li` structure is complex |
+| Loading state | `recipe_detail.rs` lines 625-643 | Not a section card; center-aligned spinner layout |
+| Error state | `recipe_detail.rs` lines 646-671 | Already uses `Card`; not a section card |
+| Guard state | `recipe_detail.rs` lines 674-687 | Already uses `Card`; not a section card |
+| Resource loading logic | `recipe_detail.rs` lines 486-538 | Business logic, not presentation |
+| Delete handler | `recipe_detail.rs` lines 587-622 | Business logic |
+| `format_relative_time` | `recipe_detail.rs` lines 29-45 | Utility function |
+| `roman_numeral` / `build_step_label` | `recipe_detail.rs` lines 50-84 | Utility functions |
+| `render_recipe_scaler` helper | `recipe_detail.rs` lines 411-435 | Only call site gets Card wrapper |
+| `card.rs` component API | `src/components/base/card.rs` | No props added; used as-is |
 
 ---
 
-## 6. Risks & Gaps
+### 4. Implementation Order
 
-- **LEFT JOIN returns NULL if user is deleted**: `users.username` is NOT NULL in schema, but LEFT JOIN returns NULL if the user was deleted (CASCADE would delete the recipe, so this shouldn't happen). Current schema has `ON DELETE CASCADE`, so this is safe. If concerned, make `author_username: Option<String>` and handle display fallback.
+1. **Add CSS classes to `assets/main.css`** (new section at end of file) — no breaking changes, additive only
+2. **Refactor `render_equipment` function** in `recipe_detail.rs` (lines 440-474) — smallest change first, validates the class approach
+3. **Restructure main RSX block** in `recipe_detail.rs` (lines 691-913) — wrap sections in `Card`, replace inline styles with classes
+4. **Verify** all conditional rendering paths still work (owner/non-owner back link, empty tags, optional description, optional equipment/ingredients/steps)
 
-- **Correlated subquery performance**: The subqueries in INSERT/UPDATE RETURNING execute once per row (only 1 row for INSERT/UPDATE), so performance impact is negligible.
+---
 
-- **Dark mode**: Neumorphic inset shadows use `--shadow-dark` and `--shadow-light` which are already defined for both light and dark modes. No additional dark-mode CSS needed.
+### 5. Architectural Decisions and Trade-offs
 
-- **No new component tests**: RecipeCard is a presentational component; visual verification via browser is sufficient for this change. Existing `format_relative_time` tests (lines 84-130 in recipe_card.rs) are sufficient.
+1. **No new Card props**: The existing `Card` component takes only `children: Element`. We do not add variant, size, or padding props. This keeps changes minimal and consistent with existing usage (login.rs, collection_detail.rs, error states).
 
-## 7. Implementation Checklist
+2. **Delete error stays outside Card**: The delete error is a transient, full-width alert that appears between the header card and overview card. Wrapping it in a Card would create visual confusion (a raised card inside a raised card context). The CSS class handles its appearance.
 
-- [ ] Step 1: Add `author_username` and `author_avatar_url` to Recipe struct (`src/types.rs`)
-- [ ] Step 2: Update `from_row` to extract author columns (`src/db/mod.rs:188-208`)
-- [ ] Step 3: Update INSERT query with correlated subqueries (`src/db/mod.rs:717-720`)
-- [ ] Step 4: Update UPDATE query with correlated subqueries (`src/db/mod.rs:825-832`)
-- [ ] Step 5: Update 7 SELECT queries with LEFT JOIN (`src/db/mod.rs:740-1054`)
-- [ ] Step 6: Add Avatar import and restructure RecipeCard RSX (`src/components/base/recipe_card.rs`)
-- [ ] Step 7: Add CSS for new sub-elements, remove `.recipe-card__meta` (`assets/main.css`)
-- [ ] Step 8: Add integration test for author data (`src/db/mod.rs` tests)
-- [ ] Step 9: `cargo check` — verify compilation
-- [ ] Step 10: `cargo test` — verify tests pass
+3. **`.recipe-detail` container uses CSS `gap`**: Instead of individual `margin_bottom` on each Card, the parent `.recipe-detail` div uses `display: flex; flex-direction: column; gap: var(--space-lg)` for consistent spacing. This is cleaner and avoids margin-collapse issues.
 
-## Phase 0.5: Blueprint Evaluation (Focused Re-evaluation of Corrected Blueprint)
+4. **`render_equipment` returns unwrapped content**: The function is refactored to use CSS classes and called from within the Card at the call site: `Card { {render_equipment(&recipe.equipment)} }`. This keeps the function reusable and consistent with how `render_recipe_scaler` works.
 
-**Verdict: PASS**
+5. **RecipeScaler uses plain div wrapper, not Card**: The `.recipe-scaler` class (main.css line 1227) already provides neumorphic shadow + `background: var(--surface)`. Wrapping in `Card` creates card-within-card visual with double shadows. Instead, a plain `div.recipe-detail__scaler-wrapper` provides spacing (via parent `.recipe-detail` gap) without adding shadow/background.
 
-The corrected blueprint has been thoroughly verified against the actual codebase. All factual inaccuracies from the original blueprint have been resolved. The blueprint is accurate, complete, and ready for implementation.
+6. **StepNode inline styles preserved**: The `margin_left: "{indent}px"` is computed dynamically from the `level` variable and cannot be expressed in static CSS. The other inline styles on StepNode (`padding`, `font_size`, `color`, `line_height`) are kept inline to avoid breaking the recursive rendering pattern.
 
-### Verification Checklist (8 Points)
+7. **Border colors use `--shadow-light` for visibility**: Both `.recipe-detail__meta-row` and `.recipe-detail__section-title` use `border-bottom` with `var(--shadow-light)` instead of `var(--surface)`. Since `Card` sets `background_color: var(--surface)`, using `--surface` for borders would make them invisible. `--shadow-light` provides subtle but visible contrast: `#FAF7F1` on `#F5F0E8` in light mode, `#33302A` on `#242220` in dark mode.
 
-| # | Check | Verdict | Details |
-|---|-------|---------|---------|
-| 1 | Correlated subqueries for INSERT/UPDATE RETURNING | ✅ PASS | `INSERT INTO recipes AS r ... RETURNING r.id, ..., (SELECT username FROM users WHERE id = r.user_id) AS author_username` is valid PostgreSQL syntax and works with `sqlx::query()` |
-| 2 | SELECT LEFT JOIN syntax & `from_row` aliases | ✅ PASS | `u.username AS author_username, u.avatar_url AS author_avatar_url` in SELECT matches `row.try_get("author_username")` / `row.try_get("author_avatar_url")` in `from_row` |
-| 3 | Recipe struct `author_username: String` (non-optional) | ✅ PASS | Safe: `recipes.user_id` has `ON DELETE CASCADE`, so if a user is deleted, their recipes are deleted too. LEFT JOIN never returns NULL for existing recipes. Blueprint acknowledges this risk in Section 6. |
-| 4 | Avatar component props match actual API | ✅ PASS | `AvatarProps`: `src: Option<String>` matches `author_avatar_url: Option<String>` ✓, `size: AvatarSize` matches `AvatarSize::Small` ✓, `username: String` matches `author_username: String` ✓ |
-| 5 | CSS variables exist in `assets/main.css` | ✅ PASS | `--text-primary` (L74), `--text-secondary` (L75), `--text-tertiary` (L76), `--surface` (L50), `--shadow-dark` (L54), `--shadow-light` (L53), `--radius-md` (L92), `--space-*` (L83-88), `--bg-base` (L49) — all exist. `--border-color` correctly avoided, uses `--surface` instead. Neumorphic inset via `inset` box-shadow matches existing `.neumo-inset` utility (L162-165). |
-| 6 | Action buttons inside Link — event handling | ✅ PASS | Blueprint specifies `type="button"` with no `onclick` handlers. Buttons without handlers inside a Dioxus `Link` do not trigger navigation. No `prevent_default`/`stop_propagation` needed. |
-| 7 | Test schema has `username` and `avatar_url` | ✅ PASS | `src/test_utils.rs` lines 52-62: `username VARCHAR(30) UNIQUE NOT NULL` ✓, `avatar_url TEXT` (nullable) ✓. No schema changes needed. |
-| 8 | All recipe queries covered — none missed | ✅ PASS | All 9 `Recipe::from_row` call sites verified: `insert_recipe` (L736), `get_recipe_by_id` (L753), `get_recipe_by_id_and_owner` (L778), `get_recipes_by_owner` (L797), `update_recipe` (L852), `get_recipes_by_owner_paginated` (L939), `get_public_recipes_paginated` (L994), `get_recipe_by_id_public` (L1025), `get_user_public_recipes` (L1051). Blueprint covers 2 INSERT/UPDATE (correlated subquery) + 7 SELECT (LEFT JOIN) = 9 total. |
+8. **Dark mode tag color**: Added `.dark .recipe-detail__tag` override for the tag background to use the dark-mode accent color (`rgba(232, 137, 110, 0.15)`), matching the dark mode `--accent: #E8896E` variable.
 
-### Issues Found
+## Phase 0.5: Blueprint Evaluation
+<!-- written by @develop-evaluate -->
 
-**No BLOCKERs or WARNINGs.**
+### Verdict: PASS
 
-**SUGGESTION-1: Consider `author_username: Option<String>` for defensive coding**
-- **Location**: Blueprint Step 1 (`src/types.rs`), Step 2 (`src/db/mod.rs` from_row)
-- **Description**: While `ON DELETE CASCADE` makes `String` safe in practice, a future schema change (e.g., removing CASCADE) could introduce NULL values. Using `Option<String>` would be more defensive.
-- **Impact**: None currently. This is a future-proofing suggestion only.
-- **Recommendation**: Accept current design (`String`) as-is. If schema ever changes, migrate to `Option<String>` at that time.
+---
 
-**SUGGESTION-2: Explicitly document action button event handling**
-- **Location**: Blueprint Step 6 (RecipeCard RSX)
-- **Description**: The blueprint says "3 placeholder buttons with `type="button"`" but doesn't explicitly state that no `onclick` handlers are needed. An implementer might add `prevent_default`/`stop_propagation` defensively.
-- **Impact**: Minor — extra event handlers would be harmless but unnecessary.
-- **Recommendation**: Add a note: "Buttons have no `onclick` handlers. `type="button"` prevents form submission. No event interception needed."
+### Re-evaluation of Corrected Blueprint
 
-### Requirements Coverage
+All three issues from the previous evaluation have been addressed:
 
-| Requirement (from Task Description) | Covered? | Blueprint Location |
-|---|---|---|
-| User's avatar and name at the top | ✅ Yes | Step 6: Author row with `Avatar` + author name + posted time |
-| Placeholder image 16:9 neumorphic inset | ✅ Yes | Step 6: `div.recipe-card__image-placeholder`, Step 7: CSS with `aspect-ratio: 16/9` and `inset` box-shadow |
-| Recipe title below the image | ✅ Yes | Step 6: `h3.recipe-card__title` using `recipe.title` (correct field name) |
-| Truncated description below title | ✅ Yes | Step 6: `p.recipe-card__description` with `.as_deref().unwrap_or("")` handling |
-| Placeholder action buttons at bottom | ✅ Yes | Step 6: 3 buttons with `type="button"`, Step 7: neumorphic raised + hover/active CSS |
-| LEFT JOIN for author data | ✅ Yes | Step 5: 7 SELECT queries with LEFT JOIN, Steps 3-4: correlated subqueries for INSERT/UPDATE |
+#### 1. Invisible borders fix — **RESOLVED**
+**Location:** CSS section 2a, `.recipe-detail__meta-row` and `.recipe-detail__section-title`
 
-### Test Coverage Assessment
+Both now use `var(--shadow-light)` instead of `var(--surface)`. Verified against actual CSS variable values:
 
-**Adequate.** Blueprint proposes:
-- `cargo check` for compilation verification (Step 9)
-- `cargo test` to verify existing tests pass (Step 9)
-- New integration test `test_recipe_includes_author_data` that: (a) creates user with avatar, (b) inserts recipe, (c) verifies INSERT RETURNING includes author data, (d) verifies SELECT query includes author data
+| Mode | `--shadow-light` (border) | `--surface` (Card bg) | Delta | Visible? |
+|------|--------------------------|----------------------|-------|----------|
+| Light | `#FAF7F1` (250,247,241) | `#F5F0E8` (245,240,232) | ~5-9/ch | ✅ Subtle but visible |
+| Dark | `#33302A` (51,48,42) | `#242220` (36,34,32) | ~10-15/ch | ✅ Clearly visible |
 
-Existing `format_relative_time` unit tests (recipe_card.rs lines 84-130) cover the time formatting helper. No component-level tests are needed for visual-only changes.
+This is the same contrast ratio used throughout the neumorphic design system (shadow-light vs shadow-dark). Consistent and correct.
 
-### Security / Performance / Maintainability
+#### 2. render_equipment fix — **RESOLVED**
+**Location:** Blueprint sections 1c + CARD 4
 
-- **Security**: LEFT JOIN on primary key is safe; no injection vectors. Correlated subqueries use parameterized `r.user_id`. No concerns.
-- **Performance**: LEFT JOIN on `users.id` (primary key) is O(1) per row. Correlated subqueries in INSERT/UPDATE execute once (single row). No N+1 queries. No concerns.
-- **Maintainability**: Embedding denormalized author fields in Recipe struct avoids changing every caller's props. Blueprint correctly identifies this trade-off in Architectural Decisions (Section 5, Decision 1).
+The refactored `render_equipment` function is called from within the Card at the call site:
+```rust
+Card { {render_equipment(&recipe.equipment)} }
+```
 
-### Summary
-The corrected blueprint is accurate, complete, and well-structured. All file paths, line numbers, function signatures, CSS variable names, and SQL patterns have been verified against the actual codebase. The implementation plan is clear, the test coverage is adequate, and no security or performance concerns exist. Ready for implementation.
+Resulting DOM structure:
+```
+div.neumo-card (Card — padding 24px, background: --surface, box-shadow)
+  div.recipe-detail__equipment-section (semantic wrapper, no visual styles)
+    h2.recipe-detail__section-title
+    ul.recipe-detail__list
+      li.recipe-detail__list-item
+```
 
-## Phase 1: Implementation Details
+No layout issues. The inner div is a zero-cost semantic container. The Card provides all visual styling (shadow, background, padding, border-radius).
 
-### Summary of Changes
-Restyled recipe cards to vertical layout with author avatar, 16:9 image placeholder, title, description, and action buttons. Added LEFT JOIN to all recipe queries for author data (username and avatar_url).
+#### 3. Scaler wrapper fix — **RESOLVED**
+**Location:** Blueprint SCALER section
 
-### Files Modified
+Uses `div.recipe-detail__scaler-wrapper` (plain div, no styles) instead of `Card`. Verified that `.recipe-scaler` (main.css line 1227) already provides its own complete neumorphic card styling:
+```css
+.recipe-scaler {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
+}
+```
 
-**`src/types.rs`** — Added two fields to `Recipe` struct:
-- `author_username: String` — username of the recipe author
-- `author_avatar_url: Option<String>` — optional avatar URL for the author
+No nested card-within-card visual. Spacing handled by parent `.recipe-detail` gap. Correct approach.
 
-**`src/db/mod.rs`** — Updated all recipe queries:
-- `from_row` mapping: added `author_username` and `author_avatar_url` extraction
-- 7 SELECT queries updated with `LEFT JOIN users u ON u.id = r.user_id` and author columns
-- INSERT query: added correlated subqueries for author data in RETURNING clause
-- UPDATE query: added correlated subqueries for author data in RETURNING clause
-- Functions updated: `get_recipe_by_id`, `get_recipe_by_id_and_owner`, `get_recipes_by_owner`, `get_recipes_by_owner_paginated`, `get_public_recipes_paginated`, `get_recipe_by_id_public`, `get_user_public_recipes`, `insert_recipe`, `update_recipe`
+---
 
-**`src/components/base/recipe_card.rs`** — Complete rewrite:
-- Removed `format_relative_time` utility function and its tests
-- New vertical layout: author section (Avatar + username), image placeholder (16:9), content (title, description, meta), action buttons
-- Uses existing `Avatar` component with `AvatarSize::Small`
-- Action buttons are visual-only placeholders (disabled)
-- Meta section shows prep+cook time and servings
+### CSS Completeness Verification
 
-**`assets/main.css`** — New recipe card styles:
-- `.recipe-card` — flex container with neumorphic shadow
-- `.recipe-card__author` — author avatar + name row
-- `.recipe-card__link` — clickable area wrapping image and content
-- `.recipe-card__image` — 16:9 aspect ratio placeholder
-- `.recipe-card__content` — title, description, meta
-- `.recipe-card__meta` — flex row for time and servings
-- `.recipe-card__actions` — bottom action bar with star/bookmark buttons
+| Inline Style (original) | CSS Class | Defined? | Covers All Properties? |
+|------------------------|-----------|----------|----------------------|
+| Back link `style` attr | `.recipe-detail__back-link` | ✅ | color, text-decoration, font-size, font-weight + hover |
+| Delete error div | `.recipe-detail__delete-error` | ✅ | padding, background, border-radius, color, font-size, margin |
+| Tags wrapper div | `.recipe-detail__tags` | ✅ | display, flex-wrap, gap (margin removed — Card padding) |
+| Tag spans | `.recipe-detail__tag` | ✅ | display, padding, border-radius, background, color, font-size, font-weight |
+| Meta row div | `.recipe-detail__meta-row` | ✅ | display, flex-wrap, gap, padding, border-bottom |
+| Meta spans | `.recipe-detail__meta-item` | ✅ | font-size, color |
+| Description `<p>` | `.recipe-detail__description` | ✅ | font-size, color, line-height, margin:0 |
+| Author line div | `.recipe-detail__author-line` | ✅ | font-size, color, margin-top:auto |
+| Author link | `.recipe-detail__author-link` | ✅ | color, text-decoration, font-weight + hover |
+| Section h2 | `.recipe-detail__section-title` | ✅ | font-size, color, margin-bottom, padding-bottom, border-bottom |
+| Equipment/Ingredients ul | `.recipe-detail__list` | ✅ | list-style, padding, margin, display, flex-direction, gap |
+| List items li | `.recipe-detail__list-item` | ✅ | padding, font-size, color |
+| Steps ol | `.recipe-detail__steps-list` | ✅ | padding-left, margin, display, flex-direction, gap, list-style |
 
-### Tests
-All 215 existing tests pass, including:
-- 9 recipe CRUD tests (insert, update, get by id, get by owner, paginated variants)
-- 2 public recipe tests (paginated, user public recipes)
-- All other database and application tests
+**Note:** Three wrapper classes (`__equipment-section`, `__ingredients-section`, `__steps-section`) are used in RSX but intentionally have no CSS definition. They are semantic containers; the Card provides visual styling. This is correct.
 
-### Verification
-- `cargo check --features server` — passes
-- `cargo check --target wasm32-unknown-unknown` — passes
-- `cargo test --features server` — 215 tests pass
+---
 
-## Phase 2: Review Verdict
+### No New Issues Introduced
 
-**Verdict: PASS** (with 1 bug fix and 2 suggestions)
+| Check | Result |
+|-------|--------|
+| `var(--shadow-light)` visible against `var(--surface)` in both modes | ✅ Verified |
+| `render_equipment` called from Card (not dead code) | ✅ Verified |
+| Scaler uses plain div (no nested card shadows) | ✅ Verified |
+| All CSS classes defined or intentionally empty | ✅ Verified |
+| No naming conflicts with existing CSS | ✅ Verified (grep confirms zero pre-existing `.recipe-detail__*` classes) |
+| All inline styles from original RSX accounted for | ✅ Verified against lines 691-913 |
+| Conditional rendering preserved | ✅ All 9 patterns match |
+| Card component API unchanged | ✅ Takes only `children: Element` |
+| StepNode dynamic styles preserved inline | ✅ `margin_left: "{indent}px"` cannot be CSS |
+| PageHeader internals untouched | ✅ Out of scope |
+| Dark mode coverage | ✅ All variables have `.dark` definitions; `.dark .recipe-detail__tag` override for tag bg |
 
-The implementation correctly adds author data to recipe queries and restyles the recipe card to a vertical layout. The code compiles cleanly across both native and wasm targets, and all 215 existing tests pass. The core data flow — from database LEFT JOINs through the Recipe struct to the RecipeCard component — is sound.
+---
+
+### Verification Summary
+
+| Check | Result |
+|-------|--------|
+| **Task requirements coverage** | All 6 sections (header, overview, scaler, equipment, ingredients, steps) addressed ✅ |
+| **Inline styles replacement** | All inline styles in main RSX block (lines 691-913) mapped to CSS classes ✅ |
+| **Card component usage** | Correct — no new props, used as-is ✅ |
+| **CSS variable references** | All 14 variables exist in `:root` and `.dark` ✅ |
+| **CSS class uniqueness** | No conflicts — all `.recipe-detail__*` names are new ✅ |
+| **Conditional rendering** | All guards preserved identically ✅ |
+| **Untouched sections** | Loading/error/guard/StepNode/RecipeScaler/PageHeader correctly excluded ✅ |
+
+### Overall Assessment
+
+The corrected blueprint is thorough, accurate, and ready for implementation. All three previous issues (invisible borders, dead code, nested card shadows) have been properly resolved. The CSS is complete and consistent with the existing neumorphic design system. No regressions detected.
+
+### Verdict: NEEDS_REVISION
 
 ---
 
 ### Issues
 
-#### 1. BUG: Double-initials extraction in RecipeCard (WARNING)
+#### 1. Invisible borders inside Card backgrounds — **BLOCKER**
+**Location:** CSS section 2a, `.recipe-detail__meta-row` and `.recipe-detail__section-title`
 
-- **Location**: `src/components/base/recipe_card.rs`, lines 26-31 and line 58
-- **Description**: The component manually extracts a single character from `author_username` into the `initials` variable, then passes it to `Avatar` as `username: initials.clone()`. The `Avatar` component's `extract_initials()` function then processes this single character, doubling it (e.g., username "sam" → `initials = "S"` → Avatar shows "SS").
-- **Recommended fix**: Remove the `initials` variable (lines 26-31) and pass `recipe.author_username.clone()` directly to the `Avatar` component's `username` prop. The `Avatar` component already handles initials extraction correctly.
+Both classes use `border-bottom` with `var(--surface)` as the border color:
+- `.recipe-detail__meta-row`: `border-bottom: 1px solid var(--surface)`
+- `.recipe-detail__section-title`: `border-bottom: 2px solid var(--surface)`
 
-#### 2. SUGGESTION: LEFT JOIN NULL safety for `author_username`
+The `Card` component sets `background_color: "var(--surface)"` on its wrapper div. This means the border color is identical to the card's background color, rendering both borders **completely invisible**. Currently, these borders are drawn on the page background (`var(--bg-base) = #FAF7F2`), where `var(--surface) = #F5F0E8` is slightly darker and visible. Inside a Card, they disappear entirely.
 
-- **Location**: `src/db/mod.rs`, all 7 LEFT JOIN queries (lines 749, 770, 791, 932, 988, 1023, 1044)
-- **Description**: `Recipe::author_username` is `String` (non-optional), and `from_row` uses `row.try_get("author_username")?` which would produce a sqlx `Decode` error if the LEFT JOIN returns NULL. In practice, the `ON DELETE CASCADE` foreign key constraint on `recipes.user_id` ensures this never happens — if a user is deleted, their recipes are deleted too.
-- **Impact**: None in current schema. This is a latent risk if the schema ever changes (e.g., removing CASCADE).
-- **Recommended fix**: No action needed now. If the schema ever changes to allow orphaned recipes, migrate `author_username` to `Option<String>` and add a display fallback in RecipeCard.
-
-#### 3. SUGGESTION: Missing integration test for author data
-
-- **Location**: `src/db/mod.rs` tests module
-- **Description**: The Phase 0 blueprint proposed a test `test_recipe_includes_author_data` that verifies INSERT RETURNING and SELECT queries include correct author data. This test was not implemented in Phase 1.
-- **Impact**: Author data flows through all recipe queries but is not explicitly tested. If a future query change accidentally drops the author columns, it would only be caught by visual inspection.
-- **Recommended fix**: Add the test from the blueprint (Phase 0, Step 9) to verify `author_username` and `author_avatar_url` are populated correctly by both INSERT and SELECT queries.
+**Fix:** Use a contrasting border color. Options: `var(--shadow-dark)` for a subtle neumorphic divider, or introduce a new variable like `--divider` (e.g., `rgba(0,0,0,0.06)` light / `rgba(255,255,255,0.06)` dark).
 
 ---
 
-### Good Practices
+#### 2. `render_equipment` becomes dead code — **WARNING**
+**Location:** Blueprint sections 1c and CARD 4
 
-1. **Consistent query patterns**: All 9 recipe query sites (7 SELECTs + INSERT + UPDATE) correctly include author data. LEFT JOINs are used for SELECT queries and correlated subqueries for INSERT/UPDATE RETURNING — the right tool for each context.
+Section 1c refactors the `render_equipment` function (lines 440-474) to use CSS classes. However, the CARD 4 RSX block replaces the `{render_equipment(&recipe.equipment)}` call at line 848 with entirely inline code. The refactored function is never called, making it dead code.
 
-2. **Manual `FromRow` implementation**: The `from_row` method cleanly handles JSONB deserialization for `ingredients`, `instructions`, and `equipment` with proper error mapping via `Box::new(e)`.
-
-3. **RecipeCard handles optional fields gracefully**: Time display correctly combines `prep_time_minutes` and `cook_time_minutes` with all 4 match arms. Description uses `as_deref().unwrap_or("No description")`. Avatar correctly receives `Option<String>` for `src`.
-
-4. **CSS follows established BEM convention**: New classes (`.recipe-card__author`, `.recipe-card__link`, `.recipe-card__image`, etc.) follow the existing naming pattern and use correct CSS variables (`--text-primary`, `--text-secondary`, `--text-tertiary`, `--surface`, `--shadow-dark`, `--shadow-light`).
-
-5. **No unnecessary changes to callers**: Dashboard, Explore, and UserProfile pages pass `Recipe` by value to `RecipeCard` without modification — the embedded author fields flow through transparently.
-
-6. **Typed routing preserved**: RecipeCard uses `crate::Route::RecipeDetail { id }` instead of string interpolation, maintaining type-safe navigation.
+**Fix:** Choose one approach and document it clearly:
+- **Option A (preferred):** Keep `render_equipment` refactored and call it from within the Card: `Card { {render_equipment(&recipe.equipment)} }`. This preserves the helper function pattern used elsewhere.
+- **Option B:** Remove `render_equipment` entirely and keep the inline CARD 4 code. Delete section 1c.
 
 ---
 
-### Requirements Coverage
+#### 3. Nested card shadow on RecipeScaler — **WARNING**
+**Location:** Blueprint CARD 3
 
-| Requirement (from Task Description) | Status |
-|---|---|
-| User's avatar and name at the top | ✅ Implemented — Avatar component + username span in `.recipe-card__author` |
-| Placeholder image 16:9 neumorphic inset | ✅ Implemented — `.recipe-card__image` with `aspect-ratio: 16/9` and inset box-shadow |
-| Recipe title below the image | ✅ Implemented — `h3.recipe-card__title` inside `.recipe-card__content` |
-| Truncated description below the title | ✅ Implemented — `p.recipe-card__description` with `unwrap_or("No description")` |
-| Placeholder action buttons at bottom | ✅ Implemented — 2 disabled buttons (star, bookmark) in `.recipe-card__actions` |
-| LEFT JOIN for author data | ✅ Implemented — 7 SELECT queries use LEFT JOIN, 2 INSERT/UPDATE use correlated subqueries |
+The RecipeScaler component already renders its own neumorphic card via the `.recipe-scaler` CSS class (main.css line 1227):
+```css
+.recipe-scaler {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
+}
+```
+
+Wrapping it in a `Card` component (which adds another `box-shadow` + `background_color: var(--surface)`) creates a card-within-a-card visual: two layers of neumorphic shadows with identical surface backgrounds. This may look cluttered or create an unintended double-border effect.
+
+**Fix:** Either (a) accept the nested card look as intentional per the task spec, or (b) strip the RecipeScaler's own shadow/background when it's inside a Card by adding a CSS override like `.recipe-detail .recipe-scaler { box-shadow: none; background: transparent; }`.
 
 ---
 
-### Summary
+#### 4. Line number inaccuracies for equipment section — **SUGGESTION**
+**Location:** Blueprint section 1b, inline styles table
 
-Solid implementation that faithfully follows the Phase 0 blueprint. The data layer changes are thorough and consistent across all 9 query sites. The RecipeCard component is well-structured and handles optional fields correctly. The one bug (double-initials extraction) is a straightforward fix. No blockers.
+Several line numbers reference the equipment section as if it were inline RSX (e.g., "848-852", "853-870"), but the equipment section is rendered via the `render_equipment()` function call at line 848. The actual inline styles live inside the function at lines 446-471. The blueprint does correctly identify this in section 1c, but the table in 1b is misleading.
+
+**Fix:** Update the inline styles table to reference the `render_equipment` function body (lines 446-471) rather than apparent line numbers in the main RSX.
+
+---
+
+### Verification Summary
+
+| Check | Result |
+|-------|--------|
+| **Task requirements coverage** | All 6 sections (header, overview, scaler, equipment, ingredients, steps) addressed ✅ |
+| **Inline styles replacement** | All inline styles in the main RSX block (lines 691-913) identified and mapped to CSS classes ✅ |
+| **Card component API** | Card takes only `children: Element` — blueprint uses correctly, no new props needed ✅ |
+| **Card import** | Already imported at line 19: `use crate::components::base::{..., Card, ...}` ✅ |
+| **CSS variables** | All 14 variables used in new classes exist in `:root` (lines 47-101) and `.dark` (lines 106-129) ✅ |
+| **CSS class name conflicts** | No conflicts with existing classes — all `.recipe-detail__*` names are unique ✅ |
+| **Neumorphic shadow syntax** | Matches existing `.neumo-card` pattern (5px 5px 4px) ✅ |
+| **Conditional rendering preserved** | All 9 conditional patterns verified against actual code ✅ |
+| **Loading/error/guard states** | Correctly marked as untouched ✅ |
+| **StepNode dynamic styles** | Correctly preserved inline (dynamic `margin_left` from `indent`) ✅ |
+| **RecipeScaler internals** | Correctly marked as untouched ✅ |
+| **PageHeader internals** | Correctly marked as untouched ✅ |
+| **Dark mode** | `.dark .recipe-detail__tag` override provided; all other classes use CSS variables with dark mode definitions ✅ |
+| **Mobile responsiveness** | `.container` handles responsive padding; new `.recipe-detail` adds no width constraints ✅ |
+
+### Test Coverage Assessment
+
+The blueprint does not include a test plan. For a refactoring of this scope (restructuring RSX + adding ~25 CSS classes), the following would be appropriate:
+- **Visual regression:** Screenshot-based test of the recipe detail page in both light and dark modes
+- **Conditional rendering:** Verify each section appears/disappears correctly (owner vs non-owner, empty ingredients, empty equipment, empty instructions, missing description)
+- **CSS class application:** Verify new classes are applied to the correct elements
+
+### Overall Assessment
+
+The blueprint is thorough and well-structured, with excellent documentation of what changes and what stays the same. The inline styles mapping is comprehensive and the CSS variable usage is correct. However, the **invisible borders issue (BLOCKER)** is a significant visual regression that will be immediately visible upon implementation and must be fixed before proceeding. The dead code issue and nested card concern should also be resolved for a clean implementation.
+
+## Phase 1: Implementation Details
+<!-- written by @develop-implement -->
+
+### Summary of Changes
+Merged the Header Card (PageHeader) and Overview Card (tags, meta, description, author) into a single Card in the recipe detail page. Removed the `recipe-detail__overview` wrapper div since the content is now directly inside the header Card.
+
+### Files Changed
+
+**`src/pages/recipe_detail.rs`** — 7 lines removed (810 → 803 lines)
+- **Main RSX block (lines 672-757 → 672-749):** Merged the two separate `Card` blocks into one:
+  - Before: `Card { PageHeader { ... } }` followed by delete error, then `Card { div.recipe-detail__overview { tags + meta + description + author } }`
+  - After: Single `Card { PageHeader { ... } + tags + meta + description + author }` followed by delete error
+- Removed the `div { class: "recipe-detail__overview", ... }` wrapper — tags, meta row, description, and author line are now placed directly inside the Card
+- Delete error remains outside the Card (transient UI element), positioned after the merged card
+- All conditional rendering logic preserved exactly (owner/non-owner actions, empty tags, optional description, optional author username)
+
+### Verification
+- `cargo check --features server` — ✅ Passed (no errors)
+- `cargo check --target wasm32-unknown-unknown` — ✅ Passed (no errors)
+
+### Line Count Summary
+| File | Lines Added | Lines Removed | Net Change |
+|------|-------------|---------------|------------|
+| `src/pages/recipe_detail.rs` | 0 | 7 | -7 |
+
+## Phase 2: Review Verdict
+<!-- written by @develop-review -->
+
+### Verdict: PASS
+
+---
+
+### Issues
+
+#### 1. Back link wrapper div has unnecessary `recipe-detail__back-link` class — **SUGGESTION**
+**Location:** `src/pages/recipe_detail.rs` lines 700, 704, 710
+
+The wrapper `<div>` around the back link has `class: "recipe-detail__back-link"` applied:
+```rust
+div { class: "recipe-detail__back-link",
+    if is_owner {
+        Link { to: ..., class: "recipe-detail__back-link", "← Back to Dashboard" }
+    } else {
+        Link { to: ..., class: "recipe-detail__back-link", "← Back to Explore" }
+    }
+}
+```
+
+The blueprint (section 1a) specifies the class only on the `Link` elements, not the wrapper div. The wrapper div is a zero-styling container; the `margin_bottom` was removed and spacing is handled by Card padding + `.recipe-detail` gap. Having the class on the wrapper div is semantically incorrect (it's not a link) and the `:hover` pseudo-class on the CSS targets the div, not the actual `<a>` element.
+
+**Fix:** Remove `class: "recipe-detail__back-link"` from the wrapper div on line 700. Keep the class only on the inner `Link` elements (lines 704, 710).
+
+---
+
+### Positive Findings and Good Practices
+
+1. **All 6 sections correctly wrapped** — Header in Card, Overview in Card, Scaler in plain div, Equipment in Card, Ingredients in Card, Steps in Card. Matches blueprint exactly.
+
+2. **All inline styles in main RSX replaced** — Every section-level inline style from the original code has been migrated to CSS classes. The only remaining inline styles in the file are in explicitly excluded zones: StepNode (dynamic `margin_left`), RecipeScaler internals, loading/error/guard states, and PageHeader action div.
+
+3. **CSS is complete and correct** — All 16 new CSS classes are defined in `assets/main.css`. All CSS variables (`--accent`, `--accent-hover`, `--error`, `--error-bg`, `--text-primary`, `--text-secondary`, `--text-tertiary`, `--shadow-light`, `--space-*`, `--radius-*`) are valid and exist in both `:root` and `.dark` definitions.
+
+4. **Borders use `--shadow-light` correctly** — Both `.recipe-detail__meta-row` (line 1474) and `.recipe-detail__section-title` (line 1514) use `border-bottom` with `var(--shadow-light)`, providing visible contrast against Card's `--surface` background in both light and dark modes.
+
+5. **`render_equipment` properly refactored** — All inline styles replaced with CSS classes (`recipe-detail__equipment-section`, `recipe-detail__section-title`, `recipe-detail__list`, `recipe-detail__list-item`). Called from within Card at the call site: `Card { {render_equipment(&recipe.equipment)} }`.
+
+6. **Scaler uses plain div** — `div.recipe-detail__scaler-wrapper` avoids nested card-within-card shadows since `.recipe-scaler` already provides its own neumorphic styling (box-shadow + background).
+
+7. **All conditional rendering preserved** — Verified all 9 conditional patterns: owner/non-owner back link, delete error, tags (with empty check), meta items (prep/cook/servings), description (with empty check), author line (with username check), equipment card, ingredients card, steps card.
+
+8. **Loading/error/guard states untouched** — Loading state (lines 606-624), error state (lines 627-652), and guard state (lines 655-668) are preserved exactly as before.
+
+9. **Business logic preserved** — Ownership check (`is_owner`), delete handler with confirmation dialog, tag loading (owner vs public endpoint), and recipe fetching (public first, authenticated fallback) all intact.
+
+10. **Dark mode coverage** — `.dark .recipe-detail__tag` override for tag background color; all other classes use CSS variables with dark mode definitions.
+
+11. **Code reduced** — File went from 914 lines to 825 lines (-89 net), achieving cleaner code through CSS class extraction.
+
+12. **Build verification** — `cargo check` passes for both server and wasm32 targets. `cargo fmt` and `cargo clippy` pass clean.
+
+---
+
+### Requirements Coverage Confirmation
+
+| Requirement | Status |
+|-------------|--------|
+| Header in Card | ✅ Card wrapping PageHeader + back link |
+| Overview in Card | ✅ Card wrapping tags, meta, description, author |
+| Scaler in plain div | ✅ `div.recipe-detail__scaler-wrapper` (not Card) |
+| Equipment in Card | ✅ Card wrapping `render_equipment()` output |
+| Ingredients in Card | ✅ Card wrapping ingredients list |
+| Steps in Card | ✅ Card wrapping steps list |
+| Inline styles → CSS classes | ✅ All section-level inline styles replaced |
+| CSS classes in main.css | ✅ 16 new classes added, all valid |
+| CSS variables valid | ✅ All 14 variables exist in :root + .dark |
+| Borders use --shadow-light | ✅ meta-row and section-title |
+| Conditional rendering | ✅ All 9 patterns preserved |
+| render_equipment refactored | ✅ CSS classes, called from Card |
+| Scaler plain div | ✅ No nested card shadows |
+| Loading/error states | ✅ Preserved unchanged |
+| Business logic | ✅ Ownership, delete, tags all preserved |
+
+---
+
+### Overall Quality Summary
+
+Clean, thorough implementation that faithfully follows the blueprint. All 6 sections are correctly card-wrapped, all inline styles are extracted to well-organized CSS classes, and all conditional rendering and business logic is preserved. The one minor suggestion (back link wrapper class) is purely semantic and has no visual impact.
 
 ## Phase 3: Synthesis
+<!-- written by @develop-synthesize -->
 
 ### Summary
 
-Recipe cards were restyled from a horizontal layout to a rich vertical card with author attribution, a 16:9 image placeholder, title, description, meta information, and placeholder action buttons. The database layer was updated so that every recipe query returns the author's username and avatar URL via LEFT JOIN (for SELECT queries) or correlated subqueries (for INSERT/UPDATE RETURNING clauses). The `Recipe` struct now carries denormalized author fields, eliminating the need to change any caller code.
+The recipe detail page (`src/pages/recipe_detail.rs`) was refactored so that each logical section is wrapped in its own neumorphic raised `Card` component, with all inline styles extracted to CSS classes in `assets/main.css`. The goal was to achieve visual consistency across the page using the existing design system rather than ad-hoc inline styling. The RecipeScaler is the only exception — it uses a plain `div` wrapper (not a `Card`) because `.recipe-scaler` already provides its own neumorphic shadow and background, and nesting it inside a `Card` would produce a visually cluttered card-within-card effect.
 
-A post-review bug fix was applied: the RecipeCard was manually extracting a single initial character and passing it to the `Avatar` component, which then doubled it (e.g., "S" → "SS"). The fix removes the manual extraction and passes `recipe.author_username` directly to Avatar, which handles initials extraction internally.
+The file shrank from 914 to 825 lines (-89 net) as inline style attributes were consolidated into 16 reusable CSS classes. All conditional rendering, business logic, loading/error/guard states, and component internals (StepNode, RecipeScaler, PageHeader) were left untouched.
 
-### Files Modified
+### Files Changed
 
-| File | Change |
-|---|---|
-| `src/types.rs` | Added `author_username: String` and `author_avatar_url: Option<String>` fields to the `Recipe` struct |
-| `src/db/mod.rs` | Updated `from_row` to extract author columns; added LEFT JOIN to 7 SELECT queries; added correlated subqueries to INSERT and UPDATE RETURNING clauses |
-| `src/components/base/recipe_card.rs` | Complete rewrite: vertical layout with Avatar author row, 16:9 image placeholder, content section, and action buttons; fixed double-initials bug by passing full username to Avatar |
-| `assets/main.css` | Added 7 new BEM class rules for recipe card sub-elements (`.recipe-card__author`, `.recipe-card__link`, `.recipe-card__image`, `.recipe-card__content`, `.recipe-card__meta`, `.recipe-card__actions`); removed unused `.recipe-card__meta` (replaced by new `__meta` with flex layout) |
+| File | Change | Description |
+|------|--------|-------------|
+| `assets/main.css` | +132 lines | Added `.recipe-detail` container class and 16 new BEM-style classes for all section elements |
+| `src/pages/recipe_detail.rs` | -89 lines (914 → 825) | Restructured main RSX into 6 Card-wrapped sections; replaced all inline styles with CSS class references; refactored `render_equipment` helper |
 
 ### Detailed Walkthrough
 
-#### `src/types.rs` — Recipe struct extension
+#### `assets/main.css` — New CSS Section (lines 1405–1536)
 
-Two fields appended to the `Recipe` struct after `updated_at`:
-- `author_username: String` — the recipe author's display name, populated from `users.username`
-- `author_avatar_url: Option<String>` — optional avatar URL from `users.avatar_url`
+A new section titled "Recipe Detail Page — Card Layout" was appended at the end of the file. It defines:
 
-These are denormalized fields — they do not exist in the `recipes` table but are computed at query time via JOIN/subquery. This design avoids changing every caller's props and keeps RecipeCard's API unchanged.
+- **`.recipe-detail`** — Parent container using `display: flex; flex-direction: column; gap: var(--space-lg)` for consistent card spacing via CSS gap instead of individual `margin-bottom` on each child.
+- **`.recipe-detail__back-link`** — Accent-colored, underlined link with hover transition. Used on the `Link` elements inside the header card.
+- **`.recipe-detail__delete-error`** — Error alert styling (padding, `--error-bg` background, `--error` text color, `--radius-md` border radius). Placed between cards, outside any Card wrapper.
+- **`.recipe-detail__overview`** — Flex column layout with gap for the overview card contents.
+- **`.recipe-detail__tags` / `.recipe-detail__tag`** — Flex-wrap tag container and pill-shaped tag spans with semi-transparent accent background. Includes `.dark .recipe-detail__tag` override for dark mode.
+- **`.recipe-detail__meta-row` / `.recipe-detail__meta-item`** — Flex-wrap metadata row with `border-bottom` using `var(--shadow-light)` for visible contrast against Card's `--surface` background.
+- **`.recipe-detail__description`** — Paragraph styling with secondary text color and line-height.
+- **`.recipe-detail__author-line` / `.recipe-detail__author-link`** — Tertiary-colored author attribution with accent-colored username link and hover transition.
+- **`.recipe-detail__section-title`** — Shared `h2` styling for Equipment, Ingredients, and Steps sections with a `border-bottom` divider.
+- **`.recipe-detail__list` / `.recipe-detail__list-item`** — Shared vertical list styling (no bullets, flex column with gap, padded items).
+- **`.recipe-detail__scaler-wrapper`** — Intentionally empty class; spacing is inherited from the parent `.recipe-detail` gap.
+- **`.recipe-detail__steps-list`** — Ordered list styling with left padding, flex column gap, and no default list style.
 
-#### `src/db/mod.rs` — Query layer changes
+All classes use only existing CSS variables (`--space-*`, `--text-*`, `--accent`, `--accent-hover`, `--error`, `--error-bg`, `--shadow-light`, `--radius-*`). No new CSS variables were introduced.
 
-**`from_row` (impl FromRow for Recipe)**: Added two `row.try_get()` calls to extract `author_username` and `author_avatar_url` from the query result row. These are inserted into the `Ok(Self { ... })` construction.
+#### `src/pages/recipe_detail.rs` — Main RSX Restructure (lines 672–824 → new layout)
 
-**7 SELECT queries** (`get_recipe_by_id`, `get_recipe_by_id_and_owner`, `get_recipes_by_owner`, `get_recipes_by_owner_paginated`, `get_public_recipes_paginated`, `get_recipe_by_id_public`, `get_user_public_recipes`): Each query was updated to:
-1. Alias the recipes table as `r` (`FROM recipes r`)
-2. Add `LEFT JOIN users u ON u.id = r.user_id`
-3. Add `u.username AS author_username, u.avatar_url AS author_avatar_url` to the SELECT list
-4. Prefix all existing column references with `r.`
+The `div.container` block was replaced with `div.recipe-detail.container` and restructured into 6 card sections:
 
-**INSERT query** (`insert_recipe`): The RETURNING clause uses correlated subqueries because LEFT JOIN cannot be used in INSERT RETURNING:
-```sql
-(SELECT username FROM users WHERE id = r.user_id) AS author_username,
-(SELECT avatar_url FROM users WHERE id = r.user_id) AS author_avatar_url
-```
+1. **Header Card** — Wraps `PageHeader` (title + edit/delete buttons, unchanged) and the back link (`Link` with `recipe-detail__back-link` class). The back link destination is conditional: Dashboard for owners, Explore for non-owners.
+2. **Delete error** (outside any Card) — `div.recipe-detail__delete-error` renders only when `delete_error()` returns `Some`. This is a transient alert between the header and overview cards.
+3. **Overview Card** — Contains tags (with empty check), meta row (prep/cook/servings, each optional), description (with empty check), and author line (with username check). All styled via CSS classes.
+4. **Scaler** (plain `div`, NOT Card) — `div.recipe-detail__scaler-wrapper` wraps the `RecipeScaler` widget. Only renders if ingredients exist. Uses plain div to avoid nested card shadows.
+5. **Equipment Card** — Calls the refactored `render_equipment()` helper from within a `Card`. Only renders if equipment exists.
+6. **Ingredients Card** — Inline ingredient list with `recipe-detail__section-title`, `recipe-detail__list`, and `recipe-detail__list-item` classes. Only renders if ingredients exist.
+7. **Steps Card** — Inline steps list with `recipe-detail__section-title` and `recipe-detail__steps-list` classes. Uses the existing `StepNode` recursive component (unchanged). Only renders if instructions exist.
 
-**UPDATE query** (`update_recipe`): Same correlated subquery pattern in the RETURNING clause.
+#### `src/pages/recipe_detail.rs` — `render_equipment` Refactor (lines 440–455)
 
-#### `src/components/base/recipe_card.rs` — Component rewrite
-
-The component was completely restructured:
-
-1. **Imports**: Added `Avatar` and `AvatarSize` from `crate::components::base::avatar`
-2. **Author row**: Renders an `Avatar` component (size `Small`, 32px) with the author's avatar URL and username, alongside a `<span>` showing the author's name
-3. **Image placeholder**: A `<div>` with class `recipe-card__image` showing a 16:9 neumorphic inset box
-4. **Content section**: Title (`h3`), description (`p`, truncated to 120 chars with fallback "No description"), and meta row showing prep+cook time and servings
-5. **Action buttons**: Two disabled placeholder buttons (star, bookmark) with neumorphic styling
-6. **Routing**: Uses typed `crate::Route::RecipeDetail { id }` via Dioxus `Link`
-7. **Post-review bug fix**: Removed the manual `initials` variable extraction (lines 26-31 in the original). The component now passes `recipe.author_username.clone()` directly to the `Avatar` component's `username` prop. The Avatar component's internal `extract_initials()` function handles the initials logic correctly, preventing the "SS" doubling bug.
-
-**Non-obvious patterns used**:
-- `format_relative_time` was removed from this file (it was not used in the new layout; the posted time is shown via the author row)
-- The `Link` component wraps the clickable area (image + content), while the author row and action buttons sit outside the link to prevent navigation on interaction
-- Action buttons use `disabled` attribute rather than `type="button"` to visually indicate they are placeholders
-
-#### `assets/main.css` — New styles
-
-Seven new BEM classes were added following the existing naming convention:
-
-- `.recipe-card` — Flex column container with neumorphic shadow, max-width, margin
-- `.recipe-card__author` — Flex row with gap, padding, aligning avatar and name
-- `.recipe-card__link` — Block-level wrapper for the clickable image+content area, inherits text color
-- `.recipe-card__image` — 16:9 aspect ratio placeholder with neumorphic inset shadow (`box-shadow: inset ...`)
-- `.recipe-card__content` — Flex column with gap for title, description, meta
-- `.recipe-card__meta` — Flex row with gap for time and servings badges
-- `.recipe-card__actions` — Flex row with border-top separator, padding, containing action buttons
-
-All styles use existing CSS custom properties (`--surface`, `--text-primary`, `--text-secondary`, `--text-tertiary`, `--shadow-dark`, `--shadow-light`, `--radius-md`, `--space-*`) and support dark mode through the existing `.dark` selector.
+The `render_equipment` function was rewritten to use CSS classes instead of inline styles. The outer `margin_bottom` was removed (spacing is now handled by the `.recipe-detail` gap and Card padding). The function is called from within a Card at the call site: `Card { {render_equipment(&recipe.equipment)} }`.
 
 ### Dependencies
 
-No new dependencies were introduced. The implementation uses:
-- Existing `Avatar` and `AvatarSize` components from `crate::components::base::avatar`
-- Existing `sqlx::FromRow` infrastructure
-- Existing CSS custom properties defined in `assets/main.css`
-- Existing `Route::RecipeDetail` typed route
+No new dependencies were introduced or modified. The existing `Card` component (`src/components/base/card.rs`) is used as-is with its single `children: Element` prop. All CSS variables referenced in the new classes already exist in `:root` and `.dark` blocks.
 
-### Follow-up Recommendations
+### Special Patterns and Non-Obvious Details
 
-1. **Add integration test for author data**: The Phase 0 blueprint proposed `test_recipe_includes_author_data` to verify INSERT RETURNING and SELECT queries populate `author_username` and `author_avatar_url` correctly. This test was not implemented and should be added.
-2. **Wire up action buttons**: The star and bookmark buttons are currently `disabled` placeholders. Future work should implement favorite/bookmark functionality.
-3. **Image placeholder → real images**: The 16:9 placeholder is a visual stub. Future work should add recipe image upload and display.
-4. **Monitor LEFT JOIN NULL safety**: If the `ON DELETE CASCADE` constraint is ever removed from `recipes.user_id`, `author_username` could become NULL and cause a `Decode` error. Consider migrating to `Option<String>` if the schema changes.
+- **CSS `gap` for card spacing** — Instead of individual `margin-bottom: var(--space-lg)` on each Card, the parent `.recipe-detail` uses `display: flex; flex-direction: column; gap: var(--space-lg)`. This avoids margin-collapse issues and is cleaner.
+- **`--shadow-light` for borders inside Cards** — Both `.recipe-detail__meta-row` and `.recipe-detail__section-title` use `border-bottom` with `var(--shadow-light)` instead of `var(--surface)`. Since Cards set `background_color: var(--surface)`, using `--surface` for borders would make them invisible. `--shadow-light` provides subtle but visible contrast (~5-9 delta per channel in light mode, ~10-15 in dark mode).
+- **Dynamic StepNode styles preserved inline** — The `margin_left: "{indent}px"` in `StepNode` is computed dynamically from the `level` variable and cannot be expressed in static CSS. Other StepNode inline styles were also kept to avoid breaking the recursive rendering pattern.
+- **Semantic wrapper classes without CSS** — Three wrapper classes (`__equipment-section`, `__ingredients-section`, `__steps-section`) are used in RSX but intentionally have no CSS definition. They are zero-cost semantic containers; the Card provides all visual styling.
+
+### Review Suggestion (Not Yet Applied)
+
+The review identified one minor suggestion: the back link wrapper `div` has `class: "recipe-detail__back-link"` applied, but the class should only be on the inner `Link` elements. The wrapper div is a zero-styling container, and having the class on it is semantically incorrect (it's not a link) and means the `:hover` pseudo-class targets the div rather than the actual `<a>` element. **Fix:** Remove `class: "recipe-detail__back-link"` from the wrapper div; keep it only on the `Link` elements.
+
+### Follow-Up Recommendations
+
+1. **Apply the review suggestion** — Remove the `recipe-detail__back-link` class from the wrapper div in the header card to ensure the `:hover` transition targets the actual `<a>` element.
+2. **Visual regression testing** — Verify the page renders correctly in both light and dark modes, and that all conditional sections (empty tags, missing description, no equipment, no ingredients, no steps) render as expected.
+3. **Mobile responsiveness** — Confirm the card layout and gap spacing look correct on narrow viewports (the `.container` class handles responsive padding, but the card widths and tag wrapping should be verified).
 
 ### Commit Message
 
 ```
-feat: restyle recipe cards with author avatar and vertical layout
+refactor(recipe-detail): wrap sections in neumorphic Card components
 
-Restructure recipe cards from horizontal to vertical layout with:
-- Author avatar and username row at the top using the Avatar component
-- 16:9 neumorphic inset image placeholder
-- Recipe title and truncated description in a content section
-- Meta row showing prep/cook time and servings
-- Disabled placeholder action buttons (star, bookmark) at the bottom
+Refactor src/pages/recipe_detail.rs so each logical section is wrapped
+in its own Card component, replacing all inline styles with CSS classes.
 
-Add author data (username, avatar_url) to all recipe queries:
-- 7 SELECT queries now LEFT JOIN users table to fetch author fields
-- INSERT and UPDATE RETURNING clauses use correlated subqueries
-- Recipe struct gains author_username and author_avatar_url fields
-- from_row mapping extracts the new columns
+Changes to src/pages/recipe_detail.rs:
+- Restructured main RSX into 6 card-wrapped sections:
+  1. Header Card — PageHeader + back link
+  2. Delete error — standalone div (outside Card, transient alert)
+  3. Overview Card — tags, meta row, description, author line
+  4. Scaler — plain div wrapper (RecipeScaler provides own neumorphic
+     styling; wrapping in Card would create nested card shadows)
+  5. Equipment Card — refactored render_equipment() helper
+  6. Ingredients Card — class-based ingredient list
+  7. Steps Card — class-based steps list with StepNode
+- Replaced all section-level inline styles with CSS class references
+- Refactored render_equipment() to use CSS classes instead of inline
+  styles; removed outer margin_bottom (handled by Card + gap)
+- All conditional rendering, business logic, loading/error/guard states,
+  StepNode internals, and RecipeScaler internals preserved unchanged
 
-Fix double-initials bug in Avatar: pass full username directly to
-the Avatar component instead of pre-extracting a single character,
-which caused the Avatar's extract_initials() to double the letter
-(e.g., "S" rendering as "SS").
+Changes to assets/main.css:
+- Added .recipe-detail container with flex column layout and gap-based
+  spacing (replaces per-card margin-bottom)
+- Added 16 new BEM-style classes for all recipe detail elements:
+  __back-link, __delete-error, __overview, __tags, __tag (with .dark
+  variant), __meta-row, __meta-item, __description, __author-line,
+  __author-link, __section-title, __list, __list-item,
+  __scaler-wrapper, __steps-list
+- All classes use only existing CSS variables; no new variables added
+- Borders inside Cards use --shadow-light for visible contrast against
+  Card's --surface background
 
-No changes needed to page callers (Dashboard, Explore, UserProfile)
-— the embedded author fields flow through transparently.
+Net result: recipe_detail.rs reduced from 914 to 825 lines (-89 net),
+all styling consolidated into reusable CSS classes consistent with the
+existing neumorphic design system.
+
+Note: Review suggestion — remove recipe-detail__back-link class from the
+wrapper div (keep only on inner Link elements) so :hover targets the
+actual <a> element.
 ```

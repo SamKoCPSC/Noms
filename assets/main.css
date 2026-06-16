@@ -1401,3 +1401,128 @@ a:hover {
     color: var(--text-primary);
     line-height: 1.6;
 }
+
+/* ============================================================
+   Recipe Detail Page — Card Layout
+   ============================================================ */
+
+.recipe-detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    padding-top: var(--space-lg);
+    padding-bottom: var(--space-xl);
+}
+
+/* ── Delete Error ──────────────────────────────────────────── */
+.recipe-detail__delete-error {
+    padding: var(--space-sm) var(--space-md);
+    background-color: var(--error-bg);
+    border-radius: var(--radius-md);
+    color: var(--error);
+    font-size: 14px;
+    margin-bottom: var(--space-md);
+}
+
+/* ── Overview Section ──────────────────────────────────────── */
+.recipe-detail__overview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+/* ── Tags ──────────────────────────────────────────────────── */
+.recipe-detail__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+}
+
+.recipe-detail__tag {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: var(--radius-full);
+    background-color: rgba(217, 115, 90, 0.10);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.dark .recipe-detail__tag {
+    background-color: rgba(232, 137, 110, 0.15);
+}
+
+/* ── Meta Row ──────────────────────────────────────────────── */
+.recipe-detail__meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--shadow-light);
+}
+
+.recipe-detail__meta-item {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* ── Description ───────────────────────────────────────────── */
+.recipe-detail__description {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* ── Author Line ───────────────────────────────────────────── */
+.recipe-detail__author-line {
+    font-size: 13px;
+    color: var(--text-tertiary);
+    margin-top: auto;
+}
+
+.recipe-detail__author-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.recipe-detail__author-link:hover {
+    color: var(--accent-hover);
+}
+
+/* ── Section Title (Equipment, Ingredients, Steps) ─────────── */
+.recipe-detail__section-title {
+    font-size: 20px;
+    color: var(--text-primary);
+    margin-bottom: var(--space-sm);
+    padding-bottom: var(--space-xs);
+    border-bottom: 2px solid var(--shadow-light);
+}
+
+/* ── Generic List (Equipment, Ingredients) ─────────────────── */
+.recipe-detail__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.recipe-detail__list-item {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+/* ── Steps List ────────────────────────────────────────────── */
+.recipe-detail__steps-list {
+    padding-left: var(--space-lg);
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    list-style: none;
+}
