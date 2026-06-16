@@ -1,22 +1,45 @@
 # NOMS-009: Image Uploads
 
-**Status:** ⚪ Backlog  
+**Status:** ✅ Phase 1 Complete | ⏳ Phase 2 Planned  
 **Phase:** Phase 2 (media)  
 **Depends on:** NOMS-008 (Recipe CRUD)
 
 ## Overview
 
-Add image upload capability for recipe hero photos and step photos. Images are uploaded to cloud storage (Cloudflare R2), URLs are stored in the existing `recipes.hero_photo_url` and `steps[].photo_url` fields. Includes file picker UI, upload progress, image optimization, and CDN serving.
+Add image upload capability for recipe images and step photos. Phase 1 established the data model and display UI using an `images` JSONB array. Phase 2 will add the full upload pipeline: file selection → upload → storage → URL → display.
 
-This feature fills the `photo_url` placeholders already defined in the NOMS-008 schema and adds a new `hero_photo_url` column to the `recipes` table.
+### ✅ Phase 1 — Implemented
+
+The `images` JSONB column on the `recipes` table, `Recipe.images` field, full DB layer support (7 SELECTs, INSERT, UPDATE, FromRow), API pass-through on `create_recipe` and `update_recipe`, and a neumorphic image slider on the recipe detail page are all implemented. Placeholder image URLs are used — no upload infrastructure exists yet.
+
+### ⏳ Phase 2 — Planned
+
+Upload infrastructure (R2 storage, file validation, image processing), upload UI (file picker, drag-and-drop, progress), and step photos.
 
 ## Context
 
-NOMS-008 defines `steps[].photo_url` as a nullable string inside the steps JSONB array, and the UI has "optional photo placeholder" per step. No upload infrastructure exists yet. This issue adds the full pipeline: file selection → upload → storage → URL → display.
+NOMS-008 defines `steps[].photo_url` as a nullable string inside the steps JSONB array. NOMS-009 Phase 1 added `images JSONB NOT NULL DEFAULT '[]'::jsonb` to the `recipes` table and an image slider on the detail page. Phase 2 adds the full upload pipeline: file selection → upload → storage → URL → display.
 
 ## Acceptance Criteria
 
-### AC1: Storage backend setup
+### AC1: Recipe images data model and display ✅ Done
+
+- [x] `images JSONB NOT NULL DEFAULT '[]'::jsonb` column on `recipes` table (array of image URL strings)
+- [x] `images: Vec<String>` field on `Recipe` struct in `src/types.rs`
+- [x] All DB queries (7 SELECTs, INSERT, UPDATE) include `images` column
+- [x] `FromRow` impl deserializes images via `serde_json::from_value`
+- [x] API `create_recipe` accepts `images` parameter
+- [x] API `update_recipe` accepts `images` parameter
+- [x] Image slider component on recipe detail page below header card
+- [x] Slider: neumorphic inset, left/right arrows, dot indicators, placeholder gradients
+- [x] Slider: responsive viewport, `aspect-ratio: 16 / 9`
+- [x] Slider arrows: glassmorphism-styled, conditionally hidden at boundaries
+- [x] Slider dots: active state with accent color, only shown for multiple images
+- [x] Placeholder/skeleton: gradient background when image URL is placeholder or empty
+- [x] Graceful degradation: slider only renders when images vector is non-empty
+- [x] Test schema (`src/test_utils.rs`) includes images column
+
+### AC2: Storage backend setup ⏳ Planned
 
 - [ ] Cloudflare R2 bucket created for recipe images
 - [ ] S3-compatible credentials configured as environment variables: `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_ENDPOINT`
@@ -27,16 +50,15 @@ NOMS-008 defines `steps[].photo_url` as a nullable string inside the steps JSONB
 - [ ] Uploaded files stored with UUID-based keys: `recipes/{recipe_id}/{timestamp}_{random}.{ext}`
 - [ ] CDN URL returned for image access (Cloudflare R2 public bucket URL or presigned read URL)
 
-### AC2: Hero photo for recipe
+### AC3: Recipe image upload UI ⏳ Planned
 
-- [ ] Migration adds `hero_photo_url TEXT` column to `recipes` table (nullable, default NULL)
-- [ ] Recipe create form includes hero photo upload area at top (drag-and-drop + file picker)
-- [ ] Recipe edit form allows changing or removing hero photo
-- [ ] Hero photo displayed prominently on recipe detail page (full-width banner below title)
-- [ ] Hero photo thumbnail shown on recipe card in dashboard and collection views
-- [ ] Removing hero photo sets `hero_photo_url = NULL` and deletes image from storage
+- [ ] Recipe create form includes image upload area at top (drag-and-drop + file picker)
+- [ ] Recipe edit form allows adding, reordering, or removing images
+- [ ] Image thumbnails shown on recipe card in dashboard and collection views
+- [ ] Removing an image removes it from the `images` array and deletes image from storage
+- [ ] Multiple images can be uploaded in sequence (not parallel batch upload — MVP)
 
-### AC3: Step photos
+### AC4: Step photos ⏳ Planned
 
 - [ ] Each step row in recipe form includes optional photo upload area
 - [ ] Photo upload replaces `photo_url: null` with actual URL in steps JSONB
@@ -44,7 +66,7 @@ NOMS-008 defines `steps[].photo_url` as a nullable string inside the steps JSONB
 - [ ] Photos can be removed from individual steps (sets `photo_url: null`, deletes from storage)
 - [ ] Reordering steps preserves their associated photos
 
-### AC4: Upload UX
+### AC5: Upload UX ⏳ Planned
 
 - [ ] File picker supports: click to browse, drag-and-drop onto drop zone
 - [ ] Image preview shown immediately after selection (before upload completes)
@@ -55,7 +77,7 @@ NOMS-008 defines `steps[].photo_url` as a nullable string inside the steps JSONB
 - [ ] Max file size enforced in UI: reject files > 10 MB with error message
 - [ ] Multiple files can be uploaded in sequence (not parallel batch upload — MVP)
 
-### AC5: Image optimization
+### AC6: Image optimization ⏳ Planned
 
 - [ ] Uploaded images are resized if longest side exceeds 1920px (preserves aspect ratio)
 - [ ] Images converted to WebP format on upload (better compression, universal browser support)
@@ -63,25 +85,15 @@ NOMS-008 defines `steps[].photo_url` as a nullable string inside the steps JSONB
 - [ ] Resize and convert happen server-side before uploading to R2
 - [ ] Thumbnail generation: 400px wide version for card/grid display, stored as separate key with `-thumb` suffix
 
-### AC6: Image display
+### AC7: Image display (enhanced) ⏳ Planned
 
-- [ ] Hero photo: responsive full-width banner, `object-fit: cover`, max-height 400px on desktop
+- [ ] Recipe images: responsive full-width display, `object-fit: cover`
 - [ ] Step photos: displayed below step text, max-width 100%, responsive
 - [ ] Card thumbnails: 400px wide, `object-fit: cover`, rounded corners
 - [ ] Lazy loading: `loading="lazy"` on all images below the fold
-- [ ] Placeholder/skeleton while image loads
-- [ ] Graceful degradation: if image fails to load, show placeholder icon or gradient background
 - [ ] `alt` text derived from recipe title (hero) or step text (step photos) for accessibility
 
-### AC7: Image DB queries and types
-
-- [ ] `hero_photo_url TEXT` column added to `recipes` table via migration
-- [ ] `Recipe` struct in `src/db/mod.rs` includes `hero_photo_url: Option<String>`
-- [ ] `insert_recipe()` and `update_recipe()` handle `hero_photo_url`
-- [ ] No new tables needed — URLs stored as strings in existing columns
-- [ ] Tests for hero photo CRUD: set, update, remove
-
-### AC8: Upload API security
+### AC8: Upload API security ⏳ Planned
 
 - [ ] Upload endpoint requires authentication (logged-in user only)
 - [ ] User can only delete images they own (ownership tracked via `recipe_id` → `owner_id`)
@@ -92,14 +104,45 @@ NOMS-008 defines `steps[].photo_url` as a nullable string inside the steps JSONB
 
 ## Technical Details
 
-### Database Schema (alteration)
+### ✅ Implemented: Database Schema
 
 ```sql
--- Add hero photo URL to recipes table
-ALTER TABLE recipes ADD COLUMN IF NOT EXISTS hero_photo_url TEXT;
+-- Already implemented in migrations/schema.sql
+-- Part of CREATE TABLE recipes:
+images JSONB NOT NULL DEFAULT '[]'::jsonb,
+
+-- Idempotent migration for existing databases:
+ALTER TABLE recipes ADD COLUMN IF NOT EXISTS images JSONB NOT NULL DEFAULT '[]'::jsonb;
 ```
 
-### Upload flow
+The `images` column stores a JSON array of URL strings (e.g., `["https://cdn.example.com/img1.webp", "https://cdn.example.com/img2.webp"]`). Consistent with the existing JSONB pattern for `ingredients`, `instructions`, and `equipment`.
+
+### ✅ Implemented: Rust Types
+
+```rust
+// src/types.rs
+pub struct Recipe {
+    // ... other fields ...
+    pub images: Vec<String>,
+}
+```
+
+All 7 SELECT queries include `r.images` in the column list. INSERT and UPDATE handle the `images` field. `FromRow` deserializes via `serde_json::from_value`.
+
+### ✅ Implemented: API Pass-Through
+
+- `create_recipe` accepts `images` parameter and persists it to the database
+- `update_recipe` accepts `images` parameter and updates the existing array
+
+### ✅ Implemented: Image Slider UI
+
+Located on the recipe detail page below the header card. Neumorphic inset design with:
+- Left/right navigation arrows (glassmorphism-styled)
+- Dot indicators for multiple images
+- Placeholder gradient backgrounds for empty or placeholder URLs
+- Graceful degradation when the images vector is empty
+
+### ⏳ Planned: Upload flow
 
 ```
 1. User selects image file in browser
@@ -110,10 +153,10 @@ ALTER TABLE recipes ADD COLUMN IF NOT EXISTS hero_photo_url TEXT;
 6. Server uploads to R2 via S3 API
 7. Server returns JSON: { url, thumbnail_url, key }
 8. Frontend shows preview, stores URL in form state
-9. On recipe save, URLs persisted in DB (hero_photo_url, steps[].photo_url)
+9. On recipe save, URLs persisted in DB (images array, steps[].photo_url)
 ```
 
-### Storage key format
+### ⏳ Planned: Storage key format
 
 ```
 recipes/{recipe_id}/{timestamp}_{random8}.{ext}
@@ -128,16 +171,15 @@ recipes/a1b2c3d4-.../1718123456_a1b2c3d4-thumb.webp
 
 UUID-based recipe_id ensures no naming collisions. Timestamp + random suffix prevents cache issues on re-upload.
 
-### Server functions
+### ⏳ Planned: Server functions
 
 | Function | Purpose |
 |----------|---------|
 | `upload_image(user_id, file)` | Validate, resize, convert, upload to R2, return URL |
 | `delete_image(user_id, recipe_id, image_key)` | Delete image from R2 (ownership-gated) |
-| `update_hero_photo(recipe_id, user_id, hero_photo_url)` | Set/update hero photo URL |
-| `remove_hero_photo(recipe_id, user_id)` | Remove hero photo (set NULL, delete from R2) |
+| `update_recipe_images(recipe_id, user_id, images)` | Replace images array on recipe |
 
-### Image processing (Rust)
+### ⏳ Planned: Image processing (Rust)
 
 Use `image` crate for resize and format conversion:
 
@@ -153,14 +195,14 @@ fn optimize_image(data: &[u8], max_longest: u32) -> Result<Vec<u8>, ImageError> 
 }
 ```
 
-### R2/S3 client setup
+### ⏳ Planned: R2/S3 client setup
 
 ```rust
 use aws_config::BehaviorVersion;
 use aws_sdk_s3::Client;
 
 async fn get_s3_client() -> Client {
-    let region = aws_types::region::Region::new("auto"); // R2 uses "auto" or custom endpoint
+    let region = aws_types::region::Region::new("auto");
     let creds = aws_types::credentials::Credentials::new(
         env::var("R2_ACCESS_KEY_ID").unwrap(),
         env::var("R2_SECRET_ACCESS_KEY").unwrap(),
@@ -175,40 +217,34 @@ async fn get_s3_client() -> Client {
 }
 ```
 
-### AuthContext changes
-
-No changes. Upload endpoint uses existing auth middleware.
-
-### Route protection changes
+### ⏳ Planned: Route protection
 
 - `POST /api/upload` added to `PROTECTED_PATHS`
 - `DELETE /api/upload/:key` added to `PROTECTED_PATHS`
 
 ### Component changes
 
-| Component | Change |
-|-----------|--------|
-| New: `ImageUpload` | Reusable upload component: drag-and-drop zone, file picker, preview, progress bar, error handling |
-| New: `HeroPhotoUpload` | Hero photo specific: full-width upload area, preview banner, remove button |
-| `RecipeForm` | Add `HeroPhotoUpload` at top |
-| `StepRow` | Add `ImageUpload` per step row |
-| `RecipeDetail` | Render hero photo banner, step photos inline |
-| `RecipeCard` | Render hero photo thumbnail (or gradient fallback if none) |
-| `RecipeNew` | Wire hero photo upload to form state |
-| `RecipeEdit` | Wire hero photo change/remove to form state |
+| Component | Status | Details |
+|-----------|--------|---------|
+| `render_image_slider` (in `recipe_detail.rs`) | ✅ Done | Neumorphic slider with arrows, dots, placeholder support |
+| New: `ImageUpload` | ⏳ Planned | Reusable upload component: drag-and-drop zone, file picker, preview, progress bar, error handling |
+| `RecipeForm` / `RecipeNew` | ⏳ Planned | Add image upload area at top |
+| `RecipeEdit` | ⏳ Planned | Wire image add/remove to form state |
+| `StepRow` | ⏳ Planned | Add `ImageUpload` per step row for step photos |
+| `RecipeCard` | ⏳ Planned | Render image thumbnail (or gradient fallback if none) |
 
-### Cleanup strategy
+### ⏳ Planned: Cleanup strategy
 
 - When recipe is deleted: cascade deletes recipe row, but orphaned images remain in R2
 - Periodic cleanup job (future): scan R2 for images not referenced by any recipe
-- When hero photo is replaced: old image deleted from R2 on save
+- When image is replaced: old image deleted from R2 on save
 - When step photo is removed: image deleted from R2 on save
 
 ### WASM considerations
 
-The `image` crate and `aws-sdk-s3` are native-only. Upload processing (resize, convert, S3 upload) happens on the Leptos server function side, not in WASM. Frontend only handles file selection and display.
+The `image` crate and `aws-sdk-s3` are native-only. Upload processing (resize, convert, S3 upload) happens on the server function side, not in WASM. Frontend only handles file selection and display.
 
-### Environment variables
+### ⏳ Planned: Environment variables
 
 | Variable | Description |
 |----------|-------------|
@@ -228,31 +264,45 @@ The `image` crate and `aws-sdk-s3` are native-only. Upload processing (resize, c
 - Bulk image upload
 - EXIF data stripping (future privacy enhancement)
 - Image moderation / content scanning
-- Collection cover images auto-selected from recipe hero photos
+- Collection cover images auto-selected from recipe images
 - Watermarking
-- Multiple hero photos / gallery
+
+**Note:** Multiple recipe images/gallery is already supported via the `images` JSONB array (Phase 1). This is no longer out of scope.
 
 ## Checkpoints
 
-| # | Checkpoint | Deliverable |
-|---|------------|-------------|
-| 1 | R2 setup + upload endpoint | Storage bucket configured, `POST /api/upload` works end-to-end, returns URL |
-| 2 | Image processing | Resize + WebP conversion + thumbnail generation working, tests pass |
-| 3 | Hero photo integration | `hero_photo_url` column added, create/edit forms wire upload, detail page displays hero |
-| 4 | Step photo integration | `StepRow` has upload, photos render inline on detail page |
-| 5 | Card thumbnails | `RecipeCard` shows hero thumbnail or fallback |
-| 6 | Delete + cleanup | Remove hero/step photos deletes from R2, DB updated |
-| 7 | Security + edge cases | Auth guards, file validation, rate limiting, error handling, WASM target builds |
+| # | Checkpoint | Status | Deliverable |
+|---|------------|--------|-------------|
+| 1 | Schema + types + DB layer | ✅ Done | `images` JSONB column, `Recipe.images: Vec<String>` field, all 7 SELECTs + INSERT + UPDATE updated, FromRow handles images via serde_json |
+| 2 | API pass-through | ✅ Done | `create_recipe` and `update_recipe` accept and persist images parameter |
+| 3 | Image slider UI | ✅ Done | Neumorphic slider on recipe detail page with arrows, dots, placeholder support, graceful degradation |
+| 4 | R2 setup + upload endpoint | ⏳ Planned | Storage bucket configured, `POST /api/upload` works end-to-end, returns URL |
+| 5 | Image processing | ⏳ Planned | Resize + WebP conversion + thumbnail generation working, tests pass |
+| 6 | Recipe image upload UI | ⏳ Planned | Create/edit forms wire upload, detail page displays real images, card thumbnails |
+| 7 | Step photo integration | ⏳ Planned | `StepRow` has upload, photos render inline on detail page |
+| 8 | Delete + cleanup | ⏳ Planned | Remove recipe/step images deletes from R2, DB updated |
+| 9 | Security + edge cases | ⏳ Planned | Auth guards, file validation, rate limiting, error handling, WASM target builds |
 
 ## Success Metrics
 
-- User uploads hero photo → sees it on recipe detail page and dashboard card
-- User uploads step photo → sees it inline with step text
-- Large image (> 1920px) is resized and converted to WebP automatically
-- Thumbnail generated for card display
-- Removing photo deletes from storage and clears DB field
-- Deleting recipe cascades DB rows (orphaned R2 cleanup deferred)
-- File validation rejects non-image files and oversized files
-- All 7 checkpoints pass with tests
-- Zero clippy warnings on both wasm32 and x86_64 targets
-- Upload completes in < 5 seconds for typical phone photo (3-5 MB) over broadband
+### ✅ Phase 1 — Done
+
+- [x] `images` column persists and retrieves correctly via DB layer
+- [x] `create_recipe` and `update_recipe` accept and pass through images
+- [x] Image slider renders on recipe detail page below header card
+- [x] Slider handles 0, 1, and multiple images correctly
+- [x] Navigation arrows wrap around, dots indicate active image
+- [x] Zero clippy warnings on both wasm32 and x86_64 targets
+
+### ⏳ Phase 2 — Planned
+
+- [ ] User uploads recipe image → sees it on recipe detail page slider and dashboard card
+- [ ] User uploads step photo → sees it inline with step text
+- [ ] Large image (> 1920px) is resized and converted to WebP automatically
+- [ ] Thumbnail generated for card display
+- [ ] Removing photo deletes from storage and clears DB field
+- [ ] Deleting recipe cascades DB rows (orphaned R2 cleanup deferred)
+- [ ] File validation rejects non-image files and oversized files
+- [ ] All 9 checkpoints pass with tests
+- [ ] Zero clippy warnings on both wasm32 and x86_64 targets
+- [ ] Upload completes in < 5 seconds for typical phone photo (3-5 MB) over broadband
