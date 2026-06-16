@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS recipes (
     ingredients JSONB NOT NULL DEFAULT '[]'::jsonb,
     instructions JSONB NOT NULL DEFAULT '[]'::jsonb,
     equipment JSONB NOT NULL DEFAULT '[]'::jsonb,
+    images JSONB NOT NULL DEFAULT '[]'::jsonb,
     visibility VARCHAR(20) NOT NULL DEFAULT 'private'
         CONSTRAINT valid_recipe_visibility CHECK (visibility IN ('private', 'unlisted', 'public')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -107,3 +108,6 @@ CREATE INDEX IF NOT EXISTS idx_recipes_created_at ON recipes(created_at DESC);
 -- Partial index for public recipe discovery (explore page)
 CREATE INDEX IF NOT EXISTS idx_recipes_visibility_created ON recipes(visibility, created_at DESC)
     WHERE visibility = 'public';
+
+-- Additive: add images column to existing tables (idempotent)
+ALTER TABLE recipes ADD COLUMN IF NOT EXISTS images JSONB NOT NULL DEFAULT '[]'::jsonb;

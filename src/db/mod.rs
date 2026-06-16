@@ -202,6 +202,8 @@ impl sqlx::FromRow<'_, sqlx::postgres::PgRow> for Recipe {
                 .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
             equipment: serde_json::from_value(row.try_get("equipment")?)
                 .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
+            images: serde_json::from_value(row.try_get("images")?)
+                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
             visibility: row.try_get("visibility")?,
             created_at: row.try_get("created_at")?,
             updated_at: row.try_get("updated_at")?,
@@ -712,16 +714,18 @@ pub async fn insert_recipe(
     ingredients: &[RecipeIngredient],
     instructions: &[RecipeStep],
     equipment: &[RecipeEquipment],
+    images: &[String],
     visibility: &str,
 ) -> Result<Recipe, DbError> {
     let ingredients_json = serde_json::to_value(ingredients).map_err(DbError::SerdeJson)?;
     let instructions_json = serde_json::to_value(instructions).map_err(DbError::SerdeJson)?;
     let equipment_json = serde_json::to_value(equipment).map_err(DbError::SerdeJson)?;
+    let images_json = serde_json::to_value(images).map_err(DbError::SerdeJson)?;
 
     let row = sqlx::query(
-        "INSERT INTO recipes (user_id, title, description, commentary, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) \
-         RETURNING id, user_id, title, description, commentary, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at, \
+        "INSERT INTO recipes (user_id, title, description, commentary, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, images, visibility) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) \
+         RETURNING id, user_id, title, description, commentary, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, images, visibility, created_at, updated_at, \
             (SELECT username FROM users WHERE users.id = $1) AS author_username, \
             (SELECT avatar_url FROM users WHERE users.id = $1) AS author_avatar_url",
     )
@@ -735,6 +739,7 @@ pub async fn insert_recipe(
     .bind(ingredients_json)
     .bind(instructions_json)
     .bind(equipment_json)
+    .bind(images_json)
     .bind(visibility)
     .fetch_one(executor)
     .await
@@ -749,7 +754,7 @@ pub async fn get_recipe_by_id(
     id: Uuid,
 ) -> Result<Option<Recipe>, DbError> {
     let row = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
          FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.id = $1",
     )
     .bind(id)
@@ -770,7 +775,7 @@ pub async fn get_recipe_by_id_and_owner(
     user_id: Uuid,
 ) -> Result<Recipe, DbError> {
     let row = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
          FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.id = $1 AND r.user_id = $2",
     )
     .bind(id)
@@ -791,7 +796,7 @@ pub async fn get_recipes_by_owner(
     user_id: Uuid,
 ) -> Result<Vec<Recipe>, DbError> {
     let rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
          FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.user_id = $1 \
          ORDER BY r.created_at DESC",
     )
@@ -823,20 +828,22 @@ pub async fn update_recipe(
     ingredients: &[RecipeIngredient],
     instructions: &[RecipeStep],
     equipment: &[RecipeEquipment],
+    images: &[String],
     visibility: Option<&str>,
 ) -> Result<Recipe, DbError> {
     let ingredients_json = serde_json::to_value(ingredients).map_err(DbError::SerdeJson)?;
     let instructions_json = serde_json::to_value(instructions).map_err(DbError::SerdeJson)?;
     let equipment_json = serde_json::to_value(equipment).map_err(DbError::SerdeJson)?;
+    let images_json = serde_json::to_value(images).map_err(DbError::SerdeJson)?;
 
     let row = sqlx::query(
         "UPDATE recipes \
          SET title = $3, description = $4, commentary = $5, prep_time_minutes = $6, cook_time_minutes = $7, \
-             servings = $8, ingredients = $9, instructions = $10, equipment = $11, \
-             visibility = COALESCE($12::VARCHAR, recipes.visibility), \
+             servings = $8, ingredients = $9, instructions = $10, equipment = $11, images = $12, \
+             visibility = COALESCE($13::VARCHAR, recipes.visibility), \
              updated_at = NOW() \
          WHERE id = $1 AND user_id = $2 \
-         RETURNING id, user_id, title, description, commentary, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at, \
+         RETURNING id, user_id, title, description, commentary, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, images, visibility, created_at, updated_at, \
             (SELECT username FROM users WHERE users.id = $2) AS author_username, \
             (SELECT avatar_url FROM users WHERE users.id = $2) AS author_avatar_url",
     )
@@ -851,6 +858,7 @@ pub async fn update_recipe(
     .bind(ingredients_json)
     .bind(instructions_json)
     .bind(equipment_json)
+    .bind(images_json)
     .bind(visibility)
     .fetch_one(executor)
     .await
@@ -933,7 +941,7 @@ pub async fn get_recipes_by_owner_paginated(
     offset: i64,
 ) -> Result<Vec<Recipe>, DbError> {
     let rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
          FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.user_id = $1 \
          ORDER BY r.created_at DESC \
          LIMIT $2 OFFSET $3",
@@ -989,7 +997,7 @@ pub async fn get_public_recipes_paginated(
     offset: i64,
 ) -> Result<Vec<Recipe>, DbError> {
     let rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
          FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.visibility = 'public' \
          ORDER BY r.created_at DESC \
          LIMIT $1 OFFSET $2",
@@ -1024,7 +1032,7 @@ pub async fn get_recipe_by_id_public(
     id: Uuid,
 ) -> Result<Option<Recipe>, DbError> {
     let row = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
          FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.id = $1 AND r.visibility IN ('public', 'unlisted')",
     )
     .bind(id)
@@ -1045,7 +1053,7 @@ pub async fn get_user_public_recipes(
     offset: i64,
 ) -> Result<Vec<Recipe>, DbError> {
     let rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
          FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.user_id = $1 AND r.visibility = 'public' \
          ORDER BY r.created_at DESC \
          LIMIT $2 OFFSET $3",
@@ -1992,6 +2000,7 @@ mod tests {
                 sub_steps: vec![],
             }],
             &[],
+            &[],
             None,
         )
         .await
@@ -2026,6 +2035,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             None,
         )
         .await;
@@ -2051,6 +2061,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -2278,8 +2289,9 @@ mod tests {
                 None,
                 &[],
                 &[],
-                &[],
-                "private",
+           &[],
+            &[],
+            "private",
             )
             .await
             .unwrap();
@@ -2408,6 +2420,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "public",
         )
         .await
@@ -2423,6 +2436,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -2489,6 +2503,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "public",
         )
         .await
@@ -2502,6 +2517,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -2536,6 +2552,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -2591,6 +2608,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "public",
         )
         .await
@@ -2604,6 +2622,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -2636,6 +2655,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -2676,6 +2696,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "public",
         )
         .await
@@ -2689,6 +2710,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -2812,6 +2834,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "public",
         )
         .await
@@ -2825,6 +2848,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -2897,6 +2921,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "public",
         )
         .await
@@ -2910,6 +2935,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -2978,6 +3004,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "public",
         )
         .await
@@ -3007,6 +3034,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -3117,6 +3145,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             Some("public"),
         )
         .await
@@ -3137,6 +3166,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             Some("unlisted"),
         )
         .await
@@ -3154,6 +3184,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -3231,6 +3262,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "public",
         )
         .await
@@ -3271,6 +3303,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "unlisted",
         )
         .await
@@ -3307,6 +3340,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "public",
         )
         .await
@@ -3322,6 +3356,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -3514,6 +3549,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             None,
         )
         .await
@@ -3534,6 +3570,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],

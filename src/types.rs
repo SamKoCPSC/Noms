@@ -42,6 +42,7 @@ pub struct Recipe {
     pub ingredients: Vec<RecipeIngredient>,
     pub instructions: Vec<RecipeStep>,
     pub equipment: Vec<RecipeEquipment>,
+    pub images: Vec<String>,
     pub visibility: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

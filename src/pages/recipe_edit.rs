@@ -243,6 +243,7 @@ pub fn RecipeEdit(id: String) -> Element {
                 Some(typed_ingredients),
                 Some(instructions),
                 Some(equip_vec),
+                None,
                 Some(tags),
                 Some(vis),
             )

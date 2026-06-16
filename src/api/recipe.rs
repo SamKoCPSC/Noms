@@ -22,6 +22,7 @@ pub async fn create_recipe(
     ingredients: Vec<crate::types::RecipeIngredient>,
     instructions: Vec<crate::types::RecipeStep>,
     equipment: Vec<crate::types::RecipeEquipment>,
+    images: Vec<String>,
     tags: Vec<String>,
     visibility: String,
 ) -> Result<crate::types::Recipe, ServerFnError> {
@@ -49,6 +50,7 @@ pub async fn create_recipe(
         &ingredients,
         &instructions,
         &equipment,
+        &images,
         &visibility,
     )
     .await
@@ -106,6 +108,7 @@ pub async fn update_recipe(
     ingredients: Option<Vec<crate::types::RecipeIngredient>>,
     instructions: Option<Vec<crate::types::RecipeStep>>,
     equipment: Option<Vec<crate::types::RecipeEquipment>>,
+    images: Option<Vec<String>>,
     tags: Option<Vec<String>>,
     visibility: Option<String>,
 ) -> Result<crate::types::Recipe, ServerFnError> {
@@ -136,6 +139,7 @@ pub async fn update_recipe(
         ingredients.as_deref().unwrap_or(&[]),
         instructions.as_deref().unwrap_or(&[]),
         equipment.as_deref().unwrap_or(&[]),
+        images.as_deref().unwrap_or(&[]),
         visibility.as_deref(),
     )
     .await

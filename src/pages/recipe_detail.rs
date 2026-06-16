@@ -454,6 +454,74 @@ fn render_equipment(equipment: &[RecipeEquipment]) -> Element {
     }
 }
 
+// ── Image Slider ─────────────────────────────────────────────────────────────
+
+fn render_image_slider(images: Vec<String>) -> Element {
+    if images.is_empty() {
+        return rsx! {};
+    }
+
+    let mut current_index = use_signal(|| 0);
+    let total = images.len();
+
+    // Pre-compute reactive values for rsx! (no closures allowed in attributes)
+    let current_src = images[current_index()].clone();
+    let show_left_arrow = current_index() > 0;
+    let show_right_arrow = current_index() < total - 1;
+    let dot_classes: Vec<String> = (0..total)
+        .map(|i| {
+            if i == current_index() {
+                "recipe-image-slider__dot recipe-image-slider__dot--active".to_string()
+            } else {
+                "recipe-image-slider__dot".to_string()
+            }
+        })
+        .collect();
+
+    rsx! {
+        div { class: "recipe-image-slider",
+            div { class: "recipe-image-slider__viewport",
+                img {
+                    class: "recipe-image-slider__image",
+                    src: "{current_src}",
+                    alt: "Recipe image",
+                }
+            }
+
+            if total > 1 {
+                if show_left_arrow {
+                    button {
+                        class: "recipe-image-slider__arrow recipe-image-slider__arrow--left",
+                        onclick: move |_| {
+                            current_index.set(current_index().saturating_sub(1));
+                        },
+                        "<"
+                    }
+                }
+
+                if show_right_arrow {
+                    button {
+                        class: "recipe-image-slider__arrow recipe-image-slider__arrow--right",
+                        onclick: move |_| {
+                            current_index.set((current_index() + 1).min(total - 1));
+                        },
+                        ">"
+                    }
+                }
+
+                div { class: "recipe-image-slider__dots",
+                    for (i, cls) in dot_classes.iter().enumerate() {
+                        button {
+                            class: "{cls}",
+                            onclick: move |_| { current_index.set(i); },
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 /// Single recipe detail page.
@@ -743,6 +811,9 @@ pub fn RecipeDetail(id: String) -> Element {
                     }
                 }
             }
+
+            // ── Image Slider (conditional) ────────────────────────────────
+            {render_image_slider(recipe.images.clone())}
 
             // ── Delete error (NOT in a card — transient UI element) ──────
             if let Some(del_err) = delete_error() {

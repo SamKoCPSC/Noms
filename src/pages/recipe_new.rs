@@ -175,6 +175,7 @@ pub fn RecipeNew() -> Element {
                 ings,
                 instructions,
                 equip,
+                vec![],
                 tags,
                 vis,
             )
