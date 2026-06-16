@@ -1474,6 +1474,15 @@ a:hover {
     margin: 0;
 }
 
+/* ── Commentary ────────────────────────────────────────────── */
+.recipe-detail__commentary {
+    font-size: 15px;
+    color: var(--text-secondary);
+    font-style: italic;
+    line-height: 1.6;
+    margin: 0;
+}
+
 /* ── Author Line ───────────────────────────────────────────── */
 .recipe-detail__author-line {
     font-size: 13px;

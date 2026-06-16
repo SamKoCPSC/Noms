@@ -35,6 +35,7 @@ pub struct Recipe {
     pub user_id: Uuid,
     pub title: String,
     pub description: Option<String>,
+    pub commentary: Option<String>,
     pub prep_time_minutes: Option<i32>,
     pub cook_time_minutes: Option<i32>,
     pub servings: Option<i32>,

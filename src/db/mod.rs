@@ -192,6 +192,7 @@ impl sqlx::FromRow<'_, sqlx::postgres::PgRow> for Recipe {
             user_id: row.try_get("user_id")?,
             title: row.try_get("title")?,
             description: row.try_get("description")?,
+            commentary: row.try_get("commentary")?,
             prep_time_minutes: row.try_get("prep_time_minutes")?,
             cook_time_minutes: row.try_get("cook_time_minutes")?,
             servings: row.try_get("servings")?,
@@ -704,6 +705,7 @@ pub async fn insert_recipe(
     user_id: Uuid,
     title: &str,
     description: Option<&str>,
+    commentary: Option<&str>,
     prep_time_minutes: Option<i32>,
     cook_time_minutes: Option<i32>,
     servings: Option<i32>,
@@ -717,15 +719,16 @@ pub async fn insert_recipe(
     let equipment_json = serde_json::to_value(equipment).map_err(DbError::SerdeJson)?;
 
     let row = sqlx::query(
-        "INSERT INTO recipes (user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) \
-         RETURNING id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at, \
+        "INSERT INTO recipes (user_id, title, description, commentary, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) \
+         RETURNING id, user_id, title, description, commentary, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at, \
             (SELECT username FROM users WHERE users.id = $1) AS author_username, \
             (SELECT avatar_url FROM users WHERE users.id = $1) AS author_avatar_url",
     )
     .bind(user_id)
     .bind(title)
     .bind(description)
+    .bind(commentary)
     .bind(prep_time_minutes)
     .bind(cook_time_minutes)
     .bind(servings)
@@ -746,7 +749,7 @@ pub async fn get_recipe_by_id(
     id: Uuid,
 ) -> Result<Option<Recipe>, DbError> {
     let row = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
          FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.id = $1",
     )
     .bind(id)
@@ -767,7 +770,7 @@ pub async fn get_recipe_by_id_and_owner(
     user_id: Uuid,
 ) -> Result<Recipe, DbError> {
     let row = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
          FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.id = $1 AND r.user_id = $2",
     )
     .bind(id)
@@ -788,7 +791,7 @@ pub async fn get_recipes_by_owner(
     user_id: Uuid,
 ) -> Result<Vec<Recipe>, DbError> {
     let rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
          FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.user_id = $1 \
          ORDER BY r.created_at DESC",
     )
@@ -803,9 +806,8 @@ pub async fn get_recipes_by_owner(
         .map_err(DbError::Query)
 }
 
-/// Update a recipe's fields. Returns the updated recipe.
-/// Returns `DbError::RecipeNotFound` if the recipe doesn't exist.
 /// Update a recipe, enforcing ownership via `user_id` in the WHERE clause.
+/// Returns the updated recipe.
 /// Returns `DbError::RecipeNotFound` if the recipe doesn't exist or doesn't belong to the user.
 #[allow(clippy::too_many_arguments)]
 pub async fn update_recipe(
@@ -814,6 +816,7 @@ pub async fn update_recipe(
     user_id: Uuid,
     title: &str,
     description: Option<&str>,
+    commentary: Option<&str>,
     prep_time_minutes: Option<i32>,
     cook_time_minutes: Option<i32>,
     servings: Option<i32>,
@@ -828,12 +831,12 @@ pub async fn update_recipe(
 
     let row = sqlx::query(
         "UPDATE recipes \
-         SET title = $3, description = $4, prep_time_minutes = $5, cook_time_minutes = $6, \
-             servings = $7, ingredients = $8, instructions = $9, equipment = $10, \
-             visibility = COALESCE($11::VARCHAR, recipes.visibility), \
+         SET title = $3, description = $4, commentary = $5, prep_time_minutes = $6, cook_time_minutes = $7, \
+             servings = $8, ingredients = $9, instructions = $10, equipment = $11, \
+             visibility = COALESCE($12::VARCHAR, recipes.visibility), \
              updated_at = NOW() \
          WHERE id = $1 AND user_id = $2 \
-         RETURNING id, user_id, title, description, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at, \
+         RETURNING id, user_id, title, description, commentary, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, visibility, created_at, updated_at, \
             (SELECT username FROM users WHERE users.id = $2) AS author_username, \
             (SELECT avatar_url FROM users WHERE users.id = $2) AS author_avatar_url",
     )
@@ -841,6 +844,7 @@ pub async fn update_recipe(
     .bind(user_id)
     .bind(title)
     .bind(description)
+    .bind(commentary)
     .bind(prep_time_minutes)
     .bind(cook_time_minutes)
     .bind(servings)
@@ -929,7 +933,7 @@ pub async fn get_recipes_by_owner_paginated(
     offset: i64,
 ) -> Result<Vec<Recipe>, DbError> {
     let rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
          FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.user_id = $1 \
          ORDER BY r.created_at DESC \
          LIMIT $2 OFFSET $3",
@@ -985,7 +989,7 @@ pub async fn get_public_recipes_paginated(
     offset: i64,
 ) -> Result<Vec<Recipe>, DbError> {
     let rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
          FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.visibility = 'public' \
          ORDER BY r.created_at DESC \
          LIMIT $1 OFFSET $2",
@@ -1020,7 +1024,7 @@ pub async fn get_recipe_by_id_public(
     id: Uuid,
 ) -> Result<Option<Recipe>, DbError> {
     let row = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
          FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.id = $1 AND r.visibility IN ('public', 'unlisted')",
     )
     .bind(id)
@@ -1041,7 +1045,7 @@ pub async fn get_user_public_recipes(
     offset: i64,
 ) -> Result<Vec<Recipe>, DbError> {
     let rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
+        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
          FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.user_id = $1 AND r.visibility = 'public' \
          ORDER BY r.created_at DESC \
          LIMIT $2 OFFSET $3",
@@ -1752,6 +1756,7 @@ mod tests {
             user.id,
             "Pancakes",
             Some("Fluffy buttermilk pancakes"),
+            None,
             Some(10),
             Some(15),
             Some(4),
@@ -1806,6 +1811,7 @@ mod tests {
             "Toast",
             None,
             None,
+            None,
             Some(5),
             None,
             &[],
@@ -1844,6 +1850,7 @@ mod tests {
             &pool,
             user.id,
             "Secret Recipe",
+            None,
             None,
             None,
             None,
@@ -1901,6 +1908,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -1913,6 +1921,7 @@ mod tests {
             &pool,
             user.id,
             "Recipe B",
+            None,
             None,
             None,
             None,
@@ -1955,6 +1964,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -1972,6 +1982,7 @@ mod tests {
             user.id,
             "Updated Title",
             Some("New description"),
+            None,
             Some(20),
             Some(30),
             Some(6),
@@ -2011,6 +2022,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -2034,6 +2046,7 @@ mod tests {
             recipe.id,
             other_user.id,
             "Hacked",
+            None,
             None,
             None,
             None,
@@ -2066,6 +2079,7 @@ mod tests {
             &pool,
             user.id,
             "To Delete",
+            None,
             None,
             None,
             None,
@@ -2122,6 +2136,7 @@ mod tests {
             &pool,
             user.id,
             "Tagged Recipe",
+            None,
             None,
             None,
             None,
@@ -2207,6 +2222,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -2255,6 +2271,7 @@ mod tests {
                 &pool,
                 user.id,
                 &format!("Recipe {i}"),
+                None,
                 None,
                 None,
                 None,
@@ -2320,6 +2337,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -2331,6 +2349,7 @@ mod tests {
             &pool,
             user.id,
             "Count B",
+            None,
             None,
             None,
             None,
@@ -2385,6 +2404,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -2402,6 +2422,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -2415,6 +2436,7 @@ mod tests {
             &pool,
             user.id,
             "Private",
+            None,
             None,
             None,
             None,
@@ -2463,6 +2485,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -2474,6 +2497,7 @@ mod tests {
             &pool,
             user_a.id,
             "A Public 2",
+            None,
             None,
             None,
             None,
@@ -2493,6 +2517,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -2506,6 +2531,7 @@ mod tests {
             &pool,
             user_b.id,
             "B Public",
+            None,
             None,
             None,
             None,
@@ -2561,6 +2587,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -2572,6 +2599,7 @@ mod tests {
             &pool,
             user.id,
             "Pub 2",
+            None,
             None,
             None,
             None,
@@ -2591,6 +2619,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -2602,6 +2631,7 @@ mod tests {
             &pool,
             user.id,
             "Unlist 1",
+            None,
             None,
             None,
             None,
@@ -2642,6 +2672,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -2653,6 +2684,7 @@ mod tests {
             &pool,
             user.id,
             "Public Recipe 2",
+            None,
             None,
             None,
             None,
@@ -2669,6 +2701,7 @@ mod tests {
             &pool,
             user.id,
             "Private Recipe",
+            None,
             None,
             None,
             None,
@@ -2739,6 +2772,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -2774,6 +2808,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -2789,6 +2824,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -2800,6 +2836,7 @@ mod tests {
             &pool,
             user.id,
             "Private",
+            None,
             None,
             None,
             None,
@@ -2856,6 +2893,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -2871,6 +2909,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -2882,6 +2921,7 @@ mod tests {
             &pool,
             user.id,
             "Priv 1",
+            None,
             None,
             None,
             None,
@@ -2934,6 +2974,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -2949,6 +2990,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -2960,6 +3002,7 @@ mod tests {
             &pool,
             user.id,
             "Unlist 1",
+            None,
             None,
             None,
             None,
@@ -3050,6 +3093,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -3065,6 +3109,7 @@ mod tests {
             recipe.id,
             user.id,
             "Vis Recipe",
+            None,
             None,
             None,
             None,
@@ -3088,6 +3133,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -3103,6 +3149,7 @@ mod tests {
             recipe.id,
             user.id,
             "Renamed",
+            None,
             None,
             None,
             None,
@@ -3180,6 +3227,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -3199,6 +3247,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -3214,6 +3263,7 @@ mod tests {
             &pool,
             user_a.id,
             "Unlisted",
+            None,
             None,
             None,
             None,
@@ -3253,6 +3303,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -3270,6 +3321,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             &[],
             &[],
@@ -3283,6 +3335,7 @@ mod tests {
             &pool,
             user.id,
             "Private Tags",
+            None,
             None,
             None,
             None,
@@ -3346,5 +3399,152 @@ mod tests {
         // Non-existent recipe returns empty vec (no error, no existence leakage)
         let tags = get_public_recipe_tags(&pool, Uuid::nil()).await.unwrap();
         assert!(tags.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_insert_recipe_with_commentary() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("commuser_{u}"),
+            "Commentary User",
+            &format!("comm{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let recipe = insert_recipe(
+            &pool,
+            user.id,
+            "Recipe with Commentary",
+            Some("A brief description"),
+            Some("This is the author's commentary about the recipe."),
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "private",
+        )
+        .await
+        .unwrap();
+
+        // Verify commentary is stored
+        assert_eq!(
+            recipe.commentary,
+            Some("This is the author's commentary about the recipe.".to_string())
+        );
+
+        // Verify it round-trips via get_recipe_by_id
+        let fetched = get_recipe_by_id(&pool, recipe.id).await.unwrap().unwrap();
+        assert_eq!(
+            fetched.commentary,
+            Some("This is the author's commentary about the recipe.".to_string())
+        );
+
+        // Verify None commentary when not provided
+        let recipe_no_comm = insert_recipe(
+            &pool,
+            user.id,
+            "Recipe without Commentary",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "private",
+        )
+        .await
+        .unwrap();
+        assert_eq!(recipe_no_comm.commentary, None);
+    }
+
+    #[tokio::test]
+    async fn test_update_recipe_commentary() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("commup_{u}"),
+            "Commentary Update User",
+            &format!("commup{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Insert recipe without commentary
+        let recipe = insert_recipe(
+            &pool,
+            user.id,
+            "Original Recipe",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            "private",
+        )
+        .await
+        .unwrap();
+        assert_eq!(recipe.commentary, None);
+
+        // Update to add commentary
+        let updated = update_recipe(
+            &pool,
+            recipe.id,
+            user.id,
+            "Original Recipe",
+            None,
+            Some("Added commentary after update."),
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            None,
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            updated.commentary,
+            Some("Added commentary after update.".to_string())
+        );
+
+        // Update to clear commentary (set to None)
+        let cleared = update_recipe(
+            &pool,
+            recipe.id,
+            user.id,
+            "Original Recipe",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            None,
+        )
+        .await
+        .unwrap();
+        assert_eq!(cleared.commentary, None);
+
+        // Verify cleared commentary persists via get_recipe_by_id
+        let fetched = get_recipe_by_id(&pool, recipe.id).await.unwrap().unwrap();
+        assert_eq!(fetched.commentary, None);
     }
 }

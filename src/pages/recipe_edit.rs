@@ -86,6 +86,7 @@ pub fn RecipeEdit(id: String) -> Element {
     // ── Form signals ─────────────────────────────────────────────────────
     let mut title = use_signal(String::new);
     let mut description = use_signal(String::new);
+    let mut commentary = use_signal(String::new);
     let mut prep_time = use_signal(String::new);
     let mut cook_time = use_signal(String::new);
     let mut servings = use_signal(String::new);
@@ -110,6 +111,7 @@ pub fn RecipeEdit(id: String) -> Element {
                 Ok(recipe) => {
                     title.set(recipe.title.clone());
                     description.set(recipe.description.clone().unwrap_or_default());
+                    commentary.set(recipe.commentary.clone().unwrap_or_default());
                     prep_time.set(
                         recipe
                             .prep_time_minutes
@@ -220,6 +222,12 @@ pub fn RecipeEdit(id: String) -> Element {
             Some(description().trim().to_string())
         };
 
+        let comm = if commentary().trim().is_empty() {
+            None
+        } else {
+            Some(commentary().trim().to_string())
+        };
+
         let recipe_id = id_for_submit.clone();
         let vis = visibility().clone();
 
@@ -228,6 +236,7 @@ pub fn RecipeEdit(id: String) -> Element {
                 recipe_id.clone(),
                 Some(trimmed_title),
                 desc,
+                comm,
                 prep,
                 cook,
                 serv,
@@ -408,6 +417,36 @@ pub fn RecipeEdit(id: String) -> Element {
                         }
                     }
 
+                    // Commentary
+                    div {
+                        display: "flex",
+                        flex_direction: "column",
+                        gap: "var(--space-sm)",
+                        label {
+                            font_size: "14px",
+                            font_weight: "600",
+                            color: "var(--text-secondary)",
+                            "Commentary"
+                        }
+                        textarea {
+                            class: "neumo-inset input",
+                            placeholder: "Notes, tips, or additional context about this recipe...",
+                            rows: "4",
+                            padding: "var(--space-sm) var(--space-md)",
+                            font_family: "var(--font-body)",
+                            font_size: "14px",
+                            color: "var(--text-primary)",
+                            background_color: "var(--surface)",
+                            outline: "none",
+                            resize: "vertical",
+                            width: "100%",
+                            value: commentary().clone(),
+                            oninput: move |evt| {
+                                commentary.set(evt.value());
+                            },
+                        }
+                    }
+
                     // Time & servings row
                     div {
                         display: "grid",
@@ -449,7 +488,7 @@ pub fn RecipeEdit(id: String) -> Element {
                         }
                         div {
                             display: "flex",
-                            flex_direction: "column",
+                            flex_direction: "column"
                             gap: "var(--space-xs)",
                             label {
                                 font_size: "14px",

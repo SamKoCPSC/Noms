@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS recipes (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
     description TEXT,
+    commentary TEXT,
     prep_time_minutes INT,
     cook_time_minutes INT,
     servings INT,

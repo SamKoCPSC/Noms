@@ -78,6 +78,7 @@ pub fn RecipeNew() -> Element {
     // Basic fields
     let mut title = use_signal(String::new);
     let mut description = use_signal(String::new);
+    let mut commentary = use_signal(String::new);
     let mut prep_time = use_signal(String::new);
     let mut cook_time = use_signal(String::new);
     let mut servings = use_signal(String::new);
@@ -155,12 +156,19 @@ pub fn RecipeNew() -> Element {
             Some(description().trim().to_string())
         };
 
+        let comm = if commentary().trim().is_empty() {
+            None
+        } else {
+            Some(commentary().trim().to_string())
+        };
+
         let vis = visibility().clone();
         let equip = equipment();
         spawn(async move {
             match create_recipe(
                 trimmed_title,
                 desc,
+                comm,
                 prep,
                 cook,
                 serv,
@@ -283,6 +291,35 @@ pub fn RecipeNew() -> Element {
                             width: "100%",
                             oninput: move |evt| {
                                 description.set(evt.value());
+                            },
+                        }
+                    }
+
+                    // Commentary
+                    div {
+                        display: "flex",
+                        flex_direction: "column",
+                        gap: "var(--space-sm)",
+                        label {
+                            font_size: "14px",
+                            font_weight: "600",
+                            color: "var(--text-secondary)",
+                            "Commentary"
+                        }
+                        textarea {
+                            class: "neumo-inset input",
+                            placeholder: "Notes, tips, or additional context about this recipe...",
+                            rows: "4",
+                            padding: "var(--space-sm) var(--space-md)",
+                            font_family: "var(--font-body)",
+                            font_size: "14px",
+                            color: "var(--text-primary)",
+                            background_color: "var(--surface)",
+                            outline: "none",
+                            resize: "vertical",
+                            width: "100%",
+                            oninput: move |evt| {
+                                commentary.set(evt.value());
                             },
                         }
                     }

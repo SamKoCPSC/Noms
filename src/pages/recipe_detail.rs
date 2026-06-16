@@ -728,6 +728,13 @@ pub fn RecipeDetail(id: String) -> Element {
                     }
                 }
 
+                // Commentary
+                if let Some(comm) = &recipe.commentary {
+                    if !comm.is_empty() {
+                        p { class: "recipe-detail__commentary", "{comm}" }
+                    }
+                }
+
                 // Author line
                 div { class: "recipe-detail__author-line",
                     if let Some(username) = &owner_username {
