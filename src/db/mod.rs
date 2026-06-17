@@ -1774,6 +1774,7 @@ mod tests {
                 sub_steps: vec![],
             }],
             &[],
+            &[],
             "private",
         )
         .await
@@ -1825,6 +1826,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "private",
         )
         .await
@@ -1863,6 +1865,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -1920,6 +1923,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "private",
         )
         .await
@@ -1934,6 +1938,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -1973,6 +1978,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -2098,6 +2104,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "private",
         )
         .await
@@ -2152,6 +2159,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -2234,6 +2242,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -2353,6 +2362,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "private",
         )
         .await
@@ -2366,6 +2376,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -2446,7 +2457,7 @@ mod tests {
         .unwrap();
         assert_eq!(r_unlisted.visibility, "unlisted");
 
-        let r_private = insert_recipe(
+          let r_private = insert_recipe(
             &pool,
             user.id,
             "Private",
@@ -2455,6 +2466,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -2525,7 +2537,7 @@ mod tests {
         )
         .await
         .unwrap();
-        insert_recipe(
+          insert_recipe(
             &pool,
             user_a.id,
             "A Private",
@@ -2534,6 +2546,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -2630,7 +2643,7 @@ mod tests {
         )
         .await
         .unwrap();
-        insert_recipe(
+          insert_recipe(
             &pool,
             user.id,
             "Priv 1",
@@ -2639,6 +2652,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -2718,7 +2732,7 @@ mod tests {
         )
         .await
         .unwrap();
-        // Private recipe — tags should NOT appear
+          // Private recipe — tags should NOT appear
         let r_private = insert_recipe(
             &pool,
             user.id,
@@ -2728,6 +2742,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -2798,6 +2813,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "private",
         )
         .await
@@ -2856,7 +2872,7 @@ mod tests {
         )
         .await
         .unwrap();
-        let r_private = insert_recipe(
+         let r_private = insert_recipe(
             &pool,
             user.id,
             "Private",
@@ -2865,6 +2881,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -2943,7 +2960,7 @@ mod tests {
         )
         .await
         .unwrap();
-        insert_recipe(
+         insert_recipe(
             &pool,
             user.id,
             "Priv 1",
@@ -2952,6 +2969,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -3009,7 +3027,7 @@ mod tests {
         )
         .await
         .unwrap();
-        insert_recipe(
+         insert_recipe(
             &pool,
             user.id,
             "Priv 1",
@@ -3018,6 +3036,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -3113,7 +3132,7 @@ mod tests {
         .await
         .unwrap();
 
-        let recipe = insert_recipe(
+         let recipe = insert_recipe(
             &pool,
             user.id,
             "Vis Recipe",
@@ -3122,6 +3141,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -3212,12 +3232,12 @@ mod tests {
         .unwrap();
 
         // Invalid visibility should fail
-        let result = sqlx::query_scalar!(
+        let result = sqlx::query_scalar(
             "INSERT INTO recipes (user_id, title, visibility) VALUES ($1, $2, $3) RETURNING id",
-            user.id,
-            "Bad Recipe",
-            "invalid_visibility" as &str,
         )
+        .bind(user.id)
+        .bind("Bad Recipe")
+        .bind("invalid_visibility")
         .fetch_one(&pool)
         .await;
 
@@ -3280,6 +3300,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -3378,6 +3399,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "private",
         )
         .await
@@ -3463,6 +3485,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "private",
         )
         .await
@@ -3491,6 +3514,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -3526,6 +3550,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
