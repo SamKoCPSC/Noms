@@ -4635,6 +4635,7 @@ dependencies = [
  "gloo-net",
  "gloo-timers",
  "ipnet",
+ "js-sys",
  "jsonwebtoken",
  "oauth2",
  "percent-encoding",
