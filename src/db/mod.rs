@@ -2457,7 +2457,7 @@ mod tests {
         .unwrap();
         assert_eq!(r_unlisted.visibility, "unlisted");
 
-          let r_private = insert_recipe(
+        let r_private = insert_recipe(
             &pool,
             user.id,
             "Private",
@@ -2537,7 +2537,7 @@ mod tests {
         )
         .await
         .unwrap();
-          insert_recipe(
+        insert_recipe(
             &pool,
             user_a.id,
             "A Private",
@@ -2643,7 +2643,7 @@ mod tests {
         )
         .await
         .unwrap();
-          insert_recipe(
+        insert_recipe(
             &pool,
             user.id,
             "Priv 1",
@@ -2732,7 +2732,7 @@ mod tests {
         )
         .await
         .unwrap();
-          // Private recipe — tags should NOT appear
+        // Private recipe — tags should NOT appear
         let r_private = insert_recipe(
             &pool,
             user.id,
@@ -2872,7 +2872,7 @@ mod tests {
         )
         .await
         .unwrap();
-         let r_private = insert_recipe(
+        let r_private = insert_recipe(
             &pool,
             user.id,
             "Private",
@@ -2960,7 +2960,7 @@ mod tests {
         )
         .await
         .unwrap();
-         insert_recipe(
+        insert_recipe(
             &pool,
             user.id,
             "Priv 1",
@@ -3027,7 +3027,7 @@ mod tests {
         )
         .await
         .unwrap();
-         insert_recipe(
+        insert_recipe(
             &pool,
             user.id,
             "Priv 1",
@@ -3132,7 +3132,7 @@ mod tests {
         .await
         .unwrap();
 
-         let recipe = insert_recipe(
+        let recipe = insert_recipe(
             &pool,
             user.id,
             "Vis Recipe",

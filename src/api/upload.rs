@@ -1,20 +1,34 @@
 //! File upload API: multipart handler and server function.
 //!
-//! Only compiled when the `server` feature is enabled.
+//! `UploadResponse` and the `#[server] upload_image` function are compiled on
+//! both targets — the `#[server]` macro strips the function body on the client
+//! (so server-only references inside it are not type-checked client-side;
+//! this is the same mechanism `recipe.rs` relies on). The `upload_handler`
+//! Axum handler and the integration tests remain server-only.
+//!
 //! Server is a pass-through: accepts pre-processed WebP bytes from the client,
 //! validates magic bytes, stores both variants, returns URLs.
-#![cfg(feature = "server")]
+#![cfg_attr(not(feature = "server"), allow(dead_code, unused_imports))]
 
+#[cfg(feature = "server")]
 use axum::extract::Multipart;
+#[cfg(feature = "server")]
 use axum::extract::State;
+#[cfg(feature = "server")]
 use axum::http::StatusCode;
+#[cfg(feature = "server")]
 use axum::response::IntoResponse;
+#[cfg(feature = "server")]
 use axum::Json;
+#[cfg(feature = "server")]
 use axum_extra::extract::cookie::CookieJar;
 use dioxus::prelude::*;
+#[cfg(feature = "server")]
 use tracing::{error, info};
+#[cfg(feature = "server")]
 use uuid::Uuid;
 
+#[cfg(feature = "server")]
 use crate::auth::session;
 
 // -- Constants --
@@ -23,9 +37,7 @@ const MAX_FILE_SIZE: usize = 10 * 1024 * 1024; // 10 MB
 
 /// Validate WebP magic bytes: "RIFF....WEBP" (first 4 + bytes 8-12).
 fn validate_webp_magic(bytes: &[u8]) -> bool {
-    bytes.len() >= 12
-        && &bytes[0..4] == b"RIFF"
-        && &bytes[8..12] == b"WEBP"
+    bytes.len() >= 12 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP"
 }
 
 /// Response from image upload, containing both full-size and thumbnail URLs.
@@ -85,7 +97,7 @@ pub async fn upload_image(
     }
 
     // Generate storage keys: recipes/{user_id}/{uuid}_full.webp and _thumb.webp
-    let unique_id = Uuid::new_v4();
+    let unique_id = uuid::Uuid::new_v4();
     let full_key = format!("recipes/{}/{}_full.webp", user_id, unique_id);
     let thumb_key = format!("recipes/{}/{}_thumb.webp", user_id, unique_id);
 
@@ -95,18 +107,18 @@ pub async fn upload_image(
         .put_object(&full_key, &full_bytes, "image/webp")
         .await
         .map_err(|e| {
-            error!(error = %e, "Failed to upload full-size image to storage");
+            tracing::error!(error = %e, "Failed to upload full-size image to storage");
             ServerFnError::new("Failed to upload file")
         })?;
     let thumb_url = storage
         .put_object(&thumb_key, &thumb_bytes, "image/webp")
         .await
         .map_err(|e| {
-            error!(error = %e, "Failed to upload thumbnail to storage");
+            tracing::error!(error = %e, "Failed to upload thumbnail to storage");
             ServerFnError::new("Failed to upload file")
         })?;
 
-    info!(full_key = %full_key, thumb_key = %thumb_key, user_id = %user_id, "Uploaded image variants");
+    tracing::info!(full_key = %full_key, thumb_key = %thumb_key, user_id = %user_id, "Uploaded image variants");
     Ok(UploadResponse {
         full_url,
         thumb_url,
@@ -121,6 +133,7 @@ pub async fn upload_image(
 /// Accepts multipart form data with TWO fields: `full_image` and `thumb_image`.
 /// Both must be valid WebP files. Validates magic bytes, uploads to
 /// S3-compatible storage, and returns the public URLs.
+#[cfg(feature = "server")]
 pub async fn upload_handler(
     State(state): State<crate::auth::user_profile::UserProfileState>,
     jar: CookieJar,
@@ -239,7 +252,10 @@ pub async fn upload_handler(
 
     // Store both variants via global storage client
     let storage = crate::storage::get_storage_client();
-    let full_url = match storage.put_object(&full_key, &full_bytes, "image/webp").await {
+    let full_url = match storage
+        .put_object(&full_key, &full_bytes, "image/webp")
+        .await
+    {
         Ok(u) => u,
         Err(e) => {
             error!(error = %e, full_key = %full_key, "Failed to upload full-size image to storage");
@@ -250,7 +266,10 @@ pub async fn upload_handler(
                 .into_response();
         }
     };
-    let thumb_url = match storage.put_object(&thumb_key, &thumb_bytes, "image/webp").await {
+    let thumb_url = match storage
+        .put_object(&thumb_key, &thumb_bytes, "image/webp")
+        .await
+    {
         Ok(u) => u,
         Err(e) => {
             error!(error = %e, thumb_key = %thumb_key, "Failed to upload thumbnail to storage");
@@ -277,7 +296,7 @@ pub async fn upload_handler(
 
 // ── Tests ───────────────────────────────────────────────────────────────────
 
-#[cfg(test)]
+#[cfg(all(feature = "server", test))]
 mod tests {
     use super::*;
     use crate::test_utils;
@@ -350,19 +369,13 @@ mod tests {
             thumb = thumb_str,
         );
 
-        let mut builder = Request::builder()
-            .method("POST")
-            .uri("/api/upload")
-            .header(
-                "Content-Type",
-                format!("multipart/form-data; boundary={BOUNDARY}"),
-            );
+        let mut builder = Request::builder().method("POST").uri("/api/upload").header(
+            "Content-Type",
+            format!("multipart/form-data; boundary={BOUNDARY}"),
+        );
 
         if let Some(cookie) = session_cookie {
-            builder = builder.header(
-                "Cookie",
-                format!("{}={}", session::COOKIE_NAME, cookie),
-            );
+            builder = builder.header("Cookie", format!("{}={}", session::COOKIE_NAME, cookie));
         }
 
         builder.body(AxumBody::from(body)).unwrap()
@@ -379,19 +392,13 @@ mod tests {
             boundary = BOUNDARY,
         );
 
-        let mut builder = Request::builder()
-            .method("POST")
-            .uri("/api/upload")
-            .header(
-                "Content-Type",
-                format!("multipart/form-data; boundary={BOUNDARY}"),
-            );
+        let mut builder = Request::builder().method("POST").uri("/api/upload").header(
+            "Content-Type",
+            format!("multipart/form-data; boundary={BOUNDARY}"),
+        );
 
         if let Some(cookie) = session_cookie {
-            builder = builder.header(
-                "Cookie",
-                format!("{}={}", session::COOKIE_NAME, cookie),
-            );
+            builder = builder.header("Cookie", format!("{}={}", session::COOKIE_NAME, cookie));
         }
 
         builder.body(AxumBody::from(body)).unwrap()
@@ -408,19 +415,13 @@ mod tests {
             boundary = BOUNDARY,
         );
 
-        let mut builder = Request::builder()
-            .method("POST")
-            .uri("/api/upload")
-            .header(
-                "Content-Type",
-                format!("multipart/form-data; boundary={BOUNDARY}"),
-            );
+        let mut builder = Request::builder().method("POST").uri("/api/upload").header(
+            "Content-Type",
+            format!("multipart/form-data; boundary={BOUNDARY}"),
+        );
 
         if let Some(cookie) = session_cookie {
-            builder = builder.header(
-                "Cookie",
-                format!("{}={}", session::COOKIE_NAME, cookie),
-            );
+            builder = builder.header("Cookie", format!("{}={}", session::COOKIE_NAME, cookie));
         }
 
         builder.body(AxumBody::from(body)).unwrap()
@@ -440,39 +441,9 @@ mod tests {
         serde_json::from_slice(&bytes).expect("response should be valid JSON")
     }
 
-    // ── WebP magic byte validation tests ────────────────────────────────────
-
-    #[test]
-    fn test_validate_webp_magic_valid() {
-        assert!(validate_webp_magic(VALID_WEBP_BYTES));
-    }
-
-    #[test]
-    fn test_validate_webp_magic_too_short() {
-        assert!(!validate_webp_magic(b"RIFF"));
-    }
-
-    #[test]
-    fn test_validate_webp_magic_bad_header() {
-        assert!(!validate_webp_magic(b"NOTR....WEBPxxxx"));
-    }
-
-    #[test]
-    fn test_validate_webp_magic_bad_footer() {
-        assert!(!validate_webp_magic(b"RIFF....JPEGxxxx"));
-    }
-
-    #[test]
-    fn test_validate_webp_magic_jpeg_rejected() {
-        // JPEG starts with 0xFFD8
-        assert!(!validate_webp_magic(&[0xFF, 0xD8, 0xFF, 0xE0, 0, 0, 0, 0, 0, 0, 0, 0]));
-    }
-
-    #[test]
-    fn test_validate_webp_magic_png_rejected() {
-        // PNG starts with 0x89 0x50 0x4E 0x47
-        assert!(!validate_webp_magic(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0]));
-    }
+    // ── WebP magic byte validation: see `validate_webp_magic_tests` at file
+    //    scope (S3) — the pure tests run on both targets, including wasm.
+    //    Tests below exercise the magic-byte check via the HTTP handler.
 
     // ── Auth flow tests ─────────────────────────────────────────────────────
 
@@ -756,10 +727,7 @@ mod tests {
                 "Content-Type",
                 format!("multipart/form-data; boundary={BOUNDARY}"),
             )
-            .header(
-                "Cookie",
-                format!("{}={}", session::COOKIE_NAME, token),
-            )
+            .header("Cookie", format!("{}={}", session::COOKIE_NAME, token))
             .body(AxumBody::from(body))
             .unwrap();
 
@@ -814,10 +782,7 @@ mod tests {
                 "Content-Type",
                 format!("multipart/form-data; boundary={BOUNDARY}"),
             )
-            .header(
-                "Cookie",
-                format!("{}={}", session::COOKIE_NAME, token),
-            )
+            .header("Cookie", format!("{}={}", session::COOKIE_NAME, token))
             .body(AxumBody::from(body))
             .unwrap();
 
@@ -889,15 +854,10 @@ mod tests {
             json.get("thumb_url").is_some(),
             "Response should contain 'thumb_url'"
         );
-        assert!(
-            json.get("key").is_some(),
-            "Response should contain 'key'"
-        );
+        assert!(json.get("key").is_some(), "Response should contain 'key'");
 
         // Verify the key format: recipes/{user_id}/{uuid}_full.webp
-        let key = json["key"]
-            .as_str()
-            .expect("key should be a string");
+        let key = json["key"].as_str().expect("key should be a string");
         let parts: Vec<&str> = key.split('/').collect();
         assert_eq!(
             parts.len(),
@@ -927,5 +887,56 @@ mod tests {
             "thumb_url should contain '_thumb.webp', got: {}",
             thumb_url
         );
+    }
+}
+
+// ── Pure `validate_webp_magic` tests (cross-platform — S3) ─────────────────
+//
+// Split out of the server-gated `tests` module so they also run on the
+// wasm32 target. The validator is pure Rust (no server deps), so it is
+// safe to compile and run anywhere.
+
+#[cfg(test)]
+mod validate_webp_magic_tests {
+    use super::validate_webp_magic;
+
+    /// Minimal valid WebP file bytes (RIFF....WEBP header).
+    /// 12 bytes: "RIFF" + 4-byte little-endian file size + "WEBP".
+    const VALID_WEBP_BYTES: &[u8] = b"RIFF\x24\x00\x00\x00WEBP";
+
+    #[test]
+    fn test_validate_webp_magic_valid() {
+        assert!(validate_webp_magic(VALID_WEBP_BYTES));
+    }
+
+    #[test]
+    fn test_validate_webp_magic_too_short() {
+        assert!(!validate_webp_magic(b"RIFF"));
+    }
+
+    #[test]
+    fn test_validate_webp_magic_bad_header() {
+        assert!(!validate_webp_magic(b"NOTR....WEBPxxxx"));
+    }
+
+    #[test]
+    fn test_validate_webp_magic_bad_footer() {
+        assert!(!validate_webp_magic(b"RIFF....JPEGxxxx"));
+    }
+
+    #[test]
+    fn test_validate_webp_magic_jpeg_rejected() {
+        // JPEG starts with 0xFFD8
+        assert!(!validate_webp_magic(&[
+            0xFF, 0xD8, 0xFF, 0xE0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]));
+    }
+
+    #[test]
+    fn test_validate_webp_magic_png_rejected() {
+        // PNG starts with 0x89 0x50 0x4E 0x47
+        assert!(!validate_webp_magic(&[
+            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0
+        ]));
     }
 }

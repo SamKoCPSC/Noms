@@ -4632,6 +4632,7 @@ dependencies = [
  "dioxus",
  "dioxus-core",
  "dioxus-ssr",
+ "dioxus-web",
  "gloo-net",
  "gloo-timers",
  "ipnet",

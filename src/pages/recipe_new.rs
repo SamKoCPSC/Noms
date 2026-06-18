@@ -6,7 +6,9 @@
 use dioxus::prelude::*;
 
 use crate::api::recipe::create_recipe;
-use crate::components::base::{Button, ButtonVariant, Input, PageHeader};
+use crate::components::base::{
+    Button, ButtonVariant, ImageUpload, Input, PageHeader, UploadOutcome,
+};
 use crate::components::AuthRequired;
 use crate::types::{RecipeEquipment, RecipeIngredient, RecipeStep};
 
@@ -18,6 +20,28 @@ use crate::types::{RecipeEquipment, RecipeIngredient, RecipeStep};
 struct StepForm {
     text: String,
     depth: usize,
+}
+
+/// Validated form fields captured at Save-click time, consumed by the
+/// `on_upload_complete` handler after the image upload batch finishes.
+///
+/// CP4: the save flow is now two-phase — (1) the user clicks Save, we stash
+/// the validated form here and trigger the image upload batch via
+/// `upload_now`; (2) `ImageUpload` fires `on_upload_complete`, which
+/// consumes this stash and calls `create_recipe` with the uploaded URLs.
+#[derive(Clone)]
+struct PendingSaveData {
+    title: String,
+    description: Option<String>,
+    commentary: Option<String>,
+    prep: Option<i32>,
+    cook: Option<i32>,
+    serv: Option<i32>,
+    ingredients: Vec<RecipeIngredient>,
+    instructions: Vec<RecipeStep>,
+    equipment: Vec<RecipeEquipment>,
+    tags: Vec<String>,
+    visibility: String,
 }
 
 // ── Tree builder ─────────────────────────────────────────────────────────────
@@ -98,6 +122,17 @@ pub fn RecipeNew() -> Element {
     let mut is_saving = use_signal(|| false);
     let mut error = use_signal(|| Option::<String>::None);
 
+    // CP4: image upload state — shared with the `ImageUpload` component.
+    // `images` is the sink for uploaded `full_url`s (read when calling
+    // `create_recipe`); `upload_now` triggers the upload batch; `busy`
+    // mirrors "processing or uploading" and disables Save; `pending_save`
+    // stashes the validated form at Save-click time for the
+    // `on_upload_complete` handler to consume after the batch finishes.
+    let images = use_signal(Vec::<String>::new);
+    let mut upload_now = use_signal(|| false);
+    let busy = use_signal(|| false);
+    let mut pending_save = use_signal(|| Option::<PendingSaveData>::None);
+
     // ── Submit handler ───────────────────────────────────────────────────
     let on_submit = move |_| {
         // Clear previous errors
@@ -147,7 +182,17 @@ pub fn RecipeNew() -> Element {
         // ── Convert flat steps to tree ──────────────────────────────────
         let instructions = build_step_tree(&sts);
 
-        // ── Commit values and spawn async call ──────────────────────────
+        // ── Early guard: images still processing ────────────────────────
+        // Belt-and-suspenders — `ImageUpload::upload_all()` also checks
+        // this and aborts. This gives immediate feedback.
+        if busy() {
+            error.set(Some(
+                "Images are still processing — please wait a moment".to_string(),
+            ));
+            return;
+        }
+
+        // ── Commit values and stash for the post-upload handler ─────────
         is_saving.set(true);
 
         let desc = if description().trim().is_empty() {
@@ -164,20 +209,74 @@ pub fn RecipeNew() -> Element {
 
         let vis = visibility().clone();
         let equip = equipment();
+
+        // Stash the validated form data. The `on_upload_complete` handler
+        // (fired by `ImageUpload` after the upload batch) consumes this and
+        // calls `create_recipe` with `images()`.
+        pending_save.set(Some(PendingSaveData {
+            title: trimmed_title,
+            description: desc,
+            commentary: comm,
+            prep,
+            cook,
+            serv,
+            ingredients: ings,
+            instructions,
+            equipment: equip,
+            tags,
+            visibility: vis,
+        }));
+
+        // Trigger the upload batch. If there are no pending images,
+        // `upload_all` returns immediately with `succeeded: 0, failed: 0,
+        // aborted: None` and the handler proceeds to `create_recipe` with
+        // `images() == vec![]` — recipes with zero images work.
+        upload_now.set(true);
+    };
+
+    // ── on_upload_complete handler ───────────────────────────────────────
+    // Fired by `ImageUpload` when the upload batch finishes. Consumes the
+    // stashed form data and calls `create_recipe` with the uploaded URLs.
+    let on_upload_complete = move |outcome: UploadOutcome| {
         spawn(async move {
+            // S5: Dioxus `Signal` requires `.write()` for mutation (returns
+            // `&mut T`; `Option::take` needs `&mut self`). Matches the
+            // codebase's `signal.write().push(...)` pattern.
+            let Some(data) = pending_save.write().take() else {
+                return;
+            };
+
+            if let Some(msg) = outcome.aborted {
+                error.set(Some(msg));
+                is_saving.set(false);
+                return;
+            }
+
+            if outcome.failed > 0 {
+                // Some uploads failed — do NOT save. User retries/removes
+                // via the component UI, then clicks Save again.
+                error.set(Some(format!(
+                    "{} image(s) failed to upload. Use the Retry button on each failed image (or remove them), then click Save again.",
+                    outcome.failed
+                )));
+                is_saving.set(false);
+                return;
+            }
+
+            error.set(None);
             match create_recipe(
-                trimmed_title,
-                desc,
-                comm,
-                prep,
-                cook,
-                serv,
-                ings,
-                instructions,
-                equip,
-                vec![],
-                tags,
-                vis,
+                data.title,
+                data.description,
+                data.commentary,
+                data.prep,
+                data.cook,
+                data.serv,
+                data.ingredients,
+                data.instructions,
+                data.equipment,
+                images(), // ← the uploaded full_urls (replaces vec![])
+                data.tags,
+                data.visibility,
             )
             .await
             {
@@ -264,6 +363,30 @@ pub fn RecipeNew() -> Element {
                                 title.set(v);
                                 error.set(None);
                             },
+                        }
+                    }
+
+                    // ── Recipe Images ───────────────────────────────────────
+                    div {
+                        display: "flex",
+                        flex_direction: "column",
+                        gap: "var(--space-sm)",
+                        label {
+                            font_size: "14px",
+                            font_weight: "600",
+                            color: "var(--text-secondary)",
+                            "Recipe Images"
+                        }
+                        ImageUpload {
+                            images,
+                            upload_now,
+                            busy,
+                            on_upload_complete,
+                        }
+                        span {
+                            font_size: "12px",
+                            color: "var(--text-tertiary)",
+                            "Images are processed and uploaded when you save"
                         }
                     }
 
@@ -675,7 +798,7 @@ pub fn RecipeNew() -> Element {
                         margin_top: "var(--space-md)",
                         Button {
                             variant: ButtonVariant::Primary,
-                            disabled: is_saving(),
+                            disabled: is_saving() || busy(),
                             onclick: on_submit,
                             if is_saving() {
                                 "Saving..."
@@ -685,7 +808,7 @@ pub fn RecipeNew() -> Element {
                         }
                         Button {
                             variant: ButtonVariant::Ghost,
-                            disabled: is_saving(),
+                            disabled: is_saving() || busy(),
                             onclick: on_cancel,
                             "Cancel"
                         }

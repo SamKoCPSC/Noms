@@ -10,9 +10,9 @@ mod components;
 mod db;
 #[cfg(feature = "server")]
 mod middleware;
+mod pages;
 #[cfg(feature = "server")]
 mod storage;
-mod pages;
 #[cfg(all(feature = "server", test))]
 mod test_utils;
 mod types;

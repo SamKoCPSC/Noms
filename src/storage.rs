@@ -300,7 +300,9 @@ mod tests {
         std::env::set_var("R2_BUCKET", "noms-media");
         std::env::set_var("R2_PUBLIC_URL", "http://localhost:9000/noms-media");
 
-        let client = StorageClient::from_env().await.expect("from_env should succeed");
+        let client = StorageClient::from_env()
+            .await
+            .expect("from_env should succeed");
         client
             .health_check()
             .await

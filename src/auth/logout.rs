@@ -86,7 +86,7 @@ pub async fn handle_logout(
     (StatusCode::FOUND, headers, ()).into_response()
 }
 
- /// Build a minimal router exposing the logout handler for testing.
+/// Build a minimal router exposing the logout handler for testing.
 /// Requires a `PgPool` as state (wrapped in `AppState`).
 #[cfg(test)]
 fn make_router(pool: PgPool) -> axum::Router {
