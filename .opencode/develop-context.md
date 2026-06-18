@@ -312,30 +312,6 @@ The blueprint has solid architectural direction but contains **3 blockers** (mis
 ## Phase 1: Implementation Details
 <!-- written by @develop-implement -->
 
-### Test Compilation Fixes
-
-Fixed two test compilation errors in `src/db/mod.rs`:
-
-**Issue 1 — `sqlx::query_scalar!` macro requiring DATABASE_URL (line ~3215)**
-- Replaced `sqlx::query_scalar!` (compile-time checked macro) with `sqlx::query_scalar` (runtime-only non-macro version) in the `test_visibility_check_constraint` test function.
-- Converted inline macro arguments to `.bind()` chain: `.bind(user.id).bind("Bad Recipe").bind("invalid_visibility")`.
-
-**Issue 2 — Missing `images` parameter in 25 `insert_recipe` test calls**
-- Added `&[],` (empty images slice) between the `equipment` parameter and the `visibility` string in every `insert_recipe` call within the test module that was missing it.
-- The `insert_recipe` function signature requires `images: &[String]` as parameter #12 (between `equipment` and `visibility`), introduced in the previous implementation phase.
-- 25 calls were updated; calls that already had 4 `&[]` parameters (including images) were left unchanged.
-
-### Files Modified
-
-| File | Changes |
-|------|---------|
-| `src/db/mod.rs` | Replaced `sqlx::query_scalar!` with `sqlx::query_scalar` + `.bind()` chain (1 location); Added `&[],` images parameter to 25 `insert_recipe` calls in test module |
-
-### Verification
-- `SQLX_OFFLINE=true cargo check --features server` — passes cleanly (0 errors)
-- Confirmed no remaining `sqlx::query_scalar!` macros in the file
-- Confirmed all `insert_recipe` calls now have 4 `&[]` parameters before visibility string (ingredients, instructions, equipment, images)
-
 ### Summary
 CP1 of NOMS-009 is fully implemented: S3-compatible storage backend (Minio) is wired into the NomS server via a new `src/storage.rs` module. The `StorageClient` struct is configured from `S3_*` environment variables, initialized as a `tokio::sync::OnceCell` singleton at server startup, and wired into `AppState` for use by downstream handlers.
 

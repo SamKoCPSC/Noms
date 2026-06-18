@@ -1775,7 +1775,6 @@ mod tests {
             }],
             &[],
             &[],
-            &[],
             "private",
         )
         .await
@@ -1870,7 +1869,6 @@ mod tests {
             &[],
             &[],
             &[],
-            &[],
             "private",
         )
         .await
@@ -1926,7 +1924,6 @@ mod tests {
             &[],
             &[],
             &[],
-            &[],
             "private",
         )
         .await
@@ -1941,7 +1938,6 @@ mod tests {
             None,
             None,
             None,
-            &[],
             &[],
             &[],
             &[],
