@@ -10,6 +10,8 @@ mod components;
 mod db;
 #[cfg(feature = "server")]
 mod middleware;
+#[cfg(feature = "server")]
+mod storage;
 mod pages;
 #[cfg(all(feature = "server", test))]
 mod test_utils;
@@ -89,6 +91,10 @@ fn main() {
             db::init_pool().await;
             let pool = db::get_pool();
 
+            // Initialize S3-compatible storage client
+            storage::init_storage().await;
+            let storage_client = storage::get_storage_client();
+
             let rate_limit = middleware::rate_limit::RateLimitState::default();
 
             let state = auth::oauth::AppState {
@@ -97,6 +103,7 @@ fn main() {
                 github_client,
                 http_client: reqwest::Client::new(),
                 rate_limit: rate_limit.clone(),
+                storage: storage_client,
             };
             let dioxus_router = axum::Router::new()
                 .layer(axum::Extension(pool.clone()))

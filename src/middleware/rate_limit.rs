@@ -601,12 +601,14 @@ mod tests {
         async fn make_test_state() -> AppState {
             let (_db, pool) = test_utils::setup_test_db().await;
             let (google_client, github_client) = build_oauth_clients("http://localhost:8080");
+
             AppState {
                 pool,
                 google_client,
                 github_client,
                 http_client: reqwest::Client::new(),
                 rate_limit: RateLimitState::default(),
+                storage: crate::storage::StorageClient::for_test(),
             }
         }
 

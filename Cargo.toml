@@ -13,6 +13,7 @@ tracing = "0.1"
 # Server-only — never compiled into the WASM client
 sqlx             = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"], optional = true }
 aws-sdk-s3       = { version = "1", optional = true }
+aws-config       = { version = "1", optional = true }
 tracing-subscriber = { version = "0.3", features = ["json"], optional = true }
 oauth2           = { version = "5", optional = true }
 jsonwebtoken     = { version = "9", optional = true }
@@ -44,6 +45,7 @@ server  = [
     "dioxus/server",
     "sqlx",
     "aws-sdk-s3",
+    "dep:aws-config",
     "tracing-subscriber",
     "oauth2",
     "jsonwebtoken",

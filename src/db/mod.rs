@@ -1775,6 +1775,7 @@ mod tests {
             }],
             &[],
             &[],
+            &[],
             "private",
         )
         .await
@@ -1869,6 +1870,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "private",
         )
         .await
@@ -1924,6 +1926,7 @@ mod tests {
             &[],
             &[],
             &[],
+            &[],
             "private",
         )
         .await
@@ -1938,6 +1941,7 @@ mod tests {
             None,
             None,
             None,
+            &[],
             &[],
             &[],
             &[],
@@ -3232,7 +3236,7 @@ mod tests {
         .unwrap();
 
         // Invalid visibility should fail
-        let result = sqlx::query_scalar(
+        let result: Result<i64, sqlx::Error> = sqlx::query_scalar(
             "INSERT INTO recipes (user_id, title, visibility) VALUES ($1, $2, $3) RETURNING id",
         )
         .bind(user.id)

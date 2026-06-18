@@ -49,6 +49,10 @@ pub struct AppState {
     pub http_client: reqwest::Client,
     /// Shared rate limit state for OAuth endpoint protection.
     pub rate_limit: crate::middleware::rate_limit::RateLimitState,
+    /// S3-compatible storage client for media file operations.
+    #[cfg(feature = "server")]
+    #[allow(dead_code)]
+    pub storage: crate::storage::StorageClient,
 }
 
 // ── Query parameter types ──────────────────────────────────────────────────

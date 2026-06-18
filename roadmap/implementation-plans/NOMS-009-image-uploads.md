@@ -66,12 +66,11 @@ Client (Tauri/eGui)          Server (Axum)              Minio (S3-compatible)
 
 | Variable | Example | Description |
 |---|---|---|
-| `S3_ENDPOINT` | `http://localhost:9000` | Minio/S3 endpoint URL |
-| `S3_ACCESS_KEY` | `noms-admin` | Access key |
-| `S3_SECRET_KEY` | `noms-admin-secret` | Secret key |
-| `S3_BUCKET` | `noms-images` | Bucket name |
-| `S3_PUBLIC_URL` | `http://localhost:9000/noms-images` | Public base URL for constructed image URLs |
-| `S3_REGION` | `us-east-1` | Region (optional, defaults to us-east-1) |
+| `R2_ENDPOINT` | `http://localhost:9000` | Minio/R2 endpoint URL |
+| `R2_ACCESS_KEY_ID` | `noms-admin` | Access key |
+| `R2_SECRET_ACCESS_KEY` | `noms-admin-secret` | Secret key |
+| `R2_BUCKET` | `noms-images` | Bucket name |
+| `R2_PUBLIC_URL` | `http://localhost:9000/noms-images` | Public base URL for constructed image URLs |
 
 ### Exact File Changes
 
@@ -82,7 +81,7 @@ Add `dep:aws-sdk-s3` to the `server` feature list.
 #### New file: `src/storage.rs`
 - `StorageError` enum: Init, HealthCheck, Upload, Download, Delete variants
 - `StorageConfig` struct: endpoint, access_key, secret_key, bucket, public_url, region
-- `StorageConfig::from_env()` - reads all S3_* env vars
+- `StorageConfig::from_env()` - reads all R2_* env vars
 - `StorageClient` struct: wraps aws-sdk-s3 Client + StorageConfig
 - `StorageClient::new(config)` - builds client with custom endpoint, path-style, credentials
 - `StorageClient::health_check()` - HEAD bucket
@@ -90,7 +89,7 @@ Add `dep:aws-sdk-s3` to the `server` feature list.
 
 #### `src/server.rs` - integrate into AppState
 - Add `storage: Option<StorageClient>` to AppState
-- In init: if S3_ENDPOINT is set, create StorageClient; otherwise None
+- In init: if R2_ENDPOINT is set, create StorageClient; otherwise None
 
 #### `src/lib.rs` or `src/main.rs` - register module
 `#[cfg(feature = "server")] pub mod storage;`
