@@ -12,8 +12,26 @@
 use aws_config::BehaviorVersion;
 use aws_sdk_s3::config::Credentials;
 use aws_sdk_s3::config::Region;
+use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::Client as S3Client;
 use tokio::sync::OnceCell;
+
+/// Errors from storage operations.
+#[derive(Debug)]
+pub enum StorageError {
+    /// Failed to upload an object to the storage backend.
+    UploadFailed(String),
+}
+
+impl std::fmt::Display for StorageError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StorageError::UploadFailed(e) => write!(f, "storage upload failed: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for StorageError {}
 
 // ── Storage client ──────────────────────────────────────────────────────────
 
@@ -132,6 +150,43 @@ impl StorageClient {
             bucket: "noms-media".to_string(),
             public_url: "http://localhost:9000/noms-media".to_string(),
         }
+    }
+
+    /// Initialize the global `STORAGE_CLIENT` with a client pointing to `endpoint`.
+    /// Intended for tests that need a mock S3 server (e.g., wiremock).
+    #[cfg(test)]
+    pub fn set_storage_for_test(endpoint: &str) {
+        let s3_config = aws_sdk_s3::config::Builder::new()
+            .behavior_version(BehaviorVersion::latest())
+            .region(Region::new("us-east-1"))
+            .endpoint_url(endpoint)
+            .credentials_provider(Credentials::for_tests())
+            .build();
+        let client = Self {
+            inner: S3Client::from_conf(s3_config),
+            bucket: "noms-media".to_string(),
+            public_url: "http://localhost:9000/noms-media".to_string(),
+        };
+        let _ = STORAGE_CLIENT.set(client);
+    }
+
+    /// Upload bytes to the configured bucket and return the public URL.
+    pub async fn put_object(
+        &self,
+        key: &str,
+        bytes: &[u8],
+        content_type: &str,
+    ) -> Result<String, StorageError> {
+        self.inner
+            .put_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .content_type(content_type)
+            .body(ByteStream::from(bytes.to_vec()))
+            .send()
+            .await
+            .map_err(|e| StorageError::UploadFailed(e.to_string()))?;
+        Ok(self.object_url(key))
     }
 }
 

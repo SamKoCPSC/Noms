@@ -115,6 +115,10 @@ fn main() {
                     "/api/user_profile",
                     axum::routing::get(auth::user_profile::handle_user_profile),
                 )
+                .route(
+                    "/api/upload",
+                    axum::routing::post(api::upload::upload_handler),
+                )
                 .with_state(auth::user_profile::UserProfileState { pool: pool.clone() })
                 .serve_dioxus_application(ServeConfig::new(), App);
 
