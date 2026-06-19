@@ -126,6 +126,55 @@ pub async fn upload_image(
     })
 }
 
+/// Delete an image from S3 storage given its full URL.
+///
+/// Derives the storage key by stripping the public URL prefix, then deletes
+/// both the full-size and thumbnail objects. Best-effort: if the full object
+/// is already gone, still attempts to delete the thumb.
+///
+/// Auth-gated: only the authenticated user can delete images. Ownership is
+/// enforced by verifying the key prefix matches `recipes/{user_id}/`.
+#[server]
+pub async fn delete_image(full_url: String) -> Result<(), ServerFnError> {
+    let user_id = crate::auth::session::extract_user_id_from_fullstack()
+        .await
+        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+
+    let storage = crate::storage::get_storage_client();
+    let public_url = storage.public_url().trim_end_matches('/');
+
+    // Extract storage key from full URL: strip public_url prefix
+    let full_key = full_url
+        .strip_prefix(public_url)
+        .ok_or_else(|| ServerFnError::new("Invalid image URL: does not match storage public URL"))?
+        .trim_start_matches('/')
+        .to_string();
+
+    // Ownership check: key must start with `recipes/{user_id}/`
+    let expected_prefix = format!("recipes/{user_id}/");
+    if !full_key.starts_with(&expected_prefix) {
+        return Err(ServerFnError::new(
+            "Access denied: image does not belong to this user",
+        ));
+    }
+
+    // Derive thumbnail key: replace `_full.webp` with `_thumb.webp`
+    let thumb_key = full_key
+        .strip_suffix("_full.webp")
+        .map(|base| format!("{base}_thumb.webp"))
+        .unwrap_or_else(|| full_key.clone());
+
+    // Delete full-size object (best-effort: ignore "not found")
+    let _ = storage.delete_object(&full_key).await;
+
+    // Delete thumbnail object (best-effort: ignore "not found")
+    if thumb_key != full_key {
+        let _ = storage.delete_object(&thumb_key).await;
+    }
+
+    Ok(())
+}
+
 // -- Axum Handler (for direct API / fetch access) --
 
 /// Handle POST /api/upload.

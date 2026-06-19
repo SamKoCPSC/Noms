@@ -21,12 +21,15 @@ use tokio::sync::OnceCell;
 pub enum StorageError {
     /// Failed to upload an object to the storage backend.
     UploadFailed(String),
+    /// Failed to delete an object from the storage backend.
+    DeleteFailed(String),
 }
 
 impl std::fmt::Display for StorageError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             StorageError::UploadFailed(e) => write!(f, "storage upload failed: {e}"),
+            StorageError::DeleteFailed(e) => write!(f, "storage delete failed: {e}"),
         }
     }
 }
@@ -187,6 +190,18 @@ impl StorageClient {
             .await
             .map_err(|e| StorageError::UploadFailed(e.to_string()))?;
         Ok(self.object_url(key))
+    }
+
+    /// Delete an object from the configured bucket by key.
+    pub async fn delete_object(&self, key: &str) -> Result<(), StorageError> {
+        self.inner
+            .delete_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .send()
+            .await
+            .map_err(|e| StorageError::DeleteFailed(e.to_string()))?;
+        Ok(())
     }
 }
 

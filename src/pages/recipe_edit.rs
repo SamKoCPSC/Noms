@@ -4,9 +4,13 @@
 //! create form, and calls `update_recipe()` on submit.
 
 use dioxus::prelude::*;
+use std::rc::Rc;
 
 use crate::api::recipe::{get_recipe, get_recipe_tags, update_recipe};
-use crate::components::base::{Button, ButtonVariant, Input, LoadingSpinner, PageHeader};
+use crate::api::upload::delete_image;
+use crate::components::base::{
+    Button, ButtonVariant, ImageUpload, Input, LoadingSpinner, PageHeader, UploadOutcome,
+};
 use crate::components::AuthRequired;
 use crate::types::{RecipeEquipment, RecipeIngredient, RecipeStep};
 
@@ -96,6 +100,11 @@ pub fn RecipeEdit(id: String) -> Element {
     let mut equipment = use_signal(Vec::<RecipeEquipment>::new);
     let mut visibility = use_signal(|| "private".to_string());
 
+    // CP5: image management signals
+    let mut images = use_signal(Vec::<String>::new);
+    let mut upload_now = use_signal(|| false);
+    let busy = use_signal(|| false);
+
     // UI state
     let mut is_loading = use_signal(|| true);
     let mut is_saving = use_signal(|| false);
@@ -141,6 +150,9 @@ pub fn RecipeEdit(id: String) -> Element {
                     equipment.set(recipe.equipment);
 
                     visibility.set(recipe.visibility);
+
+                    // CP5: pre-populate images signal with existing recipe images
+                    images.set(recipe.images.clone());
                 }
                 Err(e) => {
                     let msg = match &e {
@@ -157,10 +169,12 @@ pub fn RecipeEdit(id: String) -> Element {
     });
 
     // ── Clone id for closures that need it ──────────────────────────────
-    let id_for_submit = id.clone();
+    let _id_for_submit = id.clone(); // used in on_submit (two-phase: no direct DB call)
     let id_for_cancel = id.clone();
+    // CP5: Rc for the on_upload_complete handler (callable multiple times)
+    let id_for_upload_complete = Rc::new(id.clone());
 
-    // ── Submit handler ───────────────────────────────────────────────────
+    // ── Submit handler (two-phase: upload images → save recipe) ────────
     let on_submit = move |_| {
         // Clear previous errors
         form_error.set(None);
@@ -192,46 +206,82 @@ pub fn RecipeEdit(id: String) -> Element {
             return;
         }
 
+        // ── Early guard: images still processing ────────────────────────
+        if busy() {
+            form_error.set(Some(
+                "Images are still processing — please wait a moment".to_string(),
+            ));
+            return;
+        }
+
         // ── Parse optional numeric fields ───────────────────────────────
-        let prep = prep_time().trim().parse::<i32>().ok();
-        let cook = cook_time().trim().parse::<i32>().ok();
-        let serv = servings().trim().parse::<i32>().ok();
+        let _prep = prep_time().trim().parse::<i32>().ok();
+        let _cook = cook_time().trim().parse::<i32>().ok();
+        let _serv = servings().trim().parse::<i32>().ok();
 
-        // ── Parse tags ──────────────────────────────────────────────────
-        let tags: Vec<String> = tags_input()
-            .split(',')
-            .map(|t| t.trim().to_string())
-            .filter(|t| !t.is_empty())
-            .collect();
-
-        // ── Build typed vectors from form data ──────────────────────────
-        let typed_ingredients = ingredients();
-
-        // Build step tree from flat form
-        let instructions = build_step_tree(&steps());
-
-        // Equipment is already typed
-        let equip_vec = equipment();
-
-        // ── Commit values and spawn async call ──────────────────────────
+        // ── Trigger upload batch (may be empty — no-op) ─────────────────
         is_saving.set(true);
+        upload_now.set(true);
+    };
 
-        let desc = if description().trim().is_empty() {
-            None
-        } else {
-            Some(description().trim().to_string())
-        };
-
-        let comm = if commentary().trim().is_empty() {
-            None
-        } else {
-            Some(commentary().trim().to_string())
-        };
-
-        let recipe_id = id_for_submit.clone();
-        let vis = visibility().clone();
-
+    // ── CP5: Upload complete handler ────────────────────────────────────
+    // Fired by ImageUpload when the upload batch finishes. Proceeds to
+    // update_recipe with the merged images list (existing + newly uploaded).
+    let on_upload_complete = move |outcome: UploadOutcome| {
+        let id_rc = id_for_upload_complete.clone();
         spawn(async move {
+            if let Some(msg) = outcome.aborted {
+                form_error.set(Some(msg));
+                is_saving.set(false);
+                return;
+            }
+
+            if outcome.failed > 0 {
+                form_error.set(Some(format!(
+                    "{} image(s) failed to upload. Use the Retry button on each failed image (or remove them), then click Save again.",
+                    outcome.failed
+                )));
+                is_saving.set(false);
+                return;
+            }
+
+            // Re-validate and parse form data (signals are still accessible)
+            let trimmed_title = title().trim().to_string();
+            let ings = ingredients();
+            let sts = steps();
+
+            // Parse optional numeric fields
+            let prep = prep_time().trim().parse::<i32>().ok();
+            let cook = cook_time().trim().parse::<i32>().ok();
+            let serv = servings().trim().parse::<i32>().ok();
+
+            // Parse tags
+            let tags: Vec<String> = tags_input()
+                .split(',')
+                .map(|t| t.trim().to_string())
+                .filter(|t| !t.is_empty())
+                .collect();
+
+            // Build typed vectors from form data
+            let typed_ingredients = ings;
+            let instructions = build_step_tree(&sts);
+            let equip_vec = equipment();
+
+            let desc = if description().trim().is_empty() {
+                None
+            } else {
+                Some(description().trim().to_string())
+            };
+
+            let comm = if commentary().trim().is_empty() {
+                None
+            } else {
+                Some(commentary().trim().to_string())
+            };
+
+            let vis = visibility().clone();
+            let recipe_id = (*id_rc).clone();
+
             match update_recipe(
                 recipe_id.clone(),
                 Some(trimmed_title),
@@ -243,7 +293,7 @@ pub fn RecipeEdit(id: String) -> Element {
                 Some(typed_ingredients),
                 Some(instructions),
                 Some(equip_vec),
-                None,
+                Some(images()), // CP5: merged image list (existing + newly uploaded)
                 Some(tags),
                 Some(vis),
             )
@@ -302,6 +352,17 @@ pub fn RecipeEdit(id: String) -> Element {
         });
     };
 
+    // ── CP5: Image delete handler ───────────────────────────────────────
+    let on_delete_image = move |url: String| {
+        let url_for_signal = url.clone();
+        spawn(async move {
+            // Delete from S3 (best-effort)
+            let _ = delete_image(url).await;
+            // Remove from local images signal
+            images.write().retain(|u| u != &url_for_signal);
+        });
+    };
+
     // ── Render: loading ─────────────────────────────────────────────────
     if is_loading() {
         return rsx! {
@@ -356,467 +417,528 @@ pub fn RecipeEdit(id: String) -> Element {
 
     // ── Render: form ────────────────────────────────────────────────────
     rsx! {
-        AuthRequired {
-            div { class: "container",
-                PageHeader {
-                    title: "Edit Recipe",
-                }
-                div {
-                    display: "flex",
-                    flex_direction: "column",
-                    gap: "var(--space-md)",
-                    max_width: "600px",
-
-                    // ── Basic Info ──────────────────────────────────────
+            AuthRequired {
+                div { class: "container",
+                    PageHeader {
+                        title: "Edit Recipe",
+                    }
                     div {
                         display: "flex",
                         flex_direction: "column",
-                        gap: "var(--space-sm)",
-                        label {
-                            font_size: "14px",
-                            font_weight: "600",
-                            color: "var(--text-secondary)",
-                            "Recipe Name *"
-                        }
-                        Input {
-                            value: title().clone(),
-                            placeholder: "e.g. Grandma's Chocolate Chip Cookies",
-                            oninput: move |v| {
-                                title.set(v);
-                                form_error.set(None);
-                            },
-                        }
-                    }
+                        gap: "var(--space-md)",
+                        max_width: "600px",
 
-                    // Description
-                    div {
-                        display: "flex",
-                        flex_direction: "column",
-                        gap: "var(--space-sm)",
-                        label {
-                            font_size: "14px",
-                            font_weight: "600",
-                            color: "var(--text-secondary)",
-                            "Description"
-                        }
-                        textarea {
-                            class: "neumo-inset input",
-                            placeholder: "Brief description of the recipe...",
-                            rows: "4",
-                            padding: "var(--space-sm) var(--space-md)",
-                            font_family: "var(--font-body)",
-                            font_size: "14px",
-                            color: "var(--text-primary)",
-                            background_color: "var(--surface)",
-                            outline: "none",
-                            resize: "vertical",
-                            width: "100%",
-                            value: description().clone(),
-                            oninput: move |evt| {
-                                description.set(evt.value());
-                            },
-                        }
-                    }
-
-                    // Commentary
-                    div {
-                        display: "flex",
-                        flex_direction: "column",
-                        gap: "var(--space-sm)",
-                        label {
-                            font_size: "14px",
-                            font_weight: "600",
-                            color: "var(--text-secondary)",
-                            "Commentary"
-                        }
-                        textarea {
-                            class: "neumo-inset input",
-                            placeholder: "Notes, tips, or additional context about this recipe...",
-                            rows: "4",
-                            padding: "var(--space-sm) var(--space-md)",
-                            font_family: "var(--font-body)",
-                            font_size: "14px",
-                            color: "var(--text-primary)",
-                            background_color: "var(--surface)",
-                            outline: "none",
-                            resize: "vertical",
-                            width: "100%",
-                            value: commentary().clone(),
-                            oninput: move |evt| {
-                                commentary.set(evt.value());
-                            },
-                        }
-                    }
-
-                    // Time & servings row
-                    div {
-                        display: "grid",
-                        grid_template_columns: "1fr 1fr 1fr",
-                        gap: "var(--space-sm)",
+                        // ── Basic Info ──────────────────────────────────────
                         div {
                             display: "flex",
                             flex_direction: "column",
-                            gap: "var(--space-xs)",
+                            gap: "var(--space-sm)",
                             label {
                                 font_size: "14px",
                                 font_weight: "600",
                                 color: "var(--text-secondary)",
-                                "Prep Time (min)"
+                                "Recipe Name *"
                             }
                             Input {
-                                value: prep_time().clone(),
-                                placeholder: "0",
-                                input_type: "number",
-                                oninput: move |v| prep_time.set(v),
+                                value: title().clone(),
+                                placeholder: "e.g. Grandma's Chocolate Chip Cookies",
+                                oninput: move |v| {
+                                    title.set(v);
+                                    form_error.set(None);
+                                },
                             }
                         }
+
+                        // ── CP5: Recipe Images ──────────────────────────────
                         div {
                             display: "flex",
                             flex_direction: "column",
-                            gap: "var(--space-xs)",
+                            gap: "var(--space-sm)",
                             label {
                                 font_size: "14px",
                                 font_weight: "600",
                                 color: "var(--text-secondary)",
-                                "Cook Time (min)"
+                                "Recipe Images"
                             }
-                            Input {
-                                value: cook_time().clone(),
-                                placeholder: "0",
-                                input_type: "number",
-                                oninput: move |v| cook_time.set(v),
-                            }
-                        }
-                        div {
-                            display: "flex",
-                            flex_direction: "column",
-                            gap: "var(--space-xs)",
-                            label {
-                                font_size: "14px",
-                                font_weight: "600",
-                                color: "var(--text-secondary)",
-                                "Servings"
-                            }
-                            Input {
-                                value: servings().clone(),
-                                placeholder: "4",
-                                input_type: "number",
-                                oninput: move |v| servings.set(v),
-                            }
-                        }
-                    }
 
-                    // ── Ingredients ─────────────────────────────────────
-                    div {
-                        display: "flex",
-                        flex_direction: "column",
-                        gap: "var(--space-sm)",
-                        label {
-                            font_size: "14px",
-                            font_weight: "600",
-                            color: "var(--text-secondary)",
-                            "Ingredients *"
-                        }
-
-                        for (idx, _ing) in ingredients().iter().enumerate() {
-                            div {
-                                key: "{idx}",
-                                display: "flex",
-                                gap: "var(--space-sm)",
-                                align_items: "center",
-                                // Amount
+    // Existing images grid (index-based to avoid temporary borrow issues)
+                            for idx in 0..images().len() {
                                 div {
-                                    style: "width: 70px; flex-shrink: 0;",
-                                    Input {
-                                        value: ingredients()[idx].amount.clone(),
-                                        placeholder: "Amt",
-                                        oninput: move |v| {
-                                            ingredients.write()[idx].amount = v;
-                                        },
+                                    key: "{idx}",
+                                    position: "relative",
+                                    display: "inline-block",
+                                    width: "100px",
+                                    margin_right: "var(--space-sm)",
+                                    margin_bottom: "var(--space-sm)",
+                                    img {
+                                        class: "image-upload__thumb",
+                                        src: "{images()[idx]}",
+                                        alt: "Recipe image",
+                                        width: "100%",
+                                        aspect_ratio: "1",
+                                        object_fit: "cover",
+                                    }
+                                    div {
+                                        position: "absolute",
+                                        top: "4px",
+                                        right: "4px",
+                                        Button {
+                                            variant: ButtonVariant::Ghost,
+                                            onclick: move |_| {
+                                                let url = images()[idx].clone();
+                                                on_delete_image(url);
+                                            },
+                                            "✕"
+                                        }
                                     }
                                 }
-                                // Unit
-                                div {
-                                    style: "width: 80px; flex-shrink: 0;",
-                                    Input {
-                                        value: ingredients()[idx].unit.clone(),
-                                        placeholder: "Unit",
-                                        oninput: move |v| {
-                                            ingredients.write()[idx].unit = v;
-                                        },
-                                    }
-                                }
-                                // Name
-                                Input {
-                                    value: ingredients()[idx].name.clone(),
-                                    placeholder: "Ingredient name",
-                                    oninput: move |v| {
-                                        ingredients.write()[idx].name = v;
-                                    },
-                                }
-                                // Remove
-                                Button {
-                                    variant: ButtonVariant::Ghost,
-                                    onclick: move |_| {
-                                        ingredients.write().remove(idx);
-                                    },
-                                    "✕"
-                                }
+                            }
+
+                            // ImageUpload component for adding new images
+                            ImageUpload {
+                                images,
+                                upload_now,
+                                busy,
+                                on_upload_complete,
+                            }
+                            span {
+                                font_size: "12px",
+                                color: "var(--text-tertiary)",
+                                "Add more images (JPEG, PNG, or WebP · max 10 MB each)"
                             }
                         }
 
-                        Button {
-                            variant: ButtonVariant::Secondary,
-                            onclick: on_add_ingredient,
-                            "+ Add Ingredient"
+                        // Description
+                        div {
+                            display: "flex",
+                            flex_direction: "column",
+                            gap: "var(--space-sm)",
+                            label {
+                                font_size: "14px",
+                                font_weight: "600",
+                                color: "var(--text-secondary)",
+                                "Description"
+                            }
+                            textarea {
+                                class: "neumo-inset input",
+                                placeholder: "Brief description of the recipe...",
+                                rows: "4",
+                                padding: "var(--space-sm) var(--space-md)",
+                                font_family: "var(--font-body)",
+                                font_size: "14px",
+                                color: "var(--text-primary)",
+                                background_color: "var(--surface)",
+                                outline: "none",
+                                resize: "vertical",
+                                width: "100%",
+                                value: description().clone(),
+                                oninput: move |evt| {
+                                    description.set(evt.value());
+                                },
+                            }
                         }
-                    }
 
-                    // ── Steps ───────────────────────────────────────────
-                    div {
-                        display: "flex",
-                        flex_direction: "column",
-                        gap: "var(--space-sm)",
-                        label {
-                            font_size: "14px",
-                            font_weight: "600",
-                            color: "var(--text-secondary)",
-                            "Steps *"
+                        // Commentary
+                        div {
+                            display: "flex",
+                            flex_direction: "column",
+                            gap: "var(--space-sm)",
+                            label {
+                                font_size: "14px",
+                                font_weight: "600",
+                                color: "var(--text-secondary)",
+                                "Commentary"
+                            }
+                            textarea {
+                                class: "neumo-inset input",
+                                placeholder: "Notes, tips, or additional context about this recipe...",
+                                rows: "4",
+                                padding: "var(--space-sm) var(--space-md)",
+                                font_family: "var(--font-body)",
+                                font_size: "14px",
+                                color: "var(--text-primary)",
+                                background_color: "var(--surface)",
+                                outline: "none",
+                                resize: "vertical",
+                                width: "100%",
+                                value: commentary().clone(),
+                                oninput: move |evt| {
+                                    commentary.set(evt.value());
+                                },
+                            }
                         }
 
-                        for (idx, _step) in steps().iter().enumerate() {
+                        // Time & servings row
+                        div {
+                            display: "grid",
+                            grid_template_columns: "1fr 1fr 1fr",
+                            gap: "var(--space-sm)",
                             div {
-                                key: "{idx}",
                                 display: "flex",
-                                gap: "var(--space-sm)",
-                                align_items: "flex-start",
-                                // Indentation padding
-                                style: format!("padding-left: {}px", steps()[idx].depth * 24),
-                                // Step number
-                                span {
+                                flex_direction: "column",
+                                gap: "var(--space-xs)",
+                                label {
+                                    font_size: "14px",
                                     font_weight: "600",
                                     color: "var(--text-secondary)",
-                                    padding: "var(--space-sm) 0",
-                                    min_width: "24px",
-                                    "{idx + 1}."
+                                    "Prep Time (min)"
                                 }
-                                // Step text
-                                textarea {
-                                    class: "neumo-inset input",
-                                    placeholder: "Describe this step...",
-                                    rows: "2",
-                                    style: "flex: 1;",
-                                    padding: "var(--space-sm) var(--space-md)",
-                                    font_family: "var(--font-body)",
+                                Input {
+                                    value: prep_time().clone(),
+                                    placeholder: "0",
+                                    input_type: "number",
+                                    oninput: move |v| prep_time.set(v),
+                                }
+                            }
+                            div {
+                                display: "flex",
+                                flex_direction: "column",
+                                gap: "var(--space-xs)",
+                                label {
                                     font_size: "14px",
-                                    color: "var(--text-primary)",
-                                    background_color: "var(--surface)",
-                                    outline: "none",
-                                    resize: "vertical",
-                                    value: steps()[idx].text.clone(),
-                                    oninput: move |evt| {
-                                        steps.write()[idx].text = evt.value();
-                                    },
+                                    font_weight: "600",
+                                    color: "var(--text-secondary)",
+                                    "Cook Time (min)"
                                 }
-                                // Reorder + indent + remove controls
+                                Input {
+                                    value: cook_time().clone(),
+                                    placeholder: "0",
+                                    input_type: "number",
+                                    oninput: move |v| cook_time.set(v),
+                                }
+                            }
+                            div {
+                                display: "flex",
+                                flex_direction: "column",
+                                gap: "var(--space-xs)",
+                                label {
+                                    font_size: "14px",
+                                    font_weight: "600",
+                                    color: "var(--text-secondary)",
+                                    "Servings"
+                                }
+                                Input {
+                                    value: servings().clone(),
+                                    placeholder: "4",
+                                    input_type: "number",
+                                    oninput: move |v| servings.set(v),
+                                }
+                            }
+                        }
+
+                        // ── Ingredients ─────────────────────────────────────
+                        div {
+                            display: "flex",
+                            flex_direction: "column",
+                            gap: "var(--space-sm)",
+                            label {
+                                font_size: "14px",
+                                font_weight: "600",
+                                color: "var(--text-secondary)",
+                                "Ingredients *"
+                            }
+
+                            for (idx, _ing) in ingredients().iter().enumerate() {
                                 div {
+                                    key: "{idx}",
                                     display: "flex",
-                                    flex_direction: "column",
-                                    gap: "var(--space-xs)",
+                                    gap: "var(--space-sm)",
                                     align_items: "center",
-                                    // Move up
-                                    if idx > 0 {
-                                        Button {
-                                            variant: ButtonVariant::Ghost,
-                                            onclick: move |_| {
-                                                let mut s = steps.write();
-                                                s.swap(idx, idx - 1);
+                                    // Amount
+                                    div {
+                                        style: "width: 70px; flex-shrink: 0;",
+                                        Input {
+                                            value: ingredients()[idx].amount.clone(),
+                                            placeholder: "Amt",
+                                            oninput: move |v| {
+                                                ingredients.write()[idx].amount = v;
                                             },
-                                            "↑"
                                         }
                                     }
-                                    // Move down
-                                    if idx < steps().len() - 1 {
-                                        Button {
-                                            variant: ButtonVariant::Ghost,
-                                            onclick: move |_| {
-                                                let mut s = steps.write();
-                                                s.swap(idx, idx + 1);
+                                    // Unit
+                                    div {
+                                        style: "width: 80px; flex-shrink: 0;",
+                                        Input {
+                                            value: ingredients()[idx].unit.clone(),
+                                            placeholder: "Unit",
+                                            oninput: move |v| {
+                                                ingredients.write()[idx].unit = v;
                                             },
-                                            "↓"
                                         }
                                     }
-                                    // Indent (increase depth)
-                                    if steps()[idx].depth < 3 {
-                                        Button {
-                                            variant: ButtonVariant::Ghost,
-                                            onclick: move |_| {
-                                                steps.write()[idx].depth += 1;
-                                            },
-                                            "→"
-                                        }
-                                    }
-                                    // Unindent (decrease depth)
-                                    if steps()[idx].depth > 0 {
-                                        Button {
-                                            variant: ButtonVariant::Ghost,
-                                            onclick: move |_| {
-                                                steps.write()[idx].depth -= 1;
-                                            },
-                                            "←"
-                                        }
+                                    // Name
+                                    Input {
+                                        value: ingredients()[idx].name.clone(),
+                                        placeholder: "Ingredient name",
+                                        oninput: move |v| {
+                                            ingredients.write()[idx].name = v;
+                                        },
                                     }
                                     // Remove
                                     Button {
                                         variant: ButtonVariant::Ghost,
                                         onclick: move |_| {
-                                            steps.write().remove(idx);
+                                            ingredients.write().remove(idx);
                                         },
                                         "✕"
                                     }
                                 }
                             }
-                        }
 
-                        Button {
-                            variant: ButtonVariant::Secondary,
-                            onclick: on_add_step,
-                            "+ Add Step"
-                        }
-                    }
-
-                    // ── Tags ────────────────────────────────────────────
-                    div {
-                        display: "flex",
-                        flex_direction: "column",
-                        gap: "var(--space-sm)",
-                        label {
-                            font_size: "14px",
-                            font_weight: "600",
-                            color: "var(--text-secondary)",
-                            "Tags"
-                        }
-                        Input {
-                            value: tags_input().clone(),
-                            placeholder: "dinner, chicken, quick",
-                            oninput: move |v| tags_input.set(v),
-                        }
-                        span {
-                            font_size: "12px",
-                            color: "var(--text-tertiary)",
-                            "Comma-separated"
-                        }
-                    }
-
-                    // ── Equipment (dynamic list) ────────────────────────
-                    div {
-                        display: "flex",
-                        flex_direction: "column",
-                        gap: "var(--space-sm)",
-                        label {
-                            font_size: "14px",
-                            font_weight: "600",
-                            color: "var(--text-secondary)",
-                            "Equipment"
-                        }
-
-                        for (idx, _eq) in equipment().iter().enumerate() {
-                            div {
-                                key: "{idx}",
-                                display: "flex",
-                                gap: "var(--space-sm)",
-                                align_items: "center",
-                                Input {
-                                    value: equipment()[idx].name.clone(),
-                                    placeholder: "e.g. mixing bowl",
-                                    oninput: move |v| {
-                                        equipment.write()[idx].name = v;
-                                    },
-                                }
-                                Button {
-                                    variant: ButtonVariant::Ghost,
-                                    onclick: move |_| {
-                                        equipment.write().remove(idx);
-                                    },
-                                    "✕"
-                                }
+                            Button {
+                                variant: ButtonVariant::Secondary,
+                                onclick: on_add_ingredient,
+                                "+ Add Ingredient"
                             }
                         }
 
-                        Button {
-                            variant: ButtonVariant::Secondary,
-                            onclick: on_add_equipment,
-                            "+ Add Equipment"
-                        }
-                    }
-
-                    // ── Visibility ──────────────────────────────────────
-                    div {
-                        display: "flex",
-                        flex_direction: "column",
-                        gap: "var(--space-sm)",
-                        label {
-                            font_size: "14px",
-                            font_weight: "600",
-                            color: "var(--text-secondary)",
-                            "Visibility"
-                        }
-                        select {
-                            class: "neumo-inset input",
-                            padding: "var(--space-sm) var(--space-md)",
-                            font_family: "var(--font-body)",
-                            font_size: "14px",
-                            color: "var(--text-primary)",
-                            background_color: "var(--surface)",
-                            outline: "none",
-                            border_radius: "var(--radius-md)",
-                            width: "100%",
-                            value: visibility().clone(),
-                            onchange: move |evt| {
-                                visibility.set(evt.value());
-                            },
-                            option { value: "private", "Private — only you can see this recipe" }
-                            option { value: "unlisted", "Unlisted — anyone with the link can view" }
-                            option { value: "public", "Public — appears in Explore and search" }
-                        }
-                    }
-
-                    // ── Error message ───────────────────────────────────
-                    if let Some(err) = form_error() {
+                        // ── Steps ───────────────────────────────────────────
                         div {
-                            padding: "var(--space-sm) var(--space-md)",
-                            background_color: "var(--error-bg)",
-                            border_radius: "var(--radius-md)",
-                            color: "var(--error)",
-                            font_size: "14px",
-                            "{err}"
-                        }
-                    }
+                            display: "flex",
+                            flex_direction: "column",
+                            gap: "var(--space-sm)",
+                            label {
+                                font_size: "14px",
+                                font_weight: "600",
+                                color: "var(--text-secondary)",
+                                "Steps *"
+                            }
 
-                    // ── Action buttons ──────────────────────────────────
-                    div {
-                        display: "flex",
-                        gap: "var(--space-md)",
-                        margin_top: "var(--space-md)",
-                        Button {
-                            variant: ButtonVariant::Primary,
-                            disabled: is_saving(),
-                            onclick: on_submit,
-                            if is_saving() {
-                                "Saving..."
-                            } else {
-                                "Save Changes"
+                            for (idx, _step) in steps().iter().enumerate() {
+                                div {
+                                    key: "{idx}",
+                                    display: "flex",
+                                    gap: "var(--space-sm)",
+                                    align_items: "flex-start",
+                                    // Indentation padding
+                                    style: format!("padding-left: {}px", steps()[idx].depth * 24),
+                                    // Step number
+                                    span {
+                                        font_weight: "600",
+                                        color: "var(--text-secondary)",
+                                        padding: "var(--space-sm) 0",
+                                        min_width: "24px",
+                                        "{idx + 1}."
+                                    }
+                                    // Step text
+                                    textarea {
+                                        class: "neumo-inset input",
+                                        placeholder: "Describe this step...",
+                                        rows: "2",
+                                        style: "flex: 1;",
+                                        padding: "var(--space-sm) var(--space-md)",
+                                        font_family: "var(--font-body)",
+                                        font_size: "14px",
+                                        color: "var(--text-primary)",
+                                        background_color: "var(--surface)",
+                                        outline: "none",
+                                        resize: "vertical",
+                                        value: steps()[idx].text.clone(),
+                                        oninput: move |evt| {
+                                            steps.write()[idx].text = evt.value();
+                                        },
+                                    }
+                                    // Reorder + indent + remove controls
+                                    div {
+                                        display: "flex",
+                                        flex_direction: "column",
+                                        gap: "var(--space-xs)",
+                                        align_items: "center",
+                                        // Move up
+                                        if idx > 0 {
+                                            Button {
+                                                variant: ButtonVariant::Ghost,
+                                                onclick: move |_| {
+                                                    let mut s = steps.write();
+                                                    s.swap(idx, idx - 1);
+                                                },
+                                                "↑"
+                                            }
+                                        }
+                                        // Move down
+                                        if idx < steps().len() - 1 {
+                                            Button {
+                                                variant: ButtonVariant::Ghost,
+                                                onclick: move |_| {
+                                                    let mut s = steps.write();
+                                                    s.swap(idx, idx + 1);
+                                                },
+                                                "↓"
+                                            }
+                                        }
+                                        // Indent (increase depth)
+                                        if steps()[idx].depth < 3 {
+                                            Button {
+                                                variant: ButtonVariant::Ghost,
+                                                onclick: move |_| {
+                                                    steps.write()[idx].depth += 1;
+                                                },
+                                                "→"
+                                            }
+                                        }
+                                        // Unindent (decrease depth)
+                                        if steps()[idx].depth > 0 {
+                                            Button {
+                                                variant: ButtonVariant::Ghost,
+                                                onclick: move |_| {
+                                                    steps.write()[idx].depth -= 1;
+                                                },
+                                                "←"
+                                            }
+                                        }
+                                        // Remove
+                                        Button {
+                                            variant: ButtonVariant::Ghost,
+                                            onclick: move |_| {
+                                                steps.write().remove(idx);
+                                            },
+                                            "✕"
+                                        }
+                                    }
+                                }
+                            }
+
+                            Button {
+                                variant: ButtonVariant::Secondary,
+                                onclick: on_add_step,
+                                "+ Add Step"
                             }
                         }
-                        Button {
-                            variant: ButtonVariant::Ghost,
-                            disabled: is_saving(),
-                            onclick: on_cancel,
-                            "Cancel"
+
+                        // ── Tags ────────────────────────────────────────────
+                        div {
+                            display: "flex",
+                            flex_direction: "column",
+                            gap: "var(--space-sm)",
+                            label {
+                                font_size: "14px",
+                                font_weight: "600",
+                                color: "var(--text-secondary)",
+                                "Tags"
+                            }
+                            Input {
+                                value: tags_input().clone(),
+                                placeholder: "dinner, chicken, quick",
+                                oninput: move |v| tags_input.set(v),
+                            }
+                            span {
+                                font_size: "12px",
+                                color: "var(--text-tertiary)",
+                                "Comma-separated"
+                            }
+                        }
+
+                        // ── Equipment (dynamic list) ────────────────────────
+                        div {
+                            display: "flex",
+                            flex_direction: "column",
+                            gap: "var(--space-sm)",
+                            label {
+                                font_size: "14px",
+                                font_weight: "600",
+                                color: "var(--text-secondary)",
+                                "Equipment"
+                            }
+
+                            for (idx, _eq) in equipment().iter().enumerate() {
+                                div {
+                                    key: "{idx}",
+                                    display: "flex",
+                                    gap: "var(--space-sm)",
+                                    align_items: "center",
+                                    Input {
+                                        value: equipment()[idx].name.clone(),
+                                        placeholder: "e.g. mixing bowl",
+                                        oninput: move |v| {
+                                            equipment.write()[idx].name = v;
+                                        },
+                                    }
+                                    Button {
+                                        variant: ButtonVariant::Ghost,
+                                        onclick: move |_| {
+                                            equipment.write().remove(idx);
+                                        },
+                                        "✕"
+                                    }
+                                }
+                            }
+
+                            Button {
+                                variant: ButtonVariant::Secondary,
+                                onclick: on_add_equipment,
+                                "+ Add Equipment"
+                            }
+                        }
+
+                        // ── Visibility ──────────────────────────────────────
+                        div {
+                            display: "flex",
+                            flex_direction: "column",
+                            gap: "var(--space-sm)",
+                            label {
+                                font_size: "14px",
+                                font_weight: "600",
+                                color: "var(--text-secondary)",
+                                "Visibility"
+                            }
+                            select {
+                                class: "neumo-inset input",
+                                padding: "var(--space-sm) var(--space-md)",
+                                font_family: "var(--font-body)",
+                                font_size: "14px",
+                                color: "var(--text-primary)",
+                                background_color: "var(--surface)",
+                                outline: "none",
+                                border_radius: "var(--radius-md)",
+                                width: "100%",
+                                value: visibility().clone(),
+                                onchange: move |evt| {
+                                    visibility.set(evt.value());
+                                },
+                                option { value: "private", "Private — only you can see this recipe" }
+                                option { value: "unlisted", "Unlisted — anyone with the link can view" }
+                                option { value: "public", "Public — appears in Explore and search" }
+                            }
+                        }
+
+                        // ── Error message ───────────────────────────────────
+                        if let Some(err) = form_error() {
+                            div {
+                                padding: "var(--space-sm) var(--space-md)",
+                                background_color: "var(--error-bg)",
+                                border_radius: "var(--radius-md)",
+                                color: "var(--error)",
+                                font_size: "14px",
+                                "{err}"
+                            }
+                        }
+
+                        // ── Action buttons ──────────────────────────────────
+                        div {
+                            display: "flex",
+                            gap: "var(--space-md)",
+                            margin_top: "var(--space-md)",
+                            Button {
+                                variant: ButtonVariant::Primary,
+                                disabled: is_saving() || busy(),
+                                onclick: on_submit,
+                                if is_saving() && busy() {
+                                    "Uploading images..."
+                                } else if is_saving() {
+                                    "Saving..."
+                                } else {
+                                    "Save Changes"
+                                }
+                            }
+                            Button {
+                                variant: ButtonVariant::Ghost,
+                                disabled: is_saving() || busy(),
+                                onclick: on_cancel,
+                                "Cancel"
+                            }
                         }
                     }
                 }
             }
         }
-    }
 }
