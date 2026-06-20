@@ -105,6 +105,9 @@ pub fn RecipeEdit(id: String) -> Element {
     let mut upload_now = use_signal(|| false);
     let busy = use_signal(|| false);
 
+    // CP11: deferred delete — track URLs to delete after save succeeds
+    let mut pending_deletes = use_signal(Vec::<String>::new);
+
     // UI state
     let mut is_loading = use_signal(|| true);
     let mut is_saving = use_signal(|| false);
@@ -300,6 +303,14 @@ pub fn RecipeEdit(id: String) -> Element {
             .await
             {
                 Ok(_) => {
+                    // CP11: Delete images that were marked for removal
+                    let deletes = pending_deletes();
+                    for url in deletes {
+                        let _ = delete_image(url).await;
+                    }
+                    // Clear pending deletes
+                    pending_deletes.set(Vec::new());
+
                     // Redirect to recipe detail page
                     if let Some(window) = web_sys::window() {
                         let _ = window
@@ -352,15 +363,12 @@ pub fn RecipeEdit(id: String) -> Element {
         });
     };
 
-    // ── CP5: Image delete handler ───────────────────────────────────────
-    let on_delete_image = move |url: String| {
-        let url_for_signal = url.clone();
-        spawn(async move {
-            // Delete from S3 (best-effort)
-            let _ = delete_image(url).await;
-            // Remove from local images signal
-            images.write().retain(|u| u != &url_for_signal);
-        });
+    // ── CP11: Deferred image delete handler ────────────────────────────────────
+    let mut on_delete_image = move |url: String| {
+        // Optimistically remove from UI
+        images.write().retain(|u| u != &url);
+        // Track for deferred deletion after save
+        pending_deletes.write().push(url);
     };
 
     // ── Render: loading ─────────────────────────────────────────────────

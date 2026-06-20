@@ -1111,15 +1111,28 @@ pub async fn get_public_recipe_tags(
     sqlx::query_as!(
         RecipeTag,
         "SELECT recipe_tags.recipe_id, recipe_tags.tag \
-         FROM recipe_tags \
-         INNER JOIN recipes ON recipe_tags.recipe_id = recipes.id \
-         WHERE recipe_tags.recipe_id = $1 AND recipes.visibility IN ('public', 'unlisted') \
-         ORDER BY recipe_tags.tag",
+          FROM recipe_tags \
+          INNER JOIN recipes ON recipe_tags.recipe_id = recipes.id \
+          WHERE recipe_tags.recipe_id = $1 AND recipes.visibility IN ('public', 'unlisted') \
+          ORDER BY recipe_tags.tag",
         recipe_id,
     )
     .fetch_all(executor)
     .await
     .map_err(DbError::Query)
+}
+
+/// Get all distinct image URLs referenced by any recipe.
+///
+/// Used by the orphan cleanup worker to determine which storage objects are still needed.
+pub async fn get_all_image_urls(pool: &PgPool) -> Result<Vec<String>, DbError> {
+    let rows = sqlx::query_scalar::<_, String>(
+        "SELECT DISTINCT jsonb_array_elements_text(images) FROM recipes WHERE images IS NOT NULL AND jsonb_array_length(images) > 0",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(DbError::Query)?;
+    Ok(rows)
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -3608,5 +3621,197 @@ mod tests {
         // Verify cleared commentary persists via get_recipe_by_id
         let fetched = get_recipe_by_id(&pool, recipe.id).await.unwrap().unwrap();
         assert_eq!(fetched.commentary, None);
+    }
+
+    // ── get_all_image_urls tests ──────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_get_all_image_urls_empty_recipes() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+
+        // No recipes at all — should return empty vec
+        let urls = get_all_image_urls(&pool).await.unwrap();
+        assert!(urls.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_all_image_urls_recipe_with_no_images() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("imguser_{u}"),
+            "Image User",
+            &format!("img{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Recipe with empty images array (the default)
+        insert_recipe(
+            &pool,
+            user.id,
+            "No Images",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            &[],
+            "private",
+        )
+        .await
+        .unwrap();
+
+        let urls = get_all_image_urls(&pool).await.unwrap();
+        assert!(urls.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_all_image_urls_single_recipe_multiple_images() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("imguser2_{u}"),
+            "Image User 2",
+            &format!("img2{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let images = vec![
+            format!("https://storage.example.com/recipes/{u}_full.webp"),
+            format!("https://storage.example.com/recipes/{u}_thumb.webp"),
+            format!("https://storage.example.com/recipes/{u}_2_full.webp"),
+        ];
+
+        insert_recipe(
+            &pool,
+            user.id,
+            "Image Recipe",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            &images,
+            "private",
+        )
+        .await
+        .unwrap();
+
+        let urls = get_all_image_urls(&pool).await.unwrap();
+        assert_eq!(urls.len(), 3);
+        // Results may be in any order, so sort for comparison
+        let mut actual = urls;
+        actual.sort();
+        let mut expected = vec![
+            format!("https://storage.example.com/recipes/{u}_2_full.webp"),
+            format!("https://storage.example.com/recipes/{u}_full.webp"),
+            format!("https://storage.example.com/recipes/{u}_thumb.webp"),
+        ];
+        expected.sort();
+        assert_eq!(actual, expected);
+    }
+
+    #[tokio::test]
+    async fn test_get_all_image_urls_deduplicates_across_recipes() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("imguser3_{u}"),
+            "Image User 3",
+            &format!("img3{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let shared_url = format!("https://storage.example.com/recipes/shared_{u}.webp");
+
+        // Recipe 1 has shared_url + unique1
+        let images1 = vec![
+            shared_url.clone(),
+            format!("https://storage.example.com/recipes/unique1_{u}.webp"),
+        ];
+        insert_recipe(
+            &pool,
+            user.id,
+            "Recipe 1",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            &images1,
+            "private",
+        )
+        .await
+        .unwrap();
+
+        // Recipe 2 has shared_url + unique2
+        let images2 = vec![
+            shared_url.clone(),
+            format!("https://storage.example.com/recipes/unique2_{u}.webp"),
+        ];
+        insert_recipe(
+            &pool,
+            user.id,
+            "Recipe 2",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            &images2,
+            "private",
+        )
+        .await
+        .unwrap();
+
+        // Recipe 3 has no images
+        insert_recipe(
+            &pool,
+            user.id,
+            "Recipe 3 No Images",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            &[],
+            "private",
+        )
+        .await
+        .unwrap();
+
+        // DISTINCT should deduplicate: 3 unique URLs, not 4
+        let urls = get_all_image_urls(&pool).await.unwrap();
+        assert_eq!(urls.len(), 3);
+        assert!(urls.contains(&shared_url));
+        assert!(urls.contains(&format!("https://storage.example.com/recipes/unique1_{u}.webp")));
+        assert!(urls.contains(&format!("https://storage.example.com/recipes/unique2_{u}.webp")));
     }
 }

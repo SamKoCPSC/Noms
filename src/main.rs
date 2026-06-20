@@ -13,6 +13,8 @@ mod middleware;
 mod pages;
 #[cfg(feature = "server")]
 mod storage;
+#[cfg(feature = "server")]
+mod worker;
 #[cfg(all(feature = "server", test))]
 mod test_utils;
 mod types;
@@ -94,6 +96,14 @@ fn main() {
             // Initialize S3-compatible storage client
             storage::init_storage().await;
             let storage_client = storage::get_storage_client();
+
+            // Spawn orphan cleanup worker
+            {
+                let pool = pool.clone();
+                let storage = storage_client.clone();
+                let config = worker::orphan_cleanup::OrphanCleanupConfig::from_env();
+                worker::orphan_cleanup::spawn_orphan_cleanup(pool, storage, config);
+            }
 
             let rate_limit = middleware::rate_limit::RateLimitState::default();
 

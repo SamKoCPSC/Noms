@@ -920,6 +920,7 @@ curl -X POST http://localhost:3000/api/upload \
 | CP8 | Card thumbnails | (none) | `src/components/recipe_card.rs`, `src/pages/recipe_list.rs` | Cards show thumbnails, graceful fallback |
 | CP9 | Image preview editor + crop tool (enhancement) | `src/components/base/image_crop_editor.rs` | `src/components/base/image_upload.rs`, `src/components/base/mod.rs`, `assets/main.css` | Crop, zoom, pan, rotate, flip, preview, apply → upload cropped |
 | CP10 | Upload security hardening | (none) | `Cargo.toml`, `src/storage.rs`, `src/server.rs`, `src/server_functions/upload.rs` | MIME spoofing → 415, oversized → 413, cross-user delete → 403, rate limit → 429, concurrent → 503, path traversal sanitized |
+| CP11 | Image operation robustness | `src/worker/orphan_cleanup.rs`, `src/worker/mod.rs` | `src/storage.rs`, `src/server.rs`, `src/pages/recipe_edit.rs`, `src/api/upload.rs` | Deferred delete on save, orphan worker reconciliation, failure mode coverage |
 
 ## Execution Order
 
@@ -931,5 +932,157 @@ curl -X POST http://localhost:3000/api/upload \
 6. CP8 (depends on CP4, independent of CP5/CP6/CP7)
 7. CP9 (depends on CP4 — enhancement added after basic upload flow is working; most complex checkpoint)
 8. CP10 (depends on CP2 + CP5 — security hardening; can be done after core upload flow is functional, ideally before production deployment)
+9. CP11 (depends on CP5 — robustness layer ensuring DB/storage consistency; deferred deletes + orphan worker)
 
-Recommended: CP1 -> CP2 -> CP3 -> CP4 -> CP5 -> CP6 -> CP7 -> CP8 -> CP9 -> CP10 (sequential minimizes integration risk; CP10 is the final hardening pass before production)
+Recommended: CP1 -> CP2 -> CP3 -> CP4 -> CP5 -> CP6 -> CP7 -> CP8 -> CP9 -> CP10 -> CP11 (sequential minimizes integration risk; CP10 hardens security, CP11 ensures storage consistency)
+
+---
+
+## Checkpoint 11 (CP11): Image Operation Robustness
+
+> **Status:** Planned
+> **Depends on:** CP5 (Edit Form Integration)
+> **Goal:** Guarantee MinIO storage stays consistent with the database by always treating the DB as the source of truth and using an orphan cleanup worker as the safety net.
+
+### Design Principle
+
+The database is the source of truth for what images should exist in MinIO. Every operation follows the rule: **mutate DB first, then reconcile storage**. A periodic orphan worker catches any case where storage gets out of sync.
+
+### Operation Flows
+
+#### Create (Upload New Image)
+
+```
+1. Upload image to MinIO (full + thumb)  → get URL
+2. INSERT/UPDATE recipe with image URL    → atomic DB write
+```
+
+- If step 1 fails: nothing changed
+- If step 2 fails: orphan in MinIO → worker cleans up
+- No change needed to existing flow
+
+#### Delete (Remove Image)
+
+```
+1. UPDATE recipe removing image URL       → atomic DB write (happens on save)
+2. DELETE object from MinIO (full + thumb) → best-effort cleanup
+```
+
+- Current behavior: MinIO delete happens eagerly on ✕ click, before DB save
+- New behavior: MinIO delete is deferred until after DB save succeeds
+- If step 1 fails: image stays in MinIO, nothing broken
+- If step 2 fails: orphan in MinIO → worker cleans up
+
+#### Replace (Swap One Image for Another)
+
+```
+1. Upload new image to MinIO              → get new URL
+2. UPDATE recipe (old URL out, new URL in) → atomic pivot
+3. DELETE old image from MinIO            → best-effort cleanup
+```
+
+- Step 2 is a single UPDATE statement — never a state where old is gone but new isn't there
+- Composes create + delete patterns; no new failure modes
+
+#### Recipe Deletion
+
+```
+1. DELETE recipe from DB                   → removes all image URLs
+2. DELETE all associated objects from MinIO → best-effort cleanup
+```
+
+- Currently: only DB delete happens; images are orphaned
+- New behavior: attempt MinIO cleanup after DB delete
+- Fallback: orphan worker catches any missed deletions
+
+### Deferred Delete Implementation
+
+In `recipe_edit.rs`:
+
+- Track `pending_deletes: Signal<Vec<RecipeImage>>` alongside existing `pending_upload`
+- On ✕ click: mark image as pending deletion, remove from UI (optimistic)
+- On save: call `update_recipe` first, then batch-delete pending deletions from MinIO
+- On cancel: clear `pending_deletes`, images remain untouched in MinIO
+
+### Orphan Cleanup Worker
+
+A background task that runs periodically (e.g., every hour) and reconciles MinIO against the database:
+
+```
+1. SELECT images FROM recipes → collect all referenced URLs
+2. Extract object keys from URLs
+3. ListObjects on MinIO bucket
+4. DELETE any object not in the referenced set
+```
+
+#### Design Decisions
+
+- Runs as a Tokio task spawned on server startup
+- Uses `tokio::time::interval` for periodic execution
+- Logs each deletion for auditability
+- Skips if DB or MinIO is unreachable (logs warning, retries next cycle)
+- Configurable interval via env var (default: 1 hour)
+
+#### Failure Mode Coverage
+
+| Scenario | DB | MinIO | Resolved By |
+|---|---|---|---|
+| Upload succeeds, recipe save fails | No URL | Image exists | Orphan worker |
+| DB save succeeds, MinIO delete fails | No URL | Image exists | Orphan worker |
+| Recipe deleted, images not cleaned | No URL | Image exists | Orphan worker |
+| MinIO delete succeeds, DB save fails | URL exists | No image | User re-uploads (rare) |
+
+### Exact File Changes
+
+#### `src/storage.rs` — add `list_objects()` method
+- `StorageClient::list_objects(&self, prefix: Option<&str>) -> Result<Vec<String>, StorageError>` — lists all object keys in the bucket, optionally filtered by prefix
+
+#### New file: `src/worker/orphan_cleanup.rs` — orphan cleanup worker
+- `OrphanCleanupConfig` struct: interval, bucket reference
+- `OrphanCleanupConfig::from_env()` — reads `ORPHAN_CLEANUP_INTERVAL_SEC` (default: 3600)
+- `spawn_orphan_cleanup(pool: PgPool, storage: StorageClient, config: OrphanCleanupConfig)` — spawns Tokio task
+- Worker loop: queries all image URLs from DB, lists MinIO objects, deletes orphans, logs results
+
+#### New file: `src/worker/mod.rs` — worker module
+- `pub mod orphan_cleanup;`
+
+#### `src/server.rs` — spawn worker on startup
+- After AppState is built, call `spawn_orphan_cleanup()` if storage is configured
+- Worker runs independently of request handling
+
+#### `src/pages/recipe_edit.rs` — change eager delete to deferred delete
+- Replace immediate `api.delete_image(key)` on ✕ click with marking image as `pending_delete`
+- On save: after `update_recipe()` succeeds, iterate `pending_deletes` and call `api.delete_image()` for each
+- On cancel: discard `pending_deletes`, images remain in MinIO
+
+#### `src/api/upload.rs` — add replace endpoint (optional, or handle in frontend)
+- `AppApi::batch_delete_images(keys, auth_token)`: batch-delete multiple images in one call (optional optimization)
+
+### Verification
+
+```bash
+# 1. Code compiles
+cargo check --features server
+cargo check
+
+# 2. Manual test — deferred delete:
+#    - Open existing recipe with images -> Edit
+#    - Click ✕ on an image -> verify it's removed from UI (optimistic)
+#    - Cancel the edit -> verify image is still in MinIO (not actually deleted)
+#    - Re-open edit, click ✕ again, then Save
+#    - Verify: recipe DB has no image URL, MinIO object is deleted
+
+# 3. Manual test — orphan worker:
+#    - Upload an image, then manually delete the recipe from DB (bypassing the app)
+#    - Wait for orphan cleanup interval (or reduce interval for testing)
+#    - Verify: orphaned image is deleted from MinIO, log shows deletion
+
+# 4. Manual test — recipe deletion cleanup:
+#    - Delete a recipe with images via the app
+#    - Verify: recipe is gone from DB, images are deleted from MinIO
+
+# 5. Failure mode test — DB save fails after upload:
+#    - Simulate DB failure during recipe save (e.g., disconnect DB temporarily)
+#    - Upload succeeds, save fails
+#    - Verify: orphan worker eventually cleans up the orphaned MinIO object
+```

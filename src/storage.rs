@@ -23,6 +23,8 @@ pub enum StorageError {
     UploadFailed(String),
     /// Failed to delete an object from the storage backend.
     DeleteFailed(String),
+    /// Failed to list objects in the storage backend.
+    ListFailed(String),
 }
 
 impl std::fmt::Display for StorageError {
@@ -30,6 +32,7 @@ impl std::fmt::Display for StorageError {
         match self {
             StorageError::UploadFailed(e) => write!(f, "storage upload failed: {e}"),
             StorageError::DeleteFailed(e) => write!(f, "storage delete failed: {e}"),
+            StorageError::ListFailed(e) => write!(f, "storage list failed: {e}"),
         }
     }
 }
@@ -202,6 +205,31 @@ impl StorageClient {
             .await
             .map_err(|e| StorageError::DeleteFailed(e.to_string()))?;
         Ok(())
+    }
+
+    /// List all object keys in the bucket, optionally filtered by prefix.
+    ///
+    /// Uses the S3 `ListObjectsV2` paginator to handle pagination automatically.
+    pub async fn list_objects(&self, prefix: Option<&str>) -> Result<Vec<String>, StorageError> {
+        let mut builder = self.inner.list_objects_v2().bucket(&self.bucket);
+        if let Some(p) = prefix {
+            builder = builder.prefix(p);
+        }
+        let mut stream = builder.into_paginator().send();
+        let mut keys = Vec::new();
+        while let Some(page) = stream.next().await {
+            match page {
+                Ok(resp) => {
+                    for obj in resp.contents() {
+                        if let Some(key) = obj.key() {
+                            keys.push(key.to_string());
+                        }
+                    }
+                }
+                Err(e) => return Err(StorageError::ListFailed(e.to_string())),
+            }
+        }
+        Ok(keys)
     }
 }
 

@@ -160,6 +160,9 @@ pub async fn update_recipe(
 }
 
 /// Delete a recipe (ownership-gated).
+///
+/// Fetches the recipe first to get its images, deletes from DB, then cleans up
+/// associated images from storage (best-effort).
 #[server]
 pub async fn delete_recipe(recipe_id: String) -> Result<(), ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
@@ -169,10 +172,34 @@ pub async fn delete_recipe(recipe_id: String) -> Result<(), ServerFnError> {
         .map_err(|e| ServerFnError::new(format!("Invalid recipe ID: {e}")))?;
     let pool = crate::db::get_pool();
 
-    // Delete enforces ownership inside the DB layer via WHERE user_id = $2
+    // Fetch recipe first to get images (ownership-gated)
+    let recipe = crate::db::get_recipe_by_id_and_owner(&pool, recipe_id, user_id)
+        .await
+        .map_err(|e| ServerFnError::new(e.to_string()))?;
+
+    // Delete from DB (enforces ownership via WHERE user_id = $2)
     crate::db::delete_recipe(&pool, recipe_id, user_id)
         .await
         .map_err(|e| ServerFnError::new(e.to_string()))?;
+
+    // CP11: Clean up associated images from storage (best-effort)
+    if !recipe.images.is_empty() {
+        let storage = crate::storage::get_storage_client();
+        let public_url = storage.public_url().trim_end_matches('/');
+
+        for img_url in &recipe.images {
+            if let Some(full_key) = img_url.strip_prefix(public_url).map(|s| s.trim_start_matches('/')) {
+                // Delete full-size object
+                let _ = storage.delete_object(full_key).await;
+
+                // Delete thumbnail object
+                if let Some(base) = full_key.strip_suffix("_full.webp") {
+                    let thumb_key = format!("{base}_thumb.webp");
+                    let _ = storage.delete_object(&thumb_key).await;
+                }
+            }
+        }
+    }
 
     Ok(())
 }
