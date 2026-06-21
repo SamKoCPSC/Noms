@@ -23,6 +23,9 @@ pub fn RecipeCard(props: RecipeCardProps) -> Element {
     let RecipeCardProps { recipe } = props;
     let id = recipe.id.to_string();
 
+    // Track whether the image failed to load (for graceful fallback)
+    let mut image_failed = use_signal(|| false);
+
     let time_str = match (&recipe.prep_time_minutes, &recipe.cook_time_minutes) {
         (Some(prep), Some(cook)) => format!("{}m", prep + cook),
         (Some(prep), None) => format!("{}m", prep),
@@ -59,16 +62,26 @@ pub fn RecipeCard(props: RecipeCardProps) -> Element {
                 div {
                     class: "recipe-card__image",
                     if let Some(first_image) = recipe.images.first() {
-                        img {
-                            class: "recipe-card__image-img",
-                            src: first_image,
-                            alt: "{recipe.title}",
-                            loading: "lazy",
+                        if !image_failed() {
+                            img {
+                                class: "recipe-card__image-img",
+                                src: first_image,
+                                alt: "{recipe.title}",
+                                loading: "lazy",
+                                onerror: move |_| {
+                                    image_failed.set(true);
+                                },
+                            }
+                        } else {
+                            div {
+                                class: "recipe-card__image-placeholder",
+                                aria_hidden: true,
+                            }
                         }
                     } else {
-                        span {
+                        div {
                             class: "recipe-card__image-placeholder",
-                            "No image"
+                            aria_hidden: true,
                         }
                     }
                 }

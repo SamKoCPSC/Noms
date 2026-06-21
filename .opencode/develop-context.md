@@ -1,456 +1,411 @@
 # Develop Context
 
 ## Task Description
-Implement Checkpoint 7 of NOMS-009: Step Photos. Each recipe step can optionally have an associated photo. Add `photo_url: Option<String>` to `RecipeStep`, update JSONB schema, and wire up UI in recipe_new (upload), recipe_edit (edit/delete/replace), and recipe_detail (display). Reuses existing `upload_image()` and `delete_image()` server functions.
-
-See `roadmap/implementation-plans/NOMS-009-image-uploads.md` Checkpoint 7 for full spec.
+Implement Checkpoint 8 (Card Thumbnails + Polish): Recipe cards show the first image as a thumbnail with graceful fallback. Cards without images or failed image loads show a gradient placeholder. Lazy loading for viewport visibility. Error handling falls back to gradient. Alt text uses recipe title.
 
 ## Phase 0: Implementation Blueprint
-<!-- written by @develop-architect -->
 
-### Overview
-Add optional step photos to recipe steps. Each `RecipeStep` gains `photo_url: Option<String>`, enabling per-step image upload in recipe creation/editing and display in recipe detail view. Reuses existing upload infrastructure (`upload_image`, `delete_image`, `ImageUpload` component).
+# CP8 Card Thumbnails + Polish
 
-### Key Research Findings
+## Research Findings
 
-**Storage & Serialization**
-- `RecipeStep` is serialized as JSONB in the `instructions` column of the `recipes` table
-- No database migration needed — adding `Option<String>` field is backward-compatible with serde
-- Storage keys follow pattern: `recipes/{user_id}/{uuid}_full.webp` (same as recipe images)
-- `upload_image()` returns `UploadResponse { full_url, thumb_url, key }` — use `full_url` for `photo_url`
-- `delete_image(key: String)` requires the S3 key, not the URL — must derive key from URL or store separately
+### Current State (Already Implemented)
 
-**Codebase Patterns**
-- `recipe_new.rs` and `recipe_edit.rs` both use flat `StepForm { text, depth }` representation
-- `flatten_steps()` converts `Vec<RecipeStep>` tree to flat `Vec<StepForm>`
-- `build_step_tree()` converts flat `Vec<StepForm>` back to tree structure
-- Both functions must be updated to preserve `photo_url` through conversions
-- `recipe_new.rs` uses `PendingSaveData` struct for two-phase save flow — must include step photo URLs
-- `recipe_detail.rs` uses recursive `render_steps()` component for displaying steps
+The `RecipeCard` component at `src/components/base/recipe_card.rs` **already has the core conditional rendering logic** (lines 61-73):
 
-### Files to Modify
+- **Line 61**: `if let Some(first_image) = recipe.images.first()` — checks if recipe has images
+- **Lines 62-67**: Renders `<img>` with `loading="lazy"`, `alt` set to `recipe.title`, `src` from first image URL
+- **Lines 68-72**: Fallback `<span>` with "No image" text when no images exist
+- **CSS** (`assets/main.css` lines 1028-1048): Already has `.recipe-card__image` with `aspect-ratio: 16/9`, `.recipe-card__image-img` with `object-fit: cover`, and `.recipe-card__image-placeholder`
 
-#### 1. `src/types.rs` (lines 19-23)
-**Change:** Add `photo_url: Option<String>` to `RecipeStep`
+### What Is Missing
+
+1. **Gradient placeholder**: Current fallback is plain text "No image" — needs to be a gradient background
+2. **Error handling**: No `onerror` handler on the `<img>` tag — broken/missing images cause a blank space
+3. **Gradient CSS**: `.recipe-card__image-placeholder` lacks gradient styling
+
+### Data Flow — Already Correct
+
+- `Recipe` struct (`src/types.rs` line 47): `images: Vec<String>` — already available
+- All three pages using `RecipeCard` pass the full `recipe` object (including images):
+  - `src/pages/dashboard.rs` line 93: `RecipeCard { recipe: recipe.clone() }`
+  - `src/pages/explore.rs` line 210: `RecipeCard { recipe: recipe.clone() }`
+  - `src/pages/user_profile.rs` line 176: `RecipeCard { recipe: recipe.clone() }`
+- No changes needed to any page — `RecipeCard` receives the full `Recipe` struct
+
+---
+
+## Implementation Plan
+
+### Step 1: Add error handling state to RecipeCard
+
+**File**: `src/components/base/recipe_card.rs`
+
+Add a `use_signal` to track whether the image failed to load. On error, toggle from showing the `<img>` to showing the gradient placeholder.
+
+**Changes** (inside `RecipeCard` function, after line 23):
 
 ```rust
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RecipeStep {
-    pub text: String,
-    pub sub_steps: Vec<RecipeStep>,
-    pub photo_url: Option<String>,  // NEW
+// Track whether the image failed to load (for graceful fallback)
+let mut image_failed = use_signal(|| false);
+```
+
+**Changes** (lines 61-73, replace the existing image block):
+
+```rust
+div {
+    class: "recipe-card__image",
+    if let Some(first_image) = recipe.images.first() {
+        if !image_failed() {
+            img {
+                class: "recipe-card__image-img",
+                src: first_image,
+                alt: "{recipe.title}",
+                loading: "lazy",
+                onerror: move |_| {
+                    image_failed.set(true);
+                },
+            }
+        } else {
+            div { class: "recipe-card__image-placeholder" }
+        }
+    } else {
+        div { class: "recipe-card__image-placeholder" }
+    }
 }
 ```
 
-**Why:** Core data model change. The `Option` type ensures backward compatibility with existing recipes.
+**Key details**:
+- `onerror` is a standard HTML event that Dioxus supports natively — when the browser fails to load the image, it fires and we set `image_failed = true`, triggering re-render with the gradient placeholder
+- Changed fallback from `<span>` to `<div>` to properly fill the container with gradient
+- The `move` closure captures `image_failed` by moving the signal into the handler
+- Both the "no images" and "image failed" branches render the same `div.recipe-card__image-placeholder`
 
-#### 2. `src/pages/recipe_new.rs`
-**Changes:**
+### Step 2: Add gradient placeholder CSS
 
-a) **`StepForm` struct** (line 20): Add `photo_url: Option<String>`
-```rust
-#[derive(Debug, Clone)]
-struct StepForm {
-    text: String,
-    depth: u8,
-    photo_url: Option<String>,  // NEW
+**File**: `assets/main.css`
+
+**Changes** (modify existing `.recipe-card__image-placeholder` at line 1038-1041):
+
+Replace:
+```css
+.recipe-card__image-placeholder {
+    font-size: 14px;
+    color: var(--text-tertiary);
 }
 ```
 
-b) **`build_step_tree()` function**: Update to include `photo_url` when creating `RecipeStep`
-```rust
-// Change: RecipeStep { text, sub_steps: vec![] }
-// To: RecipeStep { text, sub_steps: vec![], photo_url: None }
-```
-
-c) **Step rendering UI**: Add `ImageUpload` component after each step's text input
-- Use `ImageUpload` with `on_upload_complete` callback to set `photo_url` on the step
-- Pass `on_delete` callback to remove photo from step
-- Display uploaded photo inline with step text
-
-d) **`PendingSaveData` struct**: Ensure step photo URLs are included in the saved data (they should be automatically via `StepForm`)
-
-#### 3. `src/pages/recipe_edit.rs`
-**Changes:**
-
-a) **`StepForm` struct**: Add `photo_url: Option<String>` (same as recipe_new)
-
-b) **`flatten_steps()` function**: Update to preserve `photo_url` when flattening tree to flat list
-```rust
-// Current: StepForm { text: step.text.clone(), depth }
-// To: StepForm { text: step.text.clone(), depth, photo_url: step.photo_url.clone() }
-```
-
-c) **`build_step_tree()` function**: Update to include `photo_url` when creating `RecipeStep`
-
-d) **Step rendering UI**: Similar to recipe_new, but also display existing photos and allow delete/replace
-- If step has existing `photo_url`, display it with a delete button
-- Allow uploading new photo to replace existing one
-
-e) **Cleanup on delete**: When recipe is deleted, ensure step photos are also removed from S3 (may need to traverse steps and call `delete_image()` for each photo)
-
-#### 4. `src/pages/recipe_detail.rs`
-**Changes:**
-
-a) **`render_steps()` function**: Add conditional image display after step text
-```rust
-// After rendering step.text, conditionally render:
-if let Some(ref photo_url) = step.photo_url {
-    img::with_attrs(|a| {
-        a.set_src(photo_url);
-        a.set_class("step-photo");
-        // ... styling
-    })
+With:
+```css
+.recipe-card__image-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: var(--text-tertiary);
+    background: linear-gradient(
+        135deg,
+        var(--bg-gradient-2) 0%,
+        var(--bg-gradient-3) 50%,
+        var(--bg-gradient-4) 100%
+    );
 }
 ```
 
-b) **Styling**: Add CSS for `.step-photo` class — consider max-width, object-fit, and responsive sizing
+**Rationale**:
+- Uses existing CSS custom properties (`--bg-gradient-2`, `--bg-gradient-3`, `--bg-gradient-4`) defined in `:root` (lines 97-100) and `.dark` (lines 125-128) — ensures both light and dark mode work
+- `width: 100%; height: 100%` ensures the gradient fills the 16:9 container
+- `display: flex; align-items: center; justify-content: center` centers any text content (currently none, but keeps the structure consistent)
+- The gradient uses the same warm, food-themed palette as the animated background gradient (lines 134-152)
 
-### Helper Functions Needed
+### Step 3: Ensure `.recipe-card__image` container handles both states
 
-**URL to Key Conversion**
-- `delete_image()` requires the S3 key, but we only store `photo_url` (the full URL)
-- Option 1: Derive key from URL by parsing the path (e.g., extract `recipes/{user_id}/{uuid}_full.webp` from URL)
-- Option 2: Store both URL and key in `RecipeStep` (adds complexity)
-- **Recommendation:** Option 1 — parse key from URL. The URL pattern is predictable: `https://bucket.s3.region.amazonaws.com/recipes/{user_id}/{uuid}_full.webp`
+**File**: `assets/main.css`
 
-**Function signature:**
-```rust
-fn photo_url_to_key(photo_url: &str) -> Option<String> {
-    // Extract key from URL
-}
-```
+The existing `.recipe-card__image` (lines 1028-1036) already has the right properties:
+- `width: 100%`
+- `aspect-ratio: 16 / 9`
+- `overflow: hidden`
+- `display: flex; align-items: center; justify-content: center`
 
-### Implementation Order
+No changes needed — it already accommodates both the `<img>` (via `object-fit: cover`) and the gradient `<div>` (via `width/height: 100%`).
 
-1. **`src/types.rs`**: Add `photo_url` to `RecipeStep`
-2. **`src/pages/recipe_new.rs`**: Update `StepForm`, `build_step_tree()`, add UI
-3. **`src/pages/recipe_edit.rs`**: Update `StepForm`, `flatten_steps()`, `build_step_tree()`, add UI
-4. **`src/pages/recipe_detail.rs`**: Add photo display in `render_steps()`
-5. **Helper function**: Implement `photo_url_to_key()` for deletion support
-6. **Cleanup logic**: Add step photo deletion when recipe is deleted
+---
 
-### Testing Strategy
+## Files Modified
 
-**Unit Tests**
-- Test `flatten_steps()` preserves `photo_url` through tree-to-flat conversion
-- Test `build_step_tree()` creates `RecipeStep` with correct `photo_url`
-- Test `photo_url_to_key()` extracts correct key from various URL formats
+| File | Lines | Change |
+|------|-------|--------|
+| `src/components/base/recipe_card.rs` | 24 (new), 61-73 (replace) | Add `image_failed` signal, `onerror` handler, gradient div fallback |
+| `assets/main.css` | 1038-1041 (replace) | Gradient placeholder styling with existing CSS variables |
 
-**Integration Tests**
-- Create recipe with step photos → verify photos appear in detail view
-- Edit recipe with step photos → verify photos persist and can be replaced/deleted
-- Delete recipe with step photos → verify photos are removed from S3
+## Files NOT Modified (no changes needed)
 
-**Manual Testing Checklist**
-- [ ] Upload photo to step in recipe_new
-- [ ] Delete photo from step in recipe_new
-- [ ] Replace photo on existing step in recipe_edit
-- [ ] Delete photo from existing step in recipe_edit
-- [ ] View step photo in recipe_detail
-- [ ] Verify step photos persist after recipe save
-- [ ] Delete recipe and verify step photos are cleaned up
+| File | Reason |
+|------|--------|
+| `src/types.rs` | `Recipe.images: Vec<String>` already exists |
+| `src/pages/dashboard.rs` | Already passes full `recipe` to `RecipeCard` |
+| `src/pages/explore.rs` | Already passes full `recipe` to `RecipeCard` |
+| `src/pages/user_profile.rs` | Already passes full `recipe` to `RecipeCard` |
+| `src/components/base/mod.rs` | No new module needed |
 
-### Dependencies
-- No new dependencies needed
-- Reuses existing: `upload_image()`, `delete_image()`, `ImageUpload` component
+---
 
-### Potential Issues & Mitigations
+## Verification Checklist
 
-1. **S3 Key Derivation**: If URL format changes, key derivation breaks
-   - *Mitigation:* Add unit tests for key extraction, consider storing key alongside URL if this becomes fragile
+### Automated
+- `cargo check` — compiles without errors or warnings
+- `cargo check --features server` — compiles for server target (no wasm-specific code in changes)
 
-2. **Cleanup on Delete**: If recipe deletion fails partway through, orphaned photos may remain
-   - *Mitigation:* Best-effort cleanup, consider periodic S3 cleanup job for orphaned files
+### Manual
+1. Navigate to dashboard → cards with uploaded images show thumbnails
+2. Navigate to dashboard → cards without images show gradient placeholder (warm gradient, no "No image" text)
+3. Simulate broken image URL (e.g., edit DB or mock a bad URL) → card falls back to gradient
+4. Check dark mode → gradient uses dark-mode CSS variables
+5. Verify `loading="lazy"` attribute is present on `<img>` tags (DevTools Elements panel)
+6. Verify `alt` attribute equals recipe title on each card
+7. Verify 16:9 aspect ratio is maintained for both image and gradient states
+8. Test on mobile viewport → gradient fills container properly
 
-3. **Large Photos**: Step photos may be large, impacting page load
-   - *Mitigation:* Use thumbnail URLs for display, lazy loading, or implement image optimization
+---
 
-4. **Nested Steps**: Sub-steps can also have photos, need to ensure UI handles nested photo uploads correctly
-   - *Mitigation:* Test with deeply nested step trees
+## Architectural Notes
 
-### URLs & References
-- Spec: `roadmap/implementation-plans/NOMS-009-image-uploads.md` (Checkpoint 7)
-- `src/api/upload.rs`: `upload_image()` and `delete_image()` server functions
-- `src/components/base/image_upload.rs`: `ImageUpload` component API
-- `src/db/mod.rs`: RecipeStep serialization into JSONB
+- **No new dependencies**: Uses existing Dioxus event handling (`onerror`) and CSS custom properties
+- **No SSR concerns**: `use_signal` works fine in Dioxus full-stack; the `onerror` event only fires in the browser after hydration
+- **Performance**: `loading="lazy"` is native browser lazy-loading (no IntersectionObserver needed); the gradient placeholder is pure CSS (no JS rendering cost)
+- **Accessibility**: `alt` text on `<img>` uses recipe title; gradient placeholder has no text (intentional — the card title below provides context)
+- **Future enhancement**: The DESIGN.md (line 1028) mentions blurhash-based gradient placeholders as a future optimization — this implementation uses static gradients as the baseline, which can be upgraded later without changing the component structure
 
 ## Phase 0.5: Blueprint Evaluation
 
-### Verdict: **PASS** (with suggestions)
+### Verdict: **PASS**
 
-The blueprint is solid and correctly maps to the existing codebase. All referenced files, structs, and functions exist. The plan is complete and addresses all requirements from Checkpoint 7. The following issues are suggestions for improvement, not blockers.
+The blueprint is well-researched, technically sound, and correctly addresses all requirements. All file paths, line numbers, function signatures, and CSS selectors were verified against the actual codebase and are accurate.
+
+### Requirement Coverage
+
+| Requirement | Status | Evidence |
+|---|---|---|
+| First image as thumbnail | ✅ Already implemented (line 61: `recipe.images.first()`) | No changes needed |
+| Graceful fallback (no images) | ✅ Covered | `else` branch renders gradient placeholder |
+| Error handling (broken images) | ✅ Covered | New `onerror` handler + `image_failed` signal |
+| Gradient placeholder | ✅ Covered | CSS Step 2 adds `linear-gradient` with theme-aware vars |
+| Lazy loading | ✅ Already implemented (line 66: `loading: "lazy"`) | No changes needed |
+| Alt text = recipe title | ✅ Already implemented (line 65: `alt: "{recipe.title}"`) | No changes needed |
+
+### Verified Claims (all confirmed against actual codebase)
+
+1. **RecipeCard component** at `src/components/base/recipe_card.rs` — exists, 125 lines, structure matches description exactly
+2. **Image rendering logic** at lines 61-73 — confirmed: `if let Some(first_image) = recipe.images.first()` with `img` and fallback `span`
+3. **`Recipe.images: Vec<String>`** at `src/types.rs` line 47 — confirmed
+4. **Three pages pass full `recipe`** — confirmed: `dashboard.rs:93`, `explore.rs:210`, `user_profile.rs:176` all use `RecipeCard { recipe: recipe.clone() }`
+5. **CSS variables** `--bg-gradient-2`, `--bg-gradient-3`, `--bg-gradient-4` — confirmed in `:root` (lines 98-100) and `.dark` (lines 126-128)
+6. **`.recipe-card__image`** container (lines 1028-1036) — confirmed: `width: 100%`, `aspect-ratio: 16/9`, `overflow: hidden`, `display: flex` with centering
+7. **`.recipe-card__image-placeholder`** (lines 1038-1041) — confirmed: current styling is `font-size: 14px; color: var(--text-tertiary);`
+8. **`use_signal`** usage — confirmed in `navbar.rs` (lines 14-16) and `image_upload.rs` (lines 485-489); `use dioxus::prelude::*` at `recipe_card.rs:9` includes it
+
+### Technical Verification
+
+**`onerror` handler — CONFIRMED WORKING:** Verified against Dioxus 0.7.9 `dioxus_html` source (`generated.rs` lines 108-113):
+```rust
+#[convert = convert_image_data]
+#[events = [
+    onerror => error,
+    onload => load,
+]]
+Image(ImageData),
+```
+The `onerror` event is explicitly defined for `Image` elements, using `ImageData` as the event type. The blueprint's `move |_|` closure correctly ignores the event parameter.
+
+**Gradient approach — SOUND:** Uses existing CSS custom properties that are already theme-aware (`:root` for light, `.dark` for dark mode). The gradient palette (`--bg-gradient-2` through `--bg-gradient-4`) is consistent with the animated background gradient used elsewhere (line 1726: `linear-gradient(135deg, var(--bg-gradient-2), var(--bg-gradient-3))`).
+
+**Signal lifecycle — CORRECT:** `image_failed` is created via `use_signal` inside the component function. Each `RecipeCard` instance gets its own signal (pages create new instances per recipe via `RecipeCard { recipe: recipe.clone() }`). Signal persists for the card's lifetime and correctly toggles on error.
 
 ### Issues
 
-**1. Location: `src/pages/recipe_new.rs` line 70 / `recipe_edit.rs` line 66 — Severity: SUGGESTION**
-`StepForm` is defined identically in both files. Consider extracting `StepForm` to `src/types.rs` or a shared module to avoid duplication. The blueprint correctly updates both, but a shared definition would prevent future drift.
+**1. [SUGGESTION] No automated tests planned** — The verification checklist is entirely manual. Consider adding at least a unit test for the `image_failed` signal toggle logic (e.g., verify signal starts as `false` and can be set to `true`). The `Avatar` component has 10 unit tests for its helper function; `RecipeCard` could benefit from similar coverage for its new conditional rendering logic. **Risk: Low** — the logic is straightforward and the manual checklist is thorough.
 
-**2. Location: `flatten_steps` / `build_step_tree` in both `recipe_new.rs` and `recipe_edit.rs` — Severity: SUGGESTION**
-These functions are duplicated across both files. The blueprint updates both correctly. Long-term, consider extracting these to `src/types.rs` as methods on `RecipeStep` or standalone utilities to maintain a single source of truth.
+**2. [SUGGESTION] Accessibility: gradient placeholder has no `aria-hidden`** — The gradient `<div>` is purely decorative but has no `aria-hidden="true"`. Screen readers may announce it as an empty region. Adding `aria_hidden: true` to the placeholder div would be a minor improvement. **Risk: Low** — the card title below provides context, and the placeholder has no text content.
 
-**3. Location: URL-to-S3-key derivation — Severity: WARNING**
-The blueprint describes deriving the S3 key by parsing `{uuid}_full.webp` from the URL path and reconstructing `recipes/{user_id}/{uuid}_full.webp`. This is fragile — if the URL format changes (e.g., CDN prefix, query params), parsing breaks. Consider storing the S3 key alongside the URL in the step data (e.g., add `photo_key: Option<String>` to `RecipeStep`) or storing it in the `UploadResponse` at upload time. Alternatively, ensure the URL format is stable and documented. **Not a blocker** since the current URL format is controlled and stable, but worth noting for maintainability.
+**3. [SUGGESTION] `use_signal` placement could be more explicit** — The blueprint says "after line 23" which is the destructuring line. Being more specific (e.g., "add as the first line after destructuring, before the time calculation logic") would reduce ambiguity during implementation. **Risk: Negligible** — any placement before the `rsx!` block works correctly in Dioxus.
 
-**4. Location: `recipe_detail.rs` line 89 (`StepNode`) — Severity: SUGGESTION**
-The blueprint adds photo display inline within `StepNode`. The current `StepNode` component is already recursive and renders step text + sub-steps. Adding an `<img>` tag with a conditional `if let Some(ref photo_url) = step.photo_url` block is straightforward. Consider using `object-fit: cover` and a max-height constraint to prevent tall photos from disrupting the step list layout.
+### Security, Performance, Maintainability
 
-**5. Location: `recipe_edit.rs` — Severity: SUGGESTION**
-The blueprint mentions adding "edit/delete" for existing step photos. The current `recipe_edit.rs` already has a deferred image delete pattern (`pending_deletes` signal, `on_delete_image` callback at line 374). The blueprint should explicitly reuse this same deferred-delete pattern for step photos to be consistent with how recipe images are handled.
-
-**6. Location: Upload UX — Severity: SUGGESTION**
-The existing `ImageUpload` component is designed for batch uploads with a file input that accepts multiple files. For per-step uploads, consider using a simpler inline approach: a small button/icon next to each step's textarea that triggers a single-file upload via `upload_image()` directly, rather than wrapping `ImageUpload`. This avoids the batch-upload UI (preview grid, remove buttons) being awkward at the per-step granularity.
-
-**7. Location: Recipe deletion — Severity: SUGGESTION**
-When a recipe is deleted, step photos stored in S3 become orphaned. The current `delete_recipe` function does not clean up step photos. This is outside the scope of Checkpoint 7 but should be tracked as a follow-up task.
-
-### Requirements Coverage
-
-| Requirement | Status |
-|---|---|
-| Add optional `photo_url` to `RecipeStep` | ✅ Covered — adds `Option<String>` field |
-| Add step photo upload in recipe creation | ✅ Covered — per-step upload UI in `recipe_new.rs` |
-| Add step photo edit/delete in recipe editing | ✅ Covered — per-step upload/delete UI in `recipe_edit.rs` |
-| Display step photos on recipe detail | ✅ Covered — photo rendering in `StepNode` |
-| Reuse existing `upload_image` / `delete_image` | ✅ Covered — blueprint explicitly references these |
-| Preserve `photo_url` through tree/flat conversion | ✅ Covered — blueprint updates both `flatten_steps` and `build_step_tree` |
-| No DB migration needed (JSONB) | ✅ Correct — `instructions` column is JSONB |
-
-### Codebase Verification
-
-| Reference | Exists? | Notes |
-|---|---|---|
-| `src/types.rs` `RecipeStep` (line 112) | ✅ | Current fields: `text`, `sub_steps` |
-| `src/pages/recipe_new.rs` `StepForm` (line 70) | ✅ | Current fields: `text`, `depth` |
-| `src/pages/recipe_edit.rs` `StepForm` (line 66) | ✅ | Current fields: `text`, `depth` |
-| `src/pages/recipe_detail.rs` `StepNode` (line 89) | ✅ | Recursive component, renders text + sub-steps |
-| `src/api/upload.rs` `upload_image` (line 17) | ✅ | Returns `UploadResponse { full_url, thumb_url, key }` |
-| `src/api/upload.rs` `delete_image` (line 113) | ✅ | Takes `key: String` |
-| `src/components/base/image_upload.rs` | ✅ | Batch upload component |
-| `src/db/mod.rs` JSONB instructions | ✅ | No migration needed |
-
-### Test Coverage Assessment
-The blueprint does not explicitly mention tests. For this feature, consider:
-- **Unit test:** `flatten_steps` preserves `photo_url` when converting tree → flat
-- **Unit test:** `build_step_tree` preserves `photo_url` when converting flat → tree
-- **Unit test:** URL-to-S3-key derivation function (if extracted)
-- **Integration:** Upload step photo, verify it appears on detail page
-- **Integration:** Delete step photo, verify S3 cleanup
-
-**Recommendation:** Add a brief test plan to the blueprint before implementation begins.
-
-### Security & Performance
-- **Security:** No new security concerns. `upload_image` already enforces auth and file type/size limits.
-- **Performance:** Step photos are loaded eagerly on the detail page. Consider lazy loading (`loading="lazy"` on `<img>`) for recipes with many steps. Use `thumb_url` for thumbnails if displaying in a grid/list view.
-- **Storage:** Each step photo is ~50-200KB (WebP). A 20-step recipe = ~1-4MB. Acceptable for individual recipes.
+- **Security:** No concerns. No new data flows, no user input handling, no external dependencies.
+- **Performance:** Optimal. Uses native browser `loading="lazy"` (no IntersectionObserver overhead), pure CSS gradient (zero JS cost), single signal per card (minimal memory).
+- **Maintainability:** Clean separation of concerns — Rust handles state, CSS handles presentation. The gradient placeholder is easily themeable via existing CSS variables.
 
 ### Summary
-The blueprint is well-structured, covers all requirements, and correctly references existing codebase structures. The main areas for improvement are: (1) consider storing S3 key alongside URL for robustness, (2) use a simpler per-step upload UX rather than the batch `ImageUpload` component, and (3) add a test plan before implementation. No blockers identified.
+
+The blueprint is thorough, accurate, and well-reasoned. It correctly identifies what already exists versus what needs to change, leverages existing infrastructure (CSS variables, Dioxus signals), and makes minimal, targeted modifications. The `onerror` approach is confirmed to work with Dioxus 0.7. All three identified issues are minor suggestions that do not affect correctness or functionality.
 
 ## Phase 1: Implementation Details
-<!-- written by @develop-implement -->
 
 ### Summary of Changes
-Implemented Checkpoint 7: optional step photos for recipe steps. Each `RecipeStep` now has an optional `photo_url` field. The recipe creation and edit forms include per-step photo upload with camera button, thumbnail preview, and remove functionality. The recipe detail view displays step photos inline after the step text.
 
-### New Files
-(None)
+Implemented Checkpoint 8: Card Thumbnails + Polish. Recipe cards now show the first image as a thumbnail with graceful fallback to a gradient placeholder when images are missing or fail to load. Added `onerror` handler for broken image URLs, `aria-hidden` on decorative placeholder for accessibility.
 
-### Modified Files
+### Files Modified
 
-**`src/types.rs`** — Added `pub photo_url: Option<String>` to `RecipeStep` struct. Backward-compatible with existing JSONB data.
+| File | Change |
+|------|--------|
+| `src/components/base/recipe_card.rs` | Added `image_failed` signal, `onerror` handler on `<img>`, replaced `<span>` fallback with `<div class="recipe-card__image-placeholder" aria-hidden="true">` |
+| `assets/main.css` | Replaced `.recipe-card__image-placeholder` with gradient background using `--bg-gradient-2/3/4` CSS custom properties, full-size flex container |
 
-**`src/pages/recipe_new.rs`** — Major changes:
-- Added `photo_url: Option<String>` to local `StepForm` struct
-- Updated `build_step_tree()` to pass `photo_url` through to `RecipeStep`
-- Added `trigger_file_input()` helper (wasm32 + SSR stub) for triggering hidden file inputs
-- Added `on_step_photo_change` closure: per-step photo upload handler using `process_image()` + `upload_image()`
-- Updated step UI: camera button (📷), hidden file input, thumbnail preview with remove button
-- Updated `on_add_step` to initialize `photo_url: None`
+### Detailed Changes
 
-**`src/pages/recipe_edit.rs`** — Major changes:
-- Added `photo_url: Option<String>` to local `StepForm` struct
-- Updated `flatten_steps()` to preserve `photo_url` from tree to flat
-- Updated `build_step_tree()` to pass `photo_url` through to `RecipeStep`
-- Added `trigger_file_input()` helper (wasm32 + SSR stub)
-- Added `on_step_photo_change` closure: per-step photo upload handler
-- Updated step UI: camera button, hidden file input, thumbnail with deferred-delete remove button
-- Updated `on_add_step` to initialize `photo_url: None`
-- Step photo deletion uses existing `pending_deletes` mechanism (deferred delete pattern)
+**`src/components/base/recipe_card.rs`** (lines 26-27, 64-86):
+- Added `let mut image_failed = use_signal(|| false);` after props destructuring to track per-card image load failures
+- Added `onerror: move |_| { image_failed.set(true); }` on the `<img>` tag — triggers re-render replacing img with gradient div
+- Changed the "no images" fallback from `<span class="...">No image</span>` to `<div class="recipe-card__image-placeholder" aria_hidden: true>`
+- Both error and no-image branches now render the same gradient placeholder div
 
-**`src/pages/recipe_detail.rs`** — Updated `StepNode` component to render step photo after step text when `photo_url.is_some()`. Uses `loading="lazy"` and responsive inline styling.
-
-**`src/db/mod.rs`** — Updated 4 test cases to include `photo_url: None` in `RecipeStep` constructions (test assertions only, no logic changes).
-
-### Tests
-- All existing tests pass (267 passed, 2 pre-existing storage failures unrelated to this change)
-- Updated 4 `RecipeStep` constructions in db/mod.rs test cases to include `photo_url: None`
-- No new unit tests written (step conversion functions are local to page modules, not easily testable)
+**`assets/main.css`** (lines 1038-1051):
+- `.recipe-card__image-placeholder` now has `width: 100%; height: 100%` to fill the 16:9 container
+- Added `display: flex; align-items: center; justify-content: center` for centering
+- Added `background: linear-gradient(135deg, var(--bg-gradient-2) 0%, var(--bg-gradient-3) 50%, var(--bg-gradient-4) 100%)` — uses existing theme-aware CSS variables (light/dark mode)
 
 ### Verification
-- `cargo check` — zero warnings on default (wasm32) target
-- `cargo check --features server` — zero warnings on server target
-- `cargo fmt --check` — passes after formatting
-- `cargo test --features server` — 267 passed, 2 pre-existing failures (storage init)
 
-### Known Limitations & Follow-ups
-- Step photos are not cleaned up when a recipe is deleted (orphaned S3 objects) — tracked as follow-up
-- No unit tests for `flatten_steps`/`build_step_tree` with `photo_url` — functions are local to page modules
-- Step photos use full-size URL (not thumbnail) — adequate for inline display but could use thumb_url for list views
+- `cargo check` — compiles cleanly with zero errors and zero warnings (wasm target)
+- `cargo check --features server` — server target errors are all pre-existing sqlx database connection issues, unrelated to these changes
+- Clippy errors are pre-existing in `recipe_edit.rs` and `recipe_new.rs` (needless `return`), not in `recipe_card.rs`
+- No tests were written or updated — the logic is straightforward conditional rendering with a signal toggle; the blueprint evaluation noted this as low risk
 
 ## Phase 2: Review Verdict
 
 ### Verdict: **PASS**
 
-### Issues
+### Numbered Issues
 
-**1. Location: `src/pages/recipe_new.rs` line 22 / `src/pages/recipe_edit.rs` line 23 — Severity: SUGGESTION**
-`StepForm` struct is defined identically in both files (`text`, `depth`, `photo_url`). Consider extracting to `src/types.rs` or a shared module to prevent future drift. Not a blocker — both definitions are currently in sync.
-
-**2. Location: `src/pages/recipe_new.rs` line 56 / `src/pages/recipe_edit.rs` line 44 — Severity: SUGGESTION**
-`build_step_tree()` is implemented with different algorithms in each file. `recipe_new.rs` uses `nodes.remove(idx)` (mutating the flat list), while `recipe_edit.rs` uses a separate `root` vector with cloning. Both are functionally correct and preserve `photo_url`, but the duplication increases maintenance burden. Long-term, extract to `src/types.rs` as a standalone utility or method on `RecipeStep`.
-
-**3. Location: `src/pages/recipe_new.rs` lines 161-208 / `recipe_edit.rs` lines 206-253 — Severity: SUGGESTION**
-`on_step_photo_change` captures `idx: usize` at file-input trigger time, but the upload is async. If the user reorders or deletes steps between selecting a file and the upload completing, `idx` may point to a different step or be out of bounds. This is a pre-existing pattern (not introduced by this change) and is an acceptable trade-off for simplicity. A mitigation would be to capture the step's text or a stable key at trigger time and match on completion.
-
-**4. Location: `src/pages/recipe_new.rs` line 718 — Severity: SUGGESTION**
-When a step photo is removed in `recipe_new.rs`, `photo_url` is set to `None` but the previously uploaded S3 object is not deleted. This creates an orphaned S3 object. This is consistent with the existing behavior for recipe images in `recipe_new.rs` (no deferred-delete mechanism exists there). Acceptable for now — tracked as a follow-up.
-
-**5. Location: `src/pages/recipe_edit.rs` lines 844-852 — Severity: INFO (good practice)**
-Step photo removal correctly uses the existing `pending_deletes` deferred-delete pattern: URL is pushed to `pending_deletes` and `photo_url` is set to `None`. After successful save, `delete_image(url)` is called for all pending deletes. This is consistent with how recipe image deletion is handled in the same file. Well done.
+**1. [SUGGESTION] No automated tests for new signal logic** — The `image_failed` signal toggle and conditional rendering branch are untested. The logic is straightforward (one signal, two branches), so this is low risk. A unit test verifying the signal starts as `false` and the `else` branch renders the placeholder div would add confidence without much effort. **Location:** `src/components/base/recipe_card.rs` lines 27, 65-86.
 
 ### Positive Findings
 
-- **`src/types.rs`**: `photo_url: Option<String>` on `RecipeStep` is backward-compatible with existing JSONB data. Serde will deserialize old records with `photo_url: None`. Clean, minimal change.
-- **`recipe_new.rs` `build_step_tree()`**: Correctly passes `photo_url: step.photo_url.clone()` when constructing `RecipeStep` (line 72). `on_add_step` initializes `photo_url: None` (line 407).
-- **`recipe_edit.rs` `flatten_steps()`**: Correctly preserves `photo_url: step.photo_url.clone()` when flattening (line 36). `build_step_tree()` also correctly passes `photo_url` (line 64).
-- **`recipe_detail.rs` `StepNode`**: Clean conditional rendering of step photo with `loading="lazy"`, responsive `max_width: "100%"`, and `height: "auto"`. Photo is rendered inline after step text, before sub-steps — good visual hierarchy.
-- **Dual-target compilation**: `trigger_file_input()` is properly gated with `#[cfg(target_arch = "wasm32")]` / `#[cfg(not(target_arch = "wasm32"))]` in both files. `on_step_photo_change` body is wrapped in `#[cfg(target_arch = "wasm32")]`. `dioxus_web::WebFileExt` is imported inside the cfg block. Zero warnings on both wasm32 and server targets.
-- **Upload pipeline reuse**: Step photos use the same `process_image()` → `upload_image()` pipeline as recipe images, ensuring consistent WebP conversion, validation, and storage key generation.
-- **Error handling**: Upload failures are logged with `tracing::error!()` and silently return (no UI crash). The step's `photo_url` remains `None` on failure — correct behavior.
-- **`delete_image` compatibility**: Step photo URLs are `full_url` from `UploadResponse`, which `delete_image()` correctly handles by stripping the public URL prefix to derive the S3 key. Ownership check (`recipes/{user_id}/` prefix) also applies correctly.
-- **DB tests**: All 4 updated `RecipeStep` constructions in `db/mod.rs` include `photo_url: None`. Tests pass (267 passed, 2 pre-existing storage init failures unrelated to this change).
+1. **Correct `onerror` handler** — `onerror: move |_| { image_failed.set(true); }` at line 71-73 correctly uses `ImageData` event type (confirmed via Dioxus 0.7 docs), ignores the event parameter, and toggles the signal to trigger re-render. The `move` keyword properly captures the `Signal<bool>` with `'static` lifetime.
+
+2. **`aria_hidden: true` on placeholder** — Both placeholder branches (error at line 78, no-image at line 84) include `aria_hidden: true`, correctly marking the decorative gradient div as non-interactive for screen readers. The `<img>` retains its `alt` text (`{recipe.title}`) when present.
+
+3. **CSS gradient is theme-aware** — Uses existing `--bg-gradient-2/3/4` custom properties, verified present in both `:root` (light: `#F5E6D0`, `#E8EDE2`, `#F0DCC8`) and `.dark` (dark: `#221E18`, `#181E20`, `#1E1820`). The gradient palette is consistent with the animated background gradient used elsewhere in the app.
+
+4. **16:9 container properly filled** — `.recipe-card__image-placeholder` has `width: 100%; height: 100%` and the parent `.recipe-card__image` enforces `aspect-ratio: 16 / 9`. The gradient fills the entire container in both states.
+
+5. **No wasm leaks or server-only issues** — `cargo check` (wasm target) compiles cleanly with zero errors/warnings. `cargo check --features server` errors are all pre-existing sqlx database connection issues unrelated to these changes. No `#[cfg]` gates or platform-specific code introduced.
+
+6. **No dead code or unused imports** — All four imports (`Avatar`, `AvatarSize`, `Recipe`, `dioxus::prelude::*`) are actively used. The `use_signal` from the prelude is the only new dependency and is correctly utilized.
+
+7. **Clean conditional structure** — The nested `if let` + `if` pattern (lines 64-86) is readable and correctly handles three states: (a) image present and loaded, (b) image present but failed, (c) no images at all. States (b) and (c) share the same placeholder rendering.
 
 ### Requirements Coverage
 
-| Requirement | Status |
-|---|---|
-| Add optional `photo_url` to `RecipeStep` | ✅ `src/types.rs` line 24 |
-| Step photo upload in recipe creation | ✅ `recipe_new.rs` camera button + file input + `on_step_photo_change` |
-| Step photo edit/delete in recipe editing | ✅ `recipe_edit.rs` camera button + deferred delete via `pending_deletes` |
-| Display step photos on recipe detail | ✅ `recipe_detail.rs` `StepNode` conditional `<img>` rendering |
-| Reuse existing `upload_image` / `delete_image` | ✅ Both reused without modification |
-| Preserve `photo_url` through tree/flat conversion | ✅ `flatten_steps()` and `build_step_tree()` in both files |
-| No DB migration needed (JSONB) | ✅ Confirmed — `Option<String>` is backward-compatible |
-| Dual-target compilation (wasm32 + server) | ✅ Zero warnings on both targets |
+| Requirement | Status | Evidence |
+|---|---|---|
+| First image as thumbnail | ✅ | Line 64: `recipe.images.first()`, line 68: `src: first_image` |
+| Graceful fallback (no images) | ✅ | Lines 81-85: gradient placeholder div |
+| Error handling (broken images) | ✅ | Lines 71-73: `onerror` handler toggles `image_failed` signal |
+| Gradient placeholder | ✅ | CSS lines 1046-1051: `linear-gradient` with theme vars |
+| Lazy loading | ✅ | Line 70: `loading: "lazy"` |
+| Alt text = recipe title | ✅ | Line 69: `alt: "{recipe.title}"` |
+| `aria-hidden` on placeholder | ✅ | Lines 78, 84: `aria_hidden: true` |
 
 ### Summary
-Clean, well-structured implementation that correctly adds optional step photos across the full data flow: upload → form state → tree conversion → DB save → display. The deferred-delete pattern in `recipe_edit.rs` is consistent with the existing recipe image deletion. All wasm32-only code is properly gated. Two minor suggestions around code deduplication (`StepForm`, `build_step_tree`) and one acceptable race condition in async upload indexing. No blockers.
+
+Clean, minimal implementation that faithfully follows the Phase 0 blueprint. Two files changed, ~20 lines of new/modified code. The `onerror` + `use_signal` pattern is idiomatic Dioxus, the CSS leverages existing theme infrastructure, and accessibility considerations (`aria-hidden`, `alt` text) are addressed. One minor suggestion around test coverage; no blockers or warnings.
 
 ## Phase 3: Synthesis
-<!-- written by @develop-synthesize -->
+## User-Facing Summary
 
-### Summary
+Checkpoint 8 (Card Thumbnails + Polish) is complete. Recipe cards now display the first uploaded image as a thumbnail with `loading="lazy"` for performance. When a recipe has no images, or when an image fails to load (broken URL, missing file), the card gracefully falls back to a warm gradient placeholder instead of showing blank space or plain "No image" text. The gradient adapts to light and dark mode via existing CSS custom properties. All image elements use the recipe title as `alt` text for accessibility, and the decorative gradient placeholder is marked `aria-hidden` so screen readers skip it.
 
-Checkpoint 7 of NOMS-009 (Step Photos) has been fully implemented. Each recipe step can now optionally have an associated photo. The implementation adds `photo_url: Option<String>` to the `RecipeStep` struct, wires up per-step photo upload with camera button and thumbnail preview in both recipe creation (`recipe_new.rs`) and recipe editing (`recipe_edit.rs`), and displays step photos inline on the recipe detail page (`recipe_detail.rs`). All changes reuse the existing `upload_image()` and `delete_image()` server functions and the `process_image()` pipeline for WebP conversion. No database migration was required since `RecipeStep` is serialized as JSONB and `Option<String>` is backward-compatible with existing data.
+**Workflow**: Phase 0 identified that the core conditional rendering (`recipe.images.first()`) and lazy loading were already in place. Only two gaps remained: (1) no `onerror` handler for broken images, and (2) the fallback was plain text instead of a styled gradient. Phase 0.5 verified all line numbers, Dioxus event signatures, and CSS variable availability. Phase 1 implemented the `image_failed` signal, the `onerror` closure, and the gradient CSS. Phase 2 reviewed and passed the implementation with one minor suggestion around test coverage.
 
-### Walkthrough of Changes
+---
 
-#### `src/types.rs`
-- **Change:** Added `pub photo_url: Option<String>` field to the `RecipeStep` struct.
-- **Purpose:** Core data model extension. The `Option` type ensures backward compatibility — existing recipe records in the `instructions` JSONB column deserialize with `photo_url: None` via serde's default handling.
+## Step-by-Step Walkthrough of Changes
 
-#### `src/pages/recipe_new.rs`
-- **`StepForm` struct:** Added `photo_url: Option<String>` field alongside existing `text` and `depth` fields.
-- **`build_step_tree()`:** Updated to pass `photo_url: step.photo_url.clone()` when constructing `RecipeStep` instances from the flat step list, preserving uploaded photos through the tree-building conversion.
-- **`on_add_step`:** Updated to initialize new steps with `photo_url: None`.
-- **`trigger_file_input()`:** New helper function (dual-target: `#[cfg(target_arch = "wasm32")]` for real DOM dispatch, `#[cfg(not(target_arch = "wasm32"))]` as SSR stub) that programmatically triggers a hidden `<input type="file">` element via a `click()` event.
-- **`on_step_photo_change`:** New per-step async upload handler. Captures the step index at trigger time, reads the selected file via `dioxus_web::WebFileExt::file()`, processes it through `process_image()` (WebP conversion), then calls `upload_image()` to persist to S3. On success, sets `steps[idx].photo_url = Some(full_url)`.
-- **Step UI (render):** Each step now renders with:
-  - A camera button (📷) that triggers the hidden file input via `trigger_file_input()`.
-  - A hidden `<input type="file" accept="image/*">` element per step.
-  - When a photo is uploaded, a thumbnail preview with a remove button (×) appears inline. Clicking remove sets `photo_url` back to `None`.
+### File 1: `src/components/base/recipe_card.rs`
 
-#### `src/pages/recipe_edit.rs`
-- **`StepForm` struct:** Added `photo_url: Option<String>` field (mirrors `recipe_new.rs`).
-- **`flatten_steps()`:** Updated to preserve `photo_url: step.photo_url.clone()` when converting the `RecipeStep` tree to a flat `Vec<StepForm>`, ensuring existing step photos survive the edit form initialization.
-- **`build_step_tree()`:** Updated to pass `photo_url` through when reconstructing the `RecipeStep` tree from flat form data.
-- **`trigger_file_input()`:** Same dual-target helper as in `recipe_new.rs`.
-- **`on_step_photo_change`:** Same per-step upload handler as in `recipe_new.rs`.
-- **Step UI (render):** Same camera button + hidden file input + thumbnail preview pattern. Key difference: clicking remove pushes the old photo URL into the `pending_deletes` signal (deferred-delete pattern), and sets `photo_url` to `None`. After successful recipe save, all pending deletes are processed via `delete_image(url)` to clean up orphaned S3 objects.
-- **`on_add_step`:** Updated to initialize new steps with `photo_url: None`.
+**Purpose**: Add runtime error handling for image loads and replace the text fallback with an accessible gradient placeholder.
 
-#### `src/pages/recipe_detail.rs`
-- **`StepNode` component:** Added conditional photo rendering after the step text. When `step.photo_url.is_some()`, an `<img>` tag is rendered with:
-  - `src` set to the photo URL.
-  - `loading="lazy"` for deferred loading.
-  - Responsive inline styles: `max_width: "100%"`, `height: "auto"`, `border_radius`, and `margin` for visual separation from step text and sub-steps.
-- Photo appears inline between the step text and any sub-steps, maintaining the visual hierarchy.
+**Logic flow**:
+1. A new `use_signal` (`image_failed`) is declared after props destructuring. Each `RecipeCard` instance gets its own independent signal initialized to `false`.
+2. The existing `if let Some(first_image) = recipe.images.first()` block now has a nested `if !image_failed()` guard. When `image_failed` is `false`, the `<img>` tag renders as before.
+3. A new `onerror` handler on the `<img>` tag uses a `move` closure to capture the `image_failed` signal. When the browser fires the native `error` event (e.g., 404, network failure), `image_failed.set(true)` triggers a Dioxus re-render.
+4. On re-render, the `if !image_failed()` condition is now `false`, so the `else` branch renders `<div class="recipe-card__image-placeholder" aria-hidden="true">` — a gradient div instead of the `<img>`.
+5. The original `else` branch (no images in the `Vec`) was changed from `<span>No image</span>` to the same `<div class="recipe-card__image-placeholder" aria-hidden="true">`, unifying both failure modes.
 
-#### `src/db/mod.rs`
-- **Test updates:** 4 existing `RecipeStep` constructions in test cases were updated to include `photo_url: None` to match the expanded struct definition. No logic changes — purely test assertion compatibility.
+**Resulting state machine per card**:
+- State A: `images` is empty → gradient placeholder
+- State B: `images` has entries, `image_failed` is `false` → `<img>` with thumbnail
+- State C: `images` has entries, `image_failed` is `true` (after `onerror`) → gradient placeholder
 
-### Dependencies
-- No new crate dependencies introduced.
-- Reuses: `upload_image()`, `delete_image()` from `src/api/upload.rs`; `process_image()` pipeline; `dioxus_web::WebFileExt` for file reading on wasm32.
+### File 2: `assets/main.css`
 
-### Non-Obvious Patterns
-- **Dual-target compilation:** `trigger_file_input()` and `on_step_photo_change` use `#[cfg(target_arch = "wasm32")]` / `#[cfg(not(target_arch = "wasm32"))]` guards to compile cleanly for both the wasm32 (browser) and server (SSR) targets.
-- **Deferred-delete pattern (recipe_edit only):** Step photo removal pushes the URL to `pending_deletes` rather than immediately calling `delete_image()`. This ensures S3 cleanup only happens after the recipe save succeeds, preventing data loss if the save fails.
-- **Async upload index capture:** The step index (`idx`) is captured at file-input trigger time. If the user modifies the step list between trigger and upload completion, the index may be stale. This is an acceptable trade-off for simplicity and matches the pre-existing pattern in the codebase.
-- **URL-to-key derivation:** `delete_image()` accepts a full URL and internally strips the public URL prefix to derive the S3 key. No separate key storage is needed.
+**Purpose**: Style the placeholder div as a visually appealing gradient that fills the 16:9 container and adapts to theme.
 
-### Follow-Up Recommendations
-1. **Orphaned S3 cleanup on recipe delete:** When a recipe is deleted, its step photos are not cleaned up from S3. Track as a follow-up task.
-2. **Orphaned uploads on remove (recipe_new):** When a step photo is removed in `recipe_new.rs`, the S3 object is not deleted. Consider adding a deferred-delete mechanism similar to `recipe_edit.rs`.
-3. **Code deduplication:** `StepForm` is defined identically in both page modules. `build_step_tree()` has different implementations. Consider extracting to `src/types.rs` or a shared utility module.
-4. **Unit tests for conversion functions:** `flatten_steps()` and `build_step_tree()` are local to page modules and currently untested with `photo_url`. Consider extracting for testability.
-5. **Thumbnail usage:** Step photos use `full_url` everywhere. Consider using `thumb_url` for list/grid views to improve performance.
+**Changes**:
+- `.recipe-card__image-placeholder` gained `width: 100%; height: 100%` so it fills the parent `.recipe-card__image` (which enforces `aspect-ratio: 16 / 9`).
+- `display: flex; align-items: center; justify-content: center` ensures any future text content would be centered.
+- `background: linear-gradient(135deg, var(--bg-gradient-2) 0%, var(--bg-gradient-3) 50%, var(--bg-gradient-4) 100%)` — a 3-stop diagonal gradient using existing theme-aware CSS custom properties:
+  - Light mode: `#F5E6D0` → `#E8EDE2` → `#F0DCC8` (warm, food-themed tones)
+  - Dark mode: `#221E18` → `#181E20` → `#1E1820` (subtle dark variation)
 
-### Commit Message
+---
+
+## Dependencies
+
+- **No new dependencies introduced**. All changes use existing infrastructure:
+  - `use_signal` from `dioxus::prelude::*` (already imported at line 9)
+  - `onerror` event on `<img>` (native Dioxus HTML binding, confirmed in Dioxus 0.7 `dioxus_html` source)
+  - CSS custom properties `--bg-gradient-2/3/4` (already defined in `:root` and `.dark`)
+
+---
+
+## Special Syntax & Language Features
+
+- **`move` closure in `onerror`**: The `move` keyword is required because Dioxus event handlers need `'static` lifetime. The `Signal<bool>` is `Clone` and internally `Arc`-based, so moving it into the closure is safe and idiomatic.
+- **`aria_hidden: true`**: Dioxus converts snake_case prop names to HTML attributes (`aria-hidden`). This marks the decorative gradient div as non-semantic for assistive technologies.
+- **Nested `if let` + `if` pattern**: The three-state conditional (no images / image OK / image failed) is expressed as `if let Some(...) { if !failed { img } else { placeholder } } else { placeholder }`. This avoids cloning or optionality overhead.
+- **Native `loading="lazy"`**: Uses the browser's built-in lazy loading (no IntersectionObserver or JS library needed). The attribute is already present and unchanged.
+
+---
+
+## Follow-Up Recommendations
+
+1. **Test coverage** (low priority): Add a unit test verifying the `image_failed` signal starts as `false` and the conditional rendering produces the correct DOM in each state. The `Avatar` component has 10 unit tests as a reference pattern.
+2. **Blurhash placeholders** (future enhancement): DESIGN.md line 1028 mentions blurhash-based gradients. The current static gradient can be upgraded without changing the component structure — only the CSS background would need to be dynamic.
+3. **Monitor image load failures**: If production cards frequently show gradients, investigate whether image URLs are being generated correctly or if CDN/storage issues exist.
+
+---
+
+## Commit Message
 
 ```
-feat(NOMS-009): add optional step photos to recipe steps
+feat(NOMS-009): add onerror handler and gradient placeholder to recipe card thumbnails
 
-Each recipe step can now have an associated photo. Adds photo_url:
-Option<String> to the RecipeStep struct and wires up the full data
-flow: upload in creation/edit forms, display in detail view.
+RecipeCard now gracefully handles two failure modes for image thumbnails:
+when a recipe has no images and when an image fails to load (broken URL,
+missing file, network error). Both cases render a theme-aware gradient
+placeholder instead of blank space or plain text.
 
-Struct change:
-- src/types.rs: Added photo_url: Option<String> to RecipeStep.
-  Backward-compatible with existing JSONB data via serde Option
-  deserialization.
+Changes:
+- recipe_card.rs: add `image_failed` signal (use_signal) to track per-card
+  image load failures; add `onerror` handler on `<img>` that sets the
+  signal to true, triggering re-render with the gradient fallback;
+  replace `<span>No image</span>` with `<div>` placeholder; add
+  `aria-hidden` to both placeholder branches for accessibility
+- main.css: style `.recipe-card__image-placeholder` with a 3-stop
+  diagonal gradient (135deg) using existing `--bg-gradient-2/3/4` CSS
+  custom properties; set `width/height: 100%` and flex centering so
+  the gradient fills the 16:9 container; gradient adapts to light and
+  dark mode via existing theme variables
 
-UI - Recipe creation (recipe_new.rs):
-- Added photo_url field to StepForm struct.
-- Updated build_step_tree() to pass photo_url through to RecipeStep.
-- Added per-step camera button with hidden file input.
-- Added on_step_photo_change handler: reads file via WebFileExt,
-  processes through process_image() pipeline, uploads via
-  upload_image(), sets full_url on step.
-- Thumbnail preview with remove button displayed after upload.
-- Added trigger_file_input() helper (dual-target wasm32/SSR).
-
-UI - Recipe editing (recipe_edit.rs):
-- Added photo_url field to StepForm struct.
-- Updated flatten_steps() to preserve photo_url from tree to flat.
-- Updated build_step_tree() to pass photo_url through.
-- Same camera button + file input + upload handler as recipe_new.
-- Step photo removal uses existing pending_deletes deferred-delete
-  pattern: URL pushed to pending_deletes, photo_url set to None.
-  After successful save, delete_image() cleans up S3 objects.
-- Added trigger_file_input() helper (dual-target wasm32/SSR).
-
-UI - Recipe detail (recipe_detail.rs):
-- StepNode renders step photo inline after step text when
-  photo_url.is_some(). Uses loading="lazy", max_width: 100%,
-  height: auto, border_radius, and margin for responsive display.
-
-Tests:
-- Updated 4 RecipeStep constructions in db/mod.rs test cases to
-  include photo_url: None. All 267 tests pass.
-
-No database migration required (JSONB instructions column).
-No new dependencies introduced. Reuses existing upload_image(),
-delete_image(), and process_image() infrastructure.
+Existing features preserved:
+- `loading="lazy"` on `<img>` for native browser lazy loading
+- `alt` text set to recipe title for screen reader accessibility
+- 16:9 aspect ratio maintained across all rendering states
+- No new dependencies or breaking changes
 ```
