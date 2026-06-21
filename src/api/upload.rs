@@ -36,7 +36,7 @@ use crate::auth::session;
 const MAX_FILE_SIZE: usize = 10 * 1024 * 1024; // 10 MB
 
 /// Validate WebP magic bytes: "RIFF....WEBP" (first 4 + bytes 8-12).
-fn validate_webp_magic(bytes: &[u8]) -> bool {
+pub fn validate_webp_magic(bytes: &[u8]) -> bool {
     bytes.len() >= 12 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP"
 }
 

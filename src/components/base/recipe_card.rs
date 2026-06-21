@@ -58,9 +58,18 @@ pub fn RecipeCard(props: RecipeCardProps) -> Element {
                 class: "recipe-card__link",
                 div {
                     class: "recipe-card__image",
-                    span {
-                        class: "recipe-card__image-placeholder",
-                        "Recipe Image"
+                    if let Some(first_image) = recipe.images.first() {
+                        img {
+                            class: "recipe-card__image-img",
+                            src: first_image,
+                            alt: "{recipe.title}",
+                            loading: "lazy",
+                        }
+                    } else {
+                        span {
+                            class: "recipe-card__image-placeholder",
+                            "No image"
+                        }
                     }
                 }
 

@@ -280,12 +280,16 @@ pub fn RecipeNew() -> Element {
             )
             .await
             {
+                #[allow(unused_variables)]
                 Ok(recipe) => {
                     // Navigate to recipe detail page
-                    if let Some(window) = web_sys::window() {
-                        let _ = window
-                            .location()
-                            .set_href(&format!("/recipes/{}", recipe.id));
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        if let Some(window) = web_sys::window() {
+                            let _ = window
+                                .location()
+                                .set_href(&format!("/recipes/{}", recipe.id));
+                        }
                     }
                 }
                 Err(e) => {
@@ -304,8 +308,11 @@ pub fn RecipeNew() -> Element {
 
     // ── Cancel handler ──────────────────────────────────────────────────
     let on_cancel = move |_| {
-        if let Some(window) = web_sys::window() {
-            let _ = window.location().set_href("/dashboard");
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(window) = web_sys::window() {
+                let _ = window.location().set_href("/dashboard");
+            }
         }
     };
 

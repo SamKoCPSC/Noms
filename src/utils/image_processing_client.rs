@@ -84,7 +84,7 @@ pub async fn process_image_with_options(
 }
 
 /// Load a File into an HtmlImageElement. Returns the loaded image element.
-async fn load_image_from_file(file: &web_sys::File) -> Result<HtmlImageElement, String> {
+pub async fn load_image_from_file(file: &web_sys::File) -> Result<HtmlImageElement, String> {
     let url = web_sys::Url::create_object_url_with_blob(file)
         .map_err(|e| format!("Failed to create object URL: {:?}", e))?;
 
@@ -205,7 +205,7 @@ async fn render_to_webp_with_quality(
 ///
 /// Uses polling approach: canvas.toBlob() callback sets AtomicBool,
 /// we poll with gloo_timers::future::sleep() until ready.
-async fn blob_from_canvas(canvas: &HtmlCanvasElement, quality: f64) -> Result<Vec<u8>, String> {
+pub async fn blob_from_canvas(canvas: &HtmlCanvasElement, quality: f64) -> Result<Vec<u8>, String> {
     let blob = std::sync::Arc::new(std::sync::Mutex::new(None));
     let blob_clone = blob.clone();
     let ready = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));

@@ -173,6 +173,7 @@ pub fn RecipeEdit(id: String) -> Element {
 
     // ── Clone id for closures that need it ──────────────────────────────
     let _id_for_submit = id.clone(); // used in on_submit (two-phase: no direct DB call)
+    #[allow(unused_variables)]
     let id_for_cancel = id.clone();
     // CP5: Rc for the on_upload_complete handler (callable multiple times)
     let id_for_upload_complete = Rc::new(id.clone());
@@ -312,10 +313,13 @@ pub fn RecipeEdit(id: String) -> Element {
                     pending_deletes.set(Vec::new());
 
                     // Redirect to recipe detail page
-                    if let Some(window) = web_sys::window() {
-                        let _ = window
-                            .location()
-                            .set_href(&format!("/recipes/{}", recipe_id));
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        if let Some(window) = web_sys::window() {
+                            let _ = window
+                                .location()
+                                .set_href(&format!("/recipes/{}", recipe_id));
+                        }
                     }
                 }
                 Err(e) => {
@@ -332,10 +336,13 @@ pub fn RecipeEdit(id: String) -> Element {
 
     // ── Cancel handler ──────────────────────────────────────────────────
     let on_cancel = move |_| {
-        if let Some(window) = web_sys::window() {
-            let _ = window
-                .location()
-                .set_href(&format!("/recipes/{}", id_for_cancel));
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(window) = web_sys::window() {
+                let _ = window
+                    .location()
+                    .set_href(&format!("/recipes/{}", id_for_cancel));
+            }
         }
     };
 

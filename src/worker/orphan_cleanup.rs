@@ -41,7 +41,10 @@ impl OrphanCleanupConfig {
 /// listing all objects in storage, and deleting any orphans.
 /// Dropped automatically on server shutdown.
 pub fn spawn_orphan_cleanup(pool: PgPool, storage: StorageClient, config: OrphanCleanupConfig) {
-    info!(interval_secs = config.interval.as_secs(), "Spawning orphan cleanup worker");
+    info!(
+        interval_secs = config.interval.as_secs(),
+        "Spawning orphan cleanup worker"
+    );
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(config.interval);
         // Skip the first immediate tick
@@ -69,7 +72,10 @@ pub async fn run_cleanup(
     let public_url = storage.public_url().trim_end_matches('/');
     let mut referenced_keys = HashSet::new();
     for url in &db_urls {
-        if let Some(key) = url.strip_prefix(public_url).map(|s| s.trim_start_matches('/')) {
+        if let Some(key) = url
+            .strip_prefix(public_url)
+            .map(|s| s.trim_start_matches('/'))
+        {
             referenced_keys.insert(key.to_string());
             // Also mark the derived thumbnail key as referenced so it isn't
             // deleted as an orphan (the DB stores only _full.webp URLs).
@@ -151,7 +157,10 @@ mod tests {
 
         let mut referenced_keys = HashSet::new();
         for url in &db_urls {
-            if let Some(key) = url.strip_prefix(public_url).map(|s| s.trim_start_matches('/')) {
+            if let Some(key) = url
+                .strip_prefix(public_url)
+                .map(|s| s.trim_start_matches('/'))
+            {
                 referenced_keys.insert(key.to_string());
                 if let Some(base) = key.strip_suffix("_full.webp") {
                     referenced_keys.insert(format!("{base}_thumb.webp"));
@@ -189,7 +198,10 @@ mod tests {
 
         let mut referenced_keys = HashSet::new();
         for url in &db_urls {
-            if let Some(key) = url.strip_prefix(public_url).map(|s| s.trim_start_matches('/')) {
+            if let Some(key) = url
+                .strip_prefix(public_url)
+                .map(|s| s.trim_start_matches('/'))
+            {
                 referenced_keys.insert(key.to_string());
                 if let Some(base) = key.strip_suffix("_full.webp") {
                     referenced_keys.insert(format!("{base}_thumb.webp"));

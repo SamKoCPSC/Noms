@@ -188,7 +188,10 @@ pub async fn delete_recipe(recipe_id: String) -> Result<(), ServerFnError> {
         let public_url = storage.public_url().trim_end_matches('/');
 
         for img_url in &recipe.images {
-            if let Some(full_key) = img_url.strip_prefix(public_url).map(|s| s.trim_start_matches('/')) {
+            if let Some(full_key) = img_url
+                .strip_prefix(public_url)
+                .map(|s| s.trim_start_matches('/'))
+            {
                 // Delete full-size object
                 let _ = storage.delete_object(full_key).await;
 

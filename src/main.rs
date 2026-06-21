@@ -13,14 +13,16 @@ mod middleware;
 mod pages;
 #[cfg(feature = "server")]
 mod storage;
-#[cfg(feature = "server")]
-mod worker;
 #[cfg(all(feature = "server", test))]
 mod test_utils;
 mod types;
 mod utils;
+#[cfg(feature = "server")]
+mod worker;
 
-use auth::context::{build_context_from_fullstack, AuthContext};
+use auth::context::build_context_from_fullstack;
+#[cfg(target_arch = "wasm32")]
+use auth::context::AuthContext;
 use components::{AppLayout, ErrorFallback};
 use pages::{
     CollectionDetail, CollectionList, Dashboard, Explore, Home, Login, NotFound, RecipeDetail,
@@ -185,22 +187,25 @@ fn App() -> Element {
     provide_context(auth_context);
 
     // On client, fetch user profile after hydration to update AuthContext
-    use_hook(move || {
-        let mut ctx = auth_context;
-        spawn(async move {
-            let res = gloo_net::http::Request::get("/api/user_profile")
-                .send()
-                .await;
-            if let Ok(response) = res {
-                if response.ok() {
-                    let body = response.text().await.unwrap_or_default();
-                    if let Ok(user_ctx) = serde_json::from_str::<AuthContext>(&body) {
-                        ctx.set(user_ctx);
+    #[cfg(target_arch = "wasm32")]
+    {
+        use_hook(move || {
+            let mut ctx = auth_context;
+            spawn(async move {
+                let res = gloo_net::http::Request::get("/api/user_profile")
+                    .send()
+                    .await;
+                if let Ok(response) = res {
+                    if response.ok() {
+                        let body = response.text().await.unwrap_or_default();
+                        if let Ok(user_ctx) = serde_json::from_str::<AuthContext>(&body) {
+                            ctx.set(user_ctx);
+                        }
                     }
                 }
-            }
+            });
         });
-    });
+    }
 
     rsx! {
         // Document head

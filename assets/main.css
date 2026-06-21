@@ -1032,11 +1032,19 @@ a:hover {
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 }
 
 .recipe-card__image-placeholder {
     font-size: 14px;
     color: var(--text-tertiary);
+}
+
+.recipe-card__image-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .recipe-card__content {

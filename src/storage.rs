@@ -18,6 +18,7 @@ use tokio::sync::OnceCell;
 
 /// Errors from storage operations.
 #[derive(Debug)]
+#[allow(clippy::enum_variant_names)]
 pub enum StorageError {
     /// Failed to upload an object to the storage backend.
     UploadFailed(String),

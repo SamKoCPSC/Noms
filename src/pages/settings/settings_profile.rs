@@ -1,4 +1,6 @@
 use dioxus::prelude::*;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::JsCast;
 
 use crate::auth::context::{use_auth, AuthContext, UserProfile};
 use crate::components::base::{
@@ -110,6 +112,283 @@ pub async fn save_profile(
     })
 }
 
+/// Upload a new avatar image for the authenticated user.
+///
+/// Expects raw WebP image bytes for both the full-size (400x400) and
+/// thumbnail (100x100) variants. The images have already been
+/// processed client-side before being sent here.
+///
+/// If the user already has an avatar, the old image files are deleted
+/// from storage (best-effort) before the new ones are uploaded.
+#[server]
+pub async fn upload_avatar(
+    full_bytes: Vec<u8>,
+    thumb_bytes: Vec<u8>,
+) -> Result<UserProfile, ServerFnError> {
+    let user_id = crate::auth::session::extract_user_id_from_fullstack()
+        .await
+        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let pool = crate::db::get_pool();
+    let storage = crate::storage::get_storage_client();
+
+    // Validate WebP magic bytes (both variants)
+    if !crate::api::upload::validate_webp_magic(&full_bytes) {
+        return Err(ServerFnError::new("Invalid image format: must be WebP"));
+    }
+    if !crate::api::upload::validate_webp_magic(&thumb_bytes) {
+        return Err(ServerFnError::new("Invalid thumbnail format: must be WebP"));
+    }
+
+    // Enforce max file size (2MB for avatars)
+    const MAX_AVATAR_SIZE: usize = 2 * 1024 * 1024;
+    if full_bytes.len() > MAX_AVATAR_SIZE {
+        return Err(ServerFnError::new(format!(
+            "Image too large: {} bytes (max {} bytes)",
+            full_bytes.len(),
+            MAX_AVATAR_SIZE
+        )));
+    }
+    if thumb_bytes.len() > MAX_AVATAR_SIZE {
+        return Err(ServerFnError::new(format!(
+            "Thumbnail too large: {} bytes (max {} bytes)",
+            thumb_bytes.len(),
+            MAX_AVATAR_SIZE
+        )));
+    }
+
+    // Fetch current user to get existing avatar URL for cleanup
+    let current_user = crate::db::get_user_by_id(&pool, user_id)
+        .await
+        .map_err(|e| ServerFnError::new(format!("Failed to fetch user: {e}")))?
+        .ok_or_else(|| ServerFnError::new("User not found"))?;
+
+    // Generate storage keys: avatars/{user_id}/{uuid}.webp and -thumb.webp
+    let unique_id = uuid::Uuid::new_v4();
+    let full_key = format!("avatars/{}/{}.webp", user_id, unique_id);
+    let thumb_key = format!("avatars/{}/{}-thumb.webp", user_id, unique_id);
+
+    // Upload new avatar to storage
+    let full_url = storage
+        .put_object(&full_key, &full_bytes, "image/webp")
+        .await
+        .map_err(|e| ServerFnError::new(format!("Failed to upload avatar: {e}")))?;
+    let _thumb_url = storage
+        .put_object(&thumb_key, &thumb_bytes, "image/webp")
+        .await
+        .map_err(|e| ServerFnError::new(format!("Failed to upload avatar thumbnail: {e}")))?;
+
+    // Persist URL to database
+    let updated = crate::db::update_avatar_url(&pool, user_id, Some(full_url.clone()))
+        .await
+        .map_err(|e| ServerFnError::new(format!("Failed to save avatar URL: {e}")))?;
+
+    // Delete old avatar from storage (best-effort)
+    if let Some(ref old_url) = current_user.avatar_url {
+        let public_base = storage.public_url().trim_end_matches('/');
+        if let Some(old_key) = old_url
+            .strip_prefix(public_base)
+            .map(|s| s.trim_start_matches('/'))
+        {
+            let _ = storage.delete_object(old_key).await;
+            // Also try to delete old thumbnail
+            if let Some(old_base) = old_key.strip_suffix(".webp") {
+                let _ = storage
+                    .delete_object(&format!("{}-thumb.webp", old_base))
+                    .await;
+            }
+        }
+    }
+
+    Ok(UserProfile {
+        id: updated.id,
+        username: updated.username,
+        display_name: updated.display_name,
+        email: updated.email,
+        avatar_url: updated.avatar_url,
+        bio: updated.bio,
+    })
+}
+
+/// Remove the authenticated user's avatar.
+///
+/// Deletes the avatar image files from storage (best-effort) before
+/// clearing the avatar_url in the database.
+#[server]
+pub async fn remove_avatar() -> Result<UserProfile, ServerFnError> {
+    let user_id = crate::auth::session::extract_user_id_from_fullstack()
+        .await
+        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let pool = crate::db::get_pool();
+    let storage = crate::storage::get_storage_client();
+
+    // Fetch current user to get existing avatar URL for cleanup
+    let current_user = crate::db::get_user_by_id(&pool, user_id)
+        .await
+        .map_err(|e| ServerFnError::new(format!("Failed to fetch user: {e}")))?
+        .ok_or_else(|| ServerFnError::new("User not found"))?;
+
+    // Delete old avatar from storage (best-effort)
+    if let Some(ref old_url) = current_user.avatar_url {
+        let public_base = storage.public_url().trim_end_matches('/');
+        if let Some(old_key) = old_url
+            .strip_prefix(public_base)
+            .map(|s| s.trim_start_matches('/'))
+        {
+            let _ = storage.delete_object(old_key).await;
+            // Also try to delete old thumbnail
+            if let Some(old_base) = old_key.strip_suffix(".webp") {
+                let _ = storage
+                    .delete_object(&format!("{}-thumb.webp", old_base))
+                    .await;
+            }
+        }
+    }
+
+    // Clear avatar_url in database
+    let updated = crate::db::update_avatar_url(&pool, user_id, None)
+        .await
+        .map_err(|e| ServerFnError::new(format!("Failed to remove avatar: {e}")))?;
+
+    Ok(UserProfile {
+        id: updated.id,
+        username: updated.username,
+        display_name: updated.display_name,
+        email: updated.email,
+        avatar_url: updated.avatar_url,
+        bio: updated.bio,
+    })
+}
+
+/// Processed avatar result: full-size (400x400) and thumbnail (100x100) WebP bytes.
+#[cfg(target_arch = "wasm32")]
+struct ProcessedAvatar {
+    /// Full-size WebP bytes (400x400, center-cropped square)
+    full_bytes: Vec<u8>,
+    /// Thumbnail WebP bytes (100x100, center-cropped square)
+    thumb_bytes: Vec<u8>,
+}
+
+/// Process an avatar image client-side: load, center-crop to square,
+/// generate full-size (400x400) and thumbnail (100x100) WebP variants.
+///
+/// Only available on wasm32 target.
+#[cfg(target_arch = "wasm32")]
+async fn process_avatar_image(web_file: web_sys::File) -> Result<ProcessedAvatar, String> {
+    use wasm_bindgen::JsCast;
+    use web_sys::HtmlCanvasElement;
+
+    let window = web_sys::window().ok_or("No window")?;
+    let document = window.document().ok_or("No document")?;
+
+    // Load the image using the existing utility
+    let img = crate::utils::image_processing_client::load_image_from_file(&web_file).await?;
+
+    // Center-crop: calculate source rectangle from the center of the image
+    let natural_width = img.natural_width();
+    let natural_height = img.natural_height();
+    let min_dim = natural_width.min(natural_height);
+    let sx = (natural_width as f64 - min_dim as f64) / 2.0;
+    let sy = (natural_height as f64 - min_dim as f64) / 2.0;
+
+    // Generate full-size (400x400) variant
+    let full_bytes = {
+        let canvas = document
+            .create_element("canvas")
+            .map_err(|e| format!("Failed to create canvas: {:?}", e))?
+            .dyn_into::<HtmlCanvasElement>()
+            .map_err(|_| "Failed to cast to HtmlCanvasElement")?;
+
+        let size: u32 = 400;
+        canvas.set_width(size);
+        canvas.set_height(size);
+
+        let ctx = canvas
+            .get_context("2d")
+            .map_err(|e| format!("Failed to get 2D context: {:?}", e))?
+            .and_then(|v| v.dyn_into::<web_sys::CanvasRenderingContext2d>().ok())
+            .ok_or("Failed to cast context")?;
+
+        ctx.set_fill_style_str("white");
+        ctx.fill_rect(0.0, 0.0, size as f64, size as f64);
+        ctx.draw_image_with_html_image_element_and_sw_and_sh_and_dx_and_dy_and_dw_and_dh(
+            &img,
+            sx,
+            sy,
+            min_dim as f64,
+            min_dim as f64,
+            0.0,
+            0.0,
+            size as f64,
+            size as f64,
+        )
+        .map_err(|e| format!("draw_image error: {:?}", e))?;
+
+        crate::utils::image_processing_client::blob_from_canvas(&canvas, 0.9).await?
+    };
+
+    // Generate thumbnail (100x100) variant
+    let thumb_bytes = {
+        let canvas = document
+            .create_element("canvas")
+            .map_err(|e| format!("Failed to create canvas: {:?}", e))?
+            .dyn_into::<HtmlCanvasElement>()
+            .map_err(|_| "Failed to cast to HtmlCanvasElement")?;
+
+        let size: u32 = 100;
+        canvas.set_width(size);
+        canvas.set_height(size);
+
+        let ctx = canvas
+            .get_context("2d")
+            .map_err(|e| format!("Failed to get 2D context: {:?}", e))?
+            .and_then(|v| v.dyn_into::<web_sys::CanvasRenderingContext2d>().ok())
+            .ok_or("Failed to cast context")?;
+
+        ctx.set_fill_style_str("white");
+        ctx.fill_rect(0.0, 0.0, size as f64, size as f64);
+        ctx.draw_image_with_html_image_element_and_sw_and_sh_and_dx_and_dy_and_dw_and_dh(
+            &img,
+            sx,
+            sy,
+            min_dim as f64,
+            min_dim as f64,
+            0.0,
+            0.0,
+            size as f64,
+            size as f64,
+        )
+        .map_err(|e| format!("draw_image error: {:?}", e))?;
+
+        crate::utils::image_processing_client::blob_from_canvas(&canvas, 0.8).await?
+    };
+
+    Ok(ProcessedAvatar {
+        full_bytes,
+        thumb_bytes,
+    })
+}
+
+/// Programmatically trigger a click on a file input element by ID.
+/// Only active on wasm32; no-op during SSR.
+#[cfg(target_arch = "wasm32")]
+fn trigger_file_input(id: &str) {
+    if let Some(window) = web_sys::window() {
+        if let Some(doc) = window.document() {
+            if let Ok(Some(input)) = doc.query_selector(id) {
+                if let Some(file_input) = input.dyn_ref::<web_sys::HtmlInputElement>() {
+                    file_input.click();
+                }
+            }
+        }
+    }
+}
+
+/// No-op stub for non-wasm32 targets (SSR).
+#[cfg(not(target_arch = "wasm32"))]
+fn trigger_file_input(_id: &str) {
+    // No DOM available during server-side rendering
+}
+
 /// User profile settings page.
 ///
 /// Displays editable display name and bio fields with validation,
@@ -131,6 +410,10 @@ pub fn SettingsProfile() -> Element {
     let mut deleting = use_signal(|| false);
     let mut delete_error = use_signal(|| Option::<String>::None);
 
+    // Avatar upload state
+    let avatar_uploading = use_signal(|| false);
+    let mut avatar_url_signal = use_signal(|| Option::<String>::None);
+
     // Extract username for typed confirmation (before use_effect consumes auth.current_user)
     let delete_username = auth
         .current_user
@@ -145,11 +428,17 @@ pub fn SettingsProfile() -> Element {
         .map(|u| u.email.clone())
         .unwrap_or_default();
 
-    // Extract avatar URL for display
-    let avatar_url = auth
+    // Extract avatar URL for display - initialize signal from auth context
+    let initial_avatar_url = auth
         .current_user
         .as_ref()
         .and_then(|u| u.avatar_url.clone());
+    if let Some(ref url) = initial_avatar_url {
+        if avatar_url_signal.read().is_none() {
+            avatar_url_signal.set(Some(url.clone()));
+        }
+    }
+    let avatar_url = avatar_url_signal.read().clone();
 
     // Avatar name: use display_name, fall back to username if empty
     let avatar_name = {
@@ -366,8 +655,11 @@ pub fn SettingsProfile() -> Element {
                 Ok(()) => {
                     // Full-page navigation to logout endpoint (clears cookie + redirects to /)
                     // Browsers ignore Set-Cookie from XHR, so we navigate directly
-                    if let Some(window) = web_sys::window() {
-                        let _ = window.location().set_href("/auth/logout?redirect_uri=/");
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        if let Some(window) = web_sys::window() {
+                            let _ = window.location().set_href("/auth/logout?redirect_uri=/");
+                        }
                     }
                 }
                 Err(e) => {
@@ -379,6 +671,105 @@ pub fn SettingsProfile() -> Element {
                     deleting.set(false);
                 }
             }
+        });
+    };
+
+    // Avatar upload handler: process image client-side, then upload
+    // Uses the same pattern as image_upload.rs for file handling
+    let on_avatar_file_change = move |files: Vec<dioxus::html::FileData>| {
+        if files.is_empty() {
+            return;
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            let mut auth_context = auth_context;
+            let mut avatar_url = avatar_url_signal;
+            let mut avatar_uploading = avatar_uploading;
+            let mut error = error;
+            let mut saved_message = saved_message;
+
+            spawn(async move {
+                use dioxus_web::WebFileExt;
+
+                avatar_uploading.set(true);
+                error.set(None);
+
+                let file_data = &files[0];
+                let web_file = match file_data.get_web_file() {
+                    Some(f) => f,
+                    None => {
+                        error.set(Some("Could not read file".to_string()));
+                        avatar_uploading.set(false);
+                        return;
+                    }
+                };
+
+                // Process: read file, center-crop on canvas, encode as WebP bytes
+                let processed = process_avatar_image(web_file).await;
+                let processed = match processed {
+                    Ok(data) => data,
+                    Err(e) => {
+                        error.set(Some(format!("Failed to process image: {e}")));
+                        avatar_uploading.set(false);
+                        return;
+                    }
+                };
+
+                // Upload to server (both full-size and thumbnail)
+                match upload_avatar(processed.full_bytes, processed.thumb_bytes).await {
+                    Ok(profile) => {
+                        avatar_url.set(profile.avatar_url.clone());
+                        auth_context.write().current_user = Some(profile);
+                        saved_message.set(Some("Avatar updated successfully!".to_string()));
+                    }
+                    Err(e) => {
+                        let msg = match &e {
+                            ServerFnError::ServerError { message, .. } => message.clone(),
+                            _ => e.to_string(),
+                        };
+                        error.set(Some(msg));
+                    }
+                }
+
+                avatar_uploading.set(false);
+            });
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let _ = &files;
+        }
+    };
+
+    // Avatar remove handler
+    let on_remove_avatar = move |_| {
+        let mut auth_context = auth_context;
+        let mut avatar_url = avatar_url_signal;
+        let mut avatar_uploading = avatar_uploading;
+        let mut error = error;
+        let mut saved_message = saved_message;
+
+        spawn(async move {
+            avatar_uploading.set(true);
+            error.set(None);
+
+            match remove_avatar().await {
+                Ok(profile) => {
+                    avatar_url.set(profile.avatar_url.clone());
+                    auth_context.write().current_user = Some(profile);
+                    saved_message.set(Some("Avatar removed successfully!".to_string()));
+                }
+                Err(e) => {
+                    let msg = match &e {
+                        ServerFnError::ServerError { message, .. } => message.clone(),
+                        _ => e.to_string(),
+                    };
+                    error.set(Some(msg));
+                }
+            }
+
+            avatar_uploading.set(false);
         });
     };
 
@@ -416,10 +807,43 @@ pub fn SettingsProfile() -> Element {
                                 src: avatar_url.clone(),
                                 username: avatar_name.clone(),
                             }
-                            span {
-                                font_size: "12px",
-                                color: "var(--text-tertiary)",
-                                "Provided by your OAuth provider"
+                            if avatar_uploading() {
+                                span {
+                                    font_size: "12px",
+                                    color: "var(--text-tertiary)",
+                                    "Uploading..."
+                                }
+                            } else if avatar_url.is_some() {
+                                div {
+                                    display: "flex",
+                                    gap: "var(--space-sm)",
+                                    Button {
+                                        variant: ButtonVariant::Secondary,
+                                        onclick: move |_| trigger_file_input("#avatar-upload-input"),
+                                        "Change Photo"
+                                    }
+                                    Button {
+                                        variant: ButtonVariant::Danger,
+                                        onclick: on_remove_avatar,
+                                        "Remove"
+                                    }
+                                }
+                            } else {
+                                Button {
+                                        variant: ButtonVariant::Secondary,
+                                        onclick: move |_| trigger_file_input("#avatar-upload-input"),
+                                        "Choose Photo"
+                                    }
+                            }
+                            // Hidden file input for avatar upload
+                            input {
+                                id: "avatar-upload-input",
+                                r#type: "file",
+                                accept: "image/png,image/jpeg,image/webp,image/gif",
+                                display: "none",
+                                onchange: move |evt| {
+                                    on_avatar_file_change(evt.files());
+                                },
                             }
                         }
                         div {

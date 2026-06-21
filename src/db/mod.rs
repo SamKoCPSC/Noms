@@ -698,6 +698,28 @@ pub async fn update_username(
     .map_err(DbError::Query)
 }
 
+/// Update a user's avatar URL.
+///
+/// Pass `Some(url)` to set a new avatar, or `None` to remove the avatar.
+/// Returns the updated user record on success.
+pub async fn update_avatar_url(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    user_id: Uuid,
+    avatar_url: Option<String>,
+) -> Result<User, DbError> {
+    sqlx::query_as!(
+        User,
+        "UPDATE users SET avatar_url = $2, updated_at = NOW() \
+         WHERE id = $1 \
+         RETURNING id, username, display_name, email, avatar_url, bio, created_at, updated_at",
+        user_id,
+        avatar_url,
+    )
+    .fetch_one(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
 // ── Recipe queries ──────────────────────────────────────────────────────────
 
 /// Insert a new recipe. Returns the created recipe with the generated ID.
@@ -3811,7 +3833,73 @@ mod tests {
         let urls = get_all_image_urls(&pool).await.unwrap();
         assert_eq!(urls.len(), 3);
         assert!(urls.contains(&shared_url));
-        assert!(urls.contains(&format!("https://storage.example.com/recipes/unique1_{u}.webp")));
-        assert!(urls.contains(&format!("https://storage.example.com/recipes/unique2_{u}.webp")));
+        assert!(urls.contains(&format!(
+            "https://storage.example.com/recipes/unique1_{u}.webp"
+        )));
+        assert!(urls.contains(&format!(
+            "https://storage.example.com/recipes/unique2_{u}.webp"
+        )));
+    }
+
+    #[tokio::test]
+    async fn test_update_avatar_url_sets_url() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("avatar_{u}"),
+            "Avatar User",
+            &format!("avatar{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert!(user.avatar_url.is_none());
+
+        let new_url = format!("https://storage.example.com/avatars/{u}.webp");
+        let updated = update_avatar_url(&pool, user.id, Some(new_url.clone()))
+            .await
+            .unwrap();
+
+        assert_eq!(updated.avatar_url, Some(new_url));
+    }
+
+    #[tokio::test]
+    async fn test_update_avatar_url_removes_url() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let existing_url = format!("https://storage.example.com/avatars/{u}.webp");
+        let user = insert_user(
+            &pool,
+            &format!("avatar2_{u}"),
+            "Avatar User 2",
+            &format!("avatar2{u}@example.com"),
+            Some(&existing_url),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(user.avatar_url, Some(existing_url));
+
+        let updated = update_avatar_url(&pool, user.id, None).await.unwrap();
+
+        assert!(updated.avatar_url.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_update_avatar_url_nonexistent_user() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+
+        let result = update_avatar_url(
+            &pool,
+            uuid::Uuid::nil(),
+            Some("https://example.com/avatar.webp".into()),
+        )
+        .await;
+
+        assert!(result.is_err());
     }
 }
