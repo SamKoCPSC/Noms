@@ -8,6 +8,8 @@ use std::rc::Rc;
 
 use crate::api::recipe::{get_recipe, get_recipe_tags, update_recipe};
 use crate::api::upload::delete_image;
+#[allow(unused_imports)]
+use crate::api::upload::upload_image;
 use crate::components::base::{
     Button, ButtonVariant, ImageUpload, Input, LoadingSpinner, PageHeader, UploadOutcome,
 };
@@ -21,6 +23,7 @@ use crate::types::{RecipeEquipment, RecipeIngredient, RecipeStep};
 struct StepForm {
     text: String,
     depth: usize,
+    photo_url: Option<String>,
 }
 
 /// Flatten a tree of `RecipeStep` into a flat list with depth information.
@@ -30,6 +33,7 @@ fn flatten_steps(steps: &[RecipeStep], depth: usize) -> Vec<StepForm> {
         result.push(StepForm {
             text: step.text.clone(),
             depth,
+            photo_url: step.photo_url.clone(),
         });
         result.extend(flatten_steps(&step.sub_steps, depth + 1));
     }
@@ -57,6 +61,7 @@ fn build_step_tree(flat: &[StepForm]) -> Vec<RecipeStep> {
         let node = RecipeStep {
             text: step.text.clone(),
             sub_steps: Vec::new(),
+            photo_url: step.photo_url.clone(),
         };
         let node_idx = nodes.len();
         nodes.push(node);
@@ -83,6 +88,25 @@ fn build_step_tree(flat: &[StepForm]) -> Vec<RecipeStep> {
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
+
+/// Programmatically trigger a click on a file input element by selector.
+/// Only active on wasm32; no-op during SSR.
+#[cfg(target_arch = "wasm32")]
+fn trigger_file_input(selector: &str) {
+    use wasm_bindgen::JsCast;
+    if let Some(window) = web_sys::window() {
+        if let Some(doc) = window.document() {
+            if let Ok(Some(input)) = doc.query_selector(selector) {
+                if let Some(file_input) = input.dyn_ref::<web_sys::HtmlInputElement>() {
+                    let _ = file_input.click();
+                }
+            }
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn trigger_file_input(_selector: &str) {}
 
 /// Edit recipe page — fetches existing data, pre-populates the form, saves via update_recipe.
 #[component]
@@ -177,6 +201,57 @@ pub fn RecipeEdit(id: String) -> Element {
     let id_for_cancel = id.clone();
     // CP5: Rc for the on_upload_complete handler (callable multiple times)
     let id_for_upload_complete = Rc::new(id.clone());
+
+    // ── Step photo upload handler ────────────────────────────────────────
+    #[allow(unused_variables)]
+    let on_step_photo_change = move |idx: usize| {
+        move |files: Vec<dioxus::html::FileData>| {
+            if files.is_empty() {
+                return;
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                let mut steps = steps;
+                spawn(async move {
+                    use dioxus_web::WebFileExt;
+
+                    let file_data = &files[0];
+                    let web_file = match file_data.get_web_file() {
+                        Some(f) => f,
+                        None => return,
+                    };
+
+                    let processed = match crate::utils::image_processing_client::process_image(
+                        web_file,
+                    )
+                    .await
+                    {
+                        Ok(p) => p,
+                        Err(e) => {
+                            tracing::error!("Step photo processing failed: {e}");
+                            return;
+                        }
+                    };
+
+                    let resp = match upload_image(
+                        processed.full_bytes,
+                        processed.thumb_bytes,
+                        format!("step_{idx}.webp"),
+                    )
+                    .await
+                    {
+                        Ok(r) => r,
+                        Err(e) => {
+                            tracing::error!("Step photo upload failed: {e}");
+                            return;
+                        }
+                    };
+
+                    steps.write()[idx].photo_url = Some(resp.full_url);
+                });
+            }
+        }
+    };
 
     // ── Submit handler (two-phase: upload images → save recipe) ────────
     let on_submit = move |_| {
@@ -360,6 +435,7 @@ pub fn RecipeEdit(id: String) -> Element {
         steps.write().push(StepForm {
             text: String::new(),
             depth: 0,
+            photo_url: None,
         });
     };
 
@@ -753,12 +829,56 @@ pub fn RecipeEdit(id: String) -> Element {
                                             steps.write()[idx].text = evt.value();
                                         },
                                     }
+                                    // Step photo thumbnail
+                                    if let Some(ref url) = steps()[idx].photo_url {
+                                        div {
+                                            position: "relative",
+                                            display: "inline-block",
+                                            margin_top: "var(--space-xs)",
+                                            img {
+                                                src: url,
+                                                width: "120px",
+                                                height: "90px",
+                                                object_fit: "cover",
+                                                border_radius: "var(--radius-sm)",
+                                            }
+                                            button {
+                                                onclick: move |_| {
+                                                    // Deferred delete: add to pending_deletes
+                                                    let url = steps()[idx].photo_url.clone().unwrap_or_default();
+                                                    if !url.is_empty() {
+                                                        pending_deletes.write().push(url);
+                                                    }
+                                                    steps.write()[idx].photo_url = None;
+                                                },
+                                                style: "position: absolute; top: -6px; right: -6px; font-size: 12px; width: 20px; height: 20px; padding: 0; line-height: 1; background: none; border: none; cursor: pointer; color: var(--text-secondary);",
+                                                "✕"
+                                            }
+                                        }
+                                    }
                                     // Reorder + indent + remove controls
                                     div {
                                         display: "flex",
                                         flex_direction: "column",
                                         gap: "var(--space-xs)",
                                         align_items: "center",
+                                        // Step photo upload
+                                        Button {
+                                            variant: ButtonVariant::Ghost,
+                                            onclick: move |_| {
+                                                trigger_file_input(&format!("#step-photo-{idx}"));
+                                            },
+                                            "📷"
+                                        }
+                                        input {
+                                            id: format!("step-photo-{idx}"),
+                                            r#type: "file",
+                                            accept: "image/*",
+                                            display: "none",
+                                            onchange: move |evt| {
+                                                on_step_photo_change(idx)(evt.files());
+                                            },
+                                        }
                                         // Move up
                                         if idx > 0 {
                                             Button {

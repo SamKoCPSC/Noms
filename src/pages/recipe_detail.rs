@@ -104,6 +104,15 @@ fn StepNode(step: RecipeStep, path: Vec<usize>, level: usize) -> Element {
             strong { font_weight: "600", margin_right: "var(--space-xs)", "{label}" }
             "{step.text}"
 
+            if let Some(ref url) = step.photo_url {
+                img {
+                    class: "recipe-step-photo",
+                    src: url,
+                    loading: "lazy",
+                    alt: "Step photo",
+                }
+            }
+
             if !step.sub_steps.is_empty() {
                 ol {
                     padding_left: "0",

@@ -20,6 +20,8 @@ pub struct RecipeIngredient {
 pub struct RecipeStep {
     pub text: String,
     pub sub_steps: Vec<RecipeStep>,
+    /// Optional photo URL for this step (full-size image URL from storage).
+    pub photo_url: Option<String>,
 }
 
 /// A piece of equipment needed for a recipe.

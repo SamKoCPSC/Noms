@@ -1807,6 +1807,7 @@ mod tests {
             &[RecipeStep {
                 text: "Mix batter, cook on griddle".to_string(),
                 sub_steps: vec![],
+                photo_url: None,
             }],
             &[],
             &[],
@@ -1829,7 +1830,8 @@ mod tests {
             recipe.instructions,
             vec![RecipeStep {
                 text: "Mix batter, cook on griddle".to_string(),
-                sub_steps: vec![]
+                sub_steps: vec![],
+                photo_url: None,
             }]
         );
     }
@@ -2039,6 +2041,7 @@ mod tests {
             &[RecipeStep {
                 text: "New instructions".to_string(),
                 sub_steps: vec![],
+                photo_url: None,
             }],
             &[],
             &[],
@@ -2056,7 +2059,8 @@ mod tests {
             updated.instructions,
             vec![RecipeStep {
                 text: "New instructions".to_string(),
-                sub_steps: vec![]
+                sub_steps: vec![],
+                photo_url: None,
             }]
         );
         assert!(updated.updated_at >= original_updated_at);
