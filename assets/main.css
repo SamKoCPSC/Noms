@@ -1574,24 +1574,28 @@ a:hover {
     border-radius: var(--radius-lg);
     overflow: hidden;
     background: var(--surface);
-    box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
 }
 
 .recipe-image-slider__viewport {
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
+    max-width: 711.11px; /* 400px * 16/9 — keeps ratio at height cap */
+    margin: 0 auto;
+    padding: var(--space-sm);
     aspect-ratio: 16 / 9;
     max-height: 400px;
     overflow: hidden;
 }
 
 .recipe-image-slider__image {
-    position: absolute;
-    top: 0;
-    left: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    border-radius: var(--radius-md);
+    object-fit: contain;
     transition: opacity 0.3s ease;
 }
 
