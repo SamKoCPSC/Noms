@@ -14,7 +14,7 @@ use dioxus::html::HasFileData;
 use dioxus::prelude::*;
 use std::sync::Arc;
 
-use crate::components::base::{Button, ButtonVariant};
+use crate::components::base::{Button, ButtonVariant, ImageEditorModal};
 
 // WASM-only bridge: connects Dioxus `FileData` to CP3's `process_image_*`
 // pipeline. Gated at module scope so the imports don't trigger
@@ -192,6 +192,7 @@ async fn process_one_file(
     mut pending: Signal<Vec<PendingImage>>,
     mut next_id: Signal<usize>,
     mut error: Signal<Option<String>>,
+    mut editor_modal_url: Signal<Option<String>>,
 ) {
     #[cfg(target_arch = "wasm32")]
     {
@@ -231,7 +232,7 @@ async fn process_one_file(
         pending.write().push(PendingImage {
             id,
             name: name.clone(),
-            preview_url,
+            preview_url: preview_url.clone(),
             original_size,
             full_bytes: Arc::new(Vec::new()),
             thumb_bytes: Arc::new(Vec::new()),
@@ -240,6 +241,11 @@ async fn process_one_file(
             status: UploadStatus::Processing,
             error: None,
         });
+
+        // Open the preview modal for the newly selected image.
+        if let Some(url) = &preview_url {
+            editor_modal_url.set(Some(url.clone()));
+        }
 
         // Process (default: compress — HQ off).
         match process_image_with_options(web_file, false).await {
@@ -276,7 +282,7 @@ async fn process_one_file(
     // Non-wasm no-op: consume the params so nothing is unused.
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let _ = (file, pending, next_id, error);
+        let _ = (file, pending, next_id, error, editor_modal_url);
     }
 }
 
@@ -487,6 +493,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     let mut uploading = use_signal(|| false);
     let error = use_signal(|| Option::<String>::None);
     let next_id = use_signal(|| 0usize);
+    let mut editor_modal_url = use_signal(|| Option::<String>::None);
 
     let images = props.images;
     let mut upload_now = props.upload_now;
@@ -510,7 +517,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     // Shared by the `<input onchange>` and `<div ondrop>` handlers.
     let handle_files = move |files: Vec<dioxus::html::FileData>| async move {
         for file in files {
-            process_one_file(file, pending, next_id, error).await;
+            process_one_file(file, pending, next_id, error, editor_modal_url).await;
         }
     };
 
@@ -597,11 +604,15 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                             key: "{img_id}",
                             class: "image-upload__item",
                             // Preview thumbnail (object URL) — only on client
-                            if let Some(url) = &img_preview {
+                            if let Some(url) = img_preview.clone() {
                                 img {
                                     class: "image-upload__thumb",
                                     src: "{url}",
                                     alt: "{img_name}",
+                                    style: "cursor: pointer;",
+                                    onclick: move |_| {
+                                        editor_modal_url.set(Some(url.clone()));
+                                    },
                                 }
                             } else {
                                 div {
@@ -688,6 +699,14 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                         }
                     }
                 }
+            }
+
+            // Image editor modal
+            ImageEditorModal {
+                image_url: editor_modal_url,
+                on_close: move |_| {
+                    editor_modal_url.set(None);
+                },
             }
         }
     }
