@@ -54,6 +54,16 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
     #[allow(unused_mut)]
     let mut just_released_drag = use_signal(|| false);
 
+    // Resize state.
+    #[allow(unused_mut)]
+    let mut is_resizing = use_signal(|| false);
+    // Which edge is being resized.
+    #[allow(unused_mut)]
+    let mut resize_handle = use_signal(|| ResizeHandle::None);
+    // (cursor screen position, initial scale) at resize start.
+    #[allow(unused_mut)]
+    let mut resize_start = use_signal(|| ((0.0f64, 0.0f64), 0.0f64));
+
     // Memo: compute final bounding box percentages from img_dims, scale, offset.
     let crop_rect = use_memo(move || {
         let Some((img_w, img_h)) = img_dims() else {
@@ -222,6 +232,9 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                         offset: offset,
                         is_dragging: is_dragging,
                         drag_start: drag_start,
+                        is_resizing: is_resizing,
+                        resize_handle: resize_handle,
+                        resize_start: resize_start,
                         just_released_drag: just_released_drag,
                         crop_rect: crop_rect,
                     }
@@ -299,6 +312,9 @@ fn ImageWithCrop(
     offset: Signal<(f64, f64)>,
     is_dragging: Signal<bool>,
     drag_start: Signal<((f64, f64), (f64, f64))>,
+    is_resizing: Signal<bool>,
+    resize_handle: Signal<ResizeHandle>,
+    resize_start: Signal<((f64, f64), f64)>,
     just_released_drag: Signal<bool>,
     crop_rect: Memo<Option<CropRectPct>>,
 ) -> Element {
@@ -326,8 +342,8 @@ fn ImageWithCrop(
             }
         };
 
-        // --- Global mouse listeners (document-level) so drag continues when
-        //     the cursor leaves the image wrapper ---
+        // --- Global mouse listeners (document-level) so drag/resize continues
+        //     when the cursor leaves the image wrapper ---
         use dioxus::core::use_hook;
         use dioxus::prelude::use_drop;
         use wasm_bindgen::closure::Closure;
@@ -338,6 +354,10 @@ fn ImageWithCrop(
         let mut offset_g = offset;
         let img_dims_g = img_dims;
         let mut just_released_drag_g = just_released_drag;
+        let mut is_resizing_g = is_resizing;
+        let resize_handle_g = resize_handle;
+        let resize_start_g = resize_start;
+        let mut scale_g = scale;
 
         // Store closures in a signal so use_drop can access them for cleanup.
         let global_closures = use_signal(|| {
@@ -355,21 +375,67 @@ fn ImageWithCrop(
                 };
 
                 let on_global_move = Closure::wrap(Box::new(move |evt: web_sys::MouseEvent| {
-                    if !is_dragging_g() {
+                    evt.stop_propagation();
+                    let current_screen = (evt.client_x() as f64, evt.client_y() as f64);
+
+                    // Handle drag
+                    if is_dragging_g() {
+                        let (start_screen, start_offset_val) = drag_start_g();
+                        let delta_screen = (
+                            current_screen.0 - start_screen.0,
+                            current_screen.1 - start_screen.1,
+                        );
+                        if let Some((iw, ih)) = img_dims_g() {
+                            let (dw, dh) = displayed_dims(&img_id_global);
+                            let px = screen_to_image_delta(delta_screen.0, iw, dw);
+                            let py = screen_to_image_delta(delta_screen.1, ih, dh);
+                            offset_g.set((start_offset_val.0 + px, start_offset_val.1 + py));
+                        }
                         return;
                     }
-                    evt.stop_propagation();
-                    let (start_screen, start_offset_val) = drag_start_g();
-                    let current_screen = (evt.client_x() as f64, evt.client_y() as f64);
-                    let delta_screen = (
-                        current_screen.0 - start_screen.0,
-                        current_screen.1 - start_screen.1,
-                    );
-                    if let Some((iw, ih)) = img_dims_g() {
-                        let (dw, dh) = displayed_dims(&img_id_global);
-                        let px = screen_to_image_delta(delta_screen.0, iw, dw);
-                        let py = screen_to_image_delta(delta_screen.1, ih, dh);
-                        offset_g.set((start_offset_val.0 + px, start_offset_val.1 + py));
+
+                    // Handle resize
+                    if is_resizing_g() {
+                        let handle = resize_handle_g();
+                        if handle == ResizeHandle::None {
+                            return;
+                        }
+                        let (start_screen, start_scale_val) = resize_start_g();
+                        let delta_screen = current_screen.0 - start_screen.0;
+                        let delta_screen_y = current_screen.1 - start_screen.1;
+                        if let Some((iw, ih)) = img_dims_g() {
+                            let (dw, dh) = displayed_dims(&img_id_global);
+                            let target_ratio = 16.0 / 9.0;
+                            let img_ratio = iw / ih;
+                            let (base_crop_w, base_crop_h) = if img_ratio < target_ratio {
+                                (iw, iw / target_ratio)
+                            } else {
+                                (ih * target_ratio, ih)
+                            };
+                            let delta_px = match handle {
+                                ResizeHandle::Left | ResizeHandle::Right => {
+                                    screen_to_image_delta(delta_screen, iw, dw)
+                                }
+                                ResizeHandle::Top | ResizeHandle::Bottom => {
+                                    screen_to_image_delta(delta_screen_y, ih, dh)
+                                }
+                                _ => 0.0,
+                            };
+                            let base_dim = match handle {
+                                ResizeHandle::Left | ResizeHandle::Right => base_crop_w,
+                                ResizeHandle::Top | ResizeHandle::Bottom => base_crop_h,
+                                _ => 1.0,
+                            };
+                            let dir = match handle {
+                                ResizeHandle::Right | ResizeHandle::Bottom => 1.0,
+                                ResizeHandle::Left | ResizeHandle::Top => -1.0,
+                                _ => 1.0,
+                            };
+                            let new_scale = (start_scale_val + dir * delta_px / base_dim)
+                                .clamp(0.1, 1.0);
+                            scale_g.set(new_scale);
+                        }
+                        return;
                     }
                 }) as Box<dyn FnMut(web_sys::MouseEvent)>);
 
@@ -377,6 +443,10 @@ fn ImageWithCrop(
                     let was_dragging = is_dragging_g();
                     is_dragging_g.set(false);
                     if was_dragging {
+                        just_released_drag_g.set(true);
+                    }
+                    if is_resizing_g() {
+                        is_resizing_g.set(false);
                         just_released_drag_g.set(true);
                     }
                 }) as Box<dyn FnMut(web_sys::MouseEvent)>);
@@ -470,6 +540,18 @@ fn ImageWithCrop(
             is_dragging.set(false);
         };
 
+        // --- Resize handle mousedown ---
+        let mut on_resize_mousedown =
+            move |handle: ResizeHandle, evt: dioxus::html::events::MouseEvent| {
+                evt.prevent_default();
+                evt.stop_propagation();
+                let coords = evt.data.client_coordinates();
+                let pos = (coords.x, coords.y);
+                resize_handle.set(handle);
+                resize_start.set((pos, scale()));
+                is_resizing.set(true);
+            };
+
         return rsx! {
             div {
                 class: "image-editor__image-wrapper",
@@ -488,19 +570,36 @@ fn ImageWithCrop(
                     alt: "Image editor",
                     onload: move |evt| on_img_load(evt),
                 }
-                // Crop rectangle outline (only rendered once dimensions are known).
-                if let Some(rect) = (*crop_rect)() {
+                // Crop rectangle outline with resize handles (only rendered once dimensions are known).
+                if let Some(_rect) = (*crop_rect)() {
                     div {
                         class: "image-editor__crop-rect",
                         style: format!(
                             "top: {}%; left: {}%; width: calc(100% - {}% - {}%); height: calc(100% - {}% - {}%);",
-                            rect.top,
-                            rect.left,
-                            rect.left,
-                            rect.right,
-                            rect.top,
-                            rect.bottom,
+                            (*crop_rect)().unwrap().top,
+                            (*crop_rect)().unwrap().left,
+                            (*crop_rect)().unwrap().left,
+                            (*crop_rect)().unwrap().right,
+                            (*crop_rect)().unwrap().top,
+                            (*crop_rect)().unwrap().bottom,
                         ),
+                        // Full-edge resize bars (invisible, clickable anywhere on the edge)
+                        div {
+                            class: "image-editor__resize-edge image-editor__resize-edge--top",
+                            onmousedown: move |evt| on_resize_mousedown(ResizeHandle::Top, evt),
+                        }
+                        div {
+                            class: "image-editor__resize-edge image-editor__resize-edge--bottom",
+                            onmousedown: move |evt| on_resize_mousedown(ResizeHandle::Bottom, evt),
+                        }
+                        div {
+                            class: "image-editor__resize-edge image-editor__resize-edge--left",
+                            onmousedown: move |evt| on_resize_mousedown(ResizeHandle::Left, evt),
+                        }
+                        div {
+                            class: "image-editor__resize-edge image-editor__resize-edge--right",
+                            onmousedown: move |evt| on_resize_mousedown(ResizeHandle::Right, evt),
+                        }
                     }
                 }
             }
@@ -519,6 +618,18 @@ fn ImageWithCrop(
             }
         }
     }
+}
+
+/// Which crop edge is being resized.
+#[derive(Clone, Copy, PartialEq, Default)]
+#[allow(dead_code)]
+enum ResizeHandle {
+    #[default]
+    None,
+    Top,
+    Bottom,
+    Left,
+    Right,
 }
 
 /// Crop rectangle edge positions as percentages (0–100) of the image.
