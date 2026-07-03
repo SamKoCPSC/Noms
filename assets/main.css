@@ -988,13 +988,41 @@ a:hover {
     width: 80px;
 }
 
+/* Dark overlay panels outside the crop area */
+.image-editor__crop-overlay {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.image-editor__crop-overlay--top {
+    top: 0;
+    left: 0;
+    width: 100%;
+}
+
+.image-editor__crop-overlay--bottom {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+}
+
+.image-editor__crop-overlay--left {
+    left: 0;
+}
+
+.image-editor__crop-overlay--right {
+    right: 0;
+}
+
 /* 16:9 crop rectangle outline */
 .image-editor__crop-rect {
     position: absolute;
     border: 2px solid rgba(0, 200, 255, 0.9);
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
     pointer-events: none;
     box-sizing: border-box;
+    z-index: 1;
 }
 
 /* Full-edge resize bars (invisible, clickable anywhere on the edge) */

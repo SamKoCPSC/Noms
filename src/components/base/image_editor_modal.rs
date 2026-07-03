@@ -571,17 +571,40 @@ fn ImageWithCrop(
                     onload: move |evt| on_img_load(evt),
                 }
                 // Crop rectangle outline with resize handles (only rendered once dimensions are known).
-                if let Some(_rect) = (*crop_rect)() {
+                if let Some(rect) = (*crop_rect)() {
+                    // Dark overlay: four panels outside the crop area
+                    div {
+                        class: "image-editor__crop-overlay image-editor__crop-overlay--top",
+                        style: format!("height: {}%;", rect.top),
+                    }
+                    div {
+                        class: "image-editor__crop-overlay image-editor__crop-overlay--bottom",
+                        style: format!("height: {}%;", rect.bottom),
+                    }
+                    div {
+                        class: "image-editor__crop-overlay image-editor__crop-overlay--left",
+                        style: format!(
+                            "top: {}%; width: {}%; height: calc(100% - {}% - {}%);",
+                            rect.top, rect.left, rect.top, rect.bottom
+                        ),
+                    }
+                    div {
+                        class: "image-editor__crop-overlay image-editor__crop-overlay--right",
+                        style: format!(
+                            "top: {}%; width: {}%; height: calc(100% - {}% - {}%);",
+                            rect.top, rect.right, rect.top, rect.bottom
+                        ),
+                    }
                     div {
                         class: "image-editor__crop-rect",
                         style: format!(
                             "top: {}%; left: {}%; width: calc(100% - {}% - {}%); height: calc(100% - {}% - {}%);",
-                            (*crop_rect)().unwrap().top,
-                            (*crop_rect)().unwrap().left,
-                            (*crop_rect)().unwrap().left,
-                            (*crop_rect)().unwrap().right,
-                            (*crop_rect)().unwrap().top,
-                            (*crop_rect)().unwrap().bottom,
+                            rect.top,
+                            rect.left,
+                            rect.left,
+                            rect.right,
+                            rect.top,
+                            rect.bottom,
                         ),
                         // Full-edge resize bars (invisible, clickable anywhere on the edge)
                         div {
