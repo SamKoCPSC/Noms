@@ -921,6 +921,8 @@ a:hover {
 
 /* Image editor modal variant */
 .modal-card--editor {
+    display: flex;
+    flex-direction: column;
     position: relative;
     max-width: 95vw;
     max-width: min(95vw, 95vh);
@@ -933,7 +935,9 @@ a:hover {
 
 .image-editor__image-wrapper {
     position: relative;
-    display: inline-block;
+    display: block;
+    width: 100%;
+    text-align: center;
 }
 
 .image-editor__image {
@@ -941,6 +945,47 @@ a:hover {
     max-width: 100%;
     max-height: 80vh;
     object-fit: contain;
+    user-select: none;
+    -webkit-user-drag: none;
+    cursor: grab;
+}
+
+.image-editor__image-wrapper:has(.image-editor__image:active) {
+    cursor: grabbing;
+}
+
+/* Action toolbar */
+.image-editor__toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-lg);
+    border-bottom: 1px solid var(--border);
+}
+
+.image-editor__scale-label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.image-editor__scale-slider {
+    flex: 1;
+    accent-color: var(--primary);
+}
+
+/* X/Y translation sliders */
+.image-editor__translations {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-left: auto;
+}
+
+.image-editor__translations .image-editor__scale-slider {
+    flex: 0 1 80px;
+    width: 80px;
 }
 
 /* 16:9 crop rectangle outline */

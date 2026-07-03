@@ -50,6 +50,9 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
     // (cursor screen position, offset) at drag start.
     #[allow(unused_mut)]
     let mut drag_start = use_signal(|| ((0.0f64, 0.0f64), (0.0f64, 0.0f64)));
+    // True immediately after a drag release — used to suppress the overlay click-close.
+    #[allow(unused_mut)]
+    let mut just_released_drag = use_signal(|| false);
 
     // Memo: compute final bounding box percentages from img_dims, scale, offset.
     let crop_rect = use_memo(move || {
@@ -93,6 +96,27 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
         })
     });
 
+    // Memo: translation slider bounds (max offset per axis).
+    let translation_bounds = use_memo(move || {
+        let Some((img_w, img_h)) = img_dims() else {
+            return None;
+        };
+
+        let target_ratio = 16.0 / 9.0;
+        let img_ratio = img_w / img_h;
+        let (base_crop_w, base_crop_h) = if img_ratio < target_ratio {
+            (img_w, img_w / target_ratio)
+        } else {
+            (img_h * target_ratio, img_h)
+        };
+
+        let crop_w = base_crop_w * scale();
+        let crop_h = base_crop_h * scale();
+        let max_off_x = (img_w - crop_w) / 2.0;
+        let max_off_y = (img_h - crop_h) / 2.0;
+        Some((max_off_x, max_off_y))
+    });
+
     if image_url().is_none() {
         return VNode::empty();
     }
@@ -101,11 +125,79 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
         div {
             class: "modal-overlay",
             onclick: move |_| {
-                on_close.call(());
+                // Don't close if the user just finished dragging the crop box.
+                let released = just_released_drag();
+                just_released_drag.set(false);
+                if !released {
+                    on_close.call(());
+                }
             },
             div {
                 class: "modal-card modal-card--editor",
                 onclick: move |evt| evt.stop_propagation(),
+                // Action toolbar
+                div {
+                    class: "image-editor__toolbar",
+                    label {
+                        class: "image-editor__scale-label",
+                        "Crop size"
+                    }
+                    input {
+                        r#type: "range",
+                        class: "image-editor__scale-slider",
+                        min: "0.1",
+                        max: "1.0",
+                        step: "0.01",
+                        value: format!("{:.2}", scale()),
+                        oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
+                            evt.stop_propagation();
+                            let val: f64 = evt.value().parse().unwrap_or(1.0);
+                            scale.set(val.clamp(0.1, 1.0));
+                        },
+                    }
+                    // X/Y translation sliders (only shown once dimensions are known)
+                    if let Some((max_off_x, max_off_y)) = (*translation_bounds)() {
+                        div {
+                            class: "image-editor__translations",
+                            label {
+                                class: "image-editor__scale-label",
+                                "X"
+                            }
+                            input {
+                                r#type: "range",
+                                class: "image-editor__scale-slider",
+                                min: format!("{}", -max_off_x),
+                                max: format!("{}", max_off_x),
+                                step: "1",
+                                value: format!("{:.0}", offset().0),
+                                oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
+                                    evt.stop_propagation();
+                                    let val: f64 = evt.value().parse().unwrap_or(0.0);
+                                    let (_, cur_y) = offset();
+                                    offset.set((val.clamp(-max_off_x, max_off_x), cur_y));
+                                },
+                            }
+                            label {
+                                class: "image-editor__scale-label",
+                                "Y"
+                            }
+                            input {
+                                r#type: "range",
+                                class: "image-editor__scale-slider",
+                                min: format!("{}", -max_off_y),
+                                max: format!("{}", max_off_y),
+                                step: "1",
+                                value: format!("{:.0}", offset().1),
+                                oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
+                                    evt.stop_propagation();
+                                    let val: f64 = evt.value().parse().unwrap_or(0.0);
+                                    let (cur_x, _) = offset();
+                                    offset.set((cur_x, val.clamp(-max_off_y, max_off_y)));
+                                },
+                            }
+                        }
+                    }
+                }
                 // Close button
                 div {
                     position: "absolute",
@@ -130,6 +222,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                         offset: offset,
                         is_dragging: is_dragging,
                         drag_start: drag_start,
+                        just_released_drag: just_released_drag,
                         crop_rect: crop_rect,
                     }
                 }
@@ -206,6 +299,7 @@ fn ImageWithCrop(
     offset: Signal<(f64, f64)>,
     is_dragging: Signal<bool>,
     drag_start: Signal<((f64, f64), (f64, f64))>,
+    just_released_drag: Signal<bool>,
     crop_rect: Memo<Option<CropRectPct>>,
 ) -> Element {
     #[cfg(target_arch = "wasm32")]
@@ -232,8 +326,83 @@ fn ImageWithCrop(
             }
         };
 
+        // --- Global mouse listeners (document-level) so drag continues when
+        //     the cursor leaves the image wrapper ---
+        use dioxus::core::use_hook;
+        use dioxus::prelude::use_drop;
+        use wasm_bindgen::closure::Closure;
+
+        let img_id_global = img_id.clone();
+        let mut is_dragging_g = is_dragging;
+        let drag_start_g = drag_start;
+        let mut offset_g = offset;
+        let img_dims_g = img_dims;
+        let mut just_released_drag_g = just_released_drag;
+
+        // Store closures in a signal so use_drop can access them for cleanup.
+        let global_closures = use_signal(|| {
+            None::<(
+                Closure<dyn FnMut(web_sys::MouseEvent)>,
+                Closure<dyn FnMut(web_sys::MouseEvent)>,
+            )>
+        });
+
+        use_hook({
+            let mut closures = global_closures;
+            move || {
+                let Some(doc) = web_sys::window().and_then(|w| w.document()) else {
+                    return;
+                };
+
+                let on_global_move = Closure::wrap(Box::new(move |evt: web_sys::MouseEvent| {
+                    if !is_dragging_g() {
+                        return;
+                    }
+                    evt.stop_propagation();
+                    let (start_screen, start_offset_val) = drag_start_g();
+                    let current_screen = (evt.client_x() as f64, evt.client_y() as f64);
+                    let delta_screen = (
+                        current_screen.0 - start_screen.0,
+                        current_screen.1 - start_screen.1,
+                    );
+                    if let Some((iw, ih)) = img_dims_g() {
+                        let (dw, dh) = displayed_dims(&img_id_global);
+                        let px = screen_to_image_delta(delta_screen.0, iw, dw);
+                        let py = screen_to_image_delta(delta_screen.1, ih, dh);
+                        offset_g.set((start_offset_val.0 + px, start_offset_val.1 + py));
+                    }
+                }) as Box<dyn FnMut(web_sys::MouseEvent)>);
+
+                let on_global_up = Closure::wrap(Box::new(move |_evt: web_sys::MouseEvent| {
+                    let was_dragging = is_dragging_g();
+                    is_dragging_g.set(false);
+                    if was_dragging {
+                        just_released_drag_g.set(true);
+                    }
+                }) as Box<dyn FnMut(web_sys::MouseEvent)>);
+
+                let _ = doc.add_event_listener_with_callback("mousemove", on_global_move.as_ref().unchecked_ref());
+                let _ = doc.add_event_listener_with_callback("mouseup", on_global_up.as_ref().unchecked_ref());
+
+                closures.set(Some((on_global_move, on_global_up)));
+            }
+        });
+
+        use_drop({
+            let mut closures = global_closures;
+            move || {
+                if let Some((move_cl, up_cl)) = closures.take() {
+                    if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
+                        let _ = doc.remove_event_listener_with_callback("mousemove", move_cl.as_ref().unchecked_ref());
+                        let _ = doc.remove_event_listener_with_callback("mouseup", up_cl.as_ref().unchecked_ref());
+                    }
+                }
+            }
+        });
+
         // --- Mouse drag ---
         let mut on_crop_mousedown = move |evt: dioxus::html::events::MouseEvent| {
+            evt.prevent_default(); // prevent browser's native image drag
             evt.stop_propagation();
             let coords = evt.data.client_coordinates();
             let pos = (coords.x, coords.y);
@@ -301,13 +470,6 @@ fn ImageWithCrop(
             is_dragging.set(false);
         };
 
-        // --- Scale slider ---
-        let mut on_scale_input = move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
-            evt.stop_propagation();
-            let val: f64 = evt.value().parse().unwrap_or(1.0);
-            scale.set(val.clamp(0.1, 1.0));
-        };
-
         return rsx! {
             div {
                 class: "image-editor__image-wrapper",
@@ -340,23 +502,6 @@ fn ImageWithCrop(
                             rect.bottom,
                         ),
                     }
-                }
-            }
-            // Scale slider
-            div {
-                class: "image-editor__controls",
-                label {
-                    class: "image-editor__scale-label",
-                    "Crop size"
-                }
-                input {
-                    r#type: "range",
-                    class: "image-editor__scale-slider",
-                    min: "0.1",
-                    max: "1.0",
-                    step: "0.01",
-                    value: format!("{:.2}", scale()),
-                    oninput: move |evt| on_scale_input(evt),
                 }
             }
         };
