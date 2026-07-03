@@ -32,9 +32,66 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
         format!("img-editor-{}", IMG_ID_COUNTER.fetch_add(1, Ordering::Relaxed))
     });
 
-    // Crop rectangle — `None` while the image is downloading, `Some` once computed.
+    // Raw natural image dimensions (width, height) — set when the image loads.
     #[allow(unused_mut)]
-    let mut crop_rect = use_signal(|| None::<CropRectPct>);
+    let mut img_dims = use_signal(|| None::<(f64, f64)>);
+
+    // Scale multiplier: 0.1 (smallest) to 1.0 (maximum 16:9 fit).
+    #[allow(unused_mut)]
+    let mut scale = use_signal(|| 1.0f64);
+
+    // X/Y pixel offset of the crop box centre from the image centre.
+    #[allow(unused_mut)]
+    let mut offset = use_signal(|| (0.0f64, 0.0f64));
+
+    // Drag state.
+    #[allow(unused_mut)]
+    let mut is_dragging = use_signal(|| false);
+    // (cursor screen position, offset) at drag start.
+    #[allow(unused_mut)]
+    let mut drag_start = use_signal(|| ((0.0f64, 0.0f64), (0.0f64, 0.0f64)));
+
+    // Memo: compute final bounding box percentages from img_dims, scale, offset.
+    let crop_rect = use_memo(move || {
+        let Some((img_w, img_h)) = img_dims() else {
+            return None;
+        };
+
+        let target_ratio = 16.0 / 9.0;
+        let img_ratio = img_w / img_h;
+
+        // Base crop dimensions at scale 1.0 (maximum 16:9 fit).
+        let (base_crop_w, base_crop_h) = if img_ratio < target_ratio {
+            // Image is narrower than 16:9 — full width.
+            (img_w, img_w / target_ratio)
+        } else {
+            // Image is wider or equal — full height.
+            (img_h * target_ratio, img_h)
+        };
+
+        let crop_w = base_crop_w * scale();
+        let crop_h = base_crop_h * scale();
+
+        // Maximum allowed pixel offset in each direction.
+        let max_off_x = (img_w - crop_w) / 2.0;
+        let max_off_y = (img_h - crop_h) / 2.0;
+
+        let (off_x, off_y) = offset();
+        let off_x = off_x.clamp(-max_off_x, max_off_x);
+        let off_y = off_y.clamp(-max_off_y, max_off_y);
+
+        // Position of the crop box edges in image pixels (from top-left origin).
+        let left_px = img_w / 2.0 - crop_w / 2.0 + off_x;
+        let top_px = img_h / 2.0 - crop_h / 2.0 + off_y;
+
+        // Convert to percentages of the image.
+        Some(CropRectPct {
+            top: (top_px / img_h) * 100.0,
+            bottom: ((img_h - top_px - crop_h) / img_h) * 100.0,
+            left: (left_px / img_w) * 100.0,
+            right: ((img_w - left_px - crop_w) / img_w) * 100.0,
+        })
+    });
 
     if image_url().is_none() {
         return VNode::empty();
@@ -68,6 +125,11 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                     ImageWithCrop {
                         img_id: img_id.clone(),
                         url: url.clone(),
+                        img_dims: img_dims,
+                        scale: scale,
+                        offset: offset,
+                        is_dragging: is_dragging,
+                        drag_start: drag_start,
                         crop_rect: crop_rect,
                     }
                 }
@@ -76,45 +138,196 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
     }
 }
 
-/// Internal component that renders the image and crop overlay.
-/// Handles the `onload` event differently for wasm vs non-wasm targets.
+// ---------------------------------------------------------------------------
+// Helpers (wasm only)
+// ---------------------------------------------------------------------------
+
+/// Convert a screen-pixel delta to an image-pixel delta.
+/// `natural_dim` and `displayed_dim` must be the same axis (both width or both height).
+#[cfg(target_arch = "wasm32")]
+fn screen_to_image_delta(
+    screen_delta: f64,
+    natural_dim: f64,
+    displayed_dim: f64,
+) -> f64 {
+    if displayed_dim <= 0.0 {
+        return screen_delta;
+    }
+    let ratio = natural_dim / displayed_dim;
+    screen_delta * ratio
+}
+
+/// Query the rendered (CSS) width and height of the image element.
+/// Returns `(offset_width, offset_height)` as f64, or `(0.0, 0.0)` on failure.
+#[cfg(target_arch = "wasm32")]
+fn displayed_dims(img_id: &str) -> (f64, f64) {
+    use wasm_bindgen::JsCast;
+
+    let doc = match web_sys::window().and_then(|w| w.document()) {
+        Some(d) => d,
+        None => return (0.0, 0.0),
+    };
+
+    let Some(el) = doc.get_element_by_id(img_id) else {
+        return (0.0, 0.0);
+    };
+
+    let Some(html_el) = el.dyn_ref::<web_sys::HtmlElement>() else {
+        return (0.0, 0.0);
+    };
+
+    (html_el.offset_width() as f64, html_el.offset_height() as f64)
+}
+
+/// Extract (clientX, clientY) from the first touch point of a TouchEvent.
+#[cfg(target_arch = "wasm32")]
+fn touch_client_pos(evt: &dioxus::html::events::TouchEvent) -> Option<(f64, f64)> {
+    let touches = evt.data.touches();
+    if touches.is_empty() {
+        return None;
+    }
+    let first = &touches[0];
+    let coords = first.client_coordinates();
+    Some((coords.x, coords.y))
+}
+
+// ---------------------------------------------------------------------------
+// Internal rendering component
+// ---------------------------------------------------------------------------
+
+/// Renders the image, crop overlay, and scale slider.
+/// Splits wasm / non-wasm so that web_sys imports only appear under wasm32.
 #[component]
 fn ImageWithCrop(
     img_id: String,
     url: String,
-    crop_rect: Signal<Option<CropRectPct>>,
+    img_dims: Signal<Option<(f64, f64)>>,
+    scale: Signal<f64>,
+    offset: Signal<(f64, f64)>,
+    is_dragging: Signal<bool>,
+    drag_start: Signal<((f64, f64), (f64, f64))>,
+    crop_rect: Memo<Option<CropRectPct>>,
 ) -> Element {
     #[cfg(target_arch = "wasm32")]
     {
-        let img_id_clone = img_id.clone();
+        use wasm_bindgen::JsCast;
+
+        // --- Image onload: capture natural dimensions ---
+        let img_id_load = img_id.clone();
+        let mut on_img_load = move |_evt: dioxus::html::events::ImageEvent| {
+            let doc = match web_sys::window().and_then(|w| w.document()) {
+                Some(d) => d,
+                None => return,
+            };
+            let Some(el) = doc
+                .get_element_by_id(&img_id_load)
+                .and_then(|e| e.dyn_into::<web_sys::HtmlImageElement>().ok())
+            else {
+                return;
+            };
+            let w = el.natural_width() as f64;
+            let h = el.natural_height() as f64;
+            if w > 0.0 && h > 0.0 {
+                img_dims.set(Some((w, h)));
+            }
+        };
+
+        // --- Mouse drag ---
+        let mut on_crop_mousedown = move |evt: dioxus::html::events::MouseEvent| {
+            evt.stop_propagation();
+            let coords = evt.data.client_coordinates();
+            let pos = (coords.x, coords.y);
+            drag_start.set((pos, offset()));
+            is_dragging.set(true);
+        };
+
+        let img_id_move = img_id.clone();
+        let mut on_crop_mousemove = move |evt: dioxus::html::events::MouseEvent| {
+            if !is_dragging() {
+                return;
+            }
+            evt.stop_propagation();
+            let (start_screen, start_offset_val) = drag_start();
+            let coords = evt.data.client_coordinates();
+            let current_screen = (coords.x, coords.y);
+            let delta_screen = (
+                current_screen.0 - start_screen.0,
+                current_screen.1 - start_screen.1,
+            );
+            if let Some((iw, ih)) = img_dims() {
+                let (dw, dh) = displayed_dims(&img_id_move);
+                let px = screen_to_image_delta(delta_screen.0, iw, dw);
+                let py = screen_to_image_delta(delta_screen.1, ih, dh);
+                offset.set((start_offset_val.0 + px, start_offset_val.1 + py));
+            }
+        };
+
+        let mut on_crop_mouseup = move |_: dioxus::html::events::MouseEvent| {
+            is_dragging.set(false);
+        };
+
+        // --- Touch drag ---
+        let mut on_crop_touchstart = move |evt: dioxus::html::events::TouchEvent| {
+            evt.stop_propagation();
+            if let Some(pos) = touch_client_pos(&evt) {
+                drag_start.set((pos, offset()));
+                is_dragging.set(true);
+            }
+        };
+
+        let img_id_tm = img_id.clone();
+        let mut on_crop_touchmove = move |evt: dioxus::html::events::TouchEvent| {
+            if !is_dragging() {
+                return;
+            }
+            evt.prevent_default();
+            evt.stop_propagation();
+            if let Some(current_screen) = touch_client_pos(&evt) {
+                let (start_screen, start_offset_val) = drag_start();
+                let delta_screen = (
+                    current_screen.0 - start_screen.0,
+                    current_screen.1 - start_screen.1,
+                );
+                if let Some((iw, ih)) = img_dims() {
+                    let (dw, dh) = displayed_dims(&img_id_tm);
+                    let px = screen_to_image_delta(delta_screen.0, iw, dw);
+                    let py = screen_to_image_delta(delta_screen.1, ih, dh);
+                    offset.set((start_offset_val.0 + px, start_offset_val.1 + py));
+                }
+            }
+        };
+
+        let mut on_crop_touchend = move |_: dioxus::html::events::TouchEvent| {
+            is_dragging.set(false);
+        };
+
+        // --- Scale slider ---
+        let mut on_scale_input = move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
+            evt.stop_propagation();
+            let val: f64 = evt.value().parse().unwrap_or(1.0);
+            scale.set(val.clamp(0.1, 1.0));
+        };
+
         return rsx! {
             div {
                 class: "image-editor__image-wrapper",
+                // Drag handlers on the wrapper so they fire even when the cursor
+                // leaves the crop rectangle but is still over the image.
+                onmousedown: move |evt| on_crop_mousedown(evt),
+                onmousemove: move |evt| on_crop_mousemove(evt),
+                onmouseup: move |evt| on_crop_mouseup(evt),
+                ontouchstart: move |evt| on_crop_touchstart(evt),
+                ontouchmove: move |evt| on_crop_touchmove(evt),
+                ontouchend: move |evt| on_crop_touchend(evt),
                 img {
                     id: img_id,
                     class: "image-editor__image",
                     src: url,
                     alt: "Image editor",
-                    onload: move |_| {
-                        use wasm_bindgen::JsCast;
-
-                        let doc = web_sys::window().unwrap().document().unwrap();
-                        let Some(el) = doc
-                            .get_element_by_id(&img_id_clone)
-                            .and_then(|e| e.dyn_into::<web_sys::HtmlImageElement>().ok())
-                        else {
-                            return;
-                        };
-
-                        let w = el.natural_width() as f64;
-                        let h = el.natural_height() as f64;
-                        if w > 0.0 && h > 0.0 {
-                            crop_rect.set(Some(compute_crop_rect_pct(w, h)));
-                        }
-                    },
+                    onload: move |evt| on_img_load(evt),
                 }
-                // Crop rectangle outline (only rendered once computed)
-                if let Some(rect) = crop_rect() {
+                // Crop rectangle outline (only rendered once dimensions are known).
+                if let Some(rect) = (*crop_rect)() {
                     div {
                         class: "image-editor__crop-rect",
                         style: format!(
@@ -127,6 +340,23 @@ fn ImageWithCrop(
                             rect.bottom,
                         ),
                     }
+                }
+            }
+            // Scale slider
+            div {
+                class: "image-editor__controls",
+                label {
+                    class: "image-editor__scale-label",
+                    "Crop size"
+                }
+                input {
+                    r#type: "range",
+                    class: "image-editor__scale-slider",
+                    min: "0.1",
+                    max: "1.0",
+                    step: "0.01",
+                    value: format!("{:.2}", scale()),
+                    oninput: move |evt| on_scale_input(evt),
                 }
             }
         };
@@ -147,40 +377,11 @@ fn ImageWithCrop(
 }
 
 /// Crop rectangle edge positions as percentages (0–100) of the image.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 #[allow(dead_code)]
 struct CropRectPct {
     top: f64,
     bottom: f64,
     left: f64,
     right: f64,
-}
-
-/// Compute a centered 16:9 crop rectangle as percentages of the image dimensions.
-#[cfg(target_arch = "wasm32")]
-fn compute_crop_rect_pct(img_width: f64, img_height: f64) -> CropRectPct {
-    let target_ratio = 16.0 / 9.0;
-    let img_ratio = img_width / img_height;
-
-    if img_ratio < target_ratio {
-        // Image is narrower than 16:9 — use full width, center vertically.
-        let crop_height = img_width / target_ratio;
-        let top_bottom_pct = (1.0 - crop_height / img_height) * 50.0;
-        CropRectPct {
-            top: top_bottom_pct,
-            bottom: top_bottom_pct,
-            left: 0.0,
-            right: 0.0,
-        }
-    } else {
-        // Image is wider than or equal to 16:9 — use full height, center horizontally.
-        let crop_width = img_height * target_ratio;
-        let left_right_pct = (1.0 - crop_width / img_width) * 50.0;
-        CropRectPct {
-            top: 0.0,
-            bottom: 0.0,
-            left: left_right_pct,
-            right: left_right_pct,
-        }
-    }
 }
