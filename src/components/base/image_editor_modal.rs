@@ -80,6 +80,14 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
     #[allow(unused_mut)]
     let mut flip_y = use_signal(|| false);
 
+    // Per-channel RGB contrast multipliers: 0.1 (washed out) to 2.0 (high contrast).
+    #[allow(unused_mut)]
+    let mut contrast_r = use_signal(|| 1.0f64);
+    #[allow(unused_mut)]
+    let mut contrast_g = use_signal(|| 1.0f64);
+    #[allow(unused_mut)]
+    let mut contrast_b = use_signal(|| 1.0f64);
+
     // Memo: compute final bounding box percentages from img_dims, scale, offset.
     let crop_rect = use_memo(move || {
         let Some((img_w, img_h)) = img_dims() else {
@@ -345,6 +353,79 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                             }
                         }
                     }
+                    // Contrast sliders (only shown once dimensions are known)
+                    if let Some(_) = img_dims() {
+                        div {
+                            class: "image-editor__control-group",
+                            label {
+                                class: "image-editor__scale-label",
+                                "Contrast"
+                            }
+                            div {
+                                class: "image-editor__slider-group",
+                                div {
+                                    class: "image-editor__slider-row",
+                                    label {
+                                        class: "image-editor__scale-label image-editor__contrast-label--r",
+                                        "R"
+                                    }
+                                    input {
+                                        r#type: "range",
+                                        class: "image-editor__scale-slider",
+                                        min: "0.1",
+                                        max: "2.0",
+                                        step: "0.01",
+                                        value: format!("{:.2}", contrast_r()),
+                                        oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
+                                            evt.stop_propagation();
+                                            let val: f64 = evt.value().parse().unwrap_or(1.0);
+                                            contrast_r.set(val.clamp(0.1, 2.0));
+                                        },
+                                    }
+                                }
+                                div {
+                                    class: "image-editor__slider-row",
+                                    label {
+                                        class: "image-editor__scale-label image-editor__contrast-label--g",
+                                        "G"
+                                    }
+                                    input {
+                                        r#type: "range",
+                                        class: "image-editor__scale-slider",
+                                        min: "0.1",
+                                        max: "2.0",
+                                        step: "0.01",
+                                        value: format!("{:.2}", contrast_g()),
+                                        oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
+                                            evt.stop_propagation();
+                                            let val: f64 = evt.value().parse().unwrap_or(1.0);
+                                            contrast_g.set(val.clamp(0.1, 2.0));
+                                        },
+                                    }
+                                }
+                                div {
+                                    class: "image-editor__slider-row",
+                                    label {
+                                        class: "image-editor__scale-label image-editor__contrast-label--b",
+                                        "B"
+                                    }
+                                    input {
+                                        r#type: "range",
+                                        class: "image-editor__scale-slider",
+                                        min: "0.1",
+                                        max: "2.0",
+                                        step: "0.01",
+                                        value: format!("{:.2}", contrast_b()),
+                                        oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
+                                            evt.stop_propagation();
+                                            let val: f64 = evt.value().parse().unwrap_or(1.0);
+                                            contrast_b.set(val.clamp(0.1, 2.0));
+                                        },
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 // Close button
                 div {
@@ -379,6 +460,9 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                         rotation: rotation,
                         flip_x: flip_x,
                         flip_y: flip_y,
+                        contrast_r: contrast_r,
+                        contrast_g: contrast_g,
+                        contrast_b: contrast_b,
                         crop_rect: crop_rect,
                     }
                 }
@@ -464,6 +548,9 @@ fn ImageWithCrop(
     rotation: Signal<f64>,
     flip_x: Signal<bool>,
     flip_y: Signal<bool>,
+    contrast_r: Signal<f64>,
+    contrast_g: Signal<f64>,
+    contrast_b: Signal<f64>,
     crop_rect: Memo<Option<CropRectPct>>,
 ) -> Element {
     #[cfg(target_arch = "wasm32")]
@@ -489,6 +576,29 @@ fn ImageWithCrop(
                 img_dims.set(Some((w, h)));
             }
         };
+
+        // --- SVG filter for per-channel RGB contrast ---
+        let filter_id = format!("{}-contrast-filter", img_id);
+        let filter_id_style = filter_id.clone();
+        // Use a memo to track contrast values so we can trigger an effect on change.
+        let contrast_vals = use_memo(move || {
+            (contrast_r(), contrast_g(), contrast_b())
+        });
+        let filter_id_memo = filter_id.clone();
+        use dioxus::prelude::use_effect;
+        use_effect(move || {
+            let (r, g, b) = contrast_vals();
+            let doc = match web_sys::window().and_then(|w| w.document()) {
+                Some(d) => d,
+                None => return,
+            };
+            for (sel, val) in [("feFuncR", r), ("feFuncG", g), ("feFuncB", b)] {
+                let full_sel = format!("#{} {}", filter_id_memo, sel);
+                if let Some(el) = doc.query_selector(&full_sel).ok().flatten() {
+                    let _ = el.set_attribute("slope", &format!("{:.4}", val));
+                }
+            }
+        });
 
         // --- Global mouse listeners (document-level) so drag/resize continues
         //     when the cursor leaves the image wrapper ---
@@ -711,13 +821,47 @@ fn ImageWithCrop(
                 ontouchstart: move |evt| on_crop_touchstart(evt),
                 ontouchmove: move |evt| on_crop_touchmove(evt),
                 ontouchend: move |evt| on_crop_touchend(evt),
+                // Inline SVG filter for per-channel RGB contrast
+                svg {
+                    style: "position: absolute; width: 0; height: 0; overflow: hidden;",
+                    xmlns: "http://www.w3.org/2000/svg",
+                    defs {
+                        filter {
+                            id: filter_id,
+                            x: "0",
+                            y: "0",
+                            width: "100%",
+                            height: "100%",
+                            feComponentTransfer {
+                                feFuncR {
+                                    r#type: "linear",
+                                    slope: "1.0",
+                                }
+                                feFuncG {
+                                    r#type: "linear",
+                                    slope: "1.0",
+                                }
+                                feFuncB {
+                                    r#type: "linear",
+                                    slope: "1.0",
+                                }
+                            }
+                        }
+                    }
+                }
                 img {
                     id: img_id,
                     class: "image-editor__image",
                     src: url,
                     alt: "Image editor",
                     onload: move |evt| on_img_load(evt),
-                    style: format!("transform: rotate({}deg) scaleX({}) scaleY({});", rotation(), stretch_x() * if flip_x() { -1.0 } else { 1.0 }, stretch_y() * if flip_y() { -1.0 } else { 1.0 }),
+                    style: format!(
+                        "transform: rotate({}deg) scaleX({}) scaleY({}); filter: url(#{});",
+                        rotation(),
+                        stretch_x() * if flip_x() { -1.0 } else { 1.0 },
+                        stretch_y() * if flip_y() { -1.0 } else { 1.0 },
+                        filter_id_style
+                    ),
                 }
                 // Crop rectangle outline with resize handles (only rendered once dimensions are known).
                 if let Some(rect) = (*crop_rect)() {
