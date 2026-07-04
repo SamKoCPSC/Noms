@@ -64,6 +64,12 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
     #[allow(unused_mut)]
     let mut resize_start = use_signal(|| ((0.0f64, 0.0f64), 0.0f64));
 
+    // Image stretch/compress multipliers: 0.1 (compressed) to 3.0 (stretched).
+    #[allow(unused_mut)]
+    let mut stretch_x = use_signal(|| 1.0f64);
+    #[allow(unused_mut)]
+    let mut stretch_y = use_signal(|| 1.0f64);
+
     // Memo: compute final bounding box percentages from img_dims, scale, offset.
     let crop_rect = use_memo(move || {
         let Some((img_w, img_h)) = img_dims() else {
@@ -148,62 +154,132 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                 // Action toolbar
                 div {
                     class: "image-editor__toolbar",
-                    label {
-                        class: "image-editor__scale-label",
-                        "Crop size"
+                    // Crop size control
+                    div {
+                        class: "image-editor__control-group",
+                        label {
+                            class: "image-editor__scale-label",
+                            "Crop size"
+                        }
+                        input {
+                            r#type: "range",
+                            class: "image-editor__scale-slider",
+                            min: "0.1",
+                            max: "1.0",
+                            step: "0.01",
+                            value: format!("{:.2}", scale()),
+                            oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
+                                evt.stop_propagation();
+                                let val: f64 = evt.value().parse().unwrap_or(1.0);
+                                scale.set(val.clamp(0.1, 1.0));
+                            },
+                        }
                     }
-                    input {
-                        r#type: "range",
-                        class: "image-editor__scale-slider",
-                        min: "0.1",
-                        max: "1.0",
-                        step: "0.01",
-                        value: format!("{:.2}", scale()),
-                        oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
-                            evt.stop_propagation();
-                            let val: f64 = evt.value().parse().unwrap_or(1.0);
-                            scale.set(val.clamp(0.1, 1.0));
-                        },
+                    // Stretch X/Y sliders (only shown once dimensions are known)
+                    if let Some(_) = img_dims() {
+                        div {
+                            class: "image-editor__control-group",
+                            label {
+                                class: "image-editor__scale-label",
+                                "Stretch"
+                            }
+                            div {
+                                class: "image-editor__slider-group",
+                                div {
+                                    class: "image-editor__slider-row",
+                                    label {
+                                        class: "image-editor__scale-label",
+                                        "X"
+                                    }
+                                    input {
+                                        r#type: "range",
+                                        class: "image-editor__scale-slider",
+                                        min: "0.1",
+                                        max: "1.0",
+                                        step: "0.01",
+                                        value: format!("{:.2}", stretch_x()),
+                                        oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
+                                            evt.stop_propagation();
+                                            let val: f64 = evt.value().parse().unwrap_or(1.0);
+                                            stretch_x.set(val.clamp(0.1, 1.0));
+                                        },
+                                    }
+                                }
+                                div {
+                                    class: "image-editor__slider-row",
+                                    label {
+                                        class: "image-editor__scale-label",
+                                        "Y"
+                                    }
+                                    input {
+                                        r#type: "range",
+                                        class: "image-editor__scale-slider",
+                                        min: "0.1",
+                                        max: "1.0",
+                                        step: "0.01",
+                                        value: format!("{:.2}", stretch_y()),
+                                        oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
+                                            evt.stop_propagation();
+                                            let val: f64 = evt.value().parse().unwrap_or(1.0);
+                                            stretch_y.set(val.clamp(0.1, 1.0));
+                                        },
+                                    }
+                                }
+                            }
+                        }
                     }
                     // X/Y translation sliders (only shown once dimensions are known)
                     if let Some((max_off_x, max_off_y)) = (*translation_bounds)() {
                         div {
-                            class: "image-editor__translations",
+                            class: "image-editor__control-group",
                             label {
                                 class: "image-editor__scale-label",
-                                "X"
+                                "Position"
                             }
-                            input {
-                                r#type: "range",
-                                class: "image-editor__scale-slider",
-                                min: format!("{}", -max_off_x),
-                                max: format!("{}", max_off_x),
-                                step: "1",
-                                value: format!("{:.0}", offset().0),
-                                oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
-                                    evt.stop_propagation();
-                                    let val: f64 = evt.value().parse().unwrap_or(0.0);
-                                    let (_, cur_y) = offset();
-                                    offset.set((val.clamp(-max_off_x, max_off_x), cur_y));
-                                },
-                            }
-                            label {
-                                class: "image-editor__scale-label",
-                                "Y"
-                            }
-                            input {
-                                r#type: "range",
-                                class: "image-editor__scale-slider",
-                                min: format!("{}", -max_off_y),
-                                max: format!("{}", max_off_y),
-                                step: "1",
-                                value: format!("{:.0}", offset().1),
-                                oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
-                                    evt.stop_propagation();
-                                    let val: f64 = evt.value().parse().unwrap_or(0.0);
-                                    let (cur_x, _) = offset();
-                                    offset.set((cur_x, val.clamp(-max_off_y, max_off_y)));
-                                },
+                            div {
+                                class: "image-editor__slider-group",
+                                div {
+                                    class: "image-editor__slider-row",
+                                    label {
+                                        class: "image-editor__scale-label",
+                                        "X"
+                                    }
+                                    input {
+                                        r#type: "range",
+                                        class: "image-editor__scale-slider",
+                                        min: format!("{}", -max_off_x),
+                                        max: format!("{}", max_off_x),
+                                        step: "1",
+                                        value: format!("{:.0}", offset().0),
+                                        oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
+                                            evt.stop_propagation();
+                                            let val: f64 = evt.value().parse().unwrap_or(0.0);
+                                            let (_, cur_y) = offset();
+                                            offset.set((val.clamp(-max_off_x, max_off_x), cur_y));
+                                        },
+                                    }
+                                }
+                                div {
+                                    class: "image-editor__slider-row",
+                                    label {
+                                        class: "image-editor__scale-label",
+                                        "Y"
+                                    }
+                                    input {
+                                        r#type: "range",
+                                        class: "image-editor__scale-slider",
+                                        min: format!("{}", -max_off_y),
+                                        max: format!("{}", max_off_y),
+                                        step: "1",
+                                        value: format!("{:.0}", offset().1),
+                                        oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
+                                            evt.stop_propagation();
+                                            let val: f64 = evt.value().parse().unwrap_or(0.0);
+                                            let (cur_x, _) = offset();
+                                            offset.set((cur_x, val.clamp(-max_off_y, max_off_y)));
+                                        },
+                                    }
+                                }
                             }
                         }
                     }
@@ -236,6 +312,8 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                         resize_handle: resize_handle,
                         resize_start: resize_start,
                         just_released_drag: just_released_drag,
+                        stretch_x: stretch_x,
+                        stretch_y: stretch_y,
                         crop_rect: crop_rect,
                     }
                 }
@@ -316,6 +394,8 @@ fn ImageWithCrop(
     resize_handle: Signal<ResizeHandle>,
     resize_start: Signal<((f64, f64), f64)>,
     just_released_drag: Signal<bool>,
+    stretch_x: Signal<f64>,
+    stretch_y: Signal<f64>,
     crop_rect: Memo<Option<CropRectPct>>,
 ) -> Element {
     #[cfg(target_arch = "wasm32")]
@@ -569,6 +649,7 @@ fn ImageWithCrop(
                     src: url,
                     alt: "Image editor",
                     onload: move |evt| on_img_load(evt),
+                    style: format!("transform: scaleX({}) scaleY({});", stretch_x(), stretch_y()),
                 }
                 // Crop rectangle outline with resize handles (only rendered once dimensions are known).
                 if let Some(rect) = (*crop_rect)() {
