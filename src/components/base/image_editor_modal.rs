@@ -74,6 +74,12 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
     #[allow(unused_mut)]
     let mut rotation = use_signal(|| 0.0f64);
 
+    // Image flip/mirror toggles.
+    #[allow(unused_mut)]
+    let mut flip_x = use_signal(|| false);
+    #[allow(unused_mut)]
+    let mut flip_y = use_signal(|| false);
+
     // Memo: compute final bounding box percentages from img_dims, scale, offset.
     let crop_rect = use_memo(move || {
         let Some((img_w, img_h)) = img_dims() else {
@@ -310,6 +316,35 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                             }
                         }
                     }
+                    // Flip toggles (only shown once dimensions are known)
+                    if let Some(_) = img_dims() {
+                        div {
+                            class: "image-editor__control-group",
+                            label {
+                                class: "image-editor__scale-label",
+                                "Flip"
+                            }
+                            div {
+                                class: "image-editor__toggle-group",
+                                button {
+                                    class: format!("image-editor__flip-toggle {}", if flip_x() { "image-editor__flip-toggle--active" } else { "" }),
+                                    onclick: move |evt| {
+                                        evt.stop_propagation();
+                                        flip_x.set(!flip_x());
+                                    },
+                                    "↔ X"
+                                }
+                                button {
+                                    class: format!("image-editor__flip-toggle {}", if flip_y() { "image-editor__flip-toggle--active" } else { "" }),
+                                    onclick: move |evt| {
+                                        evt.stop_propagation();
+                                        flip_y.set(!flip_y());
+                                    },
+                                    "↕ Y"
+                                }
+                            }
+                        }
+                    }
                 }
                 // Close button
                 div {
@@ -342,6 +377,8 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                         stretch_x: stretch_x,
                         stretch_y: stretch_y,
                         rotation: rotation,
+                        flip_x: flip_x,
+                        flip_y: flip_y,
                         crop_rect: crop_rect,
                     }
                 }
@@ -425,6 +462,8 @@ fn ImageWithCrop(
     stretch_x: Signal<f64>,
     stretch_y: Signal<f64>,
     rotation: Signal<f64>,
+    flip_x: Signal<bool>,
+    flip_y: Signal<bool>,
     crop_rect: Memo<Option<CropRectPct>>,
 ) -> Element {
     #[cfg(target_arch = "wasm32")]
@@ -678,7 +717,7 @@ fn ImageWithCrop(
                     src: url,
                     alt: "Image editor",
                     onload: move |evt| on_img_load(evt),
-                    style: format!("transform: rotate({}deg) scaleX({}) scaleY({});", rotation(), stretch_x(), stretch_y()),
+                    style: format!("transform: rotate({}deg) scaleX({}) scaleY({});", rotation(), stretch_x() * if flip_x() { -1.0 } else { 1.0 }, stretch_y() * if flip_y() { -1.0 } else { 1.0 }),
                 }
                 // Crop rectangle outline with resize handles (only rendered once dimensions are known).
                 if let Some(rect) = (*crop_rect)() {
