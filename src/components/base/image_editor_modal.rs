@@ -64,11 +64,15 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
     #[allow(unused_mut)]
     let mut resize_start = use_signal(|| ((0.0f64, 0.0f64), 0.0f64));
 
-    // Image stretch/compress multipliers: 0.1 (compressed) to 3.0 (stretched).
+    // Image stretch/compress multipliers: 0.1 (compressed) to 1.0 (original).
     #[allow(unused_mut)]
     let mut stretch_x = use_signal(|| 1.0f64);
     #[allow(unused_mut)]
     let mut stretch_y = use_signal(|| 1.0f64);
+
+    // Image rotation in degrees: -180 to 180, default 0.
+    #[allow(unused_mut)]
+    let mut rotation = use_signal(|| 0.0f64);
 
     // Memo: compute final bounding box percentages from img_dims, scale, offset.
     let crop_rect = use_memo(move || {
@@ -283,6 +287,29 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                             }
                         }
                     }
+                    // Rotation slider (only shown once dimensions are known)
+                    if let Some(_) = img_dims() {
+                        div {
+                            class: "image-editor__control-group",
+                            label {
+                                class: "image-editor__scale-label",
+                                "Rotate"
+                            }
+                            input {
+                                r#type: "range",
+                                class: "image-editor__scale-slider",
+                                min: "-180",
+                                max: "180",
+                                step: "1",
+                                value: format!("{:.0}", rotation()),
+                                oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
+                                    evt.stop_propagation();
+                                    let val: f64 = evt.value().parse().unwrap_or(0.0);
+                                    rotation.set(val.clamp(-180.0, 180.0));
+                                },
+                            }
+                        }
+                    }
                 }
                 // Close button
                 div {
@@ -314,6 +341,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                         just_released_drag: just_released_drag,
                         stretch_x: stretch_x,
                         stretch_y: stretch_y,
+                        rotation: rotation,
                         crop_rect: crop_rect,
                     }
                 }
@@ -396,6 +424,7 @@ fn ImageWithCrop(
     just_released_drag: Signal<bool>,
     stretch_x: Signal<f64>,
     stretch_y: Signal<f64>,
+    rotation: Signal<f64>,
     crop_rect: Memo<Option<CropRectPct>>,
 ) -> Element {
     #[cfg(target_arch = "wasm32")]
@@ -649,7 +678,7 @@ fn ImageWithCrop(
                     src: url,
                     alt: "Image editor",
                     onload: move |evt| on_img_load(evt),
-                    style: format!("transform: scaleX({}) scaleY({});", stretch_x(), stretch_y()),
+                    style: format!("transform: rotate({}deg) scaleX({}) scaleY({});", rotation(), stretch_x(), stretch_y()),
                 }
                 // Crop rectangle outline with resize handles (only rendered once dimensions are known).
                 if let Some(rect) = (*crop_rect)() {

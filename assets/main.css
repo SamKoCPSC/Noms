@@ -938,6 +938,7 @@ a:hover {
     display: block;
     width: 100%;
     text-align: center;
+    overflow: hidden;
 }
 
 .image-editor__image {
