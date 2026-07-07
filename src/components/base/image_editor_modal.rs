@@ -7,8 +7,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use dioxus::prelude::*;
 
-use crate::components::base::{Button, ButtonVariant};
-
 /// Global counter for unique image element IDs.
 static IMG_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -21,6 +19,91 @@ pub struct ImageEditorModalProps {
     pub on_close: EventHandler<()>,
 }
 
+#[derive(Props, Clone, PartialEq)]
+struct EditorSliderProps {
+    label: String,
+    tooltip: String,
+    min: f64,
+    max: f64,
+    step: f64,
+    value: f64,
+    #[props(default = 1.0)]
+    display_multiplier: f64,
+    #[props(default = 0)]
+    decimals: usize,
+    #[props(default)]
+    suffix: String,
+    on_change: EventHandler<f64>,
+}
+
+#[component]
+fn EditorSlider(props: EditorSliderProps) -> Element {
+    let range_value = format!("{:.4}", props.value);
+    let number_value = format!(
+        "{:.*}",
+        props.decimals,
+        props.value * props.display_multiplier
+    );
+    let fill_pct = if props.max > props.min {
+        ((props.value - props.min) / (props.max - props.min) * 100.0).clamp(0.0, 100.0)
+    } else {
+        0.0
+    };
+    let min = format!("{:.4}", props.min);
+    let max = format!("{:.4}", props.max);
+    let step = format!("{:.4}", props.step);
+    let number_min = format!("{:.4}", props.min * props.display_multiplier);
+    let number_max = format!("{:.4}", props.max * props.display_multiplier);
+    let number_step = format!("{:.4}", props.step * props.display_multiplier);
+
+    rsx! {
+        div {
+            class: "image-editor__slider-row",
+            title: "{props.tooltip}",
+            label {
+                class: "image-editor__slider-label",
+                "{props.label}"
+            }
+            input {
+                r#type: "range",
+                class: "image-editor__scale-slider",
+                style: format!("--slider-fill: {:.2}%;", fill_pct),
+                min,
+                max,
+                step,
+                value: "{range_value}",
+                oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
+                    evt.stop_propagation();
+                    if let Ok(val) = evt.value().parse::<f64>() {
+                        props.on_change.call(val.clamp(props.min, props.max));
+                    }
+                },
+            }
+            div {
+                class: "image-editor__number-shell",
+                input {
+                    r#type: "number",
+                    class: "image-editor__number-input",
+                    min: "{number_min}",
+                    max: "{number_max}",
+                    step: "{number_step}",
+                    value: "{number_value}",
+                    oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
+                        evt.stop_propagation();
+                        if let Ok(display_val) = evt.value().parse::<f64>() {
+                            let val = display_val / props.display_multiplier;
+                            props.on_change.call(val.clamp(props.min, props.max));
+                        }
+                    },
+                }
+                if !props.suffix.is_empty() {
+                    span { class: "image-editor__number-suffix", "{props.suffix}" }
+                }
+            }
+        }
+    }
+}
+
 /// Modal that opens the image editor for a selected image.
 #[component]
 pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
@@ -29,7 +112,10 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
 
     // Unique ID for this component instance's image element.
     let img_id = use_hook(|| {
-        format!("img-editor-{}", IMG_ID_COUNTER.fetch_add(1, Ordering::Relaxed))
+        format!(
+            "img-editor-{}",
+            IMG_ID_COUNTER.fetch_add(1, Ordering::Relaxed)
+        )
     });
 
     // Raw natural image dimensions (width, height) — set when the image loads.
@@ -87,6 +173,10 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
     let mut contrast_g = use_signal(|| 1.0f64);
     #[allow(unused_mut)]
     let mut contrast_b = use_signal(|| 1.0f64);
+
+    // Global color saturation multiplier: 0.0 (grayscale) to 2.0 (extra vivid).
+    #[allow(unused_mut)]
+    let mut saturation = use_signal(|| 1.0f64);
 
     // Memo: compute final bounding box percentages from img_dims, scale, offset.
     let crop_rect = use_memo(move || {
@@ -169,301 +259,240 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
             div {
                 class: "modal-card modal-card--editor",
                 onclick: move |evt| evt.stop_propagation(),
-                // Action toolbar
                 div {
-                    class: "image-editor__toolbar",
-                    // Crop size control
+                    class: "image-editor__header",
                     div {
-                        class: "image-editor__control-group",
-                        label {
-                            class: "image-editor__scale-label",
-                            "Crop size"
-                        }
-                        input {
-                            r#type: "range",
-                            class: "image-editor__scale-slider",
-                            min: "0.1",
-                            max: "1.0",
-                            step: "0.01",
-                            value: format!("{:.2}", scale()),
-                            oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
+                        h2 { "Edit image" }
+                        span { class: "image-editor__subtitle", "Visual preview" }
+                    }
+                    div {
+                        class: "image-editor__header-actions",
+                        button {
+                            class: "image-editor__soft-button",
+                            title: "Reset adjustments",
+                            onclick: move |evt| {
                                 evt.stop_propagation();
-                                let val: f64 = evt.value().parse().unwrap_or(1.0);
-                                scale.set(val.clamp(0.1, 1.0));
+                                scale.set(1.0);
+                                offset.set((0.0, 0.0));
+                                stretch_x.set(1.0);
+                                stretch_y.set(1.0);
+                                rotation.set(0.0);
+                                flip_x.set(false);
+                                flip_y.set(false);
+                                saturation.set(1.0);
+                                contrast_r.set(1.0);
+                                contrast_g.set(1.0);
+                                contrast_b.set(1.0);
                             },
+                            "Reset"
                         }
-                    }
-                    // Stretch X/Y sliders (only shown once dimensions are known)
-                    if let Some(_) = img_dims() {
-                        div {
-                            class: "image-editor__control-group",
-                            label {
-                                class: "image-editor__scale-label",
-                                "Stretch"
-                            }
-                            div {
-                                class: "image-editor__slider-group",
-                                div {
-                                    class: "image-editor__slider-row",
-                                    label {
-                                        class: "image-editor__scale-label",
-                                        "X"
-                                    }
-                                    input {
-                                        r#type: "range",
-                                        class: "image-editor__scale-slider",
-                                        min: "0.1",
-                                        max: "1.0",
-                                        step: "0.01",
-                                        value: format!("{:.2}", stretch_x()),
-                                        oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
-                                            evt.stop_propagation();
-                                            let val: f64 = evt.value().parse().unwrap_or(1.0);
-                                            stretch_x.set(val.clamp(0.1, 1.0));
-                                        },
-                                    }
-                                }
-                                div {
-                                    class: "image-editor__slider-row",
-                                    label {
-                                        class: "image-editor__scale-label",
-                                        "Y"
-                                    }
-                                    input {
-                                        r#type: "range",
-                                        class: "image-editor__scale-slider",
-                                        min: "0.1",
-                                        max: "1.0",
-                                        step: "0.01",
-                                        value: format!("{:.2}", stretch_y()),
-                                        oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
-                                            evt.stop_propagation();
-                                            let val: f64 = evt.value().parse().unwrap_or(1.0);
-                                            stretch_y.set(val.clamp(0.1, 1.0));
-                                        },
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    // X/Y translation sliders (only shown once dimensions are known)
-                    if let Some((max_off_x, max_off_y)) = (*translation_bounds)() {
-                        div {
-                            class: "image-editor__control-group",
-                            label {
-                                class: "image-editor__scale-label",
-                                "Position"
-                            }
-                            div {
-                                class: "image-editor__slider-group",
-                                div {
-                                    class: "image-editor__slider-row",
-                                    label {
-                                        class: "image-editor__scale-label",
-                                        "X"
-                                    }
-                                    input {
-                                        r#type: "range",
-                                        class: "image-editor__scale-slider",
-                                        min: format!("{}", -max_off_x),
-                                        max: format!("{}", max_off_x),
-                                        step: "1",
-                                        value: format!("{:.0}", offset().0),
-                                        oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
-                                            evt.stop_propagation();
-                                            let val: f64 = evt.value().parse().unwrap_or(0.0);
-                                            let (_, cur_y) = offset();
-                                            offset.set((val.clamp(-max_off_x, max_off_x), cur_y));
-                                        },
-                                    }
-                                }
-                                div {
-                                    class: "image-editor__slider-row",
-                                    label {
-                                        class: "image-editor__scale-label",
-                                        "Y"
-                                    }
-                                    input {
-                                        r#type: "range",
-                                        class: "image-editor__scale-slider",
-                                        min: format!("{}", -max_off_y),
-                                        max: format!("{}", max_off_y),
-                                        step: "1",
-                                        value: format!("{:.0}", offset().1),
-                                        oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
-                                            evt.stop_propagation();
-                                            let val: f64 = evt.value().parse().unwrap_or(0.0);
-                                            let (cur_x, _) = offset();
-                                            offset.set((cur_x, val.clamp(-max_off_y, max_off_y)));
-                                        },
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    // Rotation slider (only shown once dimensions are known)
-                    if let Some(_) = img_dims() {
-                        div {
-                            class: "image-editor__control-group",
-                            label {
-                                class: "image-editor__scale-label",
-                                "Rotate"
-                            }
-                            input {
-                                r#type: "range",
-                                class: "image-editor__scale-slider",
-                                min: "-180",
-                                max: "180",
-                                step: "1",
-                                value: format!("{:.0}", rotation()),
-                                oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
-                                    evt.stop_propagation();
-                                    let val: f64 = evt.value().parse().unwrap_or(0.0);
-                                    rotation.set(val.clamp(-180.0, 180.0));
-                                },
-                            }
-                        }
-                    }
-                    // Flip toggles (only shown once dimensions are known)
-                    if let Some(_) = img_dims() {
-                        div {
-                            class: "image-editor__control-group",
-                            label {
-                                class: "image-editor__scale-label",
-                                "Flip"
-                            }
-                            div {
-                                class: "image-editor__toggle-group",
-                                button {
-                                    class: format!("image-editor__flip-toggle {}", if flip_x() { "image-editor__flip-toggle--active" } else { "" }),
-                                    onclick: move |evt| {
-                                        evt.stop_propagation();
-                                        flip_x.set(!flip_x());
-                                    },
-                                    "↔ X"
-                                }
-                                button {
-                                    class: format!("image-editor__flip-toggle {}", if flip_y() { "image-editor__flip-toggle--active" } else { "" }),
-                                    onclick: move |evt| {
-                                        evt.stop_propagation();
-                                        flip_y.set(!flip_y());
-                                    },
-                                    "↕ Y"
-                                }
-                            }
-                        }
-                    }
-                    // Contrast sliders (only shown once dimensions are known)
-                    if let Some(_) = img_dims() {
-                        div {
-                            class: "image-editor__control-group",
-                            label {
-                                class: "image-editor__scale-label",
-                                "Contrast"
-                            }
-                            div {
-                                class: "image-editor__slider-group",
-                                div {
-                                    class: "image-editor__slider-row",
-                                    label {
-                                        class: "image-editor__scale-label image-editor__contrast-label--r",
-                                        "R"
-                                    }
-                                    input {
-                                        r#type: "range",
-                                        class: "image-editor__scale-slider",
-                                        min: "0.1",
-                                        max: "2.0",
-                                        step: "0.01",
-                                        value: format!("{:.2}", contrast_r()),
-                                        oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
-                                            evt.stop_propagation();
-                                            let val: f64 = evt.value().parse().unwrap_or(1.0);
-                                            contrast_r.set(val.clamp(0.1, 2.0));
-                                        },
-                                    }
-                                }
-                                div {
-                                    class: "image-editor__slider-row",
-                                    label {
-                                        class: "image-editor__scale-label image-editor__contrast-label--g",
-                                        "G"
-                                    }
-                                    input {
-                                        r#type: "range",
-                                        class: "image-editor__scale-slider",
-                                        min: "0.1",
-                                        max: "2.0",
-                                        step: "0.01",
-                                        value: format!("{:.2}", contrast_g()),
-                                        oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
-                                            evt.stop_propagation();
-                                            let val: f64 = evt.value().parse().unwrap_or(1.0);
-                                            contrast_g.set(val.clamp(0.1, 2.0));
-                                        },
-                                    }
-                                }
-                                div {
-                                    class: "image-editor__slider-row",
-                                    label {
-                                        class: "image-editor__scale-label image-editor__contrast-label--b",
-                                        "B"
-                                    }
-                                    input {
-                                        r#type: "range",
-                                        class: "image-editor__scale-slider",
-                                        min: "0.1",
-                                        max: "2.0",
-                                        step: "0.01",
-                                        value: format!("{:.2}", contrast_b()),
-                                        oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
-                                            evt.stop_propagation();
-                                            let val: f64 = evt.value().parse().unwrap_or(1.0);
-                                            contrast_b.set(val.clamp(0.1, 2.0));
-                                        },
-                                    }
-                                }
-                            }
+                        button {
+                            class: "image-editor__icon-button",
+                            title: "Close editor",
+                            onclick: move |evt| {
+                                evt.stop_propagation();
+                                on_close.call(());
+                            },
+                            "×"
                         }
                     }
                 }
-                // Close button
                 div {
-                    position: "absolute",
-                    top: "var(--space-sm)",
-                    right: "var(--space-sm)",
-                    z_index: "1",
-                    Button {
-                        variant: ButtonVariant::Ghost,
-                        onclick: move |_| {
-                            on_close.call(());
-                        },
-                        "✕"
+                    class: "image-editor__body",
+                    div {
+                        class: "image-editor__preview-panel",
+                        if let Some(ref url) = image_url() {
+                            ImageWithCrop {
+                                img_id: img_id.clone(),
+                                url: url.clone(),
+                                img_dims: img_dims,
+                                scale: scale,
+                                offset: offset,
+                                is_dragging: is_dragging,
+                                drag_start: drag_start,
+                                is_resizing: is_resizing,
+                                resize_handle: resize_handle,
+                                resize_start: resize_start,
+                                just_released_drag: just_released_drag,
+                                stretch_x: stretch_x,
+                                stretch_y: stretch_y,
+                                rotation: rotation,
+                                flip_x: flip_x,
+                                flip_y: flip_y,
+                                contrast_r: contrast_r,
+                                contrast_g: contrast_g,
+                                contrast_b: contrast_b,
+                                saturation: saturation,
+                                crop_rect: crop_rect,
+                            }
+                        }
                     }
-                }
-                // Image with crop rectangle outline
-                if let Some(ref url) = image_url() {
-                    ImageWithCrop {
-                        img_id: img_id.clone(),
-                        url: url.clone(),
-                        img_dims: img_dims,
-                        scale: scale,
-                        offset: offset,
-                        is_dragging: is_dragging,
-                        drag_start: drag_start,
-                        is_resizing: is_resizing,
-                        resize_handle: resize_handle,
-                        resize_start: resize_start,
-                        just_released_drag: just_released_drag,
-                        stretch_x: stretch_x,
-                        stretch_y: stretch_y,
-                        rotation: rotation,
-                        flip_x: flip_x,
-                        flip_y: flip_y,
-                        contrast_r: contrast_r,
-                        contrast_g: contrast_g,
-                        contrast_b: contrast_b,
-                        crop_rect: crop_rect,
+                    aside {
+                        class: "image-editor__controls",
+                        div {
+                            class: "image-editor__section",
+                            div { class: "image-editor__section-title", "Frame" }
+                            EditorSlider {
+                                label: "Crop".to_string(),
+                                tooltip: "Crop window size",
+                                min: 0.1,
+                                max: 1.0,
+                                step: 0.01,
+                                value: scale(),
+                                display_multiplier: 100.0,
+                                decimals: 0,
+                                suffix: "%".to_string(),
+                                on_change: move |val| scale.set(val),
+                            }
+                            if let Some((max_off_x, max_off_y)) = (*translation_bounds)() {
+                                EditorSlider {
+                                    label: "X".to_string(),
+                                    tooltip: "Horizontal crop position",
+                                    min: -max_off_x,
+                                    max: max_off_x,
+                                    step: 1.0,
+                                    value: offset().0.clamp(-max_off_x, max_off_x),
+                                    decimals: 0,
+                                    suffix: "px".to_string(),
+                                    on_change: move |val| {
+                                        let (_, cur_y) = offset();
+                                        offset.set((val, cur_y));
+                                    },
+                                }
+                                EditorSlider {
+                                    label: "Y".to_string(),
+                                    tooltip: "Vertical crop position",
+                                    min: -max_off_y,
+                                    max: max_off_y,
+                                    step: 1.0,
+                                    value: offset().1.clamp(-max_off_y, max_off_y),
+                                    decimals: 0,
+                                    suffix: "px".to_string(),
+                                    on_change: move |val| {
+                                        let (cur_x, _) = offset();
+                                        offset.set((cur_x, val));
+                                    },
+                                }
+                            }
+                        }
+                        if let Some(_) = img_dims() {
+                            div {
+                                class: "image-editor__section",
+                                div { class: "image-editor__section-title", "Transform" }
+                                EditorSlider {
+                                    label: "Rotate".to_string(),
+                                    tooltip: "Rotation in degrees",
+                                    min: -180.0,
+                                    max: 180.0,
+                                    step: 1.0,
+                                    value: rotation(),
+                                    decimals: 0,
+                                    suffix: "°".to_string(),
+                                    on_change: move |val| rotation.set(val),
+                                }
+                                EditorSlider {
+                                    label: "Width".to_string(),
+                                    tooltip: "Horizontal image scale",
+                                    min: 0.1,
+                                    max: 1.0,
+                                    step: 0.01,
+                                    value: stretch_x(),
+                                    display_multiplier: 100.0,
+                                    decimals: 0,
+                                    suffix: "%".to_string(),
+                                    on_change: move |val| stretch_x.set(val),
+                                }
+                                EditorSlider {
+                                    label: "Height".to_string(),
+                                    tooltip: "Vertical image scale",
+                                    min: 0.1,
+                                    max: 1.0,
+                                    step: 0.01,
+                                    value: stretch_y(),
+                                    display_multiplier: 100.0,
+                                    decimals: 0,
+                                    suffix: "%".to_string(),
+                                    on_change: move |val| stretch_y.set(val),
+                                }
+                                div {
+                                    class: "image-editor__toggle-row",
+                                    span { class: "image-editor__slider-label", "Flip" }
+                                    div {
+                                        class: "image-editor__toggle-group",
+                                        button {
+                                            class: format!("image-editor__flip-toggle {}", if flip_x() { "image-editor__flip-toggle--active" } else { "" }),
+                                            title: "Flip horizontally",
+                                            onclick: move |evt| {
+                                                evt.stop_propagation();
+                                                flip_x.set(!flip_x());
+                                            },
+                                            "↔"
+                                        }
+                                        button {
+                                            class: format!("image-editor__flip-toggle {}", if flip_y() { "image-editor__flip-toggle--active" } else { "" }),
+                                            title: "Flip vertically",
+                                            onclick: move |evt| {
+                                                evt.stop_propagation();
+                                                flip_y.set(!flip_y());
+                                            },
+                                            "↕"
+                                        }
+                                    }
+                                }
+                            }
+                            div {
+                                class: "image-editor__section",
+                                div { class: "image-editor__section-title", "Color" }
+                                EditorSlider {
+                                    label: "Saturation".to_string(),
+                                    tooltip: "Color intensity",
+                                    min: 0.0,
+                                    max: 2.0,
+                                    step: 0.01,
+                                    value: saturation(),
+                                    display_multiplier: 100.0,
+                                    decimals: 0,
+                                    suffix: "%".to_string(),
+                                    on_change: move |val| saturation.set(val),
+                                }
+                                EditorSlider {
+                                    label: "Red".to_string(),
+                                    tooltip: "Red channel contrast",
+                                    min: 0.1,
+                                    max: 2.0,
+                                    step: 0.01,
+                                    value: contrast_r(),
+                                    display_multiplier: 100.0,
+                                    decimals: 0,
+                                    suffix: "%".to_string(),
+                                    on_change: move |val| contrast_r.set(val),
+                                }
+                                EditorSlider {
+                                    label: "Green".to_string(),
+                                    tooltip: "Green channel contrast",
+                                    min: 0.1,
+                                    max: 2.0,
+                                    step: 0.01,
+                                    value: contrast_g(),
+                                    display_multiplier: 100.0,
+                                    decimals: 0,
+                                    suffix: "%".to_string(),
+                                    on_change: move |val| contrast_g.set(val),
+                                }
+                                EditorSlider {
+                                    label: "Blue".to_string(),
+                                    tooltip: "Blue channel contrast",
+                                    min: 0.1,
+                                    max: 2.0,
+                                    step: 0.01,
+                                    value: contrast_b(),
+                                    display_multiplier: 100.0,
+                                    decimals: 0,
+                                    suffix: "%".to_string(),
+                                    on_change: move |val| contrast_b.set(val),
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -478,11 +507,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
 /// Convert a screen-pixel delta to an image-pixel delta.
 /// `natural_dim` and `displayed_dim` must be the same axis (both width or both height).
 #[cfg(target_arch = "wasm32")]
-fn screen_to_image_delta(
-    screen_delta: f64,
-    natural_dim: f64,
-    displayed_dim: f64,
-) -> f64 {
+fn screen_to_image_delta(screen_delta: f64, natural_dim: f64, displayed_dim: f64) -> f64 {
     if displayed_dim <= 0.0 {
         return screen_delta;
     }
@@ -509,7 +534,10 @@ fn displayed_dims(img_id: &str) -> (f64, f64) {
         return (0.0, 0.0);
     };
 
-    (html_el.offset_width() as f64, html_el.offset_height() as f64)
+    (
+        html_el.offset_width() as f64,
+        html_el.offset_height() as f64,
+    )
 }
 
 /// Extract (clientX, clientY) from the first touch point of a TouchEvent.
@@ -551,6 +579,7 @@ fn ImageWithCrop(
     contrast_r: Signal<f64>,
     contrast_g: Signal<f64>,
     contrast_b: Signal<f64>,
+    saturation: Signal<f64>,
     crop_rect: Memo<Option<CropRectPct>>,
 ) -> Element {
     #[cfg(target_arch = "wasm32")]
@@ -581,9 +610,7 @@ fn ImageWithCrop(
         let filter_id = format!("{}-contrast-filter", img_id);
         let filter_id_style = filter_id.clone();
         // Use a memo to track contrast values so we can trigger an effect on change.
-        let contrast_vals = use_memo(move || {
-            (contrast_r(), contrast_g(), contrast_b())
-        });
+        let contrast_vals = use_memo(move || (contrast_r(), contrast_g(), contrast_b()));
         let filter_id_memo = filter_id.clone();
         use dioxus::prelude::use_effect;
         use_effect(move || {
@@ -689,13 +716,14 @@ fn ImageWithCrop(
                                 ResizeHandle::Left | ResizeHandle::Top => -1.0,
                                 _ => 1.0,
                             };
-                            let new_scale = (start_scale_val + dir * delta_px / base_dim)
-                                .clamp(0.1, 1.0);
+                            let new_scale =
+                                (start_scale_val + dir * delta_px / base_dim).clamp(0.1, 1.0);
                             scale_g.set(new_scale);
                         }
                         return;
                     }
-                }) as Box<dyn FnMut(web_sys::MouseEvent)>);
+                })
+                    as Box<dyn FnMut(web_sys::MouseEvent)>);
 
                 let on_global_up = Closure::wrap(Box::new(move |_evt: web_sys::MouseEvent| {
                     let was_dragging = is_dragging_g();
@@ -707,10 +735,17 @@ fn ImageWithCrop(
                         is_resizing_g.set(false);
                         just_released_drag_g.set(true);
                     }
-                }) as Box<dyn FnMut(web_sys::MouseEvent)>);
+                })
+                    as Box<dyn FnMut(web_sys::MouseEvent)>);
 
-                let _ = doc.add_event_listener_with_callback("mousemove", on_global_move.as_ref().unchecked_ref());
-                let _ = doc.add_event_listener_with_callback("mouseup", on_global_up.as_ref().unchecked_ref());
+                let _ = doc.add_event_listener_with_callback(
+                    "mousemove",
+                    on_global_move.as_ref().unchecked_ref(),
+                );
+                let _ = doc.add_event_listener_with_callback(
+                    "mouseup",
+                    on_global_up.as_ref().unchecked_ref(),
+                );
 
                 closures.set(Some((on_global_move, on_global_up)));
             }
@@ -721,8 +756,14 @@ fn ImageWithCrop(
             move || {
                 if let Some((move_cl, up_cl)) = closures.take() {
                     if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
-                        let _ = doc.remove_event_listener_with_callback("mousemove", move_cl.as_ref().unchecked_ref());
-                        let _ = doc.remove_event_listener_with_callback("mouseup", up_cl.as_ref().unchecked_ref());
+                        let _ = doc.remove_event_listener_with_callback(
+                            "mousemove",
+                            move_cl.as_ref().unchecked_ref(),
+                        );
+                        let _ = doc.remove_event_listener_with_callback(
+                            "mouseup",
+                            up_cl.as_ref().unchecked_ref(),
+                        );
                     }
                 }
             }
@@ -856,11 +897,12 @@ fn ImageWithCrop(
                     alt: "Image editor",
                     onload: move |evt| on_img_load(evt),
                     style: format!(
-                        "transform: rotate({}deg) scaleX({}) scaleY({}); filter: url(#{});",
+                        "transform: rotate({}deg) scaleX({}) scaleY({}); filter: url(#{}) saturate({});",
                         rotation(),
                         stretch_x() * if flip_x() { -1.0 } else { 1.0 },
                         stretch_y() * if flip_y() { -1.0 } else { 1.0 },
-                        filter_id_style
+                        filter_id_style,
+                        saturation(),
                     ),
                 }
                 // Crop rectangle outline with resize handles (only rendered once dimensions are known).
