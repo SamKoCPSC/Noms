@@ -39,6 +39,42 @@ struct EditorEditState {
     saturation: f64,
 }
 
+#[cfg(target_arch = "wasm32")]
+fn editor_transform_fit_scale(
+    img_dims: Option<(f64, f64)>,
+    stretch_x: f64,
+    stretch_y: f64,
+    rotation: f64,
+) -> f64 {
+    let Some((img_w, img_h)) = img_dims else {
+        return 1.0;
+    };
+    if img_w <= 0.0 || img_h <= 0.0 {
+        return 1.0;
+    }
+
+    let sx = stretch_x.abs();
+    let sy = stretch_y.abs();
+    let radians = rotation.to_radians();
+    let cos = radians.cos().abs();
+    let sin = radians.sin().abs();
+    let transformed_w = img_w * sx * cos + img_h * sy * sin;
+    let transformed_h = img_w * sx * sin + img_h * sy * cos;
+
+    let fit_x = if transformed_w > 0.0 {
+        img_w / transformed_w
+    } else {
+        1.0
+    };
+    let fit_y = if transformed_h > 0.0 {
+        img_h / transformed_h
+    } else {
+        1.0
+    };
+
+    fit_x.min(fit_y).min(1.0).max(0.1)
+}
+
 /// Props for [`ImageEditorModal`].
 #[derive(Props, Clone, PartialEq)]
 pub struct ImageEditorModalProps {
@@ -878,6 +914,27 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                         }
                     }
                 }
+                div {
+                    class: "image-editor__footer",
+                    button {
+                        class: "image-editor__soft-button",
+                        title: "Cancel edits and close",
+                        onclick: move |evt| {
+                            evt.stop_propagation();
+                            on_close.call(());
+                        },
+                        "Cancel"
+                    }
+                    button {
+                        class: "image-editor__primary-button",
+                        title: "Confirm edits and close",
+                        onclick: move |evt| {
+                            evt.stop_propagation();
+                            on_close.call(());
+                        },
+                        "OK"
+                    }
+                }
             }
         }
     }
@@ -1516,9 +1573,32 @@ fn ImageWithCrop(
                 is_resizing.set(true);
             };
 
+        let transform_fit =
+            editor_transform_fit_scale(img_dims(), stretch_x(), stretch_y(), rotation());
+        let transform_style = format!(
+            "transform: scale({}) rotate({}deg) scaleX({}) scaleY({});",
+            transform_fit,
+            rotation(),
+            stretch_x() * if flip_x() { -1.0 } else { 1.0 },
+            stretch_y() * if flip_y() { -1.0 } else { 1.0 },
+        );
+        let image_filter_style = format!(
+            "filter: url(#{}) saturate({});",
+            filter_id_style,
+            saturation()
+        );
+        let wrapper_style = img_dims().map(|(w, h)| {
+            let aspect = if h > 0.0 { w / h } else { 1.0 };
+            format!(
+                "--image-aspect: {:.6}; --image-natural-width: {:.2}px; aspect-ratio: {:.6};",
+                aspect, w, aspect
+            )
+        });
+
         return rsx! {
             div {
                 class: "image-editor__image-wrapper",
+                style: wrapper_style.unwrap_or_default(),
                 // Drag handlers on the wrapper so they fire even when the cursor
                 // leaves the crop rectangle but is still over the image.
                 onmousedown: move |evt| on_crop_mousedown(evt),
@@ -1527,101 +1607,98 @@ fn ImageWithCrop(
                 ontouchstart: move |evt| on_crop_touchstart(evt),
                 ontouchmove: move |evt| on_crop_touchmove(evt),
                 ontouchend: move |evt| on_crop_touchend(evt),
-                // Inline SVG filter for per-channel RGB contrast
-                svg {
-                    style: "position: absolute; width: 0; height: 0; overflow: hidden;",
-                    xmlns: "http://www.w3.org/2000/svg",
-                    defs {
-                        filter {
-                            id: filter_id,
-                            x: "0",
-                            y: "0",
-                            width: "100%",
-                            height: "100%",
-                            feComponentTransfer {
-                                feFuncR {
-                                    r#type: "linear",
-                                    slope: "1.0",
-                                }
-                                feFuncG {
-                                    r#type: "linear",
-                                    slope: "1.0",
-                                }
-                                feFuncB {
-                                    r#type: "linear",
-                                    slope: "1.0",
+                div {
+                    class: "image-editor__transform-stage",
+                    style: transform_style,
+                    // Inline SVG filter for per-channel RGB contrast
+                    svg {
+                        style: "position: absolute; width: 0; height: 0; overflow: hidden;",
+                        xmlns: "http://www.w3.org/2000/svg",
+                        defs {
+                            filter {
+                                id: filter_id,
+                                x: "0",
+                                y: "0",
+                                width: "100%",
+                                height: "100%",
+                                feComponentTransfer {
+                                    feFuncR {
+                                        r#type: "linear",
+                                        slope: "1.0",
+                                    }
+                                    feFuncG {
+                                        r#type: "linear",
+                                        slope: "1.0",
+                                    }
+                                    feFuncB {
+                                        r#type: "linear",
+                                        slope: "1.0",
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                img {
-                    id: img_id,
-                    class: "image-editor__image",
-                    src: url,
-                    alt: "Image editor",
-                    onload: move |evt| on_img_load(evt),
-                    style: format!(
-                        "transform: rotate({}deg) scaleX({}) scaleY({}); filter: url(#{}) saturate({});",
-                        rotation(),
-                        stretch_x() * if flip_x() { -1.0 } else { 1.0 },
-                        stretch_y() * if flip_y() { -1.0 } else { 1.0 },
-                        filter_id_style,
-                        saturation(),
-                    ),
-                }
-                // Crop rectangle outline with resize handles (only rendered once dimensions are known).
-                if let Some(rect) = (*crop_rect)() {
-                    // Dark overlay: four panels outside the crop area
-                    div {
-                        class: "image-editor__crop-overlay image-editor__crop-overlay--top",
-                        style: format!("height: {}%;", rect.top),
+                    img {
+                        id: img_id,
+                        class: "image-editor__image",
+                        src: url,
+                        alt: "Image editor",
+                        onload: move |evt| on_img_load(evt),
+                        style: image_filter_style,
                     }
-                    div {
-                        class: "image-editor__crop-overlay image-editor__crop-overlay--bottom",
-                        style: format!("height: {}%;", rect.bottom),
-                    }
-                    div {
-                        class: "image-editor__crop-overlay image-editor__crop-overlay--left",
-                        style: format!(
-                            "top: {}%; width: {}%; height: calc(100% - {}% - {}%);",
-                            rect.top, rect.left, rect.top, rect.bottom
-                        ),
-                    }
-                    div {
-                        class: "image-editor__crop-overlay image-editor__crop-overlay--right",
-                        style: format!(
-                            "top: {}%; width: {}%; height: calc(100% - {}% - {}%);",
-                            rect.top, rect.right, rect.top, rect.bottom
-                        ),
-                    }
-                    div {
-                        class: "image-editor__crop-rect",
-                        style: format!(
-                            "top: {}%; left: {}%; width: calc(100% - {}% - {}%); height: calc(100% - {}% - {}%);",
-                            rect.top,
-                            rect.left,
-                            rect.left,
-                            rect.right,
-                            rect.top,
-                            rect.bottom,
-                        ),
-                        // Full-edge resize bars (invisible, clickable anywhere on the edge)
+                    // Crop rectangle outline with resize handles (only rendered once dimensions are known).
+                    if let Some(rect) = (*crop_rect)() {
+                        // Dark overlay: four panels outside the crop area
                         div {
-                            class: "image-editor__resize-edge image-editor__resize-edge--top",
-                            onmousedown: move |evt| on_resize_mousedown(ResizeHandle::Top, evt),
+                            class: "image-editor__crop-overlay image-editor__crop-overlay--top",
+                            style: format!("height: {}%;", rect.top),
                         }
                         div {
-                            class: "image-editor__resize-edge image-editor__resize-edge--bottom",
-                            onmousedown: move |evt| on_resize_mousedown(ResizeHandle::Bottom, evt),
+                            class: "image-editor__crop-overlay image-editor__crop-overlay--bottom",
+                            style: format!("height: {}%;", rect.bottom),
                         }
                         div {
-                            class: "image-editor__resize-edge image-editor__resize-edge--left",
-                            onmousedown: move |evt| on_resize_mousedown(ResizeHandle::Left, evt),
+                            class: "image-editor__crop-overlay image-editor__crop-overlay--left",
+                            style: format!(
+                                "top: {}%; width: {}%; height: calc(100% - {}% - {}%);",
+                                rect.top, rect.left, rect.top, rect.bottom
+                            ),
                         }
                         div {
-                            class: "image-editor__resize-edge image-editor__resize-edge--right",
-                            onmousedown: move |evt| on_resize_mousedown(ResizeHandle::Right, evt),
+                            class: "image-editor__crop-overlay image-editor__crop-overlay--right",
+                            style: format!(
+                                "top: {}%; width: {}%; height: calc(100% - {}% - {}%);",
+                                rect.top, rect.right, rect.top, rect.bottom
+                            ),
+                        }
+                        div {
+                            class: "image-editor__crop-rect",
+                            style: format!(
+                                "top: {}%; left: {}%; width: calc(100% - {}% - {}%); height: calc(100% - {}% - {}%);",
+                                rect.top,
+                                rect.left,
+                                rect.left,
+                                rect.right,
+                                rect.top,
+                                rect.bottom,
+                            ),
+                            // Full-edge resize bars (invisible, clickable anywhere on the edge)
+                            div {
+                                class: "image-editor__resize-edge image-editor__resize-edge--top",
+                                onmousedown: move |evt| on_resize_mousedown(ResizeHandle::Top, evt),
+                            }
+                            div {
+                                class: "image-editor__resize-edge image-editor__resize-edge--bottom",
+                                onmousedown: move |evt| on_resize_mousedown(ResizeHandle::Bottom, evt),
+                            }
+                            div {
+                                class: "image-editor__resize-edge image-editor__resize-edge--left",
+                                onmousedown: move |evt| on_resize_mousedown(ResizeHandle::Left, evt),
+                            }
+                            div {
+                                class: "image-editor__resize-edge image-editor__resize-edge--right",
+                                onmousedown: move |evt| on_resize_mousedown(ResizeHandle::Right, evt),
+                            }
                         }
                     }
                 }

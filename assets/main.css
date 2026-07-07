@@ -1037,17 +1037,49 @@ a:hover {
     padding: var(--space-lg);
 }
 
+.image-editor__footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-lg);
+    border-top: 1px solid var(--glass-border);
+    background: var(--glass-fill);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.image-editor__primary-button {
+    min-height: 36px;
+    padding: var(--space-xs) var(--space-lg);
+    border: none;
+    border-radius: var(--radius-md);
+    color: white;
+    background: var(--accent);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 3px 3px 4px var(--shadow-dark), -3px -3px 4px var(--shadow-light),
+                inset 0 0 0 4px var(--btn-edge);
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.image-editor__primary-button:hover {
+    background: var(--accent-hover);
+}
+
+.image-editor__primary-button:active {
+    box-shadow: inset 3px 3px 4px rgba(92, 55, 43, 0.28), inset -3px -3px 4px rgba(255, 236, 226, 0.18);
+}
+
 .image-editor__preview-panel {
     min-width: 0;
-    min-height: 460px;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--space-md);
-    border-radius: var(--radius-lg);
-    background: var(--surface);
-    box-shadow: inset 5px 5px 4px var(--shadow-dark), inset -5px -5px 4px var(--shadow-light);
-    overflow: hidden;
+    padding: 0;
+    overflow: visible;
 }
 
 .image-editor__controls {
@@ -1086,21 +1118,38 @@ a:hover {
 }
 
 .image-editor__image-wrapper {
+    --image-aspect: 1;
+    --image-natural-width: 100%;
+    --image-frame-padding: 6px;
     position: relative;
-    display: inline-block;
-    width: fit-content;
-    height: fit-content;
+    display: block;
+    width: min(100%, var(--image-natural-width));
+    height: auto;
+    aspect-ratio: var(--image-aspect);
     max-width: 100%;
-    max-height: calc(92vh - 170px);
-    overflow: hidden;
+    padding: var(--image-frame-padding);
+    overflow: visible;
     border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: var(--surface);
+    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
+    box-sizing: content-box;
+}
+
+.image-editor__transform-stage {
+    position: absolute;
+    inset: var(--image-frame-padding);
+    width: auto;
+    height: auto;
+    transform-origin: center center;
+    will-change: transform;
 }
 
 .image-editor__image {
     display: block;
-    max-width: 100%;
-    max-height: calc(92vh - 170px);
-    object-fit: contain;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
     user-select: none;
     -webkit-user-drag: none;
     cursor: grab;
@@ -1223,7 +1272,8 @@ a:hover {
 .image-editor__number-input:focus-visible,
 .image-editor__flip-toggle:focus-visible,
 .image-editor__soft-button:focus-visible,
-.image-editor__icon-button:focus-visible {
+.image-editor__icon-button:focus-visible,
+.image-editor__primary-button:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
 }
@@ -1413,10 +1463,6 @@ a:hover {
         width: min(720px, 96vw);
     }
 
-    .image-editor__preview-panel {
-        min-height: 320px;
-    }
-
     .image-editor__controls {
         max-height: none;
         padding-right: 0;
@@ -1424,11 +1470,8 @@ a:hover {
     }
 
     .image-editor__image {
-        max-height: 48vh;
-    }
-
-    .image-editor__image-wrapper {
-        max-height: 48vh;
+        width: 100%;
+        height: 100%;
     }
 }
 
@@ -1481,14 +1524,17 @@ a:hover {
         padding: var(--space-md);
     }
 
+    .image-editor__footer {
+        padding: var(--space-sm) var(--space-md);
+    }
+
     .image-editor__slider-row {
         grid-template-columns: 64px minmax(74px, 1fr) 78px;
         gap: var(--space-xs);
     }
 
     .image-editor__preview-panel {
-        min-height: 260px;
-        padding: var(--space-sm);
+        padding: 0;
     }
 }
 
