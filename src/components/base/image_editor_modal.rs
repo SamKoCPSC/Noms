@@ -10,6 +10,35 @@ use dioxus::prelude::*;
 /// Global counter for unique image element IDs.
 static IMG_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
 
+const DEFAULT_EDITOR_STATE: EditorEditState = EditorEditState {
+    scale: 1.0,
+    offset: (0.0, 0.0),
+    stretch_x: 1.0,
+    stretch_y: 1.0,
+    rotation: 0.0,
+    flip_x: false,
+    flip_y: false,
+    contrast_r: 1.0,
+    contrast_g: 1.0,
+    contrast_b: 1.0,
+    saturation: 1.0,
+};
+
+#[derive(Clone, Copy, PartialEq)]
+struct EditorEditState {
+    scale: f64,
+    offset: (f64, f64),
+    stretch_x: f64,
+    stretch_y: f64,
+    rotation: f64,
+    flip_x: bool,
+    flip_y: bool,
+    contrast_r: f64,
+    contrast_g: f64,
+    contrast_b: f64,
+    saturation: f64,
+}
+
 /// Props for [`ImageEditorModal`].
 #[derive(Props, Clone, PartialEq)]
 pub struct ImageEditorModalProps {
@@ -33,6 +62,8 @@ struct EditorSliderProps {
     decimals: usize,
     #[props(default)]
     suffix: String,
+    on_edit_start: EventHandler<()>,
+    on_edit_commit: EventHandler<()>,
     on_change: EventHandler<f64>,
 }
 
@@ -72,11 +103,32 @@ fn EditorSlider(props: EditorSliderProps) -> Element {
                 max,
                 step,
                 value: "{range_value}",
+                onmousedown: move |evt| {
+                    evt.stop_propagation();
+                    props.on_edit_start.call(());
+                },
+                ontouchstart: move |evt| {
+                    evt.stop_propagation();
+                    props.on_edit_start.call(());
+                },
                 oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
                     evt.stop_propagation();
                     if let Ok(val) = evt.value().parse::<f64>() {
+                        props.on_edit_start.call(());
                         props.on_change.call(val.clamp(props.min, props.max));
                     }
+                },
+                onchange: move |evt| {
+                    evt.stop_propagation();
+                    props.on_edit_commit.call(());
+                },
+                onmouseup: move |evt| {
+                    evt.stop_propagation();
+                    props.on_edit_commit.call(());
+                },
+                ontouchend: move |evt| {
+                    evt.stop_propagation();
+                    props.on_edit_commit.call(());
                 },
             }
             div {
@@ -88,13 +140,20 @@ fn EditorSlider(props: EditorSliderProps) -> Element {
                     max: "{number_max}",
                     step: "{number_step}",
                     value: "{number_value}",
+                    onfocus: move |_| props.on_edit_start.call(()),
                     oninput: move |evt: dioxus::prelude::Event<dioxus::html::events::FormData>| {
                         evt.stop_propagation();
                         if let Ok(display_val) = evt.value().parse::<f64>() {
                             let val = display_val / props.display_multiplier;
+                            props.on_edit_start.call(());
                             props.on_change.call(val.clamp(props.min, props.max));
                         }
                     },
+                    onchange: move |evt| {
+                        evt.stop_propagation();
+                        props.on_edit_commit.call(());
+                    },
+                    onblur: move |_| props.on_edit_commit.call(()),
                 }
                 if !props.suffix.is_empty() {
                     span { class: "image-editor__number-suffix", "{props.suffix}" }
@@ -178,6 +237,134 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
     #[allow(unused_mut)]
     let mut saturation = use_signal(|| 1.0f64);
 
+    // History stacks store committed editor snapshots. `active_edit_start` is
+    // used while a slider, number field, drag, or resize is still in progress.
+    #[allow(unused_mut)]
+    let mut undo_stack = use_signal(Vec::<EditorEditState>::new);
+    #[allow(unused_mut)]
+    let mut redo_stack = use_signal(Vec::<EditorEditState>::new);
+    #[allow(unused_mut)]
+    let mut active_edit_start = use_signal(|| None::<EditorEditState>);
+    #[allow(unused_mut)]
+    let mut active_image_url = use_signal(|| None::<String>);
+
+    use_effect(move || {
+        let current_url = image_url();
+        if active_image_url() == current_url {
+            return;
+        }
+
+        active_image_url.set(current_url);
+        img_dims.set(None);
+        apply_editor_state(
+            DEFAULT_EDITOR_STATE,
+            scale,
+            offset,
+            stretch_x,
+            stretch_y,
+            rotation,
+            flip_x,
+            flip_y,
+            contrast_r,
+            contrast_g,
+            contrast_b,
+            saturation,
+        );
+        undo_stack.write().clear();
+        redo_stack.write().clear();
+        active_edit_start.set(None);
+        is_dragging.set(false);
+        drag_start.set(((0.0, 0.0), (0.0, 0.0)));
+        just_released_drag.set(false);
+        is_resizing.set(false);
+        resize_handle.set(ResizeHandle::None);
+        resize_start.set(((0.0, 0.0), 0.0));
+    });
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        use dioxus::core::use_hook;
+        use dioxus::prelude::use_drop;
+        use wasm_bindgen::closure::Closure;
+        use wasm_bindgen::JsCast;
+
+        let shortcut_closure = use_signal(|| None::<Closure<dyn FnMut(web_sys::KeyboardEvent)>>);
+
+        use_hook({
+            let mut closure_signal = shortcut_closure;
+            move || {
+                let Some(document) = web_sys::window().and_then(|w| w.document()) else {
+                    return;
+                };
+
+                let closure = Closure::wrap(Box::new(move |evt: web_sys::KeyboardEvent| {
+                    let key = evt.key().to_ascii_lowercase();
+                    let uses_command_key = evt.ctrl_key() || evt.meta_key();
+                    let undo_requested = key == "z" && uses_command_key && !evt.shift_key();
+                    let redo_requested = (key == "y" && evt.ctrl_key())
+                        || (key == "z" && uses_command_key && evt.shift_key());
+
+                    if undo_requested {
+                        evt.prevent_default();
+                        undo_editor_state(
+                            undo_stack,
+                            redo_stack,
+                            active_edit_start,
+                            scale,
+                            offset,
+                            stretch_x,
+                            stretch_y,
+                            rotation,
+                            flip_x,
+                            flip_y,
+                            contrast_r,
+                            contrast_g,
+                            contrast_b,
+                            saturation,
+                        );
+                    } else if redo_requested {
+                        evt.prevent_default();
+                        redo_editor_state(
+                            undo_stack,
+                            redo_stack,
+                            active_edit_start,
+                            scale,
+                            offset,
+                            stretch_x,
+                            stretch_y,
+                            rotation,
+                            flip_x,
+                            flip_y,
+                            contrast_r,
+                            contrast_g,
+                            contrast_b,
+                            saturation,
+                        );
+                    }
+                })
+                    as Box<dyn FnMut(web_sys::KeyboardEvent)>);
+
+                let _ = document
+                    .add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref());
+                closure_signal.set(Some(closure));
+            }
+        });
+
+        use_drop({
+            let mut closure_signal = shortcut_closure;
+            move || {
+                if let Some(closure) = closure_signal.take() {
+                    if let Some(document) = web_sys::window().and_then(|w| w.document()) {
+                        let _ = document.remove_event_listener_with_callback(
+                            "keydown",
+                            closure.as_ref().unchecked_ref(),
+                        );
+                    }
+                }
+            }
+        });
+    }
+
     // Memo: compute final bounding box percentages from img_dims, scale, offset.
     let crop_rect = use_memo(move || {
         let Some((img_w, img_h)) = img_dims() else {
@@ -241,9 +428,64 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
         Some((max_off_x, max_off_y))
     });
 
+    macro_rules! on_edit_start {
+        () => {
+            move |_| {
+                begin_editor_edit(
+                    active_edit_start,
+                    scale,
+                    offset,
+                    stretch_x,
+                    stretch_y,
+                    rotation,
+                    flip_x,
+                    flip_y,
+                    contrast_r,
+                    contrast_g,
+                    contrast_b,
+                    saturation,
+                );
+            }
+        };
+    }
+
+    macro_rules! on_edit_commit {
+        () => {
+            move |_| {
+                commit_editor_edit(
+                    undo_stack,
+                    redo_stack,
+                    active_edit_start,
+                    scale,
+                    offset,
+                    stretch_x,
+                    stretch_y,
+                    rotation,
+                    flip_x,
+                    flip_y,
+                    contrast_r,
+                    contrast_g,
+                    contrast_b,
+                    saturation,
+                );
+            }
+        };
+    }
+
     if image_url().is_none() {
         return VNode::empty();
     }
+
+    let current_state = current_editor_state(
+        scale, offset, stretch_x, stretch_y, rotation, flip_x, flip_y, contrast_r, contrast_g,
+        contrast_b, saturation,
+    );
+    let active_edit_can_undo = match active_edit_start() {
+        Some(start_state) => start_state != current_state,
+        None => false,
+    };
+    let undo_disabled = undo_stack().is_empty() && !active_edit_can_undo;
+    let redo_disabled = redo_stack().is_empty();
 
     rsx! {
         div {
@@ -267,22 +509,81 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                     }
                     div {
                         class: "image-editor__header-actions",
+                        div {
+                            class: "image-editor__history-actions",
+                            button {
+                                class: "image-editor__icon-button",
+                                title: "Undo (Ctrl+Z / Cmd+Z)",
+                                disabled: undo_disabled,
+                                onclick: move |evt| {
+                                    evt.stop_propagation();
+                                    undo_editor_state(
+                                        undo_stack,
+                                        redo_stack,
+                                        active_edit_start,
+                                        scale,
+                                        offset,
+                                        stretch_x,
+                                        stretch_y,
+                                        rotation,
+                                        flip_x,
+                                        flip_y,
+                                        contrast_r,
+                                        contrast_g,
+                                        contrast_b,
+                                        saturation,
+                                    );
+                                },
+                                "↶"
+                            }
+                            button {
+                                class: "image-editor__icon-button",
+                                title: "Redo (Ctrl+Y / Cmd+Shift+Z)",
+                                disabled: redo_disabled,
+                                onclick: move |evt| {
+                                    evt.stop_propagation();
+                                    redo_editor_state(
+                                        undo_stack,
+                                        redo_stack,
+                                        active_edit_start,
+                                        scale,
+                                        offset,
+                                        stretch_x,
+                                        stretch_y,
+                                        rotation,
+                                        flip_x,
+                                        flip_y,
+                                        contrast_r,
+                                        contrast_g,
+                                        contrast_b,
+                                        saturation,
+                                    );
+                                },
+                                "↷"
+                            }
+                        }
                         button {
                             class: "image-editor__soft-button",
                             title: "Reset adjustments",
                             onclick: move |evt| {
                                 evt.stop_propagation();
-                                scale.set(1.0);
-                                offset.set((0.0, 0.0));
-                                stretch_x.set(1.0);
-                                stretch_y.set(1.0);
-                                rotation.set(0.0);
-                                flip_x.set(false);
-                                flip_y.set(false);
-                                saturation.set(1.0);
-                                contrast_r.set(1.0);
-                                contrast_g.set(1.0);
-                                contrast_b.set(1.0);
+                                set_editor_state_with_history(
+                                    undo_stack,
+                                    redo_stack,
+                                    active_edit_start,
+                                    DEFAULT_EDITOR_STATE,
+                                    scale,
+                                    offset,
+                                    stretch_x,
+                                    stretch_y,
+                                    rotation,
+                                    flip_x,
+                                    flip_y,
+                                    contrast_r,
+                                    contrast_g,
+                                    contrast_b,
+                                    saturation,
+                                );
                             },
                             "Reset"
                         }
@@ -324,6 +625,8 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                 contrast_b: contrast_b,
                                 saturation: saturation,
                                 crop_rect: crop_rect,
+                                on_edit_start: on_edit_start!(),
+                                on_edit_commit: on_edit_commit!(),
                             }
                         }
                     }
@@ -342,6 +645,8 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                 display_multiplier: 100.0,
                                 decimals: 0,
                                 suffix: "%".to_string(),
+                                on_edit_start: on_edit_start!(),
+                                on_edit_commit: on_edit_commit!(),
                                 on_change: move |val| scale.set(val),
                             }
                             if let Some((max_off_x, max_off_y)) = (*translation_bounds)() {
@@ -354,6 +659,8 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                     value: offset().0.clamp(-max_off_x, max_off_x),
                                     decimals: 0,
                                     suffix: "px".to_string(),
+                                    on_edit_start: on_edit_start!(),
+                                    on_edit_commit: on_edit_commit!(),
                                     on_change: move |val| {
                                         let (_, cur_y) = offset();
                                         offset.set((val, cur_y));
@@ -368,6 +675,8 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                     value: offset().1.clamp(-max_off_y, max_off_y),
                                     decimals: 0,
                                     suffix: "px".to_string(),
+                                    on_edit_start: on_edit_start!(),
+                                    on_edit_commit: on_edit_commit!(),
                                     on_change: move |val| {
                                         let (cur_x, _) = offset();
                                         offset.set((cur_x, val));
@@ -388,6 +697,8 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                     value: rotation(),
                                     decimals: 0,
                                     suffix: "°".to_string(),
+                                    on_edit_start: on_edit_start!(),
+                                    on_edit_commit: on_edit_commit!(),
                                     on_change: move |val| rotation.set(val),
                                 }
                                 EditorSlider {
@@ -400,6 +711,8 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                     display_multiplier: 100.0,
                                     decimals: 0,
                                     suffix: "%".to_string(),
+                                    on_edit_start: on_edit_start!(),
+                                    on_edit_commit: on_edit_commit!(),
                                     on_change: move |val| stretch_x.set(val),
                                 }
                                 EditorSlider {
@@ -412,6 +725,8 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                     display_multiplier: 100.0,
                                     decimals: 0,
                                     suffix: "%".to_string(),
+                                    on_edit_start: on_edit_start!(),
+                                    on_edit_commit: on_edit_commit!(),
                                     on_change: move |val| stretch_y.set(val),
                                 }
                                 div {
@@ -424,7 +739,37 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                             title: "Flip horizontally",
                                             onclick: move |evt| {
                                                 evt.stop_propagation();
-                                                flip_x.set(!flip_x());
+                                                let mut next = current_editor_state(
+                                                    scale,
+                                                    offset,
+                                                    stretch_x,
+                                                    stretch_y,
+                                                    rotation,
+                                                    flip_x,
+                                                    flip_y,
+                                                    contrast_r,
+                                                    contrast_g,
+                                                    contrast_b,
+                                                    saturation,
+                                                );
+                                                next.flip_x = !next.flip_x;
+                                                set_editor_state_with_history(
+                                                    undo_stack,
+                                                    redo_stack,
+                                                    active_edit_start,
+                                                    next,
+                                                    scale,
+                                                    offset,
+                                                    stretch_x,
+                                                    stretch_y,
+                                                    rotation,
+                                                    flip_x,
+                                                    flip_y,
+                                                    contrast_r,
+                                                    contrast_g,
+                                                    contrast_b,
+                                                    saturation,
+                                                );
                                             },
                                             "↔"
                                         }
@@ -433,7 +778,37 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                             title: "Flip vertically",
                                             onclick: move |evt| {
                                                 evt.stop_propagation();
-                                                flip_y.set(!flip_y());
+                                                let mut next = current_editor_state(
+                                                    scale,
+                                                    offset,
+                                                    stretch_x,
+                                                    stretch_y,
+                                                    rotation,
+                                                    flip_x,
+                                                    flip_y,
+                                                    contrast_r,
+                                                    contrast_g,
+                                                    contrast_b,
+                                                    saturation,
+                                                );
+                                                next.flip_y = !next.flip_y;
+                                                set_editor_state_with_history(
+                                                    undo_stack,
+                                                    redo_stack,
+                                                    active_edit_start,
+                                                    next,
+                                                    scale,
+                                                    offset,
+                                                    stretch_x,
+                                                    stretch_y,
+                                                    rotation,
+                                                    flip_x,
+                                                    flip_y,
+                                                    contrast_r,
+                                                    contrast_g,
+                                                    contrast_b,
+                                                    saturation,
+                                                );
                                             },
                                             "↕"
                                         }
@@ -453,6 +828,8 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                     display_multiplier: 100.0,
                                     decimals: 0,
                                     suffix: "%".to_string(),
+                                    on_edit_start: on_edit_start!(),
+                                    on_edit_commit: on_edit_commit!(),
                                     on_change: move |val| saturation.set(val),
                                 }
                                 EditorSlider {
@@ -465,6 +842,8 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                     display_multiplier: 100.0,
                                     decimals: 0,
                                     suffix: "%".to_string(),
+                                    on_edit_start: on_edit_start!(),
+                                    on_edit_commit: on_edit_commit!(),
                                     on_change: move |val| contrast_r.set(val),
                                 }
                                 EditorSlider {
@@ -477,6 +856,8 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                     display_multiplier: 100.0,
                                     decimals: 0,
                                     suffix: "%".to_string(),
+                                    on_edit_start: on_edit_start!(),
+                                    on_edit_commit: on_edit_commit!(),
                                     on_change: move |val| contrast_g.set(val),
                                 }
                                 EditorSlider {
@@ -489,6 +870,8 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                     display_multiplier: 100.0,
                                     decimals: 0,
                                     suffix: "%".to_string(),
+                                    on_edit_start: on_edit_start!(),
+                                    on_edit_commit: on_edit_commit!(),
                                     on_change: move |val| contrast_b.set(val),
                                 }
                             }
@@ -498,6 +881,263 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
             }
         }
     }
+}
+
+fn current_editor_state(
+    scale: Signal<f64>,
+    offset: Signal<(f64, f64)>,
+    stretch_x: Signal<f64>,
+    stretch_y: Signal<f64>,
+    rotation: Signal<f64>,
+    flip_x: Signal<bool>,
+    flip_y: Signal<bool>,
+    contrast_r: Signal<f64>,
+    contrast_g: Signal<f64>,
+    contrast_b: Signal<f64>,
+    saturation: Signal<f64>,
+) -> EditorEditState {
+    EditorEditState {
+        scale: scale(),
+        offset: offset(),
+        stretch_x: stretch_x(),
+        stretch_y: stretch_y(),
+        rotation: rotation(),
+        flip_x: flip_x(),
+        flip_y: flip_y(),
+        contrast_r: contrast_r(),
+        contrast_g: contrast_g(),
+        contrast_b: contrast_b(),
+        saturation: saturation(),
+    }
+}
+
+fn apply_editor_state(
+    state: EditorEditState,
+    mut scale: Signal<f64>,
+    mut offset: Signal<(f64, f64)>,
+    mut stretch_x: Signal<f64>,
+    mut stretch_y: Signal<f64>,
+    mut rotation: Signal<f64>,
+    mut flip_x: Signal<bool>,
+    mut flip_y: Signal<bool>,
+    mut contrast_r: Signal<f64>,
+    mut contrast_g: Signal<f64>,
+    mut contrast_b: Signal<f64>,
+    mut saturation: Signal<f64>,
+) {
+    scale.set(state.scale);
+    offset.set(state.offset);
+    stretch_x.set(state.stretch_x);
+    stretch_y.set(state.stretch_y);
+    rotation.set(state.rotation);
+    flip_x.set(state.flip_x);
+    flip_y.set(state.flip_y);
+    contrast_r.set(state.contrast_r);
+    contrast_g.set(state.contrast_g);
+    contrast_b.set(state.contrast_b);
+    saturation.set(state.saturation);
+}
+
+fn push_editor_history(
+    mut undo_stack: Signal<Vec<EditorEditState>>,
+    mut redo_stack: Signal<Vec<EditorEditState>>,
+    before: EditorEditState,
+    after: EditorEditState,
+) {
+    if before == after {
+        return;
+    }
+
+    undo_stack.write().push(before);
+    redo_stack.write().clear();
+}
+
+fn begin_editor_edit(
+    mut active_edit_start: Signal<Option<EditorEditState>>,
+    scale: Signal<f64>,
+    offset: Signal<(f64, f64)>,
+    stretch_x: Signal<f64>,
+    stretch_y: Signal<f64>,
+    rotation: Signal<f64>,
+    flip_x: Signal<bool>,
+    flip_y: Signal<bool>,
+    contrast_r: Signal<f64>,
+    contrast_g: Signal<f64>,
+    contrast_b: Signal<f64>,
+    saturation: Signal<f64>,
+) {
+    if active_edit_start().is_some() {
+        return;
+    }
+
+    active_edit_start.set(Some(current_editor_state(
+        scale, offset, stretch_x, stretch_y, rotation, flip_x, flip_y, contrast_r, contrast_g,
+        contrast_b, saturation,
+    )));
+}
+
+fn commit_editor_edit(
+    undo_stack: Signal<Vec<EditorEditState>>,
+    redo_stack: Signal<Vec<EditorEditState>>,
+    mut active_edit_start: Signal<Option<EditorEditState>>,
+    scale: Signal<f64>,
+    offset: Signal<(f64, f64)>,
+    stretch_x: Signal<f64>,
+    stretch_y: Signal<f64>,
+    rotation: Signal<f64>,
+    flip_x: Signal<bool>,
+    flip_y: Signal<bool>,
+    contrast_r: Signal<f64>,
+    contrast_g: Signal<f64>,
+    contrast_b: Signal<f64>,
+    saturation: Signal<f64>,
+) {
+    let Some(before) = active_edit_start.take() else {
+        return;
+    };
+    let after = current_editor_state(
+        scale, offset, stretch_x, stretch_y, rotation, flip_x, flip_y, contrast_r, contrast_g,
+        contrast_b, saturation,
+    );
+    push_editor_history(undo_stack, redo_stack, before, after);
+}
+
+fn set_editor_state_with_history(
+    undo_stack: Signal<Vec<EditorEditState>>,
+    redo_stack: Signal<Vec<EditorEditState>>,
+    mut active_edit_start: Signal<Option<EditorEditState>>,
+    next: EditorEditState,
+    scale: Signal<f64>,
+    offset: Signal<(f64, f64)>,
+    stretch_x: Signal<f64>,
+    stretch_y: Signal<f64>,
+    rotation: Signal<f64>,
+    flip_x: Signal<bool>,
+    flip_y: Signal<bool>,
+    contrast_r: Signal<f64>,
+    contrast_g: Signal<f64>,
+    contrast_b: Signal<f64>,
+    saturation: Signal<f64>,
+) {
+    let before = active_edit_start.take().unwrap_or_else(|| {
+        current_editor_state(
+            scale, offset, stretch_x, stretch_y, rotation, flip_x, flip_y, contrast_r, contrast_g,
+            contrast_b, saturation,
+        )
+    });
+
+    push_editor_history(undo_stack, redo_stack, before, next);
+    apply_editor_state(
+        next, scale, offset, stretch_x, stretch_y, rotation, flip_x, flip_y, contrast_r,
+        contrast_g, contrast_b, saturation,
+    );
+}
+
+fn undo_editor_state(
+    mut undo_stack: Signal<Vec<EditorEditState>>,
+    mut redo_stack: Signal<Vec<EditorEditState>>,
+    mut active_edit_start: Signal<Option<EditorEditState>>,
+    scale: Signal<f64>,
+    offset: Signal<(f64, f64)>,
+    stretch_x: Signal<f64>,
+    stretch_y: Signal<f64>,
+    rotation: Signal<f64>,
+    flip_x: Signal<bool>,
+    flip_y: Signal<bool>,
+    contrast_r: Signal<f64>,
+    contrast_g: Signal<f64>,
+    contrast_b: Signal<f64>,
+    saturation: Signal<f64>,
+) {
+    let current = current_editor_state(
+        scale, offset, stretch_x, stretch_y, rotation, flip_x, flip_y, contrast_r, contrast_g,
+        contrast_b, saturation,
+    );
+
+    if let Some(before_active_edit) = active_edit_start.take() {
+        if before_active_edit != current {
+            redo_stack.write().push(current);
+            apply_editor_state(
+                before_active_edit,
+                scale,
+                offset,
+                stretch_x,
+                stretch_y,
+                rotation,
+                flip_x,
+                flip_y,
+                contrast_r,
+                contrast_g,
+                contrast_b,
+                saturation,
+            );
+            return;
+        }
+    }
+
+    let Some(previous) = undo_stack.write().pop() else {
+        return;
+    };
+    if previous == current {
+        return;
+    }
+
+    redo_stack.write().push(current);
+    apply_editor_state(
+        previous, scale, offset, stretch_x, stretch_y, rotation, flip_x, flip_y, contrast_r,
+        contrast_g, contrast_b, saturation,
+    );
+}
+
+fn redo_editor_state(
+    mut undo_stack: Signal<Vec<EditorEditState>>,
+    mut redo_stack: Signal<Vec<EditorEditState>>,
+    active_edit_start: Signal<Option<EditorEditState>>,
+    scale: Signal<f64>,
+    offset: Signal<(f64, f64)>,
+    stretch_x: Signal<f64>,
+    stretch_y: Signal<f64>,
+    rotation: Signal<f64>,
+    flip_x: Signal<bool>,
+    flip_y: Signal<bool>,
+    contrast_r: Signal<f64>,
+    contrast_g: Signal<f64>,
+    contrast_b: Signal<f64>,
+    saturation: Signal<f64>,
+) {
+    commit_editor_edit(
+        undo_stack,
+        redo_stack,
+        active_edit_start,
+        scale,
+        offset,
+        stretch_x,
+        stretch_y,
+        rotation,
+        flip_x,
+        flip_y,
+        contrast_r,
+        contrast_g,
+        contrast_b,
+        saturation,
+    );
+
+    let current = current_editor_state(
+        scale, offset, stretch_x, stretch_y, rotation, flip_x, flip_y, contrast_r, contrast_g,
+        contrast_b, saturation,
+    );
+    let Some(next) = redo_stack.write().pop() else {
+        return;
+    };
+    if next == current {
+        return;
+    }
+
+    undo_stack.write().push(current);
+    apply_editor_state(
+        next, scale, offset, stretch_x, stretch_y, rotation, flip_x, flip_y, contrast_r,
+        contrast_g, contrast_b, saturation,
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -581,6 +1221,8 @@ fn ImageWithCrop(
     contrast_b: Signal<f64>,
     saturation: Signal<f64>,
     crop_rect: Memo<Option<CropRectPct>>,
+    on_edit_start: EventHandler<()>,
+    on_edit_commit: EventHandler<()>,
 ) -> Element {
     #[cfg(target_arch = "wasm32")]
     {
@@ -643,6 +1285,7 @@ fn ImageWithCrop(
         let resize_handle_g = resize_handle;
         let resize_start_g = resize_start;
         let mut scale_g = scale;
+        let on_edit_commit_g = on_edit_commit.clone();
 
         // Store closures in a signal so use_drop can access them for cleanup.
         let global_closures = use_signal(|| {
@@ -727,13 +1370,17 @@ fn ImageWithCrop(
 
                 let on_global_up = Closure::wrap(Box::new(move |_evt: web_sys::MouseEvent| {
                     let was_dragging = is_dragging_g();
+                    let was_resizing = is_resizing_g();
                     is_dragging_g.set(false);
                     if was_dragging {
                         just_released_drag_g.set(true);
                     }
-                    if is_resizing_g() {
+                    if was_resizing {
                         is_resizing_g.set(false);
                         just_released_drag_g.set(true);
+                    }
+                    if was_dragging || was_resizing {
+                        on_edit_commit_g.call(());
                     }
                 })
                     as Box<dyn FnMut(web_sys::MouseEvent)>);
@@ -770,9 +1417,11 @@ fn ImageWithCrop(
         });
 
         // --- Mouse drag ---
+        let on_drag_start = on_edit_start.clone();
         let mut on_crop_mousedown = move |evt: dioxus::html::events::MouseEvent| {
             evt.prevent_default(); // prevent browser's native image drag
             evt.stop_propagation();
+            on_drag_start.call(());
             let coords = evt.data.client_coordinates();
             let pos = (coords.x, coords.y);
             drag_start.set((pos, offset()));
@@ -800,14 +1449,22 @@ fn ImageWithCrop(
             }
         };
 
+        let on_drag_commit = on_edit_commit.clone();
         let mut on_crop_mouseup = move |_: dioxus::html::events::MouseEvent| {
+            let was_dragging = is_dragging();
             is_dragging.set(false);
+            if was_dragging {
+                just_released_drag.set(true);
+                on_drag_commit.call(());
+            }
         };
 
         // --- Touch drag ---
+        let on_touch_start = on_edit_start.clone();
         let mut on_crop_touchstart = move |evt: dioxus::html::events::TouchEvent| {
             evt.stop_propagation();
             if let Some(pos) = touch_client_pos(&evt) {
+                on_touch_start.call(());
                 drag_start.set((pos, offset()));
                 is_dragging.set(true);
             }
@@ -835,15 +1492,23 @@ fn ImageWithCrop(
             }
         };
 
+        let on_touch_commit = on_edit_commit.clone();
         let mut on_crop_touchend = move |_: dioxus::html::events::TouchEvent| {
+            let was_dragging = is_dragging();
             is_dragging.set(false);
+            if was_dragging {
+                just_released_drag.set(true);
+                on_touch_commit.call(());
+            }
         };
 
         // --- Resize handle mousedown ---
+        let on_resize_start = on_edit_start.clone();
         let mut on_resize_mousedown =
             move |handle: ResizeHandle, evt: dioxus::html::events::MouseEvent| {
                 evt.prevent_default();
                 evt.stop_propagation();
+                on_resize_start.call(());
                 let coords = evt.data.client_coordinates();
                 let pos = (coords.x, coords.y);
                 resize_handle.set(handle);

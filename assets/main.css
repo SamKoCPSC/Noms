@@ -966,6 +966,15 @@ a:hover {
     gap: var(--space-sm);
 }
 
+.image-editor__history-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding-right: var(--space-sm);
+    margin-right: var(--space-xs);
+    border-right: 1px solid var(--glass-border);
+}
+
 .image-editor__soft-button,
 .image-editor__icon-button {
     font-family: var(--font-body);
@@ -1004,6 +1013,20 @@ a:hover {
 .image-editor__soft-button:active,
 .image-editor__icon-button:active {
     box-shadow: inset 3px 3px 4px var(--shadow-dark), inset -3px -3px 4px var(--shadow-light);
+}
+
+.image-editor__soft-button:disabled,
+.image-editor__icon-button:disabled {
+    color: var(--text-tertiary);
+    cursor: not-allowed;
+    opacity: 0.55;
+    box-shadow: inset 2px 2px 3px var(--shadow-dark), inset -2px -2px 3px var(--shadow-light);
+}
+
+.image-editor__soft-button:disabled:hover,
+.image-editor__icon-button:disabled:hover {
+    color: var(--text-tertiary);
+    background: var(--surface);
 }
 
 .image-editor__body {
@@ -1439,7 +1462,19 @@ a:hover {
     }
 
     .image-editor__header {
+        align-items: flex-start;
         padding: var(--space-sm) var(--space-md);
+    }
+
+    .image-editor__header-actions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .image-editor__history-actions {
+        padding-right: 0;
+        margin-right: 0;
+        border-right: none;
     }
 
     .image-editor__body {
