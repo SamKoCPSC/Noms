@@ -122,9 +122,122 @@ fn edited_image_style(edit: &RecipeImageEdit, filter_id: &str) -> String {
     let flip_y = if edit.transform.flip_y { -1.0 } else { 1.0 };
     let scale_x = edit.transform.stretch_x * flip_x;
     let scale_y = edit.transform.stretch_y * flip_y;
+    let fit_scale = transform_fit_scale(edit);
 
     format!(
-        "transform: rotate({:.4}deg) scaleX({:.6}) scaleY({:.6}); filter: url(#{}) saturate({:.6});",
-        edit.transform.rotation, scale_x, scale_y, filter_id, edit.color.saturation
+        "transform: scale({:.6}) rotate({:.4}deg) scaleX({:.6}) scaleY({:.6}); filter: url(#{}) saturate({:.6});",
+        fit_scale,
+        edit.transform.rotation,
+        scale_x,
+        scale_y,
+        filter_id,
+        edit.color.saturation
     )
+}
+
+fn transform_fit_scale(edit: &RecipeImageEdit) -> f64 {
+    let aspect_ratio = inferred_original_aspect_ratio(edit);
+    if aspect_ratio <= 0.0 {
+        return 1.0;
+    }
+
+    let stretch_x = edit.transform.stretch_x.abs();
+    let stretch_y = edit.transform.stretch_y.abs();
+    let radians = edit.transform.rotation.to_radians();
+    let cos = radians.cos().abs();
+    let sin = radians.sin().abs();
+
+    let transformed_w = stretch_x * cos + (stretch_y * sin / aspect_ratio);
+    let transformed_h = aspect_ratio * stretch_x * sin + stretch_y * cos;
+    let fit_x = if transformed_w > 0.0 {
+        1.0 / transformed_w
+    } else {
+        1.0
+    };
+    let fit_y = if transformed_h > 0.0 {
+        1.0 / transformed_h
+    } else {
+        1.0
+    };
+
+    fit_x.min(fit_y).min(1.0).max(0.1)
+}
+
+fn inferred_original_aspect_ratio(edit: &RecipeImageEdit) -> f64 {
+    let target_aspect = if edit.aspect_ratio.height > 0 {
+        edit.aspect_ratio.width as f64 / edit.aspect_ratio.height as f64
+    } else {
+        16.0 / 9.0
+    };
+
+    let crop_w = edit.crop.width.clamp(0.001, 1.0);
+    let crop_h = edit.crop.height.clamp(0.001, 1.0);
+
+    target_aspect * crop_h / crop_w
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::types::{
+        ImageAspectRatio, ImageColorEdit, ImageCropRect, ImageTransformEdit, RecipeImageEdit,
+    };
+
+    use super::{edited_image_style, transform_fit_scale};
+
+    fn edit_for_crop(crop: ImageCropRect, rotation: f64) -> RecipeImageEdit {
+        RecipeImageEdit {
+            name: "16:9".to_string(),
+            version: 1,
+            aspect_ratio: ImageAspectRatio {
+                width: 16,
+                height: 9,
+            },
+            crop,
+            transform: ImageTransformEdit {
+                rotation,
+                stretch_x: 1.0,
+                stretch_y: 1.0,
+                flip_x: false,
+                flip_y: false,
+            },
+            color: ImageColorEdit {
+                saturation: 1.0,
+                contrast_r: 1.0,
+                contrast_g: 1.0,
+                contrast_b: 1.0,
+            },
+        }
+    }
+
+    #[test]
+    fn transform_fit_scale_matches_editor_for_rotated_four_by_three_image() {
+        let edit = edit_for_crop(
+            ImageCropRect {
+                x: 0.0,
+                y: 0.125,
+                width: 1.0,
+                height: 0.75,
+            },
+            90.0,
+        );
+
+        assert!((transform_fit_scale(&edit) - 0.75).abs() < 0.0001);
+    }
+
+    #[test]
+    fn edited_image_style_replays_rotation_fit_scale() {
+        let edit = edit_for_crop(
+            ImageCropRect {
+                x: 0.0,
+                y: 0.125,
+                width: 1.0,
+                height: 0.75,
+            },
+            90.0,
+        );
+
+        let style = edited_image_style(&edit, "test-filter");
+
+        assert!(style.contains("scale(0.750000) rotate(90.0000deg)"));
+    }
 }
