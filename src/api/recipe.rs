@@ -22,7 +22,7 @@ pub async fn create_recipe(
     ingredients: Vec<crate::types::RecipeIngredient>,
     instructions: Vec<crate::types::RecipeStep>,
     equipment: Vec<crate::types::RecipeEquipment>,
-    images: Vec<String>,
+    images: Vec<crate::types::RecipeImage>,
     tags: Vec<String>,
     visibility: String,
 ) -> Result<crate::types::Recipe, ServerFnError> {
@@ -108,7 +108,7 @@ pub async fn update_recipe(
     ingredients: Option<Vec<crate::types::RecipeIngredient>>,
     instructions: Option<Vec<crate::types::RecipeStep>>,
     equipment: Option<Vec<crate::types::RecipeEquipment>>,
-    images: Option<Vec<String>>,
+    images: Option<Vec<crate::types::RecipeImage>>,
     tags: Option<Vec<String>>,
     visibility: Option<String>,
 ) -> Result<crate::types::Recipe, ServerFnError> {
@@ -187,8 +187,9 @@ pub async fn delete_recipe(recipe_id: String) -> Result<(), ServerFnError> {
         let storage = crate::storage::get_storage_client();
         let public_url = storage.public_url().trim_end_matches('/');
 
-        for img_url in &recipe.images {
-            if let Some(full_key) = img_url
+        for image in &recipe.images {
+            if let Some(full_key) = image
+                .url
                 .strip_prefix(public_url)
                 .map(|s| s.trim_start_matches('/'))
             {

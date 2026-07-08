@@ -182,7 +182,7 @@ pub struct OauthAccountRow {
 /// A recipe saved by a user.
 ///
 /// Re-exported from `crate::types` for use in database queries.
-pub use crate::types::Recipe;
+pub use crate::types::{Recipe, RecipeImage};
 
 /// Implement `sqlx::FromRow` for `Recipe` so it can be used with raw queries.
 impl sqlx::FromRow<'_, sqlx::postgres::PgRow> for Recipe {
@@ -736,7 +736,7 @@ pub async fn insert_recipe(
     ingredients: &[RecipeIngredient],
     instructions: &[RecipeStep],
     equipment: &[RecipeEquipment],
-    images: &[String],
+    images: &[RecipeImage],
     visibility: &str,
 ) -> Result<Recipe, DbError> {
     let ingredients_json = serde_json::to_value(ingredients).map_err(DbError::SerdeJson)?;
@@ -850,7 +850,7 @@ pub async fn update_recipe(
     ingredients: &[RecipeIngredient],
     instructions: &[RecipeStep],
     equipment: &[RecipeEquipment],
-    images: &[String],
+    images: &[RecipeImage],
     visibility: Option<&str>,
 ) -> Result<Recipe, DbError> {
     let ingredients_json = serde_json::to_value(ingredients).map_err(DbError::SerdeJson)?;
@@ -1149,7 +1149,12 @@ pub async fn get_public_recipe_tags(
 /// Used by the orphan cleanup worker to determine which storage objects are still needed.
 pub async fn get_all_image_urls(pool: &PgPool) -> Result<Vec<String>, DbError> {
     let rows = sqlx::query_scalar::<_, String>(
-        "SELECT DISTINCT jsonb_array_elements_text(images) FROM recipes WHERE images IS NOT NULL AND jsonb_array_length(images) > 0",
+        "SELECT DISTINCT image_entry ->> 'url' AS image_url
+         FROM recipes
+         CROSS JOIN LATERAL jsonb_array_elements(images) AS image_entry
+         WHERE images IS NOT NULL
+            AND jsonb_array_length(images) > 0
+            AND image_entry ? 'url'",
     )
     .fetch_all(pool)
     .await
@@ -3714,9 +3719,18 @@ mod tests {
         .unwrap();
 
         let images = vec![
-            format!("https://storage.example.com/recipes/{u}_full.webp"),
-            format!("https://storage.example.com/recipes/{u}_thumb.webp"),
-            format!("https://storage.example.com/recipes/{u}_2_full.webp"),
+            RecipeImage {
+                url: format!("https://storage.example.com/recipes/{u}_full.webp"),
+                edits: Vec::new(),
+            },
+            RecipeImage {
+                url: format!("https://storage.example.com/recipes/{u}_thumb.webp"),
+                edits: Vec::new(),
+            },
+            RecipeImage {
+                url: format!("https://storage.example.com/recipes/{u}_2_full.webp"),
+                edits: Vec::new(),
+            },
         ];
 
         insert_recipe(
@@ -3770,8 +3784,14 @@ mod tests {
 
         // Recipe 1 has shared_url + unique1
         let images1 = vec![
-            shared_url.clone(),
-            format!("https://storage.example.com/recipes/unique1_{u}.webp"),
+            RecipeImage {
+                url: shared_url.clone(),
+                edits: Vec::new(),
+            },
+            RecipeImage {
+                url: format!("https://storage.example.com/recipes/unique1_{u}.webp"),
+                edits: Vec::new(),
+            },
         ];
         insert_recipe(
             &pool,
@@ -3793,8 +3813,14 @@ mod tests {
 
         // Recipe 2 has shared_url + unique2
         let images2 = vec![
-            shared_url.clone(),
-            format!("https://storage.example.com/recipes/unique2_{u}.webp"),
+            RecipeImage {
+                url: shared_url.clone(),
+                edits: Vec::new(),
+            },
+            RecipeImage {
+                url: format!("https://storage.example.com/recipes/unique2_{u}.webp"),
+                edits: Vec::new(),
+            },
         ];
         insert_recipe(
             &pool,

@@ -7,6 +7,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use dioxus::prelude::*;
 
+use crate::types::{
+    ImageAspectRatio, ImageColorEdit, ImageCropRect, ImageTransformEdit, RecipeImageEdit,
+};
+
 /// Global counter for unique image element IDs.
 static IMG_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -80,6 +84,8 @@ fn editor_transform_fit_scale(
 pub struct ImageEditorModalProps {
     /// The image URL to display. `None` hides the modal.
     pub image_url: Signal<Option<String>>,
+    /// Called when the user confirms the current editor state.
+    pub on_save: EventHandler<RecipeImageEdit>,
     /// Called to close the modal (sets the parent's signal to `None`).
     pub on_close: EventHandler<()>,
 }
@@ -203,6 +209,7 @@ fn EditorSlider(props: EditorSliderProps) -> Element {
 #[component]
 pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
     let image_url = props.image_url;
+    let on_save = props.on_save;
     let on_close = props.on_close;
 
     // Unique ID for this component instance's image element.
@@ -930,6 +937,18 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                         title: "Confirm edits and close",
                         onclick: move |evt| {
                             evt.stop_propagation();
+                            on_save.call(current_recipe_image_edit(
+                                (*crop_rect)(),
+                                stretch_x(),
+                                stretch_y(),
+                                rotation(),
+                                flip_x(),
+                                flip_y(),
+                                contrast_r(),
+                                contrast_g(),
+                                contrast_b(),
+                                saturation(),
+                            ));
                             on_close.call(());
                         },
                         "OK"
@@ -1740,4 +1759,60 @@ struct CropRectPct {
     bottom: f64,
     left: f64,
     right: f64,
+}
+
+fn current_recipe_image_edit(
+    crop_rect: Option<CropRectPct>,
+    stretch_x: f64,
+    stretch_y: f64,
+    rotation: f64,
+    flip_x: bool,
+    flip_y: bool,
+    contrast_r: f64,
+    contrast_g: f64,
+    contrast_b: f64,
+    saturation: f64,
+) -> RecipeImageEdit {
+    let crop = crop_rect
+        .map(|rect| {
+            let x = (rect.left / 100.0).clamp(0.0, 1.0);
+            let y = (rect.top / 100.0).clamp(0.0, 1.0);
+            let width = (1.0 - (rect.left + rect.right) / 100.0).clamp(0.0, 1.0);
+            let height = (1.0 - (rect.top + rect.bottom) / 100.0).clamp(0.0, 1.0);
+            ImageCropRect {
+                x,
+                y,
+                width,
+                height,
+            }
+        })
+        .unwrap_or(ImageCropRect {
+            x: 0.0,
+            y: 0.0,
+            width: 1.0,
+            height: 1.0,
+        });
+
+    RecipeImageEdit {
+        name: "16:9".to_string(),
+        version: 1,
+        aspect_ratio: ImageAspectRatio {
+            width: 16,
+            height: 9,
+        },
+        crop,
+        transform: ImageTransformEdit {
+            rotation,
+            stretch_x,
+            stretch_y,
+            flip_x,
+            flip_y,
+        },
+        color: ImageColorEdit {
+            saturation,
+            contrast_r,
+            contrast_g,
+            contrast_b,
+        },
+    }
 }

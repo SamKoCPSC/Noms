@@ -1,26 +1,27 @@
 //! Image upload component: drag-and-drop / file picker, client-side resize +
 //! WebP processing (CP3), deferred server upload (CP2 `#[server] upload_image`),
-//! progress + error UI with per-item retry, and an optional High-Quality toggle
-//! with size-reduction readout and a client-side 10 MB overflow guard.
+//! progress + error UI with per-item retry, size-reduction readout, and a
+//! client-side 10 MB overflow guard.
 //!
 //! Compiles on both `wasm32-unknown-unknown` (the real client) and the server
 //! target (where the component is never rendered but is still type-checked by
 //! `dx serve` SSR and `cargo check --features server`). All
-//! `web_sys`/`process_image_with_options`/`WebFileExt`/object-URL logic that
-//! is wasm-only lives behind `#[cfg(target_arch = "wasm32")]` blocks with a
-//! non-wasm no-op branch.
+//! `web_sys`/`process_image`/`WebFileExt`/object-URL logic that is wasm-only
+//! lives behind `#[cfg(target_arch = "wasm32")]` blocks with a non-wasm no-op
+//! branch.
 
 use dioxus::html::HasFileData;
 use dioxus::prelude::*;
 use std::sync::Arc;
 
 use crate::components::base::{Button, ButtonVariant, ImageEditorModal};
+use crate::types::{RecipeImage, RecipeImageEdit};
 
 // WASM-only bridge: connects Dioxus `FileData` to CP3's `process_image_*`
 // pipeline. Gated at module scope so the imports don't trigger
 // `unused_imports` on the server build (`warnings = "deny"`).
 #[cfg(target_arch = "wasm32")]
-use crate::utils::image_processing_client::process_image_with_options;
+use crate::utils::image_processing_client::process_image;
 #[cfg(target_arch = "wasm32")]
 use dioxus_web::WebFileExt;
 
@@ -32,9 +33,6 @@ use dioxus_web::WebFileExt;
 /// server build where the wasm blocks are stripped.
 #[allow(dead_code)]
 const MAX_FILE_SIZE: u64 = 10 * 1024 * 1024;
-
-/// Originals larger than this show the "High Quality" toggle (per the plan).
-const HQ_TOGGLE_THRESHOLD: u64 = 1_000_000;
 
 /// Allowed image file extensions (checked case-insensitively).
 /// Only referenced inside wasm-gated code — `allow(dead_code)` covers the
@@ -99,10 +97,10 @@ pub struct UploadOutcome {
 /// Props for [`ImageUpload`].
 #[derive(Props, Clone, PartialEq)]
 pub struct ImageUploadProps {
-    /// Shared sink: the component appends each successfully uploaded
-    /// `full_url` here as uploads complete. The parent reads `images()`
-    /// when calling `create_recipe`.
-    pub images: Signal<Vec<String>>,
+    /// Shared sink: the component appends each successfully uploaded image
+    /// record here as uploads complete. The parent reads `images()` when
+    /// calling `create_recipe`.
+    pub images: Signal<Vec<RecipeImage>>,
     /// Parent sets this to `true` to trigger the upload batch. The component
     /// resets it to `false` when the batch finishes — BEFORE clearing its
     /// internal `uploading` flag (this ordering prevents the `use_effect`
@@ -122,6 +120,7 @@ pub struct ImageUploadProps {
 
 /// Per-file upload lifecycle.
 #[derive(Clone, PartialEq)]
+#[allow(dead_code)]
 enum UploadStatus {
     /// Canvas resize/WebP in progress.
     Processing,
@@ -131,13 +130,13 @@ enum UploadStatus {
     Uploading,
     /// Done — `full_url` already pushed into `images`.
     Uploaded,
-    /// Upload failed OR HQ overflow — user can Retry / toggle HQ off.
+    /// Upload failed or processed bytes exceeded the upload limit.
     Failed,
 }
 
 /// Snapshot of a ready-to-upload image: (id, full bytes, thumb bytes, name).
 /// Extracted as a type alias to satisfy `clippy::type_complexity`.
-type UploadItem = (usize, Arc<Vec<u8>>, Arc<Vec<u8>>, String);
+type UploadItem = (usize, Arc<Vec<u8>>, Arc<Vec<u8>>, String, RecipeImageEdit);
 
 /// One selected image, its processed bytes, and its upload status.
 ///
@@ -152,17 +151,12 @@ struct PendingImage {
     preview_url: Option<String>,
     /// Original File size in bytes.
     original_size: u64,
-    /// Processed full-size WebP bytes (always WebP regardless of HQ toggle).
+    /// Processed full-size WebP bytes.
     full_bytes: Arc<Vec<u8>>,
     /// Processed 400px thumbnail WebP bytes.
     thumb_bytes: Arc<Vec<u8>>,
-    /// Original Dioxus `FileData` — stashed for HQ-toggle re-processing
-    /// (avoids re-picking the file). `None` on SSR; only `Some` after a
-    /// wasm pick. `FileData: Clone + PartialEq + Send + Sync`, so it
-    /// participates cleanly in the derives.
-    file_data: Option<dioxus::html::FileData>,
-    /// Per-file High-Quality toggle state.
-    high_quality: bool,
+    /// Edit metadata captured from the image editor modal.
+    edit: RecipeImageEdit,
     /// Where this file is in the upload lifecycle.
     status: UploadStatus,
     /// Failure message when `status == Failed`.
@@ -236,8 +230,7 @@ async fn process_one_file(
             original_size,
             full_bytes: Arc::new(Vec::new()),
             thumb_bytes: Arc::new(Vec::new()),
-            file_data: Some(file.clone()),
-            high_quality: false,
+            edit: RecipeImageEdit::default_16x9(),
             status: UploadStatus::Processing,
             error: None,
         });
@@ -247,17 +240,14 @@ async fn process_one_file(
             editor_modal_url.set(Some(url.clone()));
         }
 
-        // Process (default: compress — HQ off).
-        match process_image_with_options(web_file, false).await {
+        // Process using the standard compressed path.
+        match process_image(web_file).await {
             Ok(processed) => {
                 let full_len = processed.full_bytes.len();
                 let mut guard = pending.write();
                 if let Some(p) = guard.iter_mut().find(|p| p.id == id) {
                     p.full_bytes = Arc::new(processed.full_bytes);
                     p.thumb_bytes = Arc::new(processed.thumb_bytes);
-                    // HQ overflow guard — at default HQ=false this is
-                    // unlikely, but a max-size original at 0.85 could
-                    // still exceed 10 MB. Belt-and-suspenders.
                     if full_len > MAX_FILE_SIZE as usize {
                         p.status = UploadStatus::Failed;
                         p.error = Some(format!(
@@ -286,84 +276,23 @@ async fn process_one_file(
     }
 }
 
-/// Re-process a stashed file with the new HQ setting (wasm-only logic; the
-/// non-wasm branch is a no-op). Updates the pending item's bytes, status,
-/// and size readout. Applies the HQ overflow guard (WARNING #6): if the
-/// HQ-processed bytes exceed the server's 10 MB limit, marks `Failed`
-/// before any network round-trip.
-async fn reprocess_for_hq(img_id: usize, new_hq: bool, mut pending: Signal<Vec<PendingImage>>) {
-    let file_data = pending()
-        .iter()
-        .find(|p| p.id == img_id)
-        .and_then(|p| p.file_data.clone());
-    let Some(file) = file_data else {
-        return;
-    };
-
-    // Mark as Processing and record the new toggle state.
-    if let Some(p) = pending.write().iter_mut().find(|p| p.id == img_id) {
-        p.status = UploadStatus::Processing;
-        p.high_quality = new_hq;
-        p.error = None;
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        let Some(web_file) = file.get_web_file() else {
-            if let Some(p) = pending.write().iter_mut().find(|p| p.id == img_id) {
-                p.status = UploadStatus::Failed;
-                p.error = Some("Could not re-read the original file.".to_string());
-            }
-            return;
-        };
-        match process_image_with_options(web_file, new_hq).await {
-            Ok(processed) => {
-                let full_len = processed.full_bytes.len();
-                let mut guard = pending.write();
-                if let Some(p) = guard.iter_mut().find(|p| p.id == img_id) {
-                    p.full_bytes = Arc::new(processed.full_bytes);
-                    p.thumb_bytes = Arc::new(processed.thumb_bytes);
-                    // HQ overflow guard (WARNING #6).
-                    if full_len > MAX_FILE_SIZE as usize {
-                        p.status = UploadStatus::Failed;
-                        p.error = Some(format!(
-                            "Image is {} — too large even in high quality. Turn off High Quality or use a smaller image.",
-                            format_file_size(full_len as u64)
-                        ));
-                    } else {
-                        p.status = UploadStatus::Ready;
-                    }
-                }
-            }
-            Err(msg) => {
-                if let Some(p) = pending.write().iter_mut().find(|p| p.id == img_id) {
-                    p.status = UploadStatus::Failed;
-                    p.error = Some(msg);
-                }
-            }
-        }
-    }
-
-    // Non-wasm no-op: consume the params so nothing is unused.
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let _ = (file, new_hq, img_id);
-    }
-}
-
 /// Re-attempt the upload for a single `Failed` item (per-item Retry, AC5).
 /// Reuses the stashed `full_bytes`/`thumb_bytes` from the last successful
 /// processing — does NOT re-process.
 async fn retry_upload(
     img_id: usize,
     mut pending: Signal<Vec<PendingImage>>,
-    mut images: Signal<Vec<String>>,
+    mut images: Signal<Vec<RecipeImage>>,
 ) {
-    let item = pending()
-        .iter()
-        .find(|p| p.id == img_id)
-        .map(|p| (p.full_bytes.clone(), p.thumb_bytes.clone(), p.name.clone()));
-    let Some((full, thumb, name)) = item else {
+    let item = pending().iter().find(|p| p.id == img_id).map(|p| {
+        (
+            p.full_bytes.clone(),
+            p.thumb_bytes.clone(),
+            p.name.clone(),
+            p.edit.clone(),
+        )
+    });
+    let Some((full, thumb, name, edit)) = item else {
         return;
     };
 
@@ -377,7 +306,7 @@ async fn retry_upload(
     let result = crate::api::upload::upload_image((*full).clone(), (*thumb).clone(), name).await;
     match result {
         Ok(resp) => {
-            images.write().push(resp.full_url);
+            images.write().push(RecipeImage::new(resp.full_url, edit));
             if let Some(p) = pending.write().iter_mut().find(|p| p.id == img_id) {
                 p.status = UploadStatus::Uploaded;
             }
@@ -398,7 +327,7 @@ async fn retry_upload(
 /// `Processing`).
 async fn upload_all(
     mut pending: Signal<Vec<PendingImage>>,
-    mut images: Signal<Vec<String>>,
+    mut images: Signal<Vec<RecipeImage>>,
 ) -> UploadOutcome {
     // Processing guard — abort if any item is still in `Processing`.
     if pending()
@@ -426,6 +355,7 @@ async fn upload_all(
                 p.full_bytes.clone(),
                 p.thumb_bytes.clone(),
                 p.name.clone(),
+                p.edit.clone(),
             )
         })
         .collect();
@@ -433,7 +363,7 @@ async fn upload_all(
     let mut succeeded = 0usize;
     let mut failed = 0usize;
 
-    for (id, full, thumb, name) in to_upload {
+    for (id, full, thumb, name, edit) in to_upload {
         if let Some(p) = pending.write().iter_mut().find(|p| p.id == id) {
             p.status = UploadStatus::Uploading;
             p.error = None;
@@ -444,7 +374,7 @@ async fn upload_all(
 
         match result {
             Ok(resp) => {
-                images.write().push(resp.full_url);
+                images.write().push(RecipeImage::new(resp.full_url, edit));
                 if let Some(p) = pending.write().iter_mut().find(|p| p.id == id) {
                     p.status = UploadStatus::Uploaded;
                 }
@@ -489,7 +419,7 @@ fn remove_pending(img_id: usize, mut pending: Signal<Vec<PendingImage>>) {
 #[component]
 pub fn ImageUpload(props: ImageUploadProps) -> Element {
     let mut drag_over = use_signal(|| false);
-    let pending = use_signal(Vec::<PendingImage>::new);
+    let mut pending = use_signal(Vec::<PendingImage>::new);
     let mut uploading = use_signal(|| false);
     let error = use_signal(|| Option::<String>::None);
     let next_id = use_signal(|| 0usize);
@@ -587,7 +517,6 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                     let img_preview = img.preview_url.clone();
                     let img_original = img.original_size;
                     let img_full_len = img.full_bytes.len();
-                    let img_hq = img.high_quality;
                     let img_status = img.status.clone();
                     let img_error = img.error.clone();
                     let img_error_display = img_error
@@ -620,33 +549,13 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                     "🖼"
                                 }
                             }
-                            // Meta: name + size readout + HQ toggle
+                            // Meta: name + size readout
                             div { class: "image-upload__meta",
                                 span { "{img_name}" }
                                 if img_full_len > 0 {
                                     span {
                                         class: "image-upload__size",
                                         "{format_file_size(img_original)} → {format_file_size(img_full_len as u64)} ({reduction_percent(img_original, img_full_len)}% smaller)"
-                                    }
-                                }
-                                // High-Quality toggle — only when original > 1 MB
-                                // and the item is in a re-processable state.
-                                if img_original > HQ_TOGGLE_THRESHOLD
-                                    && (img_status == UploadStatus::Ready
-                                        || img_status == UploadStatus::Failed)
-                                {
-                                    label { class: "image-upload__toggle",
-                                        input {
-                                            r#type: "checkbox",
-                                            checked: img_hq,
-                                            onchange: move |evt| {
-                                                let new_hq = evt.checked();
-                                                spawn(async move {
-                                                    reprocess_for_hq(img_id, new_hq, pending).await;
-                                                });
-                                            },
-                                        }
-                                        "High Quality"
                                     }
                                 }
                             }
@@ -704,6 +613,18 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
             // Image editor modal
             ImageEditorModal {
                 image_url: editor_modal_url,
+                on_save: move |edit| {
+                    let current_url = editor_modal_url();
+                    if let Some(url) = current_url {
+                        if let Some(p) = pending
+                            .write()
+                            .iter_mut()
+                            .find(|p| p.preview_url.as_deref() == Some(url.as_str()))
+                        {
+                            p.edit = edit;
+                        }
+                    }
+                },
                 on_close: move |_| {
                     editor_modal_url.set(None);
                 },

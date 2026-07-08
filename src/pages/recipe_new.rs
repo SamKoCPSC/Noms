@@ -12,7 +12,7 @@ use crate::components::base::{
     Button, ButtonVariant, ImageUpload, Input, PageHeader, UploadOutcome,
 };
 use crate::components::AuthRequired;
-use crate::types::{RecipeEquipment, RecipeIngredient, RecipeStep};
+use crate::types::{RecipeEquipment, RecipeImage, RecipeIngredient, RecipeStep};
 
 // ── Local form types ─────────────────────────────────────────────────────────
 
@@ -146,12 +146,12 @@ pub fn RecipeNew() -> Element {
     let mut error = use_signal(|| Option::<String>::None);
 
     // CP4: image upload state — shared with the `ImageUpload` component.
-    // `images` is the sink for uploaded `full_url`s (read when calling
+    // `images` is the sink for uploaded image records (read when calling
     // `create_recipe`); `upload_now` triggers the upload batch; `busy`
     // mirrors "processing or uploading" and disables Save; `pending_save`
     // stashes the validated form at Save-click time for the
     // `on_upload_complete` handler to consume after the batch finishes.
-    let images = use_signal(Vec::<String>::new);
+    let images = use_signal(Vec::<RecipeImage>::new);
     let mut upload_now = use_signal(|| false);
     let busy = use_signal(|| false);
     let mut pending_save = use_signal(|| Option::<PendingSaveData>::None);

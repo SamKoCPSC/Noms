@@ -465,7 +465,7 @@ fn render_equipment(equipment: &[RecipeEquipment]) -> Element {
 
 // ── Image Slider ─────────────────────────────────────────────────────────────
 
-fn render_image_slider(images: Vec<String>) -> Element {
+fn render_image_slider(images: Vec<crate::types::RecipeImage>) -> Element {
     if images.is_empty() {
         return rsx! {};
     }
@@ -474,7 +474,7 @@ fn render_image_slider(images: Vec<String>) -> Element {
     let total = images.len();
 
     // Pre-compute reactive values for rsx! (no closures allowed in attributes)
-    let current_src = images[current_index()].clone();
+    let current_src = images[current_index()].url.clone();
     let show_left_arrow = current_index() > 0;
     let show_right_arrow = current_index() < total - 1;
     let dot_classes: Vec<String> = (0..total)

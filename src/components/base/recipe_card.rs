@@ -65,7 +65,7 @@ pub fn RecipeCard(props: RecipeCardProps) -> Element {
                         if !image_failed() {
                             img {
                                 class: "recipe-card__image-img",
-                                src: first_image,
+                                src: "{first_image.url}",
                                 alt: "{recipe.title}",
                                 loading: "lazy",
                                 onerror: move |_| {

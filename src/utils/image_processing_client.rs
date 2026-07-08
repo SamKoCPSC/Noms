@@ -37,40 +37,16 @@ pub struct ProcessedImage {
 /// 6. Repeat steps 3-5 for thumbnail (fit within THUMB_SIZE x THUMB_SIZE, aspect ratio preserved)
 /// 7. Revoke ObjectURL to free memory
 ///
-/// Equivalent to `process_image_with_options(file, false)` — compress path
-/// (resize to ≤1920px, WebP @ 0.85). Kept for backward compatibility.
 pub async fn process_image(file: web_sys::File) -> Result<ProcessedImage, String> {
-    process_image_with_options(file, false).await
-}
-
-/// Process a File with a quality/resize option (CP4 High-Quality toggle).
-///
-/// - `high_quality = true`  → keep original dimensions, WebP @ 0.9.
-/// - `high_quality = false` → resize to ≤`MAX_DIMENSION` px, WebP @ 0.85
-///   (the existing `process_image` behavior).
-///
-/// The thumbnail is always generated at `THUMB_SIZE` and the standard
-/// `WEBP_QUALITY` regardless of the toggle — thumbnails are never the
-/// size-limit bottleneck.
-pub async fn process_image_with_options(
-    file: web_sys::File,
-    high_quality: bool,
-) -> Result<ProcessedImage, String> {
     // Step 1: Load image into HtmlImageElement
     let img = load_image_from_file(&file).await?;
 
     // Step 2: Calculate full-size dimensions
-    let (full_w, full_h) = if high_quality {
-        // HQ: keep the original pixel dimensions
-        (img.natural_width(), img.natural_height())
-    } else {
-        // Compress: fit within MAX_DIMENSION, preserving aspect ratio
-        calculate_dimensions(img.natural_width(), img.natural_height(), MAX_DIMENSION)
-    };
-    let full_quality = if high_quality { 0.9 } else { WEBP_QUALITY };
+    let (full_w, full_h) =
+        calculate_dimensions(img.natural_width(), img.natural_height(), MAX_DIMENSION);
 
     // Step 3-5: Process full-size
-    let full_bytes = render_to_webp_with_quality(&img, full_w, full_h, full_quality).await?;
+    let full_bytes = render_to_webp_with_quality(&img, full_w, full_h, WEBP_QUALITY).await?;
 
     // Step 6: Process thumbnail (fit within 400x400, preserving aspect ratio)
     let (thumb_w, thumb_h) =

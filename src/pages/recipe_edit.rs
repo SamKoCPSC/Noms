@@ -14,7 +14,7 @@ use crate::components::base::{
     Button, ButtonVariant, ImageUpload, Input, LoadingSpinner, PageHeader, UploadOutcome,
 };
 use crate::components::AuthRequired;
-use crate::types::{RecipeEquipment, RecipeIngredient, RecipeStep};
+use crate::types::{RecipeEquipment, RecipeImage, RecipeIngredient, RecipeStep};
 
 // ── Local form types ─────────────────────────────────────────────────────────
 
@@ -125,7 +125,7 @@ pub fn RecipeEdit(id: String) -> Element {
     let mut visibility = use_signal(|| "private".to_string());
 
     // CP5: image management signals
-    let mut images = use_signal(Vec::<String>::new);
+    let mut images = use_signal(Vec::<RecipeImage>::new);
     let mut upload_now = use_signal(|| false);
     let busy = use_signal(|| false);
 
@@ -449,7 +449,7 @@ pub fn RecipeEdit(id: String) -> Element {
     // ── CP11: Deferred image delete handler ────────────────────────────────────
     let mut on_delete_image = move |url: String| {
         // Optimistically remove from UI
-        images.write().retain(|u| u != &url);
+        images.write().retain(|image| image.url != url);
         // Track for deferred deletion after save
         pending_deletes.write().push(url);
     };
@@ -563,7 +563,7 @@ pub fn RecipeEdit(id: String) -> Element {
                                     margin_bottom: "var(--space-sm)",
                                     img {
                                         class: "image-upload__thumb",
-                                        src: "{images()[idx]}",
+                                        src: "{images()[idx].url}",
                                         alt: "Recipe image",
                                         width: "100%",
                                         aspect_ratio: "1",
@@ -576,7 +576,7 @@ pub fn RecipeEdit(id: String) -> Element {
                                         Button {
                                             variant: ButtonVariant::Ghost,
                                             onclick: move |_| {
-                                                let url = images()[idx].clone();
+                                                let url = images()[idx].url.clone();
                                                 on_delete_image(url);
                                             },
                                             "✕"
