@@ -1,6 +1,7 @@
 pub use avatar::*;
 pub use button::*;
 pub use card::*;
+pub use edited_recipe_image::*;
 pub use empty_state::*;
 pub use image_editor_modal::*;
 pub use image_upload::*;
@@ -13,6 +14,7 @@ pub use settings_tabs::{SettingsTab, SettingsTabs};
 mod avatar;
 mod button;
 mod card;
+mod edited_recipe_image;
 mod empty_state;
 mod image_editor_modal;
 mod image_upload;

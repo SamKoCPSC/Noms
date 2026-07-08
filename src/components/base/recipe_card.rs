@@ -5,6 +5,7 @@
 
 use crate::components::base::avatar::Avatar;
 use crate::components::base::avatar::AvatarSize;
+use crate::components::base::EditedRecipeImage;
 use crate::types::Recipe;
 use dioxus::prelude::*;
 
@@ -63,12 +64,11 @@ pub fn RecipeCard(props: RecipeCardProps) -> Element {
                     class: "recipe-card__image",
                     if let Some(first_image) = recipe.images.first() {
                         if !image_failed() {
-                            img {
+                            EditedRecipeImage {
+                                image: first_image.clone(),
                                 class: "recipe-card__image-img",
-                                src: "{first_image.url}",
-                                alt: "{recipe.title}",
-                                loading: "lazy",
-                                onerror: move |_| {
+                                alt: recipe.title.clone(),
+                                on_error: move |_| {
                                     image_failed.set(true);
                                 },
                             }

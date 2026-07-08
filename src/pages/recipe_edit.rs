@@ -11,7 +11,8 @@ use crate::api::upload::delete_image;
 #[allow(unused_imports)]
 use crate::api::upload::upload_image;
 use crate::components::base::{
-    Button, ButtonVariant, ImageUpload, Input, LoadingSpinner, PageHeader, UploadOutcome,
+    Button, ButtonVariant, EditedRecipeImage, ImageUpload, Input, LoadingSpinner, PageHeader,
+    UploadOutcome,
 };
 use crate::components::AuthRequired;
 use crate::types::{RecipeEquipment, RecipeImage, RecipeIngredient, RecipeStep};
@@ -561,13 +562,11 @@ pub fn RecipeEdit(id: String) -> Element {
                                     width: "100px",
                                     margin_right: "var(--space-sm)",
                                     margin_bottom: "var(--space-sm)",
-                                    img {
+                                    EditedRecipeImage {
+                                        image: images()[idx].clone(),
                                         class: "image-upload__thumb",
-                                        src: "{images()[idx].url}",
-                                        alt: "Recipe image",
-                                        width: "100%",
-                                        aspect_ratio: "1",
-                                        object_fit: "cover",
+                                        alt: "Recipe image".to_string(),
+                                        on_error: move |_| {},
                                     }
                                     div {
                                         position: "absolute",
