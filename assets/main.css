@@ -1145,6 +1145,12 @@ a:hover {
     will-change: transform;
 }
 
+.image-editor__crop-stage {
+    position: absolute;
+    inset: var(--image-frame-padding);
+    z-index: 2;
+}
+
 .image-editor__image {
     display: block;
     width: 100%;

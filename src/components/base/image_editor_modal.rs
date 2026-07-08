@@ -1665,9 +1665,13 @@ fn ImageWithCrop(
                         onload: move |evt| on_img_load(evt),
                         style: image_filter_style,
                     }
-                    // Crop rectangle outline with resize handles (only rendered once dimensions are known).
-                    if let Some(rect) = (*crop_rect)() {
-                        // Dark overlay: four panels outside the crop area
+                }
+                // Crop rectangle outline with resize handles. This sits outside
+                // the transformed image stage so rotation/stretch never rotate
+                // or resize the crop window itself.
+                if let Some(rect) = (*crop_rect)() {
+                    div {
+                        class: "image-editor__crop-stage",
                         div {
                             class: "image-editor__crop-overlay image-editor__crop-overlay--top",
                             style: format!("height: {}%;", rect.top),
