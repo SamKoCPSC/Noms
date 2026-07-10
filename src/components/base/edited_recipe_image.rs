@@ -16,6 +16,8 @@ pub struct EditedRecipeImageProps {
     pub loading: String,
     #[props(default = "cover".to_string())]
     pub fallback_fit: String,
+    #[props(default = false)]
+    pub prefer_thumbnail: bool,
     pub on_error: EventHandler<()>,
 }
 
@@ -39,6 +41,7 @@ pub fn EditedRecipeImage(props: EditedRecipeImageProps) -> Element {
     } else {
         format!("edited-recipe-image {}", props.class)
     };
+    let image_src = props.image.display_url(props.prefer_thumbnail).to_string();
 
     if let Some(edit) = selected_edit {
         let stage_style = crop_stage_style(edit);
@@ -73,7 +76,7 @@ pub fn EditedRecipeImage(props: EditedRecipeImageProps) -> Element {
                     style: "{stage_style}",
                     img {
                         class: "edited-recipe-image__img",
-                        src: "{props.image.url}",
+                        src: "{image_src}",
                         alt: "{props.alt}",
                         loading: "{props.loading}",
                         style: "{image_style}",
@@ -89,7 +92,7 @@ pub fn EditedRecipeImage(props: EditedRecipeImageProps) -> Element {
                 class: "{class}",
                 img {
                     class: "edited-recipe-image__plain",
-                    src: "{props.image.url}",
+                    src: "{image_src}",
                     alt: "{props.alt}",
                     loading: "{props.loading}",
                     style: "{plain_style}",

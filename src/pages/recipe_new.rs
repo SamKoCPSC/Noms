@@ -349,7 +349,7 @@ pub fn RecipeNew() -> Element {
                 data.ingredients,
                 data.instructions,
                 data.equipment,
-                images(), // ← the uploaded full_urls (replaces vec![])
+                images(), // uploaded full and thumbnail URLs
                 data.tags,
                 data.visibility,
             )

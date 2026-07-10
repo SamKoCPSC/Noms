@@ -68,6 +68,7 @@ pub fn RecipeCard(props: RecipeCardProps) -> Element {
                                 image: first_image.clone(),
                                 class: "recipe-card__image-img",
                                 alt: recipe.title.clone(),
+                                prefer_thumbnail: true,
                                 on_error: move |_| {
                                     image_failed.set(true);
                                 },

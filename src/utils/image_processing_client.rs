@@ -13,7 +13,7 @@ use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElemen
 pub const MAX_DIMENSION: u32 = 1920;
 
 /// Thumbnail dimensions (square).
-pub const THUMB_SIZE: u32 = 400;
+pub const THUMB_SIZE: u32 = 800;
 
 /// WebP encoding quality (0.0-1.0 for canvas.toBlob).
 pub const WEBP_QUALITY: f64 = 0.85;
@@ -22,7 +22,7 @@ pub const WEBP_QUALITY: f64 = 0.85;
 pub struct ProcessedImage {
     /// Full-size WebP bytes (resized to max 1920x1920)
     pub full_bytes: Vec<u8>,
-    /// Thumbnail WebP bytes (fit within 400x400, aspect ratio preserved)
+    /// Thumbnail WebP bytes (fit within 800x800, aspect ratio preserved)
     pub thumb_bytes: Vec<u8>,
 }
 
@@ -48,7 +48,7 @@ pub async fn process_image(file: web_sys::File) -> Result<ProcessedImage, String
     // Step 3-5: Process full-size
     let full_bytes = render_to_webp_with_quality(&img, full_w, full_h, WEBP_QUALITY).await?;
 
-    // Step 6: Process thumbnail (fit within 400x400, preserving aspect ratio)
+    // Step 6: Process thumbnail (fit within 800x800, preserving aspect ratio)
     let (thumb_w, thumb_h) =
         calculate_dimensions(img.natural_width(), img.natural_height(), THUMB_SIZE);
     let thumb_bytes = render_to_webp_with_quality(&img, thumb_w, thumb_h, WEBP_QUALITY).await?;
@@ -329,22 +329,22 @@ mod tests {
 
     #[test]
     fn test_calculate_dimensions_thumb_wide() {
-        // Large landscape photo for thumbnail: 3000x2000 should fit within 400x400
+        // Large landscape photo for thumbnail: 3000x2000 should fit within 800x800
         let (w, h) = calculate_dimensions(3000, 2000, THUMB_SIZE);
         assert_eq!(
             (w, h),
-            (400, 267),
+            (800, 533),
             "Wide image should preserve aspect ratio in thumbnail"
         );
     }
 
     #[test]
     fn test_calculate_dimensions_thumb_tall() {
-        // Large portrait photo for thumbnail: 2000x3000 should fit within 400x400
+        // Large portrait photo for thumbnail: 2000x3000 should fit within 800x800
         let (w, h) = calculate_dimensions(2000, 3000, THUMB_SIZE);
         assert_eq!(
             (w, h),
-            (267, 400),
+            (533, 800),
             "Tall image should preserve aspect ratio in thumbnail"
         );
     }

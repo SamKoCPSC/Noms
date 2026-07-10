@@ -1149,12 +1149,17 @@ pub async fn get_public_recipe_tags(
 /// Used by the orphan cleanup worker to determine which storage objects are still needed.
 pub async fn get_all_image_urls(pool: &PgPool) -> Result<Vec<String>, DbError> {
     let rows = sqlx::query_scalar::<_, String>(
-        "SELECT DISTINCT image_entry ->> 'url' AS image_url
+        "SELECT DISTINCT image_urls.image_url
          FROM recipes
          CROSS JOIN LATERAL jsonb_array_elements(images) AS image_entry
+         CROSS JOIN LATERAL (
+             VALUES (image_entry ->> 'url'), (image_entry ->> 'thumb_url')
+         ) AS image_urls(image_url)
          WHERE images IS NOT NULL
             AND jsonb_array_length(images) > 0
-            AND image_entry ? 'url'",
+            AND jsonb_typeof(image_entry) = 'object'
+            AND image_urls.image_url IS NOT NULL
+            AND image_urls.image_url <> ''",
     )
     .fetch_all(pool)
     .await
@@ -3721,14 +3726,21 @@ mod tests {
         let images = vec![
             RecipeImage {
                 url: format!("https://storage.example.com/recipes/{u}_full.webp"),
+                thumb_url: Some(format!(
+                    "https://storage.example.com/recipes/{u}_thumb.webp"
+                )),
                 edits: Vec::new(),
             },
             RecipeImage {
-                url: format!("https://storage.example.com/recipes/{u}_thumb.webp"),
+                url: format!("https://storage.example.com/recipes/{u}_no_thumb.webp"),
+                thumb_url: None,
                 edits: Vec::new(),
             },
             RecipeImage {
                 url: format!("https://storage.example.com/recipes/{u}_2_full.webp"),
+                thumb_url: Some(format!(
+                    "https://storage.example.com/recipes/{u}_2_thumb.webp"
+                )),
                 edits: Vec::new(),
             },
         ];
@@ -3752,14 +3764,16 @@ mod tests {
         .unwrap();
 
         let urls = get_all_image_urls(&pool).await.unwrap();
-        assert_eq!(urls.len(), 3);
+        assert_eq!(urls.len(), 5);
         // Results may be in any order, so sort for comparison
         let mut actual = urls;
         actual.sort();
         let mut expected = vec![
             format!("https://storage.example.com/recipes/{u}_2_full.webp"),
+            format!("https://storage.example.com/recipes/{u}_2_thumb.webp"),
             format!("https://storage.example.com/recipes/{u}_full.webp"),
             format!("https://storage.example.com/recipes/{u}_thumb.webp"),
+            format!("https://storage.example.com/recipes/{u}_no_thumb.webp"),
         ];
         expected.sort();
         assert_eq!(actual, expected);
@@ -3786,10 +3800,14 @@ mod tests {
         let images1 = vec![
             RecipeImage {
                 url: shared_url.clone(),
+                thumb_url: Some(format!(
+                    "https://storage.example.com/recipes/shared_{u}_thumb.webp"
+                )),
                 edits: Vec::new(),
             },
             RecipeImage {
                 url: format!("https://storage.example.com/recipes/unique1_{u}.webp"),
+                thumb_url: None,
                 edits: Vec::new(),
             },
         ];
@@ -3815,10 +3833,14 @@ mod tests {
         let images2 = vec![
             RecipeImage {
                 url: shared_url.clone(),
+                thumb_url: Some(format!(
+                    "https://storage.example.com/recipes/shared_{u}_thumb.webp"
+                )),
                 edits: Vec::new(),
             },
             RecipeImage {
                 url: format!("https://storage.example.com/recipes/unique2_{u}.webp"),
+                thumb_url: None,
                 edits: Vec::new(),
             },
         ];
@@ -3859,10 +3881,13 @@ mod tests {
         .await
         .unwrap();
 
-        // DISTINCT should deduplicate: 3 unique URLs, not 4
+        // DISTINCT should deduplicate: 4 unique URLs, not 6
         let urls = get_all_image_urls(&pool).await.unwrap();
-        assert_eq!(urls.len(), 3);
+        assert_eq!(urls.len(), 4);
         assert!(urls.contains(&shared_url));
+        assert!(urls.contains(&format!(
+            "https://storage.example.com/recipes/shared_{u}_thumb.webp"
+        )));
         assert!(urls.contains(&format!(
             "https://storage.example.com/recipes/unique1_{u}.webp"
         )));

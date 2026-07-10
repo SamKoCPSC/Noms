@@ -128,7 +128,7 @@ enum UploadStatus {
     Ready,
     /// Server fn call in flight.
     Uploading,
-    /// Done — `full_url` already pushed into `images`.
+    /// Done — uploaded URL pair already pushed into `images`.
     Uploaded,
     /// Upload failed or processed bytes exceeded the upload limit.
     Failed,
@@ -153,7 +153,7 @@ struct PendingImage {
     original_size: u64,
     /// Processed full-size WebP bytes.
     full_bytes: Arc<Vec<u8>>,
-    /// Processed 400px thumbnail WebP bytes.
+    /// Processed 800px thumbnail WebP bytes.
     thumb_bytes: Arc<Vec<u8>>,
     /// Edit metadata captured from the image editor modal.
     edit: RecipeImageEdit,
@@ -306,7 +306,9 @@ async fn retry_upload(
     let result = crate::api::upload::upload_image((*full).clone(), (*thumb).clone(), name).await;
     match result {
         Ok(resp) => {
-            images.write().push(RecipeImage::new(resp.full_url, edit));
+            images
+                .write()
+                .push(RecipeImage::new(resp.full_url, Some(resp.thumb_url), edit));
             if let Some(p) = pending.write().iter_mut().find(|p| p.id == img_id) {
                 p.status = UploadStatus::Uploaded;
             }
@@ -322,7 +324,7 @@ async fn retry_upload(
 }
 
 /// Run the save-time upload batch: upload all `Ready` items sequentially,
-/// pushing each successful `full_url` into `images`. Returns the outcome
+/// pushing each successful image URL pair into `images`. Returns the outcome
 /// (succeeded/failed counts, or an abort reason if any item is still
 /// `Processing`).
 async fn upload_all(
@@ -374,7 +376,9 @@ async fn upload_all(
 
         match result {
             Ok(resp) => {
-                images.write().push(RecipeImage::new(resp.full_url, edit));
+                images
+                    .write()
+                    .push(RecipeImage::new(resp.full_url, Some(resp.thumb_url), edit));
                 if let Some(p) = pending.write().iter_mut().find(|p| p.id == id) {
                     p.status = UploadStatus::Uploaded;
                 }

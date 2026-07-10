@@ -92,15 +92,28 @@ impl RecipeImageEdit {
 /// structured image record with no saved edits.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct RecipeImage {
+    /// Full-size image URL.
     pub url: String,
+    /// Smaller image variant for compact UI surfaces.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thumb_url: Option<String>,
     pub edits: Vec<RecipeImageEdit>,
 }
 
 impl RecipeImage {
-    pub fn new(url: String, edit: RecipeImageEdit) -> Self {
+    pub fn new(url: String, thumb_url: Option<String>, edit: RecipeImageEdit) -> Self {
         Self {
             url,
+            thumb_url,
             edits: vec![edit],
+        }
+    }
+
+    pub fn display_url(&self, prefer_thumbnail: bool) -> &str {
+        if prefer_thumbnail {
+            self.thumb_url.as_deref().unwrap_or(&self.url)
+        } else {
+            &self.url
         }
     }
 }
@@ -117,6 +130,8 @@ impl<'de> Deserialize<'de> for RecipeImage {
             Object {
                 url: String,
                 #[serde(default)]
+                thumb_url: Option<String>,
+                #[serde(default)]
                 edits: Vec<RecipeImageEdit>,
             },
         }
@@ -124,9 +139,18 @@ impl<'de> Deserialize<'de> for RecipeImage {
         match RecipeImageCompat::deserialize(deserializer)? {
             RecipeImageCompat::Url(url) => Ok(Self {
                 url,
+                thumb_url: None,
                 edits: Vec::new(),
             }),
-            RecipeImageCompat::Object { url, edits } => Ok(Self { url, edits }),
+            RecipeImageCompat::Object {
+                url,
+                thumb_url,
+                edits,
+            } => Ok(Self {
+                url,
+                thumb_url,
+                edits,
+            }),
         }
     }
 }
@@ -205,19 +229,35 @@ mod tests {
             serde_json::from_value(serde_json::json!("https://example.com/image.webp")).unwrap();
 
         assert_eq!(image.url, "https://example.com/image.webp");
+        assert_eq!(image.thumb_url, None);
         assert!(image.edits.is_empty());
     }
 
     #[test]
-    fn recipe_image_serializes_url_with_named_edit() {
+    fn recipe_image_deserializes_object_without_thumbnail() {
+        let image: RecipeImage = serde_json::from_value(serde_json::json!({
+            "url": "https://example.com/image_full.webp",
+            "edits": []
+        }))
+        .unwrap();
+
+        assert_eq!(image.url, "https://example.com/image_full.webp");
+        assert_eq!(image.thumb_url, None);
+        assert!(image.edits.is_empty());
+    }
+
+    #[test]
+    fn recipe_image_serializes_urls_with_named_edit() {
         let image = RecipeImage::new(
-            "https://example.com/image.webp".to_string(),
+            "https://example.com/image_full.webp".to_string(),
+            Some("https://example.com/image_thumb.webp".to_string()),
             RecipeImageEdit::default_16x9(),
         );
 
         let value = serde_json::to_value(image).unwrap();
 
-        assert_eq!(value["url"], "https://example.com/image.webp");
+        assert_eq!(value["url"], "https://example.com/image_full.webp");
+        assert_eq!(value["thumb_url"], "https://example.com/image_thumb.webp");
         assert_eq!(value["edits"][0]["name"], "16:9");
         assert_eq!(value["edits"][0]["version"], 1);
         assert_eq!(value["edits"][0]["aspect_ratio"]["width"], 16);
@@ -225,5 +265,20 @@ mod tests {
         assert_eq!(value["edits"][0]["crop"]["x"], 0.0);
         assert_eq!(value["edits"][0]["transform"]["rotation"], 0.0);
         assert_eq!(value["edits"][0]["color"]["saturation"], 1.0);
+    }
+
+    #[test]
+    fn recipe_image_display_url_prefers_thumbnail_when_available() {
+        let image = RecipeImage::new(
+            "https://example.com/image_full.webp".to_string(),
+            Some("https://example.com/image_thumb.webp".to_string()),
+            RecipeImageEdit::default_16x9(),
+        );
+
+        assert_eq!(image.display_url(false), "https://example.com/image_full.webp");
+        assert_eq!(
+            image.display_url(true),
+            "https://example.com/image_thumb.webp"
+        );
     }
 }

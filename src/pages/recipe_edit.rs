@@ -566,6 +566,7 @@ pub fn RecipeEdit(id: String) -> Element {
                                         image: images()[idx].clone(),
                                         class: "image-upload__thumb",
                                         alt: "Recipe image".to_string(),
+                                        prefer_thumbnail: true,
                                         on_error: move |_| {},
                                     }
                                     div {

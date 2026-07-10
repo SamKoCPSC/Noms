@@ -196,9 +196,19 @@ pub async fn delete_recipe(recipe_id: String) -> Result<(), ServerFnError> {
                 // Delete full-size object
                 let _ = storage.delete_object(full_key).await;
 
-                // Delete thumbnail object
-                if let Some(base) = full_key.strip_suffix("_full.webp") {
-                    let thumb_key = format!("{base}_thumb.webp");
+                // Delete thumbnail object. Prefer the stored URL and fall
+                // back to the legacy naming convention for older rows.
+                if let Some(thumb_key) = image
+                    .thumb_url
+                    .as_deref()
+                    .and_then(|url| url.strip_prefix(public_url))
+                    .map(|s| s.trim_start_matches('/').to_string())
+                    .or_else(|| {
+                        full_key
+                            .strip_suffix("_full.webp")
+                            .map(|base| format!("{base}_thumb.webp"))
+                    })
+                {
                     let _ = storage.delete_object(&thumb_key).await;
                 }
             }
