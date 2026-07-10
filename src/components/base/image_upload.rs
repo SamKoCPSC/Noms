@@ -14,7 +14,7 @@ use dioxus::html::HasFileData;
 use dioxus::prelude::*;
 use std::sync::Arc;
 
-use crate::components::base::{Button, ButtonVariant, ImageEditorModal};
+use crate::components::base::{Button, ButtonVariant, EditedRecipeImage, ImageEditorModal};
 use crate::types::{RecipeImage, RecipeImageEdit};
 
 // WASM-only bridge: connects Dioxus `FileData` to CP3's `process_image_*`
@@ -187,6 +187,7 @@ async fn process_one_file(
     mut next_id: Signal<usize>,
     mut error: Signal<Option<String>>,
     mut editor_modal_url: Signal<Option<String>>,
+    mut editor_modal_img_id: Signal<Option<usize>>,
 ) {
     #[cfg(target_arch = "wasm32")]
     {
@@ -237,6 +238,7 @@ async fn process_one_file(
 
         // Open the preview modal for the newly selected image.
         if let Some(url) = &preview_url {
+            editor_modal_img_id.set(Some(id));
             editor_modal_url.set(Some(url.clone()));
         }
 
@@ -272,7 +274,14 @@ async fn process_one_file(
     // Non-wasm no-op: consume the params so nothing is unused.
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let _ = (file, pending, next_id, error, editor_modal_url);
+        let _ = (
+            file,
+            pending,
+            next_id,
+            error,
+            editor_modal_url,
+            editor_modal_img_id,
+        );
     }
 }
 
@@ -428,6 +437,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     let error = use_signal(|| Option::<String>::None);
     let next_id = use_signal(|| 0usize);
     let mut editor_modal_url = use_signal(|| Option::<String>::None);
+    let mut editor_modal_img_id = use_signal(|| Option::<usize>::None);
 
     let images = props.images;
     let mut upload_now = props.upload_now;
@@ -451,7 +461,15 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     // Shared by the `<input onchange>` and `<div ondrop>` handlers.
     let handle_files = move |files: Vec<dioxus::html::FileData>| async move {
         for file in files {
-            process_one_file(file, pending, next_id, error, editor_modal_url).await;
+            process_one_file(
+                file,
+                pending,
+                next_id,
+                error,
+                editor_modal_url,
+                editor_modal_img_id,
+            )
+            .await;
         }
     };
 
@@ -523,6 +541,19 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                     let img_full_len = img.full_bytes.len();
                     let img_status = img.status.clone();
                     let img_error = img.error.clone();
+                    let img_edit = img.edit.clone();
+                    let img_edit_key = format!(
+                        "{:.4}-{:.4}-{:.4}-{:.4}-{:.2}-{:.4}-{:.4}-{:.4}-{:.4}",
+                        img_edit.crop.x,
+                        img_edit.crop.y,
+                        img_edit.crop.width,
+                        img_edit.crop.height,
+                        img_edit.transform.rotation,
+                        img_edit.transform.stretch_x,
+                        img_edit.transform.stretch_y,
+                        img_edit.color.saturation,
+                        img_edit.color.contrast_r * img_edit.color.contrast_g * img_edit.color.contrast_b
+                    );
                     let img_error_display = img_error
                         .as_deref()
                         .unwrap_or("Failed")
@@ -538,14 +569,21 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                             class: "image-upload__item",
                             // Preview thumbnail (object URL) — only on client
                             if let Some(url) = img_preview.clone() {
-                                img {
-                                    class: "image-upload__thumb",
-                                    src: "{url}",
-                                    alt: "{img_name}",
+                                div {
+                                    class: "image-upload__preview-button",
                                     style: "cursor: pointer;",
                                     onclick: move |_| {
+                                        editor_modal_img_id.set(Some(img_id));
                                         editor_modal_url.set(Some(url.clone()));
                                     },
+                                    EditedRecipeImage {
+                                        key: "{img_id}-{img_edit_key}",
+                                        image: RecipeImage::new(url.clone(), None, img_edit),
+                                        class: "recipe-image-preview",
+                                        alt: img_name.clone(),
+                                        prefer_thumbnail: false,
+                                        on_error: move |_| {},
+                                    }
                                 }
                             } else {
                                 div {
@@ -618,19 +656,15 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
             ImageEditorModal {
                 image_url: editor_modal_url,
                 on_save: move |edit| {
-                    let current_url = editor_modal_url();
-                    if let Some(url) = current_url {
-                        if let Some(p) = pending
-                            .write()
-                            .iter_mut()
-                            .find(|p| p.preview_url.as_deref() == Some(url.as_str()))
-                        {
+                    if let Some(img_id) = editor_modal_img_id() {
+                        if let Some(p) = pending.write().iter_mut().find(|p| p.id == img_id) {
                             p.edit = edit;
                         }
                     }
                 },
                 on_close: move |_| {
                     editor_modal_url.set(None);
+                    editor_modal_img_id.set(None);
                 },
             }
         }

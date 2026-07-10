@@ -7,6 +7,9 @@
 
 use dioxus::prelude::*;
 
+#[cfg(feature = "server")]
+use crate::types::{RecipeImage, RecipeStep};
+
 /// Create a new recipe for the authenticated user.
 ///
 /// Tags are inserted after the recipe is created.
@@ -188,34 +191,59 @@ pub async fn delete_recipe(recipe_id: String) -> Result<(), ServerFnError> {
         let public_url = storage.public_url().trim_end_matches('/');
 
         for image in &recipe.images {
-            if let Some(full_key) = image
-                .url
-                .strip_prefix(public_url)
-                .map(|s| s.trim_start_matches('/'))
-            {
-                // Delete full-size object
-                let _ = storage.delete_object(full_key).await;
+            delete_recipe_image_objects(&storage, public_url, image).await;
+        }
 
-                // Delete thumbnail object. Prefer the stored URL and fall
-                // back to the legacy naming convention for older rows.
-                if let Some(thumb_key) = image
-                    .thumb_url
-                    .as_deref()
-                    .and_then(|url| url.strip_prefix(public_url))
-                    .map(|s| s.trim_start_matches('/').to_string())
-                    .or_else(|| {
-                        full_key
-                            .strip_suffix("_full.webp")
-                            .map(|base| format!("{base}_thumb.webp"))
-                    })
-                {
-                    let _ = storage.delete_object(&thumb_key).await;
-                }
-            }
+        for image in collect_step_photos(&recipe.instructions) {
+            delete_recipe_image_objects(&storage, public_url, &image).await;
         }
     }
 
     Ok(())
+}
+
+#[cfg(feature = "server")]
+async fn delete_recipe_image_objects(
+    storage: &crate::storage::StorageClient,
+    public_url: &str,
+    image: &RecipeImage,
+) {
+    let Some(full_key) = image
+        .url
+        .strip_prefix(public_url)
+        .map(|s| s.trim_start_matches('/'))
+    else {
+        return;
+    };
+
+    let _ = storage.delete_object(full_key).await;
+
+    let thumb_key = image
+        .thumb_url
+        .as_deref()
+        .and_then(|url| url.strip_prefix(public_url))
+        .map(|s| s.trim_start_matches('/').to_string())
+        .or_else(|| {
+            full_key
+                .strip_suffix("_full.webp")
+                .map(|base| format!("{base}_thumb.webp"))
+        });
+
+    if let Some(thumb_key) = thumb_key {
+        let _ = storage.delete_object(&thumb_key).await;
+    }
+}
+
+#[cfg(feature = "server")]
+fn collect_step_photos(steps: &[RecipeStep]) -> Vec<RecipeImage> {
+    let mut photos = Vec::new();
+    for step in steps {
+        if let Some(photo) = step.display_photo() {
+            photos.push(photo);
+        }
+        photos.extend(collect_step_photos(&step.sub_steps));
+    }
+    photos
 }
 
 /// List recipes for the authenticated user with pagination.

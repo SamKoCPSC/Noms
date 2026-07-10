@@ -1149,17 +1149,48 @@ pub async fn get_public_recipe_tags(
 /// Used by the orphan cleanup worker to determine which storage objects are still needed.
 pub async fn get_all_image_urls(pool: &PgPool) -> Result<Vec<String>, DbError> {
     let rows = sqlx::query_scalar::<_, String>(
-        "SELECT DISTINCT image_urls.image_url
-         FROM recipes
-         CROSS JOIN LATERAL jsonb_array_elements(images) AS image_entry
-         CROSS JOIN LATERAL (
-             VALUES (image_entry ->> 'url'), (image_entry ->> 'thumb_url')
-         ) AS image_urls(image_url)
-         WHERE images IS NOT NULL
-            AND jsonb_array_length(images) > 0
-            AND jsonb_typeof(image_entry) = 'object'
-            AND image_urls.image_url IS NOT NULL
-            AND image_urls.image_url <> ''",
+        "WITH RECURSIVE step_entries(step_entry) AS (
+             SELECT step_entry
+             FROM recipes
+             CROSS JOIN LATERAL jsonb_array_elements(instructions) AS step_entry
+             WHERE instructions IS NOT NULL
+                AND jsonb_typeof(instructions) = 'array'
+             UNION ALL
+             SELECT child_step
+             FROM step_entries
+             CROSS JOIN LATERAL jsonb_array_elements(
+                 CASE
+                     WHEN jsonb_typeof(step_entry -> 'sub_steps') = 'array'
+                     THEN step_entry -> 'sub_steps'
+                     ELSE '[]'::jsonb
+                 END
+             ) AS child_step
+         ),
+         image_urls(image_url) AS (
+             SELECT image_urls.image_url
+             FROM recipes
+             CROSS JOIN LATERAL jsonb_array_elements(images) AS image_entry
+             CROSS JOIN LATERAL (
+                 VALUES (image_entry ->> 'url'), (image_entry ->> 'thumb_url')
+             ) AS image_urls(image_url)
+             WHERE images IS NOT NULL
+                AND jsonb_array_length(images) > 0
+                AND jsonb_typeof(image_entry) = 'object'
+             UNION ALL
+             SELECT step_image_urls.image_url
+             FROM step_entries
+             CROSS JOIN LATERAL (
+                 VALUES (
+                     step_entry #>> '{photo,url}'
+                 ), (
+                     step_entry #>> '{photo,thumb_url}'
+                 )
+             ) AS step_image_urls(image_url)
+         )
+         SELECT DISTINCT image_url
+         FROM image_urls
+         WHERE image_url IS NOT NULL
+            AND image_url <> ''",
     )
     .fetch_all(pool)
     .await
@@ -1818,6 +1849,7 @@ mod tests {
                 text: "Mix batter, cook on griddle".to_string(),
                 sub_steps: vec![],
                 photo_url: None,
+                photo: None,
             }],
             &[],
             &[],
@@ -1842,6 +1874,7 @@ mod tests {
                 text: "Mix batter, cook on griddle".to_string(),
                 sub_steps: vec![],
                 photo_url: None,
+                photo: None,
             }]
         );
     }
@@ -2052,6 +2085,7 @@ mod tests {
                 text: "New instructions".to_string(),
                 sub_steps: vec![],
                 photo_url: None,
+                photo: None,
             }],
             &[],
             &[],
@@ -2071,6 +2105,7 @@ mod tests {
                 text: "New instructions".to_string(),
                 sub_steps: vec![],
                 photo_url: None,
+                photo: None,
             }]
         );
         assert!(updated.updated_at >= original_updated_at);
@@ -3744,6 +3779,33 @@ mod tests {
                 edits: Vec::new(),
             },
         ];
+        let instructions = vec![RecipeStep {
+            text: "Prep the filling".to_string(),
+            photo_url: Some(format!(
+                "https://storage.example.com/recipes/{u}_step_full.webp"
+            )),
+            photo: Some(RecipeImage {
+                url: format!("https://storage.example.com/recipes/{u}_step_full.webp"),
+                thumb_url: Some(format!(
+                    "https://storage.example.com/recipes/{u}_step_thumb.webp"
+                )),
+                edits: Vec::new(),
+            }),
+            sub_steps: vec![RecipeStep {
+                text: "Check the texture".to_string(),
+                photo_url: Some(format!(
+                    "https://storage.example.com/recipes/{u}_nested_step_full.webp"
+                )),
+                photo: Some(RecipeImage {
+                    url: format!(
+                        "https://storage.example.com/recipes/{u}_nested_step_full.webp"
+                    ),
+                    thumb_url: None,
+                    edits: Vec::new(),
+                }),
+                sub_steps: Vec::new(),
+            }],
+        }];
 
         insert_recipe(
             &pool,
@@ -3755,7 +3817,7 @@ mod tests {
             None,
             None,
             &[],
-            &[],
+            &instructions,
             &[],
             &images,
             "private",
@@ -3764,7 +3826,7 @@ mod tests {
         .unwrap();
 
         let urls = get_all_image_urls(&pool).await.unwrap();
-        assert_eq!(urls.len(), 5);
+        assert_eq!(urls.len(), 8);
         // Results may be in any order, so sort for comparison
         let mut actual = urls;
         actual.sort();
@@ -3772,6 +3834,9 @@ mod tests {
             format!("https://storage.example.com/recipes/{u}_2_full.webp"),
             format!("https://storage.example.com/recipes/{u}_2_thumb.webp"),
             format!("https://storage.example.com/recipes/{u}_full.webp"),
+            format!("https://storage.example.com/recipes/{u}_nested_step_full.webp"),
+            format!("https://storage.example.com/recipes/{u}_step_full.webp"),
+            format!("https://storage.example.com/recipes/{u}_step_thumb.webp"),
             format!("https://storage.example.com/recipes/{u}_thumb.webp"),
             format!("https://storage.example.com/recipes/{u}_no_thumb.webp"),
         ];

@@ -170,6 +170,21 @@ pub struct RecipeStep {
     pub sub_steps: Vec<RecipeStep>,
     /// Optional photo URL for this step (full-size image URL from storage).
     pub photo_url: Option<String>,
+    /// Structured step photo with full/thumb URLs and edit metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub photo: Option<RecipeImage>,
+}
+
+impl RecipeStep {
+    pub fn display_photo(&self) -> Option<RecipeImage> {
+        self.photo.clone().or_else(|| {
+            self.photo_url.as_ref().map(|url| RecipeImage {
+                url: url.clone(),
+                thumb_url: None,
+                edits: Vec::new(),
+            })
+        })
+    }
 }
 
 /// A piece of equipment needed for a recipe.

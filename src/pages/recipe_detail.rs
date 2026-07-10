@@ -106,12 +106,14 @@ fn StepNode(step: RecipeStep, path: Vec<usize>, level: usize) -> Element {
             strong { font_weight: "600", margin_right: "var(--space-xs)", "{label}" }
             "{step.text}"
 
-            if let Some(ref url) = step.photo_url {
-                img {
+            if let Some(photo) = step.display_photo() {
+                EditedRecipeImage {
+                    image: photo,
                     class: "recipe-step-photo",
-                    src: url,
                     loading: "lazy",
-                    alt: "Step photo",
+                    fallback_fit: "cover".to_string(),
+                    alt: "Step photo".to_string(),
+                    on_error: move |_| {},
                 }
             }
 

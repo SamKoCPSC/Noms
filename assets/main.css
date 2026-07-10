@@ -2211,10 +2211,16 @@ a:hover {
     display: block;
     width: 100%;
     max-width: 480px;
-    max-height: 300px;
+    aspect-ratio: 16 / 9;
     object-fit: cover;
     margin-top: var(--space-sm);
     border-radius: var(--radius-md);
+}
+
+.step-photo-preview {
+    width: 120px;
+    height: auto;
+    aspect-ratio: 16 / 9;
 }
 
 /* ============================================================
@@ -2377,6 +2383,31 @@ a:hover {
     height: 64px;
     border-radius: var(--radius-md);
     object-fit: cover;
+    flex-shrink: 0;
+}
+
+.image-upload__item > .image-upload__thumb:not(.image-upload__thumb--placeholder) {
+    width: 120px;
+    height: auto;
+    aspect-ratio: 16 / 9;
+}
+
+.image-upload__thumb.step-photo-preview {
+    width: 120px;
+    height: auto;
+    aspect-ratio: 16 / 9;
+}
+
+.image-upload__preview-button {
+    display: block;
+    flex-shrink: 0;
+}
+
+.recipe-image-preview {
+    width: 120px;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-md);
     flex-shrink: 0;
 }
 
