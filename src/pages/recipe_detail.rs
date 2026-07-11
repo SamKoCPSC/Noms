@@ -95,6 +95,7 @@ fn StepNode(step: RecipeStep, path: Vec<usize>, level: usize) -> Element {
     } else {
         (level - 1) as f64 * 20.0
     };
+    let photos = step.display_photos();
 
     rsx! {
         li {
@@ -106,14 +107,23 @@ fn StepNode(step: RecipeStep, path: Vec<usize>, level: usize) -> Element {
             strong { font_weight: "600", margin_right: "var(--space-xs)", "{label}" }
             "{step.text}"
 
-            if let Some(photo) = step.display_photo() {
-                EditedRecipeImage {
-                    image: photo,
-                    class: "recipe-step-photo",
-                    loading: "lazy",
-                    fallback_fit: "cover".to_string(),
-                    alt: "Step photo".to_string(),
-                    on_error: move |_| {},
+            if !photos.is_empty() {
+                div {
+                    display: "grid",
+                    grid_template_columns: "repeat(auto-fit, minmax(140px, 1fr))",
+                    gap: "var(--space-sm)",
+                    margin_top: "var(--space-sm)",
+                    for (photo_idx, photo) in photos.iter().enumerate() {
+                        EditedRecipeImage {
+                            key: "{photo_idx}",
+                            image: photo.clone(),
+                            class: "recipe-step-photo",
+                            loading: "lazy",
+                            fallback_fit: "cover".to_string(),
+                            alt: "Step photo".to_string(),
+                            on_error: move |_| {},
+                        }
+                    }
                 }
             }
 

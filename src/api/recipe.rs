@@ -186,7 +186,8 @@ pub async fn delete_recipe(recipe_id: String) -> Result<(), ServerFnError> {
         .map_err(|e| ServerFnError::new(e.to_string()))?;
 
     // CP11: Clean up associated images from storage (best-effort)
-    if !recipe.images.is_empty() {
+    let step_photos = collect_step_photos(&recipe.instructions);
+    if !recipe.images.is_empty() || !step_photos.is_empty() {
         let storage = crate::storage::get_storage_client();
         let public_url = storage.public_url().trim_end_matches('/');
 
@@ -194,7 +195,7 @@ pub async fn delete_recipe(recipe_id: String) -> Result<(), ServerFnError> {
             delete_recipe_image_objects(&storage, public_url, image).await;
         }
 
-        for image in collect_step_photos(&recipe.instructions) {
+        for image in step_photos {
             delete_recipe_image_objects(&storage, public_url, &image).await;
         }
     }
@@ -238,9 +239,7 @@ async fn delete_recipe_image_objects(
 fn collect_step_photos(steps: &[RecipeStep]) -> Vec<RecipeImage> {
     let mut photos = Vec::new();
     for step in steps {
-        if let Some(photo) = step.display_photo() {
-            photos.push(photo);
-        }
+        photos.extend(step.display_photos());
         photos.extend(collect_step_photos(&step.sub_steps));
     }
     photos

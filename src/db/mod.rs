@@ -1176,17 +1176,25 @@ pub async fn get_all_image_urls(pool: &PgPool) -> Result<Vec<String>, DbError> {
              WHERE images IS NOT NULL
                 AND jsonb_array_length(images) > 0
                 AND jsonb_typeof(image_entry) = 'object'
-             UNION ALL
-             SELECT step_image_urls.image_url
-             FROM step_entries
-             CROSS JOIN LATERAL (
-                 VALUES (
-                     step_entry #>> '{photo,url}'
-                 ), (
-                     step_entry #>> '{photo,thumb_url}'
-                 )
-             ) AS step_image_urls(image_url)
-         )
+                UNION ALL
+                SELECT step_photo_urls.image_url
+                FROM step_entries
+                CROSS JOIN LATERAL jsonb_array_elements(
+                    CASE
+                        WHEN jsonb_typeof(step_entry -> 'photos') = 'array'
+                        THEN step_entry -> 'photos'
+                        ELSE '[]'::jsonb
+                    END
+                ) AS step_photo
+                CROSS JOIN LATERAL (
+                    VALUES (
+                        step_photo ->> 'url'
+                    ), (
+                        step_photo ->> 'thumb_url'
+                    )
+                ) AS step_photo_urls(image_url)
+                WHERE jsonb_typeof(step_photo) = 'object'
+            )
          SELECT DISTINCT image_url
          FROM image_urls
          WHERE image_url IS NOT NULL
@@ -1848,8 +1856,7 @@ mod tests {
             &[RecipeStep {
                 text: "Mix batter, cook on griddle".to_string(),
                 sub_steps: vec![],
-                photo_url: None,
-                photo: None,
+                photos: Vec::new(),
             }],
             &[],
             &[],
@@ -1873,8 +1880,7 @@ mod tests {
             vec![RecipeStep {
                 text: "Mix batter, cook on griddle".to_string(),
                 sub_steps: vec![],
-                photo_url: None,
-                photo: None,
+                photos: Vec::new(),
             }]
         );
     }
@@ -2084,8 +2090,7 @@ mod tests {
             &[RecipeStep {
                 text: "New instructions".to_string(),
                 sub_steps: vec![],
-                photo_url: None,
-                photo: None,
+                photos: Vec::new(),
             }],
             &[],
             &[],
@@ -2104,8 +2109,7 @@ mod tests {
             vec![RecipeStep {
                 text: "New instructions".to_string(),
                 sub_steps: vec![],
-                photo_url: None,
-                photo: None,
+                photos: Vec::new(),
             }]
         );
         assert!(updated.updated_at >= original_updated_at);
@@ -3781,28 +3785,34 @@ mod tests {
         ];
         let instructions = vec![RecipeStep {
             text: "Prep the filling".to_string(),
-            photo_url: Some(format!(
-                "https://storage.example.com/recipes/{u}_step_full.webp"
-            )),
-            photo: Some(RecipeImage {
-                url: format!("https://storage.example.com/recipes/{u}_step_full.webp"),
-                thumb_url: Some(format!(
-                    "https://storage.example.com/recipes/{u}_step_thumb.webp"
-                )),
-                edits: Vec::new(),
-            }),
-            sub_steps: vec![RecipeStep {
-                text: "Check the texture".to_string(),
-                photo_url: Some(format!(
-                    "https://storage.example.com/recipes/{u}_nested_step_full.webp"
-                )),
-                photo: Some(RecipeImage {
-                    url: format!(
-                        "https://storage.example.com/recipes/{u}_nested_step_full.webp"
-                    ),
+            photos: vec![
+                RecipeImage {
+                    url: format!("https://storage.example.com/recipes/{u}_step_full.webp"),
+                    thumb_url: Some(format!(
+                        "https://storage.example.com/recipes/{u}_step_thumb.webp"
+                    )),
+                    edits: Vec::new(),
+                },
+                RecipeImage {
+                    url: format!("https://storage.example.com/recipes/{u}_step_extra_1_full.webp"),
+                    thumb_url: Some(format!(
+                        "https://storage.example.com/recipes/{u}_step_extra_1_thumb.webp"
+                    )),
+                    edits: Vec::new(),
+                },
+                RecipeImage {
+                    url: format!("https://storage.example.com/recipes/{u}_step_extra_2_full.webp"),
                     thumb_url: None,
                     edits: Vec::new(),
-                }),
+                },
+            ],
+            sub_steps: vec![RecipeStep {
+                text: "Check the texture".to_string(),
+                photos: vec![RecipeImage {
+                    url: format!("https://storage.example.com/recipes/{u}_nested_step_full.webp"),
+                    thumb_url: None,
+                    edits: Vec::new(),
+                }],
                 sub_steps: Vec::new(),
             }],
         }];
@@ -3826,7 +3836,7 @@ mod tests {
         .unwrap();
 
         let urls = get_all_image_urls(&pool).await.unwrap();
-        assert_eq!(urls.len(), 8);
+        assert_eq!(urls.len(), 11);
         // Results may be in any order, so sort for comparison
         let mut actual = urls;
         actual.sort();
@@ -3835,6 +3845,9 @@ mod tests {
             format!("https://storage.example.com/recipes/{u}_2_thumb.webp"),
             format!("https://storage.example.com/recipes/{u}_full.webp"),
             format!("https://storage.example.com/recipes/{u}_nested_step_full.webp"),
+            format!("https://storage.example.com/recipes/{u}_step_extra_1_full.webp"),
+            format!("https://storage.example.com/recipes/{u}_step_extra_1_thumb.webp"),
+            format!("https://storage.example.com/recipes/{u}_step_extra_2_full.webp"),
             format!("https://storage.example.com/recipes/{u}_step_full.webp"),
             format!("https://storage.example.com/recipes/{u}_step_thumb.webp"),
             format!("https://storage.example.com/recipes/{u}_thumb.webp"),

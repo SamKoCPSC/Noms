@@ -167,23 +167,16 @@ pub struct RecipeIngredient {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RecipeStep {
     pub text: String,
+    #[serde(default)]
     pub sub_steps: Vec<RecipeStep>,
-    /// Optional photo URL for this step (full-size image URL from storage).
-    pub photo_url: Option<String>,
-    /// Structured step photo with full/thumb URLs and edit metadata.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub photo: Option<RecipeImage>,
+    /// Structured step photos with full/thumb URLs and edit metadata.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub photos: Vec<RecipeImage>,
 }
 
 impl RecipeStep {
-    pub fn display_photo(&self) -> Option<RecipeImage> {
-        self.photo.clone().or_else(|| {
-            self.photo_url.as_ref().map(|url| RecipeImage {
-                url: url.clone(),
-                thumb_url: None,
-                edits: Vec::new(),
-            })
-        })
+    pub fn display_photos(&self) -> Vec<RecipeImage> {
+        self.photos.clone()
     }
 }
 
@@ -290,10 +283,39 @@ mod tests {
             RecipeImageEdit::default_16x9(),
         );
 
-        assert_eq!(image.display_url(false), "https://example.com/image_full.webp");
+        assert_eq!(
+            image.display_url(false),
+            "https://example.com/image_full.webp"
+        );
         assert_eq!(
             image.display_url(true),
             "https://example.com/image_thumb.webp"
         );
+    }
+
+    #[test]
+    fn recipe_step_display_photos_reads_multiple_photos() {
+        let step = RecipeStep {
+            text: "Mix".to_string(),
+            sub_steps: Vec::new(),
+            photos: vec![
+                RecipeImage {
+                    url: "https://example.com/step_1.webp".to_string(),
+                    thumb_url: None,
+                    edits: Vec::new(),
+                },
+                RecipeImage {
+                    url: "https://example.com/step_2.webp".to_string(),
+                    thumb_url: None,
+                    edits: Vec::new(),
+                },
+            ],
+        };
+
+        let photos = step.display_photos();
+
+        assert_eq!(photos.len(), 2);
+        assert_eq!(photos[0].url, "https://example.com/step_1.webp");
+        assert_eq!(photos[1].url, "https://example.com/step_2.webp");
     }
 }
