@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 use crate::components::base::{Button, ButtonVariant, EditedRecipeImage, ImageEditorModal};
 use crate::types::{RecipeImage, RecipeImageEdit};
+use crate::utils::reorder::move_item;
 
 // WASM-only bridge: connects Dioxus `FileData` to CP3's `process_image_*`
 // pipeline. Gated at module scope so the imports don't trigger
@@ -161,6 +162,45 @@ struct PendingImage {
     status: UploadStatus,
     /// Failure message when `status == Failed`.
     error: Option<String>,
+    /// Uploaded record retained here so the public image list can always be
+    /// rebuilt in the same order as the pending list (including after retry).
+    uploaded_image: Option<RecipeImage>,
+}
+
+fn uploaded_images_in_pending_order(pending: &[PendingImage]) -> Vec<RecipeImage> {
+    pending
+        .iter()
+        .filter_map(|pending_image| pending_image.uploaded_image.clone())
+        .collect()
+}
+
+fn sync_uploaded_images(pending: Signal<Vec<PendingImage>>, mut images: Signal<Vec<RecipeImage>>) {
+    images.set(uploaded_images_in_pending_order(&pending()));
+}
+
+fn reorder_pending_images(
+    dragged_id: usize,
+    target_id: usize,
+    mut pending: Signal<Vec<PendingImage>>,
+    images: Signal<Vec<RecipeImage>>,
+) {
+    let pending_snapshot = pending();
+    let Some(from) = pending_snapshot
+        .iter()
+        .position(|pending_image| pending_image.id == dragged_id)
+    else {
+        return;
+    };
+    let Some(to) = pending_snapshot
+        .iter()
+        .position(|pending_image| pending_image.id == target_id)
+    else {
+        return;
+    };
+    drop(pending_snapshot);
+
+    move_item(&mut pending.write(), from, to);
+    sync_uploaded_images(pending, images);
 }
 
 // ── Module-scope async helpers ──────────────────────────────────────────────
@@ -234,6 +274,7 @@ async fn process_one_file(
             edit: RecipeImageEdit::default_16x9(),
             status: UploadStatus::Processing,
             error: None,
+            uploaded_image: None,
         });
 
         // Open the preview modal for the newly selected image.
@@ -291,7 +332,7 @@ async fn process_one_file(
 async fn retry_upload(
     img_id: usize,
     mut pending: Signal<Vec<PendingImage>>,
-    mut images: Signal<Vec<RecipeImage>>,
+    images: Signal<Vec<RecipeImage>>,
 ) {
     let item = pending().iter().find(|p| p.id == img_id).map(|p| {
         (
@@ -315,12 +356,12 @@ async fn retry_upload(
     let result = crate::api::upload::upload_image((*full).clone(), (*thumb).clone(), name).await;
     match result {
         Ok(resp) => {
-            images
-                .write()
-                .push(RecipeImage::new(resp.full_url, Some(resp.thumb_url), edit));
+            let uploaded_image = RecipeImage::new(resp.full_url, Some(resp.thumb_url), edit);
             if let Some(p) = pending.write().iter_mut().find(|p| p.id == img_id) {
                 p.status = UploadStatus::Uploaded;
+                p.uploaded_image = Some(uploaded_image);
             }
+            sync_uploaded_images(pending, images);
         }
         Err(e) => {
             let msg = e.to_string();
@@ -338,7 +379,7 @@ async fn retry_upload(
 /// `Processing`).
 async fn upload_all(
     mut pending: Signal<Vec<PendingImage>>,
-    mut images: Signal<Vec<RecipeImage>>,
+    images: Signal<Vec<RecipeImage>>,
 ) -> UploadOutcome {
     // Processing guard — abort if any item is still in `Processing`.
     if pending()
@@ -385,12 +426,12 @@ async fn upload_all(
 
         match result {
             Ok(resp) => {
-                images
-                    .write()
-                    .push(RecipeImage::new(resp.full_url, Some(resp.thumb_url), edit));
+                let uploaded_image = RecipeImage::new(resp.full_url, Some(resp.thumb_url), edit);
                 if let Some(p) = pending.write().iter_mut().find(|p| p.id == id) {
                     p.status = UploadStatus::Uploaded;
+                    p.uploaded_image = Some(uploaded_image);
                 }
+                sync_uploaded_images(pending, images);
                 succeeded += 1;
             }
             Err(e) => {
@@ -412,8 +453,13 @@ async fn upload_all(
 }
 
 /// Remove a pending item by id, revoking its preview object URL (wasm only).
-/// No server delete: nothing has been uploaded yet, so no orphans.
-fn remove_pending(img_id: usize, mut pending: Signal<Vec<PendingImage>>) {
+/// An item uploaded during a partially failed batch is left for the existing
+/// orphan cleanup worker when the user removes it before saving the recipe.
+fn remove_pending(
+    img_id: usize,
+    mut pending: Signal<Vec<PendingImage>>,
+    images: Signal<Vec<RecipeImage>>,
+) {
     #[cfg(target_arch = "wasm32")]
     {
         if let Some(p) = pending().iter().find(|p| p.id == img_id) {
@@ -423,6 +469,7 @@ fn remove_pending(img_id: usize, mut pending: Signal<Vec<PendingImage>>) {
         }
     }
     pending.write().retain(|p| p.id != img_id);
+    sync_uploaded_images(pending, images);
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
@@ -438,6 +485,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     let next_id = use_signal(|| 0usize);
     let mut editor_modal_url = use_signal(|| Option::<String>::None);
     let mut editor_modal_img_id = use_signal(|| Option::<usize>::None);
+    let mut dragged_image_id = use_signal(|| Option::<usize>::None);
 
     let images = props.images;
     let mut upload_now = props.upload_now;
@@ -532,7 +580,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
             }
 
             // Pending file list
-            for img in pending().iter() {
+            for (img_idx, img) in pending().iter().enumerate() {
                 {
                     let img_id = img.id;
                     let img_name = img.name.clone();
@@ -562,11 +610,32 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                         || pending()
                             .iter()
                             .any(|p| matches!(p.status, UploadStatus::Processing));
+                    let reorder_disabled = uploading() || img_status == UploadStatus::Uploading;
+                    let item_class = if dragged_image_id() == Some(img_id) {
+                        "image-upload__item image-upload__item--dragging"
+                    } else {
+                        "image-upload__item"
+                    };
 
                     rsx! {
                         div {
                             key: "{img_id}",
-                            class: "image-upload__item",
+                            class: "{item_class}",
+                            draggable: !reorder_disabled,
+                            ondragstart: move |_| dragged_image_id.set(Some(img_id)),
+                            ondragend: move |_| dragged_image_id.set(None),
+                            ondragover: move |event| {
+                                if dragged_image_id().is_some() {
+                                    event.prevent_default();
+                                }
+                            },
+                            ondrop: move |event| {
+                                event.prevent_default();
+                                if let Some(dragged_id) = dragged_image_id() {
+                                    reorder_pending_images(dragged_id, img_id, pending, images);
+                                }
+                                dragged_image_id.set(None);
+                            },
                             // Preview thumbnail (object URL) — only on client
                             if let Some(url) = img_preview.clone() {
                                 div {
@@ -625,6 +694,32 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                     },
                                 }
                             }
+                            div {
+                                class: "image-upload__order-controls",
+                                aria_label: "Reorder image",
+                                button {
+                                    r#type: "button",
+                                    class: "btn btn-ghost touch-target",
+                                    disabled: reorder_disabled || img_idx == 0,
+                                    aria_label: "Move image up",
+                                    onclick: move |_| {
+                                        let previous_id = pending()[img_idx - 1].id;
+                                        reorder_pending_images(img_id, previous_id, pending, images);
+                                    },
+                                    "↑"
+                                }
+                                button {
+                                    r#type: "button",
+                                    class: "btn btn-ghost touch-target",
+                                    disabled: reorder_disabled || img_idx + 1 >= pending().len(),
+                                    aria_label: "Move image down",
+                                    onclick: move |_| {
+                                        let next_id = pending()[img_idx + 1].id;
+                                        reorder_pending_images(img_id, next_id, pending, images);
+                                    },
+                                    "↓"
+                                }
+                            }
                             // Per-item Retry (AC5) — only on Failed items
                             if img_status == UploadStatus::Failed {
                                 Button {
@@ -643,7 +738,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                 variant: ButtonVariant::Ghost,
                                 disabled: img_status == UploadStatus::Uploading,
                                 onclick: move |_| {
-                                    remove_pending(img_id, pending);
+                                    remove_pending(img_id, pending, images);
                                 },
                                 "✕"
                             }
@@ -655,11 +750,15 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
             // Image editor modal
             ImageEditorModal {
                 image_url: editor_modal_url,
-                on_save: move |edit| {
+                on_save: move |edit: RecipeImageEdit| {
                     if let Some(img_id) = editor_modal_img_id() {
                         if let Some(p) = pending.write().iter_mut().find(|p| p.id == img_id) {
-                            p.edit = edit;
+                            p.edit = edit.clone();
+                            if let Some(uploaded_image) = &mut p.uploaded_image {
+                                uploaded_image.edits = vec![edit];
+                            }
                         }
+                        sync_uploaded_images(pending, images);
                     }
                 },
                 on_close: move |_| {
@@ -676,6 +775,43 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn pending_image_with_uploaded_url(id: usize, url: Option<&str>) -> PendingImage {
+        PendingImage {
+            id,
+            name: format!("image-{id}.webp"),
+            preview_url: None,
+            original_size: 100,
+            full_bytes: Arc::new(Vec::new()),
+            thumb_bytes: Arc::new(Vec::new()),
+            edit: RecipeImageEdit::default_16x9(),
+            status: if url.is_some() {
+                UploadStatus::Uploaded
+            } else {
+                UploadStatus::Failed
+            },
+            error: None,
+            uploaded_image: url.map(|url| {
+                RecipeImage::new(url.to_string(), None, RecipeImageEdit::default_16x9())
+            }),
+        }
+    }
+
+    #[test]
+    fn uploaded_images_follow_pending_display_order_and_skip_failures() {
+        let pending = vec![
+            pending_image_with_uploaded_url(3, Some("third")),
+            pending_image_with_uploaded_url(2, None),
+            pending_image_with_uploaded_url(1, Some("first")),
+        ];
+
+        let ordered_urls: Vec<String> = uploaded_images_in_pending_order(&pending)
+            .into_iter()
+            .map(|image| image.url)
+            .collect();
+
+        assert_eq!(ordered_urls, vec!["third".to_string(), "first".to_string()]);
+    }
 
     // ── is_allowed_image_type ────────────────────────────────────────────
 

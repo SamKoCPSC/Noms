@@ -3768,11 +3768,15 @@ mod tests {
                 thumb_url: Some(format!(
                     "https://storage.example.com/recipes/{u}_thumb.webp"
                 )),
+                file_name: None,
+                file_size: None,
                 edits: Vec::new(),
             },
             RecipeImage {
                 url: format!("https://storage.example.com/recipes/{u}_no_thumb.webp"),
                 thumb_url: None,
+                file_name: None,
+                file_size: None,
                 edits: Vec::new(),
             },
             RecipeImage {
@@ -3780,6 +3784,8 @@ mod tests {
                 thumb_url: Some(format!(
                     "https://storage.example.com/recipes/{u}_2_thumb.webp"
                 )),
+                file_name: None,
+                file_size: None,
                 edits: Vec::new(),
             },
         ];
@@ -3791,6 +3797,8 @@ mod tests {
                     thumb_url: Some(format!(
                         "https://storage.example.com/recipes/{u}_step_thumb.webp"
                     )),
+                    file_name: None,
+                    file_size: None,
                     edits: Vec::new(),
                 },
                 RecipeImage {
@@ -3798,11 +3806,15 @@ mod tests {
                     thumb_url: Some(format!(
                         "https://storage.example.com/recipes/{u}_step_extra_1_thumb.webp"
                     )),
+                    file_name: None,
+                    file_size: None,
                     edits: Vec::new(),
                 },
                 RecipeImage {
                     url: format!("https://storage.example.com/recipes/{u}_step_extra_2_full.webp"),
                     thumb_url: None,
+                    file_name: None,
+                    file_size: None,
                     edits: Vec::new(),
                 },
             ],
@@ -3811,6 +3823,8 @@ mod tests {
                 photos: vec![RecipeImage {
                     url: format!("https://storage.example.com/recipes/{u}_nested_step_full.webp"),
                     thumb_url: None,
+                    file_name: None,
+                    file_size: None,
                     edits: Vec::new(),
                 }],
                 sub_steps: Vec::new(),
@@ -3881,11 +3895,15 @@ mod tests {
                 thumb_url: Some(format!(
                     "https://storage.example.com/recipes/shared_{u}_thumb.webp"
                 )),
+                file_name: None,
+                file_size: None,
                 edits: Vec::new(),
             },
             RecipeImage {
                 url: format!("https://storage.example.com/recipes/unique1_{u}.webp"),
                 thumb_url: None,
+                file_name: None,
+                file_size: None,
                 edits: Vec::new(),
             },
         ];
@@ -3914,11 +3932,15 @@ mod tests {
                 thumb_url: Some(format!(
                     "https://storage.example.com/recipes/shared_{u}_thumb.webp"
                 )),
+                file_name: None,
+                file_size: None,
                 edits: Vec::new(),
             },
             RecipeImage {
                 url: format!("https://storage.example.com/recipes/unique2_{u}.webp"),
                 thumb_url: None,
+                file_name: None,
+                file_size: None,
                 edits: Vec::new(),
             },
         ];

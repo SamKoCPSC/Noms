@@ -16,6 +16,7 @@ use crate::components::base::{
 };
 use crate::components::AuthRequired;
 use crate::types::{RecipeEquipment, RecipeImage, RecipeImageEdit, RecipeIngredient, RecipeStep};
+use crate::utils::reorder::move_item;
 
 // ── Local form types ─────────────────────────────────────────────────────────
 
@@ -116,6 +117,32 @@ fn trigger_file_input(selector: &str) {
 #[cfg(not(target_arch = "wasm32"))]
 fn trigger_file_input(_selector: &str) {}
 
+fn format_step_photo_file_size(bytes: u64) -> String {
+    const KIB: u64 = 1024;
+    const MIB: u64 = KIB * 1024;
+
+    if bytes >= MIB {
+        format!("{:.1} MB", bytes as f64 / MIB as f64)
+    } else if bytes >= KIB {
+        format!("{} KB", bytes / KIB)
+    } else {
+        format!("{bytes} B")
+    }
+}
+
+fn step_photo_display_name(photo: &RecipeImage) -> String {
+    photo.file_name.clone().unwrap_or_else(|| {
+        photo
+            .url
+            .split('?')
+            .next()
+            .and_then(|url| url.rsplit('/').next())
+            .filter(|name| !name.is_empty())
+            .unwrap_or("Step photo")
+            .to_string()
+    })
+}
+
 /// Edit recipe page — fetches existing data, pre-populates the form, saves via update_recipe.
 #[component]
 pub fn RecipeEdit(id: String) -> Element {
@@ -141,6 +168,7 @@ pub fn RecipeEdit(id: String) -> Element {
     let mut step_editor_photo_idx = use_signal(|| Option::<usize>::None);
     let mut pending_step_photo_edits = use_signal(Vec::<PendingStepPhotoEdit>::new);
     let step_photo_upload_count = use_signal(|| 0usize);
+    let mut dragged_step_photo = use_signal(|| Option::<(usize, usize)>::None);
 
     // CP11: deferred delete — track URLs to delete after save succeeds
     let mut pending_deletes = use_signal(Vec::<String>::new);
@@ -238,6 +266,8 @@ pub fn RecipeEdit(id: String) -> Element {
                             Some(f) => f,
                             None => continue,
                         };
+                        let photo_file_name = web_file.name();
+                        let photo_file_size = web_file.size() as u64;
                         step_photo_upload_count.set(step_photo_upload_count().saturating_add(1));
                         let preview_url = web_sys::Url::create_object_url_with_blob(&web_file).ok();
                         if let Some(url) = &preview_url {
@@ -294,7 +324,8 @@ pub fn RecipeEdit(id: String) -> Element {
                         }
 
                         let full_url = resp.full_url;
-                        let photo = RecipeImage::new(full_url, Some(resp.thumb_url), edit);
+                        let photo = RecipeImage::new(full_url, Some(resp.thumb_url), edit)
+                            .with_file_metadata(photo_file_name, photo_file_size);
                         if let Some(step) = steps.write().get_mut(idx) {
                             let photo_idx = step.photos.len();
                             step.photos.push(photo);
@@ -868,49 +899,115 @@ pub fn RecipeEdit(id: String) -> Element {
                                         min_width: "24px",
                                         "{idx + 1}."
                                     }
-                                    // Step text
-                                    textarea {
-                                        class: "neumo-inset input",
-                                        placeholder: "Describe this step...",
-                                        rows: "2",
-                                        style: "flex: 1;",
-                                        padding: "var(--space-sm) var(--space-md)",
-                                        font_family: "var(--font-body)",
-                                        font_size: "14px",
-                                        color: "var(--text-primary)",
-                                        background_color: "var(--surface)",
-                                        outline: "none",
-                                        resize: "vertical",
-                                        value: steps()[idx].text.clone(),
-                                        oninput: move |evt| {
-                                            steps.write()[idx].text = evt.value();
-                                        },
-                                    }
-                                    if !steps()[idx].photos.is_empty() {
-                                        div {
-                                            display: "flex",
-                                            flex_wrap: "wrap",
-                                            gap: "var(--space-xs)",
-                                            margin_top: "var(--space-xs)",
-                                            for photo_idx in 0..steps()[idx].photos.len() {
-                                                div {
-                                                    key: "{idx}-{photo_idx}",
-                                                    position: "relative",
-                                                    display: "inline-block",
-                                                    EditedRecipeImage {
-                                                        image: steps()[idx].photos[photo_idx].clone(),
-                                                        class: "image-upload__thumb step-photo-preview",
-                                                        alt: "Step photo".to_string(),
-                                                        prefer_thumbnail: true,
-                                                        on_error: move |_| {},
-                                                    }
-                                                    button {
-                                                        onclick: move |_| {
-                                                            let removed = steps.write()[idx].photos.remove(photo_idx);
-                                                            pending_deletes.write().push(removed.url);
+                                    div {
+                                        display: "flex",
+                                        flex_direction: "column",
+                                        flex: "1",
+                                        min_width: "0",
+                                        gap: "var(--space-xs)",
+                                        textarea {
+                                            class: "neumo-inset input",
+                                            placeholder: "Describe this step...",
+                                            rows: "2",
+                                            width: "100%",
+                                            padding: "var(--space-sm) var(--space-md)",
+                                            font_family: "var(--font-body)",
+                                            font_size: "14px",
+                                            color: "var(--text-primary)",
+                                            background_color: "var(--surface)",
+                                            outline: "none",
+                                            resize: "vertical",
+                                            value: steps()[idx].text.clone(),
+                                            oninput: move |evt| {
+                                                steps.write()[idx].text = evt.value();
+                                            },
+                                        }
+                                        if !steps()[idx].photos.is_empty() {
+                                            div {
+                                                display: "flex",
+                                                flex_wrap: "wrap",
+                                                gap: "var(--space-xs)",
+                                                margin_top: "var(--space-xs)",
+                                                for photo_idx in 0..steps()[idx].photos.len() {
+                                                    div {
+                                                        key: "{idx}-{photo_idx}",
+                                                        class: if dragged_step_photo() == Some((idx, photo_idx)) { "step-photo-item step-photo-item--dragging" } else { "step-photo-item" },
+                                                        draggable: true,
+                                                        ondragstart: move |_| dragged_step_photo.set(Some((idx, photo_idx))),
+                                                        ondragend: move |_| dragged_step_photo.set(None),
+                                                        ondragover: move |event| {
+                                                            if dragged_step_photo().is_some() {
+                                                                event.prevent_default();
+                                                            }
                                                         },
-                                                        style: "position: absolute; top: -6px; right: -6px; font-size: 12px; width: 20px; height: 20px; padding: 0; line-height: 1; background: none; border: none; cursor: pointer; color: var(--text-secondary);",
-                                                        "✕"
+                                                        ondrop: move |event| {
+                                                            event.prevent_default();
+                                                            if let Some((source_step_idx, source_photo_idx)) = dragged_step_photo() {
+                                                                if source_step_idx == idx {
+                                                                    move_item(
+                                                                        &mut steps.write()[idx].photos,
+                                                                        source_photo_idx,
+                                                                        photo_idx,
+                                                                    );
+                                                                }
+                                                            }
+                                                            dragged_step_photo.set(None);
+                                                        },
+                                                        div { class: "step-photo-item__preview neumo-inset",
+                                                            EditedRecipeImage {
+                                                                image: steps()[idx].photos[photo_idx].clone(),
+                                                                class: "image-upload__thumb step-photo-preview",
+                                                                alt: "Step photo".to_string(),
+                                                                prefer_thumbnail: true,
+                                                                on_error: move |_| {},
+                                                            }
+                                                            div { class: "step-photo-item__meta",
+                                                                span {
+                                                                    class: "step-photo-item__name",
+                                                                    title: step_photo_display_name(&steps()[idx].photos[photo_idx]),
+                                                                    "{step_photo_display_name(&steps()[idx].photos[photo_idx])}"
+                                                                }
+                                                                span { class: "step-photo-item__size",
+                                                                    if let Some(file_size) = steps()[idx].photos[photo_idx].file_size {
+                                                                        "{format_step_photo_file_size(file_size)}"
+                                                                    } else {
+                                                                        "Size unavailable"
+                                                                    }
+                                                                }
+                                                            }
+                                                            div { class: "step-photo-item__controls",
+                                                                button {
+                                                                    r#type: "button",
+                                                                    class: "btn btn-ghost touch-target",
+                                                                    disabled: photo_idx == 0,
+                                                                    aria_label: "Move step photo left",
+                                                                    onclick: move |_| {
+                                                                        steps.write()[idx].photos.swap(photo_idx, photo_idx - 1);
+                                                                    },
+                                                                    "←"
+                                                                }
+                                                                button {
+                                                                    r#type: "button",
+                                                                    class: "btn btn-ghost touch-target",
+                                                                    disabled: photo_idx + 1 >= steps()[idx].photos.len(),
+                                                                    aria_label: "Move step photo right",
+                                                                    onclick: move |_| {
+                                                                        steps.write()[idx].photos.swap(photo_idx, photo_idx + 1);
+                                                                    },
+                                                                    "→"
+                                                                }
+                                                                button {
+                                                                    r#type: "button",
+                                                                    class: "btn btn-ghost touch-target step-photo-item__remove",
+                                                                    aria_label: "Remove step photo",
+                                                                    onclick: move |_| {
+                                                                        let removed = steps.write()[idx].photos.remove(photo_idx);
+                                                                        pending_deletes.write().push(removed.url);
+                                                                    },
+                                                                    "✕"
+                                                                }
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }

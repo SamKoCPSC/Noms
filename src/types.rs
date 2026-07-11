@@ -97,6 +97,10 @@ pub struct RecipeImage {
     /// Smaller image variant for compact UI surfaces.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thumb_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_size: Option<u64>,
     pub edits: Vec<RecipeImageEdit>,
 }
 
@@ -105,8 +109,16 @@ impl RecipeImage {
         Self {
             url,
             thumb_url,
+            file_name: None,
+            file_size: None,
             edits: vec![edit],
         }
+    }
+
+    pub fn with_file_metadata(mut self, file_name: String, file_size: u64) -> Self {
+        self.file_name = Some(file_name);
+        self.file_size = Some(file_size);
+        self
     }
 
     pub fn display_url(&self, prefer_thumbnail: bool) -> &str {
@@ -132,6 +144,10 @@ impl<'de> Deserialize<'de> for RecipeImage {
                 #[serde(default)]
                 thumb_url: Option<String>,
                 #[serde(default)]
+                file_name: Option<String>,
+                #[serde(default)]
+                file_size: Option<u64>,
+                #[serde(default)]
                 edits: Vec<RecipeImageEdit>,
             },
         }
@@ -140,15 +156,21 @@ impl<'de> Deserialize<'de> for RecipeImage {
             RecipeImageCompat::Url(url) => Ok(Self {
                 url,
                 thumb_url: None,
+                file_name: None,
+                file_size: None,
                 edits: Vec::new(),
             }),
             RecipeImageCompat::Object {
                 url,
                 thumb_url,
+                file_name,
+                file_size,
                 edits,
             } => Ok(Self {
                 url,
                 thumb_url,
+                file_name,
+                file_size,
                 edits,
             }),
         }
@@ -276,6 +298,22 @@ mod tests {
     }
 
     #[test]
+    fn recipe_image_file_metadata_round_trips() {
+        let image = RecipeImage::new(
+            "https://example.com/image_full.webp".to_string(),
+            None,
+            RecipeImageEdit::default_16x9(),
+        )
+        .with_file_metadata("family-recipe.jpg".to_string(), 2_400_000);
+
+        let serialized = serde_json::to_value(&image).unwrap();
+        let restored: RecipeImage = serde_json::from_value(serialized).unwrap();
+
+        assert_eq!(restored.file_name.as_deref(), Some("family-recipe.jpg"));
+        assert_eq!(restored.file_size, Some(2_400_000));
+    }
+
+    #[test]
     fn recipe_image_display_url_prefers_thumbnail_when_available() {
         let image = RecipeImage::new(
             "https://example.com/image_full.webp".to_string(),
@@ -302,11 +340,15 @@ mod tests {
                 RecipeImage {
                     url: "https://example.com/step_1.webp".to_string(),
                     thumb_url: None,
+                    file_name: None,
+                    file_size: None,
                     edits: Vec::new(),
                 },
                 RecipeImage {
                     url: "https://example.com/step_2.webp".to_string(),
                     thumb_url: None,
+                    file_name: None,
+                    file_size: None,
                     edits: Vec::new(),
                 },
             ],
