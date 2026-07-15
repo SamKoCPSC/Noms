@@ -11,12 +11,18 @@ mod db;
 #[cfg(feature = "server")]
 mod middleware;
 mod pages;
+#[cfg(feature = "server")]
+mod storage;
 #[cfg(all(feature = "server", test))]
 mod test_utils;
 mod types;
 mod utils;
+#[cfg(feature = "server")]
+mod worker;
 
-use auth::context::{build_context_from_fullstack, AuthContext};
+use auth::context::build_context_from_fullstack;
+#[cfg(target_arch = "wasm32")]
+use auth::context::AuthContext;
 use components::{AppLayout, ErrorFallback};
 use pages::{
     CollectionDetail, CollectionList, Dashboard, Explore, Home, Login, NotFound, RecipeDetail,
@@ -89,6 +95,18 @@ fn main() {
             db::init_pool().await;
             let pool = db::get_pool();
 
+            // Initialize S3-compatible storage client
+            storage::init_storage().await;
+            let storage_client = storage::get_storage_client();
+
+            // Spawn orphan cleanup worker
+            {
+                let pool = pool.clone();
+                let storage = storage_client.clone();
+                let config = worker::orphan_cleanup::OrphanCleanupConfig::from_env();
+                worker::orphan_cleanup::spawn_orphan_cleanup(pool, storage, config);
+            }
+
             let rate_limit = middleware::rate_limit::RateLimitState::default();
 
             let state = auth::oauth::AppState {
@@ -97,6 +115,7 @@ fn main() {
                 github_client,
                 http_client: reqwest::Client::new(),
                 rate_limit: rate_limit.clone(),
+                storage: storage_client,
             };
             let dioxus_router = axum::Router::new()
                 .layer(axum::Extension(pool.clone()))
@@ -108,8 +127,13 @@ fn main() {
                     "/api/user_profile",
                     axum::routing::get(auth::user_profile::handle_user_profile),
                 )
+                .route(
+                    "/api/upload",
+                    axum::routing::post(api::upload::upload_handler),
+                )
                 .with_state(auth::user_profile::UserProfileState { pool: pool.clone() })
-                .serve_dioxus_application(ServeConfig::new(), App);
+                .serve_dioxus_application(ServeConfig::new(), App)
+                .layer(api::upload::server_function_body_limit_layer());
 
             let oauth_router = axum::Router::new()
                 .route(
@@ -164,22 +188,25 @@ fn App() -> Element {
     provide_context(auth_context);
 
     // On client, fetch user profile after hydration to update AuthContext
-    use_hook(move || {
-        let mut ctx = auth_context;
-        spawn(async move {
-            let res = gloo_net::http::Request::get("/api/user_profile")
-                .send()
-                .await;
-            if let Ok(response) = res {
-                if response.ok() {
-                    let body = response.text().await.unwrap_or_default();
-                    if let Ok(user_ctx) = serde_json::from_str::<AuthContext>(&body) {
-                        ctx.set(user_ctx);
+    #[cfg(target_arch = "wasm32")]
+    {
+        use_hook(move || {
+            let mut ctx = auth_context;
+            spawn(async move {
+                let res = gloo_net::http::Request::get("/api/user_profile")
+                    .send()
+                    .await;
+                if let Ok(response) = res {
+                    if response.ok() {
+                        let body = response.text().await.unwrap_or_default();
+                        if let Ok(user_ctx) = serde_json::from_str::<AuthContext>(&body) {
+                            ctx.set(user_ctx);
+                        }
                     }
                 }
-            }
+            });
         });
-    });
+    }
 
     rsx! {
         // Document head

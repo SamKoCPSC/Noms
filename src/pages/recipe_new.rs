@@ -6,9 +6,15 @@
 use dioxus::prelude::*;
 
 use crate::api::recipe::create_recipe;
-use crate::components::base::{Button, ButtonVariant, Input, PageHeader};
+#[allow(unused_imports)]
+use crate::api::upload::upload_image;
+use crate::components::base::{
+    Button, ButtonVariant, EditedRecipeImage, ImageEditorModal, ImageUpload, Input, PageHeader,
+    UploadOutcome,
+};
 use crate::components::AuthRequired;
-use crate::types::{RecipeEquipment, RecipeIngredient, RecipeStep};
+use crate::types::{RecipeEquipment, RecipeImage, RecipeImageEdit, RecipeIngredient, RecipeStep};
+use crate::utils::reorder::move_item;
 
 // ── Local form types ─────────────────────────────────────────────────────────
 
@@ -18,6 +24,43 @@ use crate::types::{RecipeEquipment, RecipeIngredient, RecipeStep};
 struct StepForm {
     text: String,
     depth: usize,
+    photos: Vec<StepPhotoForm>,
+}
+
+#[derive(Clone, Debug)]
+struct StepPhotoForm {
+    image: RecipeImage,
+    file_name: String,
+    file_size: u64,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct PendingStepPhotoEdit {
+    idx: usize,
+    preview_url: String,
+    edit: RecipeImageEdit,
+}
+
+/// Validated form fields captured at Save-click time, consumed by the
+/// `on_upload_complete` handler after the image upload batch finishes.
+///
+/// CP4: the save flow is now two-phase — (1) the user clicks Save, we stash
+/// the validated form here and trigger the image upload batch via
+/// `upload_now`; (2) `ImageUpload` fires `on_upload_complete`, which
+/// consumes this stash and calls `create_recipe` with the uploaded URLs.
+#[derive(Clone)]
+struct PendingSaveData {
+    title: String,
+    description: Option<String>,
+    commentary: Option<String>,
+    prep: Option<i32>,
+    cook: Option<i32>,
+    serv: Option<i32>,
+    ingredients: Vec<RecipeIngredient>,
+    instructions: Vec<RecipeStep>,
+    equipment: Vec<RecipeEquipment>,
+    tags: Vec<String>,
+    visibility: String,
 }
 
 // ── Tree builder ─────────────────────────────────────────────────────────────
@@ -42,6 +85,11 @@ fn build_step_tree(steps: &[StepForm]) -> Vec<RecipeStep> {
         let node = RecipeStep {
             text: step.text.clone(),
             sub_steps: Vec::new(),
+            photos: step
+                .photos
+                .iter()
+                .map(|photo| photo.image.clone())
+                .collect(),
         };
         let idx = nodes.len();
         nodes.push(node);
@@ -72,6 +120,38 @@ fn build_step_tree(steps: &[StepForm]) -> Vec<RecipeStep> {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
+/// Programmatically trigger a click on a file input element by selector.
+/// Only active on wasm32; no-op during SSR.
+#[cfg(target_arch = "wasm32")]
+fn trigger_file_input(selector: &str) {
+    use wasm_bindgen::JsCast;
+    if let Some(window) = web_sys::window() {
+        if let Some(doc) = window.document() {
+            if let Ok(Some(input)) = doc.query_selector(selector) {
+                if let Some(file_input) = input.dyn_ref::<web_sys::HtmlInputElement>() {
+                    let _ = file_input.click();
+                }
+            }
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn trigger_file_input(_selector: &str) {}
+
+fn format_step_photo_file_size(bytes: u64) -> String {
+    const KIB: u64 = 1024;
+    const MIB: u64 = KIB * 1024;
+
+    if bytes >= MIB {
+        format!("{:.1} MB", bytes as f64 / MIB as f64)
+    } else if bytes >= KIB {
+        format!("{} KB", bytes / KIB)
+    } else {
+        format!("{bytes} B")
+    }
+}
+
 /// Create recipe page — full form with ingredients, steps, and tags.
 #[component]
 pub fn RecipeNew() -> Element {
@@ -97,6 +177,127 @@ pub fn RecipeNew() -> Element {
     // UI state
     let mut is_saving = use_signal(|| false);
     let mut error = use_signal(|| Option::<String>::None);
+
+    // CP4: image upload state — shared with the `ImageUpload` component.
+    // `images` is the sink for uploaded image records (read when calling
+    // `create_recipe`); `upload_now` triggers the upload batch; `busy`
+    // mirrors "processing or uploading" and disables Save; `pending_save`
+    // stashes the validated form at Save-click time for the
+    // `on_upload_complete` handler to consume after the batch finishes.
+    let images = use_signal(Vec::<RecipeImage>::new);
+    let mut upload_now = use_signal(|| false);
+    let busy = use_signal(|| false);
+    let mut pending_save = use_signal(|| Option::<PendingSaveData>::None);
+    let mut step_editor_modal_url = use_signal(|| Option::<String>::None);
+    let mut step_editor_idx = use_signal(|| Option::<usize>::None);
+    let mut step_editor_photo_idx = use_signal(|| Option::<usize>::None);
+    let mut pending_step_photo_edits = use_signal(Vec::<PendingStepPhotoEdit>::new);
+    let step_photo_upload_count = use_signal(|| 0usize);
+    let mut dragged_step_photo = use_signal(|| Option::<(usize, usize)>::None);
+
+    // ── Step photo upload handler ────────────────────────────────────────
+    // Created per-step via closure capturing the step index
+    #[allow(unused_variables)]
+    let on_step_photo_change = move |idx: usize| {
+        move |files: Vec<dioxus::html::FileData>| {
+            if files.is_empty() {
+                return;
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                let mut steps = steps;
+                let mut step_editor_modal_url = step_editor_modal_url;
+                let mut step_editor_idx = step_editor_idx;
+                let mut step_editor_photo_idx = step_editor_photo_idx;
+                let mut pending_step_photo_edits = pending_step_photo_edits;
+                let mut step_photo_upload_count = step_photo_upload_count;
+                spawn(async move {
+                    use dioxus_web::WebFileExt;
+
+                    for (file_idx, file_data) in files.iter().enumerate() {
+                        let web_file = match file_data.get_web_file() {
+                            Some(f) => f,
+                            None => continue,
+                        };
+                        let photo_file_name = web_file.name();
+                        let photo_file_size = web_file.size() as u64;
+                        step_photo_upload_count.set(step_photo_upload_count().saturating_add(1));
+                        let preview_url = web_sys::Url::create_object_url_with_blob(&web_file).ok();
+                        if let Some(url) = &preview_url {
+                            step_editor_idx.set(Some(idx));
+                            step_editor_photo_idx.set(None);
+                            step_editor_modal_url.set(Some(url.clone()));
+                        }
+
+                        let processed =
+                            match crate::utils::image_processing_client::process_image(web_file)
+                                .await
+                            {
+                                Ok(p) => p,
+                                Err(e) => {
+                                    tracing::error!("Step photo processing failed: {e}");
+                                    step_photo_upload_count
+                                        .set(step_photo_upload_count().saturating_sub(1));
+                                    continue;
+                                }
+                            };
+
+                        let resp = match upload_image(
+                            processed.full_bytes,
+                            processed.thumb_bytes,
+                            format!("step_{idx}_{file_idx}.webp"),
+                        )
+                        .await
+                        {
+                            Ok(r) => r,
+                            Err(e) => {
+                                tracing::error!("Step photo upload failed: {e}");
+                                step_photo_upload_count
+                                    .set(step_photo_upload_count().saturating_sub(1));
+                                continue;
+                            }
+                        };
+
+                        let edit = preview_url
+                            .as_ref()
+                            .and_then(|url| {
+                                pending_step_photo_edits()
+                                    .iter()
+                                    .rev()
+                                    .find(|pending| {
+                                        pending.idx == idx && pending.preview_url == *url
+                                    })
+                                    .map(|pending| pending.edit.clone())
+                            })
+                            .unwrap_or_else(RecipeImageEdit::default_rect_16x9);
+                        if let Some(url) = &preview_url {
+                            pending_step_photo_edits.write().retain(|pending| {
+                                !(pending.idx == idx && pending.preview_url == *url)
+                            });
+                        }
+
+                        let full_url = resp.full_url;
+                        let photo = StepPhotoForm {
+                            image: RecipeImage::new(full_url, Some(resp.thumb_url), edit)
+                                .with_file_metadata(photo_file_name.clone(), photo_file_size),
+                            file_name: photo_file_name,
+                            file_size: photo_file_size,
+                        };
+                        if let Some(step) = steps.write().get_mut(idx) {
+                            let photo_idx = step.photos.len();
+                            step.photos.push(photo);
+                            if preview_url.as_ref() == step_editor_modal_url().as_ref()
+                                && step_editor_idx() == Some(idx)
+                            {
+                                step_editor_photo_idx.set(Some(photo_idx));
+                            }
+                        }
+                        step_photo_upload_count.set(step_photo_upload_count().saturating_sub(1));
+                    }
+                });
+            }
+        }
+    };
 
     // ── Submit handler ───────────────────────────────────────────────────
     let on_submit = move |_| {
@@ -147,7 +348,17 @@ pub fn RecipeNew() -> Element {
         // ── Convert flat steps to tree ──────────────────────────────────
         let instructions = build_step_tree(&sts);
 
-        // ── Commit values and spawn async call ──────────────────────────
+        // ── Early guard: images still processing ────────────────────────
+        // Belt-and-suspenders — `ImageUpload::upload_all()` also checks
+        // this and aborts. This gives immediate feedback.
+        if busy() {
+            error.set(Some(
+                "Images are still processing — please wait a moment".to_string(),
+            ));
+            return;
+        }
+
+        // ── Commit values and stash for the post-upload handler ─────────
         is_saving.set(true);
 
         let desc = if description().trim().is_empty() {
@@ -164,29 +375,87 @@ pub fn RecipeNew() -> Element {
 
         let vis = visibility().clone();
         let equip = equipment();
+
+        // Stash the validated form data. The `on_upload_complete` handler
+        // (fired by `ImageUpload` after the upload batch) consumes this and
+        // calls `create_recipe` with `images()`.
+        pending_save.set(Some(PendingSaveData {
+            title: trimmed_title,
+            description: desc,
+            commentary: comm,
+            prep,
+            cook,
+            serv,
+            ingredients: ings,
+            instructions,
+            equipment: equip,
+            tags,
+            visibility: vis,
+        }));
+
+        // Trigger the upload batch. If there are no pending images,
+        // `upload_all` returns immediately with `succeeded: 0, failed: 0,
+        // aborted: None` and the handler proceeds to `create_recipe` with
+        // `images() == vec![]` — recipes with zero images work.
+        upload_now.set(true);
+    };
+
+    // ── on_upload_complete handler ───────────────────────────────────────
+    // Fired by `ImageUpload` when the upload batch finishes. Consumes the
+    // stashed form data and calls `create_recipe` with the uploaded URLs.
+    let on_upload_complete = move |outcome: UploadOutcome| {
         spawn(async move {
+            // S5: Dioxus `Signal` requires `.write()` for mutation (returns
+            // `&mut T`; `Option::take` needs `&mut self`). Matches the
+            // codebase's `signal.write().push(...)` pattern.
+            let Some(data) = pending_save.write().take() else {
+                return;
+            };
+
+            if let Some(msg) = outcome.aborted {
+                error.set(Some(msg));
+                is_saving.set(false);
+                return;
+            }
+
+            if outcome.failed > 0 {
+                // Some uploads failed — do NOT save. User retries/removes
+                // via the component UI, then clicks Save again.
+                error.set(Some(format!(
+                    "{} image(s) failed to upload. Use the Retry button on each failed image (or remove them), then click Save again.",
+                    outcome.failed
+                )));
+                is_saving.set(false);
+                return;
+            }
+
+            error.set(None);
             match create_recipe(
-                trimmed_title,
-                desc,
-                comm,
-                prep,
-                cook,
-                serv,
-                ings,
-                instructions,
-                equip,
-                vec![],
-                tags,
-                vis,
+                data.title,
+                data.description,
+                data.commentary,
+                data.prep,
+                data.cook,
+                data.serv,
+                data.ingredients,
+                data.instructions,
+                data.equipment,
+                images(), // uploaded full and thumbnail URLs
+                data.tags,
+                data.visibility,
             )
             .await
             {
+                #[allow(unused_variables)]
                 Ok(recipe) => {
                     // Navigate to recipe detail page
-                    if let Some(window) = web_sys::window() {
-                        let _ = window
-                            .location()
-                            .set_href(&format!("/recipes/{}", recipe.id));
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        if let Some(window) = web_sys::window() {
+                            let _ = window
+                                .location()
+                                .set_href(&format!("/recipes/{}", recipe.id));
+                        }
                     }
                 }
                 Err(e) => {
@@ -205,8 +474,11 @@ pub fn RecipeNew() -> Element {
 
     // ── Cancel handler ──────────────────────────────────────────────────
     let on_cancel = move |_| {
-        if let Some(window) = web_sys::window() {
-            let _ = window.location().set_href("/dashboard");
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(window) = web_sys::window() {
+                let _ = window.location().set_href("/dashboard");
+            }
         }
     };
 
@@ -224,6 +496,7 @@ pub fn RecipeNew() -> Element {
         steps.write().push(StepForm {
             text: String::new(),
             depth: 0,
+            photos: Vec::new(),
         });
     };
 
@@ -264,6 +537,30 @@ pub fn RecipeNew() -> Element {
                                 title.set(v);
                                 error.set(None);
                             },
+                        }
+                    }
+
+                    // ── Recipe Images ───────────────────────────────────────
+                    div {
+                        display: "flex",
+                        flex_direction: "column",
+                        gap: "var(--space-sm)",
+                        label {
+                            font_size: "14px",
+                            font_weight: "600",
+                            color: "var(--text-secondary)",
+                            "Recipe Images"
+                        }
+                        ImageUpload {
+                            images,
+                            upload_now,
+                            busy,
+                            on_upload_complete,
+                        }
+                        span {
+                            font_size: "12px",
+                            color: "var(--text-tertiary)",
+                            "Images are processed and uploaded when you save"
                         }
                     }
 
@@ -478,29 +775,140 @@ pub fn RecipeNew() -> Element {
                                     min_width: "24px",
                                     "{idx + 1}."
                                 }
-                                // Step text
-                                textarea {
-                                    class: "neumo-inset input",
-                                    placeholder: "Describe this step...",
-                                    rows: "2",
-                                    style: "flex: 1;",
-                                    padding: "var(--space-sm) var(--space-md)",
-                                    font_family: "var(--font-body)",
-                                    font_size: "14px",
-                                    color: "var(--text-primary)",
-                                    background_color: "var(--surface)",
-                                    outline: "none",
-                                    resize: "vertical",
-                                    oninput: move |evt| {
-                                        steps.write()[idx].text = evt.value();
-                                    },
+                                // Keep photos below the text instead of letting
+                                // them compete with the textarea for row width.
+                                div {
+                                    display: "flex",
+                                    flex_direction: "column",
+                                    flex: "1",
+                                    min_width: "0",
+                                    gap: "var(--space-xs)",
+                                    textarea {
+                                        class: "neumo-inset input",
+                                        placeholder: "Describe this step...",
+                                        rows: "2",
+                                        width: "100%",
+                                        padding: "var(--space-sm) var(--space-md)",
+                                        font_family: "var(--font-body)",
+                                        font_size: "14px",
+                                        color: "var(--text-primary)",
+                                        background_color: "var(--surface)",
+                                        outline: "none",
+                                        resize: "vertical",
+                                        oninput: move |evt| {
+                                            steps.write()[idx].text = evt.value();
+                                        },
+                                    }
+                                    if !steps()[idx].photos.is_empty() {
+                                        div {
+                                            display: "flex",
+                                            flex_wrap: "wrap",
+                                            gap: "var(--space-xs)",
+                                            margin_top: "var(--space-xs)",
+                                            for photo_idx in 0..steps()[idx].photos.len() {
+                                            div {
+                                                key: "{idx}-{photo_idx}",
+                                                class: if dragged_step_photo() == Some((idx, photo_idx)) { "step-photo-item step-photo-item--dragging" } else { "step-photo-item" },
+                                                draggable: true,
+                                                ondragstart: move |_| dragged_step_photo.set(Some((idx, photo_idx))),
+                                                ondragend: move |_| dragged_step_photo.set(None),
+                                                ondragover: move |event| {
+                                                    if dragged_step_photo().is_some() {
+                                                        event.prevent_default();
+                                                    }
+                                                },
+                                                ondrop: move |event| {
+                                                    event.prevent_default();
+                                                    if let Some((source_step_idx, source_photo_idx)) = dragged_step_photo() {
+                                                        if source_step_idx == idx {
+                                                            move_item(
+                                                                &mut steps.write()[idx].photos,
+                                                                source_photo_idx,
+                                                                photo_idx,
+                                                            );
+                                                        }
+                                                    }
+                                                    dragged_step_photo.set(None);
+                                                },
+                                                div { class: "step-photo-item__preview neumo-inset",
+                                                    EditedRecipeImage {
+                                                        image: steps()[idx].photos[photo_idx].image.clone(),
+                                                        class: "image-upload__thumb step-photo-preview",
+                                                        alt: "Step photo".to_string(),
+                                                        prefer_thumbnail: true,
+                                                        on_error: move |_| {},
+                                                    }
+                                                    div { class: "step-photo-item__meta",
+                                                        span {
+                                                            class: "step-photo-item__name",
+                                                            title: steps()[idx].photos[photo_idx].file_name.clone(),
+                                                            "{steps()[idx].photos[photo_idx].file_name}"
+                                                        }
+                                                        span { class: "step-photo-item__size",
+                                                            "{format_step_photo_file_size(steps()[idx].photos[photo_idx].file_size)}"
+                                                        }
+                                                    }
+                                                    div { class: "step-photo-item__controls",
+                                                        button {
+                                                            r#type: "button",
+                                                            class: "btn btn-ghost touch-target",
+                                                            disabled: photo_idx == 0,
+                                                            aria_label: "Move step photo left",
+                                                            onclick: move |_| {
+                                                                steps.write()[idx].photos.swap(photo_idx, photo_idx - 1);
+                                                            },
+                                                            "←"
+                                                        }
+                                                        button {
+                                                            r#type: "button",
+                                                            class: "btn btn-ghost touch-target",
+                                                            disabled: photo_idx + 1 >= steps()[idx].photos.len(),
+                                                            aria_label: "Move step photo right",
+                                                            onclick: move |_| {
+                                                                steps.write()[idx].photos.swap(photo_idx, photo_idx + 1);
+                                                            },
+                                                            "→"
+                                                        }
+                                                        button {
+                                                            r#type: "button",
+                                                            class: "btn btn-ghost touch-target step-photo-item__remove",
+                                                            aria_label: "Remove step photo",
+                                                            onclick: move |_| {
+                                                                steps.write()[idx].photos.remove(photo_idx);
+                                                            },
+                                                            "✕"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
-                                // Controls: indent/unindent + reorder + remove
+                                }
+                                // Controls: photo + indent/unindent + reorder + remove
                                 div {
                                     display: "flex",
                                     flex_direction: "column",
                                     gap: "var(--space-xs)",
                                     align_items: "center",
+                                    // Step photo upload
+                                    Button {
+                                        variant: ButtonVariant::Ghost,
+                                        onclick: move |_| {
+                                            trigger_file_input(&format!("#step-photo-{idx}"));
+                                        },
+                                        "📷"
+                                    }
+                                    input {
+                                        id: format!("step-photo-{idx}"),
+                                        r#type: "file",
+                                        accept: "image/*",
+                                        multiple: true,
+                                        display: "none",
+                                        onchange: move |evt| {
+                                            on_step_photo_change(idx)(evt.files());
+                                        },
+                                    }
                                     // Indent
                                     Button {
                                         variant: ButtonVariant::Ghost,
@@ -675,9 +1083,11 @@ pub fn RecipeNew() -> Element {
                         margin_top: "var(--space-md)",
                         Button {
                             variant: ButtonVariant::Primary,
-                            disabled: is_saving(),
+                            disabled: is_saving() || busy() || step_photo_upload_count() > 0,
                             onclick: on_submit,
-                            if is_saving() {
+                            if step_photo_upload_count() > 0 {
+                                "Uploading images..."
+                            } else if is_saving() {
                                 "Saving..."
                             } else {
                                 "Save Recipe"
@@ -685,12 +1095,42 @@ pub fn RecipeNew() -> Element {
                         }
                         Button {
                             variant: ButtonVariant::Ghost,
-                            disabled: is_saving(),
+                            disabled: is_saving() || busy() || step_photo_upload_count() > 0,
                             onclick: on_cancel,
                             "Cancel"
                         }
                     }
                 }
+            }
+            ImageEditorModal {
+                image_url: step_editor_modal_url,
+                on_save: move |edit: RecipeImageEdit| {
+                    let current_url = step_editor_modal_url();
+                    let current_idx = step_editor_idx();
+                    let current_photo_idx = step_editor_photo_idx();
+                    if let (Some(url), Some(idx)) = (current_url, current_idx) {
+                        pending_step_photo_edits.write().retain(|pending| {
+                            !(pending.idx == idx && pending.preview_url == url)
+                        });
+                        pending_step_photo_edits.write().push(PendingStepPhotoEdit {
+                            idx,
+                            preview_url: url.clone(),
+                            edit: edit.clone(),
+                        });
+                        if let Some(step) = steps.write().get_mut(idx) {
+                            if let Some(photo_idx) = current_photo_idx {
+                                if let Some(photo) = step.photos.get_mut(photo_idx) {
+                                    photo.image.edits = vec![edit];
+                                }
+                            }
+                        }
+                    }
+                },
+                on_close: move |_| {
+                    step_editor_modal_url.set(None);
+                    step_editor_idx.set(None);
+                    step_editor_photo_idx.set(None);
+                },
             }
         }
     }

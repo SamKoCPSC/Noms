@@ -17,7 +17,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
 
     // Close dropdown when clicking outside — document-level listener via web_sys
     // Only runs on web platform; no-op on server (SSR)
-    #[cfg(feature = "web")]
+    #[cfg(target_arch = "wasm32")]
     {
         use dioxus::core::use_hook;
         use dioxus::prelude::use_drop;
@@ -117,8 +117,11 @@ pub fn Navbar(theme: UseTheme) -> Element {
     // and redirects to "/". Full-page navigation is required because browsers
     // ignore Set-Cookie headers from XHR/fetch responses.
     let on_sign_out = move |_evt: dioxus::prelude::Event<dioxus::prelude::MouseData>| {
-        if let Some(window) = web_sys::window() {
-            let _ = window.location().set_href("/auth/logout?redirect_uri=/");
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(window) = web_sys::window() {
+                let _ = window.location().set_href("/auth/logout?redirect_uri=/");
+            }
         }
     };
 

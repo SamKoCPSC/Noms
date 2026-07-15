@@ -13,10 +13,11 @@ tracing = "0.1"
 # Server-only — never compiled into the WASM client
 sqlx             = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"], optional = true }
 aws-sdk-s3       = { version = "1", optional = true }
+aws-config       = { version = "1", optional = true }
 tracing-subscriber = { version = "0.3", features = ["json"], optional = true }
 oauth2           = { version = "5", optional = true }
 jsonwebtoken     = { version = "9", optional = true }
-axum             = { version = "0.8", optional = true }
+axum             = { version = "0.8", features = ["multipart"], optional = true }
 axum-extra       = { version = "0.10", features = ["cookie"], optional = true }
 reqwest          = { version = "0.12", features = ["json"], optional = true }
 uuid             = { version = "1", features = ["v4", "serde", "js"] }
@@ -30,10 +31,24 @@ tokio            = { version = "1", features = ["rt-multi-thread", "macros"], op
 unicode-normalization = { version = "0.1", optional = true }
 dashmap = { version = "6", optional = true }
 ipnet = { version = "2", optional = true }
- web-sys = { version = "0.3.98", features = ["Window", "Storage", "Location", "Document", "MouseEvent", "Element", "Node"] }
- wasm-bindgen = "0.2"
+wasm-bindgen = "0.2"
+
+# Target-specific — only compiled for the WASM client build.
+# `dioxus_web::WebFileExt` bridges Dioxus `FileData` to `web_sys::File` for
+# CP4's image upload component. Cargo.lock already resolves dioxus-web 0.7.9
+# as a transitive dep of `dioxus = "0.7.1"`, so this is zero-risk.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+dioxus-web = "0.7"
+web-sys = { version = "0.3.98", features = [
+    "Window", "Storage", "Location", "Document", "MouseEvent", "Element", "Node",
+    "HtmlCanvasElement", "CanvasRenderingContext2d", "HtmlImageElement", "HtmlInputElement", "ImageData",
+    "Blob", "File", "FileReader", "Url",
+    "DataTransfer", "DataTransferItem",
+    "DragEvent", "KeyboardEvent"
+] }
+js-sys = "0.3"
 gloo-net = { version = "0.6", features = ["http"] }
- gloo-timers = "0.3"
+gloo-timers = "0.3"
 
 [features]
 default = ["web"]
@@ -44,6 +59,7 @@ server  = [
     "dioxus/server",
     "sqlx",
     "aws-sdk-s3",
+    "dep:aws-config",
     "tracing-subscriber",
     "oauth2",
     "jsonwebtoken",

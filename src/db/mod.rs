@@ -182,7 +182,7 @@ pub struct OauthAccountRow {
 /// A recipe saved by a user.
 ///
 /// Re-exported from `crate::types` for use in database queries.
-pub use crate::types::Recipe;
+pub use crate::types::{Recipe, RecipeImage};
 
 /// Implement `sqlx::FromRow` for `Recipe` so it can be used with raw queries.
 impl sqlx::FromRow<'_, sqlx::postgres::PgRow> for Recipe {
@@ -698,6 +698,28 @@ pub async fn update_username(
     .map_err(DbError::Query)
 }
 
+/// Update a user's avatar URL.
+///
+/// Pass `Some(url)` to set a new avatar, or `None` to remove the avatar.
+/// Returns the updated user record on success.
+pub async fn update_avatar_url(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    user_id: Uuid,
+    avatar_url: Option<String>,
+) -> Result<User, DbError> {
+    sqlx::query_as!(
+        User,
+        "UPDATE users SET avatar_url = $2, updated_at = NOW() \
+         WHERE id = $1 \
+         RETURNING id, username, display_name, email, avatar_url, bio, created_at, updated_at",
+        user_id,
+        avatar_url,
+    )
+    .fetch_one(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
 // ── Recipe queries ──────────────────────────────────────────────────────────
 
 /// Insert a new recipe. Returns the created recipe with the generated ID.
@@ -714,7 +736,7 @@ pub async fn insert_recipe(
     ingredients: &[RecipeIngredient],
     instructions: &[RecipeStep],
     equipment: &[RecipeEquipment],
-    images: &[String],
+    images: &[RecipeImage],
     visibility: &str,
 ) -> Result<Recipe, DbError> {
     let ingredients_json = serde_json::to_value(ingredients).map_err(DbError::SerdeJson)?;
@@ -828,7 +850,7 @@ pub async fn update_recipe(
     ingredients: &[RecipeIngredient],
     instructions: &[RecipeStep],
     equipment: &[RecipeEquipment],
-    images: &[String],
+    images: &[RecipeImage],
     visibility: Option<&str>,
 ) -> Result<Recipe, DbError> {
     let ingredients_json = serde_json::to_value(ingredients).map_err(DbError::SerdeJson)?;
@@ -1111,15 +1133,77 @@ pub async fn get_public_recipe_tags(
     sqlx::query_as!(
         RecipeTag,
         "SELECT recipe_tags.recipe_id, recipe_tags.tag \
-         FROM recipe_tags \
-         INNER JOIN recipes ON recipe_tags.recipe_id = recipes.id \
-         WHERE recipe_tags.recipe_id = $1 AND recipes.visibility IN ('public', 'unlisted') \
-         ORDER BY recipe_tags.tag",
+          FROM recipe_tags \
+          INNER JOIN recipes ON recipe_tags.recipe_id = recipes.id \
+          WHERE recipe_tags.recipe_id = $1 AND recipes.visibility IN ('public', 'unlisted') \
+          ORDER BY recipe_tags.tag",
         recipe_id,
     )
     .fetch_all(executor)
     .await
     .map_err(DbError::Query)
+}
+
+/// Get all distinct image URLs referenced by any recipe.
+///
+/// Used by the orphan cleanup worker to determine which storage objects are still needed.
+pub async fn get_all_image_urls(pool: &PgPool) -> Result<Vec<String>, DbError> {
+    let rows = sqlx::query_scalar::<_, String>(
+        "WITH RECURSIVE step_entries(step_entry) AS (
+             SELECT step_entry
+             FROM recipes
+             CROSS JOIN LATERAL jsonb_array_elements(instructions) AS step_entry
+             WHERE instructions IS NOT NULL
+                AND jsonb_typeof(instructions) = 'array'
+             UNION ALL
+             SELECT child_step
+             FROM step_entries
+             CROSS JOIN LATERAL jsonb_array_elements(
+                 CASE
+                     WHEN jsonb_typeof(step_entry -> 'sub_steps') = 'array'
+                     THEN step_entry -> 'sub_steps'
+                     ELSE '[]'::jsonb
+                 END
+             ) AS child_step
+         ),
+         image_urls(image_url) AS (
+             SELECT image_urls.image_url
+             FROM recipes
+             CROSS JOIN LATERAL jsonb_array_elements(images) AS image_entry
+             CROSS JOIN LATERAL (
+                 VALUES (image_entry ->> 'url'), (image_entry ->> 'thumb_url')
+             ) AS image_urls(image_url)
+             WHERE images IS NOT NULL
+                AND jsonb_array_length(images) > 0
+                AND jsonb_typeof(image_entry) = 'object'
+                UNION ALL
+                SELECT step_photo_urls.image_url
+                FROM step_entries
+                CROSS JOIN LATERAL jsonb_array_elements(
+                    CASE
+                        WHEN jsonb_typeof(step_entry -> 'photos') = 'array'
+                        THEN step_entry -> 'photos'
+                        ELSE '[]'::jsonb
+                    END
+                ) AS step_photo
+                CROSS JOIN LATERAL (
+                    VALUES (
+                        step_photo ->> 'url'
+                    ), (
+                        step_photo ->> 'thumb_url'
+                    )
+                ) AS step_photo_urls(image_url)
+                WHERE jsonb_typeof(step_photo) = 'object'
+            )
+         SELECT DISTINCT image_url
+         FROM image_urls
+         WHERE image_url IS NOT NULL
+            AND image_url <> ''",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(DbError::Query)?;
+    Ok(rows)
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -1772,6 +1856,7 @@ mod tests {
             &[RecipeStep {
                 text: "Mix batter, cook on griddle".to_string(),
                 sub_steps: vec![],
+                photos: Vec::new(),
             }],
             &[],
             &[],
@@ -1794,7 +1879,8 @@ mod tests {
             recipe.instructions,
             vec![RecipeStep {
                 text: "Mix batter, cook on griddle".to_string(),
-                sub_steps: vec![]
+                sub_steps: vec![],
+                photos: Vec::new(),
             }]
         );
     }
@@ -2004,6 +2090,7 @@ mod tests {
             &[RecipeStep {
                 text: "New instructions".to_string(),
                 sub_steps: vec![],
+                photos: Vec::new(),
             }],
             &[],
             &[],
@@ -2021,7 +2108,8 @@ mod tests {
             updated.instructions,
             vec![RecipeStep {
                 text: "New instructions".to_string(),
-                sub_steps: vec![]
+                sub_steps: vec![],
+                photos: Vec::new(),
             }]
         );
         assert!(updated.updated_at >= original_updated_at);
@@ -3232,7 +3320,7 @@ mod tests {
         .unwrap();
 
         // Invalid visibility should fail
-        let result = sqlx::query_scalar(
+        let result: Result<i64, sqlx::Error> = sqlx::query_scalar(
             "INSERT INTO recipes (user_id, title, visibility) VALUES ($1, $2, $3) RETURNING id",
         )
         .bind(user.id)
@@ -3608,5 +3696,365 @@ mod tests {
         // Verify cleared commentary persists via get_recipe_by_id
         let fetched = get_recipe_by_id(&pool, recipe.id).await.unwrap().unwrap();
         assert_eq!(fetched.commentary, None);
+    }
+
+    // ── get_all_image_urls tests ──────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_get_all_image_urls_empty_recipes() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+
+        // No recipes at all — should return empty vec
+        let urls = get_all_image_urls(&pool).await.unwrap();
+        assert!(urls.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_all_image_urls_recipe_with_no_images() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("imguser_{u}"),
+            "Image User",
+            &format!("img{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        // Recipe with empty images array (the default)
+        insert_recipe(
+            &pool,
+            user.id,
+            "No Images",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            &[],
+            "private",
+        )
+        .await
+        .unwrap();
+
+        let urls = get_all_image_urls(&pool).await.unwrap();
+        assert!(urls.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_all_image_urls_single_recipe_multiple_images() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("imguser2_{u}"),
+            "Image User 2",
+            &format!("img2{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let images = vec![
+            RecipeImage {
+                url: format!("https://storage.example.com/recipes/{u}_full.webp"),
+                thumb_url: Some(format!(
+                    "https://storage.example.com/recipes/{u}_thumb.webp"
+                )),
+                file_name: None,
+                file_size: None,
+                edits: Vec::new(),
+            },
+            RecipeImage {
+                url: format!("https://storage.example.com/recipes/{u}_no_thumb.webp"),
+                thumb_url: None,
+                file_name: None,
+                file_size: None,
+                edits: Vec::new(),
+            },
+            RecipeImage {
+                url: format!("https://storage.example.com/recipes/{u}_2_full.webp"),
+                thumb_url: Some(format!(
+                    "https://storage.example.com/recipes/{u}_2_thumb.webp"
+                )),
+                file_name: None,
+                file_size: None,
+                edits: Vec::new(),
+            },
+        ];
+        let instructions = vec![RecipeStep {
+            text: "Prep the filling".to_string(),
+            photos: vec![
+                RecipeImage {
+                    url: format!("https://storage.example.com/recipes/{u}_step_full.webp"),
+                    thumb_url: Some(format!(
+                        "https://storage.example.com/recipes/{u}_step_thumb.webp"
+                    )),
+                    file_name: None,
+                    file_size: None,
+                    edits: Vec::new(),
+                },
+                RecipeImage {
+                    url: format!("https://storage.example.com/recipes/{u}_step_extra_1_full.webp"),
+                    thumb_url: Some(format!(
+                        "https://storage.example.com/recipes/{u}_step_extra_1_thumb.webp"
+                    )),
+                    file_name: None,
+                    file_size: None,
+                    edits: Vec::new(),
+                },
+                RecipeImage {
+                    url: format!("https://storage.example.com/recipes/{u}_step_extra_2_full.webp"),
+                    thumb_url: None,
+                    file_name: None,
+                    file_size: None,
+                    edits: Vec::new(),
+                },
+            ],
+            sub_steps: vec![RecipeStep {
+                text: "Check the texture".to_string(),
+                photos: vec![RecipeImage {
+                    url: format!("https://storage.example.com/recipes/{u}_nested_step_full.webp"),
+                    thumb_url: None,
+                    file_name: None,
+                    file_size: None,
+                    edits: Vec::new(),
+                }],
+                sub_steps: Vec::new(),
+            }],
+        }];
+
+        insert_recipe(
+            &pool,
+            user.id,
+            "Image Recipe",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &instructions,
+            &[],
+            &images,
+            "private",
+        )
+        .await
+        .unwrap();
+
+        let urls = get_all_image_urls(&pool).await.unwrap();
+        assert_eq!(urls.len(), 11);
+        // Results may be in any order, so sort for comparison
+        let mut actual = urls;
+        actual.sort();
+        let mut expected = vec![
+            format!("https://storage.example.com/recipes/{u}_2_full.webp"),
+            format!("https://storage.example.com/recipes/{u}_2_thumb.webp"),
+            format!("https://storage.example.com/recipes/{u}_full.webp"),
+            format!("https://storage.example.com/recipes/{u}_nested_step_full.webp"),
+            format!("https://storage.example.com/recipes/{u}_step_extra_1_full.webp"),
+            format!("https://storage.example.com/recipes/{u}_step_extra_1_thumb.webp"),
+            format!("https://storage.example.com/recipes/{u}_step_extra_2_full.webp"),
+            format!("https://storage.example.com/recipes/{u}_step_full.webp"),
+            format!("https://storage.example.com/recipes/{u}_step_thumb.webp"),
+            format!("https://storage.example.com/recipes/{u}_thumb.webp"),
+            format!("https://storage.example.com/recipes/{u}_no_thumb.webp"),
+        ];
+        expected.sort();
+        assert_eq!(actual, expected);
+    }
+
+    #[tokio::test]
+    async fn test_get_all_image_urls_deduplicates_across_recipes() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("imguser3_{u}"),
+            "Image User 3",
+            &format!("img3{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let shared_url = format!("https://storage.example.com/recipes/shared_{u}.webp");
+
+        // Recipe 1 has shared_url + unique1
+        let images1 = vec![
+            RecipeImage {
+                url: shared_url.clone(),
+                thumb_url: Some(format!(
+                    "https://storage.example.com/recipes/shared_{u}_thumb.webp"
+                )),
+                file_name: None,
+                file_size: None,
+                edits: Vec::new(),
+            },
+            RecipeImage {
+                url: format!("https://storage.example.com/recipes/unique1_{u}.webp"),
+                thumb_url: None,
+                file_name: None,
+                file_size: None,
+                edits: Vec::new(),
+            },
+        ];
+        insert_recipe(
+            &pool,
+            user.id,
+            "Recipe 1",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            &images1,
+            "private",
+        )
+        .await
+        .unwrap();
+
+        // Recipe 2 has shared_url + unique2
+        let images2 = vec![
+            RecipeImage {
+                url: shared_url.clone(),
+                thumb_url: Some(format!(
+                    "https://storage.example.com/recipes/shared_{u}_thumb.webp"
+                )),
+                file_name: None,
+                file_size: None,
+                edits: Vec::new(),
+            },
+            RecipeImage {
+                url: format!("https://storage.example.com/recipes/unique2_{u}.webp"),
+                thumb_url: None,
+                file_name: None,
+                file_size: None,
+                edits: Vec::new(),
+            },
+        ];
+        insert_recipe(
+            &pool,
+            user.id,
+            "Recipe 2",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            &images2,
+            "private",
+        )
+        .await
+        .unwrap();
+
+        // Recipe 3 has no images
+        insert_recipe(
+            &pool,
+            user.id,
+            "Recipe 3 No Images",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            &[],
+            "private",
+        )
+        .await
+        .unwrap();
+
+        // DISTINCT should deduplicate: 4 unique URLs, not 6
+        let urls = get_all_image_urls(&pool).await.unwrap();
+        assert_eq!(urls.len(), 4);
+        assert!(urls.contains(&shared_url));
+        assert!(urls.contains(&format!(
+            "https://storage.example.com/recipes/shared_{u}_thumb.webp"
+        )));
+        assert!(urls.contains(&format!(
+            "https://storage.example.com/recipes/unique1_{u}.webp"
+        )));
+        assert!(urls.contains(&format!(
+            "https://storage.example.com/recipes/unique2_{u}.webp"
+        )));
+    }
+
+    #[tokio::test]
+    async fn test_update_avatar_url_sets_url() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let user = insert_user(
+            &pool,
+            &format!("avatar_{u}"),
+            "Avatar User",
+            &format!("avatar{u}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert!(user.avatar_url.is_none());
+
+        let new_url = format!("https://storage.example.com/avatars/{u}.webp");
+        let updated = update_avatar_url(&pool, user.id, Some(new_url.clone()))
+            .await
+            .unwrap();
+
+        assert_eq!(updated.avatar_url, Some(new_url));
+    }
+
+    #[tokio::test]
+    async fn test_update_avatar_url_removes_url() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let u = test_utils::uid();
+
+        let existing_url = format!("https://storage.example.com/avatars/{u}.webp");
+        let user = insert_user(
+            &pool,
+            &format!("avatar2_{u}"),
+            "Avatar User 2",
+            &format!("avatar2{u}@example.com"),
+            Some(&existing_url),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(user.avatar_url, Some(existing_url));
+
+        let updated = update_avatar_url(&pool, user.id, None).await.unwrap();
+
+        assert!(updated.avatar_url.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_update_avatar_url_nonexistent_user() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+
+        let result = update_avatar_url(
+            &pool,
+            uuid::Uuid::nil(),
+            Some("https://example.com/avatar.webp".into()),
+        )
+        .await;
+
+        assert!(result.is_err());
     }
 }

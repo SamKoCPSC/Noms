@@ -16,7 +16,9 @@ use crate::api::recipe::{
     get_recipe_tags,
 };
 use crate::auth::context::use_auth;
-use crate::components::base::{Button, ButtonVariant, Card, LoadingSpinner, PageHeader};
+use crate::components::base::{
+    Button, ButtonVariant, Card, EditedRecipeImage, LoadingSpinner, PageHeader,
+};
 use crate::types::{Recipe, RecipeEquipment, RecipeIngredient, RecipeStep};
 #[cfg(target_arch = "wasm32")]
 use crate::utils::recipe_scaler::{
@@ -93,6 +95,7 @@ fn StepNode(step: RecipeStep, path: Vec<usize>, level: usize) -> Element {
     } else {
         (level - 1) as f64 * 20.0
     };
+    let photos = step.display_photos();
 
     rsx! {
         li {
@@ -103,6 +106,26 @@ fn StepNode(step: RecipeStep, path: Vec<usize>, level: usize) -> Element {
             line_height: "1.6",
             strong { font_weight: "600", margin_right: "var(--space-xs)", "{label}" }
             "{step.text}"
+
+            if !photos.is_empty() {
+                div {
+                    display: "grid",
+                    grid_template_columns: "repeat(auto-fit, minmax(140px, 1fr))",
+                    gap: "var(--space-sm)",
+                    margin_top: "var(--space-sm)",
+                    for (photo_idx, photo) in photos.iter().enumerate() {
+                        EditedRecipeImage {
+                            key: "{photo_idx}",
+                            image: photo.clone(),
+                            class: "recipe-step-photo",
+                            loading: "lazy",
+                            fallback_fit: "cover".to_string(),
+                            alt: "Step photo".to_string(),
+                            on_error: move |_| {},
+                        }
+                    }
+                }
+            }
 
             if !step.sub_steps.is_empty() {
                 ol {
@@ -456,7 +479,7 @@ fn render_equipment(equipment: &[RecipeEquipment]) -> Element {
 
 // ── Image Slider ─────────────────────────────────────────────────────────────
 
-fn render_image_slider(images: Vec<String>) -> Element {
+fn render_image_slider(images: Vec<crate::types::RecipeImage>) -> Element {
     if images.is_empty() {
         return rsx! {};
     }
@@ -465,7 +488,7 @@ fn render_image_slider(images: Vec<String>) -> Element {
     let total = images.len();
 
     // Pre-compute reactive values for rsx! (no closures allowed in attributes)
-    let current_src = images[current_index()].clone();
+    let current_image = images[current_index()].clone();
     let show_left_arrow = current_index() > 0;
     let show_right_arrow = current_index() < total - 1;
     let dot_classes: Vec<String> = (0..total)
@@ -481,10 +504,13 @@ fn render_image_slider(images: Vec<String>) -> Element {
     rsx! {
         div { class: "recipe-image-slider",
             div { class: "recipe-image-slider__viewport",
-                img {
+                EditedRecipeImage {
+                    image: current_image,
                     class: "recipe-image-slider__image",
-                    src: "{current_src}",
-                    alt: "Recipe image",
+                    alt: "Recipe image".to_string(),
+                    loading: "eager".to_string(),
+                    fallback_fit: "contain".to_string(),
+                    on_error: move |_| {},
                 }
             }
 

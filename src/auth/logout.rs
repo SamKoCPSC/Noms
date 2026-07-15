@@ -97,6 +97,8 @@ fn make_router(pool: PgPool) -> axum::Router {
         github_client: _github,
         http_client: reqwest::Client::new(),
         rate_limit: crate::middleware::rate_limit::RateLimitState::default(),
+        #[cfg(feature = "server")]
+        storage: crate::storage::StorageClient::for_test(),
     };
     axum::Router::new()
         .route("/auth/logout", get(handle_logout).post(handle_logout))

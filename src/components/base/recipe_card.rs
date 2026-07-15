@@ -5,6 +5,7 @@
 
 use crate::components::base::avatar::Avatar;
 use crate::components::base::avatar::AvatarSize;
+use crate::components::base::EditedRecipeImage;
 use crate::types::Recipe;
 use dioxus::prelude::*;
 
@@ -22,6 +23,9 @@ pub struct RecipeCardProps {
 pub fn RecipeCard(props: RecipeCardProps) -> Element {
     let RecipeCardProps { recipe } = props;
     let id = recipe.id.to_string();
+
+    // Track whether the image failed to load (for graceful fallback)
+    let mut image_failed = use_signal(|| false);
 
     let time_str = match (&recipe.prep_time_minutes, &recipe.cook_time_minutes) {
         (Some(prep), Some(cook)) => format!("{}m", prep + cook),
@@ -58,9 +62,28 @@ pub fn RecipeCard(props: RecipeCardProps) -> Element {
                 class: "recipe-card__link",
                 div {
                     class: "recipe-card__image",
-                    span {
-                        class: "recipe-card__image-placeholder",
-                        "Recipe Image"
+                    if let Some(first_image) = recipe.images.first() {
+                        if !image_failed() {
+                            EditedRecipeImage {
+                                image: first_image.clone(),
+                                class: "recipe-card__image-img",
+                                alt: recipe.title.clone(),
+                                prefer_thumbnail: true,
+                                on_error: move |_| {
+                                    image_failed.set(true);
+                                },
+                            }
+                        } else {
+                            div {
+                                class: "recipe-card__image-placeholder",
+                                aria_hidden: true,
+                            }
+                        }
+                    } else {
+                        div {
+                            class: "recipe-card__image-placeholder",
+                            aria_hidden: true,
+                        }
                     }
                 }
 

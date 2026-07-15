@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS users (
     display_name VARCHAR(100) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     avatar_url TEXT,
+    avatar_original_url TEXT,
+    avatar_edit JSONB,
     bio TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -108,6 +110,3 @@ CREATE INDEX IF NOT EXISTS idx_recipes_created_at ON recipes(created_at DESC);
 -- Partial index for public recipe discovery (explore page)
 CREATE INDEX IF NOT EXISTS idx_recipes_visibility_created ON recipes(visibility, created_at DESC)
     WHERE visibility = 'public';
-
--- Additive: add images column to existing tables (idempotent)
-ALTER TABLE recipes ADD COLUMN IF NOT EXISTS images JSONB NOT NULL DEFAULT '[]'::jsonb;

@@ -7,6 +7,9 @@
 
 use dioxus::prelude::*;
 
+#[cfg(feature = "server")]
+use crate::types::{RecipeImage, RecipeStep};
+
 /// Create a new recipe for the authenticated user.
 ///
 /// Tags are inserted after the recipe is created.
@@ -22,7 +25,7 @@ pub async fn create_recipe(
     ingredients: Vec<crate::types::RecipeIngredient>,
     instructions: Vec<crate::types::RecipeStep>,
     equipment: Vec<crate::types::RecipeEquipment>,
-    images: Vec<String>,
+    images: Vec<crate::types::RecipeImage>,
     tags: Vec<String>,
     visibility: String,
 ) -> Result<crate::types::Recipe, ServerFnError> {
@@ -108,7 +111,7 @@ pub async fn update_recipe(
     ingredients: Option<Vec<crate::types::RecipeIngredient>>,
     instructions: Option<Vec<crate::types::RecipeStep>>,
     equipment: Option<Vec<crate::types::RecipeEquipment>>,
-    images: Option<Vec<String>>,
+    images: Option<Vec<crate::types::RecipeImage>>,
     tags: Option<Vec<String>>,
     visibility: Option<String>,
 ) -> Result<crate::types::Recipe, ServerFnError> {
@@ -160,6 +163,9 @@ pub async fn update_recipe(
 }
 
 /// Delete a recipe (ownership-gated).
+///
+/// Fetches the recipe first to get its images, deletes from DB, then cleans up
+/// associated images from storage (best-effort).
 #[server]
 pub async fn delete_recipe(recipe_id: String) -> Result<(), ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
@@ -169,12 +175,74 @@ pub async fn delete_recipe(recipe_id: String) -> Result<(), ServerFnError> {
         .map_err(|e| ServerFnError::new(format!("Invalid recipe ID: {e}")))?;
     let pool = crate::db::get_pool();
 
-    // Delete enforces ownership inside the DB layer via WHERE user_id = $2
+    // Fetch recipe first to get images (ownership-gated)
+    let recipe = crate::db::get_recipe_by_id_and_owner(&pool, recipe_id, user_id)
+        .await
+        .map_err(|e| ServerFnError::new(e.to_string()))?;
+
+    // Delete from DB (enforces ownership via WHERE user_id = $2)
     crate::db::delete_recipe(&pool, recipe_id, user_id)
         .await
         .map_err(|e| ServerFnError::new(e.to_string()))?;
 
+    // CP11: Clean up associated images from storage (best-effort)
+    let step_photos = collect_step_photos(&recipe.instructions);
+    if !recipe.images.is_empty() || !step_photos.is_empty() {
+        let storage = crate::storage::get_storage_client();
+        let public_url = storage.public_url().trim_end_matches('/');
+
+        for image in &recipe.images {
+            delete_recipe_image_objects(&storage, public_url, image).await;
+        }
+
+        for image in step_photos {
+            delete_recipe_image_objects(&storage, public_url, &image).await;
+        }
+    }
+
     Ok(())
+}
+
+#[cfg(feature = "server")]
+async fn delete_recipe_image_objects(
+    storage: &crate::storage::StorageClient,
+    public_url: &str,
+    image: &RecipeImage,
+) {
+    let Some(full_key) = image
+        .url
+        .strip_prefix(public_url)
+        .map(|s| s.trim_start_matches('/'))
+    else {
+        return;
+    };
+
+    let _ = storage.delete_object(full_key).await;
+
+    let thumb_key = image
+        .thumb_url
+        .as_deref()
+        .and_then(|url| url.strip_prefix(public_url))
+        .map(|s| s.trim_start_matches('/').to_string())
+        .or_else(|| {
+            full_key
+                .strip_suffix("_full.webp")
+                .map(|base| format!("{base}_thumb.webp"))
+        });
+
+    if let Some(thumb_key) = thumb_key {
+        let _ = storage.delete_object(&thumb_key).await;
+    }
+}
+
+#[cfg(feature = "server")]
+fn collect_step_photos(steps: &[RecipeStep]) -> Vec<RecipeImage> {
+    let mut photos = Vec::new();
+    for step in steps {
+        photos.extend(step.display_photos());
+        photos.extend(collect_step_photos(&step.sub_steps));
+    }
+    photos
 }
 
 /// List recipes for the authenticated user with pagination.

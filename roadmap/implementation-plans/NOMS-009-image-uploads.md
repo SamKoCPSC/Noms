@@ -9,49 +9,50 @@
 ## Architecture Overview
 
 ```
-Client (Tauri/eGui)          Server (Axum)              Minio (S3-compatible)
--------------------          ---------------            -----------------------
+Client (WASM/Canvas)         Server (Axum)              Minio (S3-compatible)
+--------------------         ---------------            -----------------------
 
-  [Choose Files]
-       |
-       v
-  [ImageUploadState]
-       |
-       | multipart/form-data
-       v
-  POST /api/upload  ----->  upload_image_handler()
-                               |
-                               v
-                          validate (mime, size)
-                               |
-                               v
-                          process_image()
-                     [resize, WebP, thumb]
-                               |
-                               v
-                          upload_processed()
-                     [put_object x2]
-                               |
-                               v
-                        bucket: noms-images
-                        |-- recipes/{uid}/{uuid}.webp
-                        |-- recipes/{uid}/{uuid}-thumb.webp
-                               |
-                               | { url, key, thumb_url, thumb_key }
-                               v
-                          UploadResponse
-                               |
-                               v
-                        [slider in UI]
+   [Choose Files]
+        |
+        v
+   [ImageUploadState]
+        |
+        v
+   [Canvas Processing]
+  [resize, WebP, thumb]
+        |
+        | multipart/form-data
+        | (pre-processed WebP)
+        v
+   POST /api/upload  ----->  upload_handler()
+                                |
+                                v
+                           validate (WebP magic, size)
+                                |
+                                v
+                           store directly
+                      [put_object x2]
+                                |
+                                v
+                         bucket: noms-images
+                         |-- recipes/{uid}/{uuid}_full.webp
+                         |-- recipes/{uid}/{uuid}_thumb.webp
+                                |
+                                | { full_url, thumb_url, key }
+                                v
+                           UploadResponse
+                                |
+                                v
+                         [slider in UI]
 ```
 
 **Key conventions:**
-- Storage keys: `recipes/{user_id}/{uuid}.{ext}`
-- Thumbnail keys: `recipes/{user_id}/{uuid}-thumb.{ext}`
-- All uploaded images converted to WebP
+- Storage keys: `recipes/{user_id}/{uuid}_full.webp`
+- Thumbnail keys: `recipes/{user_id}/{uuid}_thumb.webp`
+- All images processed client-side (Canvas API), stored as WebP
 - Max original size: 10 MB
-- Resize threshold: longest side > 1920 px
-- Thumbnail size: 400 px longest side
+- Resize threshold: longest side > 1920 px (client-side)
+- Thumbnail size: 400 px longest side (client-side)
 
 ---
 
@@ -66,12 +67,11 @@ Client (Tauri/eGui)          Server (Axum)              Minio (S3-compatible)
 
 | Variable | Example | Description |
 |---|---|---|
-| `S3_ENDPOINT` | `http://localhost:9000` | Minio/S3 endpoint URL |
-| `S3_ACCESS_KEY` | `noms-admin` | Access key |
-| `S3_SECRET_KEY` | `noms-admin-secret` | Secret key |
-| `S3_BUCKET` | `noms-images` | Bucket name |
-| `S3_PUBLIC_URL` | `http://localhost:9000/noms-images` | Public base URL for constructed image URLs |
-| `S3_REGION` | `us-east-1` | Region (optional, defaults to us-east-1) |
+| `R2_ENDPOINT` | `http://localhost:9000` | Minio/R2 endpoint URL |
+| `R2_ACCESS_KEY_ID` | `noms-admin` | Access key |
+| `R2_SECRET_ACCESS_KEY` | `noms-admin-secret` | Secret key |
+| `R2_BUCKET` | `noms-images` | Bucket name |
+| `R2_PUBLIC_URL` | `http://localhost:9000/noms-images` | Public base URL for constructed image URLs |
 
 ### Exact File Changes
 
@@ -82,7 +82,7 @@ Add `dep:aws-sdk-s3` to the `server` feature list.
 #### New file: `src/storage.rs`
 - `StorageError` enum: Init, HealthCheck, Upload, Download, Delete variants
 - `StorageConfig` struct: endpoint, access_key, secret_key, bucket, public_url, region
-- `StorageConfig::from_env()` - reads all S3_* env vars
+- `StorageConfig::from_env()` - reads all R2_* env vars
 - `StorageClient` struct: wraps aws-sdk-s3 Client + StorageConfig
 - `StorageClient::new(config)` - builds client with custom endpoint, path-style, credentials
 - `StorageClient::health_check()` - HEAD bucket
@@ -90,7 +90,7 @@ Add `dep:aws-sdk-s3` to the `server` feature list.
 
 #### `src/server.rs` - integrate into AppState
 - Add `storage: Option<StorageClient>` to AppState
-- In init: if S3_ENDPOINT is set, create StorageClient; otherwise None
+- In init: if R2_ENDPOINT is set, create StorageClient; otherwise None
 
 #### `src/lib.rs` or `src/main.rs` - register module
 `#[cfg(feature = "server")] pub mod storage;`
@@ -222,91 +222,7 @@ mc ls myminio/noms-images/recipes/<user_id>/
 
 ---
 
-## Checkpoint 4 (CP4): Profile Image Upload
-
-**Goal:** Users can upload, view, and remove a profile avatar image. Reuses the storage layer from CP1-CP3; simpler than the recipe upload UI.
-
-### Dependencies
-- CP2 (`POST /api/upload` endpoint must exist)
-- CP3 (image processing pipeline preferred — avatars get resized + converted to WebP)
-
-### Server Function Signatures
-
-```rust
-pub async fn update_avatar(
-    user_id: &str,
-    avatar_url: &str,
-    pool: &sqlx::PgPool,
-) -> Result<(), String>
-
-pub async fn remove_avatar(
-    user_id: &str,
-    pool: &sqlx::PgPool,
-) -> Result<(), String>
-```
-
-### Exact File Changes
-
-#### `src/server_functions/upload.rs` — add `type` query param routing
-- Accept optional `type` query parameter on `POST /api/upload`:
-  - `type=avatar` (or omitted default) → routes to different key prefix
-- When `type=avatar`: use storage key `avatars/{user_id}/{uuid}.webp` (and `avatars/{user_id}/{uuid}-thumb.webp` for thumbnail)
-- When `type=recipe` (or omitted): existing behavior — `recipes/{user_id}/{uuid}.webp`
-- Avatar uploads use the same processing pipeline (resize, WebP, thumbnail) as recipe images
-
-#### New file: `src/server_functions/avatar.rs`
-- `update_avatar()`: `UPDATE users SET avatar_url = $1 WHERE id = $2 RETURNING id`
-- `remove_avatar()`:
-  1. `SELECT avatar_url FROM users WHERE id = $1` — fetch current URL
-  2. `UPDATE users SET avatar_url = NULL WHERE id = $1`
-  3. If old URL exists, extract key from URL and call `DELETE /api/upload/:key` (CP6's delete endpoint) to remove from Minio
-
-#### `src/server_functions/mod.rs` — register module
-`pub mod avatar;`
-
-#### `src/pages/settings/settings_profile.rs` — avatar upload UI
-- Add avatar upload section to the profile settings page:
-  - **Current avatar preview**: circular image showing uploaded avatar, OAuth avatar, or initials fallback (in that priority order)
-  - **Upload zone**: small drag-drop zone or "Choose Photo" button for selecting new avatar
-  - **Remove button**: "Remove Avatar" — calls `remove_avatar()`, clears local state
-- State: `current_avatar_url: Option<String>`, `uploading: bool`, `error: Option<String>`
-- On upload: send file via `POST /api/upload?type=avatar`, then call `update_avatar()` with returned URL
-- On remove: call `remove_avatar()`, reset preview to fallback
-
-#### `src/api.rs` — avatar API methods
-- `AppApi::upload_avatar(file_path, auth_token)`: multipart POST to `/api/upload?type=avatar`
-- `AppApi::update_avatar(avatar_url, auth_token)`: PUT/POST to new avatar endpoint
-- `AppApi::remove_avatar(auth_token)`: POST/DELETE to avatar removal endpoint
-
-#### `src/components/user_avatar.rs` (or equivalent display component) — avatar display
-- Render uploaded avatar image if `avatar_url` is `Some`
-- Fallback chain: uploaded avatar → OAuth provider avatar → initials-based placeholder
-- Circular avatar with consistent sizing across settings page and public profile page
-
-### Verification
-
-```bash
-# 1. Code compiles
-cargo check --features server
-cargo check
-
-# 2. Run the app
-cargo run --release
-
-# 3. Manual test:
-#    - Navigate to Settings > Profile
-#    - Upload a profile photo via the upload zone
-#    - Verify: avatar appears as circular preview on settings page
-#    - Verify: same avatar appears on public profile page
-#    - Click "Remove Avatar" -> avatar reverts to OAuth avatar or initials
-#    - Upload a new photo -> replaces previous avatar
-#    - Verify in Minio: avatars/<user_id>/ contains .webp files
-#    - After removing avatar: verify old file is deleted from Minio
-```
-
----
-
-## Checkpoint 5 (CP5): Upload UI Component
+## Checkpoint 4 (CP4): Upload UI Component
 
 **Goal:** Users can select and upload images from the recipe creation form.
 
@@ -386,12 +302,12 @@ cargo run --release
 
 ---
 
-## Checkpoint 6 (CP6): Edit Form Integration
+## Checkpoint 5 (CP5): Edit Form Integration
 
 **Goal:** Edit existing recipe images (add new, delete existing) from the edit form.
 
 ### Dependencies
-- CP5 (upload UI component exists)
+- CP4 (upload UI component exists)
 
 ### Server Function Signatures
 
@@ -477,12 +393,97 @@ cargo check
 
 ---
 
+## Checkpoint 6 (CP6): Profile Image Upload
+
+**Goal:** Users can upload, view, and remove a profile avatar image. Reuses the storage layer from CP1-CP3; simpler than the recipe upload UI.
+
+### Dependencies
+- CP2 (`POST /api/upload` endpoint must exist)
+- CP3 (image processing pipeline preferred — avatars get resized + converted to WebP)
+- CP5 (edit form integration must exist — avatar upload reuses image management patterns)
+
+### Server Function Signatures
+
+```rust
+pub async fn update_avatar(
+    user_id: &str,
+    avatar_url: &str,
+    pool: &sqlx::PgPool,
+) -> Result<(), String>
+
+pub async fn remove_avatar(
+    user_id: &str,
+    pool: &sqlx::PgPool,
+) -> Result<(), String>
+```
+
+### Exact File Changes
+
+#### `src/server_functions/upload.rs` — add `type` query param routing
+- Accept optional `type` query parameter on `POST /api/upload`:
+  - `type=avatar` (or omitted default) → routes to different key prefix
+- When `type=avatar`: use storage key `avatars/{user_id}/{uuid}.webp` (and `avatars/{user_id}/{uuid}-thumb.webp` for thumbnail)
+- When `type=recipe` (or omitted): existing behavior — `recipes/{user_id}/{uuid}.webp`
+- Avatar uploads use the same processing pipeline (resize, WebP, thumbnail) as recipe images
+
+#### New file: `src/server_functions/avatar.rs`
+- `update_avatar()`: `UPDATE users SET avatar_url = $1 WHERE id = $2 RETURNING id`
+- `remove_avatar()`:
+  1. `SELECT avatar_url FROM users WHERE id = $1` — fetch current URL
+  2. `UPDATE users SET avatar_url = NULL WHERE id = $1`
+  3. If old URL exists, extract key from URL and call `DELETE /api/upload/:key` (CP5's delete endpoint) to remove from Minio
+
+#### `src/server_functions/mod.rs` — register module
+`pub mod avatar;`
+
+#### `src/pages/settings/settings_profile.rs` — avatar upload UI
+- Add avatar upload section to the profile settings page:
+  - **Current avatar preview**: circular image showing uploaded avatar, OAuth avatar, or initials fallback (in that priority order)
+  - **Upload zone**: small drag-drop zone or "Choose Photo" button for selecting new avatar
+  - **Remove button**: "Remove Avatar" — calls `remove_avatar()`, clears local state
+- State: `current_avatar_url: Option<String>`, `uploading: bool`, `error: Option<String>`
+- On upload: send file via `POST /api/upload?type=avatar`, then call `update_avatar()` with returned URL
+- On remove: call `remove_avatar()`, reset preview to fallback
+
+#### `src/api.rs` — avatar API methods
+- `AppApi::upload_avatar(file_path, auth_token)`: multipart POST to `/api/upload?type=avatar`
+- `AppApi::update_avatar(avatar_url, auth_token)`: PUT/POST to new avatar endpoint
+- `AppApi::remove_avatar(auth_token)`: POST/DELETE to avatar removal endpoint
+
+#### `src/components/user_avatar.rs` (or equivalent display component) — avatar display
+- Render uploaded avatar image if `avatar_url` is `Some`
+- Fallback chain: uploaded avatar → OAuth provider avatar → initials-based placeholder
+- Circular avatar with consistent sizing across settings page and public profile page
+
+### Verification
+
+```bash
+# 1. Code compiles
+cargo check --features server
+cargo check
+
+# 2. Run the app
+cargo run --release
+
+# 3. Manual test:
+#    - Navigate to Settings > Profile
+#    - Upload a profile photo via the upload zone
+#    - Verify: avatar appears as circular preview on settings page
+#    - Verify: same avatar appears on public profile page
+#    - Click "Remove Avatar" -> avatar reverts to OAuth avatar or initials
+#    - Upload a new photo -> replaces previous avatar
+#    - Verify in Minio: avatars/<user_id>/ contains .webp files
+#    - After removing avatar: verify old file is deleted from Minio
+```
+
+---
+
 ## Checkpoint 7 (CP7): Step Photos
 
 **Goal:** Each recipe step can optionally have an associated photo.
 
 ### Dependencies
-- CP5 (upload infrastructure)
+- CP4 (upload infrastructure)
 
 ### Server Function Signatures
 
@@ -534,7 +535,7 @@ cargo check
 **Goal:** Recipe cards show the first image as a thumbnail, with graceful fallback.
 
 ### Dependencies
-- CP5 (images stored and accessible)
+- CP4 (images stored and accessible)
 
 ### Exact File Changes
 
@@ -570,7 +571,7 @@ cargo check
 **Goal:** Enhancement — full-featured image editor modal that replaces the basic file picker in the image upload component. This is a later upgrade that can be added after the basic upload flow (CP1–CP8) is fully working. Custom canvas-based cropper with no external dependencies.
 
 ### Dependencies
-- CP5 (ImageUploadState and `image_upload.rs` must exist — the crop editor is invoked from there)
+- CP4 (ImageUploadState and `image_upload.rs` must exist — the crop editor is invoked from there)
 
 ### Overview
 - This checkpoint is an enhancement layer, not a blocking dependency for the core upload flow
@@ -696,7 +697,7 @@ cargo run --release
 
 ### Dependencies
 - CP2 (upload endpoint must exist)
-- CP6 (delete_image must exist)
+- CP5 (delete_image must exist)
 
 ### 1. MIME Type Validation
 
@@ -912,23 +913,176 @@ curl -X POST http://localhost:3000/api/upload \
 | CP1 | Storage backend | `src/storage.rs` | `Cargo.toml`, `src/server.rs`, `src/lib.rs` | `cargo check --features server`, health check test |
 | CP2 | Upload API | `src/server_functions/upload.rs` | `src/server.rs`, `src/server_functions/mod.rs` | curl POST test, Minio verification |
 | CP3 | Image processing | (none) | `Cargo.toml`, `src/storage.rs`, `src/server_functions/upload.rs` | Upload large image, verify WebP + thumb |
-| CP4 | Profile image upload | `src/server_functions/avatar.rs` | `src/server_functions/upload.rs`, `src/server_functions/mod.rs`, `src/pages/settings/settings_profile.rs`, `src/api.rs`, `src/components/user_avatar.rs` | Upload avatar, see on settings + profile, remove avatar |
-| CP5 | Upload UI + client-side compression | `src/components/base/image_upload.rs` | `src/api.rs`, `src/pages/recipe_new.rs`, `src/components/base/mod.rs`, `Cargo.toml` | Create recipe with image, see in slider, compression toggle for >1MB files |
-| CP6 | Edit form + replace | (none) | `src/server_functions/upload.rs`, `src/server.rs`, `src/api.rs`, `src/components/base/image_upload.rs`, `src/pages/recipe_edit.rs` | Edit recipe, add/remove/replace images, cancel replace |
+| CP4 | Upload UI + client-side compression | `src/components/base/image_upload.rs` | `src/api.rs`, `src/pages/recipe_new.rs`, `src/components/base/mod.rs`, `Cargo.toml` | Create recipe with image, see in slider, compression toggle for >1MB files |
+| CP5 | Edit form + replace | (none) | `src/server_functions/upload.rs`, `src/server.rs`, `src/api.rs`, `src/components/base/image_upload.rs`, `src/pages/recipe_edit.rs` | Edit recipe, add/remove/replace images, cancel replace |
+| CP6 | Profile image upload | `src/server_functions/avatar.rs` | `src/server_functions/upload.rs`, `src/server_functions/mod.rs`, `src/pages/settings/settings_profile.rs`, `src/api.rs`, `src/components/user_avatar.rs` | Upload avatar, see on settings + profile, remove avatar |
 | CP7 | Step photos | (none) | `src/models/recipe.rs`, `src/pages/recipe_new.rs`, `src/pages/recipe_edit.rs`, `src/pages/recipe_detail.rs`, migration | Add photo to step, see on detail |
 | CP8 | Card thumbnails | (none) | `src/components/recipe_card.rs`, `src/pages/recipe_list.rs` | Cards show thumbnails, graceful fallback |
 | CP9 | Image preview editor + crop tool (enhancement) | `src/components/base/image_crop_editor.rs` | `src/components/base/image_upload.rs`, `src/components/base/mod.rs`, `assets/main.css` | Crop, zoom, pan, rotate, flip, preview, apply → upload cropped |
 | CP10 | Upload security hardening | (none) | `Cargo.toml`, `src/storage.rs`, `src/server.rs`, `src/server_functions/upload.rs` | MIME spoofing → 415, oversized → 413, cross-user delete → 403, rate limit → 429, concurrent → 503, path traversal sanitized |
+| CP11 | Image operation robustness | `src/worker/orphan_cleanup.rs`, `src/worker/mod.rs` | `src/storage.rs`, `src/server.rs`, `src/pages/recipe_edit.rs`, `src/api/upload.rs` | Deferred delete on save, orphan worker reconciliation, failure mode coverage |
 
 ## Execution Order
 
 1. CP1 -> CP2 -> CP3 (server-side pipeline, linear dependency)
-2. CP4 (depends on CP2/CP3, simpler than CP5 — good quick win)
-3. CP5 (can start once CP2 is done, but benefits from CP3)
-4. CP6 (depends on CP5)
-5. CP7 (depends on CP5, independent of CP6)
-6. CP8 (depends on CP5, independent of CP6/CP7)
-7. CP9 (depends on CP5 — enhancement added after basic upload flow is working; most complex checkpoint)
-8. CP10 (depends on CP2 + CP6 — security hardening; can be done after core upload flow is functional, ideally before production deployment)
+2. CP4 (recipe upload UI — depends on CP2/CP3)
+3. CP5 (edit form integration — depends on CP4)
+4. CP6 (profile image upload — depends on CP5 for image management patterns)
+5. CP7 (depends on CP4, independent of CP5/CP6)
+6. CP8 (depends on CP4, independent of CP5/CP6/CP7)
+7. CP9 (depends on CP4 — enhancement added after basic upload flow is working; most complex checkpoint)
+8. CP10 (depends on CP2 + CP5 — security hardening; can be done after core upload flow is functional, ideally before production deployment)
+9. CP11 (depends on CP5 — robustness layer ensuring DB/storage consistency; deferred deletes + orphan worker)
 
-Recommended: CP1 -> CP2 -> CP3 -> CP4 -> CP5 -> CP6 -> CP7 -> CP8 -> CP9 -> CP10 (sequential minimizes integration risk; CP10 is the final hardening pass before production)
+Recommended: CP1 -> CP2 -> CP3 -> CP4 -> CP5 -> CP6 -> CP7 -> CP8 -> CP9 -> CP10 -> CP11 (sequential minimizes integration risk; CP10 hardens security, CP11 ensures storage consistency)
+
+---
+
+## Checkpoint 11 (CP11): Image Operation Robustness
+
+> **Status:** Planned
+> **Depends on:** CP5 (Edit Form Integration)
+> **Goal:** Guarantee MinIO storage stays consistent with the database by always treating the DB as the source of truth and using an orphan cleanup worker as the safety net.
+
+### Design Principle
+
+The database is the source of truth for what images should exist in MinIO. Every operation follows the rule: **mutate DB first, then reconcile storage**. A periodic orphan worker catches any case where storage gets out of sync.
+
+### Operation Flows
+
+#### Create (Upload New Image)
+
+```
+1. Upload image to MinIO (full + thumb)  → get URL
+2. INSERT/UPDATE recipe with image URL    → atomic DB write
+```
+
+- If step 1 fails: nothing changed
+- If step 2 fails: orphan in MinIO → worker cleans up
+- No change needed to existing flow
+
+#### Delete (Remove Image)
+
+```
+1. UPDATE recipe removing image URL       → atomic DB write (happens on save)
+2. DELETE object from MinIO (full + thumb) → best-effort cleanup
+```
+
+- Current behavior: MinIO delete happens eagerly on ✕ click, before DB save
+- New behavior: MinIO delete is deferred until after DB save succeeds
+- If step 1 fails: image stays in MinIO, nothing broken
+- If step 2 fails: orphan in MinIO → worker cleans up
+
+#### Replace (Swap One Image for Another)
+
+```
+1. Upload new image to MinIO              → get new URL
+2. UPDATE recipe (old URL out, new URL in) → atomic pivot
+3. DELETE old image from MinIO            → best-effort cleanup
+```
+
+- Step 2 is a single UPDATE statement — never a state where old is gone but new isn't there
+- Composes create + delete patterns; no new failure modes
+
+#### Recipe Deletion
+
+```
+1. DELETE recipe from DB                   → removes all image URLs
+2. DELETE all associated objects from MinIO → best-effort cleanup
+```
+
+- Currently: only DB delete happens; images are orphaned
+- New behavior: attempt MinIO cleanup after DB delete
+- Fallback: orphan worker catches any missed deletions
+
+### Deferred Delete Implementation
+
+In `recipe_edit.rs`:
+
+- Track `pending_deletes: Signal<Vec<RecipeImage>>` alongside existing `pending_upload`
+- On ✕ click: mark image as pending deletion, remove from UI (optimistic)
+- On save: call `update_recipe` first, then batch-delete pending deletions from MinIO
+- On cancel: clear `pending_deletes`, images remain untouched in MinIO
+
+### Orphan Cleanup Worker
+
+A background task that runs periodically (e.g., every hour) and reconciles MinIO against the database:
+
+```
+1. SELECT images FROM recipes → collect all referenced URLs
+2. Extract object keys from URLs
+3. ListObjects on MinIO bucket
+4. DELETE any object not in the referenced set
+```
+
+#### Design Decisions
+
+- Runs as a Tokio task spawned on server startup
+- Uses `tokio::time::interval` for periodic execution
+- Logs each deletion for auditability
+- Skips if DB or MinIO is unreachable (logs warning, retries next cycle)
+- Configurable interval via env var (default: 1 hour)
+
+#### Failure Mode Coverage
+
+| Scenario | DB | MinIO | Resolved By |
+|---|---|---|---|
+| Upload succeeds, recipe save fails | No URL | Image exists | Orphan worker |
+| DB save succeeds, MinIO delete fails | No URL | Image exists | Orphan worker |
+| Recipe deleted, images not cleaned | No URL | Image exists | Orphan worker |
+| MinIO delete succeeds, DB save fails | URL exists | No image | User re-uploads (rare) |
+
+### Exact File Changes
+
+#### `src/storage.rs` — add `list_objects()` method
+- `StorageClient::list_objects(&self, prefix: Option<&str>) -> Result<Vec<String>, StorageError>` — lists all object keys in the bucket, optionally filtered by prefix
+
+#### New file: `src/worker/orphan_cleanup.rs` — orphan cleanup worker
+- `OrphanCleanupConfig` struct: interval, bucket reference
+- `OrphanCleanupConfig::from_env()` — reads `ORPHAN_CLEANUP_INTERVAL_SEC` (default: 3600)
+- `spawn_orphan_cleanup(pool: PgPool, storage: StorageClient, config: OrphanCleanupConfig)` — spawns Tokio task
+- Worker loop: queries all image URLs from DB, lists MinIO objects, deletes orphans, logs results
+
+#### New file: `src/worker/mod.rs` — worker module
+- `pub mod orphan_cleanup;`
+
+#### `src/server.rs` — spawn worker on startup
+- After AppState is built, call `spawn_orphan_cleanup()` if storage is configured
+- Worker runs independently of request handling
+
+#### `src/pages/recipe_edit.rs` — change eager delete to deferred delete
+- Replace immediate `api.delete_image(key)` on ✕ click with marking image as `pending_delete`
+- On save: after `update_recipe()` succeeds, iterate `pending_deletes` and call `api.delete_image()` for each
+- On cancel: discard `pending_deletes`, images remain in MinIO
+
+#### `src/api/upload.rs` — add replace endpoint (optional, or handle in frontend)
+- `AppApi::batch_delete_images(keys, auth_token)`: batch-delete multiple images in one call (optional optimization)
+
+### Verification
+
+```bash
+# 1. Code compiles
+cargo check --features server
+cargo check
+
+# 2. Manual test — deferred delete:
+#    - Open existing recipe with images -> Edit
+#    - Click ✕ on an image -> verify it's removed from UI (optimistic)
+#    - Cancel the edit -> verify image is still in MinIO (not actually deleted)
+#    - Re-open edit, click ✕ again, then Save
+#    - Verify: recipe DB has no image URL, MinIO object is deleted
+
+# 3. Manual test — orphan worker:
+#    - Upload an image, then manually delete the recipe from DB (bypassing the app)
+#    - Wait for orphan cleanup interval (or reduce interval for testing)
+#    - Verify: orphaned image is deleted from MinIO, log shows deletion
+
+# 4. Manual test — recipe deletion cleanup:
+#    - Delete a recipe with images via the app
+#    - Verify: recipe is gone from DB, images are deleted from MinIO
+
+# 5. Failure mode test — DB save fails after upload:
+#    - Simulate DB failure during recipe save (e.g., disconnect DB temporarily)
+#    - Upload succeeds, save fails
+#    - Verify: orphan worker eventually cleans up the orphaned MinIO object
+```
