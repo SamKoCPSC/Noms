@@ -2,523 +2,491 @@
 
 **Issue:** [NOMS-011-recipe-collections.md](../issues/NOMS-011-recipe-collections.md)
 **Created:** 2026-06-10
-**Depends on:** NOMS-008 (Recipe CRUD), NOMS-010 (Versioning & Drafts)
-**Approach:** Bottom-up by dependency, 7 incremental checkpoints matching the issue spec
+**Revised:** 2026-07-15
+**Depends on:** NOMS-008 published recipe model
+**Coordination:** NOMS-010 may be implemented in parallel. NOMS-011 only references published `recipes`; it does not depend on `recipe_versions` or `recipe_drafts`.
+**Approach:** Add private user-owned collections with a self-referential folder tree and ordered recipe membership, then integrate filesystem-like collection navigation into the existing recipe UI.
 
 ---
 
-## Pre-requisites
+## Implementation contract
 
-Before starting NOMS-011, NOMS-008 and NOMS-010 must be complete:
-- `recipes` table with: id, owner_id, title, description, is_public, is_draft, prep/cook/total_time_min, servings, ingredients JSONB, steps JSONB, created_at, updated_at
-- `recipe_tags` table exists
-- `recipe_versions` and `fork_relationships` tables exist
-- Rust types: Recipe, RecipeTag, RecipeVersion, ForkRelationship in src/db/mod.rs
-- Query functions: insert_recipe, get_recipe_by_id_and_owner, get_recipes_by_owner, update_recipe, delete_recipe
-- Server functions: create_recipe, get_recipe, update_recipe, delete_recipe, list_my_recipes
-- Pages: recipe_new.rs, recipe_detail.rs, recipe_edit.rs, dashboard.rs working
-- Components: RecipeCard, RecipeForm working
+### Current recipe model
+
+The current `recipes` table uses `user_id`, `visibility`, `prep_time_minutes`, `cook_time_minutes`, `instructions`, `equipment`, and `images`. NOMS-011 must not introduce the older `owner_id`, `is_public`, `is_draft`, `steps`, or `total_time_min` recipe fields.
+
+NOMS-010 now stores drafts separately in `recipe_drafts`. Collections reference `recipes` directly, so only published recipe rows can be added to collections. Drafts cannot be added to collections in this phase.
+
+### Collection ownership, hierarchy, and visibility
+
+- Collections are private and owned by one user.
+- Collections form a tree: `parent_collection_id = NULL` means a root collection.
+- A collection may contain child collections and recipe files.
+- A child collection has exactly one parent; moving a collection changes its parent.
+- A collection cannot be moved into itself or any of its descendants.
+- Sibling collection names are case-insensitively unique for one owner.
+- Only the collection owner can view, create, rename, delete, reorder, or modify membership.
+- A user may add a recipe they can currently access: their own recipe, or another user’s public/unlisted recipe.
+- A recipe becoming private later makes it unavailable in the collection view; the junction row may remain and become visible again if access is restored.
+- Collections do not become public merely because they contain public recipes.
+- Server functions derive the current user from the authenticated session. They must not accept a caller-supplied `user_id_str` for authorization.
+
+### Shared and server-only types
+
+Client/server response types belong in `src/types.rs` and derive `Serialize`/`Deserialize`. Database-only row adapters and query functions belong in `src/db/mod.rs` under the server feature. Do not expose a server-only SQLx row type directly in a server-function response.
+
+### Ordering
+
+- Child collections and recipe files have separate order sequences in this phase. Collection detail renders child folders first, followed by recipe files. This gives filesystem-like navigation without introducing a polymorphic `collection_entries` table; a future mixed folder/file order can add that if product requirements need it.
+- Collection `sort_order` orders sibling folders; `collection_recipes.sort_order` orders recipe files within a folder.
+- Both `sort_order` values are non-negative integers, normally normalized to `0..n-1`.
+- Adding a recipe or child collection locks the parent collection row, calculates the next order, and appends atomically. Root-folder appends lock the owner row (or use an equivalent owner-scoped advisory lock), because roots have no parent row to serialize them.
+- Reordering sends the complete ordered list of sibling IDs and normalizes that sequence in one transaction.
+- Membership changes and reorders update `collections.updated_at` so the dashboard order reflects recent activity.
 
 ---
 
-## Checkpoint 1: Database schema + Rust types + queries
+## Checkpoint 1: Schema, shared types, and ownership-safe queries
 
-**Files:** `migrations/schema.sql`, `src/db/mod.rs`, `src/test_utils.rs`
+**Files:** `migrations/schema.sql`, `src/types.rs`, `src/db/mod.rs`, `src/test_utils.rs`
 
-### 1a. Schema additions (append to schema.sql, additive-only)
+### 1a. Schema
+
+Add the following objects to `migrations/schema.sql`:
 
 ```sql
--- User-owned collections (folders for recipes)
 CREATE TABLE IF NOT EXISTS collections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    parent_collection_id UUID,
     name VARCHAR(100) NOT NULL,
     description TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (id, owner_id),
+    CHECK (parent_collection_id IS NULL OR parent_collection_id <> id),
+    FOREIGN KEY (parent_collection_id, owner_id)
+        REFERENCES collections(id, owner_id) ON DELETE CASCADE,
+    CHECK (btrim(name) <> '')
 );
 
-CREATE INDEX IF NOT EXISTS idx_collections_owner_id ON collections(owner_id);
-CREATE INDEX IF NOT EXISTS idx_collections_updated_at ON collections(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_collections_owner_updated
+    ON collections(owner_id, updated_at DESC);
 
--- Junction table: recipes in collections (many-to-many with ordering)
+CREATE INDEX IF NOT EXISTS idx_collections_parent_order
+    ON collections(owner_id, parent_collection_id, sort_order, lower(name));
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_collections_sibling_name
+    ON collections(owner_id, parent_collection_id, lower(name))
+    NULLS NOT DISTINCT;
+
 CREATE TABLE IF NOT EXISTS collection_recipes (
     collection_id UUID NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
     recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
-    sort_order INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (collection_id, recipe_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_collection_recipes_recipe_id ON collection_recipes(recipe_id);
+CREATE INDEX IF NOT EXISTS idx_collection_recipes_order
+    ON collection_recipes(collection_id, sort_order, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_collection_recipes_recipe_id
+    ON collection_recipes(recipe_id);
 ```
 
-### 1b. Rust types (append to src/db/mod.rs)
+The `NULLS NOT DISTINCT` index makes sibling names case-insensitively unique, including among root collections. The same name is allowed in different parent folders.
+
+### 1b. Shared types
+
+Add shared types in `src/types.rs`:
 
 ```rust
-#[derive(Debug, Clone, sqlx::FromRow)]
 pub struct Collection {
     pub id: Uuid,
     pub owner_id: Uuid,
+    pub parent_collection_id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, sqlx::FromRow)]
-pub struct CollectionRecipe {
-    pub collection_id: Uuid,
-    pub recipe_id: Uuid,
     pub sort_order: i32,
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, sqlx::FromRow)]
-pub struct CollectionWithCount {
+pub struct CollectionSummary {
     pub id: Uuid,
-    pub owner_id: Uuid,
+    pub parent_collection_id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub sort_order: i32,
+    pub child_count: i64,
     pub recipe_count: i64,
+    pub updated_at: DateTime<Utc>,
+}
+
+pub struct CollectionRecipeList {
+    pub recipes: Vec<Recipe>,
+    pub total_count: i64,
+    pub has_more: bool,
+}
+
+pub struct RecipeOrder {
+    pub recipe_id: Uuid,
+    pub sort_order: i32,
+}
+
+pub struct CollectionOrder {
+    pub collection_id: Uuid,
+    pub sort_order: i32,
+}
+
+pub struct CollectionContents {
+    pub collection: CollectionSummary,
+    pub breadcrumbs: Vec<CollectionSummary>,
+    pub child_collections: Vec<CollectionSummary>,
+    pub recipes: CollectionRecipeList,
 }
 ```
 
-### 1c. Query functions (12 total, append to src/db/mod.rs)
+Add `Serialize`, `Deserialize`, `Clone`, `Debug`, and `PartialEq` as appropriate for server-function payloads. `CollectionRecipe` can remain server-only because it is an internal junction-row type.
+
+### 1c. Ownership-safe query functions
+
+Implement query functions that either include the owner ID in the SQL predicate or are used only inside an already owner-locked transaction:
 
 ```rust
-// Collection CRUD
-pub async fn insert_collection(pool: &PgPool, owner_id: Uuid, name: String, description: Option<String>) -> Result<Collection, DbError>
-pub async fn get_collection_by_id(pool: &PgPool, id: Uuid) -> Result<Option<Collection>, DbError>
-pub async fn get_collection_by_id_and_owner(pool: &PgPool, id: Uuid, owner_id: Uuid) -> Result<Option<Collection>, DbError>
-pub async fn get_collections_by_owner(pool: &PgPool, owner_id: Uuid) -> Result<Vec<CollectionWithCount>, DbError>
-pub async fn update_collection(pool: &PgPool, id: Uuid, owner_id: Uuid, name: String, description: Option<String>) -> Result<Collection, DbError>
-pub async fn delete_collection(pool: &PgPool, id: Uuid, owner_id: Uuid) -> Result<bool, DbError>
+insert_collection(executor, owner_id, parent_collection_id, name, description)
+    get_collection_by_id_and_owner(executor, collection_id, owner_id)
+get_root_collections(executor, owner_id)
+get_child_collections(executor, parent_collection_id, owner_id)
+get_all_collections_by_owner(executor, owner_id)
+get_collection_breadcrumbs(executor, collection_id, owner_id)
+get_collection_descendants(executor, collection_id, owner_id)
+update_collection(executor, collection_id, owner_id, name, description)
+move_collection(executor, collection_id, owner_id, new_parent_collection_id)
+delete_collection(executor, collection_id, owner_id)
 
-// Collection recipes (junction)
-pub async fn add_recipe_to_collection(pool: &PgPool, collection_id: Uuid, recipe_id: Uuid) -> Result<bool, DbError>
-pub async fn remove_recipe_from_collection(pool: &PgPool, collection_id: Uuid, recipe_id: Uuid) -> Result<bool, DbError>
-pub async fn get_collection_recipes(pool: &PgPool, collection_id: Uuid, offset: i64, limit: i64) -> Result<Vec<Recipe>, DbError>
-pub async fn get_recipe_collections(pool: &PgPool, recipe_id: Uuid, user_id: Uuid) -> Result<Vec<Collection>, DbError>
-pub async fn reorder_collection_recipes(pool: &PgPool, collection_id: Uuid, recipe_orders: Vec<(Uuid, i32)>) -> Result<(), DbError>
-pub async fn get_collection_recipe_count(pool: &PgPool, collection_id: Uuid) -> Result<i64, DbError>
+add_recipe_to_collection(executor, collection_id, owner_id, recipe_id)
+remove_recipe_from_collection(executor, collection_id, owner_id, recipe_id)
+get_collection_recipes(executor, collection_id, owner_id, offset, limit)
+get_recipe_collections(executor, recipe_id, owner_id)
+reorder_collection_recipes(executor, collection_id, owner_id, ordered_recipe_ids)
+reorder_child_collections(executor, owner_id, parent_collection_id, ordered_collection_ids)
+get_collection_recipe_count(executor, collection_id, owner_id)
 ```
 
-### 1d. Error type additions (append to DbError)
+`add_recipe_to_collection` must verify both:
+
+1. The current user owns the collection.
+2. The current user can access the recipe through the existing visibility rules: own recipe, `public`, or `unlisted`.
+
+Collection recipe queries must apply the same visibility predicate when returning recipes and counts. This prevents a recipe that later becomes private from leaking through a collection.
+
+The add query must lock the collection row before calculating `MAX(sort_order) + 1`. Membership changes must update `collections.updated_at` in the same transaction.
+
+`get_collection_recipes` returns only recipes directly inside the requested folder. Recursive browsing happens by entering child collections; it must not silently flatten the entire subtree.
+
+`get_collection_breadcrumbs` uses a recursive CTE from the current folder to the root and returns an owner-checked, root-to-leaf path. `get_collection_descendants` uses a recursive CTE and is used by `move_collection` to reject the collection itself or any descendant as the new parent.
+
+`move_collection` locks the affected collection and destination parent (when non-root), verifies both belong to the current owner, checks the cycle rule, and updates `parent_collection_id`, `sort_order`, and `updated_at` atomically. The destination sibling order is appended and the old parent’s order is normalized.
+
+Hierarchy mutations acquire locks in a deterministic order (owner row, then parent/collection IDs) to avoid deadlocks when moving or reordering folders concurrently. Root reorders use the same owner-row serialization as root appends.
+
+`reorder_collection_recipes` must verify that the submitted IDs are exactly the collection’s current membership, lock the collection, update all order values, and update `collections.updated_at`. Do not build dynamic SQL from untrusted recipe IDs.
+
+`reorder_child_collections` must verify that the submitted IDs are exactly the direct children of the selected parent (or root), lock the affected rows, normalize `sort_order`, and update the parent’s `updated_at` when there is a parent.
+
+### 1d. Errors and test helpers
+
+Preserve existing `DbError` variants and add only the errors needed by the current implementation, for example:
 
 ```rust
-CollectionNotFound,
-CollectionAlreadyExists,  // For duplicate name prevention if needed
-RecipeAlreadyInCollection,  // For unique constraint violation
+CollectionNotFound(Uuid),
+CollectionParentNotFound(Uuid),
+CollectionNameTaken,
+CollectionCycle,
+RecipeNotAccessible(Uuid),
+RecipeAlreadyInCollection,
+InvalidCollectionOrder,
 ```
 
-### 1e. test_utils.rs changes
+Map the sibling-name uniqueness violation to a controlled `CollectionNameTaken` error.
 
-- Add collections table creation to apply_test_schema()
-- Add collection_recipes table creation to apply_test_schema()
-- Add helper: `insert_test_collection(pool, owner_id, name)` — creates collection
-- Add helper: `insert_test_collection_recipe(pool, collection_id, recipe_id, sort_order)` — adds recipe to collection
+Update `apply_test_schema()` and add helpers for users, collections, published recipes, and collection membership.
 
 **Verify:**
-- `cargo test --features server` — all 12 query functions tested against local Postgres
-- `cargo check --target wasm32-unknown-unknown` — zero errors (types are `#[cfg(feature = "server")]`)
-- Migration applies cleanly on fresh DB via `just migrate`
 
-**Risk:** Low. Straightforward SQL + SQLx pattern matching existing code.
+- Fresh `just migrate` creates both tables and indexes.
+- Owner guards work for every collection read/write query.
+- Public, unlisted, private, and inaccessible recipe cases are covered.
+- Concurrent appends do not create ambiguous duplicate order values.
+- Reordering normalizes order correctly and updates `updated_at`.
+- `cargo test --features server` and `cargo check --features server` pass.
+
+**Risk:** Medium. Ownership and visibility checks are more important than the table definitions.
 
 ---
 
-## Checkpoint 2: Server functions (API layer)
+## Checkpoint 2: Server functions and authorization
 
-**File:** `src/api/collection.rs` (new module)
+**Files:** `src/api/collection.rs` (new), `src/api/mod.rs`, `src/types.rs`
 
-**Server functions** (10 total, all `#[server]`):
+All server functions extract the authenticated user from the session. No function accepts a user ID from the client for authorization.
 
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `create_collection` | `(user_id_str, name, description)` | Insert collection row, return Collection |
-| `get_collection` | `(collection_id_str, user_id_str)` | Fetch collection + recipe count (ownership-gated) |
-| `list_my_collections` | `(user_id_str)` | List user's collections with recipe counts |
-| `update_collection` | `(collection_id_str, user_id_str, name, description)` | Update name/description, refresh updated_at |
-| `delete_collection` | `(collection_id_str, user_id_str)` | Delete collection (ownership-gated) |
-| `add_recipe_to_collection` | `(collection_id_str, user_id_str, recipe_id_str)` | Add recipe to collection with sort_order |
-| `remove_recipe_from_collection` | `(collection_id_str, user_id_str, recipe_id_str)` | Remove recipe from collection |
-| `get_collection_recipes` | `(collection_id_str, user_id_str, offset, limit)` | Paginated recipes in collection |
-| `reorder_collection_recipes` | `(collection_id_str, user_id_str, recipe_orders)` | Bulk reorder recipes in collection |
-| `get_recipe_collections` | `(recipe_id_str, user_id_str)` | Collections containing a recipe |
+Implement:
 
-**Serialization types** (shared between client and server):
+```text
+create_collection(name, description, parent_collection_id)
+get_collection(collection_id) -> CollectionContents
+list_root_collections()
+list_collection_children(parent_collection_id)
+list_my_collections() -> Vec<CollectionSummary>
+move_collection(collection_id, new_parent_collection_id)
+reorder_child_collections(parent_collection_id, ordered_collection_ids)
+update_collection(collection_id, name, description)
+delete_collection(collection_id)
+add_recipe_to_collection(collection_id, recipe_id)
+remove_recipe_from_collection(collection_id, recipe_id)
+get_collection_recipes(collection_id, offset, limit)
+reorder_collection_recipes(collection_id, ordered_recipe_ids)
+get_recipe_collections(recipe_id) -> Vec<Uuid>
+```
 
-- `CollectionSummary { id: Uuid, name: String, recipe_count: i64 }` — sidebar item
-- `CollectionDetail { collection: Collection, recipe_count: i64, recipes: Vec<RecipeSummary> }` — detail response
-- `RecipeOrder { recipe_id: Uuid, sort_order: i32 }` — reorder payload
+Each function should parse UUIDs, extract the session user, and map ownership/access failures to safe errors. `get_collection` and all membership reads are owner-only.
 
-**Module registration:** Add `collection` module to `src/api/mod.rs`.
+Use shared response types from `src/types.rs`. `get_collection` returns `CollectionContents`, including the current folder, root-to-leaf breadcrumbs, direct child folders, and direct recipe files. Root and child listing functions return `CollectionSummary`; `get_collection_recipes` returns `CollectionRecipeList`, using the existing shared `Recipe` type rather than an undefined `RecipeSummary` type. `get_recipe_collections` returns the IDs of the current user’s collections containing the recipe, which is sufficient for checkbox state.
 
-**Verify:**
-- `cargo check --features server` — all server functions compile
-- Manual test: call `create_collection` server function from test component, verify DB rows
-- Ownership gating: calling `get_collection` with wrong `user_id` returns error
+Creating with `parent_collection_id = None` creates a root folder. Creating with a parent creates a child folder after verifying that the parent belongs to the current user. Moving to `None` moves a folder to the root. Server functions trim names before storing them and map self/descendant moves, cross-owner parents, and sibling name collisions to controlled errors. `list_my_collections` returns all owned folder summaries for the membership picker; primary navigation still uses root/child queries.
 
-**Risk:** Low. Follows same pattern as recipe server functions.
+**Tests:**
+
+- unauthenticated requests fail
+- wrong-user requests cannot read or mutate collections
+- users can add their own private recipes
+- users can add accessible public/unlisted recipes
+- users cannot add another user’s private recipe
+- drafts are not accepted as collection members
+- invalid UUIDs and duplicate membership return controlled errors
+- root and nested collection creation returns the expected parent and sibling order
+- root appends remain correctly ordered under concurrent creation
+- same-name siblings are rejected, while the same name is allowed in separate folders
+- moving a collection to root or another folder works; moving into itself or a descendant fails
+
+**Risk:** Medium. The important behavior is that authorization is derived from the session and enforced twice: API boundary and SQL ownership predicate.
 
 ---
 
-## Checkpoint 3: Collection CRUD (create, view, edit, delete)
+## Checkpoint 3: Collection CRUD and routes
 
-**Files:** `src/pages/collection_new.rs` (new), `src/pages/collection_detail.rs` (new), `src/pages/collection_edit.rs` (new), `src/components/base/collection_form.rs` (new), `src/main.rs` (new routes)
+**Files:** `src/pages/collection_list.rs`, `src/pages/collection_new.rs` (new), `src/pages/collection_detail.rs`, `src/pages/collection_edit.rs` (new), `src/components/base/collection_form.rs` (new), `src/main.rs`, `src/pages/mod.rs`, `src/middleware/auth.rs`
 
 ### 3a. Routes
 
+Use UUID strings consistently:
+
 ```rust
-#[route("/collections/new")] CollectionNew
+#[route("/collections")] CollectionList {}
+#[route("/collections/new")] CollectionNew {}
 #[route("/collections/:id")] CollectionDetail { id: String }
 #[route("/collections/:id/edit")] CollectionEdit { id: String }
 ```
 
-### 3b. Auth middleware
+Replace the existing placeholder collection pages. Keep `/collections` as a useful collection browser/list page rather than leaving a placeholder route behind.
 
-Add to protected paths:
-- `/collections/new`
-- `/collections/:id` (UUID pattern)
-- `/collections/:id/edit` (UUID pattern)
+Update `src/middleware/auth.rs` so `/collections/:id` and `/collections/:id/edit` use UUID validation. Coordinate this change with NOMS-010’s route updates instead of replacing the other agent’s work.
 
-Update `is_uuid_route` to handle `/collections/` paths alongside `/recipes/`.
+### 3b. Collection form
 
-### 3c. CollectionForm component
+- Name required after trimming, maximum 100 characters.
+- Description optional, maximum 500 characters.
+- Default new name: `Untitled Collection`.
+- Create and edit use the same form component.
+- Server validation repeats the client validation.
 
-- Props: `initial_data: Option<CollectionFormData>`, `on_submit: Callback<CollectionFormData>`, `is_editing: bool`
-- State: name (required, max 100 chars), description (optional, max 500 chars)
-- Validation: name required, length constraints
-- Submit: collect fields into `CollectionFormData`, call `on_submit` callback
-- Cancel button: navigates to dashboard or collection detail (depending on context)
+### 3c. Pages
 
-### 3d. collection_new.rs
-
-- Render `CollectionForm { initial_data: None, on_submit: create_handler, is_editing: false }`
-- `create_handler`: calls `create_collection` server function
-- On success: redirect to `/collections/{id}`
-- On error: show error message
-- Loading state during save
-
-### 3e. collection_detail.rs
-
-- Fetch collection via `get_collection` server function on mount
-- Fetch recipes via `get_collection_recipes` server function on mount
-- Loading state: show `LoadingSpinner` while fetching
-- Error state: "Collection not found" or "You don't have permission"
-- Render:
-  - Collection name, description, recipe count
-  - "Edit" and "Delete" buttons in header (only visible to owner)
-  - Recipe card grid (reuse `RecipeCard`)
-  - Empty state: "This collection is empty" with "Add recipes" button
-
-### 3f. collection_edit.rs
-
-- Fetch collection on mount via `get_collection` server function
-- Pre-populate `CollectionForm` with existing data
-- `edit_handler`: calls `update_collection` server function
-- On success: redirect to detail page
-- On error: show error message
-
-### 3g. Delete flow
-
-- "Delete" button triggers confirmation dialog
-- Confirmation: "Delete this collection? Recipes in the collection will not be deleted."
-- On confirm: call `delete_collection` server function
-- On success: redirect to `/dashboard`
-- On error: show toast message
+- `collection_list.rs`: owner’s root folders with counts and an empty state.
+- `collection_new.rs`: create a root folder or a child folder when opened from a collection, then redirect to detail.
+- `collection_detail.rs`: owner-only detail page with breadcrumbs, child-folder navigation, direct recipe files, recipe count, empty state, edit/delete controls, and “New subcollection”.
+- `collection_edit.rs`: load, rename, validate, optionally move to another folder/root, and redirect back to detail.
 
 **Verify:**
-- Create collection with name and description → appears in DB
-- Navigate to collection detail → shows name, description, empty state
-- Edit collection → name/description updated, updated_at refreshed
-- Delete collection → removed from DB, redirect to dashboard
-- Non-owner sees permission error on collection detail
-- `cargo clippy --target wasm32-unknown-unknown` — zero warnings
 
-**Risk:** Low. Standard CRUD pattern matching recipe pages.
+- UUID collection routes work.
+- Create, view, edit, and delete flows work.
+- Deleting a collection does not delete recipes.
+- Non-owners receive a safe permission/not-found response.
+- Existing placeholder pages are fully replaced.
+- Breadcrumbs and child-folder links preserve the current hierarchy.
+- Move controls cannot offer the current folder or one of its descendants as a destination.
 
 ---
 
-## Checkpoint 4: Dashboard sidebar
+## Checkpoint 4: Dashboard collection navigation
 
-**Files:** `src/pages/dashboard.rs`, `src/components/base/collection_sidebar.rs` (new)
+**Files:** `src/pages/dashboard.rs`, `src/components/base/collection_sidebar.rs` (new), `src/components/base/mod.rs`
 
-### 4a. CollectionSidebar component
+Add `CollectionSidebar`:
 
-- Fetch collections via `list_my_collections` server function on mount
-- Render:
-  - "All Recipes" link at top (navigates to `/dashboard`)
-  - Collection list: each item shows name + recipe count badge
-  - "New Collection" button at bottom (navigates to `/collections/new`)
-- Clicking collection navigates to `/collections/{id}`
-- Empty state: no sidebar section shown if user has no collections
-- Collections sorted by `updated_at DESC`
+- “All Recipes” link to `/dashboard`.
+- Owner’s root collections with recipe count badges and expand/collapse controls.
+- Lazily load or prefetch child collections as the user expands a folder; render the tree using each collection’s `parent_collection_id`.
+- “New Collection” link to `/collections/new`, plus a “New subcollection” action on each expanded folder.
+- Sibling folders ordered by `sort_order ASC`, with `updated_at` used only as a secondary display fallback.
+- Hidden or collapsed empty state when no collections exist.
 
-### 4b. dashboard.rs changes
+The sidebar is a navigation tree, not a recursive recipe listing: selecting a folder opens that folder and shows only its direct child folders and recipe files.
 
-- Add sidebar slot for `CollectionSidebar`
-- Layout: sidebar on left, recipe grid on right
-- Responsive: sidebar collapses to hamburger menu on narrow screens
-- "All Recipes" is the default view (existing behavior)
+The sidebar must not fetch or display drafts directly; NOMS-010 owns draft presentation. Coordinate the final dashboard composition after the NOMS-010 dashboard changes are merged.
 
 **Verify:**
-- Dashboard shows collections in sidebar with recipe counts
-- Clicking collection navigates to collection detail page
-- "All Recipes" link returns to unfiltered dashboard
-- "New Collection" button navigates to create page
-- Empty state: no sidebar shown when no collections exist
-- Collections sorted by most recently modified first
 
-**Risk:** Low. Read-only list with navigation.
+- Collection counts update after membership changes.
+- Sidebar navigation works on desktop and narrow layouts.
+- Existing dashboard recipe pagination and draft UI remain intact.
+
+**Risk:** Medium. `dashboard.rs` is a shared integration file with NOMS-010.
 
 ---
 
-## Checkpoint 5: Add/remove recipes from collection
+## Checkpoint 5: Add and remove recipes
 
 **Files:** `src/pages/recipe_detail.rs`, `src/pages/collection_detail.rs`, `src/components/base/add_to_collection_dropdown.rs` (new)
 
-### 5a. AddToCollectionDropdown component
+### 5a. AddToCollectionDropdown
 
-- Props: `recipe_id: Uuid`
-- Fetch user's collections via `get_recipe_collections` on mount (to know which are already checked)
-- Fetch all user's collections via `list_my_collections` on mount
-- Render: dropdown with checkboxes for each collection
-- Checked state: collection already contains this recipe
-- Toggle: add or remove recipe from collection
-- Optimistic UI: update checkbox immediately, show error on failure
+- Render only for an authenticated user.
+- Load all of the user’s collections and the recipe’s current memberships.
+- Show one checkbox per owned collection, labeled with its breadcrumb path so identically named folders in different branches are distinguishable.
+- Add/remove through the server functions.
+- Use optimistic state only after ownership and access checks are already enforced server-side.
+- Refresh counts after successful changes.
 
-### 5b. recipe_detail.rs changes
+### 5b. Recipe detail integration
 
-- Add "Add to Collection" button in header area
-- Button opens `AddToCollectionDropdown`
-- Dropdown shows all user's collections with checkboxes
+Add “Add to Collection” to the recipe detail page for authenticated viewers. A user may add any currently accessible published recipe, including another user’s public/unlisted recipe.
 
-### 5c. collection_detail.rs changes
+### 5c. Collection detail integration
 
-- Add "Remove" button next to each recipe card in collection grid
-- Remove calls `remove_recipe_from_collection` server function
-- Optimistic removal: remove card from UI immediately, re-fetch on error
-
-### 5d. Sort order on add
-
-- New recipe gets `MAX(sort_order) + 1` in `collection_recipes`
-- If collection is empty, first recipe gets `sort_order = 0`
+Add a Remove control next to each recipe card. Removal is owner-gated and must update the collection count and `updated_at`.
 
 **Verify:**
-- "Add to Collection" dropdown shows all user's collections
-- Checkbox reflects whether recipe is already in collection
-- Adding recipe to collection → appears in collection grid
-- Removing recipe from collection → disappears from grid
-- Recipe can be in multiple collections simultaneously
-- Adding same recipe twice to same collection prevented (unique constraint)
-- Recipe count badge updates correctly
 
-**Risk:** Medium. Optimistic UI with rollback on error needs careful state management.
+- A recipe can belong to multiple collections.
+- Duplicate membership is rejected by the primary key.
+- Adding appends to the end.
+- Removing the last recipe leaves the collection intact.
+- Private or inaccessible recipes do not leak through collection results.
+
+**Risk:** Medium. `recipe_detail.rs` is another shared integration file with NOMS-010.
 
 ---
 
-## Checkpoint 6: Reorder recipes in collection
+## Checkpoint 6: Move and reorder folders and recipe files
 
 **Files:** `src/pages/collection_detail.rs`, `src/components/base/reorder_handle.rs` (new)
 
-### 6a. ReorderHandle component
+Use up/down controls for the first implementation. Drag-and-drop can be added later.
 
-- Props: `index: usize`, `total: usize`, `on_move_up: Callback`, `on_move_down: Callback`
-- Render: up/down arrow buttons
-- Disabled at boundaries (first item can't move up, last can't move down)
-- Alternative: drag handle for drag-and-drop (future enhancement)
+- Recipe-file move controls update local order immediately, debounce the save after 500ms of inactivity, and send the complete ordered recipe ID list.
+- Child-folder move controls send the complete ordered child collection ID list for the current parent.
+- A move/reparent action sends the target parent ID or `None` for root. The UI excludes the current folder and all descendants from the destination choices.
+- The server verifies membership or direct-child membership, locks the affected rows, normalizes sort values, and commits atomically.
+- On failure or stale state, reload the collection order.
 
-### 6b. collection_detail.rs changes
+Do not use dynamic SQL string interpolation for the submitted IDs. Parameterize each update or use a safe transaction loop.
 
-- Each recipe card in collection grid shows `ReorderHandle`
-- Up/down buttons update local state immediately (optimistic)
-- Debounced save: call `reorder_collection_recipes` after 500ms of no changes
-- Reorder logic:
-  - Moving item at index `i` to index `j`: swap sort_orders of affected items
-  - Only affected rows updated (not full renumbering)
-  - Single transaction for atomicity
+**Tests:**
 
-### 6c. Reorder query
-
-```sql
--- Bulk update sort_order for affected recipes
-UPDATE collection_recipes
-SET sort_order = CASE recipe_id
-    WHEN $1 THEN $2  -- recipe_id -> new_sort_order
-    WHEN $3 THEN $4
-    -- ... more pairs
-END
-WHERE collection_id = $N AND recipe_id IN ($1, $3, ...);
-```
-
-### 6d. Display order
-
-- Recipes in collection displayed in `sort_order ASC`
-- Query: `ORDER BY cr.sort_order ASC, cr.created_at ASC` (tie-break by creation time)
-
-**Verify:**
-- Up/down buttons reorder recipes in collection grid
-- Order persists on page reload
-- Moving first item up is disabled
-- Moving last item down is disabled
-- Reorder only affects recipes in the collection
-- Other collections are unaffected
-- Debounced save doesn't fire during rapid reordering
-
-**Risk:** Medium. Optimistic reordering with debounced save needs careful synchronization.
+- first/last boundary controls are disabled
+- order persists after reload
+- rapid moves produce one final save
+- concurrent reorders do not create duplicate or negative order values
+- other collections remain unchanged
+- moving a folder preserves its descendants and memberships
+- moving a folder into itself or a descendant is rejected without changing either tree
 
 ---
 
-## Checkpoint 7: Edge cases + polish
+## Checkpoint 7: Edge cases, integration, and polish
 
-**Files:** All collection-related files
+**Files:** collection-related files plus shared integration files as needed
 
-### 7a. Ownership guards
+### Ownership and access
 
-- Verify all server functions check ownership before write operations
-- Read operations: user can only view their own collections
-- Write operations: user can only modify their own collections
-- Recipe access: user can add any recipe they can view to their collections (own recipes + public recipes from others)
+- All collection operations are owner-gated.
+- Public/unlisted recipe membership is checked at add time and read time.
+- Drafts cannot be added because collection membership references `recipes`, not `recipe_drafts`.
+- Collection contents are never public in this phase.
 
-### 7b. Cascade behavior
+### Cascade behavior
 
-- Deleting collection cascades to `collection_recipes` (FK ON DELETE CASCADE)
-- Deleting recipe cascades from `collection_recipes` (FK ON DELETE CASCADE)
-- Deleting user cascades to collections and collection_recipes
+- Deleting a collection recursively cascades to child collections through the self-referential foreign key, and then to every descendant’s `collection_recipes` row.
+- Deleting a recipe cascades its collection memberships.
+- Deleting a user cascades collections and memberships.
+- Deleting or hiding a source recipe does not delete unrelated collections.
 
-### 7c. Empty states
+### Hierarchy behavior
 
-- Collection with no recipes: "This collection is empty" with "Add recipes" button
-- User with no collections: sidebar section hidden
-- Dashboard with no recipes in collection: empty grid with helpful message
+- Root and nested folders use the same collection detail route and expose root-to-leaf breadcrumbs.
+- Direct folder listings show child folders and direct recipe files; descendants are not flattened into the parent view.
+- Sibling names are case-insensitively unique, but names may repeat in different branches.
+- Self moves, descendant moves, cross-owner parents, and invalid reorder lists fail atomically.
+- Very deep trees must not overflow the UI; the first implementation should use bounded indentation and allow navigation through breadcrumbs.
 
-### 7d. Error states
+### Shared-file integration
 
-- Collection not found: "Collection not found" with link to dashboard
-- Permission denied: "You don't have permission to view this collection"
-- Network error: retry button, graceful degradation
-- Duplicate recipe in collection: error message, no duplicate added
+After NOMS-010 is integrated, verify the combined changes in:
 
-### 7e. URL state
-
-- Collection detail URL: `/collections/{id}` — shareable
-- Deep link to collection works for owner, shows error for non-owner
-
-### 7f. Tests
-
-- test_create_collection: collection created with correct owner
-- test_get_collection_by_owner: returns collection, wrong owner returns None
-- test_add_recipe_to_collection: recipe added, sort_order set correctly
-- test_remove_recipe_from_collection: recipe removed, junction row deleted
-- test_reorder_recipes: sort_orders updated correctly
-- test_delete_collection_cascade: collection deleted, junction rows cascade, recipes intact
-- test_duplicate_recipe_prevented: unique constraint prevents duplicate
-- test_collection_with_count: recipe count accurate
-- test_add_recipe_multiple_collections: recipe in multiple collections works
-- test_add_other_users_public_recipe: can add public recipe from other user
-
-**Verify:**
-- All ownership guards work correctly
-- Cascade deletes work as expected
-- Empty states display correctly
-- Error states display correctly
-- All tests pass
-- `cargo clippy` clean on both targets
-
-**Risk:** Low. Verification and polish pass.
+- `src/main.rs`
+- `src/middleware/auth.rs`
+- `src/pages/dashboard.rs`
+- `src/pages/recipe_detail.rs`
+- `src/components/base/mod.rs`
+- `src/api/mod.rs`
+- `src/db/mod.rs`
+- `src/test_utils.rs`
+- `migrations/schema.sql`
 
 ---
 
-## Dependencies Summary
+## Testing strategy
 
-| Crate | Feature | Purpose |
-|-------|---------|---------|
-| `uuid` | both | Collection ID in URL, server function params |
-| `chrono` | both | Timestamp serialization in responses |
-| `sqlx` | `server` | Already present, no changes needed |
-| `dioxus` | both | Already present, `#[server]` macro for API functions |
-| `serde` | both | Already present, serialization for server functions |
+- Unit tests for collection validation and order normalization.
+- Integration tests with the existing `pgtemp` test database helpers.
+- Query tests for every ownership and visibility path.
+- Hierarchy tests for root/nested creation, breadcrumbs, same-owner parent enforcement, sibling-name uniqueness, cycle-safe moves, recursive deletion, and independent folder/file ordering.
+- Transaction tests for concurrent appends, reorder, and rollback.
+- Server-function tests for session-derived authorization and UUID parsing.
+- UI tests/manual checks for collection CRUD, dashboard navigation, membership, and reorder.
+- `cargo test --features server`
+- `cargo check --features server`
+- `cargo check --target wasm32-unknown-unknown`
+- `cargo clippy --features server --all-targets -- -D warnings`
 
-No new crate dependencies required.
-
----
-
-## File Structure
-
-```
-src/
-├── api/
-│   ├── mod.rs                    # + collection module re-export
-│   └── collection.rs (new)       # Server functions + serialization types
-├── db/
-│   └── mod.rs                    # + Collection, CollectionRecipe, CollectionWithCount types + 12 query functions
-├── components/
-│   └── base/
-│       ├── add_to_collection_dropdown.rs (new)  # Dropdown with checkboxes for collections
-│       ├── collection_form.rs (new)             # Create/edit collection form
-│       ├── collection_sidebar.rs (new)          # Dashboard sidebar with collection list
-│       └── reorder_handle.rs (new)              # Up/down buttons for reordering
-├── middleware/
-│   └── auth.rs                   # Updated: UUID route matching for /collections/:id
-├── pages/
-│   ├── collection_detail.rs (new)  # Collection detail page with recipe grid
-│   ├── collection_edit.rs (new)    # Edit collection page
-│   ├── collection_new.rs (new)     # Create collection page
-│   ├── dashboard.rs                # + CollectionSidebar integration
-│   └── recipe_detail.rs            # + AddToCollectionDropdown button
-└── main.rs                       # + CollectionNew, CollectionDetail, CollectionEdit routes
-migrations/
-└── schema.sql                    # + collections, collection_recipes tables
-```
+The WASM check validates shared client types; it does not replace native server tests.
 
 ---
 
-## Migration Notes
+## Migration and rollback
 
-- Schema is additive-only: `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`
-- No `ALTER TABLE` or `DROP` statements
-- Safe to apply on existing database (auth, recipe, and versioning tables unaffected)
-- Applied via existing `just migrate` command (pgschema)
-
----
-
-## Testing Strategy
-
-Each checkpoint has self-contained verification:
-- **Checkpoint 1:** Unit tests for all 12 query functions against test DB
-- **Checkpoint 2:** Compile check + manual server function test
-- **Checkpoint 3:** Manual E2E testing: create → view → edit → delete collection
-- **Checkpoint 4:** Sidebar renders collections with counts, navigation works
-- **Checkpoint 5:** Add/remove recipes from collections, junction table correct
-- **Checkpoint 6:** Reorder recipes, sort_order persists, display reflects order
-- **Checkpoint 7:** Edge cases, ownership guards, cascade deletes, empty/error states
-- **All checkpoints:** `cargo clippy` clean on both `wasm32` and `x86_64` targets
+- `migrations/schema.sql` remains the declarative source of truth.
+- The collection schema is additive and requires no data backfill.
+- Apply through the existing `just migrate` flow.
+- Existing development data may be discarded if needed while NOMS-010 and NOMS-011 are being integrated.
+- Development rollback can recreate the database and rerun `just migrate`; do not add destructive rollback SQL to the plan.
 
 ---
 
-## Rollback Plan
+## Dependencies and parallelization
 
-If any checkpoint reveals issues:
-- Schema tables can be dropped manually: `DROP TABLE collection_recipes, collections CASCADE`
-- Code changes are isolated to new files + minimal modifications to existing files
-- Each checkpoint is independently reversible
-- Dashboard sidebar can be hidden by reverting dashboard.rs changes
-- Recipe detail page changes can be reverted without affecting collection pages
-
----
-
-## Dependencies Table
-
-| Checkpoint | Depends On | Can Parallelize With |
+| Checkpoint | Depends On | Parallelization |
 |---|---|---|
-| 1 (Schema) | NOMS-008 + NOMS-010 complete | — |
-| 2 (Server functions) | 1 (types defined) | — |
-| 3 (CRUD pages) | 2 (server functions) | — |
-| 4 (Sidebar) | 2 (list_my_collections) | 5, 6 |
-| 5 (Add/remove) | 2 (add/remove functions) | 4, 6 |
-| 6 (Reorder) | 2 (reorder function) + 3 (detail page) | 4, 5 |
-| 7 (Edge cases) | All previous | — |
+| 1 Schema/types/queries | NOMS-008 published recipe model | Can proceed alongside NOMS-010 in a separate worktree; shared schema/db files need merge review |
+| 2 Server functions | Checkpoint 1 | Can proceed before NOMS-010 finishes |
+| 3 CRUD/routes | Checkpoint 2 | Mostly independent; auth/main files may conflict with NOMS-010 |
+| 4 Sidebar | Checkpoint 2 | Defer final dashboard integration until NOMS-010 dashboard work is merged |
+| 5 Membership | Checkpoint 2 + recipe detail | Defer final recipe-detail integration until NOMS-010 recipe-detail work is merged |
+| 6 Reorder | Checkpoint 2 + collection detail | Independent of NOMS-010 |
+| 7 Integration/polish | All previous + NOMS-010 integration | Must run after both feature branches are combined |
