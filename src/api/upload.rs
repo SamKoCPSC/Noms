@@ -35,6 +35,14 @@ use crate::auth::session;
 
 const MAX_FILE_SIZE: usize = 10 * 1024 * 1024; // 10 MB
 
+/// Maximum encoded request body for server-function uploads containing both variants.
+pub(crate) const SERVER_FUNCTION_BODY_LIMIT: usize = 24 * 1024 * 1024; // 24 MiB
+
+#[cfg(feature = "server")]
+pub(crate) fn server_function_body_limit_layer() -> axum::extract::DefaultBodyLimit {
+    axum::extract::DefaultBodyLimit::max(SERVER_FUNCTION_BODY_LIMIT)
+}
+
 /// Validate WebP magic bytes: "RIFF....WEBP" (first 4 + bytes 8-12).
 pub fn validate_webp_magic(bytes: &[u8]) -> bool {
     bytes.len() >= 12 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP"
@@ -741,6 +749,32 @@ mod tests {
             status,
             body_str
         );
+    }
+
+    #[tokio::test]
+    async fn server_function_body_limit_accepts_a_near_limit_request() {
+        assert!(
+            super::SERVER_FUNCTION_BODY_LIMIT >= (MAX_FILE_SIZE * 2) + (64 * 1024),
+            "server-function body limit must include both max-size variants and encoding overhead"
+        );
+
+        let app = Router::new()
+            .route(
+                "/",
+                axum::routing::post(|_: axum::body::Bytes| async { StatusCode::NO_CONTENT }),
+            )
+            .layer(super::server_function_body_limit_layer());
+        let request_body = vec![0u8; super::SERVER_FUNCTION_BODY_LIMIT - 1];
+        let response = app
+            .oneshot(
+                Request::post("/")
+                    .body(AxumBody::from(request_body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NO_CONTENT);
     }
 
     // ── Filename sanitization tests ─────────────────────────────────────────

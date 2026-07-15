@@ -7,12 +7,42 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use dioxus::prelude::*;
 
-use crate::types::{
-    ImageAspectRatio, ImageColorEdit, ImageCropRect, ImageTransformEdit, RecipeImageEdit,
-};
+use crate::types::{ImageColorEdit, ImageCropRect, ImageTransformEdit, RecipeImageEdit};
 
 /// Global counter for unique image element IDs.
 static IMG_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+/// Fixed crop templates supported by the image editor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ImageEditorCropMode {
+    #[default]
+    Rectangle16x9,
+    Ellipse1x1,
+}
+
+impl ImageEditorCropMode {
+    fn target_ratio(self) -> f64 {
+        match self {
+            Self::Rectangle16x9 => 16.0 / 9.0,
+            Self::Ellipse1x1 => 1.0,
+        }
+    }
+
+    fn is_ellipse(self) -> bool {
+        self == Self::Ellipse1x1
+    }
+
+    fn shows_adjustment_controls(self) -> bool {
+        matches!(self, Self::Rectangle16x9 | Self::Ellipse1x1)
+    }
+
+    fn template(self) -> RecipeImageEdit {
+        match self {
+            Self::Rectangle16x9 => RecipeImageEdit::default_rect_16x9(),
+            Self::Ellipse1x1 => RecipeImageEdit::default_ellipse_1x1(),
+        }
+    }
+}
 
 const DEFAULT_EDITOR_STATE: EditorEditState = EditorEditState {
     scale: 1.0,
@@ -88,6 +118,13 @@ pub struct ImageEditorModalProps {
     pub on_save: EventHandler<RecipeImageEdit>,
     /// Called to close the modal (sets the parent's signal to `None`).
     pub on_close: EventHandler<()>,
+    /// Crop geometry and aspect ratio. Recipe editing remains rectangular by
+    /// default; avatars opt into the circular 1:1 template.
+    #[props(default)]
+    pub crop_mode: ImageEditorCropMode,
+    /// Previously saved non-destructive edit state to restore when reopening.
+    #[props(default)]
+    pub initial_edit: Option<RecipeImageEdit>,
 }
 
 #[derive(Props, Clone, PartialEq)]
@@ -211,6 +248,9 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
     let image_url = props.image_url;
     let on_save = props.on_save;
     let on_close = props.on_close;
+    let crop_mode = props.crop_mode;
+    let initial_edit = props.initial_edit;
+    let target_ratio = crop_mode.target_ratio();
 
     // Unique ID for this component instance's image element.
     let img_id = use_hook(|| {
@@ -224,7 +264,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
     #[allow(unused_mut)]
     let mut img_dims = use_signal(|| None::<(f64, f64)>);
 
-    // Scale multiplier: 0.1 (smallest) to 1.0 (maximum 16:9 fit).
+    // Scale multiplier: 0.1 (smallest) to 1.0 (maximum template fit).
     #[allow(unused_mut)]
     let mut scale = use_signal(|| 1.0f64);
 
@@ -290,6 +330,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
     let mut active_edit_start = use_signal(|| None::<EditorEditState>);
     #[allow(unused_mut)]
     let mut active_image_url = use_signal(|| None::<String>);
+    let mut initialized_image_url = use_signal(|| None::<String>);
 
     use_effect(move || {
         let current_url = image_url();
@@ -298,6 +339,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
         }
 
         active_image_url.set(current_url);
+        initialized_image_url.set(None);
         img_dims.set(None);
         apply_editor_state(
             DEFAULT_EDITOR_STATE,
@@ -322,6 +364,38 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
         is_resizing.set(false);
         resize_handle.set(ResizeHandle::None);
         resize_start.set(((0.0, 0.0), 0.0));
+    });
+
+    use_effect(move || {
+        let Some(current_url) = image_url() else {
+            return;
+        };
+        if initialized_image_url().as_ref() == Some(&current_url) {
+            return;
+        }
+        let Some(dimensions) = img_dims() else {
+            return;
+        };
+        let Some(edit) = initial_edit.as_ref() else {
+            initialized_image_url.set(Some(current_url));
+            return;
+        };
+
+        apply_editor_state(
+            editor_state_from_edit(edit, dimensions, target_ratio),
+            scale,
+            offset,
+            stretch_x,
+            stretch_y,
+            rotation,
+            flip_x,
+            flip_y,
+            contrast_r,
+            contrast_g,
+            contrast_b,
+            saturation,
+        );
+        initialized_image_url.set(Some(current_url));
     });
 
     #[cfg(target_arch = "wasm32")]
@@ -414,12 +488,11 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
             return None;
         };
 
-        let target_ratio = 16.0 / 9.0;
         let img_ratio = img_w / img_h;
 
-        // Base crop dimensions at scale 1.0 (maximum 16:9 fit).
+        // Base crop dimensions at scale 1.0 (maximum template fit).
         let (base_crop_w, base_crop_h) = if img_ratio < target_ratio {
-            // Image is narrower than 16:9 — full width.
+            // Image is narrower than the target — full width.
             (img_w, img_w / target_ratio)
         } else {
             // Image is wider or equal — full height.
@@ -456,7 +529,6 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
             return None;
         };
 
-        let target_ratio = 16.0 / 9.0;
         let img_ratio = img_w / img_h;
         let (base_crop_w, base_crop_h) = if img_ratio < target_ratio {
             (img_w, img_w / target_ratio)
@@ -668,6 +740,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                 contrast_b: contrast_b,
                                 saturation: saturation,
                                 crop_rect: crop_rect,
+                                crop_mode: crop_mode,
                                 on_edit_start: on_edit_start!(),
                                 on_edit_commit: on_edit_commit!(),
                             }
@@ -728,6 +801,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                             }
                         }
                         if let Some(_) = img_dims() {
+                            if crop_mode.shows_adjustment_controls() {
                             div {
                                 class: "image-editor__section",
                                 div { class: "image-editor__section-title", "Transform" }
@@ -918,6 +992,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                     on_change: move |val| contrast_b.set(val),
                                 }
                             }
+                            }
                         }
                     }
                 }
@@ -938,6 +1013,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                         onclick: move |evt| {
                             evt.stop_propagation();
                             on_save.call(current_recipe_image_edit(
+                                crop_mode,
                                 (*crop_rect)(),
                                 stretch_x(),
                                 stretch_y(),
@@ -956,6 +1032,107 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod crop_mode_tests {
+    use super::{editor_state_from_edit, ImageEditorCropMode};
+    use crate::types::{ImageCropRect, RecipeImageEdit};
+
+    #[test]
+    fn editor_layout_bounds_preview_and_keeps_content_reachable() {
+        let editor_styles = include_str!("../../../assets/main.css");
+
+        assert!(editor_styles.contains(".image-editor__body {\n    flex: 1 1 auto;"));
+        assert!(editor_styles.contains("    overflow-y: auto;\n}"));
+        assert!(editor_styles.contains(".image-editor__preview-panel {\n    min-width: 0;"));
+        assert!(editor_styles.contains("    height: min(48vh, 560px);"));
+        assert!(editor_styles.contains("    flex: 0 0 auto;"));
+        assert!(editor_styles.contains("    container-type: size;"));
+        assert!(editor_styles.contains("100cqw"));
+        assert!(editor_styles.contains("100cqh"));
+        assert!(editor_styles.contains(
+            ".image-editor__body {\n        overflow: hidden;\n    }\n\n    .image-editor__controls {"
+        ));
+        assert!(editor_styles.contains(
+            "        flex: 1 1 auto;\n        min-height: 0;\n        max-height: none;\n        padding-right: 0;\n        overflow-y: auto;"
+        ));
+        assert!(editor_styles.contains(
+            "@media (min-width: 901px) and (max-height: 720px) {\n    .image-editor__body {\n        overflow: hidden;\n    }"
+        ));
+        assert!(editor_styles.contains(
+            "        flex: 1 1 auto;\n        min-height: 0;\n        max-height: none;\n        overflow-y: auto;\n    }\n}"
+        ));
+    }
+
+    #[test]
+    fn both_crop_modes_show_transform_and_color_controls() {
+        assert!(ImageEditorCropMode::Rectangle16x9.shows_adjustment_controls());
+        assert!(ImageEditorCropMode::Ellipse1x1.shows_adjustment_controls());
+    }
+
+    #[test]
+    fn saved_edit_restores_crop_transform_and_color_state() {
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.crop = ImageCropRect {
+            x: 0.25,
+            y: 0.0,
+            width: 0.5,
+            height: 1.0,
+        };
+        edit.transform.rotation = 30.0;
+        edit.transform.flip_x = true;
+        edit.color.saturation = 0.4;
+
+        let state = editor_state_from_edit(&edit, (800.0, 400.0), 1.0);
+
+        assert_eq!(state.scale, 1.0);
+        assert_eq!(state.offset, (0.0, 0.0));
+        assert_eq!(state.rotation, 30.0);
+        assert!(state.flip_x);
+        assert_eq!(state.saturation, 0.4);
+    }
+}
+
+fn editor_state_from_edit(
+    edit: &RecipeImageEdit,
+    (image_width, image_height): (f64, f64),
+    target_ratio: f64,
+) -> EditorEditState {
+    let image_ratio = image_width / image_height;
+    let (base_crop_width, base_crop_height) = if image_ratio < target_ratio {
+        (image_width, image_width / target_ratio)
+    } else {
+        (image_height * target_ratio, image_height)
+    };
+    let crop_width = edit.crop.width.clamp(0.001, 1.0) * image_width;
+    let crop_height = edit.crop.height.clamp(0.001, 1.0) * image_height;
+    let width_scale = crop_width / base_crop_width;
+    let height_scale = crop_height / base_crop_height;
+    let scale = width_scale.min(height_scale).clamp(0.1, 1.0);
+    let rendered_crop_width = base_crop_width * scale;
+    let rendered_crop_height = base_crop_height * scale;
+    let crop_center_x = edit.crop.x * image_width + crop_width / 2.0;
+    let crop_center_y = edit.crop.y * image_height + crop_height / 2.0;
+    let max_offset_x = (image_width - rendered_crop_width) / 2.0;
+    let max_offset_y = (image_height - rendered_crop_height) / 2.0;
+
+    EditorEditState {
+        scale,
+        offset: (
+            (crop_center_x - image_width / 2.0).clamp(-max_offset_x, max_offset_x),
+            (crop_center_y - image_height / 2.0).clamp(-max_offset_y, max_offset_y),
+        ),
+        stretch_x: edit.transform.stretch_x,
+        stretch_y: edit.transform.stretch_y,
+        rotation: edit.transform.rotation,
+        flip_x: edit.transform.flip_x,
+        flip_y: edit.transform.flip_y,
+        contrast_r: edit.color.contrast_r,
+        contrast_g: edit.color.contrast_g,
+        contrast_b: edit.color.contrast_b,
+        saturation: edit.color.saturation,
     }
 }
 
@@ -1297,6 +1474,7 @@ fn ImageWithCrop(
     contrast_b: Signal<f64>,
     saturation: Signal<f64>,
     crop_rect: Memo<Option<CropRectPct>>,
+    crop_mode: ImageEditorCropMode,
     on_edit_start: EventHandler<()>,
     on_edit_commit: EventHandler<()>,
 ) -> Element {
@@ -1409,7 +1587,7 @@ fn ImageWithCrop(
                         let delta_screen_y = current_screen.1 - start_screen.1;
                         if let Some((iw, ih)) = img_dims_g() {
                             let (dw, dh) = displayed_dims(&img_id_global);
-                            let target_ratio = 16.0 / 9.0;
+                            let target_ratio = crop_mode.target_ratio();
                             let img_ratio = iw / ih;
                             let (base_crop_w, base_crop_h) = if img_ratio < target_ratio {
                                 (iw, iw / target_ratio)
@@ -1671,31 +1849,46 @@ fn ImageWithCrop(
                 // or resize the crop window itself.
                 if let Some(rect) = (*crop_rect)() {
                     div {
-                        class: "image-editor__crop-stage",
-                        div {
-                            class: "image-editor__crop-overlay image-editor__crop-overlay--top",
-                            style: format!("height: {}%;", rect.top),
+                        class: if crop_mode.is_ellipse() { "image-editor__crop-stage image-editor__crop-stage--ellipse" } else { "image-editor__crop-stage" },
+                        if crop_mode.is_ellipse() {
+                            div {
+                                class: "image-editor__crop-ellipse-mask",
+                                style: format!(
+                                    "top: {}%; left: {}%; width: calc(100% - {}% - {}%); height: calc(100% - {}% - {}%);",
+                                    rect.top,
+                                    rect.left,
+                                    rect.left,
+                                    rect.right,
+                                    rect.top,
+                                    rect.bottom,
+                                ),
+                            }
+                        } else {
+                            div {
+                                class: "image-editor__crop-overlay image-editor__crop-overlay--top",
+                                style: format!("height: {}%;", rect.top),
+                            }
+                            div {
+                                class: "image-editor__crop-overlay image-editor__crop-overlay--bottom",
+                                style: format!("height: {}%;", rect.bottom),
+                            }
+                            div {
+                                class: "image-editor__crop-overlay image-editor__crop-overlay--left",
+                                style: format!(
+                                    "top: {}%; width: {}%; height: calc(100% - {}% - {}%);",
+                                    rect.top, rect.left, rect.top, rect.bottom
+                                ),
+                            }
+                            div {
+                                class: "image-editor__crop-overlay image-editor__crop-overlay--right",
+                                style: format!(
+                                    "top: {}%; width: {}%; height: calc(100% - {}% - {}%);",
+                                    rect.top, rect.right, rect.top, rect.bottom
+                                ),
+                            }
                         }
                         div {
-                            class: "image-editor__crop-overlay image-editor__crop-overlay--bottom",
-                            style: format!("height: {}%;", rect.bottom),
-                        }
-                        div {
-                            class: "image-editor__crop-overlay image-editor__crop-overlay--left",
-                            style: format!(
-                                "top: {}%; width: {}%; height: calc(100% - {}% - {}%);",
-                                rect.top, rect.left, rect.top, rect.bottom
-                            ),
-                        }
-                        div {
-                            class: "image-editor__crop-overlay image-editor__crop-overlay--right",
-                            style: format!(
-                                "top: {}%; width: {}%; height: calc(100% - {}% - {}%);",
-                                rect.top, rect.right, rect.top, rect.bottom
-                            ),
-                        }
-                        div {
-                            class: "image-editor__crop-rect",
+                            class: if crop_mode.is_ellipse() { "image-editor__crop-rect image-editor__crop-rect--ellipse" } else { "image-editor__crop-rect" },
                             style: format!(
                                 "top: {}%; left: {}%; width: calc(100% - {}% - {}%); height: calc(100% - {}% - {}%);",
                                 rect.top,
@@ -1732,7 +1925,7 @@ fn ImageWithCrop(
     #[cfg(not(target_arch = "wasm32"))]
     rsx! {
         div {
-            class: "image-editor__image-wrapper",
+            class: if crop_mode.is_ellipse() { "image-editor__image-wrapper image-editor__image-wrapper--ellipse" } else { "image-editor__image-wrapper" },
             img {
                 id: img_id,
                 class: "image-editor__image",
@@ -1766,6 +1959,7 @@ struct CropRectPct {
 }
 
 fn current_recipe_image_edit(
+    crop_mode: ImageEditorCropMode,
     crop_rect: Option<CropRectPct>,
     stretch_x: f64,
     stretch_y: f64,
@@ -1797,26 +1991,20 @@ fn current_recipe_image_edit(
             height: 1.0,
         });
 
-    RecipeImageEdit {
-        name: "16:9".to_string(),
-        version: 1,
-        aspect_ratio: ImageAspectRatio {
-            width: 16,
-            height: 9,
-        },
-        crop,
-        transform: ImageTransformEdit {
-            rotation,
-            stretch_x,
-            stretch_y,
-            flip_x,
-            flip_y,
-        },
-        color: ImageColorEdit {
-            saturation,
-            contrast_r,
-            contrast_g,
-            contrast_b,
-        },
-    }
+    let mut edit = crop_mode.template();
+    edit.crop = crop;
+    edit.transform = ImageTransformEdit {
+        rotation,
+        stretch_x,
+        stretch_y,
+        flip_x,
+        flip_y,
+    };
+    edit.color = ImageColorEdit {
+        saturation,
+        contrast_r,
+        contrast_g,
+        contrast_b,
+    };
+    edit
 }

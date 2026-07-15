@@ -61,7 +61,13 @@ pub async fn process_image(file: web_sys::File) -> Result<ProcessedImage, String
 
 /// Load a File into an HtmlImageElement. Returns the loaded image element.
 pub async fn load_image_from_file(file: &web_sys::File) -> Result<HtmlImageElement, String> {
-    let url = web_sys::Url::create_object_url_with_blob(file)
+    load_image_from_blob(file).await
+}
+
+/// Load any image Blob into an HtmlImageElement. This also supports existing
+/// stored avatars fetched back from object storage for re-editing.
+pub async fn load_image_from_blob(blob: &web_sys::Blob) -> Result<HtmlImageElement, String> {
+    let url = web_sys::Url::create_object_url_with_blob(blob)
         .map_err(|e| format!("Failed to create object URL: {:?}", e))?;
 
     let img = web_sys::HtmlImageElement::new()
@@ -217,14 +223,14 @@ pub async fn blob_from_canvas(canvas: &HtmlCanvasElement, quality: f64) -> Resul
         .ok_or("toBlob returned null (WebP not supported?)")?;
 
     // Read blob as ArrayBuffer
-    array_buffer_from_blob(&blob).await
+    blob_to_bytes(&blob).await
 }
 
 /// Read a Blob as ArrayBuffer, then convert to Vec<u8>.
 ///
 /// Uses polling approach: FileReader.onload sets AtomicBool,
 /// we poll with gloo_timers::future::sleep() until ready.
-async fn array_buffer_from_blob(blob: &Blob) -> Result<Vec<u8>, String> {
+pub async fn blob_to_bytes(blob: &Blob) -> Result<Vec<u8>, String> {
     let file_reader =
         web_sys::FileReader::new().map_err(|e| format!("Failed to create FileReader: {:?}", e))?;
 

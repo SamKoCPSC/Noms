@@ -43,10 +43,21 @@ pub struct ImageColorEdit {
     pub contrast_b: f64,
 }
 
+/// Geometry used to clip an edited image after applying its crop rectangle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ImageCropShape {
+    #[default]
+    Rectangle,
+    Ellipse,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RecipeImageEdit {
     pub name: String,
     pub version: u32,
+    #[serde(default)]
+    pub crop_shape: ImageCropShape,
     pub aspect_ratio: ImageAspectRatio,
     pub crop: ImageCropRect,
     pub transform: ImageTransformEdit,
@@ -54,13 +65,27 @@ pub struct RecipeImageEdit {
 }
 
 impl RecipeImageEdit {
-    pub fn default_16x9() -> Self {
+    pub fn default_rect_16x9() -> Self {
+        Self::template("rectangle:16:9", ImageCropShape::Rectangle, 16, 9)
+    }
+
+    pub fn default_ellipse_1x1() -> Self {
+        Self::template("ellipse:1:1", ImageCropShape::Ellipse, 1, 1)
+    }
+
+    fn template(
+        name: &str,
+        crop_shape: ImageCropShape,
+        aspect_width: u32,
+        aspect_height: u32,
+    ) -> Self {
         Self {
-            name: "16:9".to_string(),
+            name: name.to_string(),
             version: 1,
+            crop_shape,
             aspect_ratio: ImageAspectRatio {
-                width: 16,
-                height: 9,
+                width: aspect_width,
+                height: aspect_height,
             },
             crop: ImageCropRect {
                 x: 0.0,
@@ -254,6 +279,87 @@ mod tests {
     use super::*;
 
     #[test]
+    fn rectangular_and_elliptical_edit_templates_are_explicit() {
+        let rectangle = RecipeImageEdit::default_rect_16x9();
+        let ellipse = RecipeImageEdit::default_ellipse_1x1();
+
+        assert_eq!(rectangle.name, "rectangle:16:9");
+        assert_eq!(rectangle.crop_shape, ImageCropShape::Rectangle);
+        assert_eq!(
+            rectangle.aspect_ratio,
+            ImageAspectRatio {
+                width: 16,
+                height: 9
+            }
+        );
+
+        assert_eq!(ellipse.name, "ellipse:1:1");
+        assert_eq!(ellipse.crop_shape, ImageCropShape::Ellipse);
+        assert_eq!(
+            ellipse.aspect_ratio,
+            ImageAspectRatio {
+                width: 1,
+                height: 1
+            }
+        );
+    }
+
+    #[test]
+    fn legacy_edit_without_crop_shape_defaults_to_rectangle() {
+        let edit = serde_json::from_value::<RecipeImageEdit>(serde_json::json!({
+            "name": "16:9",
+            "version": 1,
+            "aspect_ratio": { "width": 16, "height": 9 },
+            "crop": { "x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0 },
+            "transform": {
+                "rotation": 0.0,
+                "stretch_x": 1.0,
+                "stretch_y": 1.0,
+                "flip_x": false,
+                "flip_y": false
+            },
+            "color": {
+                "saturation": 1.0,
+                "contrast_r": 1.0,
+                "contrast_g": 1.0,
+                "contrast_b": 1.0
+            }
+        }))
+        .unwrap();
+
+        assert_eq!(edit.crop_shape, ImageCropShape::Rectangle);
+    }
+
+    #[test]
+    fn recipe_image_deserializes_legacy_edit_without_crop_shape() {
+        let image = serde_json::from_value::<RecipeImage>(serde_json::json!({
+            "url": "https://example.com/legacy.webp",
+            "edits": [{
+                "name": "16:9",
+                "version": 1,
+                "aspect_ratio": { "width": 16, "height": 9 },
+                "crop": { "x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0 },
+                "transform": {
+                    "rotation": 0.0,
+                    "stretch_x": 1.0,
+                    "stretch_y": 1.0,
+                    "flip_x": false,
+                    "flip_y": false
+                },
+                "color": {
+                    "saturation": 1.0,
+                    "contrast_r": 1.0,
+                    "contrast_g": 1.0,
+                    "contrast_b": 1.0
+                }
+            }]
+        }))
+        .unwrap();
+
+        assert_eq!(image.edits[0].crop_shape, ImageCropShape::Rectangle);
+    }
+
+    #[test]
     fn recipe_image_deserializes_legacy_url_string() {
         let image: RecipeImage =
             serde_json::from_value(serde_json::json!("https://example.com/image.webp")).unwrap();
@@ -281,14 +387,14 @@ mod tests {
         let image = RecipeImage::new(
             "https://example.com/image_full.webp".to_string(),
             Some("https://example.com/image_thumb.webp".to_string()),
-            RecipeImageEdit::default_16x9(),
+            RecipeImageEdit::default_rect_16x9(),
         );
 
         let value = serde_json::to_value(image).unwrap();
 
         assert_eq!(value["url"], "https://example.com/image_full.webp");
         assert_eq!(value["thumb_url"], "https://example.com/image_thumb.webp");
-        assert_eq!(value["edits"][0]["name"], "16:9");
+        assert_eq!(value["edits"][0]["name"], "rectangle:16:9");
         assert_eq!(value["edits"][0]["version"], 1);
         assert_eq!(value["edits"][0]["aspect_ratio"]["width"], 16);
         assert_eq!(value["edits"][0]["aspect_ratio"]["height"], 9);
@@ -302,7 +408,7 @@ mod tests {
         let image = RecipeImage::new(
             "https://example.com/image_full.webp".to_string(),
             None,
-            RecipeImageEdit::default_16x9(),
+            RecipeImageEdit::default_rect_16x9(),
         )
         .with_file_metadata("family-recipe.jpg".to_string(), 2_400_000);
 
@@ -318,7 +424,7 @@ mod tests {
         let image = RecipeImage::new(
             "https://example.com/image_full.webp".to_string(),
             Some("https://example.com/image_thumb.webp".to_string()),
-            RecipeImageEdit::default_16x9(),
+            RecipeImageEdit::default_rect_16x9(),
         );
 
         assert_eq!(

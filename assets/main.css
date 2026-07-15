@@ -927,6 +927,7 @@ a:hover {
     width: min(1180px, 95vw);
     max-width: 95vw;
     max-height: 92vh;
+    min-height: 0;
     padding: 0;
     overflow: hidden;
     border: 1px solid var(--glass-border);
@@ -1030,11 +1031,13 @@ a:hover {
 }
 
 .image-editor__body {
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     gap: var(--space-lg);
     min-height: 0;
     padding: var(--space-lg);
+    overflow-y: auto;
 }
 
 .image-editor__footer {
@@ -1075,9 +1078,13 @@ a:hover {
 
 .image-editor__preview-panel {
     min-width: 0;
+    min-height: 0;
+    container-type: size;
     display: flex;
     align-items: center;
     justify-content: center;
+    height: min(48vh, 560px);
+    flex: 0 0 auto;
     padding: 0;
     overflow: visible;
 }
@@ -1121,19 +1128,18 @@ a:hover {
     --image-aspect: 1;
     --image-natural-width: 100%;
     --image-frame-padding: 6px;
+    box-sizing: border-box;
     position: relative;
     display: block;
-    width: min(100%, var(--image-natural-width));
-    height: auto;
+    width: min(var(--image-natural-width), 100cqw, calc(100cqh * var(--image-aspect)));
+    height: min(calc(var(--image-natural-width) / var(--image-aspect)), 100cqh, calc(100cqw / var(--image-aspect)));
     aspect-ratio: var(--image-aspect);
-    max-width: 100%;
     padding: var(--image-frame-padding);
     overflow: visible;
     border-radius: var(--radius-md);
     border: 1px solid var(--glass-border);
     background: var(--surface);
     box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
-    box-sizing: content-box;
 }
 
 .image-editor__transform-stage {
@@ -1149,6 +1155,11 @@ a:hover {
     position: absolute;
     inset: var(--image-frame-padding);
     z-index: 2;
+}
+
+.image-editor__crop-stage--ellipse {
+    overflow: hidden;
+    border-radius: var(--radius-sm);
 }
 
 .image-editor__image {
@@ -1414,7 +1425,7 @@ a:hover {
     right: 0;
 }
 
-/* 16:9 crop rectangle outline */
+/* Crop outline */
 .image-editor__crop-rect {
     position: absolute;
     border: 2px solid var(--accent);
@@ -1423,6 +1434,20 @@ a:hover {
     box-sizing: border-box;
     z-index: 1;
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.50), 0 0 18px rgba(217, 115, 90, 0.28);
+}
+
+.image-editor__crop-rect--ellipse {
+    border-radius: 50%;
+}
+
+/* Circular mask: the large outer shadow darkens everything outside the
+   ellipse, including the corners inside its square bounding box. */
+.image-editor__crop-ellipse-mask {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
 }
 
 /* Full-edge resize bars (invisible, clickable anywhere on the edge) */
@@ -1469,10 +1494,20 @@ a:hover {
         width: min(720px, 96vw);
     }
 
+    .image-editor__body {
+        overflow: hidden;
+    }
+
     .image-editor__controls {
+        flex: 1 1 auto;
+        min-height: 0;
         max-height: none;
         padding-right: 0;
-        overflow: visible;
+        overflow-y: auto;
+    }
+
+    .image-editor__preview-panel {
+        height: min(42vh, 420px);
     }
 
     .image-editor__image {
@@ -1502,6 +1537,19 @@ a:hover {
         margin-top: 0;
         padding-left: var(--space-lg);
         border-left: 1px solid var(--glass-border);
+    }
+}
+
+@media (min-width: 901px) and (max-height: 720px) {
+    .image-editor__body {
+        overflow: hidden;
+    }
+
+    .image-editor__controls {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: none;
+        overflow-y: auto;
     }
 }
 
@@ -1688,6 +1736,10 @@ a:hover {
     display: block;
     overflow: hidden;
     background: var(--bg-base);
+}
+
+.edited-recipe-image--ellipse {
+    border-radius: 50%;
 }
 
 .edited-recipe-image__stage {

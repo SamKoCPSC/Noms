@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use dioxus::prelude::*;
 
-use crate::types::{RecipeImage, RecipeImageEdit};
+use crate::types::{ImageCropShape, RecipeImage, RecipeImageEdit};
 
 static FILTER_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -29,18 +29,16 @@ pub fn EditedRecipeImage(props: EditedRecipeImageProps) -> Element {
             FILTER_ID_COUNTER.fetch_add(1, Ordering::Relaxed)
         )
     });
-    let selected_edit = props
-        .image
-        .edits
-        .iter()
-        .find(|edit| edit.name == "16:9")
-        .or_else(|| props.image.edits.first());
+    let selected_edit = select_rectangle_edit(&props.image.edits);
 
-    let class = if props.class.is_empty() {
+    let mut class = if props.class.is_empty() {
         "edited-recipe-image".to_string()
     } else {
         format!("edited-recipe-image {}", props.class)
     };
+    if selected_edit.is_some_and(|edit| edit.crop_shape == ImageCropShape::Ellipse) {
+        class.push_str(" edited-recipe-image--ellipse");
+    }
     let image_src = props.image.display_url(props.prefer_thumbnail).to_string();
 
     if let Some(edit) = selected_edit {
@@ -101,6 +99,10 @@ pub fn EditedRecipeImage(props: EditedRecipeImageProps) -> Element {
             }
         }
     }
+}
+
+fn select_rectangle_edit(edits: &[RecipeImageEdit]) -> Option<&RecipeImageEdit> {
+    edits.iter().find(|edit| edit.name == "rectangle:16:9")
 }
 
 fn crop_stage_style(edit: &RecipeImageEdit) -> String {
@@ -182,15 +184,17 @@ fn inferred_original_aspect_ratio(edit: &RecipeImageEdit) -> f64 {
 #[cfg(test)]
 mod tests {
     use crate::types::{
-        ImageAspectRatio, ImageColorEdit, ImageCropRect, ImageTransformEdit, RecipeImageEdit,
+        ImageAspectRatio, ImageColorEdit, ImageCropRect, ImageCropShape, ImageTransformEdit,
+        RecipeImageEdit,
     };
 
     use super::{edited_image_style, transform_fit_scale};
 
     fn edit_for_crop(crop: ImageCropRect, rotation: f64) -> RecipeImageEdit {
         RecipeImageEdit {
-            name: "16:9".to_string(),
+            name: "rectangle:16:9".to_string(),
             version: 1,
+            crop_shape: ImageCropShape::Rectangle,
             aspect_ratio: ImageAspectRatio {
                 width: 16,
                 height: 9,

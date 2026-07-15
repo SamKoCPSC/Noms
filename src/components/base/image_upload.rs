@@ -271,7 +271,7 @@ async fn process_one_file(
             original_size,
             full_bytes: Arc::new(Vec::new()),
             thumb_bytes: Arc::new(Vec::new()),
-            edit: RecipeImageEdit::default_16x9(),
+            edit: RecipeImageEdit::default_rect_16x9(),
             status: UploadStatus::Processing,
             error: None,
             uploaded_image: None,
@@ -784,7 +784,7 @@ mod tests {
             original_size: 100,
             full_bytes: Arc::new(Vec::new()),
             thumb_bytes: Arc::new(Vec::new()),
-            edit: RecipeImageEdit::default_16x9(),
+            edit: RecipeImageEdit::default_rect_16x9(),
             status: if url.is_some() {
                 UploadStatus::Uploaded
             } else {
@@ -792,7 +792,7 @@ mod tests {
             },
             error: None,
             uploaded_image: url.map(|url| {
-                RecipeImage::new(url.to_string(), None, RecipeImageEdit::default_16x9())
+                RecipeImage::new(url.to_string(), None, RecipeImageEdit::default_rect_16x9())
             }),
         }
     }

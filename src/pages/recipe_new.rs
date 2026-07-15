@@ -269,7 +269,7 @@ pub fn RecipeNew() -> Element {
                                     })
                                     .map(|pending| pending.edit.clone())
                             })
-                            .unwrap_or_else(RecipeImageEdit::default_16x9);
+                            .unwrap_or_else(RecipeImageEdit::default_rect_16x9);
                         if let Some(url) = &preview_url {
                             pending_step_photo_edits.write().retain(|pending| {
                                 !(pending.idx == idx && pending.preview_url == *url)

@@ -4,9 +4,17 @@ use wasm_bindgen::JsCast;
 
 use crate::auth::context::{use_auth, AuthContext, UserProfile};
 use crate::components::base::{
-    Avatar, AvatarSize, Button, ButtonVariant, Card, Input, PageHeader, SettingsTab, SettingsTabs,
+    Avatar, AvatarSize, Button, ButtonVariant, Card, ImageEditorCropMode, ImageEditorModal, Input,
+    PageHeader, SettingsTab, SettingsTabs,
 };
 use crate::components::AuthRequired;
+use crate::types::RecipeImageEdit;
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct AvatarEditSource {
+    pub original_url: String,
+    pub edit: RecipeImageEdit,
+}
 
 /// Steps in the 3-layer account deletion confirmation flow.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -17,6 +25,28 @@ enum DeleteStep {
     Typing,
     /// Layer 3: Final confirmation ("This cannot be undone").
     Final,
+}
+
+fn avatar_photo_actions(has_avatar: bool) -> &'static [&'static str] {
+    if has_avatar {
+        &["Edit Photo", "Change Photo", "Remove"]
+    } else {
+        &["Choose Photo"]
+    }
+}
+
+#[cfg(test)]
+mod avatar_action_tests {
+    use super::avatar_photo_actions;
+
+    #[test]
+    fn existing_avatar_offers_edit_without_requiring_replacement() {
+        assert_eq!(
+            avatar_photo_actions(true),
+            &["Edit Photo", "Change Photo", "Remove"]
+        );
+        assert_eq!(avatar_photo_actions(false), &["Choose Photo"]);
+    }
 }
 
 /// Delete the authenticated user's account.
@@ -122,8 +152,10 @@ pub async fn save_profile(
 /// from storage (best-effort) before the new ones are uploaded.
 #[server]
 pub async fn upload_avatar(
+    original_bytes: Vec<u8>,
     full_bytes: Vec<u8>,
     thumb_bytes: Vec<u8>,
+    edit: RecipeImageEdit,
 ) -> Result<UserProfile, ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
@@ -141,6 +173,12 @@ pub async fn upload_avatar(
 
     // Enforce max file size (2MB for avatars)
     const MAX_AVATAR_SIZE: usize = 2 * 1024 * 1024;
+    const MAX_AVATAR_ORIGINAL_SIZE: usize = 10 * 1024 * 1024;
+    if original_bytes.is_empty() || original_bytes.len() > MAX_AVATAR_ORIGINAL_SIZE {
+        return Err(ServerFnError::new(
+            "Original image must be between 1 byte and 10MB",
+        ));
+    }
     if full_bytes.len() > MAX_AVATAR_SIZE {
         return Err(ServerFnError::new(format!(
             "Image too large: {} bytes (max {} bytes)",
@@ -161,26 +199,71 @@ pub async fn upload_avatar(
         .await
         .map_err(|e| ServerFnError::new(format!("Failed to fetch user: {e}")))?
         .ok_or_else(|| ServerFnError::new("User not found"))?;
+    let previous_original: Option<String> =
+        sqlx::query_scalar("SELECT avatar_original_url FROM users WHERE id = $1")
+            .bind(user_id)
+            .fetch_optional(&pool)
+            .await
+            .map_err(|e| ServerFnError::new(format!("Failed to fetch avatar original: {e}")))?
+            .flatten();
 
-    // Generate storage keys: avatars/{user_id}/{uuid}.webp and -thumb.webp
+    // Generate storage keys for the retained original and rendered caches.
     let unique_id = uuid::Uuid::new_v4();
+    let original_key = format!("avatars/{}/{}-original", user_id, unique_id);
     let full_key = format!("avatars/{}/{}.webp", user_id, unique_id);
     let thumb_key = format!("avatars/{}/{}-thumb.webp", user_id, unique_id);
+    let edit_json = serde_json::to_value(&edit)
+        .map_err(|e| ServerFnError::new(format!("Failed to serialize avatar edit: {e}")))?;
 
-    // Upload new avatar to storage
-    let full_url = storage
+    let original_url = storage
+        .put_object(&original_key, &original_bytes, "application/octet-stream")
+        .await
+        .map_err(|e| ServerFnError::new(format!("Failed to upload avatar original: {e}")))?;
+    let full_url = match storage
         .put_object(&full_key, &full_bytes, "image/webp")
         .await
-        .map_err(|e| ServerFnError::new(format!("Failed to upload avatar: {e}")))?;
-    let _thumb_url = storage
+    {
+        Ok(url) => url,
+        Err(error) => {
+            let _ = storage.delete_object(&original_key).await;
+            return Err(ServerFnError::new(format!(
+                "Failed to upload avatar: {error}"
+            )));
+        }
+    };
+    if let Err(error) = storage
         .put_object(&thumb_key, &thumb_bytes, "image/webp")
         .await
-        .map_err(|e| ServerFnError::new(format!("Failed to upload avatar thumbnail: {e}")))?;
+    {
+        let _ = storage.delete_object(&original_key).await;
+        let _ = storage.delete_object(&full_key).await;
+        return Err(ServerFnError::new(format!(
+            "Failed to upload avatar thumbnail: {error}"
+        )));
+    }
 
-    // Persist URL to database
-    let updated = crate::db::update_avatar_url(&pool, user_id, Some(full_url.clone()))
-        .await
-        .map_err(|e| ServerFnError::new(format!("Failed to save avatar URL: {e}")))?;
+    let updated_result = sqlx::query_as::<_, crate::db::User>(
+        "UPDATE users SET avatar_url = $2, avatar_original_url = $3, avatar_edit = $4, updated_at = NOW() \
+         WHERE id = $1 \
+         RETURNING id, username, display_name, email, avatar_url, bio, created_at, updated_at",
+    )
+        .bind(user_id)
+        .bind(Some(full_url.clone()))
+        .bind(Some(original_url.clone()))
+        .bind(Some(edit_json))
+        .fetch_one(&pool)
+        .await;
+    let updated = match updated_result {
+        Ok(updated) => updated,
+        Err(error) => {
+            let _ = storage.delete_object(&original_key).await;
+            let _ = storage.delete_object(&full_key).await;
+            let _ = storage.delete_object(&thumb_key).await;
+            return Err(ServerFnError::new(format!(
+                "Failed to save avatar URL: {error}"
+            )));
+        }
+    };
 
     // Delete old avatar from storage (best-effort)
     if let Some(ref old_url) = current_user.avatar_url {
@@ -198,6 +281,17 @@ pub async fn upload_avatar(
             }
         }
     }
+    if let Some(old_original_url) = previous_original {
+        if old_original_url != original_url {
+            let public_base = storage.public_url().trim_end_matches('/');
+            if let Some(old_key) = old_original_url
+                .strip_prefix(public_base)
+                .map(|value| value.trim_start_matches('/'))
+            {
+                let _ = storage.delete_object(old_key).await;
+            }
+        }
+    }
 
     Ok(UserProfile {
         id: updated.id,
@@ -209,10 +303,40 @@ pub async fn upload_avatar(
     })
 }
 
+#[server]
+pub async fn get_avatar_edit_source() -> Result<Option<AvatarEditSource>, ServerFnError> {
+    use sqlx::Row;
+
+    let user_id = crate::auth::session::extract_user_id_from_fullstack()
+        .await
+        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let pool = crate::db::get_pool();
+    let row =
+        sqlx::query("SELECT avatar_url, avatar_original_url, avatar_edit FROM users WHERE id = $1")
+            .bind(user_id)
+            .fetch_optional(&pool)
+            .await
+            .map_err(|e| ServerFnError::new(format!("Failed to load avatar edit: {e}")))?
+            .ok_or_else(|| ServerFnError::new("User not found"))?;
+    let avatar_url: Option<String> = row.try_get("avatar_url").ok();
+    let original_url: Option<String> = row.try_get("avatar_original_url").ok();
+    let edit_json: Option<serde_json::Value> = row.try_get("avatar_edit").ok();
+    let Some(original_url) = original_url.or(avatar_url) else {
+        return Ok(None);
+    };
+    let edit = edit_json
+        .map(serde_json::from_value)
+        .transpose()
+        .map_err(|e| ServerFnError::new(format!("Invalid saved avatar edit: {e}")))?
+        .unwrap_or_else(RecipeImageEdit::default_ellipse_1x1);
+
+    Ok(Some(AvatarEditSource { original_url, edit }))
+}
+
 /// Remove the authenticated user's avatar.
 ///
-/// Deletes the avatar image files from storage (best-effort) before
-/// clearing the avatar_url in the database.
+/// Clears the database fields first, then deletes avatar storage objects on a
+/// best-effort basis so a database failure never leaves dangling URLs.
 #[server]
 pub async fn remove_avatar() -> Result<UserProfile, ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
@@ -226,8 +350,25 @@ pub async fn remove_avatar() -> Result<UserProfile, ServerFnError> {
         .await
         .map_err(|e| ServerFnError::new(format!("Failed to fetch user: {e}")))?
         .ok_or_else(|| ServerFnError::new("User not found"))?;
+    let original_url: Option<String> =
+        sqlx::query_scalar("SELECT avatar_original_url FROM users WHERE id = $1")
+            .bind(user_id)
+            .fetch_optional(&pool)
+            .await
+            .map_err(|e| ServerFnError::new(format!("Failed to fetch avatar original: {e}")))?
+            .flatten();
 
-    // Delete old avatar from storage (best-effort)
+    let updated = sqlx::query_as::<_, crate::db::User>(
+        "UPDATE users SET avatar_url = NULL, avatar_original_url = NULL, avatar_edit = NULL, updated_at = NOW() \
+         WHERE id = $1 \
+         RETURNING id, username, display_name, email, avatar_url, bio, created_at, updated_at",
+    )
+        .bind(user_id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| ServerFnError::new(format!("Failed to remove avatar: {e}")))?;
+
+    // Delete old avatar from storage only after the database commit succeeds.
     if let Some(ref old_url) = current_user.avatar_url {
         let public_base = storage.public_url().trim_end_matches('/');
         if let Some(old_key) = old_url
@@ -243,11 +384,15 @@ pub async fn remove_avatar() -> Result<UserProfile, ServerFnError> {
             }
         }
     }
-
-    // Clear avatar_url in database
-    let updated = crate::db::update_avatar_url(&pool, user_id, None)
-        .await
-        .map_err(|e| ServerFnError::new(format!("Failed to remove avatar: {e}")))?;
+    if let Some(original_url) = original_url {
+        let public_base = storage.public_url().trim_end_matches('/');
+        if let Some(original_key) = original_url
+            .strip_prefix(public_base)
+            .map(|value| value.trim_start_matches('/'))
+        {
+            let _ = storage.delete_object(original_key).await;
+        }
+    }
 
     Ok(UserProfile {
         id: updated.id,
@@ -259,108 +404,311 @@ pub async fn remove_avatar() -> Result<UserProfile, ServerFnError> {
     })
 }
 
+/// Source rectangle in original-image pixels used when rendering an avatar.
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[allow(dead_code)]
+pub(crate) struct AvatarSourceRect {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
+/// Convert the editor's normalized crop metadata into a safe pixel source
+/// rectangle for canvas rendering.
+#[allow(dead_code)]
+pub(crate) fn avatar_source_rect(
+    edit: &RecipeImageEdit,
+    image_width: f64,
+    image_height: f64,
+) -> AvatarSourceRect {
+    let image_width = if image_width.is_finite() {
+        image_width.max(0.0)
+    } else {
+        0.0
+    };
+    let image_height = if image_height.is_finite() {
+        image_height.max(0.0)
+    } else {
+        0.0
+    };
+    let width = edit.crop.width.clamp(0.0, 1.0);
+    let height = edit.crop.height.clamp(0.0, 1.0);
+    let x = edit.crop.x.clamp(0.0, 1.0 - width);
+    let y = edit.crop.y.clamp(0.0, 1.0 - height);
+
+    AvatarSourceRect {
+        x: x * image_width,
+        y: y * image_height,
+        width: width * image_width,
+        height: height * image_height,
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg(any(target_arch = "wasm32", test))]
+struct AvatarTransform {
+    rotation_radians: f64,
+    scale_x: f64,
+    scale_y: f64,
+}
+
+#[cfg(any(target_arch = "wasm32", test))]
+fn avatar_transform(
+    edit: &RecipeImageEdit,
+    image_width: f64,
+    image_height: f64,
+) -> AvatarTransform {
+    let stretch_x = edit.transform.stretch_x.abs();
+    let stretch_y = edit.transform.stretch_y.abs();
+    let radians = edit.transform.rotation.to_radians();
+    let cos = radians.cos().abs();
+    let sin = radians.sin().abs();
+    let transformed_width = image_width * stretch_x * cos + image_height * stretch_y * sin;
+    let transformed_height = image_width * stretch_x * sin + image_height * stretch_y * cos;
+    let fit_x = if transformed_width > 0.0 {
+        image_width / transformed_width
+    } else {
+        1.0
+    };
+    let fit_y = if transformed_height > 0.0 {
+        image_height / transformed_height
+    } else {
+        1.0
+    };
+    let fit_scale = fit_x.min(fit_y).clamp(0.1, 1.0);
+
+    AvatarTransform {
+        rotation_radians: radians,
+        scale_x: edit.transform.stretch_x
+            * fit_scale
+            * if edit.transform.flip_x { -1.0 } else { 1.0 },
+        scale_y: edit.transform.stretch_y
+            * fit_scale
+            * if edit.transform.flip_y { -1.0 } else { 1.0 },
+    }
+}
+
+#[cfg(any(target_arch = "wasm32", test))]
+fn apply_avatar_color(red: u8, green: u8, blue: u8, edit: &RecipeImageEdit) -> (u8, u8, u8) {
+    let apply_contrast = |channel: u8, contrast: f64| {
+        (channel as f64 * contrast.max(0.0))
+            .round()
+            .clamp(0.0, 255.0)
+    };
+    let red = apply_contrast(red, edit.color.contrast_r);
+    let green = apply_contrast(green, edit.color.contrast_g);
+    let blue = apply_contrast(blue, edit.color.contrast_b);
+    let saturation = edit.color.saturation.max(0.0);
+    let luminance = red * 0.2126 + green * 0.7152 + blue * 0.0722;
+    let apply_saturation = |channel: f64| {
+        (luminance + (channel - luminance) * saturation)
+            .round()
+            .clamp(0.0, 255.0) as u8
+    };
+
+    (
+        apply_saturation(red),
+        apply_saturation(green),
+        apply_saturation(blue),
+    )
+}
+
+#[cfg(test)]
+mod avatar_crop_tests {
+    use super::{apply_avatar_color, avatar_source_rect, avatar_transform};
+    use crate::types::{ImageCropRect, RecipeImageEdit};
+
+    #[test]
+    fn avatar_source_rect_applies_the_selected_normalized_crop() {
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.crop = ImageCropRect {
+            x: 0.25,
+            y: 0.1,
+            width: 0.5,
+            height: 0.8,
+        };
+
+        let source = avatar_source_rect(&edit, 800.0, 600.0);
+
+        assert_eq!(source.x, 200.0);
+        assert_eq!(source.y, 60.0);
+        assert_eq!(source.width, 400.0);
+        assert_eq!(source.height, 480.0);
+    }
+
+    #[test]
+    fn avatar_source_rect_clamps_crop_to_image_bounds() {
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.crop = ImageCropRect {
+            x: 0.9,
+            y: -0.5,
+            width: 0.4,
+            height: 2.0,
+        };
+
+        let source = avatar_source_rect(&edit, 100.0, 200.0);
+
+        assert_eq!(source.x, 60.0);
+        assert_eq!(source.y, 0.0);
+        assert_eq!(source.width, 40.0);
+        assert_eq!(source.height, 200.0);
+    }
+
+    #[test]
+    fn avatar_transform_applies_rotation_stretch_and_flips() {
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.transform.rotation = 90.0;
+        edit.transform.stretch_x = 0.75;
+        edit.transform.stretch_y = 0.5;
+        edit.transform.flip_x = true;
+
+        let transform = avatar_transform(&edit, 800.0, 600.0);
+
+        assert!((transform.rotation_radians - std::f64::consts::FRAC_PI_2).abs() < 0.0001);
+        assert_eq!(transform.scale_x, -0.75);
+        assert_eq!(transform.scale_y, 0.5);
+    }
+
+    #[test]
+    fn avatar_transform_fits_a_square_rotated_45_degrees() {
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.transform.rotation = 45.0;
+
+        let transform = avatar_transform(&edit, 400.0, 400.0);
+
+        let expected = std::f64::consts::FRAC_1_SQRT_2;
+        assert!((transform.scale_x - expected).abs() < 0.0001);
+        assert!((transform.scale_y - expected).abs() < 0.0001);
+    }
+
+    #[test]
+    fn avatar_color_applies_saturation_and_channel_contrast() {
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.color.saturation = 0.0;
+        edit.color.contrast_r = 0.5;
+        edit.color.contrast_g = 1.0;
+        edit.color.contrast_b = 1.5;
+
+        assert_eq!(apply_avatar_color(100, 150, 200, &edit), (136, 136, 136));
+    }
+}
+
 /// Processed avatar result: full-size (400x400) and thumbnail (100x100) WebP bytes.
 #[cfg(target_arch = "wasm32")]
 struct ProcessedAvatar {
-    /// Full-size WebP bytes (400x400, center-cropped square)
+    /// Full-size circular WebP bytes (400x400)
     full_bytes: Vec<u8>,
-    /// Thumbnail WebP bytes (100x100, center-cropped square)
+    /// Circular thumbnail WebP bytes (100x100)
     thumb_bytes: Vec<u8>,
 }
 
-/// Process an avatar image client-side: load, center-crop to square,
-/// generate full-size (400x400) and thumbnail (100x100) WebP variants.
+#[cfg(target_arch = "wasm32")]
+async fn render_avatar_variant(
+    document: &web_sys::Document,
+    img: &web_sys::HtmlImageElement,
+    source: AvatarSourceRect,
+    edit: &RecipeImageEdit,
+    size: u32,
+    quality: f64,
+) -> Result<Vec<u8>, String> {
+    use wasm_bindgen::{Clamped, JsCast};
+
+    let canvas = document
+        .create_element("canvas")
+        .map_err(|e| format!("Failed to create canvas: {:?}", e))?
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .map_err(|_| "Failed to cast to HtmlCanvasElement")?;
+    canvas.set_width(size);
+    canvas.set_height(size);
+
+    let ctx = canvas
+        .get_context("2d")
+        .map_err(|e| format!("Failed to get 2D context: {:?}", e))?
+        .and_then(|value| value.dyn_into::<web_sys::CanvasRenderingContext2d>().ok())
+        .ok_or("Failed to cast context")?;
+    let half_size = size as f64 / 2.0;
+
+    ctx.begin_path();
+    ctx.arc(half_size, half_size, half_size, 0.0, std::f64::consts::TAU)
+        .map_err(|e| format!("Failed to create avatar mask: {:?}", e))?;
+    ctx.clip();
+
+    let transform = avatar_transform(
+        edit,
+        img.natural_width() as f64,
+        img.natural_height() as f64,
+    );
+    ctx.save();
+    ctx.translate(half_size, half_size)
+        .map_err(|e| format!("Failed to position avatar: {:?}", e))?;
+    ctx.rotate(transform.rotation_radians)
+        .map_err(|e| format!("Failed to rotate avatar: {:?}", e))?;
+    ctx.scale(transform.scale_x, transform.scale_y)
+        .map_err(|e| format!("Failed to scale avatar: {:?}", e))?;
+    let draw_result = ctx
+        .draw_image_with_html_image_element_and_sw_and_sh_and_dx_and_dy_and_dw_and_dh(
+            img,
+            source.x,
+            source.y,
+            source.width,
+            source.height,
+            -half_size,
+            -half_size,
+            size as f64,
+            size as f64,
+        );
+    ctx.restore();
+    draw_result.map_err(|e| format!("draw_image error: {:?}", e))?;
+
+    let image_data = ctx
+        .get_image_data(0.0, 0.0, size as f64, size as f64)
+        .map_err(|e| format!("Failed to read avatar pixels: {:?}", e))?;
+    let mut pixels = image_data.data().0;
+    for pixel in pixels.chunks_exact_mut(4) {
+        let (red, green, blue) = apply_avatar_color(pixel[0], pixel[1], pixel[2], edit);
+        pixel[0] = red;
+        pixel[1] = green;
+        pixel[2] = blue;
+    }
+    let adjusted = web_sys::ImageData::new_with_u8_clamped_array_and_sh(
+        Clamped(pixels.as_slice()),
+        size,
+        size,
+    )
+    .map_err(|e| format!("Failed to create adjusted avatar pixels: {:?}", e))?;
+    ctx.put_image_data(&adjusted, 0.0, 0.0)
+        .map_err(|e| format!("Failed to write avatar pixels: {:?}", e))?;
+
+    crate::utils::image_processing_client::blob_from_canvas(&canvas, quality).await
+}
+
+/// Process an avatar image client-side using the editor's selected crop and
+/// generate transparent circular 400px and 100px WebP variants.
 ///
 /// Only available on wasm32 target.
 #[cfg(target_arch = "wasm32")]
-async fn process_avatar_image(web_file: web_sys::File) -> Result<ProcessedAvatar, String> {
-    use wasm_bindgen::JsCast;
-    use web_sys::HtmlCanvasElement;
-
+async fn process_avatar_image(
+    image_blob: web_sys::Blob,
+    edit: &RecipeImageEdit,
+) -> Result<ProcessedAvatar, String> {
     let window = web_sys::window().ok_or("No window")?;
     let document = window.document().ok_or("No document")?;
 
     // Load the image using the existing utility
-    let img = crate::utils::image_processing_client::load_image_from_file(&web_file).await?;
+    let img = crate::utils::image_processing_client::load_image_from_blob(&image_blob).await?;
 
-    // Center-crop: calculate source rectangle from the center of the image
-    let natural_width = img.natural_width();
-    let natural_height = img.natural_height();
-    let min_dim = natural_width.min(natural_height);
-    let sx = (natural_width as f64 - min_dim as f64) / 2.0;
-    let sy = (natural_height as f64 - min_dim as f64) / 2.0;
+    let source = avatar_source_rect(
+        edit,
+        img.natural_width() as f64,
+        img.natural_height() as f64,
+    );
+    if source.width <= 0.0 || source.height <= 0.0 {
+        return Err("Selected crop is empty".to_string());
+    }
 
-    // Generate full-size (400x400) variant
-    let full_bytes = {
-        let canvas = document
-            .create_element("canvas")
-            .map_err(|e| format!("Failed to create canvas: {:?}", e))?
-            .dyn_into::<HtmlCanvasElement>()
-            .map_err(|_| "Failed to cast to HtmlCanvasElement")?;
-
-        let size: u32 = 400;
-        canvas.set_width(size);
-        canvas.set_height(size);
-
-        let ctx = canvas
-            .get_context("2d")
-            .map_err(|e| format!("Failed to get 2D context: {:?}", e))?
-            .and_then(|v| v.dyn_into::<web_sys::CanvasRenderingContext2d>().ok())
-            .ok_or("Failed to cast context")?;
-
-        ctx.set_fill_style_str("white");
-        ctx.fill_rect(0.0, 0.0, size as f64, size as f64);
-        ctx.draw_image_with_html_image_element_and_sw_and_sh_and_dx_and_dy_and_dw_and_dh(
-            &img,
-            sx,
-            sy,
-            min_dim as f64,
-            min_dim as f64,
-            0.0,
-            0.0,
-            size as f64,
-            size as f64,
-        )
-        .map_err(|e| format!("draw_image error: {:?}", e))?;
-
-        crate::utils::image_processing_client::blob_from_canvas(&canvas, 0.9).await?
-    };
-
-    // Generate thumbnail (100x100) variant
-    let thumb_bytes = {
-        let canvas = document
-            .create_element("canvas")
-            .map_err(|e| format!("Failed to create canvas: {:?}", e))?
-            .dyn_into::<HtmlCanvasElement>()
-            .map_err(|_| "Failed to cast to HtmlCanvasElement")?;
-
-        let size: u32 = 100;
-        canvas.set_width(size);
-        canvas.set_height(size);
-
-        let ctx = canvas
-            .get_context("2d")
-            .map_err(|e| format!("Failed to get 2D context: {:?}", e))?
-            .and_then(|v| v.dyn_into::<web_sys::CanvasRenderingContext2d>().ok())
-            .ok_or("Failed to cast context")?;
-
-        ctx.set_fill_style_str("white");
-        ctx.fill_rect(0.0, 0.0, size as f64, size as f64);
-        ctx.draw_image_with_html_image_element_and_sw_and_sh_and_dx_and_dy_and_dw_and_dh(
-            &img,
-            sx,
-            sy,
-            min_dim as f64,
-            min_dim as f64,
-            0.0,
-            0.0,
-            size as f64,
-            size as f64,
-        )
-        .map_err(|e| format!("draw_image error: {:?}", e))?;
-
-        crate::utils::image_processing_client::blob_from_canvas(&canvas, 0.8).await?
-    };
+    let full_bytes = render_avatar_variant(&document, &img, source, edit, 400, 0.9).await?;
+    let thumb_bytes = render_avatar_variant(&document, &img, source, edit, 100, 0.8).await?;
 
     Ok(ProcessedAvatar {
         full_bytes,
@@ -383,11 +731,25 @@ fn trigger_file_input(id: &str) {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
+fn reset_file_input(id: &str) {
+    if let Some(input) = web_sys::window()
+        .and_then(|window| window.document())
+        .and_then(|document| document.query_selector(id).ok().flatten())
+        .and_then(|element| element.dyn_into::<web_sys::HtmlInputElement>().ok())
+    {
+        input.set_value("");
+    }
+}
+
 /// No-op stub for non-wasm32 targets (SSR).
 #[cfg(not(target_arch = "wasm32"))]
 fn trigger_file_input(_id: &str) {
     // No DOM available during server-side rendering
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+fn reset_file_input(_id: &str) {}
 
 /// User profile settings page.
 ///
@@ -413,6 +775,22 @@ pub fn SettingsProfile() -> Element {
     // Avatar upload state
     let avatar_uploading = use_signal(|| false);
     let mut avatar_url_signal = use_signal(|| Option::<String>::None);
+    let mut avatar_editor_url = use_signal(|| Option::<String>::None);
+    let mut avatar_editor_initial_edit = use_signal(|| Option::<RecipeImageEdit>::None);
+    #[cfg(target_arch = "wasm32")]
+    let mut avatar_editor_blob = use_signal(|| Option::<web_sys::Blob>::None);
+
+    // Revoke a selected file's preview URL if the settings page unmounts
+    // while its editor is open.
+    #[cfg(target_arch = "wasm32")]
+    {
+        use dioxus::prelude::use_drop;
+        use_drop(move || {
+            if let Some(url) = avatar_editor_url() {
+                let _ = web_sys::Url::revoke_object_url(&url);
+            }
+        });
+    }
 
     // Extract username for typed confirmation (before use_effect consumes auth.current_user)
     let delete_username = auth
@@ -674,15 +1052,142 @@ pub fn SettingsProfile() -> Element {
         });
     };
 
-    // Avatar upload handler: process image client-side, then upload
-    // Uses the same pattern as image_upload.rs for file handling
-    let on_avatar_file_change = move |files: Vec<dioxus::html::FileData>| {
+    // Selecting an avatar opens the editor. Processing and upload only begin
+    // after the user confirms their crop.
+    #[allow(unused_mut)]
+    let mut on_avatar_file_change = move |files: Vec<dioxus::html::FileData>| {
         if files.is_empty() {
             return;
         }
 
         #[cfg(target_arch = "wasm32")]
         {
+            use dioxus_web::WebFileExt;
+
+            error.set(None);
+            saved_message.set(None);
+
+            let Some(web_file) = files[0].get_web_file() else {
+                error.set(Some("Could not read file".to_string()));
+                return;
+            };
+
+            let object_url = match web_sys::Url::create_object_url_with_blob(&web_file) {
+                Ok(url) => url,
+                Err(_) => {
+                    error.set(Some("Could not preview the selected image".to_string()));
+                    return;
+                }
+            };
+
+            if let Some(previous_url) = avatar_editor_url() {
+                let _ = web_sys::Url::revoke_object_url(&previous_url);
+            }
+            avatar_editor_blob.set(Some(web_file.into()));
+            avatar_editor_initial_edit.set(Some(RecipeImageEdit::default_ellipse_1x1()));
+            avatar_editor_url.set(Some(object_url));
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let _ = &files;
+        }
+    };
+
+    let on_edit_existing_avatar = move |_| {
+        #[cfg(target_arch = "wasm32")]
+        {
+            spawn(async move {
+                error.set(None);
+                let source = match get_avatar_edit_source().await {
+                    Ok(Some(source)) => source,
+                    Ok(None) => {
+                        error.set(Some("No avatar is available to edit".to_string()));
+                        return;
+                    }
+                    Err(_) => {
+                        error.set(Some("Could not load the saved avatar edit".to_string()));
+                        return;
+                    }
+                };
+                let response = match gloo_net::http::Request::get(&source.original_url)
+                    .send()
+                    .await
+                {
+                    Ok(response) if response.ok() => response,
+                    Ok(response) => {
+                        error.set(Some(format!(
+                            "Could not load the current avatar (HTTP {})",
+                            response.status()
+                        )));
+                        return;
+                    }
+                    Err(_) => {
+                        error.set(Some(
+                            "Could not load the current avatar for editing".to_string(),
+                        ));
+                        return;
+                    }
+                };
+                let bytes = match response.binary().await {
+                    Ok(bytes) => bytes,
+                    Err(_) => {
+                        error.set(Some("Could not read the current avatar".to_string()));
+                        return;
+                    }
+                };
+                let byte_array = js_sys::Uint8Array::from(bytes.as_slice());
+                let parts = js_sys::Array::new();
+                parts.push(&byte_array);
+                let blob = match web_sys::Blob::new_with_u8_array_sequence(&parts) {
+                    Ok(blob) => blob,
+                    Err(_) => {
+                        error.set(Some(
+                            "Could not prepare the current avatar for editing".to_string(),
+                        ));
+                        return;
+                    }
+                };
+                let object_url = match web_sys::Url::create_object_url_with_blob(&blob) {
+                    Ok(url) => url,
+                    Err(_) => {
+                        error.set(Some("Could not preview the current avatar".to_string()));
+                        return;
+                    }
+                };
+
+                if let Some(previous_url) = avatar_editor_url() {
+                    let _ = web_sys::Url::revoke_object_url(&previous_url);
+                }
+                avatar_editor_blob.set(Some(blob));
+                avatar_editor_initial_edit.set(Some(source.edit));
+                avatar_editor_url.set(Some(object_url));
+            });
+        }
+    };
+
+    let on_avatar_editor_close = move |_| {
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(url) = avatar_editor_url() {
+                let _ = web_sys::Url::revoke_object_url(&url);
+            }
+            avatar_editor_blob.set(None);
+        }
+        avatar_editor_initial_edit.set(None);
+        avatar_editor_url.set(None);
+        reset_file_input("#avatar-upload-input");
+    };
+
+    let on_avatar_edit_save = move |edit: RecipeImageEdit| {
+        #[cfg(target_arch = "wasm32")]
+        {
+            let Some(image_blob) = avatar_editor_blob() else {
+                error.set(Some(
+                    "The selected image is no longer available".to_string(),
+                ));
+                return;
+            };
             let mut auth_context = auth_context;
             let mut avatar_url = avatar_url_signal;
             let mut avatar_uploading = avatar_uploading;
@@ -690,24 +1195,20 @@ pub fn SettingsProfile() -> Element {
             let mut saved_message = saved_message;
 
             spawn(async move {
-                use dioxus_web::WebFileExt;
-
                 avatar_uploading.set(true);
                 error.set(None);
 
-                let file_data = &files[0];
-                let web_file = match file_data.get_web_file() {
-                    Some(f) => f,
-                    None => {
-                        error.set(Some("Could not read file".to_string()));
-                        avatar_uploading.set(false);
-                        return;
-                    }
-                };
+                let original_bytes =
+                    match crate::utils::image_processing_client::blob_to_bytes(&image_blob).await {
+                        Ok(bytes) => bytes,
+                        Err(e) => {
+                            error.set(Some(format!("Failed to read original image: {e}")));
+                            avatar_uploading.set(false);
+                            return;
+                        }
+                    };
 
-                // Process: read file, center-crop on canvas, encode as WebP bytes
-                let processed = process_avatar_image(web_file).await;
-                let processed = match processed {
+                let processed = match process_avatar_image(image_blob, &edit).await {
                     Ok(data) => data,
                     Err(e) => {
                         error.set(Some(format!("Failed to process image: {e}")));
@@ -716,8 +1217,14 @@ pub fn SettingsProfile() -> Element {
                     }
                 };
 
-                // Upload to server (both full-size and thumbnail)
-                match upload_avatar(processed.full_bytes, processed.thumb_bytes).await {
+                match upload_avatar(
+                    original_bytes,
+                    processed.full_bytes,
+                    processed.thumb_bytes,
+                    edit,
+                )
+                .await
+                {
                     Ok(profile) => {
                         avatar_url.set(profile.avatar_url.clone());
                         auth_context.write().current_user = Some(profile);
@@ -738,7 +1245,7 @@ pub fn SettingsProfile() -> Element {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let _ = &files;
+            let _ = edit;
         }
     };
 
@@ -817,6 +1324,11 @@ pub fn SettingsProfile() -> Element {
                                 div {
                                     display: "flex",
                                     gap: "var(--space-sm)",
+                                    Button {
+                                        variant: ButtonVariant::Secondary,
+                                        onclick: on_edit_existing_avatar,
+                                        "{avatar_photo_actions(true)[0]}"
+                                    }
                                     Button {
                                         variant: ButtonVariant::Secondary,
                                         onclick: move |_| trigger_file_input("#avatar-upload-input"),
@@ -1034,6 +1546,14 @@ pub fn SettingsProfile() -> Element {
             }
 
             // ── Modal Overlays ───────────────────────────────────────────
+            ImageEditorModal {
+                image_url: avatar_editor_url,
+                crop_mode: ImageEditorCropMode::Ellipse1x1,
+                initial_edit: avatar_editor_initial_edit(),
+                on_save: on_avatar_edit_save,
+                on_close: on_avatar_editor_close,
+            }
+
             if let Some(step) = delete_step() {
                 div {
                     class: "modal-overlay",

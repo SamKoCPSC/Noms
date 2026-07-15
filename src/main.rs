@@ -132,7 +132,8 @@ fn main() {
                     axum::routing::post(api::upload::upload_handler),
                 )
                 .with_state(auth::user_profile::UserProfileState { pool: pool.clone() })
-                .serve_dioxus_application(ServeConfig::new(), App);
+                .serve_dioxus_application(ServeConfig::new(), App)
+                .layer(api::upload::server_function_body_limit_layer());
 
             let oauth_router = axum::Router::new()
                 .route(
