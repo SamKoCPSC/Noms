@@ -51,8 +51,13 @@ fn is_recipe_route(path: &str) -> bool {
     if rest.is_empty() || rest.starts_with('/') {
         return false;
     }
-    let first_segment = rest.split('/').next().unwrap_or("");
-    is_valid_uuid_string(first_segment)
+    let segments = rest.split('/').collect::<Vec<_>>();
+    if segments.first() == Some(&"drafts") {
+        return matches!(segments.as_slice(), ["drafts", id, "edit"] if is_valid_uuid_string(id));
+    }
+    segments
+        .first()
+        .is_some_and(|segment| is_valid_uuid_string(segment))
 }
 
 /// Check if a string matches the UUID format (8-4-4-4-12 hex chars with dashes).

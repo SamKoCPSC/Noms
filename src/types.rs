@@ -263,6 +263,92 @@ pub struct RecipeListResponse {
     pub has_more: bool,
 }
 
+/// Client-facing recipe editor state. The server converts this into its
+/// canonical persistence snapshot; IDs and presentation metadata stay out of it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecipeEditorState {
+    pub title: String,
+    pub description: Option<String>,
+    pub commentary: Option<String>,
+    pub prep_time_minutes: Option<i32>,
+    pub cook_time_minutes: Option<i32>,
+    pub servings: Option<i32>,
+    pub ingredients: Vec<RecipeIngredient>,
+    pub instructions: Vec<RecipeStep>,
+    pub equipment: Vec<RecipeEquipment>,
+    pub images: Vec<RecipeImage>,
+    pub visibility: String,
+    pub tags: Vec<String>,
+}
+
+impl Default for RecipeEditorState {
+    fn default() -> Self {
+        Self {
+            title: String::new(),
+            description: None,
+            commentary: None,
+            prep_time_minutes: None,
+            cook_time_minutes: None,
+            servings: None,
+            ingredients: Vec::new(),
+            instructions: Vec::new(),
+            equipment: Vec::new(),
+            images: Vec::new(),
+            visibility: "private".to_string(),
+            tags: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecipeDraftView {
+    pub id: Uuid,
+    pub recipe_id: Option<Uuid>,
+    pub base_version_number: Option<i32>,
+    pub revision: i64,
+    pub editor: RecipeEditorState,
+    pub forked_from_recipe_id: Option<Uuid>,
+    pub forked_from_version_number: Option<i32>,
+    pub forked_from_title: Option<String>,
+    pub fork_message: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecipeVersionSummary {
+    pub version_number: i32,
+    pub title: String,
+    pub notes: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub is_current: bool,
+    pub change_summary: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecipeVersionView {
+    pub version_number: i32,
+    pub editor: RecipeEditorState,
+    pub notes: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub changes_from_previous: Vec<RecipeVersionChange>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecipeVersionChange {
+    pub op: String,
+    pub path: String,
+    pub old_value: Option<serde_json::Value>,
+    pub value: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ForkAttribution {
+    pub original_recipe_id: Option<Uuid>,
+    pub original_title: String,
+    pub message: Option<String>,
+}
+
 /// Public user profile with recipe count.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UserProfile {

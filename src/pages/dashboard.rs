@@ -1,14 +1,18 @@
 use dioxus::prelude::*;
 
-use crate::api::recipe::list_my_recipes;
+use crate::api::recipe::{list_my_recipes, list_recipe_drafts};
 use crate::components::base::{
-    Button, ButtonVariant, EmptyState, LoadingSpinner, PageHeader, RecipeCard,
+    Button, ButtonVariant, EditedRecipeImage, EmptyState, LoadingSpinner, PageHeader, RecipeCard,
 };
 use crate::components::AuthRequired;
-use crate::types::RecipeListResponse;
+use crate::types::{RecipeDraftView, RecipeImage, RecipeListResponse};
 use crate::Route;
 
 const PAGE_SIZE: i64 = 12;
+
+fn draft_card_image(images: &[RecipeImage]) -> Option<RecipeImage> {
+    images.first().cloned()
+}
 
 /// User's recipe library — paginated grid of recipe cards.
 #[component]
@@ -22,10 +26,15 @@ pub fn Dashboard() -> Element {
         let off = offset();
         async move { list_my_recipes(off, PAGE_SIZE).await }
     });
+    let drafts = use_resource(list_recipe_drafts);
 
     // Extract resource state to avoid borrow issues in rsx!
     let pending = recipes.pending();
     let recipes_result: Option<Result<RecipeListResponse, ServerFnError>> = recipes.read().clone();
+    let drafts_result: Option<Result<Vec<RecipeDraftView>, ServerFnError>> = drafts.read().clone();
+    let draft_list = drafts_result
+        .as_ref()
+        .and_then(|result| result.as_ref().ok());
 
     // Derived state
     let response = recipes_result.as_ref().and_then(|r| r.as_ref().ok());
@@ -44,6 +53,67 @@ pub fn Dashboard() -> Element {
                             "+ New Recipe"
                         }
                     },
+                }
+
+                if let Some(drafts) = draft_list {
+                    if !drafts.is_empty() {
+                        section {
+                            margin_bottom: "var(--space-xl)",
+                            h2 { "Drafts" }
+                            p {
+                                color: "var(--text-secondary)",
+                                "Private work in progress · autosaved"
+                            }
+                            div { class: "recipe-grid",
+                                for draft in drafts {
+                                    Link {
+                                        key: "{draft.id}",
+                                        to: Route::RecipeDraftEdit { id: draft.id.to_string() },
+                                        class: "recipe-card recipe-card__link",
+                                        div { class: "recipe-card__image",
+                                            if let Some(image) = draft_card_image(&draft.editor.images) {
+                                                EditedRecipeImage {
+                                                    image,
+                                                    class: "recipe-card__image-img",
+                                                    alt: if draft.editor.title.trim().is_empty() {
+                                                        "Untitled recipe draft".to_string()
+                                                    } else {
+                                                        format!("{} draft", draft.editor.title)
+                                                    },
+                                                    prefer_thumbnail: true,
+                                                    on_error: move |_| {},
+                                                }
+                                            } else {
+                                                div {
+                                                    class: "recipe-card__image-placeholder",
+                                                    aria_hidden: true,
+                                                }
+                                            }
+                                        }
+                                        div { class: "recipe-card__content",
+                                            span {
+                                                class: "recipe-detail__tag",
+                                                "DRAFT"
+                                            }
+                                            h3 { class: "recipe-card__title",
+                                                if draft.editor.title.trim().is_empty() {
+                                                    "Untitled recipe"
+                                                } else {
+                                                    "{draft.editor.title}"
+                                                }
+                                            }
+                                            if let Some(source) = &draft.forked_from_title {
+                                                p { "Forked from {source}" }
+                                            }
+                                            p { class: "recipe-card__description",
+                                                "Revision {draft.revision}"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // Loading state (first load only)
@@ -120,5 +190,32 @@ pub fn Dashboard() -> Element {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod draft_card_tests {
+    use super::draft_card_image;
+    use crate::types::{RecipeImage, RecipeImageEdit};
+
+    #[test]
+    fn draft_card_uses_the_first_snapshot_image() {
+        let first = RecipeImage::new(
+            "https://example.test/first.webp".to_string(),
+            Some("https://example.test/first-thumb.webp".to_string()),
+            RecipeImageEdit::default_rect_16x9(),
+        );
+        let second = RecipeImage::new(
+            "https://example.test/second.webp".to_string(),
+            None,
+            RecipeImageEdit::default_rect_16x9(),
+        );
+
+        assert_eq!(draft_card_image(&[first.clone(), second]), Some(first));
+    }
+
+    #[test]
+    fn draft_card_without_images_uses_the_placeholder_path() {
+        assert_eq!(draft_card_image(&[]), None);
     }
 }

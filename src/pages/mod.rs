@@ -1,6 +1,7 @@
 mod collection_detail;
 mod collection_list;
 mod dashboard;
+mod draft_save;
 mod explore;
 mod home;
 mod login;
@@ -19,7 +20,7 @@ pub use home::Home;
 pub use login::Login;
 pub use not_found::NotFound;
 pub use recipe_detail::RecipeDetail;
-pub use recipe_edit::RecipeEdit;
+pub use recipe_edit::{RecipeDraftEdit, RecipeEdit};
 pub use recipe_new::RecipeNew;
 pub use settings::SettingsAccounts;
 pub use settings::SettingsProfile;

@@ -104,6 +104,62 @@ CREATE TABLE IF NOT EXISTS recipe_tags (
     PRIMARY KEY (recipe_id, tag)
 );
 
+-- Immutable full snapshots for every published recipe revision.
+CREATE TABLE IF NOT EXISTS recipe_versions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+    version_number INTEGER NOT NULL CHECK (version_number > 0),
+    snapshot JSONB NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (recipe_id, version_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_recipe_versions_recipe
+    ON recipe_versions(recipe_id, version_number DESC);
+
+-- Mutable, owner-only work in progress. Existing recipes have one draft per
+-- owner/recipe pair; users may keep multiple new-recipe drafts.
+CREATE TABLE IF NOT EXISTS recipe_drafts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    recipe_id UUID REFERENCES recipes(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    base_version_number INTEGER CHECK (base_version_number IS NULL OR base_version_number > 0),
+    snapshot JSONB NOT NULL,
+    revision BIGINT NOT NULL DEFAULT 0,
+    forked_from_recipe_id UUID REFERENCES recipes(id) ON DELETE SET NULL,
+    forked_from_version_number INTEGER CHECK (
+        forked_from_version_number IS NULL OR forked_from_version_number > 0
+    ),
+    forked_from_title VARCHAR(255),
+    fork_message TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_recipe_drafts_user
+    ON recipe_drafts(user_id, updated_at DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_recipe_drafts_existing_recipe
+    ON recipe_drafts(user_id, recipe_id)
+    WHERE recipe_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS fork_relationships (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    original_recipe_id UUID REFERENCES recipes(id) ON DELETE SET NULL,
+    forked_recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+    forked_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    forked_version_number INTEGER CHECK (
+        forked_version_number IS NULL OR forked_version_number > 0
+    ),
+    original_title VARCHAR(255) NOT NULL,
+    message TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_forks_original ON fork_relationships(original_recipe_id);
+CREATE INDEX IF NOT EXISTS idx_forks_result ON fork_relationships(forked_recipe_id);
+
 CREATE INDEX IF NOT EXISTS idx_recipes_user_id ON recipes(user_id);
 CREATE INDEX IF NOT EXISTS idx_recipes_created_at ON recipes(created_at DESC);
 

@@ -10,6 +10,12 @@ use chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool, Postgres, Row};
 use uuid::Uuid;
 
+pub mod diff;
+mod versioning;
+
+#[allow(unused_imports)]
+pub use versioning::*;
+
 // Re-export typed recipe sub-structs for use in DB layer
 pub use crate::types::RecipeEquipment;
 pub use crate::types::RecipeIngredient;
@@ -32,6 +38,29 @@ pub enum DbError {
     SessionInvalid,
     /// The requested recipe was not found.
     RecipeNotFound(uuid::Uuid),
+    /// The requested immutable published version was not found.
+    VersionNotFound {
+        recipe_id: Uuid,
+        version_number: i32,
+    },
+    /// A publish/restore was based on a stale published version.
+    VersionConflict {
+        recipe_id: Uuid,
+        expected: i32,
+        actual: i32,
+    },
+    /// The requested owner-gated draft was not found.
+    DraftNotFound(Uuid),
+    /// A draft autosave used a stale revision counter.
+    DraftConflict {
+        draft_id: Uuid,
+        expected: i64,
+        actual: i64,
+    },
+    /// A recipe cannot be forked under the current access policy.
+    ForkError(String),
+    /// A snapshot did not satisfy publication validation.
+    InvalidRecipeSnapshot(String),
     /// Failed to serialize or deserialize JSONB data.
     SerdeJson(serde_json::Error),
 }
@@ -45,6 +74,31 @@ impl std::fmt::Display for DbError {
             DbError::UsernameTaken => write!(f, "username is already taken"),
             DbError::SessionInvalid => write!(f, "session is invalid, revoked, or expired"),
             DbError::RecipeNotFound(id) => write!(f, "recipe not found: {id}"),
+            DbError::VersionNotFound {
+                recipe_id,
+                version_number,
+            } => write!(f, "recipe version not found: {recipe_id} v{version_number}"),
+            DbError::VersionConflict {
+                recipe_id,
+                expected,
+                actual,
+            } => write!(
+                f,
+                "recipe version conflict for {recipe_id}: expected v{expected}, current v{actual}"
+            ),
+            DbError::DraftNotFound(id) => write!(f, "recipe draft not found: {id}"),
+            DbError::DraftConflict {
+                draft_id,
+                expected,
+                actual,
+            } => write!(
+                f,
+                "recipe draft conflict for {draft_id}: expected revision {expected}, current revision {actual}"
+            ),
+            DbError::ForkError(message) => write!(f, "recipe fork failed: {message}"),
+            DbError::InvalidRecipeSnapshot(message) => {
+                write!(f, "invalid recipe snapshot: {message}")
+            }
             DbError::SerdeJson(e) => write!(f, "JSON serialization/deserialization failed: {e}"),
         }
     }
@@ -58,6 +112,12 @@ impl std::error::Error for DbError {
             DbError::UsernameTaken => None,
             DbError::SessionInvalid => None,
             DbError::RecipeNotFound(_) => None,
+            DbError::VersionNotFound { .. }
+            | DbError::VersionConflict { .. }
+            | DbError::DraftNotFound(_)
+            | DbError::DraftConflict { .. }
+            | DbError::ForkError(_)
+            | DbError::InvalidRecipeSnapshot(_) => None,
             DbError::SerdeJson(e) => Some(e),
         }
     }
@@ -1149,9 +1209,16 @@ pub async fn get_public_recipe_tags(
 /// Used by the orphan cleanup worker to determine which storage objects are still needed.
 pub async fn get_all_image_urls(pool: &PgPool) -> Result<Vec<String>, DbError> {
     let rows = sqlx::query_scalar::<_, String>(
-        "WITH RECURSIVE step_entries(step_entry) AS (
+        "WITH RECURSIVE recipe_documents(images, instructions) AS (
+             SELECT images, instructions FROM recipes
+             UNION ALL
+             SELECT snapshot -> 'images', snapshot -> 'instructions' FROM recipe_drafts
+             UNION ALL
+             SELECT snapshot -> 'images', snapshot -> 'instructions' FROM recipe_versions
+         ),
+         step_entries(step_entry) AS (
              SELECT step_entry
-             FROM recipes
+             FROM recipe_documents
              CROSS JOIN LATERAL jsonb_array_elements(instructions) AS step_entry
              WHERE instructions IS NOT NULL
                 AND jsonb_typeof(instructions) = 'array'
@@ -1168,7 +1235,7 @@ pub async fn get_all_image_urls(pool: &PgPool) -> Result<Vec<String>, DbError> {
          ),
          image_urls(image_url) AS (
              SELECT image_urls.image_url
-             FROM recipes
+             FROM recipe_documents
              CROSS JOIN LATERAL jsonb_array_elements(images) AS image_entry
              CROSS JOIN LATERAL (
                  VALUES (image_entry ->> 'url'), (image_entry ->> 'thumb_url')

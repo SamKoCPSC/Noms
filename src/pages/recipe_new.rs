@@ -5,7 +5,9 @@
 
 use dioxus::prelude::*;
 
-use crate::api::recipe::create_recipe;
+use crate::api::recipe::{
+    create_recipe_draft, get_recipe_draft_api, publish_recipe_draft, save_recipe_draft,
+};
 #[allow(unused_imports)]
 use crate::api::upload::upload_image;
 use crate::components::base::{
@@ -13,7 +15,10 @@ use crate::components::base::{
     UploadOutcome,
 };
 use crate::components::AuthRequired;
-use crate::types::{RecipeEquipment, RecipeImage, RecipeImageEdit, RecipeIngredient, RecipeStep};
+use crate::pages::draft_save::draft_save_button_state;
+use crate::types::{
+    RecipeEditorState, RecipeEquipment, RecipeImage, RecipeImageEdit, RecipeIngredient, RecipeStep,
+};
 use crate::utils::reorder::move_item;
 
 // ── Local form types ─────────────────────────────────────────────────────────
@@ -118,6 +123,42 @@ fn build_step_tree(steps: &[StepForm]) -> Vec<RecipeStep> {
     nodes
 }
 
+#[allow(clippy::too_many_arguments)]
+fn editor_state(
+    title: String,
+    description: String,
+    commentary: String,
+    prep_time: String,
+    cook_time: String,
+    servings: String,
+    ingredients: Vec<RecipeIngredient>,
+    steps: Vec<StepForm>,
+    equipment: Vec<RecipeEquipment>,
+    images: Vec<RecipeImage>,
+    visibility: String,
+    tags_input: String,
+) -> RecipeEditorState {
+    RecipeEditorState {
+        title: title.trim().to_string(),
+        description: (!description.trim().is_empty()).then(|| description.trim().to_string()),
+        commentary: (!commentary.trim().is_empty()).then(|| commentary.trim().to_string()),
+        prep_time_minutes: prep_time.trim().parse().ok(),
+        cook_time_minutes: cook_time.trim().parse().ok(),
+        servings: servings.trim().parse().ok(),
+        ingredients,
+        instructions: build_step_tree(&steps),
+        equipment,
+        images,
+        visibility,
+        tags: tags_input
+            .split(',')
+            .map(str::trim)
+            .filter(|tag| !tag.is_empty())
+            .map(str::to_string)
+            .collect(),
+    }
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 /// Programmatically trigger a click on a file input element by selector.
@@ -129,7 +170,7 @@ fn trigger_file_input(selector: &str) {
         if let Some(doc) = window.document() {
             if let Ok(Some(input)) = doc.query_selector(selector) {
                 if let Some(file_input) = input.dyn_ref::<web_sys::HtmlInputElement>() {
-                    let _ = file_input.click();
+                    file_input.click();
                 }
             }
         }
@@ -176,7 +217,18 @@ pub fn RecipeNew() -> Element {
 
     // UI state
     let mut is_saving = use_signal(|| false);
+    #[allow(unused_mut)]
+    let mut is_manually_saving = use_signal(|| false);
     let mut error = use_signal(|| Option::<String>::None);
+    #[allow(unused_mut)]
+    let mut draft_id = use_signal(|| Option::<String>::None);
+    #[allow(unused_mut, unused_variables)]
+    let mut draft_revision = use_signal(|| 0i64);
+    #[allow(unused_mut)]
+    let mut last_saved_editor = use_signal(|| Option::<RecipeEditorState>::None);
+    let mut autosave_generation = use_signal(|| 0u64);
+    #[allow(unused_mut)]
+    let mut draft_creation_in_flight = use_signal(|| false);
 
     // CP4: image upload state — shared with the `ImageUpload` component.
     // `images` is the sink for uploaded image records (read when calling
@@ -184,9 +236,10 @@ pub fn RecipeNew() -> Element {
     // mirrors "processing or uploading" and disables Save; `pending_save`
     // stashes the validated form at Save-click time for the
     // `on_upload_complete` handler to consume after the batch finishes.
-    let images = use_signal(Vec::<RecipeImage>::new);
+    let mut images = use_signal(Vec::<RecipeImage>::new);
     let mut upload_now = use_signal(|| false);
     let busy = use_signal(|| false);
+    let pending_image_count = use_signal(|| 0usize);
     let mut pending_save = use_signal(|| Option::<PendingSaveData>::None);
     let mut step_editor_modal_url = use_signal(|| Option::<String>::None);
     let mut step_editor_idx = use_signal(|| Option::<usize>::None);
@@ -195,14 +248,209 @@ pub fn RecipeNew() -> Element {
     let step_photo_upload_count = use_signal(|| 0usize);
     let mut dragged_step_photo = use_signal(|| Option::<(usize, usize)>::None);
 
+    // Start a new mutable draft on the first meaningful edit, then autosave
+    // subsequent changes after two idle seconds. No version is created here.
+    use_effect(move || {
+        let editor = editor_state(
+            title(),
+            description(),
+            commentary(),
+            prep_time(),
+            cook_time(),
+            servings(),
+            ingredients(),
+            steps(),
+            equipment(),
+            images(),
+            visibility(),
+            tags_input(),
+        );
+        let meaningful = !editor.title.is_empty()
+            || editor.description.is_some()
+            || editor.commentary.is_some()
+            || !editor.ingredients.is_empty()
+            || !editor.instructions.is_empty()
+            || !editor.equipment.is_empty()
+            || !editor.images.is_empty()
+            || !editor.tags.is_empty();
+        if !meaningful
+            || is_saving()
+            || is_manually_saving()
+            || last_saved_editor().as_ref() == Some(&editor)
+        {
+            return;
+        }
+
+        // Do not subscribe the effect to its own generation counter.
+        let generation = *autosave_generation.peek() + 1;
+        autosave_generation.set(generation);
+        #[allow(unused_variables)]
+        let current_draft_id = draft_id();
+        #[allow(unused_variables)]
+        let expected_revision = draft_revision();
+        #[cfg(target_arch = "wasm32")]
+        spawn(async move {
+            gloo_timers::future::TimeoutFuture::new(2_000).await;
+            if autosave_generation() != generation || is_saving() || is_manually_saving() {
+                return;
+            }
+            let result = if let Some(current_draft_id) = current_draft_id {
+                let first_save =
+                    save_recipe_draft(current_draft_id.clone(), expected_revision, editor.clone())
+                        .await;
+                match first_save {
+                    Ok(saved) => Ok(saved),
+                    Err(_) if autosave_generation() == generation => {
+                        match get_recipe_draft_api(current_draft_id.clone()).await {
+                            Ok(current) => {
+                                save_recipe_draft(
+                                    current_draft_id,
+                                    current.revision,
+                                    editor.clone(),
+                                )
+                                .await
+                            }
+                            Err(error) => Err(error),
+                        }
+                    }
+                    Err(error) => Err(error),
+                }
+            } else if *draft_creation_in_flight.peek() {
+                return;
+            } else {
+                draft_creation_in_flight.set(true);
+                let created = create_recipe_draft(editor.clone()).await;
+                draft_creation_in_flight.set(false);
+                created
+            };
+            match result {
+                Ok(saved) => {
+                    if draft_id().is_none() {
+                        let saved_id = saved.id.to_string();
+                        draft_id.set(Some(saved_id.clone()));
+                        if let Some(window) = web_sys::window() {
+                            if let Ok(history) = window.history() {
+                                let _ = history.replace_state_with_url(
+                                    &wasm_bindgen::JsValue::NULL,
+                                    "",
+                                    Some(&format!("/recipes/drafts/{saved_id}/edit")),
+                                );
+                            }
+                        }
+                    }
+                    draft_revision.set(saved.revision);
+                    if autosave_generation() == generation {
+                        last_saved_editor.set(Some(editor));
+                    }
+                }
+                Err(save_error) if autosave_generation() == generation => {
+                    error.set(Some(format!("Autosave failed: {save_error}")));
+                }
+                Err(_) => {}
+            }
+        });
+    });
+
+    #[allow(unused_variables)]
+    let on_save_draft = move |_| {
+        #[cfg(target_arch = "wasm32")]
+        {
+            let editor = editor_state(
+                title(),
+                description(),
+                commentary(),
+                prep_time(),
+                cook_time(),
+                servings(),
+                ingredients(),
+                steps(),
+                equipment(),
+                images(),
+                visibility(),
+                tags_input(),
+            );
+            let meaningful = !editor.title.is_empty()
+                || editor.description.is_some()
+                || editor.commentary.is_some()
+                || !editor.ingredients.is_empty()
+                || !editor.instructions.is_empty()
+                || !editor.equipment.is_empty()
+                || !editor.images.is_empty()
+                || !editor.tags.is_empty();
+            if !meaningful || is_saving() || is_manually_saving() {
+                return;
+            }
+
+            error.set(None);
+            is_manually_saving.set(true);
+            autosave_generation.set(autosave_generation() + 1);
+            let current_draft_id = draft_id();
+            let expected_revision = draft_revision();
+            spawn(async move {
+                let save_result = if let Some(current_draft_id) = current_draft_id {
+                    let first_save = save_recipe_draft(
+                        current_draft_id.clone(),
+                        expected_revision,
+                        editor.clone(),
+                    )
+                    .await;
+                    match first_save {
+                        Ok(saved) => Ok(saved),
+                        Err(_) => match get_recipe_draft_api(current_draft_id.clone()).await {
+                            Ok(current) => {
+                                save_recipe_draft(
+                                    current_draft_id,
+                                    current.revision,
+                                    editor.clone(),
+                                )
+                                .await
+                            }
+                            Err(error) => Err(error),
+                        },
+                    }
+                } else if *draft_creation_in_flight.peek() {
+                    Err(ServerFnError::new(
+                        "Draft creation is already finishing. Try again in a moment.",
+                    ))
+                } else {
+                    draft_creation_in_flight.set(true);
+                    let created = create_recipe_draft(editor.clone()).await;
+                    draft_creation_in_flight.set(false);
+                    created
+                };
+
+                match save_result {
+                    Ok(saved) => {
+                        if draft_id().is_none() {
+                            let saved_id = saved.id.to_string();
+                            draft_id.set(Some(saved_id.clone()));
+                            if let Some(window) = web_sys::window() {
+                                if let Ok(history) = window.history() {
+                                    let _ = history.replace_state_with_url(
+                                        &wasm_bindgen::JsValue::NULL,
+                                        "",
+                                        Some(&format!("/recipes/drafts/{saved_id}/edit")),
+                                    );
+                                }
+                            }
+                        }
+                        draft_revision.set(saved.revision);
+                        last_saved_editor.set(Some(editor));
+                    }
+                    Err(save_error) => {
+                        error.set(Some(format!("Save draft failed: {save_error}")));
+                    }
+                }
+                is_manually_saving.set(false);
+            });
+        }
+    };
+
     // ── Step photo upload handler ────────────────────────────────────────
     // Created per-step via closure capturing the step index
     #[allow(unused_variables)]
     let on_step_photo_change = move |idx: usize| {
         move |files: Vec<dioxus::html::FileData>| {
-            if files.is_empty() {
-                return;
-            }
             #[cfg(target_arch = "wasm32")]
             {
                 let mut steps = steps;
@@ -430,22 +678,51 @@ pub fn RecipeNew() -> Element {
             }
 
             error.set(None);
-            match create_recipe(
-                data.title,
-                data.description,
-                data.commentary,
-                data.prep,
-                data.cook,
-                data.serv,
-                data.ingredients,
-                data.instructions,
-                data.equipment,
-                images(), // uploaded full and thumbnail URLs
-                data.tags,
-                data.visibility,
-            )
-            .await
-            {
+            if *draft_creation_in_flight.peek() {
+                error.set(Some(
+                    "The first autosave is still finishing. Publish again in a moment.".to_string(),
+                ));
+                is_saving.set(false);
+                return;
+            }
+            autosave_generation.set(autosave_generation() + 1);
+            let editor = RecipeEditorState {
+                title: data.title,
+                description: data.description,
+                commentary: data.commentary,
+                prep_time_minutes: data.prep,
+                cook_time_minutes: data.cook,
+                servings: data.serv,
+                ingredients: data.ingredients,
+                instructions: data.instructions,
+                equipment: data.equipment,
+                images: images(),
+                visibility: data.visibility,
+                tags: data.tags,
+            };
+            let publish_result = async {
+                let saved = if let Some(current_draft_id) = draft_id() {
+                    let current = get_recipe_draft_api(current_draft_id.clone()).await?;
+                    let first_save = save_recipe_draft(
+                        current_draft_id.clone(),
+                        current.revision,
+                        editor.clone(),
+                    )
+                    .await;
+                    match first_save {
+                        Ok(saved) => saved,
+                        Err(_) => {
+                            let refreshed = get_recipe_draft_api(current_draft_id.clone()).await?;
+                            save_recipe_draft(current_draft_id, refreshed.revision, editor).await?
+                        }
+                    }
+                } else {
+                    create_recipe_draft(editor).await?
+                };
+                publish_recipe_draft(saved.id.to_string(), None).await
+            }
+            .await;
+            match publish_result {
                 #[allow(unused_variables)]
                 Ok(recipe) => {
                     // Navigate to recipe detail page
@@ -482,6 +759,33 @@ pub fn RecipeNew() -> Element {
         }
     };
 
+    let current_editor = editor_state(
+        title(),
+        description(),
+        commentary(),
+        prep_time(),
+        cook_time(),
+        servings(),
+        ingredients(),
+        steps(),
+        equipment(),
+        images(),
+        visibility(),
+        tags_input(),
+    );
+    let has_meaningful_draft_content = !current_editor.title.is_empty()
+        || current_editor.description.is_some()
+        || current_editor.commentary.is_some()
+        || !current_editor.ingredients.is_empty()
+        || !current_editor.instructions.is_empty()
+        || !current_editor.equipment.is_empty()
+        || !current_editor.images.is_empty()
+        || !current_editor.tags.is_empty();
+    let draft_save_state = draft_save_button_state(
+        is_manually_saving(),
+        has_meaningful_draft_content && last_saved_editor().as_ref() != Some(&current_editor),
+    );
+
     // ── Ingredient helpers ──────────────────────────────────────────────
     let on_add_ingredient = move |_| {
         ingredients.write().push(RecipeIngredient {
@@ -512,6 +816,16 @@ pub fn RecipeNew() -> Element {
             div { class: "container",
                 PageHeader {
                     title: "New Recipe",
+                }
+                div { class: "recipe-detail__tags",
+                    span { class: "recipe-detail__tag", "DRAFT" }
+                    span {
+                        if draft_id().is_some() {
+                            "Autosaved privately"
+                        } else {
+                            "Autosaves after your first edit"
+                        }
+                    }
                 }
                 div {
                     display: "flex",
@@ -555,6 +869,10 @@ pub fn RecipeNew() -> Element {
                             images,
                             upload_now,
                             busy,
+                            pending_count: pending_image_count,
+                            on_remove_existing: move |url: String| {
+                                images.write().retain(|image| image.url != url);
+                            },
                             on_upload_complete,
                         }
                         span {
@@ -1082,20 +1400,29 @@ pub fn RecipeNew() -> Element {
                         gap: "var(--space-md)",
                         margin_top: "var(--space-md)",
                         Button {
+                            variant: ButtonVariant::Secondary,
+                            disabled: !draft_save_state.is_actionable()
+                                || is_saving()
+                                || busy()
+                                || step_photo_upload_count() > 0,
+                            onclick: on_save_draft,
+                            "{draft_save_state.label()}"
+                        }
+                        Button {
                             variant: ButtonVariant::Primary,
-                            disabled: is_saving() || busy() || step_photo_upload_count() > 0,
+                            disabled: is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0,
                             onclick: on_submit,
                             if step_photo_upload_count() > 0 {
                                 "Uploading images..."
                             } else if is_saving() {
-                                "Saving..."
+                                "Publishing..."
                             } else {
-                                "Save Recipe"
+                                "Publish Recipe"
                             }
                         }
                         Button {
                             variant: ButtonVariant::Ghost,
-                            disabled: is_saving() || busy() || step_photo_upload_count() > 0,
+                            disabled: is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0,
                             onclick: on_cancel,
                             "Cancel"
                         }

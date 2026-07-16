@@ -12,14 +12,18 @@ use dioxus::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use crate::api::recipe::delete_recipe;
 use crate::api::recipe::{
-    get_public_recipe, get_public_recipe_tags_by_id, get_recipe, get_recipe_owner_username,
-    get_recipe_tags,
+    fork_recipe, get_fork_attribution, get_public_recipe, get_public_recipe_tags_by_id, get_recipe,
+    get_recipe_owner_username, get_recipe_tags, get_recipe_version_api, get_recipe_versions_api,
+    restore_version,
 };
 use crate::auth::context::use_auth;
 use crate::components::base::{
     Button, ButtonVariant, Card, EditedRecipeImage, LoadingSpinner, PageHeader,
 };
-use crate::types::{Recipe, RecipeEquipment, RecipeIngredient, RecipeStep};
+use crate::types::{
+    ForkAttribution, Recipe, RecipeEquipment, RecipeIngredient, RecipeStep, RecipeVersionSummary,
+    RecipeVersionView,
+};
 #[cfg(target_arch = "wasm32")]
 use crate::utils::recipe_scaler::{
     format_amount, parse_amount, IngredientRef, ScaleCalculator, ScaleMode, ScaledIngredient,
@@ -43,6 +47,22 @@ fn format_relative_time(dt: DateTime<Utc>) -> String {
         format!("{} minutes ago", diff.num_minutes())
     } else {
         "Just now".to_string()
+    }
+}
+
+#[cfg(test)]
+mod layout_tests {
+    #[test]
+    fn version_history_is_the_final_recipe_detail_section() {
+        let source = include_str!("recipe_detail.rs");
+        let commentary_position = source
+            .rfind("// ── CARD 7: Commentary")
+            .expect("commentary section marker");
+        let history_position = source
+            .rfind("h2 { \"Version history\" }")
+            .expect("version history heading");
+
+        assert!(history_position > commentary_position);
     }
 }
 
@@ -578,6 +598,19 @@ pub fn RecipeDetail(id: String) -> Element {
         let oid = id_for_owner.clone();
         async move { get_recipe_owner_username(oid).await }
     });
+    let id_for_attribution = id.clone();
+    let attribution_resource = use_resource(move || {
+        let recipe_id = id_for_attribution.clone();
+        async move { get_fork_attribution(recipe_id).await }
+    });
+    let id_for_versions = id.clone();
+    let versions_resource = use_resource(move || {
+        let recipe_id = id_for_versions.clone();
+        async move { get_recipe_versions_api(recipe_id).await }
+    });
+    let mut selected_version = use_signal(|| Option::<RecipeVersionView>::None);
+    let mut version_action_error = use_signal(|| Option::<String>::None);
+    let mut is_forking = use_signal(|| false);
 
     // Tags (signal-based, loaded conditionally based on ownership)
     let tags = use_signal(|| Option::<Vec<String>>::None);
@@ -655,6 +688,41 @@ pub fn RecipeDetail(id: String) -> Element {
             .clone()
             .and_then(|r| r.ok())
             .flatten()
+    };
+    let attribution: Option<ForkAttribution> = attribution_resource
+        .read()
+        .clone()
+        .and_then(Result::ok)
+        .flatten();
+    let versions: Vec<RecipeVersionSummary> = versions_resource
+        .read()
+        .clone()
+        .and_then(Result::ok)
+        .unwrap_or_default();
+
+    let id_for_fork = id.clone();
+    let on_fork = move |_| {
+        is_forking.set(true);
+        version_action_error.set(None);
+        let recipe_id = id_for_fork.clone();
+        spawn(async move {
+            match fork_recipe(recipe_id, None).await {
+                #[allow(unused_variables)]
+                Ok(draft) =>
+                {
+                    #[cfg(target_arch = "wasm32")]
+                    if let Some(window) = web_sys::window() {
+                        let _ = window
+                            .location()
+                            .set_href(&format!("/recipes/drafts/{}/edit", draft.id));
+                    }
+                }
+                Err(error) => {
+                    version_action_error.set(Some(error.to_string()));
+                    is_forking.set(false);
+                }
+            }
+        });
     };
 
     // ── Delete handler ───────────────────────────────────────────────────
@@ -770,25 +838,48 @@ pub fn RecipeDetail(id: String) -> Element {
             Card {
                 PageHeader {
                     title: "{recipe.title}",
-                    action: if is_owner {
-                        Some(rsx! {
+                    action: Some(rsx! {
                             div {
                                 display: "flex",
                                 gap: "var(--space-sm)",
-                                Link {
-                                    to: crate::Route::RecipeEdit { id: recipe.id.to_string() },
-                                    class: "btn btn-secondary touch-target",
-                                    "Edit"
-                                }
                                 Button {
-                                    variant: ButtonVariant::Danger,
-                                    disabled: is_deleting(),
-                                    onclick: on_delete,
-                                    if is_deleting() { "Deleting..." } else { "Delete" }
+                                    variant: ButtonVariant::Secondary,
+                                    disabled: is_forking(),
+                                    onclick: on_fork,
+                                    if is_forking() { "Forking..." } else { "Fork" }
+                                }
+                                if is_owner {
+                                    Link {
+                                        to: crate::Route::RecipeEdit { id: recipe.id.to_string() },
+                                        class: "btn btn-secondary touch-target",
+                                        "Edit"
+                                    }
+                                    Button {
+                                        variant: ButtonVariant::Danger,
+                                        disabled: is_deleting(),
+                                        onclick: on_delete,
+                                        if is_deleting() { "Deleting..." } else { "Delete" }
+                                    }
                                 }
                             }
-                        })
-                    } else { None },
+                        }),
+                }
+
+                if let Some(source) = &attribution {
+                    div {
+                        class: "recipe-detail__tags",
+                        if let Some(source_id) = source.original_recipe_id {
+                            Link {
+                                to: crate::Route::RecipeDetail { id: source_id.to_string() },
+                                "Forked from {source.original_title}"
+                            }
+                        } else {
+                            span { "Forked from {source.original_title}" }
+                        }
+                        if let Some(message) = &source.message {
+                            span { " · {message}" }
+                        }
+                    }
                 }
 
                 // Tags
@@ -845,6 +936,9 @@ pub fn RecipeDetail(id: String) -> Element {
             if let Some(del_err) = delete_error() {
                 div { class: "recipe-detail__delete-error", "{del_err}" }
             }
+            if let Some(action_error) = version_action_error() {
+                div { class: "recipe-detail__delete-error", "{action_error}" }
+            }
 
             // ── CARD 4: Equipment (conditional) ──────────────────────────
             if !recipe.equipment.is_empty() {
@@ -895,6 +989,152 @@ pub fn RecipeDetail(id: String) -> Element {
                 if !comm.is_empty() {
                     Card {
                         p { class: "recipe-detail__commentary", "{comm}" }
+                    }
+                }
+            }
+
+            if is_owner && !versions.is_empty() {
+                Card {
+                    h2 { "Version history" }
+                    div {
+                        display: "flex",
+                        flex_direction: "column",
+                        gap: "var(--space-sm)",
+                        for version in versions.clone() {
+                            div {
+                                key: "{version.version_number}",
+                                display: "flex",
+                                justify_content: "space-between",
+                                align_items: "center",
+                                div {
+                                    strong {
+                                        "v{version.version_number} · {version.title}"
+                                        if version.is_current { " · Current" }
+                                    }
+                                    p { "Published {version.created_at}" }
+                                    p { "{version.change_summary}" }
+                                    if let Some(notes) = &version.notes {
+                                        p { "{notes}" }
+                                    }
+                                }
+                                div { display: "flex", gap: "var(--space-xs)",
+                                    Button {
+                                        variant: ButtonVariant::Ghost,
+                                        onclick: {
+                                            let recipe_id = id.clone();
+                                            move |_| {
+                                                let recipe_id = recipe_id.clone();
+                                                spawn(async move {
+                                                    match get_recipe_version_api(recipe_id, version.version_number).await {
+                                                        Ok(detail) => selected_version.set(Some(detail)),
+                                                        Err(error) => version_action_error.set(Some(error.to_string())),
+                                                    }
+                                                });
+                                            }
+                                        },
+                                        "View"
+                                    }
+                                    if !version.is_current {
+                                        Button {
+                                            variant: ButtonVariant::Secondary,
+                                            onclick: {
+                                                let recipe_id = id.clone();
+                                                let latest = versions[0].version_number;
+                                                move |_| {
+                                                    let recipe_id = recipe_id.clone();
+                                                    spawn(async move {
+                                                        match restore_version(recipe_id, version.version_number, latest).await {
+                                                            Ok(_) => {
+                                                                #[cfg(target_arch = "wasm32")]
+                                                                if let Some(window) = web_sys::window() {
+                                                                    let _ = window.location().reload();
+                                                                }
+                                                            }
+                                                            Err(error) => version_action_error.set(Some(error.to_string())),
+                                                        }
+                                                    });
+                                                }
+                                            },
+                                            "Restore"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if let Some(detail) = selected_version() {
+                        div { class: "neumo-inset", padding: "var(--space-md)",
+                            h3 { "v{detail.version_number}: {detail.editor.title}" }
+                            if let Some(description) = &detail.editor.description {
+                                p { "{description}" }
+                            }
+                            if let Some(commentary) = &detail.editor.commentary {
+                                p { "{commentary}" }
+                            }
+                            div { class: "recipe-detail__meta-row",
+                                if let Some(prep) = detail.editor.prep_time_minutes {
+                                    span { "Prep: {prep} min" }
+                                }
+                                if let Some(cook) = detail.editor.cook_time_minutes {
+                                    span { "Cook: {cook} min" }
+                                }
+                                if let Some(servings) = detail.editor.servings {
+                                    span { "Servings: {servings}" }
+                                }
+                                span { "Visibility: {detail.editor.visibility}" }
+                            }
+                            if !detail.editor.tags.is_empty() {
+                                div { class: "recipe-detail__tags",
+                                    for tag in &detail.editor.tags {
+                                        span { class: "recipe-detail__tag", "{tag}" }
+                                    }
+                                }
+                            }
+                            if !detail.editor.images.is_empty() {
+                                div { class: "recipe-detail__images",
+                                    for image in &detail.editor.images {
+                                        EditedRecipeImage {
+                                            image: image.clone(),
+                                            class: "recipe-image-slider__image",
+                                            alt: "Historical recipe image".to_string(),
+                                            loading: "lazy".to_string(),
+                                            fallback_fit: "contain".to_string(),
+                                            on_error: move |_| {},
+                                        }
+                                    }
+                                }
+                            }
+                            h4 { "Ingredients" }
+                            ul {
+                                for ingredient in &detail.editor.ingredients {
+                                    li { "{ingredient.amount} {ingredient.unit} {ingredient.name}" }
+                                }
+                            }
+                            h4 { "Instructions" }
+                            div { class: "recipe-detail__steps",
+                                for (idx, step) in detail.editor.instructions.iter().enumerate() {
+                                    StepNode { step: step.clone(), path: vec![idx], level: 0 }
+                                }
+                            }
+                            if !detail.editor.equipment.is_empty() {
+                                h4 { "Equipment" }
+                                ul {
+                                    for item in &detail.editor.equipment {
+                                        li { "{item.name}" }
+                                    }
+                                }
+                            }
+                            if !detail.changes_from_previous.is_empty() {
+                                h4 { "Changes from v{detail.version_number - 1}" }
+                                ul {
+                                    for change in &detail.changes_from_previous {
+                                        li {
+                                            code { "{change.op} {change.path}" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

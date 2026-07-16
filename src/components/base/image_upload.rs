@@ -111,6 +111,11 @@ pub struct ImageUploadProps {
     /// reads this to disable Save / guard submit. The component keeps it in
     /// sync via a `use_effect` over a memo of `pending` + `uploading`.
     pub busy: Signal<bool>,
+    /// Number of locally selected files that have not uploaded successfully.
+    /// Parents use this to mark an otherwise unchanged draft dirty.
+    pub pending_count: Signal<usize>,
+    /// Removes an image that was already persisted in the draft.
+    pub on_remove_existing: EventHandler<String>,
     /// Fired exactly once when the upload batch finishes. The parent uses
     /// this to proceed to `create_recipe` (on success) or surface an error
     /// (on abort/failure) — NO polling loop.
@@ -174,8 +179,51 @@ fn uploaded_images_in_pending_order(pending: &[PendingImage]) -> Vec<RecipeImage
         .collect()
 }
 
+fn pending_upload_count(pending: &[PendingImage]) -> usize {
+    pending
+        .iter()
+        .filter(|pending_image| pending_image.status != UploadStatus::Uploaded)
+        .count()
+}
+
+fn persisted_images_not_in_pending(
+    images: &[RecipeImage],
+    pending: &[PendingImage],
+) -> Vec<RecipeImage> {
+    images
+        .iter()
+        .filter(|image| {
+            !pending.iter().any(|pending_image| {
+                pending_image
+                    .uploaded_image
+                    .as_ref()
+                    .is_some_and(|uploaded| uploaded.url == image.url)
+            })
+        })
+        .cloned()
+        .collect()
+}
+
+fn merge_existing_and_uploaded_images(
+    mut existing: Vec<RecipeImage>,
+    uploaded: Vec<RecipeImage>,
+) -> Vec<RecipeImage> {
+    for uploaded_image in uploaded {
+        if !existing
+            .iter()
+            .any(|existing_image| existing_image.url == uploaded_image.url)
+        {
+            existing.push(uploaded_image);
+        }
+    }
+    existing
+}
+
 fn sync_uploaded_images(pending: Signal<Vec<PendingImage>>, mut images: Signal<Vec<RecipeImage>>) {
-    images.set(uploaded_images_in_pending_order(&pending()));
+    images.set(merge_existing_and_uploaded_images(
+        images(),
+        uploaded_images_in_pending_order(&pending()),
+    ));
 }
 
 fn reorder_pending_images(
@@ -458,8 +506,17 @@ async fn upload_all(
 fn remove_pending(
     img_id: usize,
     mut pending: Signal<Vec<PendingImage>>,
-    images: Signal<Vec<RecipeImage>>,
+    mut images: Signal<Vec<RecipeImage>>,
 ) {
+    let uploaded_url = pending()
+        .iter()
+        .find(|pending_image| pending_image.id == img_id)
+        .and_then(|pending_image| {
+            pending_image
+                .uploaded_image
+                .as_ref()
+                .map(|image| image.url.clone())
+        });
     #[cfg(target_arch = "wasm32")]
     {
         if let Some(p) = pending().iter().find(|p| p.id == img_id) {
@@ -469,6 +526,9 @@ fn remove_pending(
         }
     }
     pending.write().retain(|p| p.id != img_id);
+    if let Some(uploaded_url) = uploaded_url {
+        images.write().retain(|image| image.url != uploaded_url);
+    }
     sync_uploaded_images(pending, images);
 }
 
@@ -490,6 +550,8 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     let images = props.images;
     let mut upload_now = props.upload_now;
     let mut busy = props.busy;
+    let mut pending_count = props.pending_count;
+    let on_remove_existing = props.on_remove_existing;
     let on_upload_complete = props.on_upload_complete;
 
     // ── busy sync ────────────────────────────────────────────────────────
@@ -504,6 +566,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
             || uploading()
     });
     use_effect(move || busy.set(busy_memo()));
+    use_effect(move || pending_count.set(pending_upload_count(&pending())));
 
     // ── handle_files ─────────────────────────────────────────────────────
     // Shared by the `<input onchange>` and `<div ondrop>` handlers.
@@ -577,6 +640,46 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
             // Error banner
             if let Some(err) = error() {
                 div { class: "image-upload__error image-upload__error--banner", "{err}" }
+            }
+
+            // Persisted and newly selected images share one gallery. Images
+            // uploaded during this session are rendered by the pending list
+            // below so they are excluded here to avoid duplicate cards.
+            for image in persisted_images_not_in_pending(&images(), &pending()) {
+                {
+                    let image_url = image.url.clone();
+                    let image_name = image
+                        .file_name
+                        .clone()
+                        .unwrap_or_else(|| "Saved recipe image".to_string());
+                    rsx! {
+                        div {
+                            key: "persisted-{image_url}",
+                            class: "image-upload__item",
+                            div { class: "image-upload__preview-button",
+                                EditedRecipeImage {
+                                    image,
+                                    class: "recipe-image-preview",
+                                    alt: image_name.clone(),
+                                    prefer_thumbnail: true,
+                                    on_error: move |_| {},
+                                }
+                            }
+                            div { class: "image-upload__meta",
+                                span { "{image_name}" }
+                                span { class: "image-upload__size", "Saved in draft" }
+                            }
+                            div { class: "image-upload__status",
+                                span { "✓ Saved" }
+                            }
+                            Button {
+                                variant: ButtonVariant::Ghost,
+                                onclick: move |_| on_remove_existing.call(image_url.clone()),
+                                "✕"
+                            }
+                        }
+                    }
+                }
             }
 
             // Pending file list
@@ -811,6 +914,69 @@ mod tests {
             .collect();
 
         assert_eq!(ordered_urls, vec!["third".to_string(), "first".to_string()]);
+        assert_eq!(pending_upload_count(&pending), 1);
+    }
+
+    #[test]
+    fn syncing_new_uploads_preserves_existing_images_without_duplicates() {
+        let existing = vec![
+            RecipeImage::new(
+                "existing".to_string(),
+                None,
+                RecipeImageEdit::default_rect_16x9(),
+            ),
+            RecipeImage::new(
+                "already-uploaded".to_string(),
+                None,
+                RecipeImageEdit::default_rect_16x9(),
+            ),
+        ];
+        assert_eq!(
+            merge_existing_and_uploaded_images(existing.clone(), Vec::new()),
+            existing.clone()
+        );
+        let uploaded = vec![
+            RecipeImage::new(
+                "already-uploaded".to_string(),
+                None,
+                RecipeImageEdit::default_rect_16x9(),
+            ),
+            RecipeImage::new(
+                "new".to_string(),
+                None,
+                RecipeImageEdit::default_rect_16x9(),
+            ),
+        ];
+
+        let merged = merge_existing_and_uploaded_images(existing, uploaded);
+        let urls = merged
+            .into_iter()
+            .map(|image| image.url)
+            .collect::<Vec<_>>();
+
+        assert_eq!(urls, vec!["existing", "already-uploaded", "new"]);
+    }
+
+    #[test]
+    fn persisted_gallery_excludes_images_already_rendered_as_pending_uploads() {
+        let images = vec![
+            RecipeImage::new(
+                "existing".to_string(),
+                None,
+                RecipeImageEdit::default_rect_16x9(),
+            ),
+            RecipeImage::new(
+                "uploaded-pending".to_string(),
+                None,
+                RecipeImageEdit::default_rect_16x9(),
+            ),
+        ];
+        let pending = vec![pending_image_with_uploaded_url(1, Some("uploaded-pending"))];
+
+        let visible = persisted_images_not_in_pending(&images, &pending);
+
+        assert_eq!(visible.len(), 1);
+        assert_eq!(visible[0].url, "existing");
     }
 
     // ── is_allowed_image_type ────────────────────────────────────────────
