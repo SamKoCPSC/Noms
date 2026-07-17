@@ -184,3 +184,45 @@ CREATE INDEX IF NOT EXISTS idx_recipes_created_at ON recipes(created_at DESC);
 -- Partial index for public recipe discovery (explore page)
 CREATE INDEX IF NOT EXISTS idx_recipes_visibility_created ON recipes(visibility, created_at DESC)
     WHERE visibility = 'public';
+
+-- ── Recipe collections ─────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS collections (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    parent_collection_id UUID,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (id, owner_id),
+    CHECK (parent_collection_id IS NULL OR parent_collection_id <> id),
+    FOREIGN KEY (parent_collection_id, owner_id)
+        REFERENCES collections(id, owner_id) ON DELETE CASCADE,
+    CHECK (btrim(name) <> '')
+);
+
+CREATE INDEX IF NOT EXISTS idx_collections_owner_updated
+    ON collections(owner_id, updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_collections_parent_order
+    ON collections(owner_id, parent_collection_id, sort_order, lower(name));
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_collections_sibling_name
+    ON collections(owner_id, parent_collection_id, lower(name))
+    NULLS NOT DISTINCT;
+
+CREATE TABLE IF NOT EXISTS collection_recipes (
+    collection_id UUID NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+    recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (collection_id, recipe_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_collection_recipes_order
+    ON collection_recipes(collection_id, sort_order, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_collection_recipes_recipe_id
+    ON collection_recipes(recipe_id);

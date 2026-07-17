@@ -8,6 +8,7 @@
 
 use chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool, Postgres, Row};
+use std::collections::HashSet;
 use uuid::Uuid;
 
 pub mod diff;
@@ -15,6 +16,8 @@ mod versioning;
 
 #[allow(unused_imports)]
 pub use versioning::*;
+
+use crate::types::{Collection, CollectionRecipeList, CollectionSummary};
 
 // Re-export typed recipe sub-structs for use in DB layer
 pub use crate::types::RecipeEquipment;
@@ -63,6 +66,20 @@ pub enum DbError {
     InvalidRecipeSnapshot(String),
     /// Failed to serialize or deserialize JSONB data.
     SerdeJson(serde_json::Error),
+    /// The requested collection was not found for the current owner.
+    CollectionNotFound(Uuid),
+    /// The requested parent collection was not found for the current owner.
+    CollectionParentNotFound(Uuid),
+    /// A sibling collection already has this name, ignoring case.
+    CollectionNameTaken,
+    /// A collection cannot be moved into itself or a descendant.
+    CollectionCycle,
+    /// The recipe is not accessible to the collection owner.
+    RecipeNotAccessible(Uuid),
+    /// The recipe is already a member of the collection.
+    RecipeAlreadyInCollection,
+    /// The submitted order does not exactly match the current direct members.
+    InvalidCollectionOrder,
 }
 
 impl std::fmt::Display for DbError {
@@ -100,6 +117,17 @@ impl std::fmt::Display for DbError {
                 write!(f, "invalid recipe snapshot: {message}")
             }
             DbError::SerdeJson(e) => write!(f, "JSON serialization/deserialization failed: {e}"),
+            DbError::CollectionNotFound(id) => write!(f, "collection not found: {id}"),
+            DbError::CollectionParentNotFound(id) => write!(f, "collection parent not found: {id}"),
+            DbError::CollectionNameTaken => {
+                write!(f, "collection name is already used by a sibling")
+            }
+            DbError::CollectionCycle => write!(f, "collection move would create a cycle"),
+            DbError::RecipeNotAccessible(id) => write!(f, "recipe is not accessible: {id}"),
+            DbError::RecipeAlreadyInCollection => write!(f, "recipe is already in the collection"),
+            DbError::InvalidCollectionOrder => {
+                write!(f, "collection order does not match membership")
+            }
         }
     }
 }
@@ -119,6 +147,13 @@ impl std::error::Error for DbError {
             | DbError::ForkError(_)
             | DbError::InvalidRecipeSnapshot(_) => None,
             DbError::SerdeJson(e) => Some(e),
+            DbError::CollectionNotFound(_)
+            | DbError::CollectionParentNotFound(_)
+            | DbError::CollectionNameTaken
+            | DbError::CollectionCycle
+            | DbError::RecipeNotAccessible(_)
+            | DbError::RecipeAlreadyInCollection
+            | DbError::InvalidCollectionOrder => None,
         }
     }
 }
@@ -285,6 +320,898 @@ pub struct RecipeTag {
 /// Re-exported from `crate::types`.
 #[allow(unused_imports)]
 pub use crate::types::RecipeListResponse;
+
+// ── Collection queries ─────────────────────────────────────────────────────
+
+/// A database-only row for a recipe membership junction.
+#[derive(Debug, Clone)]
+pub struct CollectionRecipe {
+    pub collection_id: Uuid,
+    pub recipe_id: Uuid,
+    pub sort_order: i32,
+    pub created_at: DateTime<Utc>,
+}
+
+fn collection_from_row(row: &sqlx::postgres::PgRow) -> Result<Collection, sqlx::Error> {
+    Ok(Collection {
+        id: row.try_get("id")?,
+        owner_id: row.try_get("owner_id")?,
+        parent_collection_id: row.try_get("parent_collection_id")?,
+        name: row.try_get("name")?,
+        description: row.try_get("description")?,
+        sort_order: row.try_get("sort_order")?,
+        created_at: row.try_get("created_at")?,
+        updated_at: row.try_get("updated_at")?,
+    })
+}
+
+fn collection_summary_from_row(
+    row: &sqlx::postgres::PgRow,
+) -> Result<CollectionSummary, sqlx::Error> {
+    Ok(CollectionSummary {
+        id: row.try_get("id")?,
+        parent_collection_id: row.try_get("parent_collection_id")?,
+        name: row.try_get("name")?,
+        description: row.try_get("description")?,
+        sort_order: row.try_get("sort_order")?,
+        child_count: row.try_get("child_count")?,
+        recipe_count: row.try_get("recipe_count")?,
+        updated_at: row.try_get("updated_at")?,
+    })
+}
+
+fn collection_query_error(error: sqlx::Error) -> DbError {
+    if error
+        .as_database_error()
+        .and_then(|database_error| database_error.code())
+        .as_deref()
+        == Some("23505")
+    {
+        DbError::CollectionNameTaken
+    } else {
+        DbError::Query(error)
+    }
+}
+
+fn membership_query_error(error: sqlx::Error) -> DbError {
+    if error
+        .as_database_error()
+        .and_then(|database_error| database_error.code())
+        .as_deref()
+        == Some("23505")
+    {
+        DbError::RecipeAlreadyInCollection
+    } else {
+        DbError::Query(error)
+    }
+}
+
+fn collection_summary_select() -> &'static str {
+    "SELECT c.id, c.parent_collection_id, c.name, c.description, c.sort_order, c.updated_at,
+            (SELECT COUNT(*) FROM collections child
+             WHERE child.owner_id = c.owner_id AND child.parent_collection_id = c.id) AS child_count,
+            (SELECT COUNT(*)
+             FROM collection_recipes cr
+             INNER JOIN recipes r ON r.id = cr.recipe_id
+             WHERE cr.collection_id = c.id
+               AND (r.user_id = c.owner_id OR r.visibility IN ('public', 'unlisted'))) AS recipe_count
+     FROM collections c"
+}
+
+async fn lock_owner(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    owner_id: Uuid,
+) -> Result<(), DbError> {
+    let found: Option<Uuid> = sqlx::query_scalar("SELECT id FROM users WHERE id = $1 FOR UPDATE")
+        .bind(owner_id)
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(DbError::Query)?;
+    if found.is_none() {
+        return Err(DbError::Query(sqlx::Error::RowNotFound));
+    }
+    Ok(())
+}
+
+/// Insert a root or nested collection, appending it to the owner's sibling order.
+pub async fn insert_collection(
+    pool: &PgPool,
+    owner_id: Uuid,
+    parent_collection_id: Option<Uuid>,
+    name: &str,
+    description: Option<&str>,
+) -> Result<Collection, DbError> {
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    lock_owner(&mut tx, owner_id).await?;
+
+    if let Some(parent_id) = parent_collection_id {
+        let parent_exists: Option<Uuid> = sqlx::query_scalar(
+            "SELECT id FROM collections
+             WHERE id = $1 AND owner_id = $2
+             FOR UPDATE",
+        )
+        .bind(parent_id)
+        .bind(owner_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(DbError::Query)?;
+        if parent_exists.is_none() {
+            return Err(DbError::CollectionParentNotFound(parent_id));
+        }
+    }
+
+    let next_order: i32 = sqlx::query_scalar(
+        "SELECT COALESCE(MAX(sort_order), -1) + 1
+         FROM collections
+         WHERE owner_id = $1 AND parent_collection_id IS NOT DISTINCT FROM $2",
+    )
+    .bind(owner_id)
+    .bind(parent_collection_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+
+    let row = sqlx::query(
+        "INSERT INTO collections
+            (owner_id, parent_collection_id, name, description, sort_order)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, owner_id, parent_collection_id, name, description,
+                   sort_order, created_at, updated_at",
+    )
+    .bind(owner_id)
+    .bind(parent_collection_id)
+    .bind(name)
+    .bind(description)
+    .bind(next_order)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(collection_query_error)?;
+
+    let collection = collection_from_row(&row).map_err(DbError::Query)?;
+    tx.commit().await.map_err(DbError::Query)?;
+    Ok(collection)
+}
+
+/// Get a collection only when it belongs to the supplied owner.
+pub async fn get_collection_by_id_and_owner(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    collection_id: Uuid,
+    owner_id: Uuid,
+) -> Result<Option<Collection>, DbError> {
+    sqlx::query(
+        "SELECT id, owner_id, parent_collection_id, name, description,
+                sort_order, created_at, updated_at
+         FROM collections
+         WHERE id = $1 AND owner_id = $2",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .fetch_optional(executor)
+    .await
+    .map_err(DbError::Query)?
+    .map(|row| collection_from_row(&row))
+    .transpose()
+    .map_err(DbError::Query)
+}
+
+/// List an owner's root collections in normalized sibling order.
+pub async fn get_root_collections(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    owner_id: Uuid,
+) -> Result<Vec<CollectionSummary>, DbError> {
+    let query = format!(
+        "{} WHERE c.owner_id = $1 AND c.parent_collection_id IS NULL
+         ORDER BY c.sort_order, lower(c.name), c.id",
+        collection_summary_select()
+    );
+    let rows = sqlx::query(&query)
+        .bind(owner_id)
+        .fetch_all(executor)
+        .await
+        .map_err(DbError::Query)?;
+    rows.iter()
+        .map(collection_summary_from_row)
+        .collect::<Result<_, _>>()
+        .map_err(DbError::Query)
+}
+
+/// List direct children only when the parent belongs to the owner.
+pub async fn get_child_collections(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    parent_collection_id: Uuid,
+    owner_id: Uuid,
+) -> Result<Vec<CollectionSummary>, DbError> {
+    let query = format!(
+        "{} WHERE c.owner_id = $1 AND c.parent_collection_id = $2
+         ORDER BY c.sort_order, lower(c.name), c.id",
+        collection_summary_select()
+    );
+    let rows = sqlx::query(&query)
+        .bind(owner_id)
+        .bind(parent_collection_id)
+        .fetch_all(executor)
+        .await
+        .map_err(DbError::Query)?;
+    rows.iter()
+        .map(collection_summary_from_row)
+        .collect::<Result<_, _>>()
+        .map_err(DbError::Query)
+}
+
+/// List every collection summary owned by a user.
+pub async fn get_all_collections_by_owner(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    owner_id: Uuid,
+) -> Result<Vec<CollectionSummary>, DbError> {
+    let query = format!(
+        "{} WHERE c.owner_id = $1
+         ORDER BY c.parent_collection_id NULLS FIRST, c.sort_order, lower(c.name), c.id",
+        collection_summary_select()
+    );
+    let rows = sqlx::query(&query)
+        .bind(owner_id)
+        .fetch_all(executor)
+        .await
+        .map_err(DbError::Query)?;
+    rows.iter()
+        .map(collection_summary_from_row)
+        .collect::<Result<_, _>>()
+        .map_err(DbError::Query)
+}
+
+/// Return an owner-checked root-to-leaf breadcrumb path using a recursive CTE.
+pub async fn get_collection_breadcrumbs(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    collection_id: Uuid,
+    owner_id: Uuid,
+) -> Result<Vec<CollectionSummary>, DbError> {
+    let rows = sqlx::query(
+        "WITH RECURSIVE ancestors AS (
+             SELECT c.id, c.parent_collection_id, ARRAY[c.id] AS path, 0 AS depth
+             FROM collections c
+             WHERE c.id = $1 AND c.owner_id = $2
+             UNION ALL
+             SELECT parent.id, parent.parent_collection_id,
+                    ancestors.path || parent.id, ancestors.depth + 1
+             FROM collections parent
+             INNER JOIN ancestors ON parent.id = ancestors.parent_collection_id
+             WHERE parent.owner_id = $2
+               AND NOT parent.id = ANY(ancestors.path)
+         )
+         SELECT c.id, c.parent_collection_id, c.name, c.description, c.sort_order,
+                c.updated_at,
+                (SELECT COUNT(*) FROM collections child
+                 WHERE child.owner_id = c.owner_id AND child.parent_collection_id = c.id) AS child_count,
+                (SELECT COUNT(*) FROM collection_recipes cr
+                 INNER JOIN recipes r ON r.id = cr.recipe_id
+                 WHERE cr.collection_id = c.id
+                   AND (r.user_id = c.owner_id OR r.visibility IN ('public', 'unlisted'))) AS recipe_count
+         FROM ancestors
+         INNER JOIN collections c ON c.id = ancestors.id
+         ORDER BY ancestors.depth DESC",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .fetch_all(executor)
+    .await
+    .map_err(DbError::Query)?;
+    rows.iter()
+        .map(collection_summary_from_row)
+        .collect::<Result<_, _>>()
+        .map_err(DbError::Query)
+}
+
+/// Return all strict descendants of an owner-scoped collection using a recursive CTE.
+pub async fn get_collection_descendants(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    collection_id: Uuid,
+    owner_id: Uuid,
+) -> Result<Vec<Uuid>, DbError> {
+    sqlx::query_scalar(
+        "WITH RECURSIVE descendants AS (
+             SELECT c.id, ARRAY[c.id] AS path
+             FROM collections c
+             WHERE c.parent_collection_id = $1 AND c.owner_id = $2
+             UNION ALL
+             SELECT child.id, descendants.path || child.id
+             FROM collections child
+             INNER JOIN descendants ON child.parent_collection_id = descendants.id
+             WHERE child.owner_id = $2
+               AND NOT child.id = ANY(descendants.path)
+         )
+         SELECT id FROM descendants ORDER BY path",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .fetch_all(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Rename or update the description of an owner-scoped collection.
+pub async fn update_collection(
+    pool: &PgPool,
+    collection_id: Uuid,
+    owner_id: Uuid,
+    name: &str,
+    description: Option<&str>,
+) -> Result<Collection, DbError> {
+    let row = sqlx::query(
+        "UPDATE collections
+         SET name = $3, description = $4, updated_at = NOW()
+         WHERE id = $1 AND owner_id = $2
+         RETURNING id, owner_id, parent_collection_id, name, description,
+                   sort_order, created_at, updated_at",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .bind(name)
+    .bind(description)
+    .fetch_one(pool)
+    .await
+    .map_err(|error| match error {
+        sqlx::Error::RowNotFound => DbError::CollectionNotFound(collection_id),
+        other => collection_query_error(other),
+    })?;
+    collection_from_row(&row).map_err(DbError::Query)
+}
+
+async fn lock_siblings(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    owner_id: Uuid,
+    parent_collection_id: Option<Uuid>,
+) -> Result<(), DbError> {
+    sqlx::query(
+        "SELECT id FROM collections
+         WHERE owner_id = $1 AND parent_collection_id IS NOT DISTINCT FROM $2
+         ORDER BY id
+         FOR UPDATE",
+    )
+    .bind(owner_id)
+    .bind(parent_collection_id)
+    .fetch_all(&mut **tx)
+    .await
+    .map_err(DbError::Query)?;
+    Ok(())
+}
+
+async fn normalize_sibling_order(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    owner_id: Uuid,
+    parent_collection_id: Option<Uuid>,
+) -> Result<(), DbError> {
+    sqlx::query(
+        "WITH ordered AS (
+             SELECT id,
+                    ROW_NUMBER() OVER (ORDER BY sort_order, lower(name), id) - 1 AS new_order
+             FROM collections
+             WHERE owner_id = $1 AND parent_collection_id IS NOT DISTINCT FROM $2
+         )
+         UPDATE collections c
+         SET sort_order = ordered.new_order
+         FROM ordered
+         WHERE c.id = ordered.id",
+    )
+    .bind(owner_id)
+    .bind(parent_collection_id)
+    .execute(&mut **tx)
+    .await
+    .map_err(DbError::Query)?;
+    Ok(())
+}
+
+async fn normalize_recipe_order(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    collection_id: Uuid,
+) -> Result<(), DbError> {
+    sqlx::query(
+        "WITH ordered AS (
+             SELECT recipe_id,
+                    ROW_NUMBER() OVER (ORDER BY sort_order, created_at, recipe_id) - 1 AS new_order
+             FROM collection_recipes
+             WHERE collection_id = $1
+         )
+         UPDATE collection_recipes cr
+         SET sort_order = ordered.new_order
+         FROM ordered
+         WHERE cr.collection_id = $1 AND cr.recipe_id = ordered.recipe_id",
+    )
+    .bind(collection_id)
+    .execute(&mut **tx)
+    .await
+    .map_err(DbError::Query)?;
+    Ok(())
+}
+
+/// Move a collection to another owned parent or to the root, rejecting cycles.
+pub async fn move_collection(
+    pool: &PgPool,
+    collection_id: Uuid,
+    owner_id: Uuid,
+    new_parent_collection_id: Option<Uuid>,
+) -> Result<Collection, DbError> {
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    lock_owner(&mut tx, owner_id).await?;
+
+    let current = sqlx::query(
+        "SELECT parent_collection_id FROM collections
+         WHERE id = $1 AND owner_id = $2",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    let current_parent: Option<Uuid> = current
+        .as_ref()
+        .map(|row| row.try_get("parent_collection_id"))
+        .transpose()
+        .map_err(DbError::Query)?;
+    if current.is_none() {
+        return Err(DbError::CollectionNotFound(collection_id));
+    }
+
+    let mut ids_to_lock = vec![collection_id];
+    if let Some(parent_id) = current_parent {
+        ids_to_lock.push(parent_id);
+    }
+    if let Some(parent_id) = new_parent_collection_id {
+        ids_to_lock.push(parent_id);
+    }
+    ids_to_lock.sort();
+    ids_to_lock.dedup();
+    sqlx::query(
+        "SELECT id FROM collections
+         WHERE owner_id = $1 AND id = ANY($2)
+         ORDER BY id
+         FOR UPDATE",
+    )
+    .bind(owner_id)
+    .bind(&ids_to_lock)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+
+    if let Some(parent_id) = new_parent_collection_id {
+        let parent_exists: Option<Uuid> =
+            sqlx::query_scalar("SELECT id FROM collections WHERE id = $1 AND owner_id = $2")
+                .bind(parent_id)
+                .bind(owner_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(DbError::Query)?;
+        if parent_exists.is_none() {
+            return Err(DbError::CollectionParentNotFound(parent_id));
+        }
+
+        if parent_id == collection_id
+            || get_collection_descendants(&mut *tx, collection_id, owner_id)
+                .await?
+                .contains(&parent_id)
+        {
+            return Err(DbError::CollectionCycle);
+        }
+    }
+
+    let mut parents_to_lock: Vec<Uuid> = [current_parent, new_parent_collection_id]
+        .into_iter()
+        .flatten()
+        .collect();
+    parents_to_lock.sort();
+    parents_to_lock.dedup();
+    for parent_id in parents_to_lock {
+        lock_siblings(&mut tx, owner_id, Some(parent_id)).await?;
+    }
+    if current_parent.is_none() || new_parent_collection_id.is_none() {
+        lock_siblings(&mut tx, owner_id, None).await?;
+    }
+
+    let next_order: i32 = sqlx::query_scalar(
+        "SELECT COALESCE(MAX(sort_order), -1) + 1
+         FROM collections
+         WHERE owner_id = $1 AND parent_collection_id IS NOT DISTINCT FROM $2",
+    )
+    .bind(owner_id)
+    .bind(new_parent_collection_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+
+    sqlx::query(
+        "UPDATE collections
+         SET parent_collection_id = $3, sort_order = $4, updated_at = NOW()
+         WHERE id = $1 AND owner_id = $2",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .bind(new_parent_collection_id)
+    .bind(next_order)
+    .execute(&mut *tx)
+    .await
+    .map_err(collection_query_error)?;
+
+    if let Some(old_parent) = current_parent {
+        normalize_sibling_order(&mut tx, owner_id, Some(old_parent)).await?;
+        sqlx::query("UPDATE collections SET updated_at = NOW() WHERE id = $1 AND owner_id = $2")
+            .bind(old_parent)
+            .bind(owner_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(DbError::Query)?;
+    }
+    if new_parent_collection_id != current_parent {
+        normalize_sibling_order(&mut tx, owner_id, new_parent_collection_id).await?;
+    }
+    if let Some(new_parent) = new_parent_collection_id {
+        sqlx::query("UPDATE collections SET updated_at = NOW() WHERE id = $1 AND owner_id = $2")
+            .bind(new_parent)
+            .bind(owner_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(DbError::Query)?;
+    }
+
+    let row = sqlx::query(
+        "SELECT id, owner_id, parent_collection_id, name, description,
+                sort_order, created_at, updated_at
+         FROM collections WHERE id = $1 AND owner_id = $2",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    let moved = collection_from_row(&row).map_err(DbError::Query)?;
+    tx.commit().await.map_err(DbError::Query)?;
+    Ok(moved)
+}
+
+/// Delete an owner-scoped collection; descendants and memberships cascade in the database.
+pub async fn delete_collection(
+    pool: &PgPool,
+    collection_id: Uuid,
+    owner_id: Uuid,
+) -> Result<(), DbError> {
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    lock_owner(&mut tx, owner_id).await?;
+    let rows = sqlx::query("DELETE FROM collections WHERE id = $1 AND owner_id = $2")
+        .bind(collection_id)
+        .bind(owner_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(DbError::Query)?
+        .rows_affected();
+    if rows == 0 {
+        return Err(DbError::CollectionNotFound(collection_id));
+    }
+    tx.commit().await.map_err(DbError::Query)
+}
+
+/// Add an accessible published recipe to an owned collection, appending atomically.
+pub async fn add_recipe_to_collection(
+    pool: &PgPool,
+    collection_id: Uuid,
+    owner_id: Uuid,
+    recipe_id: Uuid,
+) -> Result<CollectionRecipe, DbError> {
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    let collection_exists: Option<Uuid> =
+        sqlx::query_scalar("SELECT id FROM collections WHERE id = $1 AND owner_id = $2 FOR UPDATE")
+            .bind(collection_id)
+            .bind(owner_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(DbError::Query)?;
+    if collection_exists.is_none() {
+        return Err(DbError::CollectionNotFound(collection_id));
+    }
+
+    let recipe_exists: Option<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM recipes
+         WHERE id = $1 AND (user_id = $2 OR visibility IN ('public', 'unlisted'))",
+    )
+    .bind(recipe_id)
+    .bind(owner_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    if recipe_exists.is_none() {
+        return Err(DbError::RecipeNotAccessible(recipe_id));
+    }
+
+    let next_order: i32 = sqlx::query_scalar(
+        "SELECT COALESCE(MAX(sort_order), -1) + 1
+         FROM collection_recipes WHERE collection_id = $1",
+    )
+    .bind(collection_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    let row = sqlx::query(
+        "INSERT INTO collection_recipes (collection_id, recipe_id, sort_order)
+         VALUES ($1, $2, $3)
+         RETURNING collection_id, recipe_id, sort_order, created_at",
+    )
+    .bind(collection_id)
+    .bind(recipe_id)
+    .bind(next_order)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(membership_query_error)?;
+    sqlx::query("UPDATE collections SET updated_at = NOW() WHERE id = $1")
+        .bind(collection_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(DbError::Query)?;
+
+    let membership = CollectionRecipe {
+        collection_id: row.try_get("collection_id").map_err(DbError::Query)?,
+        recipe_id: row.try_get("recipe_id").map_err(DbError::Query)?,
+        sort_order: row.try_get("sort_order").map_err(DbError::Query)?,
+        created_at: row.try_get("created_at").map_err(DbError::Query)?,
+    };
+    tx.commit().await.map_err(DbError::Query)?;
+    Ok(membership)
+}
+
+/// Remove a recipe membership from an owner-scoped collection.
+pub async fn remove_recipe_from_collection(
+    pool: &PgPool,
+    collection_id: Uuid,
+    owner_id: Uuid,
+    recipe_id: Uuid,
+) -> Result<(), DbError> {
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    let collection_exists: Option<Uuid> =
+        sqlx::query_scalar("SELECT id FROM collections WHERE id = $1 AND owner_id = $2 FOR UPDATE")
+            .bind(collection_id)
+            .bind(owner_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(DbError::Query)?;
+    if collection_exists.is_none() {
+        return Err(DbError::CollectionNotFound(collection_id));
+    }
+    let removed =
+        sqlx::query("DELETE FROM collection_recipes WHERE collection_id = $1 AND recipe_id = $2")
+            .bind(collection_id)
+            .bind(recipe_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(DbError::Query)?
+            .rows_affected();
+    if removed > 0 {
+        normalize_recipe_order(&mut tx, collection_id).await?;
+        sqlx::query("UPDATE collections SET updated_at = NOW() WHERE id = $1")
+            .bind(collection_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(DbError::Query)?;
+    }
+    tx.commit().await.map_err(DbError::Query)
+}
+
+/// List direct visible recipe members of an owner-scoped collection.
+pub async fn get_collection_recipes(
+    pool: &PgPool,
+    collection_id: Uuid,
+    owner_id: Uuid,
+    offset: i64,
+    limit: i64,
+) -> Result<CollectionRecipeList, DbError> {
+    if get_collection_by_id_and_owner(pool, collection_id, owner_id)
+        .await?
+        .is_none()
+    {
+        return Err(DbError::CollectionNotFound(collection_id));
+    }
+    let total_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)
+         FROM collection_recipes cr
+         INNER JOIN collections c ON c.id = cr.collection_id AND c.owner_id = $2
+         INNER JOIN recipes r ON r.id = cr.recipe_id
+         WHERE cr.collection_id = $1
+           AND (r.user_id = $2 OR r.visibility IN ('public', 'unlisted'))",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .fetch_one(pool)
+    .await
+    .map_err(DbError::Query)?;
+    let rows = sqlx::query(
+        "SELECT r.id, r.user_id, r.title, r.description, r.commentary,
+                r.prep_time_minutes, r.cook_time_minutes, r.servings,
+                r.ingredients, r.instructions, r.equipment, r.images,
+                r.visibility, r.created_at, r.updated_at,
+                u.username AS author_username, u.avatar_url AS author_avatar_url
+         FROM collection_recipes cr
+         INNER JOIN collections c ON c.id = cr.collection_id AND c.owner_id = $2
+         INNER JOIN recipes r ON r.id = cr.recipe_id
+         LEFT JOIN users u ON u.id = r.user_id
+         WHERE cr.collection_id = $1
+           AND (r.user_id = $2 OR r.visibility IN ('public', 'unlisted'))
+         ORDER BY cr.sort_order, cr.created_at, cr.recipe_id
+         LIMIT $3 OFFSET $4",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .bind(limit.max(0))
+    .bind(offset.max(0))
+    .fetch_all(pool)
+    .await
+    .map_err(DbError::Query)?;
+    let recipes = rows
+        .iter()
+        .map(Recipe::from_row)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(DbError::Query)?;
+    Ok(CollectionRecipeList {
+        has_more: offset.max(0) + (recipes.len() as i64) < total_count,
+        recipes,
+        total_count,
+    })
+}
+
+/// List collections owned by a user that contain an accessible recipe.
+pub async fn get_recipe_collections(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    recipe_id: Uuid,
+    owner_id: Uuid,
+) -> Result<Vec<Uuid>, DbError> {
+    sqlx::query_scalar(
+        "SELECT cr.collection_id
+         FROM collection_recipes cr
+         INNER JOIN collections c ON c.id = cr.collection_id AND c.owner_id = $2
+         INNER JOIN recipes r ON r.id = cr.recipe_id
+         WHERE cr.recipe_id = $1
+           AND (r.user_id = $2 OR r.visibility IN ('public', 'unlisted'))
+         ORDER BY cr.collection_id",
+    )
+    .bind(recipe_id)
+    .bind(owner_id)
+    .fetch_all(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Count visible direct recipe members in an owner-scoped collection.
+pub async fn get_collection_recipe_count(
+    pool: &PgPool,
+    collection_id: Uuid,
+    owner_id: Uuid,
+) -> Result<i64, DbError> {
+    if get_collection_by_id_and_owner(pool, collection_id, owner_id)
+        .await?
+        .is_none()
+    {
+        return Err(DbError::CollectionNotFound(collection_id));
+    }
+    sqlx::query_scalar(
+        "SELECT COUNT(*)
+         FROM collection_recipes cr
+         INNER JOIN collections c ON c.id = cr.collection_id AND c.owner_id = $2
+         INNER JOIN recipes r ON r.id = cr.recipe_id
+         WHERE cr.collection_id = $1
+           AND (r.user_id = $2 OR r.visibility IN ('public', 'unlisted'))",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .fetch_one(pool)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Reorder all recipe members after verifying the submitted set exactly matches membership.
+pub async fn reorder_collection_recipes(
+    pool: &PgPool,
+    collection_id: Uuid,
+    owner_id: Uuid,
+    ordered_recipe_ids: &[Uuid],
+) -> Result<(), DbError> {
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    let collection_exists: Option<Uuid> =
+        sqlx::query_scalar("SELECT id FROM collections WHERE id = $1 AND owner_id = $2 FOR UPDATE")
+            .bind(collection_id)
+            .bind(owner_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(DbError::Query)?;
+    if collection_exists.is_none() {
+        return Err(DbError::CollectionNotFound(collection_id));
+    }
+    let current_ids: Vec<Uuid> =
+        sqlx::query_scalar("SELECT recipe_id FROM collection_recipes WHERE collection_id = $1")
+            .bind(collection_id)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(DbError::Query)?;
+    if current_ids.len() != ordered_recipe_ids.len()
+        || current_ids.iter().collect::<HashSet<_>>()
+            != ordered_recipe_ids.iter().collect::<HashSet<_>>()
+    {
+        return Err(DbError::InvalidCollectionOrder);
+    }
+    for (sort_order, recipe_id) in ordered_recipe_ids.iter().enumerate() {
+        sqlx::query(
+            "UPDATE collection_recipes SET sort_order = $3
+             WHERE collection_id = $1 AND recipe_id = $2",
+        )
+        .bind(collection_id)
+        .bind(recipe_id)
+        .bind(sort_order as i32)
+        .execute(&mut *tx)
+        .await
+        .map_err(DbError::Query)?;
+    }
+    sqlx::query("UPDATE collections SET updated_at = NOW() WHERE id = $1")
+        .bind(collection_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(DbError::Query)?;
+    tx.commit().await.map_err(DbError::Query)
+}
+
+/// Reorder all direct child collections after verifying exact membership.
+pub async fn reorder_child_collections(
+    pool: &PgPool,
+    owner_id: Uuid,
+    parent_collection_id: Option<Uuid>,
+    ordered_collection_ids: &[Uuid],
+) -> Result<(), DbError> {
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    lock_owner(&mut tx, owner_id).await?;
+    if let Some(parent_id) = parent_collection_id {
+        let parent_exists: Option<Uuid> = sqlx::query_scalar(
+            "SELECT id FROM collections WHERE id = $1 AND owner_id = $2 FOR UPDATE",
+        )
+        .bind(parent_id)
+        .bind(owner_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(DbError::Query)?;
+        if parent_exists.is_none() {
+            return Err(DbError::CollectionParentNotFound(parent_id));
+        }
+    }
+    let current_ids: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM collections
+         WHERE owner_id = $1 AND parent_collection_id IS NOT DISTINCT FROM $2
+         ORDER BY id FOR UPDATE",
+    )
+    .bind(owner_id)
+    .bind(parent_collection_id)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    if current_ids.len() != ordered_collection_ids.len()
+        || current_ids.iter().collect::<HashSet<_>>()
+            != ordered_collection_ids.iter().collect::<HashSet<_>>()
+    {
+        return Err(DbError::InvalidCollectionOrder);
+    }
+    for (sort_order, child_id) in ordered_collection_ids.iter().enumerate() {
+        sqlx::query(
+            "UPDATE collections
+             SET sort_order = $2, updated_at = NOW()
+             WHERE id = $1 AND owner_id = $3",
+        )
+        .bind(child_id)
+        .bind(sort_order as i32)
+        .bind(owner_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(DbError::Query)?;
+    }
+    if let Some(parent_id) = parent_collection_id {
+        sqlx::query("UPDATE collections SET updated_at = NOW() WHERE id = $1 AND owner_id = $2")
+            .bind(parent_id)
+            .bind(owner_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(DbError::Query)?;
+    }
+    tx.commit().await.map_err(DbError::Query)
+}
 
 // ── Auth state queries ──────────────────────────────────────────────────────
 
@@ -4291,5 +5218,349 @@ mod tests {
         .await;
 
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_collection_hierarchy_queries_are_owner_scoped() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let other_owner = test_utils::insert_test_user(&pool).await;
+
+        let root = test_utils::insert_test_collection(&pool, owner.id, None, "Root").await;
+        let child =
+            test_utils::insert_test_collection(&pool, owner.id, Some(root.id), "Child").await;
+        let grandchild =
+            test_utils::insert_test_collection(&pool, owner.id, Some(child.id), "Grandchild").await;
+        let other_root =
+            test_utils::insert_test_collection(&pool, other_owner.id, None, "Root").await;
+
+        assert_eq!(
+            get_root_collections(&pool, owner.id).await.unwrap().len(),
+            1
+        );
+        assert_eq!(
+            get_child_collections(&pool, root.id, owner.id)
+                .await
+                .unwrap()[0]
+                .id,
+            child.id
+        );
+        assert!(
+            get_collection_by_id_and_owner(&pool, other_root.id, owner.id)
+                .await
+                .unwrap()
+                .is_none()
+        );
+
+        let breadcrumbs = get_collection_breadcrumbs(&pool, grandchild.id, owner.id)
+            .await
+            .unwrap();
+        assert_eq!(
+            breadcrumbs.iter().map(|item| item.id).collect::<Vec<_>>(),
+            vec![root.id, child.id, grandchild.id]
+        );
+
+        let descendants = get_collection_descendants(&pool, root.id, owner.id)
+            .await
+            .unwrap();
+        assert_eq!(descendants, vec![child.id, grandchild.id]);
+
+        let all = get_all_collections_by_owner(&pool, owner.id).await.unwrap();
+        assert_eq!(all.len(), 3);
+        assert!(all.iter().all(|item| item.recipe_count == 0));
+    }
+
+    #[tokio::test]
+    async fn test_collection_writes_reject_wrong_owner_and_parent() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let other_owner = test_utils::insert_test_user(&pool).await;
+        let collection =
+            test_utils::insert_test_collection(&pool, owner.id, None, "Private Folder").await;
+        let other_collection =
+            test_utils::insert_test_collection(&pool, other_owner.id, None, "Other Folder").await;
+        let recipe = test_utils::insert_test_recipe(&pool, owner.id, "private").await;
+
+        assert!(matches!(
+            insert_collection(
+                &pool,
+                owner.id,
+                Some(other_collection.id),
+                "Cross-owner child",
+                None,
+            )
+            .await,
+            Err(DbError::CollectionParentNotFound(id)) if id == other_collection.id
+        ));
+        assert!(matches!(
+            update_collection(&pool, collection.id, other_owner.id, "Nope", None).await,
+            Err(DbError::CollectionNotFound(id)) if id == collection.id
+        ));
+        assert!(matches!(
+            move_collection(&pool, collection.id, other_owner.id, None).await,
+            Err(DbError::CollectionNotFound(id)) if id == collection.id
+        ));
+        assert!(matches!(
+            add_recipe_to_collection(&pool, collection.id, other_owner.id, recipe.id).await,
+            Err(DbError::CollectionNotFound(id)) if id == collection.id
+        ));
+        assert!(matches!(
+            get_collection_recipes(&pool, collection.id, other_owner.id, 0, 10).await,
+            Err(DbError::CollectionNotFound(id)) if id == collection.id
+        ));
+        assert!(matches!(
+            get_collection_recipe_count(&pool, collection.id, other_owner.id).await,
+            Err(DbError::CollectionNotFound(id)) if id == collection.id
+        ));
+        assert!(matches!(
+            delete_collection(&pool, collection.id, other_owner.id).await,
+            Err(DbError::CollectionNotFound(id)) if id == collection.id
+        ));
+        assert!(
+            get_collection_by_id_and_owner(&pool, collection.id, owner.id)
+                .await
+                .unwrap()
+                .is_some()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_collection_name_uniqueness_is_case_insensitive_per_parent() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let first = test_utils::insert_test_collection(&pool, owner.id, None, "Recipes").await;
+
+        let duplicate = insert_collection(&pool, owner.id, None, "recipes", None).await;
+        assert!(matches!(duplicate, Err(DbError::CollectionNameTaken)));
+
+        let nested =
+            test_utils::insert_test_collection(&pool, owner.id, Some(first.id), "recipes").await;
+        assert_eq!(nested.parent_collection_id, Some(first.id));
+    }
+
+    #[tokio::test]
+    async fn test_collection_membership_applies_recipe_visibility_rules() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let author = test_utils::insert_test_user(&pool).await;
+        let collection = test_utils::insert_test_collection(&pool, owner.id, None, "Recipes").await;
+        let own_private = test_utils::insert_test_recipe(&pool, owner.id, "private").await;
+        let public = test_utils::insert_test_recipe(&pool, author.id, "public").await;
+        let unlisted = test_utils::insert_test_recipe(&pool, author.id, "unlisted").await;
+        let private = test_utils::insert_test_recipe(&pool, author.id, "private").await;
+
+        assert_eq!(
+            test_utils::add_test_recipe_to_collection(
+                &pool,
+                collection.id,
+                owner.id,
+                own_private.id,
+            )
+            .await
+            .sort_order,
+            0
+        );
+        test_utils::add_test_recipe_to_collection(&pool, collection.id, owner.id, public.id).await;
+        test_utils::add_test_recipe_to_collection(&pool, collection.id, owner.id, unlisted.id)
+            .await;
+
+        let inaccessible =
+            add_recipe_to_collection(&pool, collection.id, owner.id, private.id).await;
+        assert!(matches!(
+            inaccessible,
+            Err(DbError::RecipeNotAccessible(id)) if id == private.id
+        ));
+        assert!(matches!(
+            add_recipe_to_collection(&pool, collection.id, owner.id, own_private.id).await,
+            Err(DbError::RecipeAlreadyInCollection)
+        ));
+
+        let listed = get_collection_recipes(&pool, collection.id, owner.id, 0, 20)
+            .await
+            .unwrap();
+        assert_eq!(listed.total_count, 3);
+        assert!(!listed.has_more);
+
+        sqlx::query("UPDATE recipes SET visibility = 'private' WHERE id = $1")
+            .bind(public.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        let after_visibility_change = get_collection_recipes(&pool, collection.id, owner.id, 0, 20)
+            .await
+            .unwrap();
+        assert_eq!(after_visibility_change.total_count, 2);
+        assert_eq!(
+            get_collection_recipe_count(&pool, collection.id, owner.id)
+                .await
+                .unwrap(),
+            2
+        );
+    }
+
+    #[tokio::test]
+    async fn test_collection_move_rejects_cycles_and_delete_cascades_memberships() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let root = test_utils::insert_test_collection(&pool, owner.id, None, "Root").await;
+        let child =
+            test_utils::insert_test_collection(&pool, owner.id, Some(root.id), "Child").await;
+        let grandchild =
+            test_utils::insert_test_collection(&pool, owner.id, Some(child.id), "Grandchild").await;
+        let destination =
+            test_utils::insert_test_collection(&pool, owner.id, None, "Destination").await;
+        let recipe = test_utils::insert_test_recipe(&pool, owner.id, "private").await;
+        test_utils::add_test_recipe_to_collection(&pool, grandchild.id, owner.id, recipe.id).await;
+
+        assert!(matches!(
+            move_collection(&pool, child.id, owner.id, Some(grandchild.id)).await,
+            Err(DbError::CollectionCycle)
+        ));
+
+        let conflict =
+            test_utils::insert_test_collection(&pool, owner.id, Some(destination.id), "Child")
+                .await;
+        assert!(matches!(
+            move_collection(&pool, child.id, owner.id, Some(destination.id)).await,
+            Err(DbError::CollectionNameTaken)
+        ));
+        delete_collection(&pool, conflict.id, owner.id)
+            .await
+            .unwrap();
+
+        let moved = move_collection(&pool, child.id, owner.id, Some(destination.id))
+            .await
+            .unwrap();
+        assert_eq!(moved.parent_collection_id, Some(destination.id));
+        assert!(get_collection_by_id_and_owner(&pool, child.id, owner.id)
+            .await
+            .unwrap()
+            .is_some());
+
+        delete_collection(&pool, root.id, owner.id).await.unwrap();
+        assert!(
+            get_collection_by_id_and_owner(&pool, grandchild.id, owner.id)
+                .await
+                .unwrap()
+                .is_some()
+        );
+        assert!(get_collection_by_id_and_owner(&pool, child.id, owner.id)
+            .await
+            .unwrap()
+            .is_some());
+
+        delete_collection(&pool, destination.id, owner.id)
+            .await
+            .unwrap();
+        assert!(get_collection_by_id_and_owner(&pool, child.id, owner.id)
+            .await
+            .unwrap()
+            .is_none());
+        assert!(
+            get_collection_by_id_and_owner(&pool, grandchild.id, owner.id)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM recipes WHERE id = $1")
+                .bind(recipe.id)
+                .fetch_one(&pool)
+                .await
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>(
+                "SELECT COUNT(*) FROM collection_recipes WHERE recipe_id = $1"
+            )
+            .bind(recipe.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            0
+        );
+    }
+
+    #[tokio::test]
+    async fn test_collection_reorders_normalize_and_update_timestamp() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let parent = test_utils::insert_test_collection(&pool, owner.id, None, "Parent").await;
+        let first =
+            test_utils::insert_test_collection(&pool, owner.id, Some(parent.id), "First").await;
+        let second =
+            test_utils::insert_test_collection(&pool, owner.id, Some(parent.id), "Second").await;
+        let third =
+            test_utils::insert_test_collection(&pool, owner.id, Some(parent.id), "Third").await;
+        let recipe_a = test_utils::insert_test_recipe(&pool, owner.id, "private").await;
+        let recipe_b = test_utils::insert_test_recipe(&pool, owner.id, "private").await;
+        test_utils::add_test_recipe_to_collection(&pool, parent.id, owner.id, recipe_a.id).await;
+        test_utils::add_test_recipe_to_collection(&pool, parent.id, owner.id, recipe_b.id).await;
+
+        let before = get_collection_by_id_and_owner(&pool, parent.id, owner.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .updated_at;
+        reorder_child_collections(
+            &pool,
+            owner.id,
+            Some(parent.id),
+            &[third.id, first.id, second.id],
+        )
+        .await
+        .unwrap();
+        reorder_collection_recipes(&pool, parent.id, owner.id, &[recipe_b.id, recipe_a.id])
+            .await
+            .unwrap();
+
+        let children = get_child_collections(&pool, parent.id, owner.id)
+            .await
+            .unwrap();
+        assert_eq!(
+            children.iter().map(|item| item.id).collect::<Vec<_>>(),
+            vec![third.id, first.id, second.id]
+        );
+        let recipes = get_collection_recipes(&pool, parent.id, owner.id, 0, 20)
+            .await
+            .unwrap();
+        assert_eq!(recipes.recipes[0].id, recipe_b.id);
+        assert!(
+            get_collection_by_id_and_owner(&pool, parent.id, owner.id)
+                .await
+                .unwrap()
+                .unwrap()
+                .updated_at
+                >= before
+        );
+    }
+
+    #[tokio::test]
+    async fn test_concurrent_root_collection_appends_have_unique_orders() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let mut tasks = Vec::new();
+        for index in 0..8 {
+            let pool = pool.clone();
+            tasks.push(tokio::spawn(async move {
+                insert_collection(&pool, owner.id, None, &format!("Concurrent {index}"), None)
+                    .await
+                    .unwrap()
+                    .sort_order
+            }));
+        }
+        for task in tasks {
+            task.await.unwrap();
+        }
+
+        let orders = sqlx::query_scalar::<_, i32>(
+            "SELECT sort_order FROM collections WHERE owner_id = $1 ORDER BY sort_order",
+        )
+        .bind(owner.id)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(orders, (0..8).collect::<Vec<_>>());
     }
 }

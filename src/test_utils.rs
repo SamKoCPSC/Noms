@@ -260,6 +260,81 @@ pub async fn apply_test_schema(pool: &PgPool) {
         .execute(pool)
         .await
         .expect("failed to create recipes created_at index");
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS collections (\
+         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\
+         owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,\
+         parent_collection_id UUID,\
+         name VARCHAR(100) NOT NULL,\
+         description TEXT,\
+         sort_order INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),\
+         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
+         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
+         UNIQUE (id, owner_id),\
+         CHECK (parent_collection_id IS NULL OR parent_collection_id <> id),\
+         FOREIGN KEY (parent_collection_id, owner_id)\
+             REFERENCES collections(id, owner_id) ON DELETE CASCADE,\
+         CHECK (btrim(name) <> '')\
+         )",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create collections table");
+
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_collections_owner_updated
+         ON collections(owner_id, updated_at DESC)",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create collections owner index");
+
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_collections_parent_order
+         ON collections(owner_id, parent_collection_id, sort_order, lower(name))",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create collections parent index");
+
+    sqlx::query(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_collections_sibling_name
+         ON collections(owner_id, parent_collection_id, lower(name))
+         NULLS NOT DISTINCT",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create collections name index");
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS collection_recipes (\
+         collection_id UUID NOT NULL REFERENCES collections(id) ON DELETE CASCADE,\
+         recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,\
+         sort_order INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),\
+         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
+         PRIMARY KEY (collection_id, recipe_id)\
+         )",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create collection_recipes table");
+
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_collection_recipes_order
+         ON collection_recipes(collection_id, sort_order, created_at)",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create collection_recipes order index");
+
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_collection_recipes_recipe_id
+         ON collection_recipes(recipe_id)",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create collection_recipes recipe index");
 }
 
 /// Generate a unique 8-character suffix for test data to avoid duplicate key conflicts.
@@ -337,4 +412,67 @@ fn test_recipe_snapshot(title: &str) -> crate::db::diff::RecipeSnapshot {
         images: Vec::new(),
         tags: Vec::new(),
     }
+}
+
+/// Insert a user with unique test-only identity fields.
+pub async fn insert_test_user(pool: &PgPool) -> crate::db::User {
+    let suffix = uid();
+    crate::db::insert_user(
+        pool,
+        &format!("collections_{suffix}"),
+        "Collections Test User",
+        &format!("collections_{suffix}@example.com"),
+        None,
+    )
+    .await
+    .expect("failed to insert test user")
+}
+
+/// Insert a published or private recipe with empty structured recipe fields.
+pub async fn insert_test_recipe(
+    pool: &PgPool,
+    user_id: Uuid,
+    visibility: &str,
+) -> crate::types::Recipe {
+    crate::db::insert_recipe(
+        pool,
+        user_id,
+        "Collection Test Recipe",
+        None,
+        None,
+        None,
+        None,
+        None,
+        &[],
+        &[],
+        &[],
+        &[],
+        visibility,
+    )
+    .await
+    .expect("failed to insert test recipe")
+}
+
+/// Insert a collection through the production query path.
+pub async fn insert_test_collection(
+    pool: &PgPool,
+    owner_id: Uuid,
+    parent_collection_id: Option<Uuid>,
+    name: &str,
+) -> crate::types::Collection {
+    crate::db::insert_collection(pool, owner_id, parent_collection_id, name, None)
+        .await
+        .expect("failed to insert test collection")
+}
+
+/// Add a recipe to a collection through the production query path.
+pub async fn add_test_recipe_to_collection(
+    pool: &PgPool,
+    collection_id: Uuid,
+    owner_id: Uuid,
+    recipe_id: Uuid,
+) -> crate::db::CollectionRecipe {
+    crate::db::add_recipe_to_collection(pool, collection_id, owner_id, recipe_id)
+        .await
+        .expect("failed to add test recipe to collection")
 }

@@ -315,6 +315,19 @@ pub struct RecipeDraftView {
     pub updated_at: DateTime<Utc>,
 }
 
+/// A private, user-owned recipe collection.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Collection {
+    pub id: Uuid,
+    pub owner_id: Uuid,
+    pub parent_collection_id: Option<Uuid>,
+    pub name: String,
+    pub description: Option<String>,
+    pub sort_order: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RecipeVersionSummary {
     pub version_number: i32,
@@ -738,6 +751,50 @@ pub struct VersionGraph {
     pub truncation: VersionGraphTruncation,
     #[serde(default)]
     pub lineage_counts: VersionGraphLineageCounts,
+}
+
+/// Display-oriented collection data with direct child and visible recipe counts.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CollectionSummary {
+    pub id: Uuid,
+    pub parent_collection_id: Option<Uuid>,
+    pub name: String,
+    pub description: Option<String>,
+    pub sort_order: i32,
+    pub child_count: i64,
+    pub recipe_count: i64,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Paginated direct recipe membership for a collection.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CollectionRecipeList {
+    pub recipes: Vec<Recipe>,
+    pub total_count: i64,
+    pub has_more: bool,
+}
+
+/// A recipe's position within one collection.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecipeOrder {
+    pub recipe_id: Uuid,
+    pub sort_order: i32,
+}
+
+/// A child collection's position within its parent.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CollectionOrder {
+    pub collection_id: Uuid,
+    pub sort_order: i32,
+}
+
+/// A collection and its direct contents plus root-to-leaf navigation.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CollectionContents {
+    pub collection: CollectionSummary,
+    pub breadcrumbs: Vec<CollectionSummary>,
+    pub child_collections: Vec<CollectionSummary>,
+    pub recipes: CollectionRecipeList,
 }
 
 /// Public user profile with recipe count.
