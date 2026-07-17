@@ -26,7 +26,8 @@ use auth::context::AuthContext;
 use components::{AppLayout, ErrorFallback};
 use pages::{
     CollectionDetail, CollectionList, Dashboard, Explore, Home, Login, NotFound, RecipeDetail,
-    RecipeDraftEdit, RecipeEdit, RecipeNew, SettingsAccounts, SettingsProfile, UserProfile,
+    RecipeDraftEdit, RecipeEdit, RecipeNew, RecipeVersionDetail, SettingsAccounts, SettingsProfile,
+    UserProfile,
 };
 
 /// Application routes.
@@ -44,6 +45,8 @@ pub enum Route {
         RecipeNew {},
         #[route("/recipes/:id")]
         RecipeDetail { id: String },
+        #[route("/recipes/:id/versions/:version_number")]
+        RecipeVersionDetail { id: String, version_number: i32 },
         #[route("/recipes/:id/edit")]
         RecipeEdit { id: String },
         #[route("/recipes/drafts/:id/edit")]

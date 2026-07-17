@@ -12,17 +12,17 @@ use dioxus::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use crate::api::recipe::delete_recipe;
 use crate::api::recipe::{
-    fork_recipe, get_fork_attribution, get_public_recipe, get_public_recipe_tags_by_id, get_recipe,
-    get_recipe_owner_username, get_recipe_tags, get_recipe_version_api, get_recipe_versions_api,
-    restore_version,
+    compare_recipe_versions_api, fork_recipe, get_fork_attribution, get_public_recipe,
+    get_public_recipe_tags_by_id, get_recipe, get_recipe_owner_username, get_recipe_tags,
+    get_recipe_version_api, get_recipe_versions_api, restore_version,
 };
 use crate::auth::context::use_auth;
 use crate::components::base::{
     Button, ButtonVariant, Card, EditedRecipeImage, LoadingSpinner, PageHeader,
 };
 use crate::types::{
-    ForkAttribution, Recipe, RecipeEquipment, RecipeIngredient, RecipeStep, RecipeVersionSummary,
-    RecipeVersionView,
+    ForkAttribution, Recipe, RecipeEquipment, RecipeIngredient, RecipeStep, RecipeVersionChange,
+    RecipeVersionComparison, RecipeVersionSummary, RecipeVersionView,
 };
 #[cfg(target_arch = "wasm32")]
 use crate::utils::recipe_scaler::{
@@ -50,8 +50,189 @@ fn format_relative_time(dt: DateTime<Utc>) -> String {
     }
 }
 
+fn format_change_path(path: &str) -> String {
+    let mut labels = Vec::<String>::new();
+    for token in path.split('/').filter(|token| !token.is_empty()) {
+        let token = token.replace("~1", "/").replace("~0", "~");
+        if let Ok(index) = token.parse::<usize>() {
+            if let Some(label) = labels.last_mut() {
+                label.push_str(&format!(" #{}", index + 1));
+            } else {
+                labels.push(format!("Item #{}", index + 1));
+            }
+            continue;
+        }
+
+        let label = match token.as_str() {
+            "prep_time_minutes" => "Prep time".to_string(),
+            "cook_time_minutes" => "Cook time".to_string(),
+            "instructions" => "Steps".to_string(),
+            "sub_steps" => "Sub-steps".to_string(),
+            "thumb_url" => "Thumbnail".to_string(),
+            "file_name" => "File name".to_string(),
+            "file_size" => "File size".to_string(),
+            _ => {
+                let words = token.replace('_', " ");
+                let mut characters = words.chars();
+                match characters.next() {
+                    Some(first) => first.to_uppercase().collect::<String>() + characters.as_str(),
+                    None => String::new(),
+                }
+            }
+        };
+        labels.push(label);
+    }
+
+    if labels.is_empty() {
+        "Recipe".to_string()
+    } else {
+        labels.join(" · ")
+    }
+}
+
+fn format_change_value(value: Option<&String>) -> String {
+    match value {
+        None => "—".to_string(),
+        Some(value) => value.clone(),
+    }
+}
+
+#[component]
+fn VersionComparisonPanel(
+    title: String,
+    description: String,
+    changes: Vec<RecipeVersionChange>,
+) -> Element {
+    rsx! {
+        section {
+            class: "neumo-inset",
+            padding: "var(--space-md)",
+            h3 { margin_bottom: "var(--space-xs)", "{title}" }
+            p {
+                color: "var(--text-secondary)",
+                margin_bottom: "var(--space-md)",
+                "{description}"
+            }
+            if changes.is_empty() {
+                p { "No content differences between these versions." }
+            } else {
+                div {
+                    display: "flex",
+                    flex_direction: "column",
+                    gap: "var(--space-md)",
+                    for change in &changes {
+                        {
+                            let field = format_change_path(&change.path);
+                            let before = format_change_value(change.old_value.as_ref());
+                            let after = format_change_value(change.value.as_ref());
+                            let operation = match change.op.as_str() {
+                                "add" => "Added",
+                                "remove" => "Removed",
+                                _ => "Changed",
+                            };
+                            let is_added = change.op == "add";
+                            let is_removed = change.op == "remove";
+                            let operation_color = if is_added {
+                                "var(--success)"
+                            } else if is_removed {
+                                "var(--error)"
+                            } else {
+                                "var(--warning)"
+                            };
+                            let operation_background = if is_added {
+                                "var(--success-bg)"
+                            } else if is_removed {
+                                "var(--error-bg)"
+                            } else {
+                                "color-mix(in srgb, var(--warning) 14%, transparent)"
+                            };
+                            rsx! {
+                                div {
+                                    padding: "var(--space-sm)",
+                                    border: "1px solid var(--border-color)",
+                                    border_radius: "var(--radius-md)",
+                                    div {
+                                        display: "flex",
+                                        justify_content: "space-between",
+                                        align_items: "baseline",
+                                        gap: "var(--space-sm)",
+                                        margin_bottom: "var(--space-sm)",
+                                        strong { "{field}" }
+                                        span {
+                                            color: operation_color,
+                                            background: operation_background,
+                                            font_size: "var(--font-size-sm)",
+                                            font_weight: "700",
+                                            padding: "2px var(--space-sm)",
+                                            border_radius: "var(--radius-full)",
+                                            "{operation}"
+                                        }
+                                    }
+                                    div {
+                                        display: "grid",
+                                        grid_template_columns: "repeat(auto-fit, minmax(220px, 1fr))",
+                                        gap: "var(--space-md)",
+                                        if !is_added {
+                                            div {
+                                                background: "var(--error-bg)",
+                                                border_left: "4px solid var(--error)",
+                                                border_radius: "var(--radius-sm)",
+                                                padding: "var(--space-sm)",
+                                                span {
+                                                    display: "block",
+                                                    color: "var(--error)",
+                                                    font_size: "var(--font-size-sm)",
+                                                    font_weight: "700",
+                                                    margin_bottom: "var(--space-xs)",
+                                                    "− Before"
+                                                }
+                                                pre {
+                                                    margin: "0",
+                                                    white_space: "pre-wrap",
+                                                    overflow_wrap: "anywhere",
+                                                    font_family: "inherit",
+                                                    "{before}"
+                                                }
+                                            }
+                                        }
+                                        if !is_removed {
+                                            div {
+                                                background: "var(--success-bg)",
+                                                border_left: "4px solid var(--success)",
+                                                border_radius: "var(--radius-sm)",
+                                                padding: "var(--space-sm)",
+                                                span {
+                                                    display: "block",
+                                                    color: "var(--success)",
+                                                    font_size: "var(--font-size-sm)",
+                                                    font_weight: "700",
+                                                    margin_bottom: "var(--space-xs)",
+                                                    "+ After"
+                                                }
+                                                pre {
+                                                    margin: "0",
+                                                    white_space: "pre-wrap",
+                                                    overflow_wrap: "anywhere",
+                                                    font_family: "inherit",
+                                                    "{after}"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod layout_tests {
+    use super::{format_change_path, format_change_value};
+
     #[test]
     fn version_history_is_the_final_recipe_detail_section() {
         let source = include_str!("recipe_detail.rs");
@@ -63,6 +244,171 @@ mod layout_tests {
             .expect("version history heading");
 
         assert!(history_position > commentary_position);
+    }
+
+    #[test]
+    fn version_history_links_to_a_full_page_snapshot() {
+        let source = include_str!("recipe_detail.rs");
+        let route_link = ["to: crate::Route::RecipeVersion", "Detail"].concat();
+        let page_component = ["pub fn RecipeVersion", "Detail"].concat();
+        let embedded_selection_state = ["let mut selected_", "version"].concat();
+
+        assert!(source.contains(&route_link));
+        assert!(source.contains(&page_component));
+        assert!(!source.contains(&embedded_selection_state));
+    }
+
+    #[test]
+    fn version_history_offers_an_inline_difference_viewer() {
+        let source = include_str!("recipe_detail.rs");
+        let detail_component = ["pub fn Recipe", "Detail"].concat();
+        let version_component = ["pub fn RecipeVersion", "Detail"].concat();
+        let detail_page = source
+            .split(&detail_component)
+            .nth(1)
+            .expect("recipe detail page")
+            .split(&version_component)
+            .next()
+            .expect("recipe detail page body");
+        let button_label = ["View", " differences"].concat();
+        let expanded_state = ["expanded_version", "_difference"].concat();
+        let comparison_api = ["compare_recipe_", "versions_api"].concat();
+
+        assert!(detail_page.contains(&button_label));
+        assert!(detail_page.contains(&expanded_state));
+        assert!(detail_page.contains("VersionComparisonPanel"));
+        assert!(detail_page.contains(&comparison_api));
+    }
+
+    #[test]
+    fn version_history_actions_wrap_within_the_card() {
+        let source = include_str!("recipe_detail.rs");
+        let owner_history = ["if is_owner && !versions", ".is_empty()"].concat();
+        let version_history = source
+            .split(&owner_history)
+            .nth(1)
+            .expect("version history")
+            .split("/// Full-page, read-only")
+            .next()
+            .expect("version history body");
+
+        assert!(version_history.contains("width: \"100%\""));
+        assert!(version_history.contains("flex: \"0 0 100%\""));
+        assert!(version_history.contains("justify_content: \"flex-start\""));
+        assert!(version_history.contains("flex_wrap: \"wrap\""));
+    }
+
+    #[test]
+    fn version_differences_use_git_style_removed_and_added_colors() {
+        let source = include_str!("recipe_detail.rs");
+        let comparison_panel = source
+            .split("fn VersionComparisonPanel")
+            .nth(1)
+            .expect("comparison panel")
+            .split("#[cfg(test)]")
+            .next()
+            .expect("comparison panel body");
+        let removed_background = ["var(--", "error-bg)"].concat();
+        let added_background = ["var(--", "success-bg)"].concat();
+
+        assert!(comparison_panel.contains(&removed_background));
+        assert!(comparison_panel.contains(&added_background));
+        assert!(comparison_panel.contains("− Before"));
+        assert!(comparison_panel.contains("+ After"));
+    }
+
+    #[test]
+    fn historical_snapshot_uses_the_recipe_detail_page_layout() {
+        let source = include_str!("recipe_detail.rs");
+        let page_component = ["pub fn RecipeVersion", "Detail"].concat();
+        let historical_page = source
+            .split(&page_component)
+            .nth(1)
+            .expect("historical recipe page");
+
+        assert!(historical_page.contains("class: \"recipe-detail container\""));
+        assert!(historical_page.contains("Historical version"));
+        assert!(historical_page.contains("Back to current recipe"));
+    }
+
+    #[test]
+    fn historical_snapshot_subscribes_to_the_resource_result_before_loading_return() {
+        let source = include_str!("recipe_detail.rs");
+        let page_component = ["pub fn RecipeVersion", "Detail"].concat();
+        let historical_page = source
+            .split(&page_component)
+            .nth(1)
+            .expect("historical recipe page");
+        let result_read = historical_page
+            .find("version_resource.read()")
+            .expect("version result read");
+        let loading_return = historical_page
+            .find("if version_resource.pending()")
+            .expect("loading return");
+
+        assert!(result_read < loading_return);
+    }
+
+    #[test]
+    fn change_paths_are_readable_and_use_one_based_item_numbers() {
+        assert_eq!(
+            format_change_path("/ingredients/1/name"),
+            "Ingredients #2 · Name"
+        );
+        assert_eq!(
+            format_change_path("/instructions/0/sub_steps/1/text"),
+            "Steps #1 · Sub-steps #2 · Text"
+        );
+        assert_eq!(format_change_path("/prep_time_minutes"), "Prep time");
+        assert_eq!(format_change_path("/tags/0"), "Tags #1");
+    }
+
+    #[test]
+    fn change_values_show_plain_scalars_and_structured_content() {
+        assert_eq!(format_change_value(None), "—");
+        assert_eq!(format_change_value(Some(&"Not set".to_string())), "Not set");
+        assert_eq!(
+            format_change_value(Some(&"Sea salt".to_string())),
+            "Sea salt"
+        );
+        assert_eq!(format_change_value(Some(&"(empty)".to_string())), "(empty)");
+        assert_eq!(format_change_value(Some(&"4".to_string())), "4");
+        assert_eq!(
+            format_change_value(Some(
+                &"{\n  \"amount\": \"1\",\n  \"name\": \"salt\",\n  \"unit\": \"tsp\"\n}"
+                    .to_string()
+            )),
+            "{\n  \"amount\": \"1\",\n  \"name\": \"salt\",\n  \"unit\": \"tsp\"\n}"
+        );
+    }
+
+    #[test]
+    fn historical_page_offers_builtin_and_arbitrary_version_comparisons() {
+        let source = include_str!("recipe_detail.rs");
+        let current_heading = ["Compared with", " current version"].concat();
+        let original_heading = ["Compared with", " original version"].concat();
+        let custom_heading = ["Compare any", " two versions"].concat();
+        let comparison_api = ["compare_recipe_", "versions_api"].concat();
+
+        assert!(source.contains(&current_heading));
+        assert!(source.contains(&original_heading));
+        assert!(source.contains(&custom_heading));
+        assert!(source.contains(&comparison_api));
+    }
+
+    #[test]
+    fn arbitrary_version_selectors_are_locked_while_comparing() {
+        let source = include_str!("recipe_detail.rs");
+        let page_component = ["pub fn RecipeVersion", "Detail"].concat();
+        let historical_page = source
+            .split(&page_component)
+            .nth(1)
+            .expect("historical recipe page");
+
+        assert_eq!(
+            historical_page.matches("disabled: is_comparing()").count(),
+            2
+        );
     }
 }
 
@@ -608,8 +954,11 @@ pub fn RecipeDetail(id: String) -> Element {
         let recipe_id = id_for_versions.clone();
         async move { get_recipe_versions_api(recipe_id).await }
     });
-    let mut selected_version = use_signal(|| Option::<RecipeVersionView>::None);
     let mut version_action_error = use_signal(|| Option::<String>::None);
+    let mut expanded_version_difference = use_signal(|| Option::<i32>::None);
+    let mut version_difference = use_signal(|| Option::<RecipeVersionComparison>::None);
+    let mut version_difference_error = use_signal(|| Option::<String>::None);
+    let mut is_loading_version_difference = use_signal(|| false);
     let mut is_forking = use_signal(|| false);
 
     // Tags (signal-based, loaded conditionally based on ownership)
@@ -1001,139 +1350,492 @@ pub fn RecipeDetail(id: String) -> Element {
                         flex_direction: "column",
                         gap: "var(--space-sm)",
                         for version in versions.clone() {
-                            div {
-                                key: "{version.version_number}",
-                                display: "flex",
-                                justify_content: "space-between",
-                                align_items: "center",
-                                div {
-                                    strong {
-                                        "v{version.version_number} · {version.title}"
-                                        if version.is_current { " · Current" }
-                                    }
-                                    p { "Published {version.created_at}" }
-                                    p { "{version.change_summary}" }
-                                    if let Some(notes) = &version.notes {
-                                        p { "{notes}" }
-                                    }
-                                }
-                                div { display: "flex", gap: "var(--space-xs)",
-                                    Button {
-                                        variant: ButtonVariant::Ghost,
-                                        onclick: {
-                                            let recipe_id = id.clone();
-                                            move |_| {
-                                                let recipe_id = recipe_id.clone();
-                                                spawn(async move {
-                                                    match get_recipe_version_api(recipe_id, version.version_number).await {
-                                                        Ok(detail) => selected_version.set(Some(detail)),
-                                                        Err(error) => version_action_error.set(Some(error.to_string())),
-                                                    }
-                                                });
-                                            }
-                                        },
-                                        "View"
-                                    }
-                                    if !version.is_current {
-                                        Button {
-                                            variant: ButtonVariant::Secondary,
-                                            onclick: {
-                                                let recipe_id = id.clone();
-                                                let latest = versions[0].version_number;
-                                                move |_| {
-                                                    let recipe_id = recipe_id.clone();
-                                                    spawn(async move {
-                                                        match restore_version(recipe_id, version.version_number, latest).await {
-                                                            Ok(_) => {
-                                                                #[cfg(target_arch = "wasm32")]
-                                                                if let Some(window) = web_sys::window() {
-                                                                    let _ = window.location().reload();
-                                                                }
-                                                            }
-                                                            Err(error) => version_action_error.set(Some(error.to_string())),
-                                                        }
-                                                    });
+                            {
+                                let version_number = version.version_number;
+                                let previous_version_number = version_number - 1;
+                                let latest_version_number = versions[0].version_number;
+                                let difference_is_expanded =
+                                    expanded_version_difference() == Some(version_number);
+                                rsx! {
+                                    div {
+                                        key: "{version_number}",
+                                        padding: "var(--space-sm) 0",
+                                        border_bottom: "1px solid var(--border-color)",
+                                        div {
+                                            display: "flex",
+                                            justify_content: "space-between",
+                                            align_items: "center",
+                                            flex_wrap: "wrap",
+                                            gap: "var(--space-sm)",
+                                            div {
+                                                strong {
+                                                    "v{version_number} · {version.title}"
+                                                    if version.is_current { " · Current" }
                                                 }
-                                            },
-                                            "Restore"
+                                                p { "Published {version.created_at}" }
+                                                p { "{version.change_summary}" }
+                                                if let Some(notes) = &version.notes {
+                                                    p { "{notes}" }
+                                                }
+                                            }
+                                            div {
+                                                display: "flex",
+                                                width: "100%",
+                                                flex: "0 0 100%",
+                                                flex_wrap: "wrap",
+                                                justify_content: "flex-start",
+                                                gap: "var(--space-xs)",
+                                                if version_number > 1 {
+                                                    Button {
+                                                        variant: ButtonVariant::Secondary,
+                                                        disabled: is_loading_version_difference(),
+                                                        onclick: {
+                                                            let recipe_id = id.clone();
+                                                            move |_| {
+                                                                if expanded_version_difference()
+                                                                    == Some(version_number)
+                                                                {
+                                                                    expanded_version_difference.set(None);
+                                                                    version_difference.set(None);
+                                                                    version_difference_error.set(None);
+                                                                    return;
+                                                                }
+
+                                                                expanded_version_difference
+                                                                    .set(Some(version_number));
+                                                                version_difference.set(None);
+                                                                version_difference_error.set(None);
+                                                                is_loading_version_difference.set(true);
+                                                                let recipe_id = recipe_id.clone();
+                                                                spawn(async move {
+                                                                    match compare_recipe_versions_api(
+                                                                        recipe_id,
+                                                                        previous_version_number,
+                                                                        version_number,
+                                                                    )
+                                                                    .await
+                                                                    {
+                                                                        Ok(detail)
+                                                                            if expanded_version_difference()
+                                                                                == Some(version_number) =>
+                                                                        {
+                                                                            version_difference.set(Some(detail));
+                                                                        }
+                                                                        Err(error)
+                                                                            if expanded_version_difference()
+                                                                                == Some(version_number) =>
+                                                                        {
+                                                                            version_difference_error
+                                                                                .set(Some(error.to_string()));
+                                                                        }
+                                                                        _ => {}
+                                                                    }
+                                                                    if expanded_version_difference()
+                                                                        == Some(version_number)
+                                                                    {
+                                                                        is_loading_version_difference.set(false);
+                                                                    }
+                                                                });
+                                                            }
+                                                        },
+                                                        if difference_is_expanded {
+                                                            if is_loading_version_difference() {
+                                                                "Loading differences..."
+                                                            } else {
+                                                                "Hide differences"
+                                                            }
+                                                        } else {
+                                                            "View differences"
+                                                        }
+                                                    }
+                                                }
+                                                Link {
+                                                    to: crate::Route::RecipeVersionDetail {
+                                                        id: id.clone(),
+                                                        version_number,
+                                                    },
+                                                    class: "btn btn-ghost touch-target",
+                                                    "View snapshot"
+                                                }
+                                                if !version.is_current {
+                                                    Button {
+                                                        variant: ButtonVariant::Secondary,
+                                                        onclick: {
+                                                            let recipe_id = id.clone();
+                                                            move |_| {
+                                                                let recipe_id = recipe_id.clone();
+                                                                spawn(async move {
+                                                                    match restore_version(
+                                                                        recipe_id,
+                                                                        version_number,
+                                                                        latest_version_number,
+                                                                    )
+                                                                    .await
+                                                                    {
+                                                                        Ok(_) => {
+                                                                            #[cfg(target_arch = "wasm32")]
+                                                                            if let Some(window) = web_sys::window() {
+                                                                                let _ = window.location().reload();
+                                                                            }
+                                                                        }
+                                                                        Err(error) => version_action_error
+                                                                            .set(Some(error.to_string())),
+                                                                    }
+                                                                });
+                                                            }
+                                                        },
+                                                        "Restore"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if difference_is_expanded {
+                                            div { margin_top: "var(--space-md)",
+                                                if is_loading_version_difference() {
+                                                    div {
+                                                        display: "flex",
+                                                        align_items: "center",
+                                                        gap: "var(--space-sm)",
+                                                        padding: "var(--space-md)",
+                                                        LoadingSpinner {}
+                                                        span { "Loading differences..." }
+                                                    }
+                                                } else if let Some(error) = version_difference_error() {
+                                                    p {
+                                                        padding: "var(--space-md)",
+                                                        color: "var(--error)",
+                                                        background: "var(--error-bg)",
+                                                        border_radius: "var(--radius-md)",
+                                                        "Unable to load differences: {error}"
+                                                    }
+                                                } else if let Some(detail) = version_difference() {
+                                                    VersionComparisonPanel {
+                                                        title: format!("Changes in v{version_number}"),
+                                                        description: format!(
+                                                            "Published differences from v{previous_version_number} to v{version_number}. Red shows removed content; green shows added content.",
+                                                        ),
+                                                        changes: detail.changes,
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                    if let Some(detail) = selected_version() {
-                        div { class: "neumo-inset", padding: "var(--space-md)",
-                            h3 { "v{detail.version_number}: {detail.editor.title}" }
-                            if let Some(description) = &detail.editor.description {
-                                p { "{description}" }
-                            }
-                            if let Some(commentary) = &detail.editor.commentary {
-                                p { "{commentary}" }
-                            }
-                            div { class: "recipe-detail__meta-row",
-                                if let Some(prep) = detail.editor.prep_time_minutes {
-                                    span { "Prep: {prep} min" }
-                                }
-                                if let Some(cook) = detail.editor.cook_time_minutes {
-                                    span { "Cook: {cook} min" }
-                                }
-                                if let Some(servings) = detail.editor.servings {
-                                    span { "Servings: {servings}" }
-                                }
-                                span { "Visibility: {detail.editor.visibility}" }
-                            }
-                            if !detail.editor.tags.is_empty() {
-                                div { class: "recipe-detail__tags",
-                                    for tag in &detail.editor.tags {
-                                        span { class: "recipe-detail__tag", "{tag}" }
+                }
+            }
+        }
+    }
+}
+
+/// Full-page, read-only rendering of one immutable published recipe snapshot.
+#[component]
+pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
+    let recipe_id = id.clone();
+    let version_resource = use_resource(move || {
+        let recipe_id = recipe_id.clone();
+        async move { get_recipe_version_api(recipe_id, version_number).await }
+    });
+    let versions_recipe_id = id.clone();
+    let versions_resource = use_resource(move || {
+        let recipe_id = versions_recipe_id.clone();
+        async move { get_recipe_versions_api(recipe_id).await }
+    });
+    let mut comparison_from = use_signal(|| 1i32);
+    let mut comparison_to = use_signal(|| version_number);
+    let mut custom_comparison = use_signal(|| Option::<RecipeVersionComparison>::None);
+    let mut comparison_error = use_signal(|| Option::<String>::None);
+    let mut is_comparing = use_signal(|| false);
+    // Subscribe to the completed value before an early loading return. Reading
+    // only `pending()` here can leave this route rendered in its initial state
+    // even after the server function has completed.
+    let version_result: Option<Result<RecipeVersionView, ServerFnError>> =
+        version_resource.read().clone();
+    let versions_result: Option<Result<Vec<RecipeVersionSummary>, ServerFnError>> =
+        versions_resource.read().clone();
+
+    if version_resource.pending() {
+        return rsx! {
+            div { class: "container",
+                div {
+                    display: "flex",
+                    flex_direction: "column",
+                    align_items: "center",
+                    justify_content: "center",
+                    min_height: "300px",
+                    LoadingSpinner {}
+                    p { margin_top: "var(--space-md)", "Loading historical version..." }
+                }
+            }
+        };
+    }
+
+    let Some(Ok(detail)) = version_result else {
+        let error_message = version_result
+            .and_then(Result::err)
+            .map(|error| error.to_string())
+            .unwrap_or_else(|| "Unable to load this recipe version.".to_string());
+        return rsx! {
+            div { class: "container",
+                Card {
+                    div {
+                        display: "flex",
+                        flex_direction: "column",
+                        align_items: "center",
+                        gap: "var(--space-md)",
+                        p { color: "var(--error)", font_weight: "600", "{error_message}" }
+                        Link {
+                            to: crate::Route::RecipeDetail { id: id.clone() },
+                            class: "btn btn-secondary touch-target",
+                            "Back to current recipe"
+                        }
+                    }
+                }
+            }
+        };
+    };
+    let editor = &detail.editor;
+    let versions = versions_result.and_then(Result::ok).unwrap_or_default();
+    let recipe_id_for_comparison = id.clone();
+    let compare_selected_versions = move |_| {
+        let recipe_id = recipe_id_for_comparison.clone();
+        let from_version_number = comparison_from();
+        let to_version_number = comparison_to();
+        is_comparing.set(true);
+        comparison_error.set(None);
+        spawn(async move {
+            match compare_recipe_versions_api(recipe_id, from_version_number, to_version_number)
+                .await
+            {
+                Ok(comparison) => custom_comparison.set(Some(comparison)),
+                Err(error) => comparison_error.set(Some(error.to_string())),
+            }
+            is_comparing.set(false);
+        });
+    };
+
+    rsx! {
+        div { class: "recipe-detail container",
+            Card {
+                PageHeader {
+                    title: "{editor.title}",
+                    action: Some(rsx! {
+                        Link {
+                            to: crate::Route::RecipeDetail { id: id.clone() },
+                            class: "btn btn-secondary touch-target",
+                            "Back to current recipe"
+                        }
+                    }),
+                }
+
+                div {
+                    class: "neumo-inset",
+                    padding: "var(--space-md)",
+                    margin_bottom: "var(--space-md)",
+                    strong { "Historical version v{detail.version_number}" }
+                    p { "Published {detail.created_at}" }
+                    p { "This is a read-only snapshot. The current recipe has not been changed." }
+                    if let Some(notes) = &detail.notes {
+                        p { "{notes}" }
+                    }
+                }
+
+                if !editor.tags.is_empty() {
+                    div { class: "recipe-detail__tags",
+                        for tag in &editor.tags {
+                            span { class: "recipe-detail__tag", "{tag}" }
+                        }
+                    }
+                }
+
+                div { class: "recipe-detail__meta-row",
+                    if let Some(prep) = editor.prep_time_minutes {
+                        span { class: "recipe-detail__meta-item", "⏱ Prep: {prep} min" }
+                    }
+                    if let Some(cook) = editor.cook_time_minutes {
+                        span { class: "recipe-detail__meta-item", "🔥 Cook: {cook} min" }
+                    }
+                    if let Some(servings) = editor.servings {
+                        span { class: "recipe-detail__meta-item", "🍽 Servings: {servings}" }
+                    }
+                    span { class: "recipe-detail__meta-item", "Visibility: {editor.visibility}" }
+                }
+
+                if let Some(description) = &editor.description {
+                    if !description.is_empty() {
+                        p { class: "recipe-detail__description", "{description}" }
+                    }
+                }
+            }
+
+            {render_image_slider(editor.images.clone())}
+
+            if !editor.equipment.is_empty() {
+                Card { {render_equipment(&editor.equipment)} }
+            }
+
+            if !editor.ingredients.is_empty() {
+                Card {
+                    div { class: "recipe-detail__ingredients-section",
+                        h2 { class: "recipe-detail__section-title", "Ingredients" }
+                        ul { class: "recipe-detail__list",
+                            for ingredient in &editor.ingredients {
+                                li { class: "recipe-detail__list-item",
+                                    if !ingredient.amount.is_empty() && !ingredient.unit.is_empty() {
+                                        "- {ingredient.amount} {ingredient.unit} {ingredient.name}"
+                                    } else if !ingredient.amount.is_empty() {
+                                        "- {ingredient.amount} {ingredient.name}"
+                                    } else {
+                                        "- {ingredient.name}"
                                     }
                                 }
                             }
-                            if !detail.editor.images.is_empty() {
-                                div { class: "recipe-detail__images",
-                                    for image in &detail.editor.images {
-                                        EditedRecipeImage {
-                                            image: image.clone(),
-                                            class: "recipe-image-slider__image",
-                                            alt: "Historical recipe image".to_string(),
-                                            loading: "lazy".to_string(),
-                                            fallback_fit: "contain".to_string(),
-                                            on_error: move |_| {},
+                        }
+                    }
+                    {render_recipe_scaler(
+                        &editor.ingredients,
+                        editor.prep_time_minutes,
+                        editor.cook_time_minutes,
+                        editor.servings,
+                    )}
+                }
+            }
+
+            if !editor.instructions.is_empty() {
+                Card {
+                    div { class: "recipe-detail__steps-section",
+                        h2 { class: "recipe-detail__section-title", "Steps" }
+                        ol { class: "recipe-detail__steps-list",
+                            for (index, step) in editor.instructions.iter().enumerate() {
+                                StepNode { step: step.clone(), path: vec![index], level: 0 }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if let Some(commentary) = &editor.commentary {
+                if !commentary.is_empty() {
+                    Card { p { class: "recipe-detail__commentary", "{commentary}" } }
+                }
+            }
+
+            Card {
+                h2 { class: "recipe-detail__section-title", "Version comparisons" }
+                div {
+                    display: "flex",
+                    flex_direction: "column",
+                    gap: "var(--space-md)",
+                    if detail.version_number > 1 {
+                        VersionComparisonPanel {
+                            title: format!("Changes from v{}", detail.version_number - 1),
+                            description: format!(
+                                "Published changes from v{} to v{}.",
+                                detail.version_number - 1,
+                                detail.version_number,
+                            ),
+                            changes: detail.changes_from_previous.clone(),
+                        }
+                    }
+                    VersionComparisonPanel {
+                        title: "Compared with current version".to_string(),
+                        description: format!(
+                            "Historical v{} as Before and current v{} as After.",
+                            detail.version_number,
+                            detail.current_version_number,
+                        ),
+                        changes: detail.changes_to_current.clone(),
+                    }
+                    VersionComparisonPanel {
+                        title: "Compared with original version".to_string(),
+                        description: format!(
+                            "Original v1 as Before and historical v{} as After.",
+                            detail.version_number,
+                        ),
+                        changes: detail.changes_from_original.clone(),
+                    }
+
+                    div {
+                        class: "neumo-inset",
+                        padding: "var(--space-md)",
+                        h3 { margin_bottom: "var(--space-xs)", "Compare any two versions" }
+                        p {
+                            color: "var(--text-secondary)",
+                            margin_bottom: "var(--space-md)",
+                            "Choose the Before and After snapshots, then generate their field-by-field diff."
+                        }
+                        div {
+                            display: "grid",
+                            grid_template_columns: "repeat(auto-fit, minmax(180px, 1fr))",
+                            gap: "var(--space-md)",
+                            align_items: "end",
+                            label {
+                                "Before version"
+                                select {
+                                    class: "neumo-inset input",
+                                    disabled: is_comparing(),
+                                    onchange: move |event| {
+                                        if let Ok(version) = event.value().parse::<i32>() {
+                                            comparison_from.set(version);
+                                            custom_comparison.set(None);
+                                        }
+                                    },
+                                    for version in &versions {
+                                        option {
+                                            value: "{version.version_number}",
+                                            selected: comparison_from() == version.version_number,
+                                            "v{version.version_number} · {version.title}"
                                         }
                                     }
                                 }
                             }
-                            h4 { "Ingredients" }
-                            ul {
-                                for ingredient in &detail.editor.ingredients {
-                                    li { "{ingredient.amount} {ingredient.unit} {ingredient.name}" }
-                                }
-                            }
-                            h4 { "Instructions" }
-                            div { class: "recipe-detail__steps",
-                                for (idx, step) in detail.editor.instructions.iter().enumerate() {
-                                    StepNode { step: step.clone(), path: vec![idx], level: 0 }
-                                }
-                            }
-                            if !detail.editor.equipment.is_empty() {
-                                h4 { "Equipment" }
-                                ul {
-                                    for item in &detail.editor.equipment {
-                                        li { "{item.name}" }
-                                    }
-                                }
-                            }
-                            if !detail.changes_from_previous.is_empty() {
-                                h4 { "Changes from v{detail.version_number - 1}" }
-                                ul {
-                                    for change in &detail.changes_from_previous {
-                                        li {
-                                            code { "{change.op} {change.path}" }
+                            label {
+                                "After version"
+                                select {
+                                    class: "neumo-inset input",
+                                    disabled: is_comparing(),
+                                    onchange: move |event| {
+                                        if let Ok(version) = event.value().parse::<i32>() {
+                                            comparison_to.set(version);
+                                            custom_comparison.set(None);
+                                        }
+                                    },
+                                    for version in &versions {
+                                        option {
+                                            value: "{version.version_number}",
+                                            selected: comparison_to() == version.version_number,
+                                            "v{version.version_number} · {version.title}"
                                         }
                                     }
                                 }
                             }
+                            Button {
+                                variant: ButtonVariant::Primary,
+                                disabled: versions.is_empty() || is_comparing(),
+                                onclick: compare_selected_versions,
+                                if is_comparing() { "Comparing..." } else { "Generate comparison" }
+                            }
+                        }
+                        if let Some(error) = comparison_error() {
+                            p { color: "var(--error)", margin_top: "var(--space-md)", "{error}" }
+                        }
+                    }
+
+                    if let Some(comparison) = custom_comparison() {
+                        VersionComparisonPanel {
+                            title: format!(
+                                "Custom comparison: v{} → v{}",
+                                comparison.from_version_number,
+                                comparison.to_version_number,
+                            ),
+                            description: format!(
+                                "v{} as Before and v{} as After.",
+                                comparison.from_version_number,
+                                comparison.to_version_number,
+                            ),
+                            changes: comparison.changes,
                         }
                     }
                 }

@@ -393,31 +393,141 @@ pub async fn get_recipe_version_api(
     let snapshot = version
         .decoded_snapshot()
         .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let latest = crate::db::get_latest_recipe_version(&pool, recipe_id)
+        .await
+        .map_err(|e| ServerFnError::new(e.to_string()))?;
     let changes_from_previous = if version_number > 1 {
-        let previous = crate::db::get_recipe_version(&pool, recipe_id, version_number - 1)
+        recipe_version_changes_to_view(
+            crate::db::compare_recipe_versions(
+                &pool,
+                recipe_id,
+                version_number - 1,
+                version_number,
+            )
             .await
-            .map_err(|e| ServerFnError::new(e.to_string()))?
-            .decoded_snapshot()
-            .map_err(|e| ServerFnError::new(e.to_string()))?;
-        crate::db::diff::compute_diff(&previous, &snapshot)
-            .map_err(|e| ServerFnError::new(e.to_string()))?
-            .into_iter()
-            .map(|change| crate::types::RecipeVersionChange {
-                op: change.op,
-                path: change.path,
-                old_value: change.old_value,
-                value: change.value,
-            })
-            .collect()
+            .map_err(|e| ServerFnError::new(e.to_string()))?,
+        )
     } else {
         Vec::new()
     };
+    let changes_to_current = recipe_version_changes_to_view(
+        crate::db::compare_recipe_versions(&pool, recipe_id, version_number, latest.version_number)
+            .await
+            .map_err(|e| ServerFnError::new(e.to_string()))?,
+    );
+    let changes_from_original = recipe_version_changes_to_view(
+        crate::db::compare_recipe_versions(&pool, recipe_id, 1, version_number)
+            .await
+            .map_err(|e| ServerFnError::new(e.to_string()))?,
+    );
     Ok(crate::types::RecipeVersionView {
         version_number,
+        current_version_number: latest.version_number,
         editor: snapshot_to_editor(snapshot),
         notes: version.notes,
         created_at: version.created_at,
         changes_from_previous,
+        changes_to_current,
+        changes_from_original,
+    })
+}
+
+#[cfg(feature = "server")]
+fn recipe_version_changes_to_view(
+    changes: Vec<crate::db::diff::SnapshotChange>,
+) -> Vec<crate::types::RecipeVersionChange> {
+    changes
+        .into_iter()
+        .map(|change| crate::types::RecipeVersionChange {
+            op: change.op,
+            path: change.path,
+            old_value: change.old_value.map(snapshot_change_value_to_string),
+            value: change.value.map(snapshot_change_value_to_string),
+        })
+        .collect()
+}
+
+#[cfg(feature = "server")]
+fn snapshot_change_value_to_string(value: serde_json::Value) -> String {
+    match value {
+        serde_json::Value::Null => "Not set".to_string(),
+        serde_json::Value::String(value) if value.is_empty() => "(empty)".to_string(),
+        serde_json::Value::String(value) => value,
+        serde_json::Value::Bool(value) => value.to_string(),
+        serde_json::Value::Number(value) => value.to_string(),
+        value => serde_json::to_string_pretty(&value).unwrap_or_else(|_| value.to_string()),
+    }
+}
+
+#[cfg(all(test, feature = "server"))]
+mod version_change_tests {
+    use super::recipe_version_changes_to_view;
+    use crate::db::diff::SnapshotChange;
+    use serde_json::json;
+
+    #[test]
+    fn comparison_values_are_transported_as_display_strings() {
+        let changes = recipe_version_changes_to_view(vec![SnapshotChange {
+            op: "replace".to_string(),
+            path: "/images/0".to_string(),
+            old_value: Some(json!({
+                "url": "https://example.test/old.webp",
+                "edits": [{"name": "rectangle:16:9", "version": 1}]
+            })),
+            value: Some(json!({
+                "url": "https://example.test/new.webp",
+                "edits": [{"name": "rectangle:16:9", "version": 1}]
+            })),
+        }]);
+
+        let comparison = crate::types::RecipeVersionComparison {
+            from_version_number: 1,
+            to_version_number: 2,
+            changes,
+        };
+        let encoded = serde_json::to_vec(&comparison).expect("comparison is serializable");
+        let decoded: crate::types::RecipeVersionComparison =
+            serde_json::from_slice(&encoded).expect("comparison crosses the client boundary");
+
+        let encoded =
+            serde_json::to_value(&decoded.changes[0]).expect("comparison change is serializable");
+        assert!(encoded["old_value"].is_string());
+        assert!(encoded["value"].is_string());
+        assert!(encoded["old_value"]
+            .as_str()
+            .expect("old value string")
+            .contains("old.webp"));
+    }
+}
+
+#[server]
+pub async fn compare_recipe_versions_api(
+    recipe_id: String,
+    from_version_number: i32,
+    to_version_number: i32,
+) -> Result<crate::types::RecipeVersionComparison, ServerFnError> {
+    let user_id = crate::auth::session::extract_user_id_from_fullstack()
+        .await
+        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let recipe_id = uuid::Uuid::parse_str(&recipe_id)
+        .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
+    let pool = crate::db::get_pool();
+    crate::db::get_recipe_by_id_and_owner(&pool, recipe_id, user_id)
+        .await
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let changes = crate::db::compare_recipe_versions(
+        &pool,
+        recipe_id,
+        from_version_number,
+        to_version_number,
+    )
+    .await
+    .map_err(|error| ServerFnError::new(error.to_string()))?;
+
+    Ok(crate::types::RecipeVersionComparison {
+        from_version_number,
+        to_version_number,
+        changes: recipe_version_changes_to_view(changes),
     })
 }
 

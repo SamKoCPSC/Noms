@@ -152,6 +152,8 @@ type UploadItem = (usize, Arc<Vec<u8>>, Arc<Vec<u8>>, String, RecipeImageEdit);
 #[derive(Clone, PartialEq)]
 struct PendingImage {
     id: usize,
+    /// Whether this entry existed in the draft when the gallery mounted.
+    persisted: bool,
     name: String,
     /// Object URL for the preview thumbnail (wasm only); `None` on SSR.
     preview_url: Option<String>,
@@ -172,6 +174,34 @@ struct PendingImage {
     uploaded_image: Option<RecipeImage>,
 }
 
+fn gallery_images_from_persisted(images: &[RecipeImage]) -> Vec<PendingImage> {
+    images
+        .iter()
+        .cloned()
+        .enumerate()
+        .map(|(id, image)| PendingImage {
+            id,
+            persisted: true,
+            name: image
+                .file_name
+                .clone()
+                .unwrap_or_else(|| "Saved recipe image".to_string()),
+            preview_url: None,
+            original_size: image.file_size.unwrap_or_default(),
+            full_bytes: Arc::new(Vec::new()),
+            thumb_bytes: Arc::new(Vec::new()),
+            edit: image
+                .edits
+                .first()
+                .cloned()
+                .unwrap_or_else(RecipeImageEdit::default_rect_16x9),
+            status: UploadStatus::Uploaded,
+            error: None,
+            uploaded_image: Some(image),
+        })
+        .collect()
+}
+
 fn uploaded_images_in_pending_order(pending: &[PendingImage]) -> Vec<RecipeImage> {
     pending
         .iter()
@@ -186,6 +216,35 @@ fn pending_upload_count(pending: &[PendingImage]) -> usize {
         .count()
 }
 
+fn reorder_gallery_images(
+    gallery: &mut Vec<PendingImage>,
+    dragged_id: usize,
+    target_id: usize,
+) -> bool {
+    let Some(from) = gallery.iter().position(|image| image.id == dragged_id) else {
+        return false;
+    };
+    let Some(to) = gallery.iter().position(|image| image.id == target_id) else {
+        return false;
+    };
+    move_item(gallery, from, to)
+}
+
+fn adjacent_gallery_id(
+    gallery: &[PendingImage],
+    current_id: usize,
+    direction: i8,
+) -> Option<usize> {
+    let current_index = gallery.iter().position(|image| image.id == current_id)?;
+    let adjacent_index = match direction {
+        -1 => current_index.checked_sub(1)?,
+        1 => current_index.checked_add(1)?,
+        _ => return None,
+    };
+    gallery.get(adjacent_index).map(|image| image.id)
+}
+
+#[cfg(test)]
 fn persisted_images_not_in_pending(
     images: &[RecipeImage],
     pending: &[PendingImage],
@@ -204,6 +263,22 @@ fn persisted_images_not_in_pending(
         .collect()
 }
 
+#[cfg(test)]
+fn reorder_images_by_url(
+    images: &mut Vec<RecipeImage>,
+    dragged_url: &str,
+    target_url: &str,
+) -> bool {
+    let Some(from) = images.iter().position(|image| image.url == dragged_url) else {
+        return false;
+    };
+    let Some(to) = images.iter().position(|image| image.url == target_url) else {
+        return false;
+    };
+    move_item(images, from, to)
+}
+
+#[cfg(test)]
 fn merge_existing_and_uploaded_images(
     mut existing: Vec<RecipeImage>,
     uploaded: Vec<RecipeImage>,
@@ -220,10 +295,7 @@ fn merge_existing_and_uploaded_images(
 }
 
 fn sync_uploaded_images(pending: Signal<Vec<PendingImage>>, mut images: Signal<Vec<RecipeImage>>) {
-    images.set(merge_existing_and_uploaded_images(
-        images(),
-        uploaded_images_in_pending_order(&pending()),
-    ));
+    images.set(uploaded_images_in_pending_order(&pending()));
 }
 
 fn reorder_pending_images(
@@ -232,22 +304,7 @@ fn reorder_pending_images(
     mut pending: Signal<Vec<PendingImage>>,
     images: Signal<Vec<RecipeImage>>,
 ) {
-    let pending_snapshot = pending();
-    let Some(from) = pending_snapshot
-        .iter()
-        .position(|pending_image| pending_image.id == dragged_id)
-    else {
-        return;
-    };
-    let Some(to) = pending_snapshot
-        .iter()
-        .position(|pending_image| pending_image.id == target_id)
-    else {
-        return;
-    };
-    drop(pending_snapshot);
-
-    move_item(&mut pending.write(), from, to);
+    reorder_gallery_images(&mut pending.write(), dragged_id, target_id);
     sync_uploaded_images(pending, images);
 }
 
@@ -314,6 +371,7 @@ async fn process_one_file(
         next_id.set(id + 1);
         pending.write().push(PendingImage {
             id,
+            persisted: false,
             name: name.clone(),
             preview_url: preview_url.clone(),
             original_size,
@@ -538,11 +596,13 @@ fn remove_pending(
 /// resize/WebP processing, progress, error handling, and per-item retry.
 #[component]
 pub fn ImageUpload(props: ImageUploadProps) -> Element {
+    let initial_gallery = gallery_images_from_persisted(&(props.images)());
+    let initial_next_id = initial_gallery.len();
     let mut drag_over = use_signal(|| false);
-    let mut pending = use_signal(Vec::<PendingImage>::new);
+    let mut pending = use_signal(move || initial_gallery);
     let mut uploading = use_signal(|| false);
     let error = use_signal(|| Option::<String>::None);
-    let next_id = use_signal(|| 0usize);
+    let next_id = use_signal(move || initial_next_id);
     let mut editor_modal_url = use_signal(|| Option::<String>::None);
     let mut editor_modal_img_id = use_signal(|| Option::<usize>::None);
     let mut dragged_image_id = use_signal(|| Option::<usize>::None);
@@ -642,52 +702,14 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                 div { class: "image-upload__error image-upload__error--banner", "{err}" }
             }
 
-            // Persisted and newly selected images share one gallery. Images
-            // uploaded during this session are rendered by the pending list
-            // below so they are excluded here to avoid duplicate cards.
-            for image in persisted_images_not_in_pending(&images(), &pending()) {
-                {
-                    let image_url = image.url.clone();
-                    let image_name = image
-                        .file_name
-                        .clone()
-                        .unwrap_or_else(|| "Saved recipe image".to_string());
-                    rsx! {
-                        div {
-                            key: "persisted-{image_url}",
-                            class: "image-upload__item",
-                            div { class: "image-upload__preview-button",
-                                EditedRecipeImage {
-                                    image,
-                                    class: "recipe-image-preview",
-                                    alt: image_name.clone(),
-                                    prefer_thumbnail: true,
-                                    on_error: move |_| {},
-                                }
-                            }
-                            div { class: "image-upload__meta",
-                                span { "{image_name}" }
-                                span { class: "image-upload__size", "Saved in draft" }
-                            }
-                            div { class: "image-upload__status",
-                                span { "✓ Saved" }
-                            }
-                            Button {
-                                variant: ButtonVariant::Ghost,
-                                onclick: move |_| on_remove_existing.call(image_url.clone()),
-                                "✕"
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Pending file list
-            for (img_idx, img) in pending().iter().enumerate() {
+            // One ordered gallery contains persisted and newly selected images.
+            for img in pending().iter() {
                 {
                     let img_id = img.id;
+                    let img_persisted = img.persisted;
                     let img_name = img.name.clone();
                     let img_preview = img.preview_url.clone();
+                    let img_uploaded = img.uploaded_image.clone();
                     let img_original = img.original_size;
                     let img_full_len = img.full_bytes.len();
                     let img_status = img.status.clone();
@@ -709,6 +731,8 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                         .as_deref()
                         .unwrap_or("Failed")
                         .to_string();
+                    let previous_id = adjacent_gallery_id(&pending(), img_id, -1);
+                    let next_id = adjacent_gallery_id(&pending(), img_id, 1);
                     let retry_disabled = uploading()
                         || pending()
                             .iter()
@@ -739,8 +763,20 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                 }
                                 dragged_image_id.set(None);
                             },
-                            // Preview thumbnail (object URL) — only on client
-                            if let Some(url) = img_preview.clone() {
+                            if img_persisted {
+                                if let Some(image) = img_uploaded.clone() {
+                                    div { class: "image-upload__preview-button",
+                                        EditedRecipeImage {
+                                            image,
+                                            class: "recipe-image-preview",
+                                            alt: img_name.clone(),
+                                            prefer_thumbnail: true,
+                                            on_error: move |_| {},
+                                        }
+                                    }
+                                }
+                            // Preview thumbnail (object URL) — only on client.
+                            } else if let Some(url) = img_preview.clone() {
                                 div {
                                     class: "image-upload__preview-button",
                                     style: "cursor: pointer;",
@@ -788,7 +824,9 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                         div { class: "image-upload__progress" }
                                     },
                                     UploadStatus::Uploaded => rsx! {
-                                        span { "✓ Uploaded" }
+                                        span {
+                                            if img_persisted { "✓ Saved" } else { "✓ Uploaded" }
+                                        }
                                     },
                                     UploadStatus::Failed => rsx! {
                                         span { class: "image-upload__error",
@@ -803,22 +841,24 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                 button {
                                     r#type: "button",
                                     class: "btn btn-ghost touch-target",
-                                    disabled: reorder_disabled || img_idx == 0,
+                                    disabled: reorder_disabled || previous_id.is_none(),
                                     aria_label: "Move image up",
                                     onclick: move |_| {
-                                        let previous_id = pending()[img_idx - 1].id;
-                                        reorder_pending_images(img_id, previous_id, pending, images);
+                                        if let Some(previous_id) = previous_id {
+                                            reorder_pending_images(img_id, previous_id, pending, images);
+                                        }
                                     },
                                     "↑"
                                 }
                                 button {
                                     r#type: "button",
                                     class: "btn btn-ghost touch-target",
-                                    disabled: reorder_disabled || img_idx + 1 >= pending().len(),
+                                    disabled: reorder_disabled || next_id.is_none(),
                                     aria_label: "Move image down",
                                     onclick: move |_| {
-                                        let next_id = pending()[img_idx + 1].id;
-                                        reorder_pending_images(img_id, next_id, pending, images);
+                                        if let Some(next_id) = next_id {
+                                            reorder_pending_images(img_id, next_id, pending, images);
+                                        }
                                     },
                                     "↓"
                                 }
@@ -841,6 +881,11 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                 variant: ButtonVariant::Ghost,
                                 disabled: img_status == UploadStatus::Uploading,
                                 onclick: move |_| {
+                                    if img_persisted {
+                                        if let Some(image) = &img_uploaded {
+                                            on_remove_existing.call(image.url.clone());
+                                        }
+                                    }
                                     remove_pending(img_id, pending, images);
                                 },
                                 "✕"
@@ -882,6 +927,7 @@ mod tests {
     fn pending_image_with_uploaded_url(id: usize, url: Option<&str>) -> PendingImage {
         PendingImage {
             id,
+            persisted: false,
             name: format!("image-{id}.webp"),
             preview_url: None,
             original_size: 100,
@@ -977,6 +1023,82 @@ mod tests {
 
         assert_eq!(visible.len(), 1);
         assert_eq!(visible[0].url, "existing");
+    }
+
+    #[test]
+    fn persisted_images_reorder_by_stable_url() {
+        let mut images = vec![
+            RecipeImage::new(
+                "first".to_string(),
+                None,
+                RecipeImageEdit::default_rect_16x9(),
+            ),
+            RecipeImage::new(
+                "second".to_string(),
+                None,
+                RecipeImageEdit::default_rect_16x9(),
+            ),
+            RecipeImage::new(
+                "third".to_string(),
+                None,
+                RecipeImageEdit::default_rect_16x9(),
+            ),
+        ];
+
+        assert!(reorder_images_by_url(&mut images, "third", "first"));
+        assert_eq!(
+            images
+                .iter()
+                .map(|image| image.url.as_str())
+                .collect::<Vec<_>>(),
+            vec!["third", "first", "second"]
+        );
+        assert!(!reorder_images_by_url(&mut images, "missing", "first"));
+    }
+
+    #[test]
+    fn unified_gallery_reorders_persisted_and_local_images_together() {
+        let persisted = vec![
+            RecipeImage::new(
+                "first".to_string(),
+                None,
+                RecipeImageEdit::default_rect_16x9(),
+            ),
+            RecipeImage::new(
+                "second".to_string(),
+                None,
+                RecipeImageEdit::default_rect_16x9(),
+            ),
+        ];
+        let mut gallery = gallery_images_from_persisted(&persisted);
+        gallery.push(pending_image_with_uploaded_url(2, Some("new")));
+
+        assert!(reorder_gallery_images(&mut gallery, 0, 2));
+        assert_eq!(
+            uploaded_images_in_pending_order(&gallery)
+                .iter()
+                .map(|image| image.url.as_str())
+                .collect::<Vec<_>>(),
+            vec!["second", "new", "first"]
+        );
+    }
+
+    #[test]
+    fn adjacent_gallery_ids_are_safe_at_boundaries_and_after_reorder() {
+        let mut gallery = vec![
+            pending_image_with_uploaded_url(10, Some("first")),
+            pending_image_with_uploaded_url(20, Some("second")),
+            pending_image_with_uploaded_url(30, Some("third")),
+        ];
+
+        assert_eq!(adjacent_gallery_id(&gallery, 10, -1), None);
+        assert_eq!(adjacent_gallery_id(&gallery, 10, 1), Some(20));
+        assert_eq!(adjacent_gallery_id(&gallery, 30, 1), None);
+        assert_eq!(adjacent_gallery_id(&gallery, 999, 1), None);
+
+        assert!(reorder_gallery_images(&mut gallery, 30, 10));
+        assert_eq!(adjacent_gallery_id(&gallery, 10, -1), Some(30));
+        assert_eq!(adjacent_gallery_id(&gallery, 10, 1), Some(20));
     }
 
     // ── is_allowed_image_type ────────────────────────────────────────────

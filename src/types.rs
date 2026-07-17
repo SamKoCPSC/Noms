@@ -328,18 +328,30 @@ pub struct RecipeVersionSummary {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RecipeVersionView {
     pub version_number: i32,
+    pub current_version_number: i32,
     pub editor: RecipeEditorState,
     pub notes: Option<String>,
     pub created_at: DateTime<Utc>,
     pub changes_from_previous: Vec<RecipeVersionChange>,
+    pub changes_to_current: Vec<RecipeVersionChange>,
+    pub changes_from_original: Vec<RecipeVersionChange>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RecipeVersionChange {
     pub op: String,
     pub path: String,
-    pub old_value: Option<serde_json::Value>,
-    pub value: Option<serde_json::Value>,
+    /// Display-ready values avoid decoding arbitrary JSON trees in the
+    /// browser while rendering a comparison.
+    pub old_value: Option<String>,
+    pub value: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecipeVersionComparison {
+    pub from_version_number: i32,
+    pub to_version_number: i32,
+    pub changes: Vec<RecipeVersionChange>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

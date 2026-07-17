@@ -19,7 +19,7 @@ pub use explore::Explore;
 pub use home::Home;
 pub use login::Login;
 pub use not_found::NotFound;
-pub use recipe_detail::RecipeDetail;
+pub use recipe_detail::{RecipeDetail, RecipeVersionDetail};
 pub use recipe_edit::{RecipeDraftEdit, RecipeEdit};
 pub use recipe_new::RecipeNew;
 pub use settings::SettingsAccounts;

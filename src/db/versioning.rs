@@ -3,7 +3,10 @@ use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Postgres};
 use uuid::Uuid;
 
-use super::diff::{json_to_snapshot, recipe_to_snapshot, snapshot_to_json, RecipeSnapshot};
+use super::diff::{
+    compute_diff, json_to_snapshot, recipe_to_snapshot, snapshot_to_json, RecipeSnapshot,
+    SnapshotChange,
+};
 use super::{DbError, Recipe};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::FromRow)]
@@ -111,6 +114,21 @@ pub async fn get_recipe_version(
         recipe_id,
         version_number,
     })
+}
+
+pub async fn compare_recipe_versions(
+    pool: &PgPool,
+    recipe_id: Uuid,
+    from_version_number: i32,
+    to_version_number: i32,
+) -> Result<Vec<SnapshotChange>, DbError> {
+    let from = get_recipe_version(pool, recipe_id, from_version_number)
+        .await?
+        .decoded_snapshot()?;
+    let to = get_recipe_version(pool, recipe_id, to_version_number)
+        .await?
+        .decoded_snapshot()?;
+    compute_diff(&from, &to)
 }
 
 pub async fn get_next_version_number(
@@ -1018,6 +1036,56 @@ mod tests {
         );
         assert_eq!(versions[0].snapshot, versions[2].snapshot);
         assert_eq!(versions[0].notes.as_deref(), Some("Restored from v1"));
+    }
+
+    #[tokio::test]
+    async fn compares_any_two_immutable_recipe_versions_in_requested_direction() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let user = owner(&pool, "compare_versions").await;
+        let recipe =
+            create_published_recipe(&pool, user.id, &snapshot("Original title", "private"), None)
+                .await
+                .unwrap();
+        publish_snapshot(
+            &pool,
+            recipe.id,
+            user.id,
+            1,
+            &snapshot("Middle title", "private"),
+            None,
+        )
+        .await
+        .unwrap();
+        publish_snapshot(
+            &pool,
+            recipe.id,
+            user.id,
+            2,
+            &snapshot("Current title", "public"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let forward = compare_recipe_versions(&pool, recipe.id, 1, 3)
+            .await
+            .unwrap();
+        let forward_title = forward
+            .iter()
+            .find(|change| change.path == "/title")
+            .expect("forward title change");
+        assert_eq!(forward_title.old_value.as_ref().unwrap(), "Original title");
+        assert_eq!(forward_title.value.as_ref().unwrap(), "Current title");
+
+        let reverse = compare_recipe_versions(&pool, recipe.id, 3, 1)
+            .await
+            .unwrap();
+        let reverse_title = reverse
+            .iter()
+            .find(|change| change.path == "/title")
+            .expect("reverse title change");
+        assert_eq!(reverse_title.old_value.as_ref().unwrap(), "Current title");
+        assert_eq!(reverse_title.value.as_ref().unwrap(), "Original title");
     }
 
     #[tokio::test]
