@@ -151,8 +151,13 @@ pub fn change_summary(diff: &[SnapshotChange]) -> String {
     fields.sort();
     fields.dedup();
     match fields.as_slice() {
+        [] => "Updated recipe".to_string(),
         [field] => format!("Updated {field}"),
-        _ => format!("Updated {} fields", fields.len()),
+        [first, second] => format!("Updated {first} and {second}"),
+        _ => {
+            let last = fields.pop().expect("non-empty fields checked above");
+            format!("Updated {}, and {last}", fields.join(", "))
+        }
     }
 }
 
@@ -271,5 +276,79 @@ mod tests {
             json_to_snapshot(&snapshot_to_json(&new).unwrap()).unwrap(),
             new
         );
+    }
+
+    #[test]
+    fn change_summary_lists_every_changed_field() {
+        let diff = vec![
+            SnapshotChange {
+                op: "replace".into(),
+                path: "/title".into(),
+                value: Some(serde_json::json!("New title")),
+                old_value: Some(serde_json::json!("Old title")),
+            },
+            SnapshotChange {
+                op: "replace".into(),
+                path: "/description".into(),
+                value: Some(serde_json::json!("New description")),
+                old_value: Some(serde_json::json!("Old description")),
+            },
+            SnapshotChange {
+                op: "add".into(),
+                path: "/tags/1".into(),
+                value: Some(serde_json::json!("quick")),
+                old_value: None,
+            },
+        ];
+
+        assert_eq!(
+            change_summary(&diff),
+            "Updated description, tags, and title"
+        );
+    }
+
+    #[test]
+    fn change_summary_lists_a_changed_field_only_once() {
+        let diff = vec![
+            SnapshotChange {
+                op: "replace".into(),
+                path: "/ingredients/0/name".into(),
+                value: Some(serde_json::json!("sea salt")),
+                old_value: Some(serde_json::json!("salt")),
+            },
+            SnapshotChange {
+                op: "replace".into(),
+                path: "/ingredients/0/amount".into(),
+                value: Some(serde_json::json!("2")),
+                old_value: Some(serde_json::json!("1")),
+            },
+        ];
+
+        assert_eq!(change_summary(&diff), "Updated ingredients");
+    }
+
+    #[test]
+    fn change_summary_joins_exactly_two_changed_fields() {
+        let diff = vec![
+            SnapshotChange {
+                op: "replace".into(),
+                path: "/title".into(),
+                value: Some(serde_json::json!("New title")),
+                old_value: Some(serde_json::json!("Old title")),
+            },
+            SnapshotChange {
+                op: "replace".into(),
+                path: "/description".into(),
+                value: Some(serde_json::json!("New description")),
+                old_value: Some(serde_json::json!("Old description")),
+            },
+        ];
+
+        assert_eq!(change_summary(&diff), "Updated description and title");
+    }
+
+    #[test]
+    fn change_summary_preserves_the_empty_diff_message() {
+        assert_eq!(change_summary(&[]), "No content changes");
     }
 }
