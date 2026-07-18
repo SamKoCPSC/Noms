@@ -8,6 +8,7 @@ mod login;
 mod not_found;
 mod recipe_detail;
 mod recipe_edit;
+mod recipe_editor_form;
 mod recipe_new;
 mod settings;
 mod user_profile;

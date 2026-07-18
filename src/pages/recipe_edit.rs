@@ -17,87 +17,22 @@ use crate::components::base::{
 };
 use crate::components::AuthRequired;
 use crate::pages::draft_save::draft_save_button_state;
+use crate::pages::recipe_editor_form::{
+    build_step_tree, can_indent_step, flatten_steps, format_step_photo_file_size,
+    step_photo_display_name, StepForm,
+};
 use crate::types::{
-    RecipeEditorState, RecipeEquipment, RecipeImage, RecipeImageEdit, RecipeIngredient, RecipeStep,
+    RecipeEditorState, RecipeEquipment, RecipeImage, RecipeImageEdit, RecipeIngredient,
 };
 use crate::utils::reorder::move_item;
 
 // ── Local form types ─────────────────────────────────────────────────────────
-
-/// A single step row in the form (flat representation with depth for nesting).
-#[derive(Clone, Debug)]
-struct StepForm {
-    text: String,
-    depth: usize,
-    photos: Vec<RecipeImage>,
-}
 
 #[derive(Clone, Debug, PartialEq)]
 struct PendingStepPhotoEdit {
     idx: usize,
     preview_url: String,
     edit: RecipeImageEdit,
-}
-
-/// Flatten a tree of `RecipeStep` into a flat list with depth information.
-fn flatten_steps(steps: &[RecipeStep], depth: usize) -> Vec<StepForm> {
-    let mut result = Vec::new();
-    for step in steps {
-        result.push(StepForm {
-            text: step.text.clone(),
-            depth,
-            photos: step.display_photos(),
-        });
-        result.extend(flatten_steps(&step.sub_steps, depth + 1));
-    }
-    result
-}
-
-/// Build a tree of `RecipeStep` from a flat list with depth information.
-fn build_step_tree(flat: &[StepForm]) -> Vec<RecipeStep> {
-    if flat.is_empty() {
-        return Vec::new();
-    }
-
-    // Build tree using a stack of (depth, index_in_parent_list)
-    // We construct the tree bottom-up using indices into the result vector.
-    let mut root = Vec::new();
-    // Stack holds (depth, parent_index) where parent_index is the index in
-    // the vector that currently holds sub_steps we're appending to.
-    // We use a flat representation: a list of RecipeSteps where we track
-    // parent-child relationships via indices.
-    let mut nodes: Vec<RecipeStep> = Vec::new();
-    // Stack of (depth, node_index) — the node at that index is the current parent
-    let mut stack: Vec<(usize, usize)> = Vec::new();
-
-    for step in flat {
-        let node = RecipeStep {
-            text: step.text.clone(),
-            sub_steps: Vec::new(),
-            photos: step.photos.clone(),
-        };
-        let node_idx = nodes.len();
-        nodes.push(node);
-
-        // Pop stack until we find the right parent depth
-        while stack.len() > 1 && stack.last().unwrap().0 >= step.depth {
-            let _ = stack.pop();
-        }
-
-        if step.depth == 0 {
-            // Root-level step — add to root
-            root.push(nodes[node_idx].clone());
-            stack.push((0, node_idx));
-        } else {
-            // Find parent and add this node as sub_step
-            let parent_idx = stack.last().unwrap().1;
-            let node_clone = nodes[node_idx].clone();
-            nodes[parent_idx].sub_steps.push(node_clone);
-            stack.push((step.depth, node_idx));
-        }
-    }
-
-    root
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -120,32 +55,6 @@ fn trigger_file_input(selector: &str) {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn trigger_file_input(_selector: &str) {}
-
-fn format_step_photo_file_size(bytes: u64) -> String {
-    const KIB: u64 = 1024;
-    const MIB: u64 = KIB * 1024;
-
-    if bytes >= MIB {
-        format!("{:.1} MB", bytes as f64 / MIB as f64)
-    } else if bytes >= KIB {
-        format!("{} KB", bytes / KIB)
-    } else {
-        format!("{bytes} B")
-    }
-}
-
-fn step_photo_display_name(photo: &RecipeImage) -> String {
-    photo.file_name.clone().unwrap_or_else(|| {
-        photo
-            .url
-            .split('?')
-            .next()
-            .and_then(|url| url.rsplit('/').next())
-            .filter(|name| !name.is_empty())
-            .unwrap_or("Step photo")
-            .to_string()
-    })
-}
 
 #[allow(clippy::too_many_arguments)]
 fn editor_state(
@@ -278,7 +187,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     );
                     servings.set(editor.servings.map(|v| v.to_string()).unwrap_or_default());
                     ingredients.set(editor.ingredients);
-                    steps.set(flatten_steps(&editor.instructions, 0));
+                    steps.set(flatten_steps(&editor.instructions));
                     tags_input.set(editor.tags.join(", "));
                     equipment.set(editor.equipment);
                     visibility.set(editor.visibility);
@@ -1194,11 +1103,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                                                                 "{step_photo_display_name(&steps()[idx].photos[photo_idx])}"
                                                             }
                                                             span { class: "step-photo-item__size",
-                                                                if let Some(file_size) = steps()[idx].photos[photo_idx].file_size {
-                                                                    "{format_step_photo_file_size(file_size)}"
-                                                                } else {
-                                                                    "Size unavailable"
-                                                                }
+                                                                "{format_step_photo_file_size(steps()[idx].photos[photo_idx].file_size)}"
                                                             }
                                                         }
                                                         div { class: "step-photo-item__controls",
@@ -1286,7 +1191,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                                         }
                                     }
                                     // Indent (increase depth)
-                                    if steps()[idx].depth < 3 {
+                                    if can_indent_step(steps()[idx].depth) {
                                         Button {
                                             variant: ButtonVariant::Ghost,
                                             onclick: move |_| {

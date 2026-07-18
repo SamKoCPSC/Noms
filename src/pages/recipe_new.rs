@@ -16,28 +16,16 @@ use crate::components::base::{
 };
 use crate::components::AuthRequired;
 use crate::pages::draft_save::draft_save_button_state;
+use crate::pages::recipe_editor_form::{
+    build_step_tree, can_indent_step, format_step_photo_file_size, step_photo_display_name,
+    StepForm,
+};
 use crate::types::{
     RecipeEditorState, RecipeEquipment, RecipeImage, RecipeImageEdit, RecipeIngredient, RecipeStep,
 };
 use crate::utils::reorder::move_item;
 
 // ── Local form types ─────────────────────────────────────────────────────────
-
-/// A single step row in the flat form list.
-/// `depth` controls nesting level (0 = top-level, 1 = sub-step, etc.).
-#[derive(Clone, Debug)]
-struct StepForm {
-    text: String,
-    depth: usize,
-    photos: Vec<StepPhotoForm>,
-}
-
-#[derive(Clone, Debug)]
-struct StepPhotoForm {
-    image: RecipeImage,
-    file_name: String,
-    file_size: u64,
-}
 
 #[derive(Clone, Debug, PartialEq)]
 struct PendingStepPhotoEdit {
@@ -66,61 +54,6 @@ struct PendingSaveData {
     equipment: Vec<RecipeEquipment>,
     tags: Vec<String>,
     visibility: String,
-}
-
-// ── Tree builder ─────────────────────────────────────────────────────────────
-
-/// Convert a flat list of `StepForm` entries into a tree of `RecipeStep`s.
-///
-/// Uses a stack-based algorithm: each entry's `depth` determines where it
-/// attaches in the tree relative to previously seen entries.
-fn build_step_tree(steps: &[StepForm]) -> Vec<RecipeStep> {
-    if steps.is_empty() {
-        return Vec::new();
-    }
-
-    // Stack holds (depth, mutable reference into the current sub_steps Vec)
-    // We use a Vec of owned RecipeStep nodes and track parent indices.
-    let mut nodes: Vec<RecipeStep> = Vec::with_capacity(steps.len());
-    // Stack of (depth, node_index) — the node at that index is the current
-    // parent for children at depth+1.
-    let mut stack: Vec<(usize, usize)> = Vec::new();
-
-    for step in steps {
-        let node = RecipeStep {
-            text: step.text.clone(),
-            sub_steps: Vec::new(),
-            photos: step
-                .photos
-                .iter()
-                .map(|photo| photo.image.clone())
-                .collect(),
-        };
-        let idx = nodes.len();
-        nodes.push(node);
-
-        // Pop stack entries that are at >= current depth (they're siblings or
-        // ancestors that we've finished adding children to)
-        while let Some(&(d, _)) = stack.last() {
-            if d >= step.depth {
-                stack.pop();
-            } else {
-                break;
-            }
-        }
-
-        if let Some(&(_, parent_idx)) = stack.last() {
-            // Attach as child of the top of stack
-            // Remove first (idx is always the last element) to avoid double mutable borrow
-            let node = nodes.remove(idx);
-            nodes[parent_idx].sub_steps.push(node);
-        }
-        // else: depth 0 or stack is empty → stays as root-level node
-
-        stack.push((step.depth, idx));
-    }
-
-    nodes
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -179,19 +112,6 @@ fn trigger_file_input(selector: &str) {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn trigger_file_input(_selector: &str) {}
-
-fn format_step_photo_file_size(bytes: u64) -> String {
-    const KIB: u64 = 1024;
-    const MIB: u64 = KIB * 1024;
-
-    if bytes >= MIB {
-        format!("{:.1} MB", bytes as f64 / MIB as f64)
-    } else if bytes >= KIB {
-        format!("{} KB", bytes / KIB)
-    } else {
-        format!("{bytes} B")
-    }
-}
 
 /// Create recipe page — full form with ingredients, steps, and tags.
 #[component]
@@ -525,12 +445,8 @@ pub fn RecipeNew() -> Element {
                         }
 
                         let full_url = resp.full_url;
-                        let photo = StepPhotoForm {
-                            image: RecipeImage::new(full_url, Some(resp.thumb_url), edit)
-                                .with_file_metadata(photo_file_name.clone(), photo_file_size),
-                            file_name: photo_file_name,
-                            file_size: photo_file_size,
-                        };
+                        let photo = RecipeImage::new(full_url, Some(resp.thumb_url), edit)
+                            .with_file_metadata(photo_file_name, photo_file_size);
                         if let Some(step) = steps.write().get_mut(idx) {
                             let photo_idx = step.photos.len();
                             step.photos.push(photo);
@@ -1082,8 +998,8 @@ pub fn RecipeNew() -> Element {
                                 display: "flex",
                                 gap: "var(--space-sm)",
                                 align_items: "flex-start",
-                                // Indentation offset based on depth
-                                padding_left: format!("{}px", steps()[idx].depth * 24),
+                                // Indentation padding
+                                style: format!("padding-left: {}px", steps()[idx].depth * 24),
 
                                 // Step number
                                 span {
@@ -1113,6 +1029,7 @@ pub fn RecipeNew() -> Element {
                                         background_color: "var(--surface)",
                                         outline: "none",
                                         resize: "vertical",
+                                        value: steps()[idx].text.clone(),
                                         oninput: move |evt| {
                                             steps.write()[idx].text = evt.value();
                                         },
@@ -1148,22 +1065,22 @@ pub fn RecipeNew() -> Element {
                                                     }
                                                     dragged_step_photo.set(None);
                                                 },
-                                                div { class: "step-photo-item__preview neumo-inset",
-                                                    EditedRecipeImage {
-                                                        image: steps()[idx].photos[photo_idx].image.clone(),
+                                                    div { class: "step-photo-item__preview neumo-inset",
+                                                        EditedRecipeImage {
+                                                            image: steps()[idx].photos[photo_idx].clone(),
                                                         class: "image-upload__thumb step-photo-preview",
                                                         alt: "Step photo".to_string(),
                                                         prefer_thumbnail: true,
                                                         on_error: move |_| {},
                                                     }
                                                     div { class: "step-photo-item__meta",
-                                                        span {
-                                                            class: "step-photo-item__name",
-                                                            title: steps()[idx].photos[photo_idx].file_name.clone(),
-                                                            "{steps()[idx].photos[photo_idx].file_name}"
-                                                        }
-                                                        span { class: "step-photo-item__size",
-                                                            "{format_step_photo_file_size(steps()[idx].photos[photo_idx].file_size)}"
+                                                            span {
+                                                                class: "step-photo-item__name",
+                                                                title: step_photo_display_name(&steps()[idx].photos[photo_idx]),
+                                                                "{step_photo_display_name(&steps()[idx].photos[photo_idx])}"
+                                                            }
+                                                            span { class: "step-photo-item__size",
+                                                                "{format_step_photo_file_size(steps()[idx].photos[photo_idx].file_size)}"
                                                         }
                                                     }
                                                     div { class: "step-photo-item__controls",
@@ -1203,7 +1120,7 @@ pub fn RecipeNew() -> Element {
                                     }
                                 }
                                 }
-                                // Controls: photo + indent/unindent + reorder + remove
+                                // Reorder + indent + remove controls
                                 div {
                                     display: "flex",
                                     flex_direction: "column",
@@ -1227,24 +1144,6 @@ pub fn RecipeNew() -> Element {
                                             on_step_photo_change(idx)(evt.files());
                                         },
                                     }
-                                    // Indent
-                                    Button {
-                                        variant: ButtonVariant::Ghost,
-                                        onclick: move |_| {
-                                            steps.write()[idx].depth += 1;
-                                        },
-                                        "→"
-                                    }
-                                    // Unindent
-                                    if steps()[idx].depth > 0 {
-                                        Button {
-                                            variant: ButtonVariant::Ghost,
-                                            onclick: move |_| {
-                                                steps.write()[idx].depth -= 1;
-                                            },
-                                            "←"
-                                        }
-                                    }
                                     // Move up
                                     if idx > 0 {
                                         Button {
@@ -1265,6 +1164,26 @@ pub fn RecipeNew() -> Element {
                                                 s.swap(idx, idx + 1);
                                             },
                                             "↓"
+                                        }
+                                    }
+                                    // Indent (increase depth)
+                                    if can_indent_step(steps()[idx].depth) {
+                                        Button {
+                                            variant: ButtonVariant::Ghost,
+                                            onclick: move |_| {
+                                                steps.write()[idx].depth += 1;
+                                            },
+                                            "→"
+                                        }
+                                    }
+                                    // Unindent (decrease depth)
+                                    if steps()[idx].depth > 0 {
+                                        Button {
+                                            variant: ButtonVariant::Ghost,
+                                            onclick: move |_| {
+                                                steps.write()[idx].depth -= 1;
+                                            },
+                                            "←"
                                         }
                                     }
                                     // Remove
@@ -1447,7 +1366,7 @@ pub fn RecipeNew() -> Element {
                         if let Some(step) = steps.write().get_mut(idx) {
                             if let Some(photo_idx) = current_photo_idx {
                                 if let Some(photo) = step.photos.get_mut(photo_idx) {
-                                    photo.image.edits = vec![edit];
+                                    photo.edits = vec![edit];
                                 }
                             }
                         }
