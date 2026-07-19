@@ -13,16 +13,17 @@ use dioxus::prelude::*;
 use crate::api::recipe::delete_recipe;
 use crate::api::recipe::{
     compare_recipe_versions_api, fork_recipe, get_fork_attribution, get_public_recipe,
-    get_public_recipe_tags_by_id, get_recipe, get_recipe_owner_username, get_recipe_tags,
-    get_recipe_version_api, get_recipe_versions_api, restore_version,
+    get_public_recipe_tags_by_id, get_recipe, get_recipe_lineage, get_recipe_owner_username,
+    get_recipe_tags, get_recipe_version_api, get_recipe_versions_api, restore_version,
 };
 use crate::auth::context::use_auth;
 use crate::components::base::{
     Button, ButtonVariant, Card, EditedRecipeImage, LoadingSpinner, PageHeader,
 };
 use crate::types::{
-    ForkAttribution, Recipe, RecipeEquipment, RecipeIngredient, RecipeStep, RecipeVersionChange,
-    RecipeVersionComparison, RecipeVersionSummary, RecipeVersionView,
+    ForkAttribution, Recipe, RecipeEquipment, RecipeIngredient, RecipeLineageBranch,
+    RecipeLineageNode, RecipeStep, RecipeVersionChange, RecipeVersionComparison,
+    RecipeVersionSummary, RecipeVersionView,
 };
 #[cfg(target_arch = "wasm32")]
 use crate::utils::recipe_scaler::{
@@ -409,6 +410,26 @@ mod layout_tests {
             historical_page.matches("disabled: is_comparing()").count(),
             2
         );
+    }
+
+    #[test]
+    fn recipe_details_offer_an_accessible_bidirectional_fork_lineage() {
+        let source = include_str!("recipe_detail.rs");
+
+        assert!(source.contains("get_recipe_lineage"));
+        assert!(source.contains("Fork lineage"));
+        assert!(source.contains("Ancestors"));
+        assert!(source.contains("Descendants"));
+        assert!(source.contains("recipe-lineage__current"));
+        assert!(source.contains("aria_label: \"Expand descendant branches\""));
+    }
+
+    #[test]
+    fn lineage_nodes_use_document_navigation_between_recipe_ids() {
+        let source = include_str!("recipe_detail.rs");
+        let recipe_href = ["href: format!", "(\"/recipes/{recipe_id}\")"].concat();
+
+        assert!(source.contains(&recipe_href));
     }
 }
 
@@ -914,6 +935,77 @@ fn render_image_slider(images: Vec<crate::types::RecipeImage>) -> Element {
     }
 }
 
+#[component]
+fn LineageRecipeNode(node: RecipeLineageNode, is_current: bool) -> Element {
+    let node_class = if is_current {
+        "recipe-lineage__node recipe-lineage__current"
+    } else if node.is_redacted {
+        "recipe-lineage__node recipe-lineage__node--redacted"
+    } else if node.is_deleted {
+        "recipe-lineage__node recipe-lineage__node--deleted"
+    } else {
+        "recipe-lineage__node"
+    };
+    let status = if node.is_redacted {
+        Some("Private")
+    } else if node.is_deleted {
+        Some("Deleted")
+    } else if is_current {
+        Some("Current")
+    } else {
+        None
+    };
+
+    rsx! {
+        article { class: node_class,
+            div { class: "recipe-lineage__node-heading",
+                if let Some(recipe_id) = node.recipe_id {
+                    a {
+                        href: format!("/recipes/{recipe_id}"),
+                        class: "recipe-lineage__node-link",
+                        "{node.title}"
+                    }
+                } else {
+                    strong { "{node.title}" }
+                }
+                if let Some(status) = status {
+                    span { class: "recipe-lineage__status", "{status}" }
+                }
+            }
+            if let Some(username) = &node.owner_username {
+                span { class: "recipe-lineage__owner", "@{username}" }
+            }
+            if let Some(version_number) = node.forked_from_version_number {
+                span { class: "recipe-lineage__fork-point", "Forked from v{version_number}" }
+            }
+            if let Some(message) = &node.fork_message {
+                if !message.trim().is_empty() {
+                    p { class: "recipe-lineage__message", "{message}" }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn LineageDescendant(branch: RecipeLineageBranch) -> Element {
+    rsx! {
+        li { class: "recipe-lineage__branch",
+            LineageRecipeNode { node: branch.node.clone(), is_current: false }
+            if !branch.children.is_empty() {
+                ul { class: "recipe-lineage__children",
+                    for child in branch.children {
+                        LineageDescendant { branch: child }
+                    }
+                }
+            }
+            if branch.truncated {
+                span { class: "recipe-lineage__truncated", "More forks available" }
+            }
+        }
+    }
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 /// Single recipe detail page.
@@ -921,6 +1013,7 @@ fn render_image_slider(images: Vec<crate::types::RecipeImage>) -> Element {
 /// Publicly accessible: tries public endpoint first, falls back to authenticated.
 #[component]
 pub fn RecipeDetail(id: String) -> Element {
+    let mut lineage_depth = use_signal(|| 2_i32);
     // ── Resources ────────────────────────────────────────────────────────
     // Clone id before each use_resource to avoid move issues.
     // The closure is FnMut (called potentially multiple times), so we clone
@@ -953,6 +1046,12 @@ pub fn RecipeDetail(id: String) -> Element {
     let versions_resource = use_resource(move || {
         let recipe_id = id_for_versions.clone();
         async move { get_recipe_versions_api(recipe_id).await }
+    });
+    let id_for_lineage = id.clone();
+    let lineage_resource = use_resource(move || {
+        let recipe_id = id_for_lineage.clone();
+        let descendant_depth = lineage_depth();
+        async move { get_recipe_lineage(recipe_id, Some(descendant_depth)).await }
     });
     let mut version_action_error = use_signal(|| Option::<String>::None);
     let mut expanded_version_difference = use_signal(|| Option::<i32>::None);
@@ -1048,6 +1147,7 @@ pub fn RecipeDetail(id: String) -> Element {
         .clone()
         .and_then(Result::ok)
         .unwrap_or_default();
+    let lineage = lineage_resource.read().clone().and_then(Result::ok);
 
     let id_for_fork = id.clone();
     let on_fork = move |_| {
@@ -1338,6 +1438,94 @@ pub fn RecipeDetail(id: String) -> Element {
                 if !comm.is_empty() {
                     Card {
                         p { class: "recipe-detail__commentary", "{comm}" }
+                    }
+                }
+            }
+
+            if let Some(lineage) = &lineage {
+                if !lineage.ancestors.is_empty() || !lineage.descendants.is_empty() {
+                    Card {
+                        section {
+                            class: "recipe-lineage",
+                            aria_labelledby: "fork-lineage-title",
+                            div { class: "recipe-lineage__header",
+                                div {
+                                    h2 {
+                                        id: "fork-lineage-title",
+                                        class: "recipe-detail__section-title",
+                                        "Fork lineage"
+                                    }
+                                    p {
+                                        "Trace this recipe back to its source and explore recipes forked from it."
+                                    }
+                                }
+                            }
+
+                            div { class: "recipe-lineage__flow",
+                                div { class: "recipe-lineage__group recipe-lineage__ancestors",
+                                    h3 { "Ancestors" }
+                                    if lineage.ancestors.is_empty() {
+                                        p { class: "recipe-lineage__empty", "This is the original recipe." }
+                                    } else {
+                                        ol { class: "recipe-lineage__ancestor-list",
+                                            for ancestor in lineage.ancestors.clone() {
+                                                li {
+                                                    LineageRecipeNode {
+                                                        node: ancestor,
+                                                        is_current: false,
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                div { class: "recipe-lineage__focus",
+                                    span { class: "recipe-lineage__focus-label", "You are here" }
+                                    LineageRecipeNode {
+                                        node: lineage.current.clone(),
+                                        is_current: true,
+                                    }
+                                }
+
+                                div { class: "recipe-lineage__group recipe-lineage__descendants",
+                                    h3 { "Descendants" }
+                                    if lineage.descendants.is_empty() {
+                                        p { class: "recipe-lineage__empty", "No published forks yet." }
+                                    } else {
+                                        ul { class: "recipe-lineage__descendant-list",
+                                            for descendant in lineage.descendants.clone() {
+                                                LineageDescendant { branch: descendant }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if lineage.node_limit_reached {
+                                p {
+                                    class: "recipe-lineage__limit-notice",
+                                    role: "status",
+                                    "This lineage is too large to display in full. Showing the first branches only."
+                                }
+                            } else if lineage.truncated {
+                                div { class: "recipe-lineage__actions",
+                                    button {
+                                        class: "btn btn-secondary touch-target",
+                                        aria_label: "Expand descendant branches",
+                                        disabled: lineage_depth() >= 6,
+                                        onclick: move |_| {
+                                            lineage_depth.set((lineage_depth() + 2).min(6));
+                                        },
+                                        if lineage_depth() >= 6 {
+                                            "Maximum depth reached"
+                                        } else {
+                                            "Show more generations"
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

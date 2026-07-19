@@ -680,6 +680,81 @@ pub async fn get_user_by_email(
     .map_err(DbError::Query)
 }
 
+async fn snapshot_owned_recipe_lineage(
+    transaction: &mut sqlx::Transaction<'_, Postgres>,
+    user_id: Uuid,
+    recipe_id: Option<Uuid>,
+) -> Result<(), DbError> {
+    let _locked_recipe_ids = sqlx::query_scalar::<_, Uuid>(
+        "SELECT id FROM recipes \
+         WHERE user_id = $1 AND ($2::UUID IS NULL OR id = $2) \
+         ORDER BY id FOR UPDATE",
+    )
+    .bind(user_id)
+    .bind(recipe_id)
+    .fetch_all(&mut **transaction)
+    .await
+    .map_err(DbError::Query)?;
+
+    sqlx::query(
+        "UPDATE fork_relationships AS relationship SET \
+             original_recipe_key = CASE \
+                 WHEN relationship.original_recipe_key = recipe.id \
+                   OR relationship.original_recipe_id = recipe.id \
+                 THEN recipe.id ELSE relationship.original_recipe_key END, \
+             original_title = CASE \
+                 WHEN relationship.original_recipe_key = recipe.id \
+                   OR relationship.original_recipe_id = recipe.id \
+                 THEN recipe.title ELSE relationship.original_title END, \
+             original_owner_id = CASE \
+                 WHEN relationship.original_recipe_key = recipe.id \
+                   OR relationship.original_recipe_id = recipe.id \
+                 THEN recipe.user_id ELSE relationship.original_owner_id END, \
+             original_owner_username = CASE \
+                 WHEN relationship.original_recipe_key = recipe.id \
+                   OR relationship.original_recipe_id = recipe.id \
+                 THEN owner.username ELSE relationship.original_owner_username END, \
+             original_visibility = CASE \
+                 WHEN relationship.original_recipe_key = recipe.id \
+                   OR relationship.original_recipe_id = recipe.id \
+                 THEN recipe.visibility ELSE relationship.original_visibility END, \
+             forked_recipe_key = CASE \
+                 WHEN relationship.forked_recipe_key = recipe.id \
+                   OR relationship.forked_recipe_id = recipe.id \
+                 THEN recipe.id ELSE relationship.forked_recipe_key END, \
+             forked_title = CASE \
+                 WHEN relationship.forked_recipe_key = recipe.id \
+                   OR relationship.forked_recipe_id = recipe.id \
+                 THEN recipe.title ELSE relationship.forked_title END, \
+             forked_owner_id = CASE \
+                 WHEN relationship.forked_recipe_key = recipe.id \
+                   OR relationship.forked_recipe_id = recipe.id \
+                 THEN recipe.user_id ELSE relationship.forked_owner_id END, \
+             forked_owner_username = CASE \
+                 WHEN relationship.forked_recipe_key = recipe.id \
+                   OR relationship.forked_recipe_id = recipe.id \
+                 THEN owner.username ELSE relationship.forked_owner_username END, \
+             forked_visibility = CASE \
+                 WHEN relationship.forked_recipe_key = recipe.id \
+                   OR relationship.forked_recipe_id = recipe.id \
+                 THEN recipe.visibility ELSE relationship.forked_visibility END \
+         FROM recipes AS recipe \
+         JOIN users AS owner ON owner.id = recipe.user_id \
+         WHERE recipe.user_id = $1 \
+           AND ($2::UUID IS NULL OR recipe.id = $2) \
+           AND (relationship.original_recipe_key = recipe.id \
+                OR relationship.original_recipe_id = recipe.id \
+                OR relationship.forked_recipe_key = recipe.id \
+                OR relationship.forked_recipe_id = recipe.id)",
+    )
+    .bind(user_id)
+    .bind(recipe_id)
+    .execute(&mut **transaction)
+    .await
+    .map_err(DbError::Query)?;
+    Ok(())
+}
+
 /// Delete a user by ID. OAuth accounts cascade automatically via `ON DELETE CASCADE`.
 ///
 /// Revokes all OAuth tokens with providers before deletion. Revocation
@@ -688,16 +763,25 @@ pub async fn delete_user(pool: &PgPool, user_id: Uuid) -> Result<(), DbError> {
     // Revoke all OAuth tokens before deletion (non-blocking — failures are logged)
     crate::auth::revoke::revoke_all_user_tokens(pool, user_id).await;
 
-    // Now delete the user (oauth_accounts cascade automatically)
+    let mut transaction = pool.begin().await.map_err(DbError::Query)?;
+    sqlx::query_scalar::<_, Uuid>("SELECT id FROM users WHERE id = $1 FOR UPDATE")
+        .bind(user_id)
+        .fetch_optional(&mut *transaction)
+        .await
+        .map_err(DbError::Query)?;
+    snapshot_owned_recipe_lineage(&mut transaction, user_id, None).await?;
+
+    // Now delete the user (oauth_accounts and recipes cascade automatically)
     let rows = sqlx::query("DELETE FROM users WHERE id = $1")
         .bind(user_id)
-        .execute(pool)
+        .execute(&mut *transaction)
         .await
         .map_err(DbError::Query)?
         .rows_affected();
     if rows == 0 {
         return Err(DbError::Query(sqlx::Error::RowNotFound));
     }
+    transaction.commit().await.map_err(DbError::Query)?;
     Ok(())
 }
 
@@ -955,21 +1039,21 @@ pub async fn update_recipe(
 /// Delete a recipe, enforcing ownership via `user_id` in the WHERE clause.
 /// Tags cascade automatically via `ON DELETE CASCADE`.
 /// Returns `DbError::RecipeNotFound` if the recipe doesn't exist or doesn't belong to the user.
-pub async fn delete_recipe(
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
-    id: Uuid,
-    user_id: Uuid,
-) -> Result<(), DbError> {
+pub async fn delete_recipe(pool: &PgPool, id: Uuid, user_id: Uuid) -> Result<(), DbError> {
+    let mut transaction = pool.begin().await.map_err(DbError::Query)?;
+    snapshot_owned_recipe_lineage(&mut transaction, user_id, Some(id)).await?;
+
     let rows = sqlx::query("DELETE FROM recipes WHERE id = $1 AND user_id = $2")
         .bind(id)
         .bind(user_id)
-        .execute(executor)
+        .execute(&mut *transaction)
         .await
         .map_err(DbError::Query)?
         .rows_affected();
     if rows == 0 {
         return Err(DbError::RecipeNotFound(id));
     }
+    transaction.commit().await.map_err(DbError::Query)?;
     Ok(())
 }
 

@@ -361,6 +361,35 @@ pub struct ForkAttribution {
     pub message: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecipeLineageNode {
+    /// Present only when the viewer may navigate to the live recipe.
+    pub recipe_id: Option<Uuid>,
+    pub title: String,
+    pub owner_username: Option<String>,
+    pub forked_from_version_number: Option<i32>,
+    pub fork_message: Option<String>,
+    pub is_deleted: bool,
+    pub is_redacted: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecipeLineageBranch {
+    pub node: RecipeLineageNode,
+    pub children: Vec<RecipeLineageBranch>,
+    pub truncated: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecipeLineageView {
+    /// Ordered from the root ancestor to the current recipe's direct parent.
+    pub ancestors: Vec<RecipeLineageNode>,
+    pub current: RecipeLineageNode,
+    pub descendants: Vec<RecipeLineageBranch>,
+    pub truncated: bool,
+    pub node_limit_reached: bool,
+}
+
 /// Public user profile with recipe count.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UserProfile {

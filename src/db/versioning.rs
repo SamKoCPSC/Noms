@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Postgres};
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 use super::diff::{
@@ -51,12 +52,54 @@ impl RecipeDraft {
 pub struct ForkRelationship {
     pub id: Uuid,
     pub original_recipe_id: Option<Uuid>,
-    pub forked_recipe_id: Uuid,
-    pub forked_by: Uuid,
+    pub forked_recipe_id: Option<Uuid>,
+    pub forked_by: Option<Uuid>,
     pub forked_version_number: Option<i32>,
     pub original_title: String,
     pub message: Option<String>,
     pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, sqlx::FromRow)]
+struct LineageEdgeRow {
+    id: Uuid,
+    parent_relationship_id: Option<Uuid>,
+    original_recipe_id: Option<Uuid>,
+    original_recipe_key: Option<Uuid>,
+    forked_recipe_id: Option<Uuid>,
+    forked_recipe_key: Option<Uuid>,
+    forked_version_number: Option<i32>,
+    original_title: String,
+    forked_title: Option<String>,
+    original_owner_id: Option<Uuid>,
+    original_owner_username: Option<String>,
+    original_visibility: Option<String>,
+    forked_owner_id: Option<Uuid>,
+    forked_owner_username: Option<String>,
+    forked_visibility: Option<String>,
+    message: Option<String>,
+    created_at: DateTime<Utc>,
+    depth: i32,
+}
+
+#[derive(Debug, Clone, sqlx::FromRow)]
+struct LiveLineageNode {
+    id: Uuid,
+    user_id: Uuid,
+    title: String,
+    visibility: String,
+    owner_username: String,
+}
+
+#[derive(Debug, Clone)]
+struct LineageNodeSnapshot {
+    recipe_key: Option<Uuid>,
+    title: String,
+    owner_id: Option<Uuid>,
+    owner_username: Option<String>,
+    visibility: Option<String>,
+    forked_from_version_number: Option<i32>,
+    fork_message: Option<String>,
 }
 
 const VERSION_COLUMNS: &str = "id, recipe_id, version_number, snapshot, notes, created_at";
@@ -497,15 +540,66 @@ async fn publish_new_draft(
         draft.forked_from_title.as_deref(),
         draft.forked_from_version_number,
     ) {
+        let source = if let Some(source_recipe_id) = draft.forked_from_recipe_id {
+            sqlx::query_as::<_, LiveLineageNode>(
+                "SELECT recipes.id, recipes.user_id, recipes.title, recipes.visibility, \
+                     users.username AS owner_username \
+                 FROM recipes JOIN users ON users.id = recipes.user_id \
+                 WHERE recipes.id = $1",
+            )
+            .bind(source_recipe_id)
+            .fetch_optional(&mut *transaction)
+            .await
+            .map_err(DbError::Query)?
+        } else {
+            None
+        };
+        let parent_relationship_id = if let Some(source_recipe_id) = draft.forked_from_recipe_id {
+            sqlx::query_scalar::<_, Uuid>(
+                "SELECT id FROM fork_relationships \
+                 WHERE forked_recipe_key = $1 OR forked_recipe_id = $1 \
+                 ORDER BY created_at DESC LIMIT 1",
+            )
+            .bind(source_recipe_id)
+            .fetch_optional(&mut *transaction)
+            .await
+            .map_err(DbError::Query)?
+        } else {
+            None
+        };
+        let forked_owner_username =
+            sqlx::query_scalar::<_, String>("SELECT username FROM users WHERE id = $1")
+                .bind(user_id)
+                .fetch_one(&mut *transaction)
+                .await
+                .map_err(DbError::Query)?;
+
         sqlx::query(
-            "INSERT INTO fork_relationships (original_recipe_id, forked_recipe_id, forked_by, \
-                 forked_version_number, original_title, message) VALUES ($1, $2, $3, $4, $5, $6)",
+            "INSERT INTO fork_relationships (\
+                 original_recipe_id, forked_recipe_id, forked_by, parent_relationship_id, \
+                 original_recipe_key, forked_recipe_key, forked_version_number, \
+                 original_title, forked_title, original_owner_id, original_owner_username, \
+                 original_visibility, forked_owner_id, forked_owner_username, \
+                 forked_visibility, message\
+             ) VALUES (\
+                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16\
+             )",
         )
         .bind(draft.forked_from_recipe_id)
         .bind(recipe.id)
         .bind(user_id)
+        .bind(parent_relationship_id)
+        .bind(draft.forked_from_recipe_id)
+        .bind(recipe.id)
         .bind(version_number)
         .bind(original_title)
+        .bind(&snapshot.title)
+        .bind(source.as_ref().map(|source| source.user_id))
+        .bind(source.as_ref().map(|source| source.owner_username.as_str()))
+        .bind(source.as_ref().map(|source| source.visibility.as_str()))
+        .bind(user_id)
+        .bind(forked_owner_username)
+        .bind(&snapshot.visibility)
         .bind(draft.fork_message.as_deref())
         .execute(&mut *transaction)
         .await
@@ -688,12 +782,354 @@ pub async fn get_fork_relationship(
 ) -> Result<Option<ForkRelationship>, DbError> {
     sqlx::query_as::<_, ForkRelationship>(
         "SELECT id, original_recipe_id, forked_recipe_id, forked_by, forked_version_number, \
-         original_title, message, created_at FROM fork_relationships WHERE forked_recipe_id = $1",
+         original_title, message, created_at FROM fork_relationships \
+         WHERE forked_recipe_id = $1 OR forked_recipe_key = $1 \
+         ORDER BY created_at DESC LIMIT 1",
     )
     .bind(forked_recipe_id)
     .fetch_optional(executor)
     .await
     .map_err(DbError::Query)
+}
+
+const LINEAGE_EDGE_COLUMNS: &str = "id, parent_relationship_id, original_recipe_id, \
+    original_recipe_key, forked_recipe_id, forked_recipe_key, forked_version_number, \
+    original_title, forked_title, original_owner_id, original_owner_username, \
+    original_visibility, forked_owner_id, forked_owner_username, forked_visibility, \
+    message, created_at, depth";
+const MAX_ANCESTOR_DEPTH: i32 = 32;
+const MAX_DESCENDANT_DEPTH: i32 = 8;
+const MAX_DESCENDANT_EDGES: usize = 250;
+const DESCENDANT_EDGE_QUERY_LIMIT: usize = MAX_DESCENDANT_EDGES + 1;
+
+impl LineageEdgeRow {
+    fn original_snapshot(&self, incoming_edge: Option<&Self>) -> LineageNodeSnapshot {
+        LineageNodeSnapshot {
+            recipe_key: self.original_recipe_key.or(self.original_recipe_id),
+            title: self.original_title.clone(),
+            owner_id: self.original_owner_id,
+            owner_username: self.original_owner_username.clone(),
+            visibility: self.original_visibility.clone(),
+            forked_from_version_number: incoming_edge.and_then(|edge| edge.forked_version_number),
+            fork_message: incoming_edge.and_then(|edge| edge.message.clone()),
+        }
+    }
+
+    fn forked_snapshot(&self) -> LineageNodeSnapshot {
+        LineageNodeSnapshot {
+            recipe_key: self.forked_recipe_key.or(self.forked_recipe_id),
+            title: self
+                .forked_title
+                .clone()
+                .unwrap_or_else(|| "Deleted recipe".to_string()),
+            owner_id: self.forked_owner_id,
+            owner_username: self.forked_owner_username.clone(),
+            visibility: self.forked_visibility.clone(),
+            forked_from_version_number: self.forked_version_number,
+            fork_message: self.message.clone(),
+        }
+    }
+}
+
+fn lineage_node_from_snapshot(
+    snapshot: LineageNodeSnapshot,
+    live_nodes: &HashMap<Uuid, LiveLineageNode>,
+    viewer_id: Option<Uuid>,
+    is_current: bool,
+) -> crate::types::RecipeLineageNode {
+    let live_node = snapshot
+        .recipe_key
+        .and_then(|recipe_key| live_nodes.get(&recipe_key));
+    let (is_accessible, is_deleted, recipe_id, title, owner_username) =
+        if let Some(live_node) = live_node {
+            let is_owner = viewer_id == Some(live_node.user_id);
+            let is_accessible = is_owner
+                || live_node.visibility == "public"
+                || (is_current && live_node.visibility == "unlisted");
+            (
+                is_accessible,
+                false,
+                is_accessible.then_some(live_node.id),
+                if is_accessible {
+                    live_node.title.clone()
+                } else {
+                    "Private recipe".to_string()
+                },
+                is_accessible.then(|| live_node.owner_username.clone()),
+            )
+        } else {
+            let is_owner = snapshot.owner_id.is_some() && snapshot.owner_id == viewer_id;
+            let is_accessible = snapshot.visibility.as_deref() == Some("public") || is_owner;
+            (
+                is_accessible,
+                true,
+                None,
+                if is_accessible {
+                    snapshot.title.clone()
+                } else {
+                    "Private recipe".to_string()
+                },
+                is_accessible
+                    .then(|| snapshot.owner_username.clone())
+                    .flatten(),
+            )
+        };
+
+    crate::types::RecipeLineageNode {
+        recipe_id,
+        title,
+        owner_username,
+        forked_from_version_number: is_accessible
+            .then_some(snapshot.forked_from_version_number)
+            .flatten(),
+        fork_message: is_accessible.then_some(snapshot.fork_message).flatten(),
+        is_deleted,
+        is_redacted: !is_accessible,
+    }
+}
+
+fn build_descendant_branch(
+    edge: &LineageEdgeRow,
+    children_by_parent: &HashMap<Uuid, Vec<&LineageEdgeRow>>,
+    live_nodes: &HashMap<Uuid, LiveLineageNode>,
+    viewer_id: Option<Uuid>,
+    requested_depth: i32,
+    visited: &mut HashSet<Uuid>,
+) -> crate::types::RecipeLineageBranch {
+    if !visited.insert(edge.id) {
+        return crate::types::RecipeLineageBranch {
+            node: lineage_node_from_snapshot(edge.forked_snapshot(), live_nodes, viewer_id, false),
+            children: Vec::new(),
+            truncated: true,
+        };
+    }
+
+    let child_edges = children_by_parent
+        .get(&edge.id)
+        .map(Vec::as_slice)
+        .unwrap_or_default();
+    let (children, truncated) = if edge.depth >= requested_depth {
+        (Vec::new(), !child_edges.is_empty())
+    } else {
+        let children = child_edges
+            .iter()
+            .filter(|child| child.depth <= requested_depth)
+            .map(|child| {
+                build_descendant_branch(
+                    child,
+                    children_by_parent,
+                    live_nodes,
+                    viewer_id,
+                    requested_depth,
+                    visited,
+                )
+            })
+            .collect();
+        (children, false)
+    };
+    visited.remove(&edge.id);
+
+    crate::types::RecipeLineageBranch {
+        node: lineage_node_from_snapshot(edge.forked_snapshot(), live_nodes, viewer_id, false),
+        children,
+        truncated,
+    }
+}
+
+fn branch_is_truncated(branch: &crate::types::RecipeLineageBranch) -> bool {
+    branch.truncated || branch.children.iter().any(branch_is_truncated)
+}
+
+/// Return the privacy-filtered lineage surrounding a recipe.
+///
+/// Immutable endpoint keys and relationship-to-relationship parent links keep
+/// the tree connected after live recipes or users have been deleted.
+pub async fn get_recipe_lineage(
+    pool: &PgPool,
+    recipe_id: Uuid,
+    viewer_id: Option<Uuid>,
+    descendant_depth: i32,
+) -> Result<crate::types::RecipeLineageView, DbError> {
+    let current_live = sqlx::query_as::<_, LiveLineageNode>(
+        "SELECT recipes.id, recipes.user_id, recipes.title, recipes.visibility, \
+             users.username AS owner_username \
+         FROM recipes JOIN users ON users.id = recipes.user_id \
+         WHERE recipes.id = $1",
+    )
+    .bind(recipe_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(DbError::Query)?;
+
+    if current_live
+        .as_ref()
+        .is_some_and(|recipe| recipe.visibility == "private" && viewer_id != Some(recipe.user_id))
+    {
+        return Err(DbError::RecipeNotFound(recipe_id));
+    }
+
+    let ancestor_edges = sqlx::query_as::<_, LineageEdgeRow>(&format!(
+        "WITH RECURSIVE ancestors AS (\
+             SELECT relationship.*, 1::INTEGER AS depth, ARRAY[relationship.id] AS visited \
+             FROM fork_relationships AS relationship \
+             WHERE relationship.forked_recipe_key = $1 \
+                OR (relationship.forked_recipe_key IS NULL \
+                    AND relationship.forked_recipe_id = $1) \
+             UNION ALL \
+             SELECT parent.*, child.depth + 1, child.visited || parent.id \
+             FROM ancestors AS child \
+             JOIN fork_relationships AS parent \
+               ON parent.id = child.parent_relationship_id \
+             WHERE child.depth < {MAX_ANCESTOR_DEPTH} \
+               AND NOT parent.id = ANY(child.visited)\
+         ) \
+         SELECT {LINEAGE_EDGE_COLUMNS} FROM ancestors ORDER BY depth DESC"
+    ))
+    .bind(recipe_id)
+    .fetch_all(pool)
+    .await
+    .map_err(DbError::Query)?;
+
+    let requested_depth = descendant_depth.clamp(0, MAX_DESCENDANT_DEPTH);
+    let mut descendant_edges = sqlx::query_as::<_, LineageEdgeRow>(&format!(
+        "WITH RECURSIVE descendants AS (\
+             SELECT relationship.*, 1::INTEGER AS depth, ARRAY[relationship.id] AS visited \
+             FROM fork_relationships AS relationship \
+             WHERE relationship.original_recipe_key = $1 \
+                OR (relationship.original_recipe_key IS NULL \
+                    AND relationship.original_recipe_id = $1) \
+             UNION ALL \
+             SELECT child.*, parent.depth + 1, parent.visited || child.id \
+             FROM descendants AS parent \
+             JOIN fork_relationships AS child \
+               ON child.parent_relationship_id = parent.id \
+             WHERE parent.depth < $2 \
+               AND NOT child.id = ANY(parent.visited)\
+         ) \
+         SELECT {LINEAGE_EDGE_COLUMNS} FROM descendants \
+         LIMIT {DESCENDANT_EDGE_QUERY_LIMIT}"
+    ))
+    .bind(recipe_id)
+    .bind((requested_depth + 1).max(1))
+    .fetch_all(pool)
+    .await
+    .map_err(DbError::Query)?;
+    let node_limit_reached = descendant_edges.len() > MAX_DESCENDANT_EDGES;
+    descendant_edges.truncate(MAX_DESCENDANT_EDGES);
+    descendant_edges.sort_by(|left, right| {
+        left.depth
+            .cmp(&right.depth)
+            .then_with(|| left.created_at.cmp(&right.created_at))
+            .then_with(|| left.id.cmp(&right.id))
+    });
+
+    if current_live.is_none() && ancestor_edges.is_empty() && descendant_edges.is_empty() {
+        return Err(DbError::RecipeNotFound(recipe_id));
+    }
+
+    let mut recipe_keys = HashSet::from([recipe_id]);
+    for edge in ancestor_edges.iter().chain(&descendant_edges) {
+        recipe_keys.extend(edge.original_recipe_key.or(edge.original_recipe_id));
+        recipe_keys.extend(edge.forked_recipe_key.or(edge.forked_recipe_id));
+    }
+    let recipe_keys: Vec<Uuid> = recipe_keys.into_iter().collect();
+    let live_nodes = sqlx::query_as::<_, LiveLineageNode>(
+        "SELECT recipes.id, recipes.user_id, recipes.title, recipes.visibility, \
+             users.username AS owner_username \
+         FROM recipes JOIN users ON users.id = recipes.user_id \
+         WHERE recipes.id = ANY($1)",
+    )
+    .bind(&recipe_keys)
+    .fetch_all(pool)
+    .await
+    .map_err(DbError::Query)?
+    .into_iter()
+    .map(|node| (node.id, node))
+    .collect::<HashMap<_, _>>();
+
+    let ancestor_by_id = ancestor_edges
+        .iter()
+        .map(|edge| (edge.id, edge))
+        .collect::<HashMap<_, _>>();
+    let ancestors = ancestor_edges
+        .iter()
+        .map(|edge| {
+            let incoming_edge = edge
+                .parent_relationship_id
+                .and_then(|parent_id| ancestor_by_id.get(&parent_id).copied());
+            lineage_node_from_snapshot(
+                edge.original_snapshot(incoming_edge),
+                &live_nodes,
+                viewer_id,
+                false,
+            )
+        })
+        .collect::<Vec<_>>();
+
+    let current_incoming_edge = ancestor_edges.iter().find(|edge| edge.depth == 1);
+    let current_snapshot = current_incoming_edge
+        .map(LineageEdgeRow::forked_snapshot)
+        .or_else(|| {
+            descendant_edges
+                .iter()
+                .find(|edge| edge.depth == 1)
+                .map(|edge| edge.original_snapshot(None))
+        })
+        .or_else(|| {
+            current_live.as_ref().map(|recipe| LineageNodeSnapshot {
+                recipe_key: Some(recipe.id),
+                title: recipe.title.clone(),
+                owner_id: Some(recipe.user_id),
+                owner_username: Some(recipe.owner_username.clone()),
+                visibility: Some(recipe.visibility.clone()),
+                forked_from_version_number: None,
+                fork_message: None,
+            })
+        })
+        .ok_or(DbError::RecipeNotFound(recipe_id))?;
+    let current = lineage_node_from_snapshot(current_snapshot, &live_nodes, viewer_id, true);
+    if current.is_redacted {
+        return Err(DbError::RecipeNotFound(recipe_id));
+    }
+
+    let mut children_by_parent: HashMap<Uuid, Vec<&LineageEdgeRow>> = HashMap::new();
+    for edge in &descendant_edges {
+        if let Some(parent_relationship_id) = edge.parent_relationship_id {
+            children_by_parent
+                .entry(parent_relationship_id)
+                .or_default()
+                .push(edge);
+        }
+    }
+    let descendants = if requested_depth == 0 {
+        Vec::new()
+    } else {
+        descendant_edges
+            .iter()
+            .filter(|edge| edge.depth == 1)
+            .map(|edge| {
+                build_descendant_branch(
+                    edge,
+                    &children_by_parent,
+                    &live_nodes,
+                    viewer_id,
+                    requested_depth,
+                    &mut HashSet::new(),
+                )
+            })
+            .collect::<Vec<_>>()
+    };
+    let truncated = node_limit_reached
+        || (requested_depth == 0 && !descendant_edges.is_empty())
+        || descendants.iter().any(branch_is_truncated);
+
+    Ok(crate::types::RecipeLineageView {
+        ancestors,
+        current,
+        descendants,
+        truncated,
+        node_limit_reached,
+    })
 }
 
 pub async fn count_recipe_versions_for_draft(
@@ -1120,6 +1556,310 @@ mod tests {
             .unwrap();
         assert_eq!(relationship.original_recipe_id, None);
         assert_eq!(relationship.original_title, "Source");
+    }
+
+    #[tokio::test]
+    async fn lineage_traverses_both_directions_and_survives_deleted_intermediate_recipes() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let source_owner = owner(&pool, "lineage_source").await;
+        let fork_owner = owner(&pool, "lineage_fork").await;
+        let source = create_published_recipe(
+            &pool,
+            source_owner.id,
+            &snapshot("Family root", "public"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let branch_draft = create_fork_draft(&pool, source.id, fork_owner.id, Some("Less sugar"))
+            .await
+            .unwrap();
+        update_recipe_draft(
+            &pool,
+            branch_draft.id,
+            fork_owner.id,
+            branch_draft.revision,
+            &snapshot("Branch", "public"),
+        )
+        .await
+        .unwrap();
+        let branch = publish_recipe_draft(&pool, branch_draft.id, fork_owner.id, None)
+            .await
+            .unwrap();
+
+        let leaf_draft = create_fork_draft(&pool, branch.id, fork_owner.id, Some("Spicier"))
+            .await
+            .unwrap();
+        update_recipe_draft(
+            &pool,
+            leaf_draft.id,
+            fork_owner.id,
+            leaf_draft.revision,
+            &snapshot("Leaf", "public"),
+        )
+        .await
+        .unwrap();
+        let leaf = publish_recipe_draft(&pool, leaf_draft.id, fork_owner.id, None)
+            .await
+            .unwrap();
+
+        let from_root = get_recipe_lineage(&pool, source.id, None, 4).await.unwrap();
+        assert_eq!(from_root.current.title, "Family root");
+        assert_eq!(from_root.descendants[0].node.title, "Branch");
+        assert_eq!(from_root.descendants[0].children[0].node.title, "Leaf");
+
+        let from_leaf = get_recipe_lineage(&pool, leaf.id, None, 4).await.unwrap();
+        assert_eq!(
+            from_leaf
+                .ancestors
+                .iter()
+                .map(|node| node.title.as_str())
+                .collect::<Vec<_>>(),
+            vec!["Family root", "Branch"]
+        );
+
+        crate::db::delete_recipe(&pool, branch.id, fork_owner.id)
+            .await
+            .unwrap();
+        let after_intermediate_delete =
+            get_recipe_lineage(&pool, source.id, None, 4).await.unwrap();
+        let deleted_branch = &after_intermediate_delete.descendants[0];
+        assert!(deleted_branch.node.is_deleted);
+        assert_eq!(deleted_branch.node.title, "Branch");
+        assert_eq!(deleted_branch.children[0].node.recipe_id, Some(leaf.id));
+    }
+
+    #[tokio::test]
+    async fn lineage_caps_wide_descendant_trees_and_reports_truncation() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let source_owner = owner(&pool, "wide_src").await;
+        let fork_owner = owner(&pool, "wide_fork").await;
+        let source = create_published_recipe(
+            &pool,
+            source_owner.id,
+            &snapshot("Wide family root", "public"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "WITH inserted_forks AS (\
+                 INSERT INTO recipes (\
+                     id, user_id, title, description, ingredients, instructions, equipment, \
+                     images, visibility\
+                 ) \
+                 SELECT gen_random_uuid(), $1, 'Wide fork ' || fork_number, NULL, \
+                        '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, 'public' \
+                 FROM generate_series(1, 275) AS fork_number \
+                 RETURNING id, user_id, title, visibility\
+             ) \
+             INSERT INTO fork_relationships (\
+                 original_recipe_id, forked_recipe_id, forked_by, original_recipe_key, \
+                 forked_recipe_key, forked_version_number, original_title, forked_title, \
+                 original_owner_id, original_owner_username, original_visibility, \
+                 forked_owner_id, forked_owner_username, forked_visibility\
+             ) \
+             SELECT $2, inserted.id, $1, $2, inserted.id, 1, 'Wide family root', \
+                    inserted.title, $3, $4, 'public', $1, $5, inserted.visibility \
+             FROM inserted_forks AS inserted",
+        )
+        .bind(fork_owner.id)
+        .bind(source.id)
+        .bind(source_owner.id)
+        .bind(&source_owner.username)
+        .bind(&fork_owner.username)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let lineage = get_recipe_lineage(&pool, source.id, None, 2).await.unwrap();
+        assert!(lineage.node_limit_reached);
+        assert!(lineage.truncated);
+        assert_eq!(lineage.descendants.len(), MAX_DESCENDANT_EDGES);
+    }
+
+    #[tokio::test]
+    async fn lineage_redacts_non_public_descendants_for_other_viewers() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let source_owner = owner(&pool, "lineage_public").await;
+        let fork_owner = owner(&pool, "lineage_private").await;
+        let source = create_published_recipe(
+            &pool,
+            source_owner.id,
+            &snapshot("Visible source", "public"),
+            None,
+        )
+        .await
+        .unwrap();
+        let private_draft = create_fork_draft(&pool, source.id, fork_owner.id, None)
+            .await
+            .unwrap();
+        update_recipe_draft(
+            &pool,
+            private_draft.id,
+            fork_owner.id,
+            private_draft.revision,
+            &snapshot("Secret branch", "private"),
+        )
+        .await
+        .unwrap();
+        publish_recipe_draft(&pool, private_draft.id, fork_owner.id, None)
+            .await
+            .unwrap();
+
+        let public_view = get_recipe_lineage(&pool, source.id, None, 2).await.unwrap();
+        assert!(public_view.descendants[0].node.is_redacted);
+        assert_eq!(public_view.descendants[0].node.title, "Private recipe");
+        assert_eq!(public_view.descendants[0].node.recipe_id, None);
+
+        let owner_view = get_recipe_lineage(&pool, source.id, Some(fork_owner.id), 2)
+            .await
+            .unwrap();
+        assert!(!owner_view.descendants[0].node.is_redacted);
+        assert_eq!(owner_view.descendants[0].node.title, "Secret branch");
+    }
+
+    #[tokio::test]
+    async fn deleted_lineage_nodes_use_their_latest_visibility_for_privacy() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let source_owner = owner(&pool, "linevis_src").await;
+        let fork_owner = owner(&pool, "linevis_fork").await;
+        let source = create_published_recipe(
+            &pool,
+            source_owner.id,
+            &snapshot("Visible source", "public"),
+            None,
+        )
+        .await
+        .unwrap();
+        let fork_draft = create_fork_draft(&pool, source.id, fork_owner.id, None)
+            .await
+            .unwrap();
+        update_recipe_draft(
+            &pool,
+            fork_draft.id,
+            fork_owner.id,
+            fork_draft.revision,
+            &snapshot("Once-public branch", "public"),
+        )
+        .await
+        .unwrap();
+        let fork = publish_recipe_draft(&pool, fork_draft.id, fork_owner.id, None)
+            .await
+            .unwrap();
+
+        sqlx::query("UPDATE recipes SET visibility = 'private' WHERE id = $1")
+            .bind(fork.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        crate::db::delete_recipe(&pool, fork.id, fork_owner.id)
+            .await
+            .unwrap();
+
+        let public_view = get_recipe_lineage(&pool, source.id, None, 2).await.unwrap();
+        assert!(public_view.descendants[0].node.is_deleted);
+        assert!(public_view.descendants[0].node.is_redacted);
+        assert_eq!(public_view.descendants[0].node.title, "Private recipe");
+
+        let owner_view = get_recipe_lineage(&pool, source.id, Some(fork_owner.id), 2)
+            .await
+            .unwrap();
+        assert_eq!(owner_view.descendants[0].node.title, "Once-public branch");
+    }
+
+    #[tokio::test]
+    async fn account_deletion_snapshots_the_latest_lineage_privacy() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let source_owner = owner(&pool, "acctdel_src").await;
+        let fork_owner = owner(&pool, "acctdel_fork").await;
+        let source = create_published_recipe(
+            &pool,
+            source_owner.id,
+            &snapshot("Visible source", "public"),
+            None,
+        )
+        .await
+        .unwrap();
+        let fork_draft = create_fork_draft(&pool, source.id, fork_owner.id, None)
+            .await
+            .unwrap();
+        update_recipe_draft(
+            &pool,
+            fork_draft.id,
+            fork_owner.id,
+            fork_draft.revision,
+            &snapshot("Private before account deletion", "public"),
+        )
+        .await
+        .unwrap();
+        let fork = publish_recipe_draft(&pool, fork_draft.id, fork_owner.id, None)
+            .await
+            .unwrap();
+        sqlx::query("UPDATE recipes SET visibility = 'private' WHERE id = $1")
+            .bind(fork.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        crate::db::delete_user(&pool, fork_owner.id).await.unwrap();
+
+        let public_view = get_recipe_lineage(&pool, source.id, None, 2).await.unwrap();
+        assert!(public_view.descendants[0].node.is_deleted);
+        assert!(public_view.descendants[0].node.is_redacted);
+        assert_eq!(public_view.descendants[0].node.title, "Private recipe");
+    }
+
+    #[tokio::test]
+    async fn deletion_waits_for_concurrent_visibility_updates_before_snapshotting() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let source_owner = owner(&pool, "lock_src").await;
+        let fork_owner = owner(&pool, "lock_fork").await;
+        let source = create_published_recipe(
+            &pool,
+            source_owner.id,
+            &snapshot("Lock source", "public"),
+            None,
+        )
+        .await
+        .unwrap();
+        let fork_draft = create_fork_draft(&pool, source.id, fork_owner.id, None)
+            .await
+            .unwrap();
+        let fork = publish_recipe_draft(&pool, fork_draft.id, fork_owner.id, None)
+            .await
+            .unwrap();
+
+        let mut visibility_update = pool.begin().await.unwrap();
+        sqlx::query("UPDATE recipes SET visibility = 'private' WHERE id = $1")
+            .bind(fork.id)
+            .execute(&mut *visibility_update)
+            .await
+            .unwrap();
+
+        let delete_pool = pool.clone();
+        let delete_task = tokio::spawn(async move {
+            crate::db::delete_recipe(&delete_pool, fork.id, fork_owner.id).await
+        });
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        assert!(!delete_task.is_finished());
+        visibility_update.commit().await.unwrap();
+        delete_task.await.unwrap().unwrap();
+
+        let public_view = get_recipe_lineage(&pool, source.id, None, 2).await.unwrap();
+        assert!(public_view.descendants[0].node.is_redacted);
+        assert_eq!(public_view.descendants[0].node.title, "Private recipe");
+    }
+
+    #[test]
+    fn fresh_development_startup_has_no_lineage_backfill_step() {
+        let entrypoint = include_str!("../../entrypoint.sh");
+        let justfile = include_str!("../../justfile");
+
+        assert!(!entrypoint.contains("backfill_fork_lineage"));
+        assert!(!justfile.contains("backfill_fork_lineage"));
     }
 
     #[tokio::test]

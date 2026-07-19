@@ -213,10 +213,20 @@ pub async fn apply_test_schema(pool: &PgPool) {
         "CREATE TABLE IF NOT EXISTS fork_relationships (\
          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\
          original_recipe_id UUID REFERENCES recipes(id) ON DELETE SET NULL,\
-         forked_recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,\
-         forked_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,\
+         forked_recipe_id UUID REFERENCES recipes(id) ON DELETE SET NULL,\
+         forked_by UUID REFERENCES users(id) ON DELETE SET NULL,\
+         parent_relationship_id UUID REFERENCES fork_relationships(id) ON DELETE SET NULL,\
+         original_recipe_key UUID,\
+         forked_recipe_key UUID,\
          forked_version_number INTEGER CHECK (forked_version_number IS NULL OR forked_version_number > 0),\
          original_title VARCHAR(255) NOT NULL,\
+         forked_title VARCHAR(255),\
+         original_owner_id UUID,\
+         original_owner_username VARCHAR(30),\
+         original_visibility VARCHAR(20),\
+         forked_owner_id UUID,\
+         forked_owner_username VARCHAR(30),\
+         forked_visibility VARCHAR(20),\
          message TEXT,\
          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
          )",
@@ -231,6 +241,9 @@ pub async fn apply_test_schema(pool: &PgPool) {
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_recipe_drafts_existing_recipe ON recipe_drafts(user_id, recipe_id) WHERE recipe_id IS NOT NULL",
         "CREATE INDEX IF NOT EXISTS idx_forks_original ON fork_relationships(original_recipe_id)",
         "CREATE INDEX IF NOT EXISTS idx_forks_result ON fork_relationships(forked_recipe_id)",
+        "CREATE INDEX IF NOT EXISTS idx_forks_original_key ON fork_relationships(original_recipe_key)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_forks_result_key ON fork_relationships(forked_recipe_key) WHERE forked_recipe_key IS NOT NULL",
+        "CREATE INDEX IF NOT EXISTS idx_forks_parent ON fork_relationships(parent_relationship_id)",
     ] {
         sqlx::query(statement)
             .execute(pool)

@@ -601,6 +601,29 @@ pub async fn get_fork_attribution(
         }))
 }
 
+/// Load the current recipe's ancestors and a bounded descendant tree.
+/// Anonymous viewers are supported; privacy filtering is enforced in the
+/// database layer for every returned node.
+#[server]
+pub async fn get_recipe_lineage(
+    recipe_id: String,
+    descendant_depth: Option<i32>,
+) -> Result<crate::types::RecipeLineageView, ServerFnError> {
+    let recipe_id = uuid::Uuid::parse_str(&recipe_id)
+        .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
+    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
+    let descendant_depth = descendant_depth.unwrap_or(2).clamp(1, 6);
+
+    crate::db::get_recipe_lineage(
+        &crate::db::get_pool(),
+        recipe_id,
+        viewer_id,
+        descendant_depth,
+    )
+    .await
+    .map_err(|error| ServerFnError::new(error.to_string()))
+}
+
 /// Delete a recipe (ownership-gated).
 ///
 /// Fetches the recipe first to get its images, deletes from DB, then cleans up
