@@ -30,6 +30,8 @@ use crate::utils::recipe_scaler::{
     format_amount, parse_amount, IngredientRef, ScaleCalculator, ScaleMode, ScaledIngredient,
 };
 
+const LINEAGE_DESCENDANT_DISPLAY_DEPTH: usize = 5;
+
 // ── Date formatting helper ───────────────────────────────────────────────────
 
 /// Format a UTC datetime as a relative time string (e.g. "3 days ago").
@@ -232,7 +234,27 @@ fn VersionComparisonPanel(
 
 #[cfg(test)]
 mod layout_tests {
-    use super::{format_change_path, format_change_value};
+    use super::{
+        descendant_branch_has_more, format_change_path, format_change_value,
+        LINEAGE_DESCENDANT_DISPLAY_DEPTH,
+    };
+    use crate::types::{RecipeLineageBranch, RecipeLineageNode};
+
+    fn lineage_branch(children: Vec<RecipeLineageBranch>, truncated: bool) -> RecipeLineageBranch {
+        RecipeLineageBranch {
+            node: RecipeLineageNode {
+                recipe_id: None,
+                title: "Branch".to_string(),
+                owner_username: None,
+                forked_from_version_number: None,
+                fork_message: None,
+                is_deleted: false,
+                is_redacted: false,
+            },
+            children,
+            truncated,
+        }
+    }
 
     #[test]
     fn version_history_is_the_final_recipe_detail_section() {
@@ -421,7 +443,26 @@ mod layout_tests {
         assert!(source.contains("Ancestors"));
         assert!(source.contains("Descendants"));
         assert!(source.contains("recipe-lineage__current"));
-        assert!(source.contains("aria_label: \"Expand descendant branches\""));
+        assert!(source.contains("More recipes forked from this branch"));
+        assert!(!source.contains("aria_label: \"Expand descendant branches\""));
+    }
+
+    #[test]
+    fn descendant_lineage_stops_after_five_visible_levels() {
+        assert_eq!(LINEAGE_DESCENDANT_DISPLAY_DEPTH, 5);
+
+        let deeper_branch = lineage_branch(Vec::new(), false);
+        let branch_with_deeper_recipes = lineage_branch(vec![deeper_branch], false);
+
+        assert!(!descendant_branch_has_more(&branch_with_deeper_recipes, 4));
+        assert!(descendant_branch_has_more(&branch_with_deeper_recipes, 5));
+    }
+
+    #[test]
+    fn descendant_lineage_reports_backend_truncation_at_any_level() {
+        let truncated_branch = lineage_branch(Vec::new(), true);
+
+        assert!(descendant_branch_has_more(&truncated_branch, 1));
     }
 
     #[test]
@@ -987,20 +1028,31 @@ fn LineageRecipeNode(node: RecipeLineageNode, is_current: bool) -> Element {
     }
 }
 
+fn descendant_branch_has_more(branch: &RecipeLineageBranch, depth: usize) -> bool {
+    branch.truncated || (depth >= LINEAGE_DESCENDANT_DISPLAY_DEPTH && !branch.children.is_empty())
+}
+
 #[component]
-fn LineageDescendant(branch: RecipeLineageBranch) -> Element {
+fn LineageDescendant(branch: RecipeLineageBranch, depth: usize) -> Element {
+    let show_children = depth < LINEAGE_DESCENDANT_DISPLAY_DEPTH && !branch.children.is_empty();
+    let has_more = descendant_branch_has_more(&branch, depth);
+
     rsx! {
         li { class: "recipe-lineage__branch",
             LineageRecipeNode { node: branch.node.clone(), is_current: false }
-            if !branch.children.is_empty() {
+            if show_children {
                 ul { class: "recipe-lineage__children",
                     for child in branch.children {
-                        LineageDescendant { branch: child }
+                        LineageDescendant { branch: child, depth: depth + 1 }
                     }
                 }
             }
-            if branch.truncated {
-                span { class: "recipe-lineage__truncated", "More forks available" }
+            if has_more {
+                span {
+                    class: "recipe-lineage__truncated",
+                    role: "status",
+                    "More recipes forked from this branch"
+                }
             }
         }
     }
@@ -1013,7 +1065,6 @@ fn LineageDescendant(branch: RecipeLineageBranch) -> Element {
 /// Publicly accessible: tries public endpoint first, falls back to authenticated.
 #[component]
 pub fn RecipeDetail(id: String) -> Element {
-    let mut lineage_depth = use_signal(|| 2_i32);
     // ── Resources ────────────────────────────────────────────────────────
     // Clone id before each use_resource to avoid move issues.
     // The closure is FnMut (called potentially multiple times), so we clone
@@ -1050,7 +1101,7 @@ pub fn RecipeDetail(id: String) -> Element {
     let id_for_lineage = id.clone();
     let lineage_resource = use_resource(move || {
         let recipe_id = id_for_lineage.clone();
-        let descendant_depth = lineage_depth();
+        let descendant_depth = LINEAGE_DESCENDANT_DISPLAY_DEPTH as i32;
         async move { get_recipe_lineage(recipe_id, Some(descendant_depth)).await }
     });
     let mut version_action_error = use_signal(|| Option::<String>::None);
@@ -1466,8 +1517,9 @@ pub fn RecipeDetail(id: String) -> Element {
                                     h3 { "Ancestors" }
                                     if lineage.ancestors.is_empty() {
                                         p { class: "recipe-lineage__empty", "This is the original recipe." }
-                                    } else {
-                                        ol { class: "recipe-lineage__ancestor-list",
+                                    }
+                                    ol { class: "recipe-lineage__ancestor-list",
+                                        if !lineage.ancestors.is_empty() {
                                             for ancestor in lineage.ancestors.clone() {
                                                 li {
                                                     LineageRecipeNode {
@@ -1477,14 +1529,12 @@ pub fn RecipeDetail(id: String) -> Element {
                                                 }
                                             }
                                         }
-                                    }
-                                }
-
-                                div { class: "recipe-lineage__focus",
-                                    span { class: "recipe-lineage__focus-label", "You are here" }
-                                    LineageRecipeNode {
-                                        node: lineage.current.clone(),
-                                        is_current: true,
+                                        li { class: "recipe-lineage__ancestor-current",
+                                            LineageRecipeNode {
+                                                node: lineage.current.clone(),
+                                                is_current: true,
+                                            }
+                                        }
                                     }
                                 }
 
@@ -1495,7 +1545,7 @@ pub fn RecipeDetail(id: String) -> Element {
                                     } else {
                                         ul { class: "recipe-lineage__descendant-list",
                                             for descendant in lineage.descendants.clone() {
-                                                LineageDescendant { branch: descendant }
+                                                LineageDescendant { branch: descendant, depth: 1 }
                                             }
                                         }
                                     }
@@ -1507,22 +1557,6 @@ pub fn RecipeDetail(id: String) -> Element {
                                     class: "recipe-lineage__limit-notice",
                                     role: "status",
                                     "This lineage is too large to display in full. Showing the first branches only."
-                                }
-                            } else if lineage.truncated {
-                                div { class: "recipe-lineage__actions",
-                                    button {
-                                        class: "btn btn-secondary touch-target",
-                                        aria_label: "Expand descendant branches",
-                                        disabled: lineage_depth() >= 6,
-                                        onclick: move |_| {
-                                            lineage_depth.set((lineage_depth() + 2).min(6));
-                                        },
-                                        if lineage_depth() >= 6 {
-                                            "Maximum depth reached"
-                                        } else {
-                                            "Show more generations"
-                                        }
-                                    }
                                 }
                             }
                         }

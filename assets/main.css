@@ -2279,24 +2279,24 @@ a:hover {
 .recipe-lineage {
     display: flex;
     flex-direction: column;
-    gap: var(--space-lg);
+    gap: var(--space-md);
 }
 
 .recipe-lineage__header p {
     margin: 0;
     color: var(--text-secondary);
-    line-height: 1.5;
+    font-size: 14px;
+    line-height: 1.4;
 }
 
 .recipe-lineage__flow {
     display: grid;
-    grid-template-columns: minmax(180px, 1fr) minmax(190px, 0.9fr) minmax(220px, 1.2fr);
+    grid-template-columns: minmax(190px, 0.85fr) minmax(260px, 1.15fr);
     align-items: start;
-    gap: var(--space-lg);
+    gap: var(--space-xl);
 }
 
-.recipe-lineage__group,
-.recipe-lineage__focus {
+.recipe-lineage__group {
     min-width: 0;
 }
 
@@ -2320,74 +2320,56 @@ a:hover {
 .recipe-lineage__ancestor-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-md);
+    gap: 14px;
 }
 
 .recipe-lineage__ancestor-list > li {
     position: relative;
 }
 
+.recipe-lineage__ancestor-list > li:not(:last-child)::after,
+.recipe-lineage__ancestor-list > li:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    z-index: 2;
+}
+
 .recipe-lineage__ancestor-list > li:not(:last-child)::after {
-    content: "";
-    position: absolute;
-    left: 20px;
-    top: 100%;
+    left: 17px;
+    top: calc(100% + 1px);
     width: 2px;
-    height: var(--space-md);
-    background: var(--accent);
-    opacity: 0.45;
+    height: 9px;
+    background: color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
-.recipe-lineage__focus {
-    position: relative;
-    align-self: center;
-}
-
-.recipe-lineage__focus::before,
-.recipe-lineage__focus::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    width: var(--space-lg);
-    height: 2px;
-    background: var(--accent);
-    opacity: 0.45;
-}
-
-.recipe-lineage__focus::before {
-    right: 100%;
-}
-
-.recipe-lineage__focus::after {
-    left: 100%;
-}
-
-.recipe-lineage__focus-label {
-    display: block;
-    margin-bottom: var(--space-xs);
-    color: var(--accent);
-    font-size: 12px;
-    font-weight: 700;
-    text-align: center;
-    text-transform: uppercase;
+.recipe-lineage__ancestor-list > li:not(:last-child)::before {
+    left: 13px;
+    top: calc(100% + 8px);
+    width: 0;
+    height: 0;
+    border-right: 5px solid transparent;
+    border-left: 5px solid transparent;
+    border-top: 6px solid color-mix(in srgb, var(--accent) 65%, transparent);
 }
 
 .recipe-lineage__node {
+    position: relative;
+    z-index: 2;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
     min-width: 0;
-    padding: var(--space-sm) var(--space-md);
+    padding: 8px 11px;
     border: 1px solid var(--shadow-light);
     border-radius: var(--radius-md);
     background: var(--surface);
-    box-shadow: 2px 2px 5px var(--shadow-dark), -2px -2px 5px var(--shadow-light);
+    box-shadow: 1px 2px 4px var(--shadow-dark), -1px -1px 3px var(--shadow-light);
 }
 
 .recipe-lineage__current {
-    border: 2px solid var(--accent);
-    box-shadow: 0 0 0 3px rgba(217, 115, 90, 0.12),
-        3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);
+    border: 1px solid var(--accent);
+    box-shadow: 0 0 0 2px rgba(217, 115, 90, 0.1),
+        1px 2px 4px var(--shadow-dark), -1px -1px 3px var(--shadow-light);
 }
 
 .recipe-lineage__node--deleted {
@@ -2442,7 +2424,7 @@ a:hover {
 }
 
 .recipe-lineage__message {
-    margin: var(--space-xs) 0 0;
+    margin: 2px 0 0;
     color: var(--text-secondary);
     font-size: 12px;
     font-style: italic;
@@ -2453,39 +2435,69 @@ a:hover {
 .recipe-lineage__children {
     display: flex;
     flex-direction: column;
-    gap: var(--space-sm);
+    gap: 6px;
+}
+
+.recipe-lineage__descendant-list,
+.recipe-lineage__children {
+    position: relative;
+    padding-left: 18px;
 }
 
 .recipe-lineage__children {
-    position: relative;
-    margin: var(--space-sm) 0 0 var(--space-md);
-    padding-left: var(--space-md);
-    border-left: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    margin: 6px 0 0 10px;
+}
+
+.recipe-lineage__descendant-list::before,
+.recipe-lineage__children::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 17px;
+    bottom: 17px;
+    width: 2px;
+    background: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.recipe-lineage__children::before {
+    top: -6px;
 }
 
 .recipe-lineage__branch {
     position: relative;
 }
 
+.recipe-lineage__descendant-list > .recipe-lineage__branch::before,
 .recipe-lineage__children > .recipe-lineage__branch::before {
     content: "";
     position: absolute;
-    top: 20px;
+    z-index: 1;
+    top: 17px;
     right: 100%;
-    width: var(--space-md);
+    width: 18px;
     height: 2px;
     background: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
-.recipe-lineage__truncated {
-    display: inline-block;
-    margin: var(--space-xs) 0 0 var(--space-md);
-    font-style: italic;
+.recipe-lineage__descendant-list > .recipe-lineage__branch:last-child::after,
+.recipe-lineage__children > .recipe-lineage__branch:last-child::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    top: 19px;
+    right: calc(100% + 16px);
+    bottom: 0;
+    width: 2px;
+    background: var(--surface);
 }
 
-.recipe-lineage__actions {
-    display: flex;
-    justify-content: flex-end;
+.recipe-lineage__truncated {
+    display: block;
+    margin: 5px 0 0 11px;
+    padding-left: 9px;
+    border-left: 2px dotted color-mix(in srgb, var(--accent) 55%, transparent);
+    font-style: italic;
+    line-height: 1.35;
 }
 
 .recipe-lineage__limit-notice {
@@ -2503,34 +2515,6 @@ a:hover {
     .recipe-lineage__flow {
         grid-template-columns: minmax(0, 1fr);
         gap: var(--space-md);
-    }
-
-    .recipe-lineage__focus {
-        width: 100%;
-    }
-
-    .recipe-lineage__focus::before,
-    .recipe-lineage__focus::after {
-        left: 20px;
-        right: auto;
-        width: 2px;
-        height: var(--space-md);
-    }
-
-    .recipe-lineage__focus::before {
-        top: calc(-1 * var(--space-md));
-    }
-
-    .recipe-lineage__focus::after {
-        top: 100%;
-    }
-
-    .recipe-lineage__focus-label {
-        text-align: left;
-    }
-
-    .recipe-lineage__actions .btn {
-        width: 100%;
     }
 }
 
