@@ -2367,9 +2367,10 @@ a:hover {
 }
 
 .recipe-lineage__thumbnail {
-    width: 42px;
-    height: 42px;
-    flex: 0 0 42px;
+    width: 72px;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    flex: 0 0 72px;
     border-radius: var(--radius-sm);
     object-fit: cover;
     background: var(--background);
@@ -2398,9 +2399,10 @@ a:hover {
 }
 
 .recipe-version-history__thumbnail {
-    width: 52px;
-    height: 52px;
-    flex: 0 0 52px;
+    width: 92px;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    flex: 0 0 92px;
     border-radius: var(--radius-sm);
     object-fit: cover;
     background: var(--background);
