@@ -364,6 +364,7 @@ pub async fn get_recipe_versions_api(
             Ok(crate::types::RecipeVersionSummary {
                 version_number: version.version_number,
                 title: snapshots[index].title.clone(),
+                image_url: version_summary_image_url(&snapshots[index].images),
                 notes: version.notes.clone(),
                 created_at: version.created_at,
                 is_current: index == 0,
@@ -371,6 +372,13 @@ pub async fn get_recipe_versions_api(
             })
         })
         .collect()
+}
+
+#[cfg(feature = "server")]
+fn version_summary_image_url(images: &[crate::types::RecipeImage]) -> Option<String> {
+    images
+        .first()
+        .map(|image| image.display_url(true).to_string())
 }
 
 #[server]
@@ -461,7 +469,7 @@ fn snapshot_change_value_to_string(value: serde_json::Value) -> String {
 
 #[cfg(all(test, feature = "server"))]
 mod version_change_tests {
-    use super::recipe_version_changes_to_view;
+    use super::{recipe_version_changes_to_view, version_summary_image_url};
     use crate::db::diff::SnapshotChange;
     use serde_json::json;
 
@@ -497,6 +505,31 @@ mod version_change_tests {
             .as_str()
             .expect("old value string")
             .contains("old.webp"));
+    }
+
+    #[test]
+    fn version_summary_images_prefer_thumbnails_and_fall_back_to_full_images() {
+        let with_thumbnail: crate::types::RecipeImage = serde_json::from_value(json!({
+            "url": "https://example.test/full.webp",
+            "thumb_url": "https://example.test/thumb.webp",
+            "edits": []
+        }))
+        .unwrap();
+        let full_only: crate::types::RecipeImage = serde_json::from_value(json!({
+            "url": "https://example.test/only-full.webp",
+            "edits": []
+        }))
+        .unwrap();
+
+        assert_eq!(
+            version_summary_image_url(&[with_thumbnail]),
+            Some("https://example.test/thumb.webp".to_string())
+        );
+        assert_eq!(
+            version_summary_image_url(&[full_only]),
+            Some("https://example.test/only-full.webp".to_string())
+        );
+        assert_eq!(version_summary_image_url(&[]), None);
     }
 }
 

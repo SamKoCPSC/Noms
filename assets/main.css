@@ -2390,6 +2390,33 @@ a:hover {
     min-width: 0;
 }
 
+.recipe-version-history__summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-width: 0;
+}
+
+.recipe-version-history__thumbnail {
+    width: 52px;
+    height: 52px;
+    flex: 0 0 52px;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+    background: var(--background);
+}
+
+.recipe-version-history__thumbnail-placeholder {
+    display: grid;
+    place-items: center;
+    color: var(--text-tertiary);
+    font-size: 20px;
+}
+
+.recipe-version-history__details {
+    min-width: 0;
+}
+
 .recipe-lineage__current {
     border: 1px solid var(--accent);
     box-shadow: 0 0 0 2px rgba(217, 115, 90, 0.1),

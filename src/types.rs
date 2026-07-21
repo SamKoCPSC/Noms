@@ -319,6 +319,8 @@ pub struct RecipeDraftView {
 pub struct RecipeVersionSummary {
     pub version_number: i32,
     pub title: String,
+    /// First image captured in this immutable snapshot.
+    pub image_url: Option<String>,
     pub notes: Option<String>,
     pub created_at: DateTime<Utc>,
     pub is_current: bool,

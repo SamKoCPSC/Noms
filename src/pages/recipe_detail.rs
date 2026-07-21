@@ -332,6 +332,19 @@ mod layout_tests {
     }
 
     #[test]
+    fn version_history_entries_render_snapshot_thumbnails_with_a_placeholder_fallback() {
+        let source = include_str!("recipe_detail.rs");
+        let history = source
+            .split("h2 { \"Version history\" }")
+            .nth(1)
+            .expect("version history section");
+
+        assert!(history.contains("version.image_url"));
+        assert!(history.contains("recipe-version-history__thumbnail"));
+        assert!(history.contains("recipe-version-history__thumbnail-placeholder"));
+    }
+
+    #[test]
     fn version_history_actions_wrap_within_the_card() {
         let source = include_str!("recipe_detail.rs");
         let owner_history = ["if is_owner && !versions", ".is_empty()"].concat();
@@ -2062,15 +2075,31 @@ pub fn RecipeDetail(id: String) -> Element {
                                             align_items: "center",
                                             flex_wrap: "wrap",
                                             gap: "var(--space-sm)",
-                                            div {
-                                                strong {
-                                                    "v{version_number} · {version.title}"
-                                                    if version.is_current { " · Current" }
+                                            div { class: "recipe-version-history__summary",
+                                                if let Some(image_url) = &version.image_url {
+                                                    img {
+                                                        class: "recipe-version-history__thumbnail",
+                                                        src: image_url.clone(),
+                                                        alt: "",
+                                                        loading: "lazy",
+                                                    }
+                                                } else {
+                                                    div {
+                                                        class: "recipe-version-history__thumbnail recipe-version-history__thumbnail-placeholder",
+                                                        aria_hidden: "true",
+                                                        "🍽"
+                                                    }
                                                 }
-                                                p { "Published {version.created_at}" }
-                                                p { "{version.change_summary}" }
-                                                if let Some(notes) = &version.notes {
-                                                    p { "{notes}" }
+                                                div { class: "recipe-version-history__details",
+                                                    strong {
+                                                        "v{version_number} · {version.title}"
+                                                        if version.is_current { " · Current" }
+                                                    }
+                                                    p { "Published {version.created_at}" }
+                                                    p { "{version.change_summary}" }
+                                                    if let Some(notes) = &version.notes {
+                                                        p { "{notes}" }
+                                                    }
                                                 }
                                             }
                                             div {
