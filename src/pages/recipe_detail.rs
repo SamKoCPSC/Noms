@@ -8,6 +8,7 @@
 
 use chrono::{DateTime, Utc};
 use dioxus::prelude::*;
+use std::collections::VecDeque;
 
 #[cfg(target_arch = "wasm32")]
 use crate::api::recipe::delete_recipe;
@@ -22,7 +23,7 @@ use crate::components::base::{
 };
 use crate::types::{
     ForkAttribution, Recipe, RecipeEquipment, RecipeIngredient, RecipeLineageBranch,
-    RecipeLineageNode, RecipeStep, RecipeVersionChange, RecipeVersionComparison,
+    RecipeLineageNode, RecipeLineageView, RecipeStep, RecipeVersionChange, RecipeVersionComparison,
     RecipeVersionSummary, RecipeVersionView,
 };
 #[cfg(target_arch = "wasm32")]
@@ -30,7 +31,9 @@ use crate::utils::recipe_scaler::{
     format_amount, parse_amount, IngredientRef, ScaleCalculator, ScaleMode, ScaledIngredient,
 };
 
-const LINEAGE_DESCENDANT_DISPLAY_DEPTH: usize = 5;
+const LINEAGE_DESCENDANT_DISPLAY_DEPTH: usize = 8;
+const LINEAGE_INITIAL_VISIBLE_DESCENDANTS: usize = 10;
+const LINEAGE_DESCENDANT_EXPANSION_SIZE: usize = 5;
 
 // ── Date formatting helper ───────────────────────────────────────────────────
 
@@ -235,16 +238,26 @@ fn VersionComparisonPanel(
 #[cfg(test)]
 mod layout_tests {
     use super::{
-        descendant_branch_has_more, format_change_path, format_change_value,
-        LINEAGE_DESCENDANT_DISPLAY_DEPTH,
+        branch_has_hidden_direct_children, collapse_revealed_descendant_paths,
+        descendant_branch_has_more, descendant_paths_breadth_first, format_change_path,
+        format_change_value, next_hidden_descendant_paths, LINEAGE_DESCENDANT_DISPLAY_DEPTH,
+        LINEAGE_DESCENDANT_EXPANSION_SIZE, LINEAGE_INITIAL_VISIBLE_DESCENDANTS,
     };
     use crate::types::{RecipeLineageBranch, RecipeLineageNode};
 
     fn lineage_branch(children: Vec<RecipeLineageBranch>, truncated: bool) -> RecipeLineageBranch {
+        named_lineage_branch("Branch", children, truncated)
+    }
+
+    fn named_lineage_branch(
+        title: &str,
+        children: Vec<RecipeLineageBranch>,
+        truncated: bool,
+    ) -> RecipeLineageBranch {
         RecipeLineageBranch {
             node: RecipeLineageNode {
                 recipe_id: None,
-                title: "Branch".to_string(),
+                title: title.to_string(),
                 owner_username: None,
                 forked_from_version_number: None,
                 fork_message: None,
@@ -448,14 +461,138 @@ mod layout_tests {
     }
 
     #[test]
-    fn descendant_lineage_stops_after_five_visible_levels() {
-        assert_eq!(LINEAGE_DESCENDANT_DISPLAY_DEPTH, 5);
+    fn descendant_lineage_stops_after_eight_visible_levels() {
+        assert_eq!(LINEAGE_DESCENDANT_DISPLAY_DEPTH, 8);
 
         let deeper_branch = lineage_branch(Vec::new(), false);
         let branch_with_deeper_recipes = lineage_branch(vec![deeper_branch], false);
 
-        assert!(!descendant_branch_has_more(&branch_with_deeper_recipes, 4));
-        assert!(descendant_branch_has_more(&branch_with_deeper_recipes, 5));
+        assert!(!descendant_branch_has_more(&branch_with_deeper_recipes, 7));
+        assert!(descendant_branch_has_more(&branch_with_deeper_recipes, 8));
+    }
+
+    #[test]
+    fn descendant_visibility_is_allocated_breadth_first() {
+        let descendants = vec![
+            named_lineage_branch(
+                "A",
+                vec![
+                    named_lineage_branch(
+                        "A1",
+                        vec![named_lineage_branch("A1a", Vec::new(), false)],
+                        false,
+                    ),
+                    named_lineage_branch("A2", Vec::new(), false),
+                ],
+                false,
+            ),
+            named_lineage_branch(
+                "B",
+                vec![named_lineage_branch("B1", Vec::new(), false)],
+                false,
+            ),
+        ];
+
+        assert_eq!(
+            descendant_paths_breadth_first(&descendants, LINEAGE_DESCENDANT_DISPLAY_DEPTH),
+            vec![
+                vec![0],
+                vec![1],
+                vec![0, 0],
+                vec![0, 1],
+                vec![1, 0],
+                vec![0, 0, 0],
+            ]
+        );
+    }
+
+    #[test]
+    fn descendant_visibility_starts_at_ten() {
+        assert_eq!(LINEAGE_INITIAL_VISIBLE_DESCENDANTS, 10);
+        assert_eq!(LINEAGE_DESCENDANT_EXPANSION_SIZE, 5);
+    }
+
+    #[test]
+    fn branch_expansion_reveals_at_most_five_subtree_recipes_breadth_first() {
+        let all_paths = vec![
+            vec![0],
+            vec![1],
+            vec![0, 0],
+            vec![0, 1],
+            vec![0, 2],
+            vec![1, 0],
+            vec![1, 1],
+            vec![1, 2],
+            vec![1, 3],
+            vec![1, 4],
+            vec![1, 5],
+            vec![0, 0, 0],
+        ];
+        let visible_paths = vec![vec![0], vec![1], vec![0, 0], vec![1, 0]];
+
+        assert_eq!(
+            next_hidden_descendant_paths(&all_paths, &visible_paths, &[1]),
+            vec![vec![1, 1], vec![1, 2], vec![1, 3], vec![1, 4], vec![1, 5]]
+        );
+        assert_eq!(
+            next_hidden_descendant_paths(&all_paths, &visible_paths, &[0]),
+            vec![vec![0, 1], vec![0, 2], vec![0, 0, 0]]
+        );
+    }
+
+    #[test]
+    fn branch_controls_only_mark_visible_nodes_with_hidden_direct_children() {
+        let branch = named_lineage_branch(
+            "Parent",
+            vec![
+                named_lineage_branch("Child 1", Vec::new(), false),
+                named_lineage_branch("Child 2", Vec::new(), false),
+            ],
+            false,
+        );
+
+        assert!(branch_has_hidden_direct_children(
+            &branch,
+            &[0],
+            &[vec![0], vec![0, 0]],
+        ));
+        assert!(!branch_has_hidden_direct_children(
+            &branch,
+            &[0],
+            &[vec![0], vec![0, 0], vec![0, 1]],
+        ));
+    }
+
+    #[test]
+    fn collapsing_one_branch_preserves_reveals_in_other_branches() {
+        let revealed_paths = vec![vec![0, 1], vec![0, 1, 0], vec![1, 1]];
+
+        assert_eq!(
+            collapse_revealed_descendant_paths(&revealed_paths, &[0]),
+            vec![vec![1, 1]]
+        );
+    }
+
+    #[test]
+    fn branch_expansion_controls_identify_their_specific_subtree() {
+        let source = include_str!("recipe_detail.rs");
+        let descendant_component_marker = ["fn Lineage", "Descendant("].concat();
+        let lineage_component_marker = ["fn Fork", "Lineage"].concat();
+        let component = source
+            .split(&descendant_component_marker)
+            .nth(1)
+            .expect("lineage descendant component")
+            .split(&lineage_component_marker)
+            .next()
+            .expect("lineage descendant component body");
+
+        assert!(component.contains("id: branch_subtree_id.clone()"));
+        assert_eq!(
+            component
+                .matches("aria_controls: branch_subtree_id.clone()")
+                .count(),
+            2
+        );
     }
 
     #[test]
@@ -466,11 +603,25 @@ mod layout_tests {
     }
 
     #[test]
-    fn lineage_nodes_use_document_navigation_between_recipe_ids() {
+    fn accessible_lineage_recipes_use_the_entire_card_as_a_link() {
         let source = include_str!("recipe_detail.rs");
-        let recipe_href = ["href: format!", "(\"/recipes/{recipe_id}\")"].concat();
+        let component_marker = ["fn LineageRecipe", "Node("].concat();
+        let component = source
+            .split(&component_marker)
+            .nth(1)
+            .expect("lineage recipe node component")
+            .split("fn descendant_branch_has_more")
+            .next()
+            .expect("lineage recipe node body");
 
-        assert!(source.contains(&recipe_href));
+        assert!(component.contains("recipe-lineage__node--linked"));
+        assert!(component.contains("if let Some(recipe_id) = recipe_id"));
+        assert!(component.contains("a {\n                href:"));
+        assert!(component.contains("href: format!(\"/recipes/{recipe_id}\")"));
+        assert!(component.contains("aria_label: format!(\"Open recipe: {}\", node.title)"));
+        assert!(component.contains("class: linked_node_class"));
+        assert!(component.contains("else {\n            article {"));
+        assert!(!component.contains("class: \"recipe-lineage__node-link\""));
     }
 }
 
@@ -996,33 +1147,40 @@ fn LineageRecipeNode(node: RecipeLineageNode, is_current: bool) -> Element {
     } else {
         None
     };
+    let recipe_id = node.recipe_id;
+    let linked_node_class = format!("{node_class} recipe-lineage__node--linked");
+    let node_content = rsx! {
+        div { class: "recipe-lineage__node-heading",
+            strong { class: "recipe-lineage__node-title", "{node.title}" }
+            if let Some(status) = status {
+                span { class: "recipe-lineage__status", "{status}" }
+            }
+        }
+        if let Some(username) = &node.owner_username {
+            span { class: "recipe-lineage__owner", "@{username}" }
+        }
+        if let Some(version_number) = node.forked_from_version_number {
+            span { class: "recipe-lineage__fork-point", "Forked from v{version_number}" }
+        }
+        if let Some(message) = &node.fork_message {
+            if !message.trim().is_empty() {
+                p { class: "recipe-lineage__message", "{message}" }
+            }
+        }
+    };
 
     rsx! {
-        article { class: node_class,
-            div { class: "recipe-lineage__node-heading",
-                if let Some(recipe_id) = node.recipe_id {
-                    a {
-                        href: format!("/recipes/{recipe_id}"),
-                        class: "recipe-lineage__node-link",
-                        "{node.title}"
-                    }
-                } else {
-                    strong { "{node.title}" }
-                }
-                if let Some(status) = status {
-                    span { class: "recipe-lineage__status", "{status}" }
-                }
+        if let Some(recipe_id) = recipe_id {
+            a {
+                href: format!("/recipes/{recipe_id}"),
+                class: linked_node_class,
+                aria_label: format!("Open recipe: {}", node.title),
+                {node_content}
             }
-            if let Some(username) = &node.owner_username {
-                span { class: "recipe-lineage__owner", "@{username}" }
-            }
-            if let Some(version_number) = node.forked_from_version_number {
-                span { class: "recipe-lineage__fork-point", "Forked from v{version_number}" }
-            }
-            if let Some(message) = &node.fork_message {
-                if !message.trim().is_empty() {
-                    p { class: "recipe-lineage__message", "{message}" }
-                }
+        } else {
+            article {
+                class: node_class,
+                {node_content}
             }
         }
     }
@@ -1032,18 +1190,201 @@ fn descendant_branch_has_more(branch: &RecipeLineageBranch, depth: usize) -> boo
     branch.truncated || (depth >= LINEAGE_DESCENDANT_DISPLAY_DEPTH && !branch.children.is_empty())
 }
 
+fn descendant_paths_breadth_first(
+    descendants: &[RecipeLineageBranch],
+    maximum_depth: usize,
+) -> Vec<Vec<usize>> {
+    let mut paths = Vec::new();
+    let mut pending = VecDeque::new();
+
+    for (root_index, branch) in descendants.iter().enumerate() {
+        pending.push_back((vec![root_index], branch, 1));
+    }
+
+    while let Some((path, branch, depth)) = pending.pop_front() {
+        paths.push(path.clone());
+        if depth >= maximum_depth {
+            continue;
+        }
+
+        for (child_index, child) in branch.children.iter().enumerate() {
+            let mut child_path = path.clone();
+            child_path.push(child_index);
+            pending.push_back((child_path, child, depth + 1));
+        }
+    }
+
+    paths
+}
+
+fn path_is_strict_descendant(path: &[usize], ancestor_path: &[usize]) -> bool {
+    path.len() > ancestor_path.len() && path.starts_with(ancestor_path)
+}
+
+fn next_hidden_descendant_paths(
+    all_paths: &[Vec<usize>],
+    visible_paths: &[Vec<usize>],
+    ancestor_path: &[usize],
+) -> Vec<Vec<usize>> {
+    all_paths
+        .iter()
+        .filter(|path| {
+            path_is_strict_descendant(path, ancestor_path) && !visible_paths.contains(path)
+        })
+        .take(LINEAGE_DESCENDANT_EXPANSION_SIZE)
+        .cloned()
+        .collect()
+}
+
+fn branch_has_hidden_direct_children(
+    branch: &RecipeLineageBranch,
+    branch_path: &[usize],
+    visible_paths: &[Vec<usize>],
+) -> bool {
+    branch.children.iter().enumerate().any(|(index, _)| {
+        let mut child_path = branch_path.to_vec();
+        child_path.push(index);
+        !visible_paths.contains(&child_path)
+    })
+}
+
+fn collapse_revealed_descendant_paths(
+    revealed_paths: &[Vec<usize>],
+    branch_path: &[usize],
+) -> Vec<Vec<usize>> {
+    revealed_paths
+        .iter()
+        .filter(|path| !path_is_strict_descendant(path, branch_path))
+        .cloned()
+        .collect()
+}
+
 #[component]
-fn LineageDescendant(branch: RecipeLineageBranch, depth: usize) -> Element {
-    let show_children = depth < LINEAGE_DESCENDANT_DISPLAY_DEPTH && !branch.children.is_empty();
+fn LineageDescendant(
+    branch: RecipeLineageBranch,
+    depth: usize,
+    path: Vec<usize>,
+    visible_paths: Vec<Vec<usize>>,
+    all_descendant_paths: Vec<Vec<usize>>,
+    initial_visible_paths: Vec<Vec<usize>>,
+    mut revealed_descendant_paths: Signal<Vec<Vec<usize>>>,
+) -> Element {
+    let branch_subtree_id = format!(
+        "fork-lineage-descendants-{}",
+        path.iter()
+            .map(usize::to_string)
+            .collect::<Vec<_>>()
+            .join("-"),
+    );
+    let visible_children = if depth < LINEAGE_DESCENDANT_DISPLAY_DEPTH {
+        branch
+            .children
+            .iter()
+            .enumerate()
+            .filter_map(|(child_index, child)| {
+                let mut child_path = path.clone();
+                child_path.push(child_index);
+                visible_paths
+                    .contains(&child_path)
+                    .then(|| (child.clone(), child_path))
+            })
+            .collect::<Vec<_>>()
+    } else {
+        Vec::new()
+    };
     let has_more = descendant_branch_has_more(&branch, depth);
 
     rsx! {
         li { class: "recipe-lineage__branch",
             LineageRecipeNode { node: branch.node.clone(), is_current: false }
-            if show_children {
-                ul { class: "recipe-lineage__children",
-                    for child in branch.children {
-                        LineageDescendant { branch: child, depth: depth + 1 }
+            div {
+                id: branch_subtree_id.clone(),
+                class: "recipe-lineage__subtree",
+                if !visible_children.is_empty() {
+                    ul { class: "recipe-lineage__children",
+                        for (child, child_path) in visible_children {
+                            LineageDescendant {
+                                branch: child,
+                                depth: depth + 1,
+                                path: child_path,
+                                visible_paths: visible_paths.clone(),
+                                all_descendant_paths: all_descendant_paths.clone(),
+                                initial_visible_paths: initial_visible_paths.clone(),
+                                revealed_descendant_paths,
+                            }
+                        }
+                    }
+                }
+            }
+            {
+                let branch_has_hidden_children = branch_has_hidden_direct_children(
+                    &branch,
+                    &path,
+                    &visible_paths,
+                );
+                let branch_next_paths = next_hidden_descendant_paths(
+                    &all_descendant_paths,
+                    &visible_paths,
+                    &path,
+                );
+                let branch_next_batch_size = branch_next_paths.len();
+                let branch_recipe_noun = if branch_next_batch_size == 1 {
+                    "recipe"
+                } else {
+                    "recipes"
+                };
+                let branch_has_revealed_descendants = revealed_descendant_paths()
+                    .iter()
+                    .any(|revealed_path| path_is_strict_descendant(revealed_path, &path));
+                let branch_title = branch.node.title.clone();
+                let expand_label = format!(
+                    "Show {branch_next_batch_size} more {branch_recipe_noun} forked from {branch_title}",
+                );
+                let collapse_label = format!("Collapse descendants of {branch_title}");
+                let path_for_collapse = path.clone();
+
+                rsx! {
+                    if branch_has_hidden_children || branch_has_revealed_descendants {
+                        div { class: "recipe-lineage__branch-controls",
+                            if branch_has_hidden_children {
+                                button {
+                                    r#type: "button",
+                                    class: "recipe-lineage__control-button recipe-lineage__control-button--branch",
+                                    aria_label: expand_label,
+                                    aria_controls: branch_subtree_id.clone(),
+                                    aria_expanded: branch_has_revealed_descendants,
+                                    onclick: move |_| {
+                                        let mut revealed_paths = revealed_descendant_paths();
+                                        for path in &branch_next_paths {
+                                            if !initial_visible_paths.contains(path)
+                                                && !revealed_paths.contains(path)
+                                            {
+                                                revealed_paths.push(path.clone());
+                                            }
+                                        }
+                                        revealed_descendant_paths.set(revealed_paths);
+                                    },
+                                    "Show {branch_next_batch_size} more"
+                                }
+                            }
+                            if branch_has_revealed_descendants {
+                                button {
+                                    r#type: "button",
+                                    class: "recipe-lineage__control-button recipe-lineage__control-button--branch recipe-lineage__control-button--secondary",
+                                    aria_label: collapse_label,
+                                    aria_controls: branch_subtree_id.clone(),
+                                    onclick: move |_| {
+                                        revealed_descendant_paths.set(
+                                            collapse_revealed_descendant_paths(
+                                                &revealed_descendant_paths(),
+                                                &path_for_collapse,
+                                            ),
+                                        );
+                                    },
+                                    "Collapse"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1052,6 +1393,172 @@ fn LineageDescendant(branch: RecipeLineageBranch, depth: usize) -> Element {
                     class: "recipe-lineage__truncated",
                     role: "status",
                     "More recipes forked from this branch"
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn ForkLineage(lineage: RecipeLineageView) -> Element {
+    let mut revealed_descendant_paths = use_signal(Vec::<Vec<usize>>::new);
+    let all_descendant_paths =
+        descendant_paths_breadth_first(&lineage.descendants, LINEAGE_DESCENDANT_DISPLAY_DEPTH);
+    let total_descendant_count = all_descendant_paths.len();
+    let initial_visible_paths = all_descendant_paths
+        .iter()
+        .take(LINEAGE_INITIAL_VISIBLE_DESCENDANTS)
+        .cloned()
+        .collect::<Vec<_>>();
+    let mut visible_paths = initial_visible_paths.clone();
+    for path in revealed_descendant_paths() {
+        if !visible_paths.contains(&path) {
+            visible_paths.push(path);
+        }
+    }
+    let displayed_descendant_count = visible_paths.len();
+    let visible_roots = lineage
+        .descendants
+        .iter()
+        .enumerate()
+        .filter_map(|(root_index, branch)| {
+            let path = vec![root_index];
+            visible_paths
+                .contains(&path)
+                .then(|| (branch.clone(), path))
+        })
+        .collect::<Vec<_>>();
+    let hidden_descendant_count = total_descendant_count - displayed_descendant_count;
+    let root_next_paths = next_hidden_descendant_paths(&all_descendant_paths, &visible_paths, &[]);
+    let root_next_batch_size = root_next_paths.len();
+    let root_recipe_noun = if root_next_batch_size == 1 {
+        "recipe"
+    } else {
+        "recipes"
+    };
+    let can_collapse = !revealed_descendant_paths().is_empty();
+    let root_title = lineage.current.title.clone();
+    let root_expand_label =
+        format!("Show {root_next_batch_size} more {root_recipe_noun} forked from {root_title}",);
+
+    rsx! {
+        Card {
+            section {
+                class: "recipe-lineage",
+                aria_labelledby: "fork-lineage-title",
+                div { class: "recipe-lineage__header",
+                    div {
+                        h2 {
+                            id: "fork-lineage-title",
+                            class: "recipe-detail__section-title",
+                            "Fork lineage"
+                        }
+                        p {
+                            "Trace this recipe back to its source and explore recipes forked from it."
+                        }
+                    }
+                }
+
+                div { class: "recipe-lineage__flow",
+                    div { class: "recipe-lineage__group recipe-lineage__ancestors",
+                        h3 { "Ancestors" }
+                        if lineage.ancestors.is_empty() {
+                            p { class: "recipe-lineage__empty", "This is the original recipe." }
+                        }
+                        ol { class: "recipe-lineage__ancestor-list",
+                            if !lineage.ancestors.is_empty() {
+                                for ancestor in lineage.ancestors.clone() {
+                                    li {
+                                        LineageRecipeNode {
+                                            node: ancestor,
+                                            is_current: false,
+                                        }
+                                    }
+                                }
+                            }
+                            li { class: "recipe-lineage__ancestor-current",
+                                LineageRecipeNode {
+                                    node: lineage.current.clone(),
+                                    is_current: true,
+                                }
+                            }
+                        }
+                    }
+
+                    div { class: "recipe-lineage__group recipe-lineage__descendants",
+                        h3 { "Descendants" }
+                        if lineage.descendants.is_empty() {
+                            p { class: "recipe-lineage__empty", "No published forks yet." }
+                        } else {
+                            ul {
+                                id: "fork-lineage-descendants",
+                                class: "recipe-lineage__descendant-list",
+                                for (descendant, path) in visible_roots {
+                                    LineageDescendant {
+                                        branch: descendant,
+                                        depth: 1,
+                                        path,
+                                        visible_paths: visible_paths.clone(),
+                                        all_descendant_paths: all_descendant_paths.clone(),
+                                        initial_visible_paths: initial_visible_paths.clone(),
+                                        revealed_descendant_paths,
+                                    }
+                                }
+                            }
+
+                            if hidden_descendant_count > 0 || can_collapse {
+                                div { class: "recipe-lineage__controls",
+                                    span {
+                                        class: "recipe-lineage__count",
+                                        aria_live: "polite",
+                                        "Showing {displayed_descendant_count} of {total_descendant_count} descendants"
+                                    }
+                                    div { class: "recipe-lineage__control-actions",
+                                        if hidden_descendant_count > 0 {
+                                            button {
+                                                r#type: "button",
+                                                class: "recipe-lineage__control-button",
+                                                aria_controls: "fork-lineage-descendants",
+                                                aria_label: root_expand_label,
+                                                aria_expanded: can_collapse,
+                                                onclick: move |_| {
+                                                    let mut revealed_paths = revealed_descendant_paths();
+                                                    for path in &root_next_paths {
+                                                        if !initial_visible_paths.contains(path)
+                                                            && !revealed_paths.contains(path)
+                                                        {
+                                                            revealed_paths.push(path.clone());
+                                                        }
+                                                    }
+                                                    revealed_descendant_paths.set(revealed_paths);
+                                                },
+                                                "Show {root_next_batch_size} more"
+                                            }
+                                        }
+                                        if can_collapse {
+                                            button {
+                                                r#type: "button",
+                                                class: "recipe-lineage__control-button recipe-lineage__control-button--secondary",
+                                                aria_controls: "fork-lineage-descendants",
+                                                onclick: move |_| {
+                                                    revealed_descendant_paths.set(Vec::new());
+                                                },
+                                                "Collapse to first {LINEAGE_INITIAL_VISIBLE_DESCENDANTS}"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if lineage.node_limit_reached {
+                    p {
+                        class: "recipe-lineage__limit-notice",
+                        role: "status",
+                        "This lineage is too large to display in full. Showing the first branches only."
+                    }
                 }
             }
         }
@@ -1495,72 +2002,7 @@ pub fn RecipeDetail(id: String) -> Element {
 
             if let Some(lineage) = &lineage {
                 if !lineage.ancestors.is_empty() || !lineage.descendants.is_empty() {
-                    Card {
-                        section {
-                            class: "recipe-lineage",
-                            aria_labelledby: "fork-lineage-title",
-                            div { class: "recipe-lineage__header",
-                                div {
-                                    h2 {
-                                        id: "fork-lineage-title",
-                                        class: "recipe-detail__section-title",
-                                        "Fork lineage"
-                                    }
-                                    p {
-                                        "Trace this recipe back to its source and explore recipes forked from it."
-                                    }
-                                }
-                            }
-
-                            div { class: "recipe-lineage__flow",
-                                div { class: "recipe-lineage__group recipe-lineage__ancestors",
-                                    h3 { "Ancestors" }
-                                    if lineage.ancestors.is_empty() {
-                                        p { class: "recipe-lineage__empty", "This is the original recipe." }
-                                    }
-                                    ol { class: "recipe-lineage__ancestor-list",
-                                        if !lineage.ancestors.is_empty() {
-                                            for ancestor in lineage.ancestors.clone() {
-                                                li {
-                                                    LineageRecipeNode {
-                                                        node: ancestor,
-                                                        is_current: false,
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        li { class: "recipe-lineage__ancestor-current",
-                                            LineageRecipeNode {
-                                                node: lineage.current.clone(),
-                                                is_current: true,
-                                            }
-                                        }
-                                    }
-                                }
-
-                                div { class: "recipe-lineage__group recipe-lineage__descendants",
-                                    h3 { "Descendants" }
-                                    if lineage.descendants.is_empty() {
-                                        p { class: "recipe-lineage__empty", "No published forks yet." }
-                                    } else {
-                                        ul { class: "recipe-lineage__descendant-list",
-                                            for descendant in lineage.descendants.clone() {
-                                                LineageDescendant { branch: descendant, depth: 1 }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            if lineage.node_limit_reached {
-                                p {
-                                    class: "recipe-lineage__limit-notice",
-                                    role: "status",
-                                    "This lineage is too large to display in full. Showing the first branches only."
-                                }
-                            }
-                        }
-                    }
+                    ForkLineage { key: "{id}", lineage: lineage.clone() }
                 }
             }
 

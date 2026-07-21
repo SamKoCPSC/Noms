@@ -604,6 +604,11 @@ pub async fn get_fork_attribution(
 /// Load the current recipe's ancestors and a bounded descendant tree.
 /// Anonymous viewers are supported; privacy filtering is enforced in the
 /// database layer for every returned node.
+#[cfg(feature = "server")]
+fn normalize_lineage_descendant_depth(descendant_depth: Option<i32>) -> i32 {
+    descendant_depth.unwrap_or(2).clamp(1, 8)
+}
+
 #[server]
 pub async fn get_recipe_lineage(
     recipe_id: String,
@@ -612,7 +617,7 @@ pub async fn get_recipe_lineage(
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
-    let descendant_depth = descendant_depth.unwrap_or(2).clamp(1, 6);
+    let descendant_depth = normalize_lineage_descendant_depth(descendant_depth);
 
     crate::db::get_recipe_lineage(
         &crate::db::get_pool(),
@@ -925,4 +930,17 @@ pub async fn get_recipe_owner_username(recipe_id: String) -> Result<Option<Strin
         .map_err(|e| ServerFnError::new(e.to_string()))?;
 
     Ok(user.map(|u| u.username))
+}
+
+#[cfg(all(test, feature = "server"))]
+mod lineage_depth_tests {
+    use super::normalize_lineage_descendant_depth;
+
+    #[test]
+    fn lineage_endpoint_accepts_up_to_eight_descendant_levels() {
+        assert_eq!(normalize_lineage_descendant_depth(None), 2);
+        assert_eq!(normalize_lineage_descendant_depth(Some(0)), 1);
+        assert_eq!(normalize_lineage_descendant_depth(Some(8)), 8);
+        assert_eq!(normalize_lineage_descendant_depth(Some(9)), 8);
+    }
 }
