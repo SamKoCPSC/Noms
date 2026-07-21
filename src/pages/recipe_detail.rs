@@ -259,6 +259,7 @@ mod layout_tests {
                 recipe_id: None,
                 title: title.to_string(),
                 owner_username: None,
+                image_url: None,
                 forked_from_version_number: None,
                 fork_message: None,
                 is_deleted: false,
@@ -314,6 +315,20 @@ mod layout_tests {
         assert!(detail_page.contains(&expanded_state));
         assert!(detail_page.contains("VersionComparisonPanel"));
         assert!(detail_page.contains(&comparison_api));
+    }
+
+    #[test]
+    fn lineage_nodes_render_recipe_thumbnails_with_a_placeholder_fallback() {
+        let source = include_str!("recipe_detail.rs");
+        let component_marker = ["fn LineageRecipe", "Node("].concat();
+        let component = source
+            .split(&component_marker)
+            .nth(1)
+            .expect("lineage recipe node component");
+
+        assert!(component.contains("node.image_url"));
+        assert!(component.contains("recipe-lineage__thumbnail"));
+        assert!(component.contains("recipe-lineage__thumbnail-placeholder"));
     }
 
     #[test]
@@ -1150,21 +1165,37 @@ fn LineageRecipeNode(node: RecipeLineageNode, is_current: bool) -> Element {
     let recipe_id = node.recipe_id;
     let linked_node_class = format!("{node_class} recipe-lineage__node--linked");
     let node_content = rsx! {
-        div { class: "recipe-lineage__node-heading",
-            strong { class: "recipe-lineage__node-title", "{node.title}" }
-            if let Some(status) = status {
-                span { class: "recipe-lineage__status", "{status}" }
+        if let Some(image_url) = &node.image_url {
+            img {
+                class: "recipe-lineage__thumbnail",
+                src: image_url.clone(),
+                alt: "",
+                loading: "lazy",
+            }
+        } else {
+            div {
+                class: "recipe-lineage__thumbnail recipe-lineage__thumbnail-placeholder",
+                aria_hidden: "true",
+                "🍽"
             }
         }
-        if let Some(username) = &node.owner_username {
-            span { class: "recipe-lineage__owner", "@{username}" }
-        }
-        if let Some(version_number) = node.forked_from_version_number {
-            span { class: "recipe-lineage__fork-point", "Forked from v{version_number}" }
-        }
-        if let Some(message) = &node.fork_message {
-            if !message.trim().is_empty() {
-                p { class: "recipe-lineage__message", "{message}" }
+        div { class: "recipe-lineage__node-content",
+            div { class: "recipe-lineage__node-heading",
+                strong { class: "recipe-lineage__node-title", "{node.title}" }
+                if let Some(status) = status {
+                    span { class: "recipe-lineage__status", "{status}" }
+                }
+            }
+            if let Some(username) = &node.owner_username {
+                span { class: "recipe-lineage__owner", "@{username}" }
+            }
+            if let Some(version_number) = node.forked_from_version_number {
+                span { class: "recipe-lineage__fork-point", "Forked from v{version_number}" }
+            }
+            if let Some(message) = &node.fork_message {
+                if !message.trim().is_empty() {
+                    p { class: "recipe-lineage__message", "{message}" }
+                }
             }
         }
     };

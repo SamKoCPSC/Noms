@@ -367,6 +367,8 @@ pub struct RecipeLineageNode {
     pub recipe_id: Option<Uuid>,
     pub title: String,
     pub owner_username: Option<String>,
+    /// First recipe thumbnail, present only when the live recipe is accessible.
+    pub image_url: Option<String>,
     pub forked_from_version_number: Option<i32>,
     pub fork_message: Option<String>,
     pub is_deleted: bool,

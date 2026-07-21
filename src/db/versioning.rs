@@ -89,6 +89,7 @@ struct LiveLineageNode {
     title: String,
     visibility: String,
     owner_username: String,
+    image_url: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -543,7 +544,10 @@ async fn publish_new_draft(
         let source = if let Some(source_recipe_id) = draft.forked_from_recipe_id {
             sqlx::query_as::<_, LiveLineageNode>(
                 "SELECT recipes.id, recipes.user_id, recipes.title, recipes.visibility, \
-                     users.username AS owner_username \
+                     users.username AS owner_username, \
+                     COALESCE(recipes.images -> 0 ->> 'thumb_url', \
+                              recipes.images -> 0 ->> 'url', \
+                              recipes.images ->> 0) AS image_url \
                  FROM recipes JOIN users ON users.id = recipes.user_id \
                  WHERE recipes.id = $1",
             )
@@ -840,7 +844,7 @@ fn lineage_node_from_snapshot(
     let live_node = snapshot
         .recipe_key
         .and_then(|recipe_key| live_nodes.get(&recipe_key));
-    let (is_accessible, is_deleted, recipe_id, title, owner_username) =
+    let (is_accessible, is_deleted, recipe_id, title, owner_username, image_url) =
         if let Some(live_node) = live_node {
             let is_owner = viewer_id == Some(live_node.user_id);
             let is_accessible = is_owner
@@ -856,6 +860,7 @@ fn lineage_node_from_snapshot(
                     "Private recipe".to_string()
                 },
                 is_accessible.then(|| live_node.owner_username.clone()),
+                is_accessible.then(|| live_node.image_url.clone()).flatten(),
             )
         } else {
             let is_owner = snapshot.owner_id.is_some() && snapshot.owner_id == viewer_id;
@@ -872,6 +877,7 @@ fn lineage_node_from_snapshot(
                 is_accessible
                     .then(|| snapshot.owner_username.clone())
                     .flatten(),
+                None,
             )
         };
 
@@ -879,6 +885,7 @@ fn lineage_node_from_snapshot(
         recipe_id,
         title,
         owner_username,
+        image_url,
         forked_from_version_number: is_accessible
             .then_some(snapshot.forked_from_version_number)
             .flatten(),
@@ -952,7 +959,10 @@ pub async fn get_recipe_lineage(
 ) -> Result<crate::types::RecipeLineageView, DbError> {
     let current_live = sqlx::query_as::<_, LiveLineageNode>(
         "SELECT recipes.id, recipes.user_id, recipes.title, recipes.visibility, \
-             users.username AS owner_username \
+             users.username AS owner_username, \
+             COALESCE(recipes.images -> 0 ->> 'thumb_url', \
+                      recipes.images -> 0 ->> 'url', \
+                      recipes.images ->> 0) AS image_url \
          FROM recipes JOIN users ON users.id = recipes.user_id \
          WHERE recipes.id = $1",
     )
@@ -1035,7 +1045,10 @@ pub async fn get_recipe_lineage(
     let recipe_keys: Vec<Uuid> = recipe_keys.into_iter().collect();
     let live_nodes = sqlx::query_as::<_, LiveLineageNode>(
         "SELECT recipes.id, recipes.user_id, recipes.title, recipes.visibility, \
-             users.username AS owner_username \
+             users.username AS owner_username, \
+             COALESCE(recipes.images -> 0 ->> 'thumb_url', \
+                      recipes.images -> 0 ->> 'url', \
+                      recipes.images ->> 0) AS image_url \
          FROM recipes JOIN users ON users.id = recipes.user_id \
          WHERE recipes.id = ANY($1)",
     )
@@ -1571,7 +1584,6 @@ mod tests {
         )
         .await
         .unwrap();
-
         let branch_draft = create_fork_draft(&pool, source.id, fork_owner.id, Some("Less sugar"))
             .await
             .unwrap();
@@ -1693,6 +1705,15 @@ mod tests {
         )
         .await
         .unwrap();
+        sqlx::query(
+            "UPDATE recipes SET images = \
+             '[{\"url\":\"https://images.test/source-full.webp\",\"thumb_url\":\"https://images.test/source-thumb.webp\",\"edits\":[]}]'::jsonb \
+             WHERE id = $1",
+        )
+        .bind(source.id)
+        .execute(&pool)
+        .await
+        .unwrap();
         let private_draft = create_fork_draft(&pool, source.id, fork_owner.id, None)
             .await
             .unwrap();
@@ -1705,20 +1726,38 @@ mod tests {
         )
         .await
         .unwrap();
-        publish_recipe_draft(&pool, private_draft.id, fork_owner.id, None)
+        let private_recipe = publish_recipe_draft(&pool, private_draft.id, fork_owner.id, None)
             .await
             .unwrap();
+        sqlx::query(
+            "UPDATE recipes SET images = \
+             '[{\"url\":\"https://images.test/private-full.webp\",\"edits\":[]}]'::jsonb \
+             WHERE id = $1",
+        )
+        .bind(private_recipe.id)
+        .execute(&pool)
+        .await
+        .unwrap();
 
         let public_view = get_recipe_lineage(&pool, source.id, None, 2).await.unwrap();
+        assert_eq!(
+            public_view.current.image_url.as_deref(),
+            Some("https://images.test/source-thumb.webp")
+        );
         assert!(public_view.descendants[0].node.is_redacted);
         assert_eq!(public_view.descendants[0].node.title, "Private recipe");
         assert_eq!(public_view.descendants[0].node.recipe_id, None);
+        assert_eq!(public_view.descendants[0].node.image_url, None);
 
         let owner_view = get_recipe_lineage(&pool, source.id, Some(fork_owner.id), 2)
             .await
             .unwrap();
         assert!(!owner_view.descendants[0].node.is_redacted);
         assert_eq!(owner_view.descendants[0].node.title, "Secret branch");
+        assert_eq!(
+            owner_view.descendants[0].node.image_url.as_deref(),
+            Some("https://images.test/private-full.webp")
+        );
     }
 
     #[tokio::test]

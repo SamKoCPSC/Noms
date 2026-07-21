@@ -2356,14 +2356,38 @@ a:hover {
     position: relative;
     z-index: 2;
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: center;
+    gap: 9px;
     min-width: 0;
     padding: 8px 11px;
     border: 1px solid var(--shadow-light);
     border-radius: var(--radius-md);
     background: var(--surface);
     box-shadow: 1px 2px 4px var(--shadow-dark), -1px -1px 3px var(--shadow-light);
+}
+
+.recipe-lineage__thumbnail {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+    background: var(--background);
+}
+
+.recipe-lineage__thumbnail-placeholder {
+    display: grid;
+    place-items: center;
+    color: var(--text-tertiary);
+    font-size: 18px;
+}
+
+.recipe-lineage__node-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
 }
 
 .recipe-lineage__current {
