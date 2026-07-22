@@ -5,7 +5,7 @@
 #![allow(dead_code)]
 
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -394,6 +394,305 @@ pub struct RecipeLineageView {
     pub node_limit_reached: bool,
 }
 
+/// Stable identity for one immutable recipe snapshot in a version graph.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct VersionGraphNodeId {
+    pub recipe_id: Uuid,
+    pub version_number: i32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum VersionGraphEdgeKind {
+    Version,
+    Fork,
+}
+
+/// Directed relationship between two normalized snapshot nodes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct VersionGraphEdge {
+    source: VersionGraphNodeId,
+    target: VersionGraphNodeId,
+    kind: VersionGraphEdgeKind,
+}
+
+impl VersionGraphEdge {
+    /// Connect two consecutive snapshots belonging to the same recipe.
+    pub fn version(source: VersionGraphNodeId, target: VersionGraphNodeId) -> Option<Self> {
+        let expected_target_version = source.version_number.checked_add(1)?;
+        (source.version_number > 0
+            && source.recipe_id == target.recipe_id
+            && target.version_number == expected_target_version)
+            .then_some(Self {
+                source,
+                target,
+                kind: VersionGraphEdgeKind::Version,
+            })
+    }
+
+    /// Connect the recorded source snapshot to the first snapshot of a fork.
+    pub fn fork(
+        source_recipe_id: Uuid,
+        forked_version_number: i32,
+        forked_recipe_id: Uuid,
+    ) -> Option<Self> {
+        (forked_version_number > 0 && source_recipe_id != forked_recipe_id).then_some(Self {
+            source: VersionGraphNodeId {
+                recipe_id: source_recipe_id,
+                version_number: forked_version_number,
+            },
+            target: VersionGraphNodeId {
+                recipe_id: forked_recipe_id,
+                version_number: 1,
+            },
+            kind: VersionGraphEdgeKind::Fork,
+        })
+    }
+
+    pub fn source(&self) -> VersionGraphNodeId {
+        self.source
+    }
+
+    pub fn target(&self) -> VersionGraphNodeId {
+        self.target
+    }
+
+    pub fn kind(&self) -> VersionGraphEdgeKind {
+        self.kind
+    }
+}
+
+#[derive(Deserialize)]
+struct VersionGraphEdgeWire {
+    source: VersionGraphNodeId,
+    target: VersionGraphNodeId,
+    kind: VersionGraphEdgeKind,
+}
+
+impl<'de> Deserialize<'de> for VersionGraphEdge {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let wire = VersionGraphEdgeWire::deserialize(deserializer)?;
+        let edge = match wire.kind {
+            VersionGraphEdgeKind::Version => Self::version(wire.source, wire.target),
+            VersionGraphEdgeKind::Fork if wire.target.version_number == 1 => Self::fork(
+                wire.source.recipe_id,
+                wire.source.version_number,
+                wire.target.recipe_id,
+            ),
+            VersionGraphEdgeKind::Fork => None,
+        };
+
+        edge.filter(|edge| edge.source == wire.source && edge.target == wire.target)
+            .ok_or_else(|| D::Error::custom("invalid version graph edge"))
+    }
+}
+
+/// Non-sensitive state retained even when graph node content is redacted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VersionGraphNodeState {
+    pub is_selected_recipe: bool,
+    pub is_current_version: bool,
+    pub is_deleted: bool,
+}
+
+/// Snapshot metadata available to the current viewer.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VersionGraphNodeContent {
+    pub title: String,
+    pub owner_username: Option<String>,
+    /// Thumbnail prepared for a 16:9 graph card.
+    pub thumbnail_url: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub change_summary: String,
+}
+
+/// Display metadata for one immutable recipe snapshot.
+#[derive(Debug, Clone, PartialEq)]
+pub struct VersionGraphNode {
+    id: VersionGraphNodeId,
+    title: Option<String>,
+    owner_username: Option<String>,
+    /// Thumbnail prepared for a 16:9 graph card.
+    thumbnail_url: Option<String>,
+    created_at: Option<DateTime<Utc>>,
+    change_summary: Option<String>,
+    is_selected_recipe: bool,
+    is_current_version: bool,
+    is_deleted: bool,
+    is_redacted: bool,
+}
+
+impl VersionGraphNode {
+    pub fn visible(
+        id: VersionGraphNodeId,
+        content: VersionGraphNodeContent,
+        state: VersionGraphNodeState,
+    ) -> Self {
+        Self {
+            id,
+            title: Some(content.title),
+            owner_username: content.owner_username,
+            thumbnail_url: content.thumbnail_url,
+            created_at: Some(content.created_at),
+            change_summary: Some(content.change_summary),
+            is_selected_recipe: state.is_selected_recipe,
+            is_current_version: state.is_current_version,
+            is_deleted: state.is_deleted,
+            is_redacted: false,
+        }
+    }
+
+    /// Preserve graph topology and non-sensitive state without exposing content.
+    pub fn redacted(id: VersionGraphNodeId, state: VersionGraphNodeState) -> Self {
+        Self {
+            id,
+            title: None,
+            owner_username: None,
+            thumbnail_url: None,
+            created_at: None,
+            change_summary: None,
+            is_selected_recipe: state.is_selected_recipe,
+            is_current_version: state.is_current_version,
+            is_deleted: state.is_deleted,
+            is_redacted: true,
+        }
+    }
+
+    pub fn id(&self) -> VersionGraphNodeId {
+        self.id
+    }
+
+    pub fn title(&self) -> Option<&str> {
+        self.title.as_deref()
+    }
+
+    pub fn owner_username(&self) -> Option<&str> {
+        self.owner_username.as_deref()
+    }
+
+    pub fn thumbnail_url(&self) -> Option<&str> {
+        self.thumbnail_url.as_deref()
+    }
+
+    pub fn created_at(&self) -> Option<DateTime<Utc>> {
+        self.created_at
+    }
+
+    pub fn change_summary(&self) -> Option<&str> {
+        self.change_summary.as_deref()
+    }
+
+    pub fn is_selected_recipe(&self) -> bool {
+        self.is_selected_recipe
+    }
+
+    pub fn is_current_version(&self) -> bool {
+        self.is_current_version
+    }
+
+    pub fn is_deleted(&self) -> bool {
+        self.is_deleted
+    }
+
+    pub fn is_redacted(&self) -> bool {
+        self.is_redacted
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct VersionGraphNodeWire {
+    id: VersionGraphNodeId,
+    title: Option<String>,
+    owner_username: Option<String>,
+    thumbnail_url: Option<String>,
+    created_at: Option<DateTime<Utc>>,
+    change_summary: Option<String>,
+    is_selected_recipe: bool,
+    is_current_version: bool,
+    is_deleted: bool,
+    is_redacted: bool,
+}
+
+impl Serialize for VersionGraphNode {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let redact_content = self.is_redacted;
+        VersionGraphNodeWire {
+            id: self.id,
+            title: (!redact_content).then(|| self.title.clone()).flatten(),
+            owner_username: (!redact_content)
+                .then(|| self.owner_username.clone())
+                .flatten(),
+            thumbnail_url: (!redact_content)
+                .then(|| self.thumbnail_url.clone())
+                .flatten(),
+            created_at: (!redact_content).then_some(self.created_at).flatten(),
+            change_summary: (!redact_content)
+                .then(|| self.change_summary.clone())
+                .flatten(),
+            is_selected_recipe: self.is_selected_recipe,
+            is_current_version: self.is_current_version,
+            is_deleted: self.is_deleted,
+            is_redacted: self.is_redacted,
+        }
+        .serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for VersionGraphNode {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let wire = VersionGraphNodeWire::deserialize(deserializer)?;
+        if wire.is_redacted {
+            return Ok(Self::redacted(
+                wire.id,
+                VersionGraphNodeState {
+                    is_selected_recipe: wire.is_selected_recipe,
+                    is_current_version: wire.is_current_version,
+                    is_deleted: wire.is_deleted,
+                },
+            ));
+        }
+
+        Ok(Self {
+            id: wire.id,
+            title: wire.title,
+            owner_username: wire.owner_username,
+            thumbnail_url: wire.thumbnail_url,
+            created_at: wire.created_at,
+            change_summary: wire.change_summary,
+            is_selected_recipe: wire.is_selected_recipe,
+            is_current_version: wire.is_current_version,
+            is_deleted: wire.is_deleted,
+            is_redacted: false,
+        })
+    }
+}
+
+/// Server limits that prevented the complete connected graph from being returned.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VersionGraphTruncation {
+    pub is_truncated: bool,
+    pub node_limit_reached: bool,
+    pub edge_limit_reached: bool,
+    pub depth_limit_reached: bool,
+}
+
+/// Normalized graph payload. Relationships refer to nodes by stable identity.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct VersionGraph {
+    pub nodes: Vec<VersionGraphNode>,
+    pub edges: Vec<VersionGraphEdge>,
+    pub truncation: VersionGraphTruncation,
+}
+
 /// Public user profile with recipe count.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UserProfile {
@@ -408,6 +707,157 @@ pub struct UserProfile {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::TimeZone;
+
+    #[test]
+    fn version_graph_contract_round_trips_stable_nodes_and_typed_edges() {
+        let source_recipe_id = Uuid::new_v4();
+        let forked_recipe_id = Uuid::new_v4();
+        let source_node_id = VersionGraphNodeId {
+            recipe_id: source_recipe_id,
+            version_number: 2,
+        };
+        let graph = VersionGraph {
+            nodes: vec![VersionGraphNode::visible(
+                source_node_id,
+                VersionGraphNodeContent {
+                    title: "Tomato soup".to_string(),
+                    owner_username: Some("cook".to_string()),
+                    thumbnail_url: Some("https://example.com/soup.webp".to_string()),
+                    created_at: Utc.with_ymd_and_hms(2026, 7, 21, 12, 0, 0).unwrap(),
+                    change_summary: "Updated instructions".to_string(),
+                },
+                VersionGraphNodeState {
+                    is_selected_recipe: true,
+                    is_current_version: true,
+                    is_deleted: false,
+                },
+            )],
+            edges: vec![VersionGraphEdge::fork(source_recipe_id, 2, forked_recipe_id).unwrap()],
+            truncation: VersionGraphTruncation {
+                is_truncated: true,
+                node_limit_reached: true,
+                edge_limit_reached: false,
+                depth_limit_reached: false,
+            },
+        };
+
+        let serialized = serde_json::to_value(&graph).unwrap();
+        let restored: VersionGraph = serde_json::from_value(serialized.clone()).unwrap();
+
+        assert_eq!(restored, graph);
+        assert_eq!(serialized["edges"][0]["kind"], "fork");
+        assert_eq!(restored.nodes[0].id, source_node_id);
+        assert!(restored.truncation.is_truncated);
+        assert!(restored.truncation.node_limit_reached);
+    }
+
+    #[test]
+    fn fork_edges_connect_the_recorded_source_snapshot_to_fork_version_one() {
+        let source_recipe_id = Uuid::new_v4();
+        let forked_recipe_id = Uuid::new_v4();
+
+        let edge = VersionGraphEdge::fork(source_recipe_id, 4, forked_recipe_id).unwrap();
+
+        assert_eq!(edge.kind, VersionGraphEdgeKind::Fork);
+        assert_eq!(edge.source.recipe_id, source_recipe_id);
+        assert_eq!(edge.source.version_number, 4);
+        assert_eq!(edge.target.recipe_id, forked_recipe_id);
+        assert_eq!(edge.target.version_number, 1);
+        assert!(VersionGraphEdge::fork(source_recipe_id, 0, forked_recipe_id).is_none());
+        assert!(VersionGraphEdge::fork(source_recipe_id, 4, source_recipe_id).is_none());
+    }
+
+    #[test]
+    fn version_edges_only_connect_consecutive_snapshots_of_one_recipe() {
+        let recipe_id = Uuid::new_v4();
+        let first = VersionGraphNodeId {
+            recipe_id,
+            version_number: 2,
+        };
+        let second = VersionGraphNodeId {
+            recipe_id,
+            version_number: 3,
+        };
+
+        assert_eq!(
+            VersionGraphEdge::version(first, second).unwrap().kind,
+            VersionGraphEdgeKind::Version
+        );
+        assert!(VersionGraphEdge::version(second, first).is_none());
+        assert!(VersionGraphEdge::version(
+            first,
+            VersionGraphNodeId {
+                recipe_id: Uuid::new_v4(),
+                version_number: 3,
+            },
+        )
+        .is_none());
+
+        let invalid_serialized_edge = serde_json::json!({
+            "source": first,
+            "target": {
+                "recipe_id": recipe_id,
+                "version_number": 5,
+            },
+            "kind": "version",
+        });
+        assert!(serde_json::from_value::<VersionGraphEdge>(invalid_serialized_edge).is_err());
+    }
+
+    #[test]
+    fn redacted_version_graph_nodes_expose_only_topology_and_state() {
+        let id = VersionGraphNodeId {
+            recipe_id: Uuid::new_v4(),
+            version_number: 3,
+        };
+
+        let node = VersionGraphNode::redacted(
+            id,
+            VersionGraphNodeState {
+                is_selected_recipe: false,
+                is_current_version: false,
+                is_deleted: true,
+            },
+        );
+
+        assert_eq!(node.id, id);
+        assert!(node.title.is_none());
+        assert!(node.owner_username.is_none());
+        assert!(node.thumbnail_url.is_none());
+        assert!(node.created_at.is_none());
+        assert!(node.change_summary.is_none());
+        assert!(node.is_deleted);
+        assert!(node.is_redacted);
+
+        let serialized = serde_json::to_value(node).unwrap();
+        assert!(serialized["title"].is_null());
+        assert!(serialized["owner_username"].is_null());
+        assert!(serialized["thumbnail_url"].is_null());
+        assert!(serialized["created_at"].is_null());
+        assert!(serialized["change_summary"].is_null());
+
+        let inconsistent_redacted_node = serde_json::json!({
+            "id": id,
+            "title": "Private title",
+            "owner_username": "private-owner",
+            "thumbnail_url": "https://example.com/private.webp",
+            "created_at": "2026-07-21T12:00:00Z",
+            "change_summary": "Private changes",
+            "is_selected_recipe": false,
+            "is_current_version": false,
+            "is_deleted": false,
+            "is_redacted": true,
+        });
+        let sanitized: VersionGraphNode =
+            serde_json::from_value(inconsistent_redacted_node).unwrap();
+        let reserialized = serde_json::to_value(sanitized).unwrap();
+        assert!(reserialized["title"].is_null());
+        assert!(reserialized["owner_username"].is_null());
+        assert!(reserialized["thumbnail_url"].is_null());
+        assert!(reserialized["created_at"].is_null());
+        assert!(reserialized["change_summary"].is_null());
+    }
 
     #[test]
     fn rectangular_and_elliptical_edit_templates_are_explicit() {
