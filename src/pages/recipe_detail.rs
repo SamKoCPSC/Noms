@@ -489,6 +489,14 @@ mod layout_tests {
     }
 
     #[test]
+    fn recipe_details_link_to_the_dedicated_version_graph() {
+        let source = include_str!("recipe_detail.rs");
+
+        assert!(source.contains("View version graph"));
+        assert!(source.contains("Route::RecipeVersionGraph"));
+    }
+
+    #[test]
     fn descendant_lineage_stops_after_eight_visible_levels() {
         assert_eq!(LINEAGE_DESCENDANT_DISPLAY_DEPTH, 8);
 
@@ -1893,6 +1901,11 @@ pub fn RecipeDetail(id: String) -> Element {
                             div {
                                 display: "flex",
                                 gap: "var(--space-sm)",
+                                Link {
+                                    to: crate::Route::RecipeVersionGraph { id: recipe.id.to_string() },
+                                    class: "btn btn-secondary touch-target",
+                                    "View version graph"
+                                }
                                 Button {
                                     variant: ButtonVariant::Secondary,
                                     disabled: is_forking(),

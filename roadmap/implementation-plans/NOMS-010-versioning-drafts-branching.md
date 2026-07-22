@@ -419,6 +419,136 @@ Show `Forked from {original title}` on the fork draft and published recipe. Link
 
 ---
 
+## Checkpoint 8: Dedicated recipe version graph
+
+**Files:** `src/main.rs`, `src/types.rs`, `src/api/recipe.rs`, `src/db/versioning.rs`, `src/pages/recipe_detail.rs`, `src/pages/recipe_version_graph.rs` (new), `assets/main.css`
+
+The version graph is a dedicated page, not a replacement for the existing Version history or Fork lineage sections on recipe details. Those existing sections remain the compact, linear views and accessible fallback. The graph presents the connected lineage family as immutable recipe snapshots joined by version and fork edges.
+
+### 8a. Route and page shell
+
+- Add a dedicated route such as `/recipes/:id/version-graph`.
+- Add a "View version graph" action on recipe details.
+- Implement page heading, back navigation, loading, empty, error, and access-denied states.
+- Do not introduce graph traversal or a layout dependency in this slice.
+
+**Verify:**
+
+- The action opens the graph page for the selected recipe.
+- Invalid, inaccessible, loading, and empty states render without panics.
+- Existing recipe-details Version history and Fork lineage behavior is unchanged.
+
+### 8b. Normalized graph data contract
+
+Define client-facing graph types around immutable snapshot identity:
+
+```rust
+struct VersionGraphNodeId {
+    recipe_id: Uuid,
+    version_number: i32,
+}
+
+enum VersionGraphEdgeKind {
+    Version,
+    Fork,
+}
+```
+
+- A graph node represents one `(recipe_id, version_number)` snapshot.
+- A version edge connects consecutive snapshots of the same recipe.
+- A fork edge connects `(source_recipe_id, forked_version_number)` to `(forked_recipe_id, 1)`.
+- Include title, owner, 16:9 thumbnail, timestamp, change summary, current-state flags, deletion/redaction state, and truncation metadata as appropriate.
+- Keep the API normalized as node and edge collections rather than nested UI-shaped trees.
+
+**Verify:**
+
+- Serialization round-trips preserve stable node identities and typed edges.
+- Fork edges terminate at the exact recorded source snapshot and fork v1.
+- Redacted nodes expose no private title, owner, image, or snapshot content.
+
+### 8c. Current recipe version chain
+
+- Return only the selected recipe's immutable snapshots initially.
+- Render snapshot cards in chronological order with version connectors.
+- Highlight the live/current snapshot.
+- Use accessible HTML cards with SVG connectors rendered behind them.
+
+**Verify:**
+
+- Every stored version appears once and in the correct order.
+- Snapshot thumbnails and image-less placeholders render at 16:9.
+- Node links open the correct immutable snapshot page.
+
+### 8d. Immediate fork connections
+
+- Add the selected recipe's direct fork parent and direct fork children.
+- Connect every fork edge to its recorded source version rather than the source recipe generally.
+- Preserve deleted or redacted topology with synthetic/redacted cards where policy allows.
+
+**Verify:**
+
+- Fork edges originate from the correct version nodes.
+- Direct parent and child branches remain connected after a recipe is deleted.
+- Private branches do not leak protected metadata.
+
+### 8e. Connected lineage family
+
+- Traverse backward to the lineage root and forward through all forks in the connected component.
+- Include siblings, cousins, and deeper branches even when they are not immediate ancestors or descendants of the selected recipe.
+- Load recipe versions in batches for all discovered recipes.
+- Enforce server-side node, edge, depth, and traversal limits.
+
+**Verify:**
+
+- A recipe's sibling and cousin branches appear when connected through a shared lineage.
+- Cycles or malformed relationships cannot cause an infinite traversal.
+- Limit and truncation metadata accurately identify omitted graph regions.
+
+### 8f. Layered graph layout and navigation
+
+- Use a directed acyclic graph layout with time/version progression flowing left to right and forks branching vertically.
+- Render SVG edge paths separately from accessible HTML snapshot cards.
+- Add pan, zoom, fit-to-screen, and center-on-current controls.
+- Visually distinguish version edges from fork edges.
+- Provide a simplified list/outline fallback when a full canvas is unsuitable or unavailable.
+
+**Verify:**
+
+- Edges terminate at the intended cards without crossing card content.
+- Desktop and narrow viewports remain navigable without clipping controls.
+- Keyboard users can reach every visible node and graph control.
+
+### 8g. Progressive graph expansion
+
+- Return a bounded initial graph rather than the entire connected component.
+- Place expansion controls at every truncated graph frontier.
+- Expand a predictable bounded batch from the selected frontier without discarding already loaded nodes.
+- Allow branches or long version chains to be collapsed again.
+
+**Verify:**
+
+- Each expansion adds no more than the configured node/edge batch.
+- Expanding one frontier does not unexpectedly expand or collapse another.
+- Repeated expansion cannot duplicate nodes or edges.
+
+### 8h. Snapshot interactions
+
+- Open a node's immutable snapshot.
+- Compare a selected node with the current snapshot.
+- Select any two visible snapshots for directional comparison.
+- Navigate from a snapshot node to its live recipe when accessible.
+- Keep selection, loading, error, and disabled states explicit.
+
+**Verify:**
+
+- Comparison direction matches the user's node-selection order.
+- Cross-recipe snapshot comparisons handle schema-compatible snapshots safely.
+- Existing restore and comparison actions on recipe details remain unchanged.
+
+**Risk:** High. Connected-component traversal, privacy filtering, graph-size limits, and layout performance must be validated independently at each sub-checkpoint. Do not begin the next slice until the current slice has focused server tests, layout tests, and browser evidence.
+
+---
+
 ## Testing strategy
 
 - Unit tests for snapshot serialization, snapshot equality, and computed adjacent-version diffs.
