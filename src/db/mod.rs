@@ -1101,7 +1101,12 @@ pub async fn get_collection_recipe_count(
     .map_err(DbError::Query)
 }
 
-/// Reorder all recipe members after verifying the submitted set exactly matches membership.
+/// Reorder visible recipe members and retain inaccessible members after them.
+///
+/// A recipe saved while public or unlisted can later become private. Such a membership must stay
+/// hidden without making it impossible for the collection owner to reorder the recipes they can
+/// still see. The submitted IDs must exactly match the currently visible membership; hidden rows
+/// retain their relative order after the visible rows and are never returned to the caller.
 pub async fn reorder_collection_recipes(
     pool: &PgPool,
     collection_id: Uuid,
@@ -1119,19 +1124,37 @@ pub async fn reorder_collection_recipes(
     if collection_exists.is_none() {
         return Err(DbError::CollectionNotFound(collection_id));
     }
-    let current_ids: Vec<Uuid> =
-        sqlx::query_scalar("SELECT recipe_id FROM collection_recipes WHERE collection_id = $1")
-            .bind(collection_id)
-            .fetch_all(&mut *tx)
-            .await
-            .map_err(DbError::Query)?;
-    if current_ids.len() != ordered_recipe_ids.len()
-        || current_ids.iter().collect::<HashSet<_>>()
+    let membership_rows = sqlx::query(
+        "SELECT cr.recipe_id,
+                (r.user_id = $2 OR r.visibility IN ('public', 'unlisted')) AS is_visible
+         FROM collection_recipes cr
+         INNER JOIN recipes r ON r.id = cr.recipe_id
+         WHERE cr.collection_id = $1
+         ORDER BY cr.sort_order, cr.created_at, cr.recipe_id
+         FOR UPDATE OF cr",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    let mut visible_ids = Vec::new();
+    let mut hidden_ids = Vec::new();
+    for row in membership_rows {
+        let recipe_id = row.try_get("recipe_id").map_err(DbError::Query)?;
+        if row.try_get("is_visible").map_err(DbError::Query)? {
+            visible_ids.push(recipe_id);
+        } else {
+            hidden_ids.push(recipe_id);
+        }
+    }
+    if visible_ids.len() != ordered_recipe_ids.len()
+        || visible_ids.iter().collect::<HashSet<_>>()
             != ordered_recipe_ids.iter().collect::<HashSet<_>>()
     {
         return Err(DbError::InvalidCollectionOrder);
     }
-    for (sort_order, recipe_id) in ordered_recipe_ids.iter().enumerate() {
+    for (sort_order, recipe_id) in ordered_recipe_ids.iter().chain(&hidden_ids).enumerate() {
         sqlx::query(
             "UPDATE collection_recipes SET sort_order = $3
              WHERE collection_id = $1 AND recipe_id = $2",
