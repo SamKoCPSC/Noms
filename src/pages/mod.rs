@@ -1,5 +1,7 @@
 mod collection_detail;
+mod collection_edit;
 mod collection_list;
+mod collection_new;
 mod dashboard;
 mod draft_save;
 mod explore;
@@ -15,7 +17,9 @@ mod settings;
 mod user_profile;
 
 pub use collection_detail::CollectionDetail;
+pub use collection_edit::CollectionEdit;
 pub use collection_list::CollectionList;
+pub use collection_new::CollectionNew;
 pub use dashboard::Dashboard;
 pub use explore::Explore;
 pub use home::Home;

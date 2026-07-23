@@ -27,19 +27,23 @@ use crate::db;
 fn is_protected_path(path: &str) -> bool {
     matches!(
         path,
-        "/dashboard" | "/recipes/new" | "/collections" | "/settings/profile" | "/settings/accounts"
+        "/dashboard"
+            | "/recipes/new"
+            | "/collections"
+            | "/collections/new"
+            | "/settings/profile"
+            | "/settings/accounts"
     ) || is_recipe_route(path)
-        || is_numeric_id_route(path, "/collections/")
+        || is_collection_route(path)
 }
 
-/// Check if a path is a numeric-id parameterized route (e.g. `/collections/42`).
-fn is_numeric_id_route(path: &str, prefix: &str) -> bool {
-    if !path.starts_with(prefix) {
+fn is_collection_route(path: &str) -> bool {
+    if !path.starts_with("/collections/") {
         return false;
     }
-    let id_part = &path[prefix.len()..];
-    // Must be exactly one segment (no trailing slash or extra path)
-    !id_part.contains('/') && id_part.parse::<i32>().is_ok()
+    let segments = path["/collections/".len()..].split('/').collect::<Vec<_>>();
+    matches!(segments.as_slice(), [id] if is_valid_uuid_string(id))
+        || matches!(segments.as_slice(), [id, "edit"] if is_valid_uuid_string(id))
 }
 
 /// Check if path is a recipe route: `/recipes/{uuid}` or `/recipes/{uuid}/edit`.
@@ -181,4 +185,30 @@ fn redirect_to(location: &str) -> Response<Body> {
             .expect("redirect location must be a valid HeaderValue"),
     );
     (StatusCode::FOUND, headers, Body::empty()).into_response()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_protected_path;
+
+    const COLLECTION_ID: &str = "550e8400-e29b-41d4-a716-446655440000";
+
+    #[test]
+    fn collection_crud_routes_require_authentication() {
+        assert!(is_protected_path("/collections"));
+        assert!(is_protected_path("/collections/new"));
+        assert!(is_protected_path(&format!("/collections/{COLLECTION_ID}")));
+        assert!(is_protected_path(&format!(
+            "/collections/{COLLECTION_ID}/edit"
+        )));
+    }
+
+    #[test]
+    fn malformed_collection_routes_are_not_treated_as_crud_routes() {
+        assert!(!is_protected_path("/collections/not-a-uuid"));
+        assert!(!is_protected_path(&format!(
+            "/collections/{COLLECTION_ID}/extra"
+        )));
+        assert!(!is_protected_path("/collections/42"));
+    }
 }

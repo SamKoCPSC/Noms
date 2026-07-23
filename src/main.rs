@@ -25,9 +25,9 @@ use auth::context::build_context_from_fullstack;
 use auth::context::AuthContext;
 use components::{AppLayout, ErrorFallback};
 use pages::{
-    CollectionDetail, CollectionList, Dashboard, Explore, Home, Login, NotFound, RecipeDetail,
-    RecipeDraftEdit, RecipeEdit, RecipeNew, RecipeVersionDetail, RecipeVersionGraph,
-    SettingsAccounts, SettingsProfile, UserProfile,
+    CollectionDetail, CollectionEdit, CollectionList, CollectionNew, Dashboard, Explore, Home,
+    Login, NotFound, RecipeDetail, RecipeDraftEdit, RecipeEdit, RecipeNew, RecipeVersionDetail,
+    RecipeVersionGraph, SettingsAccounts, SettingsProfile, UserProfile,
 };
 
 /// Application routes.
@@ -55,8 +55,12 @@ pub enum Route {
         RecipeDraftEdit { id: String },
         #[route("/collections")]
         CollectionList {},
+        #[route("/collections/new")]
+        CollectionNew {},
         #[route("/collections/:id")]
-        CollectionDetail { id: i32 },
+        CollectionDetail { id: String },
+        #[route("/collections/:id/edit")]
+        CollectionEdit { id: String },
         #[route("/explore")]
         Explore {},
         #[route("/u/:username")]
