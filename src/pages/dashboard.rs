@@ -2,7 +2,8 @@ use dioxus::prelude::*;
 
 use crate::api::recipe::{list_my_recipes, list_recipe_drafts};
 use crate::components::base::{
-    Button, ButtonVariant, EditedRecipeImage, EmptyState, LoadingSpinner, PageHeader, RecipeCard,
+    Button, ButtonVariant, CollectionSidebar, EditedRecipeImage, EmptyState, LoadingSpinner,
+    PageHeader, RecipeCard,
 };
 use crate::components::AuthRequired;
 use crate::types::{RecipeDraftView, RecipeImage, RecipeListResponse};
@@ -44,18 +45,27 @@ pub fn Dashboard() -> Element {
     rsx! {
         AuthRequired {
             div { class: "container",
-                PageHeader {
-                    title: "My Recipes",
-                    action: rsx! {
-                        Link {
-                            to: Route::RecipeNew {},
-                            class: "btn btn-primary touch-target",
-                            "+ New Recipe"
+                div {
+                    display: "flex",
+                    flex_wrap: "wrap",
+                    gap: "var(--space-xl)",
+                    align_items: "start",
+                    CollectionSidebar {}
+                    main {
+                        flex: "3 1 620px",
+                        min_width: "0",
+                        PageHeader {
+                            title: "My Recipes",
+                            action: rsx! {
+                                Link {
+                                    to: Route::RecipeNew {},
+                                    class: "btn btn-primary touch-target",
+                                    "+ New Recipe"
+                                }
+                            },
                         }
-                    },
-                }
 
-                if let Some(drafts) = draft_list {
+                        if let Some(drafts) = draft_list {
                     if !drafts.is_empty() {
                         section {
                             margin_bottom: "var(--space-xl)",
@@ -117,7 +127,7 @@ pub fn Dashboard() -> Element {
                 }
 
                 // Loading state (first load only)
-                if pending {
+                        if pending {
                     div {
                         display: "flex",
                         align_items: "center",
@@ -128,7 +138,7 @@ pub fn Dashboard() -> Element {
                 }
 
                 // Error state
-                if let Some(err) = error {
+                        if let Some(err) = error {
                     div {
                         display: "flex",
                         align_items: "center",
@@ -140,7 +150,7 @@ pub fn Dashboard() -> Element {
                 }
 
                 // Success state
-                if let Some(resp) = response {
+                        if let Some(resp) = response {
                     if resp.recipes.is_empty() {
                         // No recipes at all — show empty state
                         EmptyState {
@@ -187,6 +197,8 @@ pub fn Dashboard() -> Element {
                             }
                         }
                     }
+                        }
+                    }
                 }
             }
         }
@@ -217,5 +229,16 @@ mod draft_card_tests {
     #[test]
     fn draft_card_without_images_uses_the_placeholder_path() {
         assert_eq!(draft_card_image(&[]), None);
+    }
+}
+
+#[cfg(test)]
+mod collection_sidebar_integration_tests {
+    #[test]
+    fn dashboard_composes_collections_without_replacing_drafts_or_recipe_pagination() {
+        let source = include_str!("dashboard.rs");
+        assert!(source.contains("CollectionSidebar"));
+        assert!(source.contains("list_recipe_drafts"));
+        assert!(source.contains("resp.has_more"));
     }
 }

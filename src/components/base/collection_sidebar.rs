@@ -1,0 +1,308 @@
+use std::cmp::Ordering;
+use std::collections::{HashMap, HashSet};
+
+use dioxus::prelude::*;
+use uuid::Uuid;
+
+use crate::api::collection::list_my_collections;
+use crate::types::CollectionSummary;
+use crate::Route;
+
+#[derive(Clone, Debug, PartialEq)]
+struct CollectionTreeNode {
+    collection: CollectionSummary,
+    children: Vec<CollectionTreeNode>,
+}
+
+fn compare_collections(left: &CollectionSummary, right: &CollectionSummary) -> Ordering {
+    left.sort_order
+        .cmp(&right.sort_order)
+        .then_with(|| right.updated_at.cmp(&left.updated_at))
+        .then_with(|| left.name.cmp(&right.name))
+        .then_with(|| left.id.cmp(&right.id))
+}
+
+fn collection_toggle_label(name: &str, expanded: bool) -> String {
+    if expanded {
+        format!("Collapse {name}")
+    } else {
+        format!("Expand {name}")
+    }
+}
+
+fn build_children(
+    parent_id: Option<Uuid>,
+    collections_by_parent: &mut HashMap<Option<Uuid>, Vec<CollectionSummary>>,
+    visited: &mut HashSet<Uuid>,
+) -> Vec<CollectionTreeNode> {
+    let mut siblings = collections_by_parent.remove(&parent_id).unwrap_or_default();
+    siblings.sort_by(compare_collections);
+    siblings
+        .into_iter()
+        .filter_map(|collection| {
+            if !visited.insert(collection.id) {
+                return None;
+            }
+            let children = build_children(Some(collection.id), collections_by_parent, visited);
+            Some(CollectionTreeNode {
+                collection,
+                children,
+            })
+        })
+        .collect()
+}
+
+fn build_collection_tree(collections: Vec<CollectionSummary>) -> Vec<CollectionTreeNode> {
+    let mut collections_by_parent = HashMap::<Option<Uuid>, Vec<CollectionSummary>>::new();
+    for collection in collections {
+        collections_by_parent
+            .entry(collection.parent_collection_id)
+            .or_default()
+            .push(collection);
+    }
+
+    build_children(None, &mut collections_by_parent, &mut HashSet::new())
+}
+
+#[derive(Props, Clone, PartialEq)]
+struct CollectionTreeItemProps {
+    node: CollectionTreeNode,
+    depth: usize,
+    expanded: Signal<HashSet<Uuid>>,
+}
+
+#[component]
+fn CollectionTreeItem(mut props: CollectionTreeItemProps) -> Element {
+    let collection_id = props.node.collection.id;
+    let is_expanded = props.expanded.read().contains(&collection_id);
+    let toggle_label = collection_toggle_label(&props.node.collection.name, is_expanded);
+    let indentation = props.depth.min(6) * 12;
+
+    rsx! {
+        li {
+            list_style: "none",
+            div {
+                display: "flex",
+                align_items: "center",
+                gap: "var(--space-xs)",
+                min_width: "0",
+                padding_left: "{indentation}px",
+                button {
+                    r#type: "button",
+                    class: "btn touch-target",
+                    aria_label: "{toggle_label}",
+                    aria_expanded: is_expanded,
+                    onclick: move |_| {
+                        let mut expanded = props.expanded.write();
+                        if !expanded.remove(&collection_id) {
+                            expanded.insert(collection_id);
+                        }
+                    },
+                    if is_expanded { "▾" } else { "▸" }
+                }
+                Link {
+                    to: Route::CollectionDetail { id: collection_id.to_string() },
+                    display: "flex",
+                    align_items: "center",
+                    gap: "var(--space-xs)",
+                    min_width: "0",
+                    flex: "1",
+                    padding: "var(--space-xs) 0",
+                    color: "var(--text-primary)",
+                    text_decoration: "none",
+                    span {
+                        overflow: "hidden",
+                        text_overflow: "ellipsis",
+                        white_space: "nowrap",
+                        "{props.node.collection.name}"
+                    }
+                    span {
+                        flex_shrink: "0",
+                        color: "var(--text-secondary)",
+                        font_size: "var(--font-size-sm)",
+                        aria_label: "{props.node.collection.recipe_count} recipes",
+                        "{props.node.collection.recipe_count}"
+                    }
+                }
+            }
+            if is_expanded {
+                ul {
+                    margin: "0",
+                    padding: "0",
+                    for child in props.node.children.iter().cloned() {
+                        CollectionTreeItem {
+                            key: "{child.collection.id}",
+                            node: child,
+                            depth: props.depth + 1,
+                            expanded: props.expanded,
+                        }
+                    }
+                    li {
+                        list_style: "none",
+                        padding_left: "{((props.depth + 1).min(6) * 12 + 36)}px",
+                        a {
+                            href: "/collections/new?parent={collection_id}",
+                            display: "inline-block",
+                            padding: "var(--space-xs) 0",
+                            color: "var(--text-secondary)",
+                            font_size: "var(--font-size-sm)",
+                            text_decoration: "none",
+                            "+ New subcollection"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Owner-scoped collection navigation for the recipe dashboard.
+#[component]
+pub fn CollectionSidebar() -> Element {
+    let collections = use_resource(list_my_collections);
+    let expanded = use_signal(HashSet::<Uuid>::new);
+    let tree = collections
+        .read()
+        .as_ref()
+        .and_then(|result| result.as_ref().ok())
+        .map(|items| build_collection_tree(items.clone()))
+        .unwrap_or_default();
+
+    if tree.is_empty() {
+        return rsx! {};
+    }
+
+    rsx! {
+        aside {
+            class: "neumo-card",
+            padding: "var(--space-md)",
+            flex: "1 1 220px",
+            min_width: "0",
+            max_width: "280px",
+            align_self: "start",
+            aria_label: "Recipe collections",
+            nav {
+                display: "flex",
+                flex_direction: "column",
+                gap: "var(--space-sm)",
+                Link {
+                    to: Route::Dashboard {},
+                    color: "var(--text-primary)",
+                    font_weight: "600",
+                    text_decoration: "none",
+                    "All Recipes"
+                }
+                div {
+                    display: "flex",
+                    align_items: "center",
+                    gap: "var(--space-sm)",
+                    h2 { margin: "0", font_size: "var(--font-size-md)", "Collections" }
+                }
+                ul {
+                    margin: "0",
+                    padding: "0",
+                    overflow_x: "hidden",
+                    for node in tree {
+                        CollectionTreeItem {
+                            key: "{node.collection.id}",
+                            node,
+                            depth: 0,
+                            expanded,
+                        }
+                    }
+                }
+                Link {
+                    to: Route::CollectionNew {},
+                    class: "btn btn-secondary touch-target",
+                    "New Collection"
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::{Duration, Utc};
+    use uuid::Uuid;
+
+    use super::{build_collection_tree, collection_toggle_label};
+    use crate::types::CollectionSummary;
+
+    fn summary(
+        id: Uuid,
+        parent_collection_id: Option<Uuid>,
+        name: &str,
+        sort_order: i32,
+        recipe_count: i64,
+        age_minutes: i64,
+    ) -> CollectionSummary {
+        CollectionSummary {
+            id,
+            parent_collection_id,
+            name: name.to_string(),
+            description: None,
+            sort_order,
+            child_count: 0,
+            recipe_count,
+            updated_at: Utc::now() - Duration::minutes(age_minutes),
+        }
+    }
+
+    #[test]
+    fn collection_tree_nests_children_and_preserves_counts() {
+        let root_id = Uuid::new_v4();
+        let child_id = Uuid::new_v4();
+        let tree = build_collection_tree(vec![
+            summary(child_id, Some(root_id), "Child", 0, 4, 0),
+            summary(root_id, None, "Root", 0, 2, 0),
+        ]);
+
+        assert_eq!(tree.len(), 1);
+        assert_eq!(tree[0].collection.id, root_id);
+        assert_eq!(tree[0].collection.recipe_count, 2);
+        assert_eq!(tree[0].children.len(), 1);
+        assert_eq!(tree[0].children[0].collection.id, child_id);
+        assert_eq!(tree[0].children[0].collection.recipe_count, 4);
+    }
+
+    #[test]
+    fn collection_tree_orders_siblings_by_order_then_recent_update() {
+        let first_id = Uuid::new_v4();
+        let newer_id = Uuid::new_v4();
+        let older_id = Uuid::new_v4();
+        let tree = build_collection_tree(vec![
+            summary(older_id, None, "Older", 1, 0, 20),
+            summary(first_id, None, "First", 0, 0, 50),
+            summary(newer_id, None, "Newer", 1, 0, 5),
+        ]);
+
+        assert_eq!(
+            tree.iter()
+                .map(|node| node.collection.id)
+                .collect::<Vec<_>>(),
+            vec![first_id, newer_id, older_id]
+        );
+    }
+
+    #[test]
+    fn disclosure_labels_identify_the_collection_and_state() {
+        assert_eq!(
+            collection_toggle_label("Weeknight meals", false),
+            "Expand Weeknight meals"
+        );
+        assert_eq!(
+            collection_toggle_label("Weeknight meals", true),
+            "Collapse Weeknight meals"
+        );
+    }
+
+    #[test]
+    fn new_collection_action_follows_the_tree() {
+        let source = include_str!("collection_sidebar.rs");
+        let tree_position = source.find("for node in tree").unwrap();
+        let action_position = source.rfind("\"New Collection\"").unwrap();
+        assert!(action_position > tree_position);
+        assert!(source.contains("class: \"btn btn-secondary touch-target\""));
+    }
+}
