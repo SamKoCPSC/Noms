@@ -381,30 +381,145 @@ fn version_summary_image_url(images: &[crate::types::RecipeImage]) -> Option<Str
         .map(|image| image.display_url(true).to_string())
 }
 
+#[cfg(feature = "server")]
+fn viewer_may_read_snapshot(snapshot_visibility: &str, viewer_is_owner: bool) -> bool {
+    viewer_is_owner || matches!(snapshot_visibility, "public" | "unlisted")
+}
+
+#[cfg(feature = "server")]
+fn build_recipe_version_graph(
+    recipe_id: uuid::Uuid,
+    owner_username: &str,
+    mut versions: Vec<crate::db::RecipeVersion>,
+    viewer_is_owner: bool,
+) -> Result<crate::types::VersionGraph, crate::db::DbError> {
+    versions.sort_by_key(|version| version.version_number);
+    let snapshots = versions
+        .iter()
+        .map(crate::db::RecipeVersion::decoded_snapshot)
+        .collect::<Result<Vec<_>, _>>()?;
+    let current_version_number = versions.last().map(|version| version.version_number);
+
+    let nodes = versions
+        .iter()
+        .zip(&snapshots)
+        .enumerate()
+        .map(|(index, (version, snapshot))| {
+            let id = crate::types::VersionGraphNodeId {
+                recipe_id,
+                version_number: version.version_number,
+            };
+            let state = crate::types::VersionGraphNodeState {
+                is_selected_recipe: true,
+                is_current_version: current_version_number == Some(version.version_number),
+                is_deleted: false,
+            };
+            if !viewer_may_read_snapshot(&snapshot.visibility, viewer_is_owner) {
+                return Ok(crate::types::VersionGraphNode::redacted(id, state));
+            }
+
+            let change_summary = match index.checked_sub(1) {
+                Some(previous_index)
+                    if viewer_may_read_snapshot(
+                        &snapshots[previous_index].visibility,
+                        viewer_is_owner,
+                    ) =>
+                {
+                    crate::db::diff::change_summary(&crate::db::diff::compute_diff(
+                        &snapshots[previous_index],
+                        snapshot,
+                    )?)
+                }
+                Some(_) => "Published version".to_string(),
+                None => "Initial version".to_string(),
+            };
+            Ok(crate::types::VersionGraphNode::visible(
+                id,
+                crate::types::VersionGraphNodeContent {
+                    title: snapshot.title.clone(),
+                    owner_username: Some(owner_username.to_string()),
+                    thumbnail_url: version_summary_image_url(&snapshot.images),
+                    created_at: version.created_at,
+                    change_summary,
+                },
+                state,
+            ))
+        })
+        .collect::<Result<Vec<_>, crate::db::DbError>>()?;
+
+    let edges = nodes
+        .windows(2)
+        .map(|pair| {
+            crate::types::VersionGraphEdge::version(pair[0].id(), pair[1].id()).ok_or_else(|| {
+                crate::db::DbError::InvalidRecipeSnapshot(
+                    "recipe versions are not consecutive".to_string(),
+                )
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(crate::types::VersionGraph {
+        nodes,
+        edges,
+        truncation: crate::types::VersionGraphTruncation::default(),
+    })
+}
+
+/// Return the selected recipe's immutable snapshots as a normalized graph.
+#[server]
+pub async fn get_recipe_version_graph(
+    recipe_id: String,
+) -> Result<crate::types::VersionGraph, ServerFnError> {
+    let recipe_id = uuid::Uuid::parse_str(&recipe_id)
+        .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
+    let pool = crate::db::get_pool();
+    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
+    let recipe = crate::db::get_recipe_by_id(&pool, recipe_id)
+        .await
+        .map_err(|error| ServerFnError::new(error.to_string()))?
+        .filter(|recipe| recipe.visibility != "private" || viewer_id == Some(recipe.user_id))
+        .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
+    let versions = crate::db::get_recipe_versions(&pool, recipe_id)
+        .await
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+
+    build_recipe_version_graph(
+        recipe_id,
+        &recipe.author_username,
+        versions,
+        viewer_id == Some(recipe.user_id),
+    )
+    .map_err(|error| ServerFnError::new(error.to_string()))
+}
+
 #[server]
 pub async fn get_recipe_version_api(
     recipe_id: String,
     version_number: i32,
 ) -> Result<crate::types::RecipeVersionView, ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
     let pool = crate::db::get_pool();
-    crate::db::get_recipe_by_id_and_owner(&pool, recipe_id, user_id)
+    let recipe = crate::db::get_recipe_by_id(&pool, recipe_id)
         .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+        .map_err(|e| ServerFnError::new(e.to_string()))?
+        .filter(|recipe| recipe.visibility != "private" || viewer_id == Some(recipe.user_id))
+        .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
     let version = crate::db::get_recipe_version(&pool, recipe_id, version_number)
         .await
         .map_err(|e| ServerFnError::new(e.to_string()))?;
     let snapshot = version
         .decoded_snapshot()
         .map_err(|e| ServerFnError::new(e.to_string()))?;
+    if !viewer_may_read_snapshot(&snapshot.visibility, viewer_id == Some(recipe.user_id)) {
+        return Err(ServerFnError::new("Recipe not found"));
+    }
     let latest = crate::db::get_latest_recipe_version(&pool, recipe_id)
         .await
         .map_err(|e| ServerFnError::new(e.to_string()))?;
-    let changes_from_previous = if version_number > 1 {
+    let viewer_is_owner = viewer_id == Some(recipe.user_id);
+    let changes_from_previous = if viewer_is_owner && version_number > 1 {
         recipe_version_changes_to_view(
             crate::db::compare_recipe_versions(
                 &pool,
@@ -418,22 +533,34 @@ pub async fn get_recipe_version_api(
     } else {
         Vec::new()
     };
-    let changes_to_current = recipe_version_changes_to_view(
-        crate::db::compare_recipe_versions(&pool, recipe_id, version_number, latest.version_number)
-            .await
-            .map_err(|e| ServerFnError::new(e.to_string()))?,
-    );
-    let changes_from_original = recipe_version_changes_to_view(
-        crate::db::compare_recipe_versions(&pool, recipe_id, 1, version_number)
-            .await
-            .map_err(|e| ServerFnError::new(e.to_string()))?,
-    );
+    let (changes_to_current, changes_from_original) = if viewer_is_owner {
+        (
+            recipe_version_changes_to_view(
+                crate::db::compare_recipe_versions(
+                    &pool,
+                    recipe_id,
+                    version_number,
+                    latest.version_number,
+                )
+                .await
+                .map_err(|e| ServerFnError::new(e.to_string()))?,
+            ),
+            recipe_version_changes_to_view(
+                crate::db::compare_recipe_versions(&pool, recipe_id, 1, version_number)
+                    .await
+                    .map_err(|e| ServerFnError::new(e.to_string()))?,
+            ),
+        )
+    } else {
+        (Vec::new(), Vec::new())
+    };
     Ok(crate::types::RecipeVersionView {
         version_number,
         current_version_number: latest.version_number,
         editor: snapshot_to_editor(snapshot),
         notes: version.notes,
         created_at: version.created_at,
+        comparisons_available: viewer_is_owner,
         changes_from_previous,
         changes_to_current,
         changes_from_original,
@@ -975,5 +1102,132 @@ mod lineage_depth_tests {
         assert_eq!(normalize_lineage_descendant_depth(Some(0)), 1);
         assert_eq!(normalize_lineage_descendant_depth(Some(8)), 8);
         assert_eq!(normalize_lineage_descendant_depth(Some(9)), 8);
+    }
+}
+
+#[cfg(all(test, feature = "server"))]
+mod version_graph_tests {
+    use super::{build_recipe_version_graph, viewer_may_read_snapshot};
+    use crate::db::diff::{snapshot_to_json, RecipeSnapshot};
+    use crate::db::RecipeVersion;
+    use chrono::{TimeZone, Utc};
+    use uuid::Uuid;
+
+    fn snapshot(title: &str, visibility: &str, image_url: Option<&str>) -> RecipeSnapshot {
+        RecipeSnapshot {
+            title: title.to_string(),
+            description: None,
+            commentary: None,
+            prep_time_minutes: None,
+            cook_time_minutes: None,
+            servings: None,
+            ingredients: Vec::new(),
+            instructions: Vec::new(),
+            equipment: Vec::new(),
+            images: image_url
+                .map(|url| {
+                    vec![crate::types::RecipeImage {
+                        url: url.to_string(),
+                        thumb_url: None,
+                        file_name: None,
+                        file_size: None,
+                        edits: Vec::new(),
+                    }]
+                })
+                .unwrap_or_default(),
+            visibility: visibility.to_string(),
+            tags: Vec::new(),
+        }
+    }
+
+    fn version(recipe_id: Uuid, version_number: i32, snapshot: RecipeSnapshot) -> RecipeVersion {
+        RecipeVersion {
+            id: Uuid::new_v4(),
+            recipe_id,
+            version_number,
+            snapshot: snapshot_to_json(&snapshot).unwrap(),
+            notes: None,
+            created_at: Utc
+                .with_ymd_and_hms(2026, 7, 20, version_number as u32, 0, 0)
+                .unwrap(),
+        }
+    }
+
+    #[test]
+    fn selected_recipe_graph_orders_every_snapshot_and_connects_consecutive_versions() {
+        let recipe_id = Uuid::new_v4();
+        let versions = vec![
+            version(recipe_id, 3, snapshot("Soup three", "public", None)),
+            version(recipe_id, 1, snapshot("Soup one", "public", None)),
+            version(
+                recipe_id,
+                2,
+                snapshot("Soup two", "public", Some("https://example.com/soup.webp")),
+            ),
+        ];
+
+        let graph = build_recipe_version_graph(recipe_id, "cook", versions, true).unwrap();
+
+        assert_eq!(
+            graph
+                .nodes
+                .iter()
+                .map(|node| node.id().version_number)
+                .collect::<Vec<_>>(),
+            vec![1, 2, 3]
+        );
+        assert_eq!(graph.edges.len(), 2);
+        assert_eq!(graph.edges[0].source().version_number, 1);
+        assert_eq!(graph.edges[0].target().version_number, 2);
+        assert_eq!(graph.edges[1].source().version_number, 2);
+        assert_eq!(graph.edges[1].target().version_number, 3);
+        assert_eq!(
+            graph
+                .nodes
+                .iter()
+                .filter(|node| node.is_current_version())
+                .map(|node| node.id().version_number)
+                .collect::<Vec<_>>(),
+            vec![3]
+        );
+        assert_eq!(
+            graph.nodes[1].thumbnail_url(),
+            Some("https://example.com/soup.webp")
+        );
+    }
+
+    #[test]
+    fn private_historical_snapshots_are_redacted_for_non_owners() {
+        let recipe_id = Uuid::new_v4();
+        let versions = vec![
+            version(recipe_id, 2, snapshot("Public soup", "public", None)),
+            version(
+                recipe_id,
+                1,
+                snapshot(
+                    "Private family soup",
+                    "private",
+                    Some("https://example.com/private.webp"),
+                ),
+            ),
+        ];
+
+        let graph = build_recipe_version_graph(recipe_id, "cook", versions, false).unwrap();
+
+        assert!(graph.nodes[0].is_redacted());
+        assert_eq!(graph.nodes[0].title(), None);
+        assert_eq!(graph.nodes[0].owner_username(), None);
+        assert_eq!(graph.nodes[0].thumbnail_url(), None);
+        assert!(!graph.nodes[1].is_redacted());
+        assert_eq!(graph.nodes[1].title(), Some("Public soup"));
+        assert_eq!(graph.nodes[1].change_summary(), Some("Published version"));
+    }
+
+    #[test]
+    fn immutable_snapshot_reads_follow_the_graph_visibility_policy() {
+        assert!(viewer_may_read_snapshot("public", false));
+        assert!(viewer_may_read_snapshot("unlisted", false));
+        assert!(!viewer_may_read_snapshot("private", false));
+        assert!(viewer_may_read_snapshot("private", true));
     }
 }

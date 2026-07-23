@@ -2459,9 +2459,10 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
                 }
             }
 
-            Card {
-                h2 { class: "recipe-detail__section-title", "Version comparisons" }
-                div {
+            if detail.comparisons_available {
+                Card {
+                    h2 { class: "recipe-detail__section-title", "Version comparisons" }
+                    div {
                     display: "flex",
                     flex_direction: "column",
                     gap: "var(--space-md)",
@@ -2575,6 +2576,12 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
                             changes: comparison.changes,
                         }
                     }
+                    }
+                }
+            } else {
+                Card {
+                    h2 { class: "recipe-detail__section-title", "Version comparisons" }
+                    p { "Version comparisons are available to the recipe owner." }
                 }
             }
         }

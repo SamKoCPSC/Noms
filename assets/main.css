@@ -2419,6 +2419,172 @@ a:hover {
     min-width: 0;
 }
 
+/* ── Recipe Version Graph ─────────────────────────────────── */
+.recipe-version-graph {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.recipe-version-graph__description {
+    margin: 0;
+    color: var(--text-secondary);
+}
+
+.recipe-version-graph__viewport {
+    position: relative;
+    display: grid;
+    overflow-x: auto;
+    padding: var(--space-sm) 2px var(--space-md);
+}
+
+.recipe-version-graph__edges,
+.recipe-version-graph__nodes {
+    grid-area: 1 / 1;
+    width: calc(
+        var(--version-graph-node-count) * 240px +
+            (var(--version-graph-node-count) - 1) * 32px
+    );
+}
+
+.recipe-version-graph__edges {
+    align-self: stretch;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.recipe-version-graph__edges line {
+    stroke: color-mix(in srgb, var(--accent) 60%, var(--border-color));
+    stroke-width: 0.45;
+    vector-effect: non-scaling-stroke;
+}
+
+.recipe-version-graph__nodes {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(
+        var(--version-graph-node-count),
+        240px
+    );
+    gap: 32px;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.recipe-version-graph__node-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+    border-radius: var(--radius-lg);
+}
+
+.recipe-version-graph__node-link:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--accent) 65%, transparent);
+    outline-offset: 4px;
+}
+
+.recipe-version-graph__node {
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: 3px 4px 8px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
+    transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.recipe-version-graph__node-link:hover .recipe-version-graph__node {
+    transform: translateY(-2px);
+    box-shadow: 4px 6px 12px var(--shadow-dark), -2px -2px 7px var(--shadow-light);
+}
+
+.recipe-version-graph__node--current {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent),
+        3px 4px 8px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
+}
+
+.recipe-version-graph__node--redacted {
+    border-style: dashed;
+}
+
+.recipe-version-graph__thumbnail {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: var(--background);
+}
+
+.recipe-version-graph__thumbnail img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.recipe-version-graph__thumbnail-placeholder {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    place-items: center;
+    color: var(--text-tertiary);
+    font-size: 28px;
+}
+
+.recipe-version-graph__node-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: var(--space-md);
+}
+
+.recipe-version-graph__node-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+}
+
+.recipe-version-graph__version,
+.recipe-version-graph__current-badge {
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.recipe-version-graph__current-badge {
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.recipe-version-graph__node h2,
+.recipe-version-graph__node p {
+    margin: 0;
+}
+
+.recipe-version-graph__node h2 {
+    overflow: hidden;
+    font-size: 17px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.recipe-version-graph__owner,
+.recipe-version-graph__node time,
+.recipe-version-graph__summary {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.recipe-version-graph__summary {
+    margin-top: var(--space-xs) !important;
+}
+
 .recipe-lineage__current {
     border: 1px solid var(--accent);
     box-shadow: 0 0 0 2px rgba(217, 115, 90, 0.1),

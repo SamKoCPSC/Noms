@@ -334,6 +334,7 @@ pub struct RecipeVersionView {
     pub editor: RecipeEditorState,
     pub notes: Option<String>,
     pub created_at: DateTime<Utc>,
+    pub comparisons_available: bool,
     pub changes_from_previous: Vec<RecipeVersionChange>,
     pub changes_to_current: Vec<RecipeVersionChange>,
     pub changes_from_original: Vec<RecipeVersionChange>,
