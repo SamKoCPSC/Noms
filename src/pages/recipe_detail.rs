@@ -16,6 +16,7 @@ use crate::api::recipe::{
     compare_recipe_versions_api, fork_recipe, get_fork_attribution, get_public_recipe,
     get_public_recipe_tags_by_id, get_recipe, get_recipe_lineage, get_recipe_owner_username,
     get_recipe_tags, get_recipe_version_api, get_recipe_versions_api, restore_version,
+    update_recipe_visibility,
 };
 use crate::auth::context::use_auth;
 use crate::components::base::{
@@ -101,6 +102,13 @@ fn format_change_value(value: Option<&String>) -> String {
         None => "—".to_string(),
         Some(value) => value.clone(),
     }
+}
+
+fn visibility_selection_differs_from_recipe(
+    selected_visibility: Signal<String>,
+    recipe_visibility: &str,
+) -> bool {
+    selected_visibility.peek().as_str() != recipe_visibility
 }
 
 #[component]
@@ -360,6 +368,29 @@ mod layout_tests {
         assert!(version_history.contains("flex: \"0 0 100%\""));
         assert!(version_history.contains("justify_content: \"flex-start\""));
         assert!(version_history.contains("flex_wrap: \"wrap\""));
+    }
+
+    #[test]
+    fn changing_visibility_does_not_trigger_server_value_resynchronization() {
+        let source = include_str!("recipe_detail.rs");
+        let comparison_helper = source
+            .split("fn visibility_selection_differs_from_recipe")
+            .nth(1)
+            .expect("visibility selection comparison helper")
+            .split("#[component]")
+            .next()
+            .expect("visibility selection comparison helper body");
+        let synchronization_effect = source
+            .rsplit("// Tags (signal-based, loaded conditionally based on ownership)")
+            .next()
+            .expect("visibility synchronization follows tag signal declarations")
+            .split("// Load tags once recipe is available")
+            .next()
+            .expect("visibility synchronization effect");
+
+        assert!(comparison_helper.contains("selected_visibility.peek()"));
+        assert!(synchronization_effect.contains("visibility_selection_differs_from_recipe"));
+        assert!(!synchronization_effect.contains("selected_visibility()"));
     }
 
     #[test]
@@ -1629,7 +1660,7 @@ pub fn RecipeDetail(id: String) -> Element {
     // The closure is FnMut (called potentially multiple times), so we clone
     // the captured value inside the closure body before the async block.
     let id_for_recipe = id.clone();
-    let recipe_resource = use_resource(move || {
+    let mut recipe_resource = use_resource(move || {
         let rid = id_for_recipe.clone();
         async move {
             // Try public first (no auth needed)
@@ -1669,10 +1700,24 @@ pub fn RecipeDetail(id: String) -> Element {
     let mut version_difference_error = use_signal(|| Option::<String>::None);
     let mut is_loading_version_difference = use_signal(|| false);
     let mut is_forking = use_signal(|| false);
+    let mut selected_visibility = use_signal(|| "private".to_string());
+    let mut is_saving_visibility = use_signal(|| false);
+    let mut visibility_feedback = use_signal(|| Option::<Result<(), String>>::None);
 
     // Tags (signal-based, loaded conditionally based on ownership)
     let tags = use_signal(|| Option::<Vec<String>>::None);
     let tags_error = use_signal(|| Option::<String>::None);
+
+    use_effect(move || {
+        let recipe_result = recipe_resource.read().clone();
+        if let Some(Ok(recipe)) = recipe_result {
+            if !is_saving_visibility()
+                && visibility_selection_differs_from_recipe(selected_visibility, &recipe.visibility)
+            {
+                selected_visibility.set(recipe.visibility);
+            }
+        }
+    });
 
     // Load tags once recipe is available
     let id_for_tags_effect = id.clone();
@@ -1758,6 +1803,25 @@ pub fn RecipeDetail(id: String) -> Element {
         .and_then(Result::ok)
         .unwrap_or_default();
     let lineage = lineage_resource.read().clone().and_then(Result::ok);
+    let recipe_id_for_visibility = id.clone();
+    let save_visibility = move |_| {
+        let recipe_id = recipe_id_for_visibility.clone();
+        let visibility = selected_visibility();
+        is_saving_visibility.set(true);
+        visibility_feedback.set(None);
+        spawn(async move {
+            match update_recipe_visibility(recipe_id, visibility).await {
+                Ok(_) => {
+                    visibility_feedback.set(Some(Ok(())));
+                    recipe_resource.restart();
+                }
+                Err(error) => {
+                    visibility_feedback.set(Some(Err(error.to_string())));
+                }
+            }
+            is_saving_visibility.set(false);
+        });
+    };
 
     let id_for_fork = id.clone();
     let on_fork = move |_| {
@@ -1967,6 +2031,54 @@ pub fn RecipeDetail(id: String) -> Element {
                     }
                     if let Some(serv) = recipe.servings {
                         span { class: "recipe-detail__meta-item", "🍽 Servings: {serv}" }
+                    }
+                }
+
+                if is_owner {
+                    div {
+                        class: "recipe-detail__visibility-control neumo-inset",
+                        label {
+                            r#for: "recipe-visibility",
+                            "Recipe visibility"
+                        }
+                        select {
+                            id: "recipe-visibility",
+                            class: "input",
+                            value: selected_visibility(),
+                            disabled: is_saving_visibility(),
+                            onchange: move |event| {
+                                selected_visibility.set(event.value());
+                                visibility_feedback.set(None);
+                            },
+                            option { value: "private", "Private" }
+                            option { value: "unlisted", "Unlisted" }
+                            option { value: "public", "Public" }
+                        }
+                        Button {
+                            variant: ButtonVariant::Secondary,
+                            disabled: is_saving_visibility()
+                                || selected_visibility() == recipe.visibility,
+                            onclick: save_visibility,
+                            if is_saving_visibility() { "Saving..." } else { "Save visibility" }
+                        }
+                        if let Some(feedback) = visibility_feedback() {
+                            match feedback {
+                                Ok(()) => rsx! {
+                                    span {
+                                        class: "recipe-detail__visibility-success",
+                                        role: "status",
+                                        "Visibility saved."
+                                    }
+                                },
+                                Err(error) => rsx! {
+                                    span {
+                                        class: "recipe-detail__visibility-error",
+                                        role: "alert",
+                                        "{error}"
+                                    }
+                                },
+                            }
+                        }
                     }
                 }
 

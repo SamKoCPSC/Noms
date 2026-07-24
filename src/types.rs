@@ -504,8 +504,8 @@ pub struct VersionGraphNodeState {
 pub struct VersionGraphNodeContent {
     pub title: String,
     pub owner_username: Option<String>,
-    /// Thumbnail prepared for a 16:9 graph card.
-    pub thumbnail_url: Option<String>,
+    /// Snapshot image and its non-destructive edit metadata.
+    pub image: Option<RecipeImage>,
     pub created_at: DateTime<Utc>,
     pub change_summary: String,
 }
@@ -516,8 +516,7 @@ pub struct VersionGraphNode {
     id: VersionGraphNodeId,
     title: Option<String>,
     owner_username: Option<String>,
-    /// Thumbnail prepared for a 16:9 graph card.
-    thumbnail_url: Option<String>,
+    image: Option<RecipeImage>,
     created_at: Option<DateTime<Utc>>,
     change_summary: Option<String>,
     is_selected_recipe: bool,
@@ -536,7 +535,7 @@ impl VersionGraphNode {
             id,
             title: Some(content.title),
             owner_username: content.owner_username,
-            thumbnail_url: content.thumbnail_url,
+            image: content.image,
             created_at: Some(content.created_at),
             change_summary: Some(content.change_summary),
             is_selected_recipe: state.is_selected_recipe,
@@ -552,7 +551,7 @@ impl VersionGraphNode {
             id,
             title: None,
             owner_username: None,
-            thumbnail_url: None,
+            image: None,
             created_at: None,
             change_summary: None,
             is_selected_recipe: state.is_selected_recipe,
@@ -574,8 +573,12 @@ impl VersionGraphNode {
         self.owner_username.as_deref()
     }
 
+    pub fn image(&self) -> Option<&RecipeImage> {
+        self.image.as_ref()
+    }
+
     pub fn thumbnail_url(&self) -> Option<&str> {
-        self.thumbnail_url.as_deref()
+        self.image.as_ref().map(|image| image.display_url(true))
     }
 
     pub fn created_at(&self) -> Option<DateTime<Utc>> {
@@ -608,7 +611,7 @@ struct VersionGraphNodeWire {
     id: VersionGraphNodeId,
     title: Option<String>,
     owner_username: Option<String>,
-    thumbnail_url: Option<String>,
+    image: Option<RecipeImage>,
     created_at: Option<DateTime<Utc>>,
     change_summary: Option<String>,
     is_selected_recipe: bool,
@@ -629,9 +632,7 @@ impl Serialize for VersionGraphNode {
             owner_username: (!redact_content)
                 .then(|| self.owner_username.clone())
                 .flatten(),
-            thumbnail_url: (!redact_content)
-                .then(|| self.thumbnail_url.clone())
-                .flatten(),
+            image: (!redact_content).then(|| self.image.clone()).flatten(),
             created_at: (!redact_content).then_some(self.created_at).flatten(),
             change_summary: (!redact_content)
                 .then(|| self.change_summary.clone())
@@ -666,7 +667,7 @@ impl<'de> Deserialize<'de> for VersionGraphNode {
             id: wire.id,
             title: wire.title,
             owner_username: wire.owner_username,
-            thumbnail_url: wire.thumbnail_url,
+            image: wire.image,
             created_at: wire.created_at,
             change_summary: wire.change_summary,
             is_selected_recipe: wire.is_selected_recipe,
@@ -718,13 +719,38 @@ mod tests {
             recipe_id: source_recipe_id,
             version_number: 2,
         };
+        let graph_image: RecipeImage = serde_json::from_value(serde_json::json!({
+            "url": "https://example.com/soup-full.webp",
+            "thumb_url": "https://example.com/soup-thumb.webp",
+            "edits": [{
+                "name": "rectangle:16:9",
+                "version": 1,
+                "crop_shape": "rectangle",
+                "aspect_ratio": { "width": 16, "height": 9 },
+                "crop": { "x": 0.1, "y": 0.2, "width": 0.8, "height": 0.6 },
+                "transform": {
+                    "rotation": 12.0,
+                    "stretch_x": 1.0,
+                    "stretch_y": 1.0,
+                    "flip_x": false,
+                    "flip_y": false
+                },
+                "color": {
+                    "saturation": 1.1,
+                    "contrast_r": 1.0,
+                    "contrast_g": 1.0,
+                    "contrast_b": 1.0
+                }
+            }]
+        }))
+        .unwrap();
         let graph = VersionGraph {
             nodes: vec![VersionGraphNode::visible(
                 source_node_id,
                 VersionGraphNodeContent {
                     title: "Tomato soup".to_string(),
                     owner_username: Some("cook".to_string()),
-                    thumbnail_url: Some("https://example.com/soup.webp".to_string()),
+                    image: Some(graph_image),
                     created_at: Utc.with_ymd_and_hms(2026, 7, 21, 12, 0, 0).unwrap(),
                     change_summary: "Updated instructions".to_string(),
                 },
@@ -749,6 +775,11 @@ mod tests {
         assert_eq!(restored, graph);
         assert_eq!(serialized["edges"][0]["kind"], "fork");
         assert_eq!(restored.nodes[0].id, source_node_id);
+        assert_eq!(restored.nodes[0].image().unwrap().edits.len(), 1);
+        assert_eq!(
+            restored.nodes[0].thumbnail_url(),
+            Some("https://example.com/soup-thumb.webp")
+        );
         assert!(restored.truncation.is_truncated);
         assert!(restored.truncation.node_limit_reached);
     }
@@ -825,7 +856,7 @@ mod tests {
         assert_eq!(node.id, id);
         assert!(node.title.is_none());
         assert!(node.owner_username.is_none());
-        assert!(node.thumbnail_url.is_none());
+        assert!(node.thumbnail_url().is_none());
         assert!(node.created_at.is_none());
         assert!(node.change_summary.is_none());
         assert!(node.is_deleted);
@@ -834,7 +865,8 @@ mod tests {
         let serialized = serde_json::to_value(node).unwrap();
         assert!(serialized["title"].is_null());
         assert!(serialized["owner_username"].is_null());
-        assert!(serialized["thumbnail_url"].is_null());
+        assert!(serialized["image"].is_null());
+        assert!(serialized.get("thumbnail_url").is_none());
         assert!(serialized["created_at"].is_null());
         assert!(serialized["change_summary"].is_null());
 

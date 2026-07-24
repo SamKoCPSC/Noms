@@ -6,7 +6,7 @@
 use dioxus::prelude::*;
 
 use crate::api::recipe::get_recipe_version_graph;
-use crate::components::base::{Card, EmptyState, LoadingSpinner, PageHeader};
+use crate::components::base::{Card, EditedRecipeImage, EmptyState, LoadingSpinner, PageHeader};
 use crate::types::{VersionGraph, VersionGraphEdgeKind, VersionGraphNode};
 use crate::Route;
 
@@ -43,7 +43,7 @@ fn VersionGraphSnapshotCard(node: VersionGraphNode) -> Element {
         "recipe-version-graph__node"
     };
     let title = node.title().unwrap_or("Private snapshot").to_string();
-    let thumbnail_url = node.thumbnail_url().map(str::to_string);
+    let image = node.image().cloned();
     let owner_username = node.owner_username().map(str::to_string);
     let change_summary = node.change_summary().map(str::to_string);
     let published_at = node
@@ -55,11 +55,14 @@ fn VersionGraphSnapshotCard(node: VersionGraphNode) -> Element {
             class: node_class,
             aria_label: format!("Version {version_number}: {title}"),
             div { class: "recipe-version-graph__thumbnail",
-                if let Some(thumbnail_url) = thumbnail_url {
-                    img {
-                        src: thumbnail_url,
+                if let Some(image) = image {
+                    EditedRecipeImage {
+                        image,
+                        class: "recipe-version-graph__edited-image",
                         alt: format!("Snapshot image for {title}"),
-                        loading: "lazy",
+                        loading: "lazy".to_string(),
+                        prefer_thumbnail: true,
+                        on_error: move |_| {},
                     }
                 } else {
                     div {
@@ -350,6 +353,8 @@ mod tests {
         assert!(source.contains("Route::RecipeVersionDetail"));
         assert!(source.contains("Version {version_number}"));
         assert!(source.contains("No snapshot image"));
+        assert!(source.contains("EditedRecipeImage"));
+        assert!(source.contains("prefer_thumbnail: true"));
     }
 
     #[test]

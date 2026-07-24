@@ -1036,6 +1036,36 @@ pub async fn update_recipe(
     Recipe::from_row(&row).map_err(DbError::Query)
 }
 
+/// Change only recipe-level visibility, enforcing ownership.
+pub async fn update_recipe_visibility(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    id: Uuid,
+    user_id: Uuid,
+    visibility: &str,
+) -> Result<Recipe, DbError> {
+    versioning::validate_recipe_visibility(visibility)?;
+    let row = sqlx::query(
+        "UPDATE recipes SET visibility = $3, updated_at = NOW() \
+         WHERE id = $1 AND user_id = $2 \
+         RETURNING id, user_id, title, description, commentary, prep_time_minutes, \
+             cook_time_minutes, servings, ingredients, instructions, equipment, images, \
+             visibility, created_at, updated_at, \
+             (SELECT username FROM users WHERE users.id = $2) AS author_username, \
+             (SELECT avatar_url FROM users WHERE users.id = $2) AS author_avatar_url",
+    )
+    .bind(id)
+    .bind(user_id)
+    .bind(visibility)
+    .fetch_one(executor)
+    .await
+    .map_err(|error| match error {
+        sqlx::Error::RowNotFound => DbError::RecipeNotFound(id),
+        other => DbError::Query(other),
+    })?;
+
+    Recipe::from_row(&row).map_err(DbError::Query)
+}
+
 /// Delete a recipe, enforcing ownership via `user_id` in the WHERE clause.
 /// Tags cascade automatically via `ON DELETE CASCADE`.
 /// Returns `DbError::RecipeNotFound` if the recipe doesn't exist or doesn't belong to the user.
@@ -3453,6 +3483,60 @@ mod tests {
         .unwrap();
         assert_eq!(updated.visibility, "unlisted");
         assert_eq!(updated.title, "Renamed");
+    }
+
+    #[tokio::test]
+    async fn visibility_only_update_validates_value_and_enforces_ownership() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let suffix = test_utils::uid();
+        let owner = insert_user(
+            &pool,
+            &format!("visibility_owner_{suffix}"),
+            "Visibility Owner",
+            &format!("visibility_owner_{suffix}@example.test"),
+            None,
+        )
+        .await
+        .unwrap();
+        let other_user = insert_user(
+            &pool,
+            &format!("visibility_other_{suffix}"),
+            "Visibility Other",
+            &format!("visibility_other_{suffix}@example.test"),
+            None,
+        )
+        .await
+        .unwrap();
+        let recipe = insert_recipe(
+            &pool,
+            owner.id,
+            "Visibility authority",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            &[],
+            "private",
+        )
+        .await
+        .unwrap();
+
+        let updated = update_recipe_visibility(&pool, recipe.id, owner.id, "public")
+            .await
+            .unwrap();
+        assert_eq!(updated.visibility, "public");
+        assert!(matches!(
+            update_recipe_visibility(&pool, recipe.id, other_user.id, "private").await,
+            Err(DbError::RecipeNotFound(id)) if id == recipe.id
+        ));
+        assert!(matches!(
+            update_recipe_visibility(&pool, recipe.id, owner.id, "friends").await,
+            Err(DbError::InvalidRecipeSnapshot(_))
+        ));
     }
 
     #[tokio::test]

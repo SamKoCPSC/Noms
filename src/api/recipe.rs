@@ -13,26 +13,31 @@ use crate::types::{RecipeImage, RecipeStep};
 use std::collections::HashSet;
 
 #[cfg(feature = "server")]
-fn editor_to_snapshot(editor: crate::types::RecipeEditorState) -> crate::db::diff::RecipeSnapshot {
-    crate::db::diff::RecipeSnapshot {
-        title: editor.title,
-        description: editor.description,
-        commentary: editor.commentary,
-        prep_time_minutes: editor.prep_time_minutes,
-        cook_time_minutes: editor.cook_time_minutes,
-        servings: editor.servings,
-        ingredients: editor.ingredients,
-        instructions: editor.instructions,
-        equipment: editor.equipment,
-        images: editor.images,
-        visibility: editor.visibility,
-        tags: editor.tags,
+fn editor_to_draft_payload(
+    editor: crate::types::RecipeEditorState,
+) -> crate::db::diff::RecipeDraftPayload {
+    crate::db::diff::RecipeDraftPayload {
+        initial_visibility: Some(editor.visibility),
+        content: crate::db::diff::RecipeSnapshot {
+            title: editor.title,
+            description: editor.description,
+            commentary: editor.commentary,
+            prep_time_minutes: editor.prep_time_minutes,
+            cook_time_minutes: editor.cook_time_minutes,
+            servings: editor.servings,
+            ingredients: editor.ingredients,
+            instructions: editor.instructions,
+            equipment: editor.equipment,
+            images: editor.images,
+            tags: editor.tags,
+        },
     }
 }
 
 #[cfg(feature = "server")]
 fn snapshot_to_editor(
     snapshot: crate::db::diff::RecipeSnapshot,
+    visibility: String,
 ) -> crate::types::RecipeEditorState {
     crate::types::RecipeEditorState {
         title: snapshot.title,
@@ -45,7 +50,7 @@ fn snapshot_to_editor(
         instructions: snapshot.instructions,
         equipment: snapshot.equipment,
         images: snapshot.images,
-        visibility: snapshot.visibility,
+        visibility,
         tags: snapshot.tags,
     }
 }
@@ -54,7 +59,13 @@ fn snapshot_to_editor(
 fn draft_to_view(
     draft: crate::db::RecipeDraft,
 ) -> Result<crate::types::RecipeDraftView, crate::db::DbError> {
-    let editor = snapshot_to_editor(draft.decoded_snapshot()?);
+    let payload = draft.decoded_snapshot()?;
+    let editor = snapshot_to_editor(
+        payload.content,
+        payload
+            .initial_visibility
+            .unwrap_or_else(|| "private".to_string()),
+    );
     Ok(crate::types::RecipeDraftView {
         id: draft.id,
         recipe_id: draft.recipe_id,
@@ -105,12 +116,19 @@ pub async fn create_recipe(
         instructions,
         equipment,
         images,
-        visibility,
         tags,
     };
-    crate::db::create_published_recipe(&pool, user_id, &snapshot, None)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))
+    crate::db::create_published_recipe(
+        &pool,
+        user_id,
+        &crate::db::diff::RecipeDraftPayload {
+            content: snapshot,
+            initial_visibility: Some(visibility),
+        },
+        None,
+    )
+    .await
+    .map_err(|e| ServerFnError::new(e.to_string()))
 }
 
 /// Get a recipe by ID. Two-phase access: ownership-gated first, then public/unlisted fallback.
@@ -153,7 +171,6 @@ pub async fn update_recipe(
     equipment: Option<Vec<crate::types::RecipeEquipment>>,
     images: Option<Vec<crate::types::RecipeImage>>,
     tags: Option<Vec<String>>,
-    visibility: Option<String>,
 ) -> Result<crate::types::Recipe, ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
@@ -201,9 +218,6 @@ pub async fn update_recipe(
     if let Some(tags) = tags {
         snapshot.tags = tags;
     }
-    if let Some(visibility) = visibility {
-        snapshot.visibility = visibility;
-    }
     crate::db::publish_snapshot(
         &pool,
         recipe_id,
@@ -214,6 +228,22 @@ pub async fn update_recipe(
     )
     .await
     .map_err(|e| ServerFnError::new(e.to_string()))
+}
+
+/// Change recipe-level visibility without creating or publishing a content version.
+#[server]
+pub async fn update_recipe_visibility(
+    recipe_id: String,
+    visibility: String,
+) -> Result<crate::types::Recipe, ServerFnError> {
+    let user_id = crate::auth::session::extract_user_id_from_fullstack()
+        .await
+        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let recipe_id = uuid::Uuid::parse_str(&recipe_id)
+        .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
+    crate::db::update_recipe_visibility(&crate::db::get_pool(), recipe_id, user_id, &visibility)
+        .await
+        .map_err(|error| ServerFnError::new(error.to_string()))
 }
 
 /// Start an incomplete, owner-only draft for a new recipe.
@@ -227,7 +257,7 @@ pub async fn create_recipe_draft(
     let draft = crate::db::create_new_recipe_draft(
         &crate::db::get_pool(),
         user_id,
-        &editor_to_snapshot(editor),
+        &editor_to_draft_payload(editor),
     )
     .await
     .map_err(|e| ServerFnError::new(e.to_string()))?;
@@ -277,12 +307,19 @@ pub async fn save_recipe_draft(
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
     let draft_id = uuid::Uuid::parse_str(&draft_id)
         .map_err(|error| ServerFnError::new(format!("Invalid draft ID: {error}")))?;
+    let current_draft = crate::db::get_recipe_draft(&crate::db::get_pool(), draft_id, user_id)
+        .await
+        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let mut payload = editor_to_draft_payload(editor);
+    if current_draft.recipe_id.is_some() {
+        payload.initial_visibility = None;
+    }
     let draft = crate::db::update_recipe_draft(
         &crate::db::get_pool(),
         draft_id,
         user_id,
         expected_revision,
-        &editor_to_snapshot(editor),
+        &payload,
     )
     .await
     .map_err(|e| ServerFnError::new(e.to_string()))?;
@@ -333,15 +370,15 @@ pub async fn list_recipe_drafts() -> Result<Vec<crate::types::RecipeDraftView>, 
 pub async fn get_recipe_versions_api(
     recipe_id: String,
 ) -> Result<Vec<crate::types::RecipeVersionSummary>, ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
     let pool = crate::db::get_pool();
-    crate::db::get_recipe_by_id_and_owner(&pool, recipe_id, user_id)
+    crate::db::get_recipe_by_id(&pool, recipe_id)
         .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+        .map_err(|e| ServerFnError::new(e.to_string()))?
+        .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
+        .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
     let versions = crate::db::get_recipe_versions(&pool, recipe_id)
         .await
         .map_err(|e| ServerFnError::new(e.to_string()))?;
@@ -382,8 +419,17 @@ fn version_summary_image_url(images: &[crate::types::RecipeImage]) -> Option<Str
 }
 
 #[cfg(feature = "server")]
-fn viewer_may_read_snapshot(snapshot_visibility: &str, viewer_is_owner: bool) -> bool {
-    viewer_is_owner || matches!(snapshot_visibility, "public" | "unlisted")
+fn version_graph_image(images: &[crate::types::RecipeImage]) -> Option<crate::types::RecipeImage> {
+    images.first().cloned()
+}
+
+#[cfg(feature = "server")]
+fn viewer_may_read_recipe(
+    recipe_visibility: &str,
+    recipe_owner_id: uuid::Uuid,
+    viewer_id: Option<uuid::Uuid>,
+) -> bool {
+    recipe_visibility != "private" || viewer_id == Some(recipe_owner_id)
 }
 
 #[cfg(feature = "server")]
@@ -391,7 +437,6 @@ fn build_recipe_version_graph(
     recipe_id: uuid::Uuid,
     owner_username: &str,
     mut versions: Vec<crate::db::RecipeVersion>,
-    viewer_is_owner: bool,
 ) -> Result<crate::types::VersionGraph, crate::db::DbError> {
     versions.sort_by_key(|version| version.version_number);
     let snapshots = versions
@@ -414,23 +459,10 @@ fn build_recipe_version_graph(
                 is_current_version: current_version_number == Some(version.version_number),
                 is_deleted: false,
             };
-            if !viewer_may_read_snapshot(&snapshot.visibility, viewer_is_owner) {
-                return Ok(crate::types::VersionGraphNode::redacted(id, state));
-            }
-
             let change_summary = match index.checked_sub(1) {
-                Some(previous_index)
-                    if viewer_may_read_snapshot(
-                        &snapshots[previous_index].visibility,
-                        viewer_is_owner,
-                    ) =>
-                {
-                    crate::db::diff::change_summary(&crate::db::diff::compute_diff(
-                        &snapshots[previous_index],
-                        snapshot,
-                    )?)
-                }
-                Some(_) => "Published version".to_string(),
+                Some(previous_index) => crate::db::diff::change_summary(
+                    &crate::db::diff::compute_diff(&snapshots[previous_index], snapshot)?,
+                ),
                 None => "Initial version".to_string(),
             };
             Ok(crate::types::VersionGraphNode::visible(
@@ -438,7 +470,7 @@ fn build_recipe_version_graph(
                 crate::types::VersionGraphNodeContent {
                     title: snapshot.title.clone(),
                     owner_username: Some(owner_username.to_string()),
-                    thumbnail_url: version_summary_image_url(&snapshot.images),
+                    image: version_graph_image(&snapshot.images),
                     created_at: version.created_at,
                     change_summary,
                 },
@@ -477,19 +509,14 @@ pub async fn get_recipe_version_graph(
     let recipe = crate::db::get_recipe_by_id(&pool, recipe_id)
         .await
         .map_err(|error| ServerFnError::new(error.to_string()))?
-        .filter(|recipe| recipe.visibility != "private" || viewer_id == Some(recipe.user_id))
+        .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
         .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
     let versions = crate::db::get_recipe_versions(&pool, recipe_id)
         .await
         .map_err(|error| ServerFnError::new(error.to_string()))?;
 
-    build_recipe_version_graph(
-        recipe_id,
-        &recipe.author_username,
-        versions,
-        viewer_id == Some(recipe.user_id),
-    )
-    .map_err(|error| ServerFnError::new(error.to_string()))
+    build_recipe_version_graph(recipe_id, &recipe.author_username, versions)
+        .map_err(|error| ServerFnError::new(error.to_string()))
 }
 
 #[server]
@@ -504,7 +531,7 @@ pub async fn get_recipe_version_api(
     let recipe = crate::db::get_recipe_by_id(&pool, recipe_id)
         .await
         .map_err(|e| ServerFnError::new(e.to_string()))?
-        .filter(|recipe| recipe.visibility != "private" || viewer_id == Some(recipe.user_id))
+        .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
         .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
     let version = crate::db::get_recipe_version(&pool, recipe_id, version_number)
         .await
@@ -512,14 +539,10 @@ pub async fn get_recipe_version_api(
     let snapshot = version
         .decoded_snapshot()
         .map_err(|e| ServerFnError::new(e.to_string()))?;
-    if !viewer_may_read_snapshot(&snapshot.visibility, viewer_id == Some(recipe.user_id)) {
-        return Err(ServerFnError::new("Recipe not found"));
-    }
     let latest = crate::db::get_latest_recipe_version(&pool, recipe_id)
         .await
         .map_err(|e| ServerFnError::new(e.to_string()))?;
-    let viewer_is_owner = viewer_id == Some(recipe.user_id);
-    let changes_from_previous = if viewer_is_owner && version_number > 1 {
+    let changes_from_previous = if version_number > 1 {
         recipe_version_changes_to_view(
             crate::db::compare_recipe_versions(
                 &pool,
@@ -533,34 +556,30 @@ pub async fn get_recipe_version_api(
     } else {
         Vec::new()
     };
-    let (changes_to_current, changes_from_original) = if viewer_is_owner {
-        (
-            recipe_version_changes_to_view(
-                crate::db::compare_recipe_versions(
-                    &pool,
-                    recipe_id,
-                    version_number,
-                    latest.version_number,
-                )
+    let (changes_to_current, changes_from_original) = (
+        recipe_version_changes_to_view(
+            crate::db::compare_recipe_versions(
+                &pool,
+                recipe_id,
+                version_number,
+                latest.version_number,
+            )
+            .await
+            .map_err(|e| ServerFnError::new(e.to_string()))?,
+        ),
+        recipe_version_changes_to_view(
+            crate::db::compare_recipe_versions(&pool, recipe_id, 1, version_number)
                 .await
                 .map_err(|e| ServerFnError::new(e.to_string()))?,
-            ),
-            recipe_version_changes_to_view(
-                crate::db::compare_recipe_versions(&pool, recipe_id, 1, version_number)
-                    .await
-                    .map_err(|e| ServerFnError::new(e.to_string()))?,
-            ),
-        )
-    } else {
-        (Vec::new(), Vec::new())
-    };
+        ),
+    );
     Ok(crate::types::RecipeVersionView {
         version_number,
         current_version_number: latest.version_number,
-        editor: snapshot_to_editor(snapshot),
+        editor: snapshot_to_editor(snapshot, recipe.visibility),
         notes: version.notes,
         created_at: version.created_at,
-        comparisons_available: viewer_is_owner,
+        comparisons_available: true,
         changes_from_previous,
         changes_to_current,
         changes_from_original,
@@ -596,7 +615,7 @@ fn snapshot_change_value_to_string(value: serde_json::Value) -> String {
 
 #[cfg(all(test, feature = "server"))]
 mod version_change_tests {
-    use super::{recipe_version_changes_to_view, version_summary_image_url};
+    use super::{recipe_version_changes_to_view, version_graph_image, version_summary_image_url};
     use crate::db::diff::SnapshotChange;
     use serde_json::json;
 
@@ -658,6 +677,35 @@ mod version_change_tests {
         );
         assert_eq!(version_summary_image_url(&[]), None);
     }
+
+    #[test]
+    fn version_graph_images_preserve_edits_and_thumbnail_source() {
+        let image: crate::types::RecipeImage = serde_json::from_value(json!({
+            "url": "https://example.test/full.webp",
+            "thumb_url": "https://example.test/thumb.webp",
+            "edits": []
+        }))
+        .unwrap();
+        let image_without_thumbnail: crate::types::RecipeImage = serde_json::from_value(json!({
+            "url": "https://example.test/full-only.webp",
+            "edits": []
+        }))
+        .unwrap();
+
+        assert_eq!(
+            version_graph_image(&[image])
+                .as_ref()
+                .map(|image| image.display_url(true)),
+            Some("https://example.test/thumb.webp")
+        );
+        assert_eq!(
+            version_graph_image(&[image_without_thumbnail])
+                .as_ref()
+                .map(|image| image.display_url(true)),
+            Some("https://example.test/full-only.webp")
+        );
+        assert_eq!(version_graph_image(&[]), None);
+    }
 }
 
 #[server]
@@ -666,15 +714,15 @@ pub async fn compare_recipe_versions_api(
     from_version_number: i32,
     to_version_number: i32,
 ) -> Result<crate::types::RecipeVersionComparison, ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
     let pool = crate::db::get_pool();
-    crate::db::get_recipe_by_id_and_owner(&pool, recipe_id, user_id)
+    crate::db::get_recipe_by_id(&pool, recipe_id)
         .await
-        .map_err(|error| ServerFnError::new(error.to_string()))?;
+        .map_err(|error| ServerFnError::new(error.to_string()))?
+        .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
+        .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
     let changes = crate::db::compare_recipe_versions(
         &pool,
         recipe_id,
@@ -1107,13 +1155,13 @@ mod lineage_depth_tests {
 
 #[cfg(all(test, feature = "server"))]
 mod version_graph_tests {
-    use super::{build_recipe_version_graph, viewer_may_read_snapshot};
+    use super::{build_recipe_version_graph, viewer_may_read_recipe};
     use crate::db::diff::{snapshot_to_json, RecipeSnapshot};
     use crate::db::RecipeVersion;
     use chrono::{TimeZone, Utc};
     use uuid::Uuid;
 
-    fn snapshot(title: &str, visibility: &str, image_url: Option<&str>) -> RecipeSnapshot {
+    fn snapshot(title: &str, _visibility: &str, image_url: Option<&str>) -> RecipeSnapshot {
         RecipeSnapshot {
             title: title.to_string(),
             description: None,
@@ -1135,7 +1183,6 @@ mod version_graph_tests {
                     }]
                 })
                 .unwrap_or_default(),
-            visibility: visibility.to_string(),
             tags: Vec::new(),
         }
     }
@@ -1166,7 +1213,7 @@ mod version_graph_tests {
             ),
         ];
 
-        let graph = build_recipe_version_graph(recipe_id, "cook", versions, true).unwrap();
+        let graph = build_recipe_version_graph(recipe_id, "cook", versions).unwrap();
 
         assert_eq!(
             graph
@@ -1197,7 +1244,7 @@ mod version_graph_tests {
     }
 
     #[test]
-    fn private_historical_snapshots_are_redacted_for_non_owners() {
+    fn accessible_recipes_expose_all_historical_snapshots_to_non_owners() {
         let recipe_id = Uuid::new_v4();
         let versions = vec![
             version(recipe_id, 2, snapshot("Public soup", "public", None)),
@@ -1212,22 +1259,45 @@ mod version_graph_tests {
             ),
         ];
 
-        let graph = build_recipe_version_graph(recipe_id, "cook", versions, false).unwrap();
+        let graph = build_recipe_version_graph(recipe_id, "cook", versions).unwrap();
 
-        assert!(graph.nodes[0].is_redacted());
-        assert_eq!(graph.nodes[0].title(), None);
-        assert_eq!(graph.nodes[0].owner_username(), None);
-        assert_eq!(graph.nodes[0].thumbnail_url(), None);
+        assert!(!graph.nodes[0].is_redacted());
+        assert_eq!(graph.nodes[0].title(), Some("Private family soup"));
+        assert_eq!(graph.nodes[0].owner_username(), Some("cook"));
+        assert_eq!(
+            graph.nodes[0].thumbnail_url(),
+            Some("https://example.com/private.webp")
+        );
         assert!(!graph.nodes[1].is_redacted());
         assert_eq!(graph.nodes[1].title(), Some("Public soup"));
-        assert_eq!(graph.nodes[1].change_summary(), Some("Published version"));
+        assert_ne!(graph.nodes[1].change_summary(), Some("Published version"));
     }
 
     #[test]
-    fn immutable_snapshot_reads_follow_the_graph_visibility_policy() {
-        assert!(viewer_may_read_snapshot("public", false));
-        assert!(viewer_may_read_snapshot("unlisted", false));
-        assert!(!viewer_may_read_snapshot("private", false));
-        assert!(viewer_may_read_snapshot("private", true));
+    fn immutable_snapshots_do_not_persist_recipe_visibility() {
+        let serialized =
+            snapshot_to_json(&snapshot("Soup", "private", None)).expect("snapshot serializes");
+
+        assert!(serialized.get("visibility").is_none());
+    }
+
+    #[test]
+    fn current_recipe_visibility_authorizes_the_entire_history() {
+        let owner_id = Uuid::new_v4();
+        let another_user_id = Uuid::new_v4();
+
+        assert!(viewer_may_read_recipe("public", owner_id, None));
+        assert!(viewer_may_read_recipe(
+            "unlisted",
+            owner_id,
+            Some(another_user_id)
+        ));
+        assert!(!viewer_may_read_recipe("private", owner_id, None));
+        assert!(!viewer_may_read_recipe(
+            "private",
+            owner_id,
+            Some(another_user_id)
+        ));
+        assert!(viewer_may_read_recipe("private", owner_id, Some(owner_id)));
     }
 }

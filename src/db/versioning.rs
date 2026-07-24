@@ -5,8 +5,8 @@ use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 use super::diff::{
-    compute_diff, json_to_snapshot, recipe_to_snapshot, snapshot_to_json, RecipeSnapshot,
-    SnapshotChange,
+    compute_diff, json_to_snapshot, recipe_to_snapshot, snapshot_to_json, RecipeDraftPayload,
+    RecipeSnapshot, SnapshotChange,
 };
 use super::{DbError, Recipe};
 
@@ -43,8 +43,8 @@ pub struct RecipeDraft {
 }
 
 impl RecipeDraft {
-    pub fn decoded_snapshot(&self) -> Result<RecipeSnapshot, DbError> {
-        json_to_snapshot(&self.snapshot)
+    pub fn decoded_snapshot(&self) -> Result<RecipeDraftPayload, DbError> {
+        serde_json::from_value(self.snapshot.clone()).map_err(DbError::SerdeJson)
     }
 }
 
@@ -216,13 +216,13 @@ async fn insert_recipe_draft_with_source(
     user_id: Uuid,
     recipe_id: Option<Uuid>,
     base_version_number: Option<i32>,
-    snapshot: &RecipeSnapshot,
+    snapshot: &RecipeDraftPayload,
     forked_from_recipe_id: Option<Uuid>,
     forked_from_version_number: Option<i32>,
     forked_from_title: Option<&str>,
     fork_message: Option<&str>,
 ) -> Result<RecipeDraft, DbError> {
-    let snapshot = snapshot_to_json(snapshot)?;
+    let snapshot = serde_json::to_value(snapshot).map_err(DbError::SerdeJson)?;
     let inserted = sqlx::query_as::<_, RecipeDraft>(&format!(
         "INSERT INTO recipe_drafts (recipe_id, user_id, base_version_number, snapshot, \
              forked_from_recipe_id, forked_from_version_number, forked_from_title, fork_message) \
@@ -254,14 +254,14 @@ pub async fn insert_recipe_draft(
     user_id: Uuid,
     recipe_id: Option<Uuid>,
     base_version_number: Option<i32>,
-    snapshot: &RecipeSnapshot,
+    payload: &RecipeDraftPayload,
 ) -> Result<RecipeDraft, DbError> {
     insert_recipe_draft_with_source(
         executor,
         user_id,
         recipe_id,
         base_version_number,
-        snapshot,
+        payload,
         None,
         None,
         None,
@@ -273,9 +273,9 @@ pub async fn insert_recipe_draft(
 pub async fn create_new_recipe_draft(
     pool: &PgPool,
     user_id: Uuid,
-    snapshot: &RecipeSnapshot,
+    payload: &RecipeDraftPayload,
 ) -> Result<RecipeDraft, DbError> {
-    insert_recipe_draft(pool, user_id, None, None, snapshot).await
+    insert_recipe_draft(pool, user_id, None, None, payload).await
 }
 
 pub async fn get_recipe_draft(
@@ -329,9 +329,9 @@ pub async fn update_recipe_draft(
     draft_id: Uuid,
     user_id: Uuid,
     expected_revision: i64,
-    snapshot: &RecipeSnapshot,
+    payload: &RecipeDraftPayload,
 ) -> Result<RecipeDraft, DbError> {
-    let snapshot = snapshot_to_json(snapshot)?;
+    let snapshot = serde_json::to_value(payload).map_err(DbError::SerdeJson)?;
     let updated = sqlx::query_as::<_, RecipeDraft>(&format!(
         "UPDATE recipe_drafts SET snapshot = $4, revision = revision + 1, updated_at = NOW() \
          WHERE id = $1 AND user_id = $2 AND revision = $3 RETURNING {DRAFT_COLUMNS}"
@@ -409,7 +409,10 @@ pub async fn create_edit_draft(
         .into_iter()
         .map(|tag| tag.tag)
         .collect();
-    let snapshot = recipe_to_snapshot(&recipe, tags);
+    let snapshot = RecipeDraftPayload {
+        content: recipe_to_snapshot(&recipe, tags),
+        initial_visibility: None,
+    };
     let latest = get_latest_recipe_version(&mut *transaction, recipe_id).await?;
 
     let draft = insert_recipe_draft(
@@ -427,13 +430,17 @@ pub async fn create_edit_draft(
 pub async fn create_published_recipe(
     pool: &PgPool,
     user_id: Uuid,
-    snapshot: &RecipeSnapshot,
+    payload: &RecipeDraftPayload,
     notes: Option<&str>,
 ) -> Result<Recipe, DbError> {
-    let snapshot = normalized_snapshot(snapshot);
-    validate_snapshot_for_publish(&snapshot)?;
+    let snapshot = normalized_snapshot(&payload.content);
+    let visibility = payload.initial_visibility.as_deref().ok_or_else(|| {
+        DbError::InvalidRecipeSnapshot("initial visibility is required".to_string())
+    })?;
+    validate_snapshot_for_publish(&snapshot, visibility)?;
     let mut transaction = pool.begin().await.map_err(DbError::Query)?;
-    let recipe = insert_recipe_from_snapshot(&mut transaction, user_id, &snapshot).await?;
+    let recipe =
+        insert_recipe_from_snapshot(&mut transaction, user_id, &snapshot, visibility).await?;
     insert_recipe_version(&mut *transaction, recipe.id, 1, &snapshot, notes).await?;
     super::insert_recipe_tags(&mut transaction, recipe.id, &snapshot.tags).await?;
     transaction.commit().await.map_err(DbError::Query)?;
@@ -444,6 +451,7 @@ async fn insert_recipe_from_snapshot(
     transaction: &mut sqlx::Transaction<'_, Postgres>,
     user_id: Uuid,
     snapshot: &RecipeSnapshot,
+    visibility: &str,
 ) -> Result<Recipe, DbError> {
     super::insert_recipe(
         &mut **transaction,
@@ -458,7 +466,7 @@ async fn insert_recipe_from_snapshot(
         &snapshot.instructions,
         &snapshot.equipment,
         &snapshot.images,
-        &snapshot.visibility,
+        visibility,
     )
     .await
 }
@@ -483,7 +491,7 @@ async fn update_recipe_from_snapshot(
         &snapshot.instructions,
         &snapshot.equipment,
         &snapshot.images,
-        Some(&snapshot.visibility),
+        None,
     )
     .await?;
     super::insert_recipe_tags(transaction, recipe_id, &snapshot.tags).await?;
@@ -531,9 +539,14 @@ async fn publish_new_draft(
     if draft.recipe_id.is_some() {
         return Err(DbError::DraftNotFound(draft_id));
     }
-    let snapshot = normalized_snapshot(&draft.decoded_snapshot()?);
-    validate_snapshot_for_publish(&snapshot)?;
-    let recipe = insert_recipe_from_snapshot(&mut transaction, user_id, &snapshot).await?;
+    let payload = draft.decoded_snapshot()?;
+    let snapshot = normalized_snapshot(&payload.content);
+    let visibility = payload.initial_visibility.as_deref().ok_or_else(|| {
+        DbError::InvalidRecipeSnapshot("initial visibility is required".to_string())
+    })?;
+    validate_snapshot_for_publish(&snapshot, visibility)?;
+    let recipe =
+        insert_recipe_from_snapshot(&mut transaction, user_id, &snapshot, visibility).await?;
     insert_recipe_version(&mut *transaction, recipe.id, 1, &snapshot, notes).await?;
     super::insert_recipe_tags(&mut transaction, recipe.id, &snapshot.tags).await?;
 
@@ -603,7 +616,7 @@ async fn publish_new_draft(
         .bind(source.as_ref().map(|source| source.visibility.as_str()))
         .bind(user_id)
         .bind(forked_owner_username)
-        .bind(&snapshot.visibility)
+        .bind(visibility)
         .bind(draft.fork_message.as_deref())
         .execute(&mut *transaction)
         .await
@@ -653,8 +666,9 @@ async fn publish_existing_draft(
         });
     }
 
-    let snapshot = normalized_snapshot(&draft.decoded_snapshot()?);
-    validate_snapshot_for_publish(&snapshot)?;
+    let payload = draft.decoded_snapshot()?;
+    let snapshot = normalized_snapshot(&payload.content);
+    validate_snapshot_content_for_publish(&snapshot)?;
     insert_recipe_version(
         &mut *transaction,
         recipe_id,
@@ -683,7 +697,7 @@ pub async fn publish_snapshot(
     notes: Option<&str>,
 ) -> Result<Recipe, DbError> {
     let snapshot = normalized_snapshot(snapshot);
-    validate_snapshot_for_publish(&snapshot)?;
+    validate_snapshot_content_for_publish(&snapshot)?;
     let mut transaction = pool.begin().await.map_err(DbError::Query)?;
     let owner = sqlx::query_scalar::<_, Uuid>(
         "SELECT user_id FROM recipes WHERE id = $1 AND user_id = $2 FOR UPDATE",
@@ -763,7 +777,10 @@ pub async fn create_fork_draft(
         ));
     }
     let latest = get_latest_recipe_version(&mut *transaction, source_recipe_id).await?;
-    let snapshot = latest.decoded_snapshot()?;
+    let snapshot = RecipeDraftPayload {
+        content: latest.decoded_snapshot()?,
+        initial_visibility: Some(source.visibility.clone()),
+    };
     let draft = insert_recipe_draft_with_source(
         &mut *transaction,
         user_id,
@@ -1160,18 +1177,27 @@ pub async fn count_recipe_versions_for_draft(
     .map_err(DbError::Query)
 }
 
-pub fn validate_snapshot_for_publish(snapshot: &RecipeSnapshot) -> Result<(), DbError> {
+pub fn validate_snapshot_for_publish(
+    snapshot: &RecipeSnapshot,
+    visibility: &str,
+) -> Result<(), DbError> {
+    validate_snapshot_content_for_publish(snapshot)?;
+    validate_recipe_visibility(visibility)
+}
+
+pub fn validate_recipe_visibility(visibility: &str) -> Result<(), DbError> {
+    if !matches!(visibility, "private" | "unlisted" | "public") {
+        return Err(DbError::InvalidRecipeSnapshot(
+            "visibility must be private, unlisted, or public".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_snapshot_content_for_publish(snapshot: &RecipeSnapshot) -> Result<(), DbError> {
     if snapshot.title.trim().is_empty() {
         return Err(DbError::InvalidRecipeSnapshot(
             "title is required".to_string(),
-        ));
-    }
-    if !matches!(
-        snapshot.visibility.as_str(),
-        "private" | "unlisted" | "public"
-    ) {
-        return Err(DbError::InvalidRecipeSnapshot(
-            "visibility must be private, unlisted, or public".to_string(),
         ));
     }
     if snapshot.ingredients.is_empty()
@@ -1244,28 +1270,30 @@ mod tests {
         .unwrap()
     }
 
-    fn snapshot(title: &str, visibility: &str) -> crate::db::diff::RecipeSnapshot {
-        crate::db::diff::RecipeSnapshot {
-            title: title.to_string(),
-            description: Some("description".to_string()),
-            commentary: Some("commentary".to_string()),
-            prep_time_minutes: Some(5),
-            cook_time_minutes: Some(15),
-            servings: Some(2),
-            ingredients: vec![crate::types::RecipeIngredient {
-                amount: "1".into(),
-                unit: "cup".into(),
-                name: "beans".into(),
-            }],
-            instructions: vec![crate::types::RecipeStep {
-                text: "Cook".into(),
-                sub_steps: vec![],
-                photos: vec![],
-            }],
-            equipment: vec![crate::types::RecipeEquipment { name: "Pot".into() }],
-            images: vec![],
-            visibility: visibility.to_string(),
-            tags: vec!["quick".into(), "vegan".into()],
+    fn snapshot(title: &str, visibility: &str) -> crate::db::diff::RecipeDraftPayload {
+        crate::db::diff::RecipeDraftPayload {
+            initial_visibility: Some(visibility.to_string()),
+            content: crate::db::diff::RecipeSnapshot {
+                title: title.to_string(),
+                description: Some("description".to_string()),
+                commentary: Some("commentary".to_string()),
+                prep_time_minutes: Some(5),
+                cook_time_minutes: Some(15),
+                servings: Some(2),
+                ingredients: vec![crate::types::RecipeIngredient {
+                    amount: "1".into(),
+                    unit: "cup".into(),
+                    name: "beans".into(),
+                }],
+                instructions: vec![crate::types::RecipeStep {
+                    text: "Cook".into(),
+                    sub_steps: vec![],
+                    photos: vec![],
+                }],
+                equipment: vec![crate::types::RecipeEquipment { name: "Pot".into() }],
+                images: vec![],
+                tags: vec!["quick".into(), "vegan".into()],
+            },
         }
     }
 
@@ -1406,6 +1434,28 @@ mod tests {
             versions[1].snapshot,
             snapshot_to_json(&snapshot("V1", "private")).unwrap()
         );
+    }
+
+    #[tokio::test]
+    async fn publishing_existing_draft_preserves_current_recipe_visibility() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let user = owner(&pool, "draft_visibility").await;
+        let recipe = create_published_recipe(&pool, user.id, &snapshot("Original", "public"), None)
+            .await
+            .unwrap();
+        let draft = create_edit_draft(&pool, recipe.id, user.id).await.unwrap();
+
+        sqlx::query("UPDATE recipes SET visibility = 'private' WHERE id = $1")
+            .bind(recipe.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let published = publish_recipe_draft(&pool, draft.id, user.id, None)
+            .await
+            .unwrap();
+
+        assert_eq!(published.visibility, "private");
     }
 
     #[tokio::test]

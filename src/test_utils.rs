@@ -274,9 +274,17 @@ pub async fn create_test_published_recipe(
     user_id: Uuid,
     title: &str,
 ) -> crate::db::Recipe {
-    crate::db::create_published_recipe(pool, user_id, &test_recipe_snapshot(title), None)
-        .await
-        .expect("failed to create test published recipe")
+    crate::db::create_published_recipe(
+        pool,
+        user_id,
+        &crate::db::diff::RecipeDraftPayload {
+            content: test_recipe_snapshot(title),
+            initial_visibility: Some("private".to_string()),
+        },
+        None,
+    )
+    .await
+    .expect("failed to create test published recipe")
 }
 
 /// Create or load the owner's draft for an existing published recipe.
@@ -294,9 +302,16 @@ pub async fn create_test_edit_draft(
 /// Create an incomplete, unsaved new-recipe draft without creating a version.
 #[allow(dead_code)]
 pub async fn create_test_new_draft(pool: &PgPool, user_id: Uuid) -> crate::db::RecipeDraft {
-    crate::db::create_new_recipe_draft(pool, user_id, &test_recipe_snapshot(""))
-        .await
-        .expect("failed to create test new draft")
+    crate::db::create_new_recipe_draft(
+        pool,
+        user_id,
+        &crate::db::diff::RecipeDraftPayload {
+            content: test_recipe_snapshot(""),
+            initial_visibility: Some("private".to_string()),
+        },
+    )
+    .await
+    .expect("failed to create test new draft")
 }
 
 #[allow(dead_code)]
@@ -320,7 +335,6 @@ fn test_recipe_snapshot(title: &str) -> crate::db::diff::RecipeSnapshot {
         }],
         equipment: Vec::new(),
         images: Vec::new(),
-        visibility: "private".to_string(),
         tags: Vec::new(),
     }
 }

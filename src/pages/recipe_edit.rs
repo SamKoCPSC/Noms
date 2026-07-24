@@ -92,6 +92,10 @@ fn editor_state(
     }
 }
 
+fn draft_allows_initial_visibility(recipe_id: Option<uuid::Uuid>) -> bool {
+    recipe_id.is_none()
+}
+
 /// Edit an existing published recipe through its mutable draft.
 #[component]
 pub fn RecipeEdit(id: String) -> Element {
@@ -144,6 +148,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
     let mut form_error = use_signal(|| Option::<String>::None);
     let mut is_discarding = use_signal(|| false);
     let mut draft_id = use_signal(|| Option::<String>::None);
+    let mut draft_recipe_id = use_signal(|| Option::<uuid::Uuid>::None);
     let mut draft_revision = use_signal(|| 0i64);
     let mut last_saved_editor = use_signal(|| Option::<RecipeEditorState>::None);
     let mut autosave_generation = use_signal(|| 0u64);
@@ -165,6 +170,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                 Ok(draft) => {
                     let editor = draft.editor.clone();
                     draft_id.set(Some(draft.id.to_string()));
+                    draft_recipe_id.set(draft.recipe_id);
                     draft_revision.set(draft.revision);
                     forked_from_title.set(draft.forked_from_title.clone());
                     forked_from_recipe_id.set(draft.forked_from_recipe_id.map(|id| id.to_string()));
@@ -1297,34 +1303,36 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                         }
                     }
 
-                    // ── Visibility ──────────────────────────────────────
-                    div {
-                        display: "flex",
-                        flex_direction: "column",
-                        gap: "var(--space-sm)",
-                        label {
-                            font_size: "14px",
-                            font_weight: "600",
-                            color: "var(--text-secondary)",
-                            "Visibility"
-                        }
-                        select {
-                            class: "neumo-inset input",
-                            padding: "var(--space-sm) var(--space-md)",
-                            font_family: "var(--font-body)",
-                            font_size: "14px",
-                            color: "var(--text-primary)",
-                            background_color: "var(--surface)",
-                            outline: "none",
-                            border_radius: "var(--radius-md)",
-                            width: "100%",
-                            value: visibility().clone(),
-                            onchange: move |evt| {
-                                visibility.set(evt.value());
-                            },
-                            option { value: "private", "Private — only you can see this recipe" }
-                            option { value: "unlisted", "Unlisted — anyone with the link can view" }
-                            option { value: "public", "Public — appears in Explore and search" }
+                    // Visibility is chosen here only for first publication.
+                    if draft_allows_initial_visibility(draft_recipe_id()) {
+                        div {
+                            display: "flex",
+                            flex_direction: "column",
+                            gap: "var(--space-sm)",
+                            label {
+                                font_size: "14px",
+                                font_weight: "600",
+                                color: "var(--text-secondary)",
+                                "Visibility"
+                            }
+                            select {
+                                class: "neumo-inset input",
+                                padding: "var(--space-sm) var(--space-md)",
+                                font_family: "var(--font-body)",
+                                font_size: "14px",
+                                color: "var(--text-primary)",
+                                background_color: "var(--surface)",
+                                outline: "none",
+                                border_radius: "var(--radius-md)",
+                                width: "100%",
+                                value: visibility().clone(),
+                                onchange: move |evt| {
+                                    visibility.set(evt.value());
+                                },
+                                option { value: "private", "Private — only you can see this recipe" }
+                                option { value: "unlisted", "Unlisted — anyone with the link can view" }
+                                option { value: "public", "Public — appears in Explore and search" }
+                            }
                         }
                     }
 
@@ -1413,5 +1421,16 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                 step_editor_photo_idx.set(None);
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod visibility_tests {
+    use super::draft_allows_initial_visibility;
+
+    #[test]
+    fn only_unpublished_recipe_drafts_allow_initial_visibility_edits() {
+        assert!(draft_allows_initial_visibility(None));
+        assert!(!draft_allows_initial_visibility(Some(uuid::Uuid::new_v4())));
     }
 }

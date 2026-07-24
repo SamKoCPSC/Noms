@@ -3,8 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::db::DbError;
 use crate::types::{Recipe, RecipeEquipment, RecipeImage, RecipeIngredient, RecipeStep};
 
-/// Canonical persistence payload shared by immutable versions and mutable drafts.
-/// Presentation metadata intentionally stays on the denormalized `recipes` row.
+/// Canonical immutable recipe content. Access policy lives on the `recipes` row.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RecipeSnapshot {
     pub title: String,
@@ -17,8 +16,30 @@ pub struct RecipeSnapshot {
     pub instructions: Vec<RecipeStep>,
     pub equipment: Vec<RecipeEquipment>,
     pub images: Vec<RecipeImage>,
-    pub visibility: String,
     pub tags: Vec<String>,
+}
+
+/// Mutable draft content plus the visibility used only when first published.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecipeDraftPayload {
+    #[serde(flatten)]
+    pub content: RecipeSnapshot,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub initial_visibility: Option<String>,
+}
+
+impl std::ops::Deref for RecipeDraftPayload {
+    type Target = RecipeSnapshot;
+
+    fn deref(&self) -> &Self::Target {
+        &self.content
+    }
+}
+
+impl std::ops::DerefMut for RecipeDraftPayload {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.content
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -43,7 +64,6 @@ pub fn recipe_to_snapshot(recipe: &Recipe, tags: Vec<String>) -> RecipeSnapshot 
         instructions: recipe.instructions.clone(),
         equipment: recipe.equipment.clone(),
         images: recipe.images.clone(),
-        visibility: recipe.visibility.clone(),
         tags,
     }
 }
@@ -54,6 +74,50 @@ pub fn snapshot_to_json(snapshot: &RecipeSnapshot) -> Result<serde_json::Value, 
 
 pub fn json_to_snapshot(value: &serde_json::Value) -> Result<RecipeSnapshot, DbError> {
     serde_json::from_value(value.clone()).map_err(DbError::SerdeJson)
+}
+
+#[cfg(test)]
+mod draft_payload_tests {
+    use super::{RecipeDraftPayload, RecipeSnapshot};
+
+    fn content() -> RecipeSnapshot {
+        RecipeSnapshot {
+            title: "Test recipe".to_string(),
+            description: None,
+            commentary: None,
+            prep_time_minutes: None,
+            cook_time_minutes: None,
+            servings: None,
+            ingredients: Vec::new(),
+            instructions: Vec::new(),
+            equipment: Vec::new(),
+            images: Vec::new(),
+            tags: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn existing_recipe_draft_payload_omits_visibility() {
+        let serialized = serde_json::to_value(RecipeDraftPayload {
+            content: content(),
+            initial_visibility: None,
+        })
+        .unwrap();
+
+        assert!(serialized.get("visibility").is_none());
+        assert!(serialized.get("initial_visibility").is_none());
+    }
+
+    #[test]
+    fn new_recipe_draft_payload_records_initial_visibility() {
+        let serialized = serde_json::to_value(RecipeDraftPayload {
+            content: content(),
+            initial_visibility: Some("unlisted".to_string()),
+        })
+        .unwrap();
+
+        assert_eq!(serialized["initial_visibility"], "unlisted");
+    }
 }
 
 pub fn compute_diff(
