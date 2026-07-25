@@ -7,7 +7,7 @@ use dioxus::prelude::*;
 
 use crate::api::recipe::get_recipe_version_graph;
 use crate::components::base::{Card, EditedRecipeImage, EmptyState, LoadingSpinner, PageHeader};
-use crate::types::{VersionGraph, VersionGraphEdgeKind, VersionGraphNode};
+use crate::types::{VersionGraph, VersionGraphEdge, VersionGraphEdgeKind, VersionGraphNode};
 use crate::Route;
 
 fn server_error_message(error: &ServerFnError) -> String {
@@ -32,28 +32,84 @@ fn connector_center_percent(index: usize, node_count: usize) -> f64 {
         * 100.0
 }
 
+fn fork_endpoint_label(
+    endpoint: crate::types::VersionGraphNodeId,
+    nodes: &[VersionGraphNode],
+) -> String {
+    nodes
+        .iter()
+        .find(|node| node.id() == endpoint)
+        .map(|node| {
+            node.title()
+                .unwrap_or(if node.is_deleted() {
+                    "Deleted recipe"
+                } else {
+                    "Private recipe"
+                })
+                .to_string()
+        })
+        .unwrap_or_else(|| "Private recipe".to_string())
+}
+
+fn fork_connection_label(edge: &VersionGraphEdge, nodes: &[VersionGraphNode]) -> String {
+    let source = edge.source();
+    let target = edge.target();
+    format!(
+        "{} v{} forked into {} v{}",
+        fork_endpoint_label(source, nodes),
+        source.version_number,
+        fork_endpoint_label(target, nodes),
+        target.version_number,
+    )
+}
+
 #[component]
-fn VersionGraphSnapshotCard(node: VersionGraphNode) -> Element {
+fn VersionGraphSnapshotCard(
+    node: VersionGraphNode,
+    is_fork_source: bool,
+    is_fork_target: bool,
+) -> Element {
     let version_number = node.id().version_number;
-    let node_class = if node.is_current_version() {
-        "recipe-version-graph__node recipe-version-graph__node--current"
+    let mut node_class = if node.is_current_version() {
+        "recipe-version-graph__node recipe-version-graph__node--current".to_string()
+    } else if node.is_deleted() {
+        "recipe-version-graph__node recipe-version-graph__node--deleted".to_string()
     } else if node.is_redacted() {
-        "recipe-version-graph__node recipe-version-graph__node--redacted"
+        "recipe-version-graph__node recipe-version-graph__node--redacted".to_string()
     } else {
-        "recipe-version-graph__node"
+        "recipe-version-graph__node".to_string()
     };
-    let title = node.title().unwrap_or("Private snapshot").to_string();
+    if is_fork_source {
+        node_class.push_str(" recipe-version-graph__node--fork-source");
+    }
+    if is_fork_target {
+        node_class.push_str(" recipe-version-graph__node--fork-target");
+    }
+    let title = node
+        .title()
+        .unwrap_or(if node.is_deleted() {
+            "Deleted recipe"
+        } else {
+            "Private recipe"
+        })
+        .to_string();
     let image = node.image().cloned();
     let owner_username = node.owner_username().map(str::to_string);
     let change_summary = node.change_summary().map(str::to_string);
     let published_at = node
         .created_at()
         .map(|created_at| created_at.format("%Y-%m-%d %H:%M UTC").to_string());
+    let relationship_role = match (is_fork_source, is_fork_target) {
+        (true, true) => ", fork source and target",
+        (true, false) => ", fork source",
+        (false, true) => ", fork target",
+        (false, false) => "",
+    };
 
     rsx! {
         article {
             class: node_class,
-            aria_label: format!("Version {version_number}: {title}"),
+            aria_label: format!("Version {version_number}: {title}{relationship_role}"),
             div { class: "recipe-version-graph__thumbnail",
                 if let Some(image) = image {
                     EditedRecipeImage {
@@ -77,6 +133,8 @@ fn VersionGraphSnapshotCard(node: VersionGraphNode) -> Element {
                     span { class: "recipe-version-graph__version", "Version {version_number}" }
                     if node.is_current_version() {
                         span { class: "recipe-version-graph__current-badge", "Current" }
+                    } else if node.is_deleted() {
+                        span { class: "recipe-version-graph__deleted-badge", "Deleted recipe" }
                     }
                 }
                 h2 { "{title}" }
@@ -232,25 +290,50 @@ pub fn RecipeVersionGraph(id: String) -> Element {
         .and_then(VersionGraphNode::title)
         .map(|title| format!("Version graph for {title}"))
         .unwrap_or_else(|| "Recipe version graph".to_string());
-    let connector_lines = graph
+    let mut lanes = Vec::<Vec<VersionGraphNode>>::new();
+    for node in graph.nodes.clone() {
+        if let Some(lane) = lanes.iter_mut().find(|lane| {
+            lane.first()
+                .is_some_and(|first| first.id().recipe_id == node.id().recipe_id)
+        }) {
+            lane.push(node);
+        } else {
+            lanes.push(vec![node]);
+        }
+    }
+    let fork_edges = graph
         .edges
         .iter()
-        .filter(|edge| edge.kind() == VersionGraphEdgeKind::Version)
-        .filter_map(|edge| {
-            let source_index = graph
-                .nodes
-                .iter()
-                .position(|node| node.id() == edge.source())?;
-            let target_index = graph
-                .nodes
-                .iter()
-                .position(|node| node.id() == edge.target())?;
-            Some((
-                connector_center_percent(source_index, graph.nodes.len()),
-                connector_center_percent(target_index, graph.nodes.len()),
-            ))
-        })
+        .filter(|edge| edge.kind() == VersionGraphEdgeKind::Fork)
+        .cloned()
         .collect::<Vec<_>>();
+    let selected_recipe_id = graph
+        .nodes
+        .iter()
+        .find(|node| node.is_selected_recipe())
+        .map(|node| node.id().recipe_id);
+    lanes.sort_by_key(|lane| {
+        let recipe_id = lane
+            .first()
+            .map(|node| node.id().recipe_id)
+            .unwrap_or(uuid::Uuid::nil());
+        let lane_order = if Some(recipe_id) == selected_recipe_id {
+            1
+        } else if fork_edges.iter().any(|edge| {
+            Some(edge.target().recipe_id) == selected_recipe_id
+                && edge.source().recipe_id == recipe_id
+        }) {
+            0
+        } else if fork_edges.iter().any(|edge| {
+            Some(edge.source().recipe_id) == selected_recipe_id
+                && edge.target().recipe_id == recipe_id
+        }) {
+            2
+        } else {
+            3
+        };
+        (lane_order, recipe_id)
+    });
 
     rsx! {
         div { class: "container",
@@ -261,41 +344,119 @@ pub fn RecipeVersionGraph(id: String) -> Element {
             Card {
                 div { class: "recipe-version-graph",
                     p { class: "recipe-version-graph__description",
-                        "Explore each immutable snapshot in this recipe's history."
+                        "Explore immutable snapshots and immediate recipe forks."
                     }
-                    div {
-                        class: "recipe-version-graph__viewport",
-                        style: "--version-graph-node-count: {graph.nodes.len()}",
-                        svg {
-                            class: "recipe-version-graph__edges",
-                            "aria-hidden": "true",
-                            view_box: "0 0 100 10",
-                            preserve_aspect_ratio: "none",
-                            for (index, (source_x, target_x)) in connector_lines.iter().enumerate() {
-                                line {
-                                    key: "{index}",
-                                    x1: "{source_x}",
-                                    y1: "5",
-                                    x2: "{target_x}",
-                                    y2: "5",
-                                }
-                            }
-                        }
-                        ol {
-                            class: "recipe-version-graph__nodes",
-                            for node in graph.nodes.clone() {
-                                li {
-                                    key: "{node.id().recipe_id}-{node.id().version_number}",
-                                    if node.is_redacted() {
-                                        VersionGraphSnapshotCard { node }
+                    div { class: "recipe-version-graph__lanes",
+                        for lane in lanes {
+                            {
+                                let lane_node_count = lane.len();
+                                let lane_recipe_id = lane
+                                    .first()
+                                    .map(|node| node.id().recipe_id)
+                                    .unwrap_or(uuid::Uuid::nil());
+                                let incoming_fork = fork_edges
+                                    .iter()
+                                    .find(|edge| edge.target().recipe_id == lane_recipe_id)
+                                    .cloned();
+                                let lane_title = lane
+                                    .iter()
+                                    .find_map(VersionGraphNode::title)
+                                    .unwrap_or(if lane.iter().any(VersionGraphNode::is_deleted) {
+                                        "Deleted recipe"
                                     } else {
-                                        Link {
-                                            to: Route::RecipeVersionDetail {
-                                                id: node.id().recipe_id.to_string(),
-                                                version_number: node.id().version_number,
-                                            },
-                                            class: "recipe-version-graph__node-link",
-                                            VersionGraphSnapshotCard { node }
+                                        "Private recipe"
+                                    })
+                                    .to_string();
+                                let lane_connectors = lane
+                                    .windows(2)
+                                    .map(|pair| {
+                                        (
+                                            connector_center_percent(
+                                                pair[0].id().version_number.saturating_sub(1) as usize,
+                                                lane_node_count,
+                                            ),
+                                            connector_center_percent(
+                                                pair[1].id().version_number.saturating_sub(1) as usize,
+                                                lane_node_count,
+                                            ),
+                                        )
+                                    })
+                                    .collect::<Vec<_>>();
+                                rsx! {
+                                    div { class: "recipe-version-graph__lane-group",
+                                        if let Some(edge) = incoming_fork {
+                                            div {
+                                                class: "recipe-version-graph__fork-connection",
+                                                role: "note",
+                                                aria_label: fork_connection_label(&edge, &graph.nodes),
+                                                span {
+                                                    class: "recipe-version-graph__fork-connection-line",
+                                                    aria_hidden: "true",
+                                                }
+                                                strong { "{fork_connection_label(&edge, &graph.nodes)}" }
+                                            }
+                                        }
+                                        section {
+                                            class: "recipe-version-graph__lane",
+                                            aria_label: format!("Recipe lane: {lane_title}"),
+                                            h2 { class: "recipe-version-graph__lane-title", "{lane_title}" }
+                                            div {
+                                                class: "recipe-version-graph__viewport",
+                                                style: "--version-graph-node-count: {lane_node_count}",
+                                                svg {
+                                                    class: "recipe-version-graph__edges recipe-version-graph__edge--version",
+                                                    "aria-hidden": "true",
+                                                    view_box: "0 0 100 10",
+                                                    preserve_aspect_ratio: "none",
+                                                    for (index, (source_x, target_x)) in lane_connectors.iter().enumerate() {
+                                                        line {
+                                                            key: "{index}",
+                                                            x1: "{source_x}",
+                                                            y1: "5",
+                                                            x2: "{target_x}",
+                                                            y2: "5",
+                                                        }
+                                                    }
+                                                }
+                                                ol {
+                                                    class: "recipe-version-graph__nodes",
+                                                    for node in lane {
+                                                        {
+                                                            let is_fork_source = fork_edges
+                                                                .iter()
+                                                                .any(|edge| edge.source() == node.id());
+                                                            let is_fork_target = fork_edges
+                                                                .iter()
+                                                                .any(|edge| edge.target() == node.id());
+                                                            rsx! {
+                                                                li {
+                                                                    key: "{node.id().recipe_id}-{node.id().version_number}",
+                                                                    if node.is_redacted() || node.is_deleted() {
+                                                                        VersionGraphSnapshotCard {
+                                                                            node,
+                                                                            is_fork_source,
+                                                                            is_fork_target,
+                                                                        }
+                                                                    } else {
+                                                                        Link {
+                                                                            to: Route::RecipeVersionDetail {
+                                                                                id: node.id().recipe_id.to_string(),
+                                                                                version_number: node.id().version_number,
+                                                                            },
+                                                                            class: "recipe-version-graph__node-link",
+                                                                            VersionGraphSnapshotCard {
+                                                                                node,
+                                                                                is_fork_source,
+                                                                                is_fork_target,
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -311,6 +472,33 @@ pub fn RecipeVersionGraph(id: String) -> Element {
 #[cfg(test)]
 mod tests {
     use super::is_recipe_unavailable_error;
+    use crate::types::{
+        VersionGraphEdge, VersionGraphNode, VersionGraphNodeContent, VersionGraphNodeId,
+        VersionGraphNodeState,
+    };
+    use chrono::{TimeZone, Utc};
+    use uuid::Uuid;
+
+    fn visible_node(recipe_id: Uuid, version_number: i32, title: &str) -> VersionGraphNode {
+        VersionGraphNode::visible(
+            VersionGraphNodeId {
+                recipe_id,
+                version_number,
+            },
+            VersionGraphNodeContent {
+                title: title.to_string(),
+                owner_username: Some("cook".to_string()),
+                image: None,
+                created_at: Utc.with_ymd_and_hms(2026, 7, 24, 12, 0, 0).unwrap(),
+                change_summary: "Initial version".to_string(),
+            },
+            VersionGraphNodeState {
+                is_selected_recipe: false,
+                is_current_version: true,
+                is_deleted: false,
+            },
+        )
+    }
 
     #[test]
     fn graph_shell_renders_navigation_and_all_resource_states() {
@@ -355,6 +543,40 @@ mod tests {
         assert!(source.contains("No snapshot image"));
         assert!(source.contains("EditedRecipeImage"));
         assert!(source.contains("prefer_thumbnail: true"));
+    }
+
+    #[test]
+    fn graph_page_visually_distinguishes_fork_connections() {
+        let source = include_str!("recipe_version_graph.rs");
+        let page = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("version graph page implementation");
+
+        assert!(page.contains("VersionGraphEdgeKind::Fork"));
+        assert!(page.contains("recipe-version-graph__fork-connection"));
+        assert!(page.contains("recipe-version-graph__node--fork-source"));
+        assert!(page.contains("recipe-version-graph__node--fork-target"));
+        assert!(page.contains("fork_connection_label"));
+        assert!(page.contains("forked into"));
+        assert!(page.contains("Deleted recipe"));
+        assert!(!page.contains("class: \"recipe-version-graph__fork-edges\""));
+    }
+
+    #[test]
+    fn fork_connection_labels_identify_both_endpoint_recipes_and_versions() {
+        let source_recipe_id = Uuid::new_v4();
+        let forked_recipe_id = Uuid::new_v4();
+        let edge = VersionGraphEdge::fork(source_recipe_id, 2, forked_recipe_id).unwrap();
+        let nodes = vec![
+            visible_node(source_recipe_id, 2, "Original soup"),
+            visible_node(forked_recipe_id, 1, "Spicy soup"),
+        ];
+
+        assert_eq!(
+            super::fork_connection_label(&edge, &nodes),
+            "Original soup v2 forked into Spicy soup v1"
+        );
     }
 
     #[test]

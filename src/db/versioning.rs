@@ -160,6 +160,304 @@ pub async fn get_recipe_version(
     })
 }
 
+#[derive(Debug, Clone, sqlx::FromRow)]
+struct VersionGraphRelationshipRow {
+    original_recipe_id: Option<Uuid>,
+    original_recipe_key: Option<Uuid>,
+    forked_recipe_id: Option<Uuid>,
+    forked_recipe_key: Option<Uuid>,
+    forked_version_number: Option<i32>,
+    original_title: String,
+    forked_title: Option<String>,
+    original_owner_id: Option<Uuid>,
+    original_owner_username: Option<String>,
+    original_visibility: Option<String>,
+    forked_owner_id: Option<Uuid>,
+    forked_owner_username: Option<String>,
+    forked_visibility: Option<String>,
+    created_at: DateTime<Utc>,
+}
+
+impl VersionGraphRelationshipRow {
+    fn original_recipe_key(&self) -> Option<Uuid> {
+        self.original_recipe_key.or(self.original_recipe_id)
+    }
+
+    fn forked_recipe_key(&self) -> Option<Uuid> {
+        self.forked_recipe_key.or(self.forked_recipe_id)
+    }
+}
+
+fn graph_image(images: &[crate::types::RecipeImage]) -> Option<crate::types::RecipeImage> {
+    images.first().cloned()
+}
+
+fn graph_node_state(
+    is_selected_recipe: bool,
+    is_current_version: bool,
+    is_deleted: bool,
+) -> crate::types::VersionGraphNodeState {
+    crate::types::VersionGraphNodeState {
+        is_selected_recipe,
+        is_current_version,
+        is_deleted,
+    }
+}
+
+fn append_live_recipe_chain(
+    graph: &mut crate::types::VersionGraph,
+    recipe: &Recipe,
+    mut versions: Vec<RecipeVersion>,
+    is_selected_recipe: bool,
+) -> Result<(), DbError> {
+    versions.sort_by_key(|version| version.version_number);
+    let snapshots = versions
+        .iter()
+        .map(RecipeVersion::decoded_snapshot)
+        .collect::<Result<Vec<_>, _>>()?;
+    let current_version_number = versions.last().map(|version| version.version_number);
+
+    for (index, (version, snapshot)) in versions.iter().zip(&snapshots).enumerate() {
+        let id = crate::types::VersionGraphNodeId {
+            recipe_id: recipe.id,
+            version_number: version.version_number,
+        };
+        let change_summary = match index.checked_sub(1) {
+            Some(previous_index) => {
+                super::diff::change_summary(&compute_diff(&snapshots[previous_index], snapshot)?)
+            }
+            None => "Initial version".to_string(),
+        };
+        graph.nodes.push(crate::types::VersionGraphNode::visible(
+            id,
+            crate::types::VersionGraphNodeContent {
+                title: snapshot.title.clone(),
+                owner_username: Some(recipe.author_username.clone()),
+                image: graph_image(&snapshot.images),
+                created_at: version.created_at,
+                change_summary,
+            },
+            graph_node_state(
+                is_selected_recipe,
+                current_version_number == Some(version.version_number),
+                false,
+            ),
+        ));
+    }
+
+    for pair in versions.windows(2) {
+        if let Some(edge) = crate::types::VersionGraphEdge::version(
+            crate::types::VersionGraphNodeId {
+                recipe_id: recipe.id,
+                version_number: pair[0].version_number,
+            },
+            crate::types::VersionGraphNodeId {
+                recipe_id: recipe.id,
+                version_number: pair[1].version_number,
+            },
+        ) {
+            graph.edges.push(edge);
+        }
+    }
+    Ok(())
+}
+
+fn adjacent_live_recipe_is_visible(recipe: &Recipe, viewer_id: Option<Uuid>) -> bool {
+    recipe.visibility == "public" || viewer_id == Some(recipe.user_id)
+}
+
+fn deleted_recipe_metadata_is_visible(
+    visibility: Option<&str>,
+    owner_id: Option<Uuid>,
+    viewer_id: Option<Uuid>,
+) -> bool {
+    visibility == Some("public") || owner_id.is_some_and(|owner| viewer_id == Some(owner))
+}
+
+fn append_synthetic_graph_node(
+    graph: &mut crate::types::VersionGraph,
+    id: crate::types::VersionGraphNodeId,
+    title: &str,
+    owner_username: Option<&str>,
+    created_at: DateTime<Utc>,
+    is_deleted: bool,
+    metadata_is_visible: bool,
+) {
+    let state = graph_node_state(false, false, is_deleted);
+    if metadata_is_visible {
+        graph.nodes.push(crate::types::VersionGraphNode::visible(
+            id,
+            crate::types::VersionGraphNodeContent {
+                title: title.to_string(),
+                owner_username: owner_username.map(str::to_string),
+                image: None,
+                created_at,
+                change_summary: if is_deleted {
+                    "Deleted recipe".to_string()
+                } else {
+                    "Forked recipe".to_string()
+                },
+            },
+            state,
+        ));
+    } else {
+        // A topology-only endpoint proves the fork edge without exposing the
+        // adjacent recipe's current or deletion-snapshot metadata.
+        graph
+            .nodes
+            .push(crate::types::VersionGraphNode::redacted(id, state));
+    }
+}
+
+fn deduplicate_and_sort_graph(graph: &mut crate::types::VersionGraph) {
+    graph.nodes.sort_by_key(|node| {
+        (
+            !node.is_selected_recipe(),
+            node.id().recipe_id,
+            node.id().version_number,
+            node.is_redacted(),
+        )
+    });
+    graph.nodes.dedup_by_key(|node| node.id());
+    graph.edges.sort_by_key(|edge| {
+        (
+            edge.source().recipe_id,
+            edge.source().version_number,
+            edge.target().recipe_id,
+            edge.target().version_number,
+            match edge.kind() {
+                crate::types::VersionGraphEdgeKind::Version => 0,
+                crate::types::VersionGraphEdgeKind::Fork => 1,
+            },
+        )
+    });
+    graph.edges.dedup_by(|left, right| {
+        left.source() == right.source()
+            && left.target() == right.target()
+            && left.kind() == right.kind()
+    });
+}
+
+/// Build the selected recipe plus its immediate fork neighborhood.
+pub async fn get_recipe_version_graph(
+    pool: &PgPool,
+    selected_recipe_id: Uuid,
+    viewer_id: Option<Uuid>,
+) -> Result<crate::types::VersionGraph, DbError> {
+    let selected = super::get_recipe_by_id(pool, selected_recipe_id)
+        .await?
+        .filter(|recipe| recipe.visibility != "private" || viewer_id == Some(recipe.user_id))
+        .ok_or(DbError::RecipeNotFound(selected_recipe_id))?;
+    let relationships = sqlx::query_as::<_, VersionGraphRelationshipRow>(
+        "SELECT original_recipe_id, original_recipe_key, forked_recipe_id, forked_recipe_key, \
+             forked_version_number, original_title, forked_title, original_owner_id, \
+             original_owner_username, original_visibility, forked_owner_id, \
+             forked_owner_username, forked_visibility, created_at \
+         FROM fork_relationships \
+         WHERE forked_recipe_key = $1 OR forked_recipe_id = $1 \
+            OR original_recipe_key = $1 OR original_recipe_id = $1 \
+         ORDER BY created_at, id",
+    )
+    .bind(selected_recipe_id)
+    .fetch_all(pool)
+    .await
+    .map_err(DbError::Query)?;
+
+    let mut graph = crate::types::VersionGraph::default();
+    append_live_recipe_chain(
+        &mut graph,
+        &selected,
+        get_recipe_versions(pool, selected.id).await?,
+        true,
+    )?;
+
+    for relationship in relationships {
+        let Some(source_recipe_id) = relationship.original_recipe_key() else {
+            continue;
+        };
+        let Some(forked_recipe_id) = relationship.forked_recipe_key() else {
+            continue;
+        };
+        let Some(recorded_version) = relationship.forked_version_number else {
+            continue;
+        };
+        let selected_is_source = source_recipe_id == selected_recipe_id;
+        let adjacent_recipe_id = if selected_is_source {
+            forked_recipe_id
+        } else {
+            source_recipe_id
+        };
+        let adjacent_endpoint = crate::types::VersionGraphNodeId {
+            recipe_id: adjacent_recipe_id,
+            version_number: if selected_is_source {
+                1
+            } else {
+                recorded_version
+            },
+        };
+
+        match super::get_recipe_by_id(pool, adjacent_recipe_id).await? {
+            Some(recipe) if adjacent_live_recipe_is_visible(&recipe, viewer_id) => {
+                append_live_recipe_chain(
+                    &mut graph,
+                    &recipe,
+                    get_recipe_versions(pool, adjacent_recipe_id).await?,
+                    false,
+                )?;
+            }
+            Some(_) => append_synthetic_graph_node(
+                &mut graph,
+                adjacent_endpoint,
+                "",
+                None,
+                relationship.created_at,
+                false,
+                false,
+            ),
+            None => {
+                let (title, owner_username, owner_id, visibility) = if selected_is_source {
+                    (
+                        relationship
+                            .forked_title
+                            .as_deref()
+                            .unwrap_or("Deleted recipe"),
+                        relationship.forked_owner_username.as_deref(),
+                        relationship.forked_owner_id,
+                        relationship.forked_visibility.as_deref(),
+                    )
+                } else {
+                    (
+                        relationship.original_title.as_str(),
+                        relationship.original_owner_username.as_deref(),
+                        relationship.original_owner_id,
+                        relationship.original_visibility.as_deref(),
+                    )
+                };
+                append_synthetic_graph_node(
+                    &mut graph,
+                    adjacent_endpoint,
+                    title,
+                    owner_username,
+                    relationship.created_at,
+                    true,
+                    deleted_recipe_metadata_is_visible(visibility, owner_id, viewer_id),
+                );
+            }
+        }
+
+        if let Some(edge) = crate::types::VersionGraphEdge::fork(
+            source_recipe_id,
+            recorded_version,
+            forked_recipe_id,
+        ) {
+            graph.edges.push(edge);
+        }
+    }
+
+    deduplicate_and_sort_graph(&mut graph);
+    Ok(graph)
+}
+
 pub async fn compare_recipe_versions(
     pool: &PgPool,
     recipe_id: Uuid,
@@ -1456,6 +1754,272 @@ mod tests {
             .unwrap();
 
         assert_eq!(published.visibility, "private");
+    }
+
+    #[tokio::test]
+    async fn version_graph_connects_direct_forks_to_the_recorded_source_snapshot() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let source_owner = owner(&pool, "graph_source").await;
+        let fork_owner = owner(&pool, "graph_fork").await;
+        let source = create_published_recipe(
+            &pool,
+            source_owner.id,
+            &snapshot("Source v1", "public"),
+            None,
+        )
+        .await
+        .unwrap();
+        publish_snapshot(
+            &pool,
+            source.id,
+            source_owner.id,
+            1,
+            &snapshot("Source v2", "public").content,
+            None,
+        )
+        .await
+        .unwrap();
+        let fork_draft = create_fork_draft(&pool, source.id, fork_owner.id, None)
+            .await
+            .unwrap();
+        let fork = publish_recipe_draft(&pool, fork_draft.id, fork_owner.id, None)
+            .await
+            .unwrap();
+        publish_snapshot(
+            &pool,
+            fork.id,
+            fork_owner.id,
+            1,
+            &snapshot("Fork v2", "public").content,
+            None,
+        )
+        .await
+        .unwrap();
+
+        let source_graph = get_recipe_version_graph(&pool, source.id, None)
+            .await
+            .unwrap();
+        let child_graph = get_recipe_version_graph(&pool, fork.id, None)
+            .await
+            .unwrap();
+
+        for graph in [&source_graph, &child_graph] {
+            assert_eq!(
+                graph
+                    .nodes
+                    .iter()
+                    .filter(|node| node.id().recipe_id == source.id)
+                    .count(),
+                2
+            );
+            assert_eq!(
+                graph
+                    .nodes
+                    .iter()
+                    .filter(|node| node.id().recipe_id == fork.id)
+                    .count(),
+                2
+            );
+            let fork_edge = graph
+                .edges
+                .iter()
+                .find(|edge| edge.kind() == crate::types::VersionGraphEdgeKind::Fork)
+                .expect("direct fork edge");
+            assert_eq!(
+                fork_edge.source(),
+                crate::types::VersionGraphNodeId {
+                    recipe_id: source.id,
+                    version_number: 2,
+                }
+            );
+            assert_eq!(
+                fork_edge.target(),
+                crate::types::VersionGraphNodeId {
+                    recipe_id: fork.id,
+                    version_number: 1,
+                }
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn version_graph_redacts_non_public_direct_forks_for_non_owners() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let source_owner = owner(&pool, "graph_public").await;
+        let fork_owner = owner(&pool, "graph_private").await;
+        let source = create_published_recipe(
+            &pool,
+            source_owner.id,
+            &snapshot("Public source", "public"),
+            None,
+        )
+        .await
+        .unwrap();
+        let fork_draft = create_fork_draft(&pool, source.id, fork_owner.id, None)
+            .await
+            .unwrap();
+        update_recipe_draft(
+            &pool,
+            fork_draft.id,
+            fork_owner.id,
+            fork_draft.revision,
+            &snapshot("Secret fork", "private"),
+        )
+        .await
+        .unwrap();
+        let private_fork = publish_recipe_draft(&pool, fork_draft.id, fork_owner.id, None)
+            .await
+            .unwrap();
+        let unlisted_draft = create_fork_draft(&pool, source.id, fork_owner.id, None)
+            .await
+            .unwrap();
+        update_recipe_draft(
+            &pool,
+            unlisted_draft.id,
+            fork_owner.id,
+            unlisted_draft.revision,
+            &snapshot("Unlisted fork", "unlisted"),
+        )
+        .await
+        .unwrap();
+        let unlisted_fork = publish_recipe_draft(&pool, unlisted_draft.id, fork_owner.id, None)
+            .await
+            .unwrap();
+
+        let public_graph = get_recipe_version_graph(&pool, source.id, None)
+            .await
+            .unwrap();
+        for inaccessible_recipe_id in [private_fork.id, unlisted_fork.id] {
+            let inaccessible_node = public_graph
+                .nodes
+                .iter()
+                .find(|node| node.id().recipe_id == inaccessible_recipe_id)
+                .expect("redacted non-public fork endpoint");
+            assert!(inaccessible_node.is_redacted());
+            assert_eq!(inaccessible_node.title(), None);
+            assert_eq!(inaccessible_node.owner_username(), None);
+            assert_eq!(inaccessible_node.image(), None);
+            assert!(public_graph.edges.iter().any(|edge| {
+                edge.kind() == crate::types::VersionGraphEdgeKind::Fork
+                    && edge.target().recipe_id == inaccessible_recipe_id
+            }));
+        }
+
+        let owner_graph = get_recipe_version_graph(&pool, source.id, Some(fork_owner.id))
+            .await
+            .unwrap();
+        let owner_node = owner_graph
+            .nodes
+            .iter()
+            .find(|node| node.id().recipe_id == private_fork.id)
+            .expect("owner-visible private fork");
+        assert!(!owner_node.is_redacted());
+        assert_eq!(owner_node.title(), Some("Secret fork"));
+        let unlisted_owner_node = owner_graph
+            .nodes
+            .iter()
+            .find(|node| node.id().recipe_id == unlisted_fork.id)
+            .expect("owner-visible unlisted fork");
+        assert!(!unlisted_owner_node.is_redacted());
+        assert_eq!(unlisted_owner_node.title(), Some("Unlisted fork"));
+    }
+
+    #[tokio::test]
+    async fn version_graph_keeps_direct_fork_topology_after_either_recipe_is_deleted() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let source_owner = owner(&pool, "graph_del_src").await;
+        let fork_owner = owner(&pool, "graph_del_fork").await;
+        let source = create_published_recipe(
+            &pool,
+            source_owner.id,
+            &snapshot("Source v1", "public"),
+            None,
+        )
+        .await
+        .unwrap();
+        publish_snapshot(
+            &pool,
+            source.id,
+            source_owner.id,
+            1,
+            &snapshot("Source v2", "public").content,
+            None,
+        )
+        .await
+        .unwrap();
+        let fork_draft = create_fork_draft(&pool, source.id, fork_owner.id, None)
+            .await
+            .unwrap();
+        let fork = publish_recipe_draft(&pool, fork_draft.id, fork_owner.id, None)
+            .await
+            .unwrap();
+
+        crate::db::delete_recipe(&pool, source.id, source_owner.id)
+            .await
+            .unwrap();
+        let child_graph = get_recipe_version_graph(&pool, fork.id, None)
+            .await
+            .unwrap();
+        let deleted_parent = child_graph
+            .nodes
+            .iter()
+            .find(|node| {
+                node.id()
+                    == (crate::types::VersionGraphNodeId {
+                        recipe_id: source.id,
+                        version_number: 2,
+                    })
+            })
+            .expect("deleted parent fork endpoint");
+        assert!(deleted_parent.is_deleted());
+        assert!(child_graph.edges.iter().any(|edge| {
+            edge.kind() == crate::types::VersionGraphEdgeKind::Fork
+                && edge.source() == deleted_parent.id()
+                && edge.target().recipe_id == fork.id
+        }));
+
+        let second_source_owner = owner(&pool, "graph_del2_src").await;
+        let second_fork_owner = owner(&pool, "graph_del2_fork").await;
+        let second_source = create_published_recipe(
+            &pool,
+            second_source_owner.id,
+            &snapshot("Second source", "public"),
+            None,
+        )
+        .await
+        .unwrap();
+        let second_fork_draft =
+            create_fork_draft(&pool, second_source.id, second_fork_owner.id, None)
+                .await
+                .unwrap();
+        let second_fork =
+            publish_recipe_draft(&pool, second_fork_draft.id, second_fork_owner.id, None)
+                .await
+                .unwrap();
+        crate::db::delete_recipe(&pool, second_fork.id, second_fork_owner.id)
+            .await
+            .unwrap();
+
+        let source_graph = get_recipe_version_graph(&pool, second_source.id, None)
+            .await
+            .unwrap();
+        let deleted_child = source_graph
+            .nodes
+            .iter()
+            .find(|node| {
+                node.id()
+                    == (crate::types::VersionGraphNodeId {
+                        recipe_id: second_fork.id,
+                        version_number: 1,
+                    })
+            })
+            .expect("deleted child fork endpoint");
+        assert!(deleted_child.is_deleted());
+        assert!(source_graph.edges.iter().any(|edge| {
+            edge.kind() == crate::types::VersionGraphEdgeKind::Fork
+                && edge.source().recipe_id == second_source.id
+                && edge.target() == deleted_child.id()
+        }));
     }
 
     #[tokio::test]

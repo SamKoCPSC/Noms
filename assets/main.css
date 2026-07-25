@@ -2431,6 +2431,28 @@ a:hover {
     color: var(--text-secondary);
 }
 
+.recipe-version-graph__lanes {
+    display: grid;
+    gap: var(--space-lg);
+}
+
+.recipe-version-graph__lane-group {
+    display: grid;
+    gap: var(--space-sm);
+}
+
+.recipe-version-graph__lane {
+    min-width: 0;
+    padding: var(--space-sm);
+    border-left: 3px solid color-mix(in srgb, var(--accent) 35%, var(--border-color));
+}
+
+.recipe-version-graph__lane-title {
+    margin: 0 0 var(--space-sm);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
 .recipe-version-graph__viewport {
     position: relative;
     display: grid;
@@ -2458,6 +2480,42 @@ a:hover {
     stroke: color-mix(in srgb, var(--accent) 60%, var(--border-color));
     stroke-width: 0.45;
     vector-effect: non-scaling-stroke;
+}
+
+.recipe-version-graph__edge--version line {
+    stroke-dasharray: none;
+}
+
+.recipe-version-graph__fork-connection {
+    display: grid;
+    grid-template-columns: 32px minmax(0, max-content);
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--accent);
+    font-size: 0.85rem;
+}
+
+.recipe-version-graph__fork-connection-line {
+    width: 2px;
+    height: 28px;
+    margin-inline: auto;
+    border-left: 2px dashed var(--accent);
+}
+
+.recipe-version-graph__fork-connection strong {
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.recipe-version-graph__node--fork-source {
+    box-shadow: inset 0 -4px 0 color-mix(in srgb, var(--accent) 65%, transparent),
+        3px 4px 8px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
+}
+
+.recipe-version-graph__node--fork-target {
+    outline: 2px dashed color-mix(in srgb, var(--accent) 75%, transparent);
+    outline-offset: 3px;
 }
 
 .recipe-version-graph__nodes {
@@ -2511,6 +2569,11 @@ a:hover {
     border-style: dashed;
 }
 
+.recipe-version-graph__node--deleted {
+    border-style: dashed;
+    opacity: 0.82;
+}
+
 .recipe-version-graph__thumbnail {
     width: 100%;
     aspect-ratio: 16 / 9;
@@ -2553,7 +2616,8 @@ a:hover {
 }
 
 .recipe-version-graph__version,
-.recipe-version-graph__current-badge {
+.recipe-version-graph__current-badge,
+.recipe-version-graph__deleted-badge {
     color: var(--accent);
     font-size: 12px;
     font-weight: 700;
@@ -2565,6 +2629,10 @@ a:hover {
     padding: 2px 8px;
     border-radius: var(--radius-full);
     background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.recipe-version-graph__deleted-badge {
+    color: var(--text-secondary);
 }
 
 .recipe-version-graph__node h2,

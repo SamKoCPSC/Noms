@@ -418,7 +418,7 @@ fn version_summary_image_url(images: &[crate::types::RecipeImage]) -> Option<Str
         .map(|image| image.display_url(true).to_string())
 }
 
-#[cfg(feature = "server")]
+#[cfg(all(feature = "server", test))]
 fn version_graph_image(images: &[crate::types::RecipeImage]) -> Option<crate::types::RecipeImage> {
     images.first().cloned()
 }
@@ -432,7 +432,7 @@ fn viewer_may_read_recipe(
     recipe_visibility != "private" || viewer_id == Some(recipe_owner_id)
 }
 
-#[cfg(feature = "server")]
+#[cfg(all(feature = "server", test))]
 fn build_recipe_version_graph(
     recipe_id: uuid::Uuid,
     owner_username: &str,
@@ -506,17 +506,12 @@ pub async fn get_recipe_version_graph(
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
     let pool = crate::db::get_pool();
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
-    let recipe = crate::db::get_recipe_by_id(&pool, recipe_id)
+    crate::db::get_recipe_version_graph(&pool, recipe_id, viewer_id)
         .await
-        .map_err(|error| ServerFnError::new(error.to_string()))?
-        .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
-        .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
-    let versions = crate::db::get_recipe_versions(&pool, recipe_id)
-        .await
-        .map_err(|error| ServerFnError::new(error.to_string()))?;
-
-    build_recipe_version_graph(recipe_id, &recipe.author_username, versions)
-        .map_err(|error| ServerFnError::new(error.to_string()))
+        .map_err(|error| match error {
+            crate::db::DbError::RecipeNotFound(_) => ServerFnError::new("Recipe not found"),
+            other => ServerFnError::new(other.to_string()),
+        })
 }
 
 #[server]
