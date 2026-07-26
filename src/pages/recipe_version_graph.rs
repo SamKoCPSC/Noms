@@ -1,7 +1,7 @@
 //! Dedicated shell for the recipe version graph.
 //!
-//! This initial page loads only the selected recipe. Graph data and layout are
-//! intentionally kept separate from the shell.
+//! The page renders a bounded connected lineage family. Graph discovery and
+//! presentation layout remain separate so each can evolve independently.
 
 use dioxus::prelude::*;
 
@@ -344,7 +344,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
             Card {
                 div { class: "recipe-version-graph",
                     p { class: "recipe-version-graph__description",
-                        "Explore immutable snapshots and immediate recipe forks."
+                        "Explore immutable snapshots across the connected fork family."
                     }
                     div { class: "recipe-version-graph__lanes",
                         for lane in lanes {

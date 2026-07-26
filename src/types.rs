@@ -685,6 +685,8 @@ pub struct VersionGraphTruncation {
     pub node_limit_reached: bool,
     pub edge_limit_reached: bool,
     pub depth_limit_reached: bool,
+    #[serde(default)]
+    pub traversal_limit_reached: bool,
 }
 
 /// Normalized graph payload. Relationships refer to nodes by stable identity.
@@ -766,6 +768,7 @@ mod tests {
                 node_limit_reached: true,
                 edge_limit_reached: false,
                 depth_limit_reached: false,
+                traversal_limit_reached: false,
             },
         };
 
@@ -782,6 +785,7 @@ mod tests {
         );
         assert!(restored.truncation.is_truncated);
         assert!(restored.truncation.node_limit_reached);
+        assert!(!restored.truncation.traversal_limit_reached);
     }
 
     #[test]

@@ -162,6 +162,7 @@ pub async fn get_recipe_version(
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 struct VersionGraphRelationshipRow {
+    id: Uuid,
     original_recipe_id: Option<Uuid>,
     original_recipe_key: Option<Uuid>,
     forked_recipe_id: Option<Uuid>,
@@ -185,6 +186,54 @@ impl VersionGraphRelationshipRow {
 
     fn forked_recipe_key(&self) -> Option<Uuid> {
         self.forked_recipe_key.or(self.forked_recipe_id)
+    }
+
+    fn original_endpoint_metadata(&self) -> VersionGraphEndpointMetadata<'_> {
+        VersionGraphEndpointMetadata {
+            title: &self.original_title,
+            owner_username: self.original_owner_username.as_deref(),
+            owner_id: self.original_owner_id,
+            visibility: self.original_visibility.as_deref(),
+            created_at: self.created_at,
+        }
+    }
+
+    fn forked_endpoint_metadata(&self) -> VersionGraphEndpointMetadata<'_> {
+        VersionGraphEndpointMetadata {
+            title: self.forked_title.as_deref().unwrap_or("Deleted recipe"),
+            owner_username: self.forked_owner_username.as_deref(),
+            owner_id: self.forked_owner_id,
+            visibility: self.forked_visibility.as_deref(),
+            created_at: self.created_at,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct VersionGraphEndpointMetadata<'a> {
+    title: &'a str,
+    owner_username: Option<&'a str>,
+    owner_id: Option<Uuid>,
+    visibility: Option<&'a str>,
+    created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct VersionGraphLimits {
+    max_nodes: usize,
+    max_edges: usize,
+    max_depth: usize,
+    max_relationships: usize,
+}
+
+impl Default for VersionGraphLimits {
+    fn default() -> Self {
+        Self {
+            max_nodes: 1_000,
+            max_edges: 1_500,
+            max_depth: 32,
+            max_relationships: 500,
+        }
     }
 }
 
@@ -338,40 +387,267 @@ fn deduplicate_and_sort_graph(graph: &mut crate::types::VersionGraph) {
     });
 }
 
-/// Build the selected recipe plus its immediate fork neighborhood.
-pub async fn get_recipe_version_graph(
+fn graph_query_limit(limit: usize) -> i64 {
+    i64::try_from(limit).unwrap_or(i64::MAX)
+}
+
+async fn traverse_version_graph_relationships(
+    pool: &PgPool,
+    selected_recipe_id: Uuid,
+    limits: VersionGraphLimits,
+) -> Result<(Vec<VersionGraphRelationshipRow>, HashSet<Uuid>, bool, bool), DbError> {
+    let mut relationships = Vec::new();
+    let mut discovered_recipe_keys = HashSet::from([selected_recipe_id]);
+    let mut traversed_relationship_ids = HashSet::new();
+    let mut frontier = vec![selected_recipe_id];
+    let mut depth = 0usize;
+    let mut depth_limit_reached = false;
+    let mut traversal_limit_reached = false;
+
+    while !frontier.is_empty() {
+        frontier.sort_unstable();
+        let remaining_relationships = limits
+            .max_relationships
+            .saturating_sub(traversed_relationship_ids.len());
+        let query_limit = remaining_relationships.saturating_add(1);
+        let mut frontier_relationships = sqlx::query_as::<_, VersionGraphRelationshipRow>(
+            "SELECT id, original_recipe_id, original_recipe_key, forked_recipe_id, \
+                     forked_recipe_key, forked_version_number, original_title, forked_title, \
+                     original_owner_id, original_owner_username, original_visibility, \
+                     forked_owner_id, forked_owner_username, forked_visibility, created_at \
+                 FROM fork_relationships \
+                 WHERE (COALESCE(original_recipe_key, original_recipe_id) = ANY($1) \
+                    OR COALESCE(forked_recipe_key, forked_recipe_id) = ANY($1)) \
+                   AND NOT (id = ANY($2)) \
+                 ORDER BY created_at, id \
+                 LIMIT $3",
+        )
+        .bind(&frontier)
+        .bind(
+            traversed_relationship_ids
+                .iter()
+                .copied()
+                .collect::<Vec<_>>(),
+        )
+        .bind(graph_query_limit(query_limit))
+        .fetch_all(pool)
+        .await
+        .map_err(DbError::Query)?;
+
+        if frontier_relationships.len() > remaining_relationships {
+            traversal_limit_reached = true;
+            frontier_relationships.truncate(remaining_relationships);
+        }
+
+        let mut next_frontier = HashSet::new();
+        for relationship in frontier_relationships {
+            traversed_relationship_ids.insert(relationship.id);
+            let Some(source_recipe_key) = relationship.original_recipe_key() else {
+                continue;
+            };
+            let Some(forked_recipe_key) = relationship.forked_recipe_key() else {
+                continue;
+            };
+
+            let source_was_discovered = discovered_recipe_keys.contains(&source_recipe_key);
+            let fork_was_discovered = discovered_recipe_keys.contains(&forked_recipe_key);
+            if depth >= limits.max_depth {
+                if !source_was_discovered || !fork_was_discovered {
+                    depth_limit_reached = true;
+                    continue;
+                }
+            } else {
+                if discovered_recipe_keys.insert(source_recipe_key) {
+                    next_frontier.insert(source_recipe_key);
+                }
+                if discovered_recipe_keys.insert(forked_recipe_key) {
+                    next_frontier.insert(forked_recipe_key);
+                }
+            }
+
+            relationships.push(relationship);
+        }
+
+        if traversal_limit_reached {
+            break;
+        }
+        frontier = next_frontier.into_iter().collect();
+        depth = depth.saturating_add(1);
+    }
+
+    Ok((
+        relationships,
+        discovered_recipe_keys,
+        depth_limit_reached,
+        traversal_limit_reached,
+    ))
+}
+
+async fn load_version_graph_recipes(
+    pool: &PgPool,
+    recipe_keys: &[Uuid],
+) -> Result<HashMap<Uuid, Recipe>, DbError> {
+    sqlx::query_as::<_, Recipe>(
+        "SELECT recipes.id, recipes.user_id, recipes.title, recipes.description, \
+             recipes.commentary, recipes.prep_time_minutes, recipes.cook_time_minutes, \
+             recipes.servings, recipes.ingredients, recipes.instructions, recipes.equipment, \
+             recipes.images, recipes.visibility, recipes.created_at, recipes.updated_at, \
+             users.username AS author_username, users.avatar_url AS author_avatar_url \
+         FROM recipes JOIN users ON users.id = recipes.user_id \
+         WHERE recipes.id = ANY($1) \
+         ORDER BY recipes.id",
+    )
+    .bind(recipe_keys)
+    .fetch_all(pool)
+    .await
+    .map_err(DbError::Query)
+    .map(|recipes| {
+        recipes
+            .into_iter()
+            .map(|recipe| (recipe.id, recipe))
+            .collect()
+    })
+}
+
+async fn load_version_graph_versions(
+    pool: &PgPool,
+    recipe_ids: &[Uuid],
+    selected_recipe_id: Uuid,
+    max_nodes: usize,
+) -> Result<HashMap<Uuid, Vec<RecipeVersion>>, DbError> {
+    if recipe_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    sqlx::query_as::<_, RecipeVersion>(&format!(
+        "SELECT {VERSION_COLUMNS} FROM recipe_versions \
+         WHERE recipe_id = ANY($1) \
+         ORDER BY (recipe_id = $2) DESC, recipe_id, version_number \
+         LIMIT $3"
+    ))
+    .bind(recipe_ids)
+    .bind(selected_recipe_id)
+    .bind(graph_query_limit(max_nodes.saturating_add(1)))
+    .fetch_all(pool)
+    .await
+    .map_err(DbError::Query)
+    .map(|versions| {
+        let mut versions_by_recipe = HashMap::<Uuid, Vec<RecipeVersion>>::new();
+        for version in versions {
+            versions_by_recipe
+                .entry(version.recipe_id)
+                .or_default()
+                .push(version);
+        }
+        versions_by_recipe
+    })
+}
+
+fn append_relationship_endpoint(
+    graph: &mut crate::types::VersionGraph,
+    live_recipes: &HashMap<Uuid, Recipe>,
+    visible_recipe_ids: &HashSet<Uuid>,
+    id: crate::types::VersionGraphNodeId,
+    metadata: VersionGraphEndpointMetadata<'_>,
+    viewer_id: Option<Uuid>,
+) {
+    match live_recipes.get(&id.recipe_id) {
+        Some(_) if visible_recipe_ids.contains(&id.recipe_id) => {}
+        Some(_) => {
+            append_synthetic_graph_node(graph, id, "", None, metadata.created_at, false, false)
+        }
+        None => append_synthetic_graph_node(
+            graph,
+            id,
+            metadata.title,
+            metadata.owner_username,
+            metadata.created_at,
+            true,
+            deleted_recipe_metadata_is_visible(metadata.visibility, metadata.owner_id, viewer_id),
+        ),
+    }
+}
+
+fn apply_version_graph_limits(
+    graph: &mut crate::types::VersionGraph,
+    limits: VersionGraphLimits,
+    depth_limit_reached: bool,
+    traversal_limit_reached: bool,
+) {
+    deduplicate_and_sort_graph(graph);
+
+    let node_limit_reached = graph.nodes.len() > limits.max_nodes;
+    graph.nodes.truncate(limits.max_nodes);
+    let retained_node_ids = graph
+        .nodes
+        .iter()
+        .map(crate::types::VersionGraphNode::id)
+        .collect::<HashSet<_>>();
+    graph.edges.retain(|edge| {
+        retained_node_ids.contains(&edge.source()) && retained_node_ids.contains(&edge.target())
+    });
+
+    let edge_limit_reached = graph.edges.len() > limits.max_edges;
+    graph.edges.truncate(limits.max_edges);
+    graph.truncation = crate::types::VersionGraphTruncation {
+        is_truncated: node_limit_reached
+            || edge_limit_reached
+            || depth_limit_reached
+            || traversal_limit_reached,
+        node_limit_reached,
+        edge_limit_reached,
+        depth_limit_reached,
+        traversal_limit_reached,
+    };
+}
+
+async fn get_recipe_version_graph_with_limits(
     pool: &PgPool,
     selected_recipe_id: Uuid,
     viewer_id: Option<Uuid>,
+    limits: VersionGraphLimits,
 ) -> Result<crate::types::VersionGraph, DbError> {
-    let selected = super::get_recipe_by_id(pool, selected_recipe_id)
+    super::get_recipe_by_id(pool, selected_recipe_id)
         .await?
         .filter(|recipe| recipe.visibility != "private" || viewer_id == Some(recipe.user_id))
         .ok_or(DbError::RecipeNotFound(selected_recipe_id))?;
-    let relationships = sqlx::query_as::<_, VersionGraphRelationshipRow>(
-        "SELECT original_recipe_id, original_recipe_key, forked_recipe_id, forked_recipe_key, \
-             forked_version_number, original_title, forked_title, original_owner_id, \
-             original_owner_username, original_visibility, forked_owner_id, \
-             forked_owner_username, forked_visibility, created_at \
-         FROM fork_relationships \
-         WHERE forked_recipe_key = $1 OR forked_recipe_id = $1 \
-            OR original_recipe_key = $1 OR original_recipe_id = $1 \
-         ORDER BY created_at, id",
+
+    let (relationships, discovered_recipe_keys, depth_limit_reached, traversal_limit_reached) =
+        traverse_version_graph_relationships(pool, selected_recipe_id, limits).await?;
+    let mut recipe_keys = discovered_recipe_keys.into_iter().collect::<Vec<_>>();
+    recipe_keys.sort_unstable();
+    let live_recipes = load_version_graph_recipes(pool, &recipe_keys).await?;
+    let mut visible_recipe_ids = live_recipes
+        .values()
+        .filter(|recipe| {
+            recipe.id == selected_recipe_id || adjacent_live_recipe_is_visible(recipe, viewer_id)
+        })
+        .map(|recipe| recipe.id)
+        .collect::<Vec<_>>();
+    visible_recipe_ids.sort_by_key(|recipe_id| (*recipe_id != selected_recipe_id, *recipe_id));
+    let visible_recipe_id_set = visible_recipe_ids.iter().copied().collect::<HashSet<_>>();
+    let mut versions_by_recipe = load_version_graph_versions(
+        pool,
+        &visible_recipe_ids,
+        selected_recipe_id,
+        limits.max_nodes,
     )
-    .bind(selected_recipe_id)
-    .fetch_all(pool)
-    .await
-    .map_err(DbError::Query)?;
+    .await?;
 
     let mut graph = crate::types::VersionGraph::default();
-    append_live_recipe_chain(
-        &mut graph,
-        &selected,
-        get_recipe_versions(pool, selected.id).await?,
-        true,
-    )?;
+    for recipe_id in &visible_recipe_ids {
+        let Some(recipe) = live_recipes.get(recipe_id) else {
+            continue;
+        };
+        append_live_recipe_chain(
+            &mut graph,
+            recipe,
+            versions_by_recipe.remove(recipe_id).unwrap_or_default(),
+            *recipe_id == selected_recipe_id,
+        )?;
+    }
 
-    for relationship in relationships {
+    for relationship in &relationships {
         let Some(source_recipe_id) = relationship.original_recipe_key() else {
             continue;
         };
@@ -381,81 +657,53 @@ pub async fn get_recipe_version_graph(
         let Some(recorded_version) = relationship.forked_version_number else {
             continue;
         };
-        let selected_is_source = source_recipe_id == selected_recipe_id;
-        let adjacent_recipe_id = if selected_is_source {
-            forked_recipe_id
-        } else {
-            source_recipe_id
-        };
-        let adjacent_endpoint = crate::types::VersionGraphNodeId {
-            recipe_id: adjacent_recipe_id,
-            version_number: if selected_is_source {
-                1
-            } else {
-                recorded_version
-            },
-        };
-
-        match super::get_recipe_by_id(pool, adjacent_recipe_id).await? {
-            Some(recipe) if adjacent_live_recipe_is_visible(&recipe, viewer_id) => {
-                append_live_recipe_chain(
-                    &mut graph,
-                    &recipe,
-                    get_recipe_versions(pool, adjacent_recipe_id).await?,
-                    false,
-                )?;
-            }
-            Some(_) => append_synthetic_graph_node(
-                &mut graph,
-                adjacent_endpoint,
-                "",
-                None,
-                relationship.created_at,
-                false,
-                false,
-            ),
-            None => {
-                let (title, owner_username, owner_id, visibility) = if selected_is_source {
-                    (
-                        relationship
-                            .forked_title
-                            .as_deref()
-                            .unwrap_or("Deleted recipe"),
-                        relationship.forked_owner_username.as_deref(),
-                        relationship.forked_owner_id,
-                        relationship.forked_visibility.as_deref(),
-                    )
-                } else {
-                    (
-                        relationship.original_title.as_str(),
-                        relationship.original_owner_username.as_deref(),
-                        relationship.original_owner_id,
-                        relationship.original_visibility.as_deref(),
-                    )
-                };
-                append_synthetic_graph_node(
-                    &mut graph,
-                    adjacent_endpoint,
-                    title,
-                    owner_username,
-                    relationship.created_at,
-                    true,
-                    deleted_recipe_metadata_is_visible(visibility, owner_id, viewer_id),
-                );
-            }
-        }
-
         if let Some(edge) = crate::types::VersionGraphEdge::fork(
             source_recipe_id,
             recorded_version,
             forked_recipe_id,
         ) {
+            append_relationship_endpoint(
+                &mut graph,
+                &live_recipes,
+                &visible_recipe_id_set,
+                edge.source(),
+                relationship.original_endpoint_metadata(),
+                viewer_id,
+            );
+            append_relationship_endpoint(
+                &mut graph,
+                &live_recipes,
+                &visible_recipe_id_set,
+                edge.target(),
+                relationship.forked_endpoint_metadata(),
+                viewer_id,
+            );
             graph.edges.push(edge);
         }
     }
 
-    deduplicate_and_sort_graph(&mut graph);
+    apply_version_graph_limits(
+        &mut graph,
+        limits,
+        depth_limit_reached,
+        traversal_limit_reached,
+    );
     Ok(graph)
+}
+
+/// Build the bounded connected version graph containing the selected recipe.
+pub async fn get_recipe_version_graph(
+    pool: &PgPool,
+    selected_recipe_id: Uuid,
+    viewer_id: Option<Uuid>,
+) -> Result<crate::types::VersionGraph, DbError> {
+    get_recipe_version_graph_with_limits(
+        pool,
+        selected_recipe_id,
+        viewer_id,
+        VersionGraphLimits::default(),
+    )
+    .await
 }
 
 pub async fn compare_recipe_versions(
@@ -1595,6 +1843,39 @@ mod tests {
         }
     }
 
+    async fn publish_fork(
+        pool: &sqlx::PgPool,
+        source_recipe_id: Uuid,
+        fork_owner: &crate::db::User,
+        title: &str,
+    ) -> Recipe {
+        publish_fork_with_visibility(pool, source_recipe_id, fork_owner, title, "public").await
+    }
+
+    async fn publish_fork_with_visibility(
+        pool: &sqlx::PgPool,
+        source_recipe_id: Uuid,
+        fork_owner: &crate::db::User,
+        title: &str,
+        visibility: &str,
+    ) -> Recipe {
+        let draft = create_fork_draft(pool, source_recipe_id, fork_owner.id, None)
+            .await
+            .unwrap();
+        update_recipe_draft(
+            pool,
+            draft.id,
+            fork_owner.id,
+            draft.revision,
+            &snapshot(title, visibility),
+        )
+        .await
+        .unwrap();
+        publish_recipe_draft(pool, draft.id, fork_owner.id, None)
+            .await
+            .unwrap()
+    }
+
     #[tokio::test]
     async fn publishing_new_draft_creates_recipe_v1_tags_and_deletes_draft() {
         let (_db, pool) = test_utils::setup_test_db().await;
@@ -1925,6 +2206,59 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn version_graph_traverses_hidden_branches_without_exposing_their_metadata() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let root_owner = owner(&pool, "graph_hidden_root").await;
+        let branch_owner = owner(&pool, "graph_hidden_branch").await;
+        let root = create_published_recipe(
+            &pool,
+            root_owner.id,
+            &snapshot("Public root", "public"),
+            None,
+        )
+        .await
+        .unwrap();
+        let hidden_branch = publish_fork_with_visibility(
+            &pool,
+            root.id,
+            &branch_owner,
+            "Private intermediate",
+            "private",
+        )
+        .await;
+        let public_descendant =
+            publish_fork(&pool, hidden_branch.id, &branch_owner, "Public descendant").await;
+
+        let graph = get_recipe_version_graph(&pool, root.id, None)
+            .await
+            .unwrap();
+        let hidden_nodes = graph
+            .nodes
+            .iter()
+            .filter(|node| node.id().recipe_id == hidden_branch.id)
+            .collect::<Vec<_>>();
+        let public_node = graph
+            .nodes
+            .iter()
+            .find(|node| node.id().recipe_id == public_descendant.id)
+            .expect("public recipe behind hidden branch");
+
+        assert!(!hidden_nodes.is_empty());
+        assert!(hidden_nodes.iter().all(|node| node.is_redacted()));
+        assert!(hidden_nodes.iter().all(|node| node.title().is_none()));
+        assert!(hidden_nodes
+            .iter()
+            .all(|node| node.owner_username().is_none()));
+        assert!(hidden_nodes.iter().all(|node| node.image().is_none()));
+        assert_eq!(public_node.title(), Some("Public descendant"));
+        assert!(graph.edges.iter().any(|edge| {
+            edge.kind() == crate::types::VersionGraphEdgeKind::Fork
+                && edge.source().recipe_id == hidden_branch.id
+                && edge.target().recipe_id == public_descendant.id
+        }));
+    }
+
+    #[tokio::test]
     async fn version_graph_keeps_direct_fork_topology_after_either_recipe_is_deleted() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let source_owner = owner(&pool, "graph_del_src").await;
@@ -2020,6 +2354,228 @@ mod tests {
                 && edge.source().recipe_id == second_source.id
                 && edge.target() == deleted_child.id()
         }));
+    }
+
+    #[tokio::test]
+    async fn version_graph_includes_sibling_and_cousin_branches() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let graph_owner = owner(&pool, "graph_family").await;
+        let root =
+            create_published_recipe(&pool, graph_owner.id, &snapshot("Root", "public"), None)
+                .await
+                .unwrap();
+        let left_branch = publish_fork(&pool, root.id, &graph_owner, "Left branch").await;
+        let right_branch = publish_fork(&pool, root.id, &graph_owner, "Right branch").await;
+        let selected = publish_fork(&pool, left_branch.id, &graph_owner, "Selected leaf").await;
+        let cousin = publish_fork(&pool, right_branch.id, &graph_owner, "Cousin leaf").await;
+
+        let graph = get_recipe_version_graph(&pool, selected.id, None)
+            .await
+            .unwrap();
+        let recipe_ids = graph
+            .nodes
+            .iter()
+            .map(|node| node.id().recipe_id)
+            .collect::<HashSet<_>>();
+
+        assert_eq!(
+            recipe_ids,
+            HashSet::from([
+                root.id,
+                left_branch.id,
+                right_branch.id,
+                selected.id,
+                cousin.id,
+            ])
+        );
+        assert_eq!(
+            graph
+                .edges
+                .iter()
+                .filter(|edge| edge.kind() == crate::types::VersionGraphEdgeKind::Fork)
+                .count(),
+            4
+        );
+        assert!(!graph.truncation.is_truncated);
+    }
+
+    #[tokio::test]
+    async fn version_graph_stops_malformed_cycles_without_duplicate_topology() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let graph_owner = owner(&pool, "graph_cycle").await;
+        let root = create_published_recipe(
+            &pool,
+            graph_owner.id,
+            &snapshot("Cycle root", "public"),
+            None,
+        )
+        .await
+        .unwrap();
+        let child = publish_fork(&pool, root.id, &graph_owner, "Cycle child").await;
+        sqlx::query(
+            "INSERT INTO fork_relationships (\
+                 original_recipe_id, forked_recipe_id, original_recipe_key, forked_recipe_key, \
+                 forked_version_number, original_title, forked_title, original_owner_id, \
+                 original_owner_username, original_visibility, forked_owner_id, \
+                 forked_owner_username, forked_visibility\
+             ) VALUES ($1, $2, $1, $2, 1, $3, $4, $5, $6, 'public', $5, $6, 'public')",
+        )
+        .bind(child.id)
+        .bind(root.id)
+        .bind(&child.title)
+        .bind(&root.title)
+        .bind(graph_owner.id)
+        .bind(&graph_owner.username)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let graph = get_recipe_version_graph(&pool, root.id, None)
+            .await
+            .unwrap();
+        let node_ids = graph
+            .nodes
+            .iter()
+            .map(|node| node.id())
+            .collect::<HashSet<_>>();
+        let fork_edges = graph
+            .edges
+            .iter()
+            .filter(|edge| edge.kind() == crate::types::VersionGraphEdgeKind::Fork)
+            .collect::<Vec<_>>();
+
+        assert_eq!(node_ids.len(), graph.nodes.len());
+        assert_eq!(node_ids.len(), 2);
+        assert_eq!(fork_edges.len(), 2);
+        assert!(!graph.truncation.is_truncated);
+    }
+
+    #[tokio::test]
+    async fn version_graph_reports_depth_and_traversal_limits_independently() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let graph_owner = owner(&pool, "graph_walk_limits").await;
+        let root = create_published_recipe(
+            &pool,
+            graph_owner.id,
+            &snapshot("Limit root", "public"),
+            None,
+        )
+        .await
+        .unwrap();
+        let child = publish_fork(&pool, root.id, &graph_owner, "Limit child").await;
+        let grandchild = publish_fork(&pool, child.id, &graph_owner, "Limit grandchild").await;
+        let sibling = publish_fork(&pool, root.id, &graph_owner, "Limit sibling").await;
+
+        let depth_limited = get_recipe_version_graph_with_limits(
+            &pool,
+            root.id,
+            None,
+            VersionGraphLimits {
+                max_depth: 1,
+                ..VersionGraphLimits::default()
+            },
+        )
+        .await
+        .unwrap();
+        assert!(depth_limited
+            .nodes
+            .iter()
+            .any(|node| node.id().recipe_id == child.id));
+        assert!(!depth_limited
+            .nodes
+            .iter()
+            .any(|node| node.id().recipe_id == grandchild.id));
+        assert!(depth_limited.truncation.is_truncated);
+        assert!(depth_limited.truncation.depth_limit_reached);
+        assert!(!depth_limited.truncation.traversal_limit_reached);
+
+        let traversal_limited = get_recipe_version_graph_with_limits(
+            &pool,
+            root.id,
+            None,
+            VersionGraphLimits {
+                max_relationships: 1,
+                ..VersionGraphLimits::default()
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            traversal_limited
+                .edges
+                .iter()
+                .filter(|edge| edge.kind() == crate::types::VersionGraphEdgeKind::Fork)
+                .count(),
+            1
+        );
+        assert!(traversal_limited.truncation.is_truncated);
+        assert!(traversal_limited.truncation.traversal_limit_reached);
+        assert!(!traversal_limited.truncation.depth_limit_reached);
+        assert!(traversal_limited
+            .nodes
+            .iter()
+            .any(|node| { [child.id, sibling.id].contains(&node.id().recipe_id) }));
+    }
+
+    #[tokio::test]
+    async fn version_graph_reports_node_and_edge_limits_independently() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let graph_owner = owner(&pool, "graph_shape_limits").await;
+        let root = create_published_recipe(
+            &pool,
+            graph_owner.id,
+            &snapshot("Shape root v1", "public"),
+            None,
+        )
+        .await
+        .unwrap();
+        publish_snapshot(
+            &pool,
+            root.id,
+            graph_owner.id,
+            1,
+            &snapshot("Shape root v2", "public").content,
+            None,
+        )
+        .await
+        .unwrap();
+        let child = publish_fork(&pool, root.id, &graph_owner, "Shape child").await;
+
+        let node_limited = get_recipe_version_graph_with_limits(
+            &pool,
+            root.id,
+            None,
+            VersionGraphLimits {
+                max_nodes: 2,
+                ..VersionGraphLimits::default()
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(node_limited.nodes.len(), 2);
+        assert!(node_limited.truncation.is_truncated);
+        assert!(node_limited.truncation.node_limit_reached);
+        assert!(!node_limited.truncation.edge_limit_reached);
+
+        let edge_limited = get_recipe_version_graph_with_limits(
+            &pool,
+            root.id,
+            None,
+            VersionGraphLimits {
+                max_edges: 1,
+                ..VersionGraphLimits::default()
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(edge_limited.edges.len(), 1);
+        assert!(edge_limited
+            .nodes
+            .iter()
+            .any(|node| node.id().recipe_id == child.id));
+        assert!(edge_limited.truncation.is_truncated);
+        assert!(edge_limited.truncation.edge_limit_reached);
+        assert!(!edge_limited.truncation.node_limit_reached);
     }
 
     #[tokio::test]
