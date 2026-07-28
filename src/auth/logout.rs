@@ -58,7 +58,8 @@ pub async fn handle_logout(
     Query(params): Query<LogoutQuery>,
 ) -> Response {
     // Revoke the session in the database if a valid token is present
-    if let Some(cookie) = jar.get(session::COOKIE_NAME) {
+    let configured_cookie_name = session::cookie_name();
+    if let Some(cookie) = jar.get(configured_cookie_name.as_ref()) {
         if let Err(e) = session::revoke_session(&state.pool, cookie.value()).await {
             tracing::warn!(error = %e, "Failed to revoke session during logout");
         }

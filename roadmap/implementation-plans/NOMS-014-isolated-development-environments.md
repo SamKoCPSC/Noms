@@ -1,7 +1,9 @@
 # NOMS-014: Fully Isolated `just up` Development Environments — Implementation Plan
 
 **Issue:** [NOMS-014-isolated-development-environments.md](../issues/NOMS-014-isolated-development-environments.md)  
+**Status:** ✅ Implemented and independently reviewed
 **Created:** 2026-07-24  
+**Completed:** 2026-07-26
 **Depends on:** NOMS-002 local development tooling  
 **Approach:** Establish a single per-invocation identity, move the development app into the Compose stack, allocate browser-facing ports dynamically, generate runtime configuration after container creation, isolate every writable path, and prove the contract with a two-instance integration test.
 
@@ -299,3 +301,31 @@ Keep OAuth authorization URLs browser-facing while token and userinfo URLs use t
 7. Finish operational documentation and complete the full review.
 
 Do not weaken the isolation contract to preserve the old fixed localhost ports. The printed endpoints and instance metadata replace that implicit global convention.
+
+---
+
+## Completion evidence
+
+All seven checkpoints were implemented. The final current-code validation
+included:
+
+- 37 fast configuration/safety assertions;
+- a clean two-worktree Docker run with distinct Compose identities, ports,
+  runtime directories, Cargo/Dioxus/PostgreSQL/MinIO volumes, and service state;
+- independent form-driven Mock OAuth login and authenticated sessions in both
+  apps, cross-instance cookie rejection, and logout isolation;
+- exact teardown of one project while its peer remained healthy, followed by
+  leak-free cleanup;
+- successful WASM/server `just check`, Rust formatting, Bash syntax, focused
+  cookie testing, and whitespace checks; and
+- a clean independent implementation-review verdict after fixing the reviewer's
+  Docker 29 listing and configurable-runtime-root lock findings.
+
+The implementation uses Compose `env_file` loading instead of bind-mounting the
+generated runtime environment because Docker daemons running in a VM cannot
+reliably bind arbitrary host `/tmp` paths. Runtime secrets remain private
+mode-0600 files and are copied into each instance's container configuration.
+
+The repository-wide `just test` and `just ci` gates retain unrelated baseline
+failures documented in the issue's verification evidence; no NOMS-014 change
+touches the affected source files.

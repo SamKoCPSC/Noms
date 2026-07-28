@@ -22,27 +22,34 @@ Built with **Rust** and **Dioxus**, Noms compiles to a single codebase that runs
 | Tool | Why | Install |
 |---|---|---|
 | [Rust](https://rustup.rs/) | Language | Follow rustup.rs installer |
-| [Dioxus CLI](https://dioxuslabs.com/) (`dx`) | Dev server + hot reload | `cargo install dioxus-cli` |
 | [just](https://just.systems/) | Dev commands (`just up`, `just lint`, etc.) | `cargo install just` · Windows: `winget install just` |
-| [pgschema](https://github.com/bytebase/pgschema) | Declarative database schema management | See [pgschema docs](https://github.com/bytebase/pgschema) for install options |
-| [Docker](https://docker.com/) or [Rancher Desktop](https://rancherdesktop.io/) | Local Postgres, MinIO, Mock OAuth | Windows: Docker Desktop installer |
-| `jq` | JSON parsing (used by health checks) | Arch: `sudo pacman -S jq` · Ubuntu: `sudo apt install jq` · macOS: `brew install jq` |
+| [Docker](https://docker.com/) or [Rancher Desktop](https://rancherdesktop.io/) | Isolated app, PostgreSQL, MinIO, and Mock OAuth | Docker Desktop supports macOS; Docker Engine and Rancher Desktop support Linux |
+| Git | Source control and separate development worktrees | Included with most developer environments |
 
-After installing Rust, add the WASM compilation target:
+Rust, the WASM target, Dioxus CLI, PostgreSQL client, and `pgschema` are
+installed in the development image used by `just up`. Install them on the host
+only if you also want to run standalone commands such as `just check`,
+`just migrate`, or `just dev`.
+
+For host-side Rust checks, add the WASM compilation target:
 
 ```bash
 rustup target add wasm32-unknown-unknown
 ```
 
-### 2. Configure Environment Variables
+### 2. Configure Environment Variables for Standalone Commands
 
-Copy the example environment file and adjust if needed:
+`just up` generates a private environment for every invocation and does not
+read or rewrite `.env.local`. To use standalone host-side migration or
+development recipes, copy the example and adjust it as needed:
 
 ```bash
 cp .env.local.example .env.local
 ```
 
-The defaults work out-of-the-box with the local Docker services (Postgres, MinIO, and a mock OAuth server).
+The fixed example URLs are intended only for manually managed standalone
+services. An isolated environment's generated values are stored with mode
+`0600` under its printed runtime path.
 
 ### 3. Start the Development Environment
 
@@ -50,21 +57,98 @@ The defaults work out-of-the-box with the local Docker services (Postgres, MinIO
 just up
 ```
 
-This command will:
-1. Check that Docker is running (start Docker Desktop or Rancher Desktop first if needed)
-2. Launch local infrastructure services (Postgres, MinIO, Mock OAuth)
-3. Wait for all services to become healthy
-4. Apply the database extensions and schema using `pgschema`
-5. Start the Dioxus dev server with hot reload
+Each invocation creates a disposable Compose project with its own application,
+PostgreSQL database, MinIO storage, Mock OAuth provider, network, writable
+volumes, build output, Dioxus cache, browser cookie name, and dynamically
+allocated loopback ports. The app runs in a development container and
+bind-mounts the current worktree for hot reload. Startup applies extensions and
+the declarative schema, but deliberately does not regenerate `.sqlx`.
+
+When startup succeeds, it prints the instance ID and usable endpoints:
+
+```text
+Noms instance: noms-7f3a91
+Application:   http://127.0.0.1:41783
+MinIO media:   http://127.0.0.1:41784/noms-media
+MinIO console: http://127.0.0.1:41785
+Mock OAuth:    http://127.0.0.1:41786
+PostgreSQL:    127.0.0.1:41787
+Runtime state: /tmp/noms-dev/noms-7f3a91
+```
+
+Use an explicit lowercase name when you want a recognizable environment:
+
+```bash
+just up instance=agent-a
+```
+
+The project name becomes `noms-agent-a`. A duplicate active name is rejected
+instead of attaching to or replacing the existing project.
+
+Container builds default to one Cargo job per instance so multiple cold
+worktrees do not exhaust the Docker engine's memory. Container builds also use
+single-threaded LLVM linking with debug info and incremental compilation
+disabled by default, and Dioxus builds the server and client sequentially. A
+developer with more capacity can opt back into Cargo parallelism and richer
+profiles, for example:
+
+```bash
+NOMS_CARGO_BUILD_JOBS=4 NOMS_CARGO_PROFILE_DEV_DEBUG=2 \
+  NOMS_CARGO_PROFILE_DEV_CODEGEN_UNITS=64 \
+  NOMS_CARGO_PROFILE_DEV_INCREMENTAL=true just up instance=agent-a
+```
+
+Simultaneous cold starts use a short-lived host startup slot so only one
+memory-intensive initial Dioxus compile runs at a time. The slot is released
+as soon as an app is healthy; it does not share any application or
+infrastructure state, and all completed instances run concurrently.
+
+### 4. Use a Separate Worktree per Concurrent Session
+
+Only one active environment may bind-mount a given source checkout. Run every
+concurrent agent session from a separate Git worktree so source files and
+generated checkout state cannot overlap:
+
+```bash
+git worktree add ../noms-agent-a -b agent-a
+git worktree add ../noms-agent-b -b agent-b
+
+cd ../noms-agent-a
+just up instance=agent-a
+```
+
+If a second process calls `just up` from the same worktree, it fails before
+creating containers and identifies the instance holding the lock.
 
 Stop everything with `Ctrl+C` (this also tears down the Docker containers).
+Normal teardown removes that instance's containers, network, data volumes,
+build caches, runtime files, and worktree lock without touching another
+instance.
+
+To inspect or recover an environment from another terminal:
+
+```bash
+just dev-instances
+just dev-status instance=agent-a
+just dev-logs instance=agent-a
+just down instance=agent-a
+```
+
+`just down` intentionally requires an exact, validated instance name. It never
+uses a wildcard or an implicit Compose project, and it refuses to remove
+containers that do not carry matching Noms ownership labels.
 
 ## Available Commands
 
 | Command | Description |
 |---|---|
-| `just up` | Start infrastructure + apply schema + launch dev server |
-| `just down` | Tear down Docker containers |
+| `just up [instance=<name>]` | Create an isolated app and infrastructure environment |
+| `just down instance=<name>` | Tear down exactly one environment and all its writable volumes |
+| `just dev-instances` | List active, failed, and abandoned environments |
+| `just dev-status instance=<name>` | Show metadata and Compose state for one environment |
+| `just dev-logs instance=<name>` | Follow service logs for one environment |
+| `just isolated-dev-config-test` | Run fast orchestration and Compose configuration tests |
+| `just isolated-dev-test` | Run the Docker-backed two-worktree concurrency test |
 | `just migrate` | Apply database schema changes (run after modifying `migrations/schema.sql`) |
 | `just dev` | Start the Dioxus dev server only (infrastructure must already be running) |
 | `just fmt` | Format code |
@@ -72,15 +156,45 @@ Stop everything with `Ctrl+C` (this also tears down the Docker containers).
 | `just check` | Check compilation without building |
 | `just test` | Run tests |
 
-## Local Infrastructure
+## Local Infrastructure and Isolation
 
-The `docker-compose.yml` file provides three services for local development:
+The Compose project contains the hot-reloading app, PostgreSQL, MinIO, a MinIO
+bucket initializer, Mock OAuth, and a schema initializer. Containers use
+Compose DNS and container ports for server-to-server traffic. Only
+browser/developer-facing listeners are published, always on `127.0.0.1` with
+Docker-assigned ports.
 
-| Service | Image | Port | Purpose |
-|---|---|---|---|
-| `noms-postgres` | `postgres:17-alpine` | 5432 | Local database |
-| `noms-minio` | `minio/minio:latest` | 9000 | Local S3-compatible storage |
-| `noms-mock-oauth` | `ghcr.io/navikt/mock-oauth2-server` | 8082 | Mock OAuth2 provider for Google/GitHub/Apple |
+PostgreSQL data, MinIO data, Cargo home and target output, and Dioxus session
+data use project-scoped volumes. Dioxus CLI 0.7.9 configures its session path
+through `DIOXUS_SESSION_CACHE_DIR`, the supported equivalent of a
+`--session-cache-dir` option. Session cookies include the instance ID because
+browsers scope `localhost` cookies by host rather than port.
+
+Both environments still share the host Docker daemon, image/build layers, CPU,
+memory, disk bandwidth, and network bandwidth. Those resources are immutable
+cache or host capacity rather than mutable application state.
+
+### Troubleshooting
+
+- **Docker is unavailable:** Start Docker Desktop, Rancher Desktop, or Docker
+  Engine, wait for `docker info` to succeed, and rerun `just up`.
+- **An instance name already exists:** Inspect it with
+  `just dev-status instance=<name>` or remove only that instance with
+  `just down instance=<name>`.
+- **The worktree is locked:** Use `just dev-instances` to find the owner. If the
+  process was abandoned, run the targeted `just down` command. Use a separate
+  Git worktree for another active environment.
+- **Startup or schema initialization fails:** The error prints the instance ID
+  and preserved `compose.log` path. Inspect the metadata/logs, then run the
+  targeted `just down` command before retrying.
+- **A port cannot be allocated:** Docker normally assigns all ports. Clean up
+  the named failed instance and retry to create a fresh project.
+- **Hot reload does not see changes:** Confirm you are editing the worktree
+  printed by `just dev-status`, not another agent's checkout. On macOS, also
+  confirm that Docker Desktop is allowed to share the worktree directory.
+- **Files have unexpected ownership:** Build and Dioxus output live in Docker
+  volumes rather than the bind-mounted checkout. Run targeted teardown to
+  remove those volumes; do not delete another instance's volumes manually.
 
 ## Database Schema
 
@@ -88,6 +202,7 @@ The database schema is managed declaratively with `pgschema`. The source of trut
 
 To add a new table or column:
 1. Edit `migrations/schema.sql`
-2. Run `just migrate` (or `just up` to restart everything)
+2. Restart an isolated environment with `just up`, or run `just migrate`
+   against a manually configured standalone database
 
 `pgschema` will automatically detect the diff and apply the necessary `ALTER` statements.

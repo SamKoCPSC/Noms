@@ -1,60 +1,44 @@
 set shell := ["bash", "-cu"]
 
 # NOMS — Local development commands
-# Prerequisites: docker, just, cargo/dx, pgschema, psql (postgresql client)
+# `just up` only requires Docker; app and infrastructure tooling run in the
+# invocation's isolated Compose project.
 
-# One-command local startup: Docker services + extensions + schema + offline cache + dev server
-up:
-	# Ensure Docker is running (auto-start if possible for the platform)
-	@if ! docker info > /dev/null 2>&1; then \
-		case "$(uname -s)" in \
-			Linux) \
-				if command -v rancher-desktop > /dev/null 2>&1; then \
-					echo "Starting Rancher Desktop..."; rancher-desktop & \
-				else \
-					echo "Error: Docker is not running. Please start your Docker engine and try again."; exit 1; \
-				fi \
-				;; \
-			Darwin) \
-				echo "Starting Docker Desktop..."; open -a Docker & \
-				;; \
-			MINGW*|MSYS*|CYGWIN*) \
-				echo "Starting Docker Desktop..."; cmd.exe /c start Docker & \
-				;; \
-			*) \
-				echo "Error: Docker is not running. Please start Docker and try again."; exit 1 \
-				;; \
-		esac; \
-	fi
-	@while ! docker info > /dev/null 2>&1; do echo "Waiting for Docker to start..."; sleep 2; done
-	# Start infrastructure services in background
-	docker compose up -d
-	# Wait for all services to become healthy
-	@until [ "$(docker inspect $(docker compose ps -q postgres) | jq -r '.[0].State.Health.Status')" == "healthy" ]; do echo "Waiting for postgres to be healthy..."; sleep 2; done
-	@until [ "$(docker inspect $(docker compose ps -q minio) | jq -r '.[0].State.Health.Status')" == "healthy" ]; do echo "Waiting for minio to be healthy..."; sleep 2; done
-	@until [ "$(docker inspect $(docker compose ps -q mock-oauth) | jq -r '.[0].State.Health.Status')" == "healthy" ]; do echo "Waiting for mock-oauth to be healthy..."; sleep 2; done
-	# Apply database extensions and schema
-	@source .env.local && psql "$DATABASE_URL" -f migrations/extensions.sql && pgschema apply --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" --user "$PGUSER" --password "$PGPASSWORD" --file migrations/schema.sql --schema public --auto-approve
-	# Regenerate .sqlx/ offline query cache so sqlx::query_as! macros stay in sync
-	@source .env.local && DATABASE_URL="$DATABASE_URL" cargo sqlx prepare -- --features server
-	# Launch dev server; clean up Docker on Ctrl+C
-	@set -a; source .env.local; set +a; \
-	trap 'docker compose down --remove-orphans' INT TERM EXIT; \
-	dx serve --platform web; \
-	trap - INT TERM EXIT; \
-	docker compose down --remove-orphans
+# Start a disposable isolated environment. Omit instance for an automatic ID.
+up instance="":
+	@./scripts/dev-environment.sh up "{{instance}}"
 
-# One-command local teardown
-down:
-	docker compose down --remove-orphans
+# Tear down exactly one isolated environment.
+down instance:
+	@./scripts/dev-environment.sh down "{{instance}}"
+
+# Show state and containers for exactly one isolated environment.
+dev-status instance:
+	@./scripts/dev-environment.sh status "{{instance}}"
+
+# Follow logs for exactly one isolated environment.
+dev-logs instance:
+	@./scripts/dev-environment.sh logs "{{instance}}"
+
+# List active, failed, and abandoned isolated environments.
+dev-instances:
+	@./scripts/dev-environment.sh instances
+
+# Run the Docker-backed two-worktree concurrency test.
+isolated-dev-test:
+	@bash scripts/tests/test-isolated-dev-integration.sh
+
+# Run fast configuration checks for the isolated development environment.
+isolated-dev-config-test:
+	@bash scripts/tests/test-isolated-dev-config.sh
 
 # Apply database extensions only (pgcrypto, pg_cron, etc.)
 migrate-extensions:
 	@source .env.local && psql "$DATABASE_URL" -f migrations/extensions.sql
 
 # Apply the declarative database schema (run after modifying migrations/schema.sql)
-# Note: `just up` runs this automatically and also refreshes the .sqlx/ cache.
-# If you run this standalone after a schema change, also run `just sqlx-prepare`.
+# Note: `just up` applies the schema but deliberately does not rewrite `.sqlx`.
+# After changing schema or compile-time queries, run `just sqlx-prepare` explicitly.
 migrate:
 	@source .env.local && pgschema apply --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" --user "$PGUSER" --password "$PGPASSWORD" --file migrations/schema.sql --schema public --auto-approve
 

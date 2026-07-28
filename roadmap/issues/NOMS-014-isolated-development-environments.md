@@ -1,8 +1,9 @@
 # NOMS-014: Fully Isolated `just up` Development Environments
 
-**Status:** 🔵 Ready  
+**Status:** ✅ Done
 **Phase:** Developer infrastructure  
 **Created:** 2026-07-24  
+**Completed:** 2026-07-26
 **Depends on:** NOMS-002 local development tooling
 
 ## Overview
@@ -55,64 +56,89 @@ Explicit names must be normalized and validated as safe Compose project identifi
 
 ### AC1: Per-invocation Compose isolation
 
-- [ ] `just up` generates a collision-resistant instance ID unless an explicit instance name is supplied.
-- [ ] Every Compose command uses the same explicit project name.
-- [ ] The Compose file does not define fixed `container_name` values.
-- [ ] Application, PostgreSQL, MinIO, MinIO initialization, and Mock OAuth run inside the instance's Compose project.
-- [ ] Networks and writable volumes are project-scoped and unique to the invocation.
-- [ ] Starting or stopping one instance does not restart, stop, inspect, or remove another instance's resources.
+- [x] `just up` generates a collision-resistant instance ID unless an explicit instance name is supplied.
+- [x] Every Compose command uses the same explicit project name.
+- [x] The Compose file does not define fixed `container_name` values.
+- [x] Application, PostgreSQL, MinIO, MinIO initialization, and Mock OAuth run inside the instance's Compose project.
+- [x] Networks and writable volumes are project-scoped and unique to the invocation.
+- [x] Starting or stopping one instance does not restart, stop, inspect, or remove another instance's resources.
 
 ### AC2: Dynamic ports and runtime configuration
 
-- [ ] No browser-facing or infrastructure service requires a fixed host port.
-- [ ] Published ports bind to loopback and are allocated without conflicting with concurrent instances.
-- [ ] The startup workflow discovers the assigned ports and generates a private per-instance runtime environment.
-- [ ] The app receives the correct `BASE_URL`, database URL, MinIO endpoint/public URL, and OAuth authorization/token/userinfo URLs.
-- [ ] Server-to-server traffic uses Compose DNS and container ports where browser access is unnecessary.
-- [ ] MinIO CORS permits only the current instance's application origin.
-- [ ] Startup prints the instance ID and usable browser-facing endpoints.
+- [x] No browser-facing or infrastructure service requires a fixed host port.
+- [x] Published ports bind to loopback and are allocated without conflicting with concurrent instances.
+- [x] The startup workflow discovers the assigned ports and generates a private per-instance runtime environment.
+- [x] The app receives the correct `BASE_URL`, database URL, MinIO endpoint/public URL, and OAuth authorization/token/userinfo URLs.
+- [x] Server-to-server traffic uses Compose DNS and container ports where browser access is unnecessary.
+- [x] MinIO CORS permits only the current instance's application origin.
+- [x] Startup prints the instance ID and usable browser-facing endpoints.
 
 ### AC3: Application and build isolation
 
-- [ ] The Dioxus development server runs in the instance's application container with hot reload.
-- [ ] The container bind-mounts only the invoking agent's worktree as source.
-- [ ] Cargo target output, Dioxus session data, and other writable build/runtime caches cannot overlap another instance.
-- [ ] Two active instances do not contend for `.sqlx` generation; `just up` does not rewrite shared generated source artifacts.
-- [ ] Concurrent use of the same worktree is detected and rejected before containers are started.
-- [ ] Separate worktrees can run and rebuild concurrently.
+- [x] The Dioxus development server runs in the instance's application container with hot reload.
+- [x] The container bind-mounts only the invoking agent's worktree as source.
+- [x] Cargo target output, Dioxus session data, and other writable build/runtime caches cannot overlap another instance.
+- [x] Two active instances do not contend for `.sqlx` generation; `just up` does not rewrite shared generated source artifacts.
+- [x] Concurrent use of the same worktree is detected and rejected before containers are started.
+- [x] Separate worktrees can run and rebuild concurrently.
 
 ### AC4: Browser and authentication isolation
 
-- [ ] Each instance uses a distinct application origin or instance-specific session and OAuth cookie names.
-- [ ] Signing into one instance cannot authenticate, sign out, or invalidate the browser session of another instance.
-- [ ] OAuth redirects return to the correct dynamically assigned application origin.
-- [ ] Mock OAuth browser endpoints remain reachable through the printed instance URL configuration.
-- [ ] MinIO-hosted media URLs resolve through the current instance rather than another running stack.
+- [x] Each instance uses a distinct application origin or instance-specific session and OAuth cookie names.
+- [x] Signing into one instance cannot authenticate, sign out, or invalidate the browser session of another instance.
+- [x] OAuth redirects return to the correct dynamically assigned application origin.
+- [x] Mock OAuth browser endpoints remain reachable through the printed instance URL configuration.
+- [x] MinIO-hosted media URLs resolve through the current instance rather than another running stack.
 
 ### AC5: Lifecycle and recovery
 
-- [ ] Normal exit and `Ctrl+C` tear down only the current Compose project.
-- [ ] Normal teardown removes the instance's containers, network, and writable data volumes.
-- [ ] Cleanup is idempotent and safe after partial startup.
-- [ ] A failed health check or migration reports the instance ID, preserves useful logs, and exits non-zero.
-- [ ] Interrupted or abandoned environments can be listed and explicitly removed by instance ID.
-- [ ] Cleanup commands validate their targets and cannot expand to unrelated Compose projects.
+- [x] Normal exit and `Ctrl+C` tear down only the current Compose project.
+- [x] Normal teardown removes the instance's containers, network, and writable data volumes.
+- [x] Cleanup is idempotent and safe after partial startup.
+- [x] A failed health check or migration reports the instance ID, preserves useful logs, and exits non-zero.
+- [x] Interrupted or abandoned environments can be listed and explicitly removed by instance ID.
+- [x] Cleanup commands validate their targets and cannot expand to unrelated Compose projects.
 
 ### AC6: Concurrency verification
 
-- [ ] An automated integration test starts at least two isolated instances concurrently from separate worktrees.
-- [ ] The test proves distinct project names, containers, networks, volumes, host ports, runtime directories, and cookie names.
-- [ ] Database writes and MinIO objects created in one instance are absent from the other.
-- [ ] Both applications complete an independent Mock OAuth sign-in flow.
-- [ ] Stopping the first instance leaves the second healthy and usable.
-- [ ] Teardown leaves no per-test containers, networks, volumes, locks, or runtime directories.
+- [x] An automated integration test starts at least two isolated instances concurrently from separate worktrees.
+- [x] The test proves distinct project names, containers, networks, volumes, host ports, runtime directories, and cookie names.
+- [x] Database writes and MinIO objects created in one instance are absent from the other.
+- [x] Both applications complete an independent Mock OAuth sign-in flow.
+- [x] Stopping the first instance leaves the second healthy and usable.
+- [x] Teardown leaves no per-test containers, networks, volumes, locks, or runtime directories.
 
 ### AC7: Documentation and compatibility
 
-- [ ] `README.md` documents the isolated `just up` workflow, printed endpoints, worktree requirement, status/cleanup commands, and troubleshooting.
-- [ ] `just down` has unambiguous instance semantics and cannot accidentally target every active environment.
-- [ ] Existing standalone migration, test, lint, and CI recipes continue to work.
-- [ ] The design works on the repository's supported Linux and macOS Docker environments.
+- [x] `README.md` documents the isolated `just up` workflow, printed endpoints, worktree requirement, status/cleanup commands, and troubleshooting.
+- [x] `just down` has unambiguous instance semantics and cannot accidentally target every active environment.
+- [x] Existing standalone migration, test, lint, and CI recipes continue to work.
+- [x] The design works on the repository's supported Linux and macOS Docker environments.
+
+## Verification evidence
+
+- `bash scripts/tests/test-isolated-dev-config.sh`: 37 assertions passed, including
+  exact cleanup ownership, Docker 29 label formatting, and a behavioral proof
+  that different `NOMS_RUNTIME_ROOT` values cannot bypass the same-worktree lock.
+- `bash scripts/tests/test-isolated-dev-integration.sh`: two fresh worktrees
+  completed concurrent startup with distinct projects, ports, runtime
+  directories, build/data volumes, database and MinIO state, and session cookie
+  names. Both completed the form-driven Mock OAuth flow, accepted only their own
+  sessions, and remained independent through logout and targeted teardown. No
+  test containers, networks, volumes, locks, runtime directories, or worktrees
+  remained afterward.
+- `just check`, `cargo fmt --check`, Bash syntax checks, the focused
+  per-instance-cookie unit test, and `git diff --check` passed.
+- The independent implementation review passed with no blocking or should-fix
+  findings after its Docker 29 and lock-scope findings were corrected.
+- Repository-wide baseline note: `just test` still has two unrelated,
+  pre-existing upload tests that contend on global storage initialization, and
+  `just ci` still stops on 28 pre-existing Clippy warnings in unchanged recipe
+  image-editor files. NOMS-014 did not change those files or recipes.
+- Linux/Rancher Desktop received the full live verification. The orchestration
+  uses Docker Compose v2 and Bash facilities available on the documented macOS
+  Docker Desktop path, includes GNU/BSD hashing fallbacks, and avoids
+  daemon-side bind mounts of the host runtime directory.
 
 ## Out of scope
 

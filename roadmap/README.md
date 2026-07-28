@@ -20,7 +20,7 @@ A lightweight Kanban board for tracking work. Every item lives here; no external
 | [NOMS-002](issues/NOMS-002-initial-project-setup.md) | Initial project setup — repository, workspace & infrastructure | ✅ Done | Pre-work | Rust workspace, Railway project + Postgres, R2 bucket, CI skeleton, local dev tooling |
 | [NOMS-003](issues/NOMS-003-ui-scaffold.md) | UI scaffold & application shell | ⚪ Backlog | Phase 1 | Route architecture, layout components, design system foundations, template cleanup |
 | [NOMS-008](issues/NOMS-008-recipe-crud.md) | Recipe CRUD & Versioning | 🔵 Ready | Phase 1 | Core recipe creation, viewing, editing, deletion, and version history. [Implementation plan](implementation-plans/NOMS-008-recipe-crud.md) — 8 checkpoints, bottom-up by dependency |
-| [NOMS-014](issues/NOMS-014-isolated-development-environments.md) | Fully isolated `just up` development environments | 🔵 Ready | Developer infrastructure | Disposable per-invocation app and infrastructure stacks for concurrent agents. [Implementation plan](implementation-plans/NOMS-014-isolated-development-environments.md) — 7 checkpoints |
+| [NOMS-014](issues/NOMS-014-isolated-development-environments.md) | Fully isolated `just up` development environments | ✅ Done | Developer infrastructure | Disposable per-invocation app and infrastructure stacks for concurrent agents. [Implementation plan](implementation-plans/NOMS-014-isolated-development-environments.md) — 7 checkpoints |
 
 ## Conventions
 

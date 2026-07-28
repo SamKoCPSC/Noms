@@ -96,7 +96,8 @@ pub async fn handle_auth(
     let jar = CookieJar::from_headers(req.headers());
 
     // Check for valid session
-    let session_token = jar.get(session::COOKIE_NAME);
+    let configured_cookie_name = session::cookie_name();
+    let session_token = jar.get(configured_cookie_name.as_ref());
     let verified_user_id = if let Some(cookie) = session_token {
         session::verify_session(&pool, cookie.value()).await.ok()
     } else {

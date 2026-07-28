@@ -9,6 +9,7 @@ use cookie::{Cookie, CookieBuilder, SameSite};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
+use std::borrow::Cow;
 use std::time::{SystemTime, UNIX_EPOCH};
 use time::Duration as TimeDuration;
 use uuid::Uuid;
@@ -75,6 +76,11 @@ thread_local! {
     static TEST_COOKIE_DOMAIN: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
 }
 
+#[cfg(test)]
+thread_local! {
+    static TEST_COOKIE_NAME: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
+}
+
 /// Set the thread-local test secret. Used by tests outside this module.
 #[cfg(test)]
 pub fn set_test_secret(secret: &'static str) {
@@ -90,6 +96,32 @@ pub fn clear_test_secret() {
     TEST_SECRET.with(|f| {
         *f.borrow_mut() = None;
     });
+}
+
+/// Override the configured cookie name for the current test thread.
+#[cfg(test)]
+pub fn set_test_cookie_name(name: Option<&str>) {
+    TEST_COOKIE_NAME.with(|configured_name| {
+        *configured_name.borrow_mut() = name.map(str::to_owned);
+    });
+}
+
+/// Return the configured session cookie name.
+///
+/// Development instances set `NOMS_SESSION_COOKIE_NAME` so cookies on
+/// `localhost` remain isolated even though browser cookie scoping ignores
+/// ports. Deployments that do not set it retain the established cookie name.
+pub fn cookie_name() -> Cow<'static, str> {
+    #[cfg(test)]
+    if let Some(name) = TEST_COOKIE_NAME.with(|configured_name| configured_name.borrow().clone()) {
+        return Cow::Owned(name);
+    }
+
+    std::env::var("NOMS_SESSION_COOKIE_NAME")
+        .ok()
+        .filter(|name| !name.trim().is_empty())
+        .map(Cow::Owned)
+        .unwrap_or(Cow::Borrowed(COOKIE_NAME))
 }
 
 /// Reads the session secret from the `SESSION_SECRET` environment variable.
@@ -210,7 +242,7 @@ pub async fn verify_session(pool: &PgPool, token: &str) -> Result<Uuid, SessionE
 pub fn build_session_cookie(token: &str) -> Cookie<'static> {
     let is_local = std::env::var("NOMS_ENV").ok() == Some("local".to_string());
     let domain = read_cookie_domain();
-    let mut builder = CookieBuilder::new(COOKIE_NAME, token.to_owned())
+    let mut builder = CookieBuilder::new(cookie_name(), token.to_owned())
         .http_only(true)
         .secure(!is_local)
         .path("/")
@@ -230,7 +262,7 @@ pub fn build_session_cookie(token: &str) -> Cookie<'static> {
 pub fn clear_session_cookie() -> Cookie<'static> {
     let is_local = std::env::var("NOMS_ENV").ok() == Some("local".to_string());
     let domain = read_cookie_domain();
-    let mut builder = CookieBuilder::new(COOKIE_NAME, "")
+    let mut builder = CookieBuilder::new(cookie_name(), "")
         .http_only(true)
         .secure(!is_local)
         .path("/")
@@ -265,7 +297,7 @@ pub async fn extract_user_id_from_fullstack() -> Option<uuid::Uuid> {
         let parts = fsc.parts_mut();
         let cookie_header = parts.headers.get(axum::http::header::COOKIE)?;
         let cookie_str = cookie_header.to_str().ok()?;
-        parse_cookie_value(cookie_str, COOKIE_NAME)?.to_string()
+        parse_cookie_value(cookie_str, cookie_name().as_ref())?.to_string()
     };
 
     let pool = crate::db::get_pool();
@@ -300,7 +332,8 @@ pub async fn extract_user_id_from_headers(
     use axum_extra::extract::cookie::CookieJar;
 
     let jar = CookieJar::from_headers(headers);
-    let session_token = jar.get(COOKIE_NAME)?;
+    let configured_cookie_name = cookie_name();
+    let session_token = jar.get(configured_cookie_name.as_ref())?;
     verify_session(pool, session_token.value()).await.ok()
 }
 
@@ -693,6 +726,21 @@ mod tests {
         assert_eq!(cookie.max_age(), Some(TimeDuration::ZERO));
         assert!(cookie.http_only().unwrap_or(false));
         assert!(cookie.secure().unwrap_or(false));
+    }
+
+    #[test]
+    fn session_cookie_name_can_be_isolated_per_development_instance() {
+        set_test_cookie_name(Some("noms_session_agent_a"));
+
+        let session_cookie = build_session_cookie("test-token");
+        let clear_cookie = clear_session_cookie();
+
+        assert_eq!(cookie_name(), "noms_session_agent_a");
+        assert_eq!(session_cookie.name(), "noms_session_agent_a");
+        assert_eq!(clear_cookie.name(), "noms_session_agent_a");
+
+        set_test_cookie_name(None);
+        assert_eq!(cookie_name(), COOKIE_NAME);
     }
 
     /// Set the thread-local cookie domain. Each test thread gets its own value.

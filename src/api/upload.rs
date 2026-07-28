@@ -197,7 +197,8 @@ pub async fn upload_handler(
     mut multipart: Multipart,
 ) -> axum::response::Response {
     // Verify session -- returns Uuid (user_id) directly
-    let session_token = jar.get(session::COOKIE_NAME);
+    let configured_cookie_name = session::cookie_name();
+    let session_token = jar.get(configured_cookie_name.as_ref());
     let user_id = if let Some(cookie) = session_token {
         match session::verify_session(&state.pool, cookie.value()).await {
             Ok(id) => Some(id),

@@ -307,7 +307,8 @@ pub async fn start_handler(
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
     // Extract the current session's user_id (if any) to bind to this auth state.
-    let user_id = if let Some(cookie) = jar.get(session::COOKIE_NAME) {
+    let configured_cookie_name = session::cookie_name();
+    let user_id = if let Some(cookie) = jar.get(configured_cookie_name.as_ref()) {
         session::verify_session(&state.pool, cookie.value())
             .await
             .ok()
@@ -390,7 +391,8 @@ pub async fn callback_handler(
 
     // Check if there's an existing authenticated session
     // NOTE: We need to verify the session before consuming it for the new login.
-    let existing_user_id = if let Some(cookie) = jar.get(session::COOKIE_NAME) {
+    let configured_cookie_name = session::cookie_name();
+    let existing_user_id = if let Some(cookie) = jar.get(configured_cookie_name.as_ref()) {
         session::verify_session(&state.pool, cookie.value())
             .await
             .ok()
@@ -447,7 +449,10 @@ pub async fn callback_handler(
 
     // Capture existing session cookie value to preserve on conflict redirect.
     // This ensures the user stays logged in as their current account.
-    let existing_cookie_value = jar.get(session::COOKIE_NAME).map(|c| c.to_string());
+    let configured_cookie_name = session::cookie_name();
+    let existing_cookie_value = jar
+        .get(configured_cookie_name.as_ref())
+        .map(|c| c.to_string());
 
     // Link the OAuth identity to a user (or create a new one).
     let link_result = match linking::link_or_create(
