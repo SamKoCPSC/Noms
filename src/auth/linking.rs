@@ -196,6 +196,25 @@ async fn generate_unique_username(
 
 // ── Main linking function ────────────────────────────────────────────────────
 
+/// Resolve a provider identity for an unauthenticated login.
+pub async fn login_or_create(
+    pool: &PgPool,
+    info: OauthUserInfo,
+    refresh_token: Option<String>,
+) -> Result<LinkResult, LinkError> {
+    link_or_create(pool, info, None, refresh_token).await
+}
+
+/// Link a provider identity to one explicitly authenticated user.
+pub async fn link_to_user(
+    pool: &PgPool,
+    user_id: Uuid,
+    info: OauthUserInfo,
+    refresh_token: Option<String>,
+) -> Result<LinkResult, LinkError> {
+    link_or_create(pool, info, Some(user_id), refresh_token).await
+}
+
 /// Link an OAuth identity to a user, creating a new user if necessary.
 ///
 /// Runs inside a single atomic transaction:

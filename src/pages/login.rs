@@ -18,7 +18,10 @@ pub fn Login() -> Element {
             percent_encoding::NON_ALPHANUMERIC,
         )
         .to_string();
-        format!("/auth/{}/start?redirect_uri={}", provider, encoded)
+        format!(
+            "/auth/{}/start?redirect_uri={}&purpose=login",
+            provider, encoded
+        )
     };
 
     rsx! {

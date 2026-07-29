@@ -185,8 +185,8 @@ pub fn SettingsAccounts() -> Element {
     });
 
     // Build OAuth connect URLs
-    let google_url = "/auth/google/start?redirect_uri=/settings/accounts";
-    let github_url = "/auth/github/start?redirect_uri=/settings/accounts";
+    let google_url = "/auth/google/start?redirect_uri=/settings/accounts&purpose=link";
+    let github_url = "/auth/github/start?redirect_uri=/settings/accounts&purpose=link";
 
     // Format a relative time string for last used date
     let format_date = |dt: DateTime<chrono::Utc>| -> String {

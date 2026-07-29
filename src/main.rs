@@ -129,6 +129,13 @@ fn main() {
                 google_client,
                 github_client,
                 http_client: reqwest::Client::new(),
+                google_userinfo_url: std::env::var("GOOGLE_USERINFO_URL")
+                    .unwrap_or_else(|_| "http://localhost:8082/google/userinfo".to_string()),
+                github_userinfo_url: std::env::var("GITHUB_USERINFO_URL").unwrap_or_else(|_| {
+                    let api_url = std::env::var("GITHUB_API_URL")
+                        .unwrap_or_else(|_| "https://api.github.com".to_string());
+                    format!("{api_url}/user")
+                }),
                 rate_limit: rate_limit.clone(),
                 storage: storage_client.clone(),
             };

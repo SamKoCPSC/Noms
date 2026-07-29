@@ -47,6 +47,8 @@ pub struct AppState {
     /// Shared HTTP client used for token exchange and user-info endpoints.
     /// Reusing a single client preserves the internal connection pool.
     pub http_client: reqwest::Client,
+    pub google_userinfo_url: String,
+    pub github_userinfo_url: String,
     /// Shared rate limit state for OAuth endpoint protection.
     pub rate_limit: crate::middleware::rate_limit::RateLimitState,
     /// S3-compatible storage client for media file operations.
@@ -60,6 +62,7 @@ pub struct AppState {
 #[derive(Debug, Deserialize)]
 pub struct StartQuery {
     pub redirect_uri: String,
+    pub purpose: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -79,6 +82,9 @@ pub enum OAuthError {
     ProviderMismatch,
     /// The stored auth state user_id does not match the current session user_id.
     StateUserMismatch,
+    InvalidPurpose,
+    LinkSessionRequired,
+    LoginSessionConflict,
     TokenExchange(String),
     UserInfoExtraction(String),
     DbError(String),
@@ -99,6 +105,11 @@ impl std::fmt::Display for OAuthError {
             Self::StateExpired => write!(f, "CSRF state expired"),
             Self::ProviderMismatch => write!(f, "Provider mismatch"),
             Self::StateUserMismatch => write!(f, "Auth state user mismatch"),
+            Self::InvalidPurpose => write!(f, "Invalid OAuth flow purpose"),
+            Self::LinkSessionRequired => write!(f, "Account linking requires a valid session"),
+            Self::LoginSessionConflict => {
+                write!(f, "OAuth login cannot complete with an active session")
+            }
             Self::TokenExchange(e) => write!(f, "Token exchange failed: {e}"),
             Self::UserInfoExtraction(e) => write!(f, "User info extraction failed: {e}"),
             Self::DbError(e) => write!(f, "Database error: {e}"),
@@ -129,6 +140,9 @@ impl OAuthError {
             | Self::StateExpired
             | Self::ProviderMismatch
             | Self::StateUserMismatch
+            | Self::InvalidPurpose
+            | Self::LinkSessionRequired
+            | Self::LoginSessionConflict
             | Self::AccountAlreadyLinked(_) => self.to_string(),
 
             // Internal errors — generic message only
@@ -165,6 +179,9 @@ impl IntoResponse for OAuthError {
             Self::StateNotFound => StatusCode::UNAUTHORIZED,
             Self::StateExpired => StatusCode::UNAUTHORIZED,
             Self::StateUserMismatch => StatusCode::UNAUTHORIZED,
+            Self::InvalidPurpose => StatusCode::BAD_REQUEST,
+            Self::LinkSessionRequired => StatusCode::UNAUTHORIZED,
+            Self::LoginSessionConflict => StatusCode::CONFLICT,
             Self::ProviderMismatch => StatusCode::BAD_REQUEST,
             Self::TokenExchange(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::UserInfoExtraction(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -283,6 +300,52 @@ const CSRF_STATE_TTL_SECS: i64 = 600;
 /// Maximum allowed length for redirect_uri parameter.
 const REDIRECT_URI_MAX_LEN: usize = 2048;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FlowPurpose {
+    Login,
+    Link,
+}
+
+impl FlowPurpose {
+    fn parse(value: &str) -> Result<Self, OAuthError> {
+        match value {
+            "login" => Ok(Self::Login),
+            "link" => Ok(Self::Link),
+            _ => Err(OAuthError::InvalidPurpose),
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Login => "login",
+            Self::Link => "link",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CallbackIntent {
+    Login,
+    Link(Uuid),
+}
+
+fn validate_callback_intent(
+    purpose: Option<&str>,
+    stored_user_id: Option<Uuid>,
+    current_user_id: Option<Uuid>,
+) -> Result<CallbackIntent, OAuthError> {
+    match FlowPurpose::parse(purpose.ok_or(OAuthError::InvalidPurpose)?)? {
+        FlowPurpose::Login if stored_user_id.is_none() && current_user_id.is_none() => {
+            Ok(CallbackIntent::Login)
+        }
+        FlowPurpose::Login => Err(OAuthError::LoginSessionConflict),
+        FlowPurpose::Link => match (stored_user_id, current_user_id) {
+            (Some(stored), Some(current)) if stored == current => Ok(CallbackIntent::Link(stored)),
+            _ => Err(OAuthError::StateUserMismatch),
+        },
+    }
+}
+
 // ── Handlers ────────────────────────────────────────────────────────────────
 
 /// GET /auth/:provider/start — initiate an OAuth flow.
@@ -298,6 +361,7 @@ pub async fn start_handler(
 ) -> Result<impl IntoResponse, OAuthError> {
     let prov = validate_provider(&provider)?;
     validate_redirect_uri(&params.redirect_uri)?;
+    let purpose = FlowPurpose::parse(&params.purpose)?;
 
     // Generate a CSRF state UUID and persist it in the DB.
     let csrf_state = Uuid::new_v4().to_string();
@@ -306,22 +370,28 @@ pub async fn start_handler(
     // The verifier is stored server-side; the challenge is sent to the provider.
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
-    // Extract the current session's user_id (if any) to bind to this auth state.
+    // Resolve and bind the immutable flow intent before persisting state.
     let configured_cookie_name = session::cookie_name();
-    let user_id = if let Some(cookie) = jar.get(configured_cookie_name.as_ref()) {
+    let current_user_id = if let Some(cookie) = jar.get(configured_cookie_name.as_ref()) {
         session::verify_session(&state.pool, cookie.value())
             .await
             .ok()
     } else {
         None
     };
+    let user_id = match purpose {
+        FlowPurpose::Login if current_user_id.is_none() => None,
+        FlowPurpose::Login => return Err(OAuthError::LoginSessionConflict),
+        FlowPurpose::Link => Some(current_user_id.ok_or(OAuthError::LinkSessionRequired)?),
+    };
 
-    db::insert_auth_state(
+    db::insert_auth_state_for(
         &state.pool,
         &csrf_state,
         prov.as_str(),
         &params.redirect_uri,
         pkce_verifier.secret(),
+        purpose.as_str(),
         user_id,
     )
     .await
@@ -366,7 +436,7 @@ pub async fn callback_handler(
     Path(provider): Path<String>,
     Query(params): Query<CallbackQuery>,
     jar: CookieJar,
-) -> Result<impl IntoResponse, OAuthError> {
+) -> Result<axum::response::Response, OAuthError> {
     let prov = validate_provider(&provider)?;
 
     // Atomically consume the CSRF state. First caller gets the row;
@@ -400,16 +470,11 @@ pub async fn callback_handler(
         None
     };
 
-    // Validate that the stored user_id matches the current session's user_id.
-    // This prevents CSRF attacks where an attacker initiates a flow and tricks
-    // a different user into completing it.
-    if let Some(stored) = auth_state.user_id {
-        if let Some(current) = existing_user_id {
-            if stored != current {
-                return Err(OAuthError::StateUserMismatch);
-            }
-        }
-    }
+    let intent = validate_callback_intent(
+        auth_state.purpose.as_deref(),
+        auth_state.user_id,
+        existing_user_id,
+    )?;
 
     // Select the appropriate OAuth client.
     let client = match prov {
@@ -434,10 +499,20 @@ pub async fn callback_handler(
     // Extract user info from the token response.
     let user_info = match prov {
         linking::Provider::Google => {
-            extract_google_user_info(&token_response, &state.http_client).await?
+            extract_google_user_info(
+                &token_response,
+                &state.http_client,
+                &state.google_userinfo_url,
+            )
+            .await?
         }
         linking::Provider::GitHub => {
-            extract_github_user_info(&token_response, &state.http_client).await?
+            extract_github_user_info(
+                &token_response,
+                &state.http_client,
+                &state.github_userinfo_url,
+            )
+            .await?
         }
         _ => unreachable!(),
     };
@@ -447,56 +522,47 @@ pub async fn callback_handler(
         .refresh_token()
         .map(|rt| rt.secret().to_string());
 
-    // Capture existing session cookie value to preserve on conflict redirect.
-    // This ensures the user stays logged in as their current account.
-    let configured_cookie_name = session::cookie_name();
-    let existing_cookie_value = jar
-        .get(configured_cookie_name.as_ref())
-        .map(|c| c.to_string());
-
-    // Link the OAuth identity to a user (or create a new one).
-    let link_result = match linking::link_or_create(
-        &state.pool,
-        user_info,
-        existing_user_id,
-        refresh_token,
-    )
-    .await
-    {
+    let link_result = match intent {
+        CallbackIntent::Login => {
+            linking::login_or_create(&state.pool, user_info, refresh_token).await
+        }
+        CallbackIntent::Link(user_id) => {
+            linking::link_to_user(&state.pool, user_id, user_info, refresh_token).await
+        }
+    };
+    let link_result = match link_result {
         Ok(result) => result,
         Err(linking::LinkError::AccountAlreadyLinked(provider)) => {
-            // Conflict: this provider is linked to a different user.
-            // Redirect to settings with error params, preserving the existing session.
             let redirect_uri = format!(
                 "/settings/accounts?error=account_already_linked&provider={}",
                 provider
             );
-            // Preserve existing session cookie so user stays logged in
-            let cookie_header = existing_cookie_value.unwrap_or_default();
-            return Ok((
-                StatusCode::SEE_OTHER,
-                [("location", redirect_uri), ("set-cookie", cookie_header)],
-            ));
+            return Ok((StatusCode::SEE_OTHER, [("location", redirect_uri)]).into_response());
         }
         Err(e) => return Err(OAuthError::LinkError(e.to_string())),
     };
 
-    // Create a session JWT.
-    let jwt = session::create_session(&state.pool, link_result.user_id)
-        .await
-        .map_err(|e| OAuthError::SessionError(e.to_string()))?;
-
-    // Build the session cookie.
-    let cookie = session::build_session_cookie(&jwt);
-
-    // Redirect to the stored redirect_uri with a session cookie.
-    Ok((
-        StatusCode::SEE_OTHER,
-        [
-            ("location", auth_state.redirect_uri),
-            ("set-cookie", cookie.to_string()),
-        ],
-    ))
+    match intent {
+        CallbackIntent::Login => {
+            let jwt = session::create_session(&state.pool, link_result.user_id)
+                .await
+                .map_err(|e| OAuthError::SessionError(e.to_string()))?;
+            let cookie = session::build_session_cookie(&jwt);
+            Ok((
+                StatusCode::SEE_OTHER,
+                [
+                    ("location", auth_state.redirect_uri),
+                    ("set-cookie", cookie.to_string()),
+                ],
+            )
+                .into_response())
+        }
+        CallbackIntent::Link(_) => Ok((
+            StatusCode::SEE_OTHER,
+            [("location", auth_state.redirect_uri)],
+        )
+            .into_response()),
+    }
 }
 
 // ── User info extraction ────────────────────────────────────────────────────
@@ -510,20 +576,16 @@ pub async fn callback_handler(
 async fn extract_google_user_info(
     token_response: &oauth2::basic::BasicTokenResponse,
     http_client: &reqwest::Client,
+    userinfo_url: &str,
 ) -> Result<linking::OauthUserInfo, OAuthError> {
     // Try to get the ID token from the response extras.
     // The oauth2 v5 crate's BasicTokenResponse uses EmptyExtraTokenFields,
     // which doesn't include an id_token field. Instead, we use Google's
     // userinfo endpoint with the access token.
     let access_token = token_response.access_token().secret();
-    let userinfo_url = env_or(
-        "GOOGLE_USERINFO_URL",
-        "http://localhost:8082/google/userinfo",
-    );
-
     // Use the shared HTTP client for the userinfo endpoint.
     let resp: serde_json::Value = http_client
-        .get(&userinfo_url)
+        .get(userinfo_url)
         .header("Authorization", format!("Bearer {}", access_token))
         .header("Accept", "application/json")
         .send()
@@ -559,20 +621,12 @@ async fn extract_google_user_info(
 async fn extract_github_user_info(
     token_response: &oauth2::basic::BasicTokenResponse,
     http_client: &reqwest::Client,
+    userinfo_url: &str,
 ) -> Result<linking::OauthUserInfo, OAuthError> {
     let access_token = token_response.access_token().secret();
 
-    // Prefer GITHUB_USERINFO_URL (standard OIDC endpoint, used by mock server).
-    // Fall back to GITHUB_API_URL + /user (GitHub-specific API).
-    let userinfo_url = if let Ok(url) = std::env::var("GITHUB_USERINFO_URL") {
-        url
-    } else {
-        let api_url = env_or("GITHUB_API_URL", "https://api.github.com");
-        format!("{}/user", api_url)
-    };
-
     let resp: serde_json::Value = http_client
-        .get(&userinfo_url)
+        .get(userinfo_url)
         .header("Authorization", format!("Bearer {}", access_token))
         .header("User-Agent", "noms-app")
         .header("Accept", "application/json")
@@ -841,6 +895,363 @@ mod tests {
     mod db_tests {
         use super::*;
         use crate::test_utils;
+
+        fn test_app_state(pool: PgPool) -> AppState {
+            let (google_client, github_client) = build_oauth_clients("http://localhost:3000");
+            AppState {
+                pool,
+                google_client,
+                github_client,
+                http_client: reqwest::Client::new(),
+                google_userinfo_url: "http://localhost:8082/google/userinfo".to_string(),
+                github_userinfo_url: "http://localhost:8082/github/userinfo".to_string(),
+                rate_limit: crate::middleware::rate_limit::RateLimitState::default(),
+                storage: crate::storage::StorageClient::for_test(),
+            }
+        }
+
+        async fn mock_google_state(pool: PgPool, email: &str) -> (AppState, wiremock::MockServer) {
+            let server = wiremock::MockServer::start().await;
+            wiremock::Mock::given(wiremock::matchers::method("POST"))
+                .and(wiremock::matchers::path("/google/token"))
+                .respond_with(wiremock::ResponseTemplate::new(200).set_body_json(
+                    serde_json::json!({
+                        "access_token": "test-access-token",
+                        "token_type": "Bearer"
+                    }),
+                ))
+                .mount(&server)
+                .await;
+            wiremock::Mock::given(wiremock::matchers::method("GET"))
+                .and(wiremock::matchers::path("/google/userinfo"))
+                .respond_with(wiremock::ResponseTemplate::new(200).set_body_json(
+                    serde_json::json!({
+                        "sub": format!("subject-{email}"),
+                        "email": email,
+                        "name": "OAuth Test User"
+                    }),
+                ))
+                .mount(&server)
+                .await;
+
+            let make_client = |provider: &str| {
+                BasicClient::new(ClientId::new(format!("{provider}-client")))
+                    .set_client_secret(ClientSecret::new("test-secret".to_string()))
+                    .set_auth_uri(AuthUrl::new(format!("{}/authorize", server.uri())).unwrap())
+                    .set_token_uri(
+                        TokenUrl::new(format!("{}/{provider}/token", server.uri())).unwrap(),
+                    )
+                    .set_redirect_uri(
+                        RedirectUrl::new(format!("http://localhost:3000/auth/{provider}/callback"))
+                            .unwrap(),
+                    )
+            };
+
+            (
+                AppState {
+                    pool,
+                    google_client: make_client("google"),
+                    github_client: make_client("github"),
+                    http_client: reqwest::Client::new(),
+                    google_userinfo_url: format!("{}/google/userinfo", server.uri()),
+                    github_userinfo_url: format!("{}/github/userinfo", server.uri()),
+                    rate_limit: crate::middleware::rate_limit::RateLimitState::default(),
+                    storage: crate::storage::StorageClient::for_test(),
+                },
+                server,
+            )
+        }
+
+        async fn test_user(pool: &PgPool, label: &str) -> db::User {
+            let u = test_utils::uid();
+            db::insert_user(
+                pool,
+                &format!("{label}_{u}"),
+                label,
+                &format!("{label}{u}@example.com"),
+                None,
+            )
+            .await
+            .unwrap()
+        }
+
+        #[tokio::test]
+        async fn link_start_requires_valid_session() {
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let result = start_handler(
+                State(test_app_state(pool)),
+                Path("google".to_string()),
+                Query(StartQuery {
+                    redirect_uri: "/settings/accounts".to_string(),
+                    purpose: "link".to_string(),
+                }),
+                CookieJar::new(),
+            )
+            .await;
+            assert!(matches!(result, Err(OAuthError::LinkSessionRequired)));
+        }
+
+        #[tokio::test]
+        async fn login_start_rejects_active_session() {
+            session::set_test_secret("test-secret-32-bytes-long-enough!!");
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let user = test_user(&pool, "login_active").await;
+            let token = session::create_session(&pool, user.id).await.unwrap();
+            let jar = CookieJar::new().add(session::build_session_cookie(&token));
+            let result = start_handler(
+                State(test_app_state(pool)),
+                Path("google".to_string()),
+                Query(StartQuery {
+                    redirect_uri: "/dashboard".to_string(),
+                    purpose: "login".to_string(),
+                }),
+                jar,
+            )
+            .await;
+            assert!(matches!(result, Err(OAuthError::LoginSessionConflict)));
+            session::clear_test_secret();
+        }
+
+        #[tokio::test]
+        async fn login_callback_with_victim_session_is_rejected_before_linking() {
+            session::set_test_secret("test-secret-32-bytes-long-enough!!");
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let victim = test_user(&pool, "victim").await;
+            let victim_token = session::create_session(&pool, victim.id).await.unwrap();
+            let jar = CookieJar::new().add(session::build_session_cookie(&victim_token));
+            let state_id = format!("login-csrf-{}", test_utils::uid());
+
+            db::insert_auth_state_for(
+                &pool,
+                &state_id,
+                "google",
+                "/dashboard",
+                "test-verifier-minimum-43-characters-long-enough",
+                "login",
+                None,
+            )
+            .await
+            .unwrap();
+
+            let result = callback_handler(
+                State(test_app_state(pool.clone())),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id.clone(),
+                    code: "attacker-code".to_string(),
+                }),
+                jar,
+            )
+            .await;
+
+            assert!(matches!(result, Err(OAuthError::LoginSessionConflict)));
+            assert_eq!(db::count_oauth_accounts(&pool, victim.id).await.unwrap(), 0);
+            assert_eq!(
+                session::verify_session(&pool, &victim_token).await.unwrap(),
+                victim.id
+            );
+            assert!(db::delete_auth_state(&pool, &state_id)
+                .await
+                .unwrap()
+                .is_none());
+            session::clear_test_secret();
+        }
+
+        #[tokio::test]
+        async fn legacy_state_without_purpose_is_consumed_and_rejected() {
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let state_id = format!("legacy-state-{}", test_utils::uid());
+            sqlx::query(
+                "INSERT INTO auth_states (id, provider, redirect_uri, code_verifier, user_id) \
+                 VALUES ($1, 'google', '/dashboard', $2, NULL)",
+            )
+            .bind(&state_id)
+            .bind("test-verifier-minimum-43-characters-long-enough")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+            let result = callback_handler(
+                State(test_app_state(pool.clone())),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id.clone(),
+                    code: "code".to_string(),
+                }),
+                CookieJar::new(),
+            )
+            .await;
+
+            assert!(matches!(result, Err(OAuthError::InvalidPurpose)));
+            assert!(db::delete_auth_state(&pool, &state_id)
+                .await
+                .unwrap()
+                .is_none());
+        }
+
+        #[tokio::test]
+        async fn link_callback_without_session_is_rejected_before_linking() {
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let user = test_user(&pool, "link_owner").await;
+            let state_id = format!("link-no-session-{}", test_utils::uid());
+            db::insert_auth_state_for(
+                &pool,
+                &state_id,
+                "google",
+                "/settings/accounts",
+                "test-verifier-minimum-43-characters-long-enough",
+                "link",
+                Some(user.id),
+            )
+            .await
+            .unwrap();
+
+            let result = callback_handler(
+                State(test_app_state(pool.clone())),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id,
+                    code: "code".to_string(),
+                }),
+                CookieJar::new(),
+            )
+            .await;
+
+            assert!(matches!(result, Err(OAuthError::StateUserMismatch)));
+            assert_eq!(db::count_oauth_accounts(&pool, user.id).await.unwrap(), 0);
+        }
+
+        #[tokio::test]
+        async fn link_callback_with_different_user_session_is_rejected_before_linking() {
+            session::set_test_secret("test-secret-32-bytes-long-enough!!");
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let owner = test_user(&pool, "link_owner").await;
+            let other = test_user(&pool, "link_other").await;
+            let other_token = session::create_session(&pool, other.id).await.unwrap();
+            let jar = CookieJar::new().add(session::build_session_cookie(&other_token));
+            let state_id = format!("link-wrong-session-{}", test_utils::uid());
+            db::insert_auth_state_for(
+                &pool,
+                &state_id,
+                "google",
+                "/settings/accounts",
+                "test-verifier-minimum-43-characters-long-enough",
+                "link",
+                Some(owner.id),
+            )
+            .await
+            .unwrap();
+
+            let result = callback_handler(
+                State(test_app_state(pool.clone())),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id,
+                    code: "code".to_string(),
+                }),
+                jar,
+            )
+            .await;
+
+            assert!(matches!(result, Err(OAuthError::StateUserMismatch)));
+            assert_eq!(db::count_oauth_accounts(&pool, owner.id).await.unwrap(), 0);
+            assert_eq!(db::count_oauth_accounts(&pool, other.id).await.unwrap(), 0);
+            session::clear_test_secret();
+        }
+
+        #[tokio::test]
+        async fn unauthenticated_login_callback_creates_session() {
+            session::set_test_secret("test-secret-32-bytes-long-enough!!");
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let email = format!("login{}@example.com", test_utils::uid());
+            let (state, _server) = mock_google_state(pool.clone(), &email).await;
+            let state_id = format!("login-success-{}", test_utils::uid());
+            db::insert_auth_state_for(
+                &pool,
+                &state_id,
+                "google",
+                "/dashboard",
+                "test-verifier-minimum-43-characters-long-enough",
+                "login",
+                None,
+            )
+            .await
+            .unwrap();
+
+            let response = callback_handler(
+                State(state),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id,
+                    code: "valid-code".to_string(),
+                }),
+                CookieJar::new(),
+            )
+            .await
+            .unwrap();
+
+            assert_eq!(response.status(), StatusCode::SEE_OTHER);
+            let set_cookie = response
+                .headers()
+                .get(axum::http::header::SET_COOKIE)
+                .unwrap()
+                .to_str()
+                .unwrap();
+            let cookie =
+                axum_extra::extract::cookie::Cookie::parse(set_cookie.to_string()).unwrap();
+            let user_id = session::verify_session(&pool, cookie.value())
+                .await
+                .unwrap();
+            assert_eq!(db::count_oauth_accounts(&pool, user_id).await.unwrap(), 1);
+            session::clear_test_secret();
+        }
+
+        #[tokio::test]
+        async fn matching_link_callback_preserves_existing_session() {
+            session::set_test_secret("test-secret-32-bytes-long-enough!!");
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let user = test_user(&pool, "link_success").await;
+            let token = session::create_session(&pool, user.id).await.unwrap();
+            let jar = CookieJar::new().add(session::build_session_cookie(&token));
+            let email = format!("provider{}@example.com", test_utils::uid());
+            let (state, _server) = mock_google_state(pool.clone(), &email).await;
+            let state_id = format!("link-success-{}", test_utils::uid());
+            db::insert_auth_state_for(
+                &pool,
+                &state_id,
+                "google",
+                "/settings/accounts",
+                "test-verifier-minimum-43-characters-long-enough",
+                "link",
+                Some(user.id),
+            )
+            .await
+            .unwrap();
+
+            let response = callback_handler(
+                State(state),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id,
+                    code: "valid-code".to_string(),
+                }),
+                jar,
+            )
+            .await
+            .unwrap();
+
+            assert_eq!(response.status(), StatusCode::SEE_OTHER);
+            assert!(response
+                .headers()
+                .get(axum::http::header::SET_COOKIE)
+                .is_none());
+            assert_eq!(
+                session::verify_session(&pool, &token).await.unwrap(),
+                user.id
+            );
+            assert_eq!(db::count_oauth_accounts(&pool, user.id).await.unwrap(), 1);
+            session::clear_test_secret();
+        }
 
         #[tokio::test]
         async fn test_insert_auth_state_with_provider() {

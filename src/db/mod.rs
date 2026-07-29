@@ -267,6 +267,7 @@ pub struct AuthState {
     pub redirect_uri: String,
     pub provider: String,
     pub code_verifier: Option<String>,
+    pub purpose: Option<String>,
     pub user_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
 }
@@ -1770,11 +1771,34 @@ pub async fn insert_auth_state(
     code_verifier: &str,
     user_id: Option<Uuid>,
 ) -> Result<(), DbError> {
-    sqlx::query("INSERT INTO auth_states (id, provider, redirect_uri, code_verifier, user_id) VALUES ($1, $2, $3, $4, $5)")
+    insert_auth_state_for(
+        executor,
+        id,
+        provider,
+        redirect_uri,
+        code_verifier,
+        "login",
+        user_id,
+    )
+    .await
+}
+
+/// Insert an auth state with an explicit immutable flow purpose.
+pub async fn insert_auth_state_for(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    id: &str,
+    provider: &str,
+    redirect_uri: &str,
+    code_verifier: &str,
+    purpose: &str,
+    user_id: Option<Uuid>,
+) -> Result<(), DbError> {
+    sqlx::query("INSERT INTO auth_states (id, provider, redirect_uri, code_verifier, purpose, user_id) VALUES ($1, $2, $3, $4, $5, $6)")
         .bind(id)
         .bind(provider)
         .bind(redirect_uri)
         .bind(code_verifier)
+        .bind(purpose)
         .bind(user_id)
         .execute(executor)
         .await
@@ -1792,7 +1816,7 @@ pub async fn delete_auth_state(
 ) -> Result<Option<AuthState>, DbError> {
     sqlx::query_as!(
         AuthState,
-        "DELETE FROM auth_states WHERE id = $1 RETURNING id, redirect_uri, provider, code_verifier, user_id, created_at",
+        "DELETE FROM auth_states WHERE id = $1 RETURNING id, redirect_uri, provider, code_verifier, purpose, user_id, created_at",
         id,
     )
     .fetch_optional(executor)

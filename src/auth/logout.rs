@@ -97,6 +97,8 @@ fn make_router(pool: PgPool) -> axum::Router {
         google_client: _google,
         github_client: _github,
         http_client: reqwest::Client::new(),
+        google_userinfo_url: "http://localhost:8082/google/userinfo".to_string(),
+        github_userinfo_url: "http://localhost:8082/github/userinfo".to_string(),
         rate_limit: crate::middleware::rate_limit::RateLimitState::default(),
         #[cfg(feature = "server")]
         storage: crate::storage::StorageClient::for_test(),

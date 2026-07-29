@@ -154,6 +154,7 @@ pub async fn apply_test_schema(pool: &PgPool) {
          redirect_uri TEXT NOT NULL,\
          provider TEXT NOT NULL,\
          code_verifier TEXT,\
+         purpose TEXT CHECK (purpose IN ('login', 'link')),\
          user_id UUID,\
          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
          )",
