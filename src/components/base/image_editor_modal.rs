@@ -1134,6 +1134,7 @@ fn editor_state_from_edit(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn current_editor_state(
     scale: Signal<f64>,
     offset: Signal<(f64, f64)>,
@@ -1162,6 +1163,7 @@ fn current_editor_state(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn apply_editor_state(
     state: EditorEditState,
     mut scale: Signal<f64>,
@@ -1203,6 +1205,7 @@ fn push_editor_history(
     redo_stack.write().clear();
 }
 
+#[allow(clippy::too_many_arguments)]
 fn begin_editor_edit(
     mut active_edit_start: Signal<Option<EditorEditState>>,
     scale: Signal<f64>,
@@ -1227,6 +1230,7 @@ fn begin_editor_edit(
     )));
 }
 
+#[allow(clippy::too_many_arguments)]
 fn commit_editor_edit(
     undo_stack: Signal<Vec<EditorEditState>>,
     redo_stack: Signal<Vec<EditorEditState>>,
@@ -1253,6 +1257,7 @@ fn commit_editor_edit(
     push_editor_history(undo_stack, redo_stack, before, after);
 }
 
+#[allow(clippy::too_many_arguments)]
 fn set_editor_state_with_history(
     undo_stack: Signal<Vec<EditorEditState>>,
     redo_stack: Signal<Vec<EditorEditState>>,
@@ -1284,6 +1289,7 @@ fn set_editor_state_with_history(
     );
 }
 
+#[allow(clippy::too_many_arguments)]
 fn undo_editor_state(
     mut undo_stack: Signal<Vec<EditorEditState>>,
     mut redo_stack: Signal<Vec<EditorEditState>>,
@@ -1340,6 +1346,7 @@ fn undo_editor_state(
     );
 }
 
+#[allow(clippy::too_many_arguments)]
 fn redo_editor_state(
     mut undo_stack: Signal<Vec<EditorEditState>>,
     mut redo_stack: Signal<Vec<EditorEditState>>,
@@ -1955,6 +1962,7 @@ struct CropRectPct {
     right: f64,
 }
 
+#[allow(clippy::too_many_arguments)]
 fn current_recipe_image_edit(
     crop_mode: ImageEditorCropMode,
     crop_rect: Option<CropRectPct>,

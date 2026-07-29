@@ -130,7 +130,7 @@ fn main() {
                 github_client,
                 http_client: reqwest::Client::new(),
                 rate_limit: rate_limit.clone(),
-                storage: storage_client,
+                storage: storage_client.clone(),
             };
             let dioxus_router = axum::Router::new()
                 .layer(axum::Extension(pool.clone()))
@@ -146,6 +146,7 @@ fn main() {
                     "/api/upload",
                     axum::routing::post(api::upload::upload_handler),
                 )
+                .layer(axum::Extension(storage_client.clone()))
                 .with_state(auth::user_profile::UserProfileState { pool: pool.clone() })
                 .serve_dioxus_application(ServeConfig::new(), App)
                 .layer(api::upload::server_function_body_limit_layer());

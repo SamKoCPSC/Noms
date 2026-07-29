@@ -147,34 +147,27 @@ impl StorageClient {
     /// Create a minimal `StorageClient` for testing without environment variables.
     #[cfg(test)]
     pub fn for_test() -> Self {
+        Self::for_test_with_endpoint("http://127.0.0.1:9")
+    }
+
+    /// Create a test client pointed at a specific mock endpoint.
+    ///
+    /// Retries are disabled so an unavailable endpoint fails immediately and
+    /// handler tests remain deterministic and independent of network access.
+    #[cfg(test)]
+    pub fn for_test_with_endpoint(endpoint: &str) -> Self {
         let s3_config = aws_sdk_s3::config::Builder::new()
             .behavior_version(BehaviorVersion::latest())
             .region(Region::new("us-east-1"))
+            .endpoint_url(endpoint)
             .credentials_provider(Credentials::for_tests())
+            .retry_config(aws_config::retry::RetryConfig::disabled())
             .build();
         Self {
             inner: S3Client::from_conf(s3_config),
             bucket: "noms-media".to_string(),
             public_url: "http://localhost:9000/noms-media".to_string(),
         }
-    }
-
-    /// Initialize the global `STORAGE_CLIENT` with a client pointing to `endpoint`.
-    /// Intended for tests that need a mock S3 server (e.g., wiremock).
-    #[cfg(test)]
-    pub fn set_storage_for_test(endpoint: &str) {
-        let s3_config = aws_sdk_s3::config::Builder::new()
-            .behavior_version(BehaviorVersion::latest())
-            .region(Region::new("us-east-1"))
-            .endpoint_url(endpoint)
-            .credentials_provider(Credentials::for_tests())
-            .build();
-        let client = Self {
-            inner: S3Client::from_conf(s3_config),
-            bucket: "noms-media".to_string(),
-            public_url: "http://localhost:9000/noms-media".to_string(),
-        };
-        let _ = STORAGE_CLIENT.set(client);
     }
 
     /// Upload bytes to the configured bucket and return the public URL.

@@ -13,7 +13,7 @@
 #[cfg(feature = "server")]
 use axum::extract::Multipart;
 #[cfg(feature = "server")]
-use axum::extract::State;
+use axum::extract::{Extension, State};
 #[cfg(feature = "server")]
 use axum::http::StatusCode;
 #[cfg(feature = "server")]
@@ -197,6 +197,7 @@ pub async fn delete_image(full_url: String) -> Result<(), ServerFnError> {
 #[cfg(feature = "server")]
 pub async fn upload_handler(
     State(state): State<crate::auth::user_profile::UserProfileState>,
+    Extension(storage): Extension<crate::storage::StorageClient>,
     jar: CookieJar,
     mut multipart: Multipart,
 ) -> axum::response::Response {
@@ -312,15 +313,7 @@ pub async fn upload_handler(
     let full_key = format!("recipes/{}/{}_full.webp", user_id, unique_id);
     let thumb_key = format!("recipes/{}/{}_thumb.webp", user_id, unique_id);
 
-    // Store both variants via global storage client
-    let Some(storage) = crate::storage::try_get_storage_client() else {
-        error!("Storage client is unavailable for image upload");
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to upload file".to_string(),
-        )
-            .into_response();
-    };
+    // Store both variants via the request-scoped application dependency.
     let full_url = match storage
         .put_object(&full_key, &full_bytes, "image/webp")
         .await
@@ -409,8 +402,16 @@ mod tests {
     }
 
     async fn make_router(pool: sqlx::PgPool) -> Router {
+        make_router_with_storage(pool, crate::storage::StorageClient::for_test()).await
+    }
+
+    async fn make_router_with_storage(
+        pool: sqlx::PgPool,
+        storage: crate::storage::StorageClient,
+    ) -> Router {
         Router::new()
             .route("/api/upload", axum::routing::post(upload_handler))
+            .layer(axum::Extension(storage))
             .with_state(crate::auth::user_profile::UserProfileState { pool })
     }
 
@@ -687,15 +688,8 @@ mod tests {
             .await
             .unwrap();
 
-        // WebP validation passes (not 422). Storage call fails without
-        // initialized STORAGE_CLIENT, so we expect 500. With storage
-        // configured (e.g. wiremock), this would be 200.
-        assert!(
-            response.status() != StatusCode::UNPROCESSABLE_ENTITY,
-            "Valid WebP should pass validation, got {} with body: {}",
-            response.status(),
-            String::from_utf8_lossy(&read_body(response).await)
-        );
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(read_body(response).await, b"Failed to upload file");
     }
 
     // ── Size validation tests ───────────────────────────────────────────────
@@ -795,7 +789,17 @@ mod tests {
     async fn test_upload_path_traversal_sanitized() {
         setup_test_env();
         let (_db, pool) = test_utils::setup_test_db().await;
-        let app = make_router(pool.clone()).await;
+        let mock_server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("PUT"))
+            .respond_with(wiremock::ResponseTemplate::new(200))
+            .expect(2)
+            .mount(&mock_server)
+            .await;
+        let app = make_router_with_storage(
+            pool.clone(),
+            crate::storage::StorageClient::for_test_with_endpoint(&mock_server.uri()),
+        )
+        .await;
         let user_id = create_test_user(&pool).await;
         let token = create_session_token(&pool, user_id).await;
 
@@ -828,20 +832,12 @@ mod tests {
 
         let response = app.oneshot(request).await.unwrap();
 
-        let status = response.status();
-        let body_bytes = read_body(response).await;
-        let body_str = String::from_utf8_lossy(&body_bytes);
-
-        // The handler should not crash. The multipart parser may reject
-        // path traversal filenames (400), or the request may proceed past
-        // validation and fail at storage (500). Either way, it should not
-        // be a successful upload (200).
-        assert!(
-            status != StatusCode::OK,
-            "Path traversal filename should not result in successful upload, got {} with body: {}",
-            status,
-            body_str
-        );
+        assert_eq!(response.status(), StatusCode::OK);
+        let json = read_json(response).await;
+        let key = json["key"].as_str().expect("key should be a string");
+        assert!(key.starts_with(&format!("recipes/{user_id}/")));
+        assert!(!key.contains(".."));
+        assert!(!key.contains("etc/passwd"));
     }
 
     #[tokio::test]
@@ -902,11 +898,8 @@ mod tests {
 
     /// Full success path: valid auth + valid WebP -> 200 with full_url, thumb_url, and key.
     ///
-    /// Requires the global STORAGE_CLIENT to be initialized pointing to a
-    /// mock S3 server (wiremock). Marked `#[ignore]` because the global
-    /// OnceCell can only be set once per test process.
+    /// Uses a request-scoped storage client pointed at a mock S3 server.
     #[tokio::test]
-    #[ignore]
     async fn test_upload_handler_success() {
         setup_test_env();
 
@@ -917,13 +910,14 @@ mod tests {
         // Mock the S3 PutObject call — accept any PUT request (we expect 2: full + thumb)
         let mock = wiremock::Mock::given(wiremock::matchers::method("PUT"))
             .respond_with(wiremock::ResponseTemplate::new(200));
-        mock_server.register(mock).await;
-
-        // Initialize the global storage client pointing to wiremock
-        crate::storage::StorageClient::set_storage_for_test(&endpoint);
+        mock.expect(2).mount(&mock_server).await;
 
         let (_db, pool) = test_utils::setup_test_db().await;
-        let app = make_router(pool.clone()).await;
+        let app = make_router_with_storage(
+            pool.clone(),
+            crate::storage::StorageClient::for_test_with_endpoint(&endpoint),
+        )
+        .await;
         let user_id = create_test_user(&pool).await;
         let token = create_session_token(&pool, user_id).await;
 

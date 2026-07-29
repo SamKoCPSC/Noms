@@ -372,6 +372,10 @@ pub fn RecipeNew() -> Element {
     let on_step_photo_change = move |idx: usize| {
         move |files: Vec<dioxus::html::FileData>| {
             #[cfg(target_arch = "wasm32")]
+            if files.is_empty() {
+                return;
+            }
+            #[cfg(target_arch = "wasm32")]
             {
                 let mut steps = steps;
                 let mut step_editor_modal_url = step_editor_modal_url;

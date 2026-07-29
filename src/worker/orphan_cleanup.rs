@@ -21,14 +21,20 @@ pub struct OrphanCleanupConfig {
 }
 
 impl OrphanCleanupConfig {
+    const DEFAULT_INTERVAL_SECS: u64 = 3600;
+
     /// Read config from environment.
     ///
     /// `NOMS_ORPHAN_CLEANUP_INTERVAL_SECS` — interval in seconds (default: 3600 = 1 hour).
     pub fn from_env() -> Self {
-        let interval_secs = std::env::var("NOMS_ORPHAN_CLEANUP_INTERVAL_SECS")
-            .ok()
-            .and_then(|v| v.parse::<u64>().ok())
-            .unwrap_or(3600);
+        let value = std::env::var("NOMS_ORPHAN_CLEANUP_INTERVAL_SECS").ok();
+        Self::from_interval_value(value.as_deref())
+    }
+
+    fn from_interval_value(value: Option<&str>) -> Self {
+        let interval_secs = value
+            .and_then(|value| value.parse::<u64>().ok())
+            .unwrap_or(Self::DEFAULT_INTERVAL_SECS);
         Self {
             interval: Duration::from_secs(interval_secs),
         }
@@ -119,29 +125,20 @@ mod tests {
 
     #[test]
     fn test_orphan_cleanup_config_default() {
-        // Ensure the env var is not set
-        std::env::remove_var("NOMS_ORPHAN_CLEANUP_INTERVAL_SECS");
-        let config = OrphanCleanupConfig::from_env();
+        let config = OrphanCleanupConfig::from_interval_value(None);
         assert_eq!(config.interval, Duration::from_secs(3600));
     }
 
     #[test]
     fn test_orphan_cleanup_config_from_env() {
-        std::env::set_var("NOMS_ORPHAN_CLEANUP_INTERVAL_SECS", "42");
-        let config = OrphanCleanupConfig::from_env();
+        let config = OrphanCleanupConfig::from_interval_value(Some("42"));
         assert_eq!(config.interval, Duration::from_secs(42));
-        // Clean up
-        std::env::remove_var("NOMS_ORPHAN_CLEANUP_INTERVAL_SECS");
     }
 
     #[test]
     fn test_orphan_cleanup_config_invalid_env() {
-        std::env::set_var("NOMS_ORPHAN_CLEANUP_INTERVAL_SECS", "not-a-number");
-        let config = OrphanCleanupConfig::from_env();
-        // Should fall back to default
+        let config = OrphanCleanupConfig::from_interval_value(Some("not-a-number"));
         assert_eq!(config.interval, Duration::from_secs(3600));
-        // Clean up
-        std::env::remove_var("NOMS_ORPHAN_CLEANUP_INTERVAL_SECS");
     }
 
     #[test]
