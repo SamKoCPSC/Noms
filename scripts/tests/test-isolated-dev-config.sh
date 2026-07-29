@@ -286,6 +286,10 @@ assert_contains \
     "MinIO data has a project-scoped volume" \
     'source: minio-data' \
     "$TEST_TMP/compose-config.yml"
+assert_contains \
+    "Cargo defaults to eight parallel build jobs" \
+    'CARGO_BUILD_JOBS: "8"' \
+    "$TEST_TMP/compose-config.yml"
 
 just --justfile "$REPO_ROOT/justfile" --list >"$TEST_TMP/just-recipes.txt"
 assert_contains "just up accepts an optional instance" '^    up instance=' "$TEST_TMP/just-recipes.txt"

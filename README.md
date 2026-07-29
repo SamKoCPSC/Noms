@@ -85,12 +85,12 @@ just up instance=agent-a
 The project name becomes `noms-agent-a`. A duplicate active name is rejected
 instead of attaching to or replacing the existing project.
 
-Container builds default to one Cargo job per instance so multiple cold
-worktrees do not exhaust the Docker engine's memory. Container builds also use
-single-threaded LLVM linking with debug info and incremental compilation
-disabled by default, and Dioxus builds the server and client sequentially. A
-developer with more capacity can opt back into Cargo parallelism and richer
-profiles, for example:
+Container builds default to eight parallel Cargo jobs per instance. Container
+builds also use single-threaded LLVM linking with debug info and incremental
+compilation disabled by default, and Dioxus builds the server and client
+sequentially. Set `NOMS_CARGO_BUILD_JOBS` lower when running many cold
+worktrees on a constrained Docker engine, or higher when additional CPU and
+memory are available. Profile defaults can be overridden at the same time:
 
 ```bash
 NOMS_CARGO_BUILD_JOBS=4 NOMS_CARGO_PROFILE_DEV_DEBUG=2 \
