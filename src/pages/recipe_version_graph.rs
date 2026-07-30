@@ -3,11 +3,15 @@
 //! The page renders a bounded connected lineage family. Graph discovery and
 //! presentation layout remain separate so each can evolve independently.
 
+use dioxus::html::{geometry::WheelDelta, input_data::MouseButton};
 use dioxus::prelude::*;
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::api::recipe::get_recipe_version_graph;
 use crate::components::base::{Card, EditedRecipeImage, EmptyState, LoadingSpinner, PageHeader};
-use crate::types::{VersionGraph, VersionGraphEdge, VersionGraphEdgeKind, VersionGraphNode};
+use crate::types::{
+    VersionGraph, VersionGraphEdge, VersionGraphEdgeKind, VersionGraphNode, VersionGraphNodeId,
+};
 use crate::Route;
 
 fn server_error_message(error: &ServerFnError) -> String {
@@ -22,14 +26,419 @@ fn is_recipe_unavailable_error(message: &str) -> bool {
 }
 
 const GRAPH_NODE_WIDTH_PX: f64 = 240.0;
-const GRAPH_NODE_GAP_PX: f64 = 32.0;
+const GRAPH_NODE_HEIGHT_PX: f64 = 300.0;
+const GRAPH_COLUMN_GAP_PX: f64 = 96.0;
+const GRAPH_ROW_GAP_PX: f64 = 56.0;
+const GRAPH_LAYOUT_PADDING_PX: f64 = 32.0;
+const GRAPH_MIN_ZOOM: f64 = 0.001;
+const GRAPH_MAX_ZOOM: f64 = 1.8;
+const GRAPH_ZOOM_FACTOR: f64 = 1.2;
+const GRAPH_WHEEL_ZOOM_SENSITIVITY: f64 = 0.002;
+const GRAPH_WHEEL_LINE_HEIGHT_PX: f64 = 40.0;
+const GRAPH_PAN_STEP_PX: f64 = 96.0;
+const GRAPH_DEFAULT_VIEWPORT: (f64, f64) = (900.0, 560.0);
 
-fn connector_center_percent(index: usize, node_count: usize) -> f64 {
-    let graph_width = node_count as f64 * GRAPH_NODE_WIDTH_PX
-        + node_count.saturating_sub(1) as f64 * GRAPH_NODE_GAP_PX;
-    (index as f64 * (GRAPH_NODE_WIDTH_PX + GRAPH_NODE_GAP_PX) + GRAPH_NODE_WIDTH_PX / 2.0)
-        / graph_width
-        * 100.0
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct VersionGraphTransform {
+    scale: f64,
+    offset_x: f64,
+    offset_y: f64,
+}
+
+impl Default for VersionGraphTransform {
+    fn default() -> Self {
+        Self {
+            scale: 1.0,
+            offset_x: 0.0,
+            offset_y: 0.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct VersionGraphLayoutNode {
+    id: VersionGraphNodeId,
+    x: f64,
+    y: f64,
+    rank: usize,
+    row: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct VersionGraphLayoutEdge {
+    source: VersionGraphNodeId,
+    target: VersionGraphNodeId,
+    kind: VersionGraphEdgeKind,
+    source_x: f64,
+    source_y: f64,
+    target_x: f64,
+    target_y: f64,
+    path: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+struct VersionGraphLayout {
+    nodes: Vec<VersionGraphLayoutNode>,
+    edges: Vec<VersionGraphLayoutEdge>,
+    width: f64,
+    height: f64,
+}
+
+impl VersionGraphLayout {
+    fn node(&self, id: VersionGraphNodeId) -> Option<&VersionGraphLayoutNode> {
+        self.nodes.iter().find(|node| node.id == id)
+    }
+
+    fn fit_transform(&self, viewport: (f64, f64)) -> VersionGraphTransform {
+        if self.width <= 0.0 || self.height <= 0.0 || viewport.0 <= 0.0 || viewport.1 <= 0.0 {
+            return VersionGraphTransform::default();
+        }
+
+        let scale = (viewport.0 / self.width)
+            .min(viewport.1 / self.height)
+            .min(1.0)
+            .clamp(GRAPH_MIN_ZOOM, 1.0);
+        VersionGraphTransform {
+            scale,
+            offset_x: ((viewport.0 - self.width * scale) / 2.0).max(0.0),
+            offset_y: ((viewport.1 - self.height * scale) / 2.0).max(0.0),
+        }
+    }
+
+    fn center_transform(
+        &self,
+        id: VersionGraphNodeId,
+        viewport: (f64, f64),
+        scale: f64,
+    ) -> VersionGraphTransform {
+        let Some(node) = self.node(id) else {
+            return self.fit_transform(viewport);
+        };
+        let scale = scale.clamp(GRAPH_MIN_ZOOM, GRAPH_MAX_ZOOM);
+        VersionGraphTransform {
+            scale,
+            offset_x: viewport.0 / 2.0 - (node.x + GRAPH_NODE_WIDTH_PX / 2.0) * scale,
+            offset_y: viewport.1 / 2.0 - (node.y + GRAPH_NODE_HEIGHT_PX / 2.0) * scale,
+        }
+    }
+}
+
+fn version_graph_node_key(id: VersionGraphNodeId) -> (uuid::Uuid, i32) {
+    (id.recipe_id, id.version_number)
+}
+
+fn version_graph_edge_key(
+    source: VersionGraphNodeId,
+    target: VersionGraphNodeId,
+    kind: VersionGraphEdgeKind,
+) -> ((uuid::Uuid, i32), (uuid::Uuid, i32), u8) {
+    (
+        version_graph_node_key(source),
+        version_graph_node_key(target),
+        match kind {
+            VersionGraphEdgeKind::Version => 0,
+            VersionGraphEdgeKind::Fork => 1,
+        },
+    )
+}
+
+fn stable_recipe_rows(
+    recipe_ids: &[uuid::Uuid],
+    edges: &[(VersionGraphNodeId, VersionGraphNodeId, VersionGraphEdgeKind)],
+) -> HashMap<uuid::Uuid, usize> {
+    let mut children = HashMap::<uuid::Uuid, Vec<uuid::Uuid>>::new();
+    let mut incoming = recipe_ids
+        .iter()
+        .copied()
+        .map(|recipe_id| (recipe_id, 0usize))
+        .collect::<HashMap<_, _>>();
+
+    for (source, target, kind) in edges {
+        if *kind != VersionGraphEdgeKind::Fork || source.recipe_id == target.recipe_id {
+            continue;
+        }
+        let targets = children.entry(source.recipe_id).or_default();
+        if !targets.contains(&target.recipe_id) {
+            targets.push(target.recipe_id);
+            *incoming.entry(target.recipe_id).or_default() += 1;
+        }
+    }
+    for targets in children.values_mut() {
+        targets.sort_unstable();
+    }
+
+    let mut roots = recipe_ids
+        .iter()
+        .copied()
+        .filter(|recipe_id| incoming.get(recipe_id).copied().unwrap_or_default() == 0)
+        .collect::<Vec<_>>();
+    roots.sort_unstable();
+    let mut queue = roots.into_iter().collect::<VecDeque<_>>();
+    let mut visited = HashSet::new();
+    let mut ordered_recipes = Vec::with_capacity(recipe_ids.len());
+
+    while let Some(recipe_id) = queue.pop_front() {
+        if !visited.insert(recipe_id) {
+            continue;
+        }
+        ordered_recipes.push(recipe_id);
+        if let Some(recipe_children) = children.get(&recipe_id) {
+            queue.extend(recipe_children.iter().copied());
+        }
+    }
+
+    // Cyclic components have no root. Seed each remaining component from its
+    // stable key and reuse the same guarded breadth-first ordering.
+    for recipe_id in recipe_ids {
+        if visited.contains(recipe_id) {
+            continue;
+        }
+        queue.push_back(*recipe_id);
+        while let Some(cyclic_recipe_id) = queue.pop_front() {
+            if !visited.insert(cyclic_recipe_id) {
+                continue;
+            }
+            ordered_recipes.push(cyclic_recipe_id);
+            if let Some(recipe_children) = children.get(&cyclic_recipe_id) {
+                queue.extend(recipe_children.iter().copied());
+            }
+        }
+    }
+
+    ordered_recipes
+        .into_iter()
+        .enumerate()
+        .map(|(row, recipe_id)| (recipe_id, row))
+        .collect()
+}
+
+fn build_version_graph_layout(graph: &VersionGraph) -> VersionGraphLayout {
+    let mut node_ids = graph
+        .nodes
+        .iter()
+        .map(VersionGraphNode::id)
+        .collect::<Vec<_>>();
+    node_ids.sort_by_key(|id| version_graph_node_key(*id));
+    node_ids.dedup();
+    if node_ids.is_empty() {
+        return VersionGraphLayout::default();
+    }
+
+    let node_id_set = node_ids.iter().copied().collect::<HashSet<_>>();
+    let mut edges = graph
+        .edges
+        .iter()
+        .filter(|edge| node_id_set.contains(&edge.source()) && node_id_set.contains(&edge.target()))
+        .map(|edge| (edge.source(), edge.target(), edge.kind()))
+        .collect::<Vec<_>>();
+    edges.sort_by_key(|(source, target, kind)| version_graph_edge_key(*source, *target, *kind));
+    edges.dedup();
+
+    let mut rank_edges = edges
+        .iter()
+        .map(|(source, target, _)| (*source, *target))
+        .collect::<Vec<_>>();
+    let mut nodes_by_recipe = HashMap::<uuid::Uuid, Vec<VersionGraphNodeId>>::new();
+    for id in &node_ids {
+        nodes_by_recipe.entry(id.recipe_id).or_default().push(*id);
+    }
+    for recipe_nodes in nodes_by_recipe.values_mut() {
+        recipe_nodes.sort_by_key(|id| id.version_number);
+        rank_edges.extend(recipe_nodes.windows(2).map(|pair| (pair[0], pair[1])));
+    }
+    rank_edges.sort_by_key(|(source, target)| {
+        (
+            version_graph_node_key(*source),
+            version_graph_node_key(*target),
+        )
+    });
+    rank_edges.dedup();
+
+    let mut incoming = node_ids
+        .iter()
+        .copied()
+        .map(|id| (id, 0usize))
+        .collect::<HashMap<_, _>>();
+    let mut outgoing = HashMap::<VersionGraphNodeId, Vec<VersionGraphNodeId>>::new();
+    for (source, target) in &rank_edges {
+        outgoing.entry(*source).or_default().push(*target);
+        *incoming.entry(*target).or_default() += 1;
+    }
+    for targets in outgoing.values_mut() {
+        targets.sort_by_key(|id| version_graph_node_key(*id));
+    }
+
+    let mut ready = node_ids
+        .iter()
+        .copied()
+        .filter(|id| incoming.get(id).copied().unwrap_or_default() == 0)
+        .collect::<Vec<_>>();
+    ready.sort_by_key(|id| version_graph_node_key(*id));
+    let mut ranks = node_ids
+        .iter()
+        .copied()
+        .map(|id| (id, 0usize))
+        .collect::<HashMap<_, _>>();
+    let mut ranked = HashSet::new();
+
+    while !ready.is_empty() {
+        let source = ready.remove(0);
+        if !ranked.insert(source) {
+            continue;
+        }
+        let source_rank = ranks.get(&source).copied().unwrap_or_default();
+        if let Some(targets) = outgoing.get(&source) {
+            for target in targets {
+                ranks
+                    .entry(*target)
+                    .and_modify(|rank| *rank = (*rank).max(source_rank.saturating_add(1)));
+                let target_incoming = incoming.entry(*target).or_default();
+                *target_incoming = target_incoming.saturating_sub(1);
+                if *target_incoming == 0 {
+                    ready.push(*target);
+                }
+            }
+            ready.sort_by_key(|id| version_graph_node_key(*id));
+        }
+    }
+
+    // Nodes left after Kahn's algorithm belong to, or depend on, a malformed
+    // cycle. Give each a finite stable fallback rank.
+    let mut fallback_rank = ranks
+        .iter()
+        .filter(|(id, _)| ranked.contains(id))
+        .map(|(_, rank)| *rank)
+        .max()
+        .unwrap_or_default()
+        .saturating_add(1);
+    for id in &node_ids {
+        if !ranked.contains(id) {
+            ranks.insert(*id, fallback_rank);
+            fallback_rank = fallback_rank.saturating_add(1);
+        }
+    }
+
+    let mut recipe_ids = node_ids.iter().map(|id| id.recipe_id).collect::<Vec<_>>();
+    recipe_ids.sort_unstable();
+    recipe_ids.dedup();
+    let recipe_rows = stable_recipe_rows(&recipe_ids, &edges);
+
+    let mut layout_nodes = node_ids
+        .iter()
+        .map(|id| {
+            let rank = ranks.get(id).copied().unwrap_or_default();
+            let row = recipe_rows.get(&id.recipe_id).copied().unwrap_or_default();
+            VersionGraphLayoutNode {
+                id: *id,
+                x: GRAPH_LAYOUT_PADDING_PX
+                    + rank as f64 * (GRAPH_NODE_WIDTH_PX + GRAPH_COLUMN_GAP_PX),
+                y: GRAPH_LAYOUT_PADDING_PX + row as f64 * (GRAPH_NODE_HEIGHT_PX + GRAPH_ROW_GAP_PX),
+                rank,
+                row,
+            }
+        })
+        .collect::<Vec<_>>();
+    layout_nodes.sort_by_key(|node| (node.rank, node.row, version_graph_node_key(node.id)));
+    let positioned_nodes = layout_nodes
+        .iter()
+        .copied()
+        .map(|node| (node.id, node))
+        .collect::<HashMap<_, _>>();
+
+    let mut layout_edges = Vec::with_capacity(edges.len());
+    for (source, target, kind) in edges {
+        let (Some(source_node), Some(target_node)) =
+            (positioned_nodes.get(&source), positioned_nodes.get(&target))
+        else {
+            continue;
+        };
+        let source_x = source_node.x + GRAPH_NODE_WIDTH_PX;
+        let source_y = source_node.y + GRAPH_NODE_HEIGHT_PX / 2.0;
+        let target_x = target_node.x;
+        let target_y = target_node.y + GRAPH_NODE_HEIGHT_PX / 2.0;
+        let control_distance = if target_x > source_x {
+            (target_x - source_x) / 2.0
+        } else {
+            GRAPH_COLUMN_GAP_PX / 2.0 + source_node.row.abs_diff(target_node.row) as f64 * 12.0
+        };
+        layout_edges.push(VersionGraphLayoutEdge {
+            source,
+            target,
+            kind,
+            source_x,
+            source_y,
+            target_x,
+            target_y,
+            path: format!(
+                "M {source_x:.2} {source_y:.2} C {:.2} {source_y:.2}, {:.2} {target_y:.2}, {target_x:.2} {target_y:.2}",
+                source_x + control_distance,
+                target_x - control_distance,
+            ),
+        });
+    }
+
+    let max_rank = layout_nodes
+        .iter()
+        .map(|node| node.rank)
+        .max()
+        .unwrap_or_default();
+    let max_row = layout_nodes
+        .iter()
+        .map(|node| node.row)
+        .max()
+        .unwrap_or_default();
+    VersionGraphLayout {
+        nodes: layout_nodes,
+        edges: layout_edges,
+        width: GRAPH_LAYOUT_PADDING_PX * 2.0
+            + (max_rank + 1) as f64 * GRAPH_NODE_WIDTH_PX
+            + max_rank as f64 * GRAPH_COLUMN_GAP_PX,
+        height: GRAPH_LAYOUT_PADDING_PX * 2.0
+            + (max_row + 1) as f64 * GRAPH_NODE_HEIGHT_PX
+            + max_row as f64 * GRAPH_ROW_GAP_PX,
+    }
+}
+
+fn zoom_version_graph(
+    transform: VersionGraphTransform,
+    viewport: (f64, f64),
+    zoom_factor: f64,
+) -> VersionGraphTransform {
+    zoom_version_graph_at(transform, (viewport.0 / 2.0, viewport.1 / 2.0), zoom_factor)
+}
+
+fn zoom_version_graph_at(
+    transform: VersionGraphTransform,
+    anchor: (f64, f64),
+    zoom_factor: f64,
+) -> VersionGraphTransform {
+    let scale = (transform.scale * zoom_factor).clamp(GRAPH_MIN_ZOOM, GRAPH_MAX_ZOOM);
+    let graph_anchor_x = (anchor.0 - transform.offset_x) / transform.scale;
+    let graph_anchor_y = (anchor.1 - transform.offset_y) / transform.scale;
+    VersionGraphTransform {
+        scale,
+        offset_x: anchor.0 - graph_anchor_x * scale,
+        offset_y: anchor.1 - graph_anchor_y * scale,
+    }
+}
+
+fn pan_version_graph(
+    transform: VersionGraphTransform,
+    mouse_delta: (f64, f64),
+) -> VersionGraphTransform {
+    VersionGraphTransform {
+        offset_x: transform.offset_x + mouse_delta.0,
+        offset_y: transform.offset_y + mouse_delta.1,
+        ..transform
+    }
+}
+
+fn wheel_delta_pixels(delta: WheelDelta, viewport_height: f64) -> f64 {
+    match delta {
+        WheelDelta::Pixels(delta) => delta.y,
+        WheelDelta::Lines(delta) => delta.y * GRAPH_WHEEL_LINE_HEIGHT_PX,
+        WheelDelta::Pages(delta) => delta.y * viewport_height,
+    }
 }
 
 fn fork_endpoint_label(
@@ -61,6 +470,26 @@ fn fork_connection_label(edge: &VersionGraphEdge, nodes: &[VersionGraphNode]) ->
         fork_endpoint_label(target, nodes),
         target.version_number,
     )
+}
+
+fn graph_connection_label(edge: &VersionGraphLayoutEdge, nodes: &[VersionGraphNode]) -> String {
+    let source = edge.source;
+    let target = edge.target;
+    match edge.kind {
+        VersionGraphEdgeKind::Fork => {
+            let edge =
+                VersionGraphEdge::fork(source.recipe_id, source.version_number, target.recipe_id)
+                    .expect("layout fork edges always connect distinct recipes");
+            fork_connection_label(&edge, nodes)
+        }
+        VersionGraphEdgeKind::Version => format!(
+            "{} v{} advances to {} v{}",
+            fork_endpoint_label(source, nodes),
+            source.version_number,
+            fork_endpoint_label(target, nodes),
+            target.version_number,
+        ),
+    }
 }
 
 #[component]
@@ -168,6 +597,12 @@ pub fn RecipeVersionGraph(id: String) -> Element {
             get_recipe_version_graph(recipe_id).await
         }
     });
+    let mut graph_transform = use_signal(VersionGraphTransform::default);
+    let mut graph_viewport = use_signal(|| GRAPH_DEFAULT_VIEWPORT);
+    let mut initial_graph_fit_complete = use_signal(|| false);
+    let mut graph_canvas = use_signal(|| None::<MountedEvent>);
+    // Present only while an auxiliary-button drag is active.
+    let mut pan_mouse_position = use_signal(|| None::<(f64, f64)>);
 
     let back_to_recipe = rsx! {
         Link {
@@ -290,50 +725,45 @@ pub fn RecipeVersionGraph(id: String) -> Element {
         .and_then(VersionGraphNode::title)
         .map(|title| format!("Version graph for {title}"))
         .unwrap_or_else(|| "Recipe version graph".to_string());
-    let mut lanes = Vec::<Vec<VersionGraphNode>>::new();
-    for node in graph.nodes.clone() {
-        if let Some(lane) = lanes.iter_mut().find(|lane| {
-            lane.first()
-                .is_some_and(|first| first.id().recipe_id == node.id().recipe_id)
-        }) {
-            lane.push(node);
-        } else {
-            lanes.push(vec![node]);
-        }
-    }
+    let layout = build_version_graph_layout(&graph);
     let fork_edges = graph
         .edges
         .iter()
         .filter(|edge| edge.kind() == VersionGraphEdgeKind::Fork)
         .cloned()
         .collect::<Vec<_>>();
-    let selected_recipe_id = graph
+    let current_snapshot_id = graph
         .nodes
         .iter()
-        .find(|node| node.is_selected_recipe())
-        .map(|node| node.id().recipe_id);
-    lanes.sort_by_key(|lane| {
-        let recipe_id = lane
-            .first()
-            .map(|node| node.id().recipe_id)
-            .unwrap_or(uuid::Uuid::nil());
-        let lane_order = if Some(recipe_id) == selected_recipe_id {
-            1
-        } else if fork_edges.iter().any(|edge| {
-            Some(edge.target().recipe_id) == selected_recipe_id
-                && edge.source().recipe_id == recipe_id
-        }) {
-            0
-        } else if fork_edges.iter().any(|edge| {
-            Some(edge.source().recipe_id) == selected_recipe_id
-                && edge.target().recipe_id == recipe_id
-        }) {
-            2
-        } else {
-            3
-        };
-        (lane_order, recipe_id)
-    });
+        .find(|node| node.is_selected_recipe() && node.is_current_version())
+        .or_else(|| graph.nodes.iter().find(|node| node.is_current_version()))
+        .map(VersionGraphNode::id);
+    let nodes_by_id = graph
+        .nodes
+        .iter()
+        .cloned()
+        .map(|node| (node.id(), node))
+        .collect::<HashMap<_, _>>();
+    let transform = graph_transform();
+    let is_mouse_panning = pan_mouse_position().is_some();
+    let canvas_class = if is_mouse_panning {
+        "recipe-version-graph__canvas-viewport recipe-version-graph__canvas-viewport--panning"
+    } else {
+        "recipe-version-graph__canvas-viewport"
+    };
+    let stage_style = format!(
+        "width: {:.2}px; height: {:.2}px; transform: translate({:.2}px, {:.2}px) scale({:.5});",
+        layout.width, layout.height, transform.offset_x, transform.offset_y, transform.scale,
+    );
+    let card_layer_style = format!(
+        "width: {:.2}px; height: {:.2}px;",
+        layout.width, layout.height,
+    );
+    let view_box = format!("0 0 {:.2} {:.2}", layout.width, layout.height);
+    let layout_for_mount = layout.clone();
+    let layout_for_resize = layout.clone();
+    let layout_for_fit = layout.clone();
+    let layout_for_center = layout.clone();
 
     rsx! {
         div { class: "container",
@@ -346,118 +776,374 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                     p { class: "recipe-version-graph__description",
                         "Explore immutable snapshots across the connected fork family."
                     }
-                    div { class: "recipe-version-graph__lanes",
-                        for lane in lanes {
+                    p { class: "recipe-version-graph__help",
+                        "Scroll to zoom; middle-click and drag to pan."
+                    }
+                    div {
+                        class: "recipe-version-graph__toolbar",
+                        aria_label: "Version graph navigation",
+                        div { class: "recipe-version-graph__controls",
+                            button {
+                                r#type: "button",
+                                class: "recipe-version-graph__control",
+                                aria_label: "Pan graph left",
+                                onclick: move |_| graph_transform.with_mut(|transform| {
+                                    transform.offset_x += GRAPH_PAN_STEP_PX;
+                                }),
+                                "←"
+                            }
+                            button {
+                                r#type: "button",
+                                class: "recipe-version-graph__control",
+                                aria_label: "Pan graph right",
+                                onclick: move |_| graph_transform.with_mut(|transform| {
+                                    transform.offset_x -= GRAPH_PAN_STEP_PX;
+                                }),
+                                "→"
+                            }
+                            button {
+                                r#type: "button",
+                                class: "recipe-version-graph__control",
+                                aria_label: "Pan graph up",
+                                onclick: move |_| graph_transform.with_mut(|transform| {
+                                    transform.offset_y += GRAPH_PAN_STEP_PX;
+                                }),
+                                "↑"
+                            }
+                            button {
+                                r#type: "button",
+                                class: "recipe-version-graph__control",
+                                aria_label: "Pan graph down",
+                                onclick: move |_| graph_transform.with_mut(|transform| {
+                                    transform.offset_y -= GRAPH_PAN_STEP_PX;
+                                }),
+                                "↓"
+                            }
+                            button {
+                                r#type: "button",
+                                class: "recipe-version-graph__control",
+                                aria_label: "Zoom in",
+                                onclick: move |_| {
+                                    let next = zoom_version_graph(
+                                        graph_transform(),
+                                        graph_viewport(),
+                                        GRAPH_ZOOM_FACTOR,
+                                    );
+                                    graph_transform.set(next);
+                                },
+                                "+"
+                            }
+                            button {
+                                r#type: "button",
+                                class: "recipe-version-graph__control",
+                                aria_label: "Zoom out",
+                                onclick: move |_| {
+                                    let next = zoom_version_graph(
+                                        graph_transform(),
+                                        graph_viewport(),
+                                        1.0 / GRAPH_ZOOM_FACTOR,
+                                    );
+                                    graph_transform.set(next);
+                                },
+                                "−"
+                            }
+                            button {
+                                r#type: "button",
+                                class: "recipe-version-graph__control recipe-version-graph__control--text",
+                                aria_label: "Fit graph to viewport",
+                                onclick: move |_| {
+                                    graph_transform.set(
+                                        layout_for_fit.fit_transform(graph_viewport())
+                                    );
+                                },
+                                "Fit"
+                            }
+                            button {
+                                r#type: "button",
+                                class: "recipe-version-graph__control recipe-version-graph__control--text",
+                                aria_label: "Center current snapshot",
+                                disabled: current_snapshot_id.is_none(),
+                                onclick: move |_| {
+                                    if let Some(current_snapshot_id) = current_snapshot_id {
+                                        graph_transform.set(layout_for_center.center_transform(
+                                            current_snapshot_id,
+                                            graph_viewport(),
+                                            graph_transform().scale,
+                                        ));
+                                    }
+                                },
+                                "Current"
+                            }
+                        }
+                        div {
+                            class: "recipe-version-graph__legend",
+                            role: "note",
+                            aria_label: "Graph connection legend",
+                            span { class: "recipe-version-graph__legend-item",
+                                span {
+                                    class: "recipe-version-graph__legend-line recipe-version-graph__legend-line--version",
+                                    aria_hidden: "true",
+                                }
+                                "Version history"
+                            }
+                            span { class: "recipe-version-graph__legend-item",
+                                span {
+                                    class: "recipe-version-graph__legend-line recipe-version-graph__legend-line--fork",
+                                    aria_hidden: "true",
+                                }
+                                "Fork"
+                            }
+                        }
+                    }
+                    div {
+                        class: canvas_class,
+                        tabindex: "0",
+                        aria_label: "Interactive recipe version graph",
+                        onmounted: move |event| {
+                            graph_canvas.set(Some(event.clone()));
+                            let mounted = event.data();
+                            let layout = layout_for_mount.clone();
+                            spawn(async move {
+                                if let Ok(rect) = mounted.get_client_rect().await {
+                                    let viewport = (rect.size.width, rect.size.height);
+                                    if viewport.0 > 0.0 && viewport.1 > 0.0 {
+                                        graph_viewport.set(viewport);
+                                        graph_transform.set(layout.fit_transform(viewport));
+                                        initial_graph_fit_complete.set(true);
+                                    }
+                                }
+                            });
+                        },
+                        onresize: move |event| {
+                            if let Ok(size) = event.data().get_content_box_size() {
+                                let viewport = (size.width, size.height);
+                                if viewport.0 > 0.0 && viewport.1 > 0.0 {
+                                    graph_viewport.set(viewport);
+                                    if !initial_graph_fit_complete() {
+                                        graph_transform.set(
+                                            layout_for_resize.fit_transform(viewport)
+                                        );
+                                        initial_graph_fit_complete.set(true);
+                                    }
+                                }
+                            }
+                        },
+                        onwheel: move |event| {
+                            event.prevent_default();
+                            let Some(canvas) = graph_canvas() else {
+                                return;
+                            };
+                            let client_position = event.data().client_coordinates();
+                            let wheel_delta = event.data().delta();
+                            spawn(async move {
+                                let Ok(rect) = canvas.data().get_client_rect().await else {
+                                    return;
+                                };
+                                let viewport = (rect.size.width, rect.size.height);
+                                if viewport.0 <= 0.0 || viewport.1 <= 0.0 {
+                                    return;
+                                }
+                                let anchor = (
+                                    client_position.x - rect.origin.x,
+                                    client_position.y - rect.origin.y,
+                                );
+                                let delta_pixels =
+                                    wheel_delta_pixels(wheel_delta, viewport.1).clamp(-600.0, 600.0);
+                                let zoom_factor =
+                                    (-delta_pixels * GRAPH_WHEEL_ZOOM_SENSITIVITY).exp();
+                                graph_transform.set(zoom_version_graph_at(
+                                    graph_transform(),
+                                    anchor,
+                                    zoom_factor,
+                                ));
+                            });
+                        },
+                        onmousedown: move |event| {
+                            if event.data().trigger_button() == Some(MouseButton::Auxiliary) {
+                                event.prevent_default();
+                                let position = event.data().client_coordinates();
+                                pan_mouse_position.set(Some((position.x, position.y)));
+                            }
+                        },
+                        onmousemove: move |event| {
+                            let Some(previous_position) = pan_mouse_position() else {
+                                return;
+                            };
+                            if !event
+                                .data()
+                                .held_buttons()
+                                .contains(MouseButton::Auxiliary)
                             {
-                                let lane_node_count = lane.len();
-                                let lane_recipe_id = lane
-                                    .first()
-                                    .map(|node| node.id().recipe_id)
-                                    .unwrap_or(uuid::Uuid::nil());
-                                let incoming_fork = fork_edges
-                                    .iter()
-                                    .find(|edge| edge.target().recipe_id == lane_recipe_id)
-                                    .cloned();
-                                let lane_title = lane
-                                    .iter()
-                                    .find_map(VersionGraphNode::title)
-                                    .unwrap_or(if lane.iter().any(VersionGraphNode::is_deleted) {
-                                        "Deleted recipe"
-                                    } else {
-                                        "Private recipe"
-                                    })
-                                    .to_string();
-                                let lane_connectors = lane
-                                    .windows(2)
-                                    .map(|pair| {
-                                        (
-                                            connector_center_percent(
-                                                pair[0].id().version_number.saturating_sub(1) as usize,
-                                                lane_node_count,
-                                            ),
-                                            connector_center_percent(
-                                                pair[1].id().version_number.saturating_sub(1) as usize,
-                                                lane_node_count,
-                                            ),
-                                        )
-                                    })
-                                    .collect::<Vec<_>>();
-                                rsx! {
-                                    div { class: "recipe-version-graph__lane-group",
-                                        if let Some(edge) = incoming_fork {
-                                            div {
-                                                class: "recipe-version-graph__fork-connection",
-                                                role: "note",
-                                                aria_label: fork_connection_label(&edge, &graph.nodes),
-                                                span {
-                                                    class: "recipe-version-graph__fork-connection-line",
-                                                    aria_hidden: "true",
-                                                }
-                                                strong { "{fork_connection_label(&edge, &graph.nodes)}" }
-                                            }
-                                        }
-                                        section {
-                                            class: "recipe-version-graph__lane",
-                                            aria_label: format!("Recipe lane: {lane_title}"),
-                                            h2 { class: "recipe-version-graph__lane-title", "{lane_title}" }
-                                            div {
-                                                class: "recipe-version-graph__viewport",
-                                                style: "--version-graph-node-count: {lane_node_count}",
-                                                svg {
-                                                    class: "recipe-version-graph__edges recipe-version-graph__edge--version",
-                                                    "aria-hidden": "true",
-                                                    view_box: "0 0 100 10",
-                                                    preserve_aspect_ratio: "none",
-                                                    for (index, (source_x, target_x)) in lane_connectors.iter().enumerate() {
-                                                        line {
-                                                            key: "{index}",
-                                                            x1: "{source_x}",
-                                                            y1: "5",
-                                                            x2: "{target_x}",
-                                                            y2: "5",
+                                pan_mouse_position.set(None);
+                                return;
+                            }
+                            event.prevent_default();
+                            let position = event.data().client_coordinates();
+                            graph_transform.set(pan_version_graph(
+                                graph_transform(),
+                                (
+                                    position.x - previous_position.0,
+                                    position.y - previous_position.1,
+                                ),
+                            ));
+                            pan_mouse_position.set(Some((position.x, position.y)));
+                        },
+                        onmouseup: move |event| {
+                            if event.data().trigger_button() == Some(MouseButton::Auxiliary) {
+                                event.prevent_default();
+                                pan_mouse_position.set(None);
+                            }
+                        },
+                        onmouseleave: move |_| pan_mouse_position.set(None),
+                        onauxclick: move |event| event.prevent_default(),
+                        div {
+                            class: "recipe-version-graph__canvas-stage",
+                            style: stage_style,
+                            svg {
+                                class: "recipe-version-graph__edge-layer",
+                                "aria-hidden": "true",
+                                width: "{layout.width:.2}",
+                                height: "{layout.height:.2}",
+                                view_box,
+                                defs {
+                                    marker {
+                                        id: "recipe-version-graph-arrow-version",
+                                        marker_width: "10",
+                                        marker_height: "10",
+                                        ref_x: "9",
+                                        ref_y: "5",
+                                        orient: "auto",
+                                        marker_units: "strokeWidth",
+                                        path { d: "M 0 0 L 10 5 L 0 10 z" }
+                                    }
+                                    marker {
+                                        id: "recipe-version-graph-arrow-fork",
+                                        marker_width: "10",
+                                        marker_height: "10",
+                                        ref_x: "9",
+                                        ref_y: "5",
+                                        orient: "auto",
+                                        marker_units: "strokeWidth",
+                                        path { d: "M 0 0 L 10 5 L 0 10 z" }
+                                    }
+                                }
+                                for edge in &layout.edges {
+                                    path {
+                                        key: "{edge.source.recipe_id}-{edge.source.version_number}-{edge.target.recipe_id}-{edge.target.version_number}-{edge.kind:?}",
+                                        class: if edge.kind == VersionGraphEdgeKind::Fork {
+                                            "recipe-version-graph__edge recipe-version-graph__edge--fork"
+                                        } else {
+                                            "recipe-version-graph__edge recipe-version-graph__edge--version"
+                                        },
+                                        d: edge.path.clone(),
+                                        marker_end: if edge.kind == VersionGraphEdgeKind::Fork {
+                                            "url(#recipe-version-graph-arrow-fork)"
+                                        } else {
+                                            "url(#recipe-version-graph-arrow-version)"
+                                        },
+                                    }
+                                }
+                            }
+                            div {
+                                class: "recipe-version-graph__card-layer",
+                                style: card_layer_style,
+                                for layout_node in &layout.nodes {
+                                    if let Some(node) = nodes_by_id.get(&layout_node.id).cloned() {
+                                        {
+                                            let node_id = node.id();
+                                            let is_fork_source = fork_edges
+                                                .iter()
+                                                .any(|edge| edge.source() == node_id);
+                                            let is_fork_target = fork_edges
+                                                .iter()
+                                                .any(|edge| edge.target() == node_id);
+                                            let node_style = format!(
+                                                "left: {:.2}px; top: {:.2}px;",
+                                                layout_node.x,
+                                                layout_node.y,
+                                            );
+                                            rsx! {
+                                                div {
+                                                    key: "{node_id.recipe_id}-{node_id.version_number}",
+                                                    class: "recipe-version-graph__canvas-node",
+                                                    style: node_style,
+                                                    if node.is_redacted() || node.is_deleted() {
+                                                        div {
+                                                            class: "recipe-version-graph__static-card",
+                                                            tabindex: "0",
+                                                            VersionGraphSnapshotCard {
+                                                                node,
+                                                                is_fork_source,
+                                                                is_fork_target,
+                                                            }
                                                         }
-                                                    }
-                                                }
-                                                ol {
-                                                    class: "recipe-version-graph__nodes",
-                                                    for node in lane {
-                                                        {
-                                                            let is_fork_source = fork_edges
-                                                                .iter()
-                                                                .any(|edge| edge.source() == node.id());
-                                                            let is_fork_target = fork_edges
-                                                                .iter()
-                                                                .any(|edge| edge.target() == node.id());
-                                                            rsx! {
-                                                                li {
-                                                                    key: "{node.id().recipe_id}-{node.id().version_number}",
-                                                                    if node.is_redacted() || node.is_deleted() {
-                                                                        VersionGraphSnapshotCard {
-                                                                            node,
-                                                                            is_fork_source,
-                                                                            is_fork_target,
-                                                                        }
-                                                                    } else {
-                                                                        Link {
-                                                                            to: Route::RecipeVersionDetail {
-                                                                                id: node.id().recipe_id.to_string(),
-                                                                                version_number: node.id().version_number,
-                                                                            },
-                                                                            class: "recipe-version-graph__node-link",
-                                                                            VersionGraphSnapshotCard {
-                                                                                node,
-                                                                                is_fork_source,
-                                                                                is_fork_target,
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
+                                                    } else {
+                                                        Link {
+                                                            to: Route::RecipeVersionDetail {
+                                                                id: node_id.recipe_id.to_string(),
+                                                                version_number: node_id.version_number,
+                                                            },
+                                                            class: "recipe-version-graph__node-link",
+                                                            VersionGraphSnapshotCard {
+                                                                node,
+                                                                is_fork_source,
+                                                                is_fork_target,
                                                             }
                                                         }
                                                     }
                                                 }
                                             }
                                         }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    details { class: "recipe-version-graph__outline",
+                        summary { "Accessible graph outline" }
+                        ol { class: "recipe-version-graph__outline-nodes",
+                            for layout_node in &layout.nodes {
+                                if let Some(node) = nodes_by_id.get(&layout_node.id) {
+                                    {
+                                        let node_id = node.id();
+                                        let title = node.title().unwrap_or(if node.is_deleted() {
+                                            "Deleted recipe"
+                                        } else {
+                                            "Private recipe"
+                                        });
+                                        rsx! {
+                                            li {
+                                                key: "outline-{node_id.recipe_id}-{node_id.version_number}",
+                                                if node.is_redacted() || node.is_deleted() {
+                                                    span { "{title}, version {node_id.version_number}" }
+                                                } else {
+                                                    Link {
+                                                        to: Route::RecipeVersionDetail {
+                                                            id: node_id.recipe_id.to_string(),
+                                                            version_number: node_id.version_number,
+                                                        },
+                                                        "{title}, version {node_id.version_number}"
+                                                    }
+                                                }
+                                                if node.is_current_version() {
+                                                    span {
+                                                        class: "recipe-version-graph__outline-current",
+                                                        " (current)"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if !layout.edges.is_empty() {
+                            h3 { "Relationships" }
+                            ul { class: "recipe-version-graph__outline-relationships",
+                                for edge in &layout.edges {
+                                    li {
+                                        key: "relationship-{edge.source.recipe_id}-{edge.source.version_number}-{edge.target.recipe_id}-{edge.target.version_number}-{edge.kind:?}",
+                                        "{graph_connection_label(edge, &graph.nodes)}"
                                     }
                                 }
                             }
@@ -473,8 +1159,8 @@ pub fn RecipeVersionGraph(id: String) -> Element {
 mod tests {
     use super::is_recipe_unavailable_error;
     use crate::types::{
-        VersionGraphEdge, VersionGraphNode, VersionGraphNodeContent, VersionGraphNodeId,
-        VersionGraphNodeState,
+        VersionGraph, VersionGraphEdge, VersionGraphEdgeKind, VersionGraphNode,
+        VersionGraphNodeContent, VersionGraphNodeId, VersionGraphNodeState,
     };
     use chrono::{TimeZone, Utc};
     use uuid::Uuid;
@@ -498,6 +1184,48 @@ mod tests {
                 is_deleted: false,
             },
         )
+    }
+
+    fn branched_graph() -> VersionGraph {
+        let root_recipe_id = Uuid::from_u128(1);
+        let first_branch_id = Uuid::from_u128(2);
+        let second_branch_id = Uuid::from_u128(3);
+        VersionGraph {
+            nodes: vec![
+                visible_node(root_recipe_id, 1, "Root v1"),
+                visible_node(root_recipe_id, 2, "Root v2"),
+                visible_node(first_branch_id, 1, "First branch v1"),
+                visible_node(first_branch_id, 2, "First branch v2"),
+                visible_node(second_branch_id, 1, "Second branch v1"),
+            ],
+            edges: vec![
+                VersionGraphEdge::version(
+                    VersionGraphNodeId {
+                        recipe_id: root_recipe_id,
+                        version_number: 1,
+                    },
+                    VersionGraphNodeId {
+                        recipe_id: root_recipe_id,
+                        version_number: 2,
+                    },
+                )
+                .unwrap(),
+                VersionGraphEdge::version(
+                    VersionGraphNodeId {
+                        recipe_id: first_branch_id,
+                        version_number: 1,
+                    },
+                    VersionGraphNodeId {
+                        recipe_id: first_branch_id,
+                        version_number: 2,
+                    },
+                )
+                .unwrap(),
+                VersionGraphEdge::fork(root_recipe_id, 1, first_branch_id).unwrap(),
+                VersionGraphEdge::fork(root_recipe_id, 2, second_branch_id).unwrap(),
+            ],
+            truncation: Default::default(),
+        }
     }
 
     #[test]
@@ -535,7 +1263,7 @@ mod tests {
         let source = include_str!("recipe_version_graph.rs");
 
         assert!(source.contains("get_recipe_version_graph"));
-        assert!(source.contains("recipe-version-graph__edges"));
+        assert!(source.contains("recipe-version-graph__edge-layer"));
         assert!(source.contains("aria_hidden: \"true\""));
         assert!(source.contains("recipe-version-graph__node--current"));
         assert!(source.contains("Route::RecipeVersionDetail"));
@@ -554,13 +1282,13 @@ mod tests {
             .expect("version graph page implementation");
 
         assert!(page.contains("VersionGraphEdgeKind::Fork"));
-        assert!(page.contains("recipe-version-graph__fork-connection"));
+        assert!(page.contains("recipe-version-graph__edge--fork"));
+        assert!(page.contains("recipe-version-graph__edge--version"));
         assert!(page.contains("recipe-version-graph__node--fork-source"));
         assert!(page.contains("recipe-version-graph__node--fork-target"));
         assert!(page.contains("fork_connection_label"));
         assert!(page.contains("forked into"));
         assert!(page.contains("Deleted recipe"));
-        assert!(!page.contains("class: \"recipe-version-graph__fork-edges\""));
     }
 
     #[test]
@@ -580,13 +1308,217 @@ mod tests {
     }
 
     #[test]
-    fn connector_centers_follow_the_same_card_and_gap_geometry_as_the_grid() {
-        let first = super::connector_center_percent(0, 3);
-        let second = super::connector_center_percent(1, 3);
-        let third = super::connector_center_percent(2, 3);
+    fn layered_layout_advances_time_and_separates_fork_branches() {
+        let graph = branched_graph();
+        let layout = super::build_version_graph_layout(&graph);
 
-        assert!((first - (120.0 / 784.0 * 100.0)).abs() < f64::EPSILON);
-        assert!((second - 50.0).abs() < f64::EPSILON);
-        assert!((third - (664.0 / 784.0 * 100.0)).abs() < f64::EPSILON);
+        for edge in &layout.edges {
+            let source = layout
+                .node(edge.source)
+                .expect("layout source for every edge");
+            let target = layout
+                .node(edge.target)
+                .expect("layout target for every edge");
+            assert!(
+                target.x > source.x,
+                "directed graph time must advance left to right"
+            );
+            assert_eq!(edge.source_x, source.x + super::GRAPH_NODE_WIDTH_PX);
+            assert_eq!(edge.target_x, target.x);
+            assert!(edge.path.starts_with('M'));
+            assert!(edge.path.contains('C'));
+            if edge.kind == VersionGraphEdgeKind::Version {
+                assert_eq!(source.y, target.y);
+            } else {
+                assert_ne!(source.y, target.y);
+            }
+        }
+
+        let first_branch = layout
+            .node(VersionGraphNodeId {
+                recipe_id: Uuid::from_u128(2),
+                version_number: 1,
+            })
+            .unwrap();
+        let second_branch = layout
+            .node(VersionGraphNodeId {
+                recipe_id: Uuid::from_u128(3),
+                version_number: 1,
+            })
+            .unwrap();
+        assert_ne!(first_branch.y, second_branch.y);
+    }
+
+    #[test]
+    fn fit_and_center_transforms_keep_layout_targets_in_view() {
+        let layout = super::build_version_graph_layout(&branched_graph());
+        let viewport = (900.0, 560.0);
+        let fit = layout.fit_transform(viewport);
+
+        assert!(fit.scale >= super::GRAPH_MIN_ZOOM);
+        assert!(fit.scale <= 1.0);
+        assert!(fit.offset_x >= 0.0);
+        assert!(fit.offset_y >= 0.0);
+        assert!(fit.offset_x + layout.width * fit.scale <= viewport.0 + f64::EPSILON);
+        assert!(fit.offset_y + layout.height * fit.scale <= viewport.1 + f64::EPSILON);
+
+        let target_id = VersionGraphNodeId {
+            recipe_id: Uuid::from_u128(2),
+            version_number: 2,
+        };
+        let target = layout.node(target_id).unwrap();
+        let centered = layout.center_transform(target_id, viewport, 0.85);
+        assert!(
+            (centered.offset_x + (target.x + super::GRAPH_NODE_WIDTH_PX / 2.0) * centered.scale
+                - viewport.0 / 2.0)
+                .abs()
+                < f64::EPSILON
+        );
+        assert!(
+            (centered.offset_y + (target.y + super::GRAPH_NODE_HEIGHT_PX / 2.0) * centered.scale
+                - viewport.1 / 2.0)
+                .abs()
+                < f64::EPSILON
+        );
+    }
+
+    #[test]
+    fn fit_transform_contains_the_largest_supported_graph() {
+        let layout = super::VersionGraphLayout {
+            width: 356_000.0,
+            height: 356_000.0,
+            ..Default::default()
+        };
+        let viewport = (900.0, 560.0);
+
+        let fit = layout.fit_transform(viewport);
+
+        assert!(fit.offset_x + layout.width * fit.scale <= viewport.0 + f64::EPSILON);
+        assert!(fit.offset_y + layout.height * fit.scale <= viewport.1 + f64::EPSILON);
+    }
+
+    #[test]
+    fn cursor_anchored_zoom_keeps_the_point_beneath_the_cursor_stationary() {
+        let transform = super::VersionGraphTransform {
+            scale: 0.75,
+            offset_x: 80.0,
+            offset_y: -24.0,
+        };
+        let cursor = (320.0, 180.0);
+        let graph_point = (
+            (cursor.0 - transform.offset_x) / transform.scale,
+            (cursor.1 - transform.offset_y) / transform.scale,
+        );
+
+        let zoomed = super::zoom_version_graph_at(transform, cursor, 1.2);
+
+        assert!((zoomed.offset_x + graph_point.0 * zoomed.scale - cursor.0).abs() < f64::EPSILON);
+        assert!((zoomed.offset_y + graph_point.1 * zoomed.scale - cursor.1).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn panning_moves_the_graph_by_the_mouse_delta() {
+        let transform = super::VersionGraphTransform {
+            scale: 0.75,
+            offset_x: 80.0,
+            offset_y: -24.0,
+        };
+
+        let panned = super::pan_version_graph(transform, (18.0, -12.0));
+
+        assert_eq!(panned.scale, transform.scale);
+        assert_eq!(panned.offset_x, 98.0);
+        assert_eq!(panned.offset_y, -36.0);
+    }
+
+    #[test]
+    fn malformed_cycles_produce_a_finite_layout_with_every_node_once() {
+        let first_recipe_id = Uuid::from_u128(10);
+        let second_recipe_id = Uuid::from_u128(11);
+        let graph = VersionGraph {
+            nodes: vec![
+                visible_node(first_recipe_id, 1, "First"),
+                visible_node(second_recipe_id, 1, "Second"),
+            ],
+            edges: vec![
+                VersionGraphEdge::fork(first_recipe_id, 1, second_recipe_id).unwrap(),
+                VersionGraphEdge::fork(second_recipe_id, 1, first_recipe_id).unwrap(),
+            ],
+            truncation: Default::default(),
+        };
+
+        let layout = super::build_version_graph_layout(&graph);
+
+        assert_eq!(layout.nodes.len(), 2);
+        assert_eq!(layout.edges.len(), 2);
+        assert!(layout.width.is_finite());
+        assert!(layout.height.is_finite());
+        assert!(layout
+            .nodes
+            .iter()
+            .all(|node| node.x.is_finite() && node.y.is_finite()));
+    }
+
+    #[test]
+    fn graph_page_exposes_navigation_controls_and_an_outline_fallback() {
+        let source = include_str!("recipe_version_graph.rs");
+        let page = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("version graph page implementation");
+
+        for label in [
+            "Pan graph left",
+            "Pan graph right",
+            "Pan graph up",
+            "Pan graph down",
+            "Zoom in",
+            "Zoom out",
+            "Fit graph to viewport",
+            "Center current snapshot",
+        ] {
+            assert!(page.contains(label), "missing graph control: {label}");
+        }
+        assert!(page.contains("Accessible graph outline"));
+        assert!(page.contains("recipe-version-graph__outline"));
+        assert!(page.contains("tabindex: \"0\""));
+    }
+
+    #[test]
+    fn graph_canvas_exposes_wheel_zoom_and_middle_mouse_panning() {
+        let source = include_str!("recipe_version_graph.rs");
+        let page = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("version graph page implementation");
+
+        assert!(page.contains("onwheel:"));
+        assert!(page.contains("onmousedown:"));
+        assert!(page.contains("onmousemove:"));
+        assert!(page.contains("onmouseup:"));
+        assert!(page.contains("MouseButton::Auxiliary"));
+        assert!(page.contains("Scroll to zoom"));
+        assert!(page.contains("middle-click and drag to pan"));
+    }
+
+    #[test]
+    fn graph_controls_and_outline_remain_available_on_narrow_viewports() {
+        let css = include_str!("../../assets/main.css");
+
+        assert!(css.contains(".recipe-version-graph__toolbar"));
+        assert!(css.contains(".recipe-version-graph__canvas-viewport"));
+        assert!(css.contains(".recipe-version-graph__canvas-viewport--panning"));
+        assert!(css.contains("cursor: grab"));
+        assert!(css.contains("cursor: grabbing"));
+        assert!(css.contains(".recipe-version-graph__outline"));
+        assert!(css.contains("flex-wrap: wrap"));
+        assert!(css.contains("@media (max-width: 760px)"));
+    }
+
+    #[test]
+    fn graph_border_color_is_defined_for_light_and_dark_themes() {
+        let css = include_str!("../../assets/main.css");
+
+        assert_eq!(css.matches("--border-color: rgba(").count(), 2);
     }
 }

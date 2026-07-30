@@ -52,6 +52,7 @@ a:hover {
     /* Neumorphic shadows */
     --shadow-light: #FAF7F1;
     --shadow-dark: #C8C1B4;
+    --border-color: rgba(122, 117, 109, 0.28);
 
     /* Button edge color (inherits parent context) */
     --btn-edge: var(--surface);
@@ -108,6 +109,7 @@ a:hover {
     --surface: #242220;
     --shadow-light: #33302A;
     --shadow-dark: #0F0E0B;
+    --border-color: rgba(237, 232, 223, 0.20);
     --glass-fill: rgba(30, 28, 24, 0.50);
     --glass-border: rgba(255, 255, 255, 0.10);
     --glass-blur: blur(16px) saturate(150%);
@@ -2426,86 +2428,168 @@ a:hover {
     gap: var(--space-md);
 }
 
-.recipe-version-graph__description {
+.recipe-version-graph__description,
+.recipe-version-graph__help {
     margin: 0;
     color: var(--text-secondary);
 }
 
-.recipe-version-graph__lanes {
-    display: grid;
-    gap: var(--space-lg);
+.recipe-version-graph__help {
+    margin-top: calc(-1 * var(--space-sm));
+    font-size: 0.88rem;
 }
 
-.recipe-version-graph__lane-group {
-    display: grid;
+.recipe-version-graph__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm) var(--space-md);
+    flex-wrap: wrap;
+}
+
+.recipe-version-graph__controls,
+.recipe-version-graph__legend {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    flex-wrap: wrap;
+}
+
+.recipe-version-graph__control {
+    display: inline-grid;
+    min-width: 38px;
+    min-height: 38px;
+    padding: 6px 10px;
+    place-items: center;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    box-shadow: 1px 2px 4px var(--shadow-dark), -1px -1px 3px var(--shadow-light);
+    color: var(--text-primary);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
+.recipe-version-graph__control--text {
+    min-width: auto;
+}
+
+.recipe-version-graph__control:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border-color));
+    color: var(--accent);
+}
+
+.recipe-version-graph__control:focus-visible,
+.recipe-version-graph__static-card:focus-visible,
+.recipe-version-graph__canvas-viewport:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--accent) 50%, transparent);
+    outline-offset: 2px;
+}
+
+.recipe-version-graph__control:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
+}
+
+.recipe-version-graph__legend {
     gap: var(--space-sm);
-}
-
-.recipe-version-graph__lane {
-    min-width: 0;
-    padding: var(--space-sm);
-    border-left: 3px solid color-mix(in srgb, var(--accent) 35%, var(--border-color));
-}
-
-.recipe-version-graph__lane-title {
-    margin: 0 0 var(--space-sm);
     color: var(--text-secondary);
-    font-size: 0.9rem;
+    font-size: 0.82rem;
 }
 
-.recipe-version-graph__viewport {
+.recipe-version-graph__legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.recipe-version-graph__legend-line {
+    display: inline-block;
+    width: 30px;
+    border-top: 3px solid color-mix(in srgb, var(--accent) 70%, var(--border-color));
+}
+
+.recipe-version-graph__legend-line--fork {
+    border-top-style: dashed;
+    border-top-color: var(--accent);
+}
+
+.recipe-version-graph__canvas-viewport {
     position: relative;
-    display: grid;
-    overflow-x: auto;
-    padding: var(--space-sm) 2px var(--space-md);
+    width: 100%;
+    height: clamp(420px, 65vh, 680px);
+    min-height: 420px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    background-color: color-mix(in srgb, var(--surface) 92%, var(--background));
+    background-image:
+        linear-gradient(color-mix(in srgb, var(--border-color) 35%, transparent) 1px, transparent 1px),
+        linear-gradient(90deg, color-mix(in srgb, var(--border-color) 35%, transparent) 1px, transparent 1px);
+    background-size: 24px 24px;
+    cursor: grab;
+    isolation: isolate;
 }
 
-.recipe-version-graph__edges,
-.recipe-version-graph__nodes {
-    grid-area: 1 / 1;
-    width: calc(
-        var(--version-graph-node-count) * 240px +
-            (var(--version-graph-node-count) - 1) * 32px
-    );
+.recipe-version-graph__canvas-viewport--panning {
+    cursor: grabbing;
+    user-select: none;
 }
 
-.recipe-version-graph__edges {
-    align-self: stretch;
-    height: 100%;
+.recipe-version-graph__canvas-viewport--panning * {
+    cursor: grabbing;
+}
+
+.recipe-version-graph__canvas-stage {
+    position: absolute;
+    inset: 0 auto auto 0;
+    transform-origin: 0 0;
+    will-change: transform;
+}
+
+.recipe-version-graph__edge-layer {
+    position: absolute;
+    z-index: 0;
+    inset: 0 auto auto 0;
     overflow: visible;
     pointer-events: none;
 }
 
-.recipe-version-graph__edges line {
-    stroke: color-mix(in srgb, var(--accent) 60%, var(--border-color));
-    stroke-width: 0.45;
+.recipe-version-graph__edge {
+    fill: none;
+    stroke-width: 3;
     vector-effect: non-scaling-stroke;
 }
 
-.recipe-version-graph__edge--version line {
+.recipe-version-graph__edge--version {
+    stroke: color-mix(in srgb, var(--accent) 65%, var(--border-color));
     stroke-dasharray: none;
 }
 
-.recipe-version-graph__fork-connection {
-    display: grid;
-    grid-template-columns: 32px minmax(0, max-content);
-    align-items: center;
-    gap: var(--space-sm);
-    color: var(--accent);
-    font-size: 0.85rem;
+.recipe-version-graph__edge--fork {
+    stroke: var(--accent);
+    stroke-dasharray: 10 7;
 }
 
-.recipe-version-graph__fork-connection-line {
-    width: 2px;
-    height: 28px;
-    margin-inline: auto;
-    border-left: 2px dashed var(--accent);
+#recipe-version-graph-arrow-version path {
+    fill: color-mix(in srgb, var(--accent) 65%, var(--border-color));
 }
 
-.recipe-version-graph__fork-connection strong {
-    padding: var(--space-xs) var(--space-sm);
-    border-radius: var(--radius-md);
-    background: color-mix(in srgb, var(--accent) 8%, transparent);
+#recipe-version-graph-arrow-fork path {
+    fill: var(--accent);
+}
+
+.recipe-version-graph__card-layer {
+    position: relative;
+    z-index: 1;
+}
+
+.recipe-version-graph__canvas-node {
+    position: absolute;
+    width: 240px;
+    height: 300px;
 }
 
 .recipe-version-graph__node--fork-source {
@@ -2518,23 +2602,11 @@ a:hover {
     outline-offset: 3px;
 }
 
-.recipe-version-graph__nodes {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    grid-template-columns: repeat(
-        var(--version-graph-node-count),
-        240px
-    );
-    gap: 32px;
-    align-items: center;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.recipe-version-graph__node-link {
+.recipe-version-graph__node-link,
+.recipe-version-graph__static-card {
     display: block;
+    width: 100%;
+    height: 100%;
     color: inherit;
     text-decoration: none;
     border-radius: var(--radius-lg);
@@ -2551,6 +2623,7 @@ a:hover {
     border-radius: var(--radius-lg);
     background: var(--surface);
     box-shadow: 3px 4px 8px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
+    height: 100%;
     transition: transform 160ms ease, box-shadow 160ms ease;
 }
 
@@ -2605,6 +2678,7 @@ a:hover {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-height: 0;
     padding: var(--space-md);
 }
 
@@ -2656,6 +2730,79 @@ a:hover {
 
 .recipe-version-graph__summary {
     margin-top: var(--space-xs) !important;
+}
+
+.recipe-version-graph__outline {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--surface) 92%, var(--background));
+}
+
+.recipe-version-graph__outline summary {
+    padding: var(--space-sm) var(--space-md);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.recipe-version-graph__outline summary:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--accent) 50%, transparent);
+    outline-offset: 2px;
+}
+
+.recipe-version-graph__outline ol,
+.recipe-version-graph__outline ul {
+    margin: 0;
+    padding: 0 var(--space-xl) var(--space-md) calc(var(--space-xl) + var(--space-sm));
+}
+
+.recipe-version-graph__outline li + li {
+    margin-top: var(--space-xs);
+}
+
+.recipe-version-graph__outline-current {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.recipe-version-graph__outline h3 {
+    margin: var(--space-sm) var(--space-md);
+    font-size: 0.95rem;
+}
+
+@media (max-width: 760px) {
+    .recipe-version-graph__toolbar {
+        align-items: flex-start;
+    }
+
+    .recipe-version-graph__controls {
+        width: 100%;
+    }
+
+    .recipe-version-graph__control {
+        flex: 1 1 38px;
+    }
+
+    .recipe-version-graph__control--text {
+        flex-basis: auto;
+    }
+
+    .recipe-version-graph__canvas-viewport {
+        height: min(70vh, 520px);
+        min-height: 360px;
+    }
+
+    .recipe-version-graph__outline ol,
+    .recipe-version-graph__outline ul {
+        padding-inline: var(--space-xl) var(--space-md);
+    }
 }
 
 .recipe-lineage__current {
