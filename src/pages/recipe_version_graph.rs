@@ -37,12 +37,55 @@ const GRAPH_WHEEL_ZOOM_SENSITIVITY: f64 = 0.002;
 const GRAPH_WHEEL_LINE_HEIGHT_PX: f64 = 40.0;
 const GRAPH_PAN_STEP_PX: f64 = 96.0;
 const GRAPH_DEFAULT_VIEWPORT: (f64, f64) = (900.0, 560.0);
+const GRAPH_CONTEXT_MENU_WIDTH_PX: f64 = 224.0;
+const GRAPH_CONTEXT_MENU_HEIGHT_PX: f64 = 250.0;
+const GRAPH_SNAPSHOT_CONTEXT_MENU_HEIGHT_PX: f64 = 336.0;
+const GRAPH_CONTEXT_MENU_MARGIN_PX: f64 = 8.0;
+const GRAPH_SNAPSHOT_FOCUS_ZOOM: f64 = 1.0;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct VersionGraphTransform {
     scale: f64,
     offset_x: f64,
     offset_y: f64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum VersionGraphContextMenuTarget {
+    Background,
+    Snapshot(VersionGraphNodeId),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct VersionGraphContextMenu {
+    anchor: (f64, f64),
+    position: (f64, f64),
+    target: VersionGraphContextMenuTarget,
+}
+
+impl VersionGraphContextMenu {
+    fn at(anchor: (f64, f64), viewport: (f64, f64), target: VersionGraphContextMenuTarget) -> Self {
+        let menu_height = match target {
+            VersionGraphContextMenuTarget::Background => GRAPH_CONTEXT_MENU_HEIGHT_PX,
+            VersionGraphContextMenuTarget::Snapshot(_) => GRAPH_SNAPSHOT_CONTEXT_MENU_HEIGHT_PX,
+        };
+        Self {
+            anchor,
+            position: (
+                anchor.0.clamp(
+                    GRAPH_CONTEXT_MENU_MARGIN_PX,
+                    (viewport.0 - GRAPH_CONTEXT_MENU_WIDTH_PX - GRAPH_CONTEXT_MENU_MARGIN_PX)
+                        .max(GRAPH_CONTEXT_MENU_MARGIN_PX),
+                ),
+                anchor.1.clamp(
+                    GRAPH_CONTEXT_MENU_MARGIN_PX,
+                    (viewport.1 - menu_height - GRAPH_CONTEXT_MENU_MARGIN_PX)
+                        .max(GRAPH_CONTEXT_MENU_MARGIN_PX),
+                ),
+            ),
+            target,
+        }
+    }
 }
 
 impl Default for VersionGraphTransform {
@@ -422,6 +465,81 @@ fn zoom_version_graph_at(
     }
 }
 
+fn center_version_graph_at(
+    transform: VersionGraphTransform,
+    context_point: (f64, f64),
+    viewport: (f64, f64),
+) -> VersionGraphTransform {
+    let graph_point_x = (context_point.0 - transform.offset_x) / transform.scale;
+    let graph_point_y = (context_point.1 - transform.offset_y) / transform.scale;
+    VersionGraphTransform {
+        offset_x: viewport.0 / 2.0 - graph_point_x * transform.scale,
+        offset_y: viewport.1 / 2.0 - graph_point_y * transform.scale,
+        ..transform
+    }
+}
+
+fn next_context_menu_focus_index(
+    current: usize,
+    direction: i32,
+    enabled_actions: [bool; 5],
+) -> usize {
+    let action_count = enabled_actions.len();
+    for distance in 1..=action_count {
+        let candidate = if direction < 0 {
+            (current + action_count - distance) % action_count
+        } else {
+            (current + distance) % action_count
+        };
+        if enabled_actions[candidate] {
+            return candidate;
+        }
+    }
+    current.min(action_count - 1)
+}
+
+fn first_context_menu_focus_index(enabled_actions: [bool; 5]) -> usize {
+    enabled_actions
+        .iter()
+        .position(|enabled| *enabled)
+        .unwrap_or(0)
+}
+
+fn snapshot_context_menu_route(node_id: VersionGraphNodeId, action_index: usize) -> Option<Route> {
+    let recipe_id = node_id.recipe_id.to_string();
+    match action_index {
+        0 => Some(Route::RecipeVersionDetail {
+            id: recipe_id,
+            version_number: node_id.version_number,
+        }),
+        1 => Some(Route::RecipeDetail { id: recipe_id }),
+        2 => Some(Route::RecipeVersionGraph { id: recipe_id }),
+        _ => None,
+    }
+}
+
+fn focus_mounted_element(element: Option<MountedEvent>) {
+    if let Some(element) = element {
+        spawn(async move {
+            let _ = element.data().set_focus(true).await;
+        });
+    }
+}
+
+fn restore_context_menu_focus(
+    target: VersionGraphContextMenuTarget,
+    graph_canvas: Option<MountedEvent>,
+    graph_nodes: &HashMap<VersionGraphNodeId, MountedEvent>,
+) {
+    let target_element = match target {
+        VersionGraphContextMenuTarget::Background => graph_canvas,
+        VersionGraphContextMenuTarget::Snapshot(node_id) => {
+            graph_nodes.get(&node_id).cloned().or(graph_canvas)
+        }
+    };
+    focus_mounted_element(target_element);
+}
+
 fn pan_version_graph(
     transform: VersionGraphTransform,
     mouse_delta: (f64, f64),
@@ -585,24 +703,28 @@ fn VersionGraphSnapshotCard(
 
 #[component]
 pub fn RecipeVersionGraph(id: String) -> Element {
+    let navigator = navigator();
     let recipe_id_is_valid = uuid::Uuid::parse_str(&id).is_ok();
-    let resource_recipe_id_is_valid = recipe_id_is_valid;
-    let id_for_graph = id.clone();
-    let graph_resource = use_resource(move || {
-        let recipe_id = id_for_graph.clone();
-        async move {
-            if !resource_recipe_id_is_valid {
-                return Err(ServerFnError::new("Invalid recipe ID"));
-            }
-            get_recipe_version_graph(recipe_id).await
+    let graph_resource = use_resource(use_reactive((&id,), move |(recipe_id,)| async move {
+        if uuid::Uuid::parse_str(&recipe_id).is_err() {
+            return Err(ServerFnError::new("Invalid recipe ID"));
         }
-    });
+        get_recipe_version_graph(recipe_id).await
+    }));
     let mut graph_transform = use_signal(VersionGraphTransform::default);
     let mut graph_viewport = use_signal(|| GRAPH_DEFAULT_VIEWPORT);
     let mut initial_graph_fit_complete = use_signal(|| false);
     let mut graph_canvas = use_signal(|| None::<MountedEvent>);
     // Present only while an auxiliary-button drag is active.
     let mut pan_mouse_position = use_signal(|| None::<(f64, f64)>);
+    let mut graph_context_menu = use_signal(|| None::<VersionGraphContextMenu>);
+    let mut graph_context_menu_focus_index = use_signal(|| 0usize);
+    let mut graph_node_elements = use_signal(HashMap::<VersionGraphNodeId, MountedEvent>::new);
+    let mut context_zoom_in = use_signal(|| None::<MountedEvent>);
+    let mut context_zoom_out = use_signal(|| None::<MountedEvent>);
+    let mut context_center_here = use_signal(|| None::<MountedEvent>);
+    let mut context_center_current = use_signal(|| None::<MountedEvent>);
+    let mut context_fit = use_signal(|| None::<MountedEvent>);
 
     let back_to_recipe = rsx! {
         Link {
@@ -764,6 +886,40 @@ pub fn RecipeVersionGraph(id: String) -> Element {
     let layout_for_resize = layout.clone();
     let layout_for_fit = layout.clone();
     let layout_for_center = layout.clone();
+    let layout_for_context_fit = layout.clone();
+    let layout_for_context_center_current = layout.clone();
+    let layout_for_snapshot_center = layout.clone();
+    let layout_for_snapshot_zoom = layout.clone();
+    let active_context_menu = graph_context_menu();
+    let snapshot_context_menu = active_context_menu
+        .and_then(|context_menu| match context_menu.target {
+            VersionGraphContextMenuTarget::Background => None,
+            VersionGraphContextMenuTarget::Snapshot(node_id) => Some(node_id),
+        })
+        .and_then(|node_id| {
+            nodes_by_id.get(&node_id).map(|node| {
+                let title = node
+                    .title()
+                    .unwrap_or(if node.is_deleted() {
+                        "Deleted recipe"
+                    } else {
+                        "Private recipe"
+                    })
+                    .to_string();
+                (node_id, title, !node.is_redacted() && !node.is_deleted())
+            })
+        });
+    let context_menu_actions_enabled = match snapshot_context_menu.as_ref() {
+        Some((_, _, navigation_available)) => [
+            *navigation_available,
+            *navigation_available,
+            *navigation_available,
+            true,
+            true,
+        ],
+        None => [true, true, true, current_snapshot_id.is_some(), true],
+    };
+    let is_snapshot_context_menu = snapshot_context_menu.is_some();
 
     rsx! {
         div { class: "container",
@@ -772,12 +928,35 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                 action: Some(back_to_recipe),
             }
             Card {
-                div { class: "recipe-version-graph",
+                div {
+                    class: "recipe-version-graph",
+                    onclick: move |_| {
+                        if let Some(context_menu) = graph_context_menu() {
+                            graph_context_menu.set(None);
+                            restore_context_menu_focus(
+                                context_menu.target,
+                                graph_canvas(),
+                                &graph_node_elements(),
+                            );
+                        }
+                    },
+                    onkeydown: move |event| {
+                        if event.data().key() == Key::Escape {
+                            if let Some(context_menu) = graph_context_menu() {
+                                graph_context_menu.set(None);
+                                restore_context_menu_focus(
+                                    context_menu.target,
+                                    graph_canvas(),
+                                    &graph_node_elements(),
+                                );
+                            }
+                        }
+                    },
                     p { class: "recipe-version-graph__description",
                         "Explore immutable snapshots across the connected fork family."
                     }
                     p { class: "recipe-version-graph__help",
-                        "Scroll to zoom; middle-click and drag to pan."
+                        "Scroll to zoom; middle-click and drag to pan; right-click the background for more navigation options."
                     }
                     div {
                         class: "recipe-version-graph__toolbar",
@@ -915,6 +1094,10 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                             });
                         },
                         onresize: move |event| {
+                            if graph_context_menu().is_some() {
+                                graph_context_menu.set(None);
+                                focus_mounted_element(graph_canvas());
+                            }
                             if let Ok(size) = event.data().get_content_box_size() {
                                 let viewport = (size.width, size.height);
                                 if viewport.0 > 0.0 && viewport.1 > 0.0 {
@@ -930,6 +1113,10 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                         },
                         onwheel: move |event| {
                             event.prevent_default();
+                            if graph_context_menu().is_some() {
+                                graph_context_menu.set(None);
+                                focus_mounted_element(graph_canvas());
+                            }
                             let Some(canvas) = graph_canvas() else {
                                 return;
                             };
@@ -958,9 +1145,39 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                 ));
                             });
                         },
+                        oncontextmenu: move |event| {
+                            event.prevent_default();
+                            let Some(canvas) = graph_canvas() else {
+                                return;
+                            };
+                            let client_position = event.data().client_coordinates();
+                            spawn(async move {
+                                let Ok(rect) = canvas.data().get_client_rect().await else {
+                                    return;
+                                };
+                                let viewport = (rect.size.width, rect.size.height);
+                                if viewport.0 <= 0.0 || viewport.1 <= 0.0 {
+                                    return;
+                                }
+                                let anchor = (
+                                    client_position.x - rect.origin.x,
+                                    client_position.y - rect.origin.y,
+                                );
+                                graph_context_menu_focus_index.set(0);
+                                graph_context_menu.set(Some(VersionGraphContextMenu::at(
+                                    anchor,
+                                    viewport,
+                                    VersionGraphContextMenuTarget::Background,
+                                )));
+                            });
+                        },
                         onmousedown: move |event| {
                             if event.data().trigger_button() == Some(MouseButton::Auxiliary) {
                                 event.prevent_default();
+                                if graph_context_menu().is_some() {
+                                    graph_context_menu.set(None);
+                                    focus_mounted_element(graph_canvas());
+                                }
                                 let position = event.data().client_coordinates();
                                 pan_mouse_position.set(Some((position.x, position.y)));
                             }
@@ -1057,6 +1274,8 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                             let is_fork_target = fork_edges
                                                 .iter()
                                                 .any(|edge| edge.target() == node_id);
+                                            let snapshot_navigation_available =
+                                                !node.is_redacted() && !node.is_deleted();
                                             let node_style = format!(
                                                 "left: {:.2}px; top: {:.2}px;",
                                                 layout_node.x,
@@ -1067,10 +1286,63 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                     key: "{node_id.recipe_id}-{node_id.version_number}",
                                                     class: "recipe-version-graph__canvas-node",
                                                     style: node_style,
+                                                    oncontextmenu: move |event| {
+                                                        event.prevent_default();
+                                                        event.stop_propagation();
+                                                        let Some(canvas) = graph_canvas() else {
+                                                            return;
+                                                        };
+                                                        let client_position =
+                                                            event.data().client_coordinates();
+                                                        spawn(async move {
+                                                            let Ok(rect) =
+                                                                canvas.data().get_client_rect().await
+                                                            else {
+                                                                return;
+                                                            };
+                                                            let viewport =
+                                                                (rect.size.width, rect.size.height);
+                                                            if viewport.0 <= 0.0
+                                                                || viewport.1 <= 0.0
+                                                            {
+                                                                return;
+                                                            }
+                                                            let anchor = (
+                                                                client_position.x - rect.origin.x,
+                                                                client_position.y - rect.origin.y,
+                                                            );
+                                                            let enabled_actions = [
+                                                                snapshot_navigation_available,
+                                                                snapshot_navigation_available,
+                                                                snapshot_navigation_available,
+                                                                true,
+                                                                true,
+                                                            ];
+                                                            graph_context_menu_focus_index.set(
+                                                                first_context_menu_focus_index(
+                                                                    enabled_actions,
+                                                                ),
+                                                            );
+                                                            graph_context_menu.set(Some(
+                                                                VersionGraphContextMenu::at(
+                                                                    anchor,
+                                                                    viewport,
+                                                                    VersionGraphContextMenuTarget::Snapshot(
+                                                                        node_id,
+                                                                    ),
+                                                                ),
+                                                            ));
+                                                        });
+                                                    },
                                                     if node.is_redacted() || node.is_deleted() {
                                                         div {
                                                             class: "recipe-version-graph__static-card",
                                                             tabindex: "0",
+                                                            onmounted: move |event| {
+                                                                graph_node_elements
+                                                                    .write()
+                                                                    .insert(node_id, event);
+                                                            },
                                                             VersionGraphSnapshotCard {
                                                                 node,
                                                                 is_fork_source,
@@ -1084,6 +1356,11 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                                 version_number: node_id.version_number,
                                                             },
                                                             class: "recipe-version-graph__node-link",
+                                                            onmounted: move |event| {
+                                                                graph_node_elements
+                                                                    .write()
+                                                                    .insert(node_id, event);
+                                                            },
                                                             VersionGraphSnapshotCard {
                                                                 node,
                                                                 is_fork_source,
@@ -1094,6 +1371,352 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                 }
                                             }
                                         }
+                                    }
+                                }
+                            }
+                        }
+                        if let Some(context_menu) = active_context_menu {
+                            div {
+                                class: "recipe-version-graph__context-menu",
+                                role: "menu",
+                                aria_label: if is_snapshot_context_menu {
+                                    "Snapshot context menu"
+                                } else {
+                                    "Graph navigation menu"
+                                },
+                                style: "left: {context_menu.position.0:.2}px; top: {context_menu.position.1:.2}px;",
+                                onclick: move |event| event.stop_propagation(),
+                                onkeydown: move |event| {
+                                    let next_index = match event.data().key() {
+                                        Key::ArrowDown => next_context_menu_focus_index(
+                                            graph_context_menu_focus_index(),
+                                            1,
+                                            context_menu_actions_enabled,
+                                        ),
+                                        Key::ArrowUp => next_context_menu_focus_index(
+                                            graph_context_menu_focus_index(),
+                                            -1,
+                                            context_menu_actions_enabled,
+                                        ),
+                                        Key::Home => first_context_menu_focus_index(
+                                            context_menu_actions_enabled,
+                                        ),
+                                        Key::End => next_context_menu_focus_index(
+                                            first_context_menu_focus_index(
+                                                context_menu_actions_enabled,
+                                            ),
+                                            -1,
+                                            context_menu_actions_enabled,
+                                        ),
+                                        Key::Escape => {
+                                            event.prevent_default();
+                                            event.stop_propagation();
+                                            graph_context_menu.set(None);
+                                            restore_context_menu_focus(
+                                                context_menu.target,
+                                                graph_canvas(),
+                                                &graph_node_elements(),
+                                            );
+                                            return;
+                                        }
+                                        _ => return,
+                                    };
+                                    event.prevent_default();
+                                    event.stop_propagation();
+                                    graph_context_menu_focus_index.set(next_index);
+                                    let target = match next_index {
+                                        0 => context_zoom_in(),
+                                        1 => context_zoom_out(),
+                                        2 => context_center_here(),
+                                        3 => context_center_current(),
+                                        _ => context_fit(),
+                                    };
+                                    focus_mounted_element(target);
+                                },
+                                if let Some((
+                                    snapshot_id,
+                                    snapshot_title,
+                                    snapshot_navigation_available,
+                                )) = snapshot_context_menu {
+                                    div {
+                                        class: "recipe-version-graph__context-menu-heading",
+                                        role: "presentation",
+                                        strong { "{snapshot_title}" }
+                                        span { "Version {snapshot_id.version_number}" }
+                                    }
+                                    if !snapshot_navigation_available {
+                                        p {
+                                            class: "recipe-version-graph__context-menu-unavailable",
+                                            role: "note",
+                                            "Snapshot navigation unavailable"
+                                        }
+                                    }
+                                    button {
+                                        r#type: "button",
+                                        class: "recipe-version-graph__context-menu-item",
+                                        role: "menuitem",
+                                        disabled: !snapshot_navigation_available,
+                                        tabindex: if graph_context_menu_focus_index() == 0 { "0" } else { "-1" },
+                                        onmounted: move |event| {
+                                            context_zoom_in.set(Some(event.clone()));
+                                            if graph_context_menu_focus_index() == 0 {
+                                                focus_mounted_element(Some(event));
+                                            }
+                                        },
+                                        onclick: move |_| {
+                                            if snapshot_navigation_available {
+                                                if let Some(route) =
+                                                    snapshot_context_menu_route(snapshot_id, 0)
+                                                {
+                                                    graph_context_menu.set(None);
+                                                    restore_context_menu_focus(
+                                                        context_menu.target,
+                                                        graph_canvas(),
+                                                        &graph_node_elements(),
+                                                    );
+                                                    let _ = navigator.push(route);
+                                                }
+                                            }
+                                        },
+                                        "View snapshot"
+                                    }
+                                    button {
+                                        r#type: "button",
+                                        class: "recipe-version-graph__context-menu-item",
+                                        role: "menuitem",
+                                        disabled: !snapshot_navigation_available,
+                                        tabindex: if graph_context_menu_focus_index() == 1 { "0" } else { "-1" },
+                                        onmounted: move |event| {
+                                            context_zoom_out.set(Some(event.clone()));
+                                            if graph_context_menu_focus_index() == 1 {
+                                                focus_mounted_element(Some(event));
+                                            }
+                                        },
+                                        onclick: move |_| {
+                                            if snapshot_navigation_available {
+                                                if let Some(route) =
+                                                    snapshot_context_menu_route(snapshot_id, 1)
+                                                {
+                                                    graph_context_menu.set(None);
+                                                    restore_context_menu_focus(
+                                                        context_menu.target,
+                                                        graph_canvas(),
+                                                        &graph_node_elements(),
+                                                    );
+                                                    let _ = navigator.push(route);
+                                                }
+                                            }
+                                        },
+                                        "View recipe"
+                                    }
+                                    button {
+                                        r#type: "button",
+                                        class: "recipe-version-graph__context-menu-item",
+                                        role: "menuitem",
+                                        disabled: !snapshot_navigation_available,
+                                        tabindex: if graph_context_menu_focus_index() == 2 { "0" } else { "-1" },
+                                        onmounted: move |event| {
+                                            context_center_here.set(Some(event.clone()));
+                                            if graph_context_menu_focus_index() == 2 {
+                                                focus_mounted_element(Some(event));
+                                            }
+                                        },
+                                        onclick: move |_| {
+                                            if snapshot_navigation_available {
+                                                if let Some(route) =
+                                                    snapshot_context_menu_route(snapshot_id, 2)
+                                                {
+                                                    graph_context_menu.set(None);
+                                                    restore_context_menu_focus(
+                                                        context_menu.target,
+                                                        graph_canvas(),
+                                                        &graph_node_elements(),
+                                                    );
+                                                    let _ = navigator.push(route);
+                                                }
+                                            }
+                                        },
+                                        "Focus recipe graph"
+                                    }
+                                    div {
+                                        class: "recipe-version-graph__context-menu-separator",
+                                        role: "separator",
+                                    }
+                                    button {
+                                        r#type: "button",
+                                        class: "recipe-version-graph__context-menu-item",
+                                        role: "menuitem",
+                                        tabindex: if graph_context_menu_focus_index() == 3 { "0" } else { "-1" },
+                                        onmounted: move |event| {
+                                            context_center_current.set(Some(event.clone()));
+                                            if graph_context_menu_focus_index() == 3 {
+                                                focus_mounted_element(Some(event));
+                                            }
+                                        },
+                                        onclick: move |_| {
+                                            graph_transform.set(
+                                                layout_for_snapshot_center.center_transform(
+                                                    snapshot_id,
+                                                    graph_viewport(),
+                                                    graph_transform().scale,
+                                                ),
+                                            );
+                                            graph_context_menu.set(None);
+                                            restore_context_menu_focus(
+                                                context_menu.target,
+                                                graph_canvas(),
+                                                &graph_node_elements(),
+                                            );
+                                        },
+                                        "Center snapshot"
+                                    }
+                                    button {
+                                        r#type: "button",
+                                        class: "recipe-version-graph__context-menu-item",
+                                        role: "menuitem",
+                                        tabindex: if graph_context_menu_focus_index() == 4 { "0" } else { "-1" },
+                                        onmounted: move |event| {
+                                            context_fit.set(Some(event.clone()));
+                                            if graph_context_menu_focus_index() == 4 {
+                                                focus_mounted_element(Some(event));
+                                            }
+                                        },
+                                        onclick: move |_| {
+                                            graph_transform.set(
+                                                layout_for_snapshot_zoom.center_transform(
+                                                    snapshot_id,
+                                                    graph_viewport(),
+                                                    graph_transform()
+                                                        .scale
+                                                        .max(GRAPH_SNAPSHOT_FOCUS_ZOOM),
+                                                ),
+                                            );
+                                            graph_context_menu.set(None);
+                                            restore_context_menu_focus(
+                                                context_menu.target,
+                                                graph_canvas(),
+                                                &graph_node_elements(),
+                                            );
+                                        },
+                                        "Zoom to snapshot"
+                                    }
+                                } else {
+                                    button {
+                                        r#type: "button",
+                                        class: "recipe-version-graph__context-menu-item",
+                                        role: "menuitem",
+                                        tabindex: if graph_context_menu_focus_index() == 0 { "0" } else { "-1" },
+                                        onmounted: move |event| {
+                                            context_zoom_in.set(Some(event.clone()));
+                                            if graph_context_menu_focus_index() == 0 {
+                                                focus_mounted_element(Some(event));
+                                            }
+                                        },
+                                        onclick: move |_| {
+                                            graph_transform.set(zoom_version_graph_at(
+                                                graph_transform(),
+                                                context_menu.anchor,
+                                                GRAPH_ZOOM_FACTOR,
+                                            ));
+                                            graph_context_menu.set(None);
+                                            focus_mounted_element(graph_canvas());
+                                        },
+                                        "Zoom in here"
+                                    }
+                                    button {
+                                        r#type: "button",
+                                        class: "recipe-version-graph__context-menu-item",
+                                        role: "menuitem",
+                                        tabindex: if graph_context_menu_focus_index() == 1 { "0" } else { "-1" },
+                                        onmounted: move |event| {
+                                            context_zoom_out.set(Some(event.clone()));
+                                            if graph_context_menu_focus_index() == 1 {
+                                                focus_mounted_element(Some(event));
+                                            }
+                                        },
+                                        onclick: move |_| {
+                                            graph_transform.set(zoom_version_graph_at(
+                                                graph_transform(),
+                                                context_menu.anchor,
+                                                1.0 / GRAPH_ZOOM_FACTOR,
+                                            ));
+                                            graph_context_menu.set(None);
+                                            focus_mounted_element(graph_canvas());
+                                        },
+                                        "Zoom out here"
+                                    }
+                                    button {
+                                        r#type: "button",
+                                        class: "recipe-version-graph__context-menu-item",
+                                        role: "menuitem",
+                                        tabindex: if graph_context_menu_focus_index() == 2 { "0" } else { "-1" },
+                                        onmounted: move |event| {
+                                            context_center_here.set(Some(event.clone()));
+                                            if graph_context_menu_focus_index() == 2 {
+                                                focus_mounted_element(Some(event));
+                                            }
+                                        },
+                                        onclick: move |_| {
+                                            graph_transform.set(center_version_graph_at(
+                                                graph_transform(),
+                                                context_menu.anchor,
+                                                graph_viewport(),
+                                            ));
+                                            graph_context_menu.set(None);
+                                            focus_mounted_element(graph_canvas());
+                                        },
+                                        "Center here"
+                                    }
+                                    div {
+                                        class: "recipe-version-graph__context-menu-separator",
+                                        role: "separator",
+                                    }
+                                    button {
+                                        r#type: "button",
+                                        class: "recipe-version-graph__context-menu-item",
+                                        role: "menuitem",
+                                        tabindex: if graph_context_menu_focus_index() == 3 { "0" } else { "-1" },
+                                        disabled: current_snapshot_id.is_none(),
+                                        onmounted: move |event| {
+                                            context_center_current.set(Some(event.clone()));
+                                            if graph_context_menu_focus_index() == 3 {
+                                                focus_mounted_element(Some(event));
+                                            }
+                                        },
+                                        onclick: move |_| {
+                                            if let Some(current_snapshot_id) = current_snapshot_id {
+                                                graph_transform.set(
+                                                    layout_for_context_center_current.center_transform(
+                                                        current_snapshot_id,
+                                                        graph_viewport(),
+                                                        graph_transform().scale,
+                                                    )
+                                                );
+                                            }
+                                            graph_context_menu.set(None);
+                                            focus_mounted_element(graph_canvas());
+                                        },
+                                        "Center current snapshot"
+                                    }
+                                    button {
+                                        r#type: "button",
+                                        class: "recipe-version-graph__context-menu-item",
+                                        role: "menuitem",
+                                        tabindex: if graph_context_menu_focus_index() == 4 { "0" } else { "-1" },
+                                        onmounted: move |event| {
+                                            context_fit.set(Some(event.clone()));
+                                            if graph_context_menu_focus_index() == 4 {
+                                                focus_mounted_element(Some(event));
+                                            }
+                                        },
+                                        onclick: move |_| {
+                                            graph_transform.set(
+                                                layout_for_context_fit.fit_transform(graph_viewport())
+                                            );
+                                            graph_context_menu.set(None);
+                                            focus_mounted_element(graph_canvas());
+                                        },
+                                        "Fit graph to viewport"
                                     }
                                 }
                             }
@@ -1256,6 +1879,17 @@ mod tests {
         let loading_return = source.find("if graph_resource.pending()").unwrap();
 
         assert!(result_read < loading_return);
+    }
+
+    #[test]
+    fn graph_resource_reacts_to_recipe_route_changes() {
+        let source = include_str!("recipe_version_graph.rs");
+        let page = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("version graph page implementation");
+
+        assert!(page.contains("use_resource(use_reactive((&id,)"));
     }
 
     #[test]
@@ -1432,6 +2066,97 @@ mod tests {
     }
 
     #[test]
+    fn centering_a_context_point_preserves_zoom_and_moves_it_to_the_viewport_center() {
+        let transform = super::VersionGraphTransform {
+            scale: 0.75,
+            offset_x: 80.0,
+            offset_y: -24.0,
+        };
+        let context_point = (320.0, 180.0);
+        let viewport = (900.0, 560.0);
+        let graph_point = (
+            (context_point.0 - transform.offset_x) / transform.scale,
+            (context_point.1 - transform.offset_y) / transform.scale,
+        );
+
+        let centered = super::center_version_graph_at(transform, context_point, viewport);
+
+        assert_eq!(centered.scale, transform.scale);
+        assert!(
+            (centered.offset_x + graph_point.0 * centered.scale - viewport.0 / 2.0).abs()
+                < f64::EPSILON
+        );
+        assert!(
+            (centered.offset_y + graph_point.1 * centered.scale - viewport.1 / 2.0).abs()
+                < f64::EPSILON
+        );
+    }
+
+    #[test]
+    fn context_menu_keyboard_navigation_wraps_and_skips_disabled_actions() {
+        let all_actions = [true; 5];
+        let private_snapshot_actions = [false, false, false, true, true];
+
+        assert_eq!(super::next_context_menu_focus_index(0, 1, all_actions), 1);
+        assert_eq!(super::next_context_menu_focus_index(4, 1, all_actions), 0);
+        assert_eq!(super::next_context_menu_focus_index(0, -1, all_actions), 4);
+        assert_eq!(
+            super::first_context_menu_focus_index(private_snapshot_actions),
+            3
+        );
+        assert_eq!(
+            super::next_context_menu_focus_index(3, 1, private_snapshot_actions),
+            4
+        );
+        assert_eq!(
+            super::next_context_menu_focus_index(4, 1, private_snapshot_actions),
+            3
+        );
+    }
+
+    #[test]
+    fn snapshot_context_menu_clamps_inside_the_graph_viewport() {
+        let node_id = VersionGraphNodeId {
+            recipe_id: Uuid::from_u128(42),
+            version_number: 3,
+        };
+        let menu = super::VersionGraphContextMenu::at(
+            (895.0, 555.0),
+            (900.0, 560.0),
+            super::VersionGraphContextMenuTarget::Snapshot(node_id),
+        );
+
+        assert_eq!(menu.anchor, (895.0, 555.0));
+        assert_eq!(menu.position, (668.0, 216.0));
+    }
+
+    #[test]
+    fn snapshot_context_menu_routes_target_the_selected_recipe_and_version() {
+        let recipe_id = Uuid::from_u128(42);
+        let node_id = VersionGraphNodeId {
+            recipe_id,
+            version_number: 3,
+        };
+
+        assert!(matches!(
+            super::snapshot_context_menu_route(node_id, 0),
+            Some(crate::Route::RecipeVersionDetail {
+                id,
+                version_number: 3,
+            }) if id == recipe_id.to_string()
+        ));
+        assert!(matches!(
+            super::snapshot_context_menu_route(node_id, 1),
+            Some(crate::Route::RecipeDetail { id }) if id == recipe_id.to_string()
+        ));
+        assert!(matches!(
+            super::snapshot_context_menu_route(node_id, 2),
+            Some(crate::Route::RecipeVersionGraph { id }) if id == recipe_id.to_string()
+        ));
+        assert!(super::snapshot_context_menu_route(node_id, 3).is_none());
+    }
+
+    #[test]
     fn malformed_cycles_produce_a_finite_layout_with_every_node_once() {
         let first_recipe_id = Uuid::from_u128(10);
         let second_recipe_id = Uuid::from_u128(11);
@@ -1502,12 +2227,54 @@ mod tests {
     }
 
     #[test]
+    fn graph_canvas_exposes_a_right_click_navigation_menu() {
+        let source = include_str!("recipe_version_graph.rs");
+        let page = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("version graph page implementation");
+
+        assert!(page.contains("oncontextmenu:"));
+        assert!(page.contains("role: \"menu\""));
+        assert!(page.contains("Zoom in here"));
+        assert!(page.contains("Zoom out here"));
+        assert!(page.contains("Center here"));
+        assert!(page.contains("Center current snapshot"));
+        assert!(page.contains("Fit graph to viewport"));
+        assert!(page.contains("event.stop_propagation()"));
+        assert!(page.contains("Key::ArrowDown"));
+        assert!(page.contains("Key::ArrowUp"));
+        assert!(page.contains("set_focus(true)"));
+    }
+
+    #[test]
+    fn graph_cards_expose_snapshot_specific_context_actions() {
+        let source = include_str!("recipe_version_graph.rs");
+        let page = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("version graph page implementation");
+
+        assert!(page.contains("VersionGraphContextMenuTarget::Snapshot"));
+        assert!(page.contains("View snapshot"));
+        assert!(page.contains("View recipe"));
+        assert!(page.contains("Focus recipe graph"));
+        assert!(page.contains("Center snapshot"));
+        assert!(page.contains("Zoom to snapshot"));
+        assert!(page.contains("Snapshot navigation unavailable"));
+        assert!(page.contains("event.prevent_default()"));
+        assert!(page.contains("event.stop_propagation()"));
+    }
+
+    #[test]
     fn graph_controls_and_outline_remain_available_on_narrow_viewports() {
         let css = include_str!("../../assets/main.css");
 
         assert!(css.contains(".recipe-version-graph__toolbar"));
         assert!(css.contains(".recipe-version-graph__canvas-viewport"));
         assert!(css.contains(".recipe-version-graph__canvas-viewport--panning"));
+        assert!(css.contains(".recipe-version-graph__context-menu"));
+        assert!(css.contains(".recipe-version-graph__context-menu-item"));
         assert!(css.contains("cursor: grab"));
         assert!(css.contains("cursor: grabbing"));
         assert!(css.contains(".recipe-version-graph__outline"));
