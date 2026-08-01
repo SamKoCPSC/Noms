@@ -267,7 +267,7 @@ pub struct AuthState {
     pub redirect_uri: String,
     pub provider: String,
     pub code_verifier: Option<String>,
-    pub purpose: Option<String>,
+    pub purpose: String,
     pub user_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
 }
@@ -1769,27 +1769,6 @@ pub async fn insert_auth_state(
     provider: &str,
     redirect_uri: &str,
     code_verifier: &str,
-    user_id: Option<Uuid>,
-) -> Result<(), DbError> {
-    insert_auth_state_for(
-        executor,
-        id,
-        provider,
-        redirect_uri,
-        code_verifier,
-        "login",
-        user_id,
-    )
-    .await
-}
-
-/// Insert an auth state with an explicit immutable flow purpose.
-pub async fn insert_auth_state_for(
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
-    id: &str,
-    provider: &str,
-    redirect_uri: &str,
-    code_verifier: &str,
     purpose: &str,
     user_id: Option<Uuid>,
 ) -> Result<(), DbError> {
@@ -2941,9 +2920,17 @@ mod tests {
         let (_db, pool) = test_utils::setup_test_db().await;
         let state_id = format!("test-state-{}", test_utils::uid());
         let verifier = "test-verifier-that-is-at-least-43-chars-long!";
-        insert_auth_state(&pool, &state_id, "google", "/dashboard", verifier, None)
-            .await
-            .unwrap();
+        insert_auth_state(
+            &pool,
+            &state_id,
+            "google",
+            "/dashboard",
+            verifier,
+            "login",
+            None,
+        )
+        .await
+        .unwrap();
 
         let state = delete_auth_state(&pool, &state_id).await.unwrap();
         assert!(state.is_some());
@@ -2952,6 +2939,24 @@ mod tests {
         assert_eq!(state.redirect_uri, "/dashboard");
         assert_eq!(state.provider, "google");
         assert_eq!(state.code_verifier, Some(verifier.to_string()));
+        assert_eq!(state.purpose, "login");
+    }
+
+    #[tokio::test]
+    async fn test_auth_state_requires_explicit_purpose() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let state_id = format!("missing-purpose-{}", test_utils::uid());
+
+        let result = sqlx::query(
+            "INSERT INTO auth_states (id, provider, redirect_uri, code_verifier, user_id) \
+             VALUES ($1, 'google', '/dashboard', $2, NULL)",
+        )
+        .bind(state_id)
+        .bind("test-verifier-minimum-43-characters-long-enough")
+        .execute(&pool)
+        .await;
+
+        assert!(result.is_err(), "auth state purpose must be mandatory");
     }
 
     #[tokio::test]
@@ -2964,6 +2969,7 @@ mod tests {
             "github",
             "/login",
             "dummy-verifier-minimum-43-chars-long!!",
+            "login",
             None,
         )
         .await
@@ -2995,6 +3001,7 @@ mod tests {
             "google",
             "/dashboard",
             "fresh-verifier-minimum-43-chars-long!!",
+            "login",
             None,
         )
         .await
@@ -3008,6 +3015,7 @@ mod tests {
             "github",
             "/login",
             "stale-verifier-minimum-43-chars-long!!",
+            "login",
             None,
         )
         .await

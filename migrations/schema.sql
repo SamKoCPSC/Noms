@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS auth_states (
     redirect_uri TEXT NOT NULL,
     provider TEXT NOT NULL,
     code_verifier TEXT,
-    purpose TEXT CHECK (purpose IN ('login', 'link')),
+    purpose TEXT NOT NULL CHECK (purpose IN ('login', 'link')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     user_id UUID
 );

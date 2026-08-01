@@ -330,11 +330,11 @@ enum CallbackIntent {
 }
 
 fn validate_callback_intent(
-    purpose: Option<&str>,
+    purpose: &str,
     stored_user_id: Option<Uuid>,
     current_user_id: Option<Uuid>,
 ) -> Result<CallbackIntent, OAuthError> {
-    match FlowPurpose::parse(purpose.ok_or(OAuthError::InvalidPurpose)?)? {
+    match FlowPurpose::parse(purpose)? {
         FlowPurpose::Login if stored_user_id.is_none() && current_user_id.is_none() => {
             Ok(CallbackIntent::Login)
         }
@@ -385,7 +385,7 @@ pub async fn start_handler(
         FlowPurpose::Link => Some(current_user_id.ok_or(OAuthError::LinkSessionRequired)?),
     };
 
-    db::insert_auth_state_for(
+    db::insert_auth_state(
         &state.pool,
         &csrf_state,
         prov.as_str(),
@@ -470,11 +470,8 @@ pub async fn callback_handler(
         None
     };
 
-    let intent = validate_callback_intent(
-        auth_state.purpose.as_deref(),
-        auth_state.user_id,
-        existing_user_id,
-    )?;
+    let intent =
+        validate_callback_intent(&auth_state.purpose, auth_state.user_id, existing_user_id)?;
 
     // Select the appropriate OAuth client.
     let client = match prov {
@@ -1021,7 +1018,7 @@ mod tests {
             let jar = CookieJar::new().add(session::build_session_cookie(&victim_token));
             let state_id = format!("login-csrf-{}", test_utils::uid());
 
-            db::insert_auth_state_for(
+            db::insert_auth_state(
                 &pool,
                 &state_id,
                 "google",
@@ -1058,43 +1055,11 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn legacy_state_without_purpose_is_consumed_and_rejected() {
-            let (_db, pool) = test_utils::setup_test_db().await;
-            let state_id = format!("legacy-state-{}", test_utils::uid());
-            sqlx::query(
-                "INSERT INTO auth_states (id, provider, redirect_uri, code_verifier, user_id) \
-                 VALUES ($1, 'google', '/dashboard', $2, NULL)",
-            )
-            .bind(&state_id)
-            .bind("test-verifier-minimum-43-characters-long-enough")
-            .execute(&pool)
-            .await
-            .unwrap();
-
-            let result = callback_handler(
-                State(test_app_state(pool.clone())),
-                Path("google".to_string()),
-                Query(CallbackQuery {
-                    state: state_id.clone(),
-                    code: "code".to_string(),
-                }),
-                CookieJar::new(),
-            )
-            .await;
-
-            assert!(matches!(result, Err(OAuthError::InvalidPurpose)));
-            assert!(db::delete_auth_state(&pool, &state_id)
-                .await
-                .unwrap()
-                .is_none());
-        }
-
-        #[tokio::test]
         async fn link_callback_without_session_is_rejected_before_linking() {
             let (_db, pool) = test_utils::setup_test_db().await;
             let user = test_user(&pool, "link_owner").await;
             let state_id = format!("link-no-session-{}", test_utils::uid());
-            db::insert_auth_state_for(
+            db::insert_auth_state(
                 &pool,
                 &state_id,
                 "google",
@@ -1130,7 +1095,7 @@ mod tests {
             let other_token = session::create_session(&pool, other.id).await.unwrap();
             let jar = CookieJar::new().add(session::build_session_cookie(&other_token));
             let state_id = format!("link-wrong-session-{}", test_utils::uid());
-            db::insert_auth_state_for(
+            db::insert_auth_state(
                 &pool,
                 &state_id,
                 "google",
@@ -1166,7 +1131,7 @@ mod tests {
             let email = format!("login{}@example.com", test_utils::uid());
             let (state, _server) = mock_google_state(pool.clone(), &email).await;
             let state_id = format!("login-success-{}", test_utils::uid());
-            db::insert_auth_state_for(
+            db::insert_auth_state(
                 &pool,
                 &state_id,
                 "google",
@@ -1216,7 +1181,7 @@ mod tests {
             let email = format!("provider{}@example.com", test_utils::uid());
             let (state, _server) = mock_google_state(pool.clone(), &email).await;
             let state_id = format!("link-success-{}", test_utils::uid());
-            db::insert_auth_state_for(
+            db::insert_auth_state(
                 &pool,
                 &state_id,
                 "google",
@@ -1264,6 +1229,7 @@ mod tests {
                 "google",
                 "/dashboard",
                 "test-verifier-minimum-43-chars-long!!",
+                "login",
                 None,
             )
             .await
@@ -1275,6 +1241,7 @@ mod tests {
                 .unwrap();
             assert_eq!(state.provider, "google");
             assert_eq!(state.redirect_uri, "/dashboard");
+            assert_eq!(state.purpose, "login");
         }
 
         #[tokio::test]
@@ -1288,6 +1255,7 @@ mod tests {
                 "google",
                 "/dashboard",
                 "test-verifier-minimum-43-chars-long!!",
+                "login",
                 None,
             )
             .await
@@ -1314,6 +1282,7 @@ mod tests {
                 "google",
                 "/dashboard",
                 "test-verifier-minimum-43-chars-long!!",
+                "login",
                 None,
             )
             .await
@@ -1336,9 +1305,17 @@ mod tests {
             let state_id = format!("test-state-{}", test_utils::uid());
             let verifier = "test-pkce-verifier-minimum-43-chars!!";
 
-            db::insert_auth_state(&pool, &state_id, "google", "/dashboard", verifier, None)
-                .await
-                .unwrap();
+            db::insert_auth_state(
+                &pool,
+                &state_id,
+                "google",
+                "/dashboard",
+                verifier,
+                "login",
+                None,
+            )
+            .await
+            .unwrap();
 
             let state = db::delete_auth_state(&pool, &state_id)
                 .await
@@ -1353,9 +1330,17 @@ mod tests {
             let state_id = format!("test-state-{}", test_utils::uid());
             let verifier = "test-pkce-verifier-minimum-43-chars!!";
 
-            db::insert_auth_state(&pool, &state_id, "google", "/dashboard", verifier, None)
-                .await
-                .unwrap();
+            db::insert_auth_state(
+                &pool,
+                &state_id,
+                "google",
+                "/dashboard",
+                verifier,
+                "login",
+                None,
+            )
+            .await
+            .unwrap();
 
             // Simulate new atomic flow: delete_auth_state returns the row
             let auth_state = db::delete_auth_state(&pool, &state_id).await.unwrap();
@@ -1377,11 +1362,10 @@ mod tests {
             assert_eq!(reconstructed.secret(), verifier);
         }
 
-        /// Verify that a valid session cookie causes link_or_create to link
-        /// the new OAuth provider to the existing user, rather than creating
-        /// a new user. This is the core fix for Issue #1.
+        /// Verify that a valid session cookie provides the explicit target for
+        /// link_to_user rather than allowing a new user to be created.
         #[tokio::test]
-        async fn test_callback_links_to_existing_session() {
+        async fn test_link_to_user_uses_authenticated_session_user() {
             use axum_extra::extract::cookie::CookieJar;
 
             let (_db, pool) = test_utils::setup_test_db().await;
@@ -1430,9 +1414,10 @@ mod tests {
             // Verify the session was read correctly
             assert_eq!(existing_user_id, Some(user.id));
 
-            // Now call link_or_create with the extracted user ID (simulating GitHub callback)
-            let result = linking::link_or_create(
+            // Now link the GitHub identity to the authenticated user.
+            let result = linking::link_to_user(
                 &pool,
+                existing_user_id.expect("session user should be present"),
                 linking::OauthUserInfo {
                     provider: linking::Provider::GitHub,
                     provider_uid: format!("github-sessionlink-{u}"),
@@ -1440,7 +1425,6 @@ mod tests {
                     display_name: "Session Link User".to_string(),
                     avatar_url: None,
                 },
-                existing_user_id,
                 None,
             )
             .await
@@ -1478,9 +1462,17 @@ mod tests {
             let state_id = format!("test-concurrent-{}", test_utils::uid());
             let verifier = "test-pkce-verifier-minimum-43-chars!!";
 
-            db::insert_auth_state(&pool, &state_id, "google", "/dashboard", verifier, None)
-                .await
-                .unwrap();
+            db::insert_auth_state(
+                &pool,
+                &state_id,
+                "google",
+                "/dashboard",
+                verifier,
+                "login",
+                None,
+            )
+            .await
+            .unwrap();
 
             // Spawn 16 concurrent delete attempts to exercise high-contention scenario.
             // Only one should succeed due to atomic DELETE ... RETURNING semantics.
@@ -1549,6 +1541,7 @@ mod tests {
                 "google",
                 "/dashboard",
                 "test-verifier-minimum-43-chars-long!!",
+                "login",
                 None,
             )
             .await
@@ -1602,6 +1595,7 @@ mod tests {
                 "google",
                 "/dashboard",
                 "test-verifier-minimum-43-chars-long!!",
+                "login",
                 None,
             )
             .await
@@ -1643,6 +1637,7 @@ mod tests {
                 "google",
                 "/dashboard",
                 "test-verifier-minimum-43-chars-long!!",
+                "login",
                 None,
             )
             .await
@@ -1678,6 +1673,7 @@ mod tests {
                 "google",
                 "/dashboard",
                 "test-verifier-minimum-43-chars-long!!",
+                "link",
                 Some(user_id),
             )
             .await
@@ -1702,6 +1698,7 @@ mod tests {
                 "google",
                 "/dashboard",
                 "test-verifier-minimum-43-chars-long!!",
+                "login",
                 None,
             )
             .await
@@ -1753,6 +1750,7 @@ mod tests {
                 "google",
                 "/dashboard",
                 "test-verifier-minimum-43-chars-long!!",
+                "link",
                 Some(user1.id),
             )
             .await
@@ -1834,6 +1832,7 @@ mod tests {
                 "google",
                 "/dashboard",
                 "test-verifier-minimum-43-chars-long!!",
+                "link",
                 Some(user.id),
             )
             .await
@@ -1891,6 +1890,7 @@ mod tests {
                 "google",
                 "/dashboard",
                 "test-verifier-minimum-43-chars-long!!",
+                "login",
                 None,
             )
             .await

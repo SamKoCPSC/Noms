@@ -196,13 +196,19 @@ async fn generate_unique_username(
 
 // ── Main linking function ────────────────────────────────────────────────────
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum IdentityResolution {
+    Login,
+    LinkTo(Uuid),
+}
+
 /// Resolve a provider identity for an unauthenticated login.
 pub async fn login_or_create(
     pool: &PgPool,
     info: OauthUserInfo,
     refresh_token: Option<String>,
 ) -> Result<LinkResult, LinkError> {
-    link_or_create(pool, info, None, refresh_token).await
+    resolve_provider_identity(pool, info, IdentityResolution::Login, refresh_token).await
 }
 
 /// Link a provider identity to one explicitly authenticated user.
@@ -212,26 +218,33 @@ pub async fn link_to_user(
     info: OauthUserInfo,
     refresh_token: Option<String>,
 ) -> Result<LinkResult, LinkError> {
-    link_or_create(pool, info, Some(user_id), refresh_token).await
+    resolve_provider_identity(
+        pool,
+        info,
+        IdentityResolution::LinkTo(user_id),
+        refresh_token,
+    )
+    .await
 }
 
-/// Link an OAuth identity to a user, creating a new user if necessary.
+/// Resolve an OAuth identity according to the purpose validated by the callback.
 ///
 /// Runs inside a single atomic transaction:
-/// 0. If `existing_user_id` is provided → link directly to that user.
+/// 0. For `LinkTo(user_id)` → link directly to that user.
 /// 1. Existing provider login → update `last_used_at` and return.
 /// 2. Existing user by email  → link new OAuth account to that user.
 /// 3. Brand-new user          → create user + OAuth account.
-pub async fn link_or_create(
+async fn resolve_provider_identity(
     pool: &PgPool,
     info: OauthUserInfo,
-    existing_user_id: Option<Uuid>,
+    resolution: IdentityResolution,
     refresh_token: Option<String>,
 ) -> Result<LinkResult, LinkError> {
     let mut tx = pool.begin().await.map_err(db::DbError::Connection)?;
 
-    // (0) If called with an authenticated user, link directly to that user
-    if let Some(user_id) = existing_user_id {
+    // Linking is bound to the user validated by the OAuth callback. Login never
+    // enters this branch, even if some unrelated session exists in the browser.
+    if let IdentityResolution::LinkTo(user_id) = resolution {
         let user = db::get_user_by_id(tx.deref_mut(), user_id)
             .await?
             .ok_or(LinkError::Db(db::DbError::Query(sqlx::Error::RowNotFound)))?;
@@ -460,7 +473,7 @@ mod tests {
         .unwrap();
 
         // Now link with the same provider+uid — should return existing account
-        let result = link_or_create(
+        let result = login_or_create(
             &pool,
             OauthUserInfo {
                 provider: Provider::Google,
@@ -469,7 +482,6 @@ mod tests {
                 display_name: "Test User".to_string(),
                 avatar_url: None,
             },
-            None,
             None,
         )
         .await
@@ -497,7 +509,7 @@ mod tests {
         .unwrap();
 
         // Link with a different provider but same email
-        let result = link_or_create(
+        let result = login_or_create(
             &pool,
             OauthUserInfo {
                 provider: Provider::GitHub,
@@ -506,7 +518,6 @@ mod tests {
                 display_name: "Test User".to_string(),
                 avatar_url: None,
             },
-            None,
             None,
         )
         .await
@@ -528,7 +539,7 @@ mod tests {
         let (_db, pool) = test_utils::setup_test_db().await;
         let u = test_utils::uid();
 
-        let result = link_or_create(
+        let result = login_or_create(
             &pool,
             OauthUserInfo {
                 provider: Provider::Google,
@@ -537,7 +548,6 @@ mod tests {
                 display_name: "New User".to_string(),
                 avatar_url: None,
             },
-            None,
             None,
         )
         .await
@@ -562,7 +572,7 @@ mod tests {
         // each should get a unique username
         let mut usernames = Vec::new();
         for i in 0..3 {
-            let result = link_or_create(
+            let result = login_or_create(
                 &pool,
                 OauthUserInfo {
                     provider: Provider::Google,
@@ -571,7 +581,6 @@ mod tests {
                     display_name: "Same Name".to_string(),
                     avatar_url: None,
                 },
-                None,
                 None,
             )
             .await
@@ -599,7 +608,7 @@ mod tests {
         let (_db, pool) = test_utils::setup_test_db().await;
         let u = test_utils::uid();
 
-        let result = link_or_create(
+        let result = login_or_create(
             &pool,
             OauthUserInfo {
                 provider: Provider::GitHub,
@@ -608,7 +617,6 @@ mod tests {
                 display_name: "No Email User".to_string(),
                 avatar_url: None,
             },
-            None,
             None,
         )
         .await
@@ -651,13 +659,13 @@ mod tests {
         let (_db, pool) = test_utils::setup_test_db().await;
 
         // Create many users with the same display name to exercise
-        // collision handling extensively. Each call to link_or_create
+        // collision handling extensively. Each call to login_or_create
         // generates a random 4-hex suffix; if that suffix is already
         // taken, it retries up to 5 times, then falls back to user-{8hex}
         // (with 3 fallback attempts). All usernames must remain unique.
         let mut usernames = Vec::new();
         for i in 0..10 {
-            let result = link_or_create(
+            let result = login_or_create(
                 &pool,
                 OauthUserInfo {
                     provider: Provider::Google,
@@ -666,7 +674,6 @@ mod tests {
                     display_name: "Collision Test".to_string(),
                     avatar_url: None,
                 },
-                None,
                 None,
             )
             .await
@@ -699,7 +706,7 @@ mod tests {
     // -- Tests for session-aware linking (Issue #1) --
 
     #[tokio::test]
-    async fn test_link_provider_to_existing_session() {
+    async fn test_link_to_user_adds_provider() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let u = test_utils::uid();
 
@@ -727,8 +734,9 @@ mod tests {
         .unwrap();
 
         // Now link a GitHub account with the existing user's ID
-        let result = link_or_create(
+        let result = link_to_user(
             &pool,
+            user.id,
             OauthUserInfo {
                 provider: Provider::GitHub,
                 provider_uid: format!("github-{u}"),
@@ -736,7 +744,6 @@ mod tests {
                 display_name: "Link User".to_string(),
                 avatar_url: None,
             },
-            Some(user.id),
             None,
         )
         .await
@@ -763,7 +770,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_link_provider_without_session_creates_new_user() {
+    async fn test_login_matches_existing_user_by_email() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let u = test_utils::uid();
 
@@ -790,9 +797,8 @@ mod tests {
         .await
         .unwrap();
 
-        // Link a GitHub account WITHOUT passing an existing user ID
-        // (simulates no session cookie present)
-        let result = link_or_create(
+        // Resolve a GitHub login with the same email and no linking target.
+        let result = login_or_create(
             &pool,
             OauthUserInfo {
                 provider: Provider::GitHub,
@@ -802,13 +808,11 @@ mod tests {
                 avatar_url: None,
             },
             None,
-            None,
         )
         .await
         .unwrap();
 
-        // Without existing_user_id, the email match path (b) kicks in
-        // and links to the existing user — existing behavior preserved
+        // The login email-match path resolves to the existing user.
         assert_eq!(result.user_id, user.id);
         assert!(!result.is_new_user);
     }
@@ -816,7 +820,7 @@ mod tests {
     // -- Tests for account conflict detection (AC12 / NOMS-006) --
 
     #[tokio::test]
-    async fn test_link_or_create_conflict_different_user() {
+    async fn test_link_to_user_conflict_different_user() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let u = test_utils::uid();
 
@@ -855,8 +859,9 @@ mod tests {
         .unwrap();
 
         // User B attempts to link the same Google account — should error
-        let result = link_or_create(
+        let result = link_to_user(
             &pool,
+            user_b.id,
             OauthUserInfo {
                 provider: Provider::Google,
                 provider_uid: format!("google-conflict-{u}"),
@@ -864,7 +869,6 @@ mod tests {
                 display_name: "User B".to_string(),
                 avatar_url: None,
             },
-            Some(user_b.id),
             None,
         )
         .await;
@@ -902,7 +906,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_link_or_create_same_user_no_conflict() {
+    async fn test_link_to_user_same_user_no_conflict() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let u = test_utils::uid();
 
@@ -930,8 +934,9 @@ mod tests {
         .unwrap();
 
         // Same user re-links the same provider — should succeed (re-login case)
-        let result = link_or_create(
+        let result = link_to_user(
             &pool,
+            user.id,
             OauthUserInfo {
                 provider: Provider::Google,
                 provider_uid: format!("google-sameuser-{u}"),
@@ -939,7 +944,6 @@ mod tests {
                 display_name: "Same User".to_string(),
                 avatar_url: None,
             },
-            Some(user.id),
             None,
         )
         .await
@@ -951,7 +955,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_link_or_create_conflict_github() {
+    async fn test_link_to_user_conflict_github() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let u = test_utils::uid();
 
@@ -990,8 +994,9 @@ mod tests {
         .unwrap();
 
         // User B attempts to link the same GitHub account — should error
-        let result = link_or_create(
+        let result = link_to_user(
             &pool,
+            user_b.id,
             OauthUserInfo {
                 provider: Provider::GitHub,
                 provider_uid: format!("github-conflict-{u}"),
@@ -999,7 +1004,6 @@ mod tests {
                 display_name: "GH User B".to_string(),
                 avatar_url: None,
             },
-            Some(user_b.id),
             None,
         )
         .await;
