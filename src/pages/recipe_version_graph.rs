@@ -610,6 +610,33 @@ fn graph_connection_label(edge: &VersionGraphLayoutEdge, nodes: &[VersionGraphNo
     }
 }
 
+fn version_graph_node_class(
+    node: &VersionGraphNode,
+    is_fork_source: bool,
+    is_fork_target: bool,
+) -> String {
+    let mut classes = vec!["recipe-version-graph__node"];
+    if node.is_current_version() {
+        classes.push("recipe-version-graph__node--current");
+    }
+    if node.is_deleted() {
+        classes.push("recipe-version-graph__node--deleted");
+    }
+    if node.is_redacted() {
+        classes.push("recipe-version-graph__node--redacted");
+    }
+    if node.is_selected_recipe() {
+        classes.push("recipe-version-graph__node--main-recipe");
+    }
+    if is_fork_source {
+        classes.push("recipe-version-graph__node--fork-source");
+    }
+    if is_fork_target {
+        classes.push("recipe-version-graph__node--fork-target");
+    }
+    classes.join(" ")
+}
+
 #[component]
 fn VersionGraphSnapshotCard(
     node: VersionGraphNode,
@@ -617,21 +644,7 @@ fn VersionGraphSnapshotCard(
     is_fork_target: bool,
 ) -> Element {
     let version_number = node.id().version_number;
-    let mut node_class = if node.is_current_version() {
-        "recipe-version-graph__node recipe-version-graph__node--current".to_string()
-    } else if node.is_deleted() {
-        "recipe-version-graph__node recipe-version-graph__node--deleted".to_string()
-    } else if node.is_redacted() {
-        "recipe-version-graph__node recipe-version-graph__node--redacted".to_string()
-    } else {
-        "recipe-version-graph__node".to_string()
-    };
-    if is_fork_source {
-        node_class.push_str(" recipe-version-graph__node--fork-source");
-    }
-    if is_fork_target {
-        node_class.push_str(" recipe-version-graph__node--fork-target");
-    }
+    let node_class = version_graph_node_class(&node, is_fork_source, is_fork_target);
     let title = node
         .title()
         .unwrap_or(if node.is_deleted() {
@@ -652,11 +665,18 @@ fn VersionGraphSnapshotCard(
         (false, true) => ", fork target",
         (false, false) => "",
     };
+    let main_recipe_role = if node.is_selected_recipe() {
+        ", main recipe"
+    } else {
+        ""
+    };
 
     rsx! {
         article {
             class: node_class,
-            aria_label: format!("Version {version_number}: {title}{relationship_role}"),
+            aria_label: format!(
+                "Version {version_number}: {title}{relationship_role}{main_recipe_role}"
+            ),
             div { class: "recipe-version-graph__thumbnail",
                 if let Some(image) = image {
                     EditedRecipeImage {
@@ -678,10 +698,18 @@ fn VersionGraphSnapshotCard(
             div { class: "recipe-version-graph__node-body",
                 div { class: "recipe-version-graph__node-heading",
                     span { class: "recipe-version-graph__version", "Version {version_number}" }
-                    if node.is_current_version() {
-                        span { class: "recipe-version-graph__current-badge", "Current" }
-                    } else if node.is_deleted() {
-                        span { class: "recipe-version-graph__deleted-badge", "Deleted recipe" }
+                    div { class: "recipe-version-graph__badges",
+                        if node.is_selected_recipe() {
+                            span {
+                                class: "recipe-version-graph__main-recipe-badge",
+                                "Main recipe"
+                            }
+                        }
+                        if node.is_current_version() {
+                            span { class: "recipe-version-graph__current-badge", "Current" }
+                        } else if node.is_deleted() {
+                            span { class: "recipe-version-graph__deleted-badge", "Deleted recipe" }
+                        }
                     }
                 }
                 h2 { "{title}" }
@@ -1789,6 +1817,15 @@ mod tests {
     use uuid::Uuid;
 
     fn visible_node(recipe_id: Uuid, version_number: i32, title: &str) -> VersionGraphNode {
+        visible_node_with_selection(recipe_id, version_number, title, false)
+    }
+
+    fn visible_node_with_selection(
+        recipe_id: Uuid,
+        version_number: i32,
+        title: &str,
+        is_selected_recipe: bool,
+    ) -> VersionGraphNode {
         VersionGraphNode::visible(
             VersionGraphNodeId {
                 recipe_id,
@@ -1802,7 +1839,7 @@ mod tests {
                 change_summary: "Initial version".to_string(),
             },
             VersionGraphNodeState {
-                is_selected_recipe: false,
+                is_selected_recipe,
                 is_current_version: true,
                 is_deleted: false,
             },
@@ -1905,6 +1942,50 @@ mod tests {
         assert!(source.contains("No snapshot image"));
         assert!(source.contains("EditedRecipeImage"));
         assert!(source.contains("prefer_thumbnail: true"));
+    }
+
+    #[test]
+    fn selected_recipe_snapshots_receive_a_distinct_main_recipe_treatment() {
+        let selected = visible_node_with_selection(Uuid::from_u128(1), 2, "Selected", true);
+        let related = visible_node(Uuid::from_u128(2), 1, "Related");
+
+        let selected_class = super::version_graph_node_class(&selected, false, false);
+        let related_class = super::version_graph_node_class(&related, false, false);
+
+        assert!(selected_class.contains("recipe-version-graph__node--main-recipe"));
+        assert!(selected_class.contains("recipe-version-graph__node--current"));
+        assert!(!related_class.contains("recipe-version-graph__node--main-recipe"));
+
+        let source = include_str!("recipe_version_graph.rs");
+        let page = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("version graph page implementation");
+        let css = include_str!("../../assets/main.css");
+
+        assert!(page.contains("recipe-version-graph__main-recipe-badge"));
+        assert!(page.contains("Main recipe"));
+        assert!(page.contains(", main recipe"));
+        assert!(css.contains(".recipe-version-graph__node--main-recipe"));
+        assert!(css.contains("background: color-mix(in srgb, var(--success) 24%, var(--surface));"));
+        assert!(css.contains(
+            ".recipe-version-graph__node-link:hover .recipe-version-graph__node--main-recipe"
+        ));
+        assert!(
+            css.contains(".recipe-version-graph__node--main-recipe .recipe-version-graph__summary")
+        );
+        assert!(css.contains("@keyframes recipe-version-graph-main-recipe-breathe"));
+        assert!(css.contains(
+            "animation: recipe-version-graph-main-recipe-breathe 2s ease-in-out infinite;"
+        ));
+        assert!(css.contains("var(--success) 12%, var(--surface)"));
+        assert!(css.contains("var(--success) 42%, var(--surface)"));
+        assert!(css.contains("@media (prefers-reduced-motion: reduce)"));
+        assert!(css.contains(".recipe-version-graph__node--main-recipe::after"));
+        assert!(css.contains("outline: 9px solid color-mix(in srgb, var(--success) 88%, white);"));
+        assert!(css.contains("inset: 10px;"));
+        assert!(css.contains("pointer-events: none;"));
+        assert!(css.contains(".recipe-version-graph__main-recipe-badge"));
     }
 
     #[test]

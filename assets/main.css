@@ -2717,6 +2717,61 @@ a:hover {
         3px 4px 8px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
 }
 
+.recipe-version-graph__node--main-recipe {
+    position: relative;
+    border-color: var(--success);
+    background: color-mix(in srgb, var(--success) 24%, var(--surface));
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 20%, transparent),
+        3px 4px 8px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
+    animation: recipe-version-graph-main-recipe-breathe 2s ease-in-out infinite;
+}
+
+.recipe-version-graph__node--main-recipe::after {
+    position: absolute;
+    z-index: 2;
+    inset: 10px;
+    border-radius: calc(var(--radius-lg) - 10px);
+    outline: 9px solid color-mix(in srgb, var(--success) 88%, white);
+    pointer-events: none;
+    content: "";
+}
+
+@keyframes recipe-version-graph-main-recipe-breathe {
+    0%,
+    100% {
+        background: color-mix(in srgb, var(--success) 12%, var(--surface));
+    }
+
+    50% {
+        background: color-mix(in srgb, var(--success) 42%, var(--surface));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .recipe-version-graph__node--main-recipe {
+        background: color-mix(in srgb, var(--success) 24%, var(--surface));
+        animation: none;
+    }
+}
+
+.recipe-version-graph__node--main-recipe.recipe-version-graph__node--fork-source {
+    box-shadow: inset 0 -4px 0 color-mix(in srgb, var(--accent) 65%, transparent),
+        0 0 0 2px color-mix(in srgb, var(--success) 20%, transparent),
+        3px 4px 8px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
+}
+
+.recipe-version-graph__node-link:hover .recipe-version-graph__node--main-recipe {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 20%, transparent),
+        4px 6px 12px var(--shadow-dark), -2px -2px 7px var(--shadow-light);
+}
+
+.recipe-version-graph__node-link:hover
+    .recipe-version-graph__node--main-recipe.recipe-version-graph__node--fork-source {
+    box-shadow: inset 0 -4px 0 color-mix(in srgb, var(--accent) 65%, transparent),
+        0 0 0 2px color-mix(in srgb, var(--success) 20%, transparent),
+        4px 6px 12px var(--shadow-dark), -2px -2px 7px var(--shadow-light);
+}
+
 .recipe-version-graph__node--redacted {
     border-style: dashed;
 }
@@ -2768,8 +2823,16 @@ a:hover {
     gap: var(--space-sm);
 }
 
+.recipe-version-graph__badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-xs);
+}
+
 .recipe-version-graph__version,
 .recipe-version-graph__current-badge,
+.recipe-version-graph__main-recipe-badge,
 .recipe-version-graph__deleted-badge {
     color: var(--accent);
     font-size: 12px;
@@ -2782,6 +2845,13 @@ a:hover {
     padding: 2px 8px;
     border-radius: var(--radius-full);
     background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.recipe-version-graph__main-recipe-badge {
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    color: var(--success);
+    background: var(--success-bg);
 }
 
 .recipe-version-graph__deleted-badge {
@@ -2805,6 +2875,12 @@ a:hover {
 .recipe-version-graph__summary {
     color: var(--text-secondary);
     font-size: 13px;
+}
+
+.recipe-version-graph__node--main-recipe .recipe-version-graph__owner,
+.recipe-version-graph__node--main-recipe time,
+.recipe-version-graph__node--main-recipe .recipe-version-graph__summary {
+    color: var(--text-primary);
 }
 
 .recipe-version-graph__summary {
