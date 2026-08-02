@@ -2,10 +2,10 @@
 
 **Issue:** [NOMS-012-recipe-search.md](../issues/NOMS-012-recipe-search.md)
 **Created:** 2026-06-10
-**Revised:** 2026-07-17
+**Revised:** 2026-08-01
 **Depends on:** NOMS-008 current recipe model; NOMS-011 collection hierarchy for collection search
 **Coordination:** NOMS-010 may be implemented in parallel. NOMS-012 searches published `recipes` rows, owner-only NOMS-011 collections, and public user profiles; it does not search `recipe_drafts`.
-**Approach:** Reconcile the entity-search contract first, then implement per-entity BM25 indexes, a typed logical query planner, authenticated server functions, URL-backed scoped search UI, typed autocomplete, and focused ParadeDB tests. Add the landing page as a lightweight entry point into the canonical search route.
+**Approach:** Establish the shared request contract and ParadeDB-capable test path first, then deliver recipe, user, collection/All, and autocomplete as complete backend operations. Add URL-backed simple and bounded advanced forms after those operations are stable, followed by UI integration and performance verification.
 
 ---
 
@@ -13,671 +13,449 @@
 
 ### Search corpus and authorization
 
-- The default corpus is the current user’s recipes at any visibility plus other users’ `public` recipes.
-- Other users’ `unlisted` and `private` recipes are excluded from global search and autocomplete.
-- `Mine only` returns every recipe owned by the current user.
-- `Public only` returns only rows with `visibility = 'public'`.
+- The default recipe corpus is the current user's recipes at any visibility plus other users' `public` recipes.
+- Other users' `unlisted` and `private` recipes are excluded from global search and autocomplete.
+- `Mine only` returns every recipe owned by the current user. `Public only` returns only rows with `visibility = 'public'`.
 - Drafts are excluded because NOMS-010 stores them in `recipe_drafts`; no `is_draft` filter or draft index is introduced.
-- Collection search returns only collections owned by the current user because NOMS-011 collections are private. Nested collections are searchable and results include breadcrumb paths.
-- User search returns public profile fields only: `username`, `display_name`, `bio`, and avatar metadata where appropriate. Email, OAuth, session, and other private account fields are never indexed or returned.
-- Search scopes are `All`, `Recipes`, `Collections`, and `Users`.
-- The `All` scope returns grouped entity sections with independent per-entity ranking. BM25 scores from different indexes are not compared directly.
-- A single `SearchRequest` carries distinct `query` and `filters` sections alongside multi-key sorting, facet requests, pagination, and scope.
-- `query` is one user-entered query string. The backend applies the selected entity’s tuned multi-field BM25 profile, including field selection, token handling, and boosts.
-- `filters` is a hard constraint tree supporting nested `AND`, `OR`, and `NOT` nodes with typed field/operator/value combinations. Filters include/exclude rows and never contribute to score.
-- Full-text matching, query-parser syntax, and field boosts are not permitted inside filters; text-valued filters are exact/membership constraints only.
-- A simple query string is interpreted as an `AND` across terms and an `OR` across the entity’s tuned searchable fields. Quoted phrases remain phrase searches where supported.
-- The `All` scope applies the query string through each entity’s tuned text profile and returns grouped sections. Entity-specific hard filters, such as recipe tags or collection fields, require switching to the corresponding scoped search.
-- The backend validates filter depth, node count, field capabilities, value types, and query lengths before compilation.
-- Only `query` produces relevance. When query is absent or blank, relevance is null and the requested non-relevance sort is used.
-- Server functions derive the current user from the authenticated session. They do not accept a caller-supplied user ID for authorization.
+- Collection search returns only collections owned by the current user. Nested collections are searchable and results include breadcrumb paths.
+- User search indexes and returns public profile fields only: `username`, `display_name`, `bio`, and avatar metadata where appropriate. Email, OAuth, session, and other private account fields are never indexed or returned.
+- Search scopes are `All`, `Recipes`, `Collections`, and `Users`. `All` returns grouped sections with independent per-entity ranking; scores from different indexes are never compared.
+- The client calls fixed scope-specific server functions with `RecipeSearchRequest`, `CollectionSearchRequest`, `UserSearchRequest`, or the simple-text-only `AllSearchRequest`. It cannot submit a query language, expression tree, field name, SQL fragment, boost, or ParadeDB syntax.
+- Server functions derive authorization from the authenticated session. They never accept a caller-supplied user or owner ID.
 
-### Current recipe fields
+### Simple and advanced text semantics
 
-Use the current schema and shared type names:
+- Simple `text` is ordinary literal input. The backend tokenizes it through a fixed entity profile, requires every token across that entity's searchable fields, and permits different tokens to occur in different fields.
+- Quotes, colons, `AND`, `OR`, `-`, `*`, and similar parser-looking input have no caller-controlled query-language meaning.
+- Advanced search is a bounded scope-specific form. Each statically named field has at most one positive `TextCriterion` and a bounded list of exclusions. Match modes are fixed to `AllTerms`, `AnyTerm`, and `ExactPhrase`.
+- Simple text and every populated positive advanced field combine with `AND`. Each exclusion rejects rows matching that exclusion in its assigned field.
+- Recipe advanced criteria cover title, description, ingredients, instructions, tag-any/tag-excluded sets, and created/updated ranges. Visibility, tag-all, total time, and servings remain top-level recipe controls.
+- Collection advanced criteria cover name, description, and updated date. User advanced criteria cover username, display name, and bio. `All` accepts literal text only.
+- Simple text and positive advanced text contribute relevance. Exclusions and structured filters only include or exclude rows.
+- With no positive text, relevance is `None`; `Relevance` normalizes to `UpdatedNewest` for recipes/collections and `UsernameAscending` for users.
+- Blank `All` text is a valid bounded browse state. Recipe and collection sections use `UpdatedNewest`; the user section uses `UsernameAscending`; every section retains its deterministic ID tie-breaker.
 
-- `recipes.user_id`
-- `recipes.visibility` with `private`, `unlisted`, and `public`
-- `recipes.title`, `description`, `ingredients`, and `instructions`
-- `recipes.prep_time_minutes`, `cook_time_minutes`, `servings`
-- `recipes.created_at`, `updated_at`
-- `recipe_tags(recipe_id, tag)`
+### Initial request limits
 
-Do not use those legacy names for recipe columns: `owner_id`, `is_public`, `is_draft`, `steps`, `total_time_min`, `prep_time_min`, or `cook_time_min`. NOMS-011’s collection table intentionally uses `owner_id` for collection ownership.
+Define these once as shared search-validation constants used by server validation, URL parsing, UI controls, and tests:
 
-### Total time and ranges
+| Input | Initial limit |
+|---|---|
+| Simple `text` or one advanced text criterion | 256 Unicode scalar values |
+| Exclusions | 5 criteria per statically defined text field |
+| Tags | 100 Unicode scalar values per normalized tag; 25 distinct tags across all tag lists |
+| Scoped page | Default 20, maximum 100 rows; 1-indexed with calculated offset at most 10,000 |
+| `All` sections | Default 5, maximum 10 rows per entity section |
+| Advanced URL state | 4,096 decoded bytes and 8,192 URL-encoded bytes |
+| Autocomplete | Minimum 2 Unicode scalar values after trimming; maximum 8 suggestions |
 
-Define total time as:
+Normalize tags before measuring them. Count the distinct union of `tags_all`, `tags_any`, and `tags_excluded`; reject a tag that appears in a positive list and `tags_excluded`. Reject oversized requests rather than truncating criteria or tags.
+
+`All` autocomplete allocates at most 4 recipe, 2 collection, and 2 user suggestions in fixed entity-group order. Unused slots remain empty rather than being reassigned through cross-index score comparison. Scoped autocomplete may use all 8 slots.
+
+### Recipe fields, ranges, and tags
+
+Use the current fields `user_id`, `visibility`, `title`, `description`, `ingredients`, `instructions`, `prep_time_minutes`, `cook_time_minutes`, `servings`, `created_at`, and `updated_at`. Recipe tags live in `recipe_tags(recipe_id, tag)`. Do not use legacy recipe names such as `owner_id`, `is_public`, `is_draft`, `steps`, `total_time_min`, `prep_time_min`, or `cook_time_min`; NOMS-011 collections intentionally use `owner_id`.
+
+Total time is:
 
 ```sql
 COALESCE(r.prep_time_minutes, 0) + COALESCE(r.cook_time_minutes, 0)
 ```
 
-A time filter must also require `r.prep_time_minutes IS NOT NULL OR r.cook_time_minutes IS NOT NULL`, so a recipe with both fields null does not appear in a time bucket merely because its calculated value is zero. Servings filters exclude null `servings` values.
+A total-time predicate also requires at least one time column to be non-null. Servings predicates exclude null servings.
 
-### Tags, deduplication, and facets
+`tags_all` has AND semantics and uses duplicate-safe `EXISTS` predicates. Tag joins must not multiply result or count rows. The tag facet retains current tag criteria: an unselected bucket reports the result count after additively selecting that tag, selected tag-all buckets equal the current result count, and zero-count tags are omitted. Visibility, total-time, and servings facets omit only their own filter while retaining authorization and every other criterion.
 
-- A recipe must contain every selected tag.
-- Prefer one correlated `EXISTS` clause per selected tag. This avoids duplicate recipe rows and makes AND semantics obvious.
-- Results and count queries must not paginate over a tag join that multiplies rows.
-- Facet counts are counts of distinct recipes in the current filtered result set, including the selected tag filters. This means unselected tags show co-occurrence counts and selected tags normally equal the current result count.
-- Facets are requested as part of the same search request and run against the unpaginated filtered result relation. A facet may optionally exclude its own active filter for disjunctive counts.
+Facet buckets are fixed:
 
-### Search results and ordering
+| Facet | Buckets | Ordering and zero counts |
+|---|---|---|
+| Tag | Dynamic normalized tags | Count descending, tag ascending; omit zero counts; cap at 50 |
+| Visibility | `private`, `unlisted`, `public` | Canonical enum order; include zero counts |
+| Total time | `[0,30)`, `[30,60)`, `[60,120)`, `[120,+∞)` | Lower-bound order; include zero counts; exclude both-null times |
+| Servings | `[1,3)`, `[3,5)`, `[5,9)`, `[9,+∞)` | Lower-bound order; include zero counts; exclude null servings |
 
-Search responses use shared types in `src/types.rs` rather than returning raw database rows:
+### Shared request and response shape
+
+The concrete shared types may be split into smaller structs following repository conventions, but the client-facing capability remains bounded:
 
 ```rust
-pub struct SearchResult {
-    pub recipe: Recipe,
-    pub relevance: Option<f32>,
+pub enum TextMatchMode { AllTerms, AnyTerm, ExactPhrase }
+pub struct TextCriterion { pub text: String, pub mode: TextMatchMode }
+pub struct AdvancedTextField {
+    pub include: Option<TextCriterion>,
+    pub exclude: Vec<TextCriterion>,
+}
+pub struct IntegerRange {
+    pub lower_inclusive: Option<i32>,
+    pub upper_exclusive: Option<i32>,
+}
+pub struct TimestampRange {
+    pub lower_inclusive: Option<DateTime<Utc>>,
+    pub upper_exclusive: Option<DateTime<Utc>>,
 }
 
-pub struct SearchFacet {
-    pub tag: String,
-    pub count: i64,
+pub struct AdvancedRecipeSearchCriteria {
+    pub title: AdvancedTextField,
+    pub description: AdvancedTextField,
+    pub ingredients: AdvancedTextField,
+    pub instructions: AdvancedTextField,
+    pub tags_any: Vec<String>,
+    pub tags_excluded: Vec<String>,
+    pub created_at: Option<TimestampRange>,
+    pub updated_at: Option<TimestampRange>,
+}
+pub struct RecipeSearchRequest {
+    pub text: Option<String>,
+    pub advanced: Option<AdvancedRecipeSearchCriteria>,
+    pub visibility: RecipeSearchVisibility,
+    pub tags_all: Vec<String>,
+    pub total_time: Option<IntegerRange>,
+    pub servings: Option<IntegerRange>,
+    pub sort: RecipeSearchSort,
+    pub page: u32,
+    pub page_size: u32,
 }
 
-pub struct CollectionSearchResult {
-    pub collection: CollectionSummary,
-    pub breadcrumb: Vec<String>,
-    pub relevance: Option<f32>,
+pub struct AdvancedCollectionSearchCriteria {
+    pub name: AdvancedTextField,
+    pub description: AdvancedTextField,
+    pub updated_at: Option<TimestampRange>,
+}
+pub struct CollectionSearchRequest {
+    pub text: Option<String>,
+    pub advanced: Option<AdvancedCollectionSearchCriteria>,
+    pub sort: CollectionSearchSort,
+    pub page: u32,
+    pub page_size: u32,
 }
 
-pub struct UserSearchResult {
-    pub user: UserSearchSummary,
-    pub relevance: Option<f32>,
+pub struct AdvancedUserSearchCriteria {
+    pub username: AdvancedTextField,
+    pub display_name: AdvancedTextField,
+    pub bio: AdvancedTextField,
+}
+pub struct UserSearchRequest {
+    pub text: Option<String>,
+    pub advanced: Option<AdvancedUserSearchCriteria>,
+    pub sort: UserSearchSort,
+    pub page: u32,
+    pub page_size: u32,
 }
 
-pub enum SearchScope {
-    All,
-    Recipes,
-    Collections,
-    Users,
-}
-
-pub struct SearchResponse {
-    pub scope: SearchScope,
-    pub recipes: Vec<SearchResult>,
-    pub recipe_total_count: i64,
-    pub collections: Vec<CollectionSearchResult>,
-    pub collection_total_count: i64,
-    pub users: Vec<UserSearchResult>,
-    pub user_total_count: i64,
-    pub facets: Vec<SearchFacet>,
-}
+pub struct AllSearchRequest { pub text: String, pub section_limit: u32 }
+pub enum RecipeSearchVisibility { AllVisible, MineOnly, PublicOnly }
+pub enum RecipeSearchSort { Relevance, UpdatedNewest, UpdatedOldest, TitleAscending, TitleDescending, Quickest, Longest }
+pub enum CollectionSearchSort { Relevance, UpdatedNewest, UpdatedOldest, NameAscending, NameDescending }
+pub enum UserSearchSort { Relevance, UsernameAscending, DisplayNameAscending }
 ```
 
-When `query` is absent or its text is blank, relevance is `None` and the default sort is `updated_at DESC`. When query text is present, the default sort is BM25 relevance descending. Every sort option is selected from a fixed server-side allowlist.
+Recipe, collection, user, grouped, facet, and suggestion responses use typed shared structs rather than raw rows or arbitrary maps. `RecipeSearchResponse` always contains results, a distinct total count, and fixed `RecipeSearchFacets` fields for tags, visibility, total time, and servings. The grouped response contains independent entity sections and totals but no recipe facets.
 
 ### URL history behavior
 
 - URL state is the source of truth for committed search state.
-- While typing, use `replaceState` so the browser history does not receive one entry per keystroke.
-- Enter, selecting an autocomplete result, changing a filter, changing sort, and changing page use `pushState`.
-- Initial load and `popstate` rebuild the local search state from the URL.
+- Typing uses `replaceState`; Enter, suggestion selection, filter/sort changes, and pagination use `pushState`.
+- Initial load and `popstate` rebuild local state from the canonical URL.
 
 ---
 
-## Checkpoint 1: Entity contract reconciliation and search test prerequisites
+## Checkpoint 1: Foundation — shared contract, validation, and ParadeDB-capable tests
 
-**Files:** `roadmap/issues/NOMS-012-recipe-search.md`, `roadmap/implementation-plans/NOMS-012-recipe-search.md`, `src/test_utils.rs`, `migrations/extensions.sql`
+**Files:** `src/types.rs`, search validation module, `src/test_utils.rs`, `migrations/extensions.sql`, `.github/workflows/ci.yml`, `docker/postgres/Dockerfile`
 
-Before implementing search SQL or UI, verify that the issue and plan use the current schema, NOMS-010 draft model, and NOMS-011 collection ownership model.
+Write pure validation tests first, then add the shared DTOs, response types, enums, defaults, and named limit constants described above. Validation must trim where documented, count Unicode scalar values consistently on client and server, use checked pagination arithmetic, normalize tags before conflict/count checks, reject empty or inverted ranges, and reject scope-inapplicable enum values.
 
-### Tasks
+Add a search-specific database test path that requires `pg_search` and fails explicitly if the extension or index cannot be created. It must use the repository's pinned PostgreSQL image rather than the normal `pgtemp` path, whose host PostgreSQL may not contain ParadeDB. Existing unrelated database tests remain independent of `pg_search`.
 
-- Remove legacy field names and the `Drafts` filter from the issue.
-- Document the published-recipe corpus and owner/public visibility rules.
-- Document owner-only collection search, public-profile-only user search, and the four search scopes.
-- Document that `All` uses grouped sections rather than cross-index relevance comparison.
-- Document total-time null behavior, tag AND semantics, deduplicated counts, and facet semantics.
-- Keep `migrations/extensions.sql` as the required source for `pg_search`; it intentionally fails when the production image lacks the extension.
-- Add a search-specific test database setup path that creates `pg_search` and fails explicitly if creation fails.
-- Create the BM25 index in search test setup before search tests run. Do not silently skip BM25 tests because an optional extension is unavailable.
-- Keep unrelated database tests independent of `pg_search` if they do not exercise search.
+Add a dedicated CI search job that builds and starts `docker/postgres`, waits for readiness, applies `migrations/extensions.sql` and the declarative schema, and runs search integration tests against it. Update schema-plan CI to use the same extension-capable image whenever either migration file changes; do not apply the extension migration to plain `postgres:17`.
 
 ### Verify
 
-- No NOMS-012 requirement references `is_draft`, `is_public`, `owner_id`, `steps`, or `total_time_min`.
-- Search tests cannot report success after silently failing to create `pg_search` or the BM25 index.
-- Collection and user search tests cannot read another user’s private collection or private account fields.
-- `git diff --check` passes.
+- Boundary tests cover text, exclusions, normalized/distinct tags, positive/excluded tag conflicts, range validation, page size/offset, grouped limits, URL byte limits, and autocomplete allocation.
+- Serialized requests cannot contain free-form field names, operators, boosts, authorization IDs, SQL, or ParadeDB syntax.
+- Search test setup cannot pass after failing to create `pg_search` or a BM25 index.
+- CI proves the pinned image starts and schema-plan CI no longer relies on plain PostgreSQL for extension-bearing migrations.
+- `git diff --check` and the focused validation tests pass.
 
-**Risk:** Medium. This checkpoint prevents the implementation from being built against the wrong data model.
+**Risk:** Medium. This checkpoint establishes the safety boundary used by every later operation.
 
 ---
 
-## Checkpoint 2: BM25 index and supporting database indexes
+## Checkpoint 2: Search indexes and minimal ParadeDB smoke queries
 
-**Files:** `migrations/schema.sql`, `src/test_utils.rs`, NOMS-011 collection schema integration
+**Files:** `migrations/schema.sql`, search test setup, NOMS-011 schema integration when available
 
-### Index definition
-
-Add the BM25 index after the `recipes` table exists and before search queries are implemented. Verify the exact syntax against the PostgreSQL/ParadeDB image used by the repository before applying it:
+Add the recipe BM25 index after `recipes` and the user BM25 index after `users`. Add the collection index only after NOMS-011 provides `collections`.
 
 ```sql
 CREATE INDEX IF NOT EXISTS idx_recipes_search
 ON recipes USING bm25 (
     id,
-    (title::pdb.ngram(2, 15)),
-    (description::pdb.ngram(2, 15)),
-    ingredients,
-    instructions
+    (title::pdb.simple('alias=recipe_title_words')),
+    (title::pdb.ngram(2, 15, 'alias=recipe_title_partial')),
+    (description::pdb.simple('alias=recipe_description_words')),
+    (description::pdb.ngram(2, 15, 'alias=recipe_description_partial')),
+    (jsonb_path_query_array(ingredients, 'strict $.** ? (@.type() == "string")')::pdb.simple('alias=recipe_ingredients_words')),
+    (jsonb_path_query_array(instructions, 'strict $.**.text')::pdb.simple('alias=recipe_instructions_words'))
+)
+WITH (key_field = 'id');
+
+CREATE INDEX IF NOT EXISTS idx_users_search
+ON users USING bm25 (
+    id,
+    (username::pdb.simple('alias=user_username_words')),
+    (username::pdb.ngram(2, 20, 'alias=user_username_partial')),
+    (display_name::pdb.simple('alias=user_display_name_words')),
+    (display_name::pdb.ngram(2, 20, 'alias=user_display_name_partial')),
+    (bio::pdb.simple('alias=user_bio_words'))
 )
 WITH (key_field = 'id');
 ```
 
-Add a supporting tag index if needed by the query plan:
-
-```sql
-CREATE INDEX IF NOT EXISTS idx_recipe_tags_tag
-    ON recipe_tags(tag);
-```
-
-After NOMS-011’s `collections` table is present, add a BM25 index covering collection `name` and `description`. The query must use the collection’s owner predicate and return a breadcrumb path through the NOMS-011 hierarchy query; do not denormalize paths into the search document in this phase.
-
-The intended collection index shape is:
+The collection index uses word and ngram aliases for `name` and `description`, matching the fixed collection criteria. Add `idx_recipe_tags_tag ON recipe_tags(tag)` because the existing primary-key order begins with `recipe_id` and does not serve tag-first facet access.
 
 ```sql
 CREATE INDEX IF NOT EXISTS idx_collections_search
 ON collections USING bm25 (
     id,
-    (name::pdb.ngram(2, 15)),
-    description
+    (name::pdb.simple('alias=collection_name_words')),
+    (name::pdb.ngram(2, 15, 'alias=collection_name_partial')),
+    (description::pdb.simple('alias=collection_description_words')),
+    (description::pdb.ngram(2, 15, 'alias=collection_description_partial'))
 )
 WITH (key_field = 'id');
 ```
 
-Add a separate BM25 index on `users` covering `username`, `display_name`, and `bio`. Use ngram tokenization for username/display-name partial matching and the default tokenizer for bio if bio search is retained. Never index `email`, OAuth fields, session fields, or other private account data.
+The word aliases retain positions for `ExactPhrase`; ngram aliases provide partial title/name matching and are never used for phrase evaluation. Ingredient extraction recursively indexes string values. Instruction extraction indexes only nested `text` values, not keys, numeric metadata, or photo metadata.
 
-The intended user index shape is:
-
-```sql
-CREATE INDEX IF NOT EXISTS idx_users_search
-ON users USING bm25 (
-    id,
-    (username::pdb.ngram(2, 20)),
-    (display_name::pdb.ngram(2, 20)),
-    bio
-)
-WITH (key_field = 'id');
-```
-
-The JSONB fields use the default tokenizer so text within ingredient and instruction objects can be indexed. The application does not maintain a second search document or perform a data backfill; `CREATE INDEX` indexes existing development rows and the BM25 index maintains itself on recipe DML.
+The exact index syntax and prepared bound boost/phrase forms have already been runtime-probed against pinned ParadeDB 0.23.4. Implementation must turn those probes into repeatable smoke tests rather than reopening the index design.
 
 ### Verify
 
-- Fresh migrations create the extension before the BM25 index.
-- `EXPLAIN` confirms the BM25 index is used for a representative non-empty search.
-- A recipe update to title, description, ingredients, or instructions is visible to search without application-side index maintenance.
-- The index uses `instructions`, not the legacy `steps` field.
-- Collection and user indexes are created only after their source tables exist.
+- Fresh extension/schema application creates recipe and user indexes; collection index creation is gated on its table.
+- Smoke tests prove exact, partial, prepared boost, and positional phrase matching on their intended aliases.
+- Nested instruction text is searchable while instruction photo metadata is not.
+- Updating indexed source fields is visible without application-managed index maintenance.
+- Representative `EXPLAIN` output uses the intended BM25 and supporting tag indexes.
 
-**Risk:** High. ParadeDB syntax and runtime availability must be proven before the query layer is built around it.
-
----
-
-## Checkpoint 3: Tuned text query, hard-filter planner, and request types
-
-**Files:** `src/types.rs`, `src/db/mod.rs` or a new server-only search module, `src/db/error.rs` if applicable
-
-### Shared types
-
-Add serializable shared types for server-function payloads:
-
-```rust
-pub struct SearchRequest {
-    pub scope: SearchScope,
-    pub query: Option<SearchQuery>,
-    pub filters: FilterExpression,
-    pub sort: Vec<SearchSortClause>,
-    pub facets: Vec<FacetRequest>,
-    pub page: u32,
-    pub page_size: u32,
-}
-
-pub struct SearchQuery {
-    pub text: String,
-}
-
-pub enum FilterExpression {
-    MatchAll,
-    MatchNone,
-    And(Vec<FilterExpression>),
-    Or(Vec<FilterExpression>),
-    Not(Box<FilterExpression>),
-    Term { field: FilterField, value: SearchValue },
-    In { field: FilterField, values: Vec<SearchValue> },
-    Range {
-        field: FilterField,
-        lower: Option<SearchValue>,
-        upper: Option<SearchValue>,
-    },
-    Exists { field: FilterField },
-}
-
-pub struct SearchSortClause {
-    pub field: SearchSortField,
-    pub direction: SortDirection,
-}
-
-pub struct FacetRequest {
-    pub field: SearchFacetField,
-    pub limit: u32,
-    pub exclude_current_filter: bool,
-}
-
-pub enum FilterField {
-    RecipeTitle,
-    RecipeDescription,
-    RecipeIngredients,
-    RecipeInstructions,
-    RecipeTag,
-    RecipeVisibility,
-    RecipeTotalTime,
-    RecipeServings,
-    RecipeCreatedAt,
-    RecipeUpdatedAt,
-    CollectionName,
-    CollectionDescription,
-    CollectionCreatedAt,
-    CollectionUpdatedAt,
-    UserUsername,
-    UserDisplayName,
-    UserBio,
-}
-
-pub enum SearchValue { Text(String), Integer(i32), Boolean(bool), Timestamp(DateTime<Utc>) }
-pub enum SearchSortField { Relevance, Name, UpdatedAt, CreatedAt, RecipeTotalTime, Id }
-pub enum SearchFacetField { RecipeTag, RecipeVisibility, RecipeTotalTime, RecipeServings }
-pub enum SortDirection { Asc, Desc }
-
-pub struct UserSearchSummary {
-    pub id: Uuid,
-    pub username: String,
-    pub display_name: String,
-    pub avatar_url: Option<String>,
-    pub bio: Option<String>,
-    pub public_recipe_count: i64,
-}
-
-pub struct CollectionSearchResult {
-    pub collection: CollectionSummary,
-    pub breadcrumb: Vec<String>,
-    pub relevance: Option<f32>,
-}
-
-pub struct UserSearchResult {
-    pub user: UserSearchSummary,
-    pub relevance: Option<f32>,
-}
-```
-
-The intended wire shape keeps query and filters visibly separate:
-
-```json
-{
-  "scope": "recipes",
-  "query": { "text": "pasta carbonara" },
-  "filters": {
-    "kind": "and",
-    "children": [
-      { "kind": "term", "field": "recipe_tag", "value": "quick" },
-      { "kind": "range", "field": "recipe_total_time", "lower": 0, "upper": 30 }
-    ]
-  },
-  "sort": [
-    { "field": "relevance", "direction": "desc" },
-    { "field": "updated_at", "direction": "desc" }
-  ],
-  "facets": [
-    { "field": "recipe_tag", "limit": 50, "exclude_current_filter": false }
-  ],
-  "page": 1,
-  "page_size": 20
-}
-```
-
-Use the repository’s existing derive conventions. Validate and normalize page size, page number, query length, filter depth/node count, field/operator compatibility, value types, facet limits, and ranges before constructing SQL. The client may send serialized values through server functions, but the database layer receives typed values after parsing.
-
-### Query builder rules
-
-- Build a fixed recipe query selecting the full `Recipe` projection plus `pdb.score(r.id)` when a text query exists.
-- Build separate collection and user queries with their own projections and indexes. Do not join all entity tables into one polymorphic SQL query.
-- Compile `SearchQuery.text` through an entity-specific tuning profile. The profile controls searchable fields, token parsing, phrase handling, partial matching, and boosts; the client does not submit field boosts or raw ParadeDB syntax.
-- For recipes, apply the planned title/description/ingredients/instructions tuning. Collections and users use their own field profiles.
-- Compile `FilterExpression` recursively into a parameterized predicate tree. `And`, `Or`, and `Not` must preserve grouping rather than flattening all constraints into one implicit conjunction.
-- Map filter leaves to typed hard SQL predicates: tag membership, visibility, total-time/servings/date ranges, collection ownership, and exact/in/existence checks where supported.
-- Keep query matching/scoring separate from hard filters so filter clauses cannot accidentally affect BM25 relevance.
-- Join `users` to populate the existing `author_username` and `author_avatar_url` fields.
-- Apply visibility predicates before search and filter predicates.
-- Use parameter binding for every user value.
-- Use a fixed allowlist for sort SQL; never interpolate a client-provided sort string.
-- Use the documented ParadeDB cast form for boosts, for example `'$query'::pdb.boost(3)` after binding the query value through the supported SQLx pattern.
-- Boost title at 3x, description at 2x, and ingredients/instructions at 1x.
-- Use one `EXISTS` predicate per selected tag.
-- Apply the total-time expression and null guard for time filters.
-- Use `LIMIT` and `OFFSET` only after the filtered entity set is deduplicated.
-- Collection queries enforce `c.owner_id = user_id`, search `name` and `description`, and fetch root-to-leaf breadcrumb labels through the NOMS-011 recursive hierarchy query.
-- User queries search only `username`, `display_name`, and optionally `bio`, returning a `UserSearchSummary` without email or authentication fields.
-- `All` executes the applicable per-entity queries and returns grouped sections with independent limits; it never sorts by a raw cross-entity BM25 score.
-- Compile a multi-key sort list from a fixed allowlist and append `id ASC` as a deterministic final tie-breaker when the client does not provide it.
-- Evaluate facet requests against the same query and unpaginated hard-filter relation. If `exclude_current_filter` is true, remove only that facet field’s predicate while retaining every other filter node and the complete query.
-- Reject unsupported combinations, such as recipe tag facets in user scope or collection fields in recipe scope, before SQL generation.
-
-Keep the base filtered query reusable by results, count, and facet functions. A CTE or an equivalent builder abstraction is preferred over three independently maintained sets of clauses.
-
-### Database functions
-
-Implement server-only functions with session-neutral database signatures:
-
-```rust
-search_recipes(pool, user_id, request) -> Result<Vec<SearchResult>, DbError>
-count_search_recipes(pool, user_id, request) -> Result<i64, DbError>
-get_search_facets(pool, user_id, request) -> Result<Vec<SearchFacet>, DbError>
-search_collections(pool, user_id, request) -> Result<Vec<CollectionSearchResult>, DbError>
-count_search_collections(pool, user_id, request) -> Result<i64, DbError>
-search_users(pool, request) -> Result<Vec<UserSearchResult>, DbError>
-count_search_users(pool, request) -> Result<i64, DbError>
-```
-
-The server-function layer will obtain `user_id` from the session and pass it to these database functions.
-
-### Verify
-
-- Exact title matches rank above weaker field matches.
-- Partial title input such as `past` matches `pasta`.
-- Ingredient and instruction text are searchable.
-- Empty query uses recency ordering and does not call BM25 scoring unnecessarily.
-- Nested AND/OR/NOT filter trees produce the expected result sets.
-- Results, counts, and facets agree for every valid combined request.
-- Query construction contains no untrusted SQL fragments.
-- Collection search cannot return another user’s collections.
-- User search cannot return private account fields.
-
-**Risk:** High. This is the core correctness and injection-safety boundary.
+**Risk:** High. The extension and index behavior must be stable before scope operations depend on them.
 
 ---
 
-## Checkpoint 4: Facets, entity queries, and typed autocomplete
+## Checkpoint 3: Recipe search operation
 
-**Files:** `src/db/mod.rs` or the server-only search module, `src/types.rs`, `src/test_utils.rs`
+**Files:** server-only search database module, `src/api/search.rs`, `src/api/mod.rs`, `src/types.rs`, search integration tests
 
-### Facets
-
-Build requested facets from the same filtered entity relation used by results and counts. Recipe tag facets are one example:
-
-```sql
-SELECT rt.tag, COUNT(DISTINCT fr.id) AS tag_count
-FROM filtered_recipes fr
-JOIN recipe_tags rt ON rt.recipe_id = fr.id
-GROUP BY rt.tag
-ORDER BY tag_count DESC, rt.tag ASC
-LIMIT 50;
-```
-
-The filtered relation must apply the complete tuned query and hard-filter tree. Do not paginate the relation used by facets. For `exclude_current_filter`, rebuild only the requested facet’s base relation without that facet field predicate while preserving the query and all other filters.
-
-### Collection and user results
-
-- `search_collections` returns owner-owned collections at every hierarchy depth, with direct collection metadata and breadcrumb labels.
-- `count_search_collections` counts only the current owner’s matching collections.
-- `search_users` returns public profile summaries and may include public recipe counts, but never email or authentication data.
-- `count_search_users` counts matching public profile rows.
-- Collection and user sorts are scoped to their entity type. Use relevance, newest/updated, and name sorts where meaningful; do not expose recipe time or tag filters for these scopes.
-
-### Typed autocomplete
-
-Implement per-entity autocomplete queries and a typed aggregate response:
-
-```rust
-pub enum SearchSuggestionKind {
-    Recipe,
-    Collection,
-    User,
-}
-
-pub struct SearchSuggestion {
-    pub kind: SearchSuggestionKind,
-    pub id: Uuid,
-    pub label: String,
-    pub secondary_text: Option<String>,
-}
-
-autocomplete_entities(pool, user_id, scope, query_text, limit)
-    -> Result<Vec<SearchSuggestion>, DbError>
-```
-
-Autocomplete must apply the same visibility rules as search, require at least two characters, cap the limit server-side at 8, and use the appropriate entity index. For `All`, allocate a deterministic small number of suggestions per entity or return grouped suggestions; never compare raw BM25 scores from different indexes. Use the documented `pdb.boost` cast syntax.
-
-### Verify
-
-- Facets count distinct recipes and expose tag co-occurrence correctly.
-- Selected tags remain AND filters in the facet base relation.
-- Facets can be requested alongside the text query, hard filters, sorting, and pagination.
-- Disjunctive facet mode excludes only the requested facet field’s predicate.
-- Autocomplete never returns another user’s private or unlisted recipe.
-- Own private and unlisted recipes can appear in autocomplete.
-- Collection autocomplete returns only the current user’s collections.
-- User autocomplete returns only public profile fields.
-- Suggestions are capped even if a client requests a larger limit.
-
-**Risk:** Medium. Facets are easy to make subtly inconsistent with the main result query.
-
----
-
-## Checkpoint 5: Authenticated server functions
-
-**Files:** `src/api/search.rs` (new), `src/api/mod.rs`, `src/types.rs`
-
-Implement server functions that extract the authenticated session user and parse/validate client payloads:
+Implement one complete authenticated recipe operation:
 
 ```text
-search_entities(request) -> SearchResponse
-autocomplete_entities(scope, query_text) -> Vec<SearchSuggestion>
+search_recipes(request: RecipeSearchRequest) -> RecipeSearchResponse
 ```
 
-The search server function should validate and normalize the complete `SearchRequest`, then dispatch to the typed recipe, collection, and user database functions using the same query, hard-filter tree, sort, pagination, and facet requests. For `All`, it should fetch bounded per-entity sections and return their independent counts. Recipe facets are returned only for recipe-capable scopes. It should return a stable response when query is absent and the request is filter-only. Errors should be safe for client display and should not expose SQL details.
+The server function validates the fixed request, derives the authenticated user, and calls an internal database function that accepts the resolved user ID. Use explicit recipe SQL and fixed helper functions for repeated bound clauses; do not build a generic field/operator/filter compiler.
 
-Do not accept `user_id`, `owner_id`, or an authorization visibility predicate from the client. The client may select a search visibility mode, but the server applies the authenticated-user visibility contract.
+The recipe operation must:
 
-### Tests
+- apply the baseline visibility corpus before matching;
+- implement literal simple text as AND across tokens, with each token OR'd across the tuned recipe fields;
+- apply statically assigned advanced include/exclude templates for title, description, ingredients, and instructions;
+- compute `pdb.score` whenever any positive simple or advanced text criterion exists;
+- apply fixed relevance weights of 3x title, 2x description, and 1x ingredients/instructions to simple and positive advanced text templates;
+- bind every caller value and map one fixed sort enum to SQL with `id ASC` as the final tie-breaker;
+- apply duplicate-safe tag-all/tag-any/tag-excluded predicates, time/servings ranges, and created/updated ranges;
+- derive page results, distinct total count, and all four fixed facets from the same validated request;
+- retain all tag criteria for additive tag facets, while omitting only visibility, total time, or servings for those respective facets;
+- return typed recipe rows with author attribution and no SQL details in controlled errors.
 
-- unauthenticated search and autocomplete fail
-- authenticated users see their own private/unlisted recipes
-- other users’ private/unlisted recipes are excluded
-- other users’ public recipes are included
-- users can search their own private collections at any hierarchy depth
-- users cannot search another user’s private collections
-- user results contain no email, OAuth, session, or other private account fields
-- malformed filters and invalid ranges return controlled errors
-- malformed, overly deep, or unsupported filter trees return controlled errors
-- page size and autocomplete limits are server-enforced
+Prefer a fixed base recipe relation plus explicit result, count, and facet variants. Internal reuse is encouraged, but the abstraction must not expose arbitrary fields or logical structure.
+
+### Tests and verification
+
+- Authentication and own/public/private/unlisted authorization boundaries.
+- Exact and partial matching, field boosts, cross-field all-term matching, every advanced mode, exclusions, and literal parser metacharacters.
+- Ingredient/nested-instruction matches and photo-metadata exclusion.
+- Tag AND/OR/excluded behavior without duplicate results or counts.
+- Time/servings null rules, date ranges, all sort variants, relevance fallback, deterministic pagination, and limit validation.
+- Results/count agreement and fixed typed facet counts, including additive tags, canonical zero-count ranges, and the three self-excluding facets.
+- No untrusted SQL fragments appear in query construction.
+
+**Risk:** High. This is the main correctness, authorization, ranking, and facet boundary.
 
 ---
 
-## Checkpoint 6: Search route, URL state, and page shell
+## Checkpoint 4: User search operation
 
-**Files:** `src/pages/search.rs` (new), `src/pages/mod.rs`, `src/main.rs`, `src/middleware/auth.rs`, URL helper module as appropriate
+**Files:** server-only search database module, `src/api/search.rs`, shared types, search integration tests
 
-### Route
+Implement the complete authenticated user operation:
 
-Add a protected `/search` route and validate any query parameters before creating `SearchRequest`. The route has no path identifier; all search state lives in the query string.
+```text
+search_users(request: UserSearchRequest) -> UserSearchResponse
+```
 
-### URL codec
+Use explicit user SQL over only `username`, `display_name`, and `bio`. Simple text uses the fixed user field profile; advanced criteria bind only their statically assigned field aliases. Positive advanced text contributes relevance, and filter-only/relevance-less requests normalize to username ordering. Always append the deterministic ID tie-breaker.
 
-Use a small parser/serializer with canonical keys:
+Use fixed relevance weights of 3x username, 2x display name, and 1x bio. Word aliases handle terms and phrases; ngram aliases are used only for partial username/display-name matching.
+
+Return a dedicated public `UserSearchSummary`. Do not select email, OAuth, session, refresh-token, or other private fields even into an intermediate row. If public recipe count remains in the summary, calculate it from public recipes only.
+
+### Tests and verification
+
+- Username/display-name partial and exact matching, bio terms and phrases, every fixed advanced mode, exclusions, sort fallback, pagination, and limits.
+- User results contain only the public projection and public recipe count cannot reveal private/unlisted recipes.
+- Parser-looking literal input cannot select a field or inject syntax.
+- Result count uses the identical validated criteria as the result page.
+
+**Risk:** Medium. The primary concern is preventing private account-field leakage.
+
+---
+
+## Checkpoint 5: Collection search and grouped `All`
+
+**Files:** NOMS-011 collection schema/types, server-only search database module, `src/api/search.rs`, shared types, integration tests
+
+This checkpoint starts after NOMS-011 is available in the integration base. Implement:
+
+```text
+search_collections(request: CollectionSearchRequest) -> CollectionSearchResponse
+search_all(request: AllSearchRequest) -> SearchResponse
+```
+
+Collection SQL enforces `owner_id = authenticated_user_id`, searches only name and description, supports the fixed advanced collection fields, and returns root-to-leaf breadcrumb labels through the NOMS-011 hierarchy. It uses collection-specific sorts and deterministic ID tie-breaking.
+
+Use fixed relevance weights of 3x collection name and 1x description. Word aliases handle terms and phrases; ngram aliases are used only for partial name/description matching.
+
+`search_all` accepts literal text and a bounded section limit only. It runs lightweight fixed recipe, collection, and user section queries with independent ranking and total counts. Blank trimmed text uses the canonical per-section browse sorts rather than BM25. It must not call the public `search_recipes` path in a way that computes unused recipe facets, and it must not compare or merge raw BM25 scores across indexes.
+
+### Tests and verification
+
+- Root and nested collection matching, breadcrumb correctness, owner isolation, advanced collection fields, sorts, pagination, and count agreement.
+- `All` returns grouped sections in canonical recipe/collection/user order with the requested bounded limit and correct per-entity totals.
+- Blank `All` returns the deterministic grouped browse state and its canonical URL omits `q`.
+- Other users' collections and non-public recipe/account data cannot enter `All`.
+- `All` performs no recipe facet queries and no cross-index score ordering.
+
+**Risk:** Medium. This checkpoint is gated by NOMS-011 and must be integrated against its actual hierarchy API.
+
+---
+
+## Checkpoint 6: Typed autocomplete operation
+
+**Files:** server-only search database module, `src/api/search.rs`, shared suggestion types, autocomplete integration tests
+
+Implement the authenticated bounded autocomplete operation. Recipe and user scopes may be completed immediately after Checkpoints 3–4; add collection suggestions and the complete `All` allocation after Checkpoint 5:
+
+```text
+autocomplete_entities(scope: SearchScope, text: String) -> Vec<SearchSuggestion>
+```
+
+The scope enum is the only caller-controlled routing choice. Each entity uses a fixed query and typed `SearchSuggestionKind`; no caller field, boost, or operator is accepted. Apply the same recipe visibility, collection ownership, and public-user projection rules as full search.
+
+Require two Unicode scalar values after trimming. Scoped autocomplete returns at most 8 suggestions. `All` uses fixed grouped allocation and order: 4 recipes, 2 collections, 2 users, with unused slots left empty. Debounce is a client concern; limits and authorization are server-enforced.
+
+### Tests and verification
+
+- Minimum/maximum boundaries, Unicode counting, deterministic allocation/order, and stable tie-breaking.
+- Recipe visibility, collection ownership, and user public-field projection match their full-search operations.
+- Each suggestion kind contains only the ID, label, and safe secondary text needed for navigation.
+- No score comparison or unused-slot refill occurs across entity indexes.
+
+**Risk:** Medium. Authorization drift between autocomplete and full search would leak otherwise hidden entities.
+
+---
+
+## Checkpoint 7: Canonical URL state, route, and search UI
+
+**Files:** `src/pages/search.rs`, route/auth integration, URL codec module, search components, `src/pages/home.rs`, navigation integration
+
+Add the protected `/search` route after the backend operations are stable. The URL codec creates exactly one active scope request from these canonical keys:
 
 | Key | Values |
 |---|---|
 | `scope` | `all`, `recipes`, `collections`, `users` |
-| `q` | URL-encoded query text |
-| `sort` | comma-separated scope-specific keys such as `relevance:desc,updated:desc` |
-| `tags` | comma-separated normalized tags; recipe scope only |
-| `time` | `0-30`, `30-60`, `60-120`, `120+`; recipe scope only |
-| `servings` | `1-2`, `3-4`, `5-8`, `8+`; recipe scope only |
-| `vis` | `all`, `mine`, `public`; recipe scope only |
-| `facets` | comma-separated requested facet fields |
-| `filters` | optional versioned URL-encoded `FilterExpression` for advanced nested hard constraints |
+| `q` | URL-encoded literal text |
+| `sort` | one value from the active scope's sort enum |
+| `tags` | normalized recipe `tags_all` values |
+| `time` | `0-30`, `30-60`, `60-120`, `120+` |
+| `servings` | `1-2`, `3-4`, `5-8`, `9+` |
+| `vis` | `all`, `mine`, `public` |
+| `advanced` | versioned URL-encoded advanced DTO for the active scope |
 | `page` | positive 1-indexed page |
 
-Omit default values from canonical URLs where practical. Invalid values fall back to defaults rather than reaching SQL.
-Recipe-only filters are removed or ignored when the scope is collections or users.
-The `q` parameter maps only to `SearchQuery.text`. Simple filter parameters are shorthand that compile into `FilterExpression`. If `filters` is present, it is parsed and validated as the authoritative filter tree; conflicting shorthand filters are rejected or replaced during canonicalization. Cap filter URL length and complexity before sending it to the server.
+Omitted values receive documented defaults. Explicit malformed enums/ranges, invalid advanced versions/shapes, conflicting tags, and oversized state produce a controlled validation state and never reach SQL. Scope-inapplicable parameters are removed during canonicalization. When no positive text remains, canonicalize relevance to the scope's browse sort. For `scope=all`, blank trimmed text is canonicalized by omitting `q` and renders the deterministic grouped browse state.
 
-### History and loading behavior
+Typing updates local state and uses `replaceState`; committed searches, suggestion selection, filters, sort, and pagination use `pushState`. Initial load and `popstate` parse the URL and reload the matching request. Guard browser APIs for SSR/WASM safety.
 
-- On input, update the local query and use `replaceState` for the URL while autocomplete is debounced.
-- Enter commits the current query with `pushState` and reloads search results.
-- Filter, sort, and page changes use `pushState`, reset page to 1 when appropriate, and reload results.
-- Register a `popstate` handler to parse the URL and reload the page state.
-- Guard browser APIs behind the existing client/WASM patterns so SSR remains safe.
+Build the page from focused components for input/autocomplete, bounded advanced form, fixed recipe filters/facets, typed results, and pagination. The advanced form exposes only the active scope's static fields and modes—never nesting, free-form fields/operators, boosts, SQL, or ParadeDB syntax. Sort controls are scope-specific. Recipe/user URL state and UI may proceed once their operations and autocomplete paths are stable; collection and complete `All` controls remain gated on Checkpoint 5.
 
-### Verify
+The `All` view renders grouped entity sections. Recipe scope renders the fixed facets. Collection results show breadcrumbs; user results show public metadata only. Include accessible loading, error, empty, no-results, keyboard-autocomplete, filter-chip, and clear-all states.
 
-- `/search?scope=recipes&q=pasta&tags=quick%2Cvegetarian&sort=updated:desc&page=2` restores all recipe controls correctly.
-- `/search?scope=collections&q=summer` restores collection scope and does not display recipe facets.
-- An advanced filter URL round-trips without changing its logical grouping or query text.
-- Back/forward restores prior results and filter state.
-- Typing does not flood browser history.
-- Committed changes create navigable history entries.
+Add a landing-page search bar that only navigates to `/search?q=...`; it does not own result state or call database functions. Keep landing autocomplete disabled unless unauthenticated search receives a separate design.
 
-**Risk:** Medium. Browser history and SSR/WASM boundaries need explicit testing.
+### Tests and verification
+
+- URL parse/canonicalize/round-trip tests for every scope, advanced DTO version, size boundary, invalid state, filter reset, and relevance fallback.
+- `replaceState` versus `pushState`, initial hydration, back/forward restoration, page reset, and scope switching.
+- Advanced form produces one bounded scope request and preserves simple text.
+- Autocomplete keyboard/mouse behavior and typed navigation.
+- Correct scope-specific filters, sorts, facets, result projections, pagination, and visible UI states.
+- Landing submission creates one canonical navigation without a second search state machine.
+
+**Risk:** Medium. URL canonicalization and browser history require explicit client/SSR boundary tests.
 
 ---
 
-## Checkpoint 7: Search UI, landing entry point, filters, facets, and autocomplete
+## Checkpoint 8: Combined integration, migration safety, and performance
 
-**Files:** `src/components/base/search_input.rs` (new), `src/components/base/landing_search_bar.rs` (new), `src/components/base/autocomplete_dropdown.rs` (new), `src/components/base/search_filters.rs` (new), `src/components/base/advanced_search_builder.rs` (new), `src/components/base/search_results.rs` (new), `src/components/base/search_pagination.rs` (new), `src/pages/home.rs`, `src/pages/search.rs`, `src/components/base/mod.rs`, `src/components/navbar.rs`, header/sidebar integration files
+**Files:** all NOMS-012 files plus shared NOMS-010/NOMS-011 integration points
 
-Implement the UI in separate components so URL state and server calls remain testable independently.
+Run this checkpoint only after the preceding operations and NOMS-011 integration are present. Tests belong with the checkpoint that introduces behavior; this checkpoint reruns them together and concentrates on cross-scope regression, migration safety, runtime plans, and the complete user flow.
 
-### Search input and autocomplete
-
-- Debounce autocomplete requests at approximately 200ms.
-- Do not request suggestions for fewer than two characters.
-- Support arrow-key navigation, Enter, Escape, mouse selection, loading, and error states.
-- Render suggestions with entity-kind labels and appropriate secondary text.
-- Selecting a recipe suggestion navigates to the recipe detail route.
-- Selecting a collection suggestion navigates to the collection detail route.
-- Selecting a user suggestion navigates to the existing public user profile route.
-
-### Landing-page search bar
-
-- Add a prominent `LandingSearchBar` to `src/pages/home.rs` using the shared search-input styling and validation.
-- On Enter or submit, navigate to `/search?q=<encoded query>`; preserve no separate landing-page result state.
-- The landing bar may be visible before authentication, but `/search` remains protected in this phase. An unauthenticated submit follows the existing protected-route login flow.
-- Keep landing autocomplete optional and disabled initially unless the product chooses to make public recipe/user search available without authentication.
-- Do not call search database functions directly from `Home`.
-
-### Filters and results
-
-- Search input at the top of the page.
-- Scope tabs or equivalent controls: All, Recipes, Collections, Users.
-- Recipe scope shows visibility controls, time buckets, servings buckets, and tag facets.
-- Collection scope shows owner-owned folder results with breadcrumb paths and collection-appropriate sort controls.
-- User scope shows public profile results with user-appropriate sort controls.
-- All scope renders bounded grouped sections rather than one cross-entity ranked list.
-- Tag checklist is populated from recipe facet results with counts and is hidden for non-recipe scopes.
-- The main text input writes only `SearchQuery.text`; field selection and relevance tuning stay server-owned.
-- Preset controls compile into the same `FilterExpression` used by the advanced filter builder.
-- An advanced builder allows users to add field/operator/value clauses, nest groups, and choose `AND`, `OR`, or `NOT` logic.
-- The builder exposes only fields and operators supported by the active entity scope.
-- Users can request multiple facets and multi-key sorting without losing the text query or other filters.
-- Active filter chips and clear-all action.
-- Sort selector with relevance, newest, oldest, name ascending/descending, quickest, and longest.
-- Recipe cards with relevance-independent owner attribution for non-owned results.
-- Collection result cards/rows link to collection detail and show their breadcrumb path.
-- User result cards/rows link to public profiles and show only public profile metadata.
-- Result count and range context such as `121–132 of 847`.
-- Empty, loading, error, and no-results states.
-- Pagination with previous/next controls and bounded page-number display.
-- Landing-page submission produces one canonical `/search?q=...` navigation and does not create a second search state machine.
-- Advanced filter edits preserve query text and produce a validated canonical URL state plus one combined backend request.
-
-### Navigation integration
-
-Add a search link or icon to the existing header/sidebar. If the dashboard receives a search shortcut, it should navigate to `/search` rather than duplicate search state or query logic.
-
-Coordinate shared files with NOMS-010 and NOMS-011; do not overwrite their changes.
-
----
-
-## Checkpoint 8: Integration, tests, and performance review
-
-**Files:** search-related files plus shared integration files
-
-### Database tests
-
-Use a ParadeDB-capable test environment and fail explicitly when `pg_search` or the BM25 index cannot be created. Cover:
-
-- exact and partial title matches
-- description, ingredient, and instruction matches
-- title/description boosting
-- tuned query-string behavior, field boosts, phrase handling, and partial matching
-- nested AND/OR/NOT filter compilation and execution
-- typed filter fields and unsupported-field rejection
-- query plus hard filters in one request
-- multiple sort keys and deterministic tie-breaking
-- empty query ordering
-- own/private/unlisted versus other-user visibility
-- public recipes from other users
-- all-selected-tags AND behavior
-- duplicate-safe result and count queries
-- time expression, both-null exclusion, and one-null handling
-- servings ranges and null exclusion
-- every sort option
-- facets and distinct counts
-- multiple requested facets, including disjunctive facet counts
-- pagination boundaries
-- collection search at root and nested depths with breadcrumb paths
-- collection owner isolation
-- user search by username/display name with public profile-only projection
-- autocomplete minimum length, per-entity relevance, visibility, and limit
-
-### URL/UI tests
-
-- query-string parsing and canonical serialization
-- advanced filter URL round-tripping, query preservation, and complexity limits
-- replaceState versus pushState behavior
-- initial URL hydration
-- browser back/forward restoration
-- filter reset and page reset behavior
-- keyboard autocomplete behavior
-- scope switching and typed suggestion navigation
-
-### Verification commands
+### Required verification
 
 ```text
-cargo test --features server
-cargo check --features server
-cargo check --target wasm32-unknown-unknown
-cargo clippy --features server --all-targets -- -D warnings
-just migrate
+just ci
+just schema-check-test
+just migrate-plan
+just sqlx-prepare
 ```
 
-Review representative `EXPLAIN` plans for recipe text search, collection search, user search, empty-query browsing, tag filtering, and facets. Confirm that the appropriate per-entity BM25 indexes are used, that pagination is applied after deduplication, and that the All scope uses bounded per-entity queries.
+Run the dedicated ParadeDB search integration job locally or in CI against the pinned image. Apply extensions and schema from a fresh database, inspect the schema plan for destructive operations, and confirm the offline SQLx cache is current when compile-time queries change.
+
+Review representative `EXPLAIN` plans for recipe/user/collection text search, empty-query browsing, tag predicates, all four facets, autocomplete, and grouped `All`. Confirm index use, deduplication before pagination, bounded offsets, and the absence of unused facet work in `All`.
+
+Start a fresh isolated application instance and manually verify authenticated simple search, bounded advanced search, filters/facets, all scopes, autocomplete navigation, URL back/forward, empty/error states, and existing recipe/collection/profile navigation. Coordinate shared route, home, header/sidebar, dashboard, and recipe-detail files without overwriting NOMS-010/NOMS-011 changes.
+
+### Migration and rollback
+
+- `migrations/extensions.sql` remains responsible for required extensions; `migrations/schema.sql` adds indexes declaratively after their source tables.
+- No application backfill is required because BM25 indexes cover existing rows and remain transactionally maintained.
+- If an index definition changes, build and validate its replacement before removing the old index in a separate safe migration step.
+- Do not add destructive rollback SQL. Development data may be recreated during integration where the existing roadmap permits it.
+
+### Exit criteria
+
+- All checkpoint tests and CI gates pass against the combined feature base.
+- Authorization and public projections agree across full search, `All`, and autocomplete.
+- Results/count/facet relationships and URL/UI behavior remain deterministic.
+- Performance plans use intended indexes and no unbounded or cross-index-ranked operation remains.
+- No regressions are found in existing authenticated navigation and recipe/collection/profile flows.
+
+**Risk:** High. This is the first verification against the complete combined schema and application.
 
 ---
 
-## Migration and rollback
+## Dependencies and sequencing
 
-- `migrations/extensions.sql` remains responsible for installing `pg_search`.
-- `migrations/schema.sql` adds recipe, collection, user, and tag search indexes additively. Collection index creation must follow the NOMS-011 table definition when branches are merged.
-- No application data backfill is required; development data may be discarded during integration.
-- If the index definition changes, create a replacement index using the repository’s supported concurrent/rebuild procedure, validate it, then remove the old index in a separate migration step if required.
-- Do not add destructive rollback SQL to the plan.
-
-## Dependencies and parallelization
-
-| Checkpoint | Depends on | Parallelization |
+| Checkpoint | Depends on | Execution note |
 |---|---|---|
-| 1 Contract/test prerequisites | Current recipe schema, NOMS-010 draft decision, and NOMS-011 collection privacy model | Can proceed immediately |
-| 2 BM25 indexes | Checkpoint 1; NOMS-011 collection table for collection index | Recipe/user indexes can proceed before NOMS-011; collection index waits for its table |
-| 3 Query builder/types | Checkpoint 1; index syntax verified | Can proceed alongside Checkpoint 2 after field contract is settled |
-| 4 Facets/autocomplete | Checkpoint 3 | Database-focused and independent of page UI |
-| 5 Server functions | Checkpoints 3–4 | Can proceed before UI |
-| 6 Route/URL state | Checkpoint 5 | Mostly client-side; coordinate route files with other work |
-| 7 UI | Checkpoints 5–6 | Shared header/sidebar files may conflict with NOMS-010/NOMS-011 |
-| 8 Integration | All previous checkpoints | Must run with the combined feature branches |
+| 1 Foundation | Current recipe schema and pinned database image | Start here; completes before query/index implementation |
+| 2 Indexes/smoke queries | Checkpoint 1 | Recipe/user work proceeds immediately; collection subtask waits for NOMS-011 |
+| 3 Recipe operation | Checkpoints 1–2 recipe index | First complete searchable vertical slice |
+| 4 User operation | Checkpoints 1–2 user index | May proceed alongside Checkpoint 3 |
+| 5 Collection and `All` | Checkpoints 3–4 plus NOMS-011 and collection index | Explicit integration gate |
+| 6 Autocomplete | Checkpoints 3–4 for recipe/user; Checkpoint 5 for collection/complete `All` | Implement recipe/user paths before NOMS-011 and extend the same fixed operation after collection integration |
+| 7 URL/route/UI | Checkpoints 3–4 plus corresponding Checkpoint 6 paths; Checkpoint 5 for collection/complete `All` | Recipe/user client work proceeds before NOMS-011; gated scopes are added when their backend is stable |
+| 8 Combined verification | All previous checkpoints plus NOMS-010/NOMS-011 integration | Final migration, performance, manual, and regression gate |
