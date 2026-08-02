@@ -2816,6 +2816,10 @@ a:hover {
     padding: var(--space-md);
 }
 
+.recipe-version-graph__node--main-recipe .recipe-version-graph__node-body {
+    gap: 2px;
+}
+
 .recipe-version-graph__node-heading {
     display: flex;
     align-items: center;
@@ -2885,6 +2889,10 @@ a:hover {
 
 .recipe-version-graph__summary {
     margin-top: var(--space-xs) !important;
+}
+
+.recipe-version-graph__node--main-recipe .recipe-version-graph__summary {
+    margin-top: 0 !important;
 }
 
 .recipe-version-graph__outline {

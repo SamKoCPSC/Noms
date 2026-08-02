@@ -1985,6 +1985,13 @@ mod tests {
         assert!(css.contains("outline: 9px solid color-mix(in srgb, var(--success) 88%, white);"));
         assert!(css.contains("inset: 10px;"));
         assert!(css.contains("pointer-events: none;"));
+        assert!(css
+            .contains(".recipe-version-graph__node--main-recipe .recipe-version-graph__node-body"));
+        assert!(css.contains("gap: 2px;"));
+        assert!(
+            css.contains(".recipe-version-graph__node--main-recipe .recipe-version-graph__summary")
+        );
+        assert!(css.contains("margin-top: 0 !important;"));
         assert!(css.contains(".recipe-version-graph__main-recipe-badge"));
     }
 
