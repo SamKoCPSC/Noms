@@ -207,6 +207,11 @@ Add end-to-end handler tests for these exact cases:
    - normal login still succeeds.
 6. Reuse, provider mismatch, expiry, and invalid PKCE continue to fail.
 7. Concurrent consumption still permits at most one callback.
+8. Every OAuth and logout redirect remains same-origin after URL parsing and browser normalization:
+   - reject protocol-relative paths and absolute URLs;
+   - reject raw and encoded backslash forms such as `/\\evil.example`, `/%5cevil.example`, and equivalent mixed slash/backslash inputs;
+   - reject encoded authority-confusion inputs such as `/%2fevil.example`;
+   - verify accepted relative paths resolve beneath the application's own origin using WHATWG-compatible URL semantics, not only a string-prefix check.
 
 The attack test must exercise the real callback handler and account-linking transaction. A unit test that merely recomputes a boolean mismatch is insufficient.
 
@@ -221,6 +226,7 @@ The attack test must exercise the real callback handler and account-linking tran
 - For `link` callbacks, call a linking-only function that requires a concrete authenticated user ID.
 - For `login` callbacks, call a login-only resolver that cannot attach a new provider to an arbitrary current session.
 - Preserve one-time state consumption, TTL, provider matching, PKCE, sanitized errors, and safe relative redirects.
+- Centralize same-origin redirect validation for OAuth login, callback, and logout flows. Validate the parsed/normalized destination and fail closed on backslashes, encoded separators, authority confusion, or ambiguous decoding.
 - Do not return a request cookie as a new `Set-Cookie` value. Only emit cookies built through the hardened cookie builder.
 
 ### Schema and migration
@@ -250,7 +256,7 @@ Manual verification in a fresh isolated instance:
 - callback replay;
 - link flow after session expiry.
 
-**Gate:** The checkpoint fails if any callback can choose link behavior based only on the callback cookie.
+**Gate:** The checkpoint fails if any callback can choose link behavior based only on the callback cookie, or if any OAuth/logout redirect can normalize to a different origin.
 
 **Risk:** Critical. This changes the core account identity boundary and must be reviewed before other OAuth refactoring.
 
@@ -653,6 +659,7 @@ Track structured counts without sensitive values:
 - [ ] CP0 baseline is deterministic and `just ci` passes.
 - [ ] OAuth login and linking have explicit purposes and complete state/session binding.
 - [ ] The login-CSRF account-takeover regression test passes through the real callback handler.
+- [ ] OAuth and logout redirects remain same-origin after browser-compatible parsing and normalization, including raw and encoded slash/backslash confusion cases.
 - [ ] All media persistence and deletion paths enforce exact tenant ownership.
 - [ ] Cross-tenant image and avatar deletion tests prove no victim storage request occurs.
 - [ ] The production serving path attaches trustworthy connection information.
