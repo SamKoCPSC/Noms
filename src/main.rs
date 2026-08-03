@@ -94,107 +94,176 @@ const GOOGLE_FONTS: &str = "https://fonts.googleapis.com/css2?family=Fredoka:wgh
 
 #[cfg(feature = "server")]
 fn main() {
+    dioxus::logger::initialize_default();
+
+    let runtime = tokio::runtime::Runtime::new().expect("failed to initialize the server runtime");
+
+    runtime.block_on(async move {
+        let router = build_application_router().await;
+        let address = dioxus::cli_config::fullstack_address_or_localhost();
+        let listener = tokio::net::TcpListener::bind(address)
+            .await
+            .unwrap_or_else(|error| panic!("failed to bind server to {address}: {error}"));
+
+        tracing::info!(%address, "Noms server listening");
+        serve_router_with_connect_info(listener, router, std::future::pending())
+            .await
+            .expect("application server failed");
+    });
+}
+
+#[cfg(feature = "server")]
+async fn build_application_router() -> axum::Router {
     let base_url =
         std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:8080".to_string());
     let (google_client, github_client) = auth::oauth::build_oauth_clients(&base_url);
 
-    // Build a custom Axum Router with OAuth routes and the Dioxus application.
-    // The Dioxus router handles all non-API routes (SSR), and our OAuth routes
-    // handle /auth/{provider}/start and /auth/{provider}/callback.
-    // Auth middleware protects routes and injects user into request extensions.
-    dioxus::server::serve(move || {
-        let google_client = google_client.clone();
-        let github_client = github_client.clone();
-        async move {
-            // Initialize pool lazily on Dioxus's runtime
-            db::init_pool().await;
-            let pool = db::get_pool();
+    db::init_pool().await;
+    let pool = db::get_pool();
 
-            // Initialize S3-compatible storage client
-            storage::init_storage().await;
-            let storage_client = storage::get_storage_client();
+    storage::init_storage().await;
+    let storage_client = storage::get_storage_client();
 
-            // Spawn orphan cleanup worker
-            {
-                let pool = pool.clone();
-                let storage = storage_client.clone();
-                let config = worker::orphan_cleanup::OrphanCleanupConfig::from_env();
-                worker::orphan_cleanup::spawn_orphan_cleanup(pool, storage, config);
-            }
+    {
+        let pool = pool.clone();
+        let storage = storage_client.clone();
+        let config = worker::orphan_cleanup::OrphanCleanupConfig::from_env();
+        worker::orphan_cleanup::spawn_orphan_cleanup(pool, storage, config);
+    }
 
-            let rate_limit = middleware::rate_limit::RateLimitState::default();
+    let rate_limit = middleware::rate_limit::RateLimitState::from_environment()
+        .unwrap_or_else(|error| panic!("invalid OAuth rate-limit configuration: {error}"));
+    let state = auth::oauth::AppState {
+        pool: pool.clone(),
+        google_client,
+        github_client,
+        http_client: reqwest::Client::new(),
+        google_userinfo_url: std::env::var("GOOGLE_USERINFO_URL")
+            .unwrap_or_else(|_| "http://localhost:8082/google/userinfo".to_string()),
+        github_userinfo_url: std::env::var("GITHUB_USERINFO_URL").unwrap_or_else(|_| {
+            let api_url = std::env::var("GITHUB_API_URL")
+                .unwrap_or_else(|_| "https://api.github.com".to_string());
+            format!("{api_url}/user")
+        }),
+        rate_limit: rate_limit.clone(),
+        storage: storage_client.clone(),
+    };
 
-            let state = auth::oauth::AppState {
-                pool: pool.clone(),
-                google_client,
-                github_client,
-                http_client: reqwest::Client::new(),
-                google_userinfo_url: std::env::var("GOOGLE_USERINFO_URL")
-                    .unwrap_or_else(|_| "http://localhost:8082/google/userinfo".to_string()),
-                github_userinfo_url: std::env::var("GITHUB_USERINFO_URL").unwrap_or_else(|_| {
-                    let api_url = std::env::var("GITHUB_API_URL")
-                        .unwrap_or_else(|_| "https://api.github.com".to_string());
-                    format!("{api_url}/user")
-                }),
-                rate_limit: rate_limit.clone(),
-                storage: storage_client.clone(),
-            };
-            let dioxus_router = axum::Router::new()
-                .layer(axum::Extension(pool.clone()))
-                .layer(axum::middleware::from_fn_with_state(
-                    pool.clone(),
-                    middleware::auth::handle_auth,
-                ))
-                .route(
-                    "/api/user_profile",
-                    axum::routing::get(auth::user_profile::handle_user_profile),
-                )
-                .route(
-                    "/api/upload",
-                    axum::routing::post(api::upload::upload_handler),
-                )
-                .layer(axum::Extension(storage_client.clone()))
-                .with_state(auth::user_profile::UserProfileState { pool: pool.clone() })
-                .serve_dioxus_application(ServeConfig::new(), App)
-                .layer(api::upload::server_function_body_limit_layer());
+    let dioxus_router = axum::Router::new()
+        .layer(axum::Extension(pool.clone()))
+        .layer(axum::middleware::from_fn_with_state(
+            pool.clone(),
+            middleware::auth::handle_auth,
+        ))
+        .route(
+            "/api/user_profile",
+            axum::routing::get(auth::user_profile::handle_user_profile),
+        )
+        .route(
+            "/api/upload",
+            axum::routing::post(api::upload::upload_handler),
+        )
+        .layer(axum::Extension(storage_client))
+        .with_state(auth::user_profile::UserProfileState { pool })
+        .serve_dioxus_application(ServeConfig::new(), App)
+        .layer(api::upload::server_function_body_limit_layer());
 
-            let oauth_router = axum::Router::new()
-                .route(
-                    "/auth/{provider}/start",
-                    axum::routing::get(auth::oauth::start_handler),
-                )
-                .route(
-                    "/auth/{provider}/callback",
-                    axum::routing::get(auth::oauth::callback_handler),
-                )
-                .route(
-                    "/auth/logout",
-                    axum::routing::get(auth::logout::handle_logout)
-                        .post(auth::logout::handle_logout),
-                )
-                .layer(axum::middleware::from_fn_with_state(
-                    state.clone(),
-                    middleware::rate_limit::rate_limit_middleware,
-                ))
-                .with_state(state);
-
-            // Spawn background cleanup task for rate limit state.
-            // Runs every 60 seconds, removing stale entries to prevent memory growth.
-            // Dropped on server shutdown.
-            {
-                let rl = rate_limit;
-                tokio::spawn(async move {
-                    let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
-                    loop {
-                        interval.tick().await;
-                        rl.cleanup();
-                    }
-                });
-            }
-
-            Ok(oauth_router.merge(dioxus_router))
+    // The two endpoint classes deliberately have independent in-memory windows.
+    // Each application replica owns its own limiter and cleanup task.
+    let oauth_router = build_oauth_router(state);
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
+        loop {
+            interval.tick().await;
+            rate_limit.cleanup();
         }
     });
+
+    oauth_router.merge(dioxus_router)
+}
+
+#[cfg(feature = "server")]
+fn build_oauth_router(state: auth::oauth::AppState) -> axum::Router {
+    axum::Router::new()
+        .route(
+            "/auth/{provider}/start",
+            axum::routing::get(auth::oauth::start_handler),
+        )
+        .route(
+            "/auth/{provider}/callback",
+            axum::routing::get(auth::oauth::callback_handler),
+        )
+        .route(
+            "/auth/logout",
+            axum::routing::get(auth::logout::handle_logout).post(auth::logout::handle_logout),
+        )
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            middleware::rate_limit::rate_limit_middleware,
+        ))
+        .with_state(state)
+}
+
+#[cfg(feature = "server")]
+async fn serve_router_with_connect_info<F>(
+    listener: tokio::net::TcpListener,
+    router: axum::Router,
+    shutdown: F,
+) -> std::io::Result<()>
+where
+    F: std::future::Future<Output = ()> + Send + 'static,
+{
+    axum::serve(
+        listener,
+        router.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown)
+    .await
+}
+
+#[cfg(all(feature = "server", test))]
+mod server_tests {
+    use std::net::SocketAddr;
+
+    use axum::extract::ConnectInfo;
+    use axum::routing::get;
+    use tokio::sync::oneshot;
+
+    #[tokio::test]
+    async fn production_listener_attaches_direct_peer_information() {
+        async fn peer_address(ConnectInfo(peer): ConnectInfo<SocketAddr>) -> String {
+            peer.ip().to_string()
+        }
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("test listener should bind");
+        let address = listener
+            .local_addr()
+            .expect("test listener should have an address");
+        let router = axum::Router::new().route("/peer", get(peer_address));
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+
+        let server = tokio::spawn(super::serve_router_with_connect_info(
+            listener,
+            router,
+            async move {
+                let _ = shutdown_rx.await;
+            },
+        ));
+
+        let response = reqwest::get(format!("http://{address}/peer"))
+            .await
+            .expect("peer endpoint should respond");
+        assert_eq!(response.status(), reqwest::StatusCode::OK);
+        assert_eq!(response.text().await.unwrap(), "127.0.0.1");
+
+        let _ = shutdown_tx.send(());
+        server
+            .await
+            .expect("server task should join")
+            .expect("server should shut down cleanly");
+    }
 }
 
 #[cfg(not(feature = "server"))]

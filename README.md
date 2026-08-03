@@ -51,6 +51,35 @@ The fixed example URLs are intended only for manually managed standalone
 services. An isolated environment's generated values are stored with mode
 `0600` under its printed runtime path.
 
+#### OAuth rate limiting behind a reverse proxy
+
+OAuth start and callback requests are limited per client address. Forwarded
+address headers are ignored unless the request's direct TCP peer is included
+in the comma-separated `TRUSTED_PROXIES` setting. Entries may be individual IP
+addresses or CIDR ranges. The default is empty; do not add loopback, private,
+or platform ranges unless they are the verified addresses of the proxy that
+connects directly to this application.
+
+Railway currently documents its private proxy network as `100.0.0.0/8`, so a
+Railway deployment can explicitly set:
+
+```text
+TRUSTED_PROXIES=100.0.0.0/8
+```
+
+The application accepts `X-Real-IP` or a strictly unwound
+`X-Forwarded-For` chain from configured peers. If both are present, they must
+identify the same client. Invalid configuration stops startup. A runtime with
+Railway deployment metadata also refuses to start when `TRUSTED_PROXIES` is
+missing or empty, preventing a silently shared proxy-wide bucket. Missing or
+ambiguous request identity fails closed only on the rate-limited OAuth
+endpoints.
+
+The limiter is stored in process memory and therefore applies independently
+to each application replica. Deployments requiring a global limit across
+multiple replicas should enforce an upstream shared limit or move this state
+to a shared store.
+
 ### 3. Start the Development Environment
 
 ```bash
