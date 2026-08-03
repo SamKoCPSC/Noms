@@ -27,7 +27,7 @@ fn is_recipe_unavailable_error(message: &str) -> bool {
 
 const GRAPH_NODE_WIDTH_PX: f64 = 240.0;
 const GRAPH_NODE_HEIGHT_PX: f64 = 300.0;
-const GRAPH_COLUMN_GAP_PX: f64 = 144.0;
+const GRAPH_COLUMN_GAP_PX: f64 = 216.0;
 const GRAPH_ROW_GAP_PX: f64 = 56.0;
 const GRAPH_LAYOUT_PADDING_PX: f64 = 32.0;
 const GRAPH_MIN_ZOOM: f64 = 0.001;
@@ -2548,8 +2548,8 @@ mod tests {
             })
             .unwrap();
         assert!(
-            root_v2.x - root_v1.x - super::GRAPH_NODE_WIDTH_PX >= 144.0,
-            "cards in adjacent columns need generous horizontal separation"
+            root_v2.x - root_v1.x - super::GRAPH_NODE_WIDTH_PX >= 216.0,
+            "cards in adjacent columns need expanded horizontal separation"
         );
 
         for edge in &layout.edges {
