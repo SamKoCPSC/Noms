@@ -214,18 +214,9 @@ fn validate_provider(provider: &str) -> Result<linking::Provider, OAuthError> {
     }
 }
 
-/// Validate that the redirect_uri is a same-origin relative path.
-///
-/// Must start with `/` and must not contain `://` (i.e., no absolute URLs)
-/// and must not start with `//` (i.e., no protocol-relative URLs).
-fn validate_redirect_uri(uri: &str) -> Result<(), OAuthError> {
-    if uri.len() > REDIRECT_URI_MAX_LEN {
-        return Err(OAuthError::InvalidRedirectUri(uri.to_string()));
-    }
-    if !uri.starts_with('/') || uri.starts_with("//") || uri.contains("://") {
-        return Err(OAuthError::InvalidRedirectUri(uri.to_string()));
-    }
-    Ok(())
+fn validate_redirect_uri(uri: &str) -> Result<String, OAuthError> {
+    crate::auth::redirect::normalize_same_origin_redirect(uri)
+        .ok_or_else(|| OAuthError::InvalidRedirectUri(uri.to_string()))
 }
 
 /// Build OAuth clients for Google and GitHub using environment variables.
@@ -297,9 +288,6 @@ fn env_or(key: &str, default: &str) -> String {
 /// CSRF state lifetime in seconds (10 minutes).
 const CSRF_STATE_TTL_SECS: i64 = 600;
 
-/// Maximum allowed length for redirect_uri parameter.
-const REDIRECT_URI_MAX_LEN: usize = 2048;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum FlowPurpose {
     Login,
@@ -360,7 +348,7 @@ pub async fn start_handler(
     jar: CookieJar,
 ) -> Result<impl IntoResponse, OAuthError> {
     let prov = validate_provider(&provider)?;
-    validate_redirect_uri(&params.redirect_uri)?;
+    let redirect_uri = validate_redirect_uri(&params.redirect_uri)?;
     let purpose = FlowPurpose::parse(&params.purpose)?;
 
     // Generate a CSRF state UUID and persist it in the DB.
@@ -389,7 +377,7 @@ pub async fn start_handler(
         &state.pool,
         &csrf_state,
         prov.as_str(),
-        &params.redirect_uri,
+        &redirect_uri,
         pkce_verifier.secret(),
         purpose.as_str(),
         user_id,
@@ -458,6 +446,10 @@ pub async fn callback_handler(
     if auth_state.provider != prov.as_str() {
         return Err(OAuthError::ProviderMismatch);
     }
+
+    // Revalidate persisted state so callbacks fail closed across deployments
+    // and if an auth-state row is ever written outside the start handler.
+    let redirect_uri = validate_redirect_uri(&auth_state.redirect_uri)?;
 
     // Check if there's an existing authenticated session
     // NOTE: We need to verify the session before consuming it for the new login.
@@ -548,17 +540,15 @@ pub async fn callback_handler(
             Ok((
                 StatusCode::SEE_OTHER,
                 [
-                    ("location", auth_state.redirect_uri),
+                    ("location", redirect_uri),
                     ("set-cookie", cookie.to_string()),
                 ],
             )
                 .into_response())
         }
-        CallbackIntent::Link(_) => Ok((
-            StatusCode::SEE_OTHER,
-            [("location", auth_state.redirect_uri)],
-        )
-            .into_response()),
+        CallbackIntent::Link(_) => {
+            Ok((StatusCode::SEE_OTHER, [("location", redirect_uri)]).into_response())
+        }
     }
 }
 
@@ -711,6 +701,29 @@ mod tests {
     #[test]
     fn test_validate_redirect_uri_invalid_protocol_relative() {
         assert!(validate_redirect_uri("//evil.com").is_err());
+    }
+
+    #[test]
+    fn test_validate_redirect_uri_rejects_normalization_confusion() {
+        for uri in [
+            "/\\evil.example",
+            "/%5cevil.example",
+            "/%5Cevil.example",
+            "/%2fevil.example",
+            "/%2Fevil.example",
+            "/%255cevil.example",
+            "/%252fevil.example",
+            "/.//evil.example",
+            "/%2e%2e//evil.example",
+            "/%",
+            "/%zz",
+            "/%FF",
+        ] {
+            assert!(
+                validate_redirect_uri(uri).is_err(),
+                "normalization-confusing redirect should be rejected: {uri}"
+            );
+        }
     }
 
     #[test]
@@ -1052,6 +1065,36 @@ mod tests {
                 .unwrap()
                 .is_none());
             session::clear_test_secret();
+        }
+
+        #[tokio::test]
+        async fn callback_rejects_unsafe_stored_redirect_before_token_exchange() {
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let state_id = format!("unsafe-redirect-{}", test_utils::uid());
+            db::insert_auth_state(
+                &pool,
+                &state_id,
+                "google",
+                "/\\evil.example",
+                "test-verifier-minimum-43-characters-long-enough",
+                "login",
+                None,
+            )
+            .await
+            .unwrap();
+
+            let result = callback_handler(
+                State(test_app_state(pool)),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id,
+                    code: "unused-code".to_string(),
+                }),
+                CookieJar::new(),
+            )
+            .await;
+
+            assert!(matches!(result, Err(OAuthError::InvalidRedirectUri(_))));
         }
 
         #[tokio::test]

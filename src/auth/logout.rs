@@ -16,9 +16,6 @@ use crate::auth::oauth::AppState;
 use crate::auth::session;
 use tracing;
 
-/// Maximum allowed length for redirect_uri parameter on logout.
-const REDIRECT_URI_MAX_LEN: usize = 2048;
-
 /// Query parameters for GET logout requests.
 #[derive(Debug, Deserialize)]
 pub(crate) struct LogoutQuery {
@@ -26,22 +23,8 @@ pub(crate) struct LogoutQuery {
     redirect_uri: Option<String>,
 }
 
-/// Validate that the redirect_uri is a same-origin relative path.
-///
-/// Must start with `/` and must not contain `://` (no absolute URLs)
-/// and must not start with `//` (no protocol-relative URLs).
-/// Returns `None` if the URI is empty or missing (caller should use default).
 fn validate_redirect_uri(uri: &str) -> Option<String> {
-    if uri.is_empty() {
-        return None;
-    }
-    if uri.len() > REDIRECT_URI_MAX_LEN {
-        return None;
-    }
-    if !uri.starts_with('/') || uri.starts_with("//") || uri.contains("://") {
-        return None;
-    }
-    Some(uri.to_string())
+    crate::auth::redirect::normalize_same_origin_redirect(uri)
 }
 
 /// Handle a logout request.
@@ -304,6 +287,37 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn logout_get_normalization_confusion_defaults_to_home() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        for redirect in [
+            "%2F%5Cevil.example",
+            "%2F%255cevil.example",
+            "%2F%252fevil.example",
+            "%2F.%2F%2Fevil.example",
+            "%2F%252e%252e%2F%2Fevil.example",
+            "%2F%25zz",
+            "%2F%25FF",
+        ] {
+            let response = make_router(pool.clone())
+                .oneshot(
+                    axum::http::Request::builder()
+                        .uri(format!("/auth/logout?redirect_uri={redirect}"))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+
+            assert_eq!(response.status(), StatusCode::FOUND);
+            assert_eq!(
+                response.headers().get(axum::http::header::LOCATION),
+                Some(&axum::http::HeaderValue::from_static("/")),
+                "normalization-confusing redirect should fall back: {redirect}"
+            );
+        }
+    }
+
+    #[tokio::test]
     async fn logout_get_invalid_redirect_no_leading_slash_defaults_to_home() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let app = make_router(pool);
@@ -355,7 +369,10 @@ mod tests {
 
     #[tokio::test]
     async fn logout_get_overlong_redirect_uri_defaults_to_home() {
-        let long_uri = format!("/{}", "a".repeat(REDIRECT_URI_MAX_LEN));
+        let long_uri = format!(
+            "/{}",
+            "a".repeat(crate::auth::redirect::REDIRECT_URI_MAX_LEN)
+        );
         let encoded =
             percent_encoding::utf8_percent_encode(&long_uri, percent_encoding::NON_ALPHANUMERIC)
                 .to_string();

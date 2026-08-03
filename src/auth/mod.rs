@@ -1,6 +1,7 @@
 //! Authentication module.
 
 pub mod context;
+pub mod redirect;
 
 #[cfg(feature = "server")]
 pub mod linking;
