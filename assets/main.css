@@ -2505,6 +2505,40 @@ a:hover {
     white-space: nowrap;
 }
 
+.recipe-version-graph__legend-swatch {
+    display: inline-block;
+    width: 18px;
+    height: 14px;
+    border: 2px solid;
+    border-radius: 4px;
+}
+
+.recipe-version-graph__legend-swatch--main-recipe {
+    border-color: var(--success);
+    background: color-mix(in srgb, var(--success) 24%, var(--surface));
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 72%, transparent);
+}
+
+.recipe-version-graph__legend-swatch--ancestor {
+    border-color: #5573a8;
+    background: color-mix(in srgb, #5573a8 16%, var(--surface));
+    outline: 2px solid color-mix(in srgb, #5573a8 72%, transparent);
+    outline-offset: 1px;
+}
+
+.recipe-version-graph__legend-swatch--descendant {
+    border-color: var(--warning);
+    background: color-mix(in srgb, var(--warning) 18%, var(--surface));
+    outline: 2px dashed color-mix(in srgb, var(--warning) 82%, transparent);
+    outline-offset: 1px;
+}
+
+.dark .recipe-version-graph__legend-swatch--ancestor {
+    border-color: #8ba8db;
+    background: color-mix(in srgb, #8ba8db 20%, var(--surface));
+    outline-color: color-mix(in srgb, #8ba8db 86%, transparent);
+}
+
 .recipe-version-graph__legend-line {
     display: inline-block;
     width: 30px;
@@ -2717,12 +2751,12 @@ a:hover {
         3px 4px 8px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
 }
 
-.recipe-version-graph__node--direct-ancestor {
+.recipe-version-graph__node--ancestor {
     border-color: #5573a8;
     background: color-mix(in srgb, #5573a8 16%, var(--surface));
     outline: 3px solid color-mix(in srgb, #5573a8 72%, transparent);
     outline-offset: 3px;
-    animation: recipe-version-graph-direct-ancestor-breathe 2s ease-in-out infinite;
+    animation: recipe-version-graph-ancestor-breathe 2s ease-in-out infinite;
 }
 
 .recipe-version-graph__node--immediate-descendant {
@@ -2733,7 +2767,7 @@ a:hover {
     animation: recipe-version-graph-immediate-descendant-breathe 2s ease-in-out infinite;
 }
 
-@keyframes recipe-version-graph-direct-ancestor-breathe {
+@keyframes recipe-version-graph-ancestor-breathe {
     0%,
     100% {
         background: color-mix(in srgb, #5573a8 8%, var(--surface));
@@ -2901,14 +2935,14 @@ a:hover {
     background: color-mix(in srgb, var(--warning) 16%, var(--surface));
 }
 
-.dark .recipe-version-graph__node--direct-ancestor {
+.dark .recipe-version-graph__node--ancestor {
     border-color: #8ba8db;
     background: color-mix(in srgb, #8ba8db 20%, var(--surface));
     outline-color: color-mix(in srgb, #8ba8db 86%, transparent);
-    animation-name: recipe-version-graph-dark-direct-ancestor-breathe;
+    animation-name: recipe-version-graph-dark-ancestor-breathe;
 }
 
-@keyframes recipe-version-graph-dark-direct-ancestor-breathe {
+@keyframes recipe-version-graph-dark-ancestor-breathe {
     0%,
     100% {
         background: color-mix(in srgb, #8ba8db 10%, var(--surface));
@@ -2925,12 +2959,12 @@ a:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .recipe-version-graph__node--direct-ancestor,
+    .recipe-version-graph__node--ancestor,
     .recipe-version-graph__node--immediate-descendant {
         animation: none;
     }
 
-    .recipe-version-graph__node--direct-ancestor {
+    .recipe-version-graph__node--ancestor {
         background: color-mix(in srgb, #5573a8 16%, var(--surface));
     }
 
@@ -2938,7 +2972,7 @@ a:hover {
         background: color-mix(in srgb, var(--warning) 18%, var(--surface));
     }
 
-    .dark .recipe-version-graph__node--direct-ancestor {
+    .dark .recipe-version-graph__node--ancestor {
         background: color-mix(in srgb, #8ba8db 20%, var(--surface));
     }
 }
