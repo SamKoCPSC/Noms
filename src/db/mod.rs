@@ -2876,6 +2876,145 @@ pub async fn get_all_image_urls(pool: &PgPool) -> Result<Vec<String>, DbError> {
     Ok(rows)
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
+pub struct OwnedImageReference {
+    pub owner_id: Uuid,
+    pub image_url: String,
+    /// True only for a server-created fork draft. Such a draft may retain the
+    /// canonical foreign objects copied from its source snapshot even after
+    /// the source recipe is deleted and its foreign key is set to NULL.
+    pub allows_inherited_owner: bool,
+}
+
+/// Get every retained media URL together with an owner authorized to reference it.
+///
+/// The orphan worker needs an authorized owner alongside each reference; a bare
+/// URL is insufficient proof that one user's document may retain another user's
+/// storage key. Drafts, immutable versions, collection covers, and inherited
+/// fork media all remain live references even when they are not in `recipes`.
+pub async fn get_all_owned_image_references(
+    pool: &PgPool,
+) -> Result<Vec<OwnedImageReference>, DbError> {
+    sqlx::query_as::<_, OwnedImageReference>(
+        "WITH RECURSIVE lineage_owners(
+             recipe_id, relationship_id, owner_id, visited, depth
+         ) AS (
+             SELECT COALESCE(forked_recipe_key, forked_recipe_id), id,
+                    original_owner_id, ARRAY[id], 1
+             FROM fork_relationships
+             WHERE COALESCE(forked_recipe_key, forked_recipe_id) IS NOT NULL
+               AND original_owner_id IS NOT NULL
+             UNION ALL
+             SELECT lineage_owners.recipe_id, parent.id, parent.original_owner_id,
+                    lineage_owners.visited || parent.id, lineage_owners.depth + 1
+             FROM lineage_owners
+             JOIN fork_relationships AS child
+               ON child.id = lineage_owners.relationship_id
+             JOIN fork_relationships AS parent
+               ON parent.id = child.parent_relationship_id
+             WHERE parent.original_owner_id IS NOT NULL
+               AND lineage_owners.depth < 32
+               AND NOT parent.id = ANY(lineage_owners.visited)
+         ),
+         recipe_owner_grants(recipe_id, owner_id) AS (
+             SELECT id, user_id FROM recipes
+             UNION
+             SELECT recipe_id, owner_id FROM lineage_owners
+         ),
+         draft_owner_grants(draft_id, owner_id) AS (
+             SELECT id, user_id FROM recipe_drafts
+             UNION
+             SELECT recipe_drafts.id, recipe_owner_grants.owner_id
+             FROM recipe_drafts
+             JOIN recipe_owner_grants
+               ON recipe_owner_grants.recipe_id = COALESCE(
+                    recipe_drafts.recipe_id,
+                    recipe_drafts.forked_from_recipe_id
+                  )
+         ),
+         recipe_documents(owner_id, images, instructions, allows_inherited_owner) AS (
+             SELECT recipe_owner_grants.owner_id, recipes.images, recipes.instructions, FALSE
+             FROM recipes
+             JOIN recipe_owner_grants ON recipe_owner_grants.recipe_id = recipes.id
+             UNION ALL
+             SELECT draft_owner_grants.owner_id,
+                    recipe_drafts.snapshot -> 'images',
+                    recipe_drafts.snapshot -> 'instructions',
+                    recipe_drafts.forked_from_version_number IS NOT NULL
+             FROM recipe_drafts
+             JOIN draft_owner_grants ON draft_owner_grants.draft_id = recipe_drafts.id
+             UNION ALL
+             SELECT recipe_owner_grants.owner_id,
+                    recipe_versions.snapshot -> 'images',
+                    recipe_versions.snapshot -> 'instructions',
+                    FALSE
+             FROM recipe_versions
+             JOIN recipe_owner_grants
+               ON recipe_owner_grants.recipe_id = recipe_versions.recipe_id
+         ),
+         step_entries(owner_id, step_entry, allows_inherited_owner) AS (
+             SELECT recipe_documents.owner_id, step_entry,
+                    recipe_documents.allows_inherited_owner
+             FROM recipe_documents
+             CROSS JOIN LATERAL jsonb_array_elements(instructions) AS step_entry
+             WHERE instructions IS NOT NULL
+               AND jsonb_typeof(instructions) = 'array'
+             UNION ALL
+             SELECT step_entries.owner_id, child_step,
+                    step_entries.allows_inherited_owner
+             FROM step_entries
+             CROSS JOIN LATERAL jsonb_array_elements(
+                 CASE
+                     WHEN jsonb_typeof(step_entry -> 'sub_steps') = 'array'
+                     THEN step_entry -> 'sub_steps'
+                     ELSE '[]'::jsonb
+                 END
+             ) AS child_step
+         ),
+         image_urls(owner_id, image_url, allows_inherited_owner) AS (
+             SELECT recipe_documents.owner_id, image_urls.image_url,
+                    recipe_documents.allows_inherited_owner
+             FROM recipe_documents
+             CROSS JOIN LATERAL jsonb_array_elements(images) AS image_entry
+             CROSS JOIN LATERAL (
+                 VALUES (image_entry ->> 'url'), (image_entry ->> 'thumb_url')
+             ) AS image_urls(image_url)
+             WHERE images IS NOT NULL
+                AND jsonb_array_length(images) > 0
+                AND jsonb_typeof(image_entry) = 'object'
+             UNION ALL
+             SELECT step_entries.owner_id, step_photo_urls.image_url,
+                    step_entries.allows_inherited_owner
+             FROM step_entries
+             CROSS JOIN LATERAL jsonb_array_elements(
+                 CASE
+                     WHEN jsonb_typeof(step_entry -> 'photos') = 'array'
+                     THEN step_entry -> 'photos'
+                     ELSE '[]'::jsonb
+                 END
+             ) AS step_photo
+             CROSS JOIN LATERAL (
+                 VALUES (step_photo ->> 'url'), (step_photo ->> 'thumb_url')
+             ) AS step_photo_urls(image_url)
+             WHERE jsonb_typeof(step_photo) = 'object'
+             UNION ALL
+             SELECT collections.owner_id, collection_image_urls.image_url, FALSE
+             FROM collections
+             CROSS JOIN LATERAL (
+                 VALUES (image ->> 'url'), (image ->> 'thumb_url')
+             ) AS collection_image_urls(image_url)
+             WHERE image IS NOT NULL
+               AND jsonb_typeof(image) = 'object'
+         )
+         SELECT DISTINCT owner_id, image_url, allows_inherited_owner
+         FROM image_urls
+         WHERE image_url IS NOT NULL AND image_url <> ''",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(DbError::Query)
+}
+
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -5463,6 +5602,100 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn owned_image_references_preserve_recipe_owner_for_nested_media() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let suffix = test_utils::uid();
+        let first_user = insert_user(
+            &pool,
+            &format!("owned_media_a_{suffix}"),
+            "Owned Media A",
+            &format!("owned-media-a-{suffix}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+        let second_user = insert_user(
+            &pool,
+            &format!("owned_media_b_{suffix}"),
+            "Owned Media B",
+            &format!("owned-media-b-{suffix}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+        let first_url = format!("https://cdn.example/recipes/{}/first.webp", first_user.id);
+        let nested_url = format!("https://cdn.example/recipes/{}/nested.webp", second_user.id);
+
+        insert_recipe(
+            &pool,
+            first_user.id,
+            "Top-level media",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            &[RecipeImage {
+                url: first_url.clone(),
+                thumb_url: None,
+                file_name: None,
+                file_size: None,
+                edits: Vec::new(),
+            }],
+            "private",
+        )
+        .await
+        .unwrap();
+        insert_recipe(
+            &pool,
+            second_user.id,
+            "Nested media",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[RecipeStep {
+                text: "parent".to_string(),
+                photos: Vec::new(),
+                sub_steps: vec![RecipeStep {
+                    text: "child".to_string(),
+                    photos: vec![RecipeImage {
+                        url: nested_url.clone(),
+                        thumb_url: None,
+                        file_name: None,
+                        file_size: None,
+                        edits: Vec::new(),
+                    }],
+                    sub_steps: Vec::new(),
+                }],
+            }],
+            &[],
+            &[],
+            "private",
+        )
+        .await
+        .unwrap();
+
+        let references = get_all_owned_image_references(&pool).await.unwrap();
+
+        assert!(references.iter().any(|reference| {
+            reference.owner_id == first_user.id
+                && reference.image_url == first_url
+                && !reference.allows_inherited_owner
+        }));
+        assert!(references.iter().any(|reference| {
+            reference.owner_id == second_user.id
+                && reference.image_url == nested_url
+                && !reference.allows_inherited_owner
+        }));
+    }
+
+    #[tokio::test]
     async fn test_get_all_image_urls_recipe_with_no_images() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let u = test_utils::uid();
@@ -5897,6 +6130,18 @@ mod tests {
         let urls = get_all_image_urls(&pool).await.unwrap();
         assert!(urls.contains(&cover.url));
         assert!(urls.contains(cover.thumb_url.as_ref().unwrap()));
+
+        let references = get_all_owned_image_references(&pool).await.unwrap();
+        assert!(references.iter().any(|reference| {
+            reference.owner_id == owner.id
+                && reference.image_url == cover.url
+                && !reference.allows_inherited_owner
+        }));
+        assert!(references.iter().any(|reference| {
+            reference.owner_id == owner.id
+                && reference.image_url == *cover.thumb_url.as_ref().unwrap()
+                && !reference.allows_inherited_owner
+        }));
 
         let updated = update_collection(
             &pool,

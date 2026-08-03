@@ -3936,5 +3936,149 @@ mod tests {
         assert!(urls.contains(&"https://cdn.test/historical_full.webp".to_string()));
         assert!(urls.contains(&"https://cdn.test/historical_thumb.webp".to_string()));
         assert!(urls.contains(&"https://cdn.test/draft_full.webp".to_string()));
+
+        let references = crate::db::get_all_owned_image_references(&pool)
+            .await
+            .unwrap();
+        for expected_url in [
+            "https://cdn.test/historical_full.webp",
+            "https://cdn.test/historical_thumb.webp",
+            "https://cdn.test/draft_full.webp",
+        ] {
+            assert!(references.iter().any(|reference| {
+                reference.owner_id == user.id
+                    && reference.image_url == expected_url
+                    && !reference.allows_inherited_owner
+            }));
+        }
+    }
+
+    #[tokio::test]
+    async fn orphan_reference_scan_preserves_fork_draft_media_after_source_is_deleted() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let source_owner = owner(&pool, "draft_image_source").await;
+        let fork_owner = owner(&pool, "draft_image_fork").await;
+        let object_id = Uuid::new_v4();
+        let storage = crate::storage::StorageClient::for_test();
+        let inherited_url = storage.object_url(&format!(
+            "recipes/{}/{object_id}_full.webp",
+            source_owner.id
+        ));
+
+        let mut source_snapshot = snapshot("Draft source", "public");
+        source_snapshot.images.push(crate::types::RecipeImage::new(
+            inherited_url.clone(),
+            None,
+            crate::types::RecipeImageEdit::default_rect_16x9(),
+        ));
+        let source = create_published_recipe(&pool, source_owner.id, &source_snapshot, None)
+            .await
+            .unwrap();
+        create_fork_draft(&pool, source.id, fork_owner.id, None)
+            .await
+            .unwrap();
+
+        sqlx::query("DELETE FROM recipes WHERE id = $1")
+            .bind(source.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let references = crate::db::get_all_owned_image_references(&pool)
+            .await
+            .unwrap();
+        assert!(references.iter().any(|reference| {
+            reference.owner_id == fork_owner.id
+                && reference.image_url == inherited_url
+                && reference.allows_inherited_owner
+        }));
+
+        let retained =
+            crate::worker::orphan_cleanup::collect_owned_recipe_keys(&storage, &references);
+        assert!(retained.contains(&format!(
+            "recipes/{}/{object_id}_full.webp",
+            source_owner.id
+        )));
+        assert!(retained.contains(&format!(
+            "recipes/{}/{object_id}_thumb.webp",
+            source_owner.id
+        )));
+    }
+
+    #[tokio::test]
+    async fn orphan_reference_scan_preserves_inherited_media_after_sources_are_deleted() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let root_owner = owner(&pool, "image_root").await;
+        let first_fork_owner = owner(&pool, "image_fork_one").await;
+        let second_fork_owner = owner(&pool, "image_fork_two").await;
+        let inherited_url = "https://cdn.test/inherited_full.webp".to_string();
+
+        let mut root_snapshot = snapshot("Root", "public");
+        root_snapshot.images.push(crate::types::RecipeImage::new(
+            inherited_url.clone(),
+            None,
+            crate::types::RecipeImageEdit::default_rect_16x9(),
+        ));
+        let root = create_published_recipe(&pool, root_owner.id, &root_snapshot, None)
+            .await
+            .unwrap();
+
+        let first_draft = create_fork_draft(&pool, root.id, first_fork_owner.id, None)
+            .await
+            .unwrap();
+        let mut first_payload = first_draft.decoded_snapshot().unwrap();
+        first_payload.title = "First fork".to_string();
+        update_recipe_draft(
+            &pool,
+            first_draft.id,
+            first_fork_owner.id,
+            first_draft.revision,
+            &first_payload,
+        )
+        .await
+        .unwrap();
+        let first_fork = publish_recipe_draft(&pool, first_draft.id, first_fork_owner.id, None)
+            .await
+            .unwrap();
+
+        let second_draft = create_fork_draft(&pool, first_fork.id, second_fork_owner.id, None)
+            .await
+            .unwrap();
+        let mut second_payload = second_draft.decoded_snapshot().unwrap();
+        second_payload.title = "Second fork".to_string();
+        update_recipe_draft(
+            &pool,
+            second_draft.id,
+            second_fork_owner.id,
+            second_draft.revision,
+            &second_payload,
+        )
+        .await
+        .unwrap();
+        let second_fork = publish_recipe_draft(&pool, second_draft.id, second_fork_owner.id, None)
+            .await
+            .unwrap();
+
+        sqlx::query("DELETE FROM recipes WHERE id = $1 OR id = $2")
+            .bind(root.id)
+            .bind(first_fork.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let references = crate::db::get_all_owned_image_references(&pool)
+            .await
+            .unwrap();
+        for expected_owner in [root_owner.id, first_fork_owner.id, second_fork_owner.id] {
+            assert!(references.iter().any(|reference| {
+                reference.owner_id == expected_owner
+                    && reference.image_url == inherited_url
+                    && !reference.allows_inherited_owner
+            }));
+        }
+        assert!(crate::db::get_recipe_by_id(&pool, second_fork.id)
+            .await
+            .unwrap()
+            .is_some());
     }
 }

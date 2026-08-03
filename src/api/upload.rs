@@ -138,12 +138,12 @@ pub async fn upload_image(
 
 /// Delete an image from S3 storage given its full URL.
 ///
-/// Derives the storage key by stripping the public URL prefix, then deletes
-/// both the full-size and thumbnail objects. Best-effort: if the full object
-/// is already gone, still attempts to delete the thumb.
+/// Parses the exact server-generated storage URL, then deletes both the
+/// full-size and thumbnail objects. Best-effort: if the full object is already
+/// gone, the thumbnail deletion is still attempted.
 ///
 /// Auth-gated: only the authenticated user can delete images. Ownership is
-/// enforced by verifying the key prefix matches `recipes/{user_id}/`.
+/// enforced by exact UUID namespace and filename validation.
 #[server]
 pub async fn delete_image(full_url: String) -> Result<(), ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
@@ -153,38 +153,36 @@ pub async fn delete_image(full_url: String) -> Result<(), ServerFnError> {
     let Some(storage) = crate::storage::try_get_storage_client() else {
         return Err(ServerFnError::new("Image storage is unavailable"));
     };
-    let public_url = storage.public_url().trim_end_matches('/');
-
-    // Extract storage key from full URL: strip public_url prefix
-    let full_key = full_url
-        .strip_prefix(public_url)
-        .ok_or_else(|| ServerFnError::new("Invalid image URL: does not match storage public URL"))?
-        .trim_start_matches('/')
-        .to_string();
-
-    // Ownership check: key must start with `recipes/{user_id}/`
-    let expected_prefix = format!("recipes/{user_id}/");
-    if !full_key.starts_with(&expected_prefix) {
-        return Err(ServerFnError::new(
-            "Access denied: image does not belong to this user",
-        ));
-    }
-
-    // Derive thumbnail key: replace `_full.webp` with `_thumb.webp`
-    let thumb_key = full_key
-        .strip_suffix("_full.webp")
-        .map(|base| format!("{base}_thumb.webp"))
-        .unwrap_or_else(|| full_key.clone());
+    let (full_key, thumb_key) = recipe_deletion_keys(&storage, user_id, &full_url)?;
 
     // Delete full-size object (best-effort: ignore "not found")
     let _ = storage.delete_object(&full_key).await;
 
     // Delete thumbnail object (best-effort: ignore "not found")
-    if thumb_key != full_key {
-        let _ = storage.delete_object(&thumb_key).await;
-    }
+    let _ = storage.delete_object(&thumb_key).await;
 
     Ok(())
+}
+
+#[cfg(feature = "server")]
+fn recipe_deletion_keys(
+    storage: &crate::storage::StorageClient,
+    owner_id: uuid::Uuid,
+    full_url: &str,
+) -> Result<(String, String), ServerFnError> {
+    let object = storage
+        .parse_media_url(full_url)
+        .map_err(ServerFnError::new)?;
+    if object.owner_id() != owner_id || object.kind() != crate::storage::MediaObjectKind::RecipeFull
+    {
+        return Err(ServerFnError::new(
+            "Access denied: image does not belong to this user",
+        ));
+    }
+    let thumbnail_key = object
+        .paired_thumbnail_key()
+        .ok_or_else(|| ServerFnError::new("Invalid full-size recipe image URL"))?;
+    Ok((object.key().to_string(), thumbnail_key))
 }
 
 // -- Axum Handler (for direct API / fetch access) --
@@ -976,6 +974,35 @@ mod tests {
             "thumb_url should contain '_thumb.webp', got: {}",
             thumb_url
         );
+    }
+
+    #[test]
+    fn direct_delete_requires_an_exact_owned_full_image_key() {
+        let owner_id = uuid::Uuid::new_v4();
+        let victim_id = uuid::Uuid::new_v4();
+        let object_id = uuid::Uuid::new_v4();
+        let storage = crate::storage::StorageClient::for_test();
+        let owned_url = storage.object_url(&format!("recipes/{owner_id}/{object_id}_full.webp"));
+
+        assert_eq!(
+            recipe_deletion_keys(&storage, owner_id, &owned_url).unwrap(),
+            (
+                format!("recipes/{owner_id}/{object_id}_full.webp"),
+                format!("recipes/{owner_id}/{object_id}_thumb.webp")
+            )
+        );
+
+        for unsafe_url in [
+            storage.object_url(&format!("recipes/{victim_id}/{object_id}_full.webp")),
+            storage.object_url(&format!("recipes/{owner_id}-suffix/{object_id}_full.webp")),
+            storage.object_url(&format!("recipes/{owner_id}/../{object_id}_full.webp")),
+            storage.object_url(&format!("avatars/{owner_id}/{object_id}.webp")),
+        ] {
+            assert!(
+                recipe_deletion_keys(&storage, owner_id, &unsafe_url).is_err(),
+                "unsafe direct deletion URL was accepted: {unsafe_url}"
+            );
+        }
     }
 }
 

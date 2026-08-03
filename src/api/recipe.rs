@@ -81,6 +81,38 @@ fn draft_to_view(
     })
 }
 
+#[cfg(feature = "server")]
+struct RecipeCreateInput {
+    title: String,
+    description: Option<String>,
+    commentary: Option<String>,
+    prep_time_minutes: Option<i32>,
+    cook_time_minutes: Option<i32>,
+    servings: Option<i32>,
+    ingredients: Vec<crate::types::RecipeIngredient>,
+    instructions: Vec<RecipeStep>,
+    equipment: Vec<crate::types::RecipeEquipment>,
+    images: Vec<RecipeImage>,
+    tags: Vec<String>,
+    visibility: String,
+}
+
+#[cfg(feature = "server")]
+struct RecipeUpdateInput {
+    title: Option<String>,
+    description: Option<String>,
+    commentary: Option<String>,
+    prep_time_minutes: Option<i32>,
+    cook_time_minutes: Option<i32>,
+    servings: Option<i32>,
+    ingredients: Option<Vec<crate::types::RecipeIngredient>>,
+    instructions: Option<Vec<RecipeStep>>,
+    equipment: Option<Vec<crate::types::RecipeEquipment>>,
+    images: Option<Vec<RecipeImage>>,
+    tags: Option<Vec<String>>,
+    visibility: Option<String>,
+}
+
 /// Create a new recipe for the authenticated user.
 ///
 /// Tags are inserted after the recipe is created.
@@ -104,31 +136,27 @@ pub async fn create_recipe(
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
     let pool = crate::db::get_pool();
-
-    let snapshot = crate::db::diff::RecipeSnapshot {
-        title,
-        description,
-        commentary,
-        prep_time_minutes,
-        cook_time_minutes,
-        servings,
-        ingredients,
-        instructions,
-        equipment,
-        images,
-        tags,
-    };
-    crate::db::create_published_recipe(
+    let storage = crate::storage::get_storage_client();
+    create_recipe_for_user(
         &pool,
+        &storage,
         user_id,
-        &crate::db::diff::RecipeDraftPayload {
-            content: snapshot,
-            initial_visibility: Some(visibility),
+        RecipeCreateInput {
+            title,
+            description,
+            commentary,
+            prep_time_minutes,
+            cook_time_minutes,
+            servings,
+            ingredients,
+            instructions,
+            equipment,
+            images,
+            tags,
+            visibility,
         },
-        None,
     )
     .await
-    .map_err(|e| ServerFnError::new(e.to_string()))
 }
 
 /// Get a recipe by ID. Two-phase access: ownership-gated first, then public/unlisted fallback.
@@ -178,56 +206,28 @@ pub async fn update_recipe(
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|e| ServerFnError::new(format!("Invalid recipe ID: {e}")))?;
     let pool = crate::db::get_pool();
-
-    // Capture the base before reading the denormalized current state. If a
-    // concurrent publish happens during the reads below, `publish_snapshot`
-    // rejects this update instead of labeling stale content with the newer base.
-    let latest = crate::db::get_latest_recipe_version(&pool, recipe_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
-    let current = crate::db::get_recipe_by_id_and_owner(&pool, recipe_id, user_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
-    let current_tags = crate::db::get_recipe_tags(&pool, recipe_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?
-        .into_iter()
-        .map(|tag| tag.tag)
-        .collect();
-    let mut snapshot = crate::db::diff::recipe_to_snapshot(&current, current_tags);
-    if let Some(title) = title {
-        snapshot.title = title;
-    }
-    snapshot.description = description;
-    snapshot.commentary = commentary;
-    snapshot.prep_time_minutes = prep_time_minutes;
-    snapshot.cook_time_minutes = cook_time_minutes;
-    snapshot.servings = servings;
-    if let Some(ingredients) = ingredients {
-        snapshot.ingredients = ingredients;
-    }
-    if let Some(instructions) = instructions {
-        snapshot.instructions = instructions;
-    }
-    if let Some(equipment) = equipment {
-        snapshot.equipment = equipment;
-    }
-    if let Some(images) = images {
-        snapshot.images = images;
-    }
-    if let Some(tags) = tags {
-        snapshot.tags = tags;
-    }
-    crate::db::publish_snapshot(
+    let storage = crate::storage::get_storage_client();
+    update_recipe_for_user(
         &pool,
-        recipe_id,
+        &storage,
         user_id,
-        latest.version_number,
-        &snapshot,
-        None,
+        recipe_id,
+        RecipeUpdateInput {
+            title,
+            description,
+            commentary,
+            prep_time_minutes,
+            cook_time_minutes,
+            servings,
+            ingredients,
+            instructions,
+            equipment,
+            images,
+            tags,
+            visibility: None,
+        },
     )
     .await
-    .map_err(|e| ServerFnError::new(e.to_string()))
 }
 
 /// Change recipe-level visibility without creating or publishing a content version.
@@ -254,6 +254,8 @@ pub async fn create_recipe_draft(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let storage = crate::storage::get_storage_client();
+    validate_recipe_media_references(&storage, user_id, &editor.images, &editor.instructions)?;
     let draft = crate::db::create_new_recipe_draft(
         &crate::db::get_pool(),
         user_id,
@@ -310,6 +312,21 @@ pub async fn save_recipe_draft(
     let current_draft = crate::db::get_recipe_draft(&crate::db::get_pool(), draft_id, user_id)
         .await
         .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let current_payload = current_draft
+        .decoded_snapshot()
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let allowed_urls = collect_recipe_media_urls(
+        &current_payload.content.images,
+        &current_payload.content.instructions,
+    );
+    let storage = crate::storage::get_storage_client();
+    validate_recipe_media_references_with_allowed(
+        &storage,
+        user_id,
+        &editor.images,
+        &editor.instructions,
+        &allowed_urls,
+    )?;
     let mut payload = editor_to_draft_payload(editor);
     if current_draft.recipe_id.is_some() {
         payload.initial_visibility = None;
@@ -348,7 +365,24 @@ pub async fn publish_recipe_draft(
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
     let draft_id = uuid::Uuid::parse_str(&draft_id)
         .map_err(|error| ServerFnError::new(format!("Invalid draft ID: {error}")))?;
-    crate::db::publish_recipe_draft(&crate::db::get_pool(), draft_id, user_id, notes.as_deref())
+    let pool = crate::db::get_pool();
+    let draft = crate::db::get_recipe_draft(&pool, draft_id, user_id)
+        .await
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let payload = draft
+        .decoded_snapshot()
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let allowed_urls =
+        collect_recipe_media_urls(&payload.content.images, &payload.content.instructions);
+    let storage = crate::storage::get_storage_client();
+    validate_recipe_media_references_with_allowed(
+        &storage,
+        user_id,
+        &payload.content.images,
+        &payload.content.instructions,
+        &allowed_urls,
+    )?;
+    crate::db::publish_recipe_draft(&pool, draft_id, user_id, notes.as_deref())
         .await
         .map_err(|e| ServerFnError::new(e.to_string()))
 }
@@ -898,14 +932,127 @@ pub async fn delete_recipe(recipe_id: String) -> Result<(), ServerFnError> {
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|e| ServerFnError::new(format!("Invalid recipe ID: {e}")))?;
     let pool = crate::db::get_pool();
+    let storage = crate::storage::get_storage_client();
+    delete_recipe_for_user(&pool, &storage, user_id, recipe_id).await
+}
 
+#[cfg(feature = "server")]
+async fn create_recipe_for_user(
+    pool: &sqlx::PgPool,
+    storage: &crate::storage::StorageClient,
+    user_id: uuid::Uuid,
+    input: RecipeCreateInput,
+) -> Result<crate::types::Recipe, ServerFnError> {
+    validate_recipe_media_references(storage, user_id, &input.images, &input.instructions)?;
+    crate::db::create_published_recipe(
+        pool,
+        user_id,
+        &crate::db::diff::RecipeDraftPayload {
+            initial_visibility: Some(input.visibility),
+            content: crate::db::diff::RecipeSnapshot {
+                title: input.title,
+                description: input.description,
+                commentary: input.commentary,
+                prep_time_minutes: input.prep_time_minutes,
+                cook_time_minutes: input.cook_time_minutes,
+                servings: input.servings,
+                ingredients: input.ingredients,
+                instructions: input.instructions,
+                equipment: input.equipment,
+                images: input.images,
+                tags: input.tags,
+            },
+        },
+        None,
+    )
+    .await
+    .map_err(|error| ServerFnError::new(error.to_string()))
+}
+
+#[cfg(feature = "server")]
+async fn update_recipe_for_user(
+    pool: &sqlx::PgPool,
+    storage: &crate::storage::StorageClient,
+    user_id: uuid::Uuid,
+    recipe_id: uuid::Uuid,
+    input: RecipeUpdateInput,
+) -> Result<crate::types::Recipe, ServerFnError> {
+    let latest = crate::db::get_latest_recipe_version(pool, recipe_id)
+        .await
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let current = crate::db::get_recipe_by_id_and_owner(pool, recipe_id, user_id)
+        .await
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let allowed_urls = collect_recipe_media_urls(&current.images, &current.instructions);
+    let current_tags = crate::db::get_recipe_tags(pool, recipe_id)
+        .await
+        .map_err(|error| ServerFnError::new(error.to_string()))?
+        .into_iter()
+        .map(|tag| tag.tag)
+        .collect();
+    let mut snapshot = crate::db::diff::recipe_to_snapshot(&current, current_tags);
+    if let Some(title) = input.title {
+        snapshot.title = title;
+    }
+    snapshot.description = input.description;
+    snapshot.commentary = input.commentary;
+    snapshot.prep_time_minutes = input.prep_time_minutes;
+    snapshot.cook_time_minutes = input.cook_time_minutes;
+    snapshot.servings = input.servings;
+    if let Some(ingredients) = input.ingredients {
+        snapshot.ingredients = ingredients;
+    }
+    if let Some(instructions) = input.instructions {
+        snapshot.instructions = instructions;
+    }
+    if let Some(equipment) = input.equipment {
+        snapshot.equipment = equipment;
+    }
+    if let Some(images) = input.images {
+        snapshot.images = images;
+    }
+    if let Some(tags) = input.tags {
+        snapshot.tags = tags;
+    }
+    validate_recipe_media_references_with_allowed(
+        storage,
+        user_id,
+        &snapshot.images,
+        &snapshot.instructions,
+        &allowed_urls,
+    )?;
+    let recipe = crate::db::publish_snapshot(
+        pool,
+        recipe_id,
+        user_id,
+        latest.version_number,
+        &snapshot,
+        None,
+    )
+    .await
+    .map_err(|error| ServerFnError::new(error.to_string()))?;
+    if let Some(visibility) = input.visibility {
+        return crate::db::update_recipe_visibility(pool, recipe_id, user_id, &visibility)
+            .await
+            .map_err(|error| ServerFnError::new(error.to_string()));
+    }
+    Ok(recipe)
+}
+
+#[cfg(feature = "server")]
+async fn delete_recipe_for_user(
+    pool: &sqlx::PgPool,
+    storage: &crate::storage::StorageClient,
+    user_id: uuid::Uuid,
+    recipe_id: uuid::Uuid,
+) -> Result<(), ServerFnError> {
     // Fetch recipe first to get images (ownership-gated)
-    let recipe = crate::db::get_recipe_by_id_and_owner(&pool, recipe_id, user_id)
+    let recipe = crate::db::get_recipe_by_id_and_owner(pool, recipe_id, user_id)
         .await
         .map_err(|e| ServerFnError::new(e.to_string()))?;
 
     // Delete from DB (enforces ownership via WHERE user_id = $2)
-    crate::db::delete_recipe(&pool, recipe_id, user_id)
+    crate::db::delete_recipe(pool, recipe_id, user_id)
         .await
         .map_err(|e| ServerFnError::new(e.to_string()))?;
 
@@ -914,22 +1061,19 @@ pub async fn delete_recipe(recipe_id: String) -> Result<(), ServerFnError> {
     // share object URLs with the source recipe.
     let step_photos = collect_step_photos(&recipe.instructions);
     if !recipe.images.is_empty() || !step_photos.is_empty() {
-        let retained_urls: HashSet<String> = match crate::db::get_all_image_urls(&pool).await {
+        let retained_urls: HashSet<String> = match crate::db::get_all_image_urls(pool).await {
             Ok(urls) => urls.into_iter().collect(),
             Err(error) => {
                 tracing::warn!(%error, "skipping recipe image cleanup because references could not be scanned");
                 return Ok(());
             }
         };
-        let storage = crate::storage::get_storage_client();
-        let public_url = storage.public_url().trim_end_matches('/');
-
         for image in &recipe.images {
-            delete_recipe_image_objects(&storage, public_url, image, &retained_urls).await;
+            delete_recipe_image_objects(storage, user_id, image, &retained_urls).await;
         }
 
         for image in step_photos {
-            delete_recipe_image_objects(&storage, public_url, &image, &retained_urls).await;
+            delete_recipe_image_objects(storage, user_id, &image, &retained_urls).await;
         }
     }
 
@@ -939,38 +1083,157 @@ pub async fn delete_recipe(recipe_id: String) -> Result<(), ServerFnError> {
 #[cfg(feature = "server")]
 async fn delete_recipe_image_objects(
     storage: &crate::storage::StorageClient,
-    public_url: &str,
+    owner_id: uuid::Uuid,
     image: &RecipeImage,
     retained_urls: &HashSet<String>,
 ) {
     if retained_urls.contains(&image.url) {
         return;
     }
-
-    let Some(full_key) = image
-        .url
-        .strip_prefix(public_url)
-        .map(|s| s.trim_start_matches('/'))
-    else {
+    let object = match storage.parse_media_url(&image.url) {
+        Ok(object) => object,
+        Err(error) => {
+            tracing::warn!(
+                owner_id = %owner_id,
+                error = %error,
+                "Skipping unverified recipe media during deletion"
+            );
+            return;
+        }
+    };
+    if object.owner_id() != owner_id || object.kind() != crate::storage::MediaObjectKind::RecipeFull
+    {
+        tracing::warn!(
+            owner_id = %owner_id,
+            object_owner_id = %object.owner_id(),
+            object_key = %object.key(),
+            "Skipping foreign or non-recipe media during recipe deletion"
+        );
         return;
-    };
-
-    let _ = storage.delete_object(full_key).await;
-
-    let thumb_key = if let Some(thumb_url) = image.thumb_url.as_deref() {
-        (!retained_urls.contains(thumb_url))
-            .then(|| thumb_url.strip_prefix(public_url))
-            .flatten()
-            .map(|s| s.trim_start_matches('/').to_string())
-    } else {
-        full_key
-            .strip_suffix("_full.webp")
-            .map(|base| format!("{base}_thumb.webp"))
-    };
-
-    if let Some(thumb_key) = thumb_key {
-        let _ = storage.delete_object(&thumb_key).await;
     }
+    let _ = storage.delete_object(object.key()).await;
+    let thumbnail_is_retained = image
+        .thumb_url
+        .as_ref()
+        .is_some_and(|url| retained_urls.contains(url));
+    if !thumbnail_is_retained {
+        if let Some(thumb_key) = object.paired_thumbnail_key() {
+            let _ = storage.delete_object(&thumb_key).await;
+        }
+    }
+}
+
+#[cfg(feature = "server")]
+fn validate_recipe_media_references(
+    storage: &crate::storage::StorageClient,
+    owner_id: uuid::Uuid,
+    images: &[RecipeImage],
+    instructions: &[RecipeStep],
+) -> Result<(), ServerFnError> {
+    validate_recipe_media_references_with_allowed(
+        storage,
+        owner_id,
+        images,
+        instructions,
+        &HashSet::new(),
+    )
+}
+
+#[cfg(feature = "server")]
+fn validate_recipe_media_references_with_allowed(
+    storage: &crate::storage::StorageClient,
+    owner_id: uuid::Uuid,
+    images: &[RecipeImage],
+    instructions: &[RecipeStep],
+    allowed_internal_urls: &HashSet<String>,
+) -> Result<(), ServerFnError> {
+    for image in images {
+        validate_recipe_image(storage, owner_id, image, allowed_internal_urls)?;
+    }
+    for step in instructions {
+        for image in &step.photos {
+            validate_recipe_image(storage, owner_id, image, allowed_internal_urls)?;
+        }
+        validate_recipe_media_references_with_allowed(
+            storage,
+            owner_id,
+            &[],
+            &step.sub_steps,
+            allowed_internal_urls,
+        )?;
+    }
+    Ok(())
+}
+
+#[cfg(feature = "server")]
+fn validate_recipe_image(
+    storage: &crate::storage::StorageClient,
+    owner_id: uuid::Uuid,
+    image: &RecipeImage,
+    allowed_internal_urls: &HashSet<String>,
+) -> Result<(), ServerFnError> {
+    use crate::storage::{MediaObjectKind, MediaUrl};
+
+    match storage
+        .classify_media_url(&image.url)
+        .map_err(ServerFnError::new)?
+    {
+        MediaUrl::Internal(full) => {
+            if full.kind() != MediaObjectKind::RecipeFull
+                || (full.owner_id() != owner_id && !allowed_internal_urls.contains(&image.url))
+            {
+                return Err(ServerFnError::new(
+                    "Recipe media must be an owned full-size recipe object",
+                ));
+            }
+            if let Some(thumb_url) = image.thumb_url.as_deref() {
+                let thumb = storage
+                    .parse_media_url(thumb_url)
+                    .map_err(ServerFnError::new)?;
+                if thumb.owner_id() != owner_id && !allowed_internal_urls.contains(thumb_url)
+                    || thumb.kind() != MediaObjectKind::RecipeThumbnail
+                    || thumb.owner_id() != full.owner_id()
+                    || thumb.object_id() != full.object_id()
+                {
+                    return Err(ServerFnError::new(
+                        "Recipe thumbnail must match its owned full-size object",
+                    ));
+                }
+            }
+        }
+        MediaUrl::ExternalHttps => {
+            if let Some(thumb_url) = image.thumb_url.as_deref() {
+                if storage
+                    .classify_media_url(thumb_url)
+                    .map_err(ServerFnError::new)?
+                    != MediaUrl::ExternalHttps
+                {
+                    return Err(ServerFnError::new(
+                        "External recipe media must use an external HTTPS thumbnail",
+                    ));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(feature = "server")]
+fn collect_recipe_media_urls(
+    images: &[RecipeImage],
+    instructions: &[RecipeStep],
+) -> HashSet<String> {
+    let mut urls = HashSet::new();
+    for image in images {
+        urls.insert(image.url.clone());
+        if let Some(thumb_url) = &image.thumb_url {
+            urls.insert(thumb_url.clone());
+        }
+    }
+    for step in instructions {
+        urls.extend(collect_recipe_media_urls(&step.photos, &step.sub_steps));
+    }
+    urls
 }
 
 #[cfg(feature = "server")]
@@ -1348,5 +1611,312 @@ mod version_graph_tests {
             Some(another_user_id)
         ));
         assert!(viewer_may_read_recipe("private", owner_id, Some(owner_id)));
+    }
+}
+
+#[cfg(all(feature = "server", test))]
+mod media_ownership_tests {
+    use super::*;
+
+    fn image(url: String, thumb_url: Option<String>) -> RecipeImage {
+        RecipeImage {
+            url,
+            thumb_url,
+            file_name: None,
+            file_size: None,
+            edits: Vec::new(),
+        }
+    }
+
+    fn test_storage(endpoint: &str) -> crate::storage::StorageClient {
+        crate::storage::StorageClient::for_test_with_endpoint_and_public_url(
+            endpoint,
+            "https://cdn.example.com/media",
+        )
+    }
+
+    async fn create_test_user(pool: &sqlx::PgPool, label: &str) -> crate::db::User {
+        let unique = crate::test_utils::uid();
+        crate::db::insert_user(
+            pool,
+            &format!("{label}_{unique}"),
+            label,
+            &format!("{label}_{unique}@example.com"),
+            None,
+        )
+        .await
+        .expect("test user should be created")
+    }
+
+    fn create_input(images: Vec<RecipeImage>, instructions: Vec<RecipeStep>) -> RecipeCreateInput {
+        RecipeCreateInput {
+            title: "Ownership test".to_string(),
+            description: None,
+            commentary: None,
+            prep_time_minutes: None,
+            cook_time_minutes: None,
+            servings: None,
+            ingredients: Vec::new(),
+            instructions,
+            equipment: Vec::new(),
+            images,
+            tags: Vec::new(),
+            visibility: "private".to_string(),
+        }
+    }
+
+    fn update_input(images: Vec<RecipeImage>, instructions: Vec<RecipeStep>) -> RecipeUpdateInput {
+        RecipeUpdateInput {
+            title: Some("Changed title".to_string()),
+            description: None,
+            commentary: None,
+            prep_time_minutes: None,
+            cook_time_minutes: None,
+            servings: None,
+            ingredients: Some(Vec::new()),
+            instructions: Some(instructions),
+            equipment: Some(Vec::new()),
+            images: Some(images),
+            tags: None,
+            visibility: Some("private".to_string()),
+        }
+    }
+
+    #[test]
+    fn recipe_media_rejects_foreign_recipe_and_avatar_objects_at_any_depth() {
+        let owner_id = uuid::Uuid::new_v4();
+        let victim_id = uuid::Uuid::new_v4();
+        let victim_recipe_object = uuid::Uuid::new_v4();
+        let victim_avatar_object = uuid::Uuid::new_v4();
+        let storage = test_storage("http://127.0.0.1:9");
+
+        let victim_recipe = image(
+            storage.object_url(&format!(
+                "recipes/{victim_id}/{victim_recipe_object}_full.webp"
+            )),
+            Some(storage.object_url(&format!(
+                "recipes/{victim_id}/{victim_recipe_object}_thumb.webp"
+            ))),
+        );
+        let victim_avatar = image(
+            storage.object_url(&format!("avatars/{victim_id}/{victim_avatar_object}.webp")),
+            None,
+        );
+        let owner_recipe_object = uuid::Uuid::new_v4();
+        let mismatched_thumbnail_object = uuid::Uuid::new_v4();
+        let mismatched_pair = image(
+            storage.object_url(&format!(
+                "recipes/{owner_id}/{owner_recipe_object}_full.webp"
+            )),
+            Some(storage.object_url(&format!(
+                "recipes/{owner_id}/{mismatched_thumbnail_object}_thumb.webp"
+            ))),
+        );
+        let nested_steps = vec![RecipeStep {
+            text: "parent".to_string(),
+            photos: Vec::new(),
+            sub_steps: vec![RecipeStep {
+                text: "child".to_string(),
+                photos: vec![victim_avatar],
+                sub_steps: Vec::new(),
+            }],
+        }];
+
+        assert!(
+            validate_recipe_media_references(&storage, owner_id, &[victim_recipe], &[]).is_err()
+        );
+        assert!(
+            validate_recipe_media_references(&storage, owner_id, &[mismatched_pair], &[]).is_err()
+        );
+        assert!(validate_recipe_media_references(&storage, owner_id, &[], &nested_steps).is_err());
+    }
+
+    #[test]
+    fn recipe_media_accepts_owned_pairs_and_external_https_urls() {
+        let owner_id = uuid::Uuid::new_v4();
+        let object_id = uuid::Uuid::new_v4();
+        let storage = test_storage("http://127.0.0.1:9");
+        let owned = image(
+            storage.object_url(&format!("recipes/{owner_id}/{object_id}_full.webp")),
+            Some(storage.object_url(&format!("recipes/{owner_id}/{object_id}_thumb.webp"))),
+        );
+        let external = image(
+            "https://images.example.net/recipe.webp".to_string(),
+            Some("https://images.example.net/recipe-thumb.webp".to_string()),
+        );
+
+        validate_recipe_media_references(&storage, owner_id, &[owned, external], &[])
+            .expect("owned and external HTTPS media should remain supported");
+    }
+
+    #[tokio::test]
+    async fn create_rejects_foreign_media_without_database_change() {
+        let (_database, pool) = crate::test_utils::setup_test_db().await;
+        let owner = create_test_user(&pool, "media_owner").await;
+        let victim = create_test_user(&pool, "media_victim").await;
+        let object_id = uuid::Uuid::new_v4();
+        let storage = test_storage("http://127.0.0.1:9");
+        let foreign = image(
+            storage.object_url(&format!("recipes/{}/{object_id}_full.webp", victim.id)),
+            None,
+        );
+
+        let result = create_recipe_for_user(
+            &pool,
+            &storage,
+            owner.id,
+            create_input(vec![foreign], Vec::new()),
+        )
+        .await;
+
+        assert!(result.is_err());
+        assert_eq!(
+            crate::db::count_recipes_by_owner(&pool, owner.id)
+                .await
+                .unwrap(),
+            0
+        );
+    }
+
+    #[tokio::test]
+    async fn update_rejects_nested_foreign_media_without_database_change() {
+        let (_database, pool) = crate::test_utils::setup_test_db().await;
+        let owner = create_test_user(&pool, "update_owner").await;
+        let victim = create_test_user(&pool, "update_victim").await;
+        let storage = test_storage("http://127.0.0.1:9");
+        let original = crate::db::insert_recipe(
+            &pool,
+            owner.id,
+            "Original title",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            &[],
+            "private",
+        )
+        .await
+        .unwrap();
+        let victim_object = uuid::Uuid::new_v4();
+        let nested_steps = vec![RecipeStep {
+            text: "parent".to_string(),
+            photos: Vec::new(),
+            sub_steps: vec![RecipeStep {
+                text: "child".to_string(),
+                photos: vec![image(
+                    storage.object_url(&format!("recipes/{}/{victim_object}_full.webp", victim.id)),
+                    None,
+                )],
+                sub_steps: Vec::new(),
+            }],
+        }];
+
+        let result = update_recipe_for_user(
+            &pool,
+            &storage,
+            owner.id,
+            original.id,
+            update_input(Vec::new(), nested_steps),
+        )
+        .await;
+
+        assert!(result.is_err());
+        let unchanged = crate::db::get_recipe_by_id_and_owner(&pool, original.id, owner.id)
+            .await
+            .unwrap();
+        assert_eq!(unchanged.title, "Original title");
+        assert!(unchanged.instructions.is_empty());
+    }
+
+    #[tokio::test]
+    async fn deletion_sends_only_exact_owned_recipe_keys_to_storage() {
+        let owner_id = uuid::Uuid::new_v4();
+        let victim_id = uuid::Uuid::new_v4();
+        let owned_object = uuid::Uuid::new_v4();
+        let victim_object = uuid::Uuid::new_v4();
+        let mock_server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("DELETE"))
+            .respond_with(wiremock::ResponseTemplate::new(204))
+            .expect(2)
+            .mount(&mock_server)
+            .await;
+        let storage = test_storage(&mock_server.uri());
+
+        let owned = image(
+            storage.object_url(&format!("recipes/{owner_id}/{owned_object}_full.webp")),
+            Some(storage.object_url(&format!("recipes/{owner_id}/{owned_object}_thumb.webp"))),
+        );
+        let victim = image(
+            storage.object_url(&format!("recipes/{victim_id}/{victim_object}_full.webp")),
+            Some(storage.object_url(&format!("recipes/{victim_id}/{victim_object}_thumb.webp"))),
+        );
+        let external = image("https://images.example.net/recipe.webp".to_string(), None);
+
+        let retained_urls = HashSet::new();
+        delete_recipe_image_objects(&storage, owner_id, &victim, &retained_urls).await;
+        delete_recipe_image_objects(&storage, owner_id, &external, &retained_urls).await;
+        delete_recipe_image_objects(&storage, owner_id, &owned, &retained_urls).await;
+
+        let requests = mock_server.received_requests().await.unwrap();
+        let deleted_paths: Vec<_> = requests
+            .iter()
+            .map(|request| request.url.path().to_string())
+            .collect();
+        assert_eq!(requests.len(), 2);
+        assert!(deleted_paths
+            .iter()
+            .any(|path| path.ends_with(&format!("/{owned_object}_full.webp"))));
+        assert!(deleted_paths
+            .iter()
+            .any(|path| path.ends_with(&format!("/{owned_object}_thumb.webp"))));
+        assert!(deleted_paths
+            .iter()
+            .all(|path| !path.contains(&victim_id.to_string())));
+    }
+
+    #[tokio::test]
+    async fn deleting_legacy_recipe_skips_foreign_objects_but_removes_database_row() {
+        let (_database, pool) = crate::test_utils::setup_test_db().await;
+        let owner = create_test_user(&pool, "delete_owner").await;
+        let victim = create_test_user(&pool, "delete_victim").await;
+        let victim_object = uuid::Uuid::new_v4();
+        let mock_server = wiremock::MockServer::start().await;
+        let storage = test_storage(&mock_server.uri());
+        let foreign = image(
+            storage.object_url(&format!("recipes/{}/{victim_object}_full.webp", victim.id)),
+            Some(storage.object_url(&format!("recipes/{}/{victim_object}_thumb.webp", victim.id))),
+        );
+        let recipe = crate::db::insert_recipe(
+            &pool,
+            owner.id,
+            "Legacy foreign reference",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            &[foreign],
+            "private",
+        )
+        .await
+        .unwrap();
+
+        delete_recipe_for_user(&pool, &storage, owner.id, recipe.id)
+            .await
+            .expect("recipe deletion should proceed");
+
+        assert!(
+            crate::db::get_recipe_by_id_and_owner(&pool, recipe.id, owner.id)
+                .await
+                .is_err()
+        );
+        assert!(mock_server.received_requests().await.unwrap().is_empty());
     }
 }

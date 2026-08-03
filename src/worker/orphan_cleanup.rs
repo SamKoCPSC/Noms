@@ -69,27 +69,14 @@ pub async fn run_cleanup(
     pool: &PgPool,
     storage: &StorageClient,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // 1. Get all referenced image URLs from DB
-    let db_urls = db::get_all_image_urls(pool)
+    // 1. Get every image URL together with its authorized owner context.
+    let db_references = db::get_all_owned_image_references(pool)
         .await
         .map_err(|e| format!("Failed to query image URLs from DB: {e}"))?;
 
-    // 2. Build set of referenced storage keys
-    let public_url = storage.public_url().trim_end_matches('/');
-    let mut referenced_keys = HashSet::new();
-    for url in &db_urls {
-        if let Some(key) = url
-            .strip_prefix(public_url)
-            .map(|s| s.trim_start_matches('/'))
-        {
-            referenced_keys.insert(key.to_string());
-            // Also mark the derived thumbnail key as referenced so it isn't
-            // deleted as an orphan (the DB stores only _full.webp URLs).
-            if let Some(base) = key.strip_suffix("_full.webp") {
-                referenced_keys.insert(format!("{base}_thumb.webp"));
-            }
-        }
-    }
+    // 2. Retain only canonical recipe keys whose embedded owner matches the
+    // recipe owner. A foreign URL in recipe JSON is not a retention grant.
+    let referenced_keys = collect_owned_recipe_keys(storage, &db_references);
 
     // 3. List all objects in storage (recipes/ prefix)
     let all_keys = storage
@@ -111,7 +98,7 @@ pub async fn run_cleanup(
     }
 
     info!(
-        objects_in_db = db_urls.len(),
+        objects_in_db = db_references.len(),
         objects_in_storage = all_keys.len(),
         orphans_deleted = deleted_count,
         "Orphan cleanup cycle complete"
@@ -119,9 +106,49 @@ pub async fn run_cleanup(
     Ok(())
 }
 
+pub(crate) fn collect_owned_recipe_keys(
+    storage: &StorageClient,
+    references: &[db::OwnedImageReference],
+) -> HashSet<String> {
+    let mut keys = HashSet::new();
+    for reference in references {
+        let Ok(object) = storage.parse_media_url(&reference.image_url) else {
+            continue;
+        };
+        // Only server-created fork drafts carry this exception. Their source
+        // URLs are copied by the server, and autosave rejects any new foreign
+        // internal URL, so the embedded object owner remains authoritative if
+        // the source recipe is deleted before the draft is published.
+        if object.owner_id() != reference.owner_id && !reference.allows_inherited_owner {
+            continue;
+        }
+        match object.kind() {
+            crate::storage::MediaObjectKind::RecipeFull => {
+                keys.insert(object.key().to_string());
+                if let Some(thumbnail_key) = object.paired_thumbnail_key() {
+                    keys.insert(thumbnail_key);
+                }
+            }
+            crate::storage::MediaObjectKind::RecipeThumbnail => {
+                keys.insert(object.key().to_string());
+            }
+            _ => {}
+        }
+    }
+    keys
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn owned_reference(owner_id: uuid::Uuid, image_url: String) -> db::OwnedImageReference {
+        db::OwnedImageReference {
+            owner_id,
+            image_url,
+            allows_inherited_owner: false,
+        }
+    }
 
     #[test]
     fn test_orphan_cleanup_config_default() {
@@ -143,73 +170,85 @@ mod tests {
 
     #[test]
     fn test_thumbnail_keys_derived_from_full_keys() {
-        // Simulate the key derivation that happens inside run_cleanup:
-        // for every "_full.webp" key, the corresponding "_thumb.webp" is
-        // also added to referenced_keys so thumbnails aren't deleted.
-        let public_url = "https://cdn.example.com";
-        let db_urls = vec![
-            format!("{public_url}/recipes/user1/abc123_full.webp"),
-            format!("{public_url}/recipes/user2/def456_full.webp"),
+        let first_owner = uuid::Uuid::new_v4();
+        let second_owner = uuid::Uuid::new_v4();
+        let first_object = uuid::Uuid::new_v4();
+        let second_object = uuid::Uuid::new_v4();
+        let storage = crate::storage::StorageClient::for_test();
+        let references = vec![
+            owned_reference(
+                first_owner,
+                storage.object_url(&format!("recipes/{first_owner}/{first_object}_full.webp")),
+            ),
+            owned_reference(
+                second_owner,
+                storage.object_url(&format!("recipes/{second_owner}/{second_object}_full.webp")),
+            ),
         ];
 
-        let mut referenced_keys = HashSet::new();
-        for url in &db_urls {
-            if let Some(key) = url
-                .strip_prefix(public_url)
-                .map(|s| s.trim_start_matches('/'))
-            {
-                referenced_keys.insert(key.to_string());
-                if let Some(base) = key.strip_suffix("_full.webp") {
-                    referenced_keys.insert(format!("{base}_thumb.webp"));
-                }
-            }
-        }
+        let referenced_keys = collect_owned_recipe_keys(&storage, &references);
 
         // Full keys are present
-        assert!(referenced_keys.contains("recipes/user1/abc123_full.webp"));
-        assert!(referenced_keys.contains("recipes/user2/def456_full.webp"));
+        assert!(
+            referenced_keys.contains(&format!("recipes/{first_owner}/{first_object}_full.webp"))
+        );
+        assert!(
+            referenced_keys.contains(&format!("recipes/{second_owner}/{second_object}_full.webp"))
+        );
 
         // Derived thumbnail keys are also present
-        assert!(referenced_keys.contains("recipes/user1/abc123_thumb.webp"));
-        assert!(referenced_keys.contains("recipes/user2/def456_thumb.webp"));
-
-        // A genuine orphan (not matching any full or thumb) is not referenced
-        assert!(!referenced_keys.contains("recipes/user3/orphan_full.webp"));
-        assert!(!referenced_keys.contains("recipes/user3/orphan_thumb.webp"));
-
-        // A non-image object is not referenced
-        assert!(!referenced_keys.contains("recipes/user1/some_other_file.txt"));
+        assert!(
+            referenced_keys.contains(&format!("recipes/{first_owner}/{first_object}_thumb.webp"))
+        );
+        assert!(referenced_keys.contains(&format!(
+            "recipes/{second_owner}/{second_object}_thumb.webp"
+        )));
+        assert_eq!(referenced_keys.len(), 4);
     }
 
     #[test]
-    fn test_thumbnail_derivation_ignores_non_full_keys() {
-        // Keys that don't end with "_full.webp" should not produce spurious
-        // thumbnail entries.
-        let public_url = "https://cdn.example.com";
-        let db_urls = vec![
-            // This one has no _full suffix — no thumb should be derived
-            format!("{public_url}/recipes/user1/legacy_image.webp"),
-            // This one is a full key — thumb should be derived
-            format!("{public_url}/recipes/user1/abc123_full.webp"),
+    fn noncanonical_recipe_keys_are_not_retained() {
+        let owner_id = uuid::Uuid::new_v4();
+        let storage = crate::storage::StorageClient::for_test();
+        let references = vec![owned_reference(
+            owner_id,
+            storage.object_url(&format!("recipes/{owner_id}/legacy_image.webp")),
+        )];
+
+        assert!(collect_owned_recipe_keys(&storage, &references).is_empty());
+    }
+
+    #[test]
+    fn foreign_or_malformed_recipe_references_do_not_retain_objects() {
+        let owner_id = uuid::Uuid::new_v4();
+        let victim_id = uuid::Uuid::new_v4();
+        let owned_object = uuid::Uuid::new_v4();
+        let victim_object = uuid::Uuid::new_v4();
+        let storage = crate::storage::StorageClient::for_test();
+        let references = vec![
+            owned_reference(
+                owner_id,
+                storage.object_url(&format!("recipes/{owner_id}/{owned_object}_full.webp")),
+            ),
+            owned_reference(
+                owner_id,
+                storage.object_url(&format!("recipes/{victim_id}/{victim_object}_full.webp")),
+            ),
+            owned_reference(
+                owner_id,
+                storage.object_url(&format!(
+                    "recipes/{owner_id}-suffix/{victim_object}_full.webp"
+                )),
+            ),
         ];
 
-        let mut referenced_keys = HashSet::new();
-        for url in &db_urls {
-            if let Some(key) = url
-                .strip_prefix(public_url)
-                .map(|s| s.trim_start_matches('/'))
-            {
-                referenced_keys.insert(key.to_string());
-                if let Some(base) = key.strip_suffix("_full.webp") {
-                    referenced_keys.insert(format!("{base}_thumb.webp"));
-                }
-            }
-        }
+        let referenced_keys = collect_owned_recipe_keys(&storage, &references);
 
-        assert!(referenced_keys.contains("recipes/user1/legacy_image.webp"));
-        // No spurious thumb for the legacy key
-        assert!(!referenced_keys.contains("recipes/user1/legacy_image_thumb.webp"));
-        // Thumb for the full key is present
-        assert!(referenced_keys.contains("recipes/user1/abc123_thumb.webp"));
+        assert!(referenced_keys.contains(&format!("recipes/{owner_id}/{owned_object}_full.webp")));
+        assert!(referenced_keys.contains(&format!("recipes/{owner_id}/{owned_object}_thumb.webp")));
+        assert!(referenced_keys
+            .iter()
+            .all(|key| !key.contains(&victim_id.to_string())));
+        assert_eq!(referenced_keys.len(), 2);
     }
 }

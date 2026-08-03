@@ -265,33 +265,15 @@ pub async fn upload_avatar(
         }
     };
 
-    // Delete old avatar from storage (best-effort)
-    if let Some(ref old_url) = current_user.avatar_url {
-        let public_base = storage.public_url().trim_end_matches('/');
-        if let Some(old_key) = old_url
-            .strip_prefix(public_base)
-            .map(|s| s.trim_start_matches('/'))
-        {
-            let _ = storage.delete_object(old_key).await;
-            // Also try to delete old thumbnail
-            if let Some(old_base) = old_key.strip_suffix(".webp") {
-                let _ = storage
-                    .delete_object(&format!("{}-thumb.webp", old_base))
-                    .await;
-            }
-        }
-    }
-    if let Some(old_original_url) = previous_original {
-        if old_original_url != original_url {
-            let public_base = storage.public_url().trim_end_matches('/');
-            if let Some(old_key) = old_original_url
-                .strip_prefix(public_base)
-                .map(|value| value.trim_start_matches('/'))
-            {
-                let _ = storage.delete_object(old_key).await;
-            }
-        }
-    }
+    // Stored URLs are legacy/user-influenced data, so cleanup requires exact
+    // typed ownership proof even though failures remain best-effort.
+    delete_owned_avatar_objects(
+        &storage,
+        user_id,
+        current_user.avatar_url.as_deref(),
+        previous_original.as_deref(),
+    )
+    .await;
 
     Ok(UserProfile {
         id: updated.id,
@@ -368,31 +350,14 @@ pub async fn remove_avatar() -> Result<UserProfile, ServerFnError> {
         .await
         .map_err(|e| ServerFnError::new(format!("Failed to remove avatar: {e}")))?;
 
-    // Delete old avatar from storage only after the database commit succeeds.
-    if let Some(ref old_url) = current_user.avatar_url {
-        let public_base = storage.public_url().trim_end_matches('/');
-        if let Some(old_key) = old_url
-            .strip_prefix(public_base)
-            .map(|s| s.trim_start_matches('/'))
-        {
-            let _ = storage.delete_object(old_key).await;
-            // Also try to delete old thumbnail
-            if let Some(old_base) = old_key.strip_suffix(".webp") {
-                let _ = storage
-                    .delete_object(&format!("{}-thumb.webp", old_base))
-                    .await;
-            }
-        }
-    }
-    if let Some(original_url) = original_url {
-        let public_base = storage.public_url().trim_end_matches('/');
-        if let Some(original_key) = original_url
-            .strip_prefix(public_base)
-            .map(|value| value.trim_start_matches('/'))
-        {
-            let _ = storage.delete_object(original_key).await;
-        }
-    }
+    // Delete old avatar objects only after the database update succeeds.
+    delete_owned_avatar_objects(
+        &storage,
+        user_id,
+        current_user.avatar_url.as_deref(),
+        original_url.as_deref(),
+    )
+    .await;
 
     Ok(UserProfile {
         id: updated.id,
@@ -402,6 +367,69 @@ pub async fn remove_avatar() -> Result<UserProfile, ServerFnError> {
         avatar_url: updated.avatar_url,
         bio: updated.bio,
     })
+}
+
+#[cfg(feature = "server")]
+async fn delete_owned_avatar_objects(
+    storage: &crate::storage::StorageClient,
+    owner_id: uuid::Uuid,
+    avatar_url: Option<&str>,
+    original_url: Option<&str>,
+) {
+    if let Some(avatar_url) = avatar_url {
+        match storage.parse_media_url(avatar_url) {
+            Ok(object)
+                if object.owner_id() == owner_id
+                    && object.kind() == crate::storage::MediaObjectKind::AvatarFull =>
+            {
+                let _ = storage.delete_object(object.key()).await;
+                if let Some(thumbnail_key) = object.paired_thumbnail_key() {
+                    let _ = storage.delete_object(&thumbnail_key).await;
+                }
+            }
+            Ok(object) => {
+                tracing::warn!(
+                    owner_id = %owner_id,
+                    object_owner_id = %object.owner_id(),
+                    object_key = %object.key(),
+                    "Skipping foreign or non-avatar media during avatar cleanup"
+                );
+            }
+            Err(error) => {
+                tracing::warn!(
+                    owner_id = %owner_id,
+                    error = %error,
+                    "Skipping unverified avatar media during cleanup"
+                );
+            }
+        }
+    }
+
+    if let Some(original_url) = original_url {
+        match storage.parse_media_url(original_url) {
+            Ok(object)
+                if object.owner_id() == owner_id
+                    && object.kind() == crate::storage::MediaObjectKind::AvatarOriginal =>
+            {
+                let _ = storage.delete_object(object.key()).await;
+            }
+            Ok(object) => {
+                tracing::warn!(
+                    owner_id = %owner_id,
+                    object_owner_id = %object.owner_id(),
+                    object_key = %object.key(),
+                    "Skipping foreign or non-original media during avatar cleanup"
+                );
+            }
+            Err(error) => {
+                tracing::warn!(
+                    owner_id = %owner_id,
+                    error = %error,
+                    "Skipping unverified avatar original during cleanup"
+                );
+            }
+        }
+    }
 }
 
 /// Source rectangle in original-image pixels used when rendering an avatar.
@@ -1694,5 +1722,63 @@ pub fn SettingsProfile() -> Element {
             }
         }
         }
+    }
+}
+
+#[cfg(all(feature = "server", test))]
+mod avatar_media_ownership_tests {
+    use super::delete_owned_avatar_objects;
+
+    #[tokio::test]
+    async fn avatar_cleanup_deletes_only_exact_owned_avatar_keys() {
+        let owner_id = uuid::Uuid::new_v4();
+        let victim_id = uuid::Uuid::new_v4();
+        let owned_object = uuid::Uuid::new_v4();
+        let victim_object = uuid::Uuid::new_v4();
+        let mock_server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("DELETE"))
+            .respond_with(wiremock::ResponseTemplate::new(204))
+            .expect(3)
+            .mount(&mock_server)
+            .await;
+        let storage = crate::storage::StorageClient::for_test_with_endpoint_and_public_url(
+            &mock_server.uri(),
+            "https://cdn.example.com/media",
+        );
+        let owned_full = storage.object_url(&format!("avatars/{owner_id}/{owned_object}.webp"));
+        let owned_original =
+            storage.object_url(&format!("avatars/{owner_id}/{owned_object}-original"));
+        let victim_full = storage.object_url(&format!("avatars/{victim_id}/{victim_object}.webp"));
+        let victim_original =
+            storage.object_url(&format!("avatars/{victim_id}/{victim_object}-original"));
+
+        delete_owned_avatar_objects(
+            &storage,
+            owner_id,
+            Some(&victim_full),
+            Some(&victim_original),
+        )
+        .await;
+        delete_owned_avatar_objects(&storage, owner_id, Some(&owned_full), Some(&owned_original))
+            .await;
+
+        let requests = mock_server.received_requests().await.unwrap();
+        let deleted_paths: Vec<_> = requests
+            .iter()
+            .map(|request| request.url.path().to_string())
+            .collect();
+        assert_eq!(requests.len(), 3);
+        assert!(deleted_paths
+            .iter()
+            .any(|path| path.ends_with(&format!("/{owned_object}.webp"))));
+        assert!(deleted_paths
+            .iter()
+            .any(|path| path.ends_with(&format!("/{owned_object}-thumb.webp"))));
+        assert!(deleted_paths
+            .iter()
+            .any(|path| path.ends_with(&format!("/{owned_object}-original"))));
+        assert!(deleted_paths
+            .iter()
+            .all(|path| !path.contains(&victim_id.to_string())));
     }
 }
