@@ -2717,6 +2717,44 @@ a:hover {
         3px 4px 8px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
 }
 
+.recipe-version-graph__node--direct-ancestor {
+    border-color: #5573a8;
+    background: color-mix(in srgb, #5573a8 16%, var(--surface));
+    outline: 3px solid color-mix(in srgb, #5573a8 72%, transparent);
+    outline-offset: 3px;
+    animation: recipe-version-graph-direct-ancestor-breathe 2s ease-in-out infinite;
+}
+
+.recipe-version-graph__node--immediate-descendant {
+    border-color: var(--warning);
+    background: color-mix(in srgb, var(--warning) 18%, var(--surface));
+    outline: 3px dashed color-mix(in srgb, var(--warning) 82%, transparent);
+    outline-offset: 3px;
+    animation: recipe-version-graph-immediate-descendant-breathe 2s ease-in-out infinite;
+}
+
+@keyframes recipe-version-graph-direct-ancestor-breathe {
+    0%,
+    100% {
+        background: color-mix(in srgb, #5573a8 8%, var(--surface));
+    }
+
+    50% {
+        background: color-mix(in srgb, #5573a8 32%, var(--surface));
+    }
+}
+
+@keyframes recipe-version-graph-immediate-descendant-breathe {
+    0%,
+    100% {
+        background: color-mix(in srgb, var(--warning) 10%, var(--surface));
+    }
+
+    50% {
+        background: color-mix(in srgb, var(--warning) 34%, var(--surface));
+    }
+}
+
 .recipe-version-graph__node--main-recipe {
     position: relative;
     border-color: var(--success);
@@ -2837,12 +2875,72 @@ a:hover {
 .recipe-version-graph__version,
 .recipe-version-graph__current-badge,
 .recipe-version-graph__main-recipe-badge,
+.recipe-version-graph__relationship-badge,
 .recipe-version-graph__deleted-badge {
     color: var(--accent);
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
+}
+
+.recipe-version-graph__relationship-badge {
+    padding: 2px 8px;
+    border: 1px solid currentColor;
+    border-radius: var(--radius-full);
+    background: var(--surface);
+}
+
+.recipe-version-graph__relationship-badge--ancestor {
+    color: #3f5f96;
+    background: color-mix(in srgb, #5573a8 15%, var(--surface));
+}
+
+.recipe-version-graph__relationship-badge--descendant {
+    color: color-mix(in srgb, var(--warning) 78%, #4a2a00);
+    background: color-mix(in srgb, var(--warning) 16%, var(--surface));
+}
+
+.dark .recipe-version-graph__node--direct-ancestor {
+    border-color: #8ba8db;
+    background: color-mix(in srgb, #8ba8db 20%, var(--surface));
+    outline-color: color-mix(in srgb, #8ba8db 86%, transparent);
+    animation-name: recipe-version-graph-dark-direct-ancestor-breathe;
+}
+
+@keyframes recipe-version-graph-dark-direct-ancestor-breathe {
+    0%,
+    100% {
+        background: color-mix(in srgb, #8ba8db 10%, var(--surface));
+    }
+
+    50% {
+        background: color-mix(in srgb, #8ba8db 34%, var(--surface));
+    }
+}
+
+.dark .recipe-version-graph__relationship-badge--ancestor {
+    color: #b7cef5;
+    background: color-mix(in srgb, #8ba8db 18%, var(--surface));
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .recipe-version-graph__node--direct-ancestor,
+    .recipe-version-graph__node--immediate-descendant {
+        animation: none;
+    }
+
+    .recipe-version-graph__node--direct-ancestor {
+        background: color-mix(in srgb, #5573a8 16%, var(--surface));
+    }
+
+    .recipe-version-graph__node--immediate-descendant {
+        background: color-mix(in srgb, var(--warning) 18%, var(--surface));
+    }
+
+    .dark .recipe-version-graph__node--direct-ancestor {
+        background: color-mix(in srgb, #8ba8db 20%, var(--surface));
+    }
 }
 
 .recipe-version-graph__current-badge {

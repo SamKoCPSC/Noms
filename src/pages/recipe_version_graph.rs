@@ -63,6 +63,14 @@ struct VersionGraphContextMenu {
     target: VersionGraphContextMenuTarget,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum VersionGraphRecipeRelationship {
+    MainRecipe,
+    DirectAncestor,
+    ImmediateDescendant,
+    Unrelated,
+}
+
 impl VersionGraphContextMenu {
     fn at(anchor: (f64, f64), viewport: (f64, f64), target: VersionGraphContextMenuTarget) -> Self {
         let menu_height = match target {
@@ -610,8 +618,49 @@ fn graph_connection_label(edge: &VersionGraphLayoutEdge, nodes: &[VersionGraphNo
     }
 }
 
+fn version_graph_recipe_relationships(
+    nodes: &[VersionGraphNode],
+    edges: &[VersionGraphEdge],
+) -> HashMap<VersionGraphNodeId, VersionGraphRecipeRelationship> {
+    let mut relationships = nodes
+        .iter()
+        .map(|node| (node.id(), VersionGraphRecipeRelationship::Unrelated))
+        .collect::<HashMap<_, _>>();
+    let Some(main_recipe_id) = nodes
+        .iter()
+        .find(|node| node.is_selected_recipe())
+        .map(|node| node.id().recipe_id)
+    else {
+        return relationships;
+    };
+
+    for edge in edges
+        .iter()
+        .filter(|edge| edge.kind() == VersionGraphEdgeKind::Fork)
+    {
+        let source = edge.source();
+        let target = edge.target();
+        if target.recipe_id == main_recipe_id {
+            relationships.insert(source, VersionGraphRecipeRelationship::DirectAncestor);
+        } else if source.recipe_id == main_recipe_id {
+            relationships.insert(target, VersionGraphRecipeRelationship::ImmediateDescendant);
+        }
+    }
+
+    // Every selected-recipe snapshot remains main even if malformed graph data
+    // also presents one as the opposite side of a relationship edge.
+    for node in nodes
+        .iter()
+        .filter(|node| node.id().recipe_id == main_recipe_id)
+    {
+        relationships.insert(node.id(), VersionGraphRecipeRelationship::MainRecipe);
+    }
+    relationships
+}
+
 fn version_graph_node_class(
     node: &VersionGraphNode,
+    recipe_relationship: VersionGraphRecipeRelationship,
     is_fork_source: bool,
     is_fork_target: bool,
 ) -> String {
@@ -625,8 +674,22 @@ fn version_graph_node_class(
     if node.is_redacted() {
         classes.push("recipe-version-graph__node--redacted");
     }
-    if node.is_selected_recipe() {
-        classes.push("recipe-version-graph__node--main-recipe");
+    let recipe_relationship = if node.is_selected_recipe() {
+        VersionGraphRecipeRelationship::MainRecipe
+    } else {
+        recipe_relationship
+    };
+    match recipe_relationship {
+        VersionGraphRecipeRelationship::MainRecipe => {
+            classes.push("recipe-version-graph__node--main-recipe");
+        }
+        VersionGraphRecipeRelationship::DirectAncestor => {
+            classes.push("recipe-version-graph__node--direct-ancestor");
+        }
+        VersionGraphRecipeRelationship::ImmediateDescendant => {
+            classes.push("recipe-version-graph__node--immediate-descendant");
+        }
+        VersionGraphRecipeRelationship::Unrelated => {}
     }
     if is_fork_source {
         classes.push("recipe-version-graph__node--fork-source");
@@ -640,11 +703,18 @@ fn version_graph_node_class(
 #[component]
 fn VersionGraphSnapshotCard(
     node: VersionGraphNode,
+    recipe_relationship: VersionGraphRecipeRelationship,
     is_fork_source: bool,
     is_fork_target: bool,
 ) -> Element {
     let version_number = node.id().version_number;
-    let node_class = version_graph_node_class(&node, is_fork_source, is_fork_target);
+    let recipe_relationship = if node.is_selected_recipe() {
+        VersionGraphRecipeRelationship::MainRecipe
+    } else {
+        recipe_relationship
+    };
+    let node_class =
+        version_graph_node_class(&node, recipe_relationship, is_fork_source, is_fork_target);
     let title = node
         .title()
         .unwrap_or(if node.is_deleted() {
@@ -665,17 +735,18 @@ fn VersionGraphSnapshotCard(
         (false, true) => ", fork target",
         (false, false) => "",
     };
-    let main_recipe_role = if node.is_selected_recipe() {
-        ", main recipe"
-    } else {
-        ""
+    let recipe_relationship_role = match recipe_relationship {
+        VersionGraphRecipeRelationship::MainRecipe => ", main recipe",
+        VersionGraphRecipeRelationship::DirectAncestor => ", direct ancestor",
+        VersionGraphRecipeRelationship::ImmediateDescendant => ", immediate descendant",
+        VersionGraphRecipeRelationship::Unrelated => "",
     };
 
     rsx! {
         article {
             class: node_class,
             aria_label: format!(
-                "Version {version_number}: {title}{relationship_role}{main_recipe_role}"
+                "Version {version_number}: {title}{relationship_role}{recipe_relationship_role}"
             ),
             div { class: "recipe-version-graph__thumbnail",
                 if let Some(image) = image {
@@ -699,10 +770,20 @@ fn VersionGraphSnapshotCard(
                 div { class: "recipe-version-graph__node-heading",
                     span { class: "recipe-version-graph__version", "Version {version_number}" }
                     div { class: "recipe-version-graph__badges",
-                        if node.is_selected_recipe() {
+                        if recipe_relationship == VersionGraphRecipeRelationship::MainRecipe {
                             span {
                                 class: "recipe-version-graph__main-recipe-badge",
                                 "Main recipe"
+                            }
+                        } else if recipe_relationship == VersionGraphRecipeRelationship::DirectAncestor {
+                            span {
+                                class: "recipe-version-graph__relationship-badge recipe-version-graph__relationship-badge--ancestor",
+                                "Direct ancestor"
+                            }
+                        } else if recipe_relationship == VersionGraphRecipeRelationship::ImmediateDescendant {
+                            span {
+                                class: "recipe-version-graph__relationship-badge recipe-version-graph__relationship-badge--descendant",
+                                "Immediate descendant"
                             }
                         }
                         if node.is_current_version() {
@@ -882,6 +963,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
         .filter(|edge| edge.kind() == VersionGraphEdgeKind::Fork)
         .cloned()
         .collect::<Vec<_>>();
+    let recipe_relationships = version_graph_recipe_relationships(&graph.nodes, &graph.edges);
     let current_snapshot_id = graph
         .nodes
         .iter()
@@ -1302,6 +1384,10 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                             let is_fork_target = fork_edges
                                                 .iter()
                                                 .any(|edge| edge.target() == node_id);
+                                            let recipe_relationship = recipe_relationships
+                                                .get(&node_id)
+                                                .copied()
+                                                .unwrap_or(VersionGraphRecipeRelationship::Unrelated);
                                             let snapshot_navigation_available =
                                                 !node.is_redacted() && !node.is_deleted();
                                             let node_style = format!(
@@ -1373,6 +1459,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                             },
                                                             VersionGraphSnapshotCard {
                                                                 node,
+                                                                recipe_relationship,
                                                                 is_fork_source,
                                                                 is_fork_target,
                                                             }
@@ -1391,6 +1478,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                             },
                                                             VersionGraphSnapshotCard {
                                                                 node,
+                                                                recipe_relationship,
                                                                 is_fork_source,
                                                                 is_fork_target,
                                                             }
@@ -1949,8 +2037,18 @@ mod tests {
         let selected = visible_node_with_selection(Uuid::from_u128(1), 2, "Selected", true);
         let related = visible_node(Uuid::from_u128(2), 1, "Related");
 
-        let selected_class = super::version_graph_node_class(&selected, false, false);
-        let related_class = super::version_graph_node_class(&related, false, false);
+        let selected_class = super::version_graph_node_class(
+            &selected,
+            super::VersionGraphRecipeRelationship::MainRecipe,
+            false,
+            false,
+        );
+        let related_class = super::version_graph_node_class(
+            &related,
+            super::VersionGraphRecipeRelationship::Unrelated,
+            false,
+            false,
+        );
 
         assert!(selected_class.contains("recipe-version-graph__node--main-recipe"));
         assert!(selected_class.contains("recipe-version-graph__node--current"));
@@ -1993,6 +2091,142 @@ mod tests {
         );
         assert!(css.contains("margin-top: 0 !important;"));
         assert!(css.contains(".recipe-version-graph__main-recipe-badge"));
+    }
+
+    #[test]
+    fn direct_fork_relationships_highlight_only_the_connected_snapshots() {
+        let ancestor_recipe_id = Uuid::from_u128(1);
+        let selected_recipe_id = Uuid::from_u128(2);
+        let child_recipe_id = Uuid::from_u128(3);
+        let grandchild_recipe_id = Uuid::from_u128(4);
+        let unrelated_recipe_id = Uuid::from_u128(5);
+        let nodes = vec![
+            visible_node(ancestor_recipe_id, 1, "Ancestor v1"),
+            visible_node(ancestor_recipe_id, 2, "Ancestor v2"),
+            visible_node_with_selection(selected_recipe_id, 1, "Selected v1", true),
+            visible_node_with_selection(selected_recipe_id, 2, "Selected v2", true),
+            visible_node(child_recipe_id, 1, "Child v1"),
+            visible_node(child_recipe_id, 2, "Child v2"),
+            visible_node(grandchild_recipe_id, 1, "Grandchild v1"),
+            visible_node(unrelated_recipe_id, 1, "Unrelated v1"),
+        ];
+        let edges = vec![
+            VersionGraphEdge::fork(ancestor_recipe_id, 2, selected_recipe_id).unwrap(),
+            VersionGraphEdge::fork(selected_recipe_id, 1, child_recipe_id).unwrap(),
+            VersionGraphEdge::fork(child_recipe_id, 2, grandchild_recipe_id).unwrap(),
+        ];
+
+        let relationships = super::version_graph_recipe_relationships(&nodes, &edges);
+
+        assert_eq!(
+            relationships.get(&VersionGraphNodeId {
+                recipe_id: ancestor_recipe_id,
+                version_number: 1,
+            }),
+            Some(&super::VersionGraphRecipeRelationship::Unrelated)
+        );
+        assert_eq!(
+            relationships.get(&VersionGraphNodeId {
+                recipe_id: ancestor_recipe_id,
+                version_number: 2,
+            }),
+            Some(&super::VersionGraphRecipeRelationship::DirectAncestor)
+        );
+        assert_eq!(
+            relationships.get(&VersionGraphNodeId {
+                recipe_id: selected_recipe_id,
+                version_number: 1,
+            }),
+            Some(&super::VersionGraphRecipeRelationship::MainRecipe)
+        );
+        assert_eq!(
+            relationships.get(&VersionGraphNodeId {
+                recipe_id: selected_recipe_id,
+                version_number: 2,
+            }),
+            Some(&super::VersionGraphRecipeRelationship::MainRecipe)
+        );
+        assert_eq!(
+            relationships.get(&VersionGraphNodeId {
+                recipe_id: child_recipe_id,
+                version_number: 1,
+            }),
+            Some(&super::VersionGraphRecipeRelationship::ImmediateDescendant)
+        );
+        assert_eq!(
+            relationships.get(&VersionGraphNodeId {
+                recipe_id: child_recipe_id,
+                version_number: 2,
+            }),
+            Some(&super::VersionGraphRecipeRelationship::Unrelated)
+        );
+        assert_eq!(
+            relationships.get(&VersionGraphNodeId {
+                recipe_id: grandchild_recipe_id,
+                version_number: 1,
+            }),
+            Some(&super::VersionGraphRecipeRelationship::Unrelated)
+        );
+        assert_eq!(
+            relationships.get(&VersionGraphNodeId {
+                recipe_id: unrelated_recipe_id,
+                version_number: 1,
+            }),
+            Some(&super::VersionGraphRecipeRelationship::Unrelated)
+        );
+    }
+
+    #[test]
+    fn direct_ancestor_and_descendant_cards_have_distinct_accessible_treatments() {
+        let ancestor = visible_node(Uuid::from_u128(1), 1, "Ancestor");
+        let descendant = visible_node(Uuid::from_u128(2), 1, "Descendant");
+
+        let ancestor_class = super::version_graph_node_class(
+            &ancestor,
+            super::VersionGraphRecipeRelationship::DirectAncestor,
+            false,
+            false,
+        );
+        let descendant_class = super::version_graph_node_class(
+            &descendant,
+            super::VersionGraphRecipeRelationship::ImmediateDescendant,
+            false,
+            false,
+        );
+
+        assert!(ancestor_class.contains("recipe-version-graph__node--direct-ancestor"));
+        assert!(descendant_class.contains("recipe-version-graph__node--immediate-descendant"));
+
+        let source = include_str!("recipe_version_graph.rs");
+        let page = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("version graph page implementation");
+        let css = include_str!("../../assets/main.css");
+
+        assert!(page.contains("Direct ancestor"));
+        assert!(page.contains("Immediate descendant"));
+        assert!(page.contains(", direct ancestor"));
+        assert!(page.contains(", immediate descendant"));
+        assert!(css.contains(".recipe-version-graph__node--direct-ancestor"));
+        assert!(css.contains(".recipe-version-graph__node--immediate-descendant"));
+        assert!(css.contains(".recipe-version-graph__relationship-badge--ancestor"));
+        assert!(css.contains(".recipe-version-graph__relationship-badge--descendant"));
+        assert!(css.contains("@keyframes recipe-version-graph-direct-ancestor-breathe"));
+        assert!(css.contains("@keyframes recipe-version-graph-immediate-descendant-breathe"));
+        assert!(css.contains(
+            "animation: recipe-version-graph-direct-ancestor-breathe 2s ease-in-out infinite;"
+        ));
+        assert!(css.contains(
+            "animation: recipe-version-graph-immediate-descendant-breathe 2s ease-in-out infinite;"
+        ));
+        assert!(css.contains("var(--warning) 10%, var(--surface)"));
+        assert!(css.contains("var(--warning) 34%, var(--surface)"));
+        assert!(css.contains("#5573a8 8%, var(--surface)"));
+        assert!(css.contains("#5573a8 32%, var(--surface)"));
+        assert!(css.contains(".recipe-version-graph__node--direct-ancestor,"));
+        assert!(css.contains(".recipe-version-graph__node--immediate-descendant"));
+        assert!(css.contains("animation: none;"));
     }
 
     #[test]
