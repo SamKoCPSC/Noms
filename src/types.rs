@@ -875,6 +875,333 @@ pub struct UserProfile {
     pub public_recipe_count: i64,
 }
 
+// ── Search contract ────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TextMatchMode {
+    #[default]
+    AllTerms,
+    AnyTerm,
+    ExactPhrase,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TextCriterion {
+    pub text: String,
+    pub mode: TextMatchMode,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct AdvancedTextField {
+    pub include: Option<TextCriterion>,
+    pub exclude: Vec<TextCriterion>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct IntegerRange {
+    pub lower_inclusive: Option<i32>,
+    pub upper_exclusive: Option<i32>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TimestampRange {
+    pub lower_inclusive: Option<DateTime<Utc>>,
+    pub upper_exclusive: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct AdvancedRecipeSearchCriteria {
+    pub title: AdvancedTextField,
+    pub description: AdvancedTextField,
+    pub ingredients: AdvancedTextField,
+    pub instructions: AdvancedTextField,
+    pub tags_any: Vec<String>,
+    pub tags_excluded: Vec<String>,
+    pub created_at: Option<TimestampRange>,
+    pub updated_at: Option<TimestampRange>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RecipeSearchVisibility {
+    #[default]
+    AllVisible,
+    MineOnly,
+    PublicOnly,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RecipeSearchSort {
+    #[default]
+    Relevance,
+    UpdatedNewest,
+    UpdatedOldest,
+    TitleAscending,
+    TitleDescending,
+    Quickest,
+    Longest,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct RecipeSearchRequest {
+    pub text: Option<String>,
+    pub advanced: Option<AdvancedRecipeSearchCriteria>,
+    pub visibility: RecipeSearchVisibility,
+    pub tags_all: Vec<String>,
+    pub total_time: Option<IntegerRange>,
+    pub servings: Option<IntegerRange>,
+    pub sort: RecipeSearchSort,
+    pub page: u32,
+    pub page_size: u32,
+}
+
+impl Default for RecipeSearchRequest {
+    fn default() -> Self {
+        Self {
+            text: None,
+            advanced: None,
+            visibility: RecipeSearchVisibility::default(),
+            tags_all: Vec::new(),
+            total_time: None,
+            servings: None,
+            sort: RecipeSearchSort::default(),
+            page: 1,
+            page_size: crate::search::DEFAULT_SEARCH_PAGE_SIZE,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct AdvancedCollectionSearchCriteria {
+    pub name: AdvancedTextField,
+    pub description: AdvancedTextField,
+    pub updated_at: Option<TimestampRange>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CollectionSearchSort {
+    #[default]
+    Relevance,
+    UpdatedNewest,
+    UpdatedOldest,
+    NameAscending,
+    NameDescending,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct CollectionSearchRequest {
+    pub text: Option<String>,
+    pub advanced: Option<AdvancedCollectionSearchCriteria>,
+    pub sort: CollectionSearchSort,
+    pub page: u32,
+    pub page_size: u32,
+}
+
+impl Default for CollectionSearchRequest {
+    fn default() -> Self {
+        Self {
+            text: None,
+            advanced: None,
+            sort: CollectionSearchSort::default(),
+            page: 1,
+            page_size: crate::search::DEFAULT_SEARCH_PAGE_SIZE,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct AdvancedUserSearchCriteria {
+    pub username: AdvancedTextField,
+    pub display_name: AdvancedTextField,
+    pub bio: AdvancedTextField,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UserSearchSort {
+    #[default]
+    Relevance,
+    UsernameAscending,
+    DisplayNameAscending,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct UserSearchRequest {
+    pub text: Option<String>,
+    pub advanced: Option<AdvancedUserSearchCriteria>,
+    pub sort: UserSearchSort,
+    pub page: u32,
+    pub page_size: u32,
+}
+
+impl Default for UserSearchRequest {
+    fn default() -> Self {
+        Self {
+            text: None,
+            advanced: None,
+            sort: UserSearchSort::default(),
+            page: 1,
+            page_size: crate::search::DEFAULT_SEARCH_PAGE_SIZE,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct AllSearchRequest {
+    pub text: String,
+    pub section_limit: u32,
+}
+
+impl Default for AllSearchRequest {
+    fn default() -> Self {
+        Self {
+            text: String::new(),
+            section_limit: crate::search::DEFAULT_ALL_SECTION_LIMIT,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SearchResult {
+    pub recipe: Recipe,
+    pub relevance: Option<f32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TagFacetBucket {
+    pub tag: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RecipeVisibilityFacetValue {
+    Private,
+    Unlisted,
+    Public,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VisibilityFacetBucket {
+    pub visibility: RecipeVisibilityFacetValue,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct IntegerRangeFacetBucket {
+    pub lower_inclusive: Option<i32>,
+    pub upper_exclusive: Option<i32>,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecipeSearchFacets {
+    pub tags: Vec<TagFacetBucket>,
+    pub visibility: Vec<VisibilityFacetBucket>,
+    pub total_time: Vec<IntegerRangeFacetBucket>,
+    pub servings: Vec<IntegerRangeFacetBucket>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecipeSearchResponse {
+    pub results: Vec<SearchResult>,
+    pub total_count: i64,
+    pub facets: RecipeSearchFacets,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CollectionSearchSummary {
+    pub id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CollectionSearchResult {
+    pub collection: CollectionSearchSummary,
+    pub breadcrumb: Vec<String>,
+    pub relevance: Option<f32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CollectionSearchResponse {
+    pub results: Vec<CollectionSearchResult>,
+    pub total_count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UserSearchSummary {
+    pub id: Uuid,
+    pub username: String,
+    pub display_name: String,
+    pub avatar_url: Option<String>,
+    pub bio: Option<String>,
+    pub public_recipe_count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UserSearchResult {
+    pub user: UserSearchSummary,
+    pub relevance: Option<f32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UserSearchResponse {
+    pub results: Vec<UserSearchResult>,
+    pub total_count: i64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SearchScope {
+    All,
+    Recipes,
+    Collections,
+    Users,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SearchResponse {
+    pub scope: SearchScope,
+    pub recipes: Vec<SearchResult>,
+    pub recipe_total_count: i64,
+    pub collections: Vec<CollectionSearchResult>,
+    pub collection_total_count: i64,
+    pub users: Vec<UserSearchResult>,
+    pub user_total_count: i64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SearchSuggestionKind {
+    Recipe,
+    Collection,
+    User,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SearchSuggestion {
+    pub kind: SearchSuggestionKind,
+    pub id: Uuid,
+    pub label: String,
+    pub secondary_text: Option<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

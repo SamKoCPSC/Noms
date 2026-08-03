@@ -92,6 +92,68 @@ jobs:
           SQLX_OFFLINE: true
         run: cargo test --features server
 
+  # Search tests require the repository's pinned PostgreSQL image because
+  # pg_search cannot be installed into the runner's plain PostgreSQL service.
+  search-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install pgschema
+        run: go install github.com/pgplex/pgschema@latest
+
+      - name: Build pinned PostgreSQL image
+        run: docker build --tag noms-search-postgres-ci docker/postgres
+
+      - name: Start pinned PostgreSQL image
+        run: |
+          docker run --detach --name noms-search-postgres-ci \
+            --publish 5432:5432 \
+            --env POSTGRES_USER=noms_ci \
+            --env POSTGRES_PASSWORD=noms_ci_pass \
+            --env POSTGRES_DB=noms_search_test \
+            noms-search-postgres-ci
+          for attempt in {1..60}; do
+            if docker exec noms-search-postgres-ci \
+              pg_isready --host 127.0.0.1 --username noms_ci --dbname noms_search_test; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs noms-search-postgres-ci
+          exit 1
+
+      - name: Apply extensions and schema
+        run: |
+          docker exec --interactive noms-search-postgres-ci \
+            psql --set ON_ERROR_STOP=1 --username noms_ci --dbname noms_search_test \
+            < migrations/extensions.sql
+          pgschema apply \
+            --host localhost \
+            --port 5432 \
+            --db noms_search_test \
+            --user noms_ci \
+            --password noms_ci_pass \
+            --file migrations/schema.sql \
+            --schema public \
+            --auto-approve
+
+      - name: Run ParadeDB search integration tests
+        env:
+          SEARCH_TEST_DATABASE_URL: postgres://noms_ci:noms_ci_pass@localhost:5432/noms_search_test
+          SQLX_OFFLINE: true
+        run: cargo test --features server search_integration_ -- --ignored
+
+      - name: Stop pinned PostgreSQL image
+        if: always()
+        run: docker rm --force noms-search-postgres-ci || true
+
   security:
     runs-on: ubuntu-latest
     steps:
@@ -159,20 +221,6 @@ jobs:
     runs-on: ubuntu-latest
     # Only run on pull requests (not pushes to branches without a PR)
     if: github.event_name == 'pull_request'
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: noms_ci
-          POSTGRES_PASSWORD: noms_ci_pass
-          POSTGRES_DB: noms_ci_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -190,13 +238,35 @@ jobs:
         if: steps.schema-changed.outputs.changed == 'true'
         run: go install github.com/pgplex/pgschema@latest
 
+      - name: Build extension-capable PostgreSQL image
+        if: steps.schema-changed.outputs.changed == 'true'
+        run: docker build --tag noms-schema-postgres-ci docker/postgres
+
+      - name: Start extension-capable PostgreSQL image
+        if: steps.schema-changed.outputs.changed == 'true'
+        run: |
+          docker run --detach --name noms-schema-postgres-ci \
+            --publish 5432:5432 \
+            --env POSTGRES_USER=noms_ci \
+            --env POSTGRES_PASSWORD=noms_ci_pass \
+            --env POSTGRES_DB=noms_ci_test \
+            noms-schema-postgres-ci
+          for attempt in {1..60}; do
+            if docker exec noms-schema-postgres-ci \
+              pg_isready --host 127.0.0.1 --username noms_ci --dbname noms_ci_test; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs noms-schema-postgres-ci
+          exit 1
+
       - name: Apply extensions to test database
         if: steps.schema-changed.outputs.changed == 'true'
-        env:
-          PGPASSWORD: noms_ci_pass
         run: |
-          psql -h localhost -p 5432 -d noms_ci_test -U noms_ci \
-            -f migrations/extensions.sql
+          docker exec --interactive noms-schema-postgres-ci \
+            psql --set ON_ERROR_STOP=1 --username noms_ci --dbname noms_ci_test \
+            < migrations/extensions.sql
 
       - name: Generate migration plan
         if: steps.schema-changed.outputs.changed == 'true'
@@ -221,3 +291,7 @@ jobs:
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           path: /tmp/migration-plan.json
+
+      - name: Stop extension-capable PostgreSQL image
+        if: always() && steps.schema-changed.outputs.changed == 'true'
+        run: docker rm --force noms-schema-postgres-ci || true

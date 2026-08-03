@@ -11,6 +11,7 @@ mod db;
 #[cfg(feature = "server")]
 mod middleware;
 mod pages;
+mod search;
 #[cfg(feature = "server")]
 mod storage;
 #[cfg(all(feature = "server", test))]

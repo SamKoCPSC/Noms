@@ -6,6 +6,60 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
+/// Connect to the dedicated ParadeDB test database and prove BM25 indexes work.
+///
+/// Unlike [`setup_test_db`], this deliberately does not fall back to the host
+/// PostgreSQL installation. Search integration tests must set
+/// `SEARCH_TEST_DATABASE_URL` to the repository's pinned PostgreSQL image.
+pub async fn setup_search_test_db() -> PgPool {
+    let database_url = std::env::var("SEARCH_TEST_DATABASE_URL")
+        .expect("SEARCH_TEST_DATABASE_URL must point to the pinned ParadeDB test database");
+    let pool = PgPool::connect(&database_url)
+        .await
+        .expect("failed to connect to SEARCH_TEST_DATABASE_URL");
+
+    let extension_version = sqlx::query_scalar::<_, String>(
+        "SELECT extversion FROM pg_extension WHERE extname = 'pg_search'",
+    )
+    .fetch_optional(&pool)
+    .await
+    .expect("failed to inspect installed PostgreSQL extensions")
+    .expect("pg_search is required for search integration tests");
+    assert!(
+        !extension_version.trim().is_empty(),
+        "pg_search reported an empty extension version"
+    );
+
+    verify_bm25_index_creation(&pool).await;
+    pool
+}
+
+async fn verify_bm25_index_creation(pool: &PgPool) {
+    let suffix = Uuid::new_v4().simple().to_string();
+    let table_name = format!("noms_search_smoke_{suffix}");
+    let index_name = format!("idx_noms_search_smoke_{suffix}");
+    let field_alias = format!("noms_search_smoke_body_{suffix}");
+
+    sqlx::query(&format!(
+        "CREATE TABLE {table_name} (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, body TEXT NOT NULL)"
+    ))
+    .execute(pool)
+    .await
+    .expect("failed to create ParadeDB smoke-test table");
+
+    let create_index_result = sqlx::query(&format!(
+        "CREATE INDEX {index_name} ON {table_name} USING bm25 (id, (body::pdb.simple('alias={field_alias}'))) WITH (key_field = 'id')"
+    ))
+    .execute(pool)
+    .await;
+
+    let cleanup_result = sqlx::query(&format!("DROP TABLE {table_name}"))
+        .execute(pool)
+        .await;
+    cleanup_result.expect("failed to clean up ParadeDB smoke-test table");
+    create_index_result.expect("pg_search could not create a BM25 index");
+}
+
 /// Spawn a fresh temporary PostgreSQL database and apply the NOMS schema.
 ///
 /// Each call creates an isolated database — no shared state, no cleanup needed.
@@ -495,4 +549,16 @@ pub async fn add_test_recipe_to_collection(
     crate::db::add_recipe_to_collection(pool, collection_id, owner_id, recipe_id)
         .await
         .expect("failed to add test recipe to collection")
+}
+
+#[cfg(test)]
+mod search_integration_tests {
+    use super::*;
+
+    #[tokio::test]
+    #[ignore = "requires SEARCH_TEST_DATABASE_URL backed by the pinned ParadeDB image"]
+    async fn search_integration_paradedb_database_is_available() {
+        let pool = setup_search_test_db().await;
+        pool.close().await;
+    }
 }
