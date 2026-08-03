@@ -521,8 +521,13 @@ fn snapshot_context_menu_route(node_id: VersionGraphNodeId, action_index: usize)
             version_number: node_id.version_number,
         }),
         1 => Some(Route::RecipeDetail { id: recipe_id }),
-        2 => Some(Route::RecipeVersionGraph { id: recipe_id }),
         _ => None,
+    }
+}
+
+fn set_main_recipe_route(node_id: VersionGraphNodeId) -> Route {
+    Route::RecipeVersionGraph {
+        id: node_id.recipe_id.to_string(),
     }
 }
 
@@ -1639,20 +1644,17 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                         },
                                         onclick: move |_| {
                                             if snapshot_navigation_available {
-                                                if let Some(route) =
-                                                    snapshot_context_menu_route(snapshot_id, 2)
-                                                {
-                                                    graph_context_menu.set(None);
-                                                    restore_context_menu_focus(
-                                                        context_menu.target,
-                                                        graph_canvas(),
-                                                        &graph_node_elements(),
-                                                    );
-                                                    let _ = navigator.push(route);
-                                                }
+                                                let route = set_main_recipe_route(snapshot_id);
+                                                graph_context_menu.set(None);
+                                                restore_context_menu_focus(
+                                                    context_menu.target,
+                                                    graph_canvas(),
+                                                    &graph_node_elements(),
+                                                );
+                                                let _ = navigator.push(route);
                                             }
                                         },
-                                        "Focus recipe graph"
+                                        "Set as main recipe"
                                     }
                                     div {
                                         class: "recipe-version-graph__context-menu-separator",
@@ -2471,11 +2473,33 @@ mod tests {
             super::snapshot_context_menu_route(node_id, 1),
             Some(crate::Route::RecipeDetail { id }) if id == recipe_id.to_string()
         ));
+        assert!(super::snapshot_context_menu_route(node_id, 2).is_none());
         assert!(matches!(
-            super::snapshot_context_menu_route(node_id, 2),
-            Some(crate::Route::RecipeVersionGraph { id }) if id == recipe_id.to_string()
+            super::set_main_recipe_route(node_id),
+            crate::Route::RecipeVersionGraph { id } if id == recipe_id.to_string()
         ));
-        assert!(super::snapshot_context_menu_route(node_id, 3).is_none());
+    }
+
+    #[test]
+    fn setting_a_card_as_main_reloads_the_graph_from_that_recipe() {
+        let source = include_str!("recipe_version_graph.rs");
+        let page = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("version graph page implementation");
+
+        assert!(page.contains("Set as main recipe"));
+        assert!(!page.contains("Focus recipe graph"));
+        assert!(page.contains("set_main_recipe_route(snapshot_id)"));
+        assert!(page.contains("navigator.push(route)"));
+        assert!(page.contains("use_resource(use_reactive((&id,)"));
+        assert!(matches!(
+            super::set_main_recipe_route(VersionGraphNodeId {
+                recipe_id: Uuid::from_u128(73),
+                version_number: 4,
+            }),
+            crate::Route::RecipeVersionGraph { id } if id == Uuid::from_u128(73).to_string()
+        ));
     }
 
     #[test]
@@ -2580,7 +2604,7 @@ mod tests {
         assert!(page.contains("VersionGraphContextMenuTarget::Snapshot"));
         assert!(page.contains("View snapshot"));
         assert!(page.contains("View recipe"));
-        assert!(page.contains("Focus recipe graph"));
+        assert!(page.contains("Set as main recipe"));
         assert!(page.contains("Center snapshot"));
         assert!(page.contains("Zoom to snapshot"));
         assert!(page.contains("Snapshot navigation unavailable"));
