@@ -8,10 +8,22 @@ use crate::api::collection::list_my_collections;
 use crate::types::CollectionSummary;
 use crate::Route;
 
+const MAX_VISUAL_COLLECTION_DEPTH: usize = 6;
+const COLLECTION_INDENTATION_STEP_PX: usize = 12;
+const NEW_SUBCOLLECTION_ACTION_OFFSET_PX: usize = 36;
+
 #[derive(Clone, Debug, PartialEq)]
 struct CollectionTreeNode {
     collection: CollectionSummary,
     children: Vec<CollectionTreeNode>,
+}
+
+fn collection_indentation(depth: usize) -> usize {
+    depth.min(MAX_VISUAL_COLLECTION_DEPTH) * COLLECTION_INDENTATION_STEP_PX
+}
+
+fn new_subcollection_indentation(parent_depth: usize) -> usize {
+    collection_indentation(parent_depth.saturating_add(1)) + NEW_SUBCOLLECTION_ACTION_OFFSET_PX
 }
 
 fn compare_collections(left: &CollectionSummary, right: &CollectionSummary) -> Ordering {
@@ -76,7 +88,8 @@ fn CollectionTreeItem(mut props: CollectionTreeItemProps) -> Element {
     let collection_id = props.node.collection.id;
     let is_expanded = props.expanded.read().contains(&collection_id);
     let toggle_label = collection_toggle_label(&props.node.collection.name, is_expanded);
-    let indentation = props.depth.min(6) * 12;
+    let indentation = collection_indentation(props.depth);
+    let new_subcollection_indentation = new_subcollection_indentation(props.depth);
 
     rsx! {
         li {
@@ -133,13 +146,13 @@ fn CollectionTreeItem(mut props: CollectionTreeItemProps) -> Element {
                         CollectionTreeItem {
                             key: "{child.collection.id}",
                             node: child,
-                            depth: props.depth + 1,
+                            depth: props.depth.saturating_add(1),
                             expanded: props.expanded,
                         }
                     }
                     li {
                         list_style: "none",
-                        padding_left: "{((props.depth + 1).min(6) * 12 + 36)}px",
+                        padding_left: "{new_subcollection_indentation}px",
                         a {
                             href: "/collections/new?parent={collection_id}",
                             display: "inline-block",
@@ -226,7 +239,10 @@ mod tests {
     use chrono::{Duration, Utc};
     use uuid::Uuid;
 
-    use super::{build_collection_tree, collection_toggle_label};
+    use super::{
+        build_collection_tree, collection_indentation, collection_toggle_label,
+        new_subcollection_indentation,
+    };
     use crate::types::CollectionSummary;
 
     fn summary(
@@ -304,5 +320,14 @@ mod tests {
         let action_position = source.rfind("\"New Collection\"").unwrap();
         assert!(action_position > tree_position);
         assert!(source.contains("class: \"btn btn-secondary touch-target\""));
+    }
+
+    #[test]
+    fn very_deep_collection_trees_keep_indentation_bounded() {
+        assert_eq!(collection_indentation(0), 0);
+        assert_eq!(collection_indentation(6), 72);
+        assert_eq!(collection_indentation(100_000), 72);
+        assert_eq!(collection_indentation(usize::MAX), 72);
+        assert_eq!(new_subcollection_indentation(usize::MAX), 108);
     }
 }

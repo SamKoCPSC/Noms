@@ -5294,6 +5294,54 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_collection_detail_queries_return_only_direct_contents() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let root = test_utils::insert_test_collection(&pool, owner.id, None, "Root").await;
+        let child =
+            test_utils::insert_test_collection(&pool, owner.id, Some(root.id), "Child").await;
+        let grandchild =
+            test_utils::insert_test_collection(&pool, owner.id, Some(child.id), "Grandchild").await;
+        let nested_recipe = test_utils::insert_test_recipe(&pool, owner.id, "private").await;
+        test_utils::add_test_recipe_to_collection(&pool, grandchild.id, owner.id, nested_recipe.id)
+            .await;
+
+        assert_eq!(
+            get_child_collections(&pool, root.id, owner.id)
+                .await
+                .unwrap()
+                .iter()
+                .map(|collection| collection.id)
+                .collect::<Vec<_>>(),
+            vec![child.id]
+        );
+        assert_eq!(
+            get_child_collections(&pool, child.id, owner.id)
+                .await
+                .unwrap()
+                .iter()
+                .map(|collection| collection.id)
+                .collect::<Vec<_>>(),
+            vec![grandchild.id]
+        );
+        assert_eq!(
+            get_collection_recipes(&pool, root.id, owner.id, 0, 20)
+                .await
+                .unwrap()
+                .total_count,
+            0
+        );
+        assert_eq!(
+            get_collection_recipes(&pool, grandchild.id, owner.id, 0, 20)
+                .await
+                .unwrap()
+                .recipes[0]
+                .id,
+            nested_recipe.id
+        );
+    }
+
+    #[tokio::test]
     async fn test_collection_writes_reject_wrong_owner_and_parent() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let owner = test_utils::insert_test_user(&pool).await;
@@ -5435,10 +5483,48 @@ mod tests {
         let recipe = test_utils::insert_test_recipe(&pool, owner.id, "private").await;
         test_utils::add_test_recipe_to_collection(&pool, grandchild.id, owner.id, recipe.id).await;
 
+        let tree_before_cycle_rejections = sqlx::query_as::<_, (Uuid, Option<Uuid>, i32)>(
+            "SELECT id, parent_collection_id, sort_order
+             FROM collections
+             WHERE owner_id = $1
+             ORDER BY id",
+        )
+        .bind(owner.id)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert!(matches!(
+            move_collection(&pool, child.id, owner.id, Some(child.id)).await,
+            Err(DbError::CollectionCycle)
+        ));
         assert!(matches!(
             move_collection(&pool, child.id, owner.id, Some(grandchild.id)).await,
             Err(DbError::CollectionCycle)
         ));
+        let tree_after_cycle_rejections = sqlx::query_as::<_, (Uuid, Option<Uuid>, i32)>(
+            "SELECT id, parent_collection_id, sort_order
+             FROM collections
+             WHERE owner_id = $1
+             ORDER BY id",
+        )
+        .bind(owner.id)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(tree_after_cycle_rejections, tree_before_cycle_rejections);
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>(
+                "SELECT COUNT(*)
+                 FROM collection_recipes
+                 WHERE collection_id = $1 AND recipe_id = $2",
+            )
+            .bind(grandchild.id)
+            .bind(recipe.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            1
+        );
 
         let conflict =
             test_utils::insert_test_collection(&pool, owner.id, Some(destination.id), "Child")
@@ -5557,6 +5643,34 @@ mod tests {
                 .updated_at
                 >= before
         );
+
+        let children_before_invalid_reorder = get_child_collections(&pool, parent.id, owner.id)
+            .await
+            .unwrap();
+        let recipes_before_invalid_reorder =
+            get_collection_recipes(&pool, parent.id, owner.id, 0, 20)
+                .await
+                .unwrap();
+        assert!(matches!(
+            reorder_child_collections(&pool, owner.id, Some(parent.id), &[first.id]).await,
+            Err(DbError::InvalidCollectionOrder)
+        ));
+        assert!(matches!(
+            reorder_collection_recipes(&pool, parent.id, owner.id, &[recipe_a.id]).await,
+            Err(DbError::InvalidCollectionOrder)
+        ));
+        assert_eq!(
+            get_child_collections(&pool, parent.id, owner.id)
+                .await
+                .unwrap(),
+            children_before_invalid_reorder
+        );
+        assert_eq!(
+            get_collection_recipes(&pool, parent.id, owner.id, 0, 20)
+                .await
+                .unwrap(),
+            recipes_before_invalid_reorder
+        );
     }
 
     #[tokio::test]
@@ -5585,5 +5699,292 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(orders, (0..8).collect::<Vec<_>>());
+    }
+
+    #[tokio::test]
+    async fn test_concurrent_collection_reorders_keep_sequences_normalized_and_isolated() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let parent = test_utils::insert_test_collection(&pool, owner.id, None, "Parent").await;
+        let first =
+            test_utils::insert_test_collection(&pool, owner.id, Some(parent.id), "First").await;
+        let second =
+            test_utils::insert_test_collection(&pool, owner.id, Some(parent.id), "Second").await;
+        let third =
+            test_utils::insert_test_collection(&pool, owner.id, Some(parent.id), "Third").await;
+        let other_parent = test_utils::insert_test_collection(&pool, owner.id, None, "Other").await;
+        let other_first = test_utils::insert_test_collection(
+            &pool,
+            owner.id,
+            Some(other_parent.id),
+            "Other first",
+        )
+        .await;
+        let other_second = test_utils::insert_test_collection(
+            &pool,
+            owner.id,
+            Some(other_parent.id),
+            "Other second",
+        )
+        .await;
+
+        let recipe_a = test_utils::insert_test_recipe(&pool, owner.id, "private").await;
+        let recipe_b = test_utils::insert_test_recipe(&pool, owner.id, "private").await;
+        let recipe_c = test_utils::insert_test_recipe(&pool, owner.id, "private").await;
+        let other_recipe_a = test_utils::insert_test_recipe(&pool, owner.id, "private").await;
+        let other_recipe_b = test_utils::insert_test_recipe(&pool, owner.id, "private").await;
+        for recipe_id in [recipe_a.id, recipe_b.id, recipe_c.id] {
+            test_utils::add_test_recipe_to_collection(&pool, parent.id, owner.id, recipe_id).await;
+        }
+        for recipe_id in [other_recipe_a.id, other_recipe_b.id] {
+            test_utils::add_test_recipe_to_collection(&pool, other_parent.id, owner.id, recipe_id)
+                .await;
+        }
+
+        let other_children_before = sqlx::query_as::<_, (Uuid, i32)>(
+            "SELECT id, sort_order
+             FROM collections
+             WHERE parent_collection_id = $1
+             ORDER BY sort_order, id",
+        )
+        .bind(other_parent.id)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            other_children_before,
+            vec![(other_first.id, 0), (other_second.id, 1)]
+        );
+        let other_recipes_before = sqlx::query_as::<_, (Uuid, i32)>(
+            "SELECT recipe_id, sort_order
+             FROM collection_recipes
+             WHERE collection_id = $1
+             ORDER BY sort_order, recipe_id",
+        )
+        .bind(other_parent.id)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+
+        let child_order_a = vec![third.id, first.id, second.id];
+        let child_order_b = vec![second.id, third.id, first.id];
+        let (child_result_a, child_result_b) = tokio::join!(
+            reorder_child_collections(&pool, owner.id, Some(parent.id), &child_order_a),
+            reorder_child_collections(&pool, owner.id, Some(parent.id), &child_order_b),
+        );
+        child_result_a.unwrap();
+        child_result_b.unwrap();
+
+        let recipe_order_a = vec![recipe_c.id, recipe_a.id, recipe_b.id];
+        let recipe_order_b = vec![recipe_b.id, recipe_c.id, recipe_a.id];
+        let (recipe_result_a, recipe_result_b) = tokio::join!(
+            reorder_collection_recipes(&pool, parent.id, owner.id, &recipe_order_a),
+            reorder_collection_recipes(&pool, parent.id, owner.id, &recipe_order_b),
+        );
+        recipe_result_a.unwrap();
+        recipe_result_b.unwrap();
+
+        let child_rows = sqlx::query_as::<_, (Uuid, i32)>(
+            "SELECT id, sort_order
+             FROM collections
+             WHERE parent_collection_id = $1
+             ORDER BY sort_order, id",
+        )
+        .bind(parent.id)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            child_rows
+                .iter()
+                .map(|(_, order)| *order)
+                .collect::<Vec<_>>(),
+            vec![0, 1, 2]
+        );
+        let final_child_ids = child_rows.iter().map(|(id, _)| *id).collect::<Vec<_>>();
+        assert!(final_child_ids == child_order_a || final_child_ids == child_order_b);
+
+        let recipe_rows = sqlx::query_as::<_, (Uuid, i32)>(
+            "SELECT recipe_id, sort_order
+             FROM collection_recipes
+             WHERE collection_id = $1
+             ORDER BY sort_order, recipe_id",
+        )
+        .bind(parent.id)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            recipe_rows
+                .iter()
+                .map(|(_, order)| *order)
+                .collect::<Vec<_>>(),
+            vec![0, 1, 2]
+        );
+        let final_recipe_ids = recipe_rows.iter().map(|(id, _)| *id).collect::<Vec<_>>();
+        assert!(final_recipe_ids == recipe_order_a || final_recipe_ids == recipe_order_b);
+
+        assert_eq!(
+            sqlx::query_as::<_, (Uuid, i32)>(
+                "SELECT id, sort_order
+                 FROM collections
+                 WHERE parent_collection_id = $1
+                 ORDER BY sort_order, id",
+            )
+            .bind(other_parent.id)
+            .fetch_all(&pool)
+            .await
+            .unwrap(),
+            other_children_before
+        );
+        assert_eq!(
+            sqlx::query_as::<_, (Uuid, i32)>(
+                "SELECT recipe_id, sort_order
+                 FROM collection_recipes
+                 WHERE collection_id = $1
+                 ORDER BY sort_order, recipe_id",
+            )
+            .bind(other_parent.id)
+            .fetch_all(&pool)
+            .await
+            .unwrap(),
+            other_recipes_before
+        );
+    }
+
+    #[tokio::test]
+    async fn test_collection_cascades_are_scoped_and_preserve_unrelated_collections() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let collection_owner = test_utils::insert_test_user(&pool).await;
+        let recipe_author = test_utils::insert_test_user(&pool).await;
+        let unrelated_owner = test_utils::insert_test_user(&pool).await;
+
+        let saved_sources =
+            test_utils::insert_test_collection(&pool, collection_owner.id, None, "Saved sources")
+                .await;
+        let source_recipe = test_utils::insert_test_recipe(&pool, recipe_author.id, "public").await;
+        test_utils::add_test_recipe_to_collection(
+            &pool,
+            saved_sources.id,
+            collection_owner.id,
+            source_recipe.id,
+        )
+        .await;
+
+        let unrelated_collection =
+            test_utils::insert_test_collection(&pool, unrelated_owner.id, None, "Unrelated").await;
+        let unrelated_recipe =
+            test_utils::insert_test_recipe(&pool, unrelated_owner.id, "private").await;
+        test_utils::add_test_recipe_to_collection(
+            &pool,
+            unrelated_collection.id,
+            unrelated_owner.id,
+            unrelated_recipe.id,
+        )
+        .await;
+
+        sqlx::query("UPDATE recipes SET visibility = 'private' WHERE id = $1")
+            .bind(source_recipe.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            get_collection_recipes(&pool, saved_sources.id, collection_owner.id, 0, 20)
+                .await
+                .unwrap()
+                .total_count,
+            0
+        );
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>(
+                "SELECT COUNT(*) FROM collection_recipes
+                 WHERE collection_id = $1 AND recipe_id = $2",
+            )
+            .bind(saved_sources.id)
+            .bind(source_recipe.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            1
+        );
+        assert!(
+            get_collection_by_id_and_owner(&pool, saved_sources.id, collection_owner.id)
+                .await
+                .unwrap()
+                .is_some()
+        );
+
+        delete_recipe(&pool, source_recipe.id, recipe_author.id)
+            .await
+            .unwrap();
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>(
+                "SELECT COUNT(*) FROM collection_recipes
+                 WHERE collection_id = $1 AND recipe_id = $2",
+            )
+            .bind(saved_sources.id)
+            .bind(source_recipe.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            0
+        );
+        assert!(
+            get_collection_by_id_and_owner(&pool, saved_sources.id, collection_owner.id)
+                .await
+                .unwrap()
+                .is_some()
+        );
+
+        let doomed_collection = test_utils::insert_test_collection(
+            &pool,
+            collection_owner.id,
+            Some(saved_sources.id),
+            "Deleted with owner",
+        )
+        .await;
+        let owned_recipe =
+            test_utils::insert_test_recipe(&pool, collection_owner.id, "private").await;
+        test_utils::add_test_recipe_to_collection(
+            &pool,
+            doomed_collection.id,
+            collection_owner.id,
+            owned_recipe.id,
+        )
+        .await;
+        delete_user(&pool, collection_owner.id).await.unwrap();
+
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM collections WHERE owner_id = $1")
+                .bind(collection_owner.id)
+                .fetch_one(&pool)
+                .await
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>(
+                "SELECT COUNT(*) FROM collection_recipes WHERE collection_id = $1",
+            )
+            .bind(doomed_collection.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            0
+        );
+        assert!(
+            get_collection_by_id_and_owner(&pool, unrelated_collection.id, unrelated_owner.id,)
+                .await
+                .unwrap()
+                .is_some()
+        );
+        assert_eq!(
+            get_collection_recipes(&pool, unrelated_collection.id, unrelated_owner.id, 0, 20,)
+                .await
+                .unwrap()
+                .recipes[0]
+                .id,
+            unrelated_recipe.id
+        );
     }
 }

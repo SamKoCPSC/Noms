@@ -1,3 +1,4 @@
+pub use add_to_collection_dropdown::*;
 pub use avatar::*;
 pub use button::*;
 pub use card::*;
@@ -11,8 +12,10 @@ pub use input::*;
 pub use loading_spinner::*;
 pub use page_header::*;
 pub use recipe_card::*;
+pub use reorder_handle::*;
 pub use settings_tabs::{SettingsTab, SettingsTabs};
 
+mod add_to_collection_dropdown;
 mod avatar;
 mod button;
 mod card;
@@ -26,4 +29,5 @@ mod input;
 mod loading_spinner;
 mod page_header;
 mod recipe_card;
+mod reorder_handle;
 mod settings_tabs;

@@ -172,6 +172,12 @@ a:hover {
     border-radius: var(--radius-lg);
 }
 
+/* Collection membership menus must cover the recipe content beneath them. */
+.collection-membership-dropdown {
+    background: var(--surface) !important;
+    opacity: 1;
+}
+
 /* ============================================================
    Glassmorphism Utility
    ============================================================ */

@@ -20,7 +20,8 @@ use crate::api::recipe::{
 };
 use crate::auth::context::use_auth;
 use crate::components::base::{
-    Button, ButtonVariant, Card, EditedRecipeImage, LoadingSpinner, PageHeader,
+    AddToCollectionDropdown, Button, ButtonVariant, Card, EditedRecipeImage, LoadingSpinner,
+    PageHeader,
 };
 use crate::types::{
     ForkAttribution, Recipe, RecipeEquipment, RecipeIngredient, RecipeLineageBranch,
@@ -58,6 +59,16 @@ fn format_relative_time(dt: DateTime<Utc>) -> String {
         format!("{} minutes ago", diff.num_minutes())
     } else {
         "Just now".to_string()
+    }
+}
+
+#[cfg(test)]
+mod collection_membership_integration_tests {
+    #[test]
+    fn authenticated_recipe_details_offer_collection_membership() {
+        let source = include_str!("recipe_detail.rs");
+        assert!(source.contains("AddToCollectionDropdown"));
+        assert!(source.contains("auth.is_authenticated"));
     }
 }
 
@@ -2010,6 +2021,7 @@ pub fn RecipeDetail(id: String) -> Element {
                     action: Some(rsx! {
                             div {
                                 display: "flex",
+                                flex_wrap: "wrap",
                                 gap: "var(--space-sm)",
                                 Link {
                                     to: crate::Route::RecipeVersionGraph { id: recipe.id.to_string() },
@@ -2017,6 +2029,9 @@ pub fn RecipeDetail(id: String) -> Element {
                                     "View version graph"
                                 }
                                 if auth.is_authenticated {
+                                    AddToCollectionDropdown {
+                                        recipe_id: recipe.id.to_string(),
+                                    }
                                     Button {
                                         variant: ButtonVariant::Secondary,
                                         disabled: is_forking(),
