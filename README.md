@@ -198,11 +198,14 @@ cache or host capacity rather than mutable application state.
 
 ## Database Schema
 
-The database schema is managed declaratively with `pgschema`. The source of truth is `migrations/schema.sql`.
+The database schema is managed declaratively with `pgschema`, with
+`migrations/schema.sql` as the source of truth. Because the schema uses
+extension-provided types and indexes, `pgschema` validates it through the
+extension-enabled target database rather than its embedded PostgreSQL instance.
 
 To add a new table or column:
 1. Edit `migrations/schema.sql`
 2. Restart an isolated environment with `just up`, or run `just migrate`
    against a manually configured standalone database
 
-`pgschema` will automatically detect the diff and apply the necessary `ALTER` statements.
+`pgschema` will automatically detect the diff and apply the necessary changes.

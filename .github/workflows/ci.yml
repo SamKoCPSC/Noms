@@ -106,7 +106,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install pgschema
-        run: go install github.com/pgplex/pgschema@latest
+        run: go install github.com/pgplex/pgschema@v1.12.1
 
       - name: Build pinned PostgreSQL image
         run: docker build --tag noms-search-postgres-ci docker/postgres
@@ -140,6 +140,11 @@ jobs:
             --db noms_search_test \
             --user noms_ci \
             --password noms_ci_pass \
+            --plan-host localhost \
+            --plan-port 5432 \
+            --plan-db noms_search_test \
+            --plan-user noms_ci \
+            --plan-password noms_ci_pass \
             --file migrations/schema.sql \
             --schema public \
             --auto-approve
@@ -236,7 +241,7 @@ jobs:
 
       - name: Install pgschema
         if: steps.schema-changed.outputs.changed == 'true'
-        run: go install github.com/pgplex/pgschema@latest
+        run: go install github.com/pgplex/pgschema@v1.12.1
 
       - name: Build extension-capable PostgreSQL image
         if: steps.schema-changed.outputs.changed == 'true'
@@ -277,6 +282,11 @@ jobs:
             --db noms_ci_test \
             --user noms_ci \
             --password noms_ci_pass \
+            --plan-host localhost \
+            --plan-port 5432 \
+            --plan-db noms_ci_test \
+            --plan-user noms_ci \
+            --plan-password noms_ci_pass \
             --schema public \
             --file migrations/schema.sql \
             --output-human stdout \
@@ -285,6 +295,24 @@ jobs:
       - name: Reject destructive changes
         if: steps.schema-changed.outputs.changed == 'true'
         run: bash scripts/check-schema-plan.sh /tmp/migration-plan.json
+
+      - name: Apply and validate schema migrations
+        if: steps.schema-changed.outputs.changed == 'true'
+        run: |
+          pgschema apply \
+            --host localhost \
+            --port 5432 \
+            --db noms_ci_test \
+            --user noms_ci \
+            --password noms_ci_pass \
+            --plan-host localhost \
+            --plan-port 5432 \
+            --plan-db noms_ci_test \
+            --plan-user noms_ci \
+            --plan-password noms_ci_pass \
+            --schema public \
+            --file migrations/schema.sql \
+            --auto-approve
 
       - name: Post migration plan as PR comment
         if: steps.schema-changed.outputs.changed == 'true'

@@ -36,11 +36,11 @@ isolated-dev-config-test:
 migrate-extensions:
 	@source .env.local && psql "$DATABASE_URL" -f migrations/extensions.sql
 
-# Apply the declarative database schema (run after modifying migrations/schema.sql)
+# Apply the declarative database schema using the extension-enabled target for planning.
 # Note: `just up` applies the schema but deliberately does not rewrite `.sqlx`.
 # After changing schema or compile-time queries, run `just sqlx-prepare` explicitly.
 migrate:
-	@source .env.local && pgschema apply --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" --user "$PGUSER" --password "$PGPASSWORD" --file migrations/schema.sql --schema public --auto-approve
+	@source .env.local && pgschema apply --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" --user "$PGUSER" --password "$PGPASSWORD" --plan-host "$PGHOST" --plan-port "$PGPORT" --plan-db "$PGDATABASE" --plan-user "$PGUSER" --plan-password "$PGPASSWORD" --file migrations/schema.sql --schema public --auto-approve
 
 # Regenerate the .sqlx/ offline query cache (requires a running DB with current schema)
 sqlx-prepare:
@@ -48,7 +48,7 @@ sqlx-prepare:
 
 # Preview what would change (dry run)
 migrate-plan:
-	@source .env.local && pgschema plan --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" --user "$PGUSER" --password "$PGPASSWORD" --file migrations/schema.sql --schema public --output-human stdout
+	@source .env.local && pgschema plan --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" --user "$PGUSER" --password "$PGPASSWORD" --plan-host "$PGHOST" --plan-port "$PGPORT" --plan-db "$PGDATABASE" --plan-user "$PGUSER" --plan-password "$PGPASSWORD" --file migrations/schema.sql --schema public --output-human stdout
 
 # Apply extensions + schema in one go
 migrate-full: migrate-extensions migrate
@@ -79,6 +79,7 @@ test:
 # Run CI gate script tests
 schema-check-test:
 	@bash scripts/tests/test-check-schema-plan.sh
+	@bash scripts/tests/test-pgschema-workflow.sh
 
 # Run all checks and tests (mirrors what CI does)
 ci: fmt check lint test schema-check-test

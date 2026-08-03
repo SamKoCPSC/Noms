@@ -24,7 +24,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 
 # === Stage 2b: Build pgschema ===
 FROM golang:1.24-bookworm AS pgschema-builder
-RUN go install github.com/pgplex/pgschema@latest
+RUN go install github.com/pgplex/pgschema@v1.12.1
 
 # === Stage 3: Checks + final build ===
 # Must switch back to the Rust builder context — the pgschema-builder stage

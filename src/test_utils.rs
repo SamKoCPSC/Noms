@@ -555,10 +555,258 @@ pub async fn add_test_recipe_to_collection(
 mod search_integration_tests {
     use super::*;
 
+    async fn index_exists(pool: &PgPool, index_name: &str) -> bool {
+        sqlx::query_scalar::<_, bool>("SELECT to_regclass($1) IS NOT NULL")
+            .bind(format!("public.{index_name}"))
+            .fetch_one(pool)
+            .await
+            .expect("failed to inspect search index")
+    }
+
+    async fn recipe_matches(pool: &PgPool, recipe_id: Uuid, predicate: &str, text: &str) -> bool {
+        let query = format!("SELECT EXISTS (SELECT 1 FROM recipes WHERE id = $2 AND {predicate})");
+        sqlx::query_scalar::<_, bool>(&query)
+            .bind(text)
+            .bind(recipe_id)
+            .fetch_one(pool)
+            .await
+            .expect("failed to execute recipe BM25 smoke query")
+    }
+
+    async fn user_matches(pool: &PgPool, user_id: Uuid, predicate: &str, text: &str) -> bool {
+        let query = format!("SELECT EXISTS (SELECT 1 FROM users WHERE id = $2 AND {predicate})");
+        sqlx::query_scalar::<_, bool>(&query)
+            .bind(text)
+            .bind(user_id)
+            .fetch_one(pool)
+            .await
+            .expect("failed to execute user BM25 smoke query")
+    }
+
     #[tokio::test]
     #[ignore = "requires SEARCH_TEST_DATABASE_URL backed by the pinned ParadeDB image"]
     async fn search_integration_paradedb_database_is_available() {
         let pool = setup_search_test_db().await;
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires SEARCH_TEST_DATABASE_URL backed by the pinned ParadeDB image"]
+    async fn search_integration_indexes_support_required_queries() {
+        let pool = setup_search_test_db().await;
+
+        assert!(index_exists(&pool, "idx_recipes_search").await);
+        assert!(index_exists(&pool, "idx_users_search").await);
+        assert!(index_exists(&pool, "idx_recipe_tags_tag").await);
+
+        for index_name in ["idx_recipes_search", "idx_users_search"] {
+            let has_key_field = sqlx::query_scalar::<_, bool>(
+                "SELECT COALESCE(reloptions @> ARRAY['key_field=id'], false) \
+                 FROM pg_class WHERE oid = $1::regclass",
+            )
+            .bind(index_name)
+            .fetch_one(&pool)
+            .await
+            .expect("failed to inspect ParadeDB key_field option");
+            assert!(has_key_field, "{index_name} must retain key_field=id");
+        }
+
+        let collections_exist =
+            sqlx::query_scalar::<_, bool>("SELECT to_regclass('public.collections') IS NOT NULL")
+                .fetch_one(&pool)
+                .await
+                .expect("failed to inspect collections table");
+        if collections_exist {
+            assert!(index_exists(&pool, "idx_collections_search").await);
+        }
+
+        let suffix = uid();
+        let user_id = Uuid::new_v4();
+        let recipe_id = Uuid::new_v4();
+        let username = format!("solarchef{suffix}");
+        let title = format!("Solar Saffron Risotto {suffix}");
+        let updated_title = format!("Comet Cardamom Pilaf {suffix}");
+
+        sqlx::query(
+            "INSERT INTO users (id, username, display_name, email, bio) \
+             VALUES ($1, $2, $3, $4, $5)",
+        )
+        .bind(user_id)
+        .bind(&username)
+        .bind(format!("Solar Chef {suffix}"))
+        .bind(format!("solar-{suffix}@example.test"))
+        .bind("Cooks bright seasonal food")
+        .execute(&pool)
+        .await
+        .expect("failed to insert search smoke-test user");
+
+        let ingredients = serde_json::json!([
+            {"name": "saffron", "notes": "golden thread"}
+        ]);
+        let instructions = serde_json::json!([{
+            "text": "Toast the arborio rice gently",
+            "photos": [{"url": "photo-secret-metadata"}],
+            "sub_steps": [{"text": "Fold in parmesan slowly"}]
+        }]);
+        sqlx::query(
+            "INSERT INTO recipes \
+             (id, user_id, title, description, ingredients, instructions, visibility) \
+             VALUES ($1, $2, $3, $4, $5, $6, 'public')",
+        )
+        .bind(recipe_id)
+        .bind(user_id)
+        .bind(&title)
+        .bind("Creamy orchard supper")
+        .bind(ingredients)
+        .bind(instructions)
+        .execute(&pool)
+        .await
+        .expect("failed to insert search smoke-test recipe");
+        sqlx::query("INSERT INTO recipe_tags (recipe_id, tag) VALUES ($1, $2)")
+            .bind(recipe_id)
+            .bind(format!("risotto-{suffix}"))
+            .execute(&pool)
+            .await
+            .expect("failed to insert search smoke-test tag");
+
+        let recipe_title_words =
+            "(title::pdb.simple('alias=recipe_title_words')) @@@ pdb.match_conjunction($1)";
+        let recipe_title_partial =
+            "(title::pdb.ngram(2, 15, 'alias=recipe_title_partial')) @@@ pdb.match_conjunction($1)";
+        let recipe_description_words = "(description::pdb.simple(\
+            'alias=recipe_description_words')) @@@ pdb.match_conjunction($1)";
+        let recipe_description_partial = "(description::pdb.ngram(2, 15, \
+            'alias=recipe_description_partial')) @@@ pdb.match_conjunction($1)";
+        let recipe_title_phrase =
+            "(title::pdb.simple('alias=recipe_title_words')) @@@ pdb.phrase($1)";
+        let recipe_ingredients_words = "(jsonb_path_query_array(ingredients, \
+            'strict $.** ? (@.type() == \"string\")')::pdb.simple(\
+            'alias=recipe_ingredients_words')) @@@ pdb.match_conjunction($1)";
+        let recipe_instructions_words = "(jsonb_path_query_array(instructions, \
+            'strict $.**.text')::pdb.simple('alias=recipe_instructions_words')) \
+            @@@ pdb.match_conjunction($1)";
+
+        assert!(recipe_matches(&pool, recipe_id, recipe_title_words, "saffron").await);
+        assert!(recipe_matches(&pool, recipe_id, recipe_title_partial, "affr").await);
+        assert!(recipe_matches(&pool, recipe_id, recipe_description_words, "orchard").await);
+        assert!(recipe_matches(&pool, recipe_id, recipe_description_partial, "ream").await);
+        assert!(recipe_matches(&pool, recipe_id, recipe_title_phrase, "solar saffron").await);
+        assert!(!recipe_matches(&pool, recipe_id, recipe_title_phrase, "saffron solar").await);
+        assert!(recipe_matches(&pool, recipe_id, recipe_ingredients_words, "golden").await);
+        assert!(recipe_matches(&pool, recipe_id, recipe_instructions_words, "parmesan").await);
+        assert!(
+            !recipe_matches(
+                &pool,
+                recipe_id,
+                recipe_instructions_words,
+                "photo secret metadata"
+            )
+            .await
+        );
+
+        let unboosted_score = sqlx::query_scalar::<_, f32>(
+            "SELECT pdb.score(id) FROM recipes \
+             WHERE id = $2 AND (title::pdb.simple('alias=recipe_title_words')) \
+             @@@ pdb.match_conjunction($1)",
+        )
+        .bind("saffron")
+        .bind(recipe_id)
+        .fetch_one(&pool)
+        .await
+        .expect("failed to execute unboosted prepared query");
+        let boosted_score = sqlx::query_scalar::<_, f32>(
+            "SELECT pdb.score(id) FROM recipes \
+             WHERE id = $2 AND (title::pdb.simple('alias=recipe_title_words')) \
+             @@@ $1::pdb.boost(3)",
+        )
+        .bind("saffron")
+        .bind(recipe_id)
+        .fetch_one(&pool)
+        .await
+        .expect("failed to execute boosted prepared query");
+        assert!(boosted_score > unboosted_score);
+
+        let user_username_words =
+            "(username::pdb.simple('alias=user_username_words')) @@@ pdb.match_conjunction($1)";
+        let user_username_partial = "(username::pdb.ngram(2, 20, \
+            'alias=user_username_partial')) @@@ pdb.match_conjunction($1)";
+        let user_display_name_words = "(display_name::pdb.simple(\
+            'alias=user_display_name_words')) @@@ pdb.match_conjunction($1)";
+        let user_display_name_partial = "(display_name::pdb.ngram(2, 20, \
+            'alias=user_display_name_partial')) @@@ pdb.match_conjunction($1)";
+        let user_bio_words =
+            "(bio::pdb.simple('alias=user_bio_words')) @@@ pdb.match_conjunction($1)";
+        assert!(user_matches(&pool, user_id, user_username_words, &username).await);
+        assert!(user_matches(&pool, user_id, user_username_partial, "olar").await);
+        assert!(user_matches(&pool, user_id, user_display_name_words, "solar").await);
+        assert!(user_matches(&pool, user_id, user_display_name_partial, "olar").await);
+        assert!(user_matches(&pool, user_id, user_bio_words, "seasonal").await);
+
+        sqlx::query("UPDATE recipes SET title = $1 WHERE id = $2")
+            .bind(&updated_title)
+            .bind(recipe_id)
+            .execute(&pool)
+            .await
+            .expect("failed to update indexed recipe title");
+        assert!(recipe_matches(&pool, recipe_id, recipe_title_words, "cardamom").await);
+        assert!(!recipe_matches(&pool, recipe_id, recipe_title_words, "saffron").await);
+
+        let recipe_plan = sqlx::query_scalar::<_, String>(
+            "EXPLAIN (COSTS OFF) SELECT id FROM recipes \
+             WHERE (title::pdb.simple('alias=recipe_title_words')) \
+             @@@ pdb.match_conjunction('cardamom')",
+        )
+        .fetch_all(&pool)
+        .await
+        .expect("failed to explain recipe BM25 query")
+        .join("\n");
+        assert!(recipe_plan.contains("Index: idx_recipes_search"));
+
+        let user_plan = sqlx::query_scalar::<_, String>(
+            "EXPLAIN (COSTS OFF) SELECT id FROM users \
+             WHERE (username::pdb.simple('alias=user_username_words')) \
+             @@@ pdb.match_conjunction('solarchef')",
+        )
+        .fetch_all(&pool)
+        .await
+        .expect("failed to explain user BM25 query")
+        .join("\n");
+        assert!(user_plan.contains("Index: idx_users_search"));
+
+        let mut connection = pool
+            .acquire()
+            .await
+            .expect("failed to acquire test connection");
+        sqlx::query("SET enable_seqscan = off")
+            .execute(&mut *connection)
+            .await
+            .expect("failed to disable sequential scans for tag index proof");
+        let tag_plan = sqlx::query_scalar::<_, String>(
+            "EXPLAIN (COSTS OFF) SELECT recipe_id FROM recipe_tags WHERE tag = $1",
+        )
+        .bind(format!("risotto-{suffix}"))
+        .fetch_all(&mut *connection)
+        .await
+        .expect("failed to explain tag lookup")
+        .join("\n");
+        sqlx::query("RESET enable_seqscan")
+            .execute(&mut *connection)
+            .await
+            .expect("failed to restore sequential scan setting");
+        assert!(tag_plan.contains("idx_recipe_tags_tag"));
+
+        let user_index_definition =
+            sqlx::query_scalar::<_, String>("SELECT pg_get_indexdef('idx_users_search'::regclass)")
+                .fetch_one(&pool)
+                .await
+                .expect("failed to inspect user search index definition");
+        assert!(!user_index_definition.contains("email"));
+
+        sqlx::query("DELETE FROM users WHERE id = $1")
+            .bind(user_id)
+            .execute(&pool)
+            .await
+            .expect("failed to clean up search smoke fixtures");
         pool.close().await;
     }
 }

@@ -22,6 +22,11 @@ pgschema apply \
     --db "$PGDATABASE" \
     --user "$PGUSER" \
     --password "$PGPASSWORD" \
+    --plan-host "$PGHOST" \
+    --plan-port "$PGPORT" \
+    --plan-db "$PGDATABASE" \
+    --plan-user "$PGUSER" \
+    --plan-password "$PGPASSWORD" \
     --file /workspace/migrations/schema.sql \
     --schema public \
     --auto-approve

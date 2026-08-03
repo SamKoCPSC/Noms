@@ -1,5 +1,5 @@
 FROM golang:1.24-bookworm AS pgschema-builder
-RUN go install github.com/pgplex/pgschema@latest
+RUN go install github.com/pgplex/pgschema@v1.12.1
 
 FROM rust:1-bookworm
 

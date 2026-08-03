@@ -1,10 +1,10 @@
 -- NOMS Schema
--- Applied by pgschema: `just migrate` (local), entrypoint.sh (Docker/Railway).
+-- Applied declaratively by pgschema using an extension-enabled plan database.
 -- Additive-only: never DROP or ALTER existing columns.
 -- All statements are idempotent (IF NOT EXISTS) for safe repeated application.
 --
 -- PREREQUISITES: Run migrations/extensions.sql first to install required extensions
--- (pgcrypto, pg_cron). This file only manages schema objects that pgschema tracks.
+-- (pgcrypto, pg_cron, pg_search).
 
 -- Core user table
 CREATE TABLE IF NOT EXISTS users (
@@ -19,6 +19,17 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_users_search
+ON users USING bm25 (
+    id,
+    (username::pdb.simple('alias=user_username_words')),
+    (username::pdb.ngram(2, 20, 'alias=user_username_partial')),
+    (display_name::pdb.simple('alias=user_display_name_words')),
+    (display_name::pdb.ngram(2, 20, 'alias=user_display_name_partial')),
+    (bio::pdb.simple('alias=user_bio_words'))
+)
+WITH (key_field = 'id');
 
 -- OAuth provider accounts linked to users
 CREATE TABLE IF NOT EXISTS oauth_accounts (
@@ -97,6 +108,18 @@ CREATE TABLE IF NOT EXISTS recipes (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_recipes_search
+ON recipes USING bm25 (
+    id,
+    (title::pdb.simple('alias=recipe_title_words')),
+    (title::pdb.ngram(2, 15, 'alias=recipe_title_partial')),
+    (description::pdb.simple('alias=recipe_description_words')),
+    (description::pdb.ngram(2, 15, 'alias=recipe_description_partial')),
+    (jsonb_path_query_array(ingredients, 'strict $.** ? (@.type() == "string")')::pdb.simple('alias=recipe_ingredients_words')),
+    (jsonb_path_query_array(instructions, 'strict $.**.text')::pdb.simple('alias=recipe_instructions_words'))
+)
+WITH (key_field = 'id');
 
 CREATE TABLE IF NOT EXISTS recipe_tags (
     recipe_id UUID REFERENCES recipes(id) ON DELETE CASCADE,
@@ -177,6 +200,8 @@ CREATE INDEX IF NOT EXISTS idx_forks_original_key ON fork_relationships(original
 CREATE UNIQUE INDEX IF NOT EXISTS idx_forks_result_key
     ON fork_relationships(forked_recipe_key) WHERE forked_recipe_key IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_forks_parent ON fork_relationships(parent_relationship_id);
+
+CREATE INDEX IF NOT EXISTS idx_recipe_tags_tag ON recipe_tags(tag);
 
 CREATE INDEX IF NOT EXISTS idx_recipes_user_id ON recipes(user_id);
 CREATE INDEX IF NOT EXISTS idx_recipes_created_at ON recipes(created_at DESC);

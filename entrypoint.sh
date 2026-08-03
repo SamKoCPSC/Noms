@@ -112,7 +112,8 @@ apply_extensions() {
     echo "Extensions applied."
 }
 
-# Apply database schema using pgschema
+# Apply the declarative schema using the extension-enabled target as pgschema's
+# plan database so extension-provided types and index methods can be inspected.
 apply_schema() {
     echo "Applying database schema..."
     pgschema apply \
@@ -121,6 +122,11 @@ apply_schema() {
         --db "$PGDATABASE" \
         --user "$PGUSER" \
         --password "$PGPASSWORD" \
+        --plan-host "$PGHOST" \
+        --plan-port "$PGPORT" \
+        --plan-db "$PGDATABASE" \
+        --plan-user "$PGUSER" \
+        --plan-password "$PGPASSWORD" \
         --file /usr/local/app/migrations/schema.sql \
         --schema public \
         --auto-approve
