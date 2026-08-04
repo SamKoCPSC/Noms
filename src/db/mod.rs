@@ -22,6 +22,9 @@ use crate::types::{
     CollectionSummary, CollectionVisibility, PublicCollectionListResponse,
 };
 
+mod recipe_search;
+pub use recipe_search::search_recipes;
+
 // Re-export typed recipe sub-structs for use in DB layer
 pub use crate::types::RecipeEquipment;
 pub use crate::types::RecipeIngredient;
@@ -83,6 +86,8 @@ pub enum DbError {
     RecipeAlreadyInCollection,
     /// The submitted order does not exactly match the current direct members.
     InvalidCollectionOrder,
+    /// A search request failed bounded server-side validation.
+    InvalidSearchRequest(String),
 }
 
 impl std::fmt::Display for DbError {
@@ -131,6 +136,9 @@ impl std::fmt::Display for DbError {
             DbError::InvalidCollectionOrder => {
                 write!(f, "collection order does not match membership")
             }
+            DbError::InvalidSearchRequest(message) => {
+                write!(f, "invalid search request: {message}")
+            }
         }
     }
 }
@@ -157,6 +165,7 @@ impl std::error::Error for DbError {
             | DbError::RecipeNotAccessible(_)
             | DbError::RecipeAlreadyInCollection
             | DbError::InvalidCollectionOrder => None,
+            DbError::InvalidSearchRequest(_) => None,
         }
     }
 }

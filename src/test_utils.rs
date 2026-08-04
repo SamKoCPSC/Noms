@@ -554,6 +554,12 @@ pub async fn add_test_recipe_to_collection(
 #[cfg(test)]
 mod search_integration_tests {
     use super::*;
+    use crate::types::{
+        AdvancedRecipeSearchCriteria, AdvancedTextField, IntegerRange, RecipeSearchRequest,
+        RecipeSearchSort, RecipeSearchVisibility, RecipeVisibilityFacetValue, TextCriterion,
+        TextMatchMode, TimestampRange,
+    };
+    use chrono::{Duration, Utc};
 
     async fn index_exists(pool: &PgPool, index_name: &str) -> bool {
         sqlx::query_scalar::<_, bool>("SELECT to_regclass($1) IS NOT NULL")
@@ -581,6 +587,74 @@ mod search_integration_tests {
             .fetch_one(pool)
             .await
             .expect("failed to execute user BM25 smoke query")
+    }
+
+    struct RecipeFixture<'a> {
+        id: Uuid,
+        owner_id: Uuid,
+        title: &'a str,
+        description: &'a str,
+        visibility: &'a str,
+        prep_time: Option<i32>,
+        cook_time: Option<i32>,
+        servings: Option<i32>,
+        ingredients: serde_json::Value,
+        instructions: serde_json::Value,
+        created_at: chrono::DateTime<Utc>,
+        updated_at: chrono::DateTime<Utc>,
+        tags: Vec<String>,
+    }
+
+    async fn insert_search_user(pool: &PgPool, user_id: Uuid, suffix: &str, label: &str) {
+        sqlx::query(
+            "INSERT INTO users (id, username, display_name, email) VALUES ($1, $2, $3, $4)",
+        )
+        .bind(user_id)
+        .bind(format!("{label}{suffix}"))
+        .bind(format!("{label} {suffix}"))
+        .bind(format!("{label}-{suffix}@example.test"))
+        .execute(pool)
+        .await
+        .expect("failed to insert recipe-search user");
+    }
+
+    async fn insert_search_recipe(pool: &PgPool, fixture: RecipeFixture<'_>) {
+        sqlx::query(
+            "INSERT INTO recipes (id, user_id, title, description, prep_time_minutes, \
+             cook_time_minutes, servings, ingredients, instructions, visibility, created_at, updated_at) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+        )
+        .bind(fixture.id)
+        .bind(fixture.owner_id)
+        .bind(fixture.title)
+        .bind(fixture.description)
+        .bind(fixture.prep_time)
+        .bind(fixture.cook_time)
+        .bind(fixture.servings)
+        .bind(fixture.ingredients)
+        .bind(fixture.instructions)
+        .bind(fixture.visibility)
+        .bind(fixture.created_at)
+        .bind(fixture.updated_at)
+        .execute(pool)
+        .await
+        .expect("failed to insert recipe-search fixture");
+
+        for tag in fixture.tags {
+            sqlx::query("INSERT INTO recipe_tags (recipe_id, tag) VALUES ($1, $2)")
+                .bind(fixture.id)
+                .bind(tag)
+                .execute(pool)
+                .await
+                .expect("failed to insert recipe-search tag");
+        }
+    }
+
+    fn criterion(text: impl Into<String>, mode: TextMatchMode) -> TextCriterion {
+        TextCriterion {
+            text: text.into(),
+            mode,
+        }
     }
 
     #[tokio::test]
@@ -807,6 +881,441 @@ mod search_integration_tests {
             .execute(&pool)
             .await
             .expect("failed to clean up search smoke fixtures");
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires SEARCH_TEST_DATABASE_URL backed by the pinned ParadeDB image"]
+    async fn search_integration_recipe_operation_enforces_authorization_filters_and_facets() {
+        let pool = setup_search_test_db().await;
+        let suffix = uid();
+        let anchor_tag = format!("checkpoint3-{suffix}");
+        let owner_id = Uuid::new_v4();
+        let other_id = Uuid::new_v4();
+        insert_search_user(&pool, owner_id, &suffix, "facetowner").await;
+        insert_search_user(&pool, other_id, &suffix, "facetother").await;
+
+        let now = Utc::now();
+        let fixtures = [
+            (
+                owner_id,
+                "private",
+                Some(10),
+                Some(10),
+                Some(2),
+                "quick",
+                -6,
+            ),
+            (
+                owner_id,
+                "unlisted",
+                Some(20),
+                Some(30),
+                Some(4),
+                "weeknight",
+                -5,
+            ),
+            (
+                owner_id,
+                "public",
+                Some(60),
+                Some(70),
+                Some(10),
+                "project",
+                -4,
+            ),
+            (owner_id, "public", None, None, None, "unknown", -3),
+            (
+                other_id,
+                "public",
+                Some(30),
+                Some(40),
+                Some(6),
+                "shared",
+                -2,
+            ),
+            (other_id, "private", Some(5), Some(5), Some(1), "hidden", -1),
+        ];
+        let mut hidden_other_id = Uuid::nil();
+        for (index, (user_id, visibility, prep, cook, servings, tag, day)) in
+            fixtures.into_iter().enumerate()
+        {
+            let recipe_id = Uuid::new_v4();
+            if user_id == other_id && visibility == "private" {
+                hidden_other_id = recipe_id;
+            }
+            insert_search_recipe(
+                &pool,
+                RecipeFixture {
+                    id: recipe_id,
+                    owner_id: user_id,
+                    title: &format!("Facet Recipe {index} {suffix}"),
+                    description: "facet coverage",
+                    visibility,
+                    prep_time: prep,
+                    cook_time: cook,
+                    servings,
+                    ingredients: serde_json::json!([]),
+                    instructions: serde_json::json!([]),
+                    created_at: now + Duration::days(day),
+                    updated_at: now + Duration::days(day),
+                    tags: vec![anchor_tag.clone(), format!("{tag}-{suffix}")],
+                },
+            )
+            .await;
+        }
+
+        let request = RecipeSearchRequest {
+            text: Some("   ".to_string()),
+            tags_all: vec![anchor_tag.clone()],
+            page_size: 2,
+            ..RecipeSearchRequest::default()
+        };
+        let response = crate::db::search_recipes(&pool, owner_id, &request)
+            .await
+            .expect("recipe browse search failed");
+        assert_eq!(response.total_count, 5);
+        assert_eq!(response.results.len(), 2);
+        assert!(response
+            .results
+            .iter()
+            .all(|result| result.relevance.is_none()));
+        assert!(!response
+            .results
+            .iter()
+            .any(|result| result.recipe.id == hidden_other_id));
+
+        let visibility_counts: Vec<_> = response
+            .facets
+            .visibility
+            .iter()
+            .map(|bucket| (bucket.visibility, bucket.count))
+            .collect();
+        assert_eq!(
+            visibility_counts,
+            vec![
+                (RecipeVisibilityFacetValue::Private, 1),
+                (RecipeVisibilityFacetValue::Unlisted, 1),
+                (RecipeVisibilityFacetValue::Public, 3),
+            ]
+        );
+        assert_eq!(
+            response
+                .facets
+                .total_time
+                .iter()
+                .map(|bucket| bucket.count)
+                .collect::<Vec<_>>(),
+            vec![1, 1, 1, 1]
+        );
+        assert_eq!(
+            response
+                .facets
+                .servings
+                .iter()
+                .map(|bucket| bucket.count)
+                .collect::<Vec<_>>(),
+            vec![1, 1, 1, 1]
+        );
+        let selected_anchor = response
+            .facets
+            .tags
+            .iter()
+            .find(|bucket| bucket.tag == anchor_tag)
+            .expect("selected tag facet missing");
+        assert_eq!(selected_anchor.count, 5);
+
+        let mine_request = RecipeSearchRequest {
+            visibility: RecipeSearchVisibility::MineOnly,
+            tags_all: vec![anchor_tag.clone()],
+            page_size: 100,
+            ..RecipeSearchRequest::default()
+        };
+        let mine = crate::db::search_recipes(&pool, owner_id, &mine_request)
+            .await
+            .expect("mine-only recipe search failed");
+        assert_eq!(mine.total_count, 4);
+        assert!(mine
+            .results
+            .iter()
+            .all(|result| result.recipe.user_id == owner_id));
+        assert_eq!(
+            mine.facets
+                .visibility
+                .iter()
+                .map(|bucket| bucket.count)
+                .collect::<Vec<_>>(),
+            vec![1, 1, 3],
+            "visibility facet must omit only the mine-only filter"
+        );
+
+        let ranged_request = RecipeSearchRequest {
+            tags_all: vec![anchor_tag.clone()],
+            total_time: Some(IntegerRange {
+                lower_inclusive: Some(0),
+                upper_exclusive: Some(60),
+            }),
+            servings: Some(IntegerRange {
+                lower_inclusive: Some(1),
+                upper_exclusive: Some(5),
+            }),
+            page_size: 100,
+            ..RecipeSearchRequest::default()
+        };
+        let ranged = crate::db::search_recipes(&pool, owner_id, &ranged_request)
+            .await
+            .expect("ranged recipe search failed");
+        assert_eq!(ranged.total_count, 2);
+        assert_eq!(
+            ranged
+                .facets
+                .total_time
+                .iter()
+                .map(|bucket| bucket.count)
+                .collect::<Vec<_>>(),
+            vec![1, 1, 0, 0],
+            "time facet omits time but retains the servings filter"
+        );
+        assert_eq!(
+            ranged
+                .facets
+                .servings
+                .iter()
+                .map(|bucket| bucket.count)
+                .collect::<Vec<_>>(),
+            vec![1, 1, 0, 0],
+            "servings facet omits servings but retains the time filter"
+        );
+
+        let public_request = RecipeSearchRequest {
+            visibility: RecipeSearchVisibility::PublicOnly,
+            tags_all: vec![anchor_tag.clone()],
+            page_size: 100,
+            ..RecipeSearchRequest::default()
+        };
+        let public = crate::db::search_recipes(&pool, owner_id, &public_request)
+            .await
+            .expect("public-only recipe search failed");
+        assert_eq!(public.total_count, 3);
+
+        for sort in [
+            RecipeSearchSort::Relevance,
+            RecipeSearchSort::UpdatedNewest,
+            RecipeSearchSort::UpdatedOldest,
+            RecipeSearchSort::TitleAscending,
+            RecipeSearchSort::TitleDescending,
+            RecipeSearchSort::Quickest,
+            RecipeSearchSort::Longest,
+        ] {
+            let sorted_request = RecipeSearchRequest {
+                tags_all: vec![anchor_tag.clone()],
+                sort,
+                page: 2,
+                page_size: 2,
+                ..RecipeSearchRequest::default()
+            };
+            let sorted = crate::db::search_recipes(&pool, owner_id, &sorted_request)
+                .await
+                .expect("recipe sort failed");
+            assert_eq!(sorted.total_count, 5);
+            assert_eq!(sorted.results.len(), 2);
+        }
+
+        sqlx::query("DELETE FROM users WHERE id = ANY($1)")
+            .bind(vec![owner_id, other_id])
+            .execute(&pool)
+            .await
+            .expect("failed to clean up facet fixtures");
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires SEARCH_TEST_DATABASE_URL backed by the pinned ParadeDB image"]
+    async fn search_integration_recipe_operation_handles_text_advanced_tags_and_dates() {
+        let pool = setup_search_test_db().await;
+        let suffix = uid();
+        let anchor_tag = format!("text-{suffix}");
+        let owner_id = Uuid::new_v4();
+        insert_search_user(&pool, owner_id, &suffix, "textowner").await;
+        let now = Utc::now();
+
+        let cross_field_id = Uuid::new_v4();
+        insert_search_recipe(
+            &pool,
+            RecipeFixture {
+                id: cross_field_id,
+                owner_id,
+                title: &format!("Aurora Soup {suffix}"),
+                description: "Nebula public OR private supper",
+                visibility: "private",
+                prep_time: Some(10),
+                cook_time: Some(20),
+                servings: Some(2),
+                ingredients: serde_json::json!([{"amount":"1","unit":"tsp","name":"cardamom"}]),
+                instructions: serde_json::json!([{
+                    "text":"Toast gently",
+                    "sub_steps":[{"text":"Fold in parmesan","sub_steps":[],"photos":[]}],
+                    "photos":[{"url":"secret-photo-metadata","edits":[]}]
+                }]),
+                created_at: now - Duration::days(2),
+                updated_at: now - Duration::days(1),
+                tags: vec![anchor_tag.clone(), format!("comfort-{suffix}")],
+            },
+        )
+        .await;
+
+        let title_ranked_id = Uuid::new_v4();
+        insert_search_recipe(
+            &pool,
+            RecipeFixture {
+                id: title_ranked_id,
+                owner_id,
+                title: &format!("Quasar Tart {suffix}"),
+                description: "ranking fixture",
+                visibility: "public",
+                prep_time: Some(15),
+                cook_time: Some(15),
+                servings: Some(4),
+                ingredients: serde_json::json!([]),
+                instructions: serde_json::json!([]),
+                created_at: now - Duration::days(1),
+                updated_at: now,
+                tags: vec![anchor_tag.clone(), format!("rank-{suffix}")],
+            },
+        )
+        .await;
+
+        let ingredient_ranked_id = Uuid::new_v4();
+        insert_search_recipe(
+            &pool,
+            RecipeFixture {
+                id: ingredient_ranked_id,
+                owner_id,
+                title: &format!("Spiced Tart {suffix}"),
+                description: "ranking fixture",
+                visibility: "public",
+                prep_time: Some(20),
+                cook_time: Some(20),
+                servings: Some(4),
+                ingredients: serde_json::json!([{"amount":"1","unit":"cup","name":"quasar"}]),
+                instructions: serde_json::json!([]),
+                created_at: now,
+                updated_at: now,
+                tags: vec![anchor_tag.clone(), format!("rank-{suffix}")],
+            },
+        )
+        .await;
+
+        let search = |text: &str| RecipeSearchRequest {
+            text: Some(text.to_string()),
+            tags_all: vec![anchor_tag.clone()],
+            page_size: 100,
+            ..RecipeSearchRequest::default()
+        };
+        let cross_field = crate::db::search_recipes(&pool, owner_id, &search("aurora nebula"))
+            .await
+            .expect("cross-field all-term search failed");
+        assert_eq!(cross_field.total_count, 1);
+        assert_eq!(cross_field.results[0].recipe.id, cross_field_id);
+
+        let literal = crate::db::search_recipes(&pool, owner_id, &search("public OR private"))
+            .await
+            .expect("literal parser-looking search failed");
+        assert_eq!(literal.total_count, 1);
+        assert_eq!(literal.results[0].recipe.id, cross_field_id);
+
+        let ranking = crate::db::search_recipes(&pool, owner_id, &search("quasar"))
+            .await
+            .expect("ranked recipe search failed");
+        assert_eq!(ranking.total_count, 2);
+        assert_eq!(ranking.results[0].recipe.id, title_ranked_id);
+        assert!(ranking.results[0].relevance > ranking.results[1].relevance);
+
+        let advanced = AdvancedRecipeSearchCriteria {
+            title: AdvancedTextField {
+                include: Some(criterion("aurora soup", TextMatchMode::ExactPhrase)),
+                ..AdvancedTextField::default()
+            },
+            description: AdvancedTextField {
+                include: Some(criterion("nebula supper", TextMatchMode::AllTerms)),
+                ..AdvancedTextField::default()
+            },
+            ingredients: AdvancedTextField {
+                include: Some(criterion("cardamom", TextMatchMode::AnyTerm)),
+                exclude: vec![criterion("cumin", TextMatchMode::AnyTerm)],
+            },
+            instructions: AdvancedTextField {
+                include: Some(criterion("parmesan", TextMatchMode::AllTerms)),
+                exclude: vec![criterion("secret photo metadata", TextMatchMode::AllTerms)],
+            },
+            tags_any: vec![format!("comfort-{suffix}")],
+            tags_excluded: vec![format!("forbidden-{suffix}")],
+            created_at: Some(TimestampRange {
+                lower_inclusive: Some(now - Duration::days(3)),
+                upper_exclusive: Some(now),
+            }),
+            updated_at: Some(TimestampRange {
+                lower_inclusive: Some(now - Duration::days(2)),
+                upper_exclusive: Some(now),
+            }),
+        };
+        let advanced_response = crate::db::search_recipes(
+            &pool,
+            owner_id,
+            &RecipeSearchRequest {
+                advanced: Some(advanced.clone()),
+                tags_all: vec![anchor_tag.clone()],
+                page_size: 100,
+                ..RecipeSearchRequest::default()
+            },
+        )
+        .await
+        .expect("advanced recipe search failed");
+        assert_eq!(advanced_response.total_count, 1);
+        assert_eq!(advanced_response.results[0].recipe.id, cross_field_id);
+
+        let mut excluded = advanced;
+        excluded.title.exclude = vec![criterion("aurora", TextMatchMode::AnyTerm)];
+        let excluded_response = crate::db::search_recipes(
+            &pool,
+            owner_id,
+            &RecipeSearchRequest {
+                advanced: Some(excluded),
+                tags_all: vec![anchor_tag.clone()],
+                page_size: 100,
+                ..RecipeSearchRequest::default()
+            },
+        )
+        .await
+        .expect("advanced exclusion search failed");
+        assert_eq!(excluded_response.total_count, 0);
+
+        let partial = crate::db::search_recipes(
+            &pool,
+            owner_id,
+            &RecipeSearchRequest {
+                advanced: Some(AdvancedRecipeSearchCriteria {
+                    title: AdvancedTextField {
+                        include: Some(criterion("uror", TextMatchMode::AnyTerm)),
+                        ..AdvancedTextField::default()
+                    },
+                    ..AdvancedRecipeSearchCriteria::default()
+                }),
+                tags_all: vec![anchor_tag.clone()],
+                page_size: 100,
+                ..RecipeSearchRequest::default()
+            },
+        )
+        .await
+        .expect("partial advanced recipe search failed");
+        assert_eq!(partial.total_count, 1);
+        assert_eq!(partial.results[0].recipe.id, cross_field_id);
+
+        sqlx::query("DELETE FROM users WHERE id = $1")
+            .bind(owner_id)
+            .execute(&pool)
+            .await
+            .expect("failed to clean up text fixtures");
         pool.close().await;
     }
 }
