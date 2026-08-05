@@ -555,9 +555,9 @@ pub async fn add_test_recipe_to_collection(
 mod search_integration_tests {
     use super::*;
     use crate::types::{
-        AdvancedRecipeSearchCriteria, AdvancedTextField, IntegerRange, RecipeSearchRequest,
-        RecipeSearchSort, RecipeSearchVisibility, RecipeVisibilityFacetValue, TextCriterion,
-        TextMatchMode, TimestampRange,
+        AdvancedRecipeSearchCriteria, AdvancedTextField, AdvancedUserSearchCriteria, IntegerRange,
+        RecipeSearchRequest, RecipeSearchSort, RecipeSearchVisibility, RecipeVisibilityFacetValue,
+        TextCriterion, TextMatchMode, TimestampRange, UserSearchRequest, UserSearchSort,
     };
     use chrono::{Duration, Utc};
 
@@ -616,6 +616,40 @@ mod search_integration_tests {
         .execute(pool)
         .await
         .expect("failed to insert recipe-search user");
+    }
+
+    struct UserSearchFixture<'a> {
+        id: Uuid,
+        username: &'a str,
+        display_name: &'a str,
+        email: &'a str,
+        bio: Option<&'a str>,
+    }
+
+    async fn insert_user_search_fixture(pool: &PgPool, fixture: UserSearchFixture<'_>) {
+        sqlx::query(
+            "INSERT INTO users (id, username, display_name, email, bio) \
+             VALUES ($1, $2, $3, $4, $5)",
+        )
+        .bind(fixture.id)
+        .bind(fixture.username)
+        .bind(fixture.display_name)
+        .bind(fixture.email)
+        .bind(fixture.bio)
+        .execute(pool)
+        .await
+        .expect("failed to insert user-search fixture");
+    }
+
+    async fn insert_recipe_with_visibility(pool: &PgPool, owner_id: Uuid, visibility: &str) {
+        sqlx::query("INSERT INTO recipes (id, user_id, title, visibility) VALUES ($1, $2, $3, $4)")
+            .bind(Uuid::new_v4())
+            .bind(owner_id)
+            .bind(format!("User search count fixture {}", uid()))
+            .bind(visibility)
+            .execute(pool)
+            .await
+            .expect("failed to insert user-search recipe count fixture");
     }
 
     async fn insert_search_recipe(pool: &PgPool, fixture: RecipeFixture<'_>) {
@@ -1316,6 +1350,318 @@ mod search_integration_tests {
             .execute(&pool)
             .await
             .expect("failed to clean up text fixtures");
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires SEARCH_TEST_DATABASE_URL backed by the pinned ParadeDB image"]
+    async fn search_integration_user_operation_matches_ranks_sorts_and_paginates() {
+        let pool = setup_search_test_db().await;
+        let suffix = uid();
+        let cross_field_id = Uuid::new_v4();
+        let username_ranked_id = Uuid::new_v4();
+        let bio_ranked_id = Uuid::new_v4();
+
+        let cross_username = format!("aurorachef{suffix}");
+        let username_ranked = format!("quasarpro{suffix}");
+        let bio_ranked = format!("spicepro{suffix}");
+        let secret_email_term = format!("emailsecret{suffix}");
+        insert_user_search_fixture(
+            &pool,
+            UserSearchFixture {
+                id: cross_field_id,
+                username: &cross_username,
+                display_name: &format!("Nebula Baker {suffix}"),
+                email: &format!("{secret_email_term}@example.test"),
+                bio: Some("Seasonal public OR private supper"),
+            },
+        )
+        .await;
+        insert_user_search_fixture(
+            &pool,
+            UserSearchFixture {
+                id: username_ranked_id,
+                username: &username_ranked,
+                display_name: &format!("Rank Alpha {suffix}"),
+                email: &format!("rank-a-{suffix}@example.test"),
+                bio: Some("Pastry specialist"),
+            },
+        )
+        .await;
+        insert_user_search_fixture(
+            &pool,
+            UserSearchFixture {
+                id: bio_ranked_id,
+                username: &bio_ranked,
+                display_name: &format!("Rank Beta {suffix}"),
+                email: &format!("rank-b-{suffix}@example.test"),
+                bio: Some("Quasar pastry specialist"),
+            },
+        )
+        .await;
+
+        let search = |text: &str| UserSearchRequest {
+            text: Some(text.to_string()),
+            page_size: 100,
+            ..UserSearchRequest::default()
+        };
+        let cross_field = crate::db::search_users(&pool, &search("aurora nebula"))
+            .await
+            .expect("cross-field user search failed");
+        assert_eq!(cross_field.total_count, 1);
+        assert_eq!(cross_field.results[0].user.id, cross_field_id);
+
+        let partial = crate::db::search_users(&pool, &search("uror ebul"))
+            .await
+            .expect("partial username/display-name search failed");
+        assert_eq!(partial.total_count, 1);
+        assert_eq!(partial.results[0].user.id, cross_field_id);
+
+        let exact_username = crate::db::search_users(&pool, &search(&username_ranked))
+            .await
+            .expect("exact username search failed");
+        assert_eq!(exact_username.total_count, 1);
+        assert_eq!(exact_username.results[0].user.id, username_ranked_id);
+
+        let literal = crate::db::search_users(&pool, &search("public OR private"))
+            .await
+            .expect("literal parser-looking user search failed");
+        assert_eq!(literal.total_count, 1);
+        assert_eq!(literal.results[0].user.id, cross_field_id);
+
+        let private_field = crate::db::search_users(&pool, &search(&secret_email_term))
+            .await
+            .expect("private-field exclusion search failed");
+        assert_eq!(private_field.total_count, 0, "email must not be searchable");
+
+        let ranking = crate::db::search_users(&pool, &search("quasar"))
+            .await
+            .expect("ranked user search failed");
+        assert_eq!(ranking.total_count, 2);
+        assert_eq!(ranking.results[0].user.id, username_ranked_id);
+        assert!(ranking.results[0].relevance > ranking.results[1].relevance);
+
+        let username_sorted = crate::db::search_users(
+            &pool,
+            &UserSearchRequest {
+                text: Some("pro".to_string()),
+                sort: UserSearchSort::UsernameAscending,
+                page_size: 100,
+                ..UserSearchRequest::default()
+            },
+        )
+        .await
+        .expect("username-sorted user search failed");
+        assert_eq!(username_sorted.total_count, 2);
+        assert_eq!(username_sorted.results[0].user.username, username_ranked);
+        assert_eq!(username_sorted.results[1].user.username, bio_ranked);
+
+        let display_sorted = crate::db::search_users(
+            &pool,
+            &UserSearchRequest {
+                text: Some("rank".to_string()),
+                sort: UserSearchSort::DisplayNameAscending,
+                page_size: 100,
+                ..UserSearchRequest::default()
+            },
+        )
+        .await
+        .expect("display-name-sorted user search failed");
+        assert_eq!(display_sorted.total_count, 2);
+        assert_eq!(display_sorted.results[0].user.id, username_ranked_id);
+        assert_eq!(display_sorted.results[1].user.id, bio_ranked_id);
+
+        let second_page = crate::db::search_users(
+            &pool,
+            &UserSearchRequest {
+                text: Some("quasar".to_string()),
+                page: 2,
+                page_size: 1,
+                ..UserSearchRequest::default()
+            },
+        )
+        .await
+        .expect("paginated user search failed");
+        assert_eq!(second_page.total_count, 2);
+        assert_eq!(second_page.results.len(), 1);
+        assert_eq!(second_page.results[0].user.id, bio_ranked_id);
+
+        let browse = crate::db::search_users(
+            &pool,
+            &UserSearchRequest {
+                text: Some("   ".to_string()),
+                page_size: 100,
+                ..UserSearchRequest::default()
+            },
+        )
+        .await
+        .expect("relevance-less user browse failed");
+        assert!(browse
+            .results
+            .iter()
+            .all(|result| result.relevance.is_none()));
+        assert!(browse.results.windows(2).all(|users| {
+            let left = (&users[0].user.username.to_lowercase(), users[0].user.id);
+            let right = (&users[1].user.username.to_lowercase(), users[1].user.id);
+            left <= right
+        }));
+
+        sqlx::query("DELETE FROM users WHERE id = ANY($1)")
+            .bind(vec![cross_field_id, username_ranked_id, bio_ranked_id])
+            .execute(&pool)
+            .await
+            .expect("failed to clean up user-search matching fixtures");
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires SEARCH_TEST_DATABASE_URL backed by the pinned ParadeDB image"]
+    async fn search_integration_user_operation_applies_advanced_and_public_projection() {
+        let pool = setup_search_test_db().await;
+        let suffix = uid();
+        let user_id = Uuid::new_v4();
+        let username = format!("cosmiccook{suffix}");
+        insert_user_search_fixture(
+            &pool,
+            UserSearchFixture {
+                id: user_id,
+                username: &username,
+                display_name: &format!("Stellar Kitchen {suffix}"),
+                email: &format!("cosmic-{suffix}@example.test"),
+                bio: Some("Ferments bright seasonal produce"),
+            },
+        )
+        .await;
+        for visibility in ["public", "public", "private", "unlisted"] {
+            insert_recipe_with_visibility(&pool, user_id, visibility).await;
+        }
+
+        let advanced = AdvancedUserSearchCriteria {
+            username: AdvancedTextField {
+                include: Some(criterion("osmic", TextMatchMode::AnyTerm)),
+                exclude: Vec::new(),
+            },
+            display_name: AdvancedTextField {
+                include: Some(criterion("stellar kitchen", TextMatchMode::ExactPhrase)),
+                exclude: Vec::new(),
+            },
+            bio: AdvancedTextField {
+                include: Some(criterion("bright seasonal", TextMatchMode::AllTerms)),
+                exclude: vec![criterion("spoiled", TextMatchMode::AnyTerm)],
+            },
+        };
+        let response = crate::db::search_users(
+            &pool,
+            &UserSearchRequest {
+                advanced: Some(advanced.clone()),
+                page_size: 100,
+                ..UserSearchRequest::default()
+            },
+        )
+        .await
+        .expect("advanced user search failed");
+        assert_eq!(response.total_count, 1);
+        assert_eq!(response.results.len(), 1);
+        assert_eq!(response.results[0].user.id, user_id);
+        assert_eq!(response.results[0].user.public_recipe_count, 2);
+
+        let bio_phrase = crate::db::search_users(
+            &pool,
+            &UserSearchRequest {
+                advanced: Some(AdvancedUserSearchCriteria {
+                    bio: AdvancedTextField {
+                        include: Some(criterion(
+                            "bright seasonal produce",
+                            TextMatchMode::ExactPhrase,
+                        )),
+                        exclude: Vec::new(),
+                    },
+                    ..AdvancedUserSearchCriteria::default()
+                }),
+                page_size: 100,
+                ..UserSearchRequest::default()
+            },
+        )
+        .await
+        .expect("bio phrase user search failed");
+        assert_eq!(bio_phrase.total_count, 1);
+        assert_eq!(bio_phrase.results[0].user.id, user_id);
+
+        let bio_partial = crate::db::search_users(
+            &pool,
+            &UserSearchRequest {
+                advanced: Some(AdvancedUserSearchCriteria {
+                    bio: AdvancedTextField {
+                        include: Some(criterion("eason", TextMatchMode::AnyTerm)),
+                        exclude: Vec::new(),
+                    },
+                    ..AdvancedUserSearchCriteria::default()
+                }),
+                page_size: 100,
+                ..UserSearchRequest::default()
+            },
+        )
+        .await
+        .expect("bio partial exclusion search failed");
+        assert_eq!(
+            bio_partial.total_count, 0,
+            "bio must not use an ngram alias"
+        );
+
+        for excluded in [
+            AdvancedUserSearchCriteria {
+                username: AdvancedTextField {
+                    include: advanced.username.include.clone(),
+                    exclude: vec![criterion("cosmic", TextMatchMode::AnyTerm)],
+                },
+                ..advanced.clone()
+            },
+            AdvancedUserSearchCriteria {
+                display_name: AdvancedTextField {
+                    include: advanced.display_name.include.clone(),
+                    exclude: vec![criterion("stellar kitchen", TextMatchMode::ExactPhrase)],
+                },
+                ..advanced.clone()
+            },
+            AdvancedUserSearchCriteria {
+                bio: AdvancedTextField {
+                    include: advanced.bio.include.clone(),
+                    exclude: vec![criterion("bright produce", TextMatchMode::AllTerms)],
+                },
+                ..advanced.clone()
+            },
+        ] {
+            let excluded_response = crate::db::search_users(
+                &pool,
+                &UserSearchRequest {
+                    advanced: Some(excluded),
+                    page_size: 100,
+                    ..UserSearchRequest::default()
+                },
+            )
+            .await
+            .expect("advanced user exclusion search failed");
+            assert_eq!(excluded_response.total_count, 0);
+        }
+
+        let invalid = crate::db::search_users(
+            &pool,
+            &UserSearchRequest {
+                page_size: crate::search::MAX_SEARCH_PAGE_SIZE + 1,
+                ..UserSearchRequest::default()
+            },
+        )
+        .await;
+        assert!(matches!(
+            invalid,
+            Err(crate::db::DbError::InvalidSearchRequest(_))
+        ));
+
+        sqlx::query("DELETE FROM users WHERE id = $1")
+            .bind(user_id)
+            .execute(&pool)
+            .await
+            .expect("failed to clean up advanced user-search fixture");
         pool.close().await;
     }
 }
