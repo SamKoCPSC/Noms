@@ -555,9 +555,11 @@ pub async fn add_test_recipe_to_collection(
 mod search_integration_tests {
     use super::*;
     use crate::types::{
-        AdvancedRecipeSearchCriteria, AdvancedTextField, AdvancedUserSearchCriteria, IntegerRange,
-        RecipeSearchRequest, RecipeSearchSort, RecipeSearchVisibility, RecipeVisibilityFacetValue,
-        TextCriterion, TextMatchMode, TimestampRange, UserSearchRequest, UserSearchSort,
+        AdvancedCollectionSearchCriteria, AdvancedRecipeSearchCriteria, AdvancedTextField,
+        AdvancedUserSearchCriteria, AllSearchRequest, CollectionSearchRequest,
+        CollectionSearchSort, IntegerRange, RecipeSearchRequest, RecipeSearchSort,
+        RecipeSearchVisibility, RecipeVisibilityFacetValue, SearchScope, TextCriterion,
+        TextMatchMode, TimestampRange, UserSearchRequest, UserSearchSort,
     };
     use chrono::{Duration, Utc};
 
@@ -587,6 +589,22 @@ mod search_integration_tests {
             .fetch_one(pool)
             .await
             .expect("failed to execute user BM25 smoke query")
+    }
+
+    async fn collection_matches(
+        pool: &PgPool,
+        collection_id: Uuid,
+        predicate: &str,
+        text: &str,
+    ) -> bool {
+        let query =
+            format!("SELECT EXISTS (SELECT 1 FROM collections WHERE id = $2 AND {predicate})");
+        sqlx::query_scalar::<_, bool>(&query)
+            .bind(text)
+            .bind(collection_id)
+            .fetch_one(pool)
+            .await
+            .expect("failed to execute collection BM25 smoke query")
     }
 
     struct RecipeFixture<'a> {
@@ -639,6 +657,32 @@ mod search_integration_tests {
         .execute(pool)
         .await
         .expect("failed to insert user-search fixture");
+    }
+
+    struct CollectionSearchFixture<'a> {
+        id: Uuid,
+        owner_id: Uuid,
+        parent_collection_id: Option<Uuid>,
+        name: &'a str,
+        description: Option<&'a str>,
+        updated_at: chrono::DateTime<Utc>,
+    }
+
+    async fn insert_collection_search_fixture(pool: &PgPool, fixture: CollectionSearchFixture<'_>) {
+        sqlx::query(
+            "INSERT INTO collections \
+             (id, owner_id, parent_collection_id, name, description, updated_at) \
+             VALUES ($1, $2, $3, $4, $5, $6)",
+        )
+        .bind(fixture.id)
+        .bind(fixture.owner_id)
+        .bind(fixture.parent_collection_id)
+        .bind(fixture.name)
+        .bind(fixture.description)
+        .bind(fixture.updated_at)
+        .execute(pool)
+        .await
+        .expect("failed to insert collection-search fixture");
     }
 
     async fn insert_recipe_with_visibility(pool: &PgPool, owner_id: Uuid, visibility: &str) {
@@ -707,7 +751,11 @@ mod search_integration_tests {
         assert!(index_exists(&pool, "idx_users_search").await);
         assert!(index_exists(&pool, "idx_recipe_tags_tag").await);
 
-        for index_name in ["idx_recipes_search", "idx_users_search"] {
+        for index_name in [
+            "idx_recipes_search",
+            "idx_users_search",
+            "idx_collections_search",
+        ] {
             let has_key_field = sqlx::query_scalar::<_, bool>(
                 "SELECT COALESCE(reloptions @> ARRAY['key_field=id'], false) \
                  FROM pg_class WHERE oid = $1::regclass",
@@ -731,6 +779,7 @@ mod search_integration_tests {
         let suffix = uid();
         let user_id = Uuid::new_v4();
         let recipe_id = Uuid::new_v4();
+        let collection_id = Uuid::new_v4();
         let username = format!("solarchef{suffix}");
         let title = format!("Solar Saffron Risotto {suffix}");
         let updated_title = format!("Comet Cardamom Pilaf {suffix}");
@@ -776,6 +825,16 @@ mod search_integration_tests {
             .execute(&pool)
             .await
             .expect("failed to insert search smoke-test tag");
+        sqlx::query(
+            "INSERT INTO collections (id, owner_id, name, description) VALUES ($1, $2, $3, $4)",
+        )
+        .bind(collection_id)
+        .bind(user_id)
+        .bind(format!("Solar Pantry {suffix}"))
+        .bind("Seasonal orchard collection")
+        .execute(&pool)
+        .await
+        .expect("failed to insert search smoke-test collection");
 
         let recipe_title_words =
             "(title::pdb.simple('alias=recipe_title_words')) @@@ pdb.match_conjunction($1)";
@@ -850,6 +909,34 @@ mod search_integration_tests {
         assert!(user_matches(&pool, user_id, user_display_name_partial, "olar").await);
         assert!(user_matches(&pool, user_id, user_bio_words, "seasonal").await);
 
+        let collection_name_words =
+            "(name::pdb.simple('alias=collection_name_words')) @@@ pdb.match_conjunction($1)";
+        let collection_name_partial = "(name::pdb.ngram(2, 15, \
+            'alias=collection_name_partial')) @@@ pdb.match_conjunction($1)";
+        let collection_description_words = "(description::pdb.simple(\
+            'alias=collection_description_words')) @@@ pdb.match_conjunction($1)";
+        let collection_description_partial = "(description::pdb.ngram(2, 15, \
+            'alias=collection_description_partial')) @@@ pdb.match_conjunction($1)";
+        let collection_name_phrase =
+            "(name::pdb.simple('alias=collection_name_words')) @@@ pdb.phrase($1)";
+        assert!(collection_matches(&pool, collection_id, collection_name_words, "pantry").await);
+        assert!(collection_matches(&pool, collection_id, collection_name_partial, "antr").await);
+        assert!(
+            collection_matches(
+                &pool,
+                collection_id,
+                collection_description_words,
+                "orchard"
+            )
+            .await
+        );
+        assert!(
+            collection_matches(&pool, collection_id, collection_description_partial, "rcha").await
+        );
+        assert!(
+            collection_matches(&pool, collection_id, collection_name_phrase, "solar pantry").await
+        );
+
         sqlx::query("UPDATE recipes SET title = $1 WHERE id = $2")
             .bind(&updated_title)
             .bind(recipe_id)
@@ -880,6 +967,17 @@ mod search_integration_tests {
         .expect("failed to explain user BM25 query")
         .join("\n");
         assert!(user_plan.contains("Index: idx_users_search"));
+
+        let collection_plan = sqlx::query_scalar::<_, String>(
+            "EXPLAIN (COSTS OFF) SELECT id FROM collections \
+             WHERE (name::pdb.simple('alias=collection_name_words')) \
+             @@@ pdb.match_conjunction('pantry')",
+        )
+        .fetch_all(&pool)
+        .await
+        .expect("failed to explain collection BM25 query")
+        .join("\n");
+        assert!(collection_plan.contains("Index: idx_collections_search"));
 
         let mut connection = pool
             .acquire()
@@ -1662,6 +1760,552 @@ mod search_integration_tests {
             .execute(&pool)
             .await
             .expect("failed to clean up advanced user-search fixture");
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires SEARCH_TEST_DATABASE_URL backed by the pinned ParadeDB image"]
+    async fn search_integration_collection_operation_enforces_owner_hierarchy_and_matching() {
+        let pool = setup_search_test_db().await;
+        let suffix = uid();
+        let owner_id = Uuid::new_v4();
+        let other_owner_id = Uuid::new_v4();
+        insert_search_user(&pool, owner_id, &suffix, "collectionowner").await;
+        insert_search_user(&pool, other_owner_id, &suffix, "collectionother").await;
+
+        let now = Utc::now();
+        let root_id = Uuid::new_v4();
+        let child_id = Uuid::new_v4();
+        let grandchild_id = Uuid::new_v4();
+        let name_ranked_id = Uuid::new_v4();
+        let description_ranked_id = Uuid::new_v4();
+        let root_name = format!("Aurora Pantry {suffix}");
+        let child_name = format!("Nebula Baking {suffix}");
+        let grandchild_name = format!("Comet Archive {suffix}");
+        let name_ranked = format!("Quasar Cabinet {suffix}");
+        let description_ranked = format!("Spice Shelf {suffix}");
+
+        for fixture in [
+            CollectionSearchFixture {
+                id: root_id,
+                owner_id,
+                parent_collection_id: None,
+                name: &root_name,
+                description: Some("Root pantry"),
+                updated_at: now - Duration::days(5),
+            },
+            CollectionSearchFixture {
+                id: child_id,
+                owner_id,
+                parent_collection_id: Some(root_id),
+                name: &child_name,
+                description: Some("Seasonal cosmic public OR private breads"),
+                updated_at: now - Duration::days(4),
+            },
+            CollectionSearchFixture {
+                id: grandchild_id,
+                owner_id,
+                parent_collection_id: Some(child_id),
+                name: &grandchild_name,
+                description: Some("Historic baking notes"),
+                updated_at: now - Duration::days(3),
+            },
+            CollectionSearchFixture {
+                id: name_ranked_id,
+                owner_id,
+                parent_collection_id: None,
+                name: &name_ranked,
+                description: Some("Ranking fixture"),
+                updated_at: now - Duration::days(2),
+            },
+            CollectionSearchFixture {
+                id: description_ranked_id,
+                owner_id,
+                parent_collection_id: None,
+                name: &description_ranked,
+                description: Some("Quasar preserves ranking fixture"),
+                updated_at: now - Duration::days(1),
+            },
+        ] {
+            insert_collection_search_fixture(&pool, fixture).await;
+        }
+        let other_collection_id = Uuid::new_v4();
+        insert_collection_search_fixture(
+            &pool,
+            CollectionSearchFixture {
+                id: other_collection_id,
+                owner_id: other_owner_id,
+                parent_collection_id: None,
+                name: &format!("Nebula Other {suffix}"),
+                description: Some("Seasonal cosmic breads"),
+                updated_at: now,
+            },
+        )
+        .await;
+
+        let search = |text: &str| CollectionSearchRequest {
+            text: Some(text.to_string()),
+            page_size: 100,
+            ..CollectionSearchRequest::default()
+        };
+        let cross_field =
+            crate::db::search_collections(&pool, owner_id, &search("nebula seasonal"))
+                .await
+                .expect("cross-field collection search failed");
+        assert_eq!(cross_field.total_count, 1);
+        assert_eq!(cross_field.results[0].collection.id, child_id);
+        assert_eq!(
+            cross_field.results[0].breadcrumb,
+            vec![root_name.clone(), child_name.clone()]
+        );
+
+        let partial = crate::db::search_collections(&pool, owner_id, &search("ebul"))
+            .await
+            .expect("partial collection search failed");
+        assert_eq!(partial.total_count, 1);
+        assert_eq!(partial.results[0].collection.id, child_id);
+
+        let literal = crate::db::search_collections(&pool, owner_id, &search("public OR private"))
+            .await
+            .expect("literal parser-looking collection search failed");
+        assert_eq!(literal.total_count, 1);
+        assert_eq!(literal.results[0].collection.id, child_id);
+
+        let ranking = crate::db::search_collections(&pool, owner_id, &search("quasar"))
+            .await
+            .expect("ranked collection search failed");
+        assert_eq!(ranking.total_count, 2);
+        assert_eq!(ranking.results[0].collection.id, name_ranked_id);
+        assert!(ranking.results[0].relevance > ranking.results[1].relevance);
+
+        let advanced = AdvancedCollectionSearchCriteria {
+            name: AdvancedTextField {
+                include: Some(criterion("nebula baking", TextMatchMode::ExactPhrase)),
+                exclude: Vec::new(),
+            },
+            description: AdvancedTextField {
+                include: Some(criterion("seasonal cosmic", TextMatchMode::AllTerms)),
+                exclude: vec![criterion("spoiled", TextMatchMode::AnyTerm)],
+            },
+            updated_at: Some(TimestampRange {
+                lower_inclusive: Some(now - Duration::days(5)),
+                upper_exclusive: Some(now - Duration::days(3)),
+            }),
+        };
+        let advanced_response = crate::db::search_collections(
+            &pool,
+            owner_id,
+            &CollectionSearchRequest {
+                advanced: Some(advanced.clone()),
+                page_size: 100,
+                ..CollectionSearchRequest::default()
+            },
+        )
+        .await
+        .expect("advanced collection search failed");
+        assert_eq!(advanced_response.total_count, 1);
+        assert_eq!(advanced_response.results[0].collection.id, child_id);
+
+        for excluded in [
+            AdvancedCollectionSearchCriteria {
+                name: AdvancedTextField {
+                    include: advanced.name.include.clone(),
+                    exclude: vec![criterion("nebula", TextMatchMode::AnyTerm)],
+                },
+                ..advanced.clone()
+            },
+            AdvancedCollectionSearchCriteria {
+                description: AdvancedTextField {
+                    include: advanced.description.include.clone(),
+                    exclude: vec![criterion("seasonal cosmic", TextMatchMode::ExactPhrase)],
+                },
+                ..advanced.clone()
+            },
+        ] {
+            let response = crate::db::search_collections(
+                &pool,
+                owner_id,
+                &CollectionSearchRequest {
+                    advanced: Some(excluded),
+                    page_size: 100,
+                    ..CollectionSearchRequest::default()
+                },
+            )
+            .await
+            .expect("advanced collection exclusion failed");
+            assert_eq!(response.total_count, 0);
+        }
+
+        let all_owned = crate::db::search_collections(&pool, owner_id, &search(&suffix))
+            .await
+            .expect("owned collection search failed");
+        assert_eq!(all_owned.total_count, 5);
+        assert!(!all_owned
+            .results
+            .iter()
+            .any(|result| result.collection.id == other_collection_id));
+        let grandchild = all_owned
+            .results
+            .iter()
+            .find(|result| result.collection.id == grandchild_id)
+            .expect("grandchild collection result missing");
+        assert_eq!(
+            grandchild.breadcrumb,
+            vec![root_name.clone(), child_name.clone(), grandchild_name]
+        );
+
+        for (sort, expected_ids) in [
+            (
+                CollectionSearchSort::UpdatedNewest,
+                vec![
+                    description_ranked_id,
+                    name_ranked_id,
+                    grandchild_id,
+                    child_id,
+                    root_id,
+                ],
+            ),
+            (
+                CollectionSearchSort::UpdatedOldest,
+                vec![
+                    root_id,
+                    child_id,
+                    grandchild_id,
+                    name_ranked_id,
+                    description_ranked_id,
+                ],
+            ),
+            (
+                CollectionSearchSort::NameAscending,
+                vec![
+                    root_id,
+                    grandchild_id,
+                    child_id,
+                    name_ranked_id,
+                    description_ranked_id,
+                ],
+            ),
+            (
+                CollectionSearchSort::NameDescending,
+                vec![
+                    description_ranked_id,
+                    name_ranked_id,
+                    child_id,
+                    grandchild_id,
+                    root_id,
+                ],
+            ),
+        ] {
+            let response = crate::db::search_collections(
+                &pool,
+                owner_id,
+                &CollectionSearchRequest {
+                    text: Some(suffix.clone()),
+                    sort,
+                    page_size: 100,
+                    ..CollectionSearchRequest::default()
+                },
+            )
+            .await
+            .expect("sorted collection search failed");
+            assert_eq!(response.total_count, 5);
+            assert_eq!(
+                response
+                    .results
+                    .iter()
+                    .map(|result| result.collection.id)
+                    .collect::<Vec<_>>(),
+                expected_ids
+            );
+        }
+
+        let second_page = crate::db::search_collections(
+            &pool,
+            owner_id,
+            &CollectionSearchRequest {
+                text: Some(suffix.clone()),
+                sort: CollectionSearchSort::UpdatedNewest,
+                page: 2,
+                page_size: 2,
+                ..CollectionSearchRequest::default()
+            },
+        )
+        .await
+        .expect("paginated collection search failed");
+        assert_eq!(second_page.total_count, 5);
+        assert_eq!(second_page.results.len(), 2);
+        assert_eq!(second_page.results[0].collection.id, grandchild_id);
+
+        let browse = crate::db::search_collections(
+            &pool,
+            owner_id,
+            &CollectionSearchRequest {
+                text: Some("   ".to_string()),
+                page_size: 100,
+                ..CollectionSearchRequest::default()
+            },
+        )
+        .await
+        .expect("collection browse fallback failed");
+        assert_eq!(browse.total_count, 5);
+        assert!(browse
+            .results
+            .iter()
+            .all(|result| result.relevance.is_none()));
+        assert!(browse.results.windows(2).all(|collections| {
+            let left = (
+                collections[0].collection.updated_at,
+                collections[0].collection.id,
+            );
+            let right = (
+                collections[1].collection.updated_at,
+                collections[1].collection.id,
+            );
+            left.0 > right.0 || (left.0 == right.0 && left.1 <= right.1)
+        }));
+
+        sqlx::query("DELETE FROM users WHERE id = ANY($1)")
+            .bind(vec![owner_id, other_owner_id])
+            .execute(&pool)
+            .await
+            .expect("failed to clean up collection-search fixtures");
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires SEARCH_TEST_DATABASE_URL backed by the pinned ParadeDB image"]
+    async fn search_integration_all_operation_groups_bounded_authorized_sections() {
+        let pool = setup_search_test_db().await;
+        let suffix = uid();
+        let term = format!("grouped{suffix}");
+        let secret_email_term = format!("allsecret{suffix}");
+        let owner_id = Uuid::new_v4();
+        let other_owner_id = Uuid::new_v4();
+        let third_user_id = Uuid::new_v4();
+        for fixture in [
+            UserSearchFixture {
+                id: owner_id,
+                username: &format!("groupedalpha{suffix}"),
+                display_name: "Grouped Alpha",
+                email: &format!("{secret_email_term}@example.test"),
+                bio: Some(&term),
+            },
+            UserSearchFixture {
+                id: other_owner_id,
+                username: &format!("groupedbeta{suffix}"),
+                display_name: "Grouped Beta",
+                email: &format!("all-b-{suffix}@example.test"),
+                bio: Some(&term),
+            },
+            UserSearchFixture {
+                id: third_user_id,
+                username: &format!("groupedgamma{suffix}"),
+                display_name: "Grouped Gamma",
+                email: &format!("all-c-{suffix}@example.test"),
+                bio: Some(&term),
+            },
+        ] {
+            insert_user_search_fixture(&pool, fixture).await;
+        }
+
+        let now = Utc::now();
+        let own_private_id = Uuid::new_v4();
+        let own_unlisted_id = Uuid::new_v4();
+        let other_public_id = Uuid::new_v4();
+        let other_private_id = Uuid::new_v4();
+        for (index, (id, user_id, visibility)) in [
+            (own_private_id, owner_id, "private"),
+            (own_unlisted_id, owner_id, "unlisted"),
+            (other_public_id, other_owner_id, "public"),
+            (other_private_id, other_owner_id, "private"),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            insert_search_recipe(
+                &pool,
+                RecipeFixture {
+                    id,
+                    owner_id: user_id,
+                    title: &format!("{term} Recipe {index}"),
+                    description: "Grouped search fixture",
+                    visibility,
+                    prep_time: None,
+                    cook_time: None,
+                    servings: None,
+                    ingredients: serde_json::json!([]),
+                    instructions: serde_json::json!([]),
+                    created_at: now - Duration::minutes(index as i64),
+                    updated_at: now - Duration::minutes(index as i64),
+                    tags: Vec::new(),
+                },
+            )
+            .await;
+        }
+
+        let mut owned_collection_ids = Vec::new();
+        for index in 0..3 {
+            let id = Uuid::new_v4();
+            owned_collection_ids.push(id);
+            insert_collection_search_fixture(
+                &pool,
+                CollectionSearchFixture {
+                    id,
+                    owner_id,
+                    parent_collection_id: None,
+                    name: &format!("{term} Collection {index}"),
+                    description: Some("Grouped collection fixture"),
+                    updated_at: now - Duration::minutes(index),
+                },
+            )
+            .await;
+        }
+        let other_collection_id = Uuid::new_v4();
+        insert_collection_search_fixture(
+            &pool,
+            CollectionSearchFixture {
+                id: other_collection_id,
+                owner_id: other_owner_id,
+                parent_collection_id: None,
+                name: &format!("{term} Other Collection"),
+                description: Some("Must remain owner-private"),
+                updated_at: now,
+            },
+        )
+        .await;
+
+        let grouped = crate::db::search_all(
+            &pool,
+            owner_id,
+            &AllSearchRequest {
+                text: term.clone(),
+                section_limit: 10,
+            },
+        )
+        .await
+        .expect("grouped All search failed");
+        assert_eq!(grouped.scope, SearchScope::All);
+        assert_eq!(grouped.recipe_total_count, 3);
+        assert_eq!(grouped.collection_total_count, 3);
+        assert_eq!(grouped.user_total_count, 3);
+        assert_eq!(grouped.recipes.len(), 3);
+        assert_eq!(grouped.collections.len(), 3);
+        assert_eq!(grouped.users.len(), 3);
+        assert!(grouped
+            .recipes
+            .iter()
+            .any(|result| result.recipe.id == own_private_id));
+        assert!(grouped
+            .recipes
+            .iter()
+            .any(|result| result.recipe.id == own_unlisted_id));
+        assert!(grouped
+            .recipes
+            .iter()
+            .any(|result| result.recipe.id == other_public_id));
+        assert!(!grouped
+            .recipes
+            .iter()
+            .any(|result| result.recipe.id == other_private_id));
+        assert!(grouped
+            .collections
+            .iter()
+            .all(|result| owned_collection_ids.contains(&result.collection.id)));
+        assert!(!grouped
+            .collections
+            .iter()
+            .any(|result| result.collection.id == other_collection_id));
+
+        let bounded = crate::db::search_all(
+            &pool,
+            owner_id,
+            &AllSearchRequest {
+                text: term,
+                section_limit: 2,
+            },
+        )
+        .await
+        .expect("bounded grouped All search failed");
+        assert_eq!(bounded.recipes.len(), 2);
+        assert_eq!(bounded.collections.len(), 2);
+        assert_eq!(bounded.users.len(), 2);
+        assert_eq!(bounded.recipe_total_count, 3);
+        assert_eq!(bounded.collection_total_count, 3);
+        assert_eq!(bounded.user_total_count, 3);
+
+        let private_account = crate::db::search_all(
+            &pool,
+            owner_id,
+            &AllSearchRequest {
+                text: secret_email_term,
+                section_limit: 10,
+            },
+        )
+        .await
+        .expect("private account-field grouped search failed");
+        assert_eq!(private_account.user_total_count, 0);
+
+        let browse = crate::db::search_all(
+            &pool,
+            owner_id,
+            &AllSearchRequest {
+                text: "   ".to_string(),
+                section_limit: 10,
+            },
+        )
+        .await
+        .expect("blank grouped browse failed");
+        assert_eq!(browse.scope, SearchScope::All);
+        assert!(browse
+            .recipes
+            .iter()
+            .all(|result| result.relevance.is_none()));
+        assert!(browse
+            .collections
+            .iter()
+            .all(|result| result.relevance.is_none()));
+        assert!(browse.users.iter().all(|result| result.relevance.is_none()));
+        assert!(browse.recipes.windows(2).all(|recipes| {
+            let left = (recipes[0].recipe.updated_at, recipes[0].recipe.id);
+            let right = (recipes[1].recipe.updated_at, recipes[1].recipe.id);
+            left.0 > right.0 || (left.0 == right.0 && left.1 <= right.1)
+        }));
+        assert!(browse.collections.windows(2).all(|collections| {
+            let left = (
+                collections[0].collection.updated_at,
+                collections[0].collection.id,
+            );
+            let right = (
+                collections[1].collection.updated_at,
+                collections[1].collection.id,
+            );
+            left.0 > right.0 || (left.0 == right.0 && left.1 <= right.1)
+        }));
+        assert!(browse.users.windows(2).all(|users| {
+            let left = (users[0].user.username.to_lowercase(), users[0].user.id);
+            let right = (users[1].user.username.to_lowercase(), users[1].user.id);
+            left <= right
+        }));
+
+        let invalid = crate::db::search_all(
+            &pool,
+            owner_id,
+            &AllSearchRequest {
+                text: String::new(),
+                section_limit: crate::search::MAX_ALL_SECTION_LIMIT + 1,
+            },
+        )
+        .await;
+        assert!(matches!(
+            invalid,
+            Err(crate::db::DbError::InvalidSearchRequest(_))
+        ));
+
+        sqlx::query("DELETE FROM users WHERE id = ANY($1)")
+            .bind(vec![owner_id, other_owner_id, third_user_id])
+            .execute(&pool)
+            .await
+            .expect("failed to clean up grouped All fixtures");
         pool.close().await;
     }
 }

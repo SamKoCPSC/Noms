@@ -39,3 +39,41 @@ pub async fn search_users(
             ServerFnError::new("Failed to search users")
         })
 }
+
+/// Search collections owned by the authenticated user.
+#[server]
+pub async fn search_collections(
+    request: crate::types::CollectionSearchRequest,
+) -> Result<crate::types::CollectionSearchResponse, ServerFnError> {
+    crate::search::validate_collection_search_request(&request)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let user_id = crate::auth::session::extract_user_id_from_fullstack()
+        .await
+        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+
+    crate::db::search_collections(&crate::db::get_pool(), user_id, &request)
+        .await
+        .map_err(|error| {
+            tracing::error!(error = %error, "collection search failed");
+            ServerFnError::new("Failed to search collections")
+        })
+}
+
+/// Search recipes, owned collections, and public users in independent sections.
+#[server]
+pub async fn search_all(
+    request: crate::types::AllSearchRequest,
+) -> Result<crate::types::SearchResponse, ServerFnError> {
+    crate::search::validate_all_search_request(&request)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let user_id = crate::auth::session::extract_user_id_from_fullstack()
+        .await
+        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+
+    crate::db::search_all(&crate::db::get_pool(), user_id, &request)
+        .await
+        .map_err(|error| {
+            tracing::error!(error = %error, "grouped search failed");
+            ServerFnError::new("Failed to search")
+        })
+}

@@ -246,6 +246,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_collections_sibling_name
     ON collections(owner_id, parent_collection_id, lower(name))
     NULLS NOT DISTINCT;
 
+CREATE INDEX IF NOT EXISTS idx_collections_search
+ON collections USING bm25 (
+    id,
+    (name::pdb.simple('alias=collection_name_words')),
+    (name::pdb.ngram(2, 15, 'alias=collection_name_partial')),
+    (description::pdb.simple('alias=collection_description_words')),
+    (description::pdb.ngram(2, 15, 'alias=collection_description_partial'))
+)
+WITH (key_field = 'id');
+
 CREATE TABLE IF NOT EXISTS collection_recipes (
     collection_id UUID NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
     recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,

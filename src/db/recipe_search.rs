@@ -159,6 +159,29 @@ pub async fn search_recipes(
     })
 }
 
+/// Fetch the lightweight recipe section used by grouped search.
+///
+/// This deliberately skips recipe facets, which are not part of the grouped response.
+pub(super) async fn search_recipe_section(
+    pool: &PgPool,
+    resolved_user_id: Uuid,
+    text: &str,
+    limit: u32,
+) -> Result<(Vec<SearchResult>, i64), DbError> {
+    let request = RecipeSearchRequest {
+        text: Some(text.to_owned()),
+        page_size: limit,
+        ..RecipeSearchRequest::default()
+    };
+    validate_recipe_search_request(&request)
+        .map_err(|error| DbError::InvalidSearchRequest(error.to_string()))?;
+
+    let positive_text = has_positive_text(&request);
+    let results = fetch_results(pool, resolved_user_id, &request, positive_text).await?;
+    let total_count = fetch_count(pool, resolved_user_id, &request).await?;
+    Ok((results, total_count))
+}
+
 async fn fetch_results(
     pool: &PgPool,
     user_id: Uuid,

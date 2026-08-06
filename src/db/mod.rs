@@ -26,6 +26,10 @@ mod recipe_search;
 pub use recipe_search::search_recipes;
 mod user_search;
 pub use user_search::search_users;
+mod collection_search;
+pub use collection_search::search_collections;
+mod all_search;
+pub use all_search::search_all;
 
 // Re-export typed recipe sub-structs for use in DB layer
 pub use crate::types::RecipeEquipment;

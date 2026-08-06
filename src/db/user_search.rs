@@ -98,6 +98,26 @@ pub async fn search_users(
     })
 }
 
+/// Fetch the lightweight public-user section used by grouped search.
+pub(super) async fn search_user_section(
+    pool: &PgPool,
+    text: &str,
+    limit: u32,
+) -> Result<(Vec<UserSearchResult>, i64), DbError> {
+    let request = UserSearchRequest {
+        text: Some(text.to_owned()),
+        page_size: limit,
+        ..UserSearchRequest::default()
+    };
+    validate_user_search_request(&request)
+        .map_err(|error| DbError::InvalidSearchRequest(error.to_string()))?;
+
+    let positive_text = has_positive_text(&request);
+    let results = fetch_results(pool, &request, positive_text).await?;
+    let total_count = fetch_count(pool, &request).await?;
+    Ok((results, total_count))
+}
+
 async fn fetch_results(
     pool: &PgPool,
     request: &UserSearchRequest,
