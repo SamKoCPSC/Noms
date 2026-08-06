@@ -10,7 +10,8 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use crate::api::recipe::get_recipe_version_graph;
 use crate::components::base::{Card, EditedRecipeImage, EmptyState, LoadingSpinner, PageHeader};
 use crate::types::{
-    VersionGraph, VersionGraphEdge, VersionGraphEdgeKind, VersionGraphNode, VersionGraphNodeId,
+    VersionGraph, VersionGraphEdge, VersionGraphEdgeKind, VersionGraphLineageCount,
+    VersionGraphNode, VersionGraphNodeId,
 };
 use crate::Route;
 
@@ -693,7 +694,12 @@ fn version_graph_lineage_only(graph: &VersionGraph) -> VersionGraph {
         nodes,
         edges,
         truncation: graph.truncation,
+        lineage_counts: graph.lineage_counts,
     }
+}
+
+fn format_version_graph_lineage_count(count: VersionGraphLineageCount) -> String {
+    format!("{}{}", count.count, if count.is_capped { "+" } else { "" })
 }
 
 fn version_graph_recipe_relationships(
@@ -1174,6 +1180,22 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                     },
                     p { class: "recipe-version-graph__description",
                         "Explore immutable snapshots across the connected fork family."
+                    }
+                    ul {
+                        class: "recipe-version-graph__lineage-counts",
+                        aria_label: "Recipe lineage counts",
+                        li { class: "recipe-version-graph__lineage-count",
+                            strong { {format_version_graph_lineage_count(graph.lineage_counts.ancestors)} }
+                            span { "Ancestors" }
+                        }
+                        li { class: "recipe-version-graph__lineage-count",
+                            strong { {format_version_graph_lineage_count(graph.lineage_counts.immediate_descendants)} }
+                            span { "Forks" }
+                        }
+                        li { class: "recipe-version-graph__lineage-count",
+                            strong { {format_version_graph_lineage_count(graph.lineage_counts.descendants)} }
+                            span { "Descendants" }
+                        }
                     }
                     p { class: "recipe-version-graph__help",
                         "Scroll to zoom; middle-click and drag to pan; right-click the background for more navigation options."
@@ -2141,6 +2163,7 @@ mod tests {
                 VersionGraphEdge::fork(root_recipe_id, 2, second_branch_id).unwrap(),
             ],
             truncation: Default::default(),
+            lineage_counts: Default::default(),
         }
     }
 
@@ -2388,6 +2411,7 @@ mod tests {
                 depth_limit_reached: true,
                 ..Default::default()
             },
+            lineage_counts: Default::default(),
         };
 
         let lineage = super::version_graph_lineage_only(&graph);
@@ -2408,6 +2432,7 @@ mod tests {
                 && recipe_ids.contains(&edge.target().recipe_id)
         }));
         assert_eq!(lineage.truncation, graph.truncation);
+        assert_eq!(lineage.lineage_counts, graph.lineage_counts);
     }
 
     #[test]
@@ -2494,6 +2519,37 @@ mod tests {
         assert!(css.contains(".recipe-version-graph__legend-swatch--main-recipe"));
         assert!(css.contains(".recipe-version-graph__legend-swatch--ancestor"));
         assert!(css.contains(".recipe-version-graph__legend-swatch--descendant"));
+    }
+
+    #[test]
+    fn graph_header_displays_exact_and_capped_lineage_counts() {
+        let source = include_str!("recipe_version_graph.rs");
+        let page = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("version graph page implementation");
+        let css = include_str!("../../assets/main.css");
+
+        assert_eq!(
+            super::format_version_graph_lineage_count(crate::types::VersionGraphLineageCount {
+                count: 3,
+                is_capped: false,
+            }),
+            "3"
+        );
+        assert_eq!(
+            super::format_version_graph_lineage_count(crate::types::VersionGraphLineageCount {
+                count: 50,
+                is_capped: true,
+            }),
+            "50+"
+        );
+        assert!(page.contains("Ancestors"));
+        assert!(page.contains("Forks"));
+        assert!(page.contains("Descendants"));
+        assert!(page.contains("recipe-version-graph__lineage-counts"));
+        assert!(css.contains(".recipe-version-graph__lineage-counts"));
+        assert!(css.contains(".recipe-version-graph__lineage-count"));
     }
 
     #[test]
@@ -2807,6 +2863,7 @@ mod tests {
                 VersionGraphEdge::fork(second_recipe_id, 1, first_recipe_id).unwrap(),
             ],
             truncation: Default::default(),
+            lineage_counts: Default::default(),
         };
 
         let layout = super::build_version_graph_layout(&graph);

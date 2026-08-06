@@ -387,6 +387,155 @@ fn deduplicate_and_sort_graph(graph: &mut crate::types::VersionGraph) {
     });
 }
 
+const VERSION_GRAPH_LINEAGE_COUNT_CAP: usize = 50;
+
+#[cfg(test)]
+fn version_graph_reachable_recipe_ids(
+    selected_recipe_id: Uuid,
+    adjacent_recipe_ids: &HashMap<Uuid, HashSet<Uuid>>,
+) -> HashSet<Uuid> {
+    let mut reachable_recipe_ids = HashSet::new();
+    let mut recipes_to_visit = vec![selected_recipe_id];
+
+    while let Some(recipe_id) = recipes_to_visit.pop() {
+        let Some(adjacent_ids) = adjacent_recipe_ids.get(&recipe_id) else {
+            continue;
+        };
+        for adjacent_id in adjacent_ids {
+            if *adjacent_id != selected_recipe_id && reachable_recipe_ids.insert(*adjacent_id) {
+                recipes_to_visit.push(*adjacent_id);
+            }
+        }
+    }
+
+    reachable_recipe_ids
+}
+
+fn capped_version_graph_lineage_count(count: usize) -> crate::types::VersionGraphLineageCount {
+    crate::types::VersionGraphLineageCount {
+        count: count.min(VERSION_GRAPH_LINEAGE_COUNT_CAP),
+        is_capped: count > VERSION_GRAPH_LINEAGE_COUNT_CAP,
+    }
+}
+
+#[cfg(test)]
+fn version_graph_lineage_counts(
+    selected_recipe_id: Uuid,
+    edges: &[crate::types::VersionGraphEdge],
+) -> crate::types::VersionGraphLineageCounts {
+    let mut parent_recipe_ids = HashMap::<Uuid, HashSet<Uuid>>::new();
+    let mut child_recipe_ids = HashMap::<Uuid, HashSet<Uuid>>::new();
+
+    for edge in edges
+        .iter()
+        .filter(|edge| edge.kind() == crate::types::VersionGraphEdgeKind::Fork)
+    {
+        let source_recipe_id = edge.source().recipe_id;
+        let target_recipe_id = edge.target().recipe_id;
+        parent_recipe_ids
+            .entry(target_recipe_id)
+            .or_default()
+            .insert(source_recipe_id);
+        child_recipe_ids
+            .entry(source_recipe_id)
+            .or_default()
+            .insert(target_recipe_id);
+    }
+
+    let ancestors = version_graph_reachable_recipe_ids(selected_recipe_id, &parent_recipe_ids);
+    let descendants = version_graph_reachable_recipe_ids(selected_recipe_id, &child_recipe_ids);
+    let immediate_descendant_count = child_recipe_ids
+        .get(&selected_recipe_id)
+        .map_or(0, HashSet::len);
+
+    crate::types::VersionGraphLineageCounts {
+        ancestors: capped_version_graph_lineage_count(ancestors.len()),
+        immediate_descendants: capped_version_graph_lineage_count(immediate_descendant_count),
+        descendants: capped_version_graph_lineage_count(descendants.len()),
+    }
+}
+
+async fn load_version_graph_lineage_counts(
+    pool: &PgPool,
+    selected_recipe_id: Uuid,
+) -> Result<crate::types::VersionGraphLineageCounts, DbError> {
+    let count_limit = graph_query_limit(VERSION_GRAPH_LINEAGE_COUNT_CAP.saturating_add(1));
+    let (ancestor_count, immediate_descendant_count, descendant_count) =
+        sqlx::query_as::<_, (i64, i64, i64)>(
+            "WITH RECURSIVE ancestors(recipe_id) AS (\
+                 SELECT COALESCE(original_recipe_key, original_recipe_id) \
+                 FROM fork_relationships \
+                 WHERE COALESCE(forked_recipe_key, forked_recipe_id) = $1 \
+                   AND COALESCE(original_recipe_key, original_recipe_id) IS NOT NULL \
+                   AND forked_version_number > 0 \
+                   AND COALESCE(original_recipe_key, original_recipe_id) \
+                       <> COALESCE(forked_recipe_key, forked_recipe_id) \
+                 UNION \
+                 SELECT COALESCE(relationship.original_recipe_key, relationship.original_recipe_id) \
+                 FROM ancestors \
+                 JOIN fork_relationships AS relationship \
+                   ON COALESCE(relationship.forked_recipe_key, relationship.forked_recipe_id) = ancestors.recipe_id \
+                 WHERE COALESCE(relationship.original_recipe_key, relationship.original_recipe_id) IS NOT NULL \
+                   AND relationship.forked_version_number > 0 \
+                   AND COALESCE(relationship.original_recipe_key, relationship.original_recipe_id) \
+                       <> COALESCE(relationship.forked_recipe_key, relationship.forked_recipe_id) \
+             ), descendants(recipe_id) AS (\
+                 SELECT COALESCE(forked_recipe_key, forked_recipe_id) \
+                 FROM fork_relationships \
+                 WHERE COALESCE(original_recipe_key, original_recipe_id) = $1 \
+                   AND COALESCE(forked_recipe_key, forked_recipe_id) IS NOT NULL \
+                   AND forked_version_number > 0 \
+                   AND COALESCE(original_recipe_key, original_recipe_id) \
+                       <> COALESCE(forked_recipe_key, forked_recipe_id) \
+                 UNION \
+                 SELECT COALESCE(relationship.forked_recipe_key, relationship.forked_recipe_id) \
+                 FROM descendants \
+                 JOIN fork_relationships AS relationship \
+                   ON COALESCE(relationship.original_recipe_key, relationship.original_recipe_id) = descendants.recipe_id \
+                 WHERE COALESCE(relationship.forked_recipe_key, relationship.forked_recipe_id) IS NOT NULL \
+                   AND relationship.forked_version_number > 0 \
+                   AND COALESCE(relationship.original_recipe_key, relationship.original_recipe_id) \
+                       <> COALESCE(relationship.forked_recipe_key, relationship.forked_recipe_id) \
+             ) \
+             SELECT \
+                 (SELECT COUNT(*) FROM (\
+                     SELECT recipe_id FROM ancestors WHERE recipe_id <> $1 LIMIT $2\
+                 ) AS bounded_ancestors), \
+                 (SELECT COUNT(*) FROM (\
+                     SELECT DISTINCT COALESCE(forked_recipe_key, forked_recipe_id) AS recipe_id \
+                     FROM fork_relationships \
+                     WHERE COALESCE(original_recipe_key, original_recipe_id) = $1 \
+                       AND COALESCE(forked_recipe_key, forked_recipe_id) IS NOT NULL \
+                       AND COALESCE(forked_recipe_key, forked_recipe_id) <> $1 \
+                       AND forked_version_number > 0 \
+                       AND COALESCE(original_recipe_key, original_recipe_id) \
+                           <> COALESCE(forked_recipe_key, forked_recipe_id) \
+                     LIMIT $2\
+                 ) AS bounded_immediate_descendants), \
+                 (SELECT COUNT(*) FROM (\
+                     SELECT recipe_id FROM descendants WHERE recipe_id <> $1 LIMIT $2\
+                 ) AS bounded_descendants)",
+        )
+        .bind(selected_recipe_id)
+        .bind(count_limit)
+        .fetch_one(pool)
+        .await
+        .map_err(DbError::Query)?;
+
+    Ok(crate::types::VersionGraphLineageCounts {
+        ancestors: capped_version_graph_lineage_count(
+            usize::try_from(ancestor_count).expect("bounded ancestor count fits usize"),
+        ),
+        immediate_descendants: capped_version_graph_lineage_count(
+            usize::try_from(immediate_descendant_count)
+                .expect("bounded immediate descendant count fits usize"),
+        ),
+        descendants: capped_version_graph_lineage_count(
+            usize::try_from(descendant_count).expect("bounded descendant count fits usize"),
+        ),
+    })
+}
+
 fn graph_query_limit(limit: usize) -> i64 {
     i64::try_from(limit).unwrap_or(i64::MAX)
 }
@@ -612,6 +761,7 @@ async fn get_recipe_version_graph_with_limits(
         .filter(|recipe| recipe.visibility != "private" || viewer_id == Some(recipe.user_id))
         .ok_or(DbError::RecipeNotFound(selected_recipe_id))?;
 
+    let lineage_counts = load_version_graph_lineage_counts(pool, selected_recipe_id).await?;
     let (relationships, discovered_recipe_keys, depth_limit_reached, traversal_limit_reached) =
         traverse_version_graph_relationships(pool, selected_recipe_id, limits).await?;
     let mut recipe_keys = discovered_recipe_keys.into_iter().collect::<Vec<_>>();
@@ -634,7 +784,10 @@ async fn get_recipe_version_graph_with_limits(
     )
     .await?;
 
-    let mut graph = crate::types::VersionGraph::default();
+    let mut graph = crate::types::VersionGraph {
+        lineage_counts,
+        ..Default::default()
+    };
     for recipe_id in &visible_recipe_ids {
         let Some(recipe) = live_recipes.get(recipe_id) else {
             continue;
@@ -1803,6 +1956,71 @@ mod tests {
     use crate::db::{insert_user, DbError};
     use crate::test_utils;
 
+    #[test]
+    fn version_graph_lineage_counts_distinct_recipes_in_each_direction() {
+        let selected_recipe_id = Uuid::from_u128(1);
+        let parent_recipe_id = Uuid::from_u128(2);
+        let root_recipe_id = Uuid::from_u128(3);
+        let first_fork_id = Uuid::from_u128(4);
+        let second_fork_id = Uuid::from_u128(5);
+        let grandchild_id = Uuid::from_u128(6);
+        let edges = vec![
+            crate::types::VersionGraphEdge::fork(root_recipe_id, 1, parent_recipe_id).unwrap(),
+            crate::types::VersionGraphEdge::fork(parent_recipe_id, 1, selected_recipe_id).unwrap(),
+            crate::types::VersionGraphEdge::fork(selected_recipe_id, 1, first_fork_id).unwrap(),
+            crate::types::VersionGraphEdge::fork(selected_recipe_id, 2, second_fork_id).unwrap(),
+            crate::types::VersionGraphEdge::fork(first_fork_id, 1, grandchild_id).unwrap(),
+        ];
+
+        let counts = version_graph_lineage_counts(selected_recipe_id, &edges);
+
+        assert_eq!(counts.ancestors.count, 2);
+        assert!(!counts.ancestors.is_capped);
+        assert_eq!(counts.immediate_descendants.count, 2);
+        assert!(!counts.immediate_descendants.is_capped);
+        assert_eq!(counts.descendants.count, 3);
+        assert!(!counts.descendants.is_capped);
+    }
+
+    #[test]
+    fn version_graph_lineage_counts_cap_at_fifty() {
+        let selected_recipe_id = Uuid::from_u128(1);
+        let edges = (2..=52)
+            .map(|recipe_number| {
+                crate::types::VersionGraphEdge::fork(
+                    selected_recipe_id,
+                    1,
+                    Uuid::from_u128(recipe_number),
+                )
+                .unwrap()
+            })
+            .collect::<Vec<_>>();
+
+        let counts = version_graph_lineage_counts(selected_recipe_id, &edges);
+
+        assert_eq!(counts.ancestors.count, 0);
+        assert_eq!(counts.immediate_descendants.count, 50);
+        assert!(counts.immediate_descendants.is_capped);
+        assert_eq!(counts.descendants.count, 50);
+        assert!(counts.descendants.is_capped);
+    }
+
+    #[test]
+    fn version_graph_lineage_counts_stop_cycles_without_counting_the_selected_recipe() {
+        let selected_recipe_id = Uuid::from_u128(1);
+        let child_recipe_id = Uuid::from_u128(2);
+        let edges = vec![
+            crate::types::VersionGraphEdge::fork(selected_recipe_id, 1, child_recipe_id).unwrap(),
+            crate::types::VersionGraphEdge::fork(child_recipe_id, 1, selected_recipe_id).unwrap(),
+        ];
+
+        let counts = version_graph_lineage_counts(selected_recipe_id, &edges);
+
+        assert_eq!(counts.ancestors.count, 1);
+        assert_eq!(counts.immediate_descendants.count, 1);
+        assert_eq!(counts.descendants.count, 1);
+    }
+
     async fn owner(pool: &sqlx::PgPool, prefix: &str) -> crate::db::User {
         let suffix = test_utils::uid();
         insert_user(
@@ -2488,6 +2706,18 @@ mod tests {
         assert!(depth_limited.truncation.is_truncated);
         assert!(depth_limited.truncation.depth_limit_reached);
         assert!(!depth_limited.truncation.traversal_limit_reached);
+        assert_eq!(depth_limited.lineage_counts.immediate_descendants.count, 2);
+        assert_eq!(depth_limited.lineage_counts.descendants.count, 3);
+
+        let grandchild_graph = get_recipe_version_graph(&pool, grandchild.id, None)
+            .await
+            .unwrap();
+        assert_eq!(grandchild_graph.lineage_counts.ancestors.count, 2);
+        assert_eq!(
+            grandchild_graph.lineage_counts.immediate_descendants.count,
+            0
+        );
+        assert_eq!(grandchild_graph.lineage_counts.descendants.count, 0);
 
         let traversal_limited = get_recipe_version_graph_with_limits(
             &pool,
@@ -2515,6 +2745,11 @@ mod tests {
             .nodes
             .iter()
             .any(|node| { [child.id, sibling.id].contains(&node.id().recipe_id) }));
+        assert_eq!(
+            traversal_limited.lineage_counts.immediate_descendants.count,
+            2
+        );
+        assert_eq!(traversal_limited.lineage_counts.descendants.count, 3);
     }
 
     #[tokio::test]
@@ -2556,6 +2791,8 @@ mod tests {
         assert!(node_limited.truncation.is_truncated);
         assert!(node_limited.truncation.node_limit_reached);
         assert!(!node_limited.truncation.edge_limit_reached);
+        assert_eq!(node_limited.lineage_counts.immediate_descendants.count, 1);
+        assert_eq!(node_limited.lineage_counts.descendants.count, 1);
 
         let edge_limited = get_recipe_version_graph_with_limits(
             &pool,
@@ -2576,6 +2813,8 @@ mod tests {
         assert!(edge_limited.truncation.is_truncated);
         assert!(edge_limited.truncation.edge_limit_reached);
         assert!(!edge_limited.truncation.node_limit_reached);
+        assert_eq!(edge_limited.lineage_counts.immediate_descendants.count, 1);
+        assert_eq!(edge_limited.lineage_counts.descendants.count, 1);
     }
 
     #[tokio::test]

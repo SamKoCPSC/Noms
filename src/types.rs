@@ -689,12 +689,27 @@ pub struct VersionGraphTruncation {
     pub traversal_limit_reached: bool,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VersionGraphLineageCount {
+    pub count: usize,
+    pub is_capped: bool,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VersionGraphLineageCounts {
+    pub ancestors: VersionGraphLineageCount,
+    pub immediate_descendants: VersionGraphLineageCount,
+    pub descendants: VersionGraphLineageCount,
+}
+
 /// Normalized graph payload. Relationships refer to nodes by stable identity.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct VersionGraph {
     pub nodes: Vec<VersionGraphNode>,
     pub edges: Vec<VersionGraphEdge>,
     pub truncation: VersionGraphTruncation,
+    #[serde(default)]
+    pub lineage_counts: VersionGraphLineageCounts,
 }
 
 /// Public user profile with recipe count.
@@ -770,6 +785,20 @@ mod tests {
                 depth_limit_reached: false,
                 traversal_limit_reached: false,
             },
+            lineage_counts: VersionGraphLineageCounts {
+                ancestors: VersionGraphLineageCount {
+                    count: 2,
+                    is_capped: false,
+                },
+                immediate_descendants: VersionGraphLineageCount {
+                    count: 50,
+                    is_capped: true,
+                },
+                descendants: VersionGraphLineageCount {
+                    count: 50,
+                    is_capped: true,
+                },
+            },
         };
 
         let serialized = serde_json::to_value(&graph).unwrap();
@@ -786,6 +815,13 @@ mod tests {
         assert!(restored.truncation.is_truncated);
         assert!(restored.truncation.node_limit_reached);
         assert!(!restored.truncation.traversal_limit_reached);
+        assert_eq!(restored.lineage_counts.ancestors.count, 2);
+        assert!(!restored.lineage_counts.ancestors.is_capped);
+        assert_eq!(
+            serialized["lineage_counts"]["immediate_descendants"]["count"],
+            50
+        );
+        assert!(restored.lineage_counts.immediate_descendants.is_capped);
     }
 
     #[test]

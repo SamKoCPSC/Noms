@@ -494,6 +494,7 @@ fn build_recipe_version_graph(
         nodes,
         edges,
         truncation: crate::types::VersionGraphTruncation::default(),
+        lineage_counts: crate::types::VersionGraphLineageCounts::default(),
     })
 }
 

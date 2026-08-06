@@ -2439,6 +2439,32 @@ a:hover {
     font-size: 0.88rem;
 }
 
+.recipe-version-graph__lineage-counts {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+    margin: calc(-1 * var(--space-xs)) 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.recipe-version-graph__lineage-count {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--surface) 92%, var(--background));
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+}
+
+.recipe-version-graph__lineage-count strong {
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
 .recipe-version-graph__toolbar {
     display: flex;
     align-items: center;
@@ -3073,6 +3099,16 @@ a:hover {
 }
 
 @media (max-width: 760px) {
+    .recipe-version-graph__lineage-counts {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+    }
+
+    .recipe-version-graph__lineage-count {
+        justify-content: center;
+        padding-inline: var(--space-xs);
+    }
+
     .recipe-version-graph__toolbar {
         align-items: flex-start;
     }
