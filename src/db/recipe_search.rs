@@ -13,7 +13,8 @@ use crate::types::{
     AdvancedRecipeSearchCriteria, IntegerRange, IntegerRangeFacetBucket, Recipe, RecipeEquipment,
     RecipeImage, RecipeIngredient, RecipeSearchFacets, RecipeSearchRequest, RecipeSearchResponse,
     RecipeSearchSort, RecipeSearchVisibility, RecipeStep, RecipeVisibilityFacetValue, SearchResult,
-    TagFacetBucket, TextCriterion, TextMatchMode, VisibilityFacetBucket,
+    SearchSuggestion, SearchSuggestionKind, TagFacetBucket, TextCriterion, TextMatchMode,
+    VisibilityFacetBucket,
 };
 
 const RESULT_COLUMNS: &str = "r.id, r.user_id, r.title, r.description, r.commentary, \
@@ -180,6 +181,45 @@ pub(super) async fn search_recipe_section(
     let results = fetch_results(pool, resolved_user_id, &request, positive_text).await?;
     let total_count = fetch_count(pool, resolved_user_id, &request).await?;
     Ok((results, total_count))
+}
+
+pub(super) async fn autocomplete_recipes(
+    pool: &PgPool,
+    resolved_user_id: Uuid,
+    text: &str,
+    limit: u32,
+) -> Result<Vec<SearchSuggestion>, DbError> {
+    let request = RecipeSearchRequest {
+        text: Some(text.trim().to_owned()),
+        ..RecipeSearchRequest::default()
+    };
+    let mut query = QueryBuilder::<Postgres>::new(
+        "SELECT r.id, r.title, u.username FROM recipes r \
+         JOIN users u ON u.id = r.user_id WHERE ",
+    );
+    push_criteria(
+        &mut query,
+        resolved_user_id,
+        &request,
+        OmittedFilter::default(),
+    );
+    query
+        .push(" ORDER BY pdb.score(r.id) DESC, r.id ASC LIMIT ")
+        .push_bind(i64::from(limit));
+    let rows = query
+        .build_query_as::<(Uuid, String, String)>()
+        .fetch_all(pool)
+        .await
+        .map_err(DbError::Query)?;
+    Ok(rows
+        .into_iter()
+        .map(|(id, title, author_username)| SearchSuggestion {
+            kind: SearchSuggestionKind::Recipe,
+            id,
+            label: title,
+            secondary_text: Some(author_username),
+        })
+        .collect())
 }
 
 async fn fetch_results(

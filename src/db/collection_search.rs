@@ -10,8 +10,8 @@ use super::DbError;
 use crate::search::validate_collection_search_request;
 use crate::types::{
     AdvancedCollectionSearchCriteria, CollectionSearchRequest, CollectionSearchResponse,
-    CollectionSearchResult, CollectionSearchSort, CollectionSearchSummary, TextCriterion,
-    TextMatchMode,
+    CollectionSearchResult, CollectionSearchSort, CollectionSearchSummary, SearchSuggestion,
+    SearchSuggestionKind, TextCriterion, TextMatchMode,
 };
 
 const NAME_WORDS: &str = "(c.name::pdb.simple('alias=collection_name_words'))";
@@ -95,6 +95,48 @@ pub(super) async fn search_collection_section(
     Ok((results, total_count))
 }
 
+pub(super) async fn autocomplete_collections(
+    pool: &PgPool,
+    resolved_user_id: Uuid,
+    text: &str,
+    limit: u32,
+) -> Result<Vec<SearchSuggestion>, DbError> {
+    let request = CollectionSearchRequest {
+        text: Some(text.trim().to_owned()),
+        ..CollectionSearchRequest::default()
+    };
+    let mut query =
+        QueryBuilder::<Postgres>::new("SELECT c.id, c.name FROM collections c WHERE c.owner_id = ");
+    query.push_bind(resolved_user_id);
+    push_criteria(&mut query, &request);
+    query
+        .push(" ORDER BY pdb.score(c.id) DESC, c.id ASC LIMIT ")
+        .push_bind(i64::from(limit));
+    let rows = query
+        .build_query_as::<(Uuid, String)>()
+        .fetch_all(pool)
+        .await
+        .map_err(DbError::Query)?;
+    let collection_ids = rows.iter().map(|(id, _)| *id).collect::<Vec<_>>();
+    let mut breadcrumbs = fetch_breadcrumbs(pool, resolved_user_id, &collection_ids).await?;
+    Ok(rows
+        .into_iter()
+        .map(|(id, name)| {
+            let parent_path = breadcrumbs
+                .remove(&id)
+                .unwrap_or_default()
+                .split_last()
+                .and_then(|(_, parents)| (!parents.is_empty()).then(|| parents.join(" / ")));
+            SearchSuggestion {
+                kind: SearchSuggestionKind::Collection,
+                id,
+                label: name,
+                secondary_text: parent_path,
+            }
+        })
+        .collect())
+}
+
 async fn fetch_results(
     pool: &PgPool,
     user_id: Uuid,
@@ -137,6 +179,31 @@ async fn attach_breadcrumbs(
         return Ok(Vec::new());
     }
     let collection_ids: Vec<_> = rows.iter().map(|row| row.id).collect();
+    let mut breadcrumbs = fetch_breadcrumbs(pool, user_id, &collection_ids).await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| CollectionSearchResult {
+            breadcrumb: breadcrumbs.remove(&row.id).unwrap_or_default(),
+            collection: CollectionSearchSummary {
+                id: row.id,
+                name: row.name,
+                description: row.description,
+                updated_at: row.updated_at,
+            },
+            relevance: row.relevance,
+        })
+        .collect())
+}
+
+async fn fetch_breadcrumbs(
+    pool: &PgPool,
+    user_id: Uuid,
+    collection_ids: &[Uuid],
+) -> Result<HashMap<Uuid, Vec<String>>, DbError> {
+    if collection_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
     let breadcrumb_rows = sqlx::query_as::<_, (Uuid, String, i32)>(
         "WITH RECURSIVE ancestors AS (
              SELECT c.id AS collection_id, c.id AS ancestor_id, c.parent_collection_id,
@@ -165,19 +232,7 @@ async fn attach_breadcrumbs(
         breadcrumbs.entry(collection_id).or_default().push(name);
     }
 
-    Ok(rows
-        .into_iter()
-        .map(|row| CollectionSearchResult {
-            breadcrumb: breadcrumbs.remove(&row.id).unwrap_or_default(),
-            collection: CollectionSearchSummary {
-                id: row.id,
-                name: row.name,
-                description: row.description,
-                updated_at: row.updated_at,
-            },
-            relevance: row.relevance,
-        })
-        .collect())
+    Ok(breadcrumbs)
 }
 
 async fn fetch_count(

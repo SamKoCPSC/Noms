@@ -558,8 +558,8 @@ mod search_integration_tests {
         AdvancedCollectionSearchCriteria, AdvancedRecipeSearchCriteria, AdvancedTextField,
         AdvancedUserSearchCriteria, AllSearchRequest, CollectionSearchRequest,
         CollectionSearchSort, IntegerRange, RecipeSearchRequest, RecipeSearchSort,
-        RecipeSearchVisibility, RecipeVisibilityFacetValue, SearchScope, TextCriterion,
-        TextMatchMode, TimestampRange, UserSearchRequest, UserSearchSort,
+        RecipeSearchVisibility, RecipeVisibilityFacetValue, SearchScope, SearchSuggestionKind,
+        TextCriterion, TextMatchMode, TimestampRange, UserSearchRequest, UserSearchSort,
     };
     use chrono::{Duration, Utc};
 
@@ -2306,6 +2306,271 @@ mod search_integration_tests {
             .execute(&pool)
             .await
             .expect("failed to clean up grouped All fixtures");
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires SEARCH_TEST_DATABASE_URL backed by the pinned ParadeDB image"]
+    async fn search_integration_autocomplete_is_bounded_typed_and_authorized() {
+        let pool = setup_search_test_db().await;
+        let suffix = uid();
+        let term = format!("suggest{suffix}");
+        let owner_id = Uuid::new_v4();
+        let other_owner_id = Uuid::new_v4();
+        insert_search_user(&pool, owner_id, &suffix, "suggestowner").await;
+        insert_search_user(&pool, other_owner_id, &suffix, "suggestother").await;
+
+        let now = Utc::now();
+        let mut visible_recipe_ids = Vec::new();
+        for (index, (recipe_owner_id, visibility)) in std::iter::once((owner_id, "private"))
+            .chain(std::iter::once((owner_id, "unlisted")))
+            .chain(std::iter::repeat_n((other_owner_id, "public"), 7))
+            .enumerate()
+        {
+            let id = Uuid::new_v4();
+            visible_recipe_ids.push(id);
+            insert_search_recipe(
+                &pool,
+                RecipeFixture {
+                    id,
+                    owner_id: recipe_owner_id,
+                    title: &format!("Suggestion Recipe {index:02}"),
+                    description: &term,
+                    visibility,
+                    prep_time: None,
+                    cook_time: None,
+                    servings: None,
+                    ingredients: serde_json::json!([]),
+                    instructions: serde_json::json!([]),
+                    created_at: now,
+                    updated_at: now,
+                    tags: Vec::new(),
+                },
+            )
+            .await;
+        }
+        let hidden_recipe_ids = [Uuid::new_v4(), Uuid::new_v4()];
+        for (id, visibility) in hidden_recipe_ids.into_iter().zip(["private", "unlisted"]) {
+            insert_search_recipe(
+                &pool,
+                RecipeFixture {
+                    id,
+                    owner_id: other_owner_id,
+                    title: "Hidden suggestion recipe",
+                    description: &term,
+                    visibility,
+                    prep_time: None,
+                    cook_time: None,
+                    servings: None,
+                    ingredients: serde_json::json!([]),
+                    instructions: serde_json::json!([]),
+                    created_at: now,
+                    updated_at: now,
+                    tags: Vec::new(),
+                },
+            )
+            .await;
+        }
+
+        let root_collection_id = Uuid::new_v4();
+        let child_collection_id = Uuid::new_v4();
+        let second_root_collection_id = Uuid::new_v4();
+        for fixture in [
+            CollectionSearchFixture {
+                id: root_collection_id,
+                owner_id,
+                parent_collection_id: None,
+                name: "Suggestion Root",
+                description: Some(&term),
+                updated_at: now,
+            },
+            CollectionSearchFixture {
+                id: child_collection_id,
+                owner_id,
+                parent_collection_id: Some(root_collection_id),
+                name: "Suggestion Child",
+                description: Some(&term),
+                updated_at: now,
+            },
+            CollectionSearchFixture {
+                id: second_root_collection_id,
+                owner_id,
+                parent_collection_id: None,
+                name: "Suggestion Second Root",
+                description: Some(&term),
+                updated_at: now,
+            },
+            CollectionSearchFixture {
+                id: Uuid::new_v4(),
+                owner_id: other_owner_id,
+                parent_collection_id: None,
+                name: "Other Owner Suggestion",
+                description: Some(&term),
+                updated_at: now,
+            },
+        ] {
+            insert_collection_search_fixture(&pool, fixture).await;
+        }
+
+        let mut matching_user_ids = Vec::new();
+        for index in 0..3 {
+            let id = Uuid::new_v4();
+            matching_user_ids.push(id);
+            insert_user_search_fixture(
+                &pool,
+                UserSearchFixture {
+                    id,
+                    username: &format!("suggestionuser{index}{suffix}"),
+                    display_name: &format!("Suggestion User {index}"),
+                    email: &format!("suggestion-{index}-{suffix}@example.test"),
+                    bio: Some(&term),
+                },
+            )
+            .await;
+        }
+        let private_email_term = format!("private{suffix}");
+        let email_only_user_id = Uuid::new_v4();
+        insert_user_search_fixture(
+            &pool,
+            UserSearchFixture {
+                id: email_only_user_id,
+                username: &format!("ordinaryuser{suffix}"),
+                display_name: "Ordinary User",
+                email: &format!("{private_email_term}@example.test"),
+                bio: None,
+            },
+        )
+        .await;
+
+        let too_short =
+            crate::db::autocomplete_entities(&pool, owner_id, SearchScope::Recipes, " 🍝 ").await;
+        assert!(matches!(
+            too_short,
+            Err(crate::db::DbError::InvalidSearchRequest(_))
+        ));
+        crate::db::autocomplete_entities(&pool, owner_id, SearchScope::Recipes, " 🍝a ")
+            .await
+            .expect("two-scalar Unicode autocomplete should be accepted");
+        let oversized = "x".repeat(crate::search::MAX_SEARCH_TEXT_CHARS + 1);
+        assert!(matches!(
+            crate::db::autocomplete_entities(&pool, owner_id, SearchScope::Recipes, &oversized)
+                .await,
+            Err(crate::db::DbError::InvalidSearchRequest(_))
+        ));
+
+        let recipes =
+            crate::db::autocomplete_entities(&pool, owner_id, SearchScope::Recipes, &term)
+                .await
+                .expect("recipe autocomplete failed");
+        assert_eq!(recipes.len(), crate::search::MAX_AUTOCOMPLETE_SUGGESTIONS);
+        assert!(recipes
+            .iter()
+            .all(|suggestion| suggestion.kind == SearchSuggestionKind::Recipe));
+        assert!(recipes
+            .iter()
+            .all(|suggestion| visible_recipe_ids.contains(&suggestion.id)));
+        assert!(recipes
+            .iter()
+            .all(|suggestion| !hidden_recipe_ids.contains(&suggestion.id)));
+        assert!(recipes.iter().all(|suggestion| {
+            suggestion.label.starts_with("Suggestion Recipe")
+                && suggestion.secondary_text.as_deref().is_some_and(|author| {
+                    author.starts_with("suggestowner") || author.starts_with("suggestother")
+                })
+        }));
+        assert!(recipes.windows(2).all(|pair| pair[0].id < pair[1].id));
+
+        let collections =
+            crate::db::autocomplete_entities(&pool, owner_id, SearchScope::Collections, &term)
+                .await
+                .expect("collection autocomplete failed");
+        assert_eq!(collections.len(), 3);
+        assert!(collections
+            .iter()
+            .all(|suggestion| suggestion.kind == SearchSuggestionKind::Collection));
+        let child = collections
+            .iter()
+            .find(|suggestion| suggestion.id == child_collection_id)
+            .expect("nested collection suggestion missing");
+        assert_eq!(child.secondary_text.as_deref(), Some("Suggestion Root"));
+
+        let users = crate::db::autocomplete_entities(&pool, owner_id, SearchScope::Users, &term)
+            .await
+            .expect("user autocomplete failed");
+        assert_eq!(users.len(), 3);
+        assert!(users.iter().all(|suggestion| {
+            suggestion.kind == SearchSuggestionKind::User
+                && matching_user_ids.contains(&suggestion.id)
+                && suggestion.label.starts_with("Suggestion User")
+                && suggestion
+                    .secondary_text
+                    .as_deref()
+                    .is_some_and(|username| username.starts_with("@suggestionuser"))
+        }));
+        let private_account = crate::db::autocomplete_entities(
+            &pool,
+            owner_id,
+            SearchScope::Users,
+            &private_email_term,
+        )
+        .await
+        .expect("private account-field autocomplete failed");
+        assert!(private_account.is_empty());
+
+        let all = crate::db::autocomplete_entities(&pool, owner_id, SearchScope::All, &term)
+            .await
+            .expect("All autocomplete failed");
+        assert_eq!(
+            all.iter()
+                .map(|suggestion| suggestion.kind)
+                .collect::<Vec<_>>(),
+            vec![
+                SearchSuggestionKind::Recipe,
+                SearchSuggestionKind::Recipe,
+                SearchSuggestionKind::Recipe,
+                SearchSuggestionKind::Recipe,
+                SearchSuggestionKind::Collection,
+                SearchSuggestionKind::Collection,
+                SearchSuggestionKind::User,
+                SearchSuggestionKind::User,
+            ]
+        );
+
+        sqlx::query("DELETE FROM collections WHERE owner_id = $1")
+            .bind(owner_id)
+            .execute(&pool)
+            .await
+            .expect("failed to remove owned autocomplete collections");
+        let no_collection_refill =
+            crate::db::autocomplete_entities(&pool, owner_id, SearchScope::All, &term)
+                .await
+                .expect("All autocomplete without collection matches failed");
+        assert_eq!(
+            no_collection_refill
+                .iter()
+                .map(|suggestion| suggestion.kind)
+                .collect::<Vec<_>>(),
+            vec![
+                SearchSuggestionKind::Recipe,
+                SearchSuggestionKind::Recipe,
+                SearchSuggestionKind::Recipe,
+                SearchSuggestionKind::Recipe,
+                SearchSuggestionKind::User,
+                SearchSuggestionKind::User,
+            ],
+            "unused collection slots must not be reassigned across indexes"
+        );
+
+        sqlx::query("DELETE FROM users WHERE id = ANY($1)")
+            .bind(
+                [owner_id, other_owner_id, email_only_user_id]
+                    .into_iter()
+                    .chain(matching_user_ids)
+                    .collect::<Vec<_>>(),
+            )
+            .execute(&pool)
+            .await
+            .expect("failed to clean up autocomplete fixtures");
         pool.close().await;
     }
 }

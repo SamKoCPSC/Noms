@@ -9,8 +9,9 @@ use uuid::Uuid;
 use super::DbError;
 use crate::search::validate_user_search_request;
 use crate::types::{
-    AdvancedUserSearchCriteria, TextCriterion, TextMatchMode, UserSearchRequest,
-    UserSearchResponse, UserSearchResult, UserSearchSort, UserSearchSummary,
+    AdvancedUserSearchCriteria, SearchSuggestion, SearchSuggestionKind, TextCriterion,
+    TextMatchMode, UserSearchRequest, UserSearchResponse, UserSearchResult, UserSearchSort,
+    UserSearchSummary,
 };
 
 const USERNAME_WORDS: &str = "(u.username::pdb.simple('alias=user_username_words'))";
@@ -116,6 +117,38 @@ pub(super) async fn search_user_section(
     let results = fetch_results(pool, &request, positive_text).await?;
     let total_count = fetch_count(pool, &request).await?;
     Ok((results, total_count))
+}
+
+pub(super) async fn autocomplete_users(
+    pool: &PgPool,
+    text: &str,
+    limit: u32,
+) -> Result<Vec<SearchSuggestion>, DbError> {
+    let request = UserSearchRequest {
+        text: Some(text.trim().to_owned()),
+        ..UserSearchRequest::default()
+    };
+    let mut query = QueryBuilder::<Postgres>::new(
+        "SELECT u.id, u.display_name, u.username FROM users u WHERE TRUE",
+    );
+    push_criteria(&mut query, &request);
+    query
+        .push(" ORDER BY pdb.score(u.id) DESC, u.id ASC LIMIT ")
+        .push_bind(i64::from(limit));
+    let rows = query
+        .build_query_as::<(Uuid, String, String)>()
+        .fetch_all(pool)
+        .await
+        .map_err(DbError::Query)?;
+    Ok(rows
+        .into_iter()
+        .map(|(id, display_name, username)| SearchSuggestion {
+            kind: SearchSuggestionKind::User,
+            id,
+            label: display_name,
+            secondary_text: Some(format!("@{username}")),
+        })
+        .collect())
 }
 
 async fn fetch_results(

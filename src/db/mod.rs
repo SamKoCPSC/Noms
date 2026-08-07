@@ -30,6 +30,8 @@ mod collection_search;
 pub use collection_search::search_collections;
 mod all_search;
 pub use all_search::search_all;
+mod autocomplete;
+pub use autocomplete::autocomplete_entities;
 
 // Re-export typed recipe sub-structs for use in DB layer
 pub use crate::types::RecipeEquipment;

@@ -77,3 +77,23 @@ pub async fn search_all(
             ServerFnError::new("Failed to search")
         })
 }
+
+/// Return bounded typed suggestions for the authenticated caller.
+#[server]
+pub async fn autocomplete_entities(
+    scope: crate::types::SearchScope,
+    text: String,
+) -> Result<Vec<crate::types::SearchSuggestion>, ServerFnError> {
+    crate::search::validate_autocomplete_text(&text)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let user_id = crate::auth::session::extract_user_id_from_fullstack()
+        .await
+        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+
+    crate::db::autocomplete_entities(&crate::db::get_pool(), user_id, scope, &text)
+        .await
+        .map_err(|error| {
+            tracing::error!(error = %error, "autocomplete failed");
+            ServerFnError::new("Failed to load suggestions")
+        })
+}
