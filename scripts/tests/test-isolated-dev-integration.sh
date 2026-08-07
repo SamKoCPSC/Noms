@@ -124,6 +124,7 @@ complete_mock_oauth_login() {
     local application_url="$2"
     local cookie_name="$3"
     local cookie_jar="$4"
+    local provider="$5"
     local authorization_url
     local final_url
 
@@ -132,9 +133,9 @@ complete_mock_oauth_login() {
         curl --fail --silent --show-error \
             --output /dev/null \
             --write-out '%{redirect_url}' \
-            "$application_url/auth/google/start?redirect_uri=%2Fdashboard"
+            "$application_url/auth/$provider/start?redirect_uri=%2Fdashboard&purpose=login"
     )"
-    if [[ "$authorization_url" != http://127.0.0.1:*/google/authorize\?* ]]; then
+    if [[ "$authorization_url" != http://127.0.0.1:*/"$provider"/authorize\?* ]]; then
         echo "FAIL: $description did not reach its Mock OAuth authorization endpoint" >&2
         exit 1
     fi
@@ -146,7 +147,7 @@ complete_mock_oauth_login() {
             --cookie "$cookie_jar" \
             --cookie-jar "$cookie_jar" \
             --data-urlencode "username=$cookie_name" \
-            --data-urlencode "claims={\"email\":\"$cookie_name@example.test\",\"name\":\"$description\"}" \
+            --data-urlencode "claims={\"email\":\"$cookie_name@example.test\",\"email_verified\":true,\"name\":\"$description\"}" \
             --output /dev/null \
             --write-out '%{url_effective}' \
             "$authorization_url"
@@ -322,9 +323,9 @@ fi
 COOKIE_JAR_A="$TEST_ROOT/instance-a.cookies"
 COOKIE_JAR_B="$TEST_ROOT/instance-b.cookies"
 complete_mock_oauth_login "instance A Mock OAuth login" \
-    "$APP_URL_A" "$COOKIE_NAME_A" "$COOKIE_JAR_A"
+    "$APP_URL_A" "$COOKIE_NAME_A" "$COOKIE_JAR_A" google
 complete_mock_oauth_login "instance B Mock OAuth login" \
-    "$APP_URL_B" "$COOKIE_NAME_B" "$COOKIE_JAR_B"
+    "$APP_URL_B" "$COOKIE_NAME_B" "$COOKIE_JAR_B" google
 
 if profile_is_authenticated "$APP_URL_A" "$COOKIE_JAR_A" &&
     profile_is_authenticated "$APP_URL_B" "$COOKIE_JAR_B"; then
@@ -349,6 +350,20 @@ if profile_is_authenticated "$APP_URL_A" "$COOKIE_JAR_A"; then
     echo "FAIL: signing out of instance A left its session authenticated" >&2
     exit 1
 fi
+complete_mock_oauth_login "instance A GitHub OAuth login" \
+    "$APP_URL_A" "$COOKIE_NAME_A" "$COOKIE_JAR_A" github
+if ! profile_is_authenticated "$APP_URL_A" "$COOKIE_JAR_A"; then
+    echo "FAIL: instance A did not accept its GitHub-authenticated session" >&2
+    exit 1
+fi
+if ! compose_for "$WORKTREE_A" "$INSTANCE_A" exec -T postgres \
+    psql -U noms -d noms -Atqc \
+        "SELECT provider_user_id || '|' || email || '|' || email_verified FROM oauth_accounts WHERE provider = 'github'" | \
+    grep -qx '424242|noms-local-github@example.test|true'; then
+    echo "FAIL: GitHub OAuth identity did not persist the stable id and verified email" >&2
+    exit 1
+fi
+echo "PASS: GitHub OAuth persists its stable id and verified email"
 if ! profile_is_authenticated "$APP_URL_B" "$COOKIE_JAR_B"; then
     echo "FAIL: signing out of instance A invalidated instance B" >&2
     exit 1

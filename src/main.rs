@@ -145,6 +145,12 @@ async fn build_application_router() -> axum::Router {
                 .unwrap_or_else(|_| "https://api.github.com".to_string());
             format!("{api_url}/user")
         }),
+        github_emails_url: std::env::var("GITHUB_EMAILS_URL").unwrap_or_else(|_| {
+            let api_url = std::env::var("GITHUB_API_URL")
+                .unwrap_or_else(|_| "https://api.github.com".to_string());
+            format!("{api_url}/user/emails")
+        }),
+        github_extra_scopes: auth::oauth::configured_github_extra_scopes(),
         rate_limit: rate_limit.clone(),
         storage: storage_client.clone(),
     };

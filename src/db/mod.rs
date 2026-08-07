@@ -1935,7 +1935,8 @@ pub async fn get_oauth_account_by_provider(
     .map_err(DbError::Query)
 }
 
-/// Get an OAuth account by email.
+/// Get an OAuth account by email for database-layer regression tests.
+#[cfg(test)]
 pub async fn get_oauth_account_by_email(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     email: &str,
@@ -1964,6 +1965,27 @@ pub async fn update_oauth_last_used(
         .execute(executor)
         .await
         .map_err(DbError::Query)?;
+    Ok(())
+}
+
+/// Refresh mutable provider metadata for an existing stable identity.
+pub async fn update_oauth_last_used_and_email(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    id: Uuid,
+    email: Option<&str>,
+    email_verified: bool,
+) -> Result<(), DbError> {
+    sqlx::query(
+        "UPDATE oauth_accounts \
+         SET last_used_at = NOW(), email = $2, email_verified = $3 \
+         WHERE id = $1",
+    )
+    .bind(id)
+    .bind(email)
+    .bind(email_verified)
+    .execute(executor)
+    .await
+    .map_err(DbError::Query)?;
     Ok(())
 }
 
@@ -2093,16 +2115,42 @@ pub async fn insert_oauth_account(
     profile_data: Option<&serde_json::Value>,
     refresh_token: Option<&str>,
 ) -> Result<OauthAccount, DbError> {
+    insert_oauth_account_with_email_verification(
+        executor,
+        user_id,
+        provider,
+        provider_user_id,
+        email,
+        false,
+        profile_data,
+        refresh_token,
+    )
+    .await
+}
+
+/// Insert an OAuth account while preserving provider email verification state.
+#[allow(clippy::too_many_arguments)] // Mirrors the OAuth account columns explicitly.
+pub async fn insert_oauth_account_with_email_verification(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    user_id: Uuid,
+    provider: &str,
+    provider_user_id: &str,
+    email: Option<&str>,
+    email_verified: bool,
+    profile_data: Option<&serde_json::Value>,
+    refresh_token: Option<&str>,
+) -> Result<OauthAccount, DbError> {
     sqlx::query_as!(
         OauthAccount,
-        "INSERT INTO oauth_accounts (user_id, provider, provider_user_id, email, profile_data, refresh_token) \
-         VALUES ($1, $2, $3, $4, $5, $6) \
+        "INSERT INTO oauth_accounts (user_id, provider, provider_user_id, email, email_verified, profile_data, refresh_token) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7) \
          RETURNING id, user_id, provider, provider_user_id, email, email_verified, \
          profile_data, refresh_token, created_at, last_used_at",
         user_id,
         provider,
         provider_user_id,
         email,
+        email_verified,
         profile_data,
         refresh_token,
     )

@@ -765,6 +765,8 @@ mod tests {
                     http_client: reqwest::Client::new(),
                     google_userinfo_url: "http://localhost:8082/google/userinfo".to_string(),
                     github_userinfo_url: "http://localhost:8082/github/userinfo".to_string(),
+                    github_emails_url: "http://localhost:8082/github/emails".to_string(),
+                    github_extra_scopes: Vec::new(),
                     rate_limit,
                     storage: crate::storage::StorageClient::for_test(),
                 },

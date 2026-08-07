@@ -49,6 +49,12 @@ pub struct AppState {
     pub http_client: reqwest::Client,
     pub google_userinfo_url: String,
     pub github_userinfo_url: String,
+    /// GitHub's verified-email endpoint. This is separate from `/user`
+    /// because the public profile email is not proof of email ownership.
+    pub github_emails_url: String,
+    /// Additional GitHub authorization scopes used by environment-specific
+    /// provider adapters. Required production scopes are always included.
+    pub github_extra_scopes: Vec<String>,
     /// Shared rate limit state for OAuth endpoint protection.
     pub rate_limit: crate::middleware::rate_limit::RateLimitState,
     /// S3-compatible storage client for media file operations.
@@ -217,6 +223,37 @@ fn validate_provider(provider: &str) -> Result<linking::Provider, OAuthError> {
 fn validate_redirect_uri(uri: &str) -> Result<String, OAuthError> {
     crate::auth::redirect::normalize_same_origin_redirect(uri)
         .ok_or_else(|| OAuthError::InvalidRedirectUri(uri.to_string()))
+}
+
+fn oauth_scopes(provider: &linking::Provider, github_extra_scopes: &[String]) -> Vec<String> {
+    match provider {
+        linking::Provider::Google => ["openid", "email", "profile"]
+            .into_iter()
+            .map(str::to_string)
+            .collect(),
+        linking::Provider::GitHub => ["read:user", "user:email"]
+            .into_iter()
+            .map(str::to_string)
+            .chain(github_extra_scopes.iter().cloned())
+            .collect(),
+        linking::Provider::Apple => Vec::new(),
+    }
+}
+
+/// Read environment-specific GitHub scopes without allowing deployment
+/// configuration to replace the required production scopes.
+pub fn configured_github_extra_scopes() -> Vec<String> {
+    let mut scopes = Vec::new();
+    for scope in std::env::var("GITHUB_OAUTH_EXTRA_SCOPES")
+        .unwrap_or_default()
+        .split_whitespace()
+    {
+        if matches!(scope, "read:user" | "user:email") || scopes.iter().any(|item| item == scope) {
+            continue;
+        }
+        scopes.push(scope.to_string());
+    }
+    scopes
 }
 
 /// Build OAuth clients for Google and GitHub using environment variables.
@@ -397,10 +434,9 @@ pub async fn start_handler(
         .authorize_url(|| CsrfToken::new(csrf_state.clone()))
         .set_pkce_challenge(pkce_challenge);
 
-    req = req
-        .add_scope(Scope::new("openid".to_string()))
-        .add_scope(Scope::new("email".to_string()))
-        .add_scope(Scope::new("profile".to_string()));
+    for scope in oauth_scopes(&prov, &state.github_extra_scopes) {
+        req = req.add_scope(Scope::new(scope));
+    }
 
     let (auth_url, _csrf_token) = req.url();
 
@@ -500,6 +536,7 @@ pub async fn callback_handler(
                 &token_response,
                 &state.http_client,
                 &state.github_userinfo_url,
+                &state.github_emails_url,
             )
             .await?
         }
@@ -554,51 +591,78 @@ pub async fn callback_handler(
 
 // ── User info extraction ────────────────────────────────────────────────────
 
-/// Extract user info from Google by decoding the ID token from the token response.
-///
-/// The Google token response includes an `id_token` field which is a JWT.
-/// We base64url-decode the payload segment to extract user claims.
-/// No cryptographic verification is performed — this is acceptable for
-/// the mock server in development.
+#[derive(Deserialize)]
+struct GoogleUserInfo {
+    sub: String,
+    email: Option<String>,
+    #[serde(default)]
+    email_verified: bool,
+    #[serde(default)]
+    name: String,
+    picture: Option<String>,
+}
+
+/// Extract Google identity from the authenticated user-info endpoint.
 async fn extract_google_user_info(
     token_response: &oauth2::basic::BasicTokenResponse,
     http_client: &reqwest::Client,
     userinfo_url: &str,
 ) -> Result<linking::OauthUserInfo, OAuthError> {
-    // Try to get the ID token from the response extras.
-    // The oauth2 v5 crate's BasicTokenResponse uses EmptyExtraTokenFields,
-    // which doesn't include an id_token field. Instead, we use Google's
-    // userinfo endpoint with the access token.
     let access_token = token_response.access_token().secret();
-    // Use the shared HTTP client for the userinfo endpoint.
-    let resp: serde_json::Value = http_client
+    let response = http_client
         .get(userinfo_url)
-        .header("Authorization", format!("Bearer {}", access_token))
+        .bearer_auth(access_token)
         .header("Accept", "application/json")
         .send()
         .await
         .map_err(|e| {
             OAuthError::UserInfoExtraction(format!("Google userinfo request failed: {e}"))
         })?
+        .error_for_status()
+        .map_err(|e| {
+            OAuthError::UserInfoExtraction(format!("Google userinfo returned an error: {e}"))
+        })?;
+    let response: GoogleUserInfo = response
         .json()
         .await
         .map_err(|e| OAuthError::UserInfoExtraction(format!("Google userinfo parse error: {e}")))?;
-    tracing::error!(">>> GOOGLE USERINFO RAW: {} <<<", resp);
+
+    if response.sub.trim().is_empty() {
+        return Err(OAuthError::UserInfoExtraction(
+            "Google userinfo did not include a stable subject".to_string(),
+        ));
+    }
+
+    let verified_email = response
+        .email
+        .filter(|email| response.email_verified && !email.trim().is_empty());
+    let email_verified = verified_email.is_some();
 
     Ok(linking::OauthUserInfo {
         provider: linking::Provider::Google,
-        // Use email as primary UID when available (mock servers often return
-        // a fixed 'sub' equal to the client_id). Fall back to sub (OIDC standard)
-        // for production providers.
-        provider_uid: resp["email"]
-            .as_str()
-            .map(|s| s.to_string())
-            .or_else(|| resp["sub"].as_str().map(|s| s.to_string()))
-            .unwrap_or_default(),
-        email: resp["email"].as_str().map(|s| s.to_string()),
-        display_name: resp["name"].as_str().unwrap_or("").to_string(),
-        avatar_url: resp["picture"].as_str().map(|s| s.to_string()),
+        provider_uid: response.sub,
+        email: verified_email,
+        email_verified,
+        display_name: response.name,
+        avatar_url: response.picture,
     })
+}
+
+#[derive(Deserialize)]
+struct GitHubUserInfo {
+    id: u64,
+    #[serde(default)]
+    login: String,
+    avatar_url: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct GitHubEmail {
+    email: String,
+    #[serde(default)]
+    primary: bool,
+    #[serde(default)]
+    verified: bool,
 }
 
 /// Extract user info from GitHub by calling the userinfo endpoint.
@@ -609,12 +673,13 @@ async fn extract_github_user_info(
     token_response: &oauth2::basic::BasicTokenResponse,
     http_client: &reqwest::Client,
     userinfo_url: &str,
+    emails_url: &str,
 ) -> Result<linking::OauthUserInfo, OAuthError> {
     let access_token = token_response.access_token().secret();
 
-    let resp: serde_json::Value = http_client
+    let response = http_client
         .get(userinfo_url)
-        .header("Authorization", format!("Bearer {}", access_token))
+        .bearer_auth(access_token)
         .header("User-Agent", "noms-app")
         .header("Accept", "application/json")
         .send()
@@ -622,33 +687,49 @@ async fn extract_github_user_info(
         .map_err(|e| {
             OAuthError::UserInfoExtraction(format!("GitHub userinfo request failed: {e}"))
         })?
+        .error_for_status()
+        .map_err(|e| {
+            OAuthError::UserInfoExtraction(format!("GitHub userinfo returned an error: {e}"))
+        })?;
+    let response: GitHubUserInfo = response
         .json()
         .await
         .map_err(|e| OAuthError::UserInfoExtraction(format!("GitHub userinfo parse error: {e}")))?;
 
-    // Handle both OIDC claims (sub, name, picture) and GitHub API fields (id, login, avatar_url)
+    let email_response = http_client
+        .get(emails_url)
+        .bearer_auth(access_token)
+        .header("User-Agent", "noms-app")
+        .header("Accept", "application/vnd.github+json")
+        .send()
+        .await
+        .map_err(|e| OAuthError::UserInfoExtraction(format!("GitHub email request failed: {e}")))?
+        .error_for_status()
+        .map_err(|e| {
+            OAuthError::UserInfoExtraction(format!("GitHub email endpoint returned an error: {e}"))
+        })?;
+    let emails: Vec<GitHubEmail> = email_response.json().await.map_err(|e| {
+        OAuthError::UserInfoExtraction(format!("GitHub email response parse error: {e}"))
+    })?;
+
+    let verified_email = emails
+        .iter()
+        .find(|entry| entry.verified && entry.primary && !entry.email.trim().is_empty())
+        .or_else(|| {
+            emails
+                .iter()
+                .find(|entry| entry.verified && !entry.email.trim().is_empty())
+        })
+        .map(|entry| entry.email.clone());
+    let email_verified = verified_email.is_some();
+
     Ok(linking::OauthUserInfo {
         provider: linking::Provider::GitHub,
-        // Use email as primary UID when available (mock servers often return
-        // a fixed 'sub' equal to the client_id). Fall back to id (GitHub API)
-        // or sub (OIDC) for production providers.
-        provider_uid: resp["email"]
-            .as_str()
-            .map(|s| s.to_string())
-            .or_else(|| resp["id"].as_i64().map(|n| n.to_string()))
-            .or_else(|| resp["id"].as_str().map(|s| s.to_string()))
-            .or_else(|| resp["sub"].as_str().map(|s| s.to_string()))
-            .unwrap_or_default(),
-        email: resp["email"].as_str().map(|s| s.to_string()),
-        display_name: resp["login"]
-            .as_str()
-            .or_else(|| resp["name"].as_str())
-            .unwrap_or("")
-            .to_string(),
-        avatar_url: resp["avatar_url"]
-            .as_str()
-            .or_else(|| resp["picture"].as_str())
-            .map(|s| s.to_string()),
+        provider_uid: response.id.to_string(),
+        email: verified_email,
+        email_verified,
+        display_name: response.login,
+        avatar_url: response.avatar_url,
     })
 }
 
@@ -813,6 +894,210 @@ mod tests {
     }
 
     #[test]
+    fn test_provider_specific_oauth_scopes() {
+        assert_eq!(
+            oauth_scopes(&linking::Provider::Google, &[]),
+            ["openid", "email", "profile"].map(str::to_string)
+        );
+        assert_eq!(
+            oauth_scopes(&linking::Provider::GitHub, &[]),
+            ["read:user", "user:email"].map(str::to_string)
+        );
+        assert_eq!(
+            oauth_scopes(&linking::Provider::GitHub, &["openid".to_string()]),
+            ["read:user", "user:email", "openid"].map(str::to_string)
+        );
+    }
+
+    fn test_token_response() -> oauth2::basic::BasicTokenResponse {
+        oauth2::basic::BasicTokenResponse::new(
+            oauth2::AccessToken::new("test-access-token".to_string()),
+            oauth2::basic::BasicTokenType::Bearer,
+            oauth2::EmptyExtraTokenFields {},
+        )
+    }
+
+    #[tokio::test]
+    async fn test_google_userinfo_uses_stable_subject_and_verified_email() {
+        let server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("GET"))
+            .and(wiremock::matchers::path("/google/userinfo"))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "sub": "stable-google-subject",
+                    "email": "person@example.com",
+                    "email_verified": true,
+                    "name": "Person"
+                })),
+            )
+            .mount(&server)
+            .await;
+
+        let info = extract_google_user_info(
+            &test_token_response(),
+            &reqwest::Client::new(),
+            &format!("{}/google/userinfo", server.uri()),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(info.provider_uid, "stable-google-subject");
+        assert_eq!(info.email.as_deref(), Some("person@example.com"));
+        assert!(info.email_verified);
+    }
+
+    #[tokio::test]
+    async fn test_google_userinfo_drops_unverified_email() {
+        let server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("GET"))
+            .and(wiremock::matchers::path("/google/userinfo"))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "sub": "stable-google-subject",
+                    "email": "unverified@example.com",
+                    "email_verified": false,
+                    "name": "Person"
+                })),
+            )
+            .mount(&server)
+            .await;
+
+        let info = extract_google_user_info(
+            &test_token_response(),
+            &reqwest::Client::new(),
+            &format!("{}/google/userinfo", server.uri()),
+        )
+        .await
+        .unwrap();
+
+        assert!(info.email.is_none());
+        assert!(!info.email_verified);
+    }
+
+    #[tokio::test]
+    async fn test_google_userinfo_rejects_missing_subject() {
+        let server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("GET"))
+            .and(wiremock::matchers::path("/google/userinfo"))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "email": "person@example.com",
+                    "email_verified": true,
+                    "name": "Person"
+                })),
+            )
+            .mount(&server)
+            .await;
+
+        let result = extract_google_user_info(
+            &test_token_response(),
+            &reqwest::Client::new(),
+            &format!("{}/google/userinfo", server.uri()),
+        )
+        .await;
+
+        assert!(matches!(result, Err(OAuthError::UserInfoExtraction(_))));
+    }
+
+    #[tokio::test]
+    async fn test_userinfo_http_error_is_rejected_before_claims() {
+        let server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("GET"))
+            .and(wiremock::matchers::path("/google/userinfo"))
+            .respond_with(
+                wiremock::ResponseTemplate::new(401).set_body_json(serde_json::json!({
+                    "sub": "must-not-be-accepted",
+                    "email": "attacker@example.com",
+                    "email_verified": true
+                })),
+            )
+            .mount(&server)
+            .await;
+
+        let result = extract_google_user_info(
+            &test_token_response(),
+            &reqwest::Client::new(),
+            &format!("{}/google/userinfo", server.uri()),
+        )
+        .await;
+
+        assert!(matches!(result, Err(OAuthError::UserInfoExtraction(_))));
+    }
+
+    #[tokio::test]
+    async fn test_github_userinfo_uses_numeric_id_and_verified_primary_email() {
+        let server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("GET"))
+            .and(wiremock::matchers::path("/github/userinfo"))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "id": 987654,
+                    "login": "octocat",
+                    "email": "untrusted-public@example.com"
+                })),
+            )
+            .mount(&server)
+            .await;
+        wiremock::Mock::given(wiremock::matchers::method("GET"))
+            .and(wiremock::matchers::path("/github/emails"))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!([
+                    {"email": "secondary@example.com", "primary": false, "verified": true},
+                    {"email": "primary@example.com", "primary": true, "verified": true}
+                ])),
+            )
+            .mount(&server)
+            .await;
+
+        let info = extract_github_user_info(
+            &test_token_response(),
+            &reqwest::Client::new(),
+            &format!("{}/github/userinfo", server.uri()),
+            &format!("{}/github/emails", server.uri()),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(info.provider_uid, "987654");
+        assert_eq!(info.email.as_deref(), Some("primary@example.com"));
+        assert!(info.email_verified);
+    }
+
+    #[tokio::test]
+    async fn test_github_userinfo_ignores_email_when_none_are_verified() {
+        let server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("GET"))
+            .and(wiremock::matchers::path("/github/userinfo"))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200)
+                    .set_body_json(serde_json::json!({"id": 1234, "login": "octocat"})),
+            )
+            .mount(&server)
+            .await;
+        wiremock::Mock::given(wiremock::matchers::method("GET"))
+            .and(wiremock::matchers::path("/github/emails"))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!([
+                    {"email": "unverified@example.com", "primary": true, "verified": false}
+                ])),
+            )
+            .mount(&server)
+            .await;
+
+        let info = extract_github_user_info(
+            &test_token_response(),
+            &reqwest::Client::new(),
+            &format!("{}/github/userinfo", server.uri()),
+            &format!("{}/github/emails", server.uri()),
+        )
+        .await
+        .unwrap();
+
+        assert!(info.email.is_none());
+        assert!(!info.email_verified);
+    }
+
+    #[test]
     fn test_sanitized_message_client_errors_preserved() {
         assert_eq!(
             OAuthError::InvalidProvider("facebook".to_string()).sanitized_message(),
@@ -915,6 +1200,8 @@ mod tests {
                 http_client: reqwest::Client::new(),
                 google_userinfo_url: "http://localhost:8082/google/userinfo".to_string(),
                 github_userinfo_url: "http://localhost:8082/github/userinfo".to_string(),
+                github_emails_url: "http://localhost:8082/github/emails".to_string(),
+                github_extra_scopes: Vec::new(),
                 rate_limit: crate::middleware::rate_limit::RateLimitState::default(),
                 storage: crate::storage::StorageClient::for_test(),
             }
@@ -938,6 +1225,7 @@ mod tests {
                     serde_json::json!({
                         "sub": format!("subject-{email}"),
                         "email": email,
+                        "email_verified": true,
                         "name": "OAuth Test User"
                     }),
                 ))
@@ -965,6 +1253,8 @@ mod tests {
                     http_client: reqwest::Client::new(),
                     google_userinfo_url: format!("{}/google/userinfo", server.uri()),
                     github_userinfo_url: format!("{}/github/userinfo", server.uri()),
+                    github_emails_url: format!("{}/github/emails", server.uri()),
+                    github_extra_scopes: Vec::new(),
                     rate_limit: crate::middleware::rate_limit::RateLimitState::default(),
                     storage: crate::storage::StorageClient::for_test(),
                 },
@@ -1465,6 +1755,7 @@ mod tests {
                     provider: linking::Provider::GitHub,
                     provider_uid: format!("github-sessionlink-{u}"),
                     email: Some(format!("sessionlink{u}@example.com")),
+                    email_verified: true,
                     display_name: "Session Link User".to_string(),
                     avatar_url: None,
                 },
