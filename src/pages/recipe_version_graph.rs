@@ -1197,14 +1197,12 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                             span { "Descendants" }
                         }
                     }
-                    p { class: "recipe-version-graph__help",
-                        "Scroll to zoom; middle-click and drag to pan; right-click the background for more navigation options."
-                    }
                     div {
                         class: "recipe-version-graph__toolbar",
                         aria_label: "Version graph navigation",
-                        div { class: "recipe-version-graph__controls",
-                            button {
+                        div { class: "recipe-version-graph__controls-group",
+                            div { class: "recipe-version-graph__controls",
+                                button {
                                 r#type: "button",
                                 class: "recipe-version-graph__control",
                                 aria_label: "Pan graph left",
@@ -1213,7 +1211,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                 }),
                                 "←"
                             }
-                            button {
+                                button {
                                 r#type: "button",
                                 class: "recipe-version-graph__control",
                                 aria_label: "Pan graph right",
@@ -1222,7 +1220,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                 }),
                                 "→"
                             }
-                            button {
+                                button {
                                 r#type: "button",
                                 class: "recipe-version-graph__control",
                                 aria_label: "Pan graph up",
@@ -1231,7 +1229,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                 }),
                                 "↑"
                             }
-                            button {
+                                button {
                                 r#type: "button",
                                 class: "recipe-version-graph__control",
                                 aria_label: "Pan graph down",
@@ -1240,7 +1238,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                 }),
                                 "↓"
                             }
-                            button {
+                                button {
                                 r#type: "button",
                                 class: "recipe-version-graph__control",
                                 aria_label: "Zoom in",
@@ -1254,7 +1252,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                 },
                                 "+"
                             }
-                            button {
+                                button {
                                 r#type: "button",
                                 class: "recipe-version-graph__control",
                                 aria_label: "Zoom out",
@@ -1268,7 +1266,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                 },
                                 "−"
                             }
-                            button {
+                                button {
                                 r#type: "button",
                                 class: "recipe-version-graph__control recipe-version-graph__control--text",
                                 aria_label: "Fit graph to viewport",
@@ -1279,7 +1277,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                 },
                                 "Fit"
                             }
-                            button {
+                                button {
                                 r#type: "button",
                                 class: "recipe-version-graph__control recipe-version-graph__control--text",
                                 aria_label: "Center current snapshot",
@@ -1294,6 +1292,23 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                     }
                                 },
                                 "Current"
+                            }
+                            }
+                            ul {
+                                class: "recipe-version-graph__mouse-controls",
+                                aria_label: "Mouse controls",
+                                li { class: "recipe-version-graph__mouse-control",
+                                    kbd { "Scroll wheel" }
+                                    span { "Zoom in and out" }
+                                }
+                                li { class: "recipe-version-graph__mouse-control",
+                                    kbd { "Middle-click + drag" }
+                                    span { "Pan around the graph" }
+                                }
+                                li { class: "recipe-version-graph__mouse-control",
+                                    kbd { "Right-click" }
+                                    span { "Open more options" }
+                                }
                             }
                         }
                         div {
@@ -2910,14 +2925,32 @@ mod tests {
             .split("#[cfg(test)]")
             .next()
             .expect("version graph page implementation");
+        let css = include_str!("../../assets/main.css");
 
         assert!(page.contains("onwheel:"));
         assert!(page.contains("onmousedown:"));
         assert!(page.contains("onmousemove:"));
         assert!(page.contains("onmouseup:"));
         assert!(page.contains("MouseButton::Auxiliary"));
-        assert!(page.contains("Scroll to zoom"));
-        assert!(page.contains("middle-click and drag to pan"));
+        assert!(page.contains("Mouse controls"));
+        assert!(page.contains("Scroll wheel"));
+        assert!(page.contains("Zoom in and out"));
+        assert!(page.contains("Middle-click + drag"));
+        assert!(page.contains("Pan around the graph"));
+        assert!(page.contains("Right-click"));
+        assert!(page.contains("Open more options"));
+        assert!(page.contains("recipe-version-graph__mouse-controls"));
+        assert!(page.contains("recipe-version-graph__mouse-control"));
+        let manual_controls_position = page
+            .find("class: \"recipe-version-graph__controls\"")
+            .expect("manual graph controls");
+        let mouse_guide_position = page
+            .find("class: \"recipe-version-graph__mouse-controls\"")
+            .expect("mouse controls guide");
+        assert!(manual_controls_position < mouse_guide_position);
+        assert!(css.contains(".recipe-version-graph__controls-group"));
+        assert!(css.contains("font-size: 0.76rem"));
+        assert!(css.contains("padding: 0.08rem 0.3rem"));
     }
 
     #[test]

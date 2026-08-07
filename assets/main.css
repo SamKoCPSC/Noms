@@ -2428,15 +2428,38 @@ a:hover {
     gap: var(--space-md);
 }
 
-.recipe-version-graph__description,
-.recipe-version-graph__help {
+.recipe-version-graph__description {
     margin: 0;
     color: var(--text-secondary);
 }
 
-.recipe-version-graph__help {
-    margin-top: calc(-1 * var(--space-sm));
-    font-size: 0.88rem;
+.recipe-version-graph__mouse-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem var(--space-sm);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.76rem;
+}
+
+.recipe-version-graph__mouse-control {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--text-secondary);
+}
+
+.recipe-version-graph__mouse-control kbd {
+    padding: 0.08rem 0.3rem;
+    border: 1px solid var(--border-color);
+    border-bottom-width: 2px;
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--surface) 92%, var(--background));
+    color: var(--text-primary);
+    font: inherit;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 .recipe-version-graph__lineage-counts {
@@ -2471,6 +2494,12 @@ a:hover {
     justify-content: space-between;
     gap: var(--space-sm) var(--space-md);
     flex-wrap: wrap;
+}
+
+.recipe-version-graph__controls-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
 }
 
 .recipe-version-graph__controls,
@@ -3114,6 +3143,10 @@ a:hover {
     }
 
     .recipe-version-graph__controls {
+        width: 100%;
+    }
+
+    .recipe-version-graph__controls-group {
         width: 100%;
     }
 
