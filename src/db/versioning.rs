@@ -874,6 +874,21 @@ pub async fn compare_recipe_versions(
     compute_diff(&from, &to)
 }
 
+/// Compare immutable snapshots without assuming they belong to the same recipe.
+pub async fn compare_recipe_version_snapshots(
+    pool: &PgPool,
+    from: crate::types::VersionGraphNodeId,
+    to: crate::types::VersionGraphNodeId,
+) -> Result<Vec<SnapshotChange>, DbError> {
+    let from_snapshot = get_recipe_version(pool, from.recipe_id, from.version_number)
+        .await?
+        .decoded_snapshot()?;
+    let to_snapshot = get_recipe_version(pool, to.recipe_id, to.version_number)
+        .await?
+        .decoded_snapshot()?;
+    compute_diff(&from_snapshot, &to_snapshot)
+}
+
 pub async fn get_next_version_number(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     recipe_id: Uuid,
@@ -2944,6 +2959,40 @@ mod tests {
             .expect("reverse title change");
         assert_eq!(reverse_title.old_value.as_ref().unwrap(), "Current title");
         assert_eq!(reverse_title.value.as_ref().unwrap(), "Original title");
+    }
+
+    #[tokio::test]
+    async fn compares_immutable_snapshots_across_recipes_in_requested_direction() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let user = owner(&pool, "cross_recipe_compare").await;
+        let source =
+            create_published_recipe(&pool, user.id, &snapshot("Source recipe", "public"), None)
+                .await
+                .unwrap();
+        let fork =
+            create_published_recipe(&pool, user.id, &snapshot("Fork recipe", "public"), None)
+                .await
+                .unwrap();
+
+        let changes = compare_recipe_version_snapshots(
+            &pool,
+            crate::types::VersionGraphNodeId {
+                recipe_id: source.id,
+                version_number: 1,
+            },
+            crate::types::VersionGraphNodeId {
+                recipe_id: fork.id,
+                version_number: 1,
+            },
+        )
+        .await
+        .expect("cross-recipe snapshots compare");
+
+        assert!(changes.iter().any(|change| {
+            change.path == "/title"
+                && change.old_value == Some(serde_json::json!("Source recipe"))
+                && change.value == Some(serde_json::json!("Fork recipe"))
+        }));
     }
 
     #[tokio::test]

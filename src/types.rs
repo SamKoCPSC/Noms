@@ -357,6 +357,14 @@ pub struct RecipeVersionComparison {
     pub changes: Vec<RecipeVersionChange>,
 }
 
+/// Directional comparison between any two visible graph snapshots.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VersionGraphComparison {
+    pub from: VersionGraphNodeId,
+    pub to: VersionGraphNodeId,
+    pub changes: Vec<RecipeVersionChange>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ForkAttribution {
     pub original_recipe_id: Option<Uuid>,
@@ -822,6 +830,35 @@ mod tests {
             50
         );
         assert!(restored.lineage_counts.immediate_descendants.is_capped);
+    }
+
+    #[test]
+    fn version_graph_comparison_preserves_direction_and_cross_recipe_identity() {
+        let comparison = VersionGraphComparison {
+            from: VersionGraphNodeId {
+                recipe_id: Uuid::from_u128(1),
+                version_number: 3,
+            },
+            to: VersionGraphNodeId {
+                recipe_id: Uuid::from_u128(2),
+                version_number: 1,
+            },
+            changes: vec![RecipeVersionChange {
+                op: "replace".to_string(),
+                path: "/title".to_string(),
+                old_value: Some("Before".to_string()),
+                value: Some("After".to_string()),
+            }],
+        };
+
+        let encoded = serde_json::to_vec(&comparison).expect("comparison is serializable");
+        let restored: VersionGraphComparison =
+            serde_json::from_slice(&encoded).expect("comparison crosses the client boundary");
+
+        assert_eq!(restored, comparison);
+        assert_ne!(restored.from.recipe_id, restored.to.recipe_id);
+        assert_eq!(restored.from.version_number, 3);
+        assert_eq!(restored.to.version_number, 1);
     }
 
     #[test]

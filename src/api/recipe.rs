@@ -735,6 +735,39 @@ pub async fn compare_recipe_versions_api(
     })
 }
 
+/// Compare two graph snapshots after independently authorizing both recipes.
+#[server]
+pub async fn compare_version_graph_snapshots_api(
+    from: crate::types::VersionGraphNodeId,
+    to: crate::types::VersionGraphNodeId,
+) -> Result<crate::types::VersionGraphComparison, ServerFnError> {
+    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
+    let pool = crate::db::get_pool();
+
+    for snapshot in [from, to] {
+        crate::db::get_recipe_by_id(&pool, snapshot.recipe_id)
+            .await
+            .map_err(|error| ServerFnError::new(error.to_string()))?
+            .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
+            .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
+    }
+
+    let changes = crate::db::compare_recipe_version_snapshots(&pool, from, to)
+        .await
+        .map_err(|error| match error {
+            crate::db::DbError::VersionNotFound { .. } => {
+                ServerFnError::new("Recipe snapshot not found")
+            }
+            other => ServerFnError::new(other.to_string()),
+        })?;
+
+    Ok(crate::types::VersionGraphComparison {
+        from,
+        to,
+        changes: recipe_version_changes_to_view(changes),
+    })
+}
+
 #[server]
 pub async fn restore_version(
     recipe_id: String,

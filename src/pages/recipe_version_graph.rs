@@ -7,11 +7,11 @@ use dioxus::html::{geometry::WheelDelta, input_data::MouseButton};
 use dioxus::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use crate::api::recipe::get_recipe_version_graph;
+use crate::api::recipe::{compare_version_graph_snapshots_api, get_recipe_version_graph};
 use crate::components::base::{Card, EditedRecipeImage, EmptyState, LoadingSpinner, PageHeader};
 use crate::types::{
-    VersionGraph, VersionGraphEdge, VersionGraphEdgeKind, VersionGraphLineageCount,
-    VersionGraphNode, VersionGraphNodeId,
+    RecipeVersionChange, VersionGraph, VersionGraphComparison, VersionGraphEdge,
+    VersionGraphEdgeKind, VersionGraphLineageCount, VersionGraphNode, VersionGraphNodeId,
 };
 use crate::Route;
 
@@ -24,6 +24,86 @@ fn server_error_message(error: &ServerFnError) -> String {
 
 fn is_recipe_unavailable_error(message: &str) -> bool {
     matches!(message, "Recipe not found" | "Not authenticated")
+}
+
+fn format_comparison_path(path: &str) -> String {
+    let mut labels = Vec::<String>::new();
+    for token in path.split('/').filter(|token| !token.is_empty()) {
+        let token = token.replace("~1", "/").replace("~0", "~");
+        if let Ok(index) = token.parse::<usize>() {
+            if let Some(label) = labels.last_mut() {
+                label.push_str(&format!(" #{}", index + 1));
+            }
+            continue;
+        }
+        let words = match token.as_str() {
+            "prep_time_minutes" => "Prep time".to_string(),
+            "cook_time_minutes" => "Cook time".to_string(),
+            "instructions" => "Steps".to_string(),
+            "sub_steps" => "Sub-steps".to_string(),
+            _ => token.replace('_', " "),
+        };
+        let mut characters = words.chars();
+        labels.push(match characters.next() {
+            Some(first) => first.to_uppercase().collect::<String>() + characters.as_str(),
+            None => String::new(),
+        });
+    }
+    if labels.is_empty() {
+        "Recipe".to_string()
+    } else {
+        labels.join(" · ")
+    }
+}
+
+fn comparison_value(value: Option<&String>) -> &str {
+    value.map(String::as_str).unwrap_or("—")
+}
+
+#[component]
+fn VersionGraphComparisonPanel(comparison: VersionGraphComparison) -> Element {
+    rsx! {
+        section { class: "recipe-version-graph__comparison-result", aria_label: "Snapshot comparison result",
+            h3 { "Comparison result" }
+            if comparison.changes.is_empty() {
+                p { class: "recipe-version-graph__comparison-empty", "No content differences between these snapshots." }
+            } else {
+                div { class: "recipe-version-graph__comparison-changes",
+                    for change in &comparison.changes {
+                        VersionGraphComparisonChange { change: change.clone() }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn VersionGraphComparisonChange(change: RecipeVersionChange) -> Element {
+    let field = format_comparison_path(&change.path);
+    let operation = match change.op.as_str() {
+        "add" => "Added",
+        "remove" => "Removed",
+        _ => "Changed",
+    };
+    rsx! {
+        article { class: "recipe-version-graph__comparison-change",
+            header {
+                strong { "{field}" }
+                span { "{operation}" }
+            }
+            div { class: "recipe-version-graph__comparison-values",
+                div { class: "recipe-version-graph__comparison-value recipe-version-graph__comparison-value--before",
+                    strong { "Before" }
+                    pre { "{comparison_value(change.old_value.as_ref())}" }
+                }
+                div { class: "recipe-version-graph__comparison-value recipe-version-graph__comparison-value--after",
+                    strong { "After" }
+                    pre { "{comparison_value(change.value.as_ref())}" }
+                }
+            }
+        }
+    }
 }
 
 const GRAPH_NODE_WIDTH_PX: f64 = 240.0;
@@ -40,9 +120,13 @@ const GRAPH_PAN_STEP_PX: f64 = 96.0;
 const GRAPH_DEFAULT_VIEWPORT: (f64, f64) = (900.0, 560.0);
 const GRAPH_CONTEXT_MENU_WIDTH_PX: f64 = 224.0;
 const GRAPH_CONTEXT_MENU_HEIGHT_PX: f64 = 300.0;
+// The menu scrolls when its expanded action set exceeds this positioning box.
 const GRAPH_SNAPSHOT_CONTEXT_MENU_HEIGHT_PX: f64 = 336.0;
 const GRAPH_CONTEXT_MENU_MARGIN_PX: f64 = 8.0;
 const GRAPH_SNAPSHOT_FOCUS_ZOOM: f64 = 1.0;
+#[cfg(target_arch = "wasm32")]
+const GRAPH_TOUCH_CONTEXT_MENU_DELAY_MS: u32 = 550;
+const GRAPH_TOUCH_CONTEXT_MENU_MOVE_TOLERANCE_PX: f64 = 12.0;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct VersionGraphTransform {
@@ -62,6 +146,13 @@ struct VersionGraphContextMenu {
     anchor: (f64, f64),
     position: (f64, f64),
     target: VersionGraphContextMenuTarget,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct VersionGraphTouchContextCandidate {
+    node_id: VersionGraphNodeId,
+    token: u64,
+    origin: (f64, f64),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -516,6 +607,51 @@ fn first_context_menu_focus_index<const ACTION_COUNT: usize>(
         .unwrap_or(0)
 }
 
+fn snapshot_context_menu_actions_enabled(
+    navigation_available: bool,
+    current_snapshot_id: Option<VersionGraphNodeId>,
+    snapshot_id: VersionGraphNodeId,
+    comparison_is_loading: bool,
+) -> [bool; 8] {
+    [
+        navigation_available,
+        navigation_available,
+        navigation_available,
+        navigation_available && !comparison_is_loading,
+        navigation_available && !comparison_is_loading,
+        navigation_available
+            && current_snapshot_id.is_some()
+            && current_snapshot_id != Some(snapshot_id)
+            && !comparison_is_loading,
+        true,
+        true,
+    ]
+}
+
+async fn snapshot_context_menu_at_element(
+    canvas: MountedEvent,
+    anchor_element: MountedEvent,
+    snapshot_id: VersionGraphNodeId,
+) -> Option<VersionGraphContextMenu> {
+    let canvas_rect = canvas.data().get_client_rect().await.ok()?;
+    let anchor_rect = anchor_element.data().get_client_rect().await.ok()?;
+    let viewport = (canvas_rect.size.width, canvas_rect.size.height);
+    if viewport.0 <= 0.0 || viewport.1 <= 0.0 {
+        return None;
+    }
+
+    // Place keyboard and touch menus immediately below their visible trigger.
+    let anchor = (
+        anchor_rect.origin.x - canvas_rect.origin.x,
+        anchor_rect.origin.y + anchor_rect.size.height - canvas_rect.origin.y,
+    );
+    Some(VersionGraphContextMenu::at(
+        anchor,
+        viewport,
+        VersionGraphContextMenuTarget::Snapshot(snapshot_id),
+    ))
+}
+
 fn snapshot_context_menu_route(node_id: VersionGraphNodeId, action_index: usize) -> Option<Route> {
     let recipe_id = node_id.recipe_id.to_string();
     match action_index {
@@ -592,6 +728,17 @@ fn fork_endpoint_label(
                 .to_string()
         })
         .unwrap_or_else(|| "Private recipe".to_string())
+}
+
+fn comparison_snapshot_label(
+    id: VersionGraphNodeId,
+    nodes: &HashMap<VersionGraphNodeId, VersionGraphNode>,
+) -> String {
+    nodes
+        .get(&id)
+        .and_then(VersionGraphNode::title)
+        .map(|title| format!("{title} · v{}", id.version_number))
+        .unwrap_or_else(|| format!("Snapshot v{}", id.version_number))
 }
 
 fn fork_connection_label(edge: &VersionGraphEdge, nodes: &[VersionGraphNode]) -> String {
@@ -936,6 +1083,9 @@ pub fn RecipeVersionGraph(id: String) -> Element {
     let mut graph_context_menu = use_signal(|| None::<VersionGraphContextMenu>);
     let mut graph_context_menu_focus_index = use_signal(|| 0usize);
     let mut graph_node_elements = use_signal(HashMap::<VersionGraphNodeId, MountedEvent>::new);
+    let mut touch_context_candidate = use_signal(|| None::<VersionGraphTouchContextCandidate>);
+    let mut touch_context_token = use_signal(|| 0u64);
+    let mut touch_context_menu_opened = use_signal(|| None::<VersionGraphNodeId>);
     let mut context_zoom_in = use_signal(|| None::<MountedEvent>);
     let mut context_zoom_out = use_signal(|| None::<MountedEvent>);
     let mut context_center_here = use_signal(|| None::<MountedEvent>);
@@ -943,6 +1093,14 @@ pub fn RecipeVersionGraph(id: String) -> Element {
     let mut context_fit = use_signal(|| None::<MountedEvent>);
     let mut context_lineage_toggle = use_signal(|| None::<MountedEvent>);
     let mut lineage_only = use_signal(|| false);
+    let mut comparison_before = use_signal(|| None::<VersionGraphNodeId>);
+    let mut comparison_after = use_signal(|| None::<VersionGraphNodeId>);
+    let mut comparison_result = use_signal(|| None::<VersionGraphComparison>);
+    let mut comparison_error = use_signal(|| None::<String>);
+    let mut comparison_is_loading = use_signal(|| false);
+    let mut context_select_before = use_signal(|| None::<MountedEvent>);
+    let mut context_select_after = use_signal(|| None::<MountedEvent>);
+    let mut context_compare_current = use_signal(|| None::<MountedEvent>);
 
     let back_to_recipe = rsx! {
         Link {
@@ -1135,15 +1293,22 @@ pub fn RecipeVersionGraph(id: String) -> Element {
             })
         });
     let context_menu_actions_enabled = match snapshot_context_menu.as_ref() {
-        Some((_, _, navigation_available)) => [
+        Some((snapshot_id, _, navigation_available)) => snapshot_context_menu_actions_enabled(
             *navigation_available,
-            *navigation_available,
-            *navigation_available,
+            current_snapshot_id,
+            *snapshot_id,
+            comparison_is_loading(),
+        ),
+        None => [
+            true,
+            true,
+            true,
+            current_snapshot_id.is_some(),
             true,
             true,
             false,
+            false,
         ],
-        None => [true, true, true, current_snapshot_id.is_some(), true, true],
     };
     let is_snapshot_context_menu = snapshot_context_menu.is_some();
 
@@ -1568,6 +1733,162 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                     key: "{node_id.recipe_id}-{node_id.version_number}",
                                                     class: "recipe-version-graph__canvas-node",
                                                     style: node_style,
+                                                    onkeydown: move |event| {
+                                                        let shift_is_pressed =
+                                                            event.data().modifiers().shift();
+                                                        let opens_context_menu =
+                                                            event.data().key() == Key::ContextMenu
+                                                                || (event.data().key() == Key::F10
+                                                                    && shift_is_pressed);
+                                                        if !opens_context_menu {
+                                                            return;
+                                                        }
+                                                        event.prevent_default();
+                                                        event.stop_propagation();
+                                                        let Some(canvas) = graph_canvas() else {
+                                                            return;
+                                                        };
+                                                        let Some(anchor_element) = graph_node_elements
+                                                            .read()
+                                                            .get(&node_id)
+                                                            .cloned()
+                                                        else {
+                                                            return;
+                                                        };
+                                                        spawn(async move {
+                                                            let Some(menu) = snapshot_context_menu_at_element(
+                                                                canvas,
+                                                                anchor_element,
+                                                                node_id,
+                                                            )
+                                                            .await
+                                                            else {
+                                                                return;
+                                                            };
+                                                            let enabled_actions =
+                                                                snapshot_context_menu_actions_enabled(
+                                                                    snapshot_navigation_available,
+                                                                    current_snapshot_id,
+                                                                    node_id,
+                                                                    comparison_is_loading(),
+                                                                );
+                                                            graph_context_menu_focus_index.set(
+                                                                first_context_menu_focus_index(
+                                                                    enabled_actions,
+                                                                ),
+                                                            );
+                                                            graph_context_menu.set(Some(menu));
+                                                        });
+                                                    },
+                                                    ontouchstart: move |event| {
+                                                        let touches = event.data().touches();
+                                                        let Some(touch) = touches.first() else {
+                                                            return;
+                                                        };
+                                                        let position = touch.client_coordinates();
+                                                        let token = touch_context_token()
+                                                            .wrapping_add(1);
+                                                        touch_context_token.set(token);
+                                                        let candidate =
+                                                            VersionGraphTouchContextCandidate {
+                                                                node_id,
+                                                                token,
+                                                                origin: (position.x, position.y),
+                                                            };
+                                                        touch_context_candidate.set(Some(candidate));
+                                                        #[cfg(target_arch = "wasm32")]
+                                                        {
+                                                            let Some(canvas) = graph_canvas() else {
+                                                                return;
+                                                            };
+                                                            let Some(anchor_element) = graph_node_elements
+                                                                .read()
+                                                                .get(&node_id)
+                                                                .cloned()
+                                                            else {
+                                                                return;
+                                                            };
+                                                            spawn(async move {
+                                                                gloo_timers::future::TimeoutFuture::new(
+                                                                    GRAPH_TOUCH_CONTEXT_MENU_DELAY_MS,
+                                                                )
+                                                                .await;
+                                                                if touch_context_candidate()
+                                                                    != Some(candidate)
+                                                                {
+                                                                    return;
+                                                                }
+                                                                let Some(menu) = snapshot_context_menu_at_element(
+                                                                    canvas,
+                                                                    anchor_element,
+                                                                    node_id,
+                                                                )
+                                                                .await
+                                                                else {
+                                                                    return;
+                                                                };
+                                                                // Geometry lookup is asynchronous. The
+                                                                // finger may have moved or lifted while it
+                                                                // was in flight, so validate the gesture a
+                                                                // second time before opening anything.
+                                                                if touch_context_candidate()
+                                                                    != Some(candidate)
+                                                                {
+                                                                    return;
+                                                                }
+                                                                let enabled_actions =
+                                                                    snapshot_context_menu_actions_enabled(
+                                                                        snapshot_navigation_available,
+                                                                        current_snapshot_id,
+                                                                        node_id,
+                                                                        comparison_is_loading(),
+                                                                    );
+                                                                graph_context_menu_focus_index.set(
+                                                                    first_context_menu_focus_index(
+                                                                        enabled_actions,
+                                                                    ),
+                                                                );
+                                                                graph_context_menu.set(Some(menu));
+                                                                touch_context_menu_opened.set(Some(node_id));
+                                                            });
+                                                        }
+                                                    },
+                                                    ontouchmove: move |event| {
+                                                        let Some(candidate) = touch_context_candidate()
+                                                        else {
+                                                            return;
+                                                        };
+                                                        if candidate.node_id != node_id {
+                                                            return;
+                                                        }
+                                                        let touches = event.data().touches();
+                                                        let Some(touch) = touches.first() else {
+                                                            touch_context_candidate.set(None);
+                                                            return;
+                                                        };
+                                                        let position = touch.client_coordinates();
+                                                        let distance = (position.x - candidate.origin.0)
+                                                            .hypot(position.y - candidate.origin.1);
+                                                        if distance
+                                                            > GRAPH_TOUCH_CONTEXT_MENU_MOVE_TOLERANCE_PX
+                                                        {
+                                                            touch_context_candidate.set(None);
+                                                        }
+                                                    },
+                                                    ontouchend: move |event| {
+                                                        touch_context_candidate.set(None);
+                                                        if touch_context_menu_opened()
+                                                            == Some(node_id)
+                                                        {
+                                                            event.prevent_default();
+                                                            event.stop_propagation();
+                                                            touch_context_menu_opened.set(None);
+                                                        }
+                                                    },
+                                                    ontouchcancel: move |_| {
+                                                        touch_context_candidate.set(None);
+                                                        touch_context_menu_opened.set(None);
+                                                    },
                                                     oncontextmenu: move |event| {
                                                         event.prevent_default();
                                                         event.stop_propagation();
@@ -1593,13 +1914,13 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                                 client_position.x - rect.origin.x,
                                                                 client_position.y - rect.origin.y,
                                                             );
-                                                            let enabled_actions = [
-                                                                snapshot_navigation_available,
-                                                                snapshot_navigation_available,
-                                                                snapshot_navigation_available,
-                                                                true,
-                                                                true,
-                                                            ];
+                                                            let enabled_actions =
+                                                                snapshot_context_menu_actions_enabled(
+                                                                    snapshot_navigation_available,
+                                                                    current_snapshot_id,
+                                                                    node_id,
+                                                                    comparison_is_loading(),
+                                                                );
                                                             graph_context_menu_focus_index.set(
                                                                 first_context_menu_focus_index(
                                                                     enabled_actions,
@@ -1708,13 +2029,26 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                     event.prevent_default();
                                     event.stop_propagation();
                                     graph_context_menu_focus_index.set(next_index);
-                                    let target = match next_index {
-                                        0 => context_zoom_in(),
-                                        1 => context_zoom_out(),
-                                        2 => context_center_here(),
-                                        3 => context_center_current(),
-                                        4 => context_fit(),
-                                        _ => context_lineage_toggle(),
+                                    let target = if is_snapshot_context_menu {
+                                        match next_index {
+                                            0 => context_zoom_in(),
+                                            1 => context_zoom_out(),
+                                            2 => context_center_here(),
+                                            3 => context_select_before(),
+                                            4 => context_select_after(),
+                                            5 => context_compare_current(),
+                                            6 => context_center_current(),
+                                            _ => context_fit(),
+                                        }
+                                    } else {
+                                        match next_index {
+                                            0 => context_zoom_in(),
+                                            1 => context_zoom_out(),
+                                            2 => context_center_here(),
+                                            3 => context_center_current(),
+                                            4 => context_fit(),
+                                            _ => context_lineage_toggle(),
+                                        }
                                     };
                                     focus_mounted_element(target);
                                 },
@@ -1828,10 +2162,97 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                         r#type: "button",
                                         class: "recipe-version-graph__context-menu-item",
                                         role: "menuitem",
+                                        disabled: !snapshot_navigation_available || comparison_is_loading(),
                                         tabindex: if graph_context_menu_focus_index() == 3 { "0" } else { "-1" },
                                         onmounted: move |event| {
-                                            context_center_current.set(Some(event.clone()));
+                                            context_select_before.set(Some(event.clone()));
                                             if graph_context_menu_focus_index() == 3 {
+                                                focus_mounted_element(Some(event));
+                                            }
+                                        },
+                                        onclick: move |_| {
+                                            comparison_before.set(Some(snapshot_id));
+                                            comparison_result.set(None);
+                                            comparison_error.set(None);
+                                            graph_context_menu.set(None);
+                                            restore_context_menu_focus(context_menu.target, graph_canvas(), &graph_node_elements());
+                                        },
+                                        "Select as Before"
+                                    }
+                                    button {
+                                        r#type: "button",
+                                        class: "recipe-version-graph__context-menu-item",
+                                        role: "menuitem",
+                                        disabled: !snapshot_navigation_available || comparison_is_loading(),
+                                        tabindex: if graph_context_menu_focus_index() == 4 { "0" } else { "-1" },
+                                        onmounted: move |event| {
+                                            context_select_after.set(Some(event.clone()));
+                                            if graph_context_menu_focus_index() == 4 {
+                                                focus_mounted_element(Some(event));
+                                            }
+                                        },
+                                        onclick: move |_| {
+                                            comparison_after.set(Some(snapshot_id));
+                                            comparison_result.set(None);
+                                            comparison_error.set(None);
+                                            graph_context_menu.set(None);
+                                            restore_context_menu_focus(context_menu.target, graph_canvas(), &graph_node_elements());
+                                        },
+                                        "Select as After"
+                                    }
+                                    button {
+                                        r#type: "button",
+                                        class: "recipe-version-graph__context-menu-item",
+                                        role: "menuitem",
+                                        disabled: !snapshot_navigation_available || current_snapshot_id.is_none() || current_snapshot_id == Some(snapshot_id) || comparison_is_loading(),
+                                        tabindex: if graph_context_menu_focus_index() == 5 { "0" } else { "-1" },
+                                        onmounted: move |event| {
+                                            context_compare_current.set(Some(event.clone()));
+                                            if graph_context_menu_focus_index() == 5 {
+                                                focus_mounted_element(Some(event));
+                                            }
+                                        },
+                                        onclick: move |_| {
+                                            if let Some(current_snapshot_id) = current_snapshot_id {
+                                                comparison_before.set(Some(snapshot_id));
+                                                comparison_after.set(Some(current_snapshot_id));
+                                                comparison_result.set(None);
+                                                comparison_error.set(None);
+                                                comparison_is_loading.set(true);
+                                                spawn(async move {
+                                                    match compare_version_graph_snapshots_api(
+                                                        snapshot_id,
+                                                        current_snapshot_id,
+                                                    )
+                                                    .await
+                                                    {
+                                                        Ok(comparison) => {
+                                                            comparison_result.set(Some(comparison))
+                                                        }
+                                                        Err(error) => comparison_error.set(Some(
+                                                            server_error_message(&error),
+                                                        )),
+                                                    }
+                                                    comparison_is_loading.set(false);
+                                                });
+                                            }
+                                            graph_context_menu.set(None);
+                                            restore_context_menu_focus(context_menu.target, graph_canvas(), &graph_node_elements());
+                                        },
+                                        "Compare with current"
+                                    }
+                                    div {
+                                        class: "recipe-version-graph__context-menu-separator",
+                                        role: "separator",
+                                    }
+                                    button {
+                                        r#type: "button",
+                                        class: "recipe-version-graph__context-menu-item",
+                                        role: "menuitem",
+                                        tabindex: if graph_context_menu_focus_index() == 6 { "0" } else { "-1" },
+                                        onmounted: move |event| {
+                                            context_center_current.set(Some(event.clone()));
+                                            if graph_context_menu_focus_index() == 6 {
                                                 focus_mounted_element(Some(event));
                                             }
                                         },
@@ -1856,10 +2277,10 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                         r#type: "button",
                                         class: "recipe-version-graph__context-menu-item",
                                         role: "menuitem",
-                                        tabindex: if graph_context_menu_focus_index() == 4 { "0" } else { "-1" },
+                                        tabindex: if graph_context_menu_focus_index() == 7 { "0" } else { "-1" },
                                         onmounted: move |event| {
                                             context_fit.set(Some(event.clone()));
-                                            if graph_context_menu_focus_index() == 4 {
+                                            if graph_context_menu_focus_index() == 7 {
                                                 focus_mounted_element(Some(event));
                                             }
                                         },
@@ -2041,6 +2462,105 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                     }
                                 }
                             }
+                        }
+                    }
+                    section { class: "recipe-version-graph__comparison", aria_label: "Compare graph snapshots",
+                        div { class: "recipe-version-graph__comparison-heading",
+                            div {
+                                h2 { "Compare snapshots" }
+                                p { "Choose snapshots in their card menus, then compare them in exact Before → After order." }
+                            }
+                            div { class: "recipe-version-graph__comparison-actions",
+                                button {
+                                    r#type: "button",
+                                    class: "btn btn-secondary",
+                                    disabled: comparison_before().is_none() || comparison_after().is_none() || comparison_is_loading(),
+                                    onclick: move |_| {
+                                        let before = comparison_before();
+                                        comparison_before.set(comparison_after());
+                                        comparison_after.set(before);
+                                        comparison_result.set(None);
+                                        comparison_error.set(None);
+                                    },
+                                    "Swap direction"
+                                }
+                                button {
+                                    r#type: "button",
+                                    class: "btn btn-secondary",
+                                    disabled: comparison_is_loading()
+                                        || (comparison_before().is_none()
+                                            && comparison_after().is_none()
+                                            && comparison_result().is_none()),
+                                    onclick: move |_| {
+                                        comparison_before.set(None);
+                                        comparison_after.set(None);
+                                        comparison_result.set(None);
+                                        comparison_error.set(None);
+                                    },
+                                    "Clear comparison"
+                                }
+                            }
+                        }
+                        div { class: "recipe-version-graph__comparison-selection", role: "status",
+                            div {
+                                span { "Before" }
+                                strong {
+                                    {comparison_before()
+                                        .map(|snapshot| comparison_snapshot_label(snapshot, &nodes_by_id))
+                                        .unwrap_or_else(|| "Not selected".to_string())}
+                                }
+                            }
+                            span { class: "recipe-version-graph__comparison-arrow", aria_hidden: "true", "→" }
+                            div {
+                                span { "After" }
+                                strong {
+                                    {comparison_after()
+                                        .map(|snapshot| comparison_snapshot_label(snapshot, &nodes_by_id))
+                                        .unwrap_or_else(|| "Not selected".to_string())}
+                                }
+                            }
+                        }
+                        button {
+                            r#type: "button",
+                            class: "btn btn-primary recipe-version-graph__comparison-submit",
+                            disabled: comparison_before().is_none()
+                                || comparison_after().is_none()
+                                || comparison_before() == comparison_after()
+                                || comparison_is_loading(),
+                            onclick: move |_| {
+                                let (Some(from), Some(to)) = (comparison_before(), comparison_after()) else {
+                                    return;
+                                };
+                                comparison_is_loading.set(true);
+                                comparison_error.set(None);
+                                comparison_result.set(None);
+                                spawn(async move {
+                                    match compare_version_graph_snapshots_api(from, to).await {
+                                        Ok(comparison) => comparison_result.set(Some(comparison)),
+                                        Err(error) => comparison_error.set(Some(server_error_message(&error))),
+                                    }
+                                    comparison_is_loading.set(false);
+                                });
+                            },
+                            if comparison_is_loading() {
+                                "Comparing snapshots..."
+                            } else {
+                                "Compare selected snapshots"
+                            }
+                        }
+                        if comparison_is_loading() {
+                            div { class: "recipe-version-graph__comparison-status", role: "status",
+                                LoadingSpinner {}
+                                span { "Loading comparison..." }
+                            }
+                        }
+                        if let Some(error) = comparison_error() {
+                            p { class: "recipe-version-graph__comparison-error", role: "alert",
+                                "Unable to compare these snapshots: {error}"
+                            }
+                        }
+                        if let Some(comparison) = comparison_result() {
+                            VersionGraphComparisonPanel { comparison }
                         }
                     }
                     details { class: "recipe-version-graph__outline",
@@ -2771,13 +3291,23 @@ mod tests {
 
     #[test]
     fn context_menu_keyboard_navigation_wraps_and_skips_disabled_actions() {
-        let all_actions = [true; 5];
+        let all_snapshot_actions = [true; 8];
         let background_actions = [true; 6];
-        let private_snapshot_actions = [false, false, false, true, true];
+        let private_snapshot_actions = [false, false, false, false, false, false, true, true];
+        let loading_snapshot_actions = [true, true, true, false, false, false, true, true];
 
-        assert_eq!(super::next_context_menu_focus_index(0, 1, all_actions), 1);
-        assert_eq!(super::next_context_menu_focus_index(4, 1, all_actions), 0);
-        assert_eq!(super::next_context_menu_focus_index(0, -1, all_actions), 4);
+        assert_eq!(
+            super::next_context_menu_focus_index(0, 1, all_snapshot_actions),
+            1
+        );
+        assert_eq!(
+            super::next_context_menu_focus_index(7, 1, all_snapshot_actions),
+            0
+        );
+        assert_eq!(
+            super::next_context_menu_focus_index(0, -1, all_snapshot_actions),
+            7
+        );
         assert_eq!(
             super::next_context_menu_focus_index(5, 1, background_actions),
             0
@@ -2788,15 +3318,19 @@ mod tests {
         );
         assert_eq!(
             super::first_context_menu_focus_index(private_snapshot_actions),
-            3
+            6
         );
         assert_eq!(
-            super::next_context_menu_focus_index(3, 1, private_snapshot_actions),
-            4
+            super::next_context_menu_focus_index(6, 1, private_snapshot_actions),
+            7
         );
         assert_eq!(
-            super::next_context_menu_focus_index(4, 1, private_snapshot_actions),
-            3
+            super::next_context_menu_focus_index(7, 1, private_snapshot_actions),
+            6
+        );
+        assert_eq!(
+            super::next_context_menu_focus_index(2, 1, loading_snapshot_actions),
+            6
         );
     }
 
@@ -2939,6 +3473,7 @@ mod tests {
         assert!(page.contains("Pan around the graph"));
         assert!(page.contains("Right-click"));
         assert!(page.contains("Open more options"));
+        assert!(!page.contains("Press and hold a card"));
         assert!(page.contains("recipe-version-graph__mouse-controls"));
         assert!(page.contains("recipe-version-graph__mouse-control"));
         let manual_controls_position = page
@@ -2991,6 +3526,54 @@ mod tests {
         assert!(page.contains("Snapshot navigation unavailable"));
         assert!(page.contains("event.prevent_default()"));
         assert!(page.contains("event.stop_propagation()"));
+    }
+
+    #[test]
+    fn graph_cards_expose_touch_and_keyboard_menus_without_inline_controls() {
+        let source = include_str!("recipe_version_graph.rs");
+        let page = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("version graph page implementation");
+        assert!(!page.contains("recipe-version-graph__snapshot-actions"));
+        assert!(!page.contains("Snapshot actions for"));
+        assert!(!page.contains("Press and hold a card"));
+        assert!(page.contains("Key::ContextMenu"));
+        assert!(page.contains("Key::F10"));
+        assert!(page.contains("modifiers().shift()"));
+        assert!(page.contains("ontouchend:"));
+        assert!(page.contains("ontouchstart:"));
+        assert!(page.contains("ontouchmove:"));
+        assert!(page.contains("ontouchcancel:"));
+        assert!(page.contains("GRAPH_TOUCH_CONTEXT_MENU_DELAY_MS"));
+        assert!(page.contains("GRAPH_TOUCH_CONTEXT_MENU_MOVE_TOLERANCE_PX"));
+        assert!(!page.contains("GRAPH_SNAPSHOT_ACTION_MIN_VISIBLE_SCALE"));
+    }
+
+    #[test]
+    fn graph_snapshots_support_directional_cross_recipe_comparisons() {
+        let source = include_str!("recipe_version_graph.rs");
+        let page = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("version graph page implementation");
+
+        assert!(page.contains("compare_version_graph_snapshots_api"));
+        assert!(page.contains("Select as Before"));
+        assert!(page.contains("Select as After"));
+        assert!(page.contains("Compare with current"));
+        assert!(page.contains("Compare selected snapshots"));
+        assert!(page.contains("Swap direction"));
+        assert!(page.contains("Clear comparison"));
+        assert!(page.contains("role: \"status\""));
+        assert!(page.contains("VersionGraphComparisonPanel"));
+        assert!(page.contains("No content differences between these snapshots."));
+        assert_eq!(
+            page.matches("disabled: !snapshot_navigation_available || comparison_is_loading()")
+                .count(),
+            2
+        );
+        assert!(page.contains("disabled: comparison_is_loading()"));
     }
 
     #[test]
