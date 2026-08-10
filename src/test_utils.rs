@@ -268,6 +268,8 @@ pub async fn apply_test_schema(pool: &PgPool) {
          parent_collection_id UUID,\
          name VARCHAR(100) NOT NULL,\
          description TEXT,\
+         visibility VARCHAR(20) NOT NULL DEFAULT 'private'\
+             CHECK (visibility IN ('private', 'unlisted', 'public')),\
          sort_order INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),\
          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
@@ -289,6 +291,15 @@ pub async fn apply_test_schema(pool: &PgPool) {
     .execute(pool)
     .await
     .expect("failed to create collections owner index");
+
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_collections_public_updated
+         ON collections(updated_at DESC, id)
+         WHERE visibility = 'public'",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create collections public discovery index");
 
     sqlx::query(
         "CREATE INDEX IF NOT EXISTS idx_collections_parent_order
@@ -460,9 +471,16 @@ pub async fn insert_test_collection(
     parent_collection_id: Option<Uuid>,
     name: &str,
 ) -> crate::types::Collection {
-    crate::db::insert_collection(pool, owner_id, parent_collection_id, name, None)
-        .await
-        .expect("failed to insert test collection")
+    crate::db::insert_collection(
+        pool,
+        owner_id,
+        parent_collection_id,
+        name,
+        None,
+        crate::types::CollectionVisibility::Private,
+    )
+    .await
+    .expect("failed to insert test collection")
 }
 
 /// Add a recipe to a collection through the production query path.

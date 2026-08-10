@@ -40,13 +40,14 @@ wasm-bindgen = "0.2"
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 dioxus-web = "0.7"
 web-sys = { version = "0.3.98", features = [
-    "Window", "Storage", "Location", "History", "Document", "MouseEvent", "Element", "Node",
+    "Window", "Storage", "Location", "History", "Document", "Navigator", "Clipboard", "ShareData", "MouseEvent", "Element", "Node",
     "HtmlCanvasElement", "CanvasRenderingContext2d", "HtmlImageElement", "HtmlInputElement", "ImageData",
     "Blob", "File", "FileReader", "Url",
     "DataTransfer", "DataTransferItem",
     "DragEvent", "KeyboardEvent"
 ] }
 js-sys = "0.3"
+wasm-bindgen-futures = "0.4"
 gloo-net = { version = "0.6", features = ["http"] }
 gloo-timers = "0.3"
 

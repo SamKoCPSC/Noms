@@ -315,7 +315,51 @@ pub struct RecipeDraftView {
     pub updated_at: DateTime<Utc>,
 }
 
-/// A private, user-owned recipe collection.
+/// The sharing level applied to a recipe collection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CollectionVisibility {
+    #[default]
+    Private,
+    Unlisted,
+    Public,
+}
+
+impl CollectionVisibility {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Private => "private",
+            Self::Unlisted => "unlisted",
+            Self::Public => "public",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ParseCollectionVisibilityError;
+
+impl std::fmt::Display for ParseCollectionVisibilityError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("invalid collection visibility")
+    }
+}
+
+impl std::error::Error for ParseCollectionVisibilityError {}
+
+impl std::str::FromStr for CollectionVisibility {
+    type Err = ParseCollectionVisibilityError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "private" => Ok(Self::Private),
+            "unlisted" => Ok(Self::Unlisted),
+            "public" => Ok(Self::Public),
+            _ => Err(ParseCollectionVisibilityError),
+        }
+    }
+}
+
+/// A user-owned recipe collection.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Collection {
     pub id: Uuid,
@@ -323,6 +367,7 @@ pub struct Collection {
     pub parent_collection_id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
+    pub visibility: CollectionVisibility,
     pub sort_order: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -760,10 +805,19 @@ pub struct CollectionSummary {
     pub parent_collection_id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
+    pub visibility: CollectionVisibility,
     pub sort_order: i32,
     pub child_count: i64,
     pub recipe_count: i64,
     pub updated_at: DateTime<Utc>,
+}
+
+/// Paginated public collection summaries for profile discovery.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PublicCollectionListResponse {
+    pub collections: Vec<CollectionSummary>,
+    pub total_count: i64,
+    pub has_more: bool,
 }
 
 /// Paginated direct recipe membership for a collection.
@@ -772,6 +826,13 @@ pub struct CollectionRecipeList {
     pub recipes: Vec<Recipe>,
     pub total_count: i64,
     pub has_more: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CollectionSharePreview {
+    pub total_recipe_count: i64,
+    pub visible_recipe_count: i64,
+    pub hidden_recipe_count: i64,
 }
 
 /// A recipe's position within one collection.
@@ -791,6 +852,8 @@ pub struct CollectionOrder {
 /// A collection and its direct contents plus root-to-leaf navigation.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CollectionContents {
+    pub owner_username: String,
+    pub can_edit: bool,
     pub collection: CollectionSummary,
     pub breadcrumbs: Vec<CollectionSummary>,
     pub child_collections: Vec<CollectionSummary>,
@@ -1045,6 +1108,31 @@ mod tests {
         assert!(reserialized["thumbnail_url"].is_null());
         assert!(reserialized["created_at"].is_null());
         assert!(reserialized["change_summary"].is_null());
+    }
+
+    #[test]
+    fn collection_visibility_round_trips_as_lowercase_api_values() {
+        for (visibility, serialized) in [
+            (CollectionVisibility::Private, "\"private\""),
+            (CollectionVisibility::Unlisted, "\"unlisted\""),
+            (CollectionVisibility::Public, "\"public\""),
+        ] {
+            assert_eq!(serde_json::to_string(&visibility).unwrap(), serialized);
+            assert_eq!(
+                serde_json::from_str::<CollectionVisibility>(serialized).unwrap(),
+                visibility
+            );
+        }
+
+        assert_eq!(
+            CollectionVisibility::default(),
+            CollectionVisibility::Private
+        );
+        assert!(serde_json::from_str::<CollectionVisibility>("\"friends-only\"").is_err());
+        assert_eq!("private".parse(), Ok(CollectionVisibility::Private));
+        assert_eq!("unlisted".parse(), Ok(CollectionVisibility::Unlisted));
+        assert_eq!("public".parse(), Ok(CollectionVisibility::Public));
+        assert!("friends-only".parse::<CollectionVisibility>().is_err());
     }
 
     #[test]

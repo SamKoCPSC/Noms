@@ -42,11 +42,10 @@ fn is_collection_route(path: &str) -> bool {
         return false;
     }
     let segments = path["/collections/".len()..].split('/').collect::<Vec<_>>();
-    matches!(segments.as_slice(), [id] if is_valid_uuid_string(id))
-        || matches!(segments.as_slice(), [id, "edit"] if is_valid_uuid_string(id))
+    matches!(segments.as_slice(), [id, "edit"] if is_valid_uuid_string(id))
 }
 
-/// Check if path is a recipe route: `/recipes/{uuid}` or `/recipes/{uuid}/edit`.
+/// Check for exact owner-only recipe routes while leaving published detail public.
 fn is_recipe_route(path: &str) -> bool {
     if !path.starts_with("/recipes/") {
         return false;
@@ -59,9 +58,13 @@ fn is_recipe_route(path: &str) -> bool {
     if segments.first() == Some(&"drafts") {
         return matches!(segments.as_slice(), ["drafts", id, "edit"] if is_valid_uuid_string(id));
     }
-    segments
-        .first()
-        .is_some_and(|segment| is_valid_uuid_string(segment))
+    match segments.as_slice() {
+        [id, "edit"] => is_valid_uuid_string(id),
+        [id, "versions", version_number] => {
+            is_valid_uuid_string(id) && version_number.parse::<i32>().is_ok()
+        }
+        _ => false,
+    }
 }
 
 /// Check if a string matches the UUID format (8-4-4-4-12 hex chars with dashes).
@@ -194,10 +197,10 @@ mod tests {
     const COLLECTION_ID: &str = "550e8400-e29b-41d4-a716-446655440000";
 
     #[test]
-    fn collection_crud_routes_require_authentication() {
+    fn collection_owner_routes_require_authentication_but_detail_is_shareable() {
         assert!(is_protected_path("/collections"));
         assert!(is_protected_path("/collections/new"));
-        assert!(is_protected_path(&format!("/collections/{COLLECTION_ID}")));
+        assert!(!is_protected_path(&format!("/collections/{COLLECTION_ID}")));
         assert!(is_protected_path(&format!(
             "/collections/{COLLECTION_ID}/edit"
         )));
@@ -210,5 +213,17 @@ mod tests {
             "/collections/{COLLECTION_ID}/extra"
         )));
         assert!(!is_protected_path("/collections/42"));
+    }
+
+    #[test]
+    fn published_recipe_detail_is_shareable_but_owner_recipe_routes_stay_protected() {
+        assert!(!is_protected_path(&format!("/recipes/{COLLECTION_ID}")));
+        assert!(is_protected_path(&format!("/recipes/{COLLECTION_ID}/edit")));
+        assert!(is_protected_path(&format!(
+            "/recipes/{COLLECTION_ID}/versions/1"
+        )));
+        assert!(is_protected_path(&format!(
+            "/recipes/drafts/{COLLECTION_ID}/edit"
+        )));
     }
 }

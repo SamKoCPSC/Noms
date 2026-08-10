@@ -193,6 +193,8 @@ CREATE TABLE IF NOT EXISTS collections (
     parent_collection_id UUID,
     name VARCHAR(100) NOT NULL,
     description TEXT,
+    visibility VARCHAR(20) NOT NULL DEFAULT 'private'
+        CHECK (visibility IN ('private', 'unlisted', 'public')),
     sort_order INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -205,6 +207,11 @@ CREATE TABLE IF NOT EXISTS collections (
 
 CREATE INDEX IF NOT EXISTS idx_collections_owner_updated
     ON collections(owner_id, updated_at DESC);
+
+-- Partial index for public collection discovery.
+CREATE INDEX IF NOT EXISTS idx_collections_public_updated
+    ON collections(updated_at DESC, id)
+    WHERE visibility = 'public';
 
 CREATE INDEX IF NOT EXISTS idx_collections_parent_order
     ON collections(owner_id, parent_collection_id, sort_order, lower(name));

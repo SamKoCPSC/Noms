@@ -17,7 +17,10 @@ mod versioning;
 #[allow(unused_imports)]
 pub use versioning::*;
 
-use crate::types::{Collection, CollectionRecipeList, CollectionSummary};
+use crate::types::{
+    Collection, CollectionContents, CollectionRecipeList, CollectionSharePreview,
+    CollectionSummary, CollectionVisibility, PublicCollectionListResponse,
+};
 
 // Re-export typed recipe sub-structs for use in DB layer
 pub use crate::types::RecipeEquipment;
@@ -332,6 +335,21 @@ pub struct CollectionRecipe {
     pub created_at: DateTime<Utc>,
 }
 
+fn collection_visibility_from_row(
+    row: &sqlx::postgres::PgRow,
+) -> Result<CollectionVisibility, sqlx::Error> {
+    let visibility: String = row.try_get("visibility")?;
+    match visibility.as_str() {
+        "private" => Ok(CollectionVisibility::Private),
+        "unlisted" => Ok(CollectionVisibility::Unlisted),
+        "public" => Ok(CollectionVisibility::Public),
+        invalid => Err(sqlx::Error::Decode(Box::new(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("invalid collection visibility: {invalid}"),
+        )))),
+    }
+}
+
 fn collection_from_row(row: &sqlx::postgres::PgRow) -> Result<Collection, sqlx::Error> {
     Ok(Collection {
         id: row.try_get("id")?,
@@ -339,6 +357,7 @@ fn collection_from_row(row: &sqlx::postgres::PgRow) -> Result<Collection, sqlx::
         parent_collection_id: row.try_get("parent_collection_id")?,
         name: row.try_get("name")?,
         description: row.try_get("description")?,
+        visibility: collection_visibility_from_row(row)?,
         sort_order: row.try_get("sort_order")?,
         created_at: row.try_get("created_at")?,
         updated_at: row.try_get("updated_at")?,
@@ -353,6 +372,7 @@ fn collection_summary_from_row(
         parent_collection_id: row.try_get("parent_collection_id")?,
         name: row.try_get("name")?,
         description: row.try_get("description")?,
+        visibility: collection_visibility_from_row(row)?,
         sort_order: row.try_get("sort_order")?,
         child_count: row.try_get("child_count")?,
         recipe_count: row.try_get("recipe_count")?,
@@ -387,7 +407,8 @@ fn membership_query_error(error: sqlx::Error) -> DbError {
 }
 
 fn collection_summary_select() -> &'static str {
-    "SELECT c.id, c.parent_collection_id, c.name, c.description, c.sort_order, c.updated_at,
+    "SELECT c.id, c.parent_collection_id, c.name, c.description, c.visibility,
+            c.sort_order, c.updated_at,
             (SELECT COUNT(*) FROM collections child
              WHERE child.owner_id = c.owner_id AND child.parent_collection_id = c.id) AS child_count,
             (SELECT COUNT(*)
@@ -413,13 +434,14 @@ async fn lock_owner(
     Ok(())
 }
 
-/// Insert a root or nested collection, appending it to the owner's sibling order.
+/// Insert a root or nested collection with explicit visibility.
 pub async fn insert_collection(
     pool: &PgPool,
     owner_id: Uuid,
     parent_collection_id: Option<Uuid>,
     name: &str,
     description: Option<&str>,
+    visibility: CollectionVisibility,
 ) -> Result<Collection, DbError> {
     let mut tx = pool.begin().await.map_err(DbError::Query)?;
     lock_owner(&mut tx, owner_id).await?;
@@ -453,16 +475,17 @@ pub async fn insert_collection(
 
     let row = sqlx::query(
         "INSERT INTO collections
-            (owner_id, parent_collection_id, name, description, sort_order)
-         VALUES ($1, $2, $3, $4, $5)
+            (owner_id, parent_collection_id, name, description, sort_order, visibility)
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id, owner_id, parent_collection_id, name, description,
-                   sort_order, created_at, updated_at",
+                   visibility, sort_order, created_at, updated_at",
     )
     .bind(owner_id)
     .bind(parent_collection_id)
     .bind(name)
     .bind(description)
     .bind(next_order)
+    .bind(visibility.as_str())
     .fetch_one(&mut *tx)
     .await
     .map_err(collection_query_error)?;
@@ -480,7 +503,7 @@ pub async fn get_collection_by_id_and_owner(
 ) -> Result<Option<Collection>, DbError> {
     sqlx::query(
         "SELECT id, owner_id, parent_collection_id, name, description,
-                sort_order, created_at, updated_at
+                visibility, sort_order, created_at, updated_at
          FROM collections
          WHERE id = $1 AND owner_id = $2",
     )
@@ -559,6 +582,93 @@ pub async fn get_all_collections_by_owner(
         .map_err(DbError::Query)
 }
 
+/// List public-safe collection summaries for a public user profile.
+pub async fn get_public_collections_by_username(
+    pool: &PgPool,
+    username: &str,
+    offset: i64,
+    limit: i64,
+) -> Result<PublicCollectionListResponse, DbError> {
+    let offset = offset.max(0);
+    let limit = limit.max(0);
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        .execute(&mut *tx)
+        .await
+        .map_err(DbError::Query)?;
+
+    let owner_id: Option<Uuid> = sqlx::query_scalar("SELECT id FROM users WHERE username = $1")
+        .bind(username)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(DbError::Query)?;
+    let Some(owner_id) = owner_id else {
+        tx.commit().await.map_err(DbError::Query)?;
+        return Ok(PublicCollectionListResponse {
+            collections: Vec::new(),
+            total_count: 0,
+            has_more: false,
+        });
+    };
+
+    let total_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)
+         FROM collections
+         WHERE owner_id = $1 AND visibility = 'public'",
+    )
+    .bind(owner_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+
+    let rows = sqlx::query(
+        "SELECT c.id,
+                CASE
+                    WHEN parent.owner_id = c.owner_id AND parent.visibility = 'public'
+                    THEN c.parent_collection_id
+                    ELSE NULL
+                END AS parent_collection_id,
+                c.name, c.description, c.visibility,
+                ((ROW_NUMBER() OVER (ORDER BY c.updated_at DESC, c.id) - 1)::INTEGER)
+                    AS sort_order,
+                c.updated_at,
+                (SELECT COUNT(*)
+                 FROM collections child
+                 WHERE child.owner_id = c.owner_id
+                   AND child.parent_collection_id = c.id
+                   AND child.visibility = 'public') AS child_count,
+                (SELECT COUNT(*)
+                 FROM collection_recipes cr
+                 INNER JOIN recipes r ON r.id = cr.recipe_id
+                 WHERE cr.collection_id = c.id
+                   AND r.visibility = 'public') AS recipe_count
+         FROM collections c
+         LEFT JOIN collections parent ON parent.id = c.parent_collection_id
+         WHERE c.owner_id = $1 AND c.visibility = 'public'
+         ORDER BY c.updated_at DESC, c.id
+         LIMIT $2 OFFSET $3",
+    )
+    .bind(owner_id)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    let collections = rows
+        .iter()
+        .map(collection_summary_from_row)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(DbError::Query)?;
+    let has_more = offset.saturating_add(collections.len() as i64) < total_count;
+
+    tx.commit().await.map_err(DbError::Query)?;
+    Ok(PublicCollectionListResponse {
+        collections,
+        total_count,
+        has_more,
+    })
+}
+
 /// Return an owner-checked root-to-leaf breadcrumb path using a recursive CTE.
 pub async fn get_collection_breadcrumbs(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
@@ -578,8 +688,8 @@ pub async fn get_collection_breadcrumbs(
              WHERE parent.owner_id = $2
                AND NOT parent.id = ANY(ancestors.path)
          )
-         SELECT c.id, c.parent_collection_id, c.name, c.description, c.sort_order,
-                c.updated_at,
+         SELECT c.id, c.parent_collection_id, c.name, c.description, c.visibility,
+                c.sort_order, c.updated_at,
                 (SELECT COUNT(*) FROM collections child
                  WHERE child.owner_id = c.owner_id AND child.parent_collection_id = c.id) AS child_count,
                 (SELECT COUNT(*) FROM collection_recipes cr
@@ -641,7 +751,7 @@ pub async fn update_collection(
          SET name = $3, description = $4, updated_at = NOW()
          WHERE id = $1 AND owner_id = $2
          RETURNING id, owner_id, parent_collection_id, name, description,
-                   sort_order, created_at, updated_at",
+                   visibility, sort_order, created_at, updated_at",
     )
     .bind(collection_id)
     .bind(owner_id)
@@ -652,6 +762,33 @@ pub async fn update_collection(
     .map_err(|error| match error {
         sqlx::Error::RowNotFound => DbError::CollectionNotFound(collection_id),
         other => collection_query_error(other),
+    })?;
+    collection_from_row(&row).map_err(DbError::Query)
+}
+
+/// Change visibility only when the collection belongs to the supplied owner.
+pub async fn update_collection_visibility(
+    pool: &PgPool,
+    collection_id: Uuid,
+    owner_id: Uuid,
+    visibility: CollectionVisibility,
+) -> Result<Collection, DbError> {
+    let row = sqlx::query(
+        "UPDATE collections
+         SET visibility = $3,
+             updated_at = GREATEST(NOW(), updated_at + INTERVAL '1 microsecond')
+         WHERE id = $1 AND owner_id = $2
+         RETURNING id, owner_id, parent_collection_id, name, description,
+                   visibility, sort_order, created_at, updated_at",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .bind(visibility.as_str())
+    .fetch_one(pool)
+    .await
+    .map_err(|error| match error {
+        sqlx::Error::RowNotFound => DbError::CollectionNotFound(collection_id),
+        other => DbError::Query(other),
     })?;
     collection_from_row(&row).map_err(DbError::Query)
 }
@@ -853,7 +990,7 @@ pub async fn move_collection(
 
     let row = sqlx::query(
         "SELECT id, owner_id, parent_collection_id, name, description,
-                sort_order, created_at, updated_at
+                visibility, sort_order, created_at, updated_at
          FROM collections WHERE id = $1 AND owner_id = $2",
     )
     .bind(collection_id)
@@ -1050,6 +1187,288 @@ pub async fn get_collection_recipes(
         recipes,
         total_count,
     })
+}
+
+/// Preview how many owner-visible memberships remain visible at a target level.
+pub async fn get_collection_share_preview(
+    pool: &PgPool,
+    collection_id: Uuid,
+    owner_id: Uuid,
+    target_visibility: CollectionVisibility,
+) -> Result<CollectionSharePreview, DbError> {
+    let row = sqlx::query(
+        "SELECT
+             COUNT(r.id) FILTER (
+                 WHERE r.user_id = c.owner_id
+                    OR r.visibility IN ('public', 'unlisted')
+             ) AS total_recipe_count,
+             COUNT(r.id) FILTER (
+                 WHERE (r.user_id = c.owner_id
+                        OR r.visibility IN ('public', 'unlisted'))
+                   AND ($3 = 'private'
+                        OR r.visibility = 'public'
+                        OR ($3 = 'unlisted' AND r.visibility = 'unlisted'))
+             ) AS visible_recipe_count
+         FROM collections c
+         LEFT JOIN collection_recipes cr ON cr.collection_id = c.id
+         LEFT JOIN recipes r ON r.id = cr.recipe_id
+         WHERE c.id = $1 AND c.owner_id = $2
+         GROUP BY c.id",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .bind(target_visibility.as_str())
+    .fetch_optional(pool)
+    .await
+    .map_err(DbError::Query)?;
+    let Some(row) = row else {
+        return Err(DbError::CollectionNotFound(collection_id));
+    };
+    let total_recipe_count: i64 = row.try_get("total_recipe_count").map_err(DbError::Query)?;
+    let visible_recipe_count: i64 = row
+        .try_get("visible_recipe_count")
+        .map_err(DbError::Query)?;
+    Ok(CollectionSharePreview {
+        total_recipe_count,
+        visible_recipe_count,
+        hidden_recipe_count: total_recipe_count - visible_recipe_count,
+    })
+}
+
+/// Return collection contents when the optional viewer may access the collection.
+///
+/// Owner reads retain the established owner-safe membership predicate. Shared
+/// reads use the requested collection's visibility as the context for every
+/// hierarchy count, recipe count, and returned row.
+pub async fn get_collection_contents_for_viewer(
+    pool: &PgPool,
+    collection_id: Uuid,
+    viewer_id: Option<Uuid>,
+    offset: i64,
+    limit: i64,
+) -> Result<Option<CollectionContents>, DbError> {
+    let access_row = sqlx::query(
+        "SELECT c.owner_id, c.visibility, u.username AS owner_username
+         FROM collections c
+         INNER JOIN users u ON u.id = c.owner_id
+         WHERE c.id = $1
+           AND (c.owner_id = $2 OR c.visibility IN ('public', 'unlisted'))",
+    )
+    .bind(collection_id)
+    .bind(viewer_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(DbError::Query)?;
+    let Some(access_row) = access_row else {
+        return Ok(None);
+    };
+
+    let owner_id: Uuid = access_row.try_get("owner_id").map_err(DbError::Query)?;
+    let visibility = collection_visibility_from_row(&access_row).map_err(DbError::Query)?;
+    let owner_username: String = access_row
+        .try_get("owner_username")
+        .map_err(DbError::Query)?;
+    let can_edit = viewer_id == Some(owner_id);
+
+    if can_edit {
+        let breadcrumbs = get_collection_breadcrumbs(pool, collection_id, owner_id).await?;
+        let Some(collection) = breadcrumbs.last().cloned() else {
+            return Ok(None);
+        };
+        let child_collections = get_child_collections(pool, collection_id, owner_id).await?;
+        let recipes = get_collection_recipes(pool, collection_id, owner_id, offset, limit).await?;
+        return Ok(Some(CollectionContents {
+            owner_username,
+            can_edit: true,
+            collection,
+            breadcrumbs,
+            child_collections,
+            recipes,
+        }));
+    }
+
+    let include_unlisted = match visibility {
+        CollectionVisibility::Private => return Ok(None),
+        CollectionVisibility::Unlisted => true,
+        CollectionVisibility::Public => false,
+    };
+
+    // One snapshot prevents concurrent visibility changes from making shared
+    // metadata, counts, and rows disagree within a response.
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        .execute(&mut *tx)
+        .await
+        .map_err(DbError::Query)?;
+
+    let owner_username: Option<String> = sqlx::query_scalar(
+        "SELECT u.username
+         FROM collections c
+         INNER JOIN users u ON u.id = c.owner_id
+         WHERE c.id = $1 AND c.owner_id = $2 AND c.visibility = $3",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .bind(visibility.as_str())
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    let Some(owner_username) = owner_username else {
+        return Ok(None);
+    };
+
+    let breadcrumb_rows = sqlx::query(
+        "WITH RECURSIVE ancestors AS (
+             SELECT c.id, c.parent_collection_id, ARRAY[c.id] AS path, 0 AS depth
+             FROM collections c
+             WHERE c.id = $1 AND c.owner_id = $2
+               AND (c.visibility = 'public' OR ($3 AND c.visibility = 'unlisted'))
+             UNION ALL
+             SELECT parent.id, parent.parent_collection_id,
+                    ancestors.path || parent.id, ancestors.depth + 1
+             FROM collections parent
+             INNER JOIN ancestors ON parent.id = ancestors.parent_collection_id
+             WHERE parent.owner_id = $2
+               AND (parent.visibility = 'public'
+                    OR ($3 AND parent.visibility = 'unlisted'))
+               AND NOT parent.id = ANY(ancestors.path)
+         )
+         SELECT c.id,
+                CASE
+                    WHEN EXISTS (
+                        SELECT 1 FROM ancestors visible_parent
+                        WHERE visible_parent.id = c.parent_collection_id
+                    )
+                    THEN c.parent_collection_id
+                    ELSE NULL
+                END AS parent_collection_id,
+                c.name, c.description, c.visibility,
+                0::INTEGER AS sort_order, c.updated_at,
+                (SELECT COUNT(*)
+                 FROM collections child
+                 WHERE child.owner_id = c.owner_id
+                   AND child.parent_collection_id = c.id
+                   AND (child.visibility = 'public'
+                        OR ($3 AND child.visibility = 'unlisted'))) AS child_count,
+                (SELECT COUNT(*)
+                 FROM collection_recipes cr
+                 INNER JOIN recipes r ON r.id = cr.recipe_id
+                 WHERE cr.collection_id = c.id
+                   AND (r.visibility = 'public'
+                        OR ($3 AND r.visibility = 'unlisted'))) AS recipe_count
+         FROM ancestors
+         INNER JOIN collections c ON c.id = ancestors.id
+         ORDER BY ancestors.depth DESC",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .bind(include_unlisted)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    let breadcrumbs = breadcrumb_rows
+        .iter()
+        .map(collection_summary_from_row)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(DbError::Query)?;
+    let Some(collection) = breadcrumbs.last().cloned() else {
+        return Ok(None);
+    };
+
+    let child_rows = sqlx::query(
+        "SELECT c.id, c.parent_collection_id, c.name, c.description, c.visibility,
+                ((ROW_NUMBER() OVER (
+                    ORDER BY c.sort_order, lower(c.name), c.id
+                 ) - 1)::INTEGER) AS sort_order,
+                c.updated_at,
+                (SELECT COUNT(*)
+                 FROM collections child
+                 WHERE child.owner_id = c.owner_id
+                   AND child.parent_collection_id = c.id
+                   AND (child.visibility = 'public'
+                        OR ($3 AND child.visibility = 'unlisted'))) AS child_count,
+                (SELECT COUNT(*)
+                 FROM collection_recipes cr
+                 INNER JOIN recipes r ON r.id = cr.recipe_id
+                 WHERE cr.collection_id = c.id
+                   AND (r.visibility = 'public'
+                        OR ($3 AND r.visibility = 'unlisted'))) AS recipe_count
+         FROM collections c
+         WHERE c.parent_collection_id = $1 AND c.owner_id = $2
+           AND (c.visibility = 'public' OR ($3 AND c.visibility = 'unlisted'))
+         ORDER BY c.sort_order, lower(c.name), c.id",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .bind(include_unlisted)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    let child_collections = child_rows
+        .iter()
+        .map(collection_summary_from_row)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(DbError::Query)?;
+
+    let total_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)
+         FROM collection_recipes cr
+         INNER JOIN collections c ON c.id = cr.collection_id AND c.owner_id = $2
+         INNER JOIN recipes r ON r.id = cr.recipe_id
+         WHERE cr.collection_id = $1
+           AND (c.visibility = 'public' OR ($3 AND c.visibility = 'unlisted'))
+           AND (r.visibility = 'public' OR ($3 AND r.visibility = 'unlisted'))",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .bind(include_unlisted)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    let recipe_rows = sqlx::query(
+        "SELECT r.id, r.user_id, r.title, r.description, r.commentary,
+                r.prep_time_minutes, r.cook_time_minutes, r.servings,
+                r.ingredients, r.instructions, r.equipment, r.images,
+                r.visibility, r.created_at, r.updated_at,
+                u.username AS author_username, u.avatar_url AS author_avatar_url
+         FROM collection_recipes cr
+         INNER JOIN collections c ON c.id = cr.collection_id AND c.owner_id = $2
+         INNER JOIN recipes r ON r.id = cr.recipe_id
+         LEFT JOIN users u ON u.id = r.user_id
+         WHERE cr.collection_id = $1
+           AND (c.visibility = 'public' OR ($3 AND c.visibility = 'unlisted'))
+           AND (r.visibility = 'public' OR ($3 AND r.visibility = 'unlisted'))
+         ORDER BY cr.sort_order, cr.created_at, cr.recipe_id
+         LIMIT $4 OFFSET $5",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .bind(include_unlisted)
+    .bind(limit.max(0))
+    .bind(offset.max(0))
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    let returned_recipes = recipe_rows
+        .iter()
+        .map(Recipe::from_row)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(DbError::Query)?;
+    let recipes = CollectionRecipeList {
+        has_more: offset.max(0) + (returned_recipes.len() as i64) < total_count,
+        recipes: returned_recipes,
+        total_count,
+    };
+
+    tx.commit().await.map_err(DbError::Query)?;
+    Ok(Some(CollectionContents {
+        owner_username,
+        can_edit: false,
+        collection,
+        breadcrumbs,
+        child_collections,
+        recipes,
+    }))
 }
 
 /// List collections owned by a user that contain an accessible recipe.
@@ -5244,6 +5663,448 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_collection_visibility_defaults_and_owner_updates() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let other_owner = test_utils::insert_test_user(&pool).await;
+
+        let private = test_utils::insert_test_collection(&pool, owner.id, None, "Private").await;
+        assert_eq!(private.visibility, CollectionVisibility::Private);
+
+        let public = insert_collection(
+            &pool,
+            owner.id,
+            None,
+            "Public",
+            None,
+            CollectionVisibility::Public,
+        )
+        .await
+        .unwrap();
+        assert_eq!(public.visibility, CollectionVisibility::Public);
+
+        let unlisted = update_collection_visibility(
+            &pool,
+            public.id,
+            owner.id,
+            CollectionVisibility::Unlisted,
+        )
+        .await
+        .unwrap();
+        assert_eq!(unlisted.visibility, CollectionVisibility::Unlisted);
+
+        assert!(matches!(
+            update_collection_visibility(
+                &pool,
+                public.id,
+                other_owner.id,
+                CollectionVisibility::Private,
+            )
+            .await,
+            Err(DbError::CollectionNotFound(id)) if id == public.id
+        ));
+
+        let invalid =
+            sqlx::query("UPDATE collections SET visibility = 'friends-only' WHERE id = $1")
+                .bind(public.id)
+                .execute(&pool)
+                .await
+                .unwrap_err();
+        assert_eq!(
+            invalid
+                .as_database_error()
+                .and_then(|database_error| database_error.code())
+                .as_deref(),
+            Some("23514")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_collection_viewer_reads_apply_collection_and_recipe_visibility() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let author = test_utils::insert_test_user(&pool).await;
+        let viewer = test_utils::insert_test_user(&pool).await;
+        let private_collection =
+            test_utils::insert_test_collection(&pool, owner.id, None, "Private collection").await;
+        let unlisted_collection = insert_collection(
+            &pool,
+            owner.id,
+            None,
+            "Unlisted collection",
+            None,
+            CollectionVisibility::Unlisted,
+        )
+        .await
+        .unwrap();
+        let public_collection = insert_collection(
+            &pool,
+            owner.id,
+            None,
+            "Public collection",
+            None,
+            CollectionVisibility::Public,
+        )
+        .await
+        .unwrap();
+        let owner_private_recipe = test_utils::insert_test_recipe(&pool, owner.id, "private").await;
+        let public_recipe = test_utils::insert_test_recipe(&pool, author.id, "public").await;
+        let unlisted_recipe = test_utils::insert_test_recipe(&pool, author.id, "unlisted").await;
+
+        for collection_id in [
+            private_collection.id,
+            unlisted_collection.id,
+            public_collection.id,
+        ] {
+            test_utils::add_test_recipe_to_collection(
+                &pool,
+                collection_id,
+                owner.id,
+                owner_private_recipe.id,
+            )
+            .await;
+            test_utils::add_test_recipe_to_collection(
+                &pool,
+                collection_id,
+                owner.id,
+                public_recipe.id,
+            )
+            .await;
+            test_utils::add_test_recipe_to_collection(
+                &pool,
+                collection_id,
+                owner.id,
+                unlisted_recipe.id,
+            )
+            .await;
+        }
+
+        assert!(
+            get_collection_contents_for_viewer(&pool, private_collection.id, None, 0, 20,)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert!(get_collection_contents_for_viewer(
+            &pool,
+            private_collection.id,
+            Some(viewer.id),
+            0,
+            20,
+        )
+        .await
+        .unwrap()
+        .is_none());
+
+        let owner_view =
+            get_collection_contents_for_viewer(&pool, private_collection.id, Some(owner.id), 0, 20)
+                .await
+                .unwrap()
+                .unwrap();
+        assert!(owner_view.can_edit);
+        assert_eq!(owner_view.owner_username, owner.username);
+        assert_eq!(owner_view.recipes.total_count, 3);
+
+        let unlisted_view =
+            get_collection_contents_for_viewer(&pool, unlisted_collection.id, None, 0, 1)
+                .await
+                .unwrap()
+                .unwrap();
+        assert!(!unlisted_view.can_edit);
+        assert_eq!(unlisted_view.recipes.total_count, 2);
+        assert_eq!(unlisted_view.recipes.recipes.len(), 1);
+        assert!(unlisted_view.recipes.has_more);
+
+        let public_view =
+            get_collection_contents_for_viewer(&pool, public_collection.id, Some(viewer.id), 0, 20)
+                .await
+                .unwrap()
+                .unwrap();
+        assert!(!public_view.can_edit);
+        assert_eq!(public_view.recipes.total_count, 1);
+        assert_eq!(public_view.recipes.recipes[0].id, public_recipe.id);
+
+        sqlx::query("UPDATE recipes SET visibility = 'private' WHERE id = $1")
+            .bind(public_recipe.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        let hidden_after_change =
+            get_collection_contents_for_viewer(&pool, public_collection.id, None, 0, 20)
+                .await
+                .unwrap()
+                .unwrap();
+        assert_eq!(hidden_after_change.recipes.total_count, 0);
+        assert!(hidden_after_change.recipes.recipes.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_collection_share_preview_is_owner_scoped_and_matches_target_visibility() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let author = test_utils::insert_test_user(&pool).await;
+        let other_user = test_utils::insert_test_user(&pool).await;
+        let collection = test_utils::insert_test_collection(&pool, owner.id, None, "Preview").await;
+        let own_private = test_utils::insert_test_recipe(&pool, owner.id, "private").await;
+        let public = test_utils::insert_test_recipe(&pool, author.id, "public").await;
+        let unlisted = test_utils::insert_test_recipe(&pool, author.id, "unlisted").await;
+        for recipe_id in [own_private.id, public.id, unlisted.id] {
+            test_utils::add_test_recipe_to_collection(&pool, collection.id, owner.id, recipe_id)
+                .await;
+        }
+
+        let public_preview = get_collection_share_preview(
+            &pool,
+            collection.id,
+            owner.id,
+            CollectionVisibility::Public,
+        )
+        .await
+        .unwrap();
+        assert_eq!(public_preview.total_recipe_count, 3);
+        assert_eq!(public_preview.visible_recipe_count, 1);
+        assert_eq!(public_preview.hidden_recipe_count, 2);
+
+        let unlisted_preview = get_collection_share_preview(
+            &pool,
+            collection.id,
+            owner.id,
+            CollectionVisibility::Unlisted,
+        )
+        .await
+        .unwrap();
+        assert_eq!(unlisted_preview.visible_recipe_count, 2);
+        assert_eq!(unlisted_preview.hidden_recipe_count, 1);
+
+        assert!(matches!(
+            get_collection_share_preview(
+                &pool,
+                collection.id,
+                other_user.id,
+                CollectionVisibility::Public,
+            )
+            .await,
+            Err(DbError::CollectionNotFound(id)) if id == collection.id
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_public_collection_discovery_excludes_unlisted_and_sanitizes_metadata() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let author = test_utils::insert_test_user(&pool).await;
+        let private_root =
+            test_utils::insert_test_collection(&pool, owner.id, None, "Private root").await;
+        let public_below_private = insert_collection(
+            &pool,
+            owner.id,
+            Some(private_root.id),
+            "Public below private",
+            None,
+            CollectionVisibility::Public,
+        )
+        .await
+        .unwrap();
+        let unlisted = insert_collection(
+            &pool,
+            owner.id,
+            None,
+            "Unlisted",
+            None,
+            CollectionVisibility::Unlisted,
+        )
+        .await
+        .unwrap();
+        let public_root = insert_collection(
+            &pool,
+            owner.id,
+            None,
+            "Public root",
+            None,
+            CollectionVisibility::Public,
+        )
+        .await
+        .unwrap();
+        let private_child = test_utils::insert_test_collection(
+            &pool,
+            owner.id,
+            Some(public_root.id),
+            "Private child",
+        )
+        .await;
+        let public_child = insert_collection(
+            &pool,
+            owner.id,
+            Some(public_root.id),
+            "Public child",
+            None,
+            CollectionVisibility::Public,
+        )
+        .await
+        .unwrap();
+        let unlisted_child = insert_collection(
+            &pool,
+            owner.id,
+            Some(public_root.id),
+            "Unlisted child",
+            None,
+            CollectionVisibility::Unlisted,
+        )
+        .await
+        .unwrap();
+
+        let own_private = test_utils::insert_test_recipe(&pool, owner.id, "private").await;
+        let public_recipe = test_utils::insert_test_recipe(&pool, author.id, "public").await;
+        let unlisted_recipe = test_utils::insert_test_recipe(&pool, author.id, "unlisted").await;
+        for recipe_id in [own_private.id, public_recipe.id, unlisted_recipe.id] {
+            test_utils::add_test_recipe_to_collection(&pool, public_root.id, owner.id, recipe_id)
+                .await;
+        }
+
+        let discovered = get_public_collections_by_username(&pool, &owner.username, 0, 100)
+            .await
+            .unwrap();
+        assert_eq!(discovered.total_count, 3);
+        assert!(!discovered.has_more);
+        assert!(discovered
+            .collections
+            .iter()
+            .all(|collection| collection.visibility == CollectionVisibility::Public));
+        assert!(!discovered.collections.iter().any(|collection| {
+            [
+                private_root.id,
+                private_child.id,
+                unlisted.id,
+                unlisted_child.id,
+            ]
+            .contains(&collection.id)
+        }));
+
+        let nested = discovered
+            .collections
+            .iter()
+            .find(|collection| collection.id == public_below_private.id)
+            .unwrap();
+        assert_eq!(nested.parent_collection_id, None);
+
+        let root = discovered
+            .collections
+            .iter()
+            .find(|collection| collection.id == public_root.id)
+            .unwrap();
+        assert_eq!(root.child_count, 1);
+        assert_eq!(root.recipe_count, 1);
+        assert!(discovered
+            .collections
+            .iter()
+            .any(|collection| collection.id == public_child.id));
+
+        let first_page = get_public_collections_by_username(&pool, &owner.username, 0, 2)
+            .await
+            .unwrap();
+        assert_eq!(first_page.collections.len(), 2);
+        assert_eq!(first_page.total_count, 3);
+        assert!(first_page.has_more);
+
+        let missing = get_public_collections_by_username(&pool, "missing-user", 0, 20)
+            .await
+            .unwrap();
+        assert!(missing.collections.is_empty());
+        assert_eq!(missing.total_count, 0);
+    }
+
+    #[tokio::test]
+    async fn test_shared_collection_hierarchy_does_not_leak_inaccessible_relatives() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let private_root =
+            test_utils::insert_test_collection(&pool, owner.id, None, "Private root").await;
+        let unlisted_middle = insert_collection(
+            &pool,
+            owner.id,
+            Some(private_root.id),
+            "Unlisted middle",
+            None,
+            CollectionVisibility::Unlisted,
+        )
+        .await
+        .unwrap();
+        let public_leaf = insert_collection(
+            &pool,
+            owner.id,
+            Some(unlisted_middle.id),
+            "Public leaf",
+            None,
+            CollectionVisibility::Public,
+        )
+        .await
+        .unwrap();
+        let private_child = test_utils::insert_test_collection(
+            &pool,
+            owner.id,
+            Some(unlisted_middle.id),
+            "Private child",
+        )
+        .await;
+        let unlisted_child = insert_collection(
+            &pool,
+            owner.id,
+            Some(public_leaf.id),
+            "Unlisted child",
+            None,
+            CollectionVisibility::Unlisted,
+        )
+        .await
+        .unwrap();
+
+        let public_view = get_collection_contents_for_viewer(&pool, public_leaf.id, None, 0, 20)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            public_view
+                .breadcrumbs
+                .iter()
+                .map(|breadcrumb| breadcrumb.id)
+                .collect::<Vec<_>>(),
+            vec![public_leaf.id]
+        );
+        assert!(public_view.child_collections.is_empty());
+        assert_eq!(public_view.collection.child_count, 0);
+
+        let unlisted_view =
+            get_collection_contents_for_viewer(&pool, unlisted_middle.id, None, 0, 20)
+                .await
+                .unwrap()
+                .unwrap();
+        assert_eq!(
+            unlisted_view
+                .breadcrumbs
+                .iter()
+                .map(|breadcrumb| breadcrumb.id)
+                .collect::<Vec<_>>(),
+            vec![unlisted_middle.id]
+        );
+        assert_eq!(
+            unlisted_view
+                .child_collections
+                .iter()
+                .map(|child| child.id)
+                .collect::<Vec<_>>(),
+            vec![public_leaf.id]
+        );
+        assert_eq!(unlisted_view.collection.child_count, 1);
+        assert!(!unlisted_view
+            .child_collections
+            .iter()
+            .any(|child| child.id == private_child.id));
+        assert!(!public_view
+            .child_collections
+            .iter()
+            .any(|child| child.id == unlisted_child.id));
+    }
+
+    #[tokio::test]
     async fn test_collection_hierarchy_queries_are_owner_scoped() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let owner = test_utils::insert_test_user(&pool).await;
@@ -5359,6 +6220,7 @@ mod tests {
                 Some(other_collection.id),
                 "Cross-owner child",
                 None,
+                CollectionVisibility::Private,
             )
             .await,
             Err(DbError::CollectionParentNotFound(id)) if id == other_collection.id
@@ -5401,7 +6263,15 @@ mod tests {
         let owner = test_utils::insert_test_user(&pool).await;
         let first = test_utils::insert_test_collection(&pool, owner.id, None, "Recipes").await;
 
-        let duplicate = insert_collection(&pool, owner.id, None, "recipes", None).await;
+        let duplicate = insert_collection(
+            &pool,
+            owner.id,
+            None,
+            "recipes",
+            None,
+            CollectionVisibility::Private,
+        )
+        .await;
         assert!(matches!(duplicate, Err(DbError::CollectionNameTaken)));
 
         let nested =
@@ -5681,10 +6551,17 @@ mod tests {
         for index in 0..8 {
             let pool = pool.clone();
             tasks.push(tokio::spawn(async move {
-                insert_collection(&pool, owner.id, None, &format!("Concurrent {index}"), None)
-                    .await
-                    .unwrap()
-                    .sort_order
+                insert_collection(
+                    &pool,
+                    owner.id,
+                    None,
+                    &format!("Concurrent {index}"),
+                    None,
+                    CollectionVisibility::Private,
+                )
+                .await
+                .unwrap()
+                .sort_order
             }));
         }
         for task in tasks {

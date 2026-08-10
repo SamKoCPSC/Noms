@@ -2,10 +2,11 @@
 
 **Issue:** [NOMS-011-recipe-collections.md](../issues/NOMS-011-recipe-collections.md)
 **Created:** 2026-06-10
-**Revised:** 2026-07-15
+**Revised:** 2026-08-03
 **Depends on:** NOMS-008 published recipe model
 **Coordination:** NOMS-010 may be implemented in parallel. NOMS-011 only references published `recipes`; it does not depend on `recipe_versions` or `recipe_drafts`.
-**Approach:** Add private user-owned collections with a self-referential folder tree and ordered recipe membership, then integrate filesystem-like collection navigation into the existing recipe UI.
+**Approach:** Add private user-owned collections with a self-referential folder tree and ordered recipe membership, then integrate filesystem-like collection navigation into the existing recipe UI. After the private collection baseline is complete, add collection-level `private`, `unlisted`, and `public` visibility without allowing collection visibility to broaden a recipe's own visibility.
+**Scope extension:** Checkpoints 8-11 formally extend the original NOMS-011 private-only scope with collection sharing. They supersede the issue's original “shared/public collections” and “collection-level visibility” out-of-scope entries for this implementation plan.
 
 ---
 
@@ -19,6 +20,8 @@ NOMS-010 now stores drafts separately in `recipe_drafts`. Collections reference 
 
 ### Collection ownership, hierarchy, and visibility
 
+Checkpoints 1-7 establish the private collection baseline:
+
 - Collections are private and owned by one user.
 - Collections form a tree: `parent_collection_id = NULL` means a root collection.
 - A collection may contain child collections and recipe files.
@@ -30,6 +33,20 @@ NOMS-010 now stores drafts separately in `recipe_drafts`. Collections reference 
 - A recipe becoming private later makes it unavailable in the collection view; the junction row may remain and become visible again if access is restored.
 - Collections do not become public merely because they contain public recipes.
 - Server functions derive the current user from the authenticated session. They must not accept a caller-supplied `user_id_str` for authorization.
+
+Checkpoints 8-11 extend that baseline with collection sharing. Mutations remain owner-only, and collection visibility never grants access to a recipe that its own visibility would deny.
+
+The shared-read visibility matrix is:
+
+| Collection visibility | Non-owner recipe visibility |
+|---|---|
+| `private` | No collection or recipe access |
+| `unlisted` | Direct-link access to `public` and `unlisted` recipes |
+| `public` | Public access to `public` recipes only |
+
+`unlisted` collections are accessible by UUID-based URL but are excluded from discovery. `public` collections may be listed and searched. The owner view continues to use the existing owner-aware recipe predicate: the owner's recipes plus other users' `public` or `unlisted` recipes.
+
+Each collection has independent visibility. A shared child may exist below an inaccessible parent, but shared breadcrumbs must stop before the first inaccessible ancestor so private or unlisted parent metadata is not leaked. Shared child listings apply the same access context: a public page lists public children only, while an unlisted page may list public and unlisted children.
 
 ### Shared and server-only types
 
@@ -451,15 +468,161 @@ After NOMS-010 is integrated, verify the combined changes in:
 
 ---
 
+## Checkpoint 8: Collection visibility schema, types, and owner mutations
+
+**Files:** `migrations/schema.sql`, `src/types.rs`, `src/db/mod.rs`, `src/api/collection.rs`, `src/test_utils.rs`
+
+### 8a. Schema and shared types
+
+- Add `collections.visibility VARCHAR(20) NOT NULL DEFAULT 'private'` with a check constraint allowing only `private`, `unlisted`, and `public`.
+- Add an index suitable for public collection discovery without weakening the existing owner and hierarchy indexes.
+- Add a serializable `CollectionVisibility` enum and use it in collection response and form types. Do not refactor the existing recipe visibility strings as part of this checkpoint.
+- Add visibility to `Collection` and `CollectionSummary` so owner pages, breadcrumbs, and edit forms can render the current state.
+- Default all newly created collections to `private` unless the create request explicitly supplies another valid value.
+- Preserve the development-phase migration assumption: no production backfill workflow is required. Existing development rows resolve to `private` through the schema default and development databases may be recreated.
+
+### 8b. Owner-only visibility mutation
+
+- Extend collection creation and update inputs with collection visibility.
+- Add an owner-scoped database query and server function for changing visibility.
+- Derive the owner from the authenticated session. Do not accept a caller-supplied owner/user ID.
+- Keep rename, move, reorder, delete, and membership mutations owner-only regardless of visibility.
+- Update `collections.updated_at` when visibility changes.
+
+**Verify:**
+
+- invalid visibility values are rejected at both the typed API boundary and database constraint
+- another user cannot change a shared collection's visibility
+- changing visibility does not modify recipe visibility or membership rows
+- newly created collections remain private by default
+
+**Risk:** Medium. Visibility is an access-control field and must not be represented as an unchecked client string.
+
+---
+
+## Checkpoint 9: Viewer-safe collection reads and recursive access
+
+**Files:** `src/db/mod.rs`, `src/api/collection.rs`, `src/types.rs`
+
+Add a viewer-aware read path while preserving the existing owner-only mutation paths.
+
+### 9a. Viewer-aware contents
+
+- Add a collection contents query that accepts an optional authenticated viewer derived by the server and returns an owner view when the viewer owns the collection.
+- A non-owner or anonymous viewer may read `public` and `unlisted` collections by ID; a private or missing collection returns the same not-found result.
+- Shared collection responses include the owner username and an explicit capability such as `can_edit`; do not expose mutation controls based only on client-side ownership guesses.
+- Counts and pagination must use the same recipe predicate as returned rows.
+- Private recipes are never returned to non-owners.
+- Public collection views include only `public` recipes.
+- Unlisted collection views include `public` and `unlisted` recipes.
+- A recipe becoming less visible remains in `collection_recipes` but disappears from shared rows and counts immediately.
+
+### 9b. Recursive hierarchy access
+
+- Update breadcrumb CTE support so a shared response stops before the first ancestor that is inaccessible in the current visibility context.
+- Shared child queries return only children accessible in that same context: public children on public pages, and public/unlisted children on unlisted pages.
+- Do not expose inaccessible ancestor names, descriptions, counts, IDs, or existence through errors.
+- Retain cycle protection and recursion bounds from the private hierarchy implementation.
+
+### 9c. Server API separation
+
+- Add a viewer-aware read server function using an optional authenticated session.
+- Keep create, update, delete, move, reorder, add/remove membership, and visibility updates behind required authentication and owner-scoped queries.
+- Use safe not-found responses for inaccessible collections; do not distinguish private from nonexistent resources.
+- Continue referencing published `recipes` only; never query or expose `recipe_drafts` through collections.
+
+**Tests:**
+
+- anonymous, authenticated non-owner, and owner access across all three collection visibility values
+- the full collection/recipe visibility matrix
+- row/count/pagination predicate equivalence
+- public child below private or unlisted ancestors without breadcrumb leakage
+- hidden children omitted from shared child counts and listings
+- recipe visibility changes reflected without deleting membership
+- owner mutations rejected for every non-owner viewer
+
+**Risk:** High. This checkpoint establishes the public authorization boundary and requires focused query and API review.
+
+---
+
+## Checkpoint 10: Visibility controls and read-only sharing UI
+
+**Files:** `src/pages/collection_new.rs`, `src/pages/collection_edit.rs`, `src/pages/collection_detail.rs`, collection card/list components, shared form components as needed
+
+### 10a. Owner controls
+
+- Add a visibility selector to collection creation and editing with plain-language descriptions:
+  - Private: only you can access it.
+  - Unlisted: anyone with the link can access shareable contents.
+  - Public: anyone can access it and it may appear in discovery.
+- Show visibility badges on owner collection cards and detail pages.
+- Before changing to `public` or `unlisted`, show how many memberships will be hidden from visitors by recipe visibility rules.
+- Add Copy link and Share actions for public and unlisted collections. Use the Web Share API when available and provide a clipboard fallback.
+
+### 10b. Shared collection detail
+
+- Reuse the collection detail layout for shared reads, but render it as read-only when `can_edit` is false.
+- Hide edit, delete, reorder, remove, add-membership, move, and subcollection-creation controls from non-owners.
+- Keep safe read operations such as pagination available.
+- Ensure recipe links use the existing public/unlisted recipe-detail access path.
+- Distinguish a truly empty collection from a collection whose memberships are not visible to the viewer without revealing hidden recipe counts.
+- Preserve loading, error, narrow-screen, keyboard, and screen-reader behavior.
+
+**Verify:**
+
+- copied unlisted and public links open in a logged-out session
+- private links return the standard unavailable state
+- no owner-only control appears or executes for a non-owner
+- public pages never render unlisted/private recipes or inaccessible hierarchy metadata
+- changing visibility updates badges and sharing controls after reload
+
+**Risk:** Medium. The detail page must use server-provided capabilities and filtered data rather than recreating authorization rules in RSX.
+
+---
+
+## Checkpoint 11: Discovery, integration, and sharing security review
+
+**Files:** collection pages and APIs, public profile/search integration files as available, collection-related tests
+
+### Discovery
+
+- Public collections may appear on public profiles and in NOMS-012 collection search.
+- Unlisted collections must never appear in search, feeds, public profile listings, autocomplete, or public collection indexes.
+- Public discovery queries return only public-safe counts and metadata.
+- Discovery integration may be delivered after the direct-link sharing path if NOMS-012 is not yet integrated.
+
+### Security and privacy review
+
+- Confirm that collection visibility can restrict recipe exposure but can never broaden recipe visibility.
+- Confirm private and nonexistent collections are indistinguishable to unauthorized viewers.
+- Confirm shared breadcrumbs, child listings, counts, pagination, empty states, and errors do not leak inaccessible memberships or ancestors.
+- Confirm every mutation still derives authorization from the authenticated session and remains owner-only.
+- Confirm UUID parsing, pagination limits, recursive CTE cycle protection, and deletion cascades remain intact.
+- Confirm visibility changes and recipe visibility changes take effect on the next read without cache leakage.
+
+### Integration checks
+
+- Test direct shared URLs in authenticated-owner, authenticated-non-owner, and anonymous browser sessions.
+- Test public collection discovery separately from unlisted direct-link access.
+- Run the full native server, WASM, formatting, and lint checks.
+- Review the final diff specifically for owner predicates accidentally replaced by visibility predicates in mutation queries.
+
+**Risk:** High. Treat any metadata, count, breadcrumb, or membership disclosure as an authorization defect.
+
+---
+
 ## Testing strategy
 
 - Unit tests for collection validation and order normalization.
 - Integration tests with the existing `pgtemp` test database helpers.
 - Query tests for every ownership and visibility path.
+- Access-matrix tests for private, unlisted, and public collections combined with private, unlisted, and public recipes.
+- Shared hierarchy tests proving inaccessible ancestors and children do not leak through breadcrumbs, counts, or errors.
 - Hierarchy tests for root/nested creation, breadcrumbs, same-owner parent enforcement, sibling-name uniqueness, cycle-safe moves, recursive deletion, and independent folder/file ordering.
 - Transaction tests for concurrent appends, reorder, and rollback.
 - Server-function tests for session-derived authorization and UUID parsing.
 - UI tests/manual checks for collection CRUD, dashboard navigation, membership, and reorder.
+- Logged-out and authenticated-non-owner UI checks for public/unlisted collection links and read-only controls.
 - `cargo test --features server`
 - `cargo check --features server`
 - `cargo check --target wasm32-unknown-unknown`
@@ -473,6 +636,7 @@ The WASM check validates shared client types; it does not replace native server 
 
 - `migrations/schema.sql` remains the declarative source of truth.
 - The collection schema is additive and requires no data backfill.
+- The visibility extension adds a non-null `collections.visibility` field with a `private` default; no separate development-data backfill is required.
 - Apply through the existing `just migrate` flow.
 - Existing development data may be discarded if needed while NOMS-010 and NOMS-011 are being integrated.
 - Development rollback can recreate the database and rerun `just migrate`; do not add destructive rollback SQL to the plan.
@@ -490,3 +654,7 @@ The WASM check validates shared client types; it does not replace native server 
 | 5 Membership | Checkpoint 2 + recipe detail | Defer final recipe-detail integration until NOMS-010 recipe-detail work is merged |
 | 6 Reorder | Checkpoint 2 + collection detail | Independent of NOMS-010 |
 | 7 Integration/polish | All previous + NOMS-010 integration | Must run after both feature branches are combined |
+| 8 Visibility schema/types/mutation | Checkpoint 7 | Can begin independently of discovery work; shared schema and collection API files require merge review |
+| 9 Viewer-safe reads | Checkpoint 8 | Must complete before any shared collection UI is exposed |
+| 10 Sharing UI | Checkpoint 9 | Direct-link sharing can proceed without NOMS-012 discovery integration |
+| 11 Discovery/security review | Checkpoints 9-10; NOMS-012 for search | Discovery may be deferred, but the authorization and privacy review is required before release |

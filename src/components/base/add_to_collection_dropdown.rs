@@ -227,6 +227,7 @@ mod tests {
             parent_collection_id,
             name: name.to_string(),
             description: None,
+            visibility: crate::types::CollectionVisibility::Private,
             sort_order: 0,
             child_count: 0,
             recipe_count: 0,

@@ -1,20 +1,23 @@
-//! User profile page — public-facing profile with paginated recipes.
+//! User profile page — public-facing profile with paginated collections and recipes.
 //!
 //! Displays a user's profile header (avatar, display name, username, bio,
-//! recipe count) and their public recipes in a paginated grid.
+//! recipe count), public collections, and public recipes.
 //! No authentication required.
 
 use dioxus::prelude::*;
 
+use crate::api::collection::get_user_public_collections;
 use crate::api::recipe::{get_user_profile, get_user_public_recipes};
 use crate::components::base::{
-    Avatar, AvatarSize, Button, ButtonVariant, EmptyState, LoadingSpinner, RecipeCard,
+    Avatar, AvatarSize, Button, ButtonVariant, CollectionVisibilityBadge, EmptyState,
+    LoadingSpinner, RecipeCard,
 };
-use crate::types::{Recipe, UserProfile as UserProfileType};
+use crate::types::{CollectionSummary, Recipe, UserProfile as UserProfileType};
+use crate::Route;
 
 const PAGE_SIZE: i64 = 12;
 
-/// Public user profile page with header and paginated recipe grid.
+/// Public user profile page with paginated collection and recipe grids.
 #[component]
 pub fn UserProfile(username: String) -> Element {
     // ── Signal state ─────────────────────────────────────────────────────
@@ -25,6 +28,11 @@ pub fn UserProfile(username: String) -> Element {
     let loaded_recipes = use_signal(Vec::<Recipe>::new);
     let is_loading = use_signal(|| true);
     let recipes_error = use_signal(|| Option::<String>::None);
+    let mut collection_offset = use_signal(|| 0i64);
+    let collection_has_more = use_signal(|| true);
+    let loaded_collections = use_signal(Vec::<CollectionSummary>::new);
+    let collections_are_loading = use_signal(|| true);
+    let collections_error = use_signal(|| Option::<String>::None);
 
     // ── Fetch profile (one-time) ─────────────────────────────────────────
     let uname_profile = username.clone();
@@ -41,6 +49,32 @@ pub fn UserProfile(username: String) -> Element {
                     err.set(Some(e.to_string()));
                 }
             }
+        });
+    });
+
+    // ── Fetch paginated public collections independently of recipes ─────
+    let uname_collections = username.clone();
+    use_effect(move || {
+        let uname = uname_collections.clone();
+        let off = collection_offset();
+        let mut collections = loaded_collections;
+        let mut more = collection_has_more;
+        let mut loading = collections_are_loading;
+        let mut error = collections_error;
+        loading.set(true);
+        error.set(None);
+
+        spawn(async move {
+            match get_user_public_collections(uname, off, PAGE_SIZE).await {
+                Ok(response) => {
+                    let mut current = collections.read().clone();
+                    current.extend(response.collections);
+                    collections.set(current);
+                    more.set(response.has_more);
+                }
+                Err(problem) => error.set(Some(problem.to_string())),
+            }
+            loading.set(false);
         });
     });
 
@@ -77,6 +111,11 @@ pub fn UserProfile(username: String) -> Element {
     // ── Load more handler ────────────────────────────────────────────────
     let on_load_more = move |_| {
         offset.set(offset() + PAGE_SIZE);
+    };
+    let on_load_more_collections = move |_| {
+        if !collections_are_loading() {
+            collection_offset.set(collection_offset() + PAGE_SIZE);
+        }
     };
 
     // ── Render: profile error ────────────────────────────────────────────
@@ -119,6 +158,8 @@ pub fn UserProfile(username: String) -> Element {
     // ── Render: full profile ─────────────────────────────────────────────
     let is_loading_initial = is_loading() && loaded_recipes.read().is_empty();
     let has_error = recipes_error().is_some();
+    let collections_loading_initial =
+        collections_are_loading() && loaded_collections.read().is_empty();
 
     rsx! {
         div { class: "container profile-page",
@@ -136,6 +177,71 @@ pub fn UserProfile(username: String) -> Element {
                 }
                 p { class: "profile-stats",
                     "{recipe_count_text}"
+                }
+            }
+
+            // ── Public Collection Grid ───────────────────────────────────
+            section { class: "profile-recipes profile-collections",
+                h2 { class: "section-title", "Public collections" }
+
+                if collections_loading_initial {
+                    div {
+                        display: "flex",
+                        align_items: "center",
+                        justify_content: "center",
+                        min_height: "160px",
+                        LoadingSpinner {}
+                    }
+                } else if let Some(problem) = collections_error() {
+                    EmptyState {
+                        icon: rsx! { "⚠️" },
+                        title: "Error loading collections",
+                        description: problem,
+                    }
+                } else if loaded_collections.read().is_empty() {
+                    EmptyState {
+                        icon: rsx! { "📁" },
+                        title: "No public collections yet",
+                        description: format!("{0} hasn't shared any public collections.", profile_data.display_name),
+                    }
+                } else {
+                    div {
+                        display: "grid",
+                        grid_template_columns: "repeat(auto-fill, minmax(240px, 1fr))",
+                        gap: "var(--space-lg)",
+                        for collection in loaded_collections.read().iter() {
+                            Link {
+                                key: "{collection.id}",
+                                to: Route::CollectionDetail { id: collection.id.to_string() },
+                                class: "neumo-card",
+                                padding: "var(--space-lg)",
+                                text_decoration: "none",
+                                display: "flex",
+                                flex_direction: "column",
+                                gap: "var(--space-sm)",
+                                CollectionVisibilityBadge { visibility: collection.visibility }
+                                h3 { color: "var(--text-primary)", "{collection.name}" }
+                                if let Some(description) = &collection.description {
+                                    p { color: "var(--text-secondary)", "{description}" }
+                                }
+                                p {
+                                    color: "var(--text-secondary)",
+                                    "{collection.child_count} folders · {collection.recipe_count} recipes"
+                                }
+                            }
+                        }
+                    }
+
+                    if collection_has_more() {
+                        div { class: "load-more",
+                            Button {
+                                variant: ButtonVariant::Secondary,
+                                disabled: collections_are_loading(),
+                                onclick: on_load_more_collections,
+                                if collections_are_loading() { "Loading…" } else { "Load more collections" }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -191,5 +297,17 @@ pub fn UserProfile(username: String) -> Element {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod collection_discovery_tests {
+    #[test]
+    fn public_profile_lists_public_collections_without_exposing_unlisted_entries() {
+        let source = include_str!("user_profile.rs");
+        assert!(source.contains("get_user_public_collections"));
+        assert!(source.contains("Public collections"));
+        assert!(source.contains("Route::CollectionDetail"));
+        assert!(source.contains("CollectionVisibilityBadge"));
     }
 }

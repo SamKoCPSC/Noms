@@ -151,6 +151,85 @@ fn server_error(error: CollectionApiError) -> ServerFnError {
 }
 
 #[cfg(feature = "server")]
+struct CollectionDiscoveryService<'pool> {
+    pool: &'pool PgPool,
+}
+
+#[cfg(feature = "server")]
+impl<'pool> CollectionDiscoveryService<'pool> {
+    fn new(pool: &'pool PgPool) -> Self {
+        Self { pool }
+    }
+
+    async fn list(
+        &self,
+        username: String,
+        offset: i64,
+        limit: i64,
+    ) -> Result<crate::types::PublicCollectionListResponse, CollectionApiError> {
+        if offset < 0 || !(1..=100).contains(&limit) {
+            return Err(CollectionApiError::InvalidPagination);
+        }
+        crate::db::get_public_collections_by_username(self.pool, &username, offset, limit)
+            .await
+            .map_err(map_db_error)
+    }
+}
+
+#[cfg(feature = "server")]
+struct CollectionReadService<'pool> {
+    pool: &'pool PgPool,
+    viewer_id: Option<Uuid>,
+}
+
+#[cfg(feature = "server")]
+impl<'pool> CollectionReadService<'pool> {
+    fn new(pool: &'pool PgPool, viewer_id: Option<Uuid>) -> Self {
+        Self { pool, viewer_id }
+    }
+
+    async fn get(
+        &self,
+        collection_id: String,
+    ) -> Result<crate::types::CollectionContents, CollectionApiError> {
+        let collection_id = parse_collection_id(&collection_id)?;
+        crate::db::get_collection_contents_for_viewer(
+            self.pool,
+            collection_id,
+            self.viewer_id,
+            0,
+            COLLECTION_CONTENTS_RECIPE_LIMIT,
+        )
+        .await
+        .map_err(map_db_error)?
+        .ok_or(CollectionApiError::CollectionNotFound)
+    }
+
+    async fn recipes(
+        &self,
+        collection_id: String,
+        offset: i64,
+        limit: i64,
+    ) -> Result<crate::types::CollectionRecipeList, CollectionApiError> {
+        if offset < 0 || !(1..=100).contains(&limit) {
+            return Err(CollectionApiError::InvalidPagination);
+        }
+        let collection_id = parse_collection_id(&collection_id)?;
+        crate::db::get_collection_contents_for_viewer(
+            self.pool,
+            collection_id,
+            self.viewer_id,
+            offset,
+            limit,
+        )
+        .await
+        .map_err(map_db_error)?
+        .map(|contents| contents.recipes)
+        .ok_or(CollectionApiError::CollectionNotFound)
+    }
+}
+
+#[cfg(feature = "server")]
 struct CollectionService<'pool> {
     pool: &'pool PgPool,
     user_id: Uuid,
@@ -167,6 +246,7 @@ impl<'pool> CollectionService<'pool> {
         name: String,
         description: Option<String>,
         parent_collection_id: Option<String>,
+        visibility: crate::types::CollectionVisibility,
     ) -> Result<crate::types::Collection, CollectionApiError> {
         let (name, description) = normalize_collection_fields(name, description)?;
         let parent_collection_id = parse_optional_collection_id(parent_collection_id)?;
@@ -176,11 +256,13 @@ impl<'pool> CollectionService<'pool> {
             parent_collection_id,
             &name,
             description.as_deref(),
+            visibility,
         )
         .await
         .map_err(map_db_error)
     }
 
+    /// Load collection contents only after establishing ownership.
     async fn get(
         &self,
         collection_id: String,
@@ -207,8 +289,15 @@ impl<'pool> CollectionService<'pool> {
         )
         .await
         .map_err(map_db_error)?;
+        let owner_username = crate::db::get_user_by_id(self.pool, self.user_id)
+            .await
+            .map_err(map_db_error)?
+            .map(|owner| owner.username)
+            .ok_or(CollectionApiError::Internal)?;
 
         Ok(crate::types::CollectionContents {
+            owner_username,
+            can_edit: true,
             collection,
             breadcrumbs,
             child_collections,
@@ -298,6 +387,33 @@ impl<'pool> CollectionService<'pool> {
         .map_err(map_db_error)
     }
 
+    async fn update_visibility(
+        &self,
+        collection_id: String,
+        visibility: crate::types::CollectionVisibility,
+    ) -> Result<crate::types::Collection, CollectionApiError> {
+        let collection_id = parse_collection_id(&collection_id)?;
+        crate::db::update_collection_visibility(self.pool, collection_id, self.user_id, visibility)
+            .await
+            .map_err(map_db_error)
+    }
+
+    async fn share_preview(
+        &self,
+        collection_id: String,
+        target_visibility: crate::types::CollectionVisibility,
+    ) -> Result<crate::types::CollectionSharePreview, CollectionApiError> {
+        let collection_id = parse_collection_id(&collection_id)?;
+        crate::db::get_collection_share_preview(
+            self.pool,
+            collection_id,
+            self.user_id,
+            target_visibility,
+        )
+        .await
+        .map_err(map_db_error)
+    }
+
     async fn delete(&self, collection_id: String) -> Result<(), CollectionApiError> {
         let collection_id = parse_collection_id(&collection_id)?;
         crate::db::delete_collection(self.pool, collection_id, self.user_id)
@@ -326,21 +442,6 @@ impl<'pool> CollectionService<'pool> {
         let collection_id = parse_collection_id(&collection_id)?;
         let recipe_id = parse_recipe_id(&recipe_id)?;
         crate::db::remove_recipe_from_collection(self.pool, collection_id, self.user_id, recipe_id)
-            .await
-            .map_err(map_db_error)
-    }
-
-    async fn recipes(
-        &self,
-        collection_id: String,
-        offset: i64,
-        limit: i64,
-    ) -> Result<crate::types::CollectionRecipeList, CollectionApiError> {
-        if offset < 0 || !(1..=100).contains(&limit) {
-            return Err(CollectionApiError::InvalidPagination);
-        }
-        let collection_id = parse_collection_id(&collection_id)?;
-        crate::db::get_collection_recipes(self.pool, collection_id, self.user_id, offset, limit)
             .await
             .map_err(map_db_error)
     }
@@ -376,18 +477,46 @@ pub async fn create_collection(
     name: String,
     description: Option<String>,
     parent_collection_id: Option<String>,
+    visibility: crate::types::CollectionVisibility,
 ) -> Result<crate::types::Collection, ServerFnError> {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
     let pool = crate::db::get_pool();
     CollectionService::new(&pool, user_id)
-        .create(name, description, parent_collection_id)
+        .create(name, description, parent_collection_id, visibility)
         .await
         .map_err(server_error)
 }
 
-/// Return an owned collection with breadcrumbs, children, and the first recipe page.
+/// Return a viewer-safe collection with breadcrumbs, children, and the first recipe page.
 #[server]
 pub async fn get_collection(
+    collection_id: String,
+) -> Result<crate::types::CollectionContents, ServerFnError> {
+    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
+    let pool = crate::db::get_pool();
+    CollectionReadService::new(&pool, viewer_id)
+        .get(collection_id)
+        .await
+        .map_err(server_error)
+}
+
+/// List public collections for a user profile without requiring a session.
+#[server]
+pub async fn get_user_public_collections(
+    username: String,
+    offset: i64,
+    limit: i64,
+) -> Result<crate::types::PublicCollectionListResponse, ServerFnError> {
+    let pool = crate::db::get_pool();
+    CollectionDiscoveryService::new(&pool)
+        .list(username, offset, limit)
+        .await
+        .map_err(server_error)
+}
+
+/// Return an owned collection for authenticated management screens.
+#[server]
+pub async fn get_owned_collection(
     collection_id: String,
 ) -> Result<crate::types::CollectionContents, ServerFnError> {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
@@ -477,6 +606,34 @@ pub async fn update_collection(
         .map_err(server_error)
 }
 
+/// Change an owned collection's visibility.
+#[server]
+pub async fn update_collection_visibility(
+    collection_id: String,
+    visibility: crate::types::CollectionVisibility,
+) -> Result<crate::types::Collection, ServerFnError> {
+    let user_id = authenticated_user_id().await.map_err(server_error)?;
+    let pool = crate::db::get_pool();
+    CollectionService::new(&pool, user_id)
+        .update_visibility(collection_id, visibility)
+        .await
+        .map_err(server_error)
+}
+
+/// Preview recipe visibility before sharing an owned collection.
+#[server]
+pub async fn get_collection_share_preview(
+    collection_id: String,
+    target_visibility: crate::types::CollectionVisibility,
+) -> Result<crate::types::CollectionSharePreview, ServerFnError> {
+    let user_id = authenticated_user_id().await.map_err(server_error)?;
+    let pool = crate::db::get_pool();
+    CollectionService::new(&pool, user_id)
+        .share_preview(collection_id, target_visibility)
+        .await
+        .map_err(server_error)
+}
+
 /// Delete an owned collection and its descendants without deleting recipes.
 #[server]
 pub async fn delete_collection(collection_id: String) -> Result<(), ServerFnError> {
@@ -516,16 +673,16 @@ pub async fn remove_recipe_from_collection(
         .map_err(server_error)
 }
 
-/// Return a page of direct visible recipe members from an owned collection.
+/// Return a viewer-safe page of direct recipe members from a collection.
 #[server]
 pub async fn get_collection_recipes(
     collection_id: String,
     offset: i64,
     limit: i64,
 ) -> Result<crate::types::CollectionRecipeList, ServerFnError> {
-    let user_id = authenticated_user_id().await.map_err(server_error)?;
+    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
     let pool = crate::db::get_pool();
-    CollectionService::new(&pool, user_id)
+    CollectionReadService::new(&pool, viewer_id)
         .recipes(collection_id, offset, limit)
         .await
         .map_err(server_error)
@@ -561,15 +718,36 @@ mod tests {
     use super::*;
     use crate::test_utils;
 
+    #[test]
+    fn collection_creation_uses_canonical_names_and_requires_visibility() {
+        let api_source = include_str!("collection.rs");
+        let db_source = include_str!("../db/mod.rs");
+
+        assert!(api_source.contains(concat!("pub async fn create_", "collection(")));
+        assert!(api_source.contains(concat!("async fn create", "(")));
+        assert!(db_source.contains(concat!("pub async fn insert_", "collection(")));
+        assert!(!api_source.contains(concat!("create", "_with_visibility")));
+        assert!(!db_source.contains(concat!("insert_collection", "_with_visibility")));
+        assert!(!api_source.contains(concat!(
+            "Retained as the owner-only compatibility ",
+            "facade for internal callers"
+        )));
+    }
+
     #[tokio::test]
     async fn authentication_and_inputs_return_controlled_errors() {
         assert_eq!(
             require_authenticated_user(None),
             Err(CollectionApiError::NotAuthenticated)
         );
-        let unauthenticated = create_collection("Meals".to_string(), None, None)
-            .await
-            .unwrap_err();
+        let unauthenticated = create_collection(
+            "Meals".to_string(),
+            None,
+            None,
+            crate::types::CollectionVisibility::Private,
+        )
+        .await
+        .unwrap_err();
         assert!(unauthenticated.to_string().contains("Not authenticated"));
         assert_eq!(
             parse_collection_id("not-a-uuid"),
@@ -594,6 +772,204 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn service_creates_explicit_visibility_and_keeps_updates_owner_scoped() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let other_owner = test_utils::insert_test_user(&pool).await;
+        let service = CollectionService::new(&pool, owner.id);
+        let other_service = CollectionService::new(&pool, other_owner.id);
+
+        let private = service
+            .create(
+                "Private".to_string(),
+                None,
+                None,
+                crate::types::CollectionVisibility::Private,
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            private.visibility,
+            crate::types::CollectionVisibility::Private
+        );
+
+        let public = service
+            .create(
+                "Shared".to_string(),
+                None,
+                None,
+                crate::types::CollectionVisibility::Public,
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            public.visibility,
+            crate::types::CollectionVisibility::Public
+        );
+
+        let updated = service
+            .update_visibility(
+                public.id.to_string(),
+                crate::types::CollectionVisibility::Unlisted,
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            updated.visibility,
+            crate::types::CollectionVisibility::Unlisted
+        );
+        assert_eq!(
+            other_service
+                .update_visibility(
+                    public.id.to_string(),
+                    crate::types::CollectionVisibility::Private,
+                )
+                .await,
+            Err(CollectionApiError::CollectionNotFound)
+        );
+    }
+
+    #[tokio::test]
+    async fn read_service_uses_optional_viewer_without_weakening_owner_mutations() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let viewer = test_utils::insert_test_user(&pool).await;
+        let owner_service = CollectionService::new(&pool, owner.id);
+        let private = owner_service
+            .create(
+                "Private".to_string(),
+                None,
+                None,
+                crate::types::CollectionVisibility::Private,
+            )
+            .await
+            .unwrap();
+        let public = owner_service
+            .create(
+                "Public".to_string(),
+                None,
+                None,
+                crate::types::CollectionVisibility::Public,
+            )
+            .await
+            .unwrap();
+
+        let anonymous = CollectionReadService::new(&pool, None);
+        assert_eq!(
+            anonymous.get(private.id.to_string()).await,
+            Err(CollectionApiError::CollectionNotFound)
+        );
+        let anonymous_public = anonymous.get(public.id.to_string()).await.unwrap();
+        assert!(!anonymous_public.can_edit);
+        assert_eq!(anonymous_public.owner_username, owner.username);
+
+        let owner_reader = CollectionReadService::new(&pool, Some(owner.id));
+        assert!(
+            owner_reader
+                .get(private.id.to_string())
+                .await
+                .unwrap()
+                .can_edit
+        );
+
+        let other_reader = CollectionReadService::new(&pool, Some(viewer.id));
+        assert!(
+            !other_reader
+                .get(public.id.to_string())
+                .await
+                .unwrap()
+                .can_edit
+        );
+        assert_eq!(
+            CollectionService::new(&pool, viewer.id)
+                .get(public.id.to_string())
+                .await,
+            Err(CollectionApiError::CollectionNotFound)
+        );
+        assert_eq!(
+            other_reader.recipes(public.id.to_string(), -1, 20).await,
+            Err(CollectionApiError::InvalidPagination)
+        );
+        assert_eq!(
+            CollectionService::new(&pool, viewer.id)
+                .update_visibility(
+                    public.id.to_string(),
+                    crate::types::CollectionVisibility::Private,
+                )
+                .await,
+            Err(CollectionApiError::CollectionNotFound)
+        );
+    }
+
+    #[tokio::test]
+    async fn share_preview_service_is_owner_only() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let other_user = test_utils::insert_test_user(&pool).await;
+        let collection = CollectionService::new(&pool, owner.id)
+            .create(
+                "Preview".to_string(),
+                None,
+                None,
+                crate::types::CollectionVisibility::Private,
+            )
+            .await
+            .unwrap();
+
+        let preview = CollectionService::new(&pool, owner.id)
+            .share_preview(
+                collection.id.to_string(),
+                crate::types::CollectionVisibility::Public,
+            )
+            .await
+            .unwrap();
+        assert_eq!(preview.total_recipe_count, 0);
+        assert_eq!(preview.hidden_recipe_count, 0);
+        assert_eq!(
+            CollectionService::new(&pool, other_user.id)
+                .share_preview(
+                    collection.id.to_string(),
+                    crate::types::CollectionVisibility::Public,
+                )
+                .await,
+            Err(CollectionApiError::CollectionNotFound)
+        );
+    }
+
+    #[tokio::test]
+    async fn public_collection_discovery_is_paginated_and_session_independent() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        CollectionService::new(&pool, owner.id)
+            .create(
+                "Public".to_string(),
+                None,
+                None,
+                crate::types::CollectionVisibility::Public,
+            )
+            .await
+            .unwrap();
+        CollectionService::new(&pool, owner.id)
+            .create(
+                "Unlisted".to_string(),
+                None,
+                None,
+                crate::types::CollectionVisibility::Unlisted,
+            )
+            .await
+            .unwrap();
+
+        let discovery = CollectionDiscoveryService::new(&pool);
+        let listed = discovery.list(owner.username.clone(), 0, 20).await.unwrap();
+        assert_eq!(listed.total_count, 1);
+        assert_eq!(listed.collections[0].name, "Public");
+        assert_eq!(
+            discovery.list(owner.username, -1, 20).await,
+            Err(CollectionApiError::InvalidPagination)
+        );
+    }
+
+    #[tokio::test]
     async fn service_enforces_owner_scope_hierarchy_and_names() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let owner = test_utils::insert_test_user(&pool).await;
@@ -606,6 +982,7 @@ mod tests {
                 "  Meals  ".to_string(),
                 Some("  Family meals  ".to_string()),
                 None,
+                crate::types::CollectionVisibility::Private,
             )
             .await
             .unwrap();
@@ -614,25 +991,45 @@ mod tests {
         assert_eq!(root.sort_order, 0);
 
         let child = service
-            .create("Weeknight".to_string(), None, Some(root.id.to_string()))
+            .create(
+                "Weeknight".to_string(),
+                None,
+                Some(root.id.to_string()),
+                crate::types::CollectionVisibility::Private,
+            )
             .await
             .unwrap();
         assert_eq!(child.parent_collection_id, Some(root.id));
         assert_eq!(child.sort_order, 0);
         let grandchild = service
-            .create("Fast".to_string(), None, Some(child.id.to_string()))
+            .create(
+                "Fast".to_string(),
+                None,
+                Some(child.id.to_string()),
+                crate::types::CollectionVisibility::Private,
+            )
             .await
             .unwrap();
         assert_eq!(grandchild.parent_collection_id, Some(child.id));
         assert_eq!(grandchild.sort_order, 0);
         let weekend = service
-            .create("Weekend".to_string(), None, Some(root.id.to_string()))
+            .create(
+                "Weekend".to_string(),
+                None,
+                Some(root.id.to_string()),
+                crate::types::CollectionVisibility::Private,
+            )
             .await
             .unwrap();
         assert_eq!(weekend.parent_collection_id, Some(root.id));
         assert_eq!(weekend.sort_order, 1);
         let archive = service
-            .create("Archive".to_string(), None, None)
+            .create(
+                "Archive".to_string(),
+                None,
+                None,
+                crate::types::CollectionVisibility::Private,
+            )
             .await
             .unwrap();
         assert_eq!(archive.parent_collection_id, None);
@@ -683,16 +1080,33 @@ mod tests {
         assert_eq!(reordered_roots[1].sort_order, 1);
 
         assert_eq!(
-            service.create("meals".to_string(), None, None).await,
+            service
+                .create(
+                    "meals".to_string(),
+                    None,
+                    None,
+                    crate::types::CollectionVisibility::Private,
+                )
+                .await,
             Err(CollectionApiError::NameTaken)
         );
         let duplicate_parent = service
-            .create("Weeknight".to_string(), None, Some(archive.id.to_string()))
+            .create(
+                "Weeknight".to_string(),
+                None,
+                Some(archive.id.to_string()),
+                crate::types::CollectionVisibility::Private,
+            )
             .await
             .unwrap();
 
         let other_root = other_service
-            .create("Other root".to_string(), None, None)
+            .create(
+                "Other root".to_string(),
+                None,
+                None,
+                crate::types::CollectionVisibility::Private,
+            )
             .await
             .unwrap();
         let other_roots = other_service.roots().await.unwrap();
@@ -704,6 +1118,7 @@ mod tests {
                     "Cross owner".to_string(),
                     None,
                     Some(other_root.id.to_string()),
+                    crate::types::CollectionVisibility::Private,
                 )
                 .await,
             Err(CollectionApiError::ParentNotFound)
@@ -763,8 +1178,15 @@ mod tests {
         let other_user = test_utils::insert_test_user(&pool).await;
         let service = CollectionService::new(&pool, owner.id);
         let other_service = CollectionService::new(&pool, other_user.id);
+        let owner_reader = CollectionReadService::new(&pool, Some(owner.id));
+        let other_reader = CollectionReadService::new(&pool, Some(other_user.id));
         let collection = service
-            .create("Saved".to_string(), None, None)
+            .create(
+                "Saved".to_string(),
+                None,
+                None,
+                crate::types::CollectionVisibility::Private,
+            )
             .await
             .unwrap();
         let own_private =
@@ -819,21 +1241,23 @@ mod tests {
             Err(CollectionApiError::CollectionNotFound)
         );
         assert_eq!(
-            other_service
-                .recipes(collection.id.to_string(), 0, 20)
-                .await,
+            other_reader.recipes(collection.id.to_string(), 0, 20).await,
             Err(CollectionApiError::CollectionNotFound)
         );
         assert_eq!(
-            service.recipes(collection.id.to_string(), -1, 20).await,
+            owner_reader
+                .recipes(collection.id.to_string(), -1, 20)
+                .await,
             Err(CollectionApiError::InvalidPagination)
         );
         assert_eq!(
-            service.recipes(collection.id.to_string(), 0, 101).await,
+            owner_reader
+                .recipes(collection.id.to_string(), 0, 101)
+                .await,
             Err(CollectionApiError::InvalidPagination)
         );
 
-        let listed = service
+        let listed = owner_reader
             .recipes(collection.id.to_string(), 0, 20)
             .await
             .unwrap();
@@ -858,7 +1282,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(
-            service
+            owner_reader
                 .recipes(collection.id.to_string(), 0, 20)
                 .await
                 .unwrap()
@@ -891,7 +1315,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(
-            service
+            owner_reader
                 .recipes(collection.id.to_string(), 0, 20)
                 .await
                 .unwrap()
@@ -907,7 +1331,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(
-            service
+            owner_reader
                 .recipes(collection.id.to_string(), 0, 20)
                 .await
                 .unwrap()
@@ -925,7 +1349,12 @@ mod tests {
             let pool = pool.clone();
             tasks.push(tokio::spawn(async move {
                 CollectionService::new(&pool, owner.id)
-                    .create(format!("Root {index}"), None, None)
+                    .create(
+                        format!("Root {index}"),
+                        None,
+                        None,
+                        crate::types::CollectionVisibility::Private,
+                    )
                     .await
                     .unwrap()
             }));

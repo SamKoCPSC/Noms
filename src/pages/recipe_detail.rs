@@ -62,13 +62,32 @@ fn format_relative_time(dt: DateTime<Utc>) -> String {
     }
 }
 
+fn recipe_access_error_message(_error: &ServerFnError) -> &'static str {
+    "Recipe not found"
+}
+
 #[cfg(test)]
 mod collection_membership_integration_tests {
+    use super::recipe_access_error_message;
+    use dioxus::prelude::ServerFnError;
+
     #[test]
     fn authenticated_recipe_details_offer_collection_membership() {
         let source = include_str!("recipe_detail.rs");
         assert!(source.contains("AddToCollectionDropdown"));
         assert!(source.contains("auth.is_authenticated"));
+    }
+
+    #[test]
+    fn recipe_access_failures_do_not_reveal_authentication_or_existence() {
+        let unauthenticated = ServerFnError::new("Not authenticated");
+        let missing = ServerFnError::new("Recipe not found");
+
+        assert_eq!(
+            recipe_access_error_message(&unauthenticated),
+            "Recipe not found"
+        );
+        assert_eq!(recipe_access_error_message(&missing), "Recipe not found");
     }
 }
 
@@ -1822,15 +1841,10 @@ pub fn RecipeDetail(id: String) -> Element {
     let recipe = recipe_result.as_ref().and_then(|r| r.as_ref().ok());
 
     // Determine error message (if any)
-    let error_message = if let Some(Err(e)) = &recipe_result {
-        let msg = match e {
-            ServerFnError::ServerError { message, .. } => message.clone(),
-            _ => e.to_string(),
-        };
-        Some(msg)
-    } else {
-        None
-    };
+    let error_message = recipe_result
+        .as_ref()
+        .and_then(|result| result.as_ref().err())
+        .map(recipe_access_error_message);
 
     // ── Auth context for ownership check ─────────────────────────────────
     let is_owner = recipe

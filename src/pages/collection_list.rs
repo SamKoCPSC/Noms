@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::api::collection::list_root_collections;
-use crate::components::base::{EmptyState, LoadingSpinner, PageHeader};
+use crate::components::base::{CollectionVisibilityBadge, EmptyState, LoadingSpinner, PageHeader};
 use crate::components::AuthRequired;
 use crate::Route;
 
@@ -28,6 +28,7 @@ pub fn CollectionList() -> Element {
                             for collection in items {
                                 Link { to: Route::CollectionDetail { id: collection.id.to_string() }, class: "neumo-card", padding: "var(--space-lg)", text_decoration: "none",
                                     div { font_size: "32px", "📁" }
+                                    CollectionVisibilityBadge { visibility: collection.visibility }
                                     h2 { color: "var(--text-primary)", "{collection.name}" }
                                     if let Some(description) = &collection.description { p { color: "var(--text-secondary)", "{description}" } }
                                     p { color: "var(--text-secondary)", "{collection.child_count} folders · {collection.recipe_count} recipes" }
@@ -38,5 +39,14 @@ pub fn CollectionList() -> Element {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn owner_collection_cards_show_visibility_badges() {
+        let source = include_str!("collection_list.rs");
+        assert!(source.contains("CollectionVisibilityBadge"));
     }
 }

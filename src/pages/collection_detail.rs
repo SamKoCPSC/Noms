@@ -8,12 +8,11 @@ use crate::api::collection::{
     delete_collection, get_collection, get_collection_recipes, remove_recipe_from_collection,
     reorder_child_collections,
 };
-use crate::auth::context::use_auth;
 use crate::components::base::{
-    Button, ButtonVariant, EmptyState, Input, LoadingSpinner, PageHeader, RecipeCard, ReorderHandle,
+    Button, ButtonVariant, CollectionVisibilityBadge, EmptyState, Input, LoadingSpinner,
+    PageHeader, RecipeCard, ReorderHandle,
 };
-use crate::components::AuthRequired;
-use crate::types::{CollectionSummary, Recipe};
+use crate::types::{CollectionSummary, CollectionVisibility, Recipe};
 use crate::Route;
 
 const MAX_RECIPE_PAGE_SIZE: i64 = 100;
@@ -88,6 +87,13 @@ fn collection_delete_confirmation_matches(input: &str, collection_name: &str) ->
     input == collection_delete_confirmation_phrase(collection_name)
 }
 
+fn collection_load_error_copy(_error: &ServerFnError) -> (&'static str, &'static str) {
+    (
+        "Collection not found",
+        "This collection could not be found.",
+    )
+}
+
 fn next_recipe_page_request(loaded_count: usize, total_count: i64) -> Option<(i64, i64)> {
     let loaded_count = i64::try_from(loaded_count).ok()?;
     let remaining = total_count.saturating_sub(loaded_count);
@@ -134,6 +140,89 @@ fn should_persist_reorder_generation(scheduled_generation: u64, current_generati
     scheduled_generation == current_generation
 }
 
+#[cfg(target_arch = "wasm32")]
+fn browser_api_error(action: &str, error: wasm_bindgen::JsValue) -> String {
+    use wasm_bindgen::JsCast;
+
+    let detail = error
+        .dyn_ref::<js_sys::Error>()
+        .map(|error| error.message().into())
+        .or_else(|| error.as_string())
+        .unwrap_or_else(|| format!("{error:?}"));
+    format!("{action}: {detail}")
+}
+
+#[cfg(target_arch = "wasm32")]
+fn absolute_collection_url(relative_url: &str) -> Result<String, String> {
+    let window = web_sys::window().ok_or_else(|| "Browser window is unavailable.".to_string())?;
+    let origin = window
+        .location()
+        .origin()
+        .map_err(|error| browser_api_error("Could not read the page origin", error))?;
+    web_sys::Url::new_with_base(relative_url, &origin)
+        .map(|url| url.href())
+        .map_err(|error| browser_api_error("Could not build the collection URL", error))
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn copy_to_clipboard(url: &str) -> Result<(), String> {
+    let navigator = web_sys::window()
+        .ok_or_else(|| "Browser window is unavailable.".to_string())?
+        .navigator();
+    wasm_bindgen_futures::JsFuture::from(navigator.clipboard().write_text(url))
+        .await
+        .map(|_| ())
+        .map_err(|error| browser_api_error("Could not copy the collection link", error))
+}
+
+async fn share_collection_link(title: String, url: String) -> Result<String, String> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let window =
+            web_sys::window().ok_or_else(|| "Browser window is unavailable.".to_string())?;
+        let navigator = window.navigator();
+        let absolute_url = absolute_collection_url(&url)?;
+        let share_api = js_sys::Reflect::get(
+            navigator.as_ref(),
+            &wasm_bindgen::JsValue::from_str("share"),
+        )
+        .map_err(|error| browser_api_error("Could not inspect Web Share support", error))?;
+
+        if share_api.is_function() {
+            let share_data = web_sys::ShareData::new();
+            share_data.set_title(&title);
+            share_data.set_url(&absolute_url);
+            wasm_bindgen_futures::JsFuture::from(navigator.share_with_data(&share_data))
+                .await
+                .map_err(|error| browser_api_error("Could not share the collection link", error))?;
+        } else {
+            copy_to_clipboard(&absolute_url).await?;
+        }
+        Ok("Collection link shared or copied successfully.".to_string())
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = (title, url);
+        Err("Sharing is only available in the browser.".to_string())
+    }
+}
+
+async fn copy_collection_link(url: String) -> Result<String, String> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let absolute_url = absolute_collection_url(&url)?;
+        copy_to_clipboard(&absolute_url).await?;
+        Ok("Collection link copied to clipboard.".to_string())
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = url;
+        Err("Copying links is only available in the browser.".to_string())
+    }
+}
+
 #[component]
 pub fn CollectionDetail(id: String) -> Element {
     let requested_id = id.clone();
@@ -158,7 +247,7 @@ pub fn CollectionDetail(id: String) -> Element {
     let mut recipe_save_in_flight = use_signal(|| false);
     let mut recipe_reorder_generation = use_signal(|| 0_u64);
     let mut reorder_error = use_signal(|| None::<String>);
-    let auth = use_auth();
+    let mut link_status = use_signal(|| None::<Result<String, String>>);
     let refreshing_contents = contents.pending();
     let loaded = contents.read().clone();
 
@@ -171,10 +260,13 @@ pub fn CollectionDetail(id: String) -> Element {
         }
     });
 
-    rsx! { AuthRequired { div { class: "container",
+    rsx! { div { class: "container",
         match loaded {
             None => rsx! { LoadingSpinner {} },
-            Some(Err(error)) => rsx! { EmptyState { icon: rsx! { "🔒" }, title: "Collection unavailable", description: format!("This collection could not be found or accessed: {error}") } },
+            Some(Err(error)) => {
+                let (title, description) = collection_load_error_copy(&error);
+                rsx! { EmptyState { icon: rsx! { "🔒" }, title: title, description: description } }
+            },
             Some(Ok(collection_contents)) => {
                 let collection_id = collection_contents.collection.id.to_string();
                 let collection_name = collection_contents.collection.name.clone();
@@ -197,6 +289,7 @@ pub fn CollectionDetail(id: String) -> Element {
                     .collect::<Vec<_>>();
                 let displayed_recipes =
                     recipe_order_override().unwrap_or_else(|| loaded_recipes.clone());
+                let can_edit = collection_contents.can_edit;
                 let complete_recipe_list = can_reorder_complete_recipe_list(
                     displayed_recipes.len(),
                     collection_contents.recipes.total_count,
@@ -224,6 +317,13 @@ pub fn CollectionDetail(id: String) -> Element {
                         removing_recipes.read().len(),
                         refreshing_contents,
                 );
+                let pagination_disabled = loading_more()
+                    || refreshing_contents
+                    || (can_edit
+                        && (folder_save_in_flight()
+                            || recipe_reorder_pending()
+                            || recipe_save_in_flight()
+                            || !removing_recipes.read().is_empty()));
                 rsx! {
                     nav {
                         aria_label: "Breadcrumbs",
@@ -234,11 +334,20 @@ pub fn CollectionDetail(id: String) -> Element {
                         min_width: "0",
                         max_width: "100%",
                         margin_bottom: "var(--space-md)",
-                        Link {
-                            to: Route::CollectionList {},
-                            max_width: "100%",
-                            overflow_wrap: "anywhere",
-                            "Collections"
+                        if can_edit {
+                            Link {
+                                to: Route::CollectionList {},
+                                max_width: "100%",
+                                overflow_wrap: "anywhere",
+                                "Collections"
+                            }
+                        } else {
+                            Link {
+                                to: Route::UserProfile { username: collection_contents.owner_username.clone() },
+                                max_width: "100%",
+                                overflow_wrap: "anywhere",
+                                "@{collection_contents.owner_username}"
+                            }
                         }
                         for crumb in &collection_contents.breadcrumbs {
                             span { aria_hidden: "true", flex_shrink: "0", "/" }
@@ -253,26 +362,81 @@ pub fn CollectionDetail(id: String) -> Element {
                         }
                     }
                     PageHeader { title: collection_contents.collection.name.clone(), action: rsx! {
-                        div { display: "flex", gap: "var(--space-sm)",
-                            a { href: "{new_child_url}", class: "btn btn-secondary touch-target", "New subcollection" }
-                            Link { to: Route::CollectionEdit { id: collection_id.clone() }, class: "btn btn-secondary touch-target", "Edit" }
-                            span {
-                                id: "delete-collection-trigger",
-                                Button { variant: ButtonVariant::Danger, disabled: deleting(), onclick: move |_| {
-                                    delete_confirmation_input.set(String::new());
-                                    delete_error.set(None);
-                                    delete_modal_open.set(true);
-                                }, "Delete" }
+                        div { display: "flex", flex_wrap: "wrap", gap: "var(--space-sm)",
+                            if can_edit {
+                                a { href: "{new_child_url}", class: "btn btn-secondary touch-target", "New subcollection" }
+                                Link { to: Route::CollectionEdit { id: collection_id.clone() }, class: "btn btn-secondary touch-target", "Edit" }
+                                span {
+                                    id: "delete-collection-trigger",
+                                    Button { variant: ButtonVariant::Danger, disabled: deleting(), onclick: move |_| {
+                                        delete_confirmation_input.set(String::new());
+                                        delete_error.set(None);
+                                        delete_modal_open.set(true);
+                                    }, "Delete" }
+                                }
+                            }
+                            if can_edit && collection_contents.collection.visibility != CollectionVisibility::Private {
+                                Button {
+                                    variant: ButtonVariant::Secondary,
+                                    onclick: {
+                                        let url = format!("/collections/{collection_id}");
+                                        move |_| {
+                                            link_status.set(None);
+                                            let url = url.clone();
+                                            spawn(async move {
+                                                link_status.set(Some(copy_collection_link(url).await));
+                                            });
+                                        }
+                                    },
+                                    "Copy link"
+                                }
+                                Button {
+                                    variant: ButtonVariant::Secondary,
+                                    onclick: {
+                                        let title = collection_name.clone();
+                                        let url = format!("/collections/{collection_id}");
+                                        move |_| {
+                                            link_status.set(None);
+                                            let title = title.clone();
+                                            let url = url.clone();
+                                            spawn(async move {
+                                                link_status.set(Some(share_collection_link(title, url).await));
+                                            });
+                                        }
+                                    },
+                                    "Share"
+                                }
                             }
                         }
                     } }
+                    div {
+                        display: "flex",
+                        flex_wrap: "wrap",
+                        align_items: "center",
+                        gap: "var(--space-sm)",
+                        margin_bottom: "var(--space-md)",
+                        CollectionVisibilityBadge { visibility: collection_contents.collection.visibility }
+                        span { color: "var(--text-secondary)", "By @{collection_contents.owner_username}" }
+                    }
                     if let Some(description) = &collection_contents.collection.description { p { color: "var(--text-secondary)", margin_bottom: "var(--space-lg)", "{description}" } }
-                    if let Some(error) = delete_error() { p { role: "alert", color: "var(--error)", "{error}" } }
-                    if let Some(error) = reorder_error() {
-                        p {
-                            role: "alert",
-                            color: "var(--error)",
-                            "Could not save the new order. The collection was reloaded: {error}"
+                    if can_edit {
+                        if let Some(error) = delete_error() { p { role: "alert", color: "var(--error)", "{error}" } }
+                    }
+                    if can_edit {
+                        if let Some(status) = link_status() {
+                            match status {
+                                Ok(message) => rsx! { p { role: "status", aria_live: "polite", color: "var(--success)", "{message}" } },
+                                Err(error) => rsx! { p { role: "alert", aria_live: "assertive", color: "var(--error)", "Collection link action failed: {error}" } },
+                            }
+                        }
+                    }
+                    if can_edit {
+                        if let Some(error) = reorder_error() {
+                            p {
+                                role: "alert",
+                                color: "var(--error)",
+                                "Could not save the new order. The collection was reloaded: {error}"
+                            }
                         }
                     }
                     if !displayed_children.is_empty() {
@@ -291,60 +455,66 @@ pub fn CollectionDetail(id: String) -> Element {
                                         text_decoration: "none",
                                         "📁  {child.name}"
                                     }
-                                    ReorderHandle {
-                                        current_index: child_index,
-                                        item_count: displayed_children.len(),
-                                        item_label: format!("folder {}", child.name),
-                                        disabled: folder_controls_disabled,
-                                        on_reorder: {
-                                            let collection_id = collection_id.clone();
-                                            let displayed_children = displayed_children.clone();
-                                            move |target_index| {
-                                                if folder_controls_disabled {
-                                                    return;
-                                                }
-                                                let mut reordered_children = displayed_children.clone();
-                                                reordered_children.swap(child_index, target_index);
-                                                let ordered_collection_ids = reordered_children
-                                                    .iter()
-                                                    .map(|child| child.id.to_string())
-                                                    .collect::<Vec<_>>();
-                                                child_order_override.set(Some(reordered_children));
-                                                folder_save_in_flight.set(true);
-                                                reorder_error.set(None);
-                                                let parent_collection_id = Some(collection_id.clone());
-                                                spawn(async move {
-                                                    match reorder_child_collections(
-                                                        parent_collection_id,
-                                                        ordered_collection_ids,
-                                                    )
-                                                    .await
-                                                    {
-                                                        Ok(()) => folder_save_in_flight.set(false),
-                                                        Err(error) => {
-                                                            folder_save_in_flight.set(false);
-                                                            child_order_override.set(None);
-                                                            recipe_order_override.set(None);
-                                                            additional_recipes.set(Vec::new());
-                                                            reorder_error.set(Some(error.to_string()));
-                                                            contents.restart();
-                                                        }
+                                    if can_edit {
+                                        ReorderHandle {
+                                            current_index: child_index,
+                                            item_count: displayed_children.len(),
+                                            item_label: format!("folder {}", child.name),
+                                            disabled: folder_controls_disabled,
+                                            on_reorder: {
+                                                let collection_id = collection_id.clone();
+                                                let displayed_children = displayed_children.clone();
+                                                move |target_index| {
+                                                    if folder_controls_disabled {
+                                                        return;
                                                     }
-                                                });
-                                            }
-                                        },
+                                                    let mut reordered_children = displayed_children.clone();
+                                                    reordered_children.swap(child_index, target_index);
+                                                    let ordered_collection_ids = reordered_children
+                                                        .iter()
+                                                        .map(|child| child.id.to_string())
+                                                        .collect::<Vec<_>>();
+                                                    child_order_override.set(Some(reordered_children));
+                                                    folder_save_in_flight.set(true);
+                                                    reorder_error.set(None);
+                                                    let parent_collection_id = Some(collection_id.clone());
+                                                    spawn(async move {
+                                                        match reorder_child_collections(
+                                                            parent_collection_id,
+                                                            ordered_collection_ids,
+                                                        )
+                                                        .await
+                                                        {
+                                                            Ok(()) => folder_save_in_flight.set(false),
+                                                            Err(error) => {
+                                                                folder_save_in_flight.set(false);
+                                                                child_order_override.set(None);
+                                                                recipe_order_override.set(None);
+                                                                additional_recipes.set(Vec::new());
+                                                                reorder_error.set(Some(error.to_string()));
+                                                                contents.restart();
+                                                            }
+                                                        }
+                                                    });
+                                                }
+                                            },
+                                        }
                                     }
                                 }
                             }
                         }
-                        if folder_save_in_flight() {
+                        if can_edit && folder_save_in_flight() {
                             p { role: "status", color: "var(--text-secondary)", "Saving folder order…" }
                         }
                     }
                     h2 { "Recipes ({collection_contents.recipes.total_count})" }
                     if collection_contents.recipes.recipes.is_empty() && collection_contents.child_collections.is_empty() {
-                        EmptyState { icon: rsx! { "📂" }, title: "This collection is empty", description: "Add recipes or create a subcollection to start organizing.",
-                            action: rsx! { Link { to: Route::Dashboard {}, class: "btn btn-primary touch-target", "Add recipes" } }
+                        if can_edit {
+                            EmptyState { icon: rsx! { "📂" }, title: "This collection is empty", description: "Add recipes or create a subcollection to start organizing.",
+                                action: rsx! { Link { to: Route::Dashboard {}, class: "btn btn-primary touch-target", "Add recipes" } }
+                            }
+                        } else {
+                            EmptyState { icon: rsx! { "📂" }, title: "Nothing shared here yet", description: "This collection does not currently contain any recipes or subcollections you can view." }
                         }
                     } else if collection_contents.recipes.recipes.is_empty() { p { color: "var(--text-secondary)", "No recipes directly in this collection." } }
                     else { div { class: "recipe-grid",
@@ -362,7 +532,7 @@ pub fn CollectionDetail(id: String) -> Element {
                                         flex_direction: "column",
                                         gap: "var(--space-sm)",
                                         RecipeCard { recipe }
-                                        if auth.is_authenticated {
+                                        if collection_contents.can_edit {
                                             ReorderHandle {
                                                 current_index: recipe_index,
                                                 item_count: displayed_recipes.len(),
@@ -479,29 +649,33 @@ pub fn CollectionDetail(id: String) -> Element {
                             }
                         }
                     } }
-                    if !complete_recipe_list && collection_contents.recipes.total_count > 1 {
-                        p {
-                            color: "var(--text-secondary)",
-                            "Load all recipes to enable reordering."
+                    if collection_contents.can_edit {
+                        if !complete_recipe_list && collection_contents.recipes.total_count > 1 {
+                            p {
+                                color: "var(--text-secondary)",
+                                "Load all recipes to enable reordering."
+                            }
+                        } else if recipe_reorder_pending() {
+                            p { role: "status", color: "var(--text-secondary)", "Saving recipe order…" }
                         }
-                    } else if recipe_reorder_pending() {
-                        p { role: "status", color: "var(--text-secondary)", "Saving recipe order…" }
-                    }
-                    if let Some(error) = removal_error() {
-                        p {
-                            role: "alert",
-                            color: "var(--error)",
-                            "Could not remove recipe from this collection: {error}"
+                        if let Some(error) = removal_error() {
+                            p {
+                                role: "alert",
+                                color: "var(--error)",
+                                "Could not remove recipe from this collection: {error}"
+                            }
                         }
                     }
                     if let Some(error) = recipe_page_error() { p { role: "alert", color: "var(--error)", "Could not load more recipes: {error}" } }
                     if let Some((offset, limit)) = next_recipe_page_request(collection_contents.recipes.recipes.len() + additional_recipes().len(), collection_contents.recipes.total_count) {
-                        Button { variant: ButtonVariant::Secondary, disabled: membership_controls_disabled, onclick: move |_| {
-                            if membership_mutation_controls_disabled(loading_more(), removing_recipes.read().len(), contents.pending())
-                                || folder_save_in_flight()
-                                || recipe_reorder_pending()
-                                || recipe_save_in_flight()
-                            {
+                        Button { variant: ButtonVariant::Secondary, disabled: pagination_disabled, onclick: move |_| {
+                            if loading_more()
+                                || contents.pending()
+                                || (can_edit
+                                    && (folder_save_in_flight()
+                                        || recipe_reorder_pending()
+                                        || recipe_save_in_flight()
+                                        || !removing_recipes.read().is_empty())) {
                                 return;
                             }
                             loading_more.set(true); recipe_page_error.set(None); let id = collection_id.clone();
@@ -551,7 +725,7 @@ pub fn CollectionDetail(id: String) -> Element {
                             });
                         }, if loading_more() { "Loading…" } else { "Load more" } }
                     }
-                    if delete_modal_open() {
+                    if collection_contents.can_edit && delete_modal_open() {
                         div {
                             class: "modal-overlay",
                             onclick: move |_| {
@@ -679,17 +853,38 @@ pub fn CollectionDetail(id: String) -> Element {
                 }
             }
         }
-    } } }
+    } }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
         can_reorder_complete_recipe_list, collection_delete_confirmation_matches,
-        collection_delete_confirmation_phrase, collection_recipe_page_is_stale,
-        membership_mutation_controls_disabled, next_recipe_page_request,
-        should_persist_reorder_generation, RECIPE_REORDER_DEBOUNCE_MS, RECURSIVE_DELETE_WARNING,
+        collection_delete_confirmation_phrase, collection_load_error_copy,
+        collection_recipe_page_is_stale, membership_mutation_controls_disabled,
+        next_recipe_page_request, should_persist_reorder_generation, RECIPE_REORDER_DEBOUNCE_MS,
+        RECURSIVE_DELETE_WARNING,
     };
+    use dioxus::prelude::ServerFnError;
+
+    #[test]
+    fn collection_access_failures_do_not_reveal_authentication_or_existence() {
+        let unauthenticated = ServerFnError::new("Not authenticated");
+        let missing = ServerFnError::new(
+            "error running server function: Collection not found (details: None)",
+        );
+
+        let unauthenticated_copy = collection_load_error_copy(&unauthenticated);
+        let missing_copy = collection_load_error_copy(&missing);
+
+        assert_eq!(unauthenticated_copy, missing_copy);
+        assert_eq!(unauthenticated_copy.0, "Collection not found");
+        assert_eq!(
+            unauthenticated_copy.1,
+            "This collection could not be found."
+        );
+        assert!(!unauthenticated_copy.1.contains("server function"));
+    }
 
     #[test]
     fn recipe_pagination_requests_every_remaining_page() {
@@ -813,5 +1008,33 @@ mod tests {
         assert!(source.contains("aria_label: \"Breadcrumbs\""));
         assert!(source.contains("flex_wrap: \"wrap\""));
         assert!(source.contains("overflow_wrap: \"anywhere\""));
+    }
+
+    #[test]
+    fn shared_collection_detail_is_public_and_owner_controls_are_capability_gated() {
+        let source = include_str!("collection_detail.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        let link_api_source = source
+            .split("fn browser_api_error")
+            .nth(1)
+            .unwrap()
+            .split("#[component]")
+            .next()
+            .unwrap();
+        assert!(!source.contains("AuthRequired"));
+        assert!(!source.contains("if auth.is_authenticated"));
+        assert!(source.contains("collection_contents.can_edit"));
+        assert!(source.contains("CollectionVisibilityBadge"));
+        assert!(source.contains("copy_collection_link"));
+        assert!(source.contains("\"Copy link\""));
+        assert!(source.contains("share_collection_link"));
+        assert!(link_api_source.contains("web_sys::ShareData"));
+        assert!(link_api_source.contains("navigator.share_with_data"));
+        assert!(link_api_source.contains("navigator.clipboard().write_text"));
+        assert!(!link_api_source.contains("document::eval"));
+        assert!(!link_api_source.contains("navigator.share({"));
+        assert!(!link_api_source.contains("navigator.clipboard.writeText"));
     }
 }
