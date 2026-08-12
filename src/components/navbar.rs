@@ -148,6 +148,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
                 div { class: "navbar-links",
                     Link { to: Route::Home {}, class: "navbar-link", "Home" }
                     Link { to: Route::Dashboard {}, class: "navbar-link", "Dashboard" }
+                    Link { to: Route::Search { query: Default::default() }, class: "navbar-link", "Search" }
                     Link { to: Route::Explore {}, class: "navbar-link", "Explore" }
                     Link { to: Route::RecipeNew {}, class: "navbar-link", "New Recipe" }
                 }
@@ -273,6 +274,12 @@ pub fn Navbar(theme: UseTheme) -> Element {
                             "Dashboard"
                         }
                         Link {
+                            to: Route::Search { query: Default::default() },
+                            class: "navbar-drawer-link",
+                            onclick: move |_| menu_open.set(false),
+                            "Search"
+                        }
+                        Link {
                             to: Route::Explore {},
                             class: "navbar-drawer-link",
                             onclick: move |_| menu_open.set(false),
@@ -356,6 +363,12 @@ pub fn Navbar(theme: UseTheme) -> Element {
                             class: "sidebar-link",
                             onclick: move |_| sidebar_open.set(false),
                             "Dashboard"
+                        }
+                        Link {
+                            to: Route::Search { query: Default::default() },
+                            class: "sidebar-link",
+                            onclick: move |_| sidebar_open.set(false),
+                            "Search"
                         }
                         Link {
                             to: Route::Explore {},

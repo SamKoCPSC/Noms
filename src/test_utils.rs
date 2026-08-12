@@ -797,6 +797,15 @@ mod search_integration_tests {
         .await
         .expect("failed to insert search smoke-test user");
 
+        let exact_username_exists = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM users WHERE username COLLATE \"C\" = $1)",
+        )
+        .bind(&username)
+        .fetch_one(&pool)
+        .await
+        .expect("exact username lookup should remain unambiguous with ParadeDB indexes");
+        assert!(exact_username_exists);
+
         let ingredients = serde_json::json!([
             {"name": "saffron", "notes": "golden thread"}
         ]);

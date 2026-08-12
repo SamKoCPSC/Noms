@@ -12,6 +12,7 @@ mod db;
 mod middleware;
 mod pages;
 mod search;
+mod search_url;
 #[cfg(feature = "server")]
 mod storage;
 #[cfg(all(feature = "server", test))]
@@ -28,7 +29,7 @@ use components::{AppLayout, ErrorFallback};
 use pages::{
     CollectionDetail, CollectionEdit, CollectionList, CollectionNew, Dashboard, Explore, Home,
     Login, NotFound, RecipeDetail, RecipeDraftEdit, RecipeEdit, RecipeNew, RecipeVersionDetail,
-    RecipeVersionGraph, SettingsAccounts, SettingsProfile, UserProfile,
+    RecipeVersionGraph, Search, SettingsAccounts, SettingsProfile, UserProfile,
 };
 
 /// Application routes.
@@ -64,6 +65,8 @@ pub enum Route {
         CollectionEdit { id: String },
         #[route("/explore")]
         Explore {},
+        #[route("/search?:..query")]
+        Search { query: crate::search_url::SearchRouteQuery },
         #[route("/u/:username")]
         UserProfile { username: String },
         #[redirect("/settings", || Route::SettingsProfile {})]

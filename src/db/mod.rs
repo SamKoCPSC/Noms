@@ -2129,11 +2129,14 @@ pub async fn username_exists(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     username: &str,
 ) -> Result<bool, DbError> {
-    let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)")
-        .bind(username)
-        .fetch_one(executor)
-        .await
-        .map_err(DbError::Query)?;
+    // A stable collation keeps identity lookup on PostgreSQL's native text
+    // equality path instead of matching either ParadeDB expression index.
+    let exists: bool =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE username COLLATE \"C\" = $1)")
+            .bind(username)
+            .fetch_one(executor)
+            .await
+            .map_err(DbError::Query)?;
     Ok(exists)
 }
 
@@ -2290,13 +2293,15 @@ pub async fn update_username(
     new_username: &str,
 ) -> Result<User, DbError> {
     // Check uniqueness (exclude the current user's own username)
-    let exists: bool =
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1 AND id != $2)")
-            .bind(new_username)
-            .bind(user_id)
-            .fetch_one(executor.clone())
-            .await
-            .map_err(DbError::Query)?;
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM users \
+         WHERE username COLLATE \"C\" = $1 AND id != $2)",
+    )
+    .bind(new_username)
+    .bind(user_id)
+    .fetch_one(executor.clone())
+    .await
+    .map_err(DbError::Query)?;
 
     if exists {
         return Err(DbError::UsernameTaken);
@@ -2648,12 +2653,11 @@ pub async fn get_user_by_username(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     username: &str,
 ) -> Result<Option<User>, DbError> {
-    sqlx::query_as!(
-        User,
+    sqlx::query_as::<_, User>(
         "SELECT id, username, display_name, email, avatar_url, bio, created_at, updated_at \
-         FROM users WHERE username = $1",
-        username,
+         FROM users WHERE username COLLATE \"C\" = $1",
     )
+    .bind(username)
     .fetch_optional(executor)
     .await
     .map_err(DbError::Query)

@@ -13,6 +13,7 @@ mod recipe_edit;
 mod recipe_editor_form;
 mod recipe_new;
 mod recipe_version_graph;
+pub(crate) mod search;
 mod settings;
 mod user_profile;
 
@@ -29,6 +30,7 @@ pub use recipe_detail::{RecipeDetail, RecipeVersionDetail};
 pub use recipe_edit::{RecipeDraftEdit, RecipeEdit};
 pub use recipe_new::RecipeNew;
 pub use recipe_version_graph::RecipeVersionGraph;
+pub use search::Search;
 pub use settings::SettingsAccounts;
 pub use settings::SettingsProfile;
 pub use user_profile::UserProfile;

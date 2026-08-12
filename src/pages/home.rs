@@ -1,10 +1,13 @@
 use dioxus::prelude::*;
 
+use crate::pages::search::landing_search_route;
 use crate::Route;
 
 /// Landing page with app branding.
 #[component]
 pub fn Home() -> Element {
+    let mut search_text = use_signal(String::new);
+
     rsx! {
         div { class: "container",
             div {
@@ -27,6 +30,26 @@ pub fn Home() -> Element {
                     margin_bottom: "var(--space-xl)",
                     max_width: "500px",
                     "Your personal recipe library. Save, organize, and discover delicious meals."
+                }
+                form {
+                    class: "landing-search",
+                    role: "search",
+                    onsubmit: move |event| {
+                        event.prevent_default();
+                        if let Some(route) = landing_search_route(&search_text()) {
+                            navigator().push(route);
+                        }
+                    },
+                    label { r#for: "landing-search-query", class: "sr-only", "Search Noms" }
+                    input {
+                        id: "landing-search-query",
+                        r#type: "search",
+                        value: search_text(),
+                        placeholder: "Search recipes, collections, and cooks",
+                        autocomplete: "off",
+                        oninput: move |event| search_text.set(event.value()),
+                    }
+                    button { class: "btn btn-primary", r#type: "submit", "Search" }
                 }
                 div {
                     display: "flex",
