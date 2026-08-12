@@ -110,7 +110,9 @@ pub async fn upload_image(
     let thumb_key = format!("recipes/{}/{}_thumb.webp", user_id, unique_id);
 
     // Store both variants via global storage client
-    let storage = crate::storage::get_storage_client();
+    let Some(storage) = crate::storage::try_get_storage_client() else {
+        return Err(ServerFnError::new("Image storage is unavailable"));
+    };
     let full_url = storage
         .put_object(&full_key, &full_bytes, "image/webp")
         .await
@@ -148,7 +150,9 @@ pub async fn delete_image(full_url: String) -> Result<(), ServerFnError> {
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
 
-    let storage = crate::storage::get_storage_client();
+    let Some(storage) = crate::storage::try_get_storage_client() else {
+        return Err(ServerFnError::new("Image storage is unavailable"));
+    };
     let public_url = storage.public_url().trim_end_matches('/');
 
     // Extract storage key from full URL: strip public_url prefix
@@ -309,7 +313,14 @@ pub async fn upload_handler(
     let thumb_key = format!("recipes/{}/{}_thumb.webp", user_id, unique_id);
 
     // Store both variants via global storage client
-    let storage = crate::storage::get_storage_client();
+    let Some(storage) = crate::storage::try_get_storage_client() else {
+        error!("Storage client is unavailable for image upload");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to upload file".to_string(),
+        )
+            .into_response();
+    };
     let full_url = match storage
         .put_object(&full_key, &full_bytes, "image/webp")
         .await

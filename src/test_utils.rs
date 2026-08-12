@@ -798,7 +798,7 @@ mod search_integration_tests {
         .expect("failed to insert search smoke-test user");
 
         let exact_username_exists = sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(SELECT 1 FROM users WHERE username COLLATE \"C\" = $1)",
+            "SELECT EXISTS(SELECT 1 FROM users WHERE (username || '') = $1)",
         )
         .bind(&username)
         .fetch_one(&pool)

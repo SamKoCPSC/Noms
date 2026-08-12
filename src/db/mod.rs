@@ -2129,10 +2129,11 @@ pub async fn username_exists(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     username: &str,
 ) -> Result<bool, DbError> {
-    // A stable collation keeps identity lookup on PostgreSQL's native text
-    // equality path instead of matching either ParadeDB expression index.
+    // Concatenating the empty string keeps identity lookup on PostgreSQL's
+    // native text equality path instead of matching either ParadeDB expression
+    // index. This remains portable to the plain PostgreSQL unit-test database.
     let exists: bool =
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE username COLLATE \"C\" = $1)")
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE (username || '') = $1)")
             .bind(username)
             .fetch_one(executor)
             .await
@@ -2295,7 +2296,7 @@ pub async fn update_username(
     // Check uniqueness (exclude the current user's own username)
     let exists: bool = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM users \
-         WHERE username COLLATE \"C\" = $1 AND id != $2)",
+         WHERE (username || '') = $1 AND id != $2)",
     )
     .bind(new_username)
     .bind(user_id)
@@ -2655,7 +2656,7 @@ pub async fn get_user_by_username(
 ) -> Result<Option<User>, DbError> {
     sqlx::query_as::<_, User>(
         "SELECT id, username, display_name, email, avatar_url, bio, created_at, updated_at \
-         FROM users WHERE username COLLATE \"C\" = $1",
+         FROM users WHERE (username || '') = $1",
     )
     .bind(username)
     .fetch_optional(executor)

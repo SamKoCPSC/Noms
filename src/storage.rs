@@ -259,6 +259,15 @@ pub fn get_storage_client() -> StorageClient {
         .clone()
 }
 
+/// Return the global client when storage has been initialized.
+///
+/// Request handlers use this non-panicking accessor so a startup or test
+/// configuration error becomes a controlled response instead of aborting the
+/// request task.
+pub fn try_get_storage_client() -> Option<StorageClient> {
+    STORAGE_CLIENT.get().cloned()
+}
+
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
