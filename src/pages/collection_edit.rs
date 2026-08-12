@@ -8,11 +8,12 @@ use crate::api::collection::{
     update_collection, update_collection_visibility,
 };
 use crate::components::base::{
-    validate_collection_form, Card, CollectionForm, CollectionVisibilityField, LoadingSpinner,
-    PageHeader,
+    complete_deferred_upload, single_gallery_image, validate_collection_form, Card, CollectionForm,
+    CollectionVisibilityField, DeferredUploadCompletion, ImageUpload, LoadingSpinner, PageHeader,
+    UploadOutcome,
 };
 use crate::components::AuthRequired;
-use crate::types::{CollectionSummary, CollectionVisibility};
+use crate::types::{CollectionSummary, CollectionVisibility, RecipeImage};
 use crate::Route;
 
 fn invalid_move_destinations(
@@ -44,6 +45,16 @@ fn save_failure_message(details_saved: bool, problem: &str) -> String {
     }
 }
 
+#[derive(Clone)]
+struct PendingCollectionEdit {
+    name: String,
+    description: Option<String>,
+    desired_parent: Option<String>,
+    current_parent: Option<String>,
+    desired_visibility: CollectionVisibility,
+    current_visibility: CollectionVisibility,
+}
+
 #[component]
 pub fn CollectionEdit(id: String) -> Element {
     let resource_id = id.clone();
@@ -58,6 +69,11 @@ pub fn CollectionEdit(id: String) -> Element {
     let mut initialized = use_signal(|| false);
     let mut saving = use_signal(|| false);
     let mut error = use_signal(|| None::<String>);
+    let mut images = use_signal(Vec::<RecipeImage>::new);
+    let mut upload_now = use_signal(|| false);
+    let image_busy = use_signal(|| false);
+    let pending_image_count = use_signal(|| 0usize);
+    let mut pending_save = use_signal(|| None::<PendingCollectionEdit>);
     let navigator = use_navigator();
     let preview_id = id.clone();
     let share_preview = use_resource(move || {
@@ -79,6 +95,7 @@ pub fn CollectionEdit(id: String) -> Element {
                     .unwrap_or_default(),
             );
             selected_visibility.set(contents.collection.visibility);
+            images.set(contents.collection.image.clone().into_iter().collect());
             initialized.set(true);
         }
     }
@@ -90,6 +107,50 @@ pub fn CollectionEdit(id: String) -> Element {
             Some((Ok(contents), Ok(collections))) => {
                 let collection_id = contents.collection.id;
                 let excluded = invalid_move_destinations(collection_id, &collections);
+                let on_upload_complete = move |outcome: UploadOutcome| {
+                    spawn(async move {
+                        let pending = match complete_deferred_upload(&mut pending_save.write(), outcome) {
+                            DeferredUploadCompletion::NoPendingSave => return,
+                            DeferredUploadCompletion::Ready(pending) => pending,
+                            DeferredUploadCompletion::Aborted(problem) => {
+                                error.set(Some(problem)); saving.set(false); return;
+                            }
+                            DeferredUploadCompletion::Failed => {
+                                error.set(Some("The cover image failed to upload. Retry or remove it, then save again.".to_string()));
+                                saving.set(false); return;
+                            }
+                        };
+                        let update = update_collection(
+                            collection_id.to_string(),
+                            pending.name,
+                            pending.description,
+                            single_gallery_image(&images()),
+                        ).await;
+                        let updated = match update {
+                            Ok(updated) => updated,
+                            Err(problem) => { error.set(Some(save_failure_message(false, &problem.to_string()))); saving.set(false); return; }
+                        };
+                        name.set(updated.name);
+                        description.set(updated.description.unwrap_or_default());
+                        if pending.desired_parent != pending.current_parent {
+                            if let Err(problem) = move_collection(collection_id.to_string(), pending.desired_parent).await {
+                                selected_parent.set(pending.current_parent.unwrap_or_default());
+                                error.set(Some(save_failure_message(true, &problem.to_string())));
+                                saving.set(false); return;
+                            }
+                        }
+                        if pending.desired_visibility != pending.current_visibility {
+                            match update_collection_visibility(collection_id.to_string(), pending.desired_visibility).await {
+                                Ok(updated) => selected_visibility.set(updated.visibility),
+                                Err(problem) => {
+                                    error.set(Some(format!("Collection details and location were saved, but the visibility update failed: {problem}")));
+                                    saving.set(false); return;
+                                }
+                            }
+                        }
+                        navigator.push(Route::CollectionDetail { id: collection_id.to_string() });
+                    });
+                };
                 rsx! {
                     PageHeader { title: "Edit collection" }
                     Card { CollectionForm { name, description, submit_label: "Save Changes", submitting: saving(), error: error(),
@@ -108,6 +169,19 @@ pub fn CollectionEdit(id: String) -> Element {
                                 disabled: saving(),
                                 onchange: move |visibility| selected_visibility.set(visibility),
                             }
+                            div { display: "flex", flex_direction: "column", gap: "var(--space-sm)",
+                                span { font_weight: "600", "Collection cover image" }
+                                ImageUpload {
+                                    images,
+                                    upload_now,
+                                    busy: image_busy,
+                                    pending_count: pending_image_count,
+                                    max_images: 1,
+                                    on_remove_existing: move |url: String| images.write().retain(|image| image.url != url),
+                                    on_upload_complete,
+                                }
+                                span { font_size: "12px", color: "var(--text-tertiary)", "Optional · uploaded when you save" }
+                            }
                             if selected_visibility() != CollectionVisibility::Private {
                                 match share_preview.read().as_ref() {
                                     Some(Ok(preview)) if preview.hidden_recipe_count > 0 => rsx! {
@@ -125,47 +199,22 @@ pub fn CollectionEdit(id: String) -> Element {
                         onsubmit: move |_| {
                             let validated = validate_collection_form(&name(), &description());
                             let Ok((clean_name, clean_description)) = validated else { error.set(Some(validated.unwrap_err().to_string())); return; };
+                            if image_busy() { error.set(Some("The cover image is still processing.".to_string())); return; }
                             saving.set(true); error.set(None);
                             let parent_value = selected_parent();
                             let desired_parent = (!parent_value.is_empty()).then_some(parent_value);
                             let current_parent = contents.collection.parent_collection_id.map(|id| id.to_string());
                             let desired_visibility = selected_visibility();
                             let current_visibility = contents.collection.visibility;
-                            spawn(async move {
-                                let update = update_collection(collection_id.to_string(), clean_name, clean_description).await;
-                                let updated = match update {
-                                    Ok(updated) => updated,
-                                    Err(problem) => { error.set(Some(save_failure_message(false, &problem.to_string()))); saving.set(false); return; }
-                                };
-                                name.set(updated.name);
-                                description.set(updated.description.unwrap_or_default());
-                                if desired_parent != current_parent {
-                                    if let Err(problem) = move_collection(collection_id.to_string(), desired_parent).await {
-                                        selected_parent.set(current_parent.unwrap_or_default());
-                                        error.set(Some(save_failure_message(true, &problem.to_string())));
-                                        saving.set(false);
-                                        return;
-                                    }
-                                }
-                                if desired_visibility != current_visibility {
-                                    match update_collection_visibility(
-                                        collection_id.to_string(),
-                                        desired_visibility,
-                                    )
-                                    .await
-                                    {
-                                        Ok(updated) => selected_visibility.set(updated.visibility),
-                                        Err(problem) => {
-                                            error.set(Some(format!(
-                                                "Collection details and location were saved, but the visibility update failed: {problem}"
-                                            )));
-                                            saving.set(false);
-                                            return;
-                                        }
-                                    }
-                                }
-                                navigator.push(Route::CollectionDetail { id: collection_id.to_string() });
-                            });
+                            pending_save.set(Some(PendingCollectionEdit {
+                                name: clean_name,
+                                description: clean_description,
+                                desired_parent,
+                                current_parent,
+                                desired_visibility,
+                                current_visibility,
+                            }));
+                            upload_now.set(true);
                         }
                     } }
                 }
@@ -198,5 +247,10 @@ mod tests {
         assert!(source.contains("get_collection_share_preview"));
         assert!(source.contains("hidden_recipe_count"));
         assert!(source.contains("update_collection_visibility"));
+        assert!(source.contains("max_images: 1"));
+        assert!(source.contains("on_remove_existing"));
+        assert!(source.contains("pending_save.set"));
+        assert!(source.contains("upload_now.set(true)"));
+        assert!(source.contains("single_gallery_image(&images())"));
     }
 }

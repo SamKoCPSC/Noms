@@ -1,7 +1,9 @@
 use dioxus::prelude::*;
 
 use crate::api::collection::list_root_collections;
-use crate::components::base::{CollectionVisibilityBadge, EmptyState, LoadingSpinner, PageHeader};
+use crate::components::base::{
+    CollectionCover, CollectionVisibilityBadge, EmptyState, LoadingSpinner, PageHeader,
+};
 use crate::components::AuthRequired;
 use crate::Route;
 
@@ -26,8 +28,11 @@ pub fn CollectionList() -> Element {
                     Some(Ok(items)) => rsx! {
                         div { display: "grid", grid_template_columns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "var(--space-lg)",
                             for collection in items {
-                                Link { to: Route::CollectionDetail { id: collection.id.to_string() }, class: "neumo-card", padding: "var(--space-lg)", text_decoration: "none",
-                                    div { font_size: "32px", "📁" }
+                                Link { to: Route::CollectionDetail { id: collection.id.to_string() }, class: "neumo-card", padding: "var(--space-lg)", text_decoration: "none", display: "flex", flex_direction: "column", gap: "var(--space-sm)",
+                                    CollectionCover {
+                                        image: collection.image.clone(),
+                                        alt: format!("{} collection cover", collection.name),
+                                    }
                                     CollectionVisibilityBadge { visibility: collection.visibility }
                                     h2 { color: "var(--text-primary)", "{collection.name}" }
                                     if let Some(description) = &collection.description { p { color: "var(--text-secondary)", "{description}" } }

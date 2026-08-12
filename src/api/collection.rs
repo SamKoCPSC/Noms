@@ -18,6 +18,7 @@ enum CollectionApiError {
     InvalidName,
     NameTooLong,
     DescriptionTooLong,
+    InvalidImage,
     CollectionNotFound,
     ParentNotFound,
     NameTaken,
@@ -39,6 +40,7 @@ impl std::fmt::Display for CollectionApiError {
             Self::InvalidName => "Collection name is required",
             Self::NameTooLong => "Collection name must be 100 characters or fewer",
             Self::DescriptionTooLong => "Collection description must be 500 characters or fewer",
+            Self::InvalidImage => "Collection image is invalid",
             Self::CollectionNotFound => "Collection not found",
             Self::ParentNotFound => "Parent collection not found",
             Self::NameTaken => "A sibling collection already uses this name",
@@ -127,6 +129,57 @@ fn normalize_collection_fields(
     }
 
     Ok((name, description))
+}
+
+#[cfg(feature = "server")]
+fn validate_collection_image_urls(
+    image: Option<&crate::types::RecipeImage>,
+    user_id: Uuid,
+    public_url: &str,
+) -> Result<(), CollectionApiError> {
+    let Some(image) = image else {
+        return Ok(());
+    };
+    let public_url = public_url.trim_end_matches('/');
+    let owned_upload_id = |url: &str, variant: &str| {
+        let key = url
+            .strip_prefix(public_url)
+            .and_then(|suffix| suffix.strip_prefix('/'))?;
+        let mut segments = key.split('/');
+        if segments.next()? != "recipes"
+            || segments.next()? != user_id.to_string()
+            || segments.next().is_none()
+            || segments.next().is_some()
+        {
+            return None;
+        }
+        let filename = key.rsplit('/').next()?;
+        let upload_id = filename.strip_suffix(variant)?;
+        Uuid::parse_str(upload_id).ok()
+    };
+
+    let full_id =
+        owned_upload_id(&image.url, "_full.webp").ok_or(CollectionApiError::InvalidImage)?;
+    if let Some(thumb_url) = &image.thumb_url {
+        let thumb_id =
+            owned_upload_id(thumb_url, "_thumb.webp").ok_or(CollectionApiError::InvalidImage)?;
+        if thumb_id != full_id {
+            return Err(CollectionApiError::InvalidImage);
+        }
+    }
+    Ok(())
+}
+
+#[cfg(feature = "server")]
+fn validate_collection_image(
+    image: Option<&crate::types::RecipeImage>,
+    user_id: Uuid,
+) -> Result<(), CollectionApiError> {
+    if image.is_none() {
+        return Ok(());
+    }
+    let storage = crate::storage::get_storage_client();
+    validate_collection_image_urls(image, user_id, storage.public_url())
 }
 
 #[cfg(feature = "server")]
@@ -247,9 +300,11 @@ impl<'pool> CollectionService<'pool> {
         description: Option<String>,
         parent_collection_id: Option<String>,
         visibility: crate::types::CollectionVisibility,
+        image: Option<crate::types::RecipeImage>,
     ) -> Result<crate::types::Collection, CollectionApiError> {
         let (name, description) = normalize_collection_fields(name, description)?;
         let parent_collection_id = parse_optional_collection_id(parent_collection_id)?;
+        validate_collection_image(image.as_ref(), self.user_id)?;
         crate::db::insert_collection(
             self.pool,
             self.user_id,
@@ -257,6 +312,7 @@ impl<'pool> CollectionService<'pool> {
             &name,
             description.as_deref(),
             visibility,
+            image.as_ref(),
         )
         .await
         .map_err(map_db_error)
@@ -373,15 +429,18 @@ impl<'pool> CollectionService<'pool> {
         collection_id: String,
         name: String,
         description: Option<String>,
+        image: Option<crate::types::RecipeImage>,
     ) -> Result<crate::types::Collection, CollectionApiError> {
         let collection_id = parse_collection_id(&collection_id)?;
         let (name, description) = normalize_collection_fields(name, description)?;
+        validate_collection_image(image.as_ref(), self.user_id)?;
         crate::db::update_collection(
             self.pool,
             collection_id,
             self.user_id,
             &name,
             description.as_deref(),
+            image.as_ref(),
         )
         .await
         .map_err(map_db_error)
@@ -478,11 +537,12 @@ pub async fn create_collection(
     description: Option<String>,
     parent_collection_id: Option<String>,
     visibility: crate::types::CollectionVisibility,
+    image: Option<crate::types::RecipeImage>,
 ) -> Result<crate::types::Collection, ServerFnError> {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
     let pool = crate::db::get_pool();
     CollectionService::new(&pool, user_id)
-        .create(name, description, parent_collection_id, visibility)
+        .create(name, description, parent_collection_id, visibility, image)
         .await
         .map_err(server_error)
 }
@@ -597,11 +657,12 @@ pub async fn update_collection(
     collection_id: String,
     name: String,
     description: Option<String>,
+    image: Option<crate::types::RecipeImage>,
 ) -> Result<crate::types::Collection, ServerFnError> {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
     let pool = crate::db::get_pool();
     CollectionService::new(&pool, user_id)
-        .update(collection_id, name, description)
+        .update(collection_id, name, description, image)
         .await
         .map_err(server_error)
 }
@@ -734,6 +795,80 @@ mod tests {
         )));
     }
 
+    #[test]
+    fn collection_contract_includes_an_optional_cover_image() {
+        let api_source = include_str!("collection.rs");
+        let db_source = include_str!("../db/mod.rs");
+        let type_source = include_str!("../types.rs");
+        let schema_source = include_str!("../../migrations/schema.sql");
+
+        assert!(api_source.contains("image: Option<crate::types::RecipeImage>"));
+        assert!(db_source.contains("image: Option<&RecipeImage>"));
+        assert!(type_source.contains("pub image: Option<RecipeImage>"));
+        assert!(schema_source.contains("image JSONB"));
+    }
+
+    #[test]
+    fn collection_cover_urls_must_belong_to_the_authenticated_user() {
+        let owner_id = Uuid::new_v4();
+        let other_id = Uuid::new_v4();
+        let upload_id = Uuid::new_v4();
+        let public_url = "https://media.example.test/noms-media";
+        let image = crate::types::RecipeImage::new(
+            format!("{public_url}/recipes/{owner_id}/{upload_id}_full.webp"),
+            Some(format!(
+                "{public_url}/recipes/{owner_id}/{upload_id}_thumb.webp"
+            )),
+            crate::types::RecipeImageEdit::default_rect_16x9(),
+        );
+
+        assert_eq!(
+            validate_collection_image_urls(Some(&image), owner_id, public_url),
+            Ok(())
+        );
+        assert_eq!(
+            validate_collection_image_urls(Some(&image), other_id, public_url),
+            Err(CollectionApiError::InvalidImage)
+        );
+
+        let external = crate::types::RecipeImage {
+            url: "https://attacker.example/cover_full.webp".to_string(),
+            ..image.clone()
+        };
+        assert_eq!(
+            validate_collection_image_urls(Some(&external), owner_id, public_url),
+            Err(CollectionApiError::InvalidImage)
+        );
+
+        for path in [
+            format!("{public_url}/recipes/{owner_id}/../{other_id}/{upload_id}_full.webp"),
+            format!("{public_url}/recipes/{owner_id}/%2e%2e/{other_id}/{upload_id}_full.webp"),
+            format!("{public_url}/recipes/{owner_id}/not-a-uuid_full.webp"),
+        ] {
+            let noncanonical = crate::types::RecipeImage {
+                url: path,
+                thumb_url: None,
+                ..image.clone()
+            };
+            assert_eq!(
+                validate_collection_image_urls(Some(&noncanonical), owner_id, public_url),
+                Err(CollectionApiError::InvalidImage)
+            );
+        }
+
+        let mismatched_thumbnail = crate::types::RecipeImage {
+            thumb_url: Some(format!(
+                "{public_url}/recipes/{owner_id}/{}_thumb.webp",
+                Uuid::new_v4()
+            )),
+            ..image
+        };
+        assert_eq!(
+            validate_collection_image_urls(Some(&mismatched_thumbnail), owner_id, public_url),
+            Err(CollectionApiError::InvalidImage)
+        );
+    }
+
     #[tokio::test]
     async fn authentication_and_inputs_return_controlled_errors() {
         assert_eq!(
@@ -745,6 +880,7 @@ mod tests {
             None,
             None,
             crate::types::CollectionVisibility::Private,
+            None,
         )
         .await
         .unwrap_err();
@@ -785,6 +921,7 @@ mod tests {
                 None,
                 None,
                 crate::types::CollectionVisibility::Private,
+                None,
             )
             .await
             .unwrap();
@@ -799,6 +936,7 @@ mod tests {
                 None,
                 None,
                 crate::types::CollectionVisibility::Public,
+                None,
             )
             .await
             .unwrap();
@@ -841,6 +979,7 @@ mod tests {
                 None,
                 None,
                 crate::types::CollectionVisibility::Private,
+                None,
             )
             .await
             .unwrap();
@@ -850,6 +989,7 @@ mod tests {
                 None,
                 None,
                 crate::types::CollectionVisibility::Public,
+                None,
             )
             .await
             .unwrap();
@@ -912,6 +1052,7 @@ mod tests {
                 None,
                 None,
                 crate::types::CollectionVisibility::Private,
+                None,
             )
             .await
             .unwrap();
@@ -946,6 +1087,7 @@ mod tests {
                 None,
                 None,
                 crate::types::CollectionVisibility::Public,
+                None,
             )
             .await
             .unwrap();
@@ -955,6 +1097,7 @@ mod tests {
                 None,
                 None,
                 crate::types::CollectionVisibility::Unlisted,
+                None,
             )
             .await
             .unwrap();
@@ -983,6 +1126,7 @@ mod tests {
                 Some("  Family meals  ".to_string()),
                 None,
                 crate::types::CollectionVisibility::Private,
+                None,
             )
             .await
             .unwrap();
@@ -996,6 +1140,7 @@ mod tests {
                 None,
                 Some(root.id.to_string()),
                 crate::types::CollectionVisibility::Private,
+                None,
             )
             .await
             .unwrap();
@@ -1007,6 +1152,7 @@ mod tests {
                 None,
                 Some(child.id.to_string()),
                 crate::types::CollectionVisibility::Private,
+                None,
             )
             .await
             .unwrap();
@@ -1018,6 +1164,7 @@ mod tests {
                 None,
                 Some(root.id.to_string()),
                 crate::types::CollectionVisibility::Private,
+                None,
             )
             .await
             .unwrap();
@@ -1029,6 +1176,7 @@ mod tests {
                 None,
                 None,
                 crate::types::CollectionVisibility::Private,
+                None,
             )
             .await
             .unwrap();
@@ -1086,6 +1234,7 @@ mod tests {
                     None,
                     None,
                     crate::types::CollectionVisibility::Private,
+                    None,
                 )
                 .await,
             Err(CollectionApiError::NameTaken)
@@ -1096,6 +1245,7 @@ mod tests {
                 None,
                 Some(archive.id.to_string()),
                 crate::types::CollectionVisibility::Private,
+                None,
             )
             .await
             .unwrap();
@@ -1106,6 +1256,7 @@ mod tests {
                 None,
                 None,
                 crate::types::CollectionVisibility::Private,
+                None,
             )
             .await
             .unwrap();
@@ -1119,6 +1270,7 @@ mod tests {
                     None,
                     Some(other_root.id.to_string()),
                     crate::types::CollectionVisibility::Private,
+                    None,
                 )
                 .await,
             Err(CollectionApiError::ParentNotFound)
@@ -1129,7 +1281,7 @@ mod tests {
         );
         assert_eq!(
             other_service
-                .update(root.id.to_string(), "Stolen".to_string(), None)
+                .update(root.id.to_string(), "Stolen".to_string(), None, None)
                 .await,
             Err(CollectionApiError::CollectionNotFound)
         );
@@ -1186,6 +1338,7 @@ mod tests {
                 None,
                 None,
                 crate::types::CollectionVisibility::Private,
+                None,
             )
             .await
             .unwrap();
@@ -1354,6 +1507,7 @@ mod tests {
                         None,
                         None,
                         crate::types::CollectionVisibility::Private,
+                        None,
                     )
                     .await
                     .unwrap()

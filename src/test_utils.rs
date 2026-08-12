@@ -268,6 +268,7 @@ pub async fn apply_test_schema(pool: &PgPool) {
          parent_collection_id UUID,\
          name VARCHAR(100) NOT NULL,\
          description TEXT,\
+         image JSONB CHECK (image IS NULL OR jsonb_typeof(image) = 'object'),\
          visibility VARCHAR(20) NOT NULL DEFAULT 'private'\
              CHECK (visibility IN ('private', 'unlisted', 'public')),\
          sort_order INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),\
@@ -478,6 +479,7 @@ pub async fn insert_test_collection(
         name,
         None,
         crate::types::CollectionVisibility::Private,
+        None,
     )
     .await
     .expect("failed to insert test collection")

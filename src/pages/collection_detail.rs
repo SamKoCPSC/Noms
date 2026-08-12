@@ -9,8 +9,8 @@ use crate::api::collection::{
     reorder_child_collections,
 };
 use crate::components::base::{
-    Button, ButtonVariant, CollectionVisibilityBadge, EmptyState, Input, LoadingSpinner,
-    PageHeader, RecipeCard, ReorderHandle,
+    Button, ButtonVariant, CollectionCover, CollectionVisibilityBadge, EmptyState, Input,
+    LoadingSpinner, PageHeader, RecipeCard, ReorderHandle,
 };
 use crate::types::{CollectionSummary, CollectionVisibility, Recipe};
 use crate::Route;
@@ -409,6 +409,11 @@ pub fn CollectionDetail(id: String) -> Element {
                             }
                         }
                     } }
+                    CollectionCover {
+                        image: collection_contents.collection.image.clone(),
+                        alt: format!("{} collection cover", collection_contents.collection.name),
+                        class: "collection-cover--hero".to_string(),
+                    }
                     div {
                         display: "flex",
                         flex_wrap: "wrap",
@@ -450,6 +455,10 @@ pub fn CollectionDetail(id: String) -> Element {
                                     display: "flex",
                                     flex_direction: "column",
                                     gap: "var(--space-sm)",
+                                    CollectionCover {
+                                        image: child.image.clone(),
+                                        alt: format!("{} collection cover", child.name),
+                                    }
                                     Link {
                                         to: Route::CollectionDetail { id: child.id.to_string() },
                                         text_decoration: "none",

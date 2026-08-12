@@ -9,8 +9,8 @@ use dioxus::prelude::*;
 use crate::api::collection::get_user_public_collections;
 use crate::api::recipe::{get_user_profile, get_user_public_recipes};
 use crate::components::base::{
-    Avatar, AvatarSize, Button, ButtonVariant, CollectionVisibilityBadge, EmptyState,
-    LoadingSpinner, RecipeCard,
+    Avatar, AvatarSize, Button, ButtonVariant, CollectionCover, CollectionVisibilityBadge,
+    EmptyState, LoadingSpinner, RecipeCard,
 };
 use crate::types::{CollectionSummary, Recipe, UserProfile as UserProfileType};
 use crate::Route;
@@ -219,6 +219,10 @@ pub fn UserProfile(username: String) -> Element {
                                 display: "flex",
                                 flex_direction: "column",
                                 gap: "var(--space-sm)",
+                                CollectionCover {
+                                    image: collection.image.clone(),
+                                    alt: format!("{} collection cover", collection.name),
+                                }
                                 CollectionVisibilityBadge { visibility: collection.visibility }
                                 h3 { color: "var(--text-primary)", "{collection.name}" }
                                 if let Some(description) = &collection.description {

@@ -2,11 +2,11 @@
 
 **Issue:** [NOMS-011-recipe-collections.md](../issues/NOMS-011-recipe-collections.md)
 **Created:** 2026-06-10
-**Revised:** 2026-08-03
+**Revised:** 2026-08-11
 **Depends on:** NOMS-008 published recipe model
 **Coordination:** NOMS-010 may be implemented in parallel. NOMS-011 only references published `recipes`; it does not depend on `recipe_versions` or `recipe_drafts`.
 **Approach:** Add private user-owned collections with a self-referential folder tree and ordered recipe membership, then integrate filesystem-like collection navigation into the existing recipe UI. After the private collection baseline is complete, add collection-level `private`, `unlisted`, and `public` visibility without allowing collection visibility to broaden a recipe's own visibility.
-**Scope extension:** Checkpoints 8-11 formally extend the original NOMS-011 private-only scope with collection sharing. They supersede the issue's original “shared/public collections” and “collection-level visibility” out-of-scope entries for this implementation plan.
+**Scope extension:** Checkpoints 8-11 formally extend the original NOMS-011 private-only scope with collection sharing. Checkpoint 12 adds one optional collection cover image. These checkpoints supersede the corresponding sharing, visibility, and cover-image exclusions from the original issue for this implementation plan.
 
 ---
 
@@ -611,6 +611,24 @@ Add a viewer-aware read path while preserving the existing owner-only mutation p
 
 ---
 
+## Checkpoint 12: Optional collection cover image
+
+**Files:** `migrations/schema.sql`, collection types/queries/APIs, shared image upload component, collection create/edit/detail/list/profile UI, orphan cleanup query, collection tests
+
+- Store one optional `RecipeImage` object in nullable `collections.image` JSONB; no development-data backfill is required.
+- Pass the cover through the canonical owner-authorized create and update functions. Authorization remains session-derived and mutations remain owner-only.
+- Include the image in owner and viewer summaries, recursive breadcrumb reads, child reads, and public discovery without changing collection or recipe visibility rules.
+- Reuse the existing deferred image upload pipeline. Collection forms cap the gallery at one while recipe image galleries remain unlimited.
+- Allow owners to add, replace, or remove the cover on edit. Do not save collection fields until any pending image processing/upload completes.
+- Render the cover on collection detail, owner collection cards, child collection cards, and public-profile discovery cards. Use a stable folder fallback when no usable image exists.
+- Include both full and thumbnail cover URLs in orphan-cleanup reference discovery.
+
+**Verify:** nullable image round-trips through every collection read path; create/edit defer correctly; the one-image limit is enforced; remove/replace works; image-less collections retain a coherent fallback; private/unlisted/public access behavior is unchanged; recipe galleries still accept multiple images.
+
+**Risk:** Medium. The central risks are dropping image metadata in a custom recursive query and orphan cleanup deleting a live cover object.
+
+---
+
 ## Testing strategy
 
 - Unit tests for collection validation and order normalization.
@@ -658,3 +676,4 @@ The WASM check validates shared client types; it does not replace native server 
 | 9 Viewer-safe reads | Checkpoint 8 | Must complete before any shared collection UI is exposed |
 | 10 Sharing UI | Checkpoint 9 | Direct-link sharing can proceed without NOMS-012 discovery integration |
 | 11 Discovery/security review | Checkpoints 9-10; NOMS-012 for search | Discovery may be deferred, but the authorization and privacy review is required before release |
+| 12 Optional cover image | Checkpoints 7 and 9 | Reuses recipe image processing; collection reads and orphan cleanup require full-path review |

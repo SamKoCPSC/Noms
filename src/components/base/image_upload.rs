@@ -14,7 +14,7 @@ use dioxus::html::HasFileData;
 use dioxus::prelude::*;
 use std::sync::Arc;
 
-use crate::components::base::{Button, ButtonVariant, EditedRecipeImage, ImageEditorModal};
+use crate::components::base::{EditedRecipeImage, ImageEditorModal};
 use crate::types::{RecipeImage, RecipeImageEdit};
 use crate::utils::reorder::move_item;
 
@@ -79,6 +79,13 @@ fn reduction_percent(original: u64, processed: usize) -> u64 {
     ((original - processed as u64) * 100) / original
 }
 
+/// Return how many files from a new selection fit in the configured gallery.
+fn available_image_slots(current: usize, incoming: usize, max_images: Option<usize>) -> usize {
+    max_images
+        .map(|limit| limit.saturating_sub(current).min(incoming))
+        .unwrap_or(incoming)
+}
+
 // ── Public types ────────────────────────────────────────────────────────────
 
 /// Outcome of an upload batch, reported to the parent via `on_upload_complete`.
@@ -93,6 +100,37 @@ pub struct UploadOutcome {
     /// `Processing`). When `Some`, succeeded/failed are 0 and the parent
     /// should surface the message and NOT call `create_recipe`.
     pub aborted: Option<String>,
+}
+
+/// Result of completing a deferred upload before a parent create/update call.
+/// Taking the pending value here makes each save attempt single-use, including
+/// failed or aborted attempts; a retry must enqueue the current form state.
+#[derive(Debug, PartialEq)]
+pub(crate) enum DeferredUploadCompletion<T> {
+    NoPendingSave,
+    Ready(T),
+    Aborted(String),
+    Failed,
+}
+
+pub(crate) fn complete_deferred_upload<T>(
+    pending: &mut Option<T>,
+    outcome: UploadOutcome,
+) -> DeferredUploadCompletion<T> {
+    let Some(pending) = pending.take() else {
+        return DeferredUploadCompletion::NoPendingSave;
+    };
+    if let Some(problem) = outcome.aborted {
+        return DeferredUploadCompletion::Aborted(problem);
+    }
+    if outcome.failed > 0 {
+        return DeferredUploadCompletion::Failed;
+    }
+    DeferredUploadCompletion::Ready(pending)
+}
+
+pub(crate) fn single_gallery_image(images: &[RecipeImage]) -> Option<RecipeImage> {
+    images.first().cloned()
 }
 
 /// Props for [`ImageUpload`].
@@ -114,6 +152,10 @@ pub struct ImageUploadProps {
     /// Number of locally selected files that have not uploaded successfully.
     /// Parents use this to mark an otherwise unchanged draft dirty.
     pub pending_count: Signal<usize>,
+    /// Optional gallery capacity. Recipe forms omit this to preserve their
+    /// unlimited gallery behavior; collection covers set it to one.
+    #[props(default)]
+    pub max_images: Option<usize>,
     /// Removes an image that was already persisted in the draft.
     pub on_remove_existing: EventHandler<String>,
     /// Fired exactly once when the upload batch finishes. The parent uses
@@ -143,6 +185,27 @@ enum UploadStatus {
 /// Snapshot of a ready-to-upload image: (id, full bytes, thumb bytes, name).
 /// Extracted as a type alias to satisfy `clippy::type_complexity`.
 type UploadItem = (usize, Arc<Vec<u8>>, Arc<Vec<u8>>, String, RecipeImageEdit);
+
+fn upload_batch_plan(pending: &[PendingImage]) -> (Vec<UploadItem>, usize) {
+    let ready = pending
+        .iter()
+        .filter(|item| item.status == UploadStatus::Ready)
+        .map(|item| {
+            (
+                item.id,
+                item.full_bytes.clone(),
+                item.thumb_bytes.clone(),
+                item.name.clone(),
+                item.edit.clone(),
+            )
+        })
+        .collect();
+    let failed = pending
+        .iter()
+        .filter(|item| item.status == UploadStatus::Failed)
+        .count();
+    (ready, failed)
+}
 
 /// One selected image, its processed bytes, and its upload status.
 ///
@@ -504,22 +567,9 @@ async fn upload_all(
 
     // Snapshot the ids + bytes of `Ready` items (can't hold
     // `pending.write()` across `.await`).
-    let to_upload: Vec<UploadItem> = pending()
-        .iter()
-        .filter(|p| p.status == UploadStatus::Ready)
-        .map(|p| {
-            (
-                p.id,
-                p.full_bytes.clone(),
-                p.thumb_bytes.clone(),
-                p.name.clone(),
-                p.edit.clone(),
-            )
-        })
-        .collect();
+    let (to_upload, mut failed) = upload_batch_plan(&pending());
 
     let mut succeeded = 0usize;
-    let mut failed = 0usize;
 
     for (id, full, thumb, name, edit) in to_upload {
         if let Some(p) = pending.write().iter_mut().find(|p| p.id == id) {
@@ -601,7 +651,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     let mut drag_over = use_signal(|| false);
     let mut pending = use_signal(move || initial_gallery);
     let mut uploading = use_signal(|| false);
-    let error = use_signal(|| Option::<String>::None);
+    let mut error = use_signal(|| Option::<String>::None);
     let next_id = use_signal(move || initial_next_id);
     let mut editor_modal_url = use_signal(|| Option::<String>::None);
     let mut editor_modal_img_id = use_signal(|| Option::<usize>::None);
@@ -613,6 +663,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     let mut pending_count = props.pending_count;
     let on_remove_existing = props.on_remove_existing;
     let on_upload_complete = props.on_upload_complete;
+    let max_images = props.max_images;
 
     // ── busy sync ────────────────────────────────────────────────────────
     // Memo over `pending` + `uploading`; an effect writes the result into
@@ -631,7 +682,16 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     // ── handle_files ─────────────────────────────────────────────────────
     // Shared by the `<input onchange>` and `<div ondrop>` handlers.
     let handle_files = move |files: Vec<dioxus::html::FileData>| async move {
-        for file in files {
+        let current_count = pending().len();
+        let available = available_image_slots(current_count, files.len(), max_images);
+        if available < files.len() {
+            error.set(Some(match max_images {
+                Some(1) => "A collection can have only one cover image.".to_string(),
+                Some(limit) => format!("This gallery can contain up to {limit} images."),
+                None => unreachable!("an unlimited gallery accepts every selected file"),
+            }));
+        }
+        for file in files.into_iter().take(available) {
             process_one_file(
                 file,
                 pending,
@@ -687,19 +747,20 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                 input {
                     r#type: "file",
                     accept: "image/jpeg,image/png,image/webp",
-                    multiple: true,
-                    style: "display: none;",
+                    multiple: max_images != Some(1),
+                    class: "image-upload__file-input",
+                    aria_label: if max_images == Some(1) { "Choose collection cover image" } else { "Choose recipe images" },
                     onchange: move |evt| async move {
                         handle_files(evt.files()).await;
                     },
                 }
-                span { "📷  Click or drag images here" }
+                span { "📷  Choose or drag images here" }
                 span { class: "image-upload__hint", "JPEG, PNG, or WebP · max 10 MB each" }
             }
 
             // Error banner
             if let Some(err) = error() {
-                div { class: "image-upload__error image-upload__error--banner", "{err}" }
+                div { class: "image-upload__error image-upload__error--banner", role: "alert", aria_live: "assertive", "{err}" }
             }
 
             // One ordered gallery contains persisted and newly selected images.
@@ -865,8 +926,9 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                             }
                             // Per-item Retry (AC5) — only on Failed items
                             if img_status == UploadStatus::Failed {
-                                Button {
-                                    variant: ButtonVariant::Ghost,
+                                button {
+                                    r#type: "button",
+                                    class: "btn btn-ghost touch-target",
                                     disabled: retry_disabled,
                                     onclick: move |_| {
                                         spawn(async move {
@@ -877,8 +939,9 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                 }
                             }
                             // Remove (disabled while Uploading)
-                            Button {
-                                variant: ButtonVariant::Ghost,
+                            button {
+                                r#type: "button",
+                                class: "btn btn-ghost touch-target",
                                 disabled: img_status == UploadStatus::Uploading,
                                 onclick: move |_| {
                                     if img_persisted {
@@ -924,6 +987,96 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
 mod tests {
     use super::*;
 
+    #[test]
+    fn gallery_limit_reports_only_remaining_slots() {
+        assert_eq!(available_image_slots(0, 3, Some(1)), 1);
+        assert_eq!(available_image_slots(1, 3, Some(1)), 0);
+        assert_eq!(available_image_slots(2, 3, None), 3);
+    }
+
+    #[test]
+    fn deferred_upload_completion_executes_success_failure_abort_and_retry() {
+        let success = UploadOutcome {
+            succeeded: 1,
+            failed: 0,
+            aborted: None,
+        };
+        let mut pending = Some("first save");
+        assert_eq!(
+            complete_deferred_upload(&mut pending, success.clone()),
+            DeferredUploadCompletion::Ready("first save")
+        );
+        assert_eq!(
+            complete_deferred_upload(&mut pending, success.clone()),
+            DeferredUploadCompletion::NoPendingSave
+        );
+
+        let mut pending = Some("failed save");
+        assert_eq!(
+            complete_deferred_upload(
+                &mut pending,
+                UploadOutcome {
+                    succeeded: 0,
+                    failed: 1,
+                    aborted: None,
+                },
+            ),
+            DeferredUploadCompletion::Failed
+        );
+        assert!(pending.is_none());
+
+        pending = Some("retry");
+        assert_eq!(
+            complete_deferred_upload(&mut pending, success),
+            DeferredUploadCompletion::Ready("retry")
+        );
+
+        pending = Some("aborted save");
+        assert_eq!(
+            complete_deferred_upload(
+                &mut pending,
+                UploadOutcome {
+                    succeeded: 0,
+                    failed: 0,
+                    aborted: Some("still processing".to_string()),
+                },
+            ),
+            DeferredUploadCompletion::Aborted("still processing".to_string())
+        );
+        assert!(pending.is_none());
+    }
+
+    #[test]
+    fn single_gallery_image_reflects_add_replace_and_removal() {
+        let first = RecipeImage::new(
+            "first".to_string(),
+            None,
+            RecipeImageEdit::default_rect_16x9(),
+        );
+        let replacement = RecipeImage::new(
+            "replacement".to_string(),
+            None,
+            RecipeImageEdit::default_rect_16x9(),
+        );
+        let mut gallery = vec![first.clone()];
+        assert_eq!(single_gallery_image(&gallery), Some(first));
+
+        gallery[0] = replacement.clone();
+        assert_eq!(single_gallery_image(&gallery), Some(replacement));
+
+        gallery.clear();
+        assert_eq!(single_gallery_image(&gallery), None);
+    }
+
+    #[test]
+    fn file_picker_remains_keyboard_accessible_and_errors_are_announced() {
+        let source = include_str!("image_upload.rs");
+        assert!(source.contains("image-upload__file-input"));
+        assert!(!source.contains("style: \"display: none;\""));
+        assert!(source.contains("role: \"alert\""));
+        assert!(source.contains("aria_live: \"assertive\""));
+    }
+
     fn pending_image_with_uploaded_url(id: usize, url: Option<&str>) -> PendingImage {
         PendingImage {
             id,
@@ -961,6 +1114,34 @@ mod tests {
 
         assert_eq!(ordered_urls, vec!["third".to_string(), "first".to_string()]);
         assert_eq!(pending_upload_count(&pending), 1);
+    }
+
+    #[test]
+    fn failed_pending_items_keep_later_save_batches_failed_until_retry_or_removal() {
+        let failed = pending_image_with_uploaded_url(1, None);
+        let (ready, failed_count) = upload_batch_plan(std::slice::from_ref(&failed));
+        assert!(ready.is_empty());
+        assert_eq!(failed_count, 1);
+
+        let completion = complete_deferred_upload(
+            &mut Some("replacement save"),
+            UploadOutcome {
+                succeeded: 0,
+                failed: failed_count,
+                aborted: None,
+            },
+        );
+        assert_eq!(completion, DeferredUploadCompletion::Failed);
+
+        let mut retried = failed;
+        retried.status = UploadStatus::Ready;
+        let (ready, failed_count) = upload_batch_plan(&[retried]);
+        assert_eq!(ready.len(), 1);
+        assert_eq!(failed_count, 0);
+
+        let (ready, failed_count) = upload_batch_plan(&[]);
+        assert!(ready.is_empty());
+        assert_eq!(failed_count, 0);
     }
 
     #[test]

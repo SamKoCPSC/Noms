@@ -351,12 +351,18 @@ fn collection_visibility_from_row(
 }
 
 fn collection_from_row(row: &sqlx::postgres::PgRow) -> Result<Collection, sqlx::Error> {
+    let image = row
+        .try_get::<Option<serde_json::Value>, _>("image")?
+        .map(serde_json::from_value)
+        .transpose()
+        .map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
     Ok(Collection {
         id: row.try_get("id")?,
         owner_id: row.try_get("owner_id")?,
         parent_collection_id: row.try_get("parent_collection_id")?,
         name: row.try_get("name")?,
         description: row.try_get("description")?,
+        image,
         visibility: collection_visibility_from_row(row)?,
         sort_order: row.try_get("sort_order")?,
         created_at: row.try_get("created_at")?,
@@ -367,11 +373,17 @@ fn collection_from_row(row: &sqlx::postgres::PgRow) -> Result<Collection, sqlx::
 fn collection_summary_from_row(
     row: &sqlx::postgres::PgRow,
 ) -> Result<CollectionSummary, sqlx::Error> {
+    let image = row
+        .try_get::<Option<serde_json::Value>, _>("image")?
+        .map(serde_json::from_value)
+        .transpose()
+        .map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
     Ok(CollectionSummary {
         id: row.try_get("id")?,
         parent_collection_id: row.try_get("parent_collection_id")?,
         name: row.try_get("name")?,
         description: row.try_get("description")?,
+        image,
         visibility: collection_visibility_from_row(row)?,
         sort_order: row.try_get("sort_order")?,
         child_count: row.try_get("child_count")?,
@@ -407,7 +419,7 @@ fn membership_query_error(error: sqlx::Error) -> DbError {
 }
 
 fn collection_summary_select() -> &'static str {
-    "SELECT c.id, c.parent_collection_id, c.name, c.description, c.visibility,
+    "SELECT c.id, c.parent_collection_id, c.name, c.description, c.image, c.visibility,
             c.sort_order, c.updated_at,
             (SELECT COUNT(*) FROM collections child
              WHERE child.owner_id = c.owner_id AND child.parent_collection_id = c.id) AS child_count,
@@ -442,6 +454,7 @@ pub async fn insert_collection(
     name: &str,
     description: Option<&str>,
     visibility: CollectionVisibility,
+    image: Option<&RecipeImage>,
 ) -> Result<Collection, DbError> {
     let mut tx = pool.begin().await.map_err(DbError::Query)?;
     lock_owner(&mut tx, owner_id).await?;
@@ -475,9 +488,9 @@ pub async fn insert_collection(
 
     let row = sqlx::query(
         "INSERT INTO collections
-            (owner_id, parent_collection_id, name, description, sort_order, visibility)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING id, owner_id, parent_collection_id, name, description,
+            (owner_id, parent_collection_id, name, description, sort_order, visibility, image)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, owner_id, parent_collection_id, name, description, image,
                    visibility, sort_order, created_at, updated_at",
     )
     .bind(owner_id)
@@ -486,6 +499,12 @@ pub async fn insert_collection(
     .bind(description)
     .bind(next_order)
     .bind(visibility.as_str())
+    .bind(
+        image
+            .map(serde_json::to_value)
+            .transpose()
+            .map_err(|error| DbError::Query(sqlx::Error::Encode(Box::new(error))))?,
+    )
     .fetch_one(&mut *tx)
     .await
     .map_err(collection_query_error)?;
@@ -502,7 +521,7 @@ pub async fn get_collection_by_id_and_owner(
     owner_id: Uuid,
 ) -> Result<Option<Collection>, DbError> {
     sqlx::query(
-        "SELECT id, owner_id, parent_collection_id, name, description,
+        "SELECT id, owner_id, parent_collection_id, name, description, image,
                 visibility, sort_order, created_at, updated_at
          FROM collections
          WHERE id = $1 AND owner_id = $2",
@@ -628,7 +647,7 @@ pub async fn get_public_collections_by_username(
                     THEN c.parent_collection_id
                     ELSE NULL
                 END AS parent_collection_id,
-                c.name, c.description, c.visibility,
+                c.name, c.description, c.image, c.visibility,
                 ((ROW_NUMBER() OVER (ORDER BY c.updated_at DESC, c.id) - 1)::INTEGER)
                     AS sort_order,
                 c.updated_at,
@@ -688,7 +707,7 @@ pub async fn get_collection_breadcrumbs(
              WHERE parent.owner_id = $2
                AND NOT parent.id = ANY(ancestors.path)
          )
-         SELECT c.id, c.parent_collection_id, c.name, c.description, c.visibility,
+         SELECT c.id, c.parent_collection_id, c.name, c.description, c.image, c.visibility,
                 c.sort_order, c.updated_at,
                 (SELECT COUNT(*) FROM collections child
                  WHERE child.owner_id = c.owner_id AND child.parent_collection_id = c.id) AS child_count,
@@ -745,18 +764,25 @@ pub async fn update_collection(
     owner_id: Uuid,
     name: &str,
     description: Option<&str>,
+    image: Option<&RecipeImage>,
 ) -> Result<Collection, DbError> {
     let row = sqlx::query(
         "UPDATE collections
-         SET name = $3, description = $4, updated_at = NOW()
+         SET name = $3, description = $4, image = $5, updated_at = NOW()
          WHERE id = $1 AND owner_id = $2
-         RETURNING id, owner_id, parent_collection_id, name, description,
+         RETURNING id, owner_id, parent_collection_id, name, description, image,
                    visibility, sort_order, created_at, updated_at",
     )
     .bind(collection_id)
     .bind(owner_id)
     .bind(name)
     .bind(description)
+    .bind(
+        image
+            .map(serde_json::to_value)
+            .transpose()
+            .map_err(|error| DbError::Query(sqlx::Error::Encode(Box::new(error))))?,
+    )
     .fetch_one(pool)
     .await
     .map_err(|error| match error {
@@ -778,7 +804,7 @@ pub async fn update_collection_visibility(
          SET visibility = $3,
              updated_at = GREATEST(NOW(), updated_at + INTERVAL '1 microsecond')
          WHERE id = $1 AND owner_id = $2
-         RETURNING id, owner_id, parent_collection_id, name, description,
+         RETURNING id, owner_id, parent_collection_id, name, description, image,
                    visibility, sort_order, created_at, updated_at",
     )
     .bind(collection_id)
@@ -989,7 +1015,7 @@ pub async fn move_collection(
     }
 
     let row = sqlx::query(
-        "SELECT id, owner_id, parent_collection_id, name, description,
+        "SELECT id, owner_id, parent_collection_id, name, description, image,
                 visibility, sort_order, created_at, updated_at
          FROM collections WHERE id = $1 AND owner_id = $2",
     )
@@ -1342,7 +1368,7 @@ pub async fn get_collection_contents_for_viewer(
                     THEN c.parent_collection_id
                     ELSE NULL
                 END AS parent_collection_id,
-                c.name, c.description, c.visibility,
+                c.name, c.description, c.image, c.visibility,
                 0::INTEGER AS sort_order, c.updated_at,
                 (SELECT COUNT(*)
                  FROM collections child
@@ -1376,7 +1402,7 @@ pub async fn get_collection_contents_for_viewer(
     };
 
     let child_rows = sqlx::query(
-        "SELECT c.id, c.parent_collection_id, c.name, c.description, c.visibility,
+        "SELECT c.id, c.parent_collection_id, c.name, c.description, c.image, c.visibility,
                 ((ROW_NUMBER() OVER (
                     ORDER BY c.sort_order, lower(c.name), c.id
                  ) - 1)::INTEGER) AS sort_order,
@@ -2687,7 +2713,7 @@ pub async fn get_public_recipe_tags(
     .map_err(DbError::Query)
 }
 
-/// Get all distinct image URLs referenced by any recipe.
+/// Get all distinct image URLs referenced by recipes or collection covers.
 ///
 /// Used by the orphan cleanup worker to determine which storage objects are still needed.
 pub async fn get_all_image_urls(pool: &PgPool) -> Result<Vec<String>, DbError> {
@@ -2744,6 +2770,14 @@ pub async fn get_all_image_urls(pool: &PgPool) -> Result<Vec<String>, DbError> {
                     )
                 ) AS step_photo_urls(image_url)
                 WHERE jsonb_typeof(step_photo) = 'object'
+                UNION ALL
+                SELECT collection_image_urls.image_url
+                FROM collections
+                CROSS JOIN LATERAL (
+                    VALUES (image ->> 'url'), (image ->> 'thumb_url')
+                ) AS collection_image_urls(image_url)
+                WHERE image IS NOT NULL
+                  AND jsonb_typeof(image) = 'object'
             )
          SELECT DISTINCT image_url
          FROM image_urls
@@ -5663,6 +5697,114 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_collection_cover_round_trips_and_is_retained_by_orphan_scan() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let cover = RecipeImage::new(
+            "https://storage.example.com/collections/cover-full.webp".to_string(),
+            Some("https://storage.example.com/collections/cover-thumb.webp".to_string()),
+            crate::types::RecipeImageEdit::default_rect_16x9(),
+        )
+        .with_file_metadata("cover.webp".to_string(), 42);
+
+        let collection = insert_collection(
+            &pool,
+            owner.id,
+            None,
+            "Covered collection",
+            Some("A visible cover"),
+            CollectionVisibility::Public,
+            Some(&cover),
+        )
+        .await
+        .unwrap();
+        assert_eq!(collection.image.as_ref(), Some(&cover));
+
+        let owned = get_root_collections(&pool, owner.id).await.unwrap();
+        assert_eq!(owned[0].image.as_ref(), Some(&cover));
+        let breadcrumbs = get_collection_breadcrumbs(&pool, collection.id, owner.id)
+            .await
+            .unwrap();
+        assert_eq!(breadcrumbs[0].image.as_ref(), Some(&cover));
+
+        let child = insert_collection(
+            &pool,
+            owner.id,
+            Some(collection.id),
+            "Covered child",
+            None,
+            CollectionVisibility::Public,
+            Some(&cover),
+        )
+        .await
+        .unwrap();
+        let public_contents = get_collection_contents_for_viewer(&pool, collection.id, None, 0, 10)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(public_contents.collection.image.as_ref(), Some(&cover));
+        assert_eq!(public_contents.child_collections.len(), 1);
+        assert_eq!(public_contents.child_collections[0].id, child.id);
+        assert_eq!(
+            public_contents.child_collections[0].image.as_ref(),
+            Some(&cover)
+        );
+
+        let unlisted = insert_collection(
+            &pool,
+            owner.id,
+            None,
+            "Unlisted cover",
+            None,
+            CollectionVisibility::Unlisted,
+            Some(&cover),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            get_collection_contents_for_viewer(&pool, unlisted.id, None, 0, 10)
+                .await
+                .unwrap()
+                .unwrap()
+                .collection
+                .image
+                .as_ref(),
+            Some(&cover)
+        );
+        let public = get_public_collections_by_username(&pool, &owner.username, 0, 10)
+            .await
+            .unwrap();
+        assert!(public
+            .collections
+            .iter()
+            .any(|summary| summary.id == collection.id && summary.image.as_ref() == Some(&cover)));
+
+        let urls = get_all_image_urls(&pool).await.unwrap();
+        assert!(urls.contains(&cover.url));
+        assert!(urls.contains(cover.thumb_url.as_ref().unwrap()));
+
+        let updated = update_collection(
+            &pool,
+            collection.id,
+            owner.id,
+            "Covered collection",
+            Some("Cover removed"),
+            None,
+        )
+        .await
+        .unwrap();
+        assert!(updated.image.is_none());
+        assert!(
+            get_collection_by_id_and_owner(&pool, collection.id, owner.id)
+                .await
+                .unwrap()
+                .unwrap()
+                .image
+                .is_none()
+        );
+    }
+
+    #[tokio::test]
     async fn test_collection_visibility_defaults_and_owner_updates() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let owner = test_utils::insert_test_user(&pool).await;
@@ -5678,6 +5820,7 @@ mod tests {
             "Public",
             None,
             CollectionVisibility::Public,
+            None,
         )
         .await
         .unwrap();
@@ -5734,6 +5877,7 @@ mod tests {
             "Unlisted collection",
             None,
             CollectionVisibility::Unlisted,
+            None,
         )
         .await
         .unwrap();
@@ -5744,6 +5888,7 @@ mod tests {
             "Public collection",
             None,
             CollectionVisibility::Public,
+            None,
         )
         .await
         .unwrap();
@@ -5902,6 +6047,7 @@ mod tests {
             "Public below private",
             None,
             CollectionVisibility::Public,
+            None,
         )
         .await
         .unwrap();
@@ -5912,6 +6058,7 @@ mod tests {
             "Unlisted",
             None,
             CollectionVisibility::Unlisted,
+            None,
         )
         .await
         .unwrap();
@@ -5922,6 +6069,7 @@ mod tests {
             "Public root",
             None,
             CollectionVisibility::Public,
+            None,
         )
         .await
         .unwrap();
@@ -5939,6 +6087,7 @@ mod tests {
             "Public child",
             None,
             CollectionVisibility::Public,
+            None,
         )
         .await
         .unwrap();
@@ -5949,6 +6098,7 @@ mod tests {
             "Unlisted child",
             None,
             CollectionVisibility::Unlisted,
+            None,
         )
         .await
         .unwrap();
@@ -6026,6 +6176,7 @@ mod tests {
             "Unlisted middle",
             None,
             CollectionVisibility::Unlisted,
+            None,
         )
         .await
         .unwrap();
@@ -6036,6 +6187,7 @@ mod tests {
             "Public leaf",
             None,
             CollectionVisibility::Public,
+            None,
         )
         .await
         .unwrap();
@@ -6053,6 +6205,7 @@ mod tests {
             "Unlisted child",
             None,
             CollectionVisibility::Unlisted,
+            None,
         )
         .await
         .unwrap();
@@ -6221,12 +6374,13 @@ mod tests {
                 "Cross-owner child",
                 None,
                 CollectionVisibility::Private,
+                None,
             )
             .await,
             Err(DbError::CollectionParentNotFound(id)) if id == other_collection.id
         ));
         assert!(matches!(
-            update_collection(&pool, collection.id, other_owner.id, "Nope", None).await,
+            update_collection(&pool, collection.id, other_owner.id, "Nope", None, None).await,
             Err(DbError::CollectionNotFound(id)) if id == collection.id
         ));
         assert!(matches!(
@@ -6270,6 +6424,7 @@ mod tests {
             "recipes",
             None,
             CollectionVisibility::Private,
+            None,
         )
         .await;
         assert!(matches!(duplicate, Err(DbError::CollectionNameTaken)));
@@ -6558,6 +6713,7 @@ mod tests {
                     &format!("Concurrent {index}"),
                     None,
                     CollectionVisibility::Private,
+                    None,
                 )
                 .await
                 .unwrap()
