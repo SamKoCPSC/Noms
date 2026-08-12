@@ -378,12 +378,23 @@ fn collection_summary_from_row(
         .map(serde_json::from_value)
         .transpose()
         .map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
+    // Recipe image JSON predates collections and is not schema-constrained.
+    // A malformed legacy entry must not make the entire collection unreadable.
+    let preview_images = row
+        .try_get::<serde_json::Value, _>("preview_images")?
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|image| serde_json::from_value(image.clone()).ok())
+        .take(4)
+        .collect();
     Ok(CollectionSummary {
         id: row.try_get("id")?,
         parent_collection_id: row.try_get("parent_collection_id")?,
         name: row.try_get("name")?,
         description: row.try_get("description")?,
         image,
+        preview_images,
         visibility: collection_visibility_from_row(row)?,
         sort_order: row.try_get("sort_order")?,
         child_count: row.try_get("child_count")?,
@@ -418,9 +429,37 @@ fn membership_query_error(error: sqlx::Error) -> DbError {
     }
 }
 
-fn collection_summary_select() -> &'static str {
-    "SELECT c.id, c.parent_collection_id, c.name, c.description, c.image, c.visibility,
+fn collection_preview_images_select(recipe_visibility_predicate: &str) -> String {
+    format!(
+        "COALESCE((
+             SELECT jsonb_agg(preview.image ORDER BY preview.sort_order, preview.created_at, preview.recipe_id)
+             FROM (
+                 SELECT r.images -> 0 AS image, cr.sort_order, cr.created_at, cr.recipe_id
+                 FROM collection_recipes cr
+                 INNER JOIN recipes r ON r.id = cr.recipe_id
+                 WHERE cr.collection_id = c.id
+                   AND {recipe_visibility_predicate}
+                   AND jsonb_typeof(r.images) = 'array'
+                   AND r.images <> '[]'::jsonb
+                   AND (
+                       jsonb_typeof(r.images -> 0) = 'string'
+                       OR (
+                           jsonb_typeof(r.images -> 0) = 'object'
+                           AND jsonb_typeof(r.images -> 0 -> 'url') = 'string'
+                       )
+                   )
+                 ORDER BY cr.sort_order, cr.created_at, cr.recipe_id
+                 LIMIT 4
+             ) preview
+         ), '[]'::jsonb)"
+    )
+}
+
+fn collection_summary_select() -> String {
+    format!(
+        "SELECT c.id, c.parent_collection_id, c.name, c.description, c.image, c.visibility,
             c.sort_order, c.updated_at,
+            {} AS preview_images,
             (SELECT COUNT(*) FROM collections child
              WHERE child.owner_id = c.owner_id AND child.parent_collection_id = c.id) AS child_count,
             (SELECT COUNT(*)
@@ -428,7 +467,11 @@ fn collection_summary_select() -> &'static str {
              INNER JOIN recipes r ON r.id = cr.recipe_id
              WHERE cr.collection_id = c.id
                AND (r.user_id = c.owner_id OR r.visibility IN ('public', 'unlisted'))) AS recipe_count
-     FROM collections c"
+     FROM collections c",
+        collection_preview_images_select(
+            "(r.user_id = c.owner_id OR r.visibility IN ('public', 'unlisted'))"
+        )
+    )
 }
 
 async fn lock_owner(
@@ -640,7 +683,7 @@ pub async fn get_public_collections_by_username(
     .await
     .map_err(DbError::Query)?;
 
-    let rows = sqlx::query(
+    let query = format!(
         "SELECT c.id,
                 CASE
                     WHEN parent.owner_id = c.owner_id AND parent.visibility = 'public'
@@ -651,6 +694,7 @@ pub async fn get_public_collections_by_username(
                 ((ROW_NUMBER() OVER (ORDER BY c.updated_at DESC, c.id) - 1)::INTEGER)
                     AS sort_order,
                 c.updated_at,
+                {} AS preview_images,
                 (SELECT COUNT(*)
                  FROM collections child
                  WHERE child.owner_id = c.owner_id
@@ -666,13 +710,15 @@ pub async fn get_public_collections_by_username(
          WHERE c.owner_id = $1 AND c.visibility = 'public'
          ORDER BY c.updated_at DESC, c.id
          LIMIT $2 OFFSET $3",
-    )
-    .bind(owner_id)
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(&mut *tx)
-    .await
-    .map_err(DbError::Query)?;
+        collection_preview_images_select("r.visibility = 'public'")
+    );
+    let rows = sqlx::query(&query)
+        .bind(owner_id)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(DbError::Query)?;
     let collections = rows
         .iter()
         .map(collection_summary_from_row)
@@ -694,7 +740,7 @@ pub async fn get_collection_breadcrumbs(
     collection_id: Uuid,
     owner_id: Uuid,
 ) -> Result<Vec<CollectionSummary>, DbError> {
-    let rows = sqlx::query(
+    let query = format!(
         "WITH RECURSIVE ancestors AS (
              SELECT c.id, c.parent_collection_id, ARRAY[c.id] AS path, 0 AS depth
              FROM collections c
@@ -709,6 +755,7 @@ pub async fn get_collection_breadcrumbs(
          )
          SELECT c.id, c.parent_collection_id, c.name, c.description, c.image, c.visibility,
                 c.sort_order, c.updated_at,
+                {} AS preview_images,
                 (SELECT COUNT(*) FROM collections child
                  WHERE child.owner_id = c.owner_id AND child.parent_collection_id = c.id) AS child_count,
                 (SELECT COUNT(*) FROM collection_recipes cr
@@ -718,12 +765,16 @@ pub async fn get_collection_breadcrumbs(
          FROM ancestors
          INNER JOIN collections c ON c.id = ancestors.id
          ORDER BY ancestors.depth DESC",
-    )
-    .bind(collection_id)
-    .bind(owner_id)
-    .fetch_all(executor)
-    .await
-    .map_err(DbError::Query)?;
+        collection_preview_images_select(
+            "(r.user_id = c.owner_id OR r.visibility IN ('public', 'unlisted'))"
+        )
+    );
+    let rows = sqlx::query(&query)
+        .bind(collection_id)
+        .bind(owner_id)
+        .fetch_all(executor)
+        .await
+        .map_err(DbError::Query)?;
     rows.iter()
         .map(collection_summary_from_row)
         .collect::<Result<_, _>>()
@@ -1343,7 +1394,7 @@ pub async fn get_collection_contents_for_viewer(
         return Ok(None);
     };
 
-    let breadcrumb_rows = sqlx::query(
+    let breadcrumb_query = format!(
         "WITH RECURSIVE ancestors AS (
              SELECT c.id, c.parent_collection_id, ARRAY[c.id] AS path, 0 AS depth
              FROM collections c
@@ -1370,6 +1421,7 @@ pub async fn get_collection_contents_for_viewer(
                 END AS parent_collection_id,
                 c.name, c.description, c.image, c.visibility,
                 0::INTEGER AS sort_order, c.updated_at,
+                {} AS preview_images,
                 (SELECT COUNT(*)
                  FROM collections child
                  WHERE child.owner_id = c.owner_id
@@ -1385,13 +1437,17 @@ pub async fn get_collection_contents_for_viewer(
          FROM ancestors
          INNER JOIN collections c ON c.id = ancestors.id
          ORDER BY ancestors.depth DESC",
-    )
-    .bind(collection_id)
-    .bind(owner_id)
-    .bind(include_unlisted)
-    .fetch_all(&mut *tx)
-    .await
-    .map_err(DbError::Query)?;
+        collection_preview_images_select(
+            "(r.visibility = 'public' OR ($3 AND r.visibility = 'unlisted'))"
+        )
+    );
+    let breadcrumb_rows = sqlx::query(&breadcrumb_query)
+        .bind(collection_id)
+        .bind(owner_id)
+        .bind(include_unlisted)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(DbError::Query)?;
     let breadcrumbs = breadcrumb_rows
         .iter()
         .map(collection_summary_from_row)
@@ -1401,12 +1457,13 @@ pub async fn get_collection_contents_for_viewer(
         return Ok(None);
     };
 
-    let child_rows = sqlx::query(
+    let child_query = format!(
         "SELECT c.id, c.parent_collection_id, c.name, c.description, c.image, c.visibility,
                 ((ROW_NUMBER() OVER (
                     ORDER BY c.sort_order, lower(c.name), c.id
                  ) - 1)::INTEGER) AS sort_order,
                 c.updated_at,
+                {} AS preview_images,
                 (SELECT COUNT(*)
                  FROM collections child
                  WHERE child.owner_id = c.owner_id
@@ -1423,13 +1480,17 @@ pub async fn get_collection_contents_for_viewer(
          WHERE c.parent_collection_id = $1 AND c.owner_id = $2
            AND (c.visibility = 'public' OR ($3 AND c.visibility = 'unlisted'))
          ORDER BY c.sort_order, lower(c.name), c.id",
-    )
-    .bind(collection_id)
-    .bind(owner_id)
-    .bind(include_unlisted)
-    .fetch_all(&mut *tx)
-    .await
-    .map_err(DbError::Query)?;
+        collection_preview_images_select(
+            "(r.visibility = 'public' OR ($3 AND r.visibility = 'unlisted'))"
+        )
+    );
+    let child_rows = sqlx::query(&child_query)
+        .bind(collection_id)
+        .bind(owner_id)
+        .bind(include_unlisted)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(DbError::Query)?;
     let child_collections = child_rows
         .iter()
         .map(collection_summary_from_row)
@@ -5801,6 +5862,132 @@ mod tests {
                 .unwrap()
                 .image
                 .is_none()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_collection_recipe_cover_previews_preserve_order_and_viewer_privacy() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let author = test_utils::insert_test_user(&pool).await;
+        let collection = insert_collection(
+            &pool,
+            owner.id,
+            None,
+            "Recipe mosaic",
+            None,
+            CollectionVisibility::Public,
+            None,
+        )
+        .await
+        .unwrap();
+
+        let mut malformed_recipe_ids = Vec::new();
+        for malformed_images in [
+            serde_json::json!([null]),
+            serde_json::json!([{}]),
+            serde_json::json!([42]),
+            serde_json::json!([{"url": 42}]),
+        ] {
+            let recipe = test_utils::insert_test_recipe(&pool, owner.id, "public").await;
+            sqlx::query("UPDATE recipes SET images = $2 WHERE id = $1")
+                .bind(recipe.id)
+                .bind(malformed_images)
+                .execute(&pool)
+                .await
+                .unwrap();
+            test_utils::add_test_recipe_to_collection(&pool, collection.id, owner.id, recipe.id)
+                .await;
+            malformed_recipe_ids.push(recipe.id);
+        }
+
+        let recipe_specs = [
+            (owner.id, "private", "owner-private"),
+            (author.id, "private", "other-private"),
+            (author.id, "public", "public-first"),
+            (author.id, "unlisted", "unlisted"),
+            (author.id, "public", "public-second"),
+            (author.id, "public", "public-fifth"),
+        ];
+        for (recipe_owner, visibility, image_name) in recipe_specs {
+            // Add cross-owner private coverage through a valid historical state:
+            // the recipe is public when added, then becomes private afterward.
+            let initial_visibility = if recipe_owner != owner.id && visibility == "private" {
+                "public"
+            } else {
+                visibility
+            };
+            let recipe =
+                test_utils::insert_test_recipe(&pool, recipe_owner, initial_visibility).await;
+            let image = RecipeImage::new(
+                format!("https://storage.example.com/{image_name}_full.webp"),
+                Some(format!(
+                    "https://storage.example.com/{image_name}_thumb.webp"
+                )),
+                crate::types::RecipeImageEdit::default_rect_16x9(),
+            );
+            sqlx::query("UPDATE recipes SET images = $2 WHERE id = $1")
+                .bind(recipe.id)
+                .bind(serde_json::to_value(vec![image]).unwrap())
+                .execute(&pool)
+                .await
+                .unwrap();
+            test_utils::add_test_recipe_to_collection(&pool, collection.id, owner.id, recipe.id)
+                .await;
+            if initial_visibility != visibility {
+                sqlx::query("UPDATE recipes SET visibility = $2 WHERE id = $1")
+                    .bind(recipe.id)
+                    .bind(visibility)
+                    .execute(&pool)
+                    .await
+                    .unwrap();
+            }
+        }
+
+        let owner_summary = get_root_collections(&pool, owner.id).await.unwrap();
+        let owner_urls: Vec<&str> = owner_summary[0]
+            .preview_images
+            .iter()
+            .map(|image| image.url.as_str())
+            .collect();
+        assert_eq!(owner_urls.len(), 4);
+        assert!(owner_urls[0].contains("owner-private"));
+        assert!(owner_urls[1].contains("public-first"));
+        assert!(owner_urls[2].contains("unlisted"));
+        assert!(owner_urls[3].contains("public-second"));
+        assert!(owner_urls.iter().all(|url| !url.contains("other-private")));
+
+        let public_summary = get_public_collections_by_username(&pool, &owner.username, 0, 10)
+            .await
+            .unwrap();
+        let public_urls: Vec<&str> = public_summary.collections[0]
+            .preview_images
+            .iter()
+            .map(|image| image.url.as_str())
+            .collect();
+        assert_eq!(public_urls.len(), 3);
+        assert!(public_urls[0].contains("public-first"));
+        assert!(public_urls[1].contains("public-second"));
+        assert!(public_urls[2].contains("public-fifth"));
+
+        // These fixtures exercise summary tolerance only; full recipe rows
+        // retain their established valid-image contract.
+        for recipe_id in malformed_recipe_ids {
+            sqlx::query("DELETE FROM recipes WHERE id = $1")
+                .bind(recipe_id)
+                .execute(&pool)
+                .await
+                .unwrap();
+        }
+
+        let viewer_contents = get_collection_contents_for_viewer(&pool, collection.id, None, 0, 10)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(viewer_contents.collection.preview_images.len(), 3);
+        assert_eq!(
+            viewer_contents.collection.preview_images,
+            public_summary.collections[0].preview_images
         );
     }
 

@@ -31,6 +31,7 @@ pub fn CollectionList() -> Element {
                                 Link { to: Route::CollectionDetail { id: collection.id.to_string() }, class: "neumo-card", padding: "var(--space-lg)", text_decoration: "none", display: "flex", flex_direction: "column", gap: "var(--space-sm)",
                                     CollectionCover {
                                         image: collection.image.clone(),
+                                        preview_images: collection.preview_images.clone(),
                                         alt: format!("{} collection cover", collection.name),
                                     }
                                     CollectionVisibilityBadge { visibility: collection.visibility }

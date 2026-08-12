@@ -807,6 +807,8 @@ pub struct CollectionSummary {
     pub name: String,
     pub description: Option<String>,
     pub image: Option<RecipeImage>,
+    /// Up to four ordered recipe images used when the collection has no cover.
+    pub preview_images: Vec<RecipeImage>,
     pub visibility: CollectionVisibility,
     pub sort_order: i32,
     pub child_count: i64,

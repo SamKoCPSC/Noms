@@ -620,10 +620,10 @@ Add a viewer-aware read path while preserving the existing owner-only mutation p
 - Include the image in owner and viewer summaries, recursive breadcrumb reads, child reads, and public discovery without changing collection or recipe visibility rules.
 - Reuse the existing deferred image upload pipeline. Collection forms cap the gallery at one while recipe image galleries remain unlimited.
 - Allow owners to add, replace, or remove the cover on edit. Do not save collection fields until any pending image processing/upload completes.
-- Render the cover on collection detail, owner collection cards, child collection cards, and public-profile discovery cards. Use a stable folder fallback when no usable image exists.
+- Render the cover on collection detail, owner collection cards, child collection cards, and public-profile discovery cards. When no explicit cover is set, render a bounded mosaic of the first four recipe images visible to that viewer; use the stable folder fallback only when no usable recipe image exists.
 - Include both full and thumbnail cover URLs in orphan-cleanup reference discovery.
 
-**Verify:** nullable image round-trips through every collection read path; create/edit defer correctly; the one-image limit is enforced; remove/replace works; image-less collections retain a coherent fallback; private/unlisted/public access behavior is unchanged; recipe galleries still accept multiple images.
+**Verify:** nullable image round-trips through every collection read path; create/edit defer correctly; the one-image limit is enforced; remove/replace works; recipe-image mosaics preserve collection order, stop at four, and never reveal inaccessible recipe images; image-less collections retain a coherent folder fallback; private/unlisted/public access behavior is unchanged; recipe galleries still accept multiple images.
 
 **Risk:** Medium. The central risks are dropping image metadata in a custom recursive query and orphan cleanup deleting a live cover object.
 

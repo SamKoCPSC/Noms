@@ -221,6 +221,7 @@ pub fn UserProfile(username: String) -> Element {
                                 gap: "var(--space-sm)",
                                 CollectionCover {
                                     image: collection.image.clone(),
+                                    preview_images: collection.preview_images.clone(),
                                     alt: format!("{} collection cover", collection.name),
                                 }
                                 CollectionVisibilityBadge { visibility: collection.visibility }

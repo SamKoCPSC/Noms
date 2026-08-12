@@ -228,6 +228,7 @@ mod tests {
             name: name.to_string(),
             description: None,
             image: None,
+            preview_images: Vec::new(),
             visibility: crate::types::CollectionVisibility::Private,
             sort_order: 0,
             child_count: 0,

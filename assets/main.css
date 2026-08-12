@@ -4139,6 +4139,54 @@ a:hover {
     height: 100%;
 }
 
+.collection-cover__mosaic {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  gap: 2px;
+  background: var(--surface);
+}
+
+.collection-cover__mosaic--one {
+  grid-template-columns: 1fr;
+}
+
+.collection-cover__mosaic--two,
+.collection-cover__mosaic--three,
+.collection-cover__mosaic--four {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.collection-cover__mosaic--three,
+.collection-cover__mosaic--four {
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.collection-cover__mosaic--three .collection-cover__mosaic-tile:first-child {
+  grid-row: 1 / span 2;
+}
+
+.collection-cover__mosaic-tile {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.collection-cover__mosaic-tile .edited-recipe-image,
+.collection-cover__mosaic-tile .edited-recipe-image__stage,
+.collection-cover__mosaic-tile .edited-recipe-image__plain,
+.collection-cover__tile-fallback {
+  width: 100%;
+  height: 100%;
+}
+
+.collection-cover__tile-fallback {
+  display: grid;
+  place-items: center;
+  font-size: clamp(1rem, 3vw, 2rem);
+}
+
 .collection-cover__fallback {
     display: grid;
     place-items: center;

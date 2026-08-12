@@ -6,6 +6,8 @@ use crate::types::RecipeImage;
 #[derive(Props, Clone, PartialEq)]
 pub struct CollectionCoverProps {
     pub image: Option<RecipeImage>,
+    #[props(default)]
+    pub preview_images: Vec<RecipeImage>,
     pub alt: String,
     #[props(default)]
     pub class: String,
@@ -28,8 +30,71 @@ pub fn CollectionCover(props: CollectionCoverProps) -> Element {
                     image,
                     alt: props.alt,
                 }
+            } else if !props.preview_images.is_empty() {
+                CollectionRecipeMosaic {
+                    images: props.preview_images.into_iter().take(4).collect(),
+                    alt: props.alt,
+                }
             } else {
                 span { class: "collection-cover__fallback", aria_hidden: "true", "📁" }
+            }
+        }
+    }
+}
+
+fn mosaic_layout_class(image_count: usize) -> &'static str {
+    match image_count {
+        1 => "collection-cover__mosaic--one",
+        2 => "collection-cover__mosaic--two",
+        3 => "collection-cover__mosaic--three",
+        _ => "collection-cover__mosaic--four",
+    }
+}
+
+#[derive(Props, Clone, PartialEq)]
+struct CollectionRecipeMosaicProps {
+    images: Vec<RecipeImage>,
+    alt: String,
+}
+
+#[component]
+fn CollectionRecipeMosaic(props: CollectionRecipeMosaicProps) -> Element {
+    let layout_class = mosaic_layout_class(props.images.len());
+    rsx! {
+        div {
+            class: "collection-cover__mosaic {layout_class}",
+            role: "img",
+            aria_label: "{props.alt}",
+            for image in props.images.into_iter() {
+                CollectionRecipeMosaicTile {
+                    key: "{image.url}",
+                    image,
+                }
+            }
+        }
+    }
+}
+
+#[derive(Props, Clone, PartialEq)]
+struct CollectionRecipeMosaicTileProps {
+    image: RecipeImage,
+}
+
+/// A broken recipe image only affects its tile, leaving the rest of the mosaic intact.
+#[component]
+fn CollectionRecipeMosaicTile(props: CollectionRecipeMosaicTileProps) -> Element {
+    let mut image_failed = use_signal(|| false);
+    rsx! {
+        div { class: "collection-cover__mosaic-tile", aria_hidden: "true",
+            if image_failed() {
+                span { class: "collection-cover__tile-fallback", aria_hidden: "true", "📁" }
+            } else {
+                EditedRecipeImage {
+                    image: props.image,
+                    alt: String::new(),
+                    prefer_thumbnail: true,
+                    on_error: move |_| image_failed.set(true),
+                }
             }
         }
     }
@@ -58,5 +123,28 @@ fn CollectionCoverImage(props: CollectionCoverImageProps) -> Element {
             prefer_thumbnail: true,
             on_error: move |_| image_failed.set(true),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::mosaic_layout_class;
+
+    #[test]
+    fn recipe_mosaic_layout_adapts_to_one_through_four_images() {
+        assert_eq!(mosaic_layout_class(1), "collection-cover__mosaic--one");
+        assert_eq!(mosaic_layout_class(2), "collection-cover__mosaic--two");
+        assert_eq!(mosaic_layout_class(3), "collection-cover__mosaic--three");
+        assert_eq!(mosaic_layout_class(4), "collection-cover__mosaic--four");
+        assert_eq!(mosaic_layout_class(8), "collection-cover__mosaic--four");
+    }
+
+    #[test]
+    fn recipe_mosaic_has_one_accessible_label_and_decorative_tiles() {
+        let source = include_str!("collection_cover.rs");
+        assert!(source.contains("role: \"img\""));
+        assert!(source.contains("aria_label: \"{props.alt}\""));
+        assert!(source.contains("aria_hidden: \"true\""));
+        assert!(source.contains("alt: String::new()"));
     }
 }

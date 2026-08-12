@@ -411,6 +411,7 @@ pub fn CollectionDetail(id: String) -> Element {
                     } }
                     CollectionCover {
                         image: collection_contents.collection.image.clone(),
+                        preview_images: collection_contents.collection.preview_images.clone(),
                         alt: format!("{} collection cover", collection_contents.collection.name),
                         class: "collection-cover--hero".to_string(),
                     }
@@ -457,6 +458,7 @@ pub fn CollectionDetail(id: String) -> Element {
                                     gap: "var(--space-sm)",
                                     CollectionCover {
                                         image: child.image.clone(),
+                                        preview_images: child.preview_images.clone(),
                                         alt: format!("{} collection cover", child.name),
                                     }
                                     Link {
