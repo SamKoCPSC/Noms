@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Postgres};
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use uuid::Uuid;
 
 use super::diff::{
@@ -857,6 +857,281 @@ pub async fn get_recipe_version_graph(
         VersionGraphLimits::default(),
     )
     .await
+}
+
+pub const INITIAL_VERSION_GRAPH_NODE_LIMIT: usize = 25;
+pub const VERSION_GRAPH_EXPANSION_NODE_LIMIT: usize = 5;
+
+fn version_graph_frontier_rank(kind: crate::types::VersionGraphFrontierKind) -> u8 {
+    match kind {
+        crate::types::VersionGraphFrontierKind::OlderVersions => 0,
+        crate::types::VersionGraphFrontierKind::NewerVersions => 1,
+        crate::types::VersionGraphFrontierKind::ParentFork => 2,
+        crate::types::VersionGraphFrontierKind::ChildForks => 3,
+    }
+}
+
+fn version_graph_neighbor(
+    anchor: crate::types::VersionGraphNodeId,
+    edge: &crate::types::VersionGraphEdge,
+) -> Option<(
+    crate::types::VersionGraphFrontierKind,
+    crate::types::VersionGraphNodeId,
+)> {
+    match (
+        edge.kind(),
+        edge.source() == anchor,
+        edge.target() == anchor,
+    ) {
+        (crate::types::VersionGraphEdgeKind::Version, true, _) => Some((
+            crate::types::VersionGraphFrontierKind::NewerVersions,
+            edge.target(),
+        )),
+        (crate::types::VersionGraphEdgeKind::Version, _, true) => Some((
+            crate::types::VersionGraphFrontierKind::OlderVersions,
+            edge.source(),
+        )),
+        (crate::types::VersionGraphEdgeKind::Fork, true, _) => Some((
+            crate::types::VersionGraphFrontierKind::ChildForks,
+            edge.target(),
+        )),
+        (crate::types::VersionGraphEdgeKind::Fork, _, true) => Some((
+            crate::types::VersionGraphFrontierKind::ParentFork,
+            edge.source(),
+        )),
+        _ => None,
+    }
+}
+
+fn version_graph_neighbors(
+    graph: &crate::types::VersionGraph,
+    anchor: crate::types::VersionGraphNodeId,
+) -> Vec<(
+    crate::types::VersionGraphFrontierKind,
+    crate::types::VersionGraphNodeId,
+)> {
+    let mut neighbors = graph
+        .edges
+        .iter()
+        .filter_map(|edge| version_graph_neighbor(anchor, edge))
+        .collect::<Vec<_>>();
+    neighbors.sort_by_key(|(kind, id)| {
+        (
+            version_graph_frontier_rank(*kind),
+            id.recipe_id,
+            id.version_number,
+        )
+    });
+    neighbors.dedup();
+    neighbors
+}
+
+fn version_graph_frontiers(
+    graph: &crate::types::VersionGraph,
+    loaded_node_ids: &HashSet<crate::types::VersionGraphNodeId>,
+) -> Vec<crate::types::VersionGraphFrontier> {
+    let mut anchors = loaded_node_ids.iter().copied().collect::<Vec<_>>();
+    anchors.sort_by_key(|id| (id.recipe_id, id.version_number));
+    let mut frontiers = Vec::new();
+
+    for anchor in anchors {
+        let mut hidden_by_kind = HashMap::<crate::types::VersionGraphFrontierKind, Vec<_>>::new();
+        for (kind, neighbor) in version_graph_neighbors(graph, anchor) {
+            if !loaded_node_ids.contains(&neighbor) {
+                hidden_by_kind.entry(kind).or_default().push(neighbor);
+            }
+        }
+        for kind in [
+            crate::types::VersionGraphFrontierKind::OlderVersions,
+            crate::types::VersionGraphFrontierKind::NewerVersions,
+            crate::types::VersionGraphFrontierKind::ParentFork,
+            crate::types::VersionGraphFrontierKind::ChildForks,
+        ] {
+            if let Some(seeds) = hidden_by_kind.remove(&kind) {
+                let hidden_count =
+                    version_graph_bfs(graph, seeds, loaded_node_ids, usize::MAX).len();
+                frontiers.push(crate::types::VersionGraphFrontier {
+                    anchor,
+                    kind,
+                    hidden_count,
+                });
+            }
+        }
+    }
+    frontiers
+}
+
+fn version_graph_bfs(
+    graph: &crate::types::VersionGraph,
+    seeds: impl IntoIterator<Item = crate::types::VersionGraphNodeId>,
+    excluded_node_ids: &HashSet<crate::types::VersionGraphNodeId>,
+    max_new_nodes: usize,
+) -> Vec<crate::types::VersionGraphNodeId> {
+    let graph_node_ids = graph
+        .nodes
+        .iter()
+        .map(crate::types::VersionGraphNode::id)
+        .collect::<HashSet<_>>();
+    let mut queued = excluded_node_ids.clone();
+    let mut queue = VecDeque::new();
+    for seed in seeds {
+        if graph_node_ids.contains(&seed) && queued.insert(seed) {
+            queue.push_back(seed);
+        }
+    }
+
+    let mut selected = Vec::new();
+    while let Some(node_id) = queue.pop_front() {
+        if selected.len() == max_new_nodes {
+            break;
+        }
+        selected.push(node_id);
+        for (_, neighbor) in version_graph_neighbors(graph, node_id) {
+            if graph_node_ids.contains(&neighbor) && queued.insert(neighbor) {
+                queue.push_back(neighbor);
+            }
+        }
+    }
+    selected
+}
+
+fn version_graph_batch(
+    complete_graph: &crate::types::VersionGraph,
+    previously_loaded_node_ids: &HashSet<crate::types::VersionGraphNodeId>,
+    new_node_ids: Vec<crate::types::VersionGraphNodeId>,
+) -> crate::types::VersionGraph {
+    let new_node_id_set = new_node_ids.iter().copied().collect::<HashSet<_>>();
+    let combined_node_ids = previously_loaded_node_ids
+        .union(&new_node_id_set)
+        .copied()
+        .collect::<HashSet<_>>();
+    let node_by_id = complete_graph
+        .nodes
+        .iter()
+        .map(|node| (node.id(), node))
+        .collect::<HashMap<_, _>>();
+    let nodes = new_node_ids
+        .into_iter()
+        .filter_map(|id| node_by_id.get(&id).map(|node| (*node).clone()))
+        .collect();
+    let edges = complete_graph
+        .edges
+        .iter()
+        .filter(|edge| {
+            combined_node_ids.contains(&edge.source())
+                && combined_node_ids.contains(&edge.target())
+                && (new_node_id_set.contains(&edge.source())
+                    || new_node_id_set.contains(&edge.target()))
+        })
+        .cloned()
+        .collect();
+
+    crate::types::VersionGraph {
+        nodes,
+        edges,
+        frontiers: version_graph_frontiers(complete_graph, &combined_node_ids),
+        truncation: complete_graph.truncation,
+        lineage_counts: complete_graph.lineage_counts,
+    }
+}
+
+fn initial_version_graph_batch(
+    complete_graph: &crate::types::VersionGraph,
+) -> crate::types::VersionGraph {
+    let seed = complete_graph
+        .nodes
+        .iter()
+        .filter(|node| node.is_selected_recipe())
+        .max_by_key(|node| (node.is_current_version(), node.id().version_number))
+        .map(crate::types::VersionGraphNode::id);
+    let new_node_ids = seed.map_or_else(Vec::new, |seed| {
+        version_graph_bfs(
+            complete_graph,
+            [seed],
+            &HashSet::new(),
+            INITIAL_VERSION_GRAPH_NODE_LIMIT,
+        )
+    });
+    version_graph_batch(complete_graph, &HashSet::new(), new_node_ids)
+}
+
+fn invalid_version_graph_expansion(message: &str) -> DbError {
+    DbError::InvalidRecipeSnapshot(format!("invalid version graph expansion: {message}"))
+}
+
+fn expanded_version_graph_batch(
+    complete_graph: &crate::types::VersionGraph,
+    frontier: crate::types::VersionGraphFrontier,
+    loaded_node_ids: Vec<crate::types::VersionGraphNodeId>,
+) -> Result<crate::types::VersionGraph, DbError> {
+    let loaded_node_id_set = loaded_node_ids.iter().copied().collect::<HashSet<_>>();
+    if loaded_node_id_set.len() != loaded_node_ids.len() {
+        return Err(invalid_version_graph_expansion(
+            "loaded node IDs must be unique",
+        ));
+    }
+    if !loaded_node_id_set.contains(&frontier.anchor) {
+        return Err(invalid_version_graph_expansion(
+            "frontier anchor is not loaded",
+        ));
+    }
+    let complete_node_ids = complete_graph
+        .nodes
+        .iter()
+        .map(crate::types::VersionGraphNode::id)
+        .collect::<HashSet<_>>();
+    if !loaded_node_id_set.is_subset(&complete_node_ids) {
+        return Err(invalid_version_graph_expansion(
+            "loaded node ID is not in this graph",
+        ));
+    }
+
+    let current_frontier = version_graph_frontiers(complete_graph, &loaded_node_id_set)
+        .into_iter()
+        .find(|candidate| candidate.anchor == frontier.anchor && candidate.kind == frontier.kind)
+        .ok_or_else(|| invalid_version_graph_expansion("frontier direction is not available"))?;
+    if current_frontier.hidden_count != frontier.hidden_count {
+        return Err(invalid_version_graph_expansion("frontier is stale"));
+    }
+
+    let seeds = version_graph_neighbors(complete_graph, frontier.anchor)
+        .into_iter()
+        .filter(|(kind, id)| *kind == frontier.kind && !loaded_node_id_set.contains(id))
+        .map(|(_, id)| id)
+        .collect::<Vec<_>>();
+    let new_node_ids = version_graph_bfs(
+        complete_graph,
+        seeds,
+        &loaded_node_id_set,
+        VERSION_GRAPH_EXPANSION_NODE_LIMIT,
+    );
+    Ok(version_graph_batch(
+        complete_graph,
+        &loaded_node_id_set,
+        new_node_ids,
+    ))
+}
+
+/// Load the privacy-filtered graph and return its deterministic initial batch.
+pub async fn get_initial_recipe_version_graph(
+    pool: &PgPool,
+    selected_recipe_id: Uuid,
+    viewer_id: Option<Uuid>,
+) -> Result<crate::types::VersionGraph, DbError> {
+    let complete_graph = get_recipe_version_graph(pool, selected_recipe_id, viewer_id).await?;
+    Ok(initial_version_graph_batch(&complete_graph))
+}
+
+/// Expand exactly one validated frontier without returning already loaded nodes.
+pub async fn expand_recipe_version_graph(
+    pool: &PgPool,
+    selected_recipe_id: Uuid,
+    viewer_id: Option<Uuid>,
+    frontier: crate::types::VersionGraphFrontier,
+    loaded_node_ids: Vec<crate::types::VersionGraphNodeId>,
+) -> Result<crate::types::VersionGraph, DbError> {
+    let complete_graph = get_recipe_version_graph(pool, selected_recipe_id, viewer_id).await?;
+    expanded_version_graph_batch(&complete_graph, frontier, loaded_node_ids)
 }
 
 pub async fn compare_recipe_versions(
@@ -1970,6 +2245,163 @@ mod tests {
     use crate::db::diff::snapshot_to_json;
     use crate::db::{insert_user, DbError};
     use crate::test_utils;
+
+    fn graph_node(
+        recipe_id: Uuid,
+        version_number: i32,
+        is_selected_recipe: bool,
+        is_current_version: bool,
+    ) -> crate::types::VersionGraphNode {
+        crate::types::VersionGraphNode::redacted(
+            crate::types::VersionGraphNodeId {
+                recipe_id,
+                version_number,
+            },
+            crate::types::VersionGraphNodeState {
+                is_selected_recipe,
+                is_current_version,
+                is_deleted: false,
+            },
+        )
+    }
+
+    fn version_chain_graph(recipe_id: Uuid, version_count: i32) -> crate::types::VersionGraph {
+        let nodes = (1..=version_count)
+            .map(|version_number| {
+                graph_node(
+                    recipe_id,
+                    version_number,
+                    true,
+                    version_number == version_count,
+                )
+            })
+            .collect::<Vec<_>>();
+        let edges = nodes
+            .windows(2)
+            .map(|pair| {
+                crate::types::VersionGraphEdge::version(pair[0].id(), pair[1].id()).unwrap()
+            })
+            .collect();
+        crate::types::VersionGraph {
+            nodes,
+            edges,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn initial_version_graph_batch_returns_at_most_twenty_five_nodes() {
+        let graph = version_chain_graph(Uuid::from_u128(100), 31);
+
+        let initial = initial_version_graph_batch(&graph);
+
+        assert_eq!(initial.nodes.len(), INITIAL_VERSION_GRAPH_NODE_LIMIT);
+        assert_eq!(initial.nodes[0].id().version_number, 31);
+        assert_eq!(initial.nodes[24].id().version_number, 7);
+        assert_eq!(
+            initial.frontiers,
+            vec![crate::types::VersionGraphFrontier {
+                anchor: initial.nodes[24].id(),
+                kind: crate::types::VersionGraphFrontierKind::OlderVersions,
+                hidden_count: 6,
+            }]
+        );
+    }
+
+    #[test]
+    fn version_graph_expansion_returns_at_most_five_new_nodes_without_loaded_duplicates() {
+        let graph = version_chain_graph(Uuid::from_u128(101), 31);
+        let initial = initial_version_graph_batch(&graph);
+        let loaded_node_ids = initial
+            .nodes
+            .iter()
+            .map(crate::types::VersionGraphNode::id)
+            .collect::<Vec<_>>();
+
+        let expanded =
+            expanded_version_graph_batch(&graph, initial.frontiers[0], loaded_node_ids.clone())
+                .unwrap();
+
+        assert_eq!(expanded.nodes.len(), VERSION_GRAPH_EXPANSION_NODE_LIMIT);
+        assert!(expanded
+            .nodes
+            .iter()
+            .all(|node| !loaded_node_ids.contains(&node.id())));
+        assert_eq!(
+            expanded
+                .nodes
+                .iter()
+                .map(|node| node.id().version_number)
+                .collect::<Vec<_>>(),
+            vec![6, 5, 4, 3, 2]
+        );
+    }
+
+    #[test]
+    fn version_graph_expansion_is_specific_to_the_requested_frontier() {
+        let root_recipe_id = Uuid::from_u128(110);
+        let first_child_id = Uuid::from_u128(111);
+        let second_child_id = Uuid::from_u128(112);
+        let root = graph_node(root_recipe_id, 1, true, true);
+        let newer = graph_node(root_recipe_id, 2, true, false);
+        let first_child = graph_node(first_child_id, 1, false, true);
+        let second_child = graph_node(second_child_id, 1, false, true);
+        let graph = crate::types::VersionGraph {
+            nodes: vec![
+                root.clone(),
+                newer.clone(),
+                first_child.clone(),
+                second_child.clone(),
+            ],
+            edges: vec![
+                crate::types::VersionGraphEdge::version(root.id(), newer.id()).unwrap(),
+                crate::types::VersionGraphEdge::fork(root_recipe_id, 1, first_child_id).unwrap(),
+                crate::types::VersionGraphEdge::fork(root_recipe_id, 1, second_child_id).unwrap(),
+            ],
+            ..Default::default()
+        };
+        let frontier = crate::types::VersionGraphFrontier {
+            anchor: root.id(),
+            kind: crate::types::VersionGraphFrontierKind::ChildForks,
+            hidden_count: 2,
+        };
+
+        let expanded = expanded_version_graph_batch(&graph, frontier, vec![root.id()]).unwrap();
+
+        assert_eq!(
+            expanded
+                .nodes
+                .iter()
+                .map(crate::types::VersionGraphNode::id)
+                .collect::<HashSet<_>>(),
+            HashSet::from([first_child.id(), second_child.id()])
+        );
+        assert!(!expanded.nodes.iter().any(|node| node.id() == newer.id()));
+        assert!(expanded.frontiers.iter().any(|candidate| {
+            candidate.anchor == root.id()
+                && candidate.kind == crate::types::VersionGraphFrontierKind::NewerVersions
+        }));
+    }
+
+    #[test]
+    fn version_graph_expansion_rejects_duplicate_loaded_ids_and_wrong_directions() {
+        let graph = version_chain_graph(Uuid::from_u128(120), 2);
+        let current = graph.nodes[1].id();
+        let older_frontier = crate::types::VersionGraphFrontier {
+            anchor: current,
+            kind: crate::types::VersionGraphFrontierKind::OlderVersions,
+            hidden_count: 1,
+        };
+        assert!(
+            expanded_version_graph_batch(&graph, older_frontier, vec![current, current]).is_err()
+        );
+
+        let wrong_direction = crate::types::VersionGraphFrontier {
+            kind: crate::types::VersionGraphFrontierKind::ChildForks,
+            ..older_frontier
+        };
+        assert!(expanded_version_graph_batch(&graph, wrong_direction, vec![current]).is_err());
+    }
 
     #[test]
     fn version_graph_lineage_counts_distinct_recipes_in_each_direction() {

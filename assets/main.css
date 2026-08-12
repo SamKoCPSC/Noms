@@ -2717,6 +2717,116 @@ a:hover {
     will-change: transform;
 }
 
+.recipe-version-graph__frontier-layer {
+    position: absolute;
+    z-index: 4;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.recipe-version-graph__frontier-control {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    max-width: 264px;
+    transform: translate(-50%, -50%) scale(var(--recipe-version-graph-frontier-scale, 1));
+    pointer-events: auto;
+}
+
+.recipe-version-graph__frontier-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.recipe-version-graph__frontier-button,
+.recipe-version-graph__outline-frontier-button {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border: 2px solid color-mix(in srgb, var(--accent) 62%, var(--border-color));
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--surface) 94%, var(--accent));
+    box-shadow: 1px 2px 5px var(--shadow-dark), -1px -1px 3px var(--shadow-light);
+    color: var(--text-primary);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.15;
+    white-space: nowrap;
+}
+
+.recipe-version-graph__frontier-button:hover:not(:disabled),
+.recipe-version-graph__outline-frontier-button:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.recipe-version-graph__frontier-button--continue,
+.recipe-version-graph__outline-frontier-button--continue {
+    border-style: dashed;
+    color: var(--accent);
+}
+
+.recipe-version-graph__frontier-button:focus-visible,
+.recipe-version-graph__outline-frontier-button:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--accent) 65%, transparent);
+    outline-offset: 3px;
+}
+
+.recipe-version-graph__frontier-button:disabled,
+.recipe-version-graph__outline-frontier-button:disabled {
+    cursor: wait;
+    opacity: 0.72;
+}
+
+.recipe-version-graph__frontier-spinner {
+    width: 13px;
+    height: 13px;
+    flex: 0 0 13px;
+    border: 2px solid color-mix(in srgb, var(--accent) 25%, transparent);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.recipe-version-graph__frontier-error-marker {
+    display: inline-grid;
+    width: 24px;
+    height: 24px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--error);
+    color: white;
+    font-weight: 800;
+}
+
+.recipe-version-graph__expansion-live {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+}
+
+.recipe-version-graph__expansion-error {
+    margin: calc(-1 * var(--space-sm)) 0 0;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid color-mix(in srgb, var(--error) 55%, transparent);
+    border-radius: var(--radius-md);
+    background: var(--error-bg);
+    color: var(--error);
+}
+
 .recipe-version-graph__edge-layer {
     position: absolute;
     z-index: 0;
@@ -3253,6 +3363,12 @@ a:hover {
     margin-top: var(--space-xs);
 }
 
+.recipe-version-graph__outline-frontier-button {
+    margin-inline-start: var(--space-sm);
+    box-shadow: none;
+    font-size: 0.82rem;
+}
+
 .recipe-version-graph__outline-current {
     position: absolute;
     width: 1px;
@@ -3304,6 +3420,12 @@ a:hover {
     .recipe-version-graph__canvas-viewport {
         height: min(70vh, 520px);
         min-height: 360px;
+    }
+
+    .recipe-version-graph__frontier-button {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .recipe-version-graph__comparison-heading {

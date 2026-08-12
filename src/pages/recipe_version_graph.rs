@@ -7,11 +7,14 @@ use dioxus::html::{geometry::WheelDelta, input_data::MouseButton};
 use dioxus::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use crate::api::recipe::{compare_version_graph_snapshots_api, get_recipe_version_graph};
+use crate::api::recipe::{
+    compare_version_graph_snapshots_api, expand_recipe_version_graph, get_recipe_version_graph,
+};
 use crate::components::base::{Card, EditedRecipeImage, EmptyState, LoadingSpinner, PageHeader};
 use crate::types::{
     RecipeVersionChange, VersionGraph, VersionGraphComparison, VersionGraphEdge,
-    VersionGraphEdgeKind, VersionGraphLineageCount, VersionGraphNode, VersionGraphNodeId,
+    VersionGraphEdgeKind, VersionGraphFrontier, VersionGraphFrontierKind, VersionGraphLineageCount,
+    VersionGraphNode, VersionGraphNodeId,
 };
 use crate::Route;
 
@@ -124,6 +127,9 @@ const GRAPH_CONTEXT_MENU_HEIGHT_PX: f64 = 300.0;
 const GRAPH_SNAPSHOT_CONTEXT_MENU_HEIGHT_PX: f64 = 336.0;
 const GRAPH_CONTEXT_MENU_MARGIN_PX: f64 = 8.0;
 const GRAPH_SNAPSHOT_FOCUS_ZOOM: f64 = 1.0;
+const GRAPH_FRONTIER_CONTROL_GAP_PX: f64 = 12.0;
+const GRAPH_FRONTIER_CONTROL_HALF_WIDTH_PX: f64 = 132.0;
+const GRAPH_FRONTIER_CONTROL_HALF_HEIGHT_PX: f64 = 22.0;
 #[cfg(target_arch = "wasm32")]
 const GRAPH_TOUCH_CONTEXT_MENU_DELAY_MS: u32 = 550;
 const GRAPH_TOUCH_CONTEXT_MENU_MOVE_TOLERANCE_PX: f64 = 12.0;
@@ -153,6 +159,31 @@ struct VersionGraphTouchContextCandidate {
     node_id: VersionGraphNodeId,
     token: u64,
     origin: (f64, f64),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct VersionGraphFrontierId {
+    anchor: VersionGraphNodeId,
+    kind: VersionGraphFrontierKind,
+}
+
+impl From<VersionGraphFrontier> for VersionGraphFrontierId {
+    fn from(frontier: VersionGraphFrontier) -> Self {
+        Self {
+            anchor: frontier.anchor,
+            kind: frontier.kind,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct VersionGraphExpansionRecord {
+    frontier: VersionGraphFrontier,
+    parent: Option<VersionGraphFrontierId>,
+    batch: Option<VersionGraph>,
+    is_expanded: bool,
+    is_loading: bool,
+    error: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -283,6 +314,314 @@ fn version_graph_edge_key(
             VersionGraphEdgeKind::Fork => 1,
         },
     )
+}
+
+fn merge_version_graph_batches<'a>(
+    initial: &VersionGraph,
+    batches: impl IntoIterator<Item = &'a VersionGraph>,
+) -> VersionGraph {
+    let mut merged = initial.clone();
+    let mut node_ids = merged
+        .nodes
+        .iter()
+        .map(VersionGraphNode::id)
+        .collect::<HashSet<_>>();
+    let mut edge_ids = merged
+        .edges
+        .iter()
+        .map(|edge| version_graph_edge_key(edge.source(), edge.target(), edge.kind()))
+        .collect::<HashSet<_>>();
+    let mut frontier_indexes = merged
+        .frontiers
+        .iter()
+        .copied()
+        .enumerate()
+        .map(|(index, frontier)| (VersionGraphFrontierId::from(frontier), index))
+        .collect::<HashMap<_, _>>();
+
+    for batch in batches {
+        for node in &batch.nodes {
+            if node_ids.insert(node.id()) {
+                merged.nodes.push(node.clone());
+            }
+        }
+        for edge in &batch.edges {
+            if edge_ids.insert(version_graph_edge_key(
+                edge.source(),
+                edge.target(),
+                edge.kind(),
+            )) {
+                merged.edges.push(edge.clone());
+            }
+        }
+        for frontier in &batch.frontiers {
+            let frontier_id = VersionGraphFrontierId::from(*frontier);
+            if let Some(index) = frontier_indexes.get(&frontier_id).copied() {
+                merged.frontiers[index] = *frontier;
+            } else {
+                frontier_indexes.insert(frontier_id, merged.frontiers.len());
+                merged.frontiers.push(*frontier);
+            }
+        }
+    }
+
+    merged
+}
+
+fn retain_cached_version_graph_dependencies(
+    mut visible: VersionGraph,
+    cached: &VersionGraph,
+) -> VersionGraph {
+    let mut visible_node_ids = visible
+        .nodes
+        .iter()
+        .map(VersionGraphNode::id)
+        .collect::<HashSet<_>>();
+    let required_node_ids = visible
+        .edges
+        .iter()
+        .flat_map(|edge| [edge.source(), edge.target()])
+        .chain(visible.frontiers.iter().map(|frontier| frontier.anchor))
+        .collect::<HashSet<_>>();
+    for node in &cached.nodes {
+        if required_node_ids.contains(&node.id()) && visible_node_ids.insert(node.id()) {
+            visible.nodes.push(node.clone());
+        }
+    }
+    visible
+}
+
+fn expansion_record_is_visible(
+    record_id: VersionGraphFrontierId,
+    records: &[VersionGraphExpansionRecord],
+) -> bool {
+    let mut next = Some(record_id);
+    let mut visited = HashSet::new();
+    while let Some(id) = next {
+        if !visited.insert(id) {
+            return false;
+        }
+        let Some(record) = records
+            .iter()
+            .find(|record| VersionGraphFrontierId::from(record.frontier) == id)
+        else {
+            return false;
+        };
+        if !record.is_expanded || record.batch.is_none() {
+            return false;
+        }
+        next = record.parent;
+    }
+    true
+}
+
+fn expansion_record_source_is_visible(
+    record: &VersionGraphExpansionRecord,
+    records: &[VersionGraphExpansionRecord],
+) -> bool {
+    record
+        .parent
+        .is_none_or(|parent| expansion_record_is_visible(parent, records))
+}
+
+fn visible_expansion_frontiers(
+    initial: &VersionGraph,
+    records: &[VersionGraphExpansionRecord],
+) -> Vec<(VersionGraphFrontier, Option<VersionGraphFrontierId>)> {
+    let mut frontiers = Vec::new();
+    let mut frontier_indexes = HashMap::new();
+    for frontier in &initial.frontiers {
+        let frontier_id = VersionGraphFrontierId::from(*frontier);
+        if let std::collections::hash_map::Entry::Vacant(entry) =
+            frontier_indexes.entry(frontier_id)
+        {
+            entry.insert(frontiers.len());
+            frontiers.push((*frontier, None));
+        }
+    }
+    for record in records {
+        let record_id = VersionGraphFrontierId::from(record.frontier);
+        if !expansion_record_is_visible(record_id, records) {
+            continue;
+        }
+        if let Some(batch) = &record.batch {
+            for frontier in &batch.frontiers {
+                let frontier_id = VersionGraphFrontierId::from(*frontier);
+                let parent = if frontier_id == record_id {
+                    record.parent
+                } else {
+                    Some(record_id)
+                };
+                if let Some(index) = frontier_indexes.get(&frontier_id).copied() {
+                    frontiers[index] = (*frontier, parent);
+                } else {
+                    frontier_indexes.insert(frontier_id, frontiers.len());
+                    frontiers.push((*frontier, parent));
+                }
+            }
+        }
+    }
+    frontiers
+}
+
+fn frontier_direction_label(kind: VersionGraphFrontierKind) -> &'static str {
+    match kind {
+        VersionGraphFrontierKind::OlderVersions => "older versions",
+        VersionGraphFrontierKind::NewerVersions => "newer versions",
+        VersionGraphFrontierKind::ParentFork => "parent fork",
+        VersionGraphFrontierKind::ChildForks => "child forks",
+    }
+}
+
+fn version_graph_frontier_control_scale(transform: VersionGraphTransform) -> f64 {
+    transform.scale.min(1.0)
+}
+
+fn version_graph_frontier_control_position(
+    anchor: VersionGraphLayoutNode,
+    transform: VersionGraphTransform,
+    kind: VersionGraphFrontierKind,
+) -> (f64, f64) {
+    let control_scale = version_graph_frontier_control_scale(transform);
+    let center_x = transform.offset_x + (anchor.x + GRAPH_NODE_WIDTH_PX / 2.0) * transform.scale;
+    let center_y = transform.offset_y + (anchor.y + GRAPH_NODE_HEIGHT_PX / 2.0) * transform.scale;
+    let horizontal_distance = GRAPH_NODE_WIDTH_PX / 2.0 * transform.scale
+        + (GRAPH_FRONTIER_CONTROL_GAP_PX + GRAPH_FRONTIER_CONTROL_HALF_WIDTH_PX) * control_scale;
+    let vertical_distance = GRAPH_NODE_HEIGHT_PX / 2.0 * transform.scale
+        + (GRAPH_FRONTIER_CONTROL_GAP_PX + GRAPH_FRONTIER_CONTROL_HALF_HEIGHT_PX) * control_scale;
+
+    match kind {
+        VersionGraphFrontierKind::OlderVersions => (center_x, center_y - vertical_distance),
+        VersionGraphFrontierKind::NewerVersions => (center_x + horizontal_distance, center_y),
+        VersionGraphFrontierKind::ParentFork => (center_x - horizontal_distance, center_y),
+        VersionGraphFrontierKind::ChildForks => (center_x, center_y + vertical_distance),
+    }
+}
+
+fn version_graph_frontier_port_class(kind: VersionGraphFrontierKind) -> &'static str {
+    match kind {
+        VersionGraphFrontierKind::OlderVersions => "recipe-version-graph__frontier-control--older",
+        VersionGraphFrontierKind::NewerVersions => "recipe-version-graph__frontier-control--newer",
+        VersionGraphFrontierKind::ParentFork => "recipe-version-graph__frontier-control--parent",
+        VersionGraphFrontierKind::ChildForks => "recipe-version-graph__frontier-control--children",
+    }
+}
+
+fn clamp_version_graph_frontier_control_position(
+    position: (f64, f64),
+    viewport: (f64, f64),
+    control_scale: f64,
+) -> (f64, f64) {
+    let minimum_x =
+        GRAPH_FRONTIER_CONTROL_HALF_WIDTH_PX * control_scale + GRAPH_CONTEXT_MENU_MARGIN_PX;
+    let maximum_x = (viewport.0 - minimum_x).max(minimum_x);
+    let minimum_y =
+        GRAPH_FRONTIER_CONTROL_HALF_HEIGHT_PX * control_scale + GRAPH_CONTEXT_MENU_MARGIN_PX;
+    let maximum_y = (viewport.1 - minimum_y).max(minimum_y);
+    (
+        position.0.clamp(minimum_x, maximum_x),
+        position.1.clamp(minimum_y, maximum_y),
+    )
+}
+
+fn begin_version_graph_expansion(
+    recipe_id: String,
+    frontier: VersionGraphFrontier,
+    parent: Option<VersionGraphFrontierId>,
+    loaded_node_ids: Vec<VersionGraphNodeId>,
+    mut records: Signal<Vec<VersionGraphExpansionRecord>>,
+    active_recipe_id: Signal<String>,
+    continue_expansion: bool,
+) {
+    let frontier_id = VersionGraphFrontierId::from(frontier);
+    let mut should_fetch = false;
+    records.with_mut(|records| {
+        if let Some(record) = records
+            .iter_mut()
+            .find(|record| VersionGraphFrontierId::from(record.frontier) == frontier_id)
+        {
+            if record.is_loading {
+                return;
+            }
+            record.parent = parent;
+            record.error = None;
+            if continue_expansion {
+                record.is_loading = true;
+                should_fetch = true;
+            } else if record.batch.is_some() {
+                record.is_expanded = true;
+            } else {
+                record.is_loading = true;
+                should_fetch = true;
+            }
+        } else {
+            records.push(VersionGraphExpansionRecord {
+                frontier,
+                parent,
+                batch: None,
+                is_expanded: false,
+                is_loading: true,
+                error: None,
+            });
+            should_fetch = true;
+        }
+    });
+    if !should_fetch {
+        return;
+    }
+
+    spawn(async move {
+        let requested_recipe_id = recipe_id.clone();
+        let result = expand_recipe_version_graph(recipe_id, frontier, loaded_node_ids).await;
+        if active_recipe_id() != requested_recipe_id {
+            return;
+        }
+        records.with_mut(|records| {
+            let Some(record) = records
+                .iter_mut()
+                .find(|record| VersionGraphFrontierId::from(record.frontier) == frontier_id)
+            else {
+                return;
+            };
+            record.is_loading = false;
+            match result {
+                Ok(batch) => {
+                    let mut merged_batch = record.batch.as_ref().map_or_else(
+                        || batch.clone(),
+                        |cached| merge_version_graph_batches(cached, [&batch]),
+                    );
+                    // The response describes every boundary after this page.
+                    // Replacing this list removes a fully consumed frontier.
+                    merged_batch.frontiers = batch.frontiers;
+                    record.batch = Some(merged_batch);
+                    record.is_expanded = true;
+                    record.error = None;
+                }
+                Err(error) => {
+                    if !continue_expansion {
+                        record.is_expanded = false;
+                    }
+                    record.error = Some(server_error_message(&error));
+                }
+            }
+        });
+    });
+}
+
+fn collapse_version_graph_expansion(
+    frontier: VersionGraphFrontier,
+    mut records: Signal<Vec<VersionGraphExpansionRecord>>,
+) {
+    let frontier_id = VersionGraphFrontierId::from(frontier);
+    records.with_mut(|records| {
+        if let Some(record) = records
+            .iter_mut()
+            .find(|record| VersionGraphFrontierId::from(record.frontier) == frontier_id)
+        {
+            record.is_expanded = false;
+            record.error = None;
+        }
+    });
 }
 
 fn stable_recipe_rows(
@@ -840,6 +1179,12 @@ fn version_graph_lineage_only(graph: &VersionGraph) -> VersionGraph {
     VersionGraph {
         nodes,
         edges,
+        frontiers: graph
+            .frontiers
+            .iter()
+            .filter(|frontier| included_node_ids.contains(&frontier.anchor))
+            .copied()
+            .collect(),
         truncation: graph.truncation,
         lineage_counts: graph.lineage_counts,
     }
@@ -1101,6 +1446,18 @@ pub fn RecipeVersionGraph(id: String) -> Element {
     let mut context_select_before = use_signal(|| None::<MountedEvent>);
     let mut context_select_after = use_signal(|| None::<MountedEvent>);
     let mut context_compare_current = use_signal(|| None::<MountedEvent>);
+    let mut expansion_records = use_signal(Vec::<VersionGraphExpansionRecord>::new);
+    let mut expansion_recipe_id = use_signal(|| id.clone());
+
+    use_effect(use_reactive((&id,), move |(recipe_id,)| {
+        expansion_records.set(Vec::new());
+        expansion_recipe_id.set(recipe_id);
+        initial_graph_fit_complete.set(false);
+        comparison_before.set(None);
+        comparison_after.set(None);
+        comparison_result.set(None);
+        comparison_error.set(None);
+    }));
 
     let back_to_recipe = rsx! {
         Link {
@@ -1166,7 +1523,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
         };
     };
 
-    let full_graph = match graph_result {
+    let initial_graph = match graph_result {
         Ok(graph) => graph,
         Err(error) => {
             let error_message = server_error_message(&error);
@@ -1198,7 +1555,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
         }
     };
 
-    if full_graph.nodes.is_empty() {
+    if initial_graph.nodes.is_empty() {
         return rsx! {
             div { class: "container",
                 PageHeader {
@@ -1215,6 +1572,32 @@ pub fn RecipeVersionGraph(id: String) -> Element {
             }
         };
     }
+
+    let expansion_records_snapshot = if expansion_recipe_id() == id {
+        expansion_records.read().clone()
+    } else {
+        Vec::new()
+    };
+    let cached_graph = merge_version_graph_batches(
+        &initial_graph,
+        expansion_records_snapshot
+            .iter()
+            .filter_map(|record| record.batch.as_ref()),
+    );
+    let full_graph = retain_cached_version_graph_dependencies(
+        merge_version_graph_batches(
+            &initial_graph,
+            expansion_records_snapshot
+                .iter()
+                .filter(|record| {
+                    expansion_record_is_visible(record.frontier.into(), &expansion_records_snapshot)
+                })
+                .filter_map(|record| record.batch.as_ref()),
+        ),
+        &cached_graph,
+    );
+    let expansion_frontiers =
+        visible_expansion_frontiers(&initial_graph, &expansion_records_snapshot);
 
     let heading_title = full_graph
         .nodes
@@ -1248,6 +1631,22 @@ pub fn RecipeVersionGraph(id: String) -> Element {
         .cloned()
         .map(|node| (node.id(), node))
         .collect::<HashMap<_, _>>();
+    let loaded_node_ids = full_graph
+        .nodes
+        .iter()
+        .map(VersionGraphNode::id)
+        .collect::<Vec<_>>();
+    let expansion_loading_count = expansion_records_snapshot
+        .iter()
+        .filter(|record| {
+            record.is_loading
+                && expansion_record_source_is_visible(record, &expansion_records_snapshot)
+        })
+        .count();
+    let expansion_error = expansion_records_snapshot
+        .iter()
+        .filter(|record| expansion_record_source_is_visible(record, &expansion_records_snapshot))
+        .find_map(|record| record.error.as_deref());
     let transform = graph_transform();
     let is_mouse_panning = pan_mouse_position().is_some();
     let canvas_class = if is_mouse_panning {
@@ -1657,6 +2056,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                         onmouseleave: move |_| pan_mouse_position.set(None),
                         onauxclick: move |event| event.prevent_default(),
                         div {
+                            id: "recipe-version-graph-canvas-stage",
                             class: "recipe-version-graph__canvas-stage",
                             style: stage_style,
                             svg {
@@ -1976,6 +2376,165 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                 }
                                             }
                                         }
+                                    }
+                                }
+                            }
+                        }
+                        div {
+                            class: "recipe-version-graph__frontier-layer",
+                            aria_label: "Graph expansion controls",
+                            for (frontier, parent) in &expansion_frontiers {
+                                {
+                                    let frontier = *frontier;
+                                    let parent = *parent;
+                                    let frontier_id = VersionGraphFrontierId::from(frontier);
+                                    let record = expansion_records_snapshot.iter().find(|record| {
+                                        VersionGraphFrontierId::from(record.frontier) == frontier_id
+                                    });
+                                    let is_expanded = record.is_some_and(|_| {
+                                        expansion_record_is_visible(
+                                            frontier_id,
+                                            &expansion_records_snapshot,
+                                        )
+                                    });
+                                    let is_loading = record.is_some_and(|record| record.is_loading);
+                                    let can_continue = is_expanded
+                                        && !is_loading
+                                        && record.is_some_and(|record| {
+                                            record.batch.as_ref().is_some_and(|batch| {
+                                                batch.frontiers.iter().any(|candidate| {
+                                                    VersionGraphFrontierId::from(*candidate)
+                                                        == frontier_id
+                                                })
+                                            })
+                                        });
+                                    let error = record.and_then(|record| record.error.as_deref());
+                                    let direction = frontier_direction_label(frontier.kind);
+                                    let anchor_title = nodes_by_id
+                                        .get(&frontier.anchor)
+                                        .and_then(|node| node.title())
+                                        .unwrap_or("snapshot");
+                                    let label = if is_expanded {
+                                        format!(
+                                            "Collapse {direction} from {anchor_title}, version {}",
+                                            frontier.anchor.version_number,
+                                        )
+                                    } else {
+                                        format!(
+                                            "Expand {} {direction} from {anchor_title}, version {}",
+                                            frontier.hidden_count,
+                                            frontier.anchor.version_number,
+                                        )
+                                    };
+                                    let button_text = if is_loading {
+                                        "Loading…".to_string()
+                                    } else if is_expanded {
+                                        format!("− {direction}")
+                                    } else {
+                                        format!("+ {} {direction}", frontier.hidden_count)
+                                    };
+                                    let control_scale =
+                                        version_graph_frontier_control_scale(transform);
+                                    let control_position = layout.node(frontier.anchor).copied().map(
+                                        |node| {
+                                            clamp_version_graph_frontier_control_position(
+                                                version_graph_frontier_control_position(
+                                                    node,
+                                                    transform,
+                                                    frontier.kind,
+                                                ),
+                                                graph_viewport(),
+                                                control_scale,
+                                            )
+                                        },
+                                    );
+                                    if let Some((left, top)) = control_position {
+                                        let control_class = format!(
+                                            "recipe-version-graph__frontier-control {}",
+                                            version_graph_frontier_port_class(frontier.kind),
+                                        );
+                                        let expand_recipe_id = id.clone();
+                                        let expand_loaded_node_ids = loaded_node_ids.clone();
+                                        let continuation_recipe_id = id.clone();
+                                        let continuation_loaded_node_ids = loaded_node_ids.clone();
+                                        rsx! {
+                                            div {
+                                                key: "frontier-{frontier.anchor.recipe_id}-{frontier.anchor.version_number}-{frontier.kind:?}",
+                                                class: control_class,
+                                                style: "left: {left:.2}px; top: {top:.2}px; --recipe-version-graph-frontier-scale: {control_scale:.4};",
+                                                onclick: move |event| event.stop_propagation(),
+                                                span { class: "recipe-version-graph__frontier-item",
+                                                    button {
+                                                        r#type: "button",
+                                                        class: "recipe-version-graph__frontier-button",
+                                                        aria_label: label,
+                                                        aria_controls: "recipe-version-graph-canvas-stage",
+                                                        aria_expanded: is_expanded,
+                                                        disabled: is_loading,
+                                                        onclick: move |event| {
+                                                            event.stop_propagation();
+                                                            if is_expanded {
+                                                                collapse_version_graph_expansion(
+                                                                    frontier,
+                                                                    expansion_records,
+                                                                );
+                                                            } else {
+                                                                begin_version_graph_expansion(
+                                                                    expand_recipe_id.clone(),
+                                                                    frontier,
+                                                                    parent,
+                                                                    expand_loaded_node_ids.clone(),
+                                                                    expansion_records,
+                                                                    expansion_recipe_id,
+                                                                    false,
+                                                                );
+                                                            }
+                                                        },
+                                                        if is_loading {
+                                                            span {
+                                                                class: "recipe-version-graph__frontier-spinner",
+                                                                aria_hidden: "true",
+                                                            }
+                                                        }
+                                                        span { "{button_text}" }
+                                                    }
+                                                    if can_continue {
+                                                        button {
+                                                            r#type: "button",
+                                                            class: "recipe-version-graph__frontier-button recipe-version-graph__frontier-button--continue",
+                                                            aria_label: format!(
+                                                                "Show next 5 {direction} from {anchor_title}, version {}; {} remain",
+                                                                frontier.anchor.version_number,
+                                                                frontier.hidden_count,
+                                                            ),
+                                                            aria_controls: "recipe-version-graph-canvas-stage",
+                                                            onclick: move |event| {
+                                                                event.stop_propagation();
+                                                                begin_version_graph_expansion(
+                                                                    continuation_recipe_id.clone(),
+                                                                    frontier,
+                                                                    parent,
+                                                                    continuation_loaded_node_ids.clone(),
+                                                                    expansion_records,
+                                                                    expansion_recipe_id,
+                                                                    true,
+                                                                );
+                                                            },
+                                                            "Show next 5"
+                                                        }
+                                                    }
+                                                    if error.is_some() {
+                                                        span {
+                                                            class: "recipe-version-graph__frontier-error-marker",
+                                                            aria_hidden: "true",
+                                                            "!"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        rsx! {}
                                     }
                                 }
                             }
@@ -2464,6 +3023,24 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                             }
                         }
                     }
+                    div {
+                        class: "recipe-version-graph__expansion-live",
+                        role: "status",
+                        aria_live: "polite",
+                        aria_atomic: "true",
+                        if expansion_loading_count > 0 {
+                            "Loading {expansion_loading_count} graph expansion(s)."
+                        } else if expansion_error.is_none() {
+                            "Graph expansions are ready."
+                        }
+                    }
+                    if let Some(error) = expansion_error {
+                        p {
+                            class: "recipe-version-graph__expansion-error",
+                            role: "alert",
+                            "Unable to expand the version graph: {error}"
+                        }
+                    }
                     section { class: "recipe-version-graph__comparison", aria_label: "Compare graph snapshots",
                         div { class: "recipe-version-graph__comparison-heading",
                             div {
@@ -2595,6 +3172,109 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                         " (current)"
                                                     }
                                                 }
+                                                for (frontier, parent) in expansion_frontiers
+                                                    .iter()
+                                                    .filter(|(frontier, _)| frontier.anchor == node_id)
+                                                {
+                                                    {
+                                                        let frontier = *frontier;
+                                                        let parent = *parent;
+                                                        let frontier_id = VersionGraphFrontierId::from(frontier);
+                                                        let record = expansion_records_snapshot.iter().find(|record| {
+                                                            VersionGraphFrontierId::from(record.frontier) == frontier_id
+                                                        });
+                                                        let is_expanded = record.is_some_and(|_| {
+                                                            expansion_record_is_visible(
+                                                                frontier_id,
+                                                                &expansion_records_snapshot,
+                                                            )
+                                                        });
+                                                        let is_loading = record.is_some_and(|record| record.is_loading);
+                                                        let can_continue = is_expanded
+                                                            && !is_loading
+                                                            && record.is_some_and(|record| {
+                                                                record.batch.as_ref().is_some_and(|batch| {
+                                                                    batch.frontiers.iter().any(|candidate| {
+                                                                        VersionGraphFrontierId::from(*candidate)
+                                                                            == frontier_id
+                                                                    })
+                                                                })
+                                                            });
+                                                        let direction = frontier_direction_label(frontier.kind);
+                                                        let label = if is_expanded {
+                                                            format!("Collapse {direction} from {title}, version {}", node_id.version_number)
+                                                        } else {
+                                                            format!(
+                                                                "Expand {} {direction} from {title}, version {}",
+                                                                frontier.hidden_count,
+                                                                node_id.version_number,
+                                                            )
+                                                        };
+                                                        let expand_recipe_id = id.clone();
+                                                        let expand_loaded_node_ids = loaded_node_ids.clone();
+                                                        let continuation_recipe_id = id.clone();
+                                                        let continuation_loaded_node_ids = loaded_node_ids.clone();
+                                                        rsx! {
+                                                            button {
+                                                                r#type: "button",
+                                                                class: "recipe-version-graph__outline-frontier-button",
+                                                                aria_label: label,
+                                                                aria_controls: "recipe-version-graph-canvas-stage",
+                                                                aria_expanded: is_expanded,
+                                                                disabled: is_loading,
+                                                                onclick: move |_| {
+                                                                    if is_expanded {
+                                                                        collapse_version_graph_expansion(
+                                                                            frontier,
+                                                                            expansion_records,
+                                                                        );
+                                                                    } else {
+                                                                        begin_version_graph_expansion(
+                                                                            expand_recipe_id.clone(),
+                                                                            frontier,
+                                                                            parent,
+                                                                            expand_loaded_node_ids.clone(),
+                                                                            expansion_records,
+                                                                            expansion_recipe_id,
+                                                                            false,
+                                                                        );
+                                                                    }
+                                                                },
+                                                                if is_loading {
+                                                                    "Loading…"
+                                                                } else if is_expanded {
+                                                                    "Collapse {direction}"
+                                                                } else {
+                                                                    "Expand {frontier.hidden_count} {direction}"
+                                                                }
+                                                            }
+                                                            if can_continue {
+                                                                button {
+                                                                    r#type: "button",
+                                                                    class: "recipe-version-graph__outline-frontier-button recipe-version-graph__outline-frontier-button--continue",
+                                                                    aria_label: format!(
+                                                                        "Show next 5 {direction} from {title}, version {}; {} remain",
+                                                                        node_id.version_number,
+                                                                        frontier.hidden_count,
+                                                                    ),
+                                                                    aria_controls: "recipe-version-graph-canvas-stage",
+                                                                    onclick: move |_| {
+                                                                        begin_version_graph_expansion(
+                                                                            continuation_recipe_id.clone(),
+                                                                            frontier,
+                                                                            parent,
+                                                                            continuation_loaded_node_ids.clone(),
+                                                                            expansion_records,
+                                                                            expansion_recipe_id,
+                                                                            true,
+                                                                        );
+                                                                    },
+                                                                    "Show next 5 {direction}"
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -2623,8 +3303,9 @@ pub fn RecipeVersionGraph(id: String) -> Element {
 mod tests {
     use super::is_recipe_unavailable_error;
     use crate::types::{
-        VersionGraph, VersionGraphEdge, VersionGraphEdgeKind, VersionGraphNode,
-        VersionGraphNodeContent, VersionGraphNodeId, VersionGraphNodeState,
+        VersionGraph, VersionGraphEdge, VersionGraphEdgeKind, VersionGraphFrontier,
+        VersionGraphFrontierKind, VersionGraphNode, VersionGraphNodeContent, VersionGraphNodeId,
+        VersionGraphNodeState,
     };
     use chrono::{TimeZone, Utc};
     use uuid::Uuid;
@@ -2697,6 +3378,7 @@ mod tests {
                 VersionGraphEdge::fork(root_recipe_id, 1, first_branch_id).unwrap(),
                 VersionGraphEdge::fork(root_recipe_id, 2, second_branch_id).unwrap(),
             ],
+            frontiers: vec![],
             truncation: Default::default(),
             lineage_counts: Default::default(),
         }
@@ -2941,6 +3623,7 @@ mod tests {
                 VersionGraphEdge::fork(ancestor_recipe_id, 1, sibling_recipe_id).unwrap(),
                 VersionGraphEdge::fork(sibling_recipe_id, 1, cousin_recipe_id).unwrap(),
             ],
+            frontiers: vec![],
             truncation: crate::types::VersionGraphTruncation {
                 is_truncated: true,
                 depth_limit_reached: true,
@@ -3411,6 +4094,7 @@ mod tests {
                 VersionGraphEdge::fork(first_recipe_id, 1, second_recipe_id).unwrap(),
                 VersionGraphEdge::fork(second_recipe_id, 1, first_recipe_id).unwrap(),
             ],
+            frontiers: vec![],
             truncation: Default::default(),
             lineage_counts: Default::default(),
         };
@@ -3597,5 +4281,264 @@ mod tests {
         let css = include_str!("../../assets/main.css");
 
         assert_eq!(css.matches("--border-color: rgba(").count(), 2);
+    }
+
+    #[test]
+    fn graph_expansion_batches_merge_without_duplicate_nodes_or_edges() {
+        let recipe_id = Uuid::from_u128(700);
+        let first = visible_node(recipe_id, 1, "First");
+        let second = visible_node(recipe_id, 2, "Second");
+        let edge = VersionGraphEdge::version(first.id(), second.id()).unwrap();
+        let initial = VersionGraph {
+            nodes: vec![first.clone()],
+            frontiers: vec![],
+            ..Default::default()
+        };
+        let batch = VersionGraph {
+            nodes: vec![first, second.clone(), second],
+            edges: vec![edge.clone(), edge],
+            frontiers: vec![],
+            ..Default::default()
+        };
+
+        let merged = super::merge_version_graph_batches(&initial, [&batch]);
+
+        assert_eq!(merged.nodes.len(), 2);
+        assert_eq!(merged.edges.len(), 1);
+    }
+
+    #[test]
+    fn a_later_batch_replaces_stale_metadata_for_the_same_frontier() {
+        let anchor = VersionGraphNodeId {
+            recipe_id: Uuid::from_u128(705),
+            version_number: 1,
+        };
+        let initial = VersionGraph {
+            frontiers: vec![crate::types::VersionGraphFrontier {
+                anchor,
+                kind: crate::types::VersionGraphFrontierKind::ChildForks,
+                hidden_count: 12,
+            }],
+            ..Default::default()
+        };
+        let first_page = VersionGraph {
+            frontiers: vec![crate::types::VersionGraphFrontier {
+                anchor,
+                kind: crate::types::VersionGraphFrontierKind::ChildForks,
+                hidden_count: 7,
+            }],
+            ..Default::default()
+        };
+
+        let merged = super::merge_version_graph_batches(&initial, [&first_page]);
+
+        assert_eq!(merged.frontiers.len(), 1);
+        assert_eq!(merged.frontiers[0].hidden_count, 7);
+    }
+
+    #[test]
+    fn frontier_controls_use_distinct_directional_ports_around_their_anchor() {
+        let anchor = super::VersionGraphLayoutNode {
+            id: VersionGraphNodeId {
+                recipe_id: Uuid::from_u128(706),
+                version_number: 2,
+            },
+            x: 200.0,
+            y: 150.0,
+            rank: 1,
+            row: 1,
+        };
+        let transform = super::VersionGraphTransform {
+            scale: 0.25,
+            offset_x: 20.0,
+            offset_y: 30.0,
+        };
+        let older = super::version_graph_frontier_control_position(
+            anchor,
+            transform,
+            crate::types::VersionGraphFrontierKind::OlderVersions,
+        );
+        let newer = super::version_graph_frontier_control_position(
+            anchor,
+            transform,
+            crate::types::VersionGraphFrontierKind::NewerVersions,
+        );
+        let parent = super::version_graph_frontier_control_position(
+            anchor,
+            transform,
+            crate::types::VersionGraphFrontierKind::ParentFork,
+        );
+        let children = super::version_graph_frontier_control_position(
+            anchor,
+            transform,
+            crate::types::VersionGraphFrontierKind::ChildForks,
+        );
+
+        assert!(older.1 < parent.1 && older.1 < children.1);
+        assert!(children.1 > parent.1 && children.1 > newer.1);
+        assert!(parent.0 < older.0 && parent.0 < newer.0);
+        assert!(newer.0 > older.0 && newer.0 > children.0);
+    }
+
+    #[test]
+    fn frontier_controls_shrink_with_canvas_zoom_without_growing_past_normal_size() {
+        let zoomed_out = super::VersionGraphTransform {
+            scale: 0.08,
+            offset_x: 0.0,
+            offset_y: 0.0,
+        };
+        let zoomed_in = super::VersionGraphTransform {
+            scale: 1.4,
+            offset_x: 0.0,
+            offset_y: 0.0,
+        };
+
+        assert_eq!(
+            super::version_graph_frontier_control_scale(zoomed_out),
+            0.08
+        );
+        assert_eq!(super::version_graph_frontier_control_scale(zoomed_in), 1.0);
+    }
+
+    #[test]
+    fn frontier_control_markup_applies_the_zoom_scale_to_the_overlay_control() {
+        let source = include_str!("recipe_version_graph.rs");
+
+        assert!(source.contains("--recipe-version-graph-frontier-scale"));
+        assert!(source.contains("version_graph_frontier_control_scale(transform)"));
+    }
+
+    #[test]
+    fn collapsing_one_expansion_keeps_an_independent_branch_visible() {
+        let root_id = Uuid::from_u128(710);
+        let left_id = Uuid::from_u128(711);
+        let right_id = Uuid::from_u128(712);
+        let root = visible_node(root_id, 1, "Root");
+        let left = visible_node(left_id, 1, "Left");
+        let right = visible_node(right_id, 1, "Right");
+        let initial = VersionGraph {
+            nodes: vec![root],
+            ..Default::default()
+        };
+        let left_batch = VersionGraph {
+            nodes: vec![left],
+            edges: vec![VersionGraphEdge::fork(root_id, 1, left_id).unwrap()],
+            ..Default::default()
+        };
+        let right_batch = VersionGraph {
+            nodes: vec![right],
+            edges: vec![VersionGraphEdge::fork(root_id, 1, right_id).unwrap()],
+            ..Default::default()
+        };
+
+        let expanded = super::merge_version_graph_batches(&initial, [&left_batch, &right_batch]);
+        let collapsed_left = super::merge_version_graph_batches(&initial, [&right_batch]);
+
+        assert_eq!(expanded.nodes.len(), 3);
+        assert_eq!(collapsed_left.nodes.len(), 2);
+        assert!(collapsed_left
+            .nodes
+            .iter()
+            .any(|node| node.id().recipe_id == right_id));
+        assert!(!collapsed_left
+            .nodes
+            .iter()
+            .any(|node| node.id().recipe_id == left_id));
+    }
+
+    #[test]
+    fn nested_expansions_are_hidden_with_their_parent_without_losing_cached_data() {
+        let anchor = VersionGraphNodeId {
+            recipe_id: Uuid::from_u128(720),
+            version_number: 2,
+        };
+        let parent_frontier = VersionGraphFrontier {
+            anchor,
+            kind: VersionGraphFrontierKind::OlderVersions,
+            hidden_count: 2,
+        };
+        let child_frontier = VersionGraphFrontier {
+            anchor: VersionGraphNodeId {
+                recipe_id: anchor.recipe_id,
+                version_number: 1,
+            },
+            kind: VersionGraphFrontierKind::ParentFork,
+            hidden_count: 1,
+        };
+        let parent_id = super::VersionGraphFrontierId::from(parent_frontier);
+        let child_id = super::VersionGraphFrontierId::from(child_frontier);
+        let mut records = vec![
+            super::VersionGraphExpansionRecord {
+                frontier: parent_frontier,
+                parent: None,
+                batch: Some(VersionGraph {
+                    frontiers: vec![child_frontier],
+                    ..Default::default()
+                }),
+                is_expanded: true,
+                is_loading: false,
+                error: None,
+            },
+            super::VersionGraphExpansionRecord {
+                frontier: child_frontier,
+                parent: Some(parent_id),
+                batch: Some(VersionGraph::default()),
+                is_expanded: true,
+                is_loading: false,
+                error: None,
+            },
+        ];
+
+        assert!(super::expansion_record_is_visible(child_id, &records));
+        records[0].is_expanded = false;
+        assert!(!super::expansion_record_is_visible(child_id, &records));
+        assert!(records[1].batch.is_some());
+        assert!(records[1].is_expanded);
+        records[0].is_expanded = true;
+        assert!(super::expansion_record_is_visible(child_id, &records));
+    }
+
+    #[test]
+    fn active_expansion_retains_cached_nodes_referenced_by_its_edges() {
+        let root_id = Uuid::from_u128(730);
+        let shared_id = Uuid::from_u128(731);
+        let collapsed_only_id = Uuid::from_u128(732);
+        let active_id = Uuid::from_u128(733);
+        let initial = VersionGraph {
+            nodes: vec![visible_node(root_id, 1, "Root")],
+            ..Default::default()
+        };
+        let collapsed_batch = VersionGraph {
+            nodes: vec![
+                visible_node(shared_id, 1, "Shared"),
+                visible_node(collapsed_only_id, 1, "Collapsed only"),
+            ],
+            ..Default::default()
+        };
+        let active_batch = VersionGraph {
+            nodes: vec![visible_node(active_id, 1, "Active")],
+            edges: vec![VersionGraphEdge::fork(shared_id, 1, active_id).unwrap()],
+            ..Default::default()
+        };
+        let cached =
+            super::merge_version_graph_batches(&initial, [&collapsed_batch, &active_batch]);
+        let visible = super::retain_cached_version_graph_dependencies(
+            super::merge_version_graph_batches(&initial, [&active_batch]),
+            &cached,
+        );
+        let visible_ids = visible
+            .nodes
+            .iter()
+            .map(VersionGraphNode::id)
+            .collect::<std::collections::HashSet<_>>();
+
+        assert!(visible_ids.contains(&VersionGraphNodeId {
+            recipe_id: shared_id,
+            version_number: 1,
+        }));
+        assert!(!visible_ids.contains(&VersionGraphNodeId {
+            recipe_id: collapsed_only_id,
+            version_number: 1,
+        }));
     }
 }

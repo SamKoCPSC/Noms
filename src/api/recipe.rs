@@ -493,6 +493,7 @@ fn build_recipe_version_graph(
     Ok(crate::types::VersionGraph {
         nodes,
         edges,
+        frontiers: Vec::new(),
         truncation: crate::types::VersionGraphTruncation::default(),
         lineage_counts: crate::types::VersionGraphLineageCounts::default(),
     })
@@ -507,7 +508,26 @@ pub async fn get_recipe_version_graph(
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
     let pool = crate::db::get_pool();
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
-    crate::db::get_recipe_version_graph(&pool, recipe_id, viewer_id)
+    crate::db::get_initial_recipe_version_graph(&pool, recipe_id, viewer_id)
+        .await
+        .map_err(|error| match error {
+            crate::db::DbError::RecipeNotFound(_) => ServerFnError::new("Recipe not found"),
+            other => ServerFnError::new(other.to_string()),
+        })
+}
+
+/// Expand one validated boundary of the progressively loaded version graph.
+#[server]
+pub async fn expand_recipe_version_graph(
+    recipe_id: String,
+    frontier: crate::types::VersionGraphFrontier,
+    loaded_node_ids: Vec<crate::types::VersionGraphNodeId>,
+) -> Result<crate::types::VersionGraph, ServerFnError> {
+    let recipe_id = uuid::Uuid::parse_str(&recipe_id)
+        .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
+    let pool = crate::db::get_pool();
+    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
+    crate::db::expand_recipe_version_graph(&pool, recipe_id, viewer_id, frontier, loaded_node_ids)
         .await
         .map_err(|error| match error {
             crate::db::DbError::RecipeNotFound(_) => ServerFnError::new("Recipe not found"),

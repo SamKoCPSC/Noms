@@ -710,11 +710,31 @@ pub struct VersionGraphLineageCounts {
     pub descendants: VersionGraphLineageCount,
 }
 
+/// The edge direction in which more graph nodes are available from an anchor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum VersionGraphFrontierKind {
+    OlderVersions,
+    NewerVersions,
+    ParentFork,
+    ChildForks,
+}
+
+/// One independently expandable boundary in a progressively loaded graph.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct VersionGraphFrontier {
+    pub anchor: VersionGraphNodeId,
+    pub kind: VersionGraphFrontierKind,
+    pub hidden_count: usize,
+}
+
 /// Normalized graph payload. Relationships refer to nodes by stable identity.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct VersionGraph {
     pub nodes: Vec<VersionGraphNode>,
     pub edges: Vec<VersionGraphEdge>,
+    #[serde(default)]
+    pub frontiers: Vec<VersionGraphFrontier>,
     pub truncation: VersionGraphTruncation,
     #[serde(default)]
     pub lineage_counts: VersionGraphLineageCounts,
@@ -786,6 +806,7 @@ mod tests {
                 },
             )],
             edges: vec![VersionGraphEdge::fork(source_recipe_id, 2, forked_recipe_id).unwrap()],
+            frontiers: Vec::new(),
             truncation: VersionGraphTruncation {
                 is_truncated: true,
                 node_limit_reached: true,
@@ -1156,5 +1177,28 @@ mod tests {
         assert_eq!(photos.len(), 2);
         assert_eq!(photos[0].url, "https://example.com/step_1.webp");
         assert_eq!(photos[1].url, "https://example.com/step_2.webp");
+    }
+
+    #[test]
+    fn version_graph_frontiers_round_trip_with_direction_and_hidden_count() {
+        let anchor = VersionGraphNodeId {
+            recipe_id: Uuid::from_u128(41),
+            version_number: 3,
+        };
+        let graph = VersionGraph {
+            frontiers: vec![VersionGraphFrontier {
+                anchor,
+                kind: VersionGraphFrontierKind::ChildForks,
+                hidden_count: 7,
+            }],
+            ..Default::default()
+        };
+
+        let restored: VersionGraph =
+            serde_json::from_value(serde_json::to_value(&graph).unwrap()).unwrap();
+
+        assert_eq!(restored.frontiers, graph.frontiers);
+        assert_eq!(restored.frontiers[0].anchor, anchor);
+        assert_eq!(restored.frontiers[0].hidden_count, 7);
     }
 }
