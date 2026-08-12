@@ -391,6 +391,10 @@ fn retain_cached_version_graph_dependencies(
     visible
 }
 
+fn version_graph_expansion_loaded_node_ids(graph: &VersionGraph) -> Vec<VersionGraphNodeId> {
+    graph.nodes.iter().map(VersionGraphNode::id).collect()
+}
+
 fn expansion_record_is_visible(
     record_id: VersionGraphFrontierId,
     records: &[VersionGraphExpansionRecord],
@@ -1584,18 +1588,17 @@ pub fn RecipeVersionGraph(id: String) -> Element {
             .iter()
             .filter_map(|record| record.batch.as_ref()),
     );
-    let full_graph = retain_cached_version_graph_dependencies(
-        merge_version_graph_batches(
-            &initial_graph,
-            expansion_records_snapshot
-                .iter()
-                .filter(|record| {
-                    expansion_record_is_visible(record.frontier.into(), &expansion_records_snapshot)
-                })
-                .filter_map(|record| record.batch.as_ref()),
-        ),
-        &cached_graph,
+    let visible_expansion_graph = merge_version_graph_batches(
+        &initial_graph,
+        expansion_records_snapshot
+            .iter()
+            .filter(|record| {
+                expansion_record_is_visible(record.frontier.into(), &expansion_records_snapshot)
+            })
+            .filter_map(|record| record.batch.as_ref()),
     );
+    let full_graph =
+        retain_cached_version_graph_dependencies(visible_expansion_graph.clone(), &cached_graph);
     let expansion_frontiers =
         visible_expansion_frontiers(&initial_graph, &expansion_records_snapshot);
 
@@ -1631,11 +1634,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
         .cloned()
         .map(|node| (node.id(), node))
         .collect::<HashMap<_, _>>();
-    let loaded_node_ids = full_graph
-        .nodes
-        .iter()
-        .map(VersionGraphNode::id)
-        .collect::<Vec<_>>();
+    let loaded_node_ids = version_graph_expansion_loaded_node_ids(&visible_expansion_graph);
     let expansion_loading_count = expansion_records_snapshot
         .iter()
         .filter(|record| {
@@ -4540,5 +4539,35 @@ mod tests {
             recipe_id: collapsed_only_id,
             version_number: 1,
         }));
+    }
+
+    #[test]
+    fn expansion_requests_exclude_cached_dependency_nodes_from_the_loaded_set() {
+        let root_id = Uuid::from_u128(740);
+        let cached_dependency_id = Uuid::from_u128(741);
+        let active_id = Uuid::from_u128(742);
+        let initial = VersionGraph {
+            nodes: vec![visible_node(root_id, 1, "Root")],
+            ..Default::default()
+        };
+        let active_batch = VersionGraph {
+            nodes: vec![visible_node(active_id, 1, "Active")],
+            edges: vec![VersionGraphEdge::fork(cached_dependency_id, 1, active_id).unwrap()],
+            ..Default::default()
+        };
+        let visible = super::merge_version_graph_batches(&initial, [&active_batch]);
+        let cached = VersionGraph {
+            nodes: vec![visible_node(cached_dependency_id, 1, "Cached dependency")],
+            ..Default::default()
+        };
+        let rendered = super::retain_cached_version_graph_dependencies(visible.clone(), &cached);
+
+        assert!(rendered
+            .nodes
+            .iter()
+            .any(|node| node.id().recipe_id == cached_dependency_id));
+        assert!(!super::version_graph_expansion_loaded_node_ids(&visible)
+            .iter()
+            .any(|node_id| node_id.recipe_id == cached_dependency_id));
     }
 }
