@@ -36,6 +36,10 @@ const LINEAGE_DESCENDANT_DISPLAY_DEPTH: usize = 8;
 const LINEAGE_INITIAL_VISIBLE_DESCENDANTS: usize = 10;
 const LINEAGE_DESCENDANT_EXPANSION_SIZE: usize = 5;
 
+fn fork_sign_in_url(recipe_id: &str) -> String {
+    format!("/login?redirect_uri=/recipes/{recipe_id}")
+}
+
 // ── Date formatting helper ───────────────────────────────────────────────────
 
 /// Format a UTC datetime as a relative time string (e.g. "3 days ago").
@@ -442,6 +446,23 @@ mod layout_tests {
             .expect("loading return");
 
         assert!(result_read < loading_return);
+    }
+
+    #[test]
+    fn signed_out_fork_control_links_to_login_and_returns_to_the_recipe() {
+        let source = include_str!("recipe_detail.rs");
+        let detail_component_marker = ["pub fn Recipe", "Detail"].concat();
+        let detail_component = source
+            .split(&detail_component_marker)
+            .nth(1)
+            .expect("recipe detail component")
+            .split("/// Full-page, read-only")
+            .next()
+            .expect("recipe detail component body");
+
+        assert!(detail_component.contains("if auth.is_authenticated"));
+        assert!(detail_component.contains("href: fork_sign_in_url"));
+        assert!(source.contains("fn fork_sign_in_url"));
     }
 
     #[test]
@@ -1953,6 +1974,7 @@ pub fn RecipeDetail(id: String) -> Element {
     };
 
     let relative_time = format_relative_time(recipe.created_at);
+    let fork_sign_in_url = fork_sign_in_url(&recipe.id.to_string());
 
     rsx! {
         div { class: "recipe-detail container",
@@ -1970,11 +1992,19 @@ pub fn RecipeDetail(id: String) -> Element {
                                     class: "btn btn-secondary touch-target",
                                     "View version graph"
                                 }
-                                Button {
-                                    variant: ButtonVariant::Secondary,
-                                    disabled: is_forking(),
-                                    onclick: on_fork,
-                                    if is_forking() { "Forking..." } else { "Fork" }
+                                if auth.is_authenticated {
+                                    Button {
+                                        variant: ButtonVariant::Secondary,
+                                        disabled: is_forking(),
+                                        onclick: on_fork,
+                                        if is_forking() { "Forking..." } else { "Fork" }
+                                    }
+                                } else {
+                                    a {
+                                        href: fork_sign_in_url.clone(),
+                                        class: "btn btn-secondary touch-target",
+                                        "Fork"
+                                    }
                                 }
                                 if is_owner {
                                     Link {
