@@ -40,51 +40,31 @@ pub fn Explore() -> Element {
     });
 
     // ── Fetch recipes on mount and when offset changes ────────────────────
-    // use_resource tracks the offset dependency — re-fetches when offset changes.
-    // We use a separate effect to accumulate results into loaded_recipes.
-    let current_offset = offset();
-    let recipes_resource = use_resource(move || {
-        let off = current_offset;
-        async move { get_public_recipes(off, PAGE_SIZE).await }
-    });
-
-    // Accumulate recipes from resource into loaded_recipes signal.
-    // We spawn the accumulation to avoid a circular dependency: reading
-    // loaded_recipes inside this effect would register it as a tracked
-    // dependency, and writing to it would re-trigger the effect infinitely.
     use_effect(move || {
-        let res = recipes_resource.read().clone();
+        let off = offset();
+        let mut recipes = loaded_recipes;
         let mut more = has_more;
         let mut loading = is_loading;
         let mut err = error;
 
-        match res {
-            Some(Ok(resp)) => {
-                let new_count = resp.recipes.len();
-                // Accumulate in a spawn block to break the circular dependency
-                {
-                    let mut loaded = loaded_recipes;
-                    spawn(async move {
-                        loaded.with_mut(|current| {
-                            current.extend(resp.recipes);
-                        });
-                    });
+        spawn(async move {
+            match get_public_recipes(off, PAGE_SIZE).await {
+                Ok(resp) => {
+                    let new_count = resp.recipes.len();
+                    let mut current = recipes.read().clone();
+                    current.extend(resp.recipes);
+                    recipes.set(current);
+                    more.set(resp.has_more);
+                    if new_count == 0 && off > 0 {
+                        more.set(false);
+                    }
                 }
-                more.set(resp.has_more);
-                if new_count == 0 && current_offset > 0 {
-                    // No more recipes returned
-                    more.set(false);
+                Err(e) => {
+                    err.set(Some(e.to_string()));
                 }
             }
-            Some(Err(e)) => {
-                err.set(Some(e.to_string()));
-            }
-            None => {
-                // Still loading
-                return;
-            }
-        }
-        loading.set(false);
+            loading.set(false);
+        });
     });
 
     // ── Client-side filtered recipes ─────────────────────────────────────
@@ -243,5 +223,23 @@ fn TagChip(name: String, is_active: bool, on_click: EventHandler<String>) -> Ele
             onclick: move |_| on_click.call(name.clone()),
             "{name}"
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn pagination_fetch_reads_the_current_offset_reactively() {
+        let source = include_str!("explore.rs");
+        let pagination_fetch = source
+            .split("// ── Fetch recipes on mount and when offset changes")
+            .nth(1)
+            .expect("pagination fetch section")
+            .split("// ── Client-side filtered recipes")
+            .next()
+            .expect("pagination fetch body");
+
+        assert!(pagination_fetch.contains("let off = offset();"));
+        assert!(!pagination_fetch.contains("let current_offset = offset();"));
     }
 }
