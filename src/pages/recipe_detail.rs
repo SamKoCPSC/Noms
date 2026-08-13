@@ -466,6 +466,22 @@ mod layout_tests {
     }
 
     #[test]
+    fn signed_out_missing_recipe_preserves_the_public_not_found_error() {
+        let source = include_str!("recipe_detail.rs");
+        let detail_component_marker = ["pub fn Recipe", "Detail"].concat();
+        let recipe_resource = source
+            .split(&detail_component_marker)
+            .nth(1)
+            .expect("recipe detail component")
+            .split("// Owner username resource")
+            .next()
+            .expect("recipe resource body");
+
+        assert!(recipe_resource.contains("Err(public_error) if auth.is_authenticated"));
+        assert!(recipe_resource.contains("Err(public_error) => Err(public_error)"));
+    }
+
+    #[test]
     fn change_paths_are_readable_and_use_one_based_item_numbers() {
         assert_eq!(
             format_change_path("/ingredients/1/name"),
@@ -1677,19 +1693,28 @@ fn ForkLineage(lineage: RecipeLineageView) -> Element {
 #[component]
 pub fn RecipeDetail(id: String) -> Element {
     // ── Resources ────────────────────────────────────────────────────────
+    let auth = use_auth();
+
     // Clone id before each use_resource to avoid move issues.
     // The closure is FnMut (called potentially multiple times), so we clone
     // the captured value inside the closure body before the async block.
     let id_for_recipe = id.clone();
+    let auth_for_recipe = auth.clone();
     let mut recipe_resource = use_resource(move || {
         let rid = id_for_recipe.clone();
+        let auth = auth_for_recipe.clone();
         async move {
-            // Try public first (no auth needed)
-            if let Ok(r) = get_public_recipe(rid.clone()).await {
-                return Ok(r);
+            match get_public_recipe(rid.clone()).await {
+                Ok(recipe) => Ok(recipe),
+                Err(public_error) if auth.is_authenticated => {
+                    tracing::debug!(
+                        error = ?public_error,
+                        "Public recipe lookup failed; retrying the owner endpoint"
+                    );
+                    get_recipe(rid).await
+                }
+                Err(public_error) => Err(public_error),
             }
-            // Fall back to authenticated (requires login + ownership)
-            get_recipe(rid).await
         }
     });
 
@@ -1797,7 +1822,6 @@ pub fn RecipeDetail(id: String) -> Element {
     };
 
     // ── Auth context for ownership check ─────────────────────────────────
-    let auth = use_auth();
     let is_owner = recipe
         .map(|r| auth.current_user_id == Some(r.user_id))
         .unwrap_or(false);
