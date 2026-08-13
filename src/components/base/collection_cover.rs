@@ -51,6 +51,10 @@ fn mosaic_layout_class(image_count: usize) -> &'static str {
     }
 }
 
+fn mosaic_tile_key(index: usize, image: &RecipeImage) -> String {
+    format!("{index}:{}", image.url)
+}
+
 #[derive(Props, Clone, PartialEq)]
 struct CollectionRecipeMosaicProps {
     images: Vec<RecipeImage>,
@@ -65,9 +69,11 @@ fn CollectionRecipeMosaic(props: CollectionRecipeMosaicProps) -> Element {
             class: "collection-cover__mosaic {layout_class}",
             role: "img",
             aria_label: "{props.alt}",
-            for image in props.images.into_iter() {
+            for (tile_key, image) in props.images.into_iter().enumerate().map(|(index, image)| {
+                (mosaic_tile_key(index, &image), image)
+            }) {
                 CollectionRecipeMosaicTile {
-                    key: "{image.url}",
+                    key: "{tile_key}",
                     image,
                 }
             }
@@ -128,7 +134,8 @@ fn CollectionCoverImage(props: CollectionCoverImageProps) -> Element {
 
 #[cfg(test)]
 mod tests {
-    use super::mosaic_layout_class;
+    use super::{mosaic_layout_class, mosaic_tile_key};
+    use crate::types::RecipeImage;
 
     #[test]
     fn recipe_mosaic_layout_adapts_to_one_through_four_images() {
@@ -146,6 +153,19 @@ mod tests {
         assert!(source.contains("aria_label: \"{props.alt}\""));
         assert!(source.contains("aria_hidden: \"true\""));
         assert!(source.contains("alt: String::new()"));
+    }
+
+    #[test]
+    fn recipe_mosaic_keys_remain_unique_when_recipes_share_an_image() {
+        let image = RecipeImage {
+            url: "https://example.com/shared.webp".to_string(),
+            thumb_url: None,
+            file_name: None,
+            file_size: None,
+            edits: Vec::new(),
+        };
+
+        assert_ne!(mosaic_tile_key(0, &image), mosaic_tile_key(1, &image));
     }
 
     #[test]
