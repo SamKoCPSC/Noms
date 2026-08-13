@@ -147,4 +147,16 @@ mod tests {
         assert!(source.contains("aria_hidden: \"true\""));
         assert!(source.contains("alt: String::new()"));
     }
+
+    #[test]
+    fn collection_detail_hero_preserves_the_sixteen_by_nine_cover_ratio() {
+        let styles = include_str!("../../../assets/main.css");
+        let hero_rule = styles
+            .split(".collection-cover--hero {")
+            .nth(1)
+            .and_then(|remaining| remaining.split('}').next())
+            .expect("collection cover hero styles should exist");
+
+        assert!(hero_rule.contains("aspect-ratio: 16 / 9;"));
+    }
 }
