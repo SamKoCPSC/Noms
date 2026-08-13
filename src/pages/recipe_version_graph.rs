@@ -481,6 +481,19 @@ fn version_graph_frontier_control_scale(transform: VersionGraphTransform) -> f64
     transform.scale.min(1.0)
 }
 
+fn version_graph_anchor_intersects_viewport(
+    anchor: VersionGraphLayoutNode,
+    transform: VersionGraphTransform,
+    viewport: (f64, f64),
+) -> bool {
+    let left = transform.offset_x + anchor.x * transform.scale;
+    let top = transform.offset_y + anchor.y * transform.scale;
+    let right = left + GRAPH_NODE_WIDTH_PX * transform.scale;
+    let bottom = top + GRAPH_NODE_HEIGHT_PX * transform.scale;
+
+    left < viewport.0 && right > 0.0 && top < viewport.1 && bottom > 0.0
+}
+
 fn version_graph_frontier_control_position(
     anchor: VersionGraphLayoutNode,
     transform: VersionGraphTransform,
@@ -2434,19 +2447,26 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                     };
                                     let control_scale =
                                         version_graph_frontier_control_scale(transform);
-                                    let control_position = layout.node(frontier.anchor).copied().map(
-                                        |node| {
+                                    let viewport = graph_viewport();
+                                    let control_position = layout
+                                        .node(frontier.anchor)
+                                        .copied()
+                                        .filter(|node| {
+                                            version_graph_anchor_intersects_viewport(
+                                                *node, transform, viewport,
+                                            )
+                                        })
+                                        .map(|node| {
                                             clamp_version_graph_frontier_control_position(
                                                 version_graph_frontier_control_position(
                                                     node,
                                                     transform,
                                                     frontier.kind,
                                                 ),
-                                                graph_viewport(),
+                                                viewport,
                                                 control_scale,
                                             )
-                                        },
-                                    );
+                                        });
                                     if let Some((left, top)) = control_position {
                                         let control_class = format!(
                                             "recipe-version-graph__frontier-control {}",
@@ -4397,6 +4417,73 @@ mod tests {
             0.08
         );
         assert_eq!(super::version_graph_frontier_control_scale(zoomed_in), 1.0);
+    }
+
+    #[test]
+    fn frontier_controls_are_hidden_when_their_anchor_is_fully_outside_the_viewport() {
+        let viewport = (800.0, 600.0);
+        let scale = 0.5;
+        let anchor_x = 100.0;
+        let anchor_y = 100.0;
+        for (index, (offset_x, offset_y)) in [
+            (-(anchor_x + super::GRAPH_NODE_WIDTH_PX) * scale, 0.0),
+            (viewport.0 - anchor_x * scale, 0.0),
+            (0.0, -(anchor_y + super::GRAPH_NODE_HEIGHT_PX) * scale),
+            (0.0, viewport.1 - anchor_y * scale),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let fully_outside = super::VersionGraphLayoutNode {
+                id: VersionGraphNodeId {
+                    recipe_id: Uuid::from_u128(707 + index as u128),
+                    version_number: 1,
+                },
+                x: anchor_x,
+                y: anchor_y,
+                rank: 0,
+                row: 0,
+            };
+            let transform = super::VersionGraphTransform {
+                scale,
+                offset_x,
+                offset_y,
+            };
+
+            assert!(!super::version_graph_anchor_intersects_viewport(
+                fully_outside,
+                transform,
+                viewport,
+            ));
+        }
+    }
+
+    #[test]
+    fn frontier_controls_remain_available_when_their_anchor_is_partially_visible() {
+        let viewport = (800.0, 600.0);
+        let scale = 0.5;
+        let anchor_x = 100.0;
+        let transform = super::VersionGraphTransform {
+            scale,
+            offset_x: -(anchor_x + super::GRAPH_NODE_WIDTH_PX) * scale + 0.5,
+            offset_y: 0.0,
+        };
+        let partially_left = super::VersionGraphLayoutNode {
+            id: VersionGraphNodeId {
+                recipe_id: Uuid::from_u128(708),
+                version_number: 1,
+            },
+            x: anchor_x,
+            y: 100.0,
+            rank: 0,
+            row: 0,
+        };
+
+        assert!(super::version_graph_anchor_intersects_viewport(
+            partially_left,
+            transform,
+            viewport,
+        ));
     }
 
     #[test]
