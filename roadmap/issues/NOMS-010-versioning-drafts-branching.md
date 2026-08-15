@@ -1,8 +1,15 @@
 # NOMS-010: Recipe Versioning, Drafts & Branching
 
-**Status:** ⚪ Backlog  
+**Status:** ✅ Implemented — original proposal superseded
 **Phase:** Phase 1 (core content creation)  
 **Depends on:** NOMS-008 (Recipe CRUD)
+
+> **Historical proposal:** The acceptance criteria and technical details below
+> preserve the original reverse-diff design for project history. The shipped
+> implementation uses immutable full snapshots, separate draft records, and the
+> current live recipe's visibility for all published-history access. See the
+> [canonical implementation plan](../implementation-plans/NOMS-010-versioning-drafts-branching.md)
+> for the implemented architecture and security contract.
 
 ## Overview
 
