@@ -60,9 +60,6 @@ fn is_recipe_route(path: &str) -> bool {
     }
     match segments.as_slice() {
         [id, "edit"] => is_valid_uuid_string(id),
-        [id, "versions", version_number] => {
-            is_valid_uuid_string(id) && version_number.parse::<i32>().is_ok()
-        }
         _ => false,
     }
 }
@@ -219,7 +216,7 @@ mod tests {
     fn published_recipe_detail_is_shareable_but_owner_recipe_routes_stay_protected() {
         assert!(!is_protected_path(&format!("/recipes/{COLLECTION_ID}")));
         assert!(is_protected_path(&format!("/recipes/{COLLECTION_ID}/edit")));
-        assert!(is_protected_path(&format!(
+        assert!(!is_protected_path(&format!(
             "/recipes/{COLLECTION_ID}/versions/1"
         )));
         assert!(is_protected_path(&format!(

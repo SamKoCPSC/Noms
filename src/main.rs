@@ -155,24 +155,7 @@ async fn build_application_router() -> axum::Router {
         storage: storage_client.clone(),
     };
 
-    let dioxus_router = axum::Router::new()
-        .layer(axum::Extension(pool.clone()))
-        .layer(axum::middleware::from_fn_with_state(
-            pool.clone(),
-            middleware::auth::handle_auth,
-        ))
-        .route(
-            "/api/user_profile",
-            axum::routing::get(auth::user_profile::handle_user_profile),
-        )
-        .route(
-            "/api/upload",
-            axum::routing::post(api::upload::upload_handler),
-        )
-        .layer(axum::Extension(storage_client))
-        .with_state(auth::user_profile::UserProfileState { pool })
-        .serve_dioxus_application(ServeConfig::new(), App)
-        .layer(api::upload::server_function_body_limit_layer());
+    let dioxus_router = build_dioxus_router(pool, storage_client);
 
     // The two endpoint classes deliberately have independent in-memory windows.
     // Each application replica owns its own limiter and cleanup task.
@@ -186,6 +169,34 @@ async fn build_application_router() -> axum::Router {
     });
 
     oauth_router.merge(dioxus_router)
+}
+
+#[cfg(feature = "server")]
+fn build_dioxus_router(pool: sqlx::PgPool, storage_client: storage::StorageClient) -> axum::Router {
+    let application_routes = axum::Router::new()
+        .route(
+            "/api/user_profile",
+            axum::routing::get(auth::user_profile::handle_user_profile),
+        )
+        .route(
+            "/api/upload",
+            axum::routing::post(api::upload::upload_handler),
+        )
+        .with_state(auth::user_profile::UserProfileState { pool: pool.clone() })
+        .serve_dioxus_application(ServeConfig::new(), App);
+
+    // Axum only applies a layer to routes that already exist. Keep route and
+    // Dioxus construction above these layers so authentication wraps the
+    // complete application router. OAuth routes are composed separately and
+    // retain their purpose, callback, redirect, and rate-limit controls.
+    application_routes
+        .layer(api::upload::server_function_body_limit_layer())
+        .layer(axum::Extension(storage_client))
+        .layer(axum::middleware::from_fn_with_state(
+            pool.clone(),
+            middleware::auth::handle_auth,
+        ))
+        .layer(axum::Extension(pool))
 }
 
 #[cfg(feature = "server")]
@@ -231,9 +242,143 @@ where
 mod server_tests {
     use std::net::SocketAddr;
 
+    use axum::body::Body;
     use axum::extract::ConnectInfo;
+    use axum::http::{header, Request, StatusCode};
     use axum::routing::get;
     use tokio::sync::oneshot;
+    use tower::ServiceExt;
+
+    const RESOURCE_ID: &str = "550e8400-e29b-41d4-a716-446655440000";
+
+    async fn production_dioxus_router(pool: sqlx::PgPool) -> axum::Router {
+        std::env::set_var(
+            "DIOXUS_PUBLIC_PATH",
+            format!("{}/assets", env!("CARGO_MANIFEST_DIR")),
+        );
+        super::build_dioxus_router(pool, crate::storage::StorageClient::for_test())
+    }
+
+    #[tokio::test]
+    async fn production_dioxus_router_redirects_anonymous_owner_routes() {
+        let (_database, pool) = crate::test_utils::setup_test_db().await;
+        let app = production_dioxus_router(pool).await;
+        let owner_routes = [
+            "/dashboard".to_string(),
+            "/recipes/new".to_string(),
+            format!("/recipes/{RESOURCE_ID}/edit"),
+            format!("/recipes/drafts/{RESOURCE_ID}/edit"),
+            "/collections".to_string(),
+            "/collections/new".to_string(),
+            format!("/collections/{RESOURCE_ID}/edit"),
+            "/settings/profile".to_string(),
+            "/settings/accounts".to_string(),
+        ];
+
+        for path in owner_routes {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::get(&path)
+                        .body(Body::empty())
+                        .expect("owner-route request should build"),
+                )
+                .await
+                .expect("production Dioxus router should respond");
+
+            assert_eq!(response.status(), StatusCode::FOUND, "path: {path}");
+            assert_eq!(
+                response.headers().get(header::LOCATION),
+                Some(
+                    &format!(
+                        "/login?redirect_uri={}",
+                        percent_encoding::utf8_percent_encode(
+                            &path,
+                            percent_encoding::NON_ALPHANUMERIC
+                        )
+                    )
+                    .parse()
+                    .expect("redirect should be a valid header value")
+                ),
+                "path: {path}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn production_dioxus_router_leaves_published_history_to_application_authorization() {
+        let (_database, pool) = crate::test_utils::setup_test_db().await;
+        let app = production_dioxus_router(pool).await;
+        let path = format!("/recipes/{RESOURCE_ID}/versions/1");
+
+        let response = app
+            .oneshot(
+                Request::get(&path)
+                    .body(Body::empty())
+                    .expect("history request should build"),
+            )
+            .await
+            .expect("production Dioxus router should respond");
+
+        assert_ne!(response.status(), StatusCode::FOUND);
+        assert_ne!(
+            response.headers().get(header::LOCATION),
+            Some(&axum::http::HeaderValue::from_static("/login"))
+        );
+    }
+
+    #[tokio::test]
+    async fn production_dioxus_router_propagates_identity_and_refreshes_session() {
+        crate::auth::session::set_test_secret("router-test-secret-32-bytes-long!!");
+        let (_database, pool) = crate::test_utils::setup_test_db().await;
+        let user = crate::db::insert_user(
+            &pool,
+            "router_auth_user",
+            "Router Auth User",
+            "router-auth@example.com",
+            None,
+        )
+        .await
+        .expect("test user should be created");
+        let token = crate::auth::session::create_session(&pool, user.id)
+            .await
+            .expect("test session should be created");
+        sqlx::query(
+            "UPDATE sessions SET expires_at = NOW() + INTERVAL '5 minutes' WHERE user_id = $1",
+        )
+        .bind(user.id)
+        .execute(&pool)
+        .await
+        .expect("test session should enter the refresh window");
+        let app = production_dioxus_router(pool).await;
+
+        let response = app
+            .oneshot(
+                Request::get("/settings/profile")
+                    .header(
+                        header::COOKIE,
+                        format!("{}={token}", crate::auth::session::cookie_name()),
+                    )
+                    .body(Body::empty())
+                    .expect("authenticated request should build"),
+            )
+            .await
+            .expect("production Dioxus router should respond");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(
+            response.headers().contains_key(header::SET_COOKIE),
+            "qualifying sessions should be refreshed by application middleware"
+        );
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("SSR response body should be readable");
+        let html = String::from_utf8_lossy(&body);
+        assert!(
+            html.contains("Router Auth User"),
+            "authenticated identity extensions should reach Dioxus SSR"
+        );
+    }
 
     #[tokio::test]
     async fn production_listener_attaches_direct_peer_information() {
