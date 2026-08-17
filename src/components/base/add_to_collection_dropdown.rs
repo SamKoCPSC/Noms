@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 use uuid::Uuid;
 
 use crate::api::collection::{
-    add_recipe_to_collection, get_recipe_collections, list_my_collections,
+    add_recipe_to_collection, get_recipe_collections, load_all_my_collections,
     remove_recipe_from_collection,
 };
 use crate::types::CollectionSummary;
@@ -67,7 +67,7 @@ pub fn AddToCollectionDropdown(props: AddToCollectionDropdownProps) -> Element {
     let mut membership = use_resource(move || {
         let recipe_id = recipe_id_for_resource.clone();
         async move {
-            let collections = list_my_collections().await?;
+            let collections = load_all_my_collections().await?;
             let memberships = get_recipe_collections(recipe_id).await?;
             Ok::<_, ServerFnError>((collections, memberships))
         }

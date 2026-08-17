@@ -17,6 +17,10 @@ mod versioning;
 #[allow(unused_imports)]
 pub use versioning::*;
 
+use crate::security::{
+    MAX_COLLECTIONS_PER_USER, MAX_COLLECTION_CHILDREN, MAX_COLLECTION_DEPTH,
+    MAX_COLLECTION_MEMBERSHIPS, MAX_PUBLIC_TAGS,
+};
 use crate::types::{
     Collection, CollectionContents, CollectionRecipeList, CollectionSharePreview,
     CollectionSummary, CollectionVisibility, PublicCollectionListResponse,
@@ -94,6 +98,10 @@ pub enum DbError {
     RecipeAlreadyInCollection,
     /// The submitted order does not exactly match the current direct members.
     InvalidCollectionOrder,
+    /// A collection operation would exceed a documented per-user resource bound.
+    CollectionLimitExceeded(&'static str),
+    /// A recipe, draft, or version operation would exceed a documented resource bound.
+    ResourceLimitExceeded(&'static str),
     /// A search request failed bounded server-side validation.
     InvalidSearchRequest(String),
 }
@@ -144,6 +152,12 @@ impl std::fmt::Display for DbError {
             DbError::InvalidCollectionOrder => {
                 write!(f, "collection order does not match membership")
             }
+            DbError::CollectionLimitExceeded(limit) => {
+                write!(f, "collection limit exceeded: {limit}")
+            }
+            DbError::ResourceLimitExceeded(limit) => {
+                write!(f, "resource limit exceeded: {limit}")
+            }
             DbError::InvalidSearchRequest(message) => {
                 write!(f, "invalid search request: {message}")
             }
@@ -172,7 +186,9 @@ impl std::error::Error for DbError {
             | DbError::CollectionCycle
             | DbError::RecipeNotAccessible(_)
             | DbError::RecipeAlreadyInCollection
-            | DbError::InvalidCollectionOrder => None,
+            | DbError::InvalidCollectionOrder
+            | DbError::CollectionLimitExceeded(_)
+            | DbError::ResourceLimitExceeded(_) => None,
             DbError::InvalidSearchRequest(_) => None,
         }
     }
@@ -507,6 +523,76 @@ async fn lock_owner(
     Ok(())
 }
 
+fn collection_limit_as_i64(limit: usize) -> i64 {
+    i64::try_from(limit).expect("collection security limits fit in PostgreSQL bigint")
+}
+
+async fn collection_ancestor_count(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    collection_id: Uuid,
+    owner_id: Uuid,
+) -> Result<i64, DbError> {
+    sqlx::query_scalar(
+        "WITH RECURSIVE ancestors AS (
+             SELECT id, parent_collection_id
+             FROM collections
+             WHERE id = $1 AND owner_id = $2
+             UNION ALL
+             SELECT parent.id, parent.parent_collection_id
+             FROM collections parent
+             INNER JOIN ancestors child ON parent.id = child.parent_collection_id
+             WHERE parent.owner_id = $2
+         )
+         SELECT COUNT(*) FROM ancestors",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(DbError::Query)
+}
+
+async fn collection_subtree_height(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    collection_id: Uuid,
+    owner_id: Uuid,
+) -> Result<i64, DbError> {
+    sqlx::query_scalar(
+        "WITH RECURSIVE subtree AS (
+             SELECT id, 1::bigint AS depth
+             FROM collections
+             WHERE id = $1 AND owner_id = $2
+             UNION ALL
+             SELECT child.id, subtree.depth + 1
+             FROM collections child
+             INNER JOIN subtree ON child.parent_collection_id = subtree.id
+             WHERE child.owner_id = $2
+         )
+         SELECT COALESCE(MAX(depth), 0) FROM subtree",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(DbError::Query)
+}
+
+async fn collection_sibling_count(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    owner_id: Uuid,
+    parent_collection_id: Option<Uuid>,
+) -> Result<i64, DbError> {
+    sqlx::query_scalar(
+        "SELECT COUNT(*) FROM collections
+         WHERE owner_id = $1 AND parent_collection_id IS NOT DISTINCT FROM $2",
+    )
+    .bind(owner_id)
+    .bind(parent_collection_id)
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(DbError::Query)
+}
+
 /// Insert a root or nested collection with explicit visibility.
 pub async fn insert_collection(
     pool: &PgPool,
@@ -517,8 +603,27 @@ pub async fn insert_collection(
     visibility: CollectionVisibility,
     image: Option<&RecipeImage>,
 ) -> Result<Collection, DbError> {
+    if image
+        .map(crate::security::validate_image_metadata)
+        .transpose()
+        .is_err()
+    {
+        return Err(DbError::ResourceLimitExceeded("collection image metadata"));
+    }
     let mut tx = pool.begin().await.map_err(DbError::Query)?;
     lock_owner(&mut tx, owner_id).await?;
+
+    let collection_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM collections WHERE owner_id = $1")
+            .bind(owner_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(DbError::Query)?;
+    if collection_count >= collection_limit_as_i64(MAX_COLLECTIONS_PER_USER) {
+        return Err(DbError::CollectionLimitExceeded(
+            "total collections per user",
+        ));
+    }
 
     if let Some(parent_id) = parent_collection_id {
         let parent_exists: Option<Uuid> = sqlx::query_scalar(
@@ -534,6 +639,20 @@ pub async fn insert_collection(
         if parent_exists.is_none() {
             return Err(DbError::CollectionParentNotFound(parent_id));
         }
+
+        if collection_ancestor_count(&mut tx, parent_id, owner_id).await?
+            >= collection_limit_as_i64(MAX_COLLECTION_DEPTH)
+        {
+            return Err(DbError::CollectionLimitExceeded(
+                "collection hierarchy depth",
+            ));
+        }
+    }
+
+    if collection_sibling_count(&mut tx, owner_id, parent_collection_id).await?
+        >= collection_limit_as_i64(MAX_COLLECTION_CHILDREN)
+    {
+        return Err(DbError::CollectionLimitExceeded("direct child collections"));
     }
 
     let next_order: i32 = sqlx::query_scalar(
@@ -604,8 +723,10 @@ pub async fn get_root_collections(
 ) -> Result<Vec<CollectionSummary>, DbError> {
     let query = format!(
         "{} WHERE c.owner_id = $1 AND c.parent_collection_id IS NULL
-         ORDER BY c.sort_order, lower(c.name), c.id",
-        collection_summary_select()
+         ORDER BY c.sort_order, lower(c.name), c.id
+         LIMIT {}",
+        collection_summary_select(),
+        MAX_COLLECTION_CHILDREN
     );
     let rows = sqlx::query(&query)
         .bind(owner_id)
@@ -626,8 +747,10 @@ pub async fn get_child_collections(
 ) -> Result<Vec<CollectionSummary>, DbError> {
     let query = format!(
         "{} WHERE c.owner_id = $1 AND c.parent_collection_id = $2
-         ORDER BY c.sort_order, lower(c.name), c.id",
-        collection_summary_select()
+         ORDER BY c.sort_order, lower(c.name), c.id
+         LIMIT {}",
+        collection_summary_select(),
+        MAX_COLLECTION_CHILDREN
     );
     let rows = sqlx::query(&query)
         .bind(owner_id)
@@ -660,6 +783,50 @@ pub async fn get_all_collections_by_owner(
         .map(collection_summary_from_row)
         .collect::<Result<_, _>>()
         .map_err(DbError::Query)
+}
+
+/// Return one bounded page of an owner's collection summaries.
+pub async fn get_collections_by_owner_paginated(
+    pool: &PgPool,
+    owner_id: Uuid,
+    offset: i64,
+    limit: i64,
+) -> Result<PublicCollectionListResponse, DbError> {
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        .execute(&mut *tx)
+        .await
+        .map_err(DbError::Query)?;
+    let total_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM collections WHERE owner_id = $1")
+            .bind(owner_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(DbError::Query)?;
+    let query = format!(
+        "{} WHERE c.owner_id = $1
+         ORDER BY c.parent_collection_id NULLS FIRST, c.sort_order, lower(c.name), c.id
+         OFFSET $2 LIMIT $3",
+        collection_summary_select()
+    );
+    let rows = sqlx::query(&query)
+        .bind(owner_id)
+        .bind(offset)
+        .bind(limit)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(DbError::Query)?;
+    let collections = rows
+        .iter()
+        .map(collection_summary_from_row)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(DbError::Query)?;
+    tx.commit().await.map_err(DbError::Query)?;
+    Ok(PublicCollectionListResponse {
+        has_more: offset.saturating_add(collections.len() as i64) < total_count,
+        collections,
+        total_count,
+    })
 }
 
 /// List public-safe collection summaries for a public user profile.
@@ -770,6 +937,7 @@ pub async fn get_collection_breadcrumbs(
              INNER JOIN ancestors ON parent.id = ancestors.parent_collection_id
              WHERE parent.owner_id = $2
                AND NOT parent.id = ANY(ancestors.path)
+               AND ancestors.depth < {maximum_parent_depth}
          )
          SELECT c.id, c.parent_collection_id, c.name, c.description, c.image, c.visibility,
                 c.sort_order, c.updated_at,
@@ -782,10 +950,13 @@ pub async fn get_collection_breadcrumbs(
                    AND (r.user_id = c.owner_id OR r.visibility IN ('public', 'unlisted'))) AS recipe_count
          FROM ancestors
          INNER JOIN collections c ON c.id = ancestors.id
-         ORDER BY ancestors.depth DESC",
+         ORDER BY ancestors.depth DESC
+         LIMIT {maximum_depth}",
         collection_preview_images_select(
             "(r.user_id = c.owner_id OR r.visibility IN ('public', 'unlisted'))"
-        )
+        ),
+        maximum_parent_depth = MAX_COLLECTION_DEPTH - 1,
+        maximum_depth = MAX_COLLECTION_DEPTH,
     );
     let rows = sqlx::query(&query)
         .bind(collection_id)
@@ -835,6 +1006,13 @@ pub async fn update_collection(
     description: Option<&str>,
     image: Option<&RecipeImage>,
 ) -> Result<Collection, DbError> {
+    if image
+        .map(crate::security::validate_image_metadata)
+        .transpose()
+        .is_err()
+    {
+        return Err(DbError::ResourceLimitExceeded("collection image metadata"));
+    }
     let row = sqlx::query(
         "UPDATE collections
          SET name = $3, description = $4, image = $5, updated_at = NOW()
@@ -1038,6 +1216,25 @@ pub async fn move_collection(
         lock_siblings(&mut tx, owner_id, None).await?;
     }
 
+    if new_parent_collection_id != current_parent {
+        if collection_sibling_count(&mut tx, owner_id, new_parent_collection_id).await?
+            >= collection_limit_as_i64(MAX_COLLECTION_CHILDREN)
+        {
+            return Err(DbError::CollectionLimitExceeded("direct child collections"));
+        }
+
+        let destination_depth = match new_parent_collection_id {
+            Some(parent_id) => collection_ancestor_count(&mut tx, parent_id, owner_id).await?,
+            None => 0,
+        };
+        let subtree_height = collection_subtree_height(&mut tx, collection_id, owner_id).await?;
+        if destination_depth + subtree_height > collection_limit_as_i64(MAX_COLLECTION_DEPTH) {
+            return Err(DbError::CollectionLimitExceeded(
+                "collection hierarchy depth",
+            ));
+        }
+    }
+
     let next_order: i32 = sqlx::query_scalar(
         "SELECT COALESCE(MAX(sort_order), -1) + 1
          FROM collections
@@ -1149,6 +1346,32 @@ pub async fn add_recipe_to_collection(
     .map_err(DbError::Query)?;
     if recipe_exists.is_none() {
         return Err(DbError::RecipeNotAccessible(recipe_id));
+    }
+
+    let membership_state = sqlx::query(
+        "SELECT COUNT(*) AS membership_count,
+                COUNT(*) FILTER (WHERE recipe_id = $2) > 0 AS already_member
+         FROM collection_recipes
+         WHERE collection_id = $1",
+    )
+    .bind(collection_id)
+    .bind(recipe_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    if membership_state
+        .try_get("already_member")
+        .map_err(DbError::Query)?
+    {
+        return Err(DbError::RecipeAlreadyInCollection);
+    }
+    let membership_count: i64 = membership_state
+        .try_get("membership_count")
+        .map_err(DbError::Query)?;
+    if membership_count >= collection_limit_as_i64(MAX_COLLECTION_MEMBERSHIPS) {
+        return Err(DbError::CollectionLimitExceeded(
+            "recipe memberships per collection",
+        ));
     }
 
     let next_order: i32 = sqlx::query_scalar(
@@ -1427,6 +1650,7 @@ pub async fn get_collection_contents_for_viewer(
                AND (parent.visibility = 'public'
                     OR ($3 AND parent.visibility = 'unlisted'))
                AND NOT parent.id = ANY(ancestors.path)
+               AND ancestors.depth < {maximum_parent_depth}
          )
          SELECT c.id,
                 CASE
@@ -1454,10 +1678,13 @@ pub async fn get_collection_contents_for_viewer(
                         OR ($3 AND r.visibility = 'unlisted'))) AS recipe_count
          FROM ancestors
          INNER JOIN collections c ON c.id = ancestors.id
-         ORDER BY ancestors.depth DESC",
+         ORDER BY ancestors.depth DESC
+         LIMIT {maximum_depth}",
         collection_preview_images_select(
             "(r.visibility = 'public' OR ($3 AND r.visibility = 'unlisted'))"
-        )
+        ),
+        maximum_parent_depth = MAX_COLLECTION_DEPTH - 1,
+        maximum_depth = MAX_COLLECTION_DEPTH,
     );
     let breadcrumb_rows = sqlx::query(&breadcrumb_query)
         .bind(collection_id)
@@ -1497,10 +1724,12 @@ pub async fn get_collection_contents_for_viewer(
          FROM collections c
          WHERE c.parent_collection_id = $1 AND c.owner_id = $2
            AND (c.visibility = 'public' OR ($3 AND c.visibility = 'unlisted'))
-         ORDER BY c.sort_order, lower(c.name), c.id",
+         ORDER BY c.sort_order, lower(c.name), c.id
+         LIMIT {maximum_children}",
         collection_preview_images_select(
             "(r.visibility = 'public' OR ($3 AND r.visibility = 'unlisted'))"
-        )
+        ),
+        maximum_children = MAX_COLLECTION_CHILDREN,
     );
     let child_rows = sqlx::query(&child_query)
         .bind(collection_id)
@@ -1637,6 +1866,11 @@ pub async fn reorder_collection_recipes(
     owner_id: Uuid,
     ordered_recipe_ids: &[Uuid],
 ) -> Result<(), DbError> {
+    if ordered_recipe_ids.len() > MAX_COLLECTION_MEMBERSHIPS {
+        return Err(DbError::CollectionLimitExceeded(
+            "recipe membership reorder length",
+        ));
+    }
     let mut tx = pool.begin().await.map_err(DbError::Query)?;
     let collection_exists: Option<Uuid> =
         sqlx::query_scalar("SELECT id FROM collections WHERE id = $1 AND owner_id = $2 FOR UPDATE")
@@ -1705,6 +1939,11 @@ pub async fn reorder_child_collections(
     parent_collection_id: Option<Uuid>,
     ordered_collection_ids: &[Uuid],
 ) -> Result<(), DbError> {
+    if ordered_collection_ids.len() > MAX_COLLECTION_CHILDREN {
+        return Err(DbError::CollectionLimitExceeded(
+            "child collection reorder length",
+        ));
+    }
     let mut tx = pool.begin().await.map_err(DbError::Query)?;
     lock_owner(&mut tx, owner_id).await?;
     if let Some(parent_id) = parent_collection_id {
@@ -2815,12 +3054,13 @@ pub async fn count_user_public_recipes(
 pub async fn get_distinct_public_tags(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
 ) -> Result<Vec<String>, DbError> {
-    sqlx::query_scalar::<_, String>(
+    sqlx::query_scalar::<_, String>(&format!(
         "SELECT DISTINCT tag FROM recipe_tags
          INNER JOIN recipes ON recipe_tags.recipe_id = recipes.id
          WHERE recipes.visibility = 'public'
-         ORDER BY tag",
-    )
+         ORDER BY tag
+         LIMIT {MAX_PUBLIC_TAGS}",
+    ))
     .fetch_all(executor)
     .await
     .map_err(DbError::Query)

@@ -9,6 +9,10 @@ use super::diff::{
     RecipeSnapshot, SnapshotChange,
 };
 use super::{DbError, Recipe};
+use crate::security::{
+    RecipeValidationMode, MAX_ACTIVE_DRAFTS_PER_USER, MAX_FORK_MESSAGE_CHARS,
+    MAX_VERSIONS_PER_RECIPE, MAX_VERSIONS_PER_USER, MAX_VERSION_NOTE_CHARS,
+};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::FromRow)]
 pub struct RecipeVersion {
@@ -1164,6 +1168,94 @@ pub async fn compare_recipe_version_snapshots(
     compute_diff(&from_snapshot, &to_snapshot)
 }
 
+fn resource_limit_as_i64(limit: usize) -> i64 {
+    i64::try_from(limit).expect("recipe security limits fit in PostgreSQL bigint")
+}
+
+async fn lock_resource_owner(
+    transaction: &mut sqlx::Transaction<'_, Postgres>,
+    user_id: Uuid,
+) -> Result<(), DbError> {
+    let owner: Option<Uuid> = sqlx::query_scalar("SELECT id FROM users WHERE id = $1 FOR UPDATE")
+        .bind(user_id)
+        .fetch_optional(&mut **transaction)
+        .await
+        .map_err(DbError::Query)?;
+    if owner.is_none() {
+        return Err(DbError::Query(sqlx::Error::RowNotFound));
+    }
+    Ok(())
+}
+
+async fn lock_owned_recipe(
+    transaction: &mut sqlx::Transaction<'_, Postgres>,
+    recipe_id: Uuid,
+    user_id: Uuid,
+) -> Result<String, DbError> {
+    sqlx::query_scalar(
+        "SELECT visibility FROM recipes
+         WHERE id = $1 AND user_id = $2
+         FOR UPDATE",
+    )
+    .bind(recipe_id)
+    .bind(user_id)
+    .fetch_optional(&mut **transaction)
+    .await
+    .map_err(DbError::Query)?
+    .ok_or(DbError::RecipeNotFound(recipe_id))
+}
+
+async fn enforce_active_draft_quota(
+    transaction: &mut sqlx::Transaction<'_, Postgres>,
+    user_id: Uuid,
+) -> Result<(), DbError> {
+    let draft_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM recipe_drafts WHERE user_id = $1")
+            .bind(user_id)
+            .fetch_one(&mut **transaction)
+            .await
+            .map_err(DbError::Query)?;
+    if draft_count >= resource_limit_as_i64(MAX_ACTIVE_DRAFTS_PER_USER) {
+        return Err(DbError::ResourceLimitExceeded("active drafts per user"));
+    }
+    Ok(())
+}
+
+async fn enforce_version_quotas(
+    transaction: &mut sqlx::Transaction<'_, Postgres>,
+    recipe_id: Uuid,
+    user_id: Uuid,
+) -> Result<(), DbError> {
+    let recipe_version_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM recipe_versions WHERE recipe_id = $1")
+            .bind(recipe_id)
+            .fetch_one(&mut **transaction)
+            .await
+            .map_err(DbError::Query)?;
+    if recipe_version_count >= resource_limit_as_i64(MAX_VERSIONS_PER_RECIPE) {
+        return Err(DbError::ResourceLimitExceeded(
+            "immutable versions per recipe",
+        ));
+    }
+
+    let user_version_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)
+         FROM recipe_versions version
+         INNER JOIN recipes recipe ON recipe.id = version.recipe_id
+         WHERE recipe.user_id = $1",
+    )
+    .bind(user_id)
+    .fetch_one(&mut **transaction)
+    .await
+    .map_err(DbError::Query)?;
+    if user_version_count >= resource_limit_as_i64(MAX_VERSIONS_PER_USER) {
+        return Err(DbError::ResourceLimitExceeded(
+            "immutable versions per user",
+        ));
+    }
+    Ok(())
+}
+
 pub async fn get_next_version_number(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     recipe_id: Uuid,
@@ -1179,12 +1271,23 @@ pub async fn get_next_version_number(
 }
 
 pub async fn insert_recipe_version(
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    transaction: &mut sqlx::Transaction<'_, Postgres>,
     recipe_id: Uuid,
+    user_id: Uuid,
     version_number: i32,
     snapshot: &RecipeSnapshot,
     notes: Option<&str>,
 ) -> Result<RecipeVersion, DbError> {
+    if notes.is_some_and(|value| value.chars().count() > MAX_VERSION_NOTE_CHARS) {
+        return Err(DbError::InvalidRecipeSnapshot(
+            "version note exceeds an application limit".to_string(),
+        ));
+    }
+    lock_resource_owner(transaction, user_id).await?;
+    let visibility = lock_owned_recipe(transaction, recipe_id, user_id).await?;
+    validate_snapshot_for_publish(snapshot, &visibility)?;
+    enforce_version_quotas(transaction, recipe_id, user_id).await?;
+
     let snapshot = snapshot_to_json(snapshot)?;
     sqlx::query_as::<_, RecipeVersion>(&format!(
         "INSERT INTO recipe_versions (recipe_id, version_number, snapshot, notes) \
@@ -1194,14 +1297,14 @@ pub async fn insert_recipe_version(
     .bind(version_number)
     .bind(snapshot)
     .bind(notes)
-    .fetch_one(executor)
+    .fetch_one(&mut **transaction)
     .await
     .map_err(DbError::Query)
 }
 
 #[allow(clippy::too_many_arguments)]
 async fn insert_recipe_draft_with_source(
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    transaction: &mut sqlx::Transaction<'_, Postgres>,
     user_id: Uuid,
     recipe_id: Option<Uuid>,
     base_version_number: Option<i32>,
@@ -1211,6 +1314,15 @@ async fn insert_recipe_draft_with_source(
     forked_from_title: Option<&str>,
     fork_message: Option<&str>,
 ) -> Result<RecipeDraft, DbError> {
+    if fork_message.is_some_and(|value| value.chars().count() > MAX_FORK_MESSAGE_CHARS) {
+        return Err(DbError::InvalidRecipeSnapshot(
+            "fork message exceeds an application limit".to_string(),
+        ));
+    }
+    validate_draft_payload(snapshot)?;
+    lock_resource_owner(transaction, user_id).await?;
+    enforce_active_draft_quota(transaction, user_id).await?;
+
     let snapshot = serde_json::to_value(snapshot).map_err(DbError::SerdeJson)?;
     let inserted = sqlx::query_as::<_, RecipeDraft>(&format!(
         "INSERT INTO recipe_drafts (recipe_id, user_id, base_version_number, snapshot, \
@@ -1228,7 +1340,7 @@ async fn insert_recipe_draft_with_source(
     .bind(forked_from_version_number)
     .bind(forked_from_title)
     .bind(fork_message)
-    .fetch_optional(executor)
+    .fetch_optional(&mut **transaction)
     .await
     .map_err(DbError::Query)?;
     inserted.ok_or_else(|| {
@@ -1239,14 +1351,15 @@ async fn insert_recipe_draft_with_source(
 }
 
 pub async fn insert_recipe_draft(
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    pool: &PgPool,
     user_id: Uuid,
     recipe_id: Option<Uuid>,
     base_version_number: Option<i32>,
     payload: &RecipeDraftPayload,
 ) -> Result<RecipeDraft, DbError> {
-    insert_recipe_draft_with_source(
-        executor,
+    let mut transaction = pool.begin().await.map_err(DbError::Query)?;
+    let draft = insert_recipe_draft_with_source(
+        &mut transaction,
         user_id,
         recipe_id,
         base_version_number,
@@ -1256,7 +1369,9 @@ pub async fn insert_recipe_draft(
         None,
         None,
     )
-    .await
+    .await?;
+    transaction.commit().await.map_err(DbError::Query)?;
+    Ok(draft)
 }
 
 pub async fn create_new_recipe_draft(
@@ -1305,9 +1420,10 @@ pub async fn list_recipe_drafts(
 ) -> Result<Vec<RecipeDraft>, DbError> {
     sqlx::query_as::<_, RecipeDraft>(&format!(
         "SELECT {DRAFT_COLUMNS} FROM recipe_drafts \
-         WHERE user_id = $1 ORDER BY updated_at DESC"
+         WHERE user_id = $1 ORDER BY updated_at DESC LIMIT $2"
     ))
     .bind(user_id)
+    .bind(resource_limit_as_i64(MAX_ACTIVE_DRAFTS_PER_USER))
     .fetch_all(executor)
     .await
     .map_err(DbError::Query)
@@ -1320,6 +1436,7 @@ pub async fn update_recipe_draft(
     expected_revision: i64,
     payload: &RecipeDraftPayload,
 ) -> Result<RecipeDraft, DbError> {
+    validate_draft_payload(payload)?;
     let snapshot = serde_json::to_value(payload).map_err(DbError::SerdeJson)?;
     let updated = sqlx::query_as::<_, RecipeDraft>(&format!(
         "UPDATE recipe_drafts SET snapshot = $4, revision = revision + 1, updated_at = NOW() \
@@ -1376,6 +1493,7 @@ pub async fn create_edit_draft(
     user_id: Uuid,
 ) -> Result<RecipeDraft, DbError> {
     let mut transaction = pool.begin().await.map_err(DbError::Query)?;
+    lock_resource_owner(&mut transaction, user_id).await?;
     let locked_recipe = sqlx::query_scalar::<_, Uuid>(
         "SELECT id FROM recipes WHERE id = $1 AND user_id = $2 FOR UPDATE",
     )
@@ -1404,12 +1522,16 @@ pub async fn create_edit_draft(
     };
     let latest = get_latest_recipe_version(&mut *transaction, recipe_id).await?;
 
-    let draft = insert_recipe_draft(
-        &mut *transaction,
+    let draft = insert_recipe_draft_with_source(
+        &mut transaction,
         user_id,
         Some(recipe_id),
         Some(latest.version_number),
         &snapshot,
+        None,
+        None,
+        None,
+        None,
     )
     .await?;
     transaction.commit().await.map_err(DbError::Query)?;
@@ -1428,9 +1550,10 @@ pub async fn create_published_recipe(
     })?;
     validate_snapshot_for_publish(&snapshot, visibility)?;
     let mut transaction = pool.begin().await.map_err(DbError::Query)?;
+    lock_resource_owner(&mut transaction, user_id).await?;
     let recipe =
         insert_recipe_from_snapshot(&mut transaction, user_id, &snapshot, visibility).await?;
-    insert_recipe_version(&mut *transaction, recipe.id, 1, &snapshot, notes).await?;
+    insert_recipe_version(&mut transaction, recipe.id, user_id, 1, &snapshot, notes).await?;
     super::insert_recipe_tags(&mut transaction, recipe.id, &snapshot.tags).await?;
     transaction.commit().await.map_err(DbError::Query)?;
     Ok(recipe)
@@ -1524,6 +1647,7 @@ async fn publish_new_draft(
     notes: Option<&str>,
 ) -> Result<Recipe, DbError> {
     let mut transaction = pool.begin().await.map_err(DbError::Query)?;
+    lock_resource_owner(&mut transaction, user_id).await?;
     let draft = locked_draft(&mut transaction, draft_id, user_id).await?;
     if draft.recipe_id.is_some() {
         return Err(DbError::DraftNotFound(draft_id));
@@ -1536,7 +1660,7 @@ async fn publish_new_draft(
     validate_snapshot_for_publish(&snapshot, visibility)?;
     let recipe =
         insert_recipe_from_snapshot(&mut transaction, user_id, &snapshot, visibility).await?;
-    insert_recipe_version(&mut *transaction, recipe.id, 1, &snapshot, notes).await?;
+    insert_recipe_version(&mut transaction, recipe.id, user_id, 1, &snapshot, notes).await?;
     super::insert_recipe_tags(&mut transaction, recipe.id, &snapshot.tags).await?;
 
     if let (Some(original_title), Some(version_number)) = (
@@ -1629,17 +1753,8 @@ async fn publish_existing_draft(
     notes: Option<&str>,
 ) -> Result<Recipe, DbError> {
     let mut transaction = pool.begin().await.map_err(DbError::Query)?;
-    let owner = sqlx::query_scalar::<_, Uuid>(
-        "SELECT user_id FROM recipes WHERE id = $1 AND user_id = $2 FOR UPDATE",
-    )
-    .bind(recipe_id)
-    .bind(user_id)
-    .fetch_optional(&mut *transaction)
-    .await
-    .map_err(DbError::Query)?;
-    if owner.is_none() {
-        return Err(DbError::RecipeNotFound(recipe_id));
-    }
+    lock_resource_owner(&mut transaction, user_id).await?;
+    let visibility = lock_owned_recipe(&mut transaction, recipe_id, user_id).await?;
 
     let draft = locked_draft(&mut transaction, draft_id, user_id).await?;
     if draft.recipe_id != Some(recipe_id) {
@@ -1657,10 +1772,11 @@ async fn publish_existing_draft(
 
     let payload = draft.decoded_snapshot()?;
     let snapshot = normalized_snapshot(&payload.content);
-    validate_snapshot_content_for_publish(&snapshot)?;
+    validate_snapshot_for_publish(&snapshot, &visibility)?;
     insert_recipe_version(
-        &mut *transaction,
+        &mut transaction,
         recipe_id,
+        user_id,
         latest.version_number + 1,
         &snapshot,
         notes,
@@ -1686,19 +1802,10 @@ pub async fn publish_snapshot(
     notes: Option<&str>,
 ) -> Result<Recipe, DbError> {
     let snapshot = normalized_snapshot(snapshot);
-    validate_snapshot_content_for_publish(&snapshot)?;
     let mut transaction = pool.begin().await.map_err(DbError::Query)?;
-    let owner = sqlx::query_scalar::<_, Uuid>(
-        "SELECT user_id FROM recipes WHERE id = $1 AND user_id = $2 FOR UPDATE",
-    )
-    .bind(recipe_id)
-    .bind(user_id)
-    .fetch_optional(&mut *transaction)
-    .await
-    .map_err(DbError::Query)?;
-    if owner.is_none() {
-        return Err(DbError::RecipeNotFound(recipe_id));
-    }
+    lock_resource_owner(&mut transaction, user_id).await?;
+    let visibility = lock_owned_recipe(&mut transaction, recipe_id, user_id).await?;
+    validate_snapshot_for_publish(&snapshot, &visibility)?;
     let latest = get_latest_recipe_version(&mut *transaction, recipe_id).await?;
     if latest.version_number != expected_latest_version {
         return Err(DbError::VersionConflict {
@@ -1708,8 +1815,9 @@ pub async fn publish_snapshot(
         });
     }
     insert_recipe_version(
-        &mut *transaction,
+        &mut transaction,
         recipe_id,
+        user_id,
         latest.version_number + 1,
         &snapshot,
         notes,
@@ -1748,6 +1856,7 @@ pub async fn create_fork_draft(
     message: Option<&str>,
 ) -> Result<RecipeDraft, DbError> {
     let mut transaction = pool.begin().await.map_err(DbError::Query)?;
+    lock_resource_owner(&mut transaction, user_id).await?;
     let locked_source =
         sqlx::query_scalar::<_, Uuid>("SELECT id FROM recipes WHERE id = $1 FOR SHARE")
             .bind(source_recipe_id)
@@ -1771,7 +1880,7 @@ pub async fn create_fork_draft(
         initial_visibility: Some(source.visibility.clone()),
     };
     let draft = insert_recipe_draft_with_source(
-        &mut *transaction,
+        &mut transaction,
         user_id,
         None,
         None,
@@ -2170,8 +2279,26 @@ pub fn validate_snapshot_for_publish(
     snapshot: &RecipeSnapshot,
     visibility: &str,
 ) -> Result<(), DbError> {
-    validate_snapshot_content_for_publish(snapshot)?;
-    validate_recipe_visibility(visibility)
+    validate_recipe_visibility(visibility)?;
+    crate::security::validate_recipe_snapshot(snapshot, visibility, RecipeValidationMode::Publish)
+        .map_err(|_| {
+            DbError::InvalidRecipeSnapshot(
+                "recipe snapshot exceeds an application limit".to_string(),
+            )
+        })?;
+    validate_snapshot_content_for_publish(snapshot)
+}
+
+fn validate_draft_payload(payload: &RecipeDraftPayload) -> Result<(), DbError> {
+    let visibility = payload.initial_visibility.as_deref().unwrap_or("private");
+    crate::security::validate_recipe_snapshot(
+        &payload.content,
+        visibility,
+        RecipeValidationMode::Draft,
+    )
+    .map_err(|_| {
+        DbError::InvalidRecipeSnapshot("recipe draft exceeds an application limit".to_string())
+    })
 }
 
 pub fn validate_recipe_visibility(visibility: &str) -> Result<(), DbError> {
@@ -3840,9 +3967,19 @@ mod tests {
             .await
             .unwrap();
         let draft = create_edit_draft(&pool, recipe.id, user.id).await.unwrap();
-        let mut invalid_tag_snapshot = snapshot("Must roll back", "public");
-        invalid_tag_snapshot.tags = vec!["x".repeat(101)];
-        update_recipe_draft(&pool, draft.id, user.id, 0, &invalid_tag_snapshot)
+        // Keep the draft valid under CP5's early payload bounds, then force a
+        // database failure at the final tag-write stage to retain coverage of
+        // transaction rollback after the version and recipe writes begin.
+        sqlx::query(
+            "ALTER TABLE recipe_tags ADD CONSTRAINT reject_late_failure_tag \
+             CHECK (tag <> 'late-failure')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        let mut late_failure_snapshot = snapshot("Must roll back", "public");
+        late_failure_snapshot.tags = vec!["late-failure".to_string()];
+        update_recipe_draft(&pool, draft.id, user.id, 0, &late_failure_snapshot)
             .await
             .unwrap();
 

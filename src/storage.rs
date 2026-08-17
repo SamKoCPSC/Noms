@@ -376,6 +376,39 @@ impl StorageClient {
         }
         Ok(keys)
     }
+
+    /// Sum object count and encoded bytes below one owner namespace.
+    ///
+    /// Listing stops once the global object ceiling is crossed; callers only
+    /// need to know that quota is exhausted and should not keep paging through
+    /// a hostile or unexpectedly large namespace.
+    pub async fn media_usage(
+        &self,
+        prefix: &str,
+        object_ceiling: u64,
+    ) -> Result<crate::security::MediaUsage, StorageError> {
+        let mut stream = self
+            .inner
+            .list_objects_v2()
+            .bucket(&self.bucket)
+            .prefix(prefix)
+            .into_paginator()
+            .send();
+        let mut usage = crate::security::MediaUsage::default();
+        while let Some(page) = stream.next().await {
+            let response = page.map_err(|error| StorageError::ListFailed(error.to_string()))?;
+            for object in response.contents() {
+                usage.objects = usage.objects.saturating_add(1);
+                usage.bytes = usage
+                    .bytes
+                    .saturating_add(u64::try_from(object.size().unwrap_or_default()).unwrap_or(0));
+                if usage.objects > object_ceiling {
+                    return Ok(usage);
+                }
+            }
+        }
+        Ok(usage)
+    }
 }
 
 fn parse_media_key(key: &str) -> Result<MediaObject, String> {

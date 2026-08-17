@@ -36,6 +36,11 @@ static X_FORWARDED_FOR: LazyLock<HeaderName> =
 /// The client address header supplied by Railway and some other reverse proxies.
 static X_REAL_IP: LazyLock<HeaderName> = LazyLock::new(|| HeaderName::from_static("x-real-ip"));
 
+/// Internal header overwritten from trusted connection metadata before a
+/// request reaches a server function. Clients cannot choose this value.
+pub(crate) static RESOLVED_CLIENT_IP: LazyLock<HeaderName> =
+    LazyLock::new(|| HeaderName::from_static("x-noms-resolved-client-ip"));
+
 /// Maximum OAuth callback requests per IP per 60-second window.
 const CALLBACK_LIMIT_PER_MIN: usize = 5;
 
@@ -420,6 +425,22 @@ pub async fn rate_limit_middleware(
         Ok(()) => next.run(req).await,
         Err(retry_after) => make_429_response(retry_after),
     }
+}
+
+/// Propagate the already-normalized client identity into Fullstack request
+/// parts, whose extension propagation is not reliable across all Dioxus paths.
+pub async fn resolved_client_ip_middleware(
+    State(rate_limit): State<RateLimitState>,
+    mut req: Request<Body>,
+    next: Next,
+) -> Response<Body> {
+    req.headers_mut().remove(&*RESOLVED_CLIENT_IP);
+    if let Some(ip) = extract_client_ip(&req, &rate_limit.trusted_proxies) {
+        if let Ok(value) = HeaderValue::from_str(&ip.to_string()) {
+            req.headers_mut().insert(RESOLVED_CLIENT_IP.clone(), value);
+        }
+    }
+    next.run(req).await
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────

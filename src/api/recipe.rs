@@ -13,6 +13,37 @@ use crate::types::{RecipeImage, RecipeStep};
 use std::collections::HashSet;
 
 #[cfg(feature = "server")]
+fn enforce_graph_budget(viewer_id: Option<uuid::Uuid>) -> Result<(), ServerFnError> {
+    crate::security::enforce_request_budget(viewer_id, crate::security::RequestClass::Graph)
+        .map_err(|_| ServerFnError::new("Graph request rate limit exceeded"))
+}
+
+#[cfg(feature = "server")]
+fn enforce_mutation_budget(user_id: uuid::Uuid) -> Result<(), ServerFnError> {
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))
+}
+
+#[cfg(feature = "server")]
+fn enforce_publication_budget(user_id: uuid::Uuid) -> Result<(), ServerFnError> {
+    crate::security::enforce_user_request_budget(
+        user_id,
+        crate::security::RequestClass::Publication,
+    )
+    .map_err(|_| ServerFnError::new("Publication rate limit exceeded"))
+}
+
+#[cfg(feature = "server")]
+async fn bounded_database_operation<T>(
+    operation: impl std::future::Future<Output = Result<T, crate::db::DbError>>,
+) -> Result<T, ServerFnError> {
+    crate::security::run_with_database_budget(crate::security::DATABASE_EXECUTION_BUDGET, operation)
+        .await
+        .map_err(|_| ServerFnError::new("Database operation timed out"))?
+        .map_err(|error| ServerFnError::new(error.to_string()))
+}
+
+#[cfg(feature = "server")]
 fn editor_to_draft_payload(
     editor: crate::types::RecipeEditorState,
 ) -> crate::db::diff::RecipeDraftPayload {
@@ -135,6 +166,9 @@ pub async fn create_recipe(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
+    enforce_publication_budget(user_id)?;
     let pool = crate::db::get_pool();
     let storage = crate::storage::get_storage_client();
     create_recipe_for_user(
@@ -203,6 +237,9 @@ pub async fn update_recipe(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
+    enforce_publication_budget(user_id)?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|e| ServerFnError::new(format!("Invalid recipe ID: {e}")))?;
     let pool = crate::db::get_pool();
@@ -239,11 +276,16 @@ pub async fn update_recipe_visibility(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    enforce_mutation_budget(user_id)?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
-    crate::db::update_recipe_visibility(&crate::db::get_pool(), recipe_id, user_id, &visibility)
-        .await
-        .map_err(|error| ServerFnError::new(error.to_string()))
+    bounded_database_operation(crate::db::update_recipe_visibility(
+        &crate::db::get_pool(),
+        recipe_id,
+        user_id,
+        &visibility,
+    ))
+    .await
 }
 
 /// Start an incomplete, owner-only draft for a new recipe.
@@ -254,15 +296,18 @@ pub async fn create_recipe_draft(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
+    crate::security::validate_recipe_editor(&editor, crate::security::RecipeValidationMode::Draft)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
     let storage = crate::storage::get_storage_client();
     validate_recipe_media_references(&storage, user_id, &editor.images, &editor.instructions)?;
-    let draft = crate::db::create_new_recipe_draft(
+    let draft = bounded_database_operation(crate::db::create_new_recipe_draft(
         &crate::db::get_pool(),
         user_id,
         &editor_to_draft_payload(editor),
-    )
-    .await
-    .map_err(|e| ServerFnError::new(e.to_string()))?;
+    ))
+    .await?;
     draft_to_view(draft).map_err(|e| ServerFnError::new(e.to_string()))
 }
 
@@ -274,11 +319,15 @@ pub async fn create_edit_draft(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    enforce_mutation_budget(user_id)?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
-    let draft = crate::db::create_edit_draft(&crate::db::get_pool(), recipe_id, user_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let draft = bounded_database_operation(crate::db::create_edit_draft(
+        &crate::db::get_pool(),
+        recipe_id,
+        user_id,
+    ))
+    .await?;
     draft_to_view(draft).map_err(|e| ServerFnError::new(e.to_string()))
 }
 
@@ -307,6 +356,10 @@ pub async fn save_recipe_draft(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
+    crate::security::validate_recipe_editor(&editor, crate::security::RecipeValidationMode::Draft)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
     let draft_id = uuid::Uuid::parse_str(&draft_id)
         .map_err(|error| ServerFnError::new(format!("Invalid draft ID: {error}")))?;
     let current_draft = crate::db::get_recipe_draft(&crate::db::get_pool(), draft_id, user_id)
@@ -331,15 +384,14 @@ pub async fn save_recipe_draft(
     if current_draft.recipe_id.is_some() {
         payload.initial_visibility = None;
     }
-    let draft = crate::db::update_recipe_draft(
+    let draft = bounded_database_operation(crate::db::update_recipe_draft(
         &crate::db::get_pool(),
         draft_id,
         user_id,
         expected_revision,
         &payload,
-    )
-    .await
-    .map_err(|e| ServerFnError::new(e.to_string()))?;
+    ))
+    .await?;
     draft_to_view(draft).map_err(|e| ServerFnError::new(e.to_string()))
 }
 
@@ -348,11 +400,15 @@ pub async fn discard_recipe_draft(draft_id: String) -> Result<(), ServerFnError>
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    enforce_mutation_budget(user_id)?;
     let draft_id = uuid::Uuid::parse_str(&draft_id)
         .map_err(|error| ServerFnError::new(format!("Invalid draft ID: {error}")))?;
-    crate::db::delete_recipe_draft(&crate::db::get_pool(), draft_id, user_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))
+    bounded_database_operation(crate::db::delete_recipe_draft(
+        &crate::db::get_pool(),
+        draft_id,
+        user_id,
+    ))
+    .await
 }
 
 #[server]
@@ -363,6 +419,15 @@ pub async fn publish_recipe_draft(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
+    enforce_publication_budget(user_id)?;
+    if notes
+        .as_deref()
+        .is_some_and(|value| value.chars().count() > crate::security::MAX_VERSION_NOTE_CHARS)
+    {
+        return Err(ServerFnError::new("Version note is too long"));
+    }
     let draft_id = uuid::Uuid::parse_str(&draft_id)
         .map_err(|error| ServerFnError::new(format!("Invalid draft ID: {error}")))?;
     let pool = crate::db::get_pool();
@@ -372,6 +437,16 @@ pub async fn publish_recipe_draft(
     let payload = draft
         .decoded_snapshot()
         .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let visibility = payload
+        .initial_visibility
+        .clone()
+        .unwrap_or_else(|| "private".to_string());
+    let editor = snapshot_to_editor(payload.content.clone(), visibility);
+    crate::security::validate_recipe_editor(
+        &editor,
+        crate::security::RecipeValidationMode::Publish,
+    )
+    .map_err(|error| ServerFnError::new(error.to_string()))?;
     let allowed_urls =
         collect_recipe_media_urls(&payload.content.images, &payload.content.instructions);
     let storage = crate::storage::get_storage_client();
@@ -382,9 +457,13 @@ pub async fn publish_recipe_draft(
         &payload.content.instructions,
         &allowed_urls,
     )?;
-    crate::db::publish_recipe_draft(&pool, draft_id, user_id, notes.as_deref())
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))
+    bounded_database_operation(crate::db::publish_recipe_draft(
+        &pool,
+        draft_id,
+        user_id,
+        notes.as_deref(),
+    ))
+    .await
 }
 
 #[server]
@@ -392,12 +471,14 @@ pub async fn list_recipe_drafts() -> Result<Vec<crate::types::RecipeDraftView>, 
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
-    crate::db::list_recipe_drafts(&crate::db::get_pool(), user_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?
-        .into_iter()
-        .map(|draft| draft_to_view(draft).map_err(|e| ServerFnError::new(e.to_string())))
-        .collect()
+    bounded_database_operation(crate::db::list_recipe_drafts(
+        &crate::db::get_pool(),
+        user_id,
+    ))
+    .await?
+    .into_iter()
+    .map(|draft| draft_to_view(draft).map_err(|e| ServerFnError::new(e.to_string())))
+    .collect()
 }
 
 #[server]
@@ -405,17 +486,16 @@ pub async fn get_recipe_versions_api(
     recipe_id: String,
 ) -> Result<Vec<crate::types::RecipeVersionSummary>, ServerFnError> {
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
+    enforce_graph_budget(viewer_id)?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
     let pool = crate::db::get_pool();
-    crate::db::get_recipe_by_id(&pool, recipe_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?
+    bounded_database_operation(crate::db::get_recipe_by_id(&pool, recipe_id))
+        .await?
         .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
         .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
-    let versions = crate::db::get_recipe_versions(&pool, recipe_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let versions =
+        bounded_database_operation(crate::db::get_recipe_versions(&pool, recipe_id)).await?;
     let snapshots = versions
         .iter()
         .map(crate::db::RecipeVersion::decoded_snapshot)
@@ -540,14 +620,19 @@ pub async fn get_recipe_version_graph(
 ) -> Result<crate::types::VersionGraph, ServerFnError> {
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
-    let pool = crate::db::get_pool();
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
-    crate::db::get_initial_recipe_version_graph(&pool, recipe_id, viewer_id)
-        .await
-        .map_err(|error| match error {
-            crate::db::DbError::RecipeNotFound(_) => ServerFnError::new("Recipe not found"),
-            other => ServerFnError::new(other.to_string()),
-        })
+    enforce_graph_budget(viewer_id)?;
+    let pool = crate::db::get_pool();
+    crate::security::run_with_database_budget(
+        crate::security::DATABASE_EXECUTION_BUDGET,
+        crate::db::get_initial_recipe_version_graph(&pool, recipe_id, viewer_id),
+    )
+    .await
+    .map_err(|_| ServerFnError::new("Database operation timed out"))?
+    .map_err(|error| match error {
+        crate::db::DbError::RecipeNotFound(_) => ServerFnError::new("Recipe not found"),
+        other => ServerFnError::new(other.to_string()),
+    })
 }
 
 /// Expand one validated boundary of the progressively loaded version graph.
@@ -557,16 +642,29 @@ pub async fn expand_recipe_version_graph(
     frontier: crate::types::VersionGraphFrontier,
     loaded_node_ids: Vec<crate::types::VersionGraphNodeId>,
 ) -> Result<crate::types::VersionGraph, ServerFnError> {
+    crate::security::validate_graph_expansion(&frontier, &loaded_node_ids)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
-    let pool = crate::db::get_pool();
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
-    crate::db::expand_recipe_version_graph(&pool, recipe_id, viewer_id, frontier, loaded_node_ids)
-        .await
-        .map_err(|error| match error {
-            crate::db::DbError::RecipeNotFound(_) => ServerFnError::new("Recipe not found"),
-            other => ServerFnError::new(other.to_string()),
-        })
+    enforce_graph_budget(viewer_id)?;
+    let pool = crate::db::get_pool();
+    crate::security::run_with_database_budget(
+        crate::security::DATABASE_EXECUTION_BUDGET,
+        crate::db::expand_recipe_version_graph(
+            &pool,
+            recipe_id,
+            viewer_id,
+            frontier,
+            loaded_node_ids,
+        ),
+    )
+    .await
+    .map_err(|_| ServerFnError::new("Database operation timed out"))?
+    .map_err(|error| match error {
+        crate::db::DbError::RecipeNotFound(_) => ServerFnError::new("Recipe not found"),
+        other => ServerFnError::new(other.to_string()),
+    })
 }
 
 #[server]
@@ -575,52 +673,56 @@ pub async fn get_recipe_version_api(
     version_number: i32,
 ) -> Result<crate::types::RecipeVersionView, ServerFnError> {
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
+    enforce_graph_budget(viewer_id)?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
     let pool = crate::db::get_pool();
-    let recipe = crate::db::get_recipe_by_id(&pool, recipe_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?
+    let recipe = bounded_database_operation(crate::db::get_recipe_by_id(&pool, recipe_id))
+        .await?
         .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
         .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
-    let version = crate::db::get_recipe_version(&pool, recipe_id, version_number)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let version = bounded_database_operation(crate::db::get_recipe_version(
+        &pool,
+        recipe_id,
+        version_number,
+    ))
+    .await?;
     let snapshot = version
         .decoded_snapshot()
         .map_err(|e| ServerFnError::new(e.to_string()))?;
-    let latest = crate::db::get_latest_recipe_version(&pool, recipe_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let latest =
+        bounded_database_operation(crate::db::get_latest_recipe_version(&pool, recipe_id)).await?;
     let changes_from_previous = if version_number > 1 {
         recipe_version_changes_to_view(
-            crate::db::compare_recipe_versions(
+            bounded_database_operation(crate::db::compare_recipe_versions(
                 &pool,
                 recipe_id,
                 version_number - 1,
                 version_number,
-            )
-            .await
-            .map_err(|e| ServerFnError::new(e.to_string()))?,
+            ))
+            .await?,
         )
     } else {
         Vec::new()
     };
     let (changes_to_current, changes_from_original) = (
         recipe_version_changes_to_view(
-            crate::db::compare_recipe_versions(
+            bounded_database_operation(crate::db::compare_recipe_versions(
                 &pool,
                 recipe_id,
                 version_number,
                 latest.version_number,
-            )
-            .await
-            .map_err(|e| ServerFnError::new(e.to_string()))?,
+            ))
+            .await?,
         ),
         recipe_version_changes_to_view(
-            crate::db::compare_recipe_versions(&pool, recipe_id, 1, version_number)
-                .await
-                .map_err(|e| ServerFnError::new(e.to_string()))?,
+            bounded_database_operation(crate::db::compare_recipe_versions(
+                &pool,
+                recipe_id,
+                1,
+                version_number,
+            ))
+            .await?,
         ),
     );
     Ok(crate::types::RecipeVersionView {
@@ -765,22 +867,21 @@ pub async fn compare_recipe_versions_api(
     to_version_number: i32,
 ) -> Result<crate::types::RecipeVersionComparison, ServerFnError> {
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
+    enforce_graph_budget(viewer_id)?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
     let pool = crate::db::get_pool();
-    crate::db::get_recipe_by_id(&pool, recipe_id)
-        .await
-        .map_err(|error| ServerFnError::new(error.to_string()))?
+    bounded_database_operation(crate::db::get_recipe_by_id(&pool, recipe_id))
+        .await?
         .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
         .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
-    let changes = crate::db::compare_recipe_versions(
+    let changes = bounded_database_operation(crate::db::compare_recipe_versions(
         &pool,
         recipe_id,
         from_version_number,
         to_version_number,
-    )
-    .await
-    .map_err(|error| ServerFnError::new(error.to_string()))?;
+    ))
+    .await?;
 
     Ok(crate::types::RecipeVersionComparison {
         from_version_number,
@@ -796,24 +897,28 @@ pub async fn compare_version_graph_snapshots_api(
     to: crate::types::VersionGraphNodeId,
 ) -> Result<crate::types::VersionGraphComparison, ServerFnError> {
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
+    enforce_graph_budget(viewer_id)?;
     let pool = crate::db::get_pool();
 
     for snapshot in [from, to] {
-        crate::db::get_recipe_by_id(&pool, snapshot.recipe_id)
-            .await
-            .map_err(|error| ServerFnError::new(error.to_string()))?
+        bounded_database_operation(crate::db::get_recipe_by_id(&pool, snapshot.recipe_id))
+            .await?
             .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
             .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
     }
 
-    let changes = crate::db::compare_recipe_version_snapshots(&pool, from, to)
-        .await
-        .map_err(|error| match error {
-            crate::db::DbError::VersionNotFound { .. } => {
-                ServerFnError::new("Recipe snapshot not found")
-            }
-            other => ServerFnError::new(other.to_string()),
-        })?;
+    let changes = crate::security::run_with_database_budget(
+        crate::security::DATABASE_EXECUTION_BUDGET,
+        crate::db::compare_recipe_version_snapshots(&pool, from, to),
+    )
+    .await
+    .map_err(|_| ServerFnError::new("Database operation timed out"))?
+    .map_err(|error| match error {
+        crate::db::DbError::VersionNotFound { .. } => {
+            ServerFnError::new("Recipe snapshot not found")
+        }
+        other => ServerFnError::new(other.to_string()),
+    })?;
 
     Ok(crate::types::VersionGraphComparison {
         from,
@@ -831,17 +936,19 @@ pub async fn restore_version(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
+    enforce_publication_budget(user_id)?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
-    crate::db::restore_recipe_version(
+    bounded_database_operation(crate::db::restore_recipe_version(
         &crate::db::get_pool(),
         recipe_id,
         user_id,
         version_number,
         expected_latest_version,
-    )
+    ))
     .await
-    .map_err(|e| ServerFnError::new(e.to_string()))
 }
 
 #[server]
@@ -852,16 +959,23 @@ pub async fn fork_recipe(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
+    if message
+        .as_deref()
+        .is_some_and(|value| value.chars().count() > crate::security::MAX_FORK_MESSAGE_CHARS)
+    {
+        return Err(ServerFnError::new("Fork message is too long"));
+    }
     let source_recipe_id = uuid::Uuid::parse_str(&source_recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
-    let draft = crate::db::create_fork_draft(
+    let draft = bounded_database_operation(crate::db::create_fork_draft(
         &crate::db::get_pool(),
         source_recipe_id,
         user_id,
         message.as_deref(),
-    )
-    .await
-    .map_err(|e| ServerFnError::new(e.to_string()))?;
+    ))
+    .await?;
     draft_to_view(draft).map_err(|e| ServerFnError::new(e.to_string()))
 }
 
@@ -871,25 +985,25 @@ pub async fn get_fork_attribution(
 ) -> Result<Option<crate::types::ForkAttribution>, ServerFnError> {
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
+    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
+    enforce_graph_budget(viewer_id)?;
     let pool = crate::db::get_pool();
-    let recipe = crate::db::get_recipe_by_id(&pool, recipe_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let recipe = bounded_database_operation(crate::db::get_recipe_by_id(&pool, recipe_id)).await?;
     let Some(recipe) = recipe else {
         return Ok(None);
     };
-    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
     if recipe.visibility == "private" && viewer_id != Some(recipe.user_id) {
         return Ok(None);
     }
-    Ok(crate::db::get_fork_relationship(&pool, recipe_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?
-        .map(|relationship| crate::types::ForkAttribution {
-            original_recipe_id: relationship.original_recipe_id,
-            original_title: relationship.original_title,
-            message: relationship.message,
-        }))
+    Ok(
+        bounded_database_operation(crate::db::get_fork_relationship(&pool, recipe_id))
+            .await?
+            .map(|relationship| crate::types::ForkAttribution {
+                original_recipe_id: relationship.original_recipe_id,
+                original_title: relationship.original_title,
+                message: relationship.message,
+            }),
+    )
 }
 
 /// Load the current recipe's ancestors and a bounded descendant tree.
@@ -908,16 +1022,16 @@ pub async fn get_recipe_lineage(
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
+    enforce_graph_budget(viewer_id)?;
     let descendant_depth = normalize_lineage_descendant_depth(descendant_depth);
 
-    crate::db::get_recipe_lineage(
+    bounded_database_operation(crate::db::get_recipe_lineage(
         &crate::db::get_pool(),
         recipe_id,
         viewer_id,
         descendant_depth,
-    )
+    ))
     .await
-    .map_err(|error| ServerFnError::new(error.to_string()))
 }
 
 /// Delete a recipe (ownership-gated).
@@ -929,6 +1043,7 @@ pub async fn delete_recipe(recipe_id: String) -> Result<(), ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    enforce_mutation_budget(user_id)?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|e| ServerFnError::new(format!("Invalid recipe ID: {e}")))?;
     let pool = crate::db::get_pool();
@@ -943,8 +1058,27 @@ async fn create_recipe_for_user(
     user_id: uuid::Uuid,
     input: RecipeCreateInput,
 ) -> Result<crate::types::Recipe, ServerFnError> {
+    let editor = crate::types::RecipeEditorState {
+        title: input.title.clone(),
+        description: input.description.clone(),
+        commentary: input.commentary.clone(),
+        prep_time_minutes: input.prep_time_minutes,
+        cook_time_minutes: input.cook_time_minutes,
+        servings: input.servings,
+        ingredients: input.ingredients.clone(),
+        instructions: input.instructions.clone(),
+        equipment: input.equipment.clone(),
+        images: input.images.clone(),
+        tags: input.tags.clone(),
+        visibility: input.visibility.clone(),
+    };
+    crate::security::validate_recipe_editor(
+        &editor,
+        crate::security::RecipeValidationMode::Publish,
+    )
+    .map_err(|error| ServerFnError::new(error.to_string()))?;
     validate_recipe_media_references(storage, user_id, &input.images, &input.instructions)?;
-    crate::db::create_published_recipe(
+    bounded_database_operation(crate::db::create_published_recipe(
         pool,
         user_id,
         &crate::db::diff::RecipeDraftPayload {
@@ -964,9 +1098,8 @@ async fn create_recipe_for_user(
             },
         },
         None,
-    )
+    ))
     .await
-    .map_err(|error| ServerFnError::new(error.to_string()))
 }
 
 #[cfg(feature = "server")]
@@ -1014,6 +1147,12 @@ async fn update_recipe_for_user(
     if let Some(tags) = input.tags {
         snapshot.tags = tags;
     }
+    let editor = snapshot_to_editor(snapshot.clone(), current.visibility.clone());
+    crate::security::validate_recipe_editor(
+        &editor,
+        crate::security::RecipeValidationMode::Publish,
+    )
+    .map_err(|error| ServerFnError::new(error.to_string()))?;
     validate_recipe_media_references_with_allowed(
         storage,
         user_id,
@@ -1021,16 +1160,15 @@ async fn update_recipe_for_user(
         &snapshot.instructions,
         &allowed_urls,
     )?;
-    let recipe = crate::db::publish_snapshot(
+    let recipe = bounded_database_operation(crate::db::publish_snapshot(
         pool,
         recipe_id,
         user_id,
         latest.version_number,
         &snapshot,
         None,
-    )
-    .await
-    .map_err(|error| ServerFnError::new(error.to_string()))?;
+    ))
+    .await?;
     if let Some(visibility) = input.visibility {
         return crate::db::update_recipe_visibility(pool, recipe_id, user_id, &visibility)
             .await
@@ -1052,9 +1190,7 @@ async fn delete_recipe_for_user(
         .map_err(|e| ServerFnError::new(e.to_string()))?;
 
     // Delete from DB (enforces ownership via WHERE user_id = $2)
-    crate::db::delete_recipe(pool, recipe_id, user_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    bounded_database_operation(crate::db::delete_recipe(pool, recipe_id, user_id)).await?;
 
     // Clean up only objects which are no longer referenced by another recipe,
     // draft, or immutable version. Forks and historical snapshots deliberately
@@ -1252,18 +1388,20 @@ pub async fn list_my_recipes(
     offset: i64,
     limit: i64,
 ) -> Result<crate::types::RecipeListResponse, ServerFnError> {
+    crate::security::validate_offset_pagination(offset, limit)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
     let pool = crate::db::get_pool();
 
-    let recipes = crate::db::get_recipes_by_owner_paginated(&pool, user_id, limit, offset)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let recipes = bounded_database_operation(crate::db::get_recipes_by_owner_paginated(
+        &pool, user_id, limit, offset,
+    ))
+    .await?;
 
-    let total_count = crate::db::count_recipes_by_owner(&pool, user_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let total_count =
+        bounded_database_operation(crate::db::count_recipes_by_owner(&pool, user_id)).await?;
 
     let has_more = (offset + recipes.len() as i64) < total_count;
 
@@ -1321,15 +1459,16 @@ pub async fn get_public_recipes(
     offset: i64,
     limit: i64,
 ) -> Result<crate::types::RecipeListResponse, ServerFnError> {
+    crate::security::validate_offset_pagination(offset, limit)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
     let pool = crate::db::get_pool();
 
-    let recipes = crate::db::get_public_recipes_paginated(&pool, limit, offset)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let recipes = bounded_database_operation(crate::db::get_public_recipes_paginated(
+        &pool, limit, offset,
+    ))
+    .await?;
 
-    let total_count = crate::db::count_public_recipes(&pool)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let total_count = bounded_database_operation(crate::db::count_public_recipes(&pool)).await?;
 
     let has_more = (offset + recipes.len() as i64) < total_count;
 
@@ -1374,20 +1513,21 @@ pub async fn get_user_public_recipes(
     offset: i64,
     limit: i64,
 ) -> Result<crate::types::RecipeListResponse, ServerFnError> {
+    crate::security::validate_offset_pagination(offset, limit)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
     let pool = crate::db::get_pool();
 
-    let user = crate::db::get_user_by_username(&pool, &username)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?
+    let user = bounded_database_operation(crate::db::get_user_by_username(&pool, &username))
+        .await?
         .ok_or_else(|| ServerFnError::new("User not found"))?;
 
-    let recipes = crate::db::get_user_public_recipes(&pool, user.id, limit, offset)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let recipes = bounded_database_operation(crate::db::get_user_public_recipes(
+        &pool, user.id, limit, offset,
+    ))
+    .await?;
 
-    let total_count = crate::db::count_user_public_recipes(&pool, user.id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let total_count =
+        bounded_database_operation(crate::db::count_user_public_recipes(&pool, user.id)).await?;
 
     let has_more = (offset + recipes.len() as i64) < total_count;
 
@@ -1403,12 +1543,16 @@ pub async fn get_user_public_recipes(
 #[server]
 pub async fn get_public_recipe_tags() -> Result<Vec<String>, ServerFnError> {
     let pool = crate::db::get_pool();
-    let tags = crate::db::get_distinct_public_tags(&pool)
-        .await
-        .map_err(|e| {
-            tracing::error!(error = ?e, "Failed to fetch distinct public tags");
-            ServerFnError::new("Failed to fetch tags")
-        })?;
+    let tags = crate::security::run_with_database_budget(
+        crate::security::DATABASE_EXECUTION_BUDGET,
+        crate::db::get_distinct_public_tags(&pool),
+    )
+    .await
+    .map_err(|_| ServerFnError::new("Database operation timed out"))?
+    .map_err(|e| {
+        tracing::error!(error = ?e, "Failed to fetch distinct public tags");
+        ServerFnError::new("Failed to fetch tags")
+    })?;
     Ok(tags)
 }
 

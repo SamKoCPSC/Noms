@@ -6,6 +6,8 @@ use manganis::CssAssetOptions;
 mod api;
 mod auth;
 mod components;
+#[cfg(all(feature = "server", test))]
+mod cp5_quota_tests;
 #[cfg(feature = "server")]
 mod db;
 #[cfg(feature = "server")]
@@ -13,6 +15,8 @@ mod middleware;
 mod pages;
 mod search;
 mod search_url;
+#[cfg(feature = "server")]
+mod security;
 #[cfg(feature = "server")]
 mod storage;
 #[cfg(all(feature = "server", test))]
@@ -166,7 +170,11 @@ async fn build_application_router() -> axum::Router {
         storage: storage_client.clone(),
     };
 
-    let dioxus_router = build_dioxus_router(pool, storage_client);
+    let dioxus_router =
+        build_dioxus_router(pool, storage_client).layer(axum::middleware::from_fn_with_state(
+            rate_limit.clone(),
+            middleware::rate_limit::resolved_client_ip_middleware,
+        ));
 
     // The two endpoint classes deliberately have independent in-memory windows.
     // Each application replica owns its own limiter and cleanup task.

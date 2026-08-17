@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 use uuid::Uuid;
 
 use crate::api::collection::{
-    get_collection_share_preview, get_owned_collection, list_my_collections, move_collection,
+    get_collection_share_preview, get_owned_collection, load_all_my_collections, move_collection,
     update_collection, update_collection_visibility,
 };
 use crate::components::base::{
@@ -60,7 +60,12 @@ pub fn CollectionEdit(id: String) -> Element {
     let resource_id = id.clone();
     let data = use_resource(move || {
         let id = resource_id.clone();
-        async move { (get_owned_collection(id).await, list_my_collections().await) }
+        async move {
+            (
+                get_owned_collection(id).await,
+                load_all_my_collections().await,
+            )
+        }
     });
     let mut name = use_signal(String::new);
     let mut description = use_signal(String::new);

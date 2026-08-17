@@ -2,6 +2,28 @@
 
 use dioxus::prelude::*;
 
+#[cfg(feature = "server")]
+fn enforce_budget(
+    user_id: uuid::Uuid,
+    request_class: crate::security::RequestClass,
+) -> Result<(), ServerFnError> {
+    crate::security::enforce_user_request_budget(user_id, request_class)
+        .map_err(|_| ServerFnError::new("Request rate limit exceeded"))
+}
+
+#[cfg(feature = "server")]
+async fn database_budget<T>(
+    operation: impl std::future::Future<Output = Result<T, crate::db::DbError>>,
+) -> Result<T, ServerFnError> {
+    crate::security::run_with_database_budget(crate::security::DATABASE_EXECUTION_BUDGET, operation)
+        .await
+        .map_err(|_| ServerFnError::new("Database operation timed out"))?
+        .map_err(|error| {
+            tracing::error!(%error, "bounded search operation failed");
+            ServerFnError::new("Search operation failed")
+        })
+}
+
 /// Search the authenticated user's visible recipe corpus.
 #[server]
 pub async fn search_recipes(
@@ -12,13 +34,9 @@ pub async fn search_recipes(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
-
-    crate::db::search_recipes(&crate::db::get_pool(), user_id, &request)
-        .await
-        .map_err(|error| {
-            tracing::error!(error = %error, "recipe search failed");
-            ServerFnError::new("Failed to search recipes")
-        })
+    enforce_budget(user_id, crate::security::RequestClass::Search)?;
+    let pool = crate::db::get_pool();
+    database_budget(crate::db::search_recipes(&pool, user_id, &request)).await
 }
 
 /// Search the public user directory as an authenticated caller.
@@ -28,16 +46,12 @@ pub async fn search_users(
 ) -> Result<crate::types::UserSearchResponse, ServerFnError> {
     crate::search::validate_user_search_request(&request)
         .map_err(|error| ServerFnError::new(error.to_string()))?;
-    crate::auth::session::extract_user_id_from_fullstack()
+    let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
-
-    crate::db::search_users(&crate::db::get_pool(), &request)
-        .await
-        .map_err(|error| {
-            tracing::error!(error = %error, "user search failed");
-            ServerFnError::new("Failed to search users")
-        })
+    enforce_budget(user_id, crate::security::RequestClass::Search)?;
+    let pool = crate::db::get_pool();
+    database_budget(crate::db::search_users(&pool, &request)).await
 }
 
 /// Search collections owned by the authenticated user.
@@ -50,13 +64,9 @@ pub async fn search_collections(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
-
-    crate::db::search_collections(&crate::db::get_pool(), user_id, &request)
-        .await
-        .map_err(|error| {
-            tracing::error!(error = %error, "collection search failed");
-            ServerFnError::new("Failed to search collections")
-        })
+    enforce_budget(user_id, crate::security::RequestClass::Search)?;
+    let pool = crate::db::get_pool();
+    database_budget(crate::db::search_collections(&pool, user_id, &request)).await
 }
 
 /// Search recipes, owned collections, and public users in independent sections.
@@ -69,13 +79,9 @@ pub async fn search_all(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
-
-    crate::db::search_all(&crate::db::get_pool(), user_id, &request)
-        .await
-        .map_err(|error| {
-            tracing::error!(error = %error, "grouped search failed");
-            ServerFnError::new("Failed to search")
-        })
+    enforce_budget(user_id, crate::security::RequestClass::Search)?;
+    let pool = crate::db::get_pool();
+    database_budget(crate::db::search_all(&pool, user_id, &request)).await
 }
 
 /// Return bounded typed suggestions for the authenticated caller.
@@ -89,11 +95,10 @@ pub async fn autocomplete_entities(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
-
-    crate::db::autocomplete_entities(&crate::db::get_pool(), user_id, scope, &text)
-        .await
-        .map_err(|error| {
-            tracing::error!(error = %error, "autocomplete failed");
-            ServerFnError::new("Failed to load suggestions")
-        })
+    enforce_budget(user_id, crate::security::RequestClass::Autocomplete)?;
+    let pool = crate::db::get_pool();
+    database_budget(crate::db::autocomplete_entities(
+        &pool, user_id, scope, &text,
+    ))
+    .await
 }

@@ -27,6 +27,9 @@ enum CollectionApiError {
     RecipeAlreadyInCollection,
     InvalidOrder,
     InvalidPagination,
+    QuotaExceeded,
+    RateLimited,
+    TimedOut,
     Internal,
 }
 
@@ -49,6 +52,9 @@ impl std::fmt::Display for CollectionApiError {
             Self::RecipeAlreadyInCollection => "Recipe is already in this collection",
             Self::InvalidOrder => "Submitted order does not match collection contents",
             Self::InvalidPagination => "Invalid collection pagination",
+            Self::QuotaExceeded => "Collection quota exceeded",
+            Self::RateLimited => "Mutation rate limit exceeded",
+            Self::TimedOut => "Database operation timed out",
             Self::Internal => "Collection operation failed",
         };
         formatter.write_str(message)
@@ -113,7 +119,7 @@ fn normalize_collection_fields(
     if name.is_empty() {
         return Err(CollectionApiError::InvalidName);
     }
-    if name.chars().count() > 100 {
+    if name.chars().count() > crate::security::MAX_COLLECTION_NAME_CHARS {
         return Err(CollectionApiError::NameTooLong);
     }
 
@@ -121,10 +127,9 @@ fn normalize_collection_fields(
         let description = description.trim().to_string();
         (!description.is_empty()).then_some(description)
     });
-    if description
-        .as_ref()
-        .is_some_and(|description| description.chars().count() > 500)
-    {
+    if description.as_ref().is_some_and(|description| {
+        description.chars().count() > crate::security::MAX_COLLECTION_DESCRIPTION_CHARS
+    }) {
         return Err(CollectionApiError::DescriptionTooLong);
     }
 
@@ -140,6 +145,8 @@ fn validate_collection_image_urls(
     let Some(image) = image else {
         return Ok(());
     };
+    crate::security::validate_image_metadata(image)
+        .map_err(|_| CollectionApiError::InvalidImage)?;
     storage
         .validate_owned_media_pair(
             &image.url,
@@ -174,6 +181,8 @@ fn map_db_error(error: crate::db::DbError) -> CollectionApiError {
             CollectionApiError::RecipeAlreadyInCollection
         }
         crate::db::DbError::InvalidCollectionOrder => CollectionApiError::InvalidOrder,
+        crate::db::DbError::CollectionLimitExceeded(_) => CollectionApiError::QuotaExceeded,
+        crate::db::DbError::ResourceLimitExceeded(_) => CollectionApiError::InvalidImage,
         _ => CollectionApiError::Internal,
     }
 }
@@ -181,6 +190,21 @@ fn map_db_error(error: crate::db::DbError) -> CollectionApiError {
 #[cfg(feature = "server")]
 fn server_error(error: CollectionApiError) -> ServerFnError {
     ServerFnError::new(error.to_string())
+}
+
+#[cfg(feature = "server")]
+fn enforce_mutation_budget(user_id: Uuid) -> Result<(), CollectionApiError> {
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| CollectionApiError::RateLimited)
+}
+
+#[cfg(feature = "server")]
+async fn with_database_budget<T>(
+    operation: impl std::future::Future<Output = Result<T, CollectionApiError>>,
+) -> Result<T, CollectionApiError> {
+    crate::security::run_with_database_budget(crate::security::DATABASE_EXECUTION_BUDGET, operation)
+        .await
+        .map_err(|_| CollectionApiError::TimedOut)?
 }
 
 #[cfg(feature = "server")]
@@ -200,9 +224,8 @@ impl<'pool> CollectionDiscoveryService<'pool> {
         offset: i64,
         limit: i64,
     ) -> Result<crate::types::PublicCollectionListResponse, CollectionApiError> {
-        if offset < 0 || !(1..=100).contains(&limit) {
-            return Err(CollectionApiError::InvalidPagination);
-        }
+        crate::security::validate_offset_pagination(offset, limit)
+            .map_err(|_| CollectionApiError::InvalidPagination)?;
         crate::db::get_public_collections_by_username(self.pool, &username, offset, limit)
             .await
             .map_err(map_db_error)
@@ -244,9 +267,8 @@ impl<'pool> CollectionReadService<'pool> {
         offset: i64,
         limit: i64,
     ) -> Result<crate::types::CollectionRecipeList, CollectionApiError> {
-        if offset < 0 || !(1..=100).contains(&limit) {
-            return Err(CollectionApiError::InvalidPagination);
-        }
+        crate::security::validate_offset_pagination(offset, limit)
+            .map_err(|_| CollectionApiError::InvalidPagination)?;
         let collection_id = parse_collection_id(&collection_id)?;
         crate::db::get_collection_contents_for_viewer(
             self.pool,
@@ -364,8 +386,21 @@ impl<'pool> CollectionService<'pool> {
             .map_err(map_db_error)
     }
 
+    #[cfg(test)]
     async fn all(&self) -> Result<Vec<crate::types::CollectionSummary>, CollectionApiError> {
         crate::db::get_all_collections_by_owner(self.pool, self.user_id)
+            .await
+            .map_err(map_db_error)
+    }
+
+    async fn all_page(
+        &self,
+        offset: i64,
+        limit: i64,
+    ) -> Result<crate::types::PublicCollectionListResponse, CollectionApiError> {
+        crate::security::validate_offset_pagination(offset, limit)
+            .map_err(|_| CollectionApiError::InvalidPagination)?;
+        crate::db::get_collections_by_owner_paginated(self.pool, self.user_id, offset, limit)
             .await
             .map_err(map_db_error)
     }
@@ -392,6 +427,8 @@ impl<'pool> CollectionService<'pool> {
         parent_collection_id: Option<String>,
         ordered_collection_ids: Vec<String>,
     ) -> Result<(), CollectionApiError> {
+        crate::security::validate_collection_reorder_len(ordered_collection_ids.len())
+            .map_err(|_| CollectionApiError::QuotaExceeded)?;
         let parent_collection_id = parse_optional_collection_id(parent_collection_id)?;
         let ordered_collection_ids = parse_collection_ids(ordered_collection_ids)?;
         crate::db::reorder_child_collections(
@@ -490,6 +527,8 @@ impl<'pool> CollectionService<'pool> {
         collection_id: String,
         ordered_recipe_ids: Vec<String>,
     ) -> Result<(), CollectionApiError> {
+        crate::security::validate_membership_reorder_len(ordered_recipe_ids.len())
+            .map_err(|_| CollectionApiError::QuotaExceeded)?;
         let collection_id = parse_collection_id(&collection_id)?;
         let ordered_recipe_ids = parse_recipe_ids(ordered_recipe_ids)?;
         crate::db::reorder_collection_recipes(
@@ -520,11 +559,17 @@ pub async fn create_collection(
     image: Option<crate::types::RecipeImage>,
 ) -> Result<crate::types::Collection, ServerFnError> {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
+    enforce_mutation_budget(user_id).map_err(server_error)?;
     let pool = crate::db::get_pool();
-    CollectionService::new(&pool, user_id)
-        .create(name, description, parent_collection_id, visibility, image)
-        .await
-        .map_err(server_error)
+    with_database_budget(CollectionService::new(&pool, user_id).create(
+        name,
+        description,
+        parent_collection_id,
+        visibility,
+        image,
+    ))
+    .await
+    .map_err(server_error)
 }
 
 /// Return a viewer-safe collection with breadcrumbs, children, and the first recipe page.
@@ -534,8 +579,7 @@ pub async fn get_collection(
 ) -> Result<crate::types::CollectionContents, ServerFnError> {
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
     let pool = crate::db::get_pool();
-    CollectionReadService::new(&pool, viewer_id)
-        .get(collection_id)
+    with_database_budget(CollectionReadService::new(&pool, viewer_id).get(collection_id))
         .await
         .map_err(server_error)
 }
@@ -548,8 +592,7 @@ pub async fn get_user_public_collections(
     limit: i64,
 ) -> Result<crate::types::PublicCollectionListResponse, ServerFnError> {
     let pool = crate::db::get_pool();
-    CollectionDiscoveryService::new(&pool)
-        .list(username, offset, limit)
+    with_database_budget(CollectionDiscoveryService::new(&pool).list(username, offset, limit))
         .await
         .map_err(server_error)
 }
@@ -561,8 +604,7 @@ pub async fn get_owned_collection(
 ) -> Result<crate::types::CollectionContents, ServerFnError> {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
     let pool = crate::db::get_pool();
-    CollectionService::new(&pool, user_id)
-        .get(collection_id)
+    with_database_budget(CollectionService::new(&pool, user_id).get(collection_id))
         .await
         .map_err(server_error)
 }
@@ -573,8 +615,7 @@ pub async fn list_root_collections() -> Result<Vec<crate::types::CollectionSumma
 {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
     let pool = crate::db::get_pool();
-    CollectionService::new(&pool, user_id)
-        .roots()
+    with_database_budget(CollectionService::new(&pool, user_id).roots())
         .await
         .map_err(server_error)
 }
@@ -586,21 +627,41 @@ pub async fn list_collection_children(
 ) -> Result<Vec<crate::types::CollectionSummary>, ServerFnError> {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
     let pool = crate::db::get_pool();
-    CollectionService::new(&pool, user_id)
-        .children(parent_collection_id)
+    with_database_budget(CollectionService::new(&pool, user_id).children(parent_collection_id))
         .await
         .map_err(server_error)
 }
 
-/// List all collections owned by the authenticated user.
+/// List one bounded page of collections owned by the authenticated user.
 #[server]
-pub async fn list_my_collections() -> Result<Vec<crate::types::CollectionSummary>, ServerFnError> {
+pub async fn list_my_collections(
+    offset: i64,
+    limit: i64,
+) -> Result<crate::types::PublicCollectionListResponse, ServerFnError> {
+    crate::security::validate_offset_pagination(offset, limit)
+        .map_err(|_| server_error(CollectionApiError::InvalidPagination))?;
     let user_id = authenticated_user_id().await.map_err(server_error)?;
     let pool = crate::db::get_pool();
-    CollectionService::new(&pool, user_id)
-        .all()
+    with_database_budget(CollectionService::new(&pool, user_id).all_page(offset, limit))
         .await
         .map_err(server_error)
+}
+
+/// Load every owned collection through bounded server pages for pickers and hierarchy editors.
+pub async fn load_all_my_collections() -> Result<Vec<crate::types::CollectionSummary>, ServerFnError>
+{
+    const PAGE_SIZE: i64 = 100;
+    const MAX_PAGES: usize = 5;
+    let mut collections = Vec::new();
+    for page_index in 0..MAX_PAGES {
+        let offset = i64::try_from(page_index).unwrap_or_default() * PAGE_SIZE;
+        let page = list_my_collections(offset, PAGE_SIZE).await?;
+        collections.extend(page.collections);
+        if !page.has_more {
+            return Ok(collections);
+        }
+    }
+    Ok(collections)
 }
 
 /// Move an owned collection to another owned parent or to the root.
@@ -610,11 +671,13 @@ pub async fn move_collection(
     new_parent_collection_id: Option<String>,
 ) -> Result<crate::types::Collection, ServerFnError> {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
+    enforce_mutation_budget(user_id).map_err(server_error)?;
     let pool = crate::db::get_pool();
-    CollectionService::new(&pool, user_id)
-        .move_to(collection_id, new_parent_collection_id)
-        .await
-        .map_err(server_error)
+    with_database_budget(
+        CollectionService::new(&pool, user_id).move_to(collection_id, new_parent_collection_id),
+    )
+    .await
+    .map_err(server_error)
 }
 
 /// Normalize the complete direct-child order for a parent or the root.
@@ -624,11 +687,16 @@ pub async fn reorder_child_collections(
     ordered_collection_ids: Vec<String>,
 ) -> Result<(), ServerFnError> {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
+    enforce_mutation_budget(user_id).map_err(server_error)?;
+    crate::security::validate_collection_reorder_len(ordered_collection_ids.len())
+        .map_err(|_| server_error(CollectionApiError::QuotaExceeded))?;
     let pool = crate::db::get_pool();
-    CollectionService::new(&pool, user_id)
-        .reorder_children(parent_collection_id, ordered_collection_ids)
-        .await
-        .map_err(server_error)
+    with_database_budget(
+        CollectionService::new(&pool, user_id)
+            .reorder_children(parent_collection_id, ordered_collection_ids),
+    )
+    .await
+    .map_err(server_error)
 }
 
 /// Rename or change the description of an owned collection.
@@ -640,11 +708,16 @@ pub async fn update_collection(
     image: Option<crate::types::RecipeImage>,
 ) -> Result<crate::types::Collection, ServerFnError> {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
+    enforce_mutation_budget(user_id).map_err(server_error)?;
     let pool = crate::db::get_pool();
-    CollectionService::new(&pool, user_id)
-        .update(collection_id, name, description, image)
-        .await
-        .map_err(server_error)
+    with_database_budget(CollectionService::new(&pool, user_id).update(
+        collection_id,
+        name,
+        description,
+        image,
+    ))
+    .await
+    .map_err(server_error)
 }
 
 /// Change an owned collection's visibility.
@@ -654,11 +727,13 @@ pub async fn update_collection_visibility(
     visibility: crate::types::CollectionVisibility,
 ) -> Result<crate::types::Collection, ServerFnError> {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
+    enforce_mutation_budget(user_id).map_err(server_error)?;
     let pool = crate::db::get_pool();
-    CollectionService::new(&pool, user_id)
-        .update_visibility(collection_id, visibility)
-        .await
-        .map_err(server_error)
+    with_database_budget(
+        CollectionService::new(&pool, user_id).update_visibility(collection_id, visibility),
+    )
+    .await
+    .map_err(server_error)
 }
 
 /// Preview recipe visibility before sharing an owned collection.
@@ -669,19 +744,20 @@ pub async fn get_collection_share_preview(
 ) -> Result<crate::types::CollectionSharePreview, ServerFnError> {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
     let pool = crate::db::get_pool();
-    CollectionService::new(&pool, user_id)
-        .share_preview(collection_id, target_visibility)
-        .await
-        .map_err(server_error)
+    with_database_budget(
+        CollectionService::new(&pool, user_id).share_preview(collection_id, target_visibility),
+    )
+    .await
+    .map_err(server_error)
 }
 
 /// Delete an owned collection and its descendants without deleting recipes.
 #[server]
 pub async fn delete_collection(collection_id: String) -> Result<(), ServerFnError> {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
+    enforce_mutation_budget(user_id).map_err(server_error)?;
     let pool = crate::db::get_pool();
-    CollectionService::new(&pool, user_id)
-        .delete(collection_id)
+    with_database_budget(CollectionService::new(&pool, user_id).delete(collection_id))
         .await
         .map_err(server_error)
 }
@@ -693,11 +769,13 @@ pub async fn add_recipe_to_collection(
     recipe_id: String,
 ) -> Result<(), ServerFnError> {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
+    enforce_mutation_budget(user_id).map_err(server_error)?;
     let pool = crate::db::get_pool();
-    CollectionService::new(&pool, user_id)
-        .add_recipe(collection_id, recipe_id)
-        .await
-        .map_err(server_error)
+    with_database_budget(
+        CollectionService::new(&pool, user_id).add_recipe(collection_id, recipe_id),
+    )
+    .await
+    .map_err(server_error)
 }
 
 /// Remove a recipe membership from an owned collection.
@@ -707,11 +785,13 @@ pub async fn remove_recipe_from_collection(
     recipe_id: String,
 ) -> Result<(), ServerFnError> {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
+    enforce_mutation_budget(user_id).map_err(server_error)?;
     let pool = crate::db::get_pool();
-    CollectionService::new(&pool, user_id)
-        .remove_recipe(collection_id, recipe_id)
-        .await
-        .map_err(server_error)
+    with_database_budget(
+        CollectionService::new(&pool, user_id).remove_recipe(collection_id, recipe_id),
+    )
+    .await
+    .map_err(server_error)
 }
 
 /// Return a viewer-safe page of direct recipe members from a collection.
@@ -721,12 +801,17 @@ pub async fn get_collection_recipes(
     offset: i64,
     limit: i64,
 ) -> Result<crate::types::CollectionRecipeList, ServerFnError> {
+    crate::security::validate_offset_pagination(offset, limit)
+        .map_err(|_| server_error(CollectionApiError::InvalidPagination))?;
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
     let pool = crate::db::get_pool();
-    CollectionReadService::new(&pool, viewer_id)
-        .recipes(collection_id, offset, limit)
-        .await
-        .map_err(server_error)
+    with_database_budget(CollectionReadService::new(&pool, viewer_id).recipes(
+        collection_id,
+        offset,
+        limit,
+    ))
+    .await
+    .map_err(server_error)
 }
 
 /// Normalize the complete direct recipe order for an owned collection.
@@ -736,11 +821,15 @@ pub async fn reorder_collection_recipes(
     ordered_recipe_ids: Vec<String>,
 ) -> Result<(), ServerFnError> {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
+    enforce_mutation_budget(user_id).map_err(server_error)?;
+    crate::security::validate_membership_reorder_len(ordered_recipe_ids.len())
+        .map_err(|_| server_error(CollectionApiError::QuotaExceeded))?;
     let pool = crate::db::get_pool();
-    CollectionService::new(&pool, user_id)
-        .reorder_recipes(collection_id, ordered_recipe_ids)
-        .await
-        .map_err(server_error)
+    with_database_budget(
+        CollectionService::new(&pool, user_id).reorder_recipes(collection_id, ordered_recipe_ids),
+    )
+    .await
+    .map_err(server_error)
 }
 
 /// Return IDs of owned collections containing an accessible recipe.
@@ -748,8 +837,7 @@ pub async fn reorder_collection_recipes(
 pub async fn get_recipe_collections(recipe_id: String) -> Result<Vec<Uuid>, ServerFnError> {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
     let pool = crate::db::get_pool();
-    CollectionService::new(&pool, user_id)
-        .recipe_collections(recipe_id)
+    with_database_budget(CollectionService::new(&pool, user_id).recipe_collections(recipe_id))
         .await
         .map_err(server_error)
 }

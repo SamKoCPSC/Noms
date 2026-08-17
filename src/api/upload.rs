@@ -24,6 +24,8 @@ use axum::Json;
 use axum_extra::extract::cookie::CookieJar;
 use dioxus::prelude::*;
 #[cfg(feature = "server")]
+use std::sync::{Arc, OnceLock};
+#[cfg(feature = "server")]
 use tracing::{error, info};
 #[cfg(feature = "server")]
 use uuid::Uuid;
@@ -46,6 +48,87 @@ pub(crate) fn server_function_body_limit_layer() -> axum::extract::DefaultBodyLi
 /// Validate WebP magic bytes: "RIFF....WEBP" (first 4 + bytes 8-12).
 pub fn validate_webp_magic(bytes: &[u8]) -> bool {
     bytes.len() >= 12 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP"
+}
+
+#[cfg(feature = "server")]
+fn validate_image_variants(
+    full_bytes: &[u8],
+    thumbnail_bytes: &[u8],
+    maximum_full_size: usize,
+    maximum_thumbnail_size: usize,
+) -> Result<(), &'static str> {
+    if full_bytes.is_empty() || thumbnail_bytes.is_empty() {
+        return Err("Image variants must not be empty");
+    }
+    if full_bytes.len() > maximum_full_size || thumbnail_bytes.len() > maximum_thumbnail_size {
+        return Err("Image variant exceeds the size limit");
+    }
+    Ok(())
+}
+
+#[cfg(feature = "server")]
+pub(crate) async fn load_user_media_usage(
+    storage: &crate::storage::StorageClient,
+    owner_id: Uuid,
+) -> Result<crate::security::MediaUsage, crate::storage::StorageError> {
+    let mut aggregate = crate::security::MediaUsage::default();
+    // These exact prefixes are the complete set of owner-controlled media.
+    for namespace in ["recipes", "collections", "avatars"] {
+        let prefix = format!("{namespace}/{owner_id}/");
+        let remaining =
+            crate::security::MAX_MEDIA_OBJECTS_PER_USER.saturating_sub(aggregate.objects);
+        let usage = storage.media_usage(&prefix, remaining).await?;
+        aggregate.bytes = aggregate.bytes.saturating_add(usage.bytes);
+        aggregate.objects = aggregate.objects.saturating_add(usage.objects);
+        if aggregate.objects > crate::security::MAX_MEDIA_OBJECTS_PER_USER {
+            return Ok(aggregate);
+        }
+    }
+    Ok(aggregate)
+}
+
+#[cfg(feature = "server")]
+static MEDIA_UPLOAD_LOCKS: OnceLock<dashmap::DashMap<Uuid, Arc<tokio::sync::Mutex<()>>>> =
+    OnceLock::new();
+
+#[cfg(feature = "server")]
+pub(crate) fn media_upload_lock(owner_id: Uuid) -> Arc<tokio::sync::Mutex<()>> {
+    let locks = MEDIA_UPLOAD_LOCKS.get_or_init(dashmap::DashMap::new);
+    if locks.len() > 4_096 {
+        locks.retain(|_, lock| Arc::strong_count(lock) > 1);
+    }
+    locks
+        .entry(owner_id)
+        .or_insert_with(|| Arc::new(tokio::sync::Mutex::new(())))
+        .clone()
+}
+
+#[cfg(feature = "server")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MediaQuotaCheckError {
+    UsageUnavailable,
+    Exceeded,
+}
+
+#[cfg(feature = "server")]
+async fn enforce_media_upload_quota(
+    storage: &crate::storage::StorageClient,
+    owner_id: Uuid,
+    incoming_bytes: usize,
+    incoming_objects: u64,
+) -> Result<(), MediaQuotaCheckError> {
+    let current = load_user_media_usage(storage, owner_id)
+        .await
+        .map_err(|error| {
+            tracing::error!(%error, %owner_id, "failed to load aggregate media usage");
+            MediaQuotaCheckError::UsageUnavailable
+        })?;
+    let incoming = crate::security::MediaUsage {
+        bytes: u64::try_from(incoming_bytes).unwrap_or(u64::MAX),
+        objects: incoming_objects,
+    };
+    crate::security::validate_media_quota(current, incoming)
+        .map_err(|_| MediaQuotaCheckError::Exceeded)
 }
 
 /// Response from image upload, containing both full-size and thumbnail URLs.
@@ -138,17 +221,8 @@ pub async fn upload_image(
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
 
-    // Validate file sizes
-    if full_bytes.len() > MAX_FILE_SIZE {
-        return Err(ServerFnError::new(
-            "Full-size image too large. Maximum size is 10MB.",
-        ));
-    }
-    if thumb_bytes.len() > MAX_FILE_SIZE {
-        return Err(ServerFnError::new(
-            "Thumbnail too large. Maximum size is 10MB.",
-        ));
-    }
+    validate_image_variants(&full_bytes, &thumb_bytes, MAX_FILE_SIZE, MAX_FILE_SIZE)
+        .map_err(ServerFnError::new)?;
 
     // Validate WebP magic bytes (defense-in-depth)
     if !validate_webp_magic(&full_bytes) {
@@ -166,6 +240,23 @@ pub async fn upload_image(
     let Some(storage) = crate::storage::try_get_storage_client() else {
         return Err(ServerFnError::new("Image storage is unavailable"));
     };
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Upload)
+        .map_err(|_| ServerFnError::new("Upload rate limit exceeded"))?;
+    let upload_lock = media_upload_lock(user_id);
+    let _guard = upload_lock.lock().await;
+    enforce_media_upload_quota(
+        &storage,
+        user_id,
+        full_bytes.len().saturating_add(thumb_bytes.len()),
+        2,
+    )
+    .await
+    .map_err(|error| match error {
+        MediaQuotaCheckError::UsageUnavailable => {
+            ServerFnError::new("Unable to verify media quota")
+        }
+        MediaQuotaCheckError::Exceeded => ServerFnError::new("Media storage quota exceeded"),
+    })?;
     let response = upload_media_variants(&storage, user_id, &full_bytes, &thumb_bytes, purpose)
         .await
         .map_err(|e| {
@@ -189,6 +280,8 @@ pub async fn delete_image(full_url: String) -> Result<(), ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
 
     let Some(storage) = crate::storage::try_get_storage_client() else {
         return Err(ServerFnError::new("Image storage is unavailable"));
@@ -210,6 +303,8 @@ pub async fn delete_unsaved_collection_cover(full_url: String) -> Result<(), Ser
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
     let Some(storage) = crate::storage::try_get_storage_client() else {
         return Err(ServerFnError::new("Image storage is unavailable"));
     };
@@ -367,6 +462,12 @@ pub async fn upload_handler(
         }
     };
 
+    if let Err(message) =
+        validate_image_variants(&full_bytes, &thumb_bytes, MAX_FILE_SIZE, MAX_FILE_SIZE)
+    {
+        return (StatusCode::BAD_REQUEST, message.to_string()).into_response();
+    }
+
     // Validate WebP magic bytes (defense-in-depth)
     if !validate_webp_magic(&full_bytes) {
         return (
@@ -379,6 +480,39 @@ pub async fn upload_handler(
         return (
             StatusCode::UNPROCESSABLE_ENTITY,
             "Invalid thumb_image. Expected WebP format.".to_string(),
+        )
+            .into_response();
+    }
+
+    if crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Upload)
+        .is_err()
+    {
+        return (
+            StatusCode::TOO_MANY_REQUESTS,
+            "Upload rate limit exceeded".to_string(),
+        )
+            .into_response();
+    }
+    let upload_lock = media_upload_lock(user_id);
+    let _guard = upload_lock.lock().await;
+    if let Err(error) = enforce_media_upload_quota(
+        &storage,
+        user_id,
+        full_bytes.len().saturating_add(thumb_bytes.len()),
+        2,
+    )
+    .await
+    {
+        if error == MediaQuotaCheckError::Exceeded {
+            return (
+                StatusCode::PAYLOAD_TOO_LARGE,
+                "Media storage quota exceeded".to_string(),
+            )
+                .into_response();
+        }
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to upload file".to_string(),
         )
             .into_response();
     }
@@ -571,6 +705,16 @@ mod tests {
     async fn read_json(response: axum::response::Response) -> Value {
         let bytes = read_body(response).await;
         serde_json::from_slice(&bytes).expect("response should be valid JSON")
+    }
+
+    async fn mock_empty_user_media_usage(mock_server: &wiremock::MockServer) {
+        wiremock::Mock::given(wiremock::matchers::method("GET"))
+            .respond_with(wiremock::ResponseTemplate::new(200).set_body_string(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?><ListBucketResult><Name>noms-media</Name><KeyCount>0</KeyCount><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated></ListBucketResult>",
+            ))
+            .expect(3)
+            .mount(mock_server)
+            .await;
     }
 
     // ── WebP magic byte validation: see `validate_webp_magic_tests` at file
@@ -852,6 +996,7 @@ mod tests {
         setup_test_env();
         let (_db, pool) = test_utils::setup_test_db().await;
         let mock_server = wiremock::MockServer::start().await;
+        mock_empty_user_media_usage(&mock_server).await;
         wiremock::Mock::given(wiremock::matchers::method("PUT"))
             .respond_with(wiremock::ResponseTemplate::new(200))
             .expect(2)
@@ -968,6 +1113,7 @@ mod tests {
         // Start a wiremock server to intercept S3 calls
         let mock_server = wiremock::MockServer::start().await;
         let endpoint = mock_server.uri();
+        mock_empty_user_media_usage(&mock_server).await;
 
         // Mock the S3 PutObject call — accept any PUT request (we expect 2: full + thumb)
         let mock = wiremock::Mock::given(wiremock::matchers::method("PUT"))
@@ -1058,6 +1204,59 @@ mod tests {
                 format!("collections/{owner_id}/{object_id}_full.webp"),
                 format!("collections/{owner_id}/{object_id}_thumb.webp")
             )
+        );
+    }
+
+    #[test]
+    fn upload_variants_reject_empty_and_accept_exact_size_boundaries() {
+        let mut boundary = vec![0_u8; MAX_FILE_SIZE];
+        boundary[0..4].copy_from_slice(b"RIFF");
+        boundary[8..12].copy_from_slice(b"WEBP");
+
+        assert!(
+            validate_image_variants(&boundary, &boundary, MAX_FILE_SIZE, MAX_FILE_SIZE).is_ok()
+        );
+        assert!(
+            validate_image_variants(&[], VALID_WEBP_BYTES, MAX_FILE_SIZE, MAX_FILE_SIZE).is_err()
+        );
+        assert!(
+            validate_image_variants(VALID_WEBP_BYTES, &[], MAX_FILE_SIZE, MAX_FILE_SIZE).is_err()
+        );
+
+        boundary.push(0);
+        assert!(
+            validate_image_variants(&boundary, VALID_WEBP_BYTES, MAX_FILE_SIZE, MAX_FILE_SIZE)
+                .is_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn media_usage_sums_recipe_collection_and_avatar_namespaces() {
+        let owner_id = uuid::Uuid::new_v4();
+        let mock_server = wiremock::MockServer::start().await;
+        let storage = crate::storage::StorageClient::for_test_with_endpoint(&mock_server.uri());
+
+        for (namespace, size) in [("recipes", 11), ("collections", 13), ("avatars", 17)] {
+            let key = format!("{namespace}/{owner_id}/{}.webp", uuid::Uuid::new_v4());
+            wiremock::Mock::given(wiremock::matchers::method("GET"))
+                .and(wiremock::matchers::query_param(
+                    "prefix",
+                    format!("{namespace}/{owner_id}/"),
+                ))
+                .respond_with(wiremock::ResponseTemplate::new(200).set_body_string(format!(
+                    "<?xml version=\"1.0\" encoding=\"UTF-8\"?><ListBucketResult><Name>noms-media</Name><KeyCount>1</KeyCount><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>{key}</Key><Size>{size}</Size></Contents></ListBucketResult>"
+                )))
+                .expect(1)
+                .mount(&mock_server)
+                .await;
+        }
+
+        assert_eq!(
+            load_user_media_usage(&storage, owner_id).await.unwrap(),
+            crate::security::MediaUsage {
+                bytes: 41,
+                objects: 3,
+            }
         );
     }
 

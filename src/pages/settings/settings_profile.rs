@@ -150,6 +150,21 @@ pub async fn save_profile(
 ///
 /// If the user already has an avatar, the old image files are deleted
 /// from storage (best-effort) before the new ones are uploaded.
+#[cfg(feature = "server")]
+fn validate_avatar_payload(
+    original_bytes: &[u8],
+    full_bytes: &[u8],
+    thumbnail_bytes: &[u8],
+    edit: &RecipeImageEdit,
+) -> Result<(), &'static str> {
+    if original_bytes.is_empty() || full_bytes.is_empty() || thumbnail_bytes.is_empty() {
+        return Err("Avatar image variants must not be empty");
+    }
+    crate::security::validate_image_edit_metadata(edit)
+        .map_err(|_| "Avatar edit metadata is invalid")?;
+    Ok(())
+}
+
 #[server]
 pub async fn upload_avatar(
     original_bytes: Vec<u8>,
@@ -162,6 +177,9 @@ pub async fn upload_avatar(
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
     let pool = crate::db::get_pool();
     let storage = crate::storage::get_storage_client();
+
+    validate_avatar_payload(&original_bytes, &full_bytes, &thumb_bytes, &edit)
+        .map_err(ServerFnError::new)?;
 
     // Validate WebP magic bytes (both variants)
     if !crate::api::upload::validate_webp_magic(&full_bytes) {
@@ -193,6 +211,31 @@ pub async fn upload_avatar(
             MAX_AVATAR_SIZE
         )));
     }
+
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Upload)
+        .map_err(|_| ServerFnError::new("Upload rate limit exceeded"))?;
+    let upload_lock = crate::api::upload::media_upload_lock(user_id);
+    let _upload_guard = upload_lock.lock().await;
+    let current_usage = crate::api::upload::load_user_media_usage(&storage, user_id)
+        .await
+        .map_err(|error| {
+            tracing::error!(%error, %user_id, "failed to load aggregate media usage");
+            ServerFnError::new("Unable to verify media quota")
+        })?;
+    crate::security::validate_media_quota(
+        current_usage,
+        crate::security::MediaUsage {
+            bytes: u64::try_from(
+                original_bytes
+                    .len()
+                    .saturating_add(full_bytes.len())
+                    .saturating_add(thumb_bytes.len()),
+            )
+            .unwrap_or(u64::MAX),
+            objects: 3,
+        },
+    )
+    .map_err(|_| ServerFnError::new("Media storage quota exceeded"))?;
 
     // Fetch current user to get existing avatar URL for cleanup
     let current_user = crate::db::get_user_by_id(&pool, user_id)
@@ -324,6 +367,8 @@ pub async fn remove_avatar() -> Result<UserProfile, ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
     let pool = crate::db::get_pool();
     let storage = crate::storage::get_storage_client();
 
@@ -1727,7 +1772,31 @@ pub fn SettingsProfile() -> Element {
 
 #[cfg(all(feature = "server", test))]
 mod avatar_media_ownership_tests {
-    use super::delete_owned_avatar_objects;
+    use super::{delete_owned_avatar_objects, validate_avatar_payload};
+    use crate::types::RecipeImageEdit;
+
+    const VALID_WEBP_BYTES: &[u8] = b"RIFF\x24\x00\x00\x00WEBP";
+
+    #[test]
+    fn avatar_payload_rejects_every_empty_variant() {
+        let edit = RecipeImageEdit::default_ellipse_1x1();
+        assert!(validate_avatar_payload(&[], VALID_WEBP_BYTES, VALID_WEBP_BYTES, &edit).is_err());
+        assert!(validate_avatar_payload(b"original", &[], VALID_WEBP_BYTES, &edit).is_err());
+        assert!(validate_avatar_payload(b"original", VALID_WEBP_BYTES, &[], &edit).is_err());
+        assert!(
+            validate_avatar_payload(b"original", VALID_WEBP_BYTES, VALID_WEBP_BYTES, &edit).is_ok()
+        );
+    }
+
+    #[test]
+    fn avatar_payload_rejects_oversized_edit_metadata() {
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.name = "e".repeat(crate::security::MAX_IMAGE_EDIT_NAME_CHARS + 1);
+        assert!(
+            validate_avatar_payload(b"original", VALID_WEBP_BYTES, VALID_WEBP_BYTES, &edit,)
+                .is_err()
+        );
+    }
 
     #[tokio::test]
     async fn avatar_cleanup_deletes_only_exact_owned_avatar_keys() {
