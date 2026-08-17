@@ -366,6 +366,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                             processed.full_bytes,
                             processed.thumb_bytes,
                             format!("step_{idx}_{file_idx}.webp"),
+                            crate::api::upload::UploadPurpose::Recipe,
                         )
                         .await
                         {
@@ -822,6 +823,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                             upload_now,
                             busy,
                             pending_count: pending_image_count,
+                            purpose: crate::api::upload::UploadPurpose::Recipe,
                             on_remove_existing: on_delete_image,
                             on_upload_complete,
                         }

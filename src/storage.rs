@@ -23,6 +23,8 @@ use uuid::Uuid;
 pub enum MediaObjectKind {
     RecipeFull,
     RecipeThumbnail,
+    CollectionFull,
+    CollectionThumbnail,
     AvatarFull,
     AvatarThumbnail,
     AvatarOriginal,
@@ -58,6 +60,10 @@ impl MediaObject {
         match self.kind {
             MediaObjectKind::RecipeFull => Some(format!(
                 "recipes/{}/{}_thumb.webp",
+                self.owner_id, self.object_id
+            )),
+            MediaObjectKind::CollectionFull => Some(format!(
+                "collections/{}/{}_thumb.webp",
                 self.owner_id, self.object_id
             )),
             MediaObjectKind::AvatarFull => Some(format!(
@@ -259,6 +265,31 @@ impl StorageClient {
         Ok(MediaUrl::ExternalHttps)
     }
 
+    /// Validate an owned full-size media URL and its optional exact thumbnail.
+    pub fn validate_owned_media_pair(
+        &self,
+        full_url: &str,
+        thumbnail_url: Option<&str>,
+        owner_id: Uuid,
+        expected_full_kind: MediaObjectKind,
+    ) -> Result<(), String> {
+        let full = self.parse_media_url(full_url)?;
+        if full.owner_id() != owner_id || full.kind() != expected_full_kind {
+            return Err("media object does not match its expected owner or kind".to_string());
+        }
+
+        if let Some(thumbnail_url) = thumbnail_url {
+            let thumbnail = self.parse_media_url(thumbnail_url)?;
+            let expected_thumbnail_key = full
+                .paired_thumbnail_key()
+                .ok_or_else(|| "media object has no thumbnail variant".to_string())?;
+            if thumbnail.key() != expected_thumbnail_key {
+                return Err("thumbnail does not match the full-size media object".to_string());
+            }
+        }
+        Ok(())
+    }
+
     /// Create a minimal `StorageClient` for testing without environment variables.
     #[cfg(test)]
     pub fn for_test() -> Self {
@@ -362,6 +393,15 @@ fn parse_media_key(key: &str) -> Result<MediaObject, String> {
                 (value, MediaObjectKind::RecipeThumbnail)
             } else {
                 return Err("invalid recipe media filename".to_string());
+            }
+        }
+        "collections" => {
+            if let Some(value) = segments[2].strip_suffix("_full.webp") {
+                (value, MediaObjectKind::CollectionFull)
+            } else if let Some(value) = segments[2].strip_suffix("_thumb.webp") {
+                (value, MediaObjectKind::CollectionThumbnail)
+            } else {
+                return Err("invalid collection media filename".to_string());
             }
         }
         "avatars" => {
@@ -522,6 +562,18 @@ mod tests {
             Some(format!("recipes/{owner_id}/{object_id}_thumb.webp").as_str())
         );
 
+        let collection_full = client
+            .parse_media_url(&format!(
+                "https://cdn.example.com/media/collections/{owner_id}/{object_id}_full.webp"
+            ))
+            .expect("server-generated collection URL should parse");
+        assert_eq!(collection_full.owner_id(), owner_id);
+        assert_eq!(collection_full.kind(), MediaObjectKind::CollectionFull);
+        assert_eq!(
+            collection_full.paired_thumbnail_key().as_deref(),
+            Some(format!("collections/{owner_id}/{object_id}_thumb.webp").as_str())
+        );
+
         let avatar_original = client
             .parse_media_url(&format!(
                 "https://cdn.example.com/media/avatars/{owner_id}/{object_id}-original"
@@ -529,6 +581,56 @@ mod tests {
             .expect("server-generated avatar original should parse");
         assert_eq!(avatar_original.owner_id(), owner_id);
         assert_eq!(avatar_original.kind(), MediaObjectKind::AvatarOriginal);
+    }
+
+    #[test]
+    fn collection_pairs_require_exact_owner_kind_and_object_identity() {
+        let owner_id = uuid::Uuid::new_v4();
+        let other_owner = uuid::Uuid::new_v4();
+        let object_id = uuid::Uuid::new_v4();
+        let other_object = uuid::Uuid::new_v4();
+        let client = make_test_client("https://cdn.example.com/media", "test-bucket");
+        let full =
+            format!("https://cdn.example.com/media/collections/{owner_id}/{object_id}_full.webp");
+        let thumb =
+            format!("https://cdn.example.com/media/collections/{owner_id}/{object_id}_thumb.webp");
+
+        assert!(client
+            .validate_owned_media_pair(
+                &full,
+                Some(&thumb),
+                owner_id,
+                MediaObjectKind::CollectionFull,
+            )
+            .is_ok());
+
+        for invalid_thumbnail in [
+            format!(
+                "https://cdn.example.com/media/collections/{other_owner}/{object_id}_thumb.webp"
+            ),
+            format!(
+                "https://cdn.example.com/media/collections/{owner_id}/{other_object}_thumb.webp"
+            ),
+            format!("https://cdn.example.com/media/recipes/{owner_id}/{object_id}_thumb.webp"),
+        ] {
+            assert!(client
+                .validate_owned_media_pair(
+                    &full,
+                    Some(&invalid_thumbnail),
+                    owner_id,
+                    MediaObjectKind::CollectionFull,
+                )
+                .is_err());
+        }
+
+        assert!(client
+            .validate_owned_media_pair(
+                &format!("https://cdn.example.com/media/recipes/{owner_id}/{object_id}_full.webp"),
+                None,
+                owner_id,
+                MediaObjectKind::CollectionFull,
+            )
+            .is_err());
     }
 
     #[test]

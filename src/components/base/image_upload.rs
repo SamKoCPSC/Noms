@@ -152,6 +152,8 @@ pub struct ImageUploadProps {
     /// Number of locally selected files that have not uploaded successfully.
     /// Parents use this to mark an otherwise unchanged draft dirty.
     pub pending_count: Signal<usize>,
+    /// Selects the server-controlled storage namespace for this uploader.
+    pub purpose: crate::api::upload::UploadPurpose,
     /// Optional gallery capacity. Recipe forms omit this to preserve their
     /// unlimited gallery behavior; collection covers set it to one.
     #[props(default)]
@@ -502,6 +504,7 @@ async fn retry_upload(
     img_id: usize,
     mut pending: Signal<Vec<PendingImage>>,
     images: Signal<Vec<RecipeImage>>,
+    purpose: crate::api::upload::UploadPurpose,
 ) {
     let item = pending().iter().find(|p| p.id == img_id).map(|p| {
         (
@@ -522,7 +525,8 @@ async fn retry_upload(
 
     // The one unavoidable `Vec<u8>` clone — to pass bytes by value to the
     // server fn. Happens once per retry, not per render.
-    let result = crate::api::upload::upload_image((*full).clone(), (*thumb).clone(), name).await;
+    let result =
+        crate::api::upload::upload_image((*full).clone(), (*thumb).clone(), name, purpose).await;
     match result {
         Ok(resp) => {
             let uploaded_image = RecipeImage::new(resp.full_url, Some(resp.thumb_url), edit);
@@ -549,6 +553,7 @@ async fn retry_upload(
 async fn upload_all(
     mut pending: Signal<Vec<PendingImage>>,
     images: Signal<Vec<RecipeImage>>,
+    purpose: crate::api::upload::UploadPurpose,
 ) -> UploadOutcome {
     // Processing guard — abort if any item is still in `Processing`.
     if pending()
@@ -578,7 +583,8 @@ async fn upload_all(
         }
 
         let result =
-            crate::api::upload::upload_image((*full).clone(), (*thumb).clone(), name).await;
+            crate::api::upload::upload_image((*full).clone(), (*thumb).clone(), name, purpose)
+                .await;
 
         match result {
             Ok(resp) => {
@@ -615,7 +621,7 @@ fn remove_pending(
     img_id: usize,
     mut pending: Signal<Vec<PendingImage>>,
     mut images: Signal<Vec<RecipeImage>>,
-) {
+) -> Option<String> {
     let uploaded_url = pending()
         .iter()
         .find(|pending_image| pending_image.id == img_id)
@@ -634,10 +640,11 @@ fn remove_pending(
         }
     }
     pending.write().retain(|p| p.id != img_id);
-    if let Some(uploaded_url) = uploaded_url {
+    if let Some(uploaded_url) = uploaded_url.as_deref() {
         images.write().retain(|image| image.url != uploaded_url);
     }
     sync_uploaded_images(pending, images);
+    uploaded_url
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
@@ -664,6 +671,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     let on_remove_existing = props.on_remove_existing;
     let on_upload_complete = props.on_upload_complete;
     let max_images = props.max_images;
+    let purpose = props.purpose;
 
     // ── busy sync ────────────────────────────────────────────────────────
     // Memo over `pending` + `uploading`; an effect writes the result into
@@ -713,7 +721,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
         if upload_now() && !uploading() {
             uploading.set(true);
             spawn(async move {
-                let outcome = upload_all(pending, images).await;
+                let outcome = upload_all(pending, images, purpose).await;
                 upload_now.set(false);
                 uploading.set(false);
                 on_upload_complete.call(outcome);
@@ -932,7 +940,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                     disabled: retry_disabled,
                                     onclick: move |_| {
                                         spawn(async move {
-                                            retry_upload(img_id, pending, images).await;
+                                            retry_upload(img_id, pending, images, purpose).await;
                                         });
                                     },
                                     "↻ Retry"
@@ -949,7 +957,19 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                             on_remove_existing.call(image.url.clone());
                                         }
                                     }
-                                    remove_pending(img_id, pending, images);
+                                    let removed_uploaded_url =
+                                        remove_pending(img_id, pending, images);
+                                    if !img_persisted
+                                        && purpose == crate::api::upload::UploadPurpose::CollectionCover
+                                    {
+                                        if let Some(url) = removed_uploaded_url {
+                                            spawn(async move {
+                                                if let Err(problem) = crate::api::upload::delete_unsaved_collection_cover(url).await {
+                                                    tracing::warn!("Failed to delete unsaved collection cover: {problem}");
+                                                }
+                                            });
+                                        }
+                                    }
                                 },
                                 "✕"
                             }

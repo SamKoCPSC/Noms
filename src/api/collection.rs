@@ -135,39 +135,19 @@ fn normalize_collection_fields(
 fn validate_collection_image_urls(
     image: Option<&crate::types::RecipeImage>,
     user_id: Uuid,
-    public_url: &str,
+    storage: &crate::storage::StorageClient,
 ) -> Result<(), CollectionApiError> {
     let Some(image) = image else {
         return Ok(());
     };
-    let public_url = public_url.trim_end_matches('/');
-    let owned_upload_id = |url: &str, variant: &str| {
-        let key = url
-            .strip_prefix(public_url)
-            .and_then(|suffix| suffix.strip_prefix('/'))?;
-        let mut segments = key.split('/');
-        if segments.next()? != "recipes"
-            || segments.next()? != user_id.to_string()
-            || segments.next().is_none()
-            || segments.next().is_some()
-        {
-            return None;
-        }
-        let filename = key.rsplit('/').next()?;
-        let upload_id = filename.strip_suffix(variant)?;
-        Uuid::parse_str(upload_id).ok()
-    };
-
-    let full_id =
-        owned_upload_id(&image.url, "_full.webp").ok_or(CollectionApiError::InvalidImage)?;
-    if let Some(thumb_url) = &image.thumb_url {
-        let thumb_id =
-            owned_upload_id(thumb_url, "_thumb.webp").ok_or(CollectionApiError::InvalidImage)?;
-        if thumb_id != full_id {
-            return Err(CollectionApiError::InvalidImage);
-        }
-    }
-    Ok(())
+    storage
+        .validate_owned_media_pair(
+            &image.url,
+            image.thumb_url.as_deref(),
+            user_id,
+            crate::storage::MediaObjectKind::CollectionFull,
+        )
+        .map_err(|_| CollectionApiError::InvalidImage)
 }
 
 #[cfg(feature = "server")]
@@ -179,7 +159,7 @@ fn validate_collection_image(
         return Ok(());
     }
     let storage = crate::storage::get_storage_client();
-    validate_collection_image_urls(image, user_id, storage.public_url())
+    validate_collection_image_urls(image, user_id, &storage)
 }
 
 #[cfg(feature = "server")]
@@ -814,20 +794,24 @@ mod tests {
         let other_id = Uuid::new_v4();
         let upload_id = Uuid::new_v4();
         let public_url = "https://media.example.test/noms-media";
+        let storage = crate::storage::StorageClient::for_test_with_endpoint_and_public_url(
+            "http://127.0.0.1:9",
+            public_url,
+        );
         let image = crate::types::RecipeImage::new(
-            format!("{public_url}/recipes/{owner_id}/{upload_id}_full.webp"),
+            format!("{public_url}/collections/{owner_id}/{upload_id}_full.webp"),
             Some(format!(
-                "{public_url}/recipes/{owner_id}/{upload_id}_thumb.webp"
+                "{public_url}/collections/{owner_id}/{upload_id}_thumb.webp"
             )),
             crate::types::RecipeImageEdit::default_rect_16x9(),
         );
 
         assert_eq!(
-            validate_collection_image_urls(Some(&image), owner_id, public_url),
+            validate_collection_image_urls(Some(&image), owner_id, &storage),
             Ok(())
         );
         assert_eq!(
-            validate_collection_image_urls(Some(&image), other_id, public_url),
+            validate_collection_image_urls(Some(&image), other_id, &storage),
             Err(CollectionApiError::InvalidImage)
         );
 
@@ -836,14 +820,18 @@ mod tests {
             ..image.clone()
         };
         assert_eq!(
-            validate_collection_image_urls(Some(&external), owner_id, public_url),
+            validate_collection_image_urls(Some(&external), owner_id, &storage),
             Err(CollectionApiError::InvalidImage)
         );
 
         for path in [
-            format!("{public_url}/recipes/{owner_id}/../{other_id}/{upload_id}_full.webp"),
-            format!("{public_url}/recipes/{owner_id}/%2e%2e/{other_id}/{upload_id}_full.webp"),
-            format!("{public_url}/recipes/{owner_id}/not-a-uuid_full.webp"),
+            format!("{public_url}/recipes/{owner_id}/{upload_id}_full.webp"),
+            format!("{public_url}/avatars/{owner_id}/{upload_id}.webp"),
+            format!("{public_url}/collections/{owner_id}/../{other_id}/{upload_id}_full.webp"),
+            format!("{public_url}/collections/{owner_id}/%2e%2e/{other_id}/{upload_id}_full.webp"),
+            format!("{public_url}/collections/{owner_id}/not-a-uuid_full.webp"),
+            format!("{public_url}/collections/{owner_id}//{upload_id}_full.webp"),
+            format!("{public_url}/collections/{owner_id}/{upload_id}_full.webp?download=1"),
         ] {
             let noncanonical = crate::types::RecipeImage {
                 url: path,
@@ -851,20 +839,20 @@ mod tests {
                 ..image.clone()
             };
             assert_eq!(
-                validate_collection_image_urls(Some(&noncanonical), owner_id, public_url),
+                validate_collection_image_urls(Some(&noncanonical), owner_id, &storage),
                 Err(CollectionApiError::InvalidImage)
             );
         }
 
         let mismatched_thumbnail = crate::types::RecipeImage {
             thumb_url: Some(format!(
-                "{public_url}/recipes/{owner_id}/{}_thumb.webp",
+                "{public_url}/collections/{owner_id}/{}_thumb.webp",
                 Uuid::new_v4()
             )),
             ..image
         };
         assert_eq!(
-            validate_collection_image_urls(Some(&mismatched_thumbnail), owner_id, public_url),
+            validate_collection_image_urls(Some(&mismatched_thumbnail), owner_id, &storage),
             Err(CollectionApiError::InvalidImage)
         );
     }

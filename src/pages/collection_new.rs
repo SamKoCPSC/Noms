@@ -102,6 +102,7 @@ pub fn CollectionNew() -> Element {
                         upload_now,
                         busy: image_busy,
                         pending_count: pending_image_count,
+                        purpose: crate::api::upload::UploadPurpose::CollectionCover,
                         max_images: 1,
                         on_remove_existing: move |url: String| images.write().retain(|image| image.url != url),
                         on_upload_complete,

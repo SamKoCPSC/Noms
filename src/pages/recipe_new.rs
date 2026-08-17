@@ -418,6 +418,7 @@ pub fn RecipeNew() -> Element {
                             processed.full_bytes,
                             processed.thumb_bytes,
                             format!("step_{idx}_{file_idx}.webp"),
+                            crate::api::upload::UploadPurpose::Recipe,
                         )
                         .await
                         {
@@ -790,6 +791,7 @@ pub fn RecipeNew() -> Element {
                             upload_now,
                             busy,
                             pending_count: pending_image_count,
+                            purpose: crate::api::upload::UploadPurpose::Recipe,
                             on_remove_existing: move |url: String| {
                                 images.write().retain(|image| image.url != url);
                             },
