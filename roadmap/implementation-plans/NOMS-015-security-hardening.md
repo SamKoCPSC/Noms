@@ -525,6 +525,12 @@ media. This is currently owner-safe, but it conflates recipe and collection
 lifecycles. New custom collection-cover uploads require their own typed object
 kind and namespace while continuing to use the single canonical URL parser.
 
+**Selected rollout:** No compatibility. Startup atomically clears collection
+image references that are not canonical, owner-matched `CollectionFull`
+objects before the dual-namespace cleanup worker is spawned. Historical
+recipe-namespace covers are neither reinterpreted nor backfilled; their now
+unreferenced recipe objects become eligible for ordinary orphan reclamation.
+
 #### Tests first
 
 - A custom-cover upload produces exactly one canonical pair under `collections/{owner}/{object}_full.webp` and `collections/{owner}/{object}_thumb.webp`; the ordinary recipe uploader continues to produce only `recipes/` objects.

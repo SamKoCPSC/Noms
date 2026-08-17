@@ -2924,6 +2924,13 @@ pub async fn get_all_image_urls(pool: &PgPool) -> Result<Vec<String>, DbError> {
     Ok(rows)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type)]
+#[sqlx(type_name = "text", rename_all = "snake_case")]
+pub enum OwnedMediaKind {
+    Recipe,
+    CollectionCover,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
 pub struct OwnedImageReference {
     pub owner_id: Uuid,
@@ -2932,6 +2939,7 @@ pub struct OwnedImageReference {
     /// canonical foreign objects copied from its source snapshot even after
     /// the source recipe is deleted and its foreign key is set to NULL.
     pub allows_inherited_owner: bool,
+    pub media_kind: OwnedMediaKind,
 }
 
 /// Get every retained media URL together with an owner authorized to reference it.
@@ -3019,9 +3027,9 @@ pub async fn get_all_owned_image_references(
                  END
              ) AS child_step
          ),
-         image_urls(owner_id, image_url, allows_inherited_owner) AS (
+         image_urls(owner_id, image_url, allows_inherited_owner, media_kind) AS (
              SELECT recipe_documents.owner_id, image_urls.image_url,
-                    recipe_documents.allows_inherited_owner
+                    recipe_documents.allows_inherited_owner, 'recipe'::text
              FROM recipe_documents
              CROSS JOIN LATERAL jsonb_array_elements(images) AS image_entry
              CROSS JOIN LATERAL (
@@ -3032,7 +3040,7 @@ pub async fn get_all_owned_image_references(
                 AND jsonb_typeof(image_entry) = 'object'
              UNION ALL
              SELECT step_entries.owner_id, step_photo_urls.image_url,
-                    step_entries.allows_inherited_owner
+                    step_entries.allows_inherited_owner, 'recipe'::text
              FROM step_entries
              CROSS JOIN LATERAL jsonb_array_elements(
                  CASE
@@ -3046,7 +3054,8 @@ pub async fn get_all_owned_image_references(
              ) AS step_photo_urls(image_url)
              WHERE jsonb_typeof(step_photo) = 'object'
              UNION ALL
-             SELECT collections.owner_id, collection_image_urls.image_url, FALSE
+             SELECT collections.owner_id, collection_image_urls.image_url, FALSE,
+                    'collection_cover'::text
              FROM collections
              CROSS JOIN LATERAL (
                  VALUES (image ->> 'url'), (image ->> 'thumb_url')
@@ -3054,13 +3063,65 @@ pub async fn get_all_owned_image_references(
              WHERE image IS NOT NULL
                AND jsonb_typeof(image) = 'object'
          )
-         SELECT DISTINCT owner_id, image_url, allows_inherited_owner
+         SELECT DISTINCT owner_id, image_url, allows_inherited_owner, media_kind
          FROM image_urls
          WHERE image_url IS NOT NULL AND image_url <> ''",
     )
     .fetch_all(pool)
     .await
     .map_err(DbError::Query)
+}
+
+/// Atomically clear collection images that are not canonical owned covers.
+///
+/// This is the intentional no-compatibility cutover from the former recipe
+/// namespace. It does not copy or reinterpret historical URLs.
+pub async fn clear_non_collection_cover_references(
+    pool: &PgPool,
+    storage: &crate::storage::StorageClient,
+) -> Result<u64, DbError> {
+    let mut transaction = pool.begin().await.map_err(DbError::Query)?;
+    let rows = sqlx::query_as::<_, (Uuid, Uuid, serde_json::Value)>(
+        "SELECT id, owner_id, image
+         FROM collections
+         WHERE image IS NOT NULL
+         FOR UPDATE",
+    )
+    .fetch_all(&mut *transaction)
+    .await
+    .map_err(DbError::Query)?;
+
+    let mut invalid_collection_ids = Vec::new();
+    for (collection_id, owner_id, image_value) in rows {
+        let is_valid = serde_json::from_value::<RecipeImage>(image_value)
+            .ok()
+            .is_some_and(|image| {
+                storage
+                    .validate_owned_media_pair(
+                        &image.url,
+                        image.thumb_url.as_deref(),
+                        owner_id,
+                        crate::storage::MediaObjectKind::CollectionFull,
+                    )
+                    .is_ok()
+            });
+        if !is_valid {
+            invalid_collection_ids.push(collection_id);
+        }
+    }
+
+    let cleared = if invalid_collection_ids.is_empty() {
+        0
+    } else {
+        sqlx::query("UPDATE collections SET image = NULL WHERE id = ANY($1)")
+            .bind(&invalid_collection_ids)
+            .execute(&mut *transaction)
+            .await
+            .map_err(DbError::Query)?
+            .rows_affected()
+    };
+    transaction.commit().await.map_err(DbError::Query)?;
+    Ok(cleared)
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -6096,9 +6157,11 @@ mod tests {
     async fn test_collection_cover_round_trips_and_is_retained_by_orphan_scan() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let owner = test_utils::insert_test_user(&pool).await;
+        let object_id = Uuid::new_v4();
+        let storage = crate::storage::StorageClient::for_test();
         let cover = RecipeImage::new(
-            "https://storage.example.com/collections/cover-full.webp".to_string(),
-            Some("https://storage.example.com/collections/cover-thumb.webp".to_string()),
+            storage.object_url(&format!("collections/{}/{object_id}_full.webp", owner.id)),
+            Some(storage.object_url(&format!("collections/{}/{object_id}_thumb.webp", owner.id))),
             crate::types::RecipeImageEdit::default_rect_16x9(),
         )
         .with_file_metadata("cover.webp".to_string(), 42);
@@ -6184,11 +6247,13 @@ mod tests {
             reference.owner_id == owner.id
                 && reference.image_url == cover.url
                 && !reference.allows_inherited_owner
+                && reference.media_kind == OwnedMediaKind::CollectionCover
         }));
         assert!(references.iter().any(|reference| {
             reference.owner_id == owner.id
                 && reference.image_url == *cover.thumb_url.as_ref().unwrap()
                 && !reference.allows_inherited_owner
+                && reference.media_kind == OwnedMediaKind::CollectionCover
         }));
 
         let updated = update_collection(
@@ -6209,6 +6274,74 @@ mod tests {
                 .unwrap()
                 .image
                 .is_none()
+        );
+    }
+
+    #[tokio::test]
+    async fn collection_cover_cutover_clears_legacy_recipe_keys_and_keeps_collection_keys() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let storage = crate::storage::StorageClient::for_test();
+        let legacy_object = Uuid::new_v4();
+        let collection_object = Uuid::new_v4();
+        let legacy_cover = RecipeImage::new(
+            storage.object_url(&format!("recipes/{}/{legacy_object}_full.webp", owner.id)),
+            Some(storage.object_url(&format!("recipes/{}/{legacy_object}_thumb.webp", owner.id))),
+            crate::types::RecipeImageEdit::default_rect_16x9(),
+        );
+        let collection_cover = RecipeImage::new(
+            storage.object_url(&format!(
+                "collections/{}/{collection_object}_full.webp",
+                owner.id
+            )),
+            Some(storage.object_url(&format!(
+                "collections/{}/{collection_object}_thumb.webp",
+                owner.id
+            ))),
+            crate::types::RecipeImageEdit::default_rect_16x9(),
+        );
+        let legacy = insert_collection(
+            &pool,
+            owner.id,
+            None,
+            "Legacy cover",
+            None,
+            CollectionVisibility::Private,
+            Some(&legacy_cover),
+        )
+        .await
+        .unwrap();
+        let current = insert_collection(
+            &pool,
+            owner.id,
+            None,
+            "Current cover",
+            None,
+            CollectionVisibility::Private,
+            Some(&collection_cover),
+        )
+        .await
+        .unwrap();
+
+        let cleared = clear_non_collection_cover_references(&pool, &storage)
+            .await
+            .unwrap();
+
+        assert_eq!(cleared, 1);
+        assert!(get_collection_by_id_and_owner(&pool, legacy.id, owner.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .image
+            .is_none());
+        assert_eq!(
+            get_collection_by_id_and_owner(&pool, current.id, owner.id)
+                .await
+                .unwrap()
+                .unwrap()
+                .image
+                .as_ref(),
+            Some(&collection_cover)
         );
     }
 

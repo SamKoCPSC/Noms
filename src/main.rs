@@ -124,6 +124,17 @@ async fn build_application_router() -> axum::Router {
     storage::init_storage().await;
     let storage_client = storage::get_storage_client();
 
+    let cleared_collection_images =
+        db::clear_non_collection_cover_references(&pool, &storage_client)
+            .await
+            .unwrap_or_else(|error| {
+                panic!("failed to apply collection-cover media cutover: {error}")
+            });
+    tracing::info!(
+        cleared_collection_images,
+        "Applied collection-cover media cutover"
+    );
+
     {
         let pool = pool.clone();
         let storage = storage_client.clone();

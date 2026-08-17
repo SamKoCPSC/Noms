@@ -3994,7 +3994,7 @@ mod tests {
         }));
 
         let retained =
-            crate::worker::orphan_cleanup::collect_owned_recipe_keys(&storage, &references);
+            crate::worker::orphan_cleanup::collect_retained_media_keys(&storage, &references);
         assert!(retained.contains(&format!(
             "recipes/{}/{object_id}_full.webp",
             source_owner.id
