@@ -1,6 +1,6 @@
 # NOMS-015: Security Hardening to a Good-Enough Baseline — Agentic Implementation Plan
 
-**Status:** In progress — CP0–CP4 implemented; integrated CP5–CP7 work remains
+**Status:** In progress — CP0–CP4 implemented; post-merge CP4A and integrated CP5–CP7 work remain
 **Created:** 2026-07-29
 **Issue:** [NOMS-015-security-hardening.md](../issues/NOMS-015-security-hardening.md)
 **Source:** Authentication, authorization, and application security review completed 2026-07-28
@@ -33,7 +33,7 @@ that will actually ship.
 ### Progress summary
 
 - **Implemented and independently reviewed:** CP0 baseline reliability, CP1 OAuth intent/session binding and same-origin redirects, CP2 integrated media ownership and orphan retention, CP3 trusted-proxy client identity and per-client OAuth limits, and CP4 stable provider identities without legacy email reconciliation.
-- **Remaining before the final consumer-security verdict:** CP5 integrated resource-abuse bounds, CP6 dependency/secret/deployment verification, and CP7 adversarial review against the complete release candidate.
+- **Remaining before the final consumer-security verdict:** CP4A post-merge router/media-control alignment, CP5 integrated resource-abuse bounds, CP6 dependency/secret/deployment verification, and CP7 adversarial review against the complete release candidate.
 
 ---
 
@@ -119,11 +119,12 @@ Use NOMS-014 isolated worktrees and development environments:
 security-oauth       CP1 and CP4, serialized
 security-storage     CP2
 security-rate-limit  CP3
-security-abuse       CP5 after CP1–CP3 interfaces settle
+security-integration CP4A after the integrated rebase
+security-abuse       CP5 after CP4A controls settle
 security-release     CP6–CP7 integration and review
 ```
 
-CP2 and CP3 may run in parallel after CP0. CP1 must land before CP4 because both alter OAuth state, user-info extraction, account linking, schema, and tests. CP5 starts after the blocking interfaces stabilize. CP6 and CP7 run on the integrated branch only.
+CP2 and CP3 may run in parallel after CP0. CP1 must land before CP4 because both alter OAuth state, user-info extraction, account linking, schema, and tests. CP4A runs after the feature integration and before CP5 so the final router and every media-bearing feature share the intended controls. CP5 starts after those interfaces stabilize. CP6 and CP7 run on the integrated branch only.
 
 Each implementation branch uses the `codex/` prefix unless the operator selects another repository convention. Agents must not share a source checkout, database, MinIO bucket, browser cookie name, or Dioxus cache.
 
@@ -303,7 +304,7 @@ Create tests covering top-level images and recursively nested step photos:
    - a public URL with a misleading host or path prefix;
    - thumbnail/full-name substitutions outside A's namespace.
 7. The direct `delete_image` server function continues to reject cross-user keys.
-8. Collection covers require the same exact owner, canonical full/thumbnail pairing, and storage namespace as recipe media.
+8. Collection covers require the same exact owner, canonical full/thumbnail pairing, and the expected namespace for their media kind; CP4A moves new custom-cover uploads out of the recipe namespace.
 9. New drafts, edit drafts, draft autosaves, publication, restore, and fork publication cannot introduce a new foreign internal media URL.
 10. A server-created fork may continue referencing the exact media copied from its accessible source, but cannot use that exception to add a different foreign object.
 11. Orphan cleanup retains canonical objects referenced only by a draft, immutable version, collection cover, published fork ancestry, or an unpublished fork whose source was deleted.
@@ -324,7 +325,7 @@ Use a mock S3 endpoint that records exact delete requests. Asserting only on a h
 - Before deletion, validate every stored reference again and skip/log legacy or foreign references.
 - Keep database ownership checks on the recipe itself.
 - Prefer persisting a server-issued object key or opaque upload ID in addition to display URLs so future deletion does not derive authority from client-controlled URLs.
-- Make orphan cleanup scan live recipes, nested steps, drafts, immutable versions, collection covers, and surviving fork references while retaining objects only under an exact owner or server-established inheritance proof.
+- Make orphan cleanup scan live recipes, nested steps, drafts, immutable versions, collection covers, and surviving fork references across every managed namespace while retaining objects only under an exact owner or server-established inheritance proof.
 
 ### Validation
 
@@ -466,6 +467,123 @@ just lint
 
 ---
 
+## Checkpoint 4A: Align post-merge router and media controls
+
+**Goal:** Make the integrated NOMS-010/011/012 routes and collection-cover media use the already-reviewed authentication and typed media boundaries before beginning broader abuse-control work.
+
+The post-merge review found no currently exploitable bypass in CP1–CP4. This
+checkpoint closes two defense-in-depth inconsistencies that could become
+security regressions as new endpoints or media types are added:
+
+1. the Dioxus router attaches `handle_auth` before adding the routes it is
+   intended to wrap, so the middleware does not currently supply redirects,
+   request identity extensions, or rolling session refresh to those later
+   routes;
+2. collection covers enforce ownership with a collection-specific textual URL
+   parser instead of the canonical typed parser used by recipe and avatar
+   media.
+
+Implement and review these as two independent commits.
+
+### CP4A.1: Apply authentication middleware to the completed router
+
+**Primary files:** `src/main.rs`, `src/middleware/auth.rs`, and production-router tests.
+
+#### Tests first
+
+- Build the same Dioxus router used by production and prove `handle_auth` runs for routes added by `serve_dioxus_application`.
+- Prove an anonymous request to an owner-only edit, draft, collection-management, or settings route is redirected to login.
+- Prove an authenticated request receives the expected identity extensions and a qualifying session receives the rolling-refresh cookie.
+- Prove published recipe detail and historical snapshot pages are not blanket login-gated: anonymous access to public and URL-known unlisted history reaches the application authorization layer, while private history remains inaccessible there.
+- Prove every state-changing server function still performs its own session and ownership checks; middleware is defense in depth, not the sole authorization boundary.
+- Prove the upload body-limit layer and OAuth router rate-limit layer retain their current scopes after router reordering.
+
+#### Implementation tasks
+
+- Construct the Dioxus routes and direct API routes before applying `handle_auth`, so Axum applies the middleware to the completed router.
+- Preserve the required pool and storage extensions and document the security-relevant layer order.
+- Remove published historical snapshot routes from the blanket protected-path matcher. Continue to enforce public, unlisted, private, and owner access in the recipe/version server and database boundary.
+- Keep edit routes, owner-only draft routes, collection-management routes, account settings, and other authenticated application pages protected.
+- Do not move the OAuth start/callback/logout router behind the Dioxus authentication middleware; its explicit intent, callback, redirect, and rate-limit controls remain independent.
+
+#### Gate
+
+The production-composed router demonstrably executes authentication middleware
+for its intended routes without narrowing intentional anonymous public/unlisted
+recipe-history access or replacing server-function authorization checks.
+
+**Risk:** Medium. Incorrect layer ordering can silently disable middleware; an indiscriminate correction can also break the intentional history-visibility policy.
+
+### CP4A.2: Give custom collection covers a typed media lifecycle
+
+**Primary files:** `src/api/upload.rs`, `src/api/collection.rs`, `src/components/base/image_upload.rs`, collection create/edit pages, `src/storage.rs`, `src/db/mod.rs`, `src/worker/orphan_cleanup.rs`, and focused media-ownership tests.
+
+The current custom-cover flow reuses the generic recipe upload path, so cover
+objects are stored as `recipes/{owner}/{object}_full.webp` and are protected
+only because collection validation and orphan scanning treat them as recipe
+media. This is currently owner-safe, but it conflates recipe and collection
+lifecycles. New custom collection-cover uploads require their own typed object
+kind and namespace while continuing to use the single canonical URL parser.
+
+#### Tests first
+
+- A custom-cover upload produces exactly one canonical pair under `collections/{owner}/{object}_full.webp` and `collections/{owner}/{object}_thumb.webp`; the ordinary recipe uploader continues to produce only `recipes/` objects.
+- Collection creation and update accept only a canonical `CollectionFull` object owned by the authenticated user.
+- An optional thumbnail must be the canonical `CollectionThumbnail` with the same owner and object ID as the full image.
+- Recipe, avatar, foreign-owner, full/thumbnail substitution, sibling-host/path, credential, query/fragment, duplicate-slash, encoded-traversal, non-canonical UUID, and external URL inputs are rejected without a database write.
+- A canonical custom cover is returned by the owner-aware reference scan and reaches the generalized retained-media-key collector as its exact full and thumbnail keys.
+- Recipe cleanup cannot delete collection media, and collection cleanup cannot retain or delete recipe or avatar media merely because an object ID or owner matches.
+- Removing, replacing, or deleting a collection removes its cover retention grant so the scheduled orphan worker may reclaim the old custom-cover objects, while another user's forged or legacy reference grants neither retention nor deletion authority.
+- A custom cover uploaded before a failed/abandoned collection save is eventually reclaimed; partial upload failures synchronously remove only the server-generated keys from that attempt.
+- Removing an uploaded-but-unsaved custom cover uses an owner-checked collection-media deletion path rather than the recipe-only `delete_image` path.
+- The cleanup cycle loads the complete typed reference set and successfully lists both managed namespaces before issuing any deletion; failure of either prerequisite produces zero delete requests for the entire cycle.
+- The selected legacy-cover rollout is exercised with cleanup running concurrently and cannot delete an object that is still displayed by a collection before the cutover transaction commits.
+- Ordinary collection creation, editing, sharing, rendering, and cover replacement continue to work.
+
+#### Implementation tasks
+
+- Add `MediaObjectKind::CollectionFull` and `MediaObjectKind::CollectionThumbnail` to the canonical `StorageClient::parse_media_url` model with exact `collections/{owner}/{object}_{full|thumb}.webp` parsing and pairing.
+- Add a dedicated collection-cover upload operation, or a closed server-side upload-purpose enum, that selects the collection namespace and object kinds. Do not infer purpose from a filename or accept a caller-supplied storage key.
+- Make the shared `ImageUpload` component require an explicit upload purpose and route collection create/edit uploads through the collection-cover operation. Keep recipe uploads on the recipe operation.
+- Replace the collection-specific `strip_prefix`/segment parser with the shared typed parser. Require exact owner, collection object kind, and full/thumbnail pairing at collection create and update boundaries.
+- Keep custom collection covers restricted to application-owned collection media; do not silently widen them to arbitrary external HTTPS or recipe/avatar objects. Recipe-image mosaics remain derived display content rather than persisted custom-cover authority.
+- Replace the recipe-specific retention representation with a typed owner-aware media reference, or equivalent separate recipe/collection reference sets, so the database source determines the expected object kinds. A client-provided URL must not select its own expected kind.
+- Generalize `collect_owned_recipe_keys` into a typed retained-media-key collector that covers both `recipes/` and `collections/`, preserves the existing server-established fork exception only for recipe media, and never grants collection media inherited-recipe provenance.
+- Preflight the complete typed reference set plus successful `recipes/` and `collections/` listings before deleting from either namespace. After that all-or-nothing preflight succeeds, compute and reclaim each namespace independently. Continue excluding `avatars/`, whose replacement/removal lifecycle remains separate unless a later checkpoint deliberately adds avatar orphan scanning.
+- Add an owner-checked custom-cover deletion helper for uploaded-but-unsaved media. It may delete only an exact `CollectionFull` object and its canonical paired thumbnail.
+- Keep deletion authority out of stored URLs. Cover replacement/deletion removes the database reference but does not directly delete storage objects; the collection orphan pass may reclaim canonical objects only after no authorized live collection reference remains.
+- Select and document one rollout policy before implementation:
+  - **No compatibility:** pause/disable cleanup, atomically clear every existing recipe-namespace collection-cover reference while cutting new uploads and validation to `CollectionFull`, verify that no collection retains a recipe-namespace custom-cover URL, then enable strict dual-namespace cleanup. This option performs no re-upload or backfill.
+  - **Bounded read-only compatibility:** cut all new writes to `CollectionFull`, preserve existing recipe-namespace covers only as explicitly typed legacy display/retention references, and remove that compatibility after the last reference is replaced or cleared. Legacy references never authorize collection mutation or collection-object deletion against a recipe key.
+- Keep cleanup disabled during the cutover until the selected policy's database state and code are both active. New writes must never create recipe-namespace collection covers after cutover, and strict cleanup must not start while a surviving reference lacks a recognized typed retention path.
+
+#### Gate
+
+Recipe images, nested step photos, custom collection covers, avatars, direct
+deletion, and orphan retention all derive internal object identity from the
+same canonical typed parser while retaining distinct object kinds and
+namespaces. Every user-triggered storage deletion remains preceded by exact
+ownership and kind proof for the key being deleted. Background orphan deletion
+remains restricted to the controlled `recipes/` and `collections/` prefixes and
+requires proof that no authorized live reference of the expected type retains
+the canonical key.
+
+**Risk:** Medium. The current recipe-namespace cover flow has no demonstrated ownership bypass, but parallel parsers and shared recipe/collection object kinds make later storage-format, cleanup, and quota changes prone to inconsistent enforcement.
+
+### Validation
+
+```bash
+just fmt
+just check
+just test
+just lint
+```
+
+Run the production-router tests through a real TCP listener and use a mock S3
+endpoint to assert the exact collection-cover keys retained or deleted.
+
+---
+
 ## Checkpoint 5: Bound realistic authenticated and unauthenticated abuse
 
 **Goal:** Prevent inexpensive resource exhaustion without inventing enterprise-grade controls.
@@ -479,9 +597,10 @@ Implement proportionate controls for the application's actual public surface:
 - clamp public and authenticated pagination to a documented range such as `1..=100`;
 - reject negative offsets;
 - bound recipe title, description, commentary, tag count/length, ingredient count, instruction count/depth, equipment count, and image count;
-- retain upload byte limits and ensure empty image variants are rejected;
+- retain upload byte limits and ensure empty image variants are rejected across recipe, custom collection-cover, and avatar upload paths;
 - reject oversized version-graph expansion state before loading or traversing the graph; bound loaded node IDs, requested depth, returned nodes/edges, and relationship traversal independently;
 - bound collection hierarchy depth, total collections per user, direct children, memberships, and reorder-array lengths; paginate collection listings that can grow with user-controlled data;
+- count custom-cover uploads, replacements, failed/abandoned saves, stored bytes, and object counts in proportionate per-user collection/upload budgets; separating the `collections/` namespace must not create an independent unbounded quota lane;
 - bound active drafts per user and apply a documented publication/storage policy to immutable versions so repeated full-snapshot publication cannot cheaply exhaust database storage;
 - retain NOMS-012's fixed search grammar, text/filter/page/facet/autocomplete limits, and maximum offset;
 - apply proportionate per-user request limits and database execution budgets to expensive search, autocomplete, grouped/faceted search, graph traversal, mutation, and upload paths, with IP fallback only for unauthenticated endpoints;
@@ -500,10 +619,11 @@ Do not introduce CAPTCHA, device fingerprinting, 2FA, enterprise audit infrastru
 - extreme pagination cannot force an unbounded public query;
 - a maximum-sized valid graph expansion succeeds, while one additional loaded node is rejected before database graph construction;
 - oversized collection reorder vectors, excessive hierarchy depth, collection count, membership count, and active-draft count fail without partial writes;
+- repeated custom-cover upload/replacement is constrained per user, abandoned objects remain eligible for timely reclamation, and exhausting that budget does not block another user or ordinary recipe uploads;
 - repeated draft publication and version creation are constrained by the selected per-user rate/quota policy;
 - one authenticated user saturating advanced/faceted search or autocomplete does not consume another user's budget, and database query timeouts fail with a controlled response;
 - search counts, facets, grouped results, and autocomplete preserve the same authorization predicates under both boundary-sized and rejected requests;
-- normal large recipes and avatar/recipe uploads continue to work.
+- normal large recipes and avatar/recipe/custom-cover uploads continue to work.
 
 ### Validation
 
@@ -656,6 +776,7 @@ Produce a self-contained HTML report under `/tmp` containing:
 The security reviewer may return `GOOD ENOUGH` only when:
 
 - CP1, CP2, and CP3 have no blocking or should-fix findings;
+- CP4A production-router and typed collection-media lifecycle gates pass without weakening server-function authorization or intentional public/unlisted history access;
 - CP4 is complete, or the deployment explicitly excludes recyclable-email environments with a time-bounded migration plan;
 - `just ci` passes;
 - no reachable unmitigated critical or high dependency advisory remains;
@@ -678,8 +799,9 @@ The security reviewer may return `GOOD ENOUGH` only when:
 3. Enable explicit OAuth purposes.
 4. Enable storage ownership validation and safe deletion.
 5. Enable corrected client-IP extraction and observe rate-limit metrics.
-6. Execute the selected stable-identity rollout policy, including the approved no-compatibility path where applicable.
-7. If the rollout uses temporary legacy compatibility, remove it only after evidence shows it is unused; omit this step for the approved no-compatibility path.
+6. Pause collection/recipe orphan cleanup, atomically apply the selected legacy-cover database policy and typed `collections/` upload cutover, verify every surviving cover has a recognized retention path, then re-enable strict dual-namespace cleanup.
+7. Execute the selected stable-identity rollout policy, including the approved no-compatibility path where applicable.
+8. If the rollout uses temporary legacy compatibility, remove it only after evidence shows it is unused; omit this step for the approved no-compatibility path.
 
 ### Monitoring
 
@@ -689,6 +811,7 @@ Track structured counts without sensitive values:
 - rejected link callbacks by mismatch category;
 - provider-subject migration successes/conflicts;
 - rejected foreign storage references;
+- rejected media-kind/namespace mismatches and orphan cleanup outcomes per managed namespace;
 - skipped unsafe legacy deletions;
 - OAuth rate-limit responses by hashed/anonymized client key;
 - mutation-limit responses;
@@ -710,7 +833,9 @@ Track structured counts without sensitive values:
 - [ ] OAuth login and linking have explicit purposes and complete state/session binding.
 - [ ] The login-CSRF account-takeover regression test passes through the real callback handler.
 - [ ] OAuth and logout redirects remain same-origin after browser-compatible parsing and normalization, including raw and encoded slash/backslash confusion cases.
+- [ ] The production-composed Dioxus router applies authentication middleware to intended routes while public/unlisted recipe history remains governed by application authorization rather than a blanket login redirect.
 - [ ] All media persistence and deletion paths enforce exact tenant ownership.
+- [ ] New custom collection covers use dedicated collection object kinds, upload handling, and the `collections/` namespace through the shared typed parser; exact pairing, owner-aware retention, unsaved-upload deletion, and orphan reclamation are verified.
 - [ ] Cross-tenant image and avatar deletion tests prove no victim storage request occurs.
 - [ ] The production serving path attaches trustworthy connection information.
 - [ ] OAuth rate limits are independent per client and cannot be globally exhausted by one attacker.
