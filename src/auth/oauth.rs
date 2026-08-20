@@ -1728,8 +1728,9 @@ mod tests {
             let (_db, pool) = test_utils::setup_test_db().await;
             let u = test_utils::uid();
 
-            // Set up a test session secret via env var so we can create/verify tokens
-            std::env::set_var("SESSION_SECRET", "test-secret-32-bytes-long-enough!!");
+            // Use the thread-local override so parallel tests cannot remove the
+            // process-wide environment variable while this test is running.
+            session::set_test_secret("test-secret-32-bytes-long-enough!!");
 
             // Create a user with a Google account
             let user = db::insert_user(
@@ -1770,6 +1771,8 @@ mod tests {
 
             // Verify the session was read correctly
             assert_eq!(existing_user_id, Some(user.id));
+
+            session::clear_test_secret();
 
             // Now link the GitHub identity to the authenticated user.
             let result = linking::link_to_user(
@@ -2168,8 +2171,9 @@ mod tests {
             let (_db, pool) = test_utils::setup_test_db().await;
             let u = test_utils::uid();
 
-            // Set up session secret
-            std::env::set_var("SESSION_SECRET", "test-secret-32-bytes-long-enough!!");
+            // Use the thread-local override so parallel tests cannot remove the
+            // process-wide environment variable while this test is running.
+            session::set_test_secret("test-secret-32-bytes-long-enough!!");
 
             // Create a single user
             let user = db::insert_user(
@@ -2232,6 +2236,8 @@ mod tests {
                 "stored user_id ({:?}) should match current session user_id ({:?})",
                 stored, current
             );
+
+            session::clear_test_secret();
         }
 
         /// Verify that callback_handler allows an unauthenticated flow when the
