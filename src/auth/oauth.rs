@@ -9,13 +9,19 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Redirect};
 use axum_extra::extract::cookie::CookieJar;
 use chrono::Utc;
+use cookie::{Cookie, CookieBuilder, SameSite};
 use oauth2::basic::BasicClient;
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, EndpointNotSet, EndpointSet,
     PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, Scope, TokenResponse, TokenUrl,
 };
 use serde::Deserialize;
+use sha2::{Digest, Sha256};
 use sqlx::PgPool;
+use std::fmt::Write as _;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+use time::Duration as TimeDuration;
 use uuid::Uuid;
 
 use crate::auth::{linking, session};
@@ -40,6 +46,11 @@ type ConfiguredClient =
 #[derive(Clone)]
 pub struct AppState {
     pub pool: PgPool,
+    /// Parsed configured application origin used for exact request-origin and
+    /// cookie transport decisions.
+    pub base_url_origin: url::Origin,
+    /// Aggregate, non-sensitive authentication rejection counters.
+    pub auth_security_metrics: AuthSecurityMetrics,
     /// Google OAuth client, fully configured with auth/token/redirect URLs.
     pub google_client: ConfiguredClient,
     /// GitHub OAuth client, fully configured with auth/token/redirect URLs.
@@ -61,6 +72,46 @@ pub struct AppState {
     #[cfg(feature = "server")]
     #[allow(dead_code)]
     pub storage: crate::storage::StorageClient,
+}
+
+#[derive(Default)]
+struct AuthSecurityMetricsInner {
+    browser_binding_missing: AtomicU64,
+    browser_binding_malformed: AtomicU64,
+    browser_binding_mismatch: AtomicU64,
+    logout_origin_missing: AtomicU64,
+    logout_origin_duplicate: AtomicU64,
+    logout_origin_null: AtomicU64,
+    logout_origin_malformed: AtomicU64,
+    logout_origin_mismatch: AtomicU64,
+}
+
+/// Cloneable aggregate metrics shared by all authentication handlers.
+#[derive(Clone, Default)]
+pub struct AuthSecurityMetrics(Arc<AuthSecurityMetricsInner>);
+
+impl AuthSecurityMetrics {
+    fn record_browser_binding_rejection(&self, category: &'static str) -> u64 {
+        let counter = match category {
+            "missing" => &self.0.browser_binding_missing,
+            "malformed" => &self.0.browser_binding_malformed,
+            "mismatch" => &self.0.browser_binding_mismatch,
+            _ => unreachable!("closed browser-binding rejection category"),
+        };
+        counter.fetch_add(1, Ordering::Relaxed) + 1
+    }
+
+    pub(crate) fn record_logout_origin_rejection(&self, category: &'static str) -> u64 {
+        let counter = match category {
+            "missing" => &self.0.logout_origin_missing,
+            "duplicate" => &self.0.logout_origin_duplicate,
+            "null" => &self.0.logout_origin_null,
+            "malformed" => &self.0.logout_origin_malformed,
+            "mismatch" => &self.0.logout_origin_mismatch,
+            _ => unreachable!("closed logout-origin rejection category"),
+        };
+        counter.fetch_add(1, Ordering::Relaxed) + 1
+    }
 }
 
 // ── Query parameter types ──────────────────────────────────────────────────
@@ -91,6 +142,9 @@ pub enum OAuthError {
     InvalidPurpose,
     LinkSessionRequired,
     LoginSessionConflict,
+    BrowserBindingMissing,
+    BrowserBindingMalformed,
+    BrowserBindingMismatch,
     TokenExchange(String),
     UserInfoExtraction(String),
     DbError(String),
@@ -116,6 +170,9 @@ impl std::fmt::Display for OAuthError {
             Self::LoginSessionConflict => {
                 write!(f, "OAuth login cannot complete with an active session")
             }
+            Self::BrowserBindingMissing => write!(f, "OAuth browser binding is missing"),
+            Self::BrowserBindingMalformed => write!(f, "OAuth browser binding is malformed"),
+            Self::BrowserBindingMismatch => write!(f, "OAuth browser binding does not match"),
             Self::TokenExchange(e) => write!(f, "Token exchange failed: {e}"),
             Self::UserInfoExtraction(e) => write!(f, "User info extraction failed: {e}"),
             Self::DbError(e) => write!(f, "Database error: {e}"),
@@ -144,6 +201,9 @@ impl OAuthError {
             Self::InvalidPurpose => "invalid_purpose",
             Self::LinkSessionRequired => "link_session_required",
             Self::LoginSessionConflict => "login_session_conflict",
+            Self::BrowserBindingMissing => "browser_binding_missing",
+            Self::BrowserBindingMalformed => "browser_binding_malformed",
+            Self::BrowserBindingMismatch => "browser_binding_mismatch",
             Self::TokenExchange(_) => "token_exchange",
             Self::UserInfoExtraction(_) => "user_info",
             Self::DbError(_) => "database",
@@ -170,6 +230,9 @@ impl OAuthError {
             | Self::InvalidPurpose
             | Self::LinkSessionRequired
             | Self::LoginSessionConflict
+            | Self::BrowserBindingMissing
+            | Self::BrowserBindingMalformed
+            | Self::BrowserBindingMismatch
             | Self::AccountAlreadyLinked(_) => self.to_string(),
 
             // Internal errors — generic message only
@@ -209,6 +272,9 @@ impl IntoResponse for OAuthError {
             Self::InvalidPurpose => StatusCode::BAD_REQUEST,
             Self::LinkSessionRequired => StatusCode::UNAUTHORIZED,
             Self::LoginSessionConflict => StatusCode::CONFLICT,
+            Self::BrowserBindingMissing
+            | Self::BrowserBindingMalformed
+            | Self::BrowserBindingMismatch => StatusCode::UNAUTHORIZED,
             Self::ProviderMismatch => StatusCode::BAD_REQUEST,
             Self::TokenExchange(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::UserInfoExtraction(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -347,6 +413,103 @@ fn env_or(key: &str, default: &str) -> String {
 /// CSRF state lifetime in seconds (10 minutes).
 const CSRF_STATE_TTL_SECS: i64 = 600;
 
+const BROWSER_BINDING_COOKIE_PREFIX: &str = "noms_oauth_tx_";
+const BROWSER_BINDING_SECRET_HEX_LEN: usize = 64;
+
+fn browser_binding_cookie_name(state_id: &str) -> String {
+    let digest = Sha256::digest(state_id.as_bytes());
+    let mut suffix = String::with_capacity(32);
+    for byte in &digest[..16] {
+        write!(&mut suffix, "{byte:02x}").expect("writing to a String cannot fail");
+    }
+    format!("{BROWSER_BINDING_COOKIE_PREFIX}{suffix}")
+}
+
+fn browser_binding_cookie_path(provider: &str) -> String {
+    match provider {
+        "google" => "/auth/google/callback".to_string(),
+        "github" => "/auth/github/callback".to_string(),
+        // No transaction cookie is ever issued for another provider. Keep the
+        // error-path clearing header syntactically safe and narrowly scoped.
+        _ => "/auth/".to_string(),
+    }
+}
+
+fn browser_binding_secret() -> String {
+    // Two independent UUIDv4 values provide over 240 bits of randomness while
+    // retaining a strict, cookie-safe representation that is cheap to validate.
+    format!(
+        "{:032x}{:032x}",
+        Uuid::new_v4().as_u128(),
+        Uuid::new_v4().as_u128()
+    )
+}
+
+fn browser_binding_digest(secret: &str) -> Vec<u8> {
+    Sha256::digest(secret.as_bytes()).to_vec()
+}
+
+fn is_valid_browser_binding_secret(secret: &str) -> bool {
+    secret.len() == BROWSER_BINDING_SECRET_HEX_LEN
+        && secret.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
+fn binding_cookie_secure(state: &AppState) -> bool {
+    // Production configuration already requires HTTPS. Local mode permits
+    // other HTTP hostnames as well as loopback, and those must remain usable.
+    !matches!(
+        &state.base_url_origin,
+        url::Origin::Tuple(scheme, _, _) if scheme == "http"
+    )
+}
+
+fn build_browser_binding_cookie(
+    state: &AppState,
+    provider: &str,
+    state_id: &str,
+    value: String,
+    max_age: TimeDuration,
+) -> Cookie<'static> {
+    CookieBuilder::new(browser_binding_cookie_name(state_id), value)
+        .http_only(true)
+        .secure(binding_cookie_secure(state))
+        .same_site(SameSite::Lax)
+        .path(browser_binding_cookie_path(provider))
+        .max_age(max_age)
+        .build()
+}
+
+fn clear_browser_binding_cookie(
+    state: &AppState,
+    provider: &str,
+    state_id: &str,
+) -> Cookie<'static> {
+    build_browser_binding_cookie(state, provider, state_id, String::new(), TimeDuration::ZERO)
+}
+
+fn append_set_cookie(response: &mut axum::response::Response, cookie: Cookie<'static>) {
+    response.headers_mut().append(
+        axum::http::header::SET_COOKIE,
+        cookie
+            .encoded()
+            .to_string()
+            .parse()
+            .expect("OAuth binding cookie should form a valid header"),
+    );
+}
+
+fn binding_rejection(state: &AppState, error: OAuthError, category: &'static str) -> OAuthError {
+    let total = state
+        .auth_security_metrics
+        .record_browser_binding_rejection(category);
+    tracing::warn!(
+        error_code = error.log_code(),
+        rejection_total = total,
+        "OAuth callback rejected by browser transaction binding"
+    );
+    error
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum FlowPurpose {
     Login,
@@ -410,8 +573,11 @@ pub async fn start_handler(
     let redirect_uri = validate_redirect_uri(&params.redirect_uri)?;
     let purpose = FlowPurpose::parse(&params.purpose)?;
 
-    // Generate a CSRF state UUID and persist it in the DB.
+    // Generate a CSRF state UUID and a separate browser-held transaction key.
+    // Only the key digest is persisted.
     let csrf_state = Uuid::new_v4().to_string();
+    let binding_secret = browser_binding_secret();
+    let binding_digest = browser_binding_digest(&binding_secret);
 
     // Generate PKCE code verifier and challenge (S256 method).
     // The verifier is stored server-side; the challenge is sent to the provider.
@@ -432,7 +598,7 @@ pub async fn start_handler(
         FlowPurpose::Link => Some(current_user_id.ok_or(OAuthError::LinkSessionRequired)?),
     };
 
-    db::insert_auth_state(
+    db::insert_bound_auth_state(
         &state.pool,
         &csrf_state,
         prov.as_str(),
@@ -440,6 +606,7 @@ pub async fn start_handler(
         pkce_verifier.secret(),
         purpose.as_str(),
         user_id,
+        &binding_digest,
     )
     .await
     .map_err(|e| OAuthError::DbError(e.to_string()))?;
@@ -469,7 +636,16 @@ pub async fn start_handler(
         auth_url.to_string()
     };
 
-    Ok(Redirect::temporary(&auth_url))
+    let binding_cookie = build_browser_binding_cookie(
+        &state,
+        prov.as_str(),
+        &csrf_state,
+        binding_secret,
+        TimeDuration::seconds(CSRF_STATE_TTL_SECS),
+    );
+    let mut response = Redirect::temporary(&auth_url).into_response();
+    append_set_cookie(&mut response, binding_cookie);
+    Ok(response)
 }
 
 /// GET /auth/:provider/callback — process the OAuth callback.
@@ -483,14 +659,69 @@ pub async fn callback_handler(
     Query(params): Query<CallbackQuery>,
     jar: CookieJar,
 ) -> Result<axum::response::Response, OAuthError> {
-    let prov = validate_provider(&provider)?;
+    let clear_cookie = clear_browser_binding_cookie(&state, &provider, &params.state);
+    let mut response = callback_inner(&state, &provider, &params, &jar).await?;
+    append_set_cookie(&mut response, clear_cookie);
+    Ok(response)
+}
 
-    // Atomically consume the CSRF state. First caller gets the row;
-    // concurrent callers get None and are rejected.
-    let auth_state = db::delete_auth_state(&state.pool, &params.state)
-        .await
-        .map_err(|e| OAuthError::DbError(e.to_string()))?
-        .ok_or(OAuthError::StateNotFound)?;
+/// Router-facing callback wrapper that also clears the transaction cookie when
+/// the callback terminates with an error.
+pub async fn callback_route_handler(
+    State(state): State<AppState>,
+    Path(provider): Path<String>,
+    Query(params): Query<CallbackQuery>,
+    jar: CookieJar,
+) -> axum::response::Response {
+    let clear_cookie = clear_browser_binding_cookie(&state, &provider, &params.state);
+    match callback_handler(State(state), Path(provider), Query(params), jar).await {
+        Ok(response) => response,
+        Err(error) => {
+            let mut response = error.into_response();
+            append_set_cookie(&mut response, clear_cookie);
+            response
+        }
+    }
+}
+
+async fn callback_inner(
+    state: &AppState,
+    provider: &str,
+    params: &CallbackQuery,
+    jar: &CookieJar,
+) -> Result<axum::response::Response, OAuthError> {
+    let prov = validate_provider(provider)?;
+
+    let binding_cookie_name = browser_binding_cookie_name(&params.state);
+    let binding_secret = jar
+        .get(&binding_cookie_name)
+        .ok_or_else(|| binding_rejection(state, OAuthError::BrowserBindingMissing, "missing"))?;
+    if !is_valid_browser_binding_secret(binding_secret.value()) {
+        return Err(binding_rejection(
+            state,
+            OAuthError::BrowserBindingMalformed,
+            "malformed",
+        ));
+    }
+    let supplied_digest = browser_binding_digest(binding_secret.value());
+
+    // The row lock and digest comparison occur before deletion. A wrong browser
+    // leaves the transaction available to the browser that initiated it.
+    let auth_state =
+        match db::consume_bound_auth_state(&state.pool, &params.state, &supplied_digest)
+            .await
+            .map_err(|error| OAuthError::DbError(error.to_string()))?
+        {
+            db::BoundAuthStateConsume::Consumed(auth_state) => auth_state,
+            db::BoundAuthStateConsume::StateNotFound => return Err(OAuthError::StateNotFound),
+            db::BoundAuthStateConsume::BindingMismatch => {
+                return Err(binding_rejection(
+                    state,
+                    OAuthError::BrowserBindingMismatch,
+                    "mismatch",
+                ));
+            }
+        };
 
     // Check expiry (10 min TTL) — state is already consumed, no cleanup needed.
     let elapsed = Utc::now()
@@ -527,7 +758,7 @@ pub async fn callback_handler(
     let client = match prov {
         linking::Provider::Google => &state.google_client,
         linking::Provider::GitHub => &state.github_client,
-        _ => return Err(OAuthError::InvalidProvider(provider)),
+        _ => return Err(OAuthError::InvalidProvider(provider.to_string())),
     };
 
     // Reconstruct the PKCE code verifier from the stored value.
@@ -1215,10 +1446,83 @@ mod tests {
         use super::*;
         use crate::test_utils;
 
+        const TEST_BROWSER_BINDING_SECRET: &str =
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+        #[allow(clippy::too_many_arguments)]
+        async fn insert_callback_state(
+            pool: &PgPool,
+            state_id: &str,
+            provider: &str,
+            redirect_uri: &str,
+            code_verifier: &str,
+            purpose: &str,
+            user_id: Option<Uuid>,
+        ) {
+            db::insert_bound_auth_state(
+                pool,
+                state_id,
+                provider,
+                redirect_uri,
+                code_verifier,
+                purpose,
+                user_id,
+                &browser_binding_digest(TEST_BROWSER_BINDING_SECRET),
+            )
+            .await
+            .unwrap();
+        }
+
+        fn add_test_browser_binding(jar: CookieJar, state_id: &str) -> CookieJar {
+            jar.add(cookie::Cookie::new(
+                browser_binding_cookie_name(state_id),
+                TEST_BROWSER_BINDING_SECRET,
+            ))
+        }
+
+        async fn start_test_login(pool: PgPool) -> (String, cookie::Cookie<'static>) {
+            let response = start_handler(
+                State(test_app_state(pool)),
+                Path("google".to_string()),
+                Query(StartQuery {
+                    redirect_uri: "/dashboard".to_string(),
+                    purpose: "login".to_string(),
+                }),
+                CookieJar::new(),
+            )
+            .await
+            .unwrap()
+            .into_response();
+
+            let location = response
+                .headers()
+                .get(axum::http::header::LOCATION)
+                .unwrap()
+                .to_str()
+                .unwrap();
+            let state_id = url::Url::parse(location)
+                .unwrap()
+                .query_pairs()
+                .find_map(|(name, value)| (name == "state").then(|| value.into_owned()))
+                .expect("authorization redirect should contain state");
+            let set_cookie = response
+                .headers()
+                .get(axum::http::header::SET_COOKIE)
+                .expect("OAuth start should bind the transaction to a browser")
+                .to_str()
+                .unwrap();
+            let cookie = cookie::Cookie::parse(set_cookie.to_string())
+                .unwrap()
+                .into_owned();
+            (state_id, cookie)
+        }
+
         fn test_app_state(pool: PgPool) -> AppState {
             let (google_client, github_client) = build_oauth_clients("http://localhost:3000");
             AppState {
                 pool,
+                base_url_origin: url::Url::parse("http://localhost:3000").unwrap().origin(),
+                auth_security_metrics: AuthSecurityMetrics::default(),
                 google_client,
                 github_client,
                 http_client: reqwest::Client::new(),
@@ -1272,6 +1576,8 @@ mod tests {
             (
                 AppState {
                     pool,
+                    base_url_origin: url::Url::parse("http://localhost:3000").unwrap().origin(),
+                    auth_security_metrics: AuthSecurityMetrics::default(),
                     google_client: make_client("google"),
                     github_client: make_client("github"),
                     http_client: reqwest::Client::new(),
@@ -1337,6 +1643,300 @@ mod tests {
         }
 
         #[tokio::test]
+        async fn oauth_start_sets_host_only_callback_scoped_browser_binding_cookie() {
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let (_state_id, cookie) = start_test_login(pool).await;
+
+            assert!(cookie.name().starts_with("noms_oauth_tx_"));
+            assert_eq!(cookie.path(), Some("/auth/google/callback"));
+            assert_eq!(
+                cookie.domain(),
+                None,
+                "binding cookie must remain host-only"
+            );
+            assert!(cookie.http_only().unwrap_or(false));
+            assert!(!cookie.secure().unwrap_or(false));
+            assert_eq!(cookie.same_site(), Some(cookie::SameSite::Lax));
+            assert_eq!(
+                cookie.max_age().unwrap().whole_seconds(),
+                CSRF_STATE_TTL_SECS
+            );
+        }
+
+        #[tokio::test]
+        async fn oauth_binding_cookie_is_secure_for_https_origin() {
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let mut state = test_app_state(pool);
+            state.base_url_origin = url::Url::parse("https://noms.example.com")
+                .unwrap()
+                .origin();
+
+            let cookie = build_browser_binding_cookie(
+                &state,
+                "google",
+                "state-id",
+                TEST_BROWSER_BINDING_SECRET.to_string(),
+                TimeDuration::seconds(CSRF_STATE_TTL_SECS),
+            );
+            assert!(cookie.secure().unwrap_or(false));
+        }
+
+        #[tokio::test]
+        async fn transferred_callback_cannot_authorize_another_browser_or_consume_state() {
+            session::set_test_secret("test-secret-32-bytes-long-enough!!");
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let (state_id, browser_cookie) = start_test_login(pool.clone()).await;
+            let email = format!("browser-bound{}@example.com", test_utils::uid());
+            let (callback_state, token_server) = mock_google_state(pool.clone(), &email).await;
+
+            let transferred = callback_handler(
+                State(callback_state.clone()),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id.clone(),
+                    code: "attacker-visible-code".to_string(),
+                }),
+                CookieJar::new(),
+            )
+            .await;
+            assert!(transferred.is_err());
+            assert!(token_server.received_requests().await.unwrap().is_empty());
+
+            let initiating_browser = CookieJar::new().add(browser_cookie.clone());
+            let completed = callback_handler(
+                State(callback_state.clone()),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id.clone(),
+                    code: "valid-code".to_string(),
+                }),
+                initiating_browser.clone(),
+            )
+            .await
+            .unwrap();
+            assert_eq!(completed.status(), StatusCode::SEE_OTHER);
+            assert!(completed
+                .headers()
+                .get(axum::http::header::SET_COOKIE)
+                .is_some());
+
+            let replay = callback_handler(
+                State(callback_state),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id,
+                    code: "valid-code".to_string(),
+                }),
+                initiating_browser,
+            )
+            .await;
+            assert!(matches!(replay, Err(OAuthError::StateNotFound)));
+            session::clear_test_secret();
+        }
+
+        #[tokio::test]
+        async fn forced_get_logout_then_transferred_callback_cannot_swap_victim_session() {
+            use axum::body::Body;
+            use axum::http::Request;
+            use tower::ServiceExt;
+
+            session::set_test_secret("test-secret-32-bytes-long-enough!!");
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let victim = test_user(&pool, "forced_logout_victim").await;
+            let victim_token = session::create_session(&pool, victim.id).await.unwrap();
+            let (state_id, _initiating_browser_cookie) = start_test_login(pool.clone()).await;
+            let email = format!("forced-logout-attacker{}@example.com", test_utils::uid());
+            let (callback_state, token_server) = mock_google_state(pool.clone(), &email).await;
+
+            let logout_router = axum::Router::new()
+                .route(
+                    "/auth/logout",
+                    axum::routing::post(crate::auth::logout::handle_logout),
+                )
+                .with_state(callback_state.clone());
+            let forced_logout = logout_router
+                .oneshot(
+                    Request::builder()
+                        .method("GET")
+                        .uri("/auth/logout")
+                        .header("Cookie", format!("noms_session={victim_token}"))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(forced_logout.status(), StatusCode::METHOD_NOT_ALLOWED);
+            assert!(!forced_logout
+                .headers()
+                .contains_key(axum::http::header::SET_COOKIE));
+
+            let victim_jar = CookieJar::new().add(session::build_session_cookie(&victim_token));
+            let transferred = callback_handler(
+                State(callback_state),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id,
+                    code: "attacker-visible-code".to_string(),
+                }),
+                victim_jar,
+            )
+            .await;
+            assert!(matches!(
+                transferred,
+                Err(OAuthError::BrowserBindingMissing)
+            ));
+            assert!(token_server.received_requests().await.unwrap().is_empty());
+            assert_eq!(
+                session::verify_session(&pool, &victim_token).await.unwrap(),
+                victim.id
+            );
+            session::clear_test_secret();
+        }
+
+        #[tokio::test]
+        async fn malformed_browser_binding_is_rejected_before_exchange_without_consuming_state() {
+            session::set_test_secret("test-secret-32-bytes-long-enough!!");
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let (state_id, browser_cookie) = start_test_login(pool.clone()).await;
+            let email = format!("malformed-binding{}@example.com", test_utils::uid());
+            let (callback_state, token_server) = mock_google_state(pool, &email).await;
+            let malformed_cookie = cookie::Cookie::new(
+                browser_cookie.name().to_string(),
+                "not-a-valid-browser-secret",
+            );
+
+            let rejected = callback_handler(
+                State(callback_state.clone()),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id.clone(),
+                    code: "unused-code".to_string(),
+                }),
+                CookieJar::new().add(malformed_cookie),
+            )
+            .await;
+            assert!(rejected.is_err());
+            assert!(token_server.received_requests().await.unwrap().is_empty());
+
+            let completed = callback_handler(
+                State(callback_state),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id,
+                    code: "valid-code".to_string(),
+                }),
+                CookieJar::new().add(browser_cookie),
+            )
+            .await;
+            assert!(completed.is_ok());
+            session::clear_test_secret();
+        }
+
+        #[tokio::test]
+        async fn mismatched_browser_binding_does_not_consume_the_initiators_state() {
+            session::set_test_secret("test-secret-32-bytes-long-enough!!");
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let (state_id, browser_cookie) = start_test_login(pool.clone()).await;
+            let email = format!("mismatched-binding{}@example.com", test_utils::uid());
+            let (callback_state, token_server) = mock_google_state(pool, &email).await;
+            let wrong_cookie = cookie::Cookie::new(
+                browser_cookie.name().to_string(),
+                "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            );
+
+            let rejected = callback_handler(
+                State(callback_state.clone()),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id.clone(),
+                    code: "unused-code".to_string(),
+                }),
+                CookieJar::new().add(wrong_cookie),
+            )
+            .await;
+            assert!(matches!(rejected, Err(OAuthError::BrowserBindingMismatch)));
+            assert!(token_server.received_requests().await.unwrap().is_empty());
+
+            let completed = callback_handler(
+                State(callback_state),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id,
+                    code: "valid-code".to_string(),
+                }),
+                CookieJar::new().add(browser_cookie),
+            )
+            .await;
+            assert!(completed.is_ok());
+            session::clear_test_secret();
+        }
+
+        #[tokio::test]
+        async fn expired_callback_is_rejected_before_exchange_and_clears_binding_cookie() {
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let (state_id, browser_cookie) = start_test_login(pool.clone()).await;
+            sqlx::query(
+                "UPDATE auth_states SET created_at = NOW() - INTERVAL '20 minutes' WHERE id = $1",
+            )
+            .bind(&state_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+            let response = callback_route_handler(
+                State(test_app_state(pool)),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id,
+                    code: "unused-code".to_string(),
+                }),
+                CookieJar::new().add(browser_cookie),
+            )
+            .await;
+
+            assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+            let set_cookie = response
+                .headers()
+                .get(axum::http::header::SET_COOKIE)
+                .unwrap()
+                .to_str()
+                .unwrap();
+            assert!(set_cookie.contains(BROWSER_BINDING_COOKIE_PREFIX));
+            assert!(set_cookie.contains("Max-Age=0"));
+            assert!(!set_cookie.contains(session::cookie_name().as_ref()));
+        }
+
+        #[tokio::test]
+        async fn concurrent_oauth_attempts_use_independent_browser_bindings() {
+            session::set_test_secret("test-secret-32-bytes-long-enough!!");
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let (first_state_id, first_cookie) = start_test_login(pool.clone()).await;
+            let (second_state_id, second_cookie) = start_test_login(pool.clone()).await;
+            assert_ne!(first_cookie.name(), second_cookie.name());
+
+            let email = format!("concurrent-binding{}@example.com", test_utils::uid());
+            let (callback_state, _token_server) = mock_google_state(pool, &email).await;
+            for (state_id, browser_cookie) in [
+                (first_state_id, first_cookie),
+                (second_state_id, second_cookie),
+            ] {
+                let response = callback_handler(
+                    State(callback_state.clone()),
+                    Path("google".to_string()),
+                    Query(CallbackQuery {
+                        state: state_id,
+                        code: "valid-code".to_string(),
+                    }),
+                    CookieJar::new().add(browser_cookie),
+                )
+                .await
+                .unwrap();
+                assert_eq!(response.status(), StatusCode::SEE_OTHER);
+            }
+            session::clear_test_secret();
+        }
+
+        #[tokio::test]
         async fn login_callback_with_victim_session_is_rejected_before_linking() {
             session::set_test_secret("test-secret-32-bytes-long-enough!!");
             let (_db, pool) = test_utils::setup_test_db().await;
@@ -1345,7 +1945,7 @@ mod tests {
             let jar = CookieJar::new().add(session::build_session_cookie(&victim_token));
             let state_id = format!("login-csrf-{}", test_utils::uid());
 
-            db::insert_auth_state(
+            insert_callback_state(
                 &pool,
                 &state_id,
                 "google",
@@ -1354,8 +1954,8 @@ mod tests {
                 "login",
                 None,
             )
-            .await
-            .unwrap();
+            .await;
+            let jar = add_test_browser_binding(jar, &state_id);
 
             let result = callback_handler(
                 State(test_app_state(pool.clone())),
@@ -1385,7 +1985,7 @@ mod tests {
         async fn callback_rejects_unsafe_stored_redirect_before_token_exchange() {
             let (_db, pool) = test_utils::setup_test_db().await;
             let state_id = format!("unsafe-redirect-{}", test_utils::uid());
-            db::insert_auth_state(
+            insert_callback_state(
                 &pool,
                 &state_id,
                 "google",
@@ -1394,17 +1994,16 @@ mod tests {
                 "login",
                 None,
             )
-            .await
-            .unwrap();
+            .await;
 
             let result = callback_handler(
                 State(test_app_state(pool)),
                 Path("google".to_string()),
                 Query(CallbackQuery {
-                    state: state_id,
+                    state: state_id.clone(),
                     code: "unused-code".to_string(),
                 }),
-                CookieJar::new(),
+                add_test_browser_binding(CookieJar::new(), &state_id),
             )
             .await;
 
@@ -1416,7 +2015,7 @@ mod tests {
             let (_db, pool) = test_utils::setup_test_db().await;
             let user = test_user(&pool, "link_owner").await;
             let state_id = format!("link-no-session-{}", test_utils::uid());
-            db::insert_auth_state(
+            insert_callback_state(
                 &pool,
                 &state_id,
                 "google",
@@ -1425,17 +2024,16 @@ mod tests {
                 "link",
                 Some(user.id),
             )
-            .await
-            .unwrap();
+            .await;
 
             let result = callback_handler(
                 State(test_app_state(pool.clone())),
                 Path("google".to_string()),
                 Query(CallbackQuery {
-                    state: state_id,
+                    state: state_id.clone(),
                     code: "code".to_string(),
                 }),
-                CookieJar::new(),
+                add_test_browser_binding(CookieJar::new(), &state_id),
             )
             .await;
 
@@ -1452,7 +2050,7 @@ mod tests {
             let other_token = session::create_session(&pool, other.id).await.unwrap();
             let jar = CookieJar::new().add(session::build_session_cookie(&other_token));
             let state_id = format!("link-wrong-session-{}", test_utils::uid());
-            db::insert_auth_state(
+            insert_callback_state(
                 &pool,
                 &state_id,
                 "google",
@@ -1461,8 +2059,8 @@ mod tests {
                 "link",
                 Some(owner.id),
             )
-            .await
-            .unwrap();
+            .await;
+            let jar = add_test_browser_binding(jar, &state_id);
 
             let result = callback_handler(
                 State(test_app_state(pool.clone())),
@@ -1488,7 +2086,7 @@ mod tests {
             let email = format!("login{}@example.com", test_utils::uid());
             let (state, _server) = mock_google_state(pool.clone(), &email).await;
             let state_id = format!("login-success-{}", test_utils::uid());
-            db::insert_auth_state(
+            insert_callback_state(
                 &pool,
                 &state_id,
                 "google",
@@ -1497,17 +2095,16 @@ mod tests {
                 "login",
                 None,
             )
-            .await
-            .unwrap();
+            .await;
 
             let response = callback_handler(
                 State(state),
                 Path("google".to_string()),
                 Query(CallbackQuery {
-                    state: state_id,
+                    state: state_id.clone(),
                     code: "valid-code".to_string(),
                 }),
-                CookieJar::new(),
+                add_test_browser_binding(CookieJar::new(), &state_id),
             )
             .await
             .unwrap();
@@ -1538,7 +2135,7 @@ mod tests {
             let email = format!("provider{}@example.com", test_utils::uid());
             let (state, _server) = mock_google_state(pool.clone(), &email).await;
             let state_id = format!("link-success-{}", test_utils::uid());
-            db::insert_auth_state(
+            insert_callback_state(
                 &pool,
                 &state_id,
                 "google",
@@ -1547,8 +2144,8 @@ mod tests {
                 "link",
                 Some(user.id),
             )
-            .await
-            .unwrap();
+            .await;
+            let jar = add_test_browser_binding(jar, &state_id);
 
             let response = callback_handler(
                 State(state),
@@ -1563,10 +2160,16 @@ mod tests {
             .unwrap();
 
             assert_eq!(response.status(), StatusCode::SEE_OTHER);
-            assert!(response
+            let set_cookies: Vec<_> = response
                 .headers()
-                .get(axum::http::header::SET_COOKIE)
-                .is_none());
+                .get_all(axum::http::header::SET_COOKIE)
+                .iter()
+                .map(|value| value.to_str().unwrap())
+                .collect();
+            assert_eq!(set_cookies.len(), 1);
+            assert!(set_cookies[0].contains(BROWSER_BINDING_COOKIE_PREFIX));
+            assert!(set_cookies[0].contains("Max-Age=0"));
+            assert!(!set_cookies[0].contains(session::cookie_name().as_ref()));
             assert_eq!(
                 session::verify_session(&pool, &token).await.unwrap(),
                 user.id

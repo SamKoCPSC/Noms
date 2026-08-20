@@ -2155,6 +2155,7 @@ pub async fn reorder_child_collections(
 // ── Auth state queries ──────────────────────────────────────────────────────
 
 /// Insert an auth state for OAuth CSRF protection.
+#[cfg(test)]
 pub async fn insert_auth_state(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     id: &str,
@@ -2164,17 +2165,110 @@ pub async fn insert_auth_state(
     purpose: &str,
     user_id: Option<Uuid>,
 ) -> Result<(), DbError> {
-    sqlx::query("INSERT INTO auth_states (id, provider, redirect_uri, code_verifier, purpose, user_id) VALUES ($1, $2, $3, $4, $5, $6)")
+    // This compatibility helper is retained for low-level state tests. Real
+    // OAuth starts use `insert_bound_auth_state` with a random digest.
+    sqlx::query("INSERT INTO auth_states (id, provider, redirect_uri, code_verifier, purpose, user_id, browser_binding_digest) VALUES ($1, $2, $3, $4, $5, $6, $7)")
         .bind(id)
         .bind(provider)
         .bind(redirect_uri)
         .bind(code_verifier)
         .bind(purpose)
         .bind(user_id)
+        .bind([0_u8; 32].as_slice())
         .execute(executor)
         .await
         .map_err(DbError::Query)?;
     Ok(())
+}
+
+/// Insert an OAuth state bound to a digest of a browser-held transaction secret.
+///
+/// The raw secret must never cross this database boundary.
+#[allow(clippy::too_many_arguments)]
+pub async fn insert_bound_auth_state(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    id: &str,
+    provider: &str,
+    redirect_uri: &str,
+    code_verifier: &str,
+    purpose: &str,
+    user_id: Option<Uuid>,
+    browser_binding_digest: &[u8],
+) -> Result<(), DbError> {
+    sqlx::query(
+        "INSERT INTO auth_states \
+         (id, provider, redirect_uri, code_verifier, purpose, user_id, browser_binding_digest) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    )
+    .bind(id)
+    .bind(provider)
+    .bind(redirect_uri)
+    .bind(code_verifier)
+    .bind(purpose)
+    .bind(user_id)
+    .bind(browser_binding_digest)
+    .execute(executor)
+    .await
+    .map_err(DbError::Query)?;
+    Ok(())
+}
+
+/// Result of attempting to consume a browser-bound OAuth state.
+pub enum BoundAuthStateConsume {
+    Consumed(AuthState),
+    StateNotFound,
+    BindingMismatch,
+}
+
+/// Consume an OAuth state only when its browser-binding digest matches.
+///
+/// Locking the row serializes competing callbacks. A mismatch commits no
+/// mutation, while the matching callback deletes and returns the row in the
+/// same transaction.
+pub async fn consume_bound_auth_state(
+    pool: &PgPool,
+    id: &str,
+    browser_binding_digest: &[u8],
+) -> Result<BoundAuthStateConsume, DbError> {
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    let stored: Option<(Vec<u8>,)> =
+        sqlx::query_as("SELECT browser_binding_digest FROM auth_states WHERE id = $1 FOR UPDATE")
+            .bind(id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(DbError::Query)?;
+
+    let Some((stored_digest,)) = stored else {
+        tx.commit().await.map_err(DbError::Query)?;
+        return Ok(BoundAuthStateConsume::StateNotFound);
+    };
+
+    // Both values are SHA-256 digests. Keep comparison time independent of the
+    // first differing byte so the browser secret remains an all-or-nothing key.
+    let digest_matches = stored_digest.len() == browser_binding_digest.len()
+        && stored_digest
+            .iter()
+            .zip(browser_binding_digest)
+            .fold(0_u8, |difference, (stored, supplied)| {
+                difference | (stored ^ supplied)
+            })
+            == 0;
+    if !digest_matches {
+        tx.commit().await.map_err(DbError::Query)?;
+        return Ok(BoundAuthStateConsume::BindingMismatch);
+    }
+
+    let auth_state = sqlx::query_as::<_, AuthState>(
+        "DELETE FROM auth_states WHERE id = $1 \
+         RETURNING id, redirect_uri, provider, code_verifier, purpose, user_id, created_at",
+    )
+    .bind(id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(DbError::Query)?
+    .ok_or_else(|| DbError::Query(sqlx::Error::RowNotFound))?;
+    tx.commit().await.map_err(DbError::Query)?;
+    Ok(BoundAuthStateConsume::Consumed(auth_state))
 }
 
 /// Atomically delete an auth state by ID and return the deleted row.
@@ -3777,11 +3871,13 @@ mod tests {
         let state_id = format!("missing-purpose-{}", test_utils::uid());
 
         let result = sqlx::query(
-            "INSERT INTO auth_states (id, provider, redirect_uri, code_verifier, user_id) \
-             VALUES ($1, 'google', '/dashboard', $2, NULL)",
+            "INSERT INTO auth_states \
+             (id, provider, redirect_uri, code_verifier, user_id, browser_binding_digest) \
+             VALUES ($1, 'google', '/dashboard', $2, NULL, $3)",
         )
         .bind(state_id)
         .bind("test-verifier-minimum-43-characters-long-enough")
+        .bind([0_u8; 32].as_slice())
         .execute(&pool)
         .await;
 

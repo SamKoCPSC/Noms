@@ -781,6 +781,8 @@ mod tests {
                 database,
                 AppState {
                     pool,
+                    base_url_origin: url::Url::parse("http://localhost:8080").unwrap().origin(),
+                    auth_security_metrics: crate::auth::oauth::AuthSecurityMetrics::default(),
                     google_client,
                     github_client,
                     http_client: reqwest::Client::new(),

@@ -633,6 +633,15 @@ a:hover {
     color: white;
 }
 
+.navbar-logout-form {
+    width: 100%;
+    margin: 0;
+}
+
+.navbar-logout-form .navbar-drawer-link {
+    width: 100%;
+}
+
 /* Mobile drawer danger link */
 .navbar-drawer-link-danger {
     color: var(--error);

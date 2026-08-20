@@ -161,6 +161,10 @@ async fn build_application_router() -> axum::Router {
         .unwrap_or_else(|error| panic!("invalid OAuth rate-limit configuration: {error}"));
     let state = auth::oauth::AppState {
         pool: pool.clone(),
+        base_url_origin: url::Url::parse(runtime_config.base_url())
+            .expect("validated BASE_URL should remain parseable")
+            .origin(),
+        auth_security_metrics: auth::oauth::AuthSecurityMetrics::default(),
         google_client,
         github_client,
         http_client: reqwest::Client::new(),
@@ -243,11 +247,11 @@ fn build_oauth_router(state: auth::oauth::AppState) -> axum::Router {
         )
         .route(
             "/auth/{provider}/callback",
-            axum::routing::get(auth::oauth::callback_handler),
+            axum::routing::get(auth::oauth::callback_route_handler),
         )
         .route(
             "/auth/logout",
-            axum::routing::get(auth::logout::handle_logout).post(auth::logout::handle_logout),
+            axum::routing::post(auth::logout::handle_logout),
         )
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),

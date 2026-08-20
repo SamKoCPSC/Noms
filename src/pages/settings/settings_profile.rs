@@ -1062,12 +1062,15 @@ pub fn SettingsProfile() -> Element {
         spawn(async move {
             match delete_account().await {
                 Ok(()) => {
-                    // Full-page navigation to logout endpoint (clears cookie + redirects to /)
-                    // Browsers ignore Set-Cookie from XHR, so we navigate directly
+                    // Account deletion invalidates the database session. POST logout as
+                    // a final browser-side cleanup so the host-only cookie is removed too.
                     #[cfg(target_arch = "wasm32")]
                     {
+                        let _ = gloo_net::http::Request::post("/auth/logout?redirect_uri=/")
+                            .send()
+                            .await;
                         if let Some(window) = web_sys::window() {
-                            let _ = window.location().set_href("/auth/logout?redirect_uri=/");
+                            let _ = window.location().set_href("/");
                         }
                     }
                 }

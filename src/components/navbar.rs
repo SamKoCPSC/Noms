@@ -113,18 +113,6 @@ pub fn Navbar(theme: UseTheme) -> Element {
         .as_ref()
         .and_then(|u| u.avatar_url.clone());
 
-    // Sign out handler: navigate to /auth/logout which clears the session cookie
-    // and redirects to "/". Full-page navigation is required because browsers
-    // ignore Set-Cookie headers from XHR/fetch responses.
-    let on_sign_out = move |_evt: dioxus::prelude::Event<dioxus::prelude::MouseData>| {
-        #[cfg(target_arch = "wasm32")]
-        {
-            if let Some(window) = web_sys::window() {
-                let _ = window.location().set_href("/auth/logout?redirect_uri=/");
-            }
-        }
-    };
-
     rsx! {
         nav {
             class: "navbar",
@@ -196,14 +184,19 @@ pub fn Navbar(theme: UseTheme) -> Element {
                                         onclick: move |_| dropdown_open.set(false),
                                         "Settings"
                                     }
-                                    button {
-                                        class: "navbar-dropdown-item navbar-dropdown-item-danger",
-                                        onclick: move |evt| {
-                                            evt.stop_propagation();
-                                            dropdown_open.set(false);
-                                            on_sign_out(evt);
-                                        },
-                                        "Sign Out"
+                                    form {
+                                        class: "navbar-logout-form",
+                                        method: "post",
+                                        action: "/auth/logout?redirect_uri=/",
+                                        button {
+                                            r#type: "submit",
+                                            class: "navbar-dropdown-item navbar-dropdown-item-danger",
+                                            onclick: move |evt| {
+                                                evt.stop_propagation();
+                                                dropdown_open.set(false);
+                                            },
+                                            "Sign Out"
+                                        }
                                     }
                                 }
                             }
@@ -298,13 +291,16 @@ pub fn Navbar(theme: UseTheme) -> Element {
                                 onclick: move |_| menu_open.set(false),
                                 "Settings"
                             }
-                            button {
-                                class: "navbar-drawer-link navbar-drawer-link-danger",
-                                onclick: move |evt| {
-                                    menu_open.set(false);
-                                    on_sign_out(evt);
-                                },
-                                "Sign Out"
+                            form {
+                                class: "navbar-logout-form",
+                                method: "post",
+                                action: "/auth/logout?redirect_uri=/",
+                                button {
+                                    r#type: "submit",
+                                    class: "navbar-drawer-link navbar-drawer-link-danger",
+                                    onclick: move |_| menu_open.set(false),
+                                    "Sign Out"
+                                }
                             }
                         } else {
                             Link {
