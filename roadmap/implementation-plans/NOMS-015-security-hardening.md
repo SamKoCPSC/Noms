@@ -830,13 +830,20 @@ Build the production Docker image and inspect its runtime user, environment cont
   dependencies. The reviewed RustSec exception is narrow and expires.
 - The runtime database role is verified as a non-owning data-plane role with
   bounded pool and server-side statement/transaction timeouts.
-- `just ci` passed at implementation revision `c72562d` with 656 active tests
-  passing and 10 environment-dependent tests ignored; the schema, security
-  policy, secret, deployment-artifact, and dependency-audit gates also passed.
-- Independent focused review returned `PASS` in
-  `/tmp/noms-cp6-final-pass.html`. A local production-image build could not be
-  repeated because the Docker daemon was unavailable, so CP7 must repeat the
-  image/runtime inspection in its fresh release-candidate environment.
+- At revision `6f6f659`, the compile, lint, schema, security-policy, secret,
+  deployment-artifact, and pinned dependency-audit gates passed with 656 active
+  tests passing and 10 environment-dependent tests ignored.
+- The production image built successfully from revision `6f6f659` as
+  `noms-cp6-validation@sha256:923fbc0ff63c2898ec58a43ab0cb7166d91a49c207b076ab28b68d8a5274e499`.
+  Artifact inspection confirmed UID/GID 999 (`noms`), a root-owned read-only
+  application directory and entrypoint, port 8080 plus a health check, only
+  `PORT` and `IP` application defaults, and no source, Git, Cargo credential,
+  or local environment files. Startup without `DATABASE_URL` failed closed.
+- Independent focused reviews returned `PASS` in
+  `/tmp/noms-cp6-final-pass.html` and `/tmp/noms-cp6-docker-review.html`. CP7
+  must still repeat the image/runtime inspection in its fresh release-candidate
+  environment so the final gate validates the integrated release revision
+  rather than this CP6 snapshot.
 
 ---
 
