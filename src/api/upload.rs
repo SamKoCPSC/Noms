@@ -177,7 +177,7 @@ impl<'a> MediaUploadRequest<'a> {
         purpose: UploadPurpose,
         full_bytes: &'a [u8],
         thumbnail_bytes: &'a [u8],
-    ) -> Result<Self, &'static str> {
+    ) -> Result<Self, String> {
         let (full_kind, thumbnail_kind) = match purpose {
             UploadPurpose::Recipe => (
                 crate::storage::MediaObjectKind::RecipeFull,
@@ -188,15 +188,16 @@ impl<'a> MediaUploadRequest<'a> {
                 crate::storage::MediaObjectKind::CollectionThumbnail,
             ),
             UploadPurpose::Avatar => {
-                return Err("Avatar uploads require the profile avatar operation")
+                return Err("Avatar uploads require the profile avatar operation".to_string())
             }
         };
-        validate_image_variants(full_bytes, thumbnail_bytes, MAX_FILE_SIZE, MAX_FILE_SIZE)?;
+        validate_image_variants(full_bytes, thumbnail_bytes, MAX_FILE_SIZE, MAX_FILE_SIZE)
+            .map_err(str::to_string)?;
         if !validate_webp_magic(full_bytes) {
-            return Err("Invalid full-size image. Expected WebP format.");
+            return Err("Invalid full-size image. Expected WebP format.".to_string());
         }
         if !validate_webp_magic(thumbnail_bytes) {
-            return Err("Invalid thumbnail. Expected WebP format.");
+            return Err("Invalid thumbnail. Expected WebP format.".to_string());
         }
 
         Ok(Self {
@@ -221,21 +222,32 @@ impl<'a> MediaUploadRequest<'a> {
         original_bytes: &'a [u8],
         full_bytes: &'a [u8],
         thumbnail_bytes: &'a [u8],
-    ) -> Result<Self, &'static str> {
-        if original_bytes.is_empty() || original_bytes.len() > MAX_AVATAR_ORIGINAL_SIZE {
-            return Err("Original image must be between 1 byte and 10MB");
+    ) -> Result<Self, String> {
+        if original_bytes.is_empty() || full_bytes.is_empty() || thumbnail_bytes.is_empty() {
+            return Err("Avatar image variants must not be empty".to_string());
         }
-        validate_image_variants(
-            full_bytes,
-            thumbnail_bytes,
-            MAX_AVATAR_RENDERED_SIZE,
-            MAX_AVATAR_RENDERED_SIZE,
-        )?;
         if !validate_webp_magic(full_bytes) {
-            return Err("Invalid image format: must be WebP");
+            return Err("Invalid image format: must be WebP".to_string());
         }
         if !validate_webp_magic(thumbnail_bytes) {
-            return Err("Invalid thumbnail format: must be WebP");
+            return Err("Invalid thumbnail format: must be WebP".to_string());
+        }
+        if original_bytes.len() > MAX_AVATAR_ORIGINAL_SIZE {
+            return Err("Original image must be between 1 byte and 10MB".to_string());
+        }
+        if full_bytes.len() > MAX_AVATAR_RENDERED_SIZE {
+            return Err(format!(
+                "Image too large: {} bytes (max {} bytes)",
+                full_bytes.len(),
+                MAX_AVATAR_RENDERED_SIZE
+            ));
+        }
+        if thumbnail_bytes.len() > MAX_AVATAR_RENDERED_SIZE {
+            return Err(format!(
+                "Thumbnail too large: {} bytes (max {} bytes)",
+                thumbnail_bytes.len(),
+                MAX_AVATAR_RENDERED_SIZE
+            ));
         }
 
         Ok(Self {
@@ -427,6 +439,15 @@ async fn upload_media_transaction(
     })
 }
 
+#[cfg(all(feature = "server", test))]
+pub(crate) async fn upload_media_transaction_for_test(
+    storage: &crate::storage::StorageClient,
+    owner_id: Uuid,
+    request: MediaUploadRequest<'_>,
+) -> Result<UploadedMedia, crate::storage::StorageError> {
+    upload_media_transaction(storage, owner_id, request).await
+}
+
 #[cfg(feature = "server")]
 #[derive(Debug)]
 pub(crate) enum MediaUploadError {
@@ -437,32 +458,68 @@ pub(crate) enum MediaUploadError {
 }
 
 #[cfg(feature = "server")]
+pub(crate) struct MediaUploadPermit {
+    owner_id: Uuid,
+    upload_guard: tokio::sync::OwnedMutexGuard<()>,
+}
+
+#[cfg(feature = "server")]
+pub(crate) async fn acquire_media_lifecycle_guard(
+    owner_id: Uuid,
+) -> tokio::sync::OwnedMutexGuard<()> {
+    media_upload_lock(owner_id).lock_owned().await
+}
+
+#[cfg(feature = "server")]
+pub(crate) async fn acquire_media_upload_permit(
+    owner_id: Uuid,
+) -> Result<MediaUploadPermit, MediaUploadError> {
+    crate::security::enforce_user_request_budget(owner_id, crate::security::RequestClass::Upload)
+        .map_err(|_| MediaUploadError::RateLimited)?;
+    Ok(MediaUploadPermit {
+        owner_id,
+        upload_guard: acquire_media_lifecycle_guard(owner_id).await,
+    })
+}
+
+#[cfg(feature = "server")]
+impl MediaUploadPermit {
+    pub(crate) async fn upload(
+        self,
+        storage: &crate::storage::StorageClient,
+        request: MediaUploadRequest<'_>,
+    ) -> Result<UploadedMedia, MediaUploadError> {
+        enforce_media_upload_quota(
+            storage,
+            self.owner_id,
+            request.incoming_bytes(),
+            u64::try_from(request.variants.len()).unwrap_or(u64::MAX),
+        )
+        .await
+        .map_err(|error| match error {
+            MediaQuotaCheckError::UsageUnavailable => MediaUploadError::UsageUnavailable,
+            MediaQuotaCheckError::Exceeded => MediaUploadError::QuotaExceeded,
+        })?;
+        let mut uploaded = upload_media_transaction(storage, self.owner_id, request)
+            .await
+            .map_err(MediaUploadError::Storage)?;
+        // Keep the permit alive for avatar persistence and previous-object
+        // retirement; paired responses release it when converted.
+        uploaded._upload_guard = Some(self.upload_guard);
+        Ok(uploaded)
+    }
+}
+
+#[cfg(feature = "server")]
 pub(crate) async fn upload_owned_media(
     storage: &crate::storage::StorageClient,
     owner_id: Uuid,
     request: MediaUploadRequest<'_>,
 ) -> Result<UploadedMedia, MediaUploadError> {
-    crate::security::enforce_user_request_budget(owner_id, crate::security::RequestClass::Upload)
-        .map_err(|_| MediaUploadError::RateLimited)?;
-    let upload_guard = media_upload_lock(owner_id).lock_owned().await;
-    enforce_media_upload_quota(
-        storage,
-        owner_id,
-        request.incoming_bytes(),
-        u64::try_from(request.variants.len()).unwrap_or(u64::MAX),
-    )
-    .await
-    .map_err(|error| match error {
-        MediaQuotaCheckError::UsageUnavailable => MediaUploadError::UsageUnavailable,
-        MediaQuotaCheckError::Exceeded => MediaUploadError::QuotaExceeded,
-    })?;
-    let mut uploaded = upload_media_transaction(storage, owner_id, request)
+    acquire_media_upload_permit(owner_id)
+        .await?
+        .upload(storage, request)
         .await
-        .map_err(MediaUploadError::Storage)?;
-    // Avatar persistence keeps this guard alive through its database update;
-    // paired uploads release it when their response is converted.
-    uploaded._upload_guard = Some(upload_guard);
-    Ok(uploaded)
 }
 
 // -- Server Function (for Dioxus frontend) --
@@ -1803,6 +1860,121 @@ mod tests {
         assert_eq!(original.owner_id(), owner_id);
         assert_eq!(original.object_id(), full.object_id());
         assert_eq!(full.object_id(), thumbnail.object_id());
+    }
+
+    #[tokio::test]
+    async fn upload_permits_serialize_one_owner_without_blocking_another() {
+        let owner_id = uuid::Uuid::new_v4();
+        let other_owner_id = uuid::Uuid::new_v4();
+        let first = acquire_media_upload_permit(owner_id).await.unwrap();
+        let mut same_owner = tokio::spawn(acquire_media_upload_permit(owner_id));
+
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(25), &mut same_owner,)
+                .await
+                .is_err()
+        );
+        let other_owner = tokio::time::timeout(
+            std::time::Duration::from_secs(1),
+            acquire_media_upload_permit(other_owner_id),
+        )
+        .await
+        .expect("another owner should not share the lock")
+        .unwrap();
+
+        drop(other_owner);
+        drop(first);
+        tokio::time::timeout(std::time::Duration::from_secs(1), same_owner)
+            .await
+            .expect("same owner should proceed after the first lifecycle ends")
+            .expect("same-owner permit task should join")
+            .expect("same-owner permit should be granted");
+    }
+
+    #[tokio::test]
+    async fn concurrent_owner_uploads_recheck_quota_after_the_first_transaction() {
+        let owner_id = uuid::Uuid::new_v4();
+        let mock_server = wiremock::MockServer::start().await;
+        let storage = crate::storage::StorageClient::for_test_with_endpoint(&mock_server.uri());
+        let incoming_bytes = u64::try_from(VALID_WEBP_BYTES.len() * 2).unwrap();
+        let stored_bytes = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(
+            crate::security::MAX_MEDIA_BYTES_PER_USER - incoming_bytes,
+        ));
+
+        let recipe_usage = stored_bytes.clone();
+        wiremock::Mock::given(wiremock::matchers::method("GET"))
+            .and(wiremock::matchers::query_param(
+                "prefix",
+                format!("recipes/{owner_id}/"),
+            ))
+            .respond_with(move |_: &wiremock::Request| {
+                let bytes = recipe_usage.load(std::sync::atomic::Ordering::SeqCst);
+                wiremock::ResponseTemplate::new(200).set_body_string(format!(
+                    "<?xml version=\"1.0\" encoding=\"UTF-8\"?><ListBucketResult><Name>noms-media</Name><KeyCount>1</KeyCount><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>recipes/{owner_id}/existing_full.webp</Key><Size>{bytes}</Size></Contents></ListBucketResult>"
+                ))
+            })
+            .expect(2)
+            .mount(&mock_server)
+            .await;
+        for namespace in ["collections", "avatars"] {
+            wiremock::Mock::given(wiremock::matchers::method("GET"))
+                .and(wiremock::matchers::query_param(
+                    "prefix",
+                    format!("{namespace}/{owner_id}/"),
+                ))
+                .respond_with(wiremock::ResponseTemplate::new(200).set_body_string(
+                    "<?xml version=\"1.0\" encoding=\"UTF-8\"?><ListBucketResult><Name>noms-media</Name><KeyCount>0</KeyCount><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated></ListBucketResult>",
+                ))
+                .expect(2)
+                .mount(&mock_server)
+                .await;
+        }
+
+        let uploaded_bytes = stored_bytes.clone();
+        wiremock::Mock::given(wiremock::matchers::method("PUT"))
+            .respond_with(move |_: &wiremock::Request| {
+                uploaded_bytes.fetch_add(
+                    u64::try_from(VALID_WEBP_BYTES.len()).unwrap(),
+                    std::sync::atomic::Ordering::SeqCst,
+                );
+                wiremock::ResponseTemplate::new(200)
+            })
+            .expect(2)
+            .mount(&mock_server)
+            .await;
+
+        let first_request =
+            MediaUploadRequest::paired(UploadPurpose::Recipe, VALID_WEBP_BYTES, VALID_WEBP_BYTES)
+                .unwrap();
+        let second_request =
+            MediaUploadRequest::paired(UploadPurpose::Recipe, VALID_WEBP_BYTES, VALID_WEBP_BYTES)
+                .unwrap();
+        let first_upload = async {
+            let uploaded = upload_owned_media(&storage, owner_id, first_request).await?;
+            uploaded
+                .into_upload_response()
+                .expect("paired upload response should be complete");
+            Ok::<(), MediaUploadError>(())
+        };
+        let second_upload = async {
+            let uploaded = upload_owned_media(&storage, owner_id, second_request).await?;
+            uploaded
+                .into_upload_response()
+                .expect("paired upload response should be complete");
+            Ok::<(), MediaUploadError>(())
+        };
+        let (first, second) = tokio::join!(first_upload, second_upload);
+
+        assert_eq!(usize::from(first.is_ok()) + usize::from(second.is_ok()), 1);
+        assert!(matches!(
+            (&first, &second),
+            (Ok(_), Err(MediaUploadError::QuotaExceeded))
+                | (Err(MediaUploadError::QuotaExceeded), Ok(_))
+        ));
+        assert_eq!(
+            stored_bytes.load(std::sync::atomic::Ordering::SeqCst),
+            crate::security::MAX_MEDIA_BYTES_PER_USER
+        );
     }
 
     #[test]
