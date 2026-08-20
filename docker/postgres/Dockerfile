@@ -1,4 +1,4 @@
-FROM postgres:17-bookworm
+FROM postgres:17-bookworm@sha256:84560e3b9c6874893fc4e2854f5dc3e7c1a37bc9d1dfd7a8c641310ae22ba5ad
 
 # Use a subdirectory under the persistent volume mount point for PGDATA.
 # Railway (and other orchestrators) mount storage at /var/lib/postgresql/data,
@@ -20,6 +20,7 @@ RUN apt-get update \
     && curl -fsSL \
        "https://github.com/paradedb/paradedb/releases/download/v0.23.4/postgresql-17-pg-search_0.23.4-1PARADEDB-bookworm_amd64.deb" \
        -o /tmp/pg_search.deb \
+    && echo "95b4ef14a43c158e1b18cedc2c59024beeabcb8ab0520f55529cc1932781a495  /tmp/pg_search.deb" | sha256sum --check - \
     && dpkg -i /tmp/pg_search.deb \
     && rm /tmp/pg_search.deb \
     && rm -rf /var/lib/apt/lists/*

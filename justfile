@@ -81,7 +81,17 @@ schema-check-test:
 	@bash scripts/tests/test-check-schema-plan.sh
 	@bash scripts/tests/test-pgschema-workflow.sh
 
+# Run security policy regression tests without network access.
+security-policy-test:
+	@bash scripts/tests/test-security-policy.sh
+
+# Audit dependencies and deployment artifacts using pinned policy.
+security-check:
+	@./scripts/security-audit.sh
+	@./scripts/check-tracked-secrets.sh
+	@./scripts/check-deployment-artifacts.sh
+
 # Run all checks and tests (mirrors what CI does)
-ci: fmt check lint test schema-check-test
+ci: fmt check lint test schema-check-test security-policy-test security-check
 	@echo ""
 	@echo "✅ All checks passed."

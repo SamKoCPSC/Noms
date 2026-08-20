@@ -1,7 +1,7 @@
-FROM golang:1.24-bookworm AS pgschema-builder
+FROM golang:1.24-bookworm@sha256:1a6d4452c65dea36aac2e2d606b01b4a029ec90cc1ae53890540ce6173ea77ac AS pgschema-builder
 RUN go install github.com/pgplex/pgschema@v1.12.1
 
-FROM rust:1-bookworm
+FROM rust:1-bookworm@sha256:0e2bcaef56d041a486784e54104a81aebe0da44bd03019bd70bc0401e42e4a97
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

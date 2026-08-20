@@ -30,7 +30,7 @@ services:
       start_period: 30s
 
   minio:
-    image: minio/minio:latest
+    image: minio/minio:latest@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     labels: *noms-labels
     entrypoint: ["/bin/sh", "-c"]
     command:
@@ -61,7 +61,7 @@ services:
       retries: 20
 
   minio-init:
-    image: minio/mc:latest
+    image: minio/mc:latest@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
     labels: *noms-labels
     depends_on:
       minio:
@@ -76,7 +76,7 @@ services:
         echo "noms-media bucket ready"
 
   mock-oauth:
-    image: ghcr.io/navikt/mock-oauth2-server:latest
+    image: ghcr.io/navikt/mock-oauth2-server:latest@sha256:b538810afd589d42fbfb856c588c2065eaeed1dc528d6c532972048e67fc2aff
     labels: *noms-labels
     ports:
       - target: 8080
@@ -93,7 +93,7 @@ services:
       retries: 20
 
   mock-github-api:
-    image: nginx:1.27-alpine
+    image: nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
     labels: *noms-labels
     volumes:
       - type: bind
