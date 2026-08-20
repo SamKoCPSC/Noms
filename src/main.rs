@@ -6,6 +6,8 @@ use manganis::CssAssetOptions;
 mod api;
 mod auth;
 mod components;
+#[cfg(feature = "server")]
+mod config;
 #[cfg(all(feature = "server", test))]
 mod cp5_quota_tests;
 #[cfg(feature = "server")]
@@ -118,9 +120,18 @@ fn main() {
 
 #[cfg(feature = "server")]
 async fn build_application_router() -> axum::Router {
-    let base_url =
-        std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:8080".to_string());
-    let (google_client, github_client) = auth::oauth::build_oauth_clients(&base_url);
+    // Validate the complete deployment contract before opening database or
+    // storage connections. Local development remains explicit via NOMS_ENV.
+    let runtime_config = config::RuntimeConfig::from_environment()
+        .unwrap_or_else(|error| panic!("application startup rejected: {error}"));
+    tracing::info!(
+        deployment_mode = ?runtime_config.mode(),
+        hsts_enabled = runtime_config.hsts_enabled(),
+        host_only_session_cookie = runtime_config.cookie_domain().is_none(),
+        "Validated runtime security configuration"
+    );
+    let (google_client, github_client) =
+        auth::oauth::build_oauth_clients(runtime_config.base_url());
 
     db::init_pool().await;
     let pool = db::get_pool();
@@ -187,7 +198,12 @@ async fn build_application_router() -> axum::Router {
         }
     });
 
-    oauth_router.merge(dioxus_router)
+    oauth_router
+        .merge(dioxus_router)
+        .layer(axum::middleware::from_fn_with_state(
+            runtime_config.security_headers(),
+            config::security_headers_middleware,
+        ))
 }
 
 #[cfg(feature = "server")]

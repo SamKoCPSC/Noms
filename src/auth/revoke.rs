@@ -89,7 +89,7 @@ pub async fn revoke_token(refresh_token: &str, provider: Provider) -> RevokeResu
 
 /// Revoke a Google OAuth token.
 ///
-/// POST https://oauth2.googleapis.com/revoke?token=...
+/// POST https://oauth2.googleapis.com/revoke with a form-encoded token body.
 /// No auth header required. Returns 200 on success.
 /// Accepts both access tokens and refresh tokens.
 async fn revoke_google(refresh_token: &str) -> RevokeResult {
@@ -103,29 +103,37 @@ async fn revoke_google_with_url(base_url: &str, refresh_token: &str) -> RevokeRe
         .build()
     {
         Ok(c) => c,
-        Err(e) => return RevokeResult::NetworkError(format!("Failed to build HTTP client: {e}")),
+        Err(_) => {
+            return RevokeResult::NetworkError("HTTP client initialization failed".to_string())
+        }
     };
 
-    let url = format!("{base_url}/revoke?token={refresh_token}");
+    let url = format!("{base_url}/revoke");
 
-    let response = match client.post(&url).send().await {
+    let response = match client
+        .post(&url)
+        .form(&[("token", refresh_token)])
+        .send()
+        .await
+    {
         Ok(r) => r,
         Err(e) => {
             if e.is_timeout() {
                 return RevokeResult::Timeout;
             }
-            return RevokeResult::NetworkError(e.to_string());
+            let category = if e.is_connect() {
+                "provider connection failed"
+            } else {
+                "provider request failed"
+            };
+            return RevokeResult::NetworkError(category.to_string());
         }
     };
 
     if response.status().is_success() {
         RevokeResult::Success
     } else {
-        RevokeResult::HttpError(format!(
-            "HTTP {}: {}",
-            response.status(),
-            response.text().await.unwrap_or_default()
-        ))
+        RevokeResult::HttpError(format!("HTTP {}", response.status()))
     }
 }
 
@@ -176,7 +184,7 @@ pub async fn revoke_all_user_tokens(pool: &sqlx::PgPool, user_id: uuid::Uuid) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wiremock::matchers::{method, path};
+    use wiremock::matchers::{body_string, method, path, query_param_is_missing};
     use wiremock::MockServer;
     use wiremock::ResponseTemplate;
 
@@ -192,6 +200,8 @@ mod tests {
 
         wiremock::Mock::given(method("POST"))
             .and(path("/revoke"))
+            .and(query_param_is_missing("token"))
+            .and(body_string("token=test_refresh_token"))
             .respond_with(ResponseTemplate::new(200).set_body_string("{}"))
             .mount(&server)
             .await;
@@ -251,6 +261,18 @@ mod tests {
             }
             other => panic!("expected NetworkError or Timeout, got {other:?}"),
         }
+    }
+
+    #[tokio::test]
+    async fn revocation_failures_never_expose_the_refresh_token() {
+        let refresh_token = "cp6-super-sensitive-refresh-token";
+        let result = revoke_google_with_url("http://127.0.0.1:1", refresh_token).await;
+
+        assert!(matches!(
+            result,
+            RevokeResult::NetworkError(_) | RevokeResult::Timeout
+        ));
+        assert!(!format!("{result:?}").contains(refresh_token));
     }
 
     #[test]

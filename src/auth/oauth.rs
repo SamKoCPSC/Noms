@@ -132,6 +132,27 @@ impl std::fmt::Display for OAuthError {
 }
 
 impl OAuthError {
+    /// Stable, non-sensitive category for structured server logs.
+    fn log_code(&self) -> &'static str {
+        match self {
+            Self::InvalidProvider(_) => "invalid_provider",
+            Self::InvalidRedirectUri(_) => "invalid_redirect",
+            Self::StateNotFound => "state_not_found",
+            Self::StateExpired => "state_expired",
+            Self::ProviderMismatch => "provider_mismatch",
+            Self::StateUserMismatch => "state_user_mismatch",
+            Self::InvalidPurpose => "invalid_purpose",
+            Self::LinkSessionRequired => "link_session_required",
+            Self::LoginSessionConflict => "login_session_conflict",
+            Self::TokenExchange(_) => "token_exchange",
+            Self::UserInfoExtraction(_) => "user_info",
+            Self::DbError(_) => "database",
+            Self::SessionError(_) => "session",
+            Self::LinkError(_) => "account_link",
+            Self::AccountAlreadyLinked(_) => "account_already_linked",
+        }
+    }
+
     /// Return a client-safe error message.
     ///
     /// For client errors (4xx), returns the detailed message via `Display`.
@@ -172,7 +193,7 @@ impl IntoResponse for OAuthError {
                 provider
             );
             tracing::warn!(
-                error = %self,
+                error_code = self.log_code(),
                 provider = %provider,
                 "Account already linked conflict — redirecting with error"
             );
@@ -197,11 +218,12 @@ impl IntoResponse for OAuthError {
             Self::AccountAlreadyLinked(_) => unreachable!(), // handled above
         };
 
-        // Log detailed error server-side for all errors
+        // Log only a stable category; provider bodies and token-exchange
+        // details may contain credentials or authorization artifacts.
         if status.is_server_error() {
-            tracing::error!(error = %self, status = ?status, "Internal server error");
+            tracing::error!(error_code = self.log_code(), status = ?status, "Internal server error");
         } else {
-            tracing::warn!(error = %self, status = ?status, "Client error");
+            tracing::warn!(error_code = self.log_code(), status = ?status, "Client error");
         }
 
         let message = self.sanitized_message();
@@ -1151,16 +1173,18 @@ mod tests {
     }
 
     #[test]
-    fn test_display_still_detailed_for_logging() {
-        // Verify Display still produces detailed messages (for logging)
-        let err = OAuthError::DbError("PG error: relation does not exist".to_string());
-        let display_msg = err.to_string();
-        assert!(
-            display_msg.contains("PG error"),
-            "Display should contain details for logging: {display_msg}"
-        );
-        // But sanitized message should be generic
-        assert!(!err.sanitized_message().contains("PG error"));
+    fn internal_error_log_codes_never_include_provider_or_secret_details() {
+        let secret = "cp6-sensitive-provider-response";
+        for (error, expected_code) in [
+            (OAuthError::TokenExchange(secret.into()), "token_exchange"),
+            (OAuthError::UserInfoExtraction(secret.into()), "user_info"),
+            (OAuthError::DbError(secret.into()), "database"),
+            (OAuthError::SessionError(secret.into()), "session"),
+            (OAuthError::LinkError(secret.into()), "account_link"),
+        ] {
+            assert_eq!(error.log_code(), expected_code);
+            assert!(!error.log_code().contains(secret));
+        }
     }
 
     #[test]

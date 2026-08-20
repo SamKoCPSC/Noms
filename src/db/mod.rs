@@ -51,6 +51,8 @@ pub enum DbError {
     MissingUrl,
     /// Failed to connect to the database.
     Connection(sqlx::Error),
+    /// Database pool limits are malformed or unsafe.
+    InvalidConfiguration(DatabaseConfigError),
     /// A query failed.
     Query(sqlx::Error),
     /// The requested username is already taken by another user.
@@ -111,6 +113,7 @@ impl std::fmt::Display for DbError {
         match self {
             DbError::MissingUrl => write!(f, "DATABASE_URL not set"),
             DbError::Connection(e) => write!(f, "database connection failed: {e}"),
+            DbError::InvalidConfiguration(e) => write!(f, "database configuration failed: {e}"),
             DbError::Query(e) => write!(f, "database query failed: {e}"),
             DbError::UsernameTaken => write!(f, "username is already taken"),
             DbError::SessionInvalid => write!(f, "session is invalid, revoked, or expired"),
@@ -168,7 +171,7 @@ impl std::fmt::Display for DbError {
 impl std::error::Error for DbError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            DbError::MissingUrl => None,
+            DbError::MissingUrl | DbError::InvalidConfiguration(_) => None,
             DbError::Connection(e) | DbError::Query(e) => Some(e),
             DbError::UsernameTaken => None,
             DbError::SessionInvalid => None,
@@ -196,6 +199,150 @@ impl std::error::Error for DbError {
 
 // ── Connection pool ─────────────────────────────────────────────────────────
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DatabaseConfigError {
+    variable: &'static str,
+    reason: &'static str,
+}
+
+impl std::fmt::Display for DatabaseConfigError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "{} {}", self.variable, self.reason)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct DatabasePoolConfig {
+    max_connections: u32,
+    acquire_timeout: std::time::Duration,
+    idle_timeout: std::time::Duration,
+    statement_timeout: std::time::Duration,
+    transaction_timeout: std::time::Duration,
+    idle_in_transaction_timeout: std::time::Duration,
+}
+
+impl DatabasePoolConfig {
+    fn from_environment() -> Result<Self, DatabaseConfigError> {
+        Self::from_lookup(|name| std::env::var(name).ok())
+    }
+
+    fn from_lookup<F>(lookup: F) -> Result<Self, DatabaseConfigError>
+    where
+        F: Fn(&str) -> Option<String>,
+    {
+        let max_connections = parse_bounded_u64(&lookup, "DB_MAX_CONNECTIONS", 5, 1, 100)? as u32;
+        let acquire_timeout = duration_from_seconds(&lookup, "DB_ACQUIRE_TIMEOUT_SECS", 10, 1, 60)?;
+        let idle_timeout = duration_from_seconds(&lookup, "DB_IDLE_TIMEOUT_SECS", 300, 1, 3600)?;
+        let statement_timeout =
+            duration_from_millis(&lookup, "DB_STATEMENT_TIMEOUT_MS", 15_000, 100, 300_000)?;
+        let transaction_timeout =
+            duration_from_millis(&lookup, "DB_TRANSACTION_TIMEOUT_MS", 30_000, 100, 600_000)?;
+        let idle_in_transaction_timeout = duration_from_millis(
+            &lookup,
+            "DB_IDLE_TRANSACTION_TIMEOUT_MS",
+            30_000,
+            100,
+            600_000,
+        )?;
+
+        if transaction_timeout < statement_timeout {
+            return Err(DatabaseConfigError {
+                variable: "DB_TRANSACTION_TIMEOUT_MS",
+                reason: "must be greater than or equal to DB_STATEMENT_TIMEOUT_MS",
+            });
+        }
+        if idle_in_transaction_timeout < statement_timeout {
+            return Err(DatabaseConfigError {
+                variable: "DB_IDLE_TRANSACTION_TIMEOUT_MS",
+                reason: "must be greater than or equal to DB_STATEMENT_TIMEOUT_MS",
+            });
+        }
+
+        Ok(Self {
+            max_connections,
+            acquire_timeout,
+            idle_timeout,
+            statement_timeout,
+            transaction_timeout,
+            idle_in_transaction_timeout,
+        })
+    }
+}
+
+fn parse_bounded_u64<F>(
+    lookup: &F,
+    variable: &'static str,
+    default: u64,
+    minimum: u64,
+    maximum: u64,
+) -> Result<u64, DatabaseConfigError>
+where
+    F: Fn(&str) -> Option<String>,
+{
+    let Some(raw) = lookup(variable) else {
+        return Ok(default);
+    };
+    let value = raw.parse::<u64>().map_err(|_| DatabaseConfigError {
+        variable,
+        reason: "must be an integer",
+    })?;
+    if !(minimum..=maximum).contains(&value) {
+        return Err(DatabaseConfigError {
+            variable,
+            reason: "is outside the supported safety range",
+        });
+    }
+    Ok(value)
+}
+
+fn duration_from_seconds<F>(
+    lookup: &F,
+    variable: &'static str,
+    default: u64,
+    minimum: u64,
+    maximum: u64,
+) -> Result<std::time::Duration, DatabaseConfigError>
+where
+    F: Fn(&str) -> Option<String>,
+{
+    parse_bounded_u64(lookup, variable, default, minimum, maximum)
+        .map(std::time::Duration::from_secs)
+}
+
+fn duration_from_millis<F>(
+    lookup: &F,
+    variable: &'static str,
+    default: u64,
+    minimum: u64,
+    maximum: u64,
+) -> Result<std::time::Duration, DatabaseConfigError>
+where
+    F: Fn(&str) -> Option<String>,
+{
+    parse_bounded_u64(lookup, variable, default, minimum, maximum)
+        .map(std::time::Duration::from_millis)
+}
+
+async fn apply_database_session_limits(
+    connection: &mut sqlx::PgConnection,
+    config: &DatabasePoolConfig,
+) -> Result<(), sqlx::Error> {
+    let statement_timeout = format!("{}ms", config.statement_timeout.as_millis());
+    let transaction_timeout = format!("{}ms", config.transaction_timeout.as_millis());
+    let idle_transaction_timeout = format!("{}ms", config.idle_in_transaction_timeout.as_millis());
+    sqlx::query(
+        "SELECT set_config('statement_timeout', $1, false), \
+                set_config('transaction_timeout', $2, false), \
+                set_config('idle_in_transaction_session_timeout', $3, false)",
+    )
+    .bind(statement_timeout)
+    .bind(transaction_timeout)
+    .bind(idle_transaction_timeout)
+    .execute(connection)
+    .await?;
+    Ok(())
+}
+
 /// Create a new connection pool from the `DATABASE_URL` environment variable.
 ///
 /// Validates connectivity — returns an error if the database is unreachable.
@@ -207,18 +354,24 @@ impl std::error::Error for DbError {
 /// - `min_connections`: 1 (avoids cold-start latency on first request)
 /// - `idle_timeout`: 5min (releases unused connections promptly)
 ///
-/// Override `max_connections` via the `DB_MAX_CONNECTIONS` env var if needed.
+/// Every pooled connection also receives bounded statement, transaction, and
+/// idle-in-transaction budgets. All pool values have narrow environment
+/// overrides that fail closed on malformed or unsafe values.
 pub async fn create_pool() -> Result<PgPool, DbError> {
     let url = std::env::var("DATABASE_URL").map_err(|_| DbError::MissingUrl)?;
-    let max_connections: u32 = std::env::var("DB_MAX_CONNECTIONS")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(5);
+    let config = DatabasePoolConfig::from_environment().map_err(DbError::InvalidConfiguration)?;
+    let connection_config = config.clone();
 
     sqlx::postgres::PgPoolOptions::new()
-        .max_connections(max_connections)
-        .acquire_timeout(std::time::Duration::from_secs(10))
-        .idle_timeout(std::time::Duration::from_secs(300))
+        .max_connections(config.max_connections)
+        .min_connections(1)
+        .acquire_timeout(config.acquire_timeout)
+        .idle_timeout(config.idle_timeout)
+        .max_lifetime(std::time::Duration::from_secs(1800))
+        .after_connect(move |connection, _metadata| {
+            let config = connection_config.clone();
+            Box::pin(async move { apply_database_session_limits(connection, &config).await })
+        })
         .connect(&url)
         .await
         .map_err(DbError::Connection)
@@ -3370,6 +3523,157 @@ pub async fn clear_non_collection_cover_references(
 mod tests {
     use super::*;
     use crate::test_utils;
+
+    #[test]
+    fn production_pool_limits_have_bounded_defaults() {
+        let config = DatabasePoolConfig::from_lookup(|_| None).unwrap();
+
+        assert_eq!(config.max_connections, 5);
+        assert_eq!(config.acquire_timeout, std::time::Duration::from_secs(10));
+        assert_eq!(config.idle_timeout, std::time::Duration::from_secs(300));
+        assert_eq!(config.statement_timeout, std::time::Duration::from_secs(15));
+        assert_eq!(
+            config.transaction_timeout,
+            std::time::Duration::from_secs(30)
+        );
+        assert_eq!(
+            config.idle_in_transaction_timeout,
+            std::time::Duration::from_secs(30)
+        );
+    }
+
+    #[test]
+    fn production_pool_limits_reject_zero_invalid_and_unbounded_values() {
+        for (name, value) in [
+            ("DB_MAX_CONNECTIONS", "0"),
+            ("DB_MAX_CONNECTIONS", "101"),
+            ("DB_STATEMENT_TIMEOUT_MS", "0"),
+            ("DB_TRANSACTION_TIMEOUT_MS", "not-a-number"),
+            ("DB_IDLE_TRANSACTION_TIMEOUT_MS", "600001"),
+        ] {
+            let result = DatabasePoolConfig::from_lookup(|requested| {
+                (requested == name).then(|| value.to_string())
+            });
+            let error = result.expect_err("unsafe pool configuration must be rejected");
+            assert!(error.to_string().contains(name));
+        }
+    }
+
+    #[test]
+    fn transaction_timeout_cannot_be_shorter_than_statement_timeout() {
+        let result = DatabasePoolConfig::from_lookup(|name| match name {
+            "DB_STATEMENT_TIMEOUT_MS" => Some("30000".into()),
+            "DB_TRANSACTION_TIMEOUT_MS" => Some("15000".into()),
+            _ => None,
+        });
+
+        let error = result.expect_err("transaction timeout must cover a statement budget");
+        assert!(error.to_string().contains("DB_TRANSACTION_TIMEOUT_MS"));
+    }
+
+    #[tokio::test]
+    async fn database_session_limits_are_applied_to_a_connection() {
+        let (_database, pool) = test_utils::setup_test_db().await;
+        let config = DatabasePoolConfig::from_lookup(|_| None).unwrap();
+        let mut connection = pool.acquire().await.unwrap();
+        let server_version =
+            sqlx::query_scalar::<_, i32>("SELECT current_setting('server_version_num')::INTEGER")
+                .fetch_one(&mut *connection)
+                .await
+                .unwrap();
+        if server_version < 170_000 {
+            eprintln!("PostgreSQL 17 is required to exercise transaction_timeout");
+            return;
+        }
+
+        apply_database_session_limits(&mut connection, &config)
+            .await
+            .unwrap();
+        let settings: (String, String, String) = sqlx::query_as(
+            "SELECT current_setting('statement_timeout'), \
+                    current_setting('transaction_timeout'), \
+                    current_setting('idle_in_transaction_session_timeout')",
+        )
+        .fetch_one(&mut *connection)
+        .await
+        .unwrap();
+
+        assert_eq!(settings.0, "15s");
+        assert_eq!(settings.1, "30s");
+        assert_eq!(settings.2, "30s");
+    }
+
+    #[tokio::test]
+    async fn runtime_grants_enforce_a_non_owning_data_plane_role() {
+        use std::process::Command;
+
+        let (database, pool) = test_utils::setup_test_db().await;
+        sqlx::query("CREATE ROLE noms_runtime LOGIN PASSWORD 'runtime-test-password'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let database_name = sqlx::query_scalar::<_, String>("SELECT current_database()")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        let output = Command::new("psql")
+            .arg(database.connection_uri())
+            .args([
+                "--set",
+                "ON_ERROR_STOP=1",
+                "--set",
+                "runtime_role=noms_runtime",
+                "--set",
+                &format!("runtime_database={database_name}"),
+                "--file",
+                concat!(env!("CARGO_MANIFEST_DIR"), "/migrations/runtime-grants.sql"),
+            ])
+            .output()
+            .expect("psql is required for the production grants regression test");
+        assert!(
+            output.status.success(),
+            "runtime grants failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        let privileges: (bool, bool, bool, bool, bool, bool) = sqlx::query_as(
+            "SELECT \
+                has_database_privilege('noms_runtime', current_database(), 'CONNECT'), \
+                has_database_privilege('noms_runtime', current_database(), 'TEMPORARY'), \
+                has_schema_privilege('noms_runtime', 'public', 'USAGE'), \
+                has_schema_privilege('noms_runtime', 'public', 'CREATE'), \
+                has_table_privilege('noms_runtime', 'users', 'SELECT,INSERT,UPDATE,DELETE'), \
+                has_table_privilege('noms_runtime', 'users', 'TRUNCATE,REFERENCES,TRIGGER')",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(privileges, (true, false, true, false, true, false));
+
+        sqlx::query("CREATE ROLE unsafe_runtime LOGIN SUPERUSER")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let rejected = Command::new("psql")
+            .arg(database.connection_uri())
+            .args([
+                "--set",
+                "ON_ERROR_STOP=1",
+                "--set",
+                "runtime_role=unsafe_runtime",
+                "--set",
+                &format!("runtime_database={database_name}"),
+                "--file",
+                concat!(env!("CARGO_MANIFEST_DIR"), "/migrations/runtime-grants.sql"),
+            ])
+            .output()
+            .expect("psql is required for the production grants regression test");
+        assert!(
+            !rejected.status.success(),
+            "administrative runtime roles must fail closed"
+        );
+    }
 
     #[tokio::test]
     async fn test_insert_and_get_user() {
