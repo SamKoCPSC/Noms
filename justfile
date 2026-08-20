@@ -72,9 +72,11 @@ check:
 	cargo check --target wasm32-unknown-unknown
 	SQLX_OFFLINE=true cargo check --features server
 
-# Run tests (uses SQLx offline mode so no live DB is needed at compile time)
+# Run tests (uses SQLx offline mode so no live DB is needed at compile time).
+# Cap concurrency because database tests each start an isolated PostgreSQL
+# process; matching the host's full CPU count can exhaust startup resources.
 test:
-	SQLX_OFFLINE=true cargo test --features server
+	SQLX_OFFLINE=true cargo test --features server -- --test-threads=8
 
 # Run CI gate script tests
 schema-check-test:
