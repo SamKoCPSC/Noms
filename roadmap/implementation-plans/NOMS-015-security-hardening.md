@@ -1,6 +1,6 @@
 # NOMS-015: Security Hardening to a Good-Enough Baseline — Agentic Implementation Plan
 
-**Status:** In progress — CP0–CP5A implemented and reviewed; CP6–CP7 remain
+**Status:** In progress — CP0–CP6 implemented and reviewed; CP7 remains
 **Created:** 2026-07-29
 **Issue:** [NOMS-015-security-hardening.md](../issues/NOMS-015-security-hardening.md)
 **Source:** Authentication, authorization, and application security review completed 2026-07-28
@@ -32,8 +32,8 @@ that will actually ship.
 
 ### Progress summary
 
-- **Implemented and independently reviewed:** CP0 baseline reliability, CP1 OAuth intent/session binding and same-origin redirects, CP2 integrated media ownership and orphan retention, CP3 trusted-proxy client identity and per-client OAuth limits, CP4 stable provider identities without legacy email reconciliation, CP4A completed-router and collection-media alignment, CP5 integrated resource-abuse bounds, and CP5A typed media-upload unification.
-- **Remaining before the final consumer-security verdict:** CP6 dependency/secret/deployment verification and CP7 adversarial review against the complete release candidate.
+- **Implemented and independently reviewed:** CP0 baseline reliability, CP1 OAuth intent/session binding and same-origin redirects, CP2 integrated media ownership and orphan retention, CP3 trusted-proxy client identity and per-client OAuth limits, CP4 stable provider identities without legacy email reconciliation, CP4A completed-router and collection-media alignment, CP5 integrated resource-abuse bounds, CP5A typed media-upload unification, and CP6 dependency/secret/deployment verification.
+- **Remaining before the final consumer-security verdict:** CP7 adversarial review against the complete release candidate.
 
 ---
 
@@ -821,6 +821,23 @@ Build the production Docker image and inspect its runtime user, environment cont
 
 **Risk:** Medium. Most work is preventative, but configuration drift can bypass otherwise correct cookie and OAuth behavior.
 
+### Completion evidence (2026-08-20)
+
+- Production configuration now fails closed for insecure or missing secrets,
+  origins, provider endpoints, database role separation, and Railway-local mode.
+- CI pins build inputs and rejects new reachable dependency advisories, tracked
+  credential patterns, mutable deployment artifacts, and unpinned production
+  dependencies. The reviewed RustSec exception is narrow and expires.
+- The runtime database role is verified as a non-owning data-plane role with
+  bounded pool and server-side statement/transaction timeouts.
+- `just ci` passed at implementation revision `c72562d` with 656 active tests
+  passing and 10 environment-dependent tests ignored; the schema, security
+  policy, secret, deployment-artifact, and dependency-audit gates also passed.
+- Independent focused review returned `PASS` in
+  `/tmp/noms-cp6-final-pass.html`. A local production-image build could not be
+  repeated because the Docker daemon was unavailable, so CP7 must repeat the
+  image/runtime inspection in its fresh release-candidate environment.
+
 ---
 
 ## Checkpoint 7: Integrated adversarial review and release gate
@@ -980,6 +997,6 @@ Track structured counts without sensitive values:
 - [ ] Search results, grouped sections, counts, facets, and autocomplete cannot reveal another user's private/unlisted entities.
 - [ ] Graph expansion state, collection hierarchy/reorders, active drafts, immutable-version growth, and search/autocomplete workloads have proportionate per-request and sustained-abuse controls.
 - [ ] Public queries, structured recipe inputs, uploads, and mutations have proportionate server-side bounds.
-- [ ] Dependency audit and production security configuration are enforced in CI/deployment.
+- [x] Dependency audit and production security configuration are enforced in CI/deployment.
 - [ ] Independent integrated security review returns `GOOD ENOUGH`.
 - [ ] Remaining specialized risks, exclusions, owners, and expiry dates are documented.
