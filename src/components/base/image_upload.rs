@@ -784,7 +784,10 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                     let img_status = img.status.clone();
                     let img_error = img.error.clone();
                     let img_edit = img.edit.clone();
-                    let img_edit_key = format!(
+                    // The web renderer uses this key to remount the preview after an
+                    // edit. The server half of a full-stack bundle intentionally
+                    // discards DOM keys, so keep the binding warning-free there.
+                    let _img_edit_key = format!(
                         "{:.4}-{:.4}-{:.4}-{:.4}-{:.2}-{:.4}-{:.4}-{:.4}-{:.4}",
                         img_edit.crop.x,
                         img_edit.crop.y,
@@ -854,7 +857,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                         editor_modal_url.set(Some(url.clone()));
                                     },
                                     EditedRecipeImage {
-                                        key: "{img_id}-{img_edit_key}",
+                                        key: "{img_id}-{_img_edit_key}",
                                         image: RecipeImage::new(url.clone(), None, img_edit),
                                         class: "recipe-image-preview",
                                         alt: img_name.clone(),
