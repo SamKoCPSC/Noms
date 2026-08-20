@@ -44,6 +44,27 @@ if grep -Fq "$fixture_secret" "$test_root/secret.out"; then
     echo "secret scan output must not print discovered values" >&2
     exit 1
 fi
+git -C "$fixture_repo" rm --quiet --cached credential.txt
+
+project_secret_fixture='cp6-production-credential-value-with-entropy'
+{
+    printf 'SESSION_SECRET=%s\n' "$project_secret_fixture"
+    printf 'export GOOGLE_CLIENT_SECRET=%s\n' "$project_secret_fixture"
+    printf '"GITHUB_CLIENT_SECRET": "%s"\n' "$project_secret_fixture"
+    printf -- '- R2_ACCESS_KEY_ID=%s\n' "$project_secret_fixture"
+    printf 'R2_SECRET_ACCESS_KEY=%s\n' "$project_secret_fixture"
+} > "$fixture_repo/production.env"
+git -C "$fixture_repo" add production.env
+if NOMS_SECRET_SCAN_ROOT="$fixture_repo" "$repo_root/scripts/check-tracked-secrets.sh" \
+    >"$test_root/project-secret.out" 2>&1; then
+    echo "project credential assignments must fail validation" >&2
+    exit 1
+fi
+grep -q 'production.env' "$test_root/project-secret.out"
+if grep -Fq "$project_secret_fixture" "$test_root/project-secret.out"; then
+    echo "project secret scan output must not print discovered values" >&2
+    exit 1
+fi
 
 "$repo_root/scripts/check-deployment-artifacts.sh"
 deployment_fixture="$test_root/deployment-fixture"

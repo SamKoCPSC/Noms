@@ -32,6 +32,14 @@ SELECT format(
 
         IF EXISTS (
             SELECT 1
+            FROM pg_database
+            WHERE datname = %L AND datdba = checked_role.oid
+        ) THEN
+            RAISE EXCEPTION 'runtime database role must not own the application database';
+        END IF;
+
+        IF EXISTS (
+            SELECT 1
             FROM pg_namespace
             WHERE nspname = 'public' AND nspowner = checked_role.oid
         ) OR EXISTS (
@@ -55,13 +63,15 @@ SELECT format(
     END
     $runtime_role_guard$;
     $guard$,
-    :'runtime_role'
+    :'runtime_role',
+    :'runtime_database'
 ) \gexec
 
-REVOKE TEMPORARY ON DATABASE :"runtime_database" FROM PUBLIC;
+REVOKE CREATE, TEMPORARY ON DATABASE :"runtime_database" FROM PUBLIC;
+REVOKE ALL PRIVILEGES ON DATABASE :"runtime_database" FROM :"runtime_role";
+GRANT CONNECT ON DATABASE :"runtime_database" TO :"runtime_role";
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 REVOKE ALL ON SCHEMA public FROM :"runtime_role";
-GRANT CONNECT ON DATABASE :"runtime_database" TO :"runtime_role";
 GRANT USAGE ON SCHEMA public TO :"runtime_role";
 
 REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM :"runtime_role";

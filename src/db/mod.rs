@@ -3616,6 +3616,13 @@ mod tests {
             .fetch_one(&pool)
             .await
             .unwrap();
+        let quoted_database_name = database_name.replace('"', "\"\"");
+        sqlx::query(&format!(
+            "GRANT CREATE, TEMPORARY ON DATABASE \"{quoted_database_name}\" TO noms_runtime"
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
 
         let output = Command::new("psql")
             .arg(database.connection_uri())
@@ -3637,10 +3644,11 @@ mod tests {
             String::from_utf8_lossy(&output.stderr)
         );
 
-        let privileges: (bool, bool, bool, bool, bool, bool) = sqlx::query_as(
+        let privileges: (bool, bool, bool, bool, bool, bool, bool) = sqlx::query_as(
             "SELECT \
                 has_database_privilege('noms_runtime', current_database(), 'CONNECT'), \
                 has_database_privilege('noms_runtime', current_database(), 'TEMPORARY'), \
+                has_database_privilege('noms_runtime', current_database(), 'CREATE'), \
                 has_schema_privilege('noms_runtime', 'public', 'USAGE'), \
                 has_schema_privilege('noms_runtime', 'public', 'CREATE'), \
                 has_table_privilege('noms_runtime', 'users', 'SELECT,INSERT,UPDATE,DELETE'), \
@@ -3649,7 +3657,7 @@ mod tests {
         .fetch_one(&pool)
         .await
         .unwrap();
-        assert_eq!(privileges, (true, false, true, false, true, false));
+        assert_eq!(privileges, (true, false, false, true, false, true, false));
 
         sqlx::query("CREATE ROLE unsafe_runtime LOGIN SUPERUSER")
             .execute(&pool)
@@ -3672,6 +3680,35 @@ mod tests {
         assert!(
             !rejected.status.success(),
             "administrative runtime roles must fail closed"
+        );
+
+        sqlx::query("CREATE ROLE owner_runtime LOGIN")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(&format!(
+            "ALTER DATABASE \"{quoted_database_name}\" OWNER TO owner_runtime"
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
+        let owner_rejected = Command::new("psql")
+            .arg(database.connection_uri())
+            .args([
+                "--set",
+                "ON_ERROR_STOP=1",
+                "--set",
+                "runtime_role=owner_runtime",
+                "--set",
+                &format!("runtime_database={database_name}"),
+                "--file",
+                concat!(env!("CARGO_MANIFEST_DIR"), "/migrations/runtime-grants.sql"),
+            ])
+            .output()
+            .expect("psql is required for the production grants regression test");
+        assert!(
+            !owner_rejected.status.success(),
+            "database-owning runtime roles must fail closed"
         );
     }
 

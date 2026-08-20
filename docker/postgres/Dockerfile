@@ -16,7 +16,10 @@ RUN apt-get update \
        > /etc/apt/sources.list.d/timescaledb.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-       postgresql-17-cron postgresql-17-pgvector timescaledb-2-postgresql-17 \
+       postgresql-17-cron=1.6.7-3.pgdg12+1 \
+       postgresql-17-pgvector=0.8.6-1.pgdg12+1 \
+       timescaledb-2-loader-postgresql-17=2.29.2~debian12-1710 \
+       timescaledb-2-postgresql-17=2.29.2~debian12-1710 \
     && curl -fsSL \
        "https://github.com/paradedb/paradedb/releases/download/v0.23.4/postgresql-17-pg-search_0.23.4-1PARADEDB-bookworm_amd64.deb" \
        -o /tmp/pg_search.deb \

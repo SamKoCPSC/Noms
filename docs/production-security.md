@@ -43,8 +43,10 @@ and uses the direct peer address.
 
 Railway is configured to build the repository Dockerfile, use `/` as its
 health check, and restart failed processes. The container runs as the
-unprivileged `noms` user. Railway terminates public TLS; the application adds a
-one-year HSTS header to every production response. Verify HTTP-to-HTTPS
+unprivileged `noms` user. The server, entrypoint, and migration files remain
+root-owned and non-writable so a compromised runtime process cannot replace a
+privileged restart artifact. Railway terminates public TLS; the application
+adds a one-year HSTS header to every production response. Verify HTTP-to-HTTPS
 redirection and HSTS on the deployed custom domain after every routing change.
 
 Keep the application at one replica until the process-local OAuth request
@@ -65,7 +67,8 @@ The runtime role must be standalone: no inherited roles, `CREATEDB`,
 extension-management, schema-creation, or object-ownership privileges. The
 entrypoint checks these properties before granting data-plane access and
 aborts deployment if they are violated. It also removes public temporary-table
-access for the application database.
+and schema-creation access for the application database, removes any direct
+runtime-role database ACLs, and then restores only `CONNECT`.
 
 Production requires PostgreSQL 17 or newer because the transaction-wide
 budget uses `transaction_timeout`; an older server is rejected while opening
@@ -100,7 +103,10 @@ just ci
 ```
 
 This includes the pinned RustSec audit, expiring-exception validation, tracked
-credential scan, immutable container/action checks, compilation, linting,
-tests, and schema-plan regression tests. A production Docker build should also
-be completed before release. Never put discovered secret values into CI logs
-or review reports.
+credential scan (including project-specific OAuth, session, and R2 assignment
+formats), immutable container/action checks, compilation, linting, tests, and
+schema-plan regression tests. The PostgreSQL extension packages are exact
+versions and the ParadeDB package is checksum-verified; update those pins only
+as a reviewed dependency change. A production Docker build should also be
+completed before release. Never put discovered secret values into CI logs or
+review reports.

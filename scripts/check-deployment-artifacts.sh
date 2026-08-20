@@ -53,6 +53,15 @@ if [ -f "$production_dockerfile" ]; then
         echo "production Dockerfile must run as USER noms" >&2
         failed=true
     }
+    if grep -qE 'chown.*noms.*/usr/local/app|COPY[[:space:]]+--chown=noms' \
+        "$production_dockerfile"; then
+        echo "production startup artifacts must not be writable by USER noms" >&2
+        failed=true
+    fi
+    grep -qE 'chmod[[:space:]]+0555[[:space:]]+/usr/local/app' "$production_dockerfile" || {
+        echo "production application directory must be read-only to USER noms" >&2
+        failed=true
+    }
     for ignored_path in '.git' '.env.local' 'target'; do
         grep -Fxq "$ignored_path" "$deployment_root/.dockerignore" 2>/dev/null || {
             echo ".dockerignore must exclude $ignored_path" >&2
@@ -69,7 +78,7 @@ if [ -f "$production_dockerfile" ]; then
         echo "production entrypoint must separate migration credentials" >&2
         failed=true
     }
-    for role_guard in rolsuper pg_auth_members relowner; do
+    for role_guard in rolsuper pg_auth_members datdba relowner; do
         grep -q "$role_guard" "$deployment_root/migrations/runtime-grants.sql" 2>/dev/null || {
             echo "runtime database role guard is missing: $role_guard" >&2
             failed=true
@@ -88,6 +97,13 @@ if [ -f "$postgres_dockerfile" ]; then
         echo "pg_search package checksum is not verified" >&2
         failed=true
     }
+    for extension_package in postgresql-17-cron postgresql-17-pgvector \
+        timescaledb-2-loader-postgresql-17 timescaledb-2-postgresql-17; do
+        grep -qE "${extension_package}=[^[:space:]\\]+" "$postgres_dockerfile" || {
+            echo "PostgreSQL extension package is not version-pinned: $extension_package" >&2
+            failed=true
+        }
+    done
 fi
 
 railway_config="$deployment_root/railway.toml"
@@ -116,6 +132,11 @@ if [ -d "$workflow_directory" ]; then
     if ! grep -R -q 'cargo install cargo-audit --version 0.22.2 --locked' \
         "$workflow_directory"; then
         echo "CI must install the pinned cargo-audit release" >&2
+        failed=true
+    fi
+    if grep -R -A3 'dtolnay/rust-toolchain@a5f673d0ba8626c3977bb416a1612774bc82181b' \
+        "$workflow_directory" | grep -q 'toolchain:'; then
+        echo "version-specific dtolnay action must not receive an unsupported toolchain input" >&2
         failed=true
     fi
 fi

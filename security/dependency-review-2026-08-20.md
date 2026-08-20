@@ -3,7 +3,7 @@
 ## Reproducible baseline
 
 - Auditor: `cargo-audit 0.22.2`, installed with `--locked`.
-- RustSec database revision: `2f08fbb85332687b721f2f22706d07448369451b`.
+- RustSec database revision: `42ead52aed439b170e1b8c8f9eab6735a93061d7`.
 - Audited lockfile after CP6 updates: 775 packages.
 - Production graph command: `cargo tree --no-default-features --features server`.
 

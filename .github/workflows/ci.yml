@@ -21,7 +21,6 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@a5f673d0ba8626c3977bb416a1612774bc82181b
         with:
-          toolchain: "1.95.0"
           targets: wasm32-unknown-unknown
 
       - name: Cache dependencies
@@ -48,7 +47,6 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@a5f673d0ba8626c3977bb416a1612774bc82181b
         with:
-          toolchain: "1.95.0"
           components: clippy
           targets: wasm32-unknown-unknown
 
@@ -73,7 +71,6 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@a5f673d0ba8626c3977bb416a1612774bc82181b
         with:
-          toolchain: "1.95.0"
           components: rustfmt
 
       - name: Check formatting
@@ -86,8 +83,6 @@ jobs:
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@a5f673d0ba8626c3977bb416a1612774bc82181b
-        with:
-          toolchain: "1.95.0"
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c
@@ -106,8 +101,6 @@ jobs:
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@a5f673d0ba8626c3977bb416a1612774bc82181b
-        with:
-          toolchain: "1.95.0"
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c
@@ -173,8 +166,6 @@ jobs:
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@a5f673d0ba8626c3977bb416a1612774bc82181b
-        with:
-          toolchain: "1.95.0"
 
       - name: Install cargo-audit
         run: cargo install cargo-audit --version 0.22.2 --locked

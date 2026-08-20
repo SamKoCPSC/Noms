@@ -46,8 +46,8 @@ COPY --from=pgschema-builder /go/bin/pgschema /usr/local/bin/pgschema
 COPY --from=build-check /usr/src/app/target/dx/noms/release/web/ /usr/local/app
 COPY --from=build-check /usr/src/app/migrations/ /usr/local/app/migrations/
 COPY entrypoint.sh /usr/local/app/entrypoint.sh
-RUN chmod +x /usr/local/app/entrypoint.sh \
-    && chown -R noms:noms /usr/local/app
+RUN chmod 0555 /usr/local/app /usr/local/app/entrypoint.sh \
+    && chmod -R go-w /usr/local/app
 
 USER noms
 WORKDIR /usr/local/app
