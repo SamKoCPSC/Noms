@@ -1,6 +1,6 @@
 # NOMS-015: Security Hardening to a Good-Enough Baseline — Agentic Implementation Plan
 
-**Status:** In progress — CP0–CP5 implemented and reviewed; CP6–CP7 remain
+**Status:** In progress — CP0–CP5 implemented and reviewed; CP5A–CP7 remain
 **Created:** 2026-07-29
 **Issue:** [NOMS-015-security-hardening.md](../issues/NOMS-015-security-hardening.md)
 **Source:** Authentication, authorization, and application security review completed 2026-07-28
@@ -33,7 +33,7 @@ that will actually ship.
 ### Progress summary
 
 - **Implemented and independently reviewed:** CP0 baseline reliability, CP1 OAuth intent/session binding and same-origin redirects, CP2 integrated media ownership and orphan retention, CP3 trusted-proxy client identity and per-client OAuth limits, CP4 stable provider identities without legacy email reconciliation, CP4A completed-router and collection-media alignment, and CP5 integrated resource-abuse bounds.
-- **Remaining before the final consumer-security verdict:** CP6 dependency/secret/deployment verification and CP7 adversarial review against the complete release candidate.
+- **Remaining before the final consumer-security verdict:** CP5A typed media-upload unification, CP6 dependency/secret/deployment verification, and CP7 adversarial review against the complete release candidate.
 
 ---
 
@@ -121,10 +121,11 @@ security-storage     CP2
 security-rate-limit  CP3
 security-integration CP4A after the integrated rebase
 security-abuse       CP5 after CP4A controls settle
+security-media       CP5A after CP5 upload/quota controls settle
 security-release     CP6–CP7 integration and review
 ```
 
-CP2 and CP3 may run in parallel after CP0. CP1 must land before CP4 because both alter OAuth state, user-info extraction, account linking, schema, and tests. CP4A runs after the feature integration and before CP5 so the final router and every media-bearing feature share the intended controls. CP5 starts after those interfaces stabilize. CP6 and CP7 run on the integrated branch only.
+CP2 and CP3 may run in parallel after CP0. CP1 must land before CP4 because both alter OAuth state, user-info extraction, account linking, schema, and tests. CP4A runs after the feature integration and before CP5 so the final router and every media-bearing feature share the intended controls. CP5 starts after those interfaces stabilize. CP5A then unifies the now-bounded upload implementations without changing their product behavior. CP6 and CP7 run on the integrated branch only.
 
 Each implementation branch uses the `codex/` prefix unless the operator selects another repository convention. Agents must not share a source checkout, database, MinIO bucket, browser cookie name, or Dioxus cache.
 
@@ -703,6 +704,72 @@ just lint
 
 ---
 
+## Checkpoint 5A: Unify typed media upload transactions
+
+**Goal:** Remove parallel recipe/collection and avatar upload implementations by routing every application-owned media upload through one server-internal, typed transaction engine without weakening the distinct persistence rules for each media purpose.
+
+**Primary files:** `src/api/upload.rs`, `src/pages/settings/settings_profile.rs`, `src/storage.rs`, `src/security.rs`, recipe/collection upload callers, and focused mock-storage tests.
+
+The existing recipe and collection-cover flow shares `upload_media_variants`,
+while avatar upload independently repeats key generation, quota locking, object
+uploads, partial-failure compensation, and logging. Avatar upload is currently
+owner-safe, but maintaining two implementations makes later fixes to upload
+atomicity, quotas, validation, and observability easy to apply inconsistently.
+
+The shared engine is internal infrastructure, not a new generic authorization
+surface. Recipe and collection callers may continue selecting their closed
+public `UploadPurpose`; avatar profile mutation remains available only through
+the authenticated avatar operation, which supplies the avatar purpose to the
+shared engine and updates the current user's profile itself.
+
+### Tests first
+
+- Every supported purpose produces only its canonical server-generated keys:
+  - recipe: `recipes/{owner}/{object}_{full|thumb}.webp`;
+  - collection cover: `collections/{owner}/{object}_{full|thumb}.webp`;
+  - avatar: `avatars/{owner}/{object}-original`, `avatars/{owner}/{object}.webp`, and `avatars/{owner}/{object}-thumb.webp`.
+- Purpose, expected variant set, content type, size policy, object kind, and namespace are selected by a closed server-side policy; filenames, URLs, and caller-supplied storage keys cannot change them.
+- Recipe and collection uploads reject an avatar purpose at the generic client-callable boundary. Only the authenticated avatar profile operation may invoke the avatar policy and persist an avatar URL.
+- Authentication is required before key generation or storage writes for all three purposes, and generated keys always use the authenticated user's canonical UUID.
+- A failure while uploading any variant compensates every object successfully created by that attempt and no pre-existing or foreign object. Exercise failure at each position, including avatar original, full, and thumbnail uploads.
+- A database failure after a complete avatar upload removes all three newly generated avatar objects and preserves the previous avatar reference and objects.
+- Successful avatar replacement commits the new database references before best-effort deletion of the previous exact owned `AvatarFull`, paired thumbnail, and `AvatarOriginal` objects.
+- Recipe, collection-cover, and avatar uploads share the CP5 per-user lock, aggregate quota, upload rate limit, byte/object accounting, and sanitized logging behavior; one purpose cannot obtain an independent quota lane.
+- Existing WebP checks, avatar original/rendered size limits, image-edit metadata validation, recipe/collection byte limits, collection unsaved-cover cleanup, and ordinary upload behavior remain intact.
+- Concurrent uploads for one user cannot both pass quota checks against the same starting usage, while another user's upload remains independent.
+
+### Implementation tasks
+
+- Extend the typed media-purpose model to include avatars and define one internal upload specification for namespace, canonical key shapes, required variants, content types, and per-variant validation policy.
+- Replace the fixed two-variant helper with a shared transaction that accepts only validated variant bytes, generates one object UUID, uploads the specification's complete variant set, and records the exact keys created by the current attempt.
+- Centralize reverse-order compensation so every failure path deletes only keys recorded for that attempt. Cleanup failures remain logged with structured key kind/purpose metadata and do not expose storage details to clients.
+- Keep authorization and persistence orchestration outside the storage primitive: `upload_avatar` authenticates the user, validates avatar edit metadata, invokes the shared avatar transaction, updates the user's avatar fields, compensates on database failure, and only then retires the previous owned avatar.
+- Keep recipe and collection persistence validation based on the canonical typed URL parser. Selecting an upload purpose never grants authority to persist, retain, or delete a media object under a different resource kind.
+- Reuse the CP5 request budget, per-user upload lock, and aggregate quota calculation exactly once per logical upload transaction. Account for the correct number and byte size of variants before the first storage write.
+- Return a typed internal upload result that exposes canonical objects/URLs by variant rather than relying on suffix replacement or positional string assumptions. Adapt the existing two-URL recipe/collection response at its boundary.
+- Remove duplicated avatar key generation, object upload, compensation, and quota plumbing after the shared path has equivalent regression coverage.
+- Do not migrate or backfill existing objects: current recipe, collection, and avatar key formats already match the canonical parser. This checkpoint changes implementation ownership, not stored URL formats or database schema.
+- Keep avatar orphan scanning outside this refactor. Avatar replacement/removal retains its immediate, owner-checked lifecycle; expanding background retention or reclamation requires separate acceptance criteria.
+
+### Validation
+
+```bash
+just fmt
+just check
+just test
+just lint
+```
+
+Use a mock S3 endpoint to assert exact ordered PUT/DELETE behavior for every
+variant and injected failure position. Review the final diff specifically for
+authorization widening at the generic upload server-function boundary.
+
+**Gate:** Recipe, collection-cover, and avatar uploads use one typed internal transaction and one quota/compensation path. Public callers cannot select avatar persistence authority, every returned object has a canonical kind and authenticated owner, and failures cannot delete an object not created by that attempt.
+
+**Risk:** Medium. This is primarily technical-debt reduction, but an overly generic public API could accidentally let arbitrary callers mutate avatar state or mix media kinds. Preserve purpose-specific authorization and database boundaries while sharing only the upload mechanics and policy enforcement.
+
+---
+
 ## Checkpoint 6: Dependency, secret, and deployment verification
 
 **Goal:** Make the secure code path the deployed path and prevent known dependency drift from silently accumulating.
@@ -780,6 +847,7 @@ Required focused evidence:
 - recipe read/update/delete ownership tests;
 - account unlink ownership and last-login-method tests;
 - upload size/type/ownership tests;
+- unified recipe, collection-cover, and avatar upload transaction tests, including per-variant compensation failures and rejection of avatar purpose at the generic upload boundary;
 - pagination and structured recipe limit tests;
 - current-visibility authorization tests across version lists, historical snapshots, comparisons, lineage, and version graphs;
 - owner-only draft read/save/publish/discard tests, including stale and cross-user revisions;
@@ -848,6 +916,7 @@ The security reviewer may return `GOOD ENOUGH` only when:
 - the documented current-visibility policy is enforced consistently for public, unlisted, and private historical snapshots;
 - drafts remain owner-only, collection visibility never overrides member-recipe visibility, and search cannot infer inaccessible entities through metadata or counts;
 - integrated graph, collection, draft/version, search, and autocomplete resource controls meet CP5's per-request and sustained-abuse gates;
+- recipe, collection-cover, and avatar uploads meet CP5A's shared typed-transaction, quota, compensation, and purpose-specific authorization gate;
 - no security control relies only on client UI state;
 - residual risks are operational or specialized rather than straightforward cross-user compromise.
 
@@ -863,8 +932,9 @@ The security reviewer may return `GOOD ENOUGH` only when:
 4. Enable storage ownership validation and safe deletion.
 5. Enable corrected client-IP extraction and observe rate-limit metrics.
 6. Pause collection/recipe orphan cleanup, atomically apply the selected legacy-cover database policy and typed `collections/` upload cutover, verify every surviving cover has a recognized retention path, then re-enable strict dual-namespace cleanup.
-7. Execute the selected stable-identity rollout policy, including the approved no-compatibility path where applicable.
-8. If the rollout uses temporary legacy compatibility, remove it only after evidence shows it is unused; omit this step for the approved no-compatibility path.
+7. Deploy the unified internal upload transaction; no media-object or schema migration is required because canonical key formats remain unchanged.
+8. Execute the selected stable-identity rollout policy, including the approved no-compatibility path where applicable.
+9. If the rollout uses temporary legacy compatibility, remove it only after evidence shows it is unused; omit this step for the approved no-compatibility path.
 
 ### Monitoring
 
@@ -899,6 +969,7 @@ Track structured counts without sensitive values:
 - [ ] The production-composed Dioxus router applies authentication middleware to intended routes while public/unlisted recipe history remains governed by application authorization rather than a blanket login redirect.
 - [ ] All media persistence and deletion paths enforce exact tenant ownership.
 - [ ] New custom collection covers use dedicated collection object kinds, upload handling, and the `collections/` namespace through the shared typed parser; exact pairing, owner-aware retention, unsaved-upload deletion, and orphan reclamation are verified.
+- [ ] Recipe, collection-cover, and avatar uploads use one typed internal transaction with shared quota locking, exact variant accounting, attempt-scoped compensation, and purpose-specific authorization; generic upload callers cannot acquire avatar persistence authority.
 - [ ] Cross-tenant image and avatar deletion tests prove no victim storage request occurs.
 - [ ] The production serving path attaches trustworthy connection information.
 - [ ] OAuth rate limits are independent per client and cannot be globally exhausted by one attacker.
