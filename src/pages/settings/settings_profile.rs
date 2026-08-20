@@ -148,21 +148,18 @@ pub async fn save_profile(
 /// thumbnail (100x100) variants. The images have already been
 /// processed client-side before being sent here.
 ///
-/// If the user already has an avatar, the old image files are deleted
-/// from storage (best-effort) before the new ones are uploaded.
+/// If the user already has an avatar, its old image files are deleted
+/// best-effort only after the new avatar is uploaded and persisted.
 #[cfg(feature = "server")]
-fn validate_avatar_payload(
-    original_bytes: &[u8],
-    full_bytes: &[u8],
-    thumbnail_bytes: &[u8],
+fn validate_avatar_payload<'a>(
+    original_bytes: &'a [u8],
+    full_bytes: &'a [u8],
+    thumbnail_bytes: &'a [u8],
     edit: &RecipeImageEdit,
-) -> Result<(), &'static str> {
-    if original_bytes.is_empty() || full_bytes.is_empty() || thumbnail_bytes.is_empty() {
-        return Err("Avatar image variants must not be empty");
-    }
+) -> Result<crate::api::upload::MediaUploadRequest<'a>, &'static str> {
     crate::security::validate_image_edit_metadata(edit)
         .map_err(|_| "Avatar edit metadata is invalid")?;
-    Ok(())
+    crate::api::upload::MediaUploadRequest::avatar(original_bytes, full_bytes, thumbnail_bytes)
 }
 
 #[server]
@@ -178,64 +175,8 @@ pub async fn upload_avatar(
     let pool = crate::db::get_pool();
     let storage = crate::storage::get_storage_client();
 
-    validate_avatar_payload(&original_bytes, &full_bytes, &thumb_bytes, &edit)
+    let upload_request = validate_avatar_payload(&original_bytes, &full_bytes, &thumb_bytes, &edit)
         .map_err(ServerFnError::new)?;
-
-    // Validate WebP magic bytes (both variants)
-    if !crate::api::upload::validate_webp_magic(&full_bytes) {
-        return Err(ServerFnError::new("Invalid image format: must be WebP"));
-    }
-    if !crate::api::upload::validate_webp_magic(&thumb_bytes) {
-        return Err(ServerFnError::new("Invalid thumbnail format: must be WebP"));
-    }
-
-    // Enforce max file size (2MB for avatars)
-    const MAX_AVATAR_SIZE: usize = 2 * 1024 * 1024;
-    const MAX_AVATAR_ORIGINAL_SIZE: usize = 10 * 1024 * 1024;
-    if original_bytes.is_empty() || original_bytes.len() > MAX_AVATAR_ORIGINAL_SIZE {
-        return Err(ServerFnError::new(
-            "Original image must be between 1 byte and 10MB",
-        ));
-    }
-    if full_bytes.len() > MAX_AVATAR_SIZE {
-        return Err(ServerFnError::new(format!(
-            "Image too large: {} bytes (max {} bytes)",
-            full_bytes.len(),
-            MAX_AVATAR_SIZE
-        )));
-    }
-    if thumb_bytes.len() > MAX_AVATAR_SIZE {
-        return Err(ServerFnError::new(format!(
-            "Thumbnail too large: {} bytes (max {} bytes)",
-            thumb_bytes.len(),
-            MAX_AVATAR_SIZE
-        )));
-    }
-
-    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Upload)
-        .map_err(|_| ServerFnError::new("Upload rate limit exceeded"))?;
-    let upload_lock = crate::api::upload::media_upload_lock(user_id);
-    let _upload_guard = upload_lock.lock().await;
-    let current_usage = crate::api::upload::load_user_media_usage(&storage, user_id)
-        .await
-        .map_err(|error| {
-            tracing::error!(%error, %user_id, "failed to load aggregate media usage");
-            ServerFnError::new("Unable to verify media quota")
-        })?;
-    crate::security::validate_media_quota(
-        current_usage,
-        crate::security::MediaUsage {
-            bytes: u64::try_from(
-                original_bytes
-                    .len()
-                    .saturating_add(full_bytes.len())
-                    .saturating_add(thumb_bytes.len()),
-            )
-            .unwrap_or(u64::MAX),
-            objects: 3,
-        },
-    )
-    .map_err(|_| ServerFnError::new("Media storage quota exceeded"))?;
 
     // Fetch current user to get existing avatar URL for cleanup
     let current_user = crate::db::get_user_by_id(&pool, user_id)
@@ -250,40 +191,38 @@ pub async fn upload_avatar(
             .map_err(|e| ServerFnError::new(format!("Failed to fetch avatar original: {e}")))?
             .flatten();
 
-    // Generate storage keys for the retained original and rendered caches.
-    let unique_id = uuid::Uuid::new_v4();
-    let original_key = format!("avatars/{}/{}-original", user_id, unique_id);
-    let full_key = format!("avatars/{}/{}.webp", user_id, unique_id);
-    let thumb_key = format!("avatars/{}/{}-thumb.webp", user_id, unique_id);
     let edit_json = serde_json::to_value(&edit)
         .map_err(|e| ServerFnError::new(format!("Failed to serialize avatar edit: {e}")))?;
-
-    let original_url = storage
-        .put_object(&original_key, &original_bytes, "application/octet-stream")
+    let uploaded = crate::api::upload::upload_owned_media(&storage, user_id, upload_request)
         .await
-        .map_err(|e| ServerFnError::new(format!("Failed to upload avatar original: {e}")))?;
-    let full_url = match storage
-        .put_object(&full_key, &full_bytes, "image/webp")
-        .await
-    {
-        Ok(url) => url,
-        Err(error) => {
-            let _ = storage.delete_object(&original_key).await;
-            return Err(ServerFnError::new(format!(
-                "Failed to upload avatar: {error}"
-            )));
-        }
+        .map_err(|error| match error {
+            crate::api::upload::MediaUploadError::RateLimited => {
+                ServerFnError::new("Upload rate limit exceeded")
+            }
+            crate::api::upload::MediaUploadError::UsageUnavailable => {
+                ServerFnError::new("Unable to verify media quota")
+            }
+            crate::api::upload::MediaUploadError::QuotaExceeded => {
+                ServerFnError::new("Media storage quota exceeded")
+            }
+            crate::api::upload::MediaUploadError::Storage(error) => {
+                tracing::error!(%error, %user_id, "Failed to upload avatar media variants");
+                ServerFnError::new("Failed to upload avatar")
+            }
+        })?;
+    let uploaded_urls = (
+        uploaded.url(crate::storage::MediaObjectKind::AvatarOriginal),
+        uploaded.url(crate::storage::MediaObjectKind::AvatarFull),
+        uploaded.url(crate::storage::MediaObjectKind::AvatarThumbnail),
+    );
+    let (Some(original_url), Some(full_url), Some(_thumbnail_url)) = uploaded_urls else {
+        uploaded.compensate(&storage).await;
+        return Err(ServerFnError::new(
+            "Uploaded avatar response was incomplete",
+        ));
     };
-    if let Err(error) = storage
-        .put_object(&thumb_key, &thumb_bytes, "image/webp")
-        .await
-    {
-        let _ = storage.delete_object(&original_key).await;
-        let _ = storage.delete_object(&full_key).await;
-        return Err(ServerFnError::new(format!(
-            "Failed to upload avatar thumbnail: {error}"
-        )));
-    }
+    let original_url = original_url.to_string();
+    let full_url = full_url.to_string();
 
     let updated_result = sqlx::query_as::<_, crate::db::User>(
         "UPDATE users SET avatar_url = $2, avatar_original_url = $3, avatar_edit = $4, updated_at = NOW() \
@@ -299,9 +238,7 @@ pub async fn upload_avatar(
     let updated = match updated_result {
         Ok(updated) => updated,
         Err(error) => {
-            let _ = storage.delete_object(&original_key).await;
-            let _ = storage.delete_object(&full_key).await;
-            let _ = storage.delete_object(&thumb_key).await;
+            uploaded.compensate(&storage).await;
             return Err(ServerFnError::new(format!(
                 "Failed to save avatar URL: {error}"
             )));

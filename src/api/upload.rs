@@ -36,6 +36,8 @@ use crate::auth::session;
 // -- Constants --
 
 const MAX_FILE_SIZE: usize = 10 * 1024 * 1024; // 10 MB
+const MAX_AVATAR_RENDERED_SIZE: usize = 2 * 1024 * 1024;
+const MAX_AVATAR_ORIGINAL_SIZE: usize = 10 * 1024 * 1024;
 
 /// Maximum encoded request body for server-function uploads containing both variants.
 pub(crate) const SERVER_FUNCTION_BODY_LIMIT: usize = 24 * 1024 * 1024; // 24 MiB
@@ -150,56 +152,317 @@ pub struct UploadResponse {
 pub enum UploadPurpose {
     Recipe,
     CollectionCover,
+    Avatar,
 }
 
 #[cfg(feature = "server")]
-fn media_variant_keys(owner_id: Uuid, object_id: Uuid, purpose: UploadPurpose) -> (String, String) {
-    let namespace = match purpose {
-        UploadPurpose::Recipe => "recipes",
-        UploadPurpose::CollectionCover => "collections",
-    };
-    (
-        format!("{namespace}/{owner_id}/{object_id}_full.webp"),
-        format!("{namespace}/{owner_id}/{object_id}_thumb.webp"),
-    )
+#[derive(Debug)]
+struct MediaUploadVariant<'a> {
+    kind: crate::storage::MediaObjectKind,
+    bytes: &'a [u8],
+    content_type: &'static str,
 }
 
 #[cfg(feature = "server")]
-async fn upload_media_variants(
+#[derive(Debug)]
+pub(crate) struct MediaUploadRequest<'a> {
+    purpose: UploadPurpose,
+    variants: Vec<MediaUploadVariant<'a>>,
+}
+
+#[cfg(feature = "server")]
+impl<'a> MediaUploadRequest<'a> {
+    /// Construct the two-variant request exposed by the generic image API.
+    pub(crate) fn paired(
+        purpose: UploadPurpose,
+        full_bytes: &'a [u8],
+        thumbnail_bytes: &'a [u8],
+    ) -> Result<Self, &'static str> {
+        let (full_kind, thumbnail_kind) = match purpose {
+            UploadPurpose::Recipe => (
+                crate::storage::MediaObjectKind::RecipeFull,
+                crate::storage::MediaObjectKind::RecipeThumbnail,
+            ),
+            UploadPurpose::CollectionCover => (
+                crate::storage::MediaObjectKind::CollectionFull,
+                crate::storage::MediaObjectKind::CollectionThumbnail,
+            ),
+            UploadPurpose::Avatar => {
+                return Err("Avatar uploads require the profile avatar operation")
+            }
+        };
+        validate_image_variants(full_bytes, thumbnail_bytes, MAX_FILE_SIZE, MAX_FILE_SIZE)?;
+        if !validate_webp_magic(full_bytes) {
+            return Err("Invalid full-size image. Expected WebP format.");
+        }
+        if !validate_webp_magic(thumbnail_bytes) {
+            return Err("Invalid thumbnail. Expected WebP format.");
+        }
+
+        Ok(Self {
+            purpose,
+            variants: vec![
+                MediaUploadVariant {
+                    kind: full_kind,
+                    bytes: full_bytes,
+                    content_type: "image/webp",
+                },
+                MediaUploadVariant {
+                    kind: thumbnail_kind,
+                    bytes: thumbnail_bytes,
+                    content_type: "image/webp",
+                },
+            ],
+        })
+    }
+
+    /// Construct the three-variant request available only to avatar profile code.
+    pub(crate) fn avatar(
+        original_bytes: &'a [u8],
+        full_bytes: &'a [u8],
+        thumbnail_bytes: &'a [u8],
+    ) -> Result<Self, &'static str> {
+        if original_bytes.is_empty() || original_bytes.len() > MAX_AVATAR_ORIGINAL_SIZE {
+            return Err("Original image must be between 1 byte and 10MB");
+        }
+        validate_image_variants(
+            full_bytes,
+            thumbnail_bytes,
+            MAX_AVATAR_RENDERED_SIZE,
+            MAX_AVATAR_RENDERED_SIZE,
+        )?;
+        if !validate_webp_magic(full_bytes) {
+            return Err("Invalid image format: must be WebP");
+        }
+        if !validate_webp_magic(thumbnail_bytes) {
+            return Err("Invalid thumbnail format: must be WebP");
+        }
+
+        Ok(Self {
+            purpose: UploadPurpose::Avatar,
+            variants: vec![
+                MediaUploadVariant {
+                    kind: crate::storage::MediaObjectKind::AvatarOriginal,
+                    bytes: original_bytes,
+                    content_type: "application/octet-stream",
+                },
+                MediaUploadVariant {
+                    kind: crate::storage::MediaObjectKind::AvatarFull,
+                    bytes: full_bytes,
+                    content_type: "image/webp",
+                },
+                MediaUploadVariant {
+                    kind: crate::storage::MediaObjectKind::AvatarThumbnail,
+                    bytes: thumbnail_bytes,
+                    content_type: "image/webp",
+                },
+            ],
+        })
+    }
+
+    fn incoming_bytes(&self) -> usize {
+        self.variants.iter().fold(0_usize, |total, variant| {
+            total.saturating_add(variant.bytes.len())
+        })
+    }
+}
+
+#[cfg(feature = "server")]
+fn media_variant_keys(
+    owner_id: Uuid,
+    object_id: Uuid,
+    purpose: UploadPurpose,
+) -> Vec<(crate::storage::MediaObjectKind, String)> {
+    use crate::storage::MediaObjectKind;
+
+    match purpose {
+        UploadPurpose::Recipe => vec![
+            (
+                MediaObjectKind::RecipeFull,
+                format!("recipes/{owner_id}/{object_id}_full.webp"),
+            ),
+            (
+                MediaObjectKind::RecipeThumbnail,
+                format!("recipes/{owner_id}/{object_id}_thumb.webp"),
+            ),
+        ],
+        UploadPurpose::CollectionCover => vec![
+            (
+                MediaObjectKind::CollectionFull,
+                format!("collections/{owner_id}/{object_id}_full.webp"),
+            ),
+            (
+                MediaObjectKind::CollectionThumbnail,
+                format!("collections/{owner_id}/{object_id}_thumb.webp"),
+            ),
+        ],
+        UploadPurpose::Avatar => vec![
+            (
+                MediaObjectKind::AvatarOriginal,
+                format!("avatars/{owner_id}/{object_id}-original"),
+            ),
+            (
+                MediaObjectKind::AvatarFull,
+                format!("avatars/{owner_id}/{object_id}.webp"),
+            ),
+            (
+                MediaObjectKind::AvatarThumbnail,
+                format!("avatars/{owner_id}/{object_id}-thumb.webp"),
+            ),
+        ],
+    }
+}
+
+#[cfg(feature = "server")]
+#[derive(Debug)]
+struct UploadedMediaObject {
+    kind: crate::storage::MediaObjectKind,
+    key: String,
+    url: String,
+}
+
+#[cfg(feature = "server")]
+#[derive(Debug)]
+pub(crate) struct UploadedMedia {
+    purpose: UploadPurpose,
+    objects: Vec<UploadedMediaObject>,
+    _upload_guard: Option<tokio::sync::OwnedMutexGuard<()>>,
+}
+
+#[cfg(feature = "server")]
+impl UploadedMedia {
+    pub(crate) fn url(&self, kind: crate::storage::MediaObjectKind) -> Option<&str> {
+        self.objects
+            .iter()
+            .find(|object| object.kind == kind)
+            .map(|object| object.url.as_str())
+    }
+
+    pub(crate) async fn compensate(&self, storage: &crate::storage::StorageClient) {
+        compensate_media_objects(storage, self.purpose, &self.objects).await;
+    }
+
+    fn into_upload_response(self) -> Result<UploadResponse, &'static str> {
+        let full_kind = match self.purpose {
+            UploadPurpose::Recipe => crate::storage::MediaObjectKind::RecipeFull,
+            UploadPurpose::CollectionCover => crate::storage::MediaObjectKind::CollectionFull,
+            UploadPurpose::Avatar => {
+                return Err("Avatar media cannot use the generic upload response")
+            }
+        };
+        let thumbnail_kind = match self.purpose {
+            UploadPurpose::Recipe => crate::storage::MediaObjectKind::RecipeThumbnail,
+            UploadPurpose::CollectionCover => crate::storage::MediaObjectKind::CollectionThumbnail,
+            UploadPurpose::Avatar => unreachable!("avatar returned above"),
+        };
+        let full = self
+            .objects
+            .iter()
+            .find(|object| object.kind == full_kind)
+            .ok_or("Uploaded media is missing its full-size object")?;
+        let thumbnail = self
+            .objects
+            .iter()
+            .find(|object| object.kind == thumbnail_kind)
+            .ok_or("Uploaded media is missing its thumbnail object")?;
+        Ok(UploadResponse {
+            full_url: full.url.clone(),
+            thumb_url: thumbnail.url.clone(),
+            key: full.key.clone(),
+        })
+    }
+}
+
+#[cfg(feature = "server")]
+async fn compensate_media_objects(
+    storage: &crate::storage::StorageClient,
+    purpose: UploadPurpose,
+    objects: &[UploadedMediaObject],
+) {
+    for object in objects.iter().rev() {
+        if let Err(delete_error) = storage.delete_object(&object.key).await {
+            tracing::error!(
+                purpose = ?purpose,
+                kind = ?object.kind,
+                key = %object.key,
+                error = %delete_error,
+                "Failed to compensate partial media upload"
+            );
+        }
+    }
+}
+
+#[cfg(feature = "server")]
+async fn upload_media_transaction(
     storage: &crate::storage::StorageClient,
     owner_id: Uuid,
-    full_bytes: &[u8],
-    thumbnail_bytes: &[u8],
-    purpose: UploadPurpose,
-) -> Result<UploadResponse, crate::storage::StorageError> {
-    let (full_key, thumbnail_key) = media_variant_keys(owner_id, Uuid::new_v4(), purpose);
-    let full_url = storage
-        .put_object(&full_key, full_bytes, "image/webp")
-        .await?;
-    let thumbnail_url = match storage
-        .put_object(&thumbnail_key, thumbnail_bytes, "image/webp")
-        .await
-    {
-        Ok(url) => url,
-        Err(upload_error) => {
-            // The full key was generated by this request and is not yet
-            // referenceable, so it is the only safe compensation target.
-            if let Err(delete_error) = storage.delete_object(&full_key).await {
-                tracing::error!(
-                    key = %full_key,
-                    error = %delete_error,
-                    "Failed to compensate partial media upload"
-                );
-            }
-            return Err(upload_error);
-        }
-    };
+    request: MediaUploadRequest<'_>,
+) -> Result<UploadedMedia, crate::storage::StorageError> {
+    let keys = media_variant_keys(owner_id, Uuid::new_v4(), request.purpose);
+    debug_assert_eq!(keys.len(), request.variants.len());
+    let mut uploaded = Vec::with_capacity(request.variants.len());
 
-    Ok(UploadResponse {
-        full_url,
-        thumb_url: thumbnail_url,
-        key: full_key,
+    for ((expected_kind, key), variant) in keys.into_iter().zip(request.variants) {
+        debug_assert_eq!(expected_kind, variant.kind);
+        match storage
+            .put_object(&key, variant.bytes, variant.content_type)
+            .await
+        {
+            Ok(url) => uploaded.push(UploadedMediaObject {
+                kind: variant.kind,
+                key,
+                url,
+            }),
+            Err(upload_error) => {
+                compensate_media_objects(storage, request.purpose, &uploaded).await;
+                return Err(upload_error);
+            }
+        }
+    }
+
+    Ok(UploadedMedia {
+        purpose: request.purpose,
+        objects: uploaded,
+        _upload_guard: None,
     })
+}
+
+#[cfg(feature = "server")]
+#[derive(Debug)]
+pub(crate) enum MediaUploadError {
+    RateLimited,
+    UsageUnavailable,
+    QuotaExceeded,
+    Storage(crate::storage::StorageError),
+}
+
+#[cfg(feature = "server")]
+pub(crate) async fn upload_owned_media(
+    storage: &crate::storage::StorageClient,
+    owner_id: Uuid,
+    request: MediaUploadRequest<'_>,
+) -> Result<UploadedMedia, MediaUploadError> {
+    crate::security::enforce_user_request_budget(owner_id, crate::security::RequestClass::Upload)
+        .map_err(|_| MediaUploadError::RateLimited)?;
+    let upload_guard = media_upload_lock(owner_id).lock_owned().await;
+    enforce_media_upload_quota(
+        storage,
+        owner_id,
+        request.incoming_bytes(),
+        u64::try_from(request.variants.len()).unwrap_or(u64::MAX),
+    )
+    .await
+    .map_err(|error| match error {
+        MediaQuotaCheckError::UsageUnavailable => MediaUploadError::UsageUnavailable,
+        MediaQuotaCheckError::Exceeded => MediaUploadError::QuotaExceeded,
+    })?;
+    let mut uploaded = upload_media_transaction(storage, owner_id, request)
+        .await
+        .map_err(MediaUploadError::Storage)?;
+    // Avatar persistence keeps this guard alive through its database update;
+    // paired uploads release it when their response is converted.
+    uploaded._upload_guard = Some(upload_guard);
+    Ok(uploaded)
 }
 
 // -- Server Function (for Dioxus frontend) --
@@ -220,49 +483,29 @@ pub async fn upload_image(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
-
-    validate_image_variants(&full_bytes, &thumb_bytes, MAX_FILE_SIZE, MAX_FILE_SIZE)
+    let request = MediaUploadRequest::paired(purpose, &full_bytes, &thumb_bytes)
         .map_err(ServerFnError::new)?;
-
-    // Validate WebP magic bytes (defense-in-depth)
-    if !validate_webp_magic(&full_bytes) {
-        return Err(ServerFnError::new(
-            "Invalid full-size image. Expected WebP format.",
-        ));
-    }
-    if !validate_webp_magic(&thumb_bytes) {
-        return Err(ServerFnError::new(
-            "Invalid thumbnail. Expected WebP format.",
-        ));
-    }
 
     // Store both variants via global storage client
     let Some(storage) = crate::storage::try_get_storage_client() else {
         return Err(ServerFnError::new("Image storage is unavailable"));
     };
-    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Upload)
-        .map_err(|_| ServerFnError::new("Upload rate limit exceeded"))?;
-    let upload_lock = media_upload_lock(user_id);
-    let _guard = upload_lock.lock().await;
-    enforce_media_upload_quota(
-        &storage,
-        user_id,
-        full_bytes.len().saturating_add(thumb_bytes.len()),
-        2,
-    )
-    .await
-    .map_err(|error| match error {
-        MediaQuotaCheckError::UsageUnavailable => {
-            ServerFnError::new("Unable to verify media quota")
-        }
-        MediaQuotaCheckError::Exceeded => ServerFnError::new("Media storage quota exceeded"),
-    })?;
-    let response = upload_media_variants(&storage, user_id, &full_bytes, &thumb_bytes, purpose)
+    let uploaded = upload_owned_media(&storage, user_id, request)
         .await
-        .map_err(|e| {
-            tracing::error!(error = %e, user_id = %user_id, "Failed to upload media variants");
-            ServerFnError::new("Failed to upload file")
+        .map_err(|error| match error {
+            MediaUploadError::RateLimited => ServerFnError::new("Upload rate limit exceeded"),
+            MediaUploadError::UsageUnavailable => {
+                ServerFnError::new("Unable to verify media quota")
+            }
+            MediaUploadError::QuotaExceeded => ServerFnError::new("Media storage quota exceeded"),
+            MediaUploadError::Storage(error) => {
+                tracing::error!(%error, %user_id, ?purpose, "Failed to upload media variants");
+                ServerFnError::new("Failed to upload file")
+            }
         })?;
+    let response = uploaded
+        .into_upload_response()
+        .map_err(ServerFnError::new)?;
     tracing::info!(full_key = %response.key, user_id = %user_id, "Uploaded image variants");
     Ok(response)
 }
@@ -484,53 +727,50 @@ pub async fn upload_handler(
             .into_response();
     }
 
-    if crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Upload)
-        .is_err()
+    // The direct multipart endpoint remains recipe-specific. Collection
+    // covers use the typed full-stack server function above.
+    let request = match MediaUploadRequest::paired(UploadPurpose::Recipe, &full_bytes, &thumb_bytes)
     {
-        return (
-            StatusCode::TOO_MANY_REQUESTS,
-            "Upload rate limit exceeded".to_string(),
-        )
-            .into_response();
-    }
-    let upload_lock = media_upload_lock(user_id);
-    let _guard = upload_lock.lock().await;
-    if let Err(error) = enforce_media_upload_quota(
-        &storage,
-        user_id,
-        full_bytes.len().saturating_add(thumb_bytes.len()),
-        2,
-    )
-    .await
-    {
-        if error == MediaQuotaCheckError::Exceeded {
+        Ok(request) => request,
+        Err(message) => return (StatusCode::BAD_REQUEST, message.to_string()).into_response(),
+    };
+    let uploaded = match upload_owned_media(&storage, user_id, request).await {
+        Ok(uploaded) => uploaded,
+        Err(MediaUploadError::RateLimited) => {
+            return (
+                StatusCode::TOO_MANY_REQUESTS,
+                "Upload rate limit exceeded".to_string(),
+            )
+                .into_response();
+        }
+        Err(MediaUploadError::QuotaExceeded) => {
             return (
                 StatusCode::PAYLOAD_TOO_LARGE,
                 "Media storage quota exceeded".to_string(),
             )
                 .into_response();
         }
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to upload file".to_string(),
-        )
-            .into_response();
-    }
-
-    // The direct multipart endpoint remains recipe-specific. Collection
-    // covers use the typed full-stack server function above.
-    let response = match upload_media_variants(
-        &storage,
-        user_id,
-        &full_bytes,
-        &thumb_bytes,
-        UploadPurpose::Recipe,
-    )
-    .await
-    {
+        Err(MediaUploadError::UsageUnavailable) => {
+            error!(user_id = %user_id, "Failed to upload media variants");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to upload file".to_string(),
+            )
+                .into_response();
+        }
+        Err(MediaUploadError::Storage(error)) => {
+            error!(%error, user_id = %user_id, "Failed to upload media variants");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to upload file".to_string(),
+            )
+                .into_response();
+        }
+    };
+    let response = match uploaded.into_upload_response() {
         Ok(response) => response,
-        Err(e) => {
-            error!(error = %e, user_id = %user_id, "Failed to upload media variants");
+        Err(error) => {
+            error!(%error, user_id = %user_id, "Uploaded media response was incomplete");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to upload file".to_string(),
@@ -1187,23 +1427,89 @@ mod tests {
     }
 
     #[test]
-    fn upload_purpose_selects_a_closed_storage_namespace() {
+    fn upload_purpose_selects_a_closed_variant_policy() {
         let owner_id = uuid::Uuid::new_v4();
         let object_id = uuid::Uuid::new_v4();
 
         assert_eq!(
             media_variant_keys(owner_id, object_id, UploadPurpose::Recipe),
-            (
-                format!("recipes/{owner_id}/{object_id}_full.webp"),
-                format!("recipes/{owner_id}/{object_id}_thumb.webp")
-            )
+            vec![
+                (
+                    crate::storage::MediaObjectKind::RecipeFull,
+                    format!("recipes/{owner_id}/{object_id}_full.webp"),
+                ),
+                (
+                    crate::storage::MediaObjectKind::RecipeThumbnail,
+                    format!("recipes/{owner_id}/{object_id}_thumb.webp"),
+                ),
+            ]
         );
         assert_eq!(
             media_variant_keys(owner_id, object_id, UploadPurpose::CollectionCover),
-            (
-                format!("collections/{owner_id}/{object_id}_full.webp"),
-                format!("collections/{owner_id}/{object_id}_thumb.webp")
-            )
+            vec![
+                (
+                    crate::storage::MediaObjectKind::CollectionFull,
+                    format!("collections/{owner_id}/{object_id}_full.webp"),
+                ),
+                (
+                    crate::storage::MediaObjectKind::CollectionThumbnail,
+                    format!("collections/{owner_id}/{object_id}_thumb.webp"),
+                ),
+            ]
+        );
+        assert_eq!(
+            media_variant_keys(owner_id, object_id, UploadPurpose::Avatar),
+            vec![
+                (
+                    crate::storage::MediaObjectKind::AvatarOriginal,
+                    format!("avatars/{owner_id}/{object_id}-original"),
+                ),
+                (
+                    crate::storage::MediaObjectKind::AvatarFull,
+                    format!("avatars/{owner_id}/{object_id}.webp"),
+                ),
+                (
+                    crate::storage::MediaObjectKind::AvatarThumbnail,
+                    format!("avatars/{owner_id}/{object_id}-thumb.webp"),
+                ),
+            ]
+        );
+    }
+
+    #[test]
+    fn generic_upload_request_rejects_avatar_purpose() {
+        assert!(MediaUploadRequest::paired(
+            UploadPurpose::Avatar,
+            VALID_WEBP_BYTES,
+            VALID_WEBP_BYTES,
+        )
+        .is_err());
+        let avatar =
+            MediaUploadRequest::avatar(b"original image bytes", VALID_WEBP_BYTES, VALID_WEBP_BYTES)
+                .unwrap();
+        assert_eq!(avatar.purpose, UploadPurpose::Avatar);
+        assert_eq!(avatar.variants.len(), 3);
+        assert_eq!(
+            avatar
+                .variants
+                .iter()
+                .map(|variant| (variant.kind, variant.content_type))
+                .collect::<Vec<_>>(),
+            vec![
+                (
+                    crate::storage::MediaObjectKind::AvatarOriginal,
+                    "application/octet-stream",
+                ),
+                (crate::storage::MediaObjectKind::AvatarFull, "image/webp",),
+                (
+                    crate::storage::MediaObjectKind::AvatarThumbnail,
+                    "image/webp",
+                ),
+            ]
+        );
+        assert_eq!(
+            avatar.incoming_bytes(),
+            b"original image bytes".len() + VALID_WEBP_BYTES.len() * 2
         );
     }
 
@@ -1228,6 +1534,23 @@ mod tests {
             validate_image_variants(&boundary, VALID_WEBP_BYTES, MAX_FILE_SIZE, MAX_FILE_SIZE)
                 .is_err()
         );
+    }
+
+    #[test]
+    fn avatar_request_preserves_original_and_rendered_size_boundaries() {
+        let original = vec![1_u8; MAX_AVATAR_ORIGINAL_SIZE];
+        let mut rendered = vec![0_u8; MAX_AVATAR_RENDERED_SIZE];
+        rendered[0..4].copy_from_slice(b"RIFF");
+        rendered[8..12].copy_from_slice(b"WEBP");
+
+        assert!(MediaUploadRequest::avatar(&original, &rendered, &rendered).is_ok());
+
+        let mut oversized_original = original;
+        oversized_original.push(1);
+        assert!(MediaUploadRequest::avatar(&oversized_original, &rendered, &rendered).is_err());
+
+        rendered.push(0);
+        assert!(MediaUploadRequest::avatar(VALID_WEBP_BYTES, &rendered, VALID_WEBP_BYTES).is_err());
     }
 
     #[tokio::test]
@@ -1291,16 +1614,195 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let result = upload_media_variants(
-            &storage,
-            owner_id,
-            VALID_WEBP_BYTES,
-            VALID_WEBP_BYTES,
+        let request = MediaUploadRequest::paired(
             UploadPurpose::CollectionCover,
+            VALID_WEBP_BYTES,
+            VALID_WEBP_BYTES,
         )
-        .await;
+        .unwrap();
+        let result = upload_media_transaction(&storage, owner_id, request).await;
 
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn partial_avatar_upload_compensates_every_created_variant() {
+        let owner_id = uuid::Uuid::new_v4();
+        let mock_server = wiremock::MockServer::start().await;
+        let storage = crate::storage::StorageClient::for_test_with_endpoint(&mock_server.uri());
+
+        wiremock::Mock::given(wiremock::matchers::method("PUT"))
+            .and(wiremock::matchers::path_regex(
+                r"/noms-media/avatars/.+-original$",
+            ))
+            .respond_with(wiremock::ResponseTemplate::new(200))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+        wiremock::Mock::given(wiremock::matchers::method("PUT"))
+            .and(wiremock::matchers::path_regex(
+                r"/noms-media/avatars/[0-9a-f-]+/[0-9a-f-]+\.webp$",
+            ))
+            .respond_with(wiremock::ResponseTemplate::new(200))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+        wiremock::Mock::given(wiremock::matchers::method("PUT"))
+            .and(wiremock::matchers::path_regex(
+                r"/noms-media/avatars/.+-thumb\.webp$",
+            ))
+            .respond_with(wiremock::ResponseTemplate::new(500))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+        wiremock::Mock::given(wiremock::matchers::method("DELETE"))
+            .and(wiremock::matchers::path_regex(r"/noms-media/avatars/.+"))
+            .respond_with(wiremock::ResponseTemplate::new(204))
+            .expect(2)
+            .mount(&mock_server)
+            .await;
+
+        let request =
+            MediaUploadRequest::avatar(b"original image bytes", VALID_WEBP_BYTES, VALID_WEBP_BYTES)
+                .unwrap();
+        let result = upload_media_transaction(&storage, owner_id, request).await;
+
+        assert!(result.is_err());
+        let requests = mock_server.received_requests().await.unwrap();
+        let deleted_paths: Vec<_> = requests
+            .iter()
+            .filter(|request| request.method.as_str() == "DELETE")
+            .map(|request| request.url.path().to_string())
+            .collect();
+        assert_eq!(deleted_paths.len(), 2);
+        assert!(deleted_paths.iter().any(|path| path.ends_with("-original")));
+        assert!(deleted_paths.iter().any(|path| path.ends_with(".webp")));
+        assert!(deleted_paths
+            .iter()
+            .all(|path| !path.ends_with("-thumb.webp")));
+    }
+
+    #[tokio::test]
+    async fn avatar_original_failure_has_no_compensation_target() {
+        let owner_id = uuid::Uuid::new_v4();
+        let mock_server = wiremock::MockServer::start().await;
+        let storage = crate::storage::StorageClient::for_test_with_endpoint(&mock_server.uri());
+
+        wiremock::Mock::given(wiremock::matchers::method("PUT"))
+            .and(wiremock::matchers::path_regex(
+                r"/noms-media/avatars/.+-original$",
+            ))
+            .respond_with(wiremock::ResponseTemplate::new(500))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let request =
+            MediaUploadRequest::avatar(b"original image bytes", VALID_WEBP_BYTES, VALID_WEBP_BYTES)
+                .unwrap();
+        assert!(upload_media_transaction(&storage, owner_id, request)
+            .await
+            .is_err());
+
+        let requests = mock_server.received_requests().await.unwrap();
+        assert_eq!(requests.len(), 1);
+        assert_eq!(requests[0].method.as_str(), "PUT");
+    }
+
+    #[tokio::test]
+    async fn avatar_full_failure_compensates_only_the_created_original() {
+        let owner_id = uuid::Uuid::new_v4();
+        let mock_server = wiremock::MockServer::start().await;
+        let storage = crate::storage::StorageClient::for_test_with_endpoint(&mock_server.uri());
+
+        wiremock::Mock::given(wiremock::matchers::method("PUT"))
+            .and(wiremock::matchers::path_regex(
+                r"/noms-media/avatars/.+-original$",
+            ))
+            .respond_with(wiremock::ResponseTemplate::new(200))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+        wiremock::Mock::given(wiremock::matchers::method("PUT"))
+            .and(wiremock::matchers::path_regex(
+                r"/noms-media/avatars/[0-9a-f-]+/[0-9a-f-]+\.webp$",
+            ))
+            .respond_with(wiremock::ResponseTemplate::new(500))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+        wiremock::Mock::given(wiremock::matchers::method("DELETE"))
+            .and(wiremock::matchers::path_regex(
+                r"/noms-media/avatars/.+-original$",
+            ))
+            .respond_with(wiremock::ResponseTemplate::new(204))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let request =
+            MediaUploadRequest::avatar(b"original image bytes", VALID_WEBP_BYTES, VALID_WEBP_BYTES)
+                .unwrap();
+        assert!(upload_media_transaction(&storage, owner_id, request)
+            .await
+            .is_err());
+
+        let requests = mock_server.received_requests().await.unwrap();
+        let deleted_paths: Vec<_> = requests
+            .iter()
+            .filter(|request| request.method.as_str() == "DELETE")
+            .map(|request| request.url.path().to_string())
+            .collect();
+        assert_eq!(deleted_paths.len(), 1);
+        assert!(deleted_paths[0].ends_with("-original"));
+        assert!(requests
+            .iter()
+            .all(|request| !request.url.path().ends_with("-thumb.webp")));
+    }
+
+    #[tokio::test]
+    async fn successful_avatar_transaction_returns_one_typed_object_family() {
+        let owner_id = uuid::Uuid::new_v4();
+        let mock_server = wiremock::MockServer::start().await;
+        let storage = crate::storage::StorageClient::for_test_with_endpoint(&mock_server.uri());
+
+        wiremock::Mock::given(wiremock::matchers::method("PUT"))
+            .respond_with(wiremock::ResponseTemplate::new(200))
+            .expect(3)
+            .mount(&mock_server)
+            .await;
+        let request =
+            MediaUploadRequest::avatar(b"original image bytes", VALID_WEBP_BYTES, VALID_WEBP_BYTES)
+                .unwrap();
+        let uploaded = upload_media_transaction(&storage, owner_id, request)
+            .await
+            .unwrap();
+
+        let original = storage
+            .parse_media_url(
+                uploaded
+                    .url(crate::storage::MediaObjectKind::AvatarOriginal)
+                    .unwrap(),
+            )
+            .unwrap();
+        let full = storage
+            .parse_media_url(
+                uploaded
+                    .url(crate::storage::MediaObjectKind::AvatarFull)
+                    .unwrap(),
+            )
+            .unwrap();
+        let thumbnail = storage
+            .parse_media_url(
+                uploaded
+                    .url(crate::storage::MediaObjectKind::AvatarThumbnail)
+                    .unwrap(),
+            )
+            .unwrap();
+
+        assert_eq!(original.owner_id(), owner_id);
+        assert_eq!(original.object_id(), full.object_id());
+        assert_eq!(full.object_id(), thumbnail.object_id());
     }
 
     #[test]
