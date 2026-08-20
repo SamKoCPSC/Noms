@@ -1,4 +1,9 @@
 # Noms
+
+Production deployments must satisfy the fail-closed configuration and
+least-privilege requirements in
+[`docs/production-security.md`](docs/production-security.md).
+
 Recipe Management And Sharing App
 
 ## Summary
