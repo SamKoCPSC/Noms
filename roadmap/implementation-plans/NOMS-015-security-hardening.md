@@ -1,6 +1,6 @@
 # NOMS-015: Security Hardening to a Good-Enough Baseline — Agentic Implementation Plan
 
-**Status:** In progress — CP0–CP5 implemented and reviewed; CP5A–CP7 remain
+**Status:** In progress — CP0–CP5A implemented and reviewed; CP6–CP7 remain
 **Created:** 2026-07-29
 **Issue:** [NOMS-015-security-hardening.md](../issues/NOMS-015-security-hardening.md)
 **Source:** Authentication, authorization, and application security review completed 2026-07-28
@@ -32,8 +32,8 @@ that will actually ship.
 
 ### Progress summary
 
-- **Implemented and independently reviewed:** CP0 baseline reliability, CP1 OAuth intent/session binding and same-origin redirects, CP2 integrated media ownership and orphan retention, CP3 trusted-proxy client identity and per-client OAuth limits, CP4 stable provider identities without legacy email reconciliation, CP4A completed-router and collection-media alignment, and CP5 integrated resource-abuse bounds.
-- **Remaining before the final consumer-security verdict:** CP5A typed media-upload unification, CP6 dependency/secret/deployment verification, and CP7 adversarial review against the complete release candidate.
+- **Implemented and independently reviewed:** CP0 baseline reliability, CP1 OAuth intent/session binding and same-origin redirects, CP2 integrated media ownership and orphan retention, CP3 trusted-proxy client identity and per-client OAuth limits, CP4 stable provider identities without legacy email reconciliation, CP4A completed-router and collection-media alignment, CP5 integrated resource-abuse bounds, and CP5A typed media-upload unification.
+- **Remaining before the final consumer-security verdict:** CP6 dependency/secret/deployment verification and CP7 adversarial review against the complete release candidate.
 
 ---
 
