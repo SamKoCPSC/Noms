@@ -14,6 +14,25 @@ use crate::security::{
     MAX_VERSIONS_PER_RECIPE, MAX_VERSIONS_PER_USER, MAX_VERSION_NOTE_CHARS,
 };
 
+fn recipe_snapshot_media_urls(snapshot: &RecipeSnapshot) -> Vec<String> {
+    fn collect_steps(steps: &[crate::types::RecipeStep], urls: &mut Vec<String>) {
+        for step in steps {
+            for image in &step.photos {
+                urls.push(image.url.clone());
+                urls.extend(image.thumb_url.iter().cloned());
+            }
+            collect_steps(&step.sub_steps, urls);
+        }
+    }
+    let mut urls = Vec::new();
+    for image in &snapshot.images {
+        urls.push(image.url.clone());
+        urls.extend(image.thumb_url.iter().cloned());
+    }
+    collect_steps(&snapshot.instructions, &mut urls);
+    urls
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::FromRow)]
 pub struct RecipeVersion {
     pub id: Uuid,
@@ -1287,6 +1306,13 @@ pub async fn insert_recipe_version(
     let visibility = lock_owned_recipe(transaction, recipe_id, user_id).await?;
     validate_snapshot_for_publish(snapshot, &visibility)?;
     enforce_version_quotas(transaction, recipe_id, user_id).await?;
+    super::retain_media_urls(
+        transaction,
+        user_id,
+        super::MediaPurpose::Recipe,
+        &recipe_snapshot_media_urls(snapshot),
+    )
+    .await?;
 
     let snapshot = snapshot_to_json(snapshot)?;
     sqlx::query_as::<_, RecipeVersion>(&format!(
@@ -1322,6 +1348,20 @@ async fn insert_recipe_draft_with_source(
     validate_draft_payload(snapshot)?;
     lock_resource_owner(transaction, user_id).await?;
     enforce_active_draft_quota(transaction, user_id).await?;
+    super::retain_media_urls(
+        transaction,
+        user_id,
+        super::MediaPurpose::Recipe,
+        &recipe_snapshot_media_urls(&snapshot.content),
+    )
+    .await?;
+    if forked_from_version_number.is_some() {
+        super::retain_inherited_recipe_media_urls(
+            transaction,
+            &recipe_snapshot_media_urls(&snapshot.content),
+        )
+        .await?;
+    }
 
     let snapshot = serde_json::to_value(snapshot).map_err(DbError::SerdeJson)?;
     let inserted = sqlx::query_as::<_, RecipeDraft>(&format!(
@@ -1437,6 +1477,14 @@ pub async fn update_recipe_draft(
     payload: &RecipeDraftPayload,
 ) -> Result<RecipeDraft, DbError> {
     validate_draft_payload(payload)?;
+    let mut transaction = pool.begin().await.map_err(DbError::Query)?;
+    super::retain_media_urls(
+        &mut transaction,
+        user_id,
+        super::MediaPurpose::Recipe,
+        &recipe_snapshot_media_urls(&payload.content),
+    )
+    .await?;
     let snapshot = serde_json::to_value(payload).map_err(DbError::SerdeJson)?;
     let updated = sqlx::query_as::<_, RecipeDraft>(&format!(
         "UPDATE recipe_drafts SET snapshot = $4, revision = revision + 1, updated_at = NOW() \
@@ -1446,10 +1494,11 @@ pub async fn update_recipe_draft(
     .bind(user_id)
     .bind(expected_revision)
     .bind(snapshot)
-    .fetch_optional(pool)
+    .fetch_optional(&mut *transaction)
     .await
     .map_err(DbError::Query)?;
     if let Some(updated) = updated {
+        transaction.commit().await.map_err(DbError::Query)?;
         return Ok(updated);
     }
 
@@ -1458,7 +1507,7 @@ pub async fn update_recipe_draft(
     )
     .bind(draft_id)
     .bind(user_id)
-    .fetch_optional(pool)
+    .fetch_optional(&mut *transaction)
     .await
     .map_err(DbError::Query)?
     .ok_or(DbError::DraftNotFound(draft_id))?;

@@ -14,6 +14,9 @@ use uuid::Uuid;
 pub mod diff;
 mod versioning;
 
+#[cfg(test)]
+mod media_lifecycle_tests;
+
 #[allow(unused_imports)]
 pub use versioning::*;
 
@@ -765,6 +768,11 @@ pub async fn insert_collection(
     }
     let mut tx = pool.begin().await.map_err(DbError::Query)?;
     lock_owner(&mut tx, owner_id).await?;
+    if let Some(image) = image {
+        let mut urls = vec![image.url.clone()];
+        urls.extend(image.thumb_url.iter().cloned());
+        retain_media_urls(&mut tx, owner_id, MediaPurpose::CollectionCover, &urls).await?;
+    }
 
     let collection_count: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM collections WHERE owner_id = $1")
@@ -1166,6 +1174,12 @@ pub async fn update_collection(
     {
         return Err(DbError::ResourceLimitExceeded("collection image metadata"));
     }
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    if let Some(image) = image {
+        let mut urls = vec![image.url.clone()];
+        urls.extend(image.thumb_url.iter().cloned());
+        retain_media_urls(&mut tx, owner_id, MediaPurpose::CollectionCover, &urls).await?;
+    }
     let row = sqlx::query(
         "UPDATE collections
          SET name = $3, description = $4, image = $5, updated_at = NOW()
@@ -1183,13 +1197,15 @@ pub async fn update_collection(
             .transpose()
             .map_err(|error| DbError::Query(sqlx::Error::Encode(Box::new(error))))?,
     )
-    .fetch_one(pool)
+    .fetch_one(&mut *tx)
     .await
     .map_err(|error| match error {
         sqlx::Error::RowNotFound => DbError::CollectionNotFound(collection_id),
         other => collection_query_error(other),
     })?;
-    collection_from_row(&row).map_err(DbError::Query)
+    let collection = collection_from_row(&row).map_err(DbError::Query)?;
+    tx.commit().await.map_err(DbError::Query)?;
+    Ok(collection)
 }
 
 /// Change visibility only when the collection belongs to the supplied owner.
@@ -3429,15 +3445,362 @@ pub struct OwnedImageReference {
     pub media_kind: OwnedMediaKind,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type)]
+#[sqlx(type_name = "text", rename_all = "snake_case")]
+pub enum MediaPurpose {
+    Recipe,
+    CollectionCover,
+}
+
+#[derive(Debug, Clone)]
+pub struct NewMediaUploadFamily {
+    pub owner_id: Uuid,
+    pub purpose: MediaPurpose,
+    pub full_url: String,
+    pub thumbnail_url: String,
+    pub full_key: String,
+    pub thumbnail_key: String,
+    pub capability_digest: Vec<u8>,
+    pub expires_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
+pub struct MediaDiscardClaim {
+    pub id: Uuid,
+    pub owner_id: Uuid,
+    pub purpose: MediaPurpose,
+    pub full_key: String,
+    pub thumbnail_key: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MediaDiscardDecision {
+    Claimed(MediaDiscardClaim),
+    Retained,
+    Denied,
+}
+
+type LockedMediaFamilyRow = (
+    Uuid,
+    Uuid,
+    MediaPurpose,
+    String,
+    String,
+    String,
+    String,
+    String,
+    DateTime<Utc>,
+);
+
+pub async fn register_media_upload_family(
+    pool: &PgPool,
+    family: &NewMediaUploadFamily,
+) -> Result<(), DbError> {
+    sqlx::query(
+        "INSERT INTO media_upload_families (owner_id, purpose, full_url, thumbnail_url, \
+             full_key, thumbnail_key, capability_digest, expires_at) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+    )
+    .bind(family.owner_id)
+    .bind(family.purpose)
+    .bind(&family.full_url)
+    .bind(&family.thumbnail_url)
+    .bind(&family.full_key)
+    .bind(&family.thumbnail_key)
+    .bind(&family.capability_digest)
+    .bind(family.expires_at)
+    .execute(pool)
+    .await
+    .map_err(DbError::Query)?;
+    Ok(())
+}
+
+/// Retain tracked uploads while holding the transaction that will persist the
+/// referencing document. The row lock serializes save against discard.
+pub async fn retain_media_urls(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    owner_id: Uuid,
+    purpose: MediaPurpose,
+    urls: &[String],
+) -> Result<(), DbError> {
+    if urls.is_empty() {
+        return Ok(());
+    }
+    let rows = sqlx::query_as::<_, (Uuid, String)>(
+        "SELECT id, lifecycle FROM media_upload_families \
+         WHERE owner_id = $1 AND purpose = $2 \
+           AND (full_url = ANY($3) OR thumbnail_url = ANY($3)) FOR UPDATE",
+    )
+    .bind(owner_id)
+    .bind(purpose)
+    .bind(urls)
+    .fetch_all(&mut **tx)
+    .await
+    .map_err(DbError::Query)?;
+    if rows
+        .iter()
+        .any(|(_, state)| matches!(state.as_str(), "discard_claimed" | "discarded"))
+    {
+        return Err(DbError::InvalidRecipeSnapshot(
+            "media upload is no longer available".to_string(),
+        ));
+    }
+    let ids = rows.into_iter().map(|(id, _)| id).collect::<Vec<_>>();
+    if !ids.is_empty() {
+        sqlx::query(
+            "UPDATE media_upload_families SET lifecycle = 'retained', \
+                 retained_at = COALESCE(retained_at, NOW()) \
+             WHERE id = ANY($1) AND lifecycle = 'uncommitted'",
+        )
+        .bind(&ids)
+        .execute(&mut **tx)
+        .await
+        .map_err(DbError::Query)?;
+    }
+    Ok(())
+}
+
+/// Retain recipe families copied by the server from an authorized fork source.
+/// This is intentionally not exposed for collection covers or browser input.
+pub(crate) async fn retain_inherited_recipe_media_urls(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    urls: &[String],
+) -> Result<(), DbError> {
+    if urls.is_empty() {
+        return Ok(());
+    }
+    let rows = sqlx::query_as::<_, (Uuid, String)>(
+        "SELECT id, lifecycle FROM media_upload_families \
+         WHERE purpose = 'recipe' AND (full_url = ANY($1) OR thumbnail_url = ANY($1)) \
+         FOR UPDATE",
+    )
+    .bind(urls)
+    .fetch_all(&mut **tx)
+    .await
+    .map_err(DbError::Query)?;
+    if rows
+        .iter()
+        .any(|(_, state)| matches!(state.as_str(), "discard_claimed" | "discarded"))
+    {
+        return Err(DbError::ForkError(
+            "source media is no longer available".to_string(),
+        ));
+    }
+    let ids = rows.into_iter().map(|(id, _)| id).collect::<Vec<_>>();
+    if !ids.is_empty() {
+        sqlx::query(
+            "UPDATE media_upload_families SET lifecycle = 'retained', \
+                 retained_at = COALESCE(retained_at, NOW()) \
+             WHERE id = ANY($1) AND lifecycle = 'uncommitted'",
+        )
+        .bind(ids)
+        .execute(&mut **tx)
+        .await
+        .map_err(DbError::Query)?;
+    }
+    Ok(())
+}
+
+async fn media_family_is_referenced(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    family_owner_id: Uuid,
+    purpose: MediaPurpose,
+    full_url: &str,
+    thumbnail_url: &str,
+) -> Result<bool, DbError> {
+    let expected_kind = match purpose {
+        MediaPurpose::Recipe => OwnedMediaKind::Recipe,
+        MediaPurpose::CollectionCover => OwnedMediaKind::CollectionCover,
+    };
+    Ok(get_all_owned_image_references(&mut **tx)
+        .await?
+        .into_iter()
+        .any(|reference| {
+            (reference.image_url == full_url || reference.image_url == thumbnail_url)
+                && reference.media_kind == expected_kind
+                && (reference.owner_id == family_owner_id
+                    || (purpose == MediaPurpose::Recipe && reference.allows_inherited_owner))
+        }))
+}
+
+async fn claim_media_family_by_digest(
+    pool: &PgPool,
+    owner_id: Uuid,
+    capability_digest: &[u8],
+) -> Result<MediaDiscardDecision, DbError> {
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    let row = sqlx::query_as::<_, LockedMediaFamilyRow>(
+        "SELECT id, owner_id, purpose, full_key, thumbnail_key, full_url, thumbnail_url, \
+                lifecycle, expires_at FROM media_upload_families \
+         WHERE capability_digest = $1 FOR UPDATE",
+    )
+    .bind(capability_digest)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    let decision = claim_locked_media_family(&mut tx, row, owner_id, true, true).await?;
+    tx.commit().await.map_err(DbError::Query)?;
+    Ok(decision)
+}
+
+async fn claim_locked_media_family(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    row: Option<LockedMediaFamilyRow>,
+    owner_id: Uuid,
+    enforce_expiry: bool,
+    protect_retained: bool,
+) -> Result<MediaDiscardDecision, DbError> {
+    let Some((
+        id,
+        actual_owner,
+        purpose,
+        full_key,
+        thumbnail_key,
+        full_url,
+        thumbnail_url,
+        state,
+        expires_at,
+    )) = row
+    else {
+        return Ok(MediaDiscardDecision::Denied);
+    };
+    if actual_owner != owner_id {
+        return Ok(MediaDiscardDecision::Denied);
+    }
+    if (protect_retained && state == "retained")
+        || media_family_is_referenced(tx, actual_owner, purpose, &full_url, &thumbnail_url).await?
+    {
+        if state == "uncommitted" {
+            sqlx::query("UPDATE media_upload_families SET lifecycle = 'retained', retained_at = NOW() WHERE id = $1")
+                .bind(id).execute(&mut **tx).await.map_err(DbError::Query)?;
+        }
+        if !protect_retained {
+            sqlx::query(
+                "UPDATE media_upload_families SET cleanup_checked_at = NOW() WHERE id = $1",
+            )
+            .bind(id)
+            .execute(&mut **tx)
+            .await
+            .map_err(DbError::Query)?;
+        }
+        return Ok(MediaDiscardDecision::Retained);
+    }
+    if state == "discard_claimed" && !protect_retained {
+        return Ok(MediaDiscardDecision::Claimed(MediaDiscardClaim {
+            id,
+            owner_id,
+            purpose,
+            full_key,
+            thumbnail_key,
+        }));
+    }
+    if matches!(state.as_str(), "discard_claimed" | "discarded")
+        || (enforce_expiry && expires_at <= Utc::now())
+    {
+        return Ok(MediaDiscardDecision::Denied);
+    }
+    sqlx::query(
+        "UPDATE media_upload_families SET lifecycle = 'discard_claimed', \
+             discard_claimed_at = NOW(), delete_failure = NULL WHERE id = $1",
+    )
+    .bind(id)
+    .execute(&mut **tx)
+    .await
+    .map_err(DbError::Query)?;
+    Ok(MediaDiscardDecision::Claimed(MediaDiscardClaim {
+        id,
+        owner_id,
+        purpose,
+        full_key,
+        thumbnail_key,
+    }))
+}
+
+pub async fn claim_media_discard(
+    pool: &PgPool,
+    owner_id: Uuid,
+    capability_digest: &[u8],
+) -> Result<MediaDiscardDecision, DbError> {
+    claim_media_family_by_digest(pool, owner_id, capability_digest).await
+}
+
+pub async fn claim_retained_media_cleanup(
+    pool: &PgPool,
+    owner_id: Uuid,
+    full_url: &str,
+) -> Result<MediaDiscardDecision, DbError> {
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    let row = sqlx::query_as::<_, LockedMediaFamilyRow>(
+        "SELECT id, owner_id, purpose, full_key, thumbnail_key, full_url, thumbnail_url, \
+                lifecycle, expires_at FROM media_upload_families \
+         WHERE full_url = $1 FOR UPDATE",
+    )
+    .bind(full_url)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    let decision = claim_locked_media_family(&mut tx, row, owner_id, false, false).await?;
+    tx.commit().await.map_err(DbError::Query)?;
+    Ok(decision)
+}
+
+pub async fn finish_media_discard(
+    pool: &PgPool,
+    claim_id: Uuid,
+    delete_failure: Option<&str>,
+) -> Result<(), DbError> {
+    let lifecycle = if delete_failure.is_some() {
+        "discard_claimed"
+    } else {
+        "discarded"
+    };
+    sqlx::query(
+        "UPDATE media_upload_families SET lifecycle = $2, \
+             discarded_at = CASE WHEN $2 = 'discarded' THEN NOW() ELSE discarded_at END, \
+             delete_failure = $3 WHERE id = $1 AND lifecycle = 'discard_claimed'",
+    )
+    .bind(claim_id)
+    .bind(lifecycle)
+    .bind(delete_failure)
+    .execute(pool)
+    .await
+    .map_err(DbError::Query)?;
+    Ok(())
+}
+
+/// Bounded set of tracked families eligible for centralized cleanup. Unknown
+/// legacy storage keys are intentionally absent and therefore never deleted.
+pub async fn list_media_cleanup_candidates(
+    pool: &PgPool,
+    limit: i64,
+) -> Result<Vec<(Uuid, String)>, DbError> {
+    sqlx::query_as(
+        "SELECT owner_id, full_url FROM media_upload_families \
+         WHERE lifecycle IN ('retained', 'discard_claimed') \
+            OR (lifecycle = 'uncommitted' AND expires_at <= NOW()) \
+         ORDER BY CASE WHEN lifecycle = 'discard_claimed' THEN 0 \
+                       WHEN lifecycle = 'uncommitted' THEN 1 ELSE 2 END, \
+                  cleanup_checked_at ASC NULLS FIRST, created_at \
+         LIMIT $1",
+    )
+    .bind(limit)
+    .fetch_all(pool)
+    .await
+    .map_err(DbError::Query)
+}
+
 /// Get every retained media URL together with an owner authorized to reference it.
 ///
 /// The orphan worker needs an authorized owner alongside each reference; a bare
 /// URL is insufficient proof that one user's document may retain another user's
 /// storage key. Drafts, immutable versions, collection covers, and inherited
 /// fork media all remain live references even when they are not in `recipes`.
-pub async fn get_all_owned_image_references(
-    pool: &PgPool,
-) -> Result<Vec<OwnedImageReference>, DbError> {
+pub async fn get_all_owned_image_references<'e, E>(
+    executor: E,
+) -> Result<Vec<OwnedImageReference>, DbError>
+where
+    E: sqlx::Executor<'e, Database = Postgres>,
+{
     sqlx::query_as::<_, OwnedImageReference>(
         "WITH RECURSIVE lineage_owners(
              recipe_id, relationship_id, owner_id, visited, depth
@@ -3554,7 +3917,7 @@ pub async fn get_all_owned_image_references(
          FROM image_urls
          WHERE image_url IS NOT NULL AND image_url <> ''",
     )
-    .fetch_all(pool)
+    .fetch_all(executor)
     .await
     .map_err(DbError::Query)
 }

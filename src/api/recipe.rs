@@ -1197,19 +1197,12 @@ async fn delete_recipe_for_user(
     // share object URLs with the source recipe.
     let step_photos = collect_step_photos(&recipe.instructions);
     if !recipe.images.is_empty() || !step_photos.is_empty() {
-        let retained_urls: HashSet<String> = match crate::db::get_all_image_urls(pool).await {
-            Ok(urls) => urls.into_iter().collect(),
-            Err(error) => {
-                tracing::warn!(%error, "skipping recipe image cleanup because references could not be scanned");
-                return Ok(());
-            }
-        };
         for image in &recipe.images {
-            delete_recipe_image_objects(storage, user_id, image, &retained_urls).await;
+            cleanup_tracked_recipe_image(pool, storage, user_id, image).await;
         }
 
         for image in step_photos {
-            delete_recipe_image_objects(storage, user_id, &image, &retained_urls).await;
+            cleanup_tracked_recipe_image(pool, storage, user_id, &image).await;
         }
     }
 
@@ -1217,6 +1210,35 @@ async fn delete_recipe_for_user(
 }
 
 #[cfg(feature = "server")]
+async fn cleanup_tracked_recipe_image(
+    pool: &sqlx::PgPool,
+    storage: &crate::storage::StorageClient,
+    owner_id: uuid::Uuid,
+    image: &RecipeImage,
+) {
+    let decision = match crate::db::claim_retained_media_cleanup(pool, owner_id, &image.url).await {
+        Ok(decision) => decision,
+        Err(error) => {
+            tracing::warn!(%error, %owner_id, "Skipping media cleanup after claim failure");
+            return;
+        }
+    };
+    let crate::db::MediaDiscardDecision::Claimed(claim) = decision else {
+        return;
+    };
+    let full = storage.delete_object(&claim.full_key).await;
+    let thumbnail = storage.delete_object(&claim.thumbnail_key).await;
+    let failure = match (&full, &thumbnail) {
+        (Ok(()), Ok(())) => None,
+        _ => Some(format!("full={full:?}; thumbnail={thumbnail:?}")),
+    };
+    if let Err(error) = crate::db::finish_media_discard(pool, claim.id, failure.as_deref()).await {
+        tracing::warn!(%error, claim_id = %claim.id, "Failed to finish media cleanup");
+    }
+}
+
+#[cfg(feature = "server")]
+#[cfg(test)]
 async fn delete_recipe_image_objects(
     storage: &crate::storage::StorageClient,
     owner_id: uuid::Uuid,

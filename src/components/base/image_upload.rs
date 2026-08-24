@@ -505,6 +505,7 @@ async fn retry_upload(
     mut pending: Signal<Vec<PendingImage>>,
     images: Signal<Vec<RecipeImage>>,
     purpose: crate::api::upload::UploadPurpose,
+    mut discard_capabilities: Signal<std::collections::HashMap<usize, String>>,
 ) {
     let item = pending().iter().find(|p| p.id == img_id).map(|p| {
         (
@@ -529,6 +530,9 @@ async fn retry_upload(
         crate::api::upload::upload_image((*full).clone(), (*thumb).clone(), name, purpose).await;
     match result {
         Ok(resp) => {
+            discard_capabilities
+                .write()
+                .insert(img_id, resp.discard_capability.clone());
             let uploaded_image = RecipeImage::new(resp.full_url, Some(resp.thumb_url), edit);
             if let Some(p) = pending.write().iter_mut().find(|p| p.id == img_id) {
                 p.status = UploadStatus::Uploaded;
@@ -554,6 +558,7 @@ async fn upload_all(
     mut pending: Signal<Vec<PendingImage>>,
     images: Signal<Vec<RecipeImage>>,
     purpose: crate::api::upload::UploadPurpose,
+    mut discard_capabilities: Signal<std::collections::HashMap<usize, String>>,
 ) -> UploadOutcome {
     // Processing guard — abort if any item is still in `Processing`.
     if pending()
@@ -588,6 +593,9 @@ async fn upload_all(
 
         match result {
             Ok(resp) => {
+                discard_capabilities
+                    .write()
+                    .insert(id, resp.discard_capability.clone());
                 let uploaded_image = RecipeImage::new(resp.full_url, Some(resp.thumb_url), edit);
                 if let Some(p) = pending.write().iter_mut().find(|p| p.id == id) {
                     p.status = UploadStatus::Uploaded;
@@ -663,6 +671,8 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     let mut editor_modal_url = use_signal(|| Option::<String>::None);
     let mut editor_modal_img_id = use_signal(|| Option::<usize>::None);
     let mut dragged_image_id = use_signal(|| Option::<usize>::None);
+    // Raw capabilities never enter RecipeImage or any persisted form payload.
+    let mut discard_capabilities = use_signal(std::collections::HashMap::<usize, String>::new);
 
     let images = props.images;
     let mut upload_now = props.upload_now;
@@ -721,7 +731,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
         if upload_now() && !uploading() {
             uploading.set(true);
             spawn(async move {
-                let outcome = upload_all(pending, images, purpose).await;
+                let outcome = upload_all(pending, images, purpose, discard_capabilities).await;
                 upload_now.set(false);
                 uploading.set(false);
                 on_upload_complete.call(outcome);
@@ -943,7 +953,14 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                     disabled: retry_disabled,
                                     onclick: move |_| {
                                         spawn(async move {
-                                            retry_upload(img_id, pending, images, purpose).await;
+                                            retry_upload(
+                                                img_id,
+                                                pending,
+                                                images,
+                                                purpose,
+                                                discard_capabilities,
+                                            )
+                                            .await;
                                         });
                                     },
                                     "↻ Retry"
@@ -960,15 +977,14 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                             on_remove_existing.call(image.url.clone());
                                         }
                                     }
-                                    let removed_uploaded_url =
-                                        remove_pending(img_id, pending, images);
-                                    if !img_persisted
-                                        && purpose == crate::api::upload::UploadPurpose::CollectionCover
-                                    {
-                                        if let Some(url) = removed_uploaded_url {
+                                    let _removed_uploaded_url = remove_pending(img_id, pending, images);
+                                    let discard_capability =
+                                        discard_capabilities.write().remove(&img_id);
+                                    if !img_persisted {
+                                        if let Some(discard_capability) = discard_capability {
                                             spawn(async move {
-                                                if let Err(problem) = crate::api::upload::delete_unsaved_collection_cover(url).await {
-                                                    tracing::warn!("Failed to delete unsaved collection cover: {problem}");
+                                                if let Err(problem) = crate::api::upload::discard_upload(discard_capability).await {
+                                                    tracing::warn!("Failed to discard unsaved upload: {problem}");
                                                 }
                                             });
                                         }

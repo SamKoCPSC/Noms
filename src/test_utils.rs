@@ -193,6 +193,25 @@ pub async fn apply_test_schema(pool: &PgPool) {
         .await
         .expect("failed to create sessions cleanup index");
 
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS media_upload_families (\
+         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\
+         owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,\
+         purpose TEXT NOT NULL CHECK (purpose IN ('recipe', 'collection_cover')),\
+         full_url TEXT NOT NULL, thumbnail_url TEXT NOT NULL,\
+         full_key TEXT NOT NULL UNIQUE, thumbnail_key TEXT NOT NULL UNIQUE,\
+         capability_digest BYTEA NOT NULL UNIQUE CHECK (octet_length(capability_digest) = 32),\
+         lifecycle TEXT NOT NULL DEFAULT 'uncommitted'\
+             CHECK (lifecycle IN ('uncommitted', 'retained', 'discard_claimed', 'discarded')),\
+         expires_at TIMESTAMPTZ NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
+         retained_at TIMESTAMPTZ, discard_claimed_at TIMESTAMPTZ, discarded_at TIMESTAMPTZ,\
+         cleanup_checked_at TIMESTAMPTZ, delete_failure TEXT,\
+         CHECK (full_url <> thumbnail_url), CHECK (full_key <> thumbnail_key))",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create media upload family table");
+
     // ── Recipe tables ──────────────────────────────────────────────────────
 
     sqlx::query(

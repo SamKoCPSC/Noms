@@ -1,10 +1,10 @@
 //! Orphan image cleanup worker.
 //!
-//! Periodically reconciles MinIO storage against the database:
-//! 1. Collects all image URLs referenced by recipes in the DB
-//! 2. Lists all objects in the storage bucket
-//! 3. Deletes any object whose key is not referenced by the DB
+//! Periodically reconciles tracked upload families against database references.
+//! Storage listings are preflight/observability only; unknown legacy objects
+//! are never treated as deletion authority.
 
+#[cfg(test)]
 use std::collections::HashSet;
 use std::time::Duration;
 
@@ -43,8 +43,8 @@ impl OrphanCleanupConfig {
 
 /// Spawn the orphan cleanup background task.
 ///
-/// The task runs on a periodic interval, querying all image URLs from the DB,
-/// listing all objects in storage, and deleting any orphans.
+/// The task runs on a periodic interval and retries only database-tracked,
+/// lock-claimed object-family cleanup.
 /// Dropped automatically on server shutdown.
 pub fn spawn_orphan_cleanup(pool: PgPool, storage: StorageClient, config: OrphanCleanupConfig) {
     info!(
@@ -69,17 +69,14 @@ pub async fn run_cleanup(
     pool: &PgPool,
     storage: &StorageClient,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // 1. Get every image URL together with its authorized owner context.
+    // Reference inventory remains useful observability, but deletion authority
+    // comes exclusively from a locked, tracked upload-family claim.
     let db_references = db::get_all_owned_image_references(pool)
         .await
         .map_err(|e| format!("Failed to query image URLs from DB: {e}"))?;
 
-    // 2. Retain only canonical keys whose namespace agrees with the typed DB
-    // reference and whose embedded owner is authorized for that reference.
-    let referenced_keys = collect_retained_media_keys(storage, &db_references);
-
-    // 3. Complete every preflight before deleting anything. A failed listing
-    // must never make a healthy namespace look empty and therefore orphaned.
+    // Complete both namespace preflights before any mutation. Listings are
+    // observability only: unknown legacy objects never become delete targets.
     let recipe_keys = storage
         .list_objects(Some("recipes/"))
         .await
@@ -89,16 +86,26 @@ pub async fn run_cleanup(
         .await
         .map_err(|e| format!("Failed to list collection storage objects: {e}"))?;
 
-    // 4. Delete orphans
+    let candidates = db::list_media_cleanup_candidates(pool, 500).await?;
     let mut deleted_count = 0u64;
-    for key in recipe_keys.iter().chain(&collection_keys) {
-        if !referenced_keys.contains(key.as_str()) {
-            if let Err(e) = storage.delete_object(key).await {
-                warn!(key = %key, error = %e, "Failed to delete orphan object");
-            } else {
-                deleted_count += 1;
-                debug!(key = %key, "Deleted orphan object");
-            }
+    for (owner_id, full_url) in candidates {
+        let db::MediaDiscardDecision::Claimed(claim) =
+            db::claim_retained_media_cleanup(pool, owner_id, &full_url).await?
+        else {
+            continue;
+        };
+        let full = storage.delete_object(&claim.full_key).await;
+        let thumbnail = storage.delete_object(&claim.thumbnail_key).await;
+        let failure = match (&full, &thumbnail) {
+            (Ok(()), Ok(())) => None,
+            _ => Some(format!("full={full:?}; thumbnail={thumbnail:?}")),
+        };
+        db::finish_media_discard(pool, claim.id, failure.as_deref()).await?;
+        if let Some(error) = failure {
+            warn!(claim_id = %claim.id, %error, "Failed to delete tracked orphan family");
+        } else {
+            deleted_count += 2;
+            debug!(claim_id = %claim.id, "Deleted tracked orphan family");
         }
     }
 
@@ -111,6 +118,7 @@ pub async fn run_cleanup(
     Ok(())
 }
 
+#[cfg(test)]
 pub(crate) fn collect_retained_media_keys(
     storage: &StorageClient,
     references: &[db::OwnedImageReference],

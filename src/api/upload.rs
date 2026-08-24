@@ -24,6 +24,8 @@ use axum::Json;
 use axum_extra::extract::cookie::CookieJar;
 use dioxus::prelude::*;
 #[cfg(feature = "server")]
+use sha2::{Digest, Sha256};
+#[cfg(feature = "server")]
 use std::sync::{Arc, OnceLock};
 #[cfg(feature = "server")]
 use tracing::{error, info};
@@ -145,6 +147,10 @@ pub struct UploadResponse {
     pub thumb_url: String,
     /// Storage key for the full-size image
     pub key: String,
+    /// One-use, short-lived authority to discard this upload before it is saved.
+    /// This value belongs only in transient browser state.
+    #[serde(default)]
+    pub discard_capability: String,
 }
 
 /// Closed set of media destinations exposed by the upload API.
@@ -354,7 +360,7 @@ impl UploadedMedia {
         compensate_media_objects(storage, self.purpose, &self.objects).await;
     }
 
-    fn into_upload_response(self) -> Result<UploadResponse, &'static str> {
+    fn upload_response(&self) -> Result<UploadResponse, &'static str> {
         let full_kind = match self.purpose {
             UploadPurpose::Recipe => crate::storage::MediaObjectKind::RecipeFull,
             UploadPurpose::CollectionCover => crate::storage::MediaObjectKind::CollectionFull,
@@ -381,8 +387,53 @@ impl UploadedMedia {
             full_url: full.url.clone(),
             thumb_url: thumbnail.url.clone(),
             key: full.key.clone(),
+            discard_capability: String::new(),
         })
     }
+
+    #[cfg(test)]
+    fn into_upload_response(self) -> Result<UploadResponse, &'static str> {
+        self.upload_response()
+    }
+}
+
+#[cfg(feature = "server")]
+async fn register_uploaded_media(
+    pool: &sqlx::PgPool,
+    storage: &crate::storage::StorageClient,
+    owner_id: Uuid,
+    uploaded: &UploadedMedia,
+) -> Result<UploadResponse, String> {
+    let mut response = uploaded.upload_response().map_err(str::to_string)?;
+    let capability = format!("{}{}", Uuid::new_v4().simple(), Uuid::new_v4().simple());
+    let digest = Sha256::digest(capability.as_bytes()).to_vec();
+    let thumbnail_key = uploaded
+        .objects
+        .iter()
+        .find(|object| object.url == response.thumb_url)
+        .map(|object| object.key.clone())
+        .ok_or_else(|| "Uploaded media is missing its thumbnail key".to_string())?;
+    let purpose = match uploaded.purpose {
+        UploadPurpose::Recipe => crate::db::MediaPurpose::Recipe,
+        UploadPurpose::CollectionCover => crate::db::MediaPurpose::CollectionCover,
+        UploadPurpose::Avatar => return Err("Avatar media is not discard-capability media".into()),
+    };
+    let family = crate::db::NewMediaUploadFamily {
+        owner_id,
+        purpose,
+        full_url: response.full_url.clone(),
+        thumbnail_url: response.thumb_url.clone(),
+        full_key: response.key.clone(),
+        thumbnail_key,
+        capability_digest: digest,
+        expires_at: chrono::Utc::now() + chrono::Duration::minutes(15),
+    };
+    if let Err(error) = crate::db::register_media_upload_family(pool, &family).await {
+        uploaded.compensate(storage).await;
+        return Err(format!("failed to register upload lifecycle: {error}"));
+    }
+    response.discard_capability = capability;
+    Ok(response)
 }
 
 #[cfg(feature = "server")]
@@ -560,61 +611,66 @@ pub async fn upload_image(
                 ServerFnError::new("Failed to upload file")
             }
         })?;
-    let response = uploaded
-        .into_upload_response()
-        .map_err(ServerFnError::new)?;
+    let pool = crate::db::get_pool();
+    let response = register_uploaded_media(&pool, &storage, user_id, &uploaded)
+        .await
+        .map_err(|error| {
+            tracing::error!(%error, %user_id, "Failed to register uploaded media");
+            ServerFnError::new("Failed to finalize upload")
+        })?;
     tracing::info!(full_key = %response.key, user_id = %user_id, "Uploaded image variants");
     Ok(response)
 }
 
-/// Delete an image from S3 storage given its full URL.
-///
-/// Parses the exact server-generated storage URL, then deletes both the
-/// full-size and thumbnail objects. Best-effort: if the full object is already
-/// gone, the thumbnail deletion is still attempted.
-///
-/// Auth-gated: only the authenticated user can delete images. Ownership is
-/// enforced by exact UUID namespace and filename validation.
 #[server]
-pub async fn delete_image(full_url: String) -> Result<(), ServerFnError> {
+pub async fn discard_upload(discard_capability: String) -> Result<(), ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
     crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
         .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
 
-    let Some(storage) = crate::storage::try_get_storage_client() else {
-        return Err(ServerFnError::new("Image storage is unavailable"));
-    };
-    let (full_key, thumb_key) = recipe_deletion_keys(&storage, user_id, &full_url)?;
-
-    // Delete full-size object (best-effort: ignore "not found")
-    let _ = storage.delete_object(&full_key).await;
-
-    // Delete thumbnail object (best-effort: ignore "not found")
-    let _ = storage.delete_object(&thumb_key).await;
-
-    Ok(())
-}
-
-/// Delete an uploaded collection cover that was removed before it was saved.
-#[server]
-pub async fn delete_unsaved_collection_cover(full_url: String) -> Result<(), ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
+    if discard_capability.len() != 64
+        || !discard_capability
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit())
+    {
+        return Err(ServerFnError::new("Invalid discard capability"));
+    }
+    let digest = Sha256::digest(discard_capability.as_bytes());
+    let decision = crate::db::claim_media_discard(&crate::db::get_pool(), user_id, &digest)
         .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
-    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
-        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
+        .map_err(|error| {
+            tracing::error!(%error, %user_id, "Failed to claim upload discard");
+            ServerFnError::new("Unable to discard upload")
+        })?;
+    let crate::db::MediaDiscardDecision::Claimed(claim) = decision else {
+        // Do not distinguish missing, foreign, expired, used, or retained capabilities.
+        return Ok(());
+    };
     let Some(storage) = crate::storage::try_get_storage_client() else {
         return Err(ServerFnError::new("Image storage is unavailable"));
     };
-    let (full_key, thumbnail_key) = collection_cover_deletion_keys(&storage, user_id, &full_url)?;
-    let _ = storage.delete_object(&full_key).await;
-    let _ = storage.delete_object(&thumbnail_key).await;
+    let full = storage.delete_object(&claim.full_key).await;
+    let thumbnail = storage.delete_object(&claim.thumbnail_key).await;
+    let failure = match (&full, &thumbnail) {
+        (Ok(()), Ok(())) => None,
+        _ => Some(format!("full={full:?}; thumbnail={thumbnail:?}")),
+    };
+    crate::db::finish_media_discard(&crate::db::get_pool(), claim.id, failure.as_deref())
+        .await
+        .map_err(|error| {
+            tracing::error!(%error, claim_id = %claim.id, "Failed to record media discard result");
+            ServerFnError::new("Unable to finish upload discard")
+        })?;
+    if failure.is_some() {
+        return Err(ServerFnError::new("Upload discard will be retried"));
+    }
     Ok(())
 }
 
 #[cfg(feature = "server")]
+#[cfg(test)]
 fn recipe_deletion_keys(
     storage: &crate::storage::StorageClient,
     owner_id: uuid::Uuid,
@@ -636,6 +692,7 @@ fn recipe_deletion_keys(
 }
 
 #[cfg(feature = "server")]
+#[cfg(test)]
 fn collection_cover_deletion_keys(
     storage: &crate::storage::StorageClient,
     owner_id: uuid::Uuid,
@@ -824,10 +881,10 @@ pub async fn upload_handler(
                 .into_response();
         }
     };
-    let response = match uploaded.into_upload_response() {
+    let response = match register_uploaded_media(&state.pool, &storage, user_id, &uploaded).await {
         Ok(response) => response,
         Err(error) => {
-            error!(%error, user_id = %user_id, "Uploaded media response was incomplete");
+            error!(%error, user_id = %user_id, "Uploaded media lifecycle registration failed");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to upload file".to_string(),
@@ -843,7 +900,8 @@ pub async fn upload_handler(
         Json(serde_json::json!({
             "full_url": response.full_url,
             "thumb_url": response.thumb_url,
-            "key": response.key
+            "key": response.key,
+            "discard_capability": response.discard_capability
         })),
     )
         .into_response()
@@ -1449,6 +1507,13 @@ mod tests {
             "Response should contain 'thumb_url'"
         );
         assert!(json.get("key").is_some(), "Response should contain 'key'");
+        let discard_capability = json["discard_capability"]
+            .as_str()
+            .expect("discard_capability should be a string");
+        assert_eq!(discard_capability.len(), 64);
+        assert!(discard_capability
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit()));
 
         // Verify the key format: recipes/{user_id}/{uuid}_full.webp
         let key = json["key"].as_str().expect("key should be a string");

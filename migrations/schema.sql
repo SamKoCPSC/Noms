@@ -91,6 +91,35 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_cleanup ON sessions(expires_at, revoked)
     WHERE revoked = TRUE;
 
+-- Paired object families uploaded by the generic media API. The browser keeps
+-- the raw discard capability; the database stores only its digest.
+CREATE TABLE IF NOT EXISTS media_upload_families (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    purpose TEXT NOT NULL CHECK (purpose IN ('recipe', 'collection_cover')),
+    full_url TEXT NOT NULL,
+    thumbnail_url TEXT NOT NULL,
+    full_key TEXT NOT NULL UNIQUE,
+    thumbnail_key TEXT NOT NULL UNIQUE,
+    capability_digest BYTEA NOT NULL UNIQUE CHECK (octet_length(capability_digest) = 32),
+    lifecycle TEXT NOT NULL DEFAULT 'uncommitted'
+        CHECK (lifecycle IN ('uncommitted', 'retained', 'discard_claimed', 'discarded')),
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    retained_at TIMESTAMPTZ,
+    discard_claimed_at TIMESTAMPTZ,
+    discarded_at TIMESTAMPTZ,
+    cleanup_checked_at TIMESTAMPTZ,
+    delete_failure TEXT,
+    CHECK (full_url <> thumbnail_url),
+    CHECK (full_key <> thumbnail_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_media_upload_families_owner_lifecycle
+    ON media_upload_families(owner_id, lifecycle);
+CREATE INDEX IF NOT EXISTS idx_media_upload_families_expiry
+    ON media_upload_families(expires_at) WHERE lifecycle = 'uncommitted';
+
 -- ── Recipe management ──────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS recipes (
