@@ -8,6 +8,9 @@ use chrono::{DateTime, Utc};
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 
+/// Fixed client page size for bounded immutable-version history reads.
+pub const VERSION_HISTORY_PAGE_SIZE: usize = 25;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ImageAspectRatio {
     pub width: u32,
@@ -384,6 +387,14 @@ pub struct RecipeVersionSummary {
     pub created_at: DateTime<Utc>,
     pub is_current: bool,
     pub change_summary: String,
+}
+
+/// One descending cursor page of lightweight immutable-version summaries.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct RecipeVersionSummaryPage {
+    pub items: Vec<RecipeVersionSummary>,
+    /// Pass this value as `before_version_number` to request the next page.
+    pub next_before_version_number: Option<i32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1670,5 +1681,26 @@ mod tests {
         assert_eq!(restored.frontiers, graph.frontiers);
         assert_eq!(restored.frontiers[0].anchor, anchor);
         assert_eq!(restored.frontiers[0].hidden_count, 7);
+    }
+
+    #[test]
+    fn version_summary_page_round_trips_cursor_and_items() {
+        let page = RecipeVersionSummaryPage {
+            items: vec![RecipeVersionSummary {
+                version_number: 25,
+                title: "Bounded history".to_string(),
+                image_url: None,
+                notes: None,
+                created_at: Utc::now(),
+                is_current: true,
+                change_summary: "Title changed".to_string(),
+            }],
+            next_before_version_number: Some(25),
+        };
+
+        let restored: RecipeVersionSummaryPage =
+            serde_json::from_value(serde_json::to_value(&page).unwrap()).unwrap();
+
+        assert_eq!(restored, page);
     }
 }

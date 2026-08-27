@@ -53,6 +53,10 @@ pub const MAX_ACTIVE_DRAFTS_PER_USER: usize = 50;
 pub const MAX_VERSIONS_PER_RECIPE: usize = 250;
 pub const MAX_VERSIONS_PER_USER: usize = 5_000;
 pub const MAX_GRAPH_LOADED_NODE_IDS: usize = 250;
+pub const MAX_VERSION_HISTORY_PAGE_SIZE: usize = crate::types::VERSION_HISTORY_PAGE_SIZE;
+pub const MAX_VERSION_HISTORY_ENCODED_SNAPSHOT_BYTES: usize = 32 * 1024 * 1024;
+pub const MAX_VERSION_HISTORY_DECODED_SNAPSHOT_BYTES: usize = 32 * 1024 * 1024;
+pub const MAX_CONCURRENT_GRAPH_HISTORY_READS: usize = 4;
 
 pub const MAX_MEDIA_BYTES_PER_USER: u64 = 512 * 1024 * 1024;
 pub const MAX_MEDIA_OBJECTS_PER_USER: u64 = 2_048;
@@ -74,6 +78,7 @@ pub enum SecurityLimitError {
     MediaQuotaExceeded,
     RequestBudgetExceeded,
     DatabaseBudgetExceeded,
+    ConcurrentReadBudgetExceeded,
 }
 
 impl std::fmt::Display for SecurityLimitError {
@@ -87,6 +92,7 @@ impl std::fmt::Display for SecurityLimitError {
             Self::MediaQuotaExceeded => "media quota exceeded",
             Self::RequestBudgetExceeded => "request rate limit exceeded",
             Self::DatabaseBudgetExceeded => "database operation timed out",
+            Self::ConcurrentReadBudgetExceeded => "graph/history work budget exhausted",
         };
         formatter.write_str(message)
     }
@@ -332,6 +338,18 @@ pub fn validate_graph_expansion(
     Ok(())
 }
 
+pub fn validate_version_history_page(
+    before_version_number: Option<i32>,
+    page_size: usize,
+) -> Result<(), SecurityLimitError> {
+    if before_version_number.is_some_and(|version_number| version_number <= 0)
+        || !(1..=MAX_VERSION_HISTORY_PAGE_SIZE).contains(&page_size)
+    {
+        return Err(SecurityLimitError::InvalidPagination);
+    }
+    Ok(())
+}
+
 pub fn validate_collection_reorder_len(length: usize) -> Result<(), SecurityLimitError> {
     (length <= MAX_COLLECTION_CHILDREN)
         .then_some(())
@@ -561,6 +579,47 @@ pub async fn run_with_database_budget<T>(
     tokio::time::timeout(budget, operation)
         .await
         .map_err(|_| SecurityLimitError::DatabaseBudgetExceeded)
+}
+
+#[cfg(feature = "server")]
+#[derive(Debug, Clone)]
+pub struct ConcurrentReadBudget {
+    permits: std::sync::Arc<tokio::sync::Semaphore>,
+}
+
+#[cfg(feature = "server")]
+impl ConcurrentReadBudget {
+    pub fn new(maximum_concurrent_reads: usize) -> Self {
+        assert!(maximum_concurrent_reads > 0);
+        Self {
+            permits: std::sync::Arc::new(tokio::sync::Semaphore::new(maximum_concurrent_reads)),
+        }
+    }
+
+    pub async fn run<T>(
+        &self,
+        operation: impl Future<Output = T>,
+    ) -> Result<T, SecurityLimitError> {
+        let _permit = self
+            .permits
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| SecurityLimitError::ConcurrentReadBudgetExceeded)?;
+        Ok(operation.await)
+    }
+}
+
+#[cfg(feature = "server")]
+static GRAPH_HISTORY_READ_BUDGET: OnceLock<ConcurrentReadBudget> = OnceLock::new();
+
+#[cfg(feature = "server")]
+pub async fn run_with_graph_history_work_budget<T>(
+    operation: impl Future<Output = T>,
+) -> Result<T, SecurityLimitError> {
+    GRAPH_HISTORY_READ_BUDGET
+        .get_or_init(|| ConcurrentReadBudget::new(MAX_CONCURRENT_GRAPH_HISTORY_READS))
+        .run(operation)
+        .await
 }
 
 #[cfg(all(test, feature = "server"))]
@@ -937,5 +996,44 @@ mod tests {
     async fn database_budget_timeout_is_a_controlled_error() {
         let result = run_with_database_budget(Duration::from_millis(1), pending::<()>()).await;
         assert_eq!(result, Err(SecurityLimitError::DatabaseBudgetExceeded));
+    }
+
+    #[test]
+    fn version_history_cursor_and_page_size_are_bounded_before_database_work() {
+        assert_eq!(
+            validate_version_history_page(None, MAX_VERSION_HISTORY_PAGE_SIZE),
+            Ok(())
+        );
+        assert_eq!(validate_version_history_page(Some(1), 1), Ok(()));
+        assert!(validate_version_history_page(Some(0), 1).is_err());
+        assert!(validate_version_history_page(None, 0).is_err());
+        assert!(validate_version_history_page(None, MAX_VERSION_HISTORY_PAGE_SIZE + 1).is_err());
+    }
+
+    #[tokio::test]
+    async fn expensive_history_and_graph_work_rejects_excess_concurrency() {
+        let budget = std::sync::Arc::new(ConcurrentReadBudget::new(1));
+        let started = std::sync::Arc::new(tokio::sync::Notify::new());
+        let release = std::sync::Arc::new(tokio::sync::Notify::new());
+        let first_budget = budget.clone();
+        let first_started = started.clone();
+        let first_release = release.clone();
+        let first = tokio::spawn(async move {
+            first_budget
+                .run(async move {
+                    first_started.notify_one();
+                    first_release.notified().await;
+                })
+                .await
+        });
+        started.notified().await;
+
+        assert_eq!(
+            budget.run(async {}).await,
+            Err(SecurityLimitError::ConcurrentReadBudgetExceeded)
+        );
+
+        release.notify_one();
+        assert_eq!(first.await.unwrap(), Ok(()));
     }
 }

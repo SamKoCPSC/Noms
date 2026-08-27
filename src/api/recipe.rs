@@ -484,48 +484,45 @@ pub async fn list_recipe_drafts() -> Result<Vec<crate::types::RecipeDraftView>, 
 #[server]
 pub async fn get_recipe_versions_api(
     recipe_id: String,
-) -> Result<Vec<crate::types::RecipeVersionSummary>, ServerFnError> {
+    before_version_number: Option<i32>,
+    page_size: usize,
+) -> Result<crate::types::RecipeVersionSummaryPage, ServerFnError> {
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
     enforce_graph_budget(viewer_id)?;
-    let recipe_id = uuid::Uuid::parse_str(&recipe_id)
-        .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
-    let pool = crate::db::get_pool();
-    bounded_database_operation(crate::db::get_recipe_by_id(&pool, recipe_id))
-        .await?
-        .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
-        .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
-    let versions =
-        bounded_database_operation(crate::db::get_recipe_versions(&pool, recipe_id)).await?;
-    let snapshots = versions
-        .iter()
-        .map(crate::db::RecipeVersion::decoded_snapshot)
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
-    versions
-        .iter()
-        .enumerate()
-        .map(|(index, version)| {
-            let change_summary = snapshots
-                .get(index + 1)
-                .map(|older| crate::db::diff::compute_diff(older, &snapshots[index]))
-                .transpose()
-                .map_err(|e| ServerFnError::new(e.to_string()))?
-                .map(|diff| crate::db::diff::change_summary(&diff))
-                .unwrap_or_else(|| "Initial version".to_string());
-            Ok(crate::types::RecipeVersionSummary {
-                version_number: version.version_number,
-                title: snapshots[index].title.clone(),
-                image_url: version_summary_image_url(&snapshots[index].images),
-                notes: version.notes.clone(),
-                created_at: version.created_at,
-                is_current: index == 0,
-                change_summary,
-            })
-        })
-        .collect()
+    crate::security::validate_version_history_page(before_version_number, page_size)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    crate::security::run_with_graph_history_work_budget(async move {
+        let recipe_id = uuid::Uuid::parse_str(&recipe_id)
+            .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
+        let pool = crate::db::get_pool();
+        bounded_database_operation(crate::db::get_recipe_by_id(&pool, recipe_id))
+            .await?
+            .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
+            .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
+        let bounded_page = bounded_database_operation(crate::db::get_recipe_version_summary_page(
+            &pool,
+            recipe_id,
+            before_version_number,
+            page_size,
+        ))
+        .await?;
+        tracing::info!(
+            rows_read = bounded_page.work.rows_read,
+            encoded_snapshot_bytes = bounded_page.work.encoded_snapshot_bytes,
+            decoded_snapshot_bytes = bounded_page.work.decoded_snapshot_bytes,
+            snapshots_decoded = bounded_page.work.snapshots_decoded,
+            diff_operations = bounded_page.work.diff_operations,
+            returned_items = bounded_page.page.items.len(),
+            has_more = bounded_page.page.next_before_version_number.is_some(),
+            "completed bounded recipe version-summary page"
+        );
+        Ok(bounded_page.page)
+    })
+    .await
+    .map_err(|error| ServerFnError::new(error.to_string()))?
 }
 
-#[cfg(feature = "server")]
+#[cfg(all(feature = "server", test))]
 fn version_summary_image_url(images: &[crate::types::RecipeImage]) -> Option<String> {
     images
         .first()

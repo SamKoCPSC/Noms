@@ -156,6 +156,177 @@ pub async fn get_recipe_versions(
     .map_err(DbError::Query)
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct VersionSummaryReadWork {
+    pub rows_read: usize,
+    pub encoded_snapshot_bytes: usize,
+    pub decoded_snapshot_bytes: usize,
+    pub snapshots_decoded: usize,
+    pub diff_operations: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BoundedRecipeVersionSummaryPage {
+    pub page: crate::types::RecipeVersionSummaryPage,
+    pub work: VersionSummaryReadWork,
+}
+
+#[derive(Debug, Clone, Copy, sqlx::FromRow)]
+struct RecipeVersionSnapshotSize {
+    version_number: i32,
+    snapshot_bytes: i64,
+    current_version_number: i32,
+}
+
+fn checked_snapshot_byte_total(
+    sizes: impl IntoIterator<Item = usize>,
+    maximum: usize,
+) -> Result<usize, DbError> {
+    let mut total = 0usize;
+    for size in sizes {
+        total = total
+            .checked_add(size)
+            .ok_or(DbError::ResourceLimitExceeded(
+                "version history encoded snapshot bytes",
+            ))?;
+        if total > maximum {
+            return Err(DbError::ResourceLimitExceeded(
+                "version history encoded snapshot bytes",
+            ));
+        }
+    }
+    Ok(total)
+}
+
+/// Fetch one descending summary page plus the single older snapshot required
+/// to describe the last visible row. Size preflight happens before JSONB is
+/// transferred into the application process.
+pub async fn get_recipe_version_summary_page(
+    pool: &PgPool,
+    recipe_id: Uuid,
+    before_version_number: Option<i32>,
+    page_size: usize,
+) -> Result<BoundedRecipeVersionSummaryPage, DbError> {
+    crate::security::validate_version_history_page(before_version_number, page_size)
+        .map_err(|_| DbError::ResourceLimitExceeded("version history page"))?;
+    let row_limit = page_size.saturating_add(1);
+    let size_rows = sqlx::query_as::<_, RecipeVersionSnapshotSize>(
+        "SELECT version.version_number, \
+                octet_length(version.snapshot::text)::BIGINT AS snapshot_bytes, \
+                (SELECT MAX(current.version_number) \
+                   FROM recipe_versions AS current \
+                  WHERE current.recipe_id = $1)::INTEGER AS current_version_number \
+           FROM recipe_versions AS version \
+          WHERE version.recipe_id = $1 \
+            AND ($2::INTEGER IS NULL OR version.version_number < $2) \
+          ORDER BY version.version_number DESC \
+          LIMIT $3",
+    )
+    .bind(recipe_id)
+    .bind(before_version_number)
+    .bind(graph_query_limit(row_limit))
+    .fetch_all(pool)
+    .await
+    .map_err(DbError::Query)?;
+
+    let encoded_snapshot_bytes = checked_snapshot_byte_total(
+        size_rows
+            .iter()
+            .map(|row| usize::try_from(row.snapshot_bytes).unwrap_or(usize::MAX)),
+        crate::security::MAX_VERSION_HISTORY_ENCODED_SNAPSHOT_BYTES,
+    )?;
+    let version_numbers = size_rows
+        .iter()
+        .map(|row| row.version_number)
+        .collect::<Vec<_>>();
+    let versions = if version_numbers.is_empty() {
+        Vec::new()
+    } else {
+        sqlx::query_as::<_, RecipeVersion>(&format!(
+            "SELECT {VERSION_COLUMNS} FROM recipe_versions \
+             WHERE recipe_id = $1 AND version_number = ANY($2) \
+             ORDER BY version_number DESC"
+        ))
+        .bind(recipe_id)
+        .bind(&version_numbers)
+        .fetch_all(pool)
+        .await
+        .map_err(DbError::Query)?
+    };
+    if versions.len() != size_rows.len() {
+        return Err(DbError::ResourceLimitExceeded(
+            "version history changed during page read",
+        ));
+    }
+
+    let mut decoded_snapshot_bytes = 0usize;
+    let mut snapshots = Vec::with_capacity(versions.len());
+    for version in &versions {
+        let snapshot = version.decoded_snapshot()?;
+        let snapshot_bytes = serde_json::to_vec(&snapshot)
+            .map_err(DbError::SerdeJson)?
+            .len();
+        decoded_snapshot_bytes = decoded_snapshot_bytes.checked_add(snapshot_bytes).ok_or(
+            DbError::ResourceLimitExceeded("version history decoded snapshot bytes"),
+        )?;
+        if decoded_snapshot_bytes > crate::security::MAX_VERSION_HISTORY_DECODED_SNAPSHOT_BYTES {
+            return Err(DbError::ResourceLimitExceeded(
+                "version history decoded snapshot bytes",
+            ));
+        }
+        snapshots.push(snapshot);
+    }
+
+    let visible_count = versions.len().min(page_size);
+    let current_version_number = size_rows.first().map(|row| row.current_version_number);
+    let mut diff_operations = 0usize;
+    let items = versions
+        .iter()
+        .take(visible_count)
+        .zip(snapshots.iter())
+        .enumerate()
+        .map(|(index, (version, snapshot))| {
+            let change_summary = snapshots
+                .get(index + 1)
+                .map(|older| {
+                    diff_operations = diff_operations.saturating_add(1);
+                    compute_diff(older, snapshot).map(|diff| super::diff::change_summary(&diff))
+                })
+                .transpose()?
+                .unwrap_or_else(|| "Initial version".to_string());
+            Ok(crate::types::RecipeVersionSummary {
+                version_number: version.version_number,
+                title: snapshot.title.clone(),
+                image_url: snapshot
+                    .images
+                    .first()
+                    .map(|image| image.display_url(true).to_string()),
+                notes: version.notes.clone(),
+                created_at: version.created_at,
+                is_current: current_version_number == Some(version.version_number),
+                change_summary,
+            })
+        })
+        .collect::<Result<Vec<_>, DbError>>()?;
+    let next_before_version_number = (versions.len() > page_size)
+        .then(|| items.last().map(|summary| summary.version_number))
+        .flatten();
+
+    Ok(BoundedRecipeVersionSummaryPage {
+        page: crate::types::RecipeVersionSummaryPage {
+            items,
+            next_before_version_number,
+        },
+        work: VersionSummaryReadWork {
+            rows_read: versions.len(),
+            encoded_snapshot_bytes,
+            decoded_snapshot_bytes,
+            snapshots_decoded: snapshots.len(),
+            diff_operations,
+        },
+    })
+}
+
 pub async fn get_latest_recipe_version(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     recipe_id: Uuid,
@@ -2997,6 +3168,105 @@ mod tests {
             versions[1].snapshot,
             snapshot_to_json(&snapshot("V1", "private")).unwrap()
         );
+    }
+
+    #[tokio::test]
+    async fn version_summary_pages_read_only_one_page_and_adjacent_lookahead() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let user = owner(&pool, "bounded_history").await;
+        let recipe =
+            create_published_recipe(&pool, user.id, &snapshot("Version 1", "public"), None)
+                .await
+                .unwrap();
+        for version_number in 2..=60 {
+            sqlx::query(
+                "INSERT INTO recipe_versions (recipe_id, version_number, snapshot, notes) \
+                 VALUES ($1, $2, $3, $4)",
+            )
+            .bind(recipe.id)
+            .bind(version_number)
+            .bind(
+                snapshot_to_json(&snapshot(&format!("Version {version_number}"), "public"))
+                    .unwrap(),
+            )
+            .bind(format!("Notes {version_number}"))
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+
+        let first = get_recipe_version_summary_page(
+            &pool,
+            recipe.id,
+            None,
+            crate::security::MAX_VERSION_HISTORY_PAGE_SIZE,
+        )
+        .await
+        .unwrap();
+        assert_eq!(first.page.items.len(), 25);
+        assert_eq!(first.page.items[0].version_number, 60);
+        assert!(first.page.items[0].is_current);
+        assert_eq!(first.page.items[24].version_number, 36);
+        assert_eq!(first.page.next_before_version_number, Some(36));
+        assert_eq!(first.work.rows_read, 26);
+        assert_eq!(first.work.snapshots_decoded, 26);
+        assert_eq!(first.work.diff_operations, 25);
+        assert!(first.work.encoded_snapshot_bytes > 0);
+        assert!(
+            first.work.encoded_snapshot_bytes
+                <= crate::security::MAX_VERSION_HISTORY_ENCODED_SNAPSHOT_BYTES
+        );
+        assert!(
+            first.work.decoded_snapshot_bytes
+                <= crate::security::MAX_VERSION_HISTORY_DECODED_SNAPSHOT_BYTES
+        );
+
+        let second = get_recipe_version_summary_page(
+            &pool,
+            recipe.id,
+            first.page.next_before_version_number,
+            crate::security::MAX_VERSION_HISTORY_PAGE_SIZE,
+        )
+        .await
+        .unwrap();
+        assert_eq!(second.page.items[0].version_number, 35);
+        assert_eq!(second.page.items[24].version_number, 11);
+        assert_eq!(second.page.next_before_version_number, Some(11));
+        assert!(second.page.items.iter().all(|summary| !summary.is_current));
+
+        let final_page = get_recipe_version_summary_page(
+            &pool,
+            recipe.id,
+            second.page.next_before_version_number,
+            crate::security::MAX_VERSION_HISTORY_PAGE_SIZE,
+        )
+        .await
+        .unwrap();
+        assert_eq!(final_page.page.items.len(), 10);
+        assert_eq!(final_page.page.items[0].version_number, 10);
+        assert_eq!(final_page.page.items[9].version_number, 1);
+        assert_eq!(final_page.page.items[9].change_summary, "Initial version");
+        assert_eq!(final_page.page.next_before_version_number, None);
+        assert_eq!(final_page.work.rows_read, 10);
+        assert_eq!(final_page.work.snapshots_decoded, 10);
+        assert_eq!(final_page.work.diff_operations, 9);
+    }
+
+    #[test]
+    fn version_snapshot_byte_accounting_accepts_exact_limit_and_rejects_one_over() {
+        assert_eq!(checked_snapshot_byte_total([12, 20], 32).unwrap(), 32);
+        assert!(matches!(
+            checked_snapshot_byte_total([12, 21], 32),
+            Err(DbError::ResourceLimitExceeded(
+                "version history encoded snapshot bytes"
+            ))
+        ));
+        assert!(matches!(
+            checked_snapshot_byte_total([usize::MAX, 1], usize::MAX),
+            Err(DbError::ResourceLimitExceeded(
+                "version history encoded snapshot bytes"
+            ))
+        ));
     }
 
     #[tokio::test]
