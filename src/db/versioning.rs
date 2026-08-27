@@ -2192,9 +2192,11 @@ async fn load_fork_direction_page(
     let raw_page_limit = graph_fork_raw_page_limit(limit);
     let has_more_raw_rows = relationships.len() > raw_page_limit;
     relationships.truncate(raw_page_limit);
-    let next_fork_cursor = has_more_raw_rows
-        .then(|| relationships.last().map(|relationship| relationship.id))
-        .flatten();
+    // Retain the last consumed key even for a terminal slice. Frontier
+    // rebuilding must probe strictly after it; dropping the key would restart
+    // at the branch beginning and manufacture a false continuation from rows
+    // that are already loaded.
+    let next_fork_cursor = relationships.last().map(|relationship| relationship.id);
 
     let mut endpoint_recipe_ids = relationships
         .iter()
@@ -5206,6 +5208,39 @@ mod tests {
                 .map(|frontier| frontier.hidden_count),
             Some(1)
         );
+
+        let final_frontier = expansion
+            .graph
+            .frontiers
+            .iter()
+            .copied()
+            .find(|frontier| {
+                frontier.anchor.recipe_id == source.id
+                    && frontier.kind == crate::types::VersionGraphFrontierKind::ChildForks
+            })
+            .expect("final child fork");
+        let mut final_loaded = loaded;
+        final_loaded.extend(
+            expansion
+                .graph
+                .nodes
+                .iter()
+                .map(crate::types::VersionGraphNode::id),
+        );
+        let final_expansion = expand_recipe_version_graph_with_work(
+            &pool,
+            source.id,
+            None,
+            final_frontier,
+            final_loaded,
+        )
+        .await
+        .unwrap();
+        assert_eq!(final_expansion.graph.nodes.len(), 1);
+        assert!(final_expansion.graph.frontiers.iter().all(|frontier| {
+            frontier.anchor.recipe_id != source.id
+                || frontier.kind != crate::types::VersionGraphFrontierKind::ChildForks
+        }));
     }
 
     #[tokio::test]
@@ -5246,44 +5281,51 @@ mod tests {
             .await
             .unwrap();
 
-        let anchor = crate::types::VersionGraphNodeId {
-            recipe_id: source.id,
-            version_number: 1,
-        };
-        let excluded = HashSet::from([anchor]);
-        let mut cursor = None;
-        let mut found = Vec::new();
-        for _ in 0..=6 {
-            let page = load_fork_direction_page(
+        let initial = get_initial_recipe_version_graph_with_work(&pool, source.id, None)
+            .await
+            .unwrap();
+        let mut loaded = initial
+            .graph
+            .nodes
+            .iter()
+            .map(crate::types::VersionGraphNode::id)
+            .collect::<Vec<_>>();
+        assert!(initial.work.relationship_rows_returned <= 4 * INITIAL_VERSION_GRAPH_NODE_LIMIT);
+        let mut graph = initial.graph;
+        let mut expansions = 0;
+        loop {
+            let Some(frontier) = graph.frontiers.iter().copied().find(|frontier| {
+                frontier.anchor.recipe_id == source.id
+                    && frontier.kind == crate::types::VersionGraphFrontierKind::ChildForks
+            }) else {
+                break;
+            };
+            let expansion = expand_recipe_version_graph_with_work(
                 &pool,
                 source.id,
                 None,
-                VersionGraphDirectionRequest {
-                    anchor,
-                    kind: crate::types::VersionGraphFrontierKind::ChildForks,
-                    excluded_node_ids: &excluded,
-                    fork_cursor: cursor,
-                    limit: VERSION_GRAPH_EXPANSION_NODE_LIMIT,
-                },
+                frontier,
+                loaded.clone(),
             )
             .await
             .unwrap();
-            assert!(page.work.relationship_rows_returned <= 6);
-            found.extend(page.node_ids);
-            cursor = page.next_fork_cursor;
-            if cursor.is_none() {
-                break;
-            }
+            assert!(
+                expansion.work.relationship_rows_returned <= 4 * INITIAL_VERSION_GRAPH_NODE_LIMIT
+            );
+            loaded.extend(
+                expansion
+                    .graph
+                    .nodes
+                    .iter()
+                    .map(crate::types::VersionGraphNode::id),
+            );
+            graph = expansion.graph;
+            expansions += 1;
+            assert!(expansions <= 3, "frontier must make bounded progress");
         }
 
-        assert_eq!(
-            found,
-            vec![crate::types::VersionGraphNodeId {
-                recipe_id: visible.id,
-                version_number: 1,
-            }]
-        );
-        assert_eq!(cursor, None);
+        assert_eq!(expansions, 2);
+        assert!(loaded.iter().any(|node_id| node_id.recipe_id == visible.id));
     }
 
     #[test]
