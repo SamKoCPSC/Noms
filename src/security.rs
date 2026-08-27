@@ -56,6 +56,10 @@ pub const MAX_GRAPH_LOADED_NODE_IDS: usize = 250;
 pub const MAX_VERSION_HISTORY_PAGE_SIZE: usize = crate::types::VERSION_HISTORY_PAGE_SIZE;
 pub const MAX_VERSION_HISTORY_ENCODED_SNAPSHOT_BYTES: usize = 32 * 1024 * 1024;
 pub const MAX_VERSION_HISTORY_DECODED_SNAPSHOT_BYTES: usize = 32 * 1024 * 1024;
+pub const MAX_INITIAL_GRAPH_ENCODED_SNAPSHOT_BYTES: usize = 32 * 1024 * 1024;
+pub const MAX_INITIAL_GRAPH_DECODED_SNAPSHOT_BYTES: usize = 32 * 1024 * 1024;
+pub const MAX_EXPANSION_GRAPH_ENCODED_SNAPSHOT_BYTES: usize = 12 * 1024 * 1024;
+pub const MAX_EXPANSION_GRAPH_DECODED_SNAPSHOT_BYTES: usize = 12 * 1024 * 1024;
 pub const MAX_CONCURRENT_GRAPH_HISTORY_READS: usize = 4;
 
 pub const MAX_MEDIA_BYTES_PER_USER: u64 = 512 * 1024 * 1024;
@@ -600,11 +604,13 @@ impl ConcurrentReadBudget {
         &self,
         operation: impl Future<Output = T>,
     ) -> Result<T, SecurityLimitError> {
-        let _permit = self
-            .permits
-            .clone()
-            .try_acquire_owned()
-            .map_err(|_| SecurityLimitError::ConcurrentReadBudgetExceeded)?;
+        let _permit = self.permits.clone().try_acquire_owned().map_err(|_| {
+            tracing::warn!(
+                available_permits = self.permits.available_permits(),
+                "rejected graph/history request because the shared work budget is exhausted"
+            );
+            SecurityLimitError::ConcurrentReadBudgetExceeded
+        })?;
         Ok(operation.await)
     }
 }

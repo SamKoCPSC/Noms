@@ -492,6 +492,7 @@ pub async fn get_recipe_versions_api(
     crate::security::validate_version_history_page(before_version_number, page_size)
         .map_err(|error| ServerFnError::new(error.to_string()))?;
     crate::security::run_with_graph_history_work_budget(async move {
+        let started_at = std::time::Instant::now();
         let recipe_id = uuid::Uuid::parse_str(&recipe_id)
             .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
         let pool = crate::db::get_pool();
@@ -514,6 +515,7 @@ pub async fn get_recipe_versions_api(
             diff_operations = bounded_page.work.diff_operations,
             returned_items = bounded_page.page.items.len(),
             has_more = bounded_page.page.next_before_version_number.is_some(),
+            duration_ms = started_at.elapsed().as_millis() as u64,
             "completed bounded recipe version-summary page"
         );
         Ok(bounded_page.page)
@@ -620,16 +622,37 @@ pub async fn get_recipe_version_graph(
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
     enforce_graph_budget(viewer_id)?;
     let pool = crate::db::get_pool();
-    crate::security::run_with_database_budget(
-        crate::security::DATABASE_EXECUTION_BUDGET,
-        crate::db::get_initial_recipe_version_graph(&pool, recipe_id, viewer_id),
-    )
-    .await
-    .map_err(|_| ServerFnError::new("Database operation timed out"))?
-    .map_err(|error| match error {
-        crate::db::DbError::RecipeNotFound(_) => ServerFnError::new("Recipe not found"),
-        other => ServerFnError::new(other.to_string()),
+    let started_at = std::time::Instant::now();
+    let bounded_page = crate::security::run_with_graph_history_work_budget(async move {
+        crate::security::run_with_database_budget(
+            crate::security::DATABASE_EXECUTION_BUDGET,
+            crate::db::get_initial_recipe_version_graph_with_work(&pool, recipe_id, viewer_id),
+        )
+        .await
+        .map_err(|_| ServerFnError::new("Database operation timed out"))?
+        .map_err(|error| match error {
+            crate::db::DbError::RecipeNotFound(_) => ServerFnError::new("Recipe not found"),
+            other => ServerFnError::new(other.to_string()),
+        })
     })
+    .await
+    .map_err(|error| ServerFnError::new(error.to_string()))??;
+    tracing::info!(
+        recipe_rows_read = bounded_page.work.recipe_rows_read,
+        validation_rows_read = bounded_page.work.validation_rows_read,
+        relationship_rows_read = bounded_page.work.relationship_rows_read,
+        relationship_queries = bounded_page.work.relationship_queries,
+        snapshot_rows_read = bounded_page.work.snapshot_rows_read,
+        encoded_snapshot_bytes = bounded_page.work.encoded_snapshot_bytes,
+        decoded_snapshot_bytes = bounded_page.work.decoded_snapshot_bytes,
+        snapshots_decoded = bounded_page.work.snapshots_decoded,
+        diff_operations = bounded_page.work.diff_operations,
+        returned_nodes = bounded_page.graph.nodes.len(),
+        returned_edges = bounded_page.graph.edges.len(),
+        duration_ms = started_at.elapsed().as_millis() as u64,
+        "completed bounded initial version-graph page"
+    );
+    Ok(bounded_page.graph)
 }
 
 /// Expand one validated boundary of the progressively loaded version graph.
@@ -646,22 +669,43 @@ pub async fn expand_recipe_version_graph(
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
     enforce_graph_budget(viewer_id)?;
     let pool = crate::db::get_pool();
-    crate::security::run_with_database_budget(
-        crate::security::DATABASE_EXECUTION_BUDGET,
-        crate::db::expand_recipe_version_graph(
-            &pool,
-            recipe_id,
-            viewer_id,
-            frontier,
-            loaded_node_ids,
-        ),
-    )
-    .await
-    .map_err(|_| ServerFnError::new("Database operation timed out"))?
-    .map_err(|error| match error {
-        crate::db::DbError::RecipeNotFound(_) => ServerFnError::new("Recipe not found"),
-        other => ServerFnError::new(other.to_string()),
+    let started_at = std::time::Instant::now();
+    let bounded_page = crate::security::run_with_graph_history_work_budget(async move {
+        crate::security::run_with_database_budget(
+            crate::security::DATABASE_EXECUTION_BUDGET,
+            crate::db::expand_recipe_version_graph_with_work(
+                &pool,
+                recipe_id,
+                viewer_id,
+                frontier,
+                loaded_node_ids,
+            ),
+        )
+        .await
+        .map_err(|_| ServerFnError::new("Database operation timed out"))?
+        .map_err(|error| match error {
+            crate::db::DbError::RecipeNotFound(_) => ServerFnError::new("Recipe not found"),
+            other => ServerFnError::new(other.to_string()),
+        })
     })
+    .await
+    .map_err(|error| ServerFnError::new(error.to_string()))??;
+    tracing::info!(
+        recipe_rows_read = bounded_page.work.recipe_rows_read,
+        validation_rows_read = bounded_page.work.validation_rows_read,
+        relationship_rows_read = bounded_page.work.relationship_rows_read,
+        relationship_queries = bounded_page.work.relationship_queries,
+        snapshot_rows_read = bounded_page.work.snapshot_rows_read,
+        encoded_snapshot_bytes = bounded_page.work.encoded_snapshot_bytes,
+        decoded_snapshot_bytes = bounded_page.work.decoded_snapshot_bytes,
+        snapshots_decoded = bounded_page.work.snapshots_decoded,
+        diff_operations = bounded_page.work.diff_operations,
+        returned_nodes = bounded_page.graph.nodes.len(),
+        returned_edges = bounded_page.graph.edges.len(),
+        duration_ms = started_at.elapsed().as_millis() as u64,
+        "completed bounded version-graph expansion"
+    );
+    Ok(bounded_page.graph)
 }
 
 #[server]
