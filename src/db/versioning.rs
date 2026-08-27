@@ -83,6 +83,17 @@ pub struct ForkRelationship {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(sqlx::FromRow)]
+struct ForkAttributionRow {
+    original_title: String,
+    original_owner_id: Option<Uuid>,
+    original_visibility: Option<String>,
+    message: Option<String>,
+    live_recipe_id: Option<Uuid>,
+    live_owner_id: Option<Uuid>,
+    live_visibility: Option<String>,
+}
+
 #[derive(Debug, Clone, sqlx::FromRow)]
 struct LineageEdgeRow {
     id: Uuid,
@@ -353,32 +364,23 @@ fn append_synthetic_graph_node(
     owner_username: Option<&str>,
     created_at: DateTime<Utc>,
     is_deleted: bool,
-    metadata_is_visible: bool,
 ) {
     let state = graph_node_state(false, false, is_deleted);
-    if metadata_is_visible {
-        graph.nodes.push(crate::types::VersionGraphNode::visible(
-            id,
-            crate::types::VersionGraphNodeContent {
-                title: title.to_string(),
-                owner_username: owner_username.map(str::to_string),
-                image: None,
-                created_at,
-                change_summary: if is_deleted {
-                    "Deleted recipe".to_string()
-                } else {
-                    "Forked recipe".to_string()
-                },
+    graph.nodes.push(crate::types::VersionGraphNode::visible(
+        id,
+        crate::types::VersionGraphNodeContent {
+            title: title.to_string(),
+            owner_username: owner_username.map(str::to_string),
+            image: None,
+            created_at,
+            change_summary: if is_deleted {
+                "Deleted recipe".to_string()
+            } else {
+                "Forked recipe".to_string()
             },
-            state,
-        ));
-    } else {
-        // A topology-only endpoint proves the fork edge without exposing the
-        // adjacent recipe's current or deletion-snapshot metadata.
-        graph
-            .nodes
-            .push(crate::types::VersionGraphNode::redacted(id, state));
-    }
+        },
+        state,
+    ));
 }
 
 fn deduplicate_and_sort_graph(graph: &mut crate::types::VersionGraph) {
@@ -715,28 +717,99 @@ async fn load_version_graph_versions(
     })
 }
 
-fn append_relationship_endpoint(
-    graph: &mut crate::types::VersionGraph,
+fn relationship_endpoint_is_visible(
     live_recipes: &HashMap<Uuid, Recipe>,
     visible_recipe_ids: &HashSet<Uuid>,
     id: crate::types::VersionGraphNodeId,
     metadata: VersionGraphEndpointMetadata<'_>,
     viewer_id: Option<Uuid>,
-) {
+) -> bool {
     match live_recipes.get(&id.recipe_id) {
-        Some(_) if visible_recipe_ids.contains(&id.recipe_id) => {}
-        Some(_) => {
-            append_synthetic_graph_node(graph, id, "", None, metadata.created_at, false, false)
+        Some(_) => visible_recipe_ids.contains(&id.recipe_id),
+        None => {
+            deleted_recipe_metadata_is_visible(metadata.visibility, metadata.owner_id, viewer_id)
         }
-        None => append_synthetic_graph_node(
+    }
+}
+
+fn version_graph_relationship_edge(
+    relationship: &VersionGraphRelationshipRow,
+) -> Option<crate::types::VersionGraphEdge> {
+    crate::types::VersionGraphEdge::fork(
+        relationship.original_recipe_key()?,
+        relationship.forked_version_number?,
+        relationship.forked_recipe_key()?,
+    )
+}
+
+/// Return the visibility-preserving connected component containing the recipe
+/// the viewer explicitly requested. A visible recipe beyond an inaccessible
+/// intermediate branch is intentionally omitted because returning it in this
+/// graph would disclose that hidden lineage relationship.
+fn visible_version_graph_component(
+    selected_recipe_id: Uuid,
+    relationships: &[VersionGraphRelationshipRow],
+    live_recipes: &HashMap<Uuid, Recipe>,
+    discoverable_live_recipe_ids: &HashSet<Uuid>,
+    viewer_id: Option<Uuid>,
+) -> HashSet<Uuid> {
+    let mut adjacency = HashMap::<Uuid, Vec<Uuid>>::new();
+    for relationship in relationships {
+        let Some(edge) = version_graph_relationship_edge(relationship) else {
+            continue;
+        };
+        if !relationship_endpoint_is_visible(
+            live_recipes,
+            discoverable_live_recipe_ids,
+            edge.source(),
+            relationship.original_endpoint_metadata(),
+            viewer_id,
+        ) || !relationship_endpoint_is_visible(
+            live_recipes,
+            discoverable_live_recipe_ids,
+            edge.target(),
+            relationship.forked_endpoint_metadata(),
+            viewer_id,
+        ) {
+            continue;
+        }
+        adjacency
+            .entry(edge.source().recipe_id)
+            .or_default()
+            .push(edge.target().recipe_id);
+        adjacency
+            .entry(edge.target().recipe_id)
+            .or_default()
+            .push(edge.source().recipe_id);
+    }
+
+    let mut connected = HashSet::from([selected_recipe_id]);
+    let mut pending = vec![selected_recipe_id];
+    while let Some(recipe_id) = pending.pop() {
+        for adjacent_recipe_id in adjacency.get(&recipe_id).into_iter().flatten() {
+            if connected.insert(*adjacent_recipe_id) {
+                pending.push(*adjacent_recipe_id);
+            }
+        }
+    }
+    connected
+}
+
+fn append_visible_relationship_endpoint(
+    graph: &mut crate::types::VersionGraph,
+    live_recipes: &HashMap<Uuid, Recipe>,
+    id: crate::types::VersionGraphNodeId,
+    metadata: VersionGraphEndpointMetadata<'_>,
+) {
+    if !live_recipes.contains_key(&id.recipe_id) {
+        append_synthetic_graph_node(
             graph,
             id,
             metadata.title,
             metadata.owner_username,
             metadata.created_at,
             true,
-            deleted_recipe_metadata_is_visible(metadata.visibility, metadata.owner_id, viewer_id),
-        ),
+        );
     }
 }
 
@@ -797,8 +870,16 @@ async fn get_recipe_version_graph_with_limits(
         })
         .map(|recipe| recipe.id)
         .collect::<Vec<_>>();
+    let discoverable_live_recipe_ids = visible_recipe_ids.iter().copied().collect::<HashSet<_>>();
+    let connected_recipe_ids = visible_version_graph_component(
+        selected_recipe_id,
+        &relationships,
+        &live_recipes,
+        &discoverable_live_recipe_ids,
+        viewer_id,
+    );
+    visible_recipe_ids.retain(|recipe_id| connected_recipe_ids.contains(recipe_id));
     visible_recipe_ids.sort_by_key(|recipe_id| (*recipe_id != selected_recipe_id, *recipe_id));
-    let visible_recipe_id_set = visible_recipe_ids.iter().copied().collect::<HashSet<_>>();
     let mut versions_by_recipe = load_version_graph_versions(
         pool,
         &visible_recipe_ids,
@@ -824,35 +905,42 @@ async fn get_recipe_version_graph_with_limits(
     }
 
     for relationship in &relationships {
-        let Some(source_recipe_id) = relationship.original_recipe_key() else {
-            continue;
-        };
-        let Some(forked_recipe_id) = relationship.forked_recipe_key() else {
-            continue;
-        };
-        let Some(recorded_version) = relationship.forked_version_number else {
-            continue;
-        };
-        if let Some(edge) = crate::types::VersionGraphEdge::fork(
-            source_recipe_id,
-            recorded_version,
-            forked_recipe_id,
-        ) {
-            append_relationship_endpoint(
-                &mut graph,
+        if let Some(edge) = version_graph_relationship_edge(relationship) {
+            if !connected_recipe_ids.contains(&edge.source().recipe_id)
+                || !connected_recipe_ids.contains(&edge.target().recipe_id)
+            {
+                continue;
+            }
+            let source_metadata = relationship.original_endpoint_metadata();
+            let target_metadata = relationship.forked_endpoint_metadata();
+            let source_is_visible = relationship_endpoint_is_visible(
                 &live_recipes,
-                &visible_recipe_id_set,
+                &discoverable_live_recipe_ids,
                 edge.source(),
-                relationship.original_endpoint_metadata(),
+                source_metadata,
                 viewer_id,
             );
-            append_relationship_endpoint(
+            let target_is_visible = relationship_endpoint_is_visible(
+                &live_recipes,
+                &discoverable_live_recipe_ids,
+                edge.target(),
+                target_metadata,
+                viewer_id,
+            );
+            if !source_is_visible || !target_is_visible {
+                continue;
+            }
+            append_visible_relationship_endpoint(
                 &mut graph,
                 &live_recipes,
-                &visible_recipe_id_set,
+                edge.source(),
+                source_metadata,
+            );
+            append_visible_relationship_endpoint(
+                &mut graph,
+                &live_recipes,
                 edge.target(),
-                relationship.forked_endpoint_metadata(),
-                viewer_id,
+                target_metadata,
             );
             graph.edges.push(edge);
         }
@@ -1960,6 +2048,61 @@ pub async fn get_fork_relationship(
     .map_err(DbError::Query)
 }
 
+/// Project fork attribution through the source's current visibility.
+///
+/// Deleted sources use their captured deletion-time visibility. Inaccessible
+/// live or deleted sources retain only the existence of the attribution and
+/// the fork author's message; neither title nor reusable recipe ID crosses the
+/// response boundary.
+pub async fn get_fork_attribution_for_viewer(
+    pool: &PgPool,
+    forked_recipe_id: Uuid,
+    viewer_id: Option<Uuid>,
+) -> Result<Option<crate::types::ForkAttribution>, DbError> {
+    let row = sqlx::query_as::<_, ForkAttributionRow>(
+        "SELECT relationship.original_title, relationship.original_owner_id, \
+                relationship.original_visibility, relationship.message, \
+                source.id AS live_recipe_id, source.user_id AS live_owner_id, \
+                source.visibility AS live_visibility \
+         FROM fork_relationships AS relationship \
+         LEFT JOIN recipes AS source \
+           ON source.id = COALESCE(relationship.original_recipe_key, \
+                                   relationship.original_recipe_id) \
+         WHERE relationship.forked_recipe_id = $1 OR relationship.forked_recipe_key = $1 \
+         ORDER BY relationship.created_at DESC LIMIT 1",
+    )
+    .bind(forked_recipe_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(DbError::Query)?;
+
+    Ok(row.map(|row| {
+        let (original_recipe_id, original_title) = if let Some(live_recipe_id) = row.live_recipe_id
+        {
+            let source_is_visible = row.live_visibility.as_deref() == Some("public")
+                || viewer_id.is_some_and(|viewer| row.live_owner_id == Some(viewer));
+            if source_is_visible {
+                (Some(live_recipe_id), Some(row.original_title))
+            } else {
+                (None, None)
+            }
+        } else {
+            let source_is_visible = row.original_visibility.as_deref() == Some("public")
+                || viewer_id.is_some_and(|viewer| row.original_owner_id == Some(viewer));
+            if source_is_visible {
+                (None, Some(row.original_title))
+            } else {
+                (None, None)
+            }
+        };
+        crate::types::ForkAttribution {
+            original_recipe_id,
+            original_title,
+            message: row.message,
+        }
+    }))
+}
+
 const LINEAGE_EDGE_COLUMNS: &str = "id, parent_relationship_id, original_recipe_id, \
     original_recipe_key, forked_recipe_id, forked_recipe_key, forked_version_number, \
     original_title, forked_title, original_owner_id, original_owner_username, \
@@ -2901,9 +3044,10 @@ mod tests {
         )
         .await
         .unwrap();
-        let fork_draft = create_fork_draft(&pool, source.id, fork_owner.id, None)
-            .await
-            .unwrap();
+        let fork_draft =
+            create_fork_draft(&pool, source.id, fork_owner.id, Some("Private fork note"))
+                .await
+                .unwrap();
         let fork = publish_recipe_draft(&pool, fork_draft.id, fork_owner.id, None)
             .await
             .unwrap();
@@ -2965,7 +3109,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn version_graph_redacts_non_public_direct_forks_for_non_owners() {
+    async fn version_graph_omits_non_public_direct_fork_identifiers_for_non_owners() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let source_owner = owner(&pool, "graph_public").await;
         let fork_owner = owner(&pool, "graph_private").await;
@@ -2992,9 +3136,10 @@ mod tests {
         let private_fork = publish_recipe_draft(&pool, fork_draft.id, fork_owner.id, None)
             .await
             .unwrap();
-        let unlisted_draft = create_fork_draft(&pool, source.id, fork_owner.id, None)
-            .await
-            .unwrap();
+        let unlisted_draft =
+            create_fork_draft(&pool, source.id, fork_owner.id, Some("Unlisted fork note"))
+                .await
+                .unwrap();
         update_recipe_draft(
             &pool,
             unlisted_draft.id,
@@ -3008,24 +3153,58 @@ mod tests {
             .await
             .unwrap();
 
-        let public_graph = get_recipe_version_graph(&pool, source.id, None)
+        let public_graph = get_initial_recipe_version_graph(&pool, source.id, None)
             .await
             .unwrap();
+        let serialized = serde_json::to_string(&public_graph).unwrap();
         for inaccessible_recipe_id in [private_fork.id, unlisted_fork.id] {
-            let inaccessible_node = public_graph
+            assert!(public_graph
                 .nodes
                 .iter()
-                .find(|node| node.id().recipe_id == inaccessible_recipe_id)
-                .expect("redacted non-public fork endpoint");
-            assert!(inaccessible_node.is_redacted());
-            assert_eq!(inaccessible_node.title(), None);
-            assert_eq!(inaccessible_node.owner_username(), None);
-            assert_eq!(inaccessible_node.image(), None);
-            assert!(public_graph.edges.iter().any(|edge| {
-                edge.kind() == crate::types::VersionGraphEdgeKind::Fork
-                    && edge.target().recipe_id == inaccessible_recipe_id
+                .all(|node| node.id().recipe_id != inaccessible_recipe_id));
+            assert!(public_graph.edges.iter().all(|edge| {
+                edge.source().recipe_id != inaccessible_recipe_id
+                    && edge.target().recipe_id != inaccessible_recipe_id
             }));
+            assert!(!serialized.contains(&inaccessible_recipe_id.to_string()));
         }
+        assert!(!serialized.contains("Secret fork"));
+        assert!(!serialized.contains("Unlisted fork"));
+        assert!(!serialized.contains("Private fork note"));
+        assert!(!serialized.contains("Unlisted fork note"));
+        assert_eq!(public_graph.lineage_counts.immediate_descendants.count, 2);
+
+        for hidden_recipe_id in [private_fork.id, unlisted_fork.id] {
+            let hidden_node_id = crate::types::VersionGraphNodeId {
+                recipe_id: hidden_recipe_id,
+                version_number: 1,
+            };
+            let forged_frontier = crate::types::VersionGraphFrontier {
+                anchor: hidden_node_id,
+                kind: crate::types::VersionGraphFrontierKind::ParentFork,
+                hidden_count: 1,
+            };
+            assert!(expand_recipe_version_graph(
+                &pool,
+                source.id,
+                None,
+                forged_frontier,
+                vec![hidden_node_id],
+            )
+            .await
+            .is_err());
+        }
+
+        let known_unlisted_graph = get_initial_recipe_version_graph(&pool, unlisted_fork.id, None)
+            .await
+            .unwrap();
+        assert!(known_unlisted_graph
+            .nodes
+            .iter()
+            .any(|node| node.id().recipe_id == unlisted_fork.id));
+        assert!(serde_json::to_string(&known_unlisted_graph)
+            .unwrap()
+            .contains(&unlisted_fork.id.to_string()));
 
         let owner_graph = get_recipe_version_graph(&pool, source.id, Some(fork_owner.id))
             .await
@@ -3047,7 +3226,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn version_graph_traverses_hidden_branches_without_exposing_their_metadata() {
+    async fn version_graph_omits_hidden_branches_and_disconnected_descendants() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let root_owner = owner(&pool, "graph_hidden_root").await;
         let branch_owner = owner(&pool, "graph_hidden_branch").await;
@@ -3073,30 +3252,12 @@ mod tests {
         let graph = get_recipe_version_graph(&pool, root.id, None)
             .await
             .unwrap();
-        let hidden_nodes = graph
-            .nodes
-            .iter()
-            .filter(|node| node.id().recipe_id == hidden_branch.id)
-            .collect::<Vec<_>>();
-        let public_node = graph
-            .nodes
-            .iter()
-            .find(|node| node.id().recipe_id == public_descendant.id)
-            .expect("public recipe behind hidden branch");
-
-        assert!(!hidden_nodes.is_empty());
-        assert!(hidden_nodes.iter().all(|node| node.is_redacted()));
-        assert!(hidden_nodes.iter().all(|node| node.title().is_none()));
-        assert!(hidden_nodes
-            .iter()
-            .all(|node| node.owner_username().is_none()));
-        assert!(hidden_nodes.iter().all(|node| node.image().is_none()));
-        assert_eq!(public_node.title(), Some("Public descendant"));
-        assert!(graph.edges.iter().any(|edge| {
-            edge.kind() == crate::types::VersionGraphEdgeKind::Fork
-                && edge.source().recipe_id == hidden_branch.id
-                && edge.target().recipe_id == public_descendant.id
-        }));
+        let serialized = serde_json::to_string(&graph).unwrap();
+        assert!(!serialized.contains(&hidden_branch.id.to_string()));
+        assert!(!serialized.contains("Private intermediate"));
+        assert!(!serialized.contains(&public_descendant.id.to_string()));
+        assert!(!serialized.contains("Public descendant"));
+        assert_eq!(graph.lineage_counts.descendants.count, 2);
     }
 
     #[tokio::test]
@@ -3638,6 +3799,113 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn fork_attribution_redacts_live_and_deleted_private_sources_for_non_owners() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let source_owner = owner(&pool, "attribution_source").await;
+        let fork_owner = owner(&pool, "attribution_fork").await;
+        let source =
+            create_published_recipe(&pool, source_owner.id, &snapshot("Source", "public"), None)
+                .await
+                .unwrap();
+        let draft = create_fork_draft(&pool, source.id, fork_owner.id, Some("My variation"))
+            .await
+            .unwrap();
+        let fork = publish_recipe_draft(&pool, draft.id, fork_owner.id, None)
+            .await
+            .unwrap();
+
+        let public = get_fork_attribution_for_viewer(&pool, fork.id, None)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(public.original_recipe_id, Some(source.id));
+        assert_eq!(public.original_title.as_deref(), Some("Source"));
+
+        crate::db::update_recipe_visibility(&pool, source.id, source_owner.id, "unlisted")
+            .await
+            .unwrap();
+        let unlisted_redacted = get_fork_attribution_for_viewer(&pool, fork.id, None)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(unlisted_redacted.original_recipe_id, None);
+        assert_eq!(unlisted_redacted.original_title, None);
+
+        crate::db::update_recipe_visibility(&pool, source.id, source_owner.id, "private")
+            .await
+            .unwrap();
+        let redacted = get_fork_attribution_for_viewer(&pool, fork.id, None)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(redacted.original_recipe_id, None);
+        assert_eq!(redacted.original_title, None);
+        assert_eq!(redacted.message.as_deref(), Some("My variation"));
+
+        let owner_view = get_fork_attribution_for_viewer(&pool, fork.id, Some(source_owner.id))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(owner_view.original_recipe_id, Some(source.id));
+        assert_eq!(owner_view.original_title.as_deref(), Some("Source"));
+
+        crate::db::delete_recipe(&pool, source.id, source_owner.id)
+            .await
+            .unwrap();
+        let deleted_redacted = get_fork_attribution_for_viewer(&pool, fork.id, None)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(deleted_redacted.original_recipe_id, None);
+        assert_eq!(deleted_redacted.original_title, None);
+
+        let deleted_owner = get_fork_attribution_for_viewer(&pool, fork.id, Some(source_owner.id))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(deleted_owner.original_recipe_id, None);
+        assert_eq!(deleted_owner.original_title.as_deref(), Some("Source"));
+
+        sqlx::query(
+            "UPDATE fork_relationships SET original_owner_id = NULL \
+             WHERE forked_recipe_key = $1 OR forked_recipe_id = $1",
+        )
+        .bind(fork.id)
+        .execute(&pool)
+        .await
+        .unwrap();
+        let missing_owner_snapshot = get_fork_attribution_for_viewer(&pool, fork.id, None)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(missing_owner_snapshot.original_recipe_id, None);
+        assert_eq!(missing_owner_snapshot.original_title, None);
+
+        let public_deleted_source = create_published_recipe(
+            &pool,
+            source_owner.id,
+            &snapshot("Public deleted source", "public"),
+            None,
+        )
+        .await
+        .unwrap();
+        let public_deleted_fork =
+            publish_fork(&pool, public_deleted_source.id, &fork_owner, "Public fork").await;
+        crate::db::delete_recipe(&pool, public_deleted_source.id, source_owner.id)
+            .await
+            .unwrap();
+        let deleted_public = get_fork_attribution_for_viewer(&pool, public_deleted_fork.id, None)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(deleted_public.original_recipe_id, None);
+        assert_eq!(
+            deleted_public.original_title.as_deref(),
+            Some("Public deleted source")
+        );
+    }
+
+    #[tokio::test]
     async fn lineage_traverses_both_directions_and_survives_deleted_intermediate_recipes() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let source_owner = owner(&pool, "lineage_source").await;
@@ -3780,9 +4048,14 @@ mod tests {
         .execute(&pool)
         .await
         .unwrap();
-        let private_draft = create_fork_draft(&pool, source.id, fork_owner.id, None)
-            .await
-            .unwrap();
+        let private_draft = create_fork_draft(
+            &pool,
+            source.id,
+            fork_owner.id,
+            Some("Sensitive lineage note"),
+        )
+        .await
+        .unwrap();
         update_recipe_draft(
             &pool,
             private_draft.id,
@@ -3813,7 +4086,13 @@ mod tests {
         assert!(public_view.descendants[0].node.is_redacted);
         assert_eq!(public_view.descendants[0].node.title, "Private recipe");
         assert_eq!(public_view.descendants[0].node.recipe_id, None);
+        assert_eq!(public_view.descendants[0].node.owner_username, None);
         assert_eq!(public_view.descendants[0].node.image_url, None);
+        assert_eq!(public_view.descendants[0].node.fork_message, None);
+        let serialized_public_view = serde_json::to_string(&public_view).unwrap();
+        assert!(!serialized_public_view.contains(&private_recipe.id.to_string()));
+        assert!(!serialized_public_view.contains("Secret branch"));
+        assert!(!serialized_public_view.contains("Sensitive lineage note"));
 
         let owner_view = get_recipe_lineage(&pool, source.id, Some(fork_owner.id), 2)
             .await

@@ -2079,13 +2079,17 @@ pub fn RecipeDetail(id: String) -> Element {
                 if let Some(source) = &attribution {
                     div {
                         class: "recipe-detail__tags",
-                        if let Some(source_id) = source.original_recipe_id {
+                        if let (Some(source_id), Some(source_title)) =
+                            (source.original_recipe_id, source.original_title.as_deref())
+                        {
                             Link {
                                 to: crate::Route::RecipeDetail { id: source_id.to_string() },
-                                "Forked from {source.original_title}"
+                                "Forked from {source_title}"
                             }
+                        } else if let Some(source_title) = source.original_title.as_deref() {
+                            span { "Forked from {source_title}" }
                         } else {
-                            span { "Forked from {source.original_title}" }
+                            span { "Forked from a private recipe" }
                         }
                         if let Some(message) = &source.message {
                             span { " · {message}" }

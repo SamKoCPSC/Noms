@@ -995,15 +995,10 @@ pub async fn get_fork_attribution(
     if recipe.visibility == "private" && viewer_id != Some(recipe.user_id) {
         return Ok(None);
     }
-    Ok(
-        bounded_database_operation(crate::db::get_fork_relationship(&pool, recipe_id))
-            .await?
-            .map(|relationship| crate::types::ForkAttribution {
-                original_recipe_id: relationship.original_recipe_id,
-                original_title: relationship.original_title,
-                message: relationship.message,
-            }),
-    )
+    bounded_database_operation(crate::db::get_fork_attribution_for_viewer(
+        &pool, recipe_id, viewer_id,
+    ))
+    .await
 }
 
 /// Load the current recipe's ancestors and a bounded descendant tree.

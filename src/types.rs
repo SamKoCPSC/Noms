@@ -427,7 +427,9 @@ pub struct VersionGraphComparison {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ForkAttribution {
     pub original_recipe_id: Option<Uuid>,
-    pub original_title: String,
+    /// Present only when the viewer may discover the source under its current
+    /// visibility, or under its captured visibility after deletion.
+    pub original_title: Option<String>,
     pub message: Option<String>,
 }
 
@@ -692,22 +694,22 @@ impl Serialize for VersionGraphNode {
     where
         S: Serializer,
     {
-        let redact_content = self.is_redacted;
+        if self.is_redacted {
+            return Err(serde::ser::Error::custom(
+                "redacted version graph nodes must be omitted before serialization",
+            ));
+        }
         VersionGraphNodeWire {
             id: self.id,
-            title: (!redact_content).then(|| self.title.clone()).flatten(),
-            owner_username: (!redact_content)
-                .then(|| self.owner_username.clone())
-                .flatten(),
-            image: (!redact_content).then(|| self.image.clone()).flatten(),
-            created_at: (!redact_content).then_some(self.created_at).flatten(),
-            change_summary: (!redact_content)
-                .then(|| self.change_summary.clone())
-                .flatten(),
+            title: self.title.clone(),
+            owner_username: self.owner_username.clone(),
+            image: self.image.clone(),
+            created_at: self.created_at,
+            change_summary: self.change_summary.clone(),
             is_selected_recipe: self.is_selected_recipe,
             is_current_version: self.is_current_version,
             is_deleted: self.is_deleted,
-            is_redacted: self.is_redacted,
+            is_redacted: false,
         }
         .serialize(serializer)
     }
@@ -762,6 +764,9 @@ pub struct VersionGraphLineageCount {
     pub is_capped: bool,
 }
 
+/// Aggregate topology intentionally includes inaccessible lineage branches.
+/// Counts disclose only existence and size; hidden nodes and their reusable
+/// identifiers are omitted from every graph page.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VersionGraphLineageCounts {
     pub ancestors: VersionGraphLineageCount,
@@ -1387,7 +1392,7 @@ mod tests {
     }
 
     #[test]
-    fn redacted_version_graph_nodes_expose_only_topology_and_state() {
+    fn redacted_version_graph_nodes_cannot_cross_the_wire_with_stable_ids() {
         let id = VersionGraphNodeId {
             recipe_id: Uuid::new_v4(),
             version_number: 3,
@@ -1411,13 +1416,7 @@ mod tests {
         assert!(node.is_deleted);
         assert!(node.is_redacted);
 
-        let serialized = serde_json::to_value(node).unwrap();
-        assert!(serialized["title"].is_null());
-        assert!(serialized["owner_username"].is_null());
-        assert!(serialized["image"].is_null());
-        assert!(serialized.get("thumbnail_url").is_none());
-        assert!(serialized["created_at"].is_null());
-        assert!(serialized["change_summary"].is_null());
+        assert!(serde_json::to_value(node).is_err());
 
         let inconsistent_redacted_node = serde_json::json!({
             "id": id,
@@ -1433,12 +1432,7 @@ mod tests {
         });
         let sanitized: VersionGraphNode =
             serde_json::from_value(inconsistent_redacted_node).unwrap();
-        let reserialized = serde_json::to_value(sanitized).unwrap();
-        assert!(reserialized["title"].is_null());
-        assert!(reserialized["owner_username"].is_null());
-        assert!(reserialized["thumbnail_url"].is_null());
-        assert!(reserialized["created_at"].is_null());
-        assert!(reserialized["change_summary"].is_null());
+        assert!(serde_json::to_value(sanitized).is_err());
     }
 
     #[test]
