@@ -318,6 +318,8 @@ pub async fn apply_test_schema(pool: &PgPool) {
         "CREATE INDEX IF NOT EXISTS idx_forks_result ON fork_relationships(forked_recipe_id)",
         "CREATE INDEX IF NOT EXISTS idx_forks_original_key ON fork_relationships(original_recipe_key)",
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_forks_result_key ON fork_relationships(forked_recipe_key) WHERE forked_recipe_key IS NOT NULL",
+        "CREATE INDEX IF NOT EXISTS idx_forks_original_version_cursor ON fork_relationships((COALESCE(original_recipe_key, original_recipe_id)), forked_version_number, id)",
+        "CREATE INDEX IF NOT EXISTS idx_forks_result_cursor ON fork_relationships((COALESCE(forked_recipe_key, forked_recipe_id)), id)",
         "CREATE INDEX IF NOT EXISTS idx_forks_parent ON fork_relationships(parent_relationship_id)",
     ] {
         sqlx::query(statement)

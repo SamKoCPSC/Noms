@@ -801,6 +801,10 @@ pub struct VersionGraphFrontier {
     pub anchor: VersionGraphNodeId,
     pub kind: VersionGraphFrontierKind,
     pub hidden_count: usize,
+    /// Random relationship key used as an opaque keyset continuation for
+    /// bounded fork pages. Version-only directions leave this unset.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fork_cursor: Option<Uuid>,
 }
 
 /// Normalized graph payload. Relationships refer to nodes by stable identity.
@@ -1671,6 +1675,7 @@ mod tests {
                 anchor,
                 kind: VersionGraphFrontierKind::ChildForks,
                 hidden_count: 7,
+                fork_cursor: None,
             }],
             ..Default::default()
         };

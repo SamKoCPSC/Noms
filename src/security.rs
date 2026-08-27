@@ -336,6 +336,11 @@ pub fn validate_graph_expansion(
         || !unique.contains(&frontier.anchor)
         || frontier.anchor.version_number <= 0
         || loaded.iter().any(|node| node.version_number <= 0)
+        || (matches!(
+            frontier.kind,
+            crate::types::VersionGraphFrontierKind::OlderVersions
+                | crate::types::VersionGraphFrontierKind::NewerVersions
+        ) && frontier.fork_cursor.is_some())
     {
         return Err(SecurityLimitError::InvalidGraphExpansion);
     }
@@ -856,6 +861,7 @@ mod tests {
             anchor: loaded[0],
             kind: VersionGraphFrontierKind::NewerVersions,
             hidden_count: 1,
+            fork_cursor: None,
         };
 
         assert_eq!(validate_graph_expansion(&frontier, &loaded), Ok(()));

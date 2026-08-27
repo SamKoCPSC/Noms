@@ -4337,6 +4337,7 @@ mod tests {
                 anchor,
                 kind: crate::types::VersionGraphFrontierKind::ChildForks,
                 hidden_count: 12,
+                fork_cursor: None,
             }],
             ..Default::default()
         };
@@ -4345,6 +4346,7 @@ mod tests {
                 anchor,
                 kind: crate::types::VersionGraphFrontierKind::ChildForks,
                 hidden_count: 7,
+                fork_cursor: None,
             }],
             ..Default::default()
         };
@@ -4542,6 +4544,7 @@ mod tests {
             anchor,
             kind: VersionGraphFrontierKind::OlderVersions,
             hidden_count: 2,
+            fork_cursor: None,
         };
         let child_frontier = VersionGraphFrontier {
             anchor: VersionGraphNodeId {
@@ -4550,6 +4553,7 @@ mod tests {
             },
             kind: VersionGraphFrontierKind::ParentFork,
             hidden_count: 1,
+            fork_cursor: None,
         };
         let parent_id = super::VersionGraphFrontierId::from(parent_frontier);
         let child_id = super::VersionGraphFrontierId::from(child_frontier);

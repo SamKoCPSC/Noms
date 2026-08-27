@@ -508,7 +508,8 @@ pub async fn get_recipe_versions_api(
         ))
         .await?;
         tracing::info!(
-            rows_read = bounded_page.work.rows_read,
+            snapshot_metadata_rows_returned = bounded_page.work.snapshot_metadata_rows_returned,
+            snapshot_payload_rows_returned = bounded_page.work.snapshot_payload_rows_returned,
             encoded_snapshot_bytes = bounded_page.work.encoded_snapshot_bytes,
             decoded_snapshot_bytes = bounded_page.work.decoded_snapshot_bytes,
             snapshots_decoded = bounded_page.work.snapshots_decoded,
@@ -638,11 +639,12 @@ pub async fn get_recipe_version_graph(
     .await
     .map_err(|error| ServerFnError::new(error.to_string()))??;
     tracing::info!(
-        recipe_rows_read = bounded_page.work.recipe_rows_read,
-        validation_rows_read = bounded_page.work.validation_rows_read,
-        relationship_rows_read = bounded_page.work.relationship_rows_read,
+        recipe_rows_returned = bounded_page.work.recipe_rows_returned,
+        validation_rows_returned = bounded_page.work.validation_rows_returned,
+        relationship_rows_returned = bounded_page.work.relationship_rows_returned,
         relationship_queries = bounded_page.work.relationship_queries,
-        snapshot_rows_read = bounded_page.work.snapshot_rows_read,
+        snapshot_metadata_rows_returned = bounded_page.work.snapshot_metadata_rows_returned,
+        snapshot_payload_rows_returned = bounded_page.work.snapshot_payload_rows_returned,
         encoded_snapshot_bytes = bounded_page.work.encoded_snapshot_bytes,
         decoded_snapshot_bytes = bounded_page.work.decoded_snapshot_bytes,
         snapshots_decoded = bounded_page.work.snapshots_decoded,
@@ -691,11 +693,12 @@ pub async fn expand_recipe_version_graph(
     .await
     .map_err(|error| ServerFnError::new(error.to_string()))??;
     tracing::info!(
-        recipe_rows_read = bounded_page.work.recipe_rows_read,
-        validation_rows_read = bounded_page.work.validation_rows_read,
-        relationship_rows_read = bounded_page.work.relationship_rows_read,
+        recipe_rows_returned = bounded_page.work.recipe_rows_returned,
+        validation_rows_returned = bounded_page.work.validation_rows_returned,
+        relationship_rows_returned = bounded_page.work.relationship_rows_returned,
         relationship_queries = bounded_page.work.relationship_queries,
-        snapshot_rows_read = bounded_page.work.snapshot_rows_read,
+        snapshot_metadata_rows_returned = bounded_page.work.snapshot_metadata_rows_returned,
+        snapshot_payload_rows_returned = bounded_page.work.snapshot_payload_rows_returned,
         encoded_snapshot_bytes = bounded_page.work.encoded_snapshot_bytes,
         decoded_snapshot_bytes = bounded_page.work.decoded_snapshot_bytes,
         snapshots_decoded = bounded_page.work.snapshots_decoded,

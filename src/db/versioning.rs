@@ -158,7 +158,11 @@ pub async fn get_recipe_versions(
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct VersionSummaryReadWork {
-    pub rows_read: usize,
+    /// Rows returned by the size-preflight query. This is not a PostgreSQL
+    /// storage-engine scan count.
+    pub snapshot_metadata_rows_returned: usize,
+    /// Rows returned by the bounded snapshot payload query.
+    pub snapshot_payload_rows_returned: usize,
     pub encoded_snapshot_bytes: usize,
     pub decoded_snapshot_bytes: usize,
     pub snapshots_decoded: usize,
@@ -178,12 +182,224 @@ struct RecipeVersionSnapshotSize {
     current_version_number: i32,
 }
 
+#[derive(Debug, Clone, sqlx::FromRow)]
+struct BoundedRecipeVersionPayloadRow {
+    recipe_id: Uuid,
+    version_number: i32,
+    snapshot_text: String,
+    notes: Option<String>,
+    created_at: DateTime<Utc>,
+}
+
+impl BoundedRecipeVersionPayloadRow {
+    fn decoded_snapshot(&self) -> Result<RecipeSnapshot, DbError> {
+        serde_json::from_str(&self.snapshot_text).map_err(DbError::SerdeJson)
+    }
+}
+
+fn checked_decoded_heap_add(
+    total: &mut usize,
+    bytes: usize,
+    label: &'static str,
+) -> Result<(), DbError> {
+    *total = total
+        .checked_add(bytes)
+        .ok_or(DbError::ResourceLimitExceeded(label))?;
+    Ok(())
+}
+
+fn recipe_image_decoded_heap_bytes(
+    image: &crate::types::RecipeImage,
+    total: &mut usize,
+    label: &'static str,
+) -> Result<(), DbError> {
+    checked_decoded_heap_add(total, image.url.capacity(), label)?;
+    if let Some(value) = &image.thumb_url {
+        checked_decoded_heap_add(total, value.capacity(), label)?;
+    }
+    if let Some(value) = &image.file_name {
+        checked_decoded_heap_add(total, value.capacity(), label)?;
+    }
+    checked_decoded_heap_add(
+        total,
+        image
+            .edits
+            .capacity()
+            .checked_mul(std::mem::size_of::<crate::types::RecipeImageEdit>())
+            .ok_or(DbError::ResourceLimitExceeded(label))?,
+        label,
+    )?;
+    for edit in &image.edits {
+        checked_decoded_heap_add(total, edit.name.capacity(), label)?;
+    }
+    Ok(())
+}
+
+fn recipe_steps_decoded_heap_bytes(
+    steps: &[crate::types::RecipeStep],
+    total: &mut usize,
+    label: &'static str,
+) -> Result<(), DbError> {
+    for step in steps {
+        checked_decoded_heap_add(total, step.text.capacity(), label)?;
+        checked_decoded_heap_add(
+            total,
+            step.sub_steps
+                .capacity()
+                .checked_mul(std::mem::size_of::<crate::types::RecipeStep>())
+                .ok_or(DbError::ResourceLimitExceeded(label))?,
+            label,
+        )?;
+        recipe_steps_decoded_heap_bytes(&step.sub_steps, total, label)?;
+        checked_decoded_heap_add(
+            total,
+            step.photos
+                .capacity()
+                .checked_mul(std::mem::size_of::<crate::types::RecipeImage>())
+                .ok_or(DbError::ResourceLimitExceeded(label))?,
+            label,
+        )?;
+        for image in &step.photos {
+            recipe_image_decoded_heap_bytes(image, total, label)?;
+        }
+    }
+    Ok(())
+}
+
+/// Return the bytes owned by a decoded snapshot: the root value, all vector
+/// allocations, and all string allocations. Unlike JSON reserialization,
+/// this follows the allocations retained by the typed Rust value.
+fn recipe_snapshot_decoded_heap_bytes(snapshot: &RecipeSnapshot) -> Result<usize, DbError> {
+    let label = "decoded recipe snapshot heap bytes";
+    let mut total = std::mem::size_of::<RecipeSnapshot>();
+    checked_decoded_heap_add(&mut total, snapshot.title.capacity(), label)?;
+    for value in [&snapshot.description, &snapshot.commentary]
+        .into_iter()
+        .flatten()
+    {
+        checked_decoded_heap_add(&mut total, value.capacity(), label)?;
+    }
+    checked_decoded_heap_add(
+        &mut total,
+        snapshot
+            .ingredients
+            .capacity()
+            .checked_mul(std::mem::size_of::<crate::types::RecipeIngredient>())
+            .ok_or(DbError::ResourceLimitExceeded(label))?,
+        label,
+    )?;
+    for ingredient in &snapshot.ingredients {
+        for value in [&ingredient.amount, &ingredient.unit, &ingredient.name] {
+            checked_decoded_heap_add(&mut total, value.capacity(), label)?;
+        }
+    }
+    checked_decoded_heap_add(
+        &mut total,
+        snapshot
+            .instructions
+            .capacity()
+            .checked_mul(std::mem::size_of::<crate::types::RecipeStep>())
+            .ok_or(DbError::ResourceLimitExceeded(label))?,
+        label,
+    )?;
+    recipe_steps_decoded_heap_bytes(&snapshot.instructions, &mut total, label)?;
+    checked_decoded_heap_add(
+        &mut total,
+        snapshot
+            .equipment
+            .capacity()
+            .checked_mul(std::mem::size_of::<crate::types::RecipeEquipment>())
+            .ok_or(DbError::ResourceLimitExceeded(label))?,
+        label,
+    )?;
+    for equipment in &snapshot.equipment {
+        checked_decoded_heap_add(&mut total, equipment.name.capacity(), label)?;
+    }
+    checked_decoded_heap_add(
+        &mut total,
+        snapshot
+            .images
+            .capacity()
+            .checked_mul(std::mem::size_of::<crate::types::RecipeImage>())
+            .ok_or(DbError::ResourceLimitExceeded(label))?,
+        label,
+    )?;
+    for image in &snapshot.images {
+        recipe_image_decoded_heap_bytes(image, &mut total, label)?;
+    }
+    checked_decoded_heap_add(
+        &mut total,
+        snapshot
+            .tags
+            .capacity()
+            .checked_mul(std::mem::size_of::<String>())
+            .ok_or(DbError::ResourceLimitExceeded(label))?,
+        label,
+    )?;
+    for tag in &snapshot.tags {
+        checked_decoded_heap_add(&mut total, tag.capacity(), label)?;
+    }
+    Ok(total)
+}
+
+fn bounded_snapshot_change_summary(older: &RecipeSnapshot, newer: &RecipeSnapshot) -> String {
+    let mut fields = Vec::with_capacity(11);
+    if older.title != newer.title {
+        fields.push("title");
+    }
+    if older.description != newer.description {
+        fields.push("description");
+    }
+    if older.commentary != newer.commentary {
+        fields.push("commentary");
+    }
+    if older.prep_time_minutes != newer.prep_time_minutes {
+        fields.push("prep_time_minutes");
+    }
+    if older.cook_time_minutes != newer.cook_time_minutes {
+        fields.push("cook_time_minutes");
+    }
+    if older.servings != newer.servings {
+        fields.push("servings");
+    }
+    if older.ingredients != newer.ingredients {
+        fields.push("ingredients");
+    }
+    if older.instructions != newer.instructions {
+        fields.push("instructions");
+    }
+    if older.equipment != newer.equipment {
+        fields.push("equipment");
+    }
+    if older.images != newer.images {
+        fields.push("images");
+    }
+    if older.tags != newer.tags {
+        fields.push("tags");
+    }
+    fields.sort_unstable();
+    match fields.as_slice() {
+        [] => "No content changes".to_string(),
+        [field] => format!("Updated {field}"),
+        [first, second] => format!("Updated {first} and {second}"),
+        _ => {
+            let last = fields.pop().expect("non-empty fields checked above");
+            format!("Updated {}, and {last}", fields.join(", "))
+        }
+    }
+}
+
 fn checked_snapshot_byte_total(
     sizes: impl IntoIterator<Item = usize>,
     maximum: usize,
 ) -> Result<usize, DbError> {
     let mut total = 0usize;
     for size in sizes {
+        if size > crate::security::MAX_RECIPE_SNAPSHOT_BYTES {
+            return Err(DbError::ResourceLimitExceeded(
+                "version history encoded snapshot bytes",
+            ));
+        }
         total = total
             .checked_add(size)
             .ok_or(DbError::ResourceLimitExceeded(
@@ -242,11 +458,12 @@ pub async fn get_recipe_version_summary_page(
     let versions = if version_numbers.is_empty() {
         Vec::new()
     } else {
-        sqlx::query_as::<_, RecipeVersion>(&format!(
-            "SELECT {VERSION_COLUMNS} FROM recipe_versions \
+        sqlx::query_as::<_, BoundedRecipeVersionPayloadRow>(
+            "SELECT recipe_id, version_number, snapshot::text AS snapshot_text, notes, created_at \
+               FROM recipe_versions \
              WHERE recipe_id = $1 AND version_number = ANY($2) \
-             ORDER BY version_number DESC"
-        ))
+             ORDER BY version_number DESC",
+        )
         .bind(recipe_id)
         .bind(&version_numbers)
         .fetch_all(pool)
@@ -263,9 +480,7 @@ pub async fn get_recipe_version_summary_page(
     let mut snapshots = Vec::with_capacity(versions.len());
     for version in &versions {
         let snapshot = version.decoded_snapshot()?;
-        let snapshot_bytes = serde_json::to_vec(&snapshot)
-            .map_err(DbError::SerdeJson)?
-            .len();
+        let snapshot_bytes = recipe_snapshot_decoded_heap_bytes(&snapshot)?;
         decoded_snapshot_bytes = decoded_snapshot_bytes.checked_add(snapshot_bytes).ok_or(
             DbError::ResourceLimitExceeded("version history decoded snapshot bytes"),
         )?;
@@ -290,7 +505,7 @@ pub async fn get_recipe_version_summary_page(
                 .get(index + 1)
                 .map(|older| {
                     diff_operations = diff_operations.saturating_add(1);
-                    compute_diff(older, snapshot).map(|diff| super::diff::change_summary(&diff))
+                    Ok::<_, DbError>(bounded_snapshot_change_summary(older, snapshot))
                 })
                 .transpose()?
                 .unwrap_or_else(|| "Initial version".to_string());
@@ -318,7 +533,8 @@ pub async fn get_recipe_version_summary_page(
             next_before_version_number,
         },
         work: VersionSummaryReadWork {
-            rows_read: versions.len(),
+            snapshot_metadata_rows_returned: size_rows.len(),
+            snapshot_payload_rows_returned: versions.len(),
             encoded_snapshot_bytes,
             decoded_snapshot_bytes,
             snapshots_decoded: snapshots.len(),
@@ -1236,6 +1452,7 @@ fn version_graph_frontiers(
                     anchor,
                     kind,
                     hidden_count,
+                    fork_cursor: None,
                 });
             }
         }
@@ -1396,14 +1613,39 @@ fn expanded_version_graph_batch(
 
 const VERSION_GRAPH_PAGE_EDGE_LIMIT: usize = 64;
 const VERSION_GRAPH_VALIDATION_RELATIONSHIP_LIMIT: usize = 500;
+const VERSION_GRAPH_FRONTIER_COUNT_CAP: usize = VERSION_GRAPH_EXPANSION_NODE_LIMIT + 1;
+
+fn graph_frontier_probe_limit(node_limit: usize) -> usize {
+    node_limit
+        .max(VERSION_GRAPH_FRONTIER_COUNT_CAP)
+        .saturating_add(1)
+}
+
+fn graph_fork_raw_page_limit(node_limit: usize) -> usize {
+    node_limit.clamp(
+        VERSION_GRAPH_EXPANSION_NODE_LIMIT,
+        INITIAL_VERSION_GRAPH_NODE_LIMIT,
+    )
+}
+
+fn graph_fork_query_limit(node_limit: usize) -> usize {
+    graph_fork_raw_page_limit(node_limit).saturating_add(1)
+}
+
+fn bounded_graph_frontier_hidden_count(probed_rows: usize) -> usize {
+    probed_rows.min(VERSION_GRAPH_FRONTIER_COUNT_CAP)
+}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct VersionGraphPageReadWork {
-    pub recipe_rows_read: usize,
-    pub validation_rows_read: usize,
-    pub relationship_rows_read: usize,
+    /// SQL result rows returned to the application, not PostgreSQL
+    /// storage-engine scan counts.
+    pub recipe_rows_returned: usize,
+    pub validation_rows_returned: usize,
+    pub relationship_rows_returned: usize,
     pub relationship_queries: usize,
-    pub snapshot_rows_read: usize,
+    pub snapshot_metadata_rows_returned: usize,
+    pub snapshot_payload_rows_returned: usize,
     pub encoded_snapshot_bytes: usize,
     pub decoded_snapshot_bytes: usize,
     pub snapshots_decoded: usize,
@@ -1412,19 +1654,24 @@ pub struct VersionGraphPageReadWork {
 
 impl VersionGraphPageReadWork {
     fn absorb(&mut self, other: Self) {
-        self.recipe_rows_read = self.recipe_rows_read.saturating_add(other.recipe_rows_read);
-        self.validation_rows_read = self
-            .validation_rows_read
-            .saturating_add(other.validation_rows_read);
-        self.relationship_rows_read = self
-            .relationship_rows_read
-            .saturating_add(other.relationship_rows_read);
+        self.recipe_rows_returned = self
+            .recipe_rows_returned
+            .saturating_add(other.recipe_rows_returned);
+        self.validation_rows_returned = self
+            .validation_rows_returned
+            .saturating_add(other.validation_rows_returned);
+        self.relationship_rows_returned = self
+            .relationship_rows_returned
+            .saturating_add(other.relationship_rows_returned);
         self.relationship_queries = self
             .relationship_queries
             .saturating_add(other.relationship_queries);
-        self.snapshot_rows_read = self
-            .snapshot_rows_read
-            .saturating_add(other.snapshot_rows_read);
+        self.snapshot_metadata_rows_returned = self
+            .snapshot_metadata_rows_returned
+            .saturating_add(other.snapshot_metadata_rows_returned);
+        self.snapshot_payload_rows_returned = self
+            .snapshot_payload_rows_returned
+            .saturating_add(other.snapshot_payload_rows_returned);
         self.encoded_snapshot_bytes = self
             .encoded_snapshot_bytes
             .saturating_add(other.encoded_snapshot_bytes);
@@ -1482,7 +1729,17 @@ struct VersionGraphContext {
 struct VersionGraphDirectionPage {
     node_ids: Vec<crate::types::VersionGraphNodeId>,
     hidden_count: usize,
+    next_fork_cursor: Option<Uuid>,
     work: VersionGraphPageReadWork,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct VersionGraphDirectionRequest<'a> {
+    anchor: crate::types::VersionGraphNodeId,
+    kind: crate::types::VersionGraphFrontierKind,
+    excluded_node_ids: &'a HashSet<crate::types::VersionGraphNodeId>,
+    fork_cursor: Option<Uuid>,
+    limit: usize,
 }
 
 #[derive(Debug, Clone, Copy, sqlx::FromRow)]
@@ -1586,7 +1843,7 @@ async fn load_version_graph_context(
     let live_recipe_rows = load_graph_recipe_access_rows(pool, &recipe_ids).await?;
     let mut context = VersionGraphContext {
         work: VersionGraphPageReadWork {
-            recipe_rows_read: live_recipe_rows.len(),
+            recipe_rows_returned: live_recipe_rows.len(),
             ..Default::default()
         },
         live_recipes: live_recipe_rows
@@ -1643,7 +1900,7 @@ async fn load_version_graph_context(
         )
         .collect::<HashSet<_>>()
     };
-    context.work.validation_rows_read = persisted_live_node_ids.len();
+    context.work.validation_rows_returned = persisted_live_node_ids.len();
 
     let relationship_limit = VERSION_GRAPH_VALIDATION_RELATIONSHIP_LIMIT.saturating_add(1);
     let relationships = sqlx::query_as::<_, VersionGraphRelationshipRow>(
@@ -1671,7 +1928,7 @@ async fn load_version_graph_context(
             "version graph validation relationships",
         ));
     }
-    context.work.relationship_rows_read = relationships.len();
+    context.work.relationship_rows_returned = relationships.len();
     context.work.relationship_queries = 1;
 
     for relationship in relationships.iter().filter(|relationship| {
@@ -1829,34 +2086,22 @@ async fn load_version_direction_page(
         crate::types::VersionGraphFrontierKind::NewerVersions => (">", "ASC"),
         _ => return Ok(VersionGraphDirectionPage::default()),
     };
-    let count = sqlx::query_scalar::<_, i64>(&format!(
-        "SELECT COUNT(*) FROM recipe_versions \
+    let mut version_numbers = sqlx::query_scalar::<_, i32>(&format!(
+        "SELECT version_number FROM recipe_versions \
          WHERE recipe_id = $1 AND version_number {comparison} $2 \
-           AND NOT (version_number = ANY($3))"
+           AND NOT (version_number = ANY($3)) \
+         ORDER BY version_number {ordering} LIMIT $4"
     ))
     .bind(anchor.recipe_id)
     .bind(anchor.version_number)
     .bind(&excluded_versions)
-    .fetch_one(pool)
+    .bind(graph_query_limit(graph_frontier_probe_limit(limit)))
+    .fetch_all(pool)
     .await
     .map_err(DbError::Query)?;
-    let version_numbers = if limit == 0 {
-        Vec::new()
-    } else {
-        sqlx::query_scalar::<_, i32>(&format!(
-            "SELECT version_number FROM recipe_versions \
-             WHERE recipe_id = $1 AND version_number {comparison} $2 \
-               AND NOT (version_number = ANY($3)) \
-             ORDER BY version_number {ordering} LIMIT $4"
-        ))
-        .bind(anchor.recipe_id)
-        .bind(anchor.version_number)
-        .bind(&excluded_versions)
-        .bind(graph_query_limit(limit))
-        .fetch_all(pool)
-        .await
-        .map_err(DbError::Query)?
-    };
+    let probed_rows = version_numbers.len();
+    let hidden_count = bounded_graph_frontier_hidden_count(probed_rows);
+    version_numbers.truncate(limit);
     Ok(VersionGraphDirectionPage {
         node_ids: version_numbers
             .into_iter()
@@ -1865,54 +2110,28 @@ async fn load_version_direction_page(
                 version_number,
             })
             .collect(),
-        hidden_count: usize::try_from(count).unwrap_or(usize::MAX),
+        hidden_count,
+        next_fork_cursor: None,
         work: VersionGraphPageReadWork {
-            validation_rows_read: limit.min(usize::try_from(count).unwrap_or(usize::MAX)),
+            validation_rows_returned: probed_rows,
             ..Default::default()
         },
     })
-}
-
-fn visible_fork_relationship_sql(direction_clause: &str, select: &str) -> String {
-    format!(
-        "{select} \
-           FROM fork_relationships AS relationship \
-           LEFT JOIN recipes AS original_live \
-             ON original_live.id = COALESCE(relationship.original_recipe_key, relationship.original_recipe_id) \
-           LEFT JOIN recipes AS forked_live \
-             ON forked_live.id = COALESCE(relationship.forked_recipe_key, relationship.forked_recipe_id) \
-          WHERE {direction_clause} \
-            AND COALESCE(relationship.original_recipe_key, relationship.original_recipe_id) IS NOT NULL \
-            AND COALESCE(relationship.forked_recipe_key, relationship.forked_recipe_id) IS NOT NULL \
-            AND relationship.forked_version_number > 0 \
-            AND COALESCE(relationship.original_recipe_key, relationship.original_recipe_id) \
-                <> COALESCE(relationship.forked_recipe_key, relationship.forked_recipe_id) \
-            AND (\
-                (original_live.id IS NOT NULL AND (\
-                    original_live.id = $3 OR original_live.visibility = 'public' OR original_live.user_id = $4\
-                )) OR (original_live.id IS NULL AND (\
-                    relationship.original_visibility = 'public' OR relationship.original_owner_id = $4\
-                ))\
-            ) \
-            AND (\
-                (forked_live.id IS NOT NULL AND (\
-                    forked_live.id = $3 OR forked_live.visibility = 'public' OR forked_live.user_id = $4\
-                )) OR (forked_live.id IS NULL AND (\
-                    relationship.forked_visibility = 'public' OR relationship.forked_owner_id = $4\
-                ))\
-            )"
-    )
 }
 
 async fn load_fork_direction_page(
     pool: &PgPool,
     selected_recipe_id: Uuid,
     viewer_id: Option<Uuid>,
-    anchor: crate::types::VersionGraphNodeId,
-    kind: crate::types::VersionGraphFrontierKind,
-    excluded_node_ids: &HashSet<crate::types::VersionGraphNodeId>,
-    limit: usize,
+    request: VersionGraphDirectionRequest<'_>,
 ) -> Result<VersionGraphDirectionPage, DbError> {
+    let VersionGraphDirectionRequest {
+        anchor,
+        kind,
+        excluded_node_ids,
+        fork_cursor: cursor,
+        limit,
+    } = request;
     let excluded_recipe_ids = excluded_node_ids
         .iter()
         .map(|node_id| node_id.recipe_id)
@@ -1920,56 +2139,103 @@ async fn load_fork_direction_page(
     let (direction_clause, neighbor_is_source) = match kind {
         crate::types::VersionGraphFrontierKind::ParentFork => (
             "$2 = 1 \
-             AND COALESCE(relationship.forked_recipe_key, relationship.forked_recipe_id) = $1 \
-             AND NOT (COALESCE(relationship.original_recipe_key, relationship.original_recipe_id) = ANY($5))",
+             AND COALESCE(relationship.forked_recipe_key, relationship.forked_recipe_id) = $1",
             true,
         ),
         crate::types::VersionGraphFrontierKind::ChildForks => (
             "COALESCE(relationship.original_recipe_key, relationship.original_recipe_id) = $1 \
-             AND relationship.forked_version_number = $2 \
-             AND NOT (COALESCE(relationship.forked_recipe_key, relationship.forked_recipe_id) = ANY($5))",
+             AND relationship.forked_version_number = $2",
             false,
         ),
         _ => return Ok(VersionGraphDirectionPage::default()),
     };
-    let count_sql = visible_fork_relationship_sql(direction_clause, "SELECT COUNT(*)");
-    let count = sqlx::query_scalar::<_, i64>(&count_sql)
-        .bind(anchor.recipe_id)
-        .bind(anchor.version_number)
-        .bind(selected_recipe_id)
-        .bind(viewer_id)
-        .bind(&excluded_recipe_ids)
-        .fetch_one(pool)
-        .await
-        .map_err(DbError::Query)?;
-    let relationships = if limit == 0 {
-        Vec::new()
-    } else {
-        let select = "SELECT relationship.id, relationship.original_recipe_id, \
-            relationship.original_recipe_key, relationship.forked_recipe_id, \
-            relationship.forked_recipe_key, relationship.forked_version_number, \
-            relationship.original_title, relationship.forked_title, \
-            relationship.original_owner_id, relationship.original_owner_username, \
-            relationship.original_visibility, relationship.forked_owner_id, \
-            relationship.forked_owner_username, relationship.forked_visibility, \
-            relationship.created_at";
+    let select = "SELECT relationship.id, relationship.original_recipe_id, \
+        relationship.original_recipe_key, relationship.forked_recipe_id, \
+        relationship.forked_recipe_key, relationship.forked_version_number, \
+        relationship.original_title, relationship.forked_title, \
+        relationship.original_owner_id, relationship.original_owner_username, \
+        relationship.original_visibility, relationship.forked_owner_id, \
+        relationship.forked_owner_username, relationship.forked_visibility, \
+        relationship.created_at";
+    // The matching schema indexes order raw branch rows by the random UUID
+    // primary key. LIMIT therefore bounds the branch read before visibility,
+    // validity, exclusion, or deduplication work happens in the application.
+    let mut relationships = if let Some(cursor) = cursor {
         let row_sql = format!(
-            "{} ORDER BY relationship.created_at, relationship.id LIMIT $6",
-            visible_fork_relationship_sql(direction_clause, select)
+            "{select} FROM fork_relationships AS relationship \
+              WHERE {direction_clause} AND relationship.id > $3 \
+              ORDER BY relationship.id LIMIT $4"
         );
         sqlx::query_as::<_, VersionGraphRelationshipRow>(&row_sql)
             .bind(anchor.recipe_id)
             .bind(anchor.version_number)
-            .bind(selected_recipe_id)
-            .bind(viewer_id)
-            .bind(&excluded_recipe_ids)
-            .bind(graph_query_limit(limit))
+            .bind(cursor)
+            .bind(graph_query_limit(graph_fork_query_limit(limit)))
+            .fetch_all(pool)
+            .await
+            .map_err(DbError::Query)?
+    } else {
+        let row_sql = format!(
+            "{select} FROM fork_relationships AS relationship \
+              WHERE {direction_clause} \
+              ORDER BY relationship.id LIMIT $3"
+        );
+        sqlx::query_as::<_, VersionGraphRelationshipRow>(&row_sql)
+            .bind(anchor.recipe_id)
+            .bind(anchor.version_number)
+            .bind(graph_query_limit(graph_fork_query_limit(limit)))
             .fetch_all(pool)
             .await
             .map_err(DbError::Query)?
     };
+    let relationship_rows_returned = relationships.len();
+    let raw_page_limit = graph_fork_raw_page_limit(limit);
+    let has_more_raw_rows = relationships.len() > raw_page_limit;
+    relationships.truncate(raw_page_limit);
+    let next_fork_cursor = has_more_raw_rows
+        .then(|| relationships.last().map(|relationship| relationship.id))
+        .flatten();
+
+    let mut endpoint_recipe_ids = relationships
+        .iter()
+        .flat_map(|relationship| {
+            [
+                relationship.original_recipe_key(),
+                relationship.forked_recipe_key(),
+            ]
+        })
+        .flatten()
+        .collect::<Vec<_>>();
+    endpoint_recipe_ids.sort_unstable();
+    endpoint_recipe_ids.dedup();
+    let live_recipe_rows = load_graph_recipe_access_rows(pool, &endpoint_recipe_ids).await?;
+    let recipe_rows_returned = live_recipe_rows.len();
+    let live_recipes = live_recipe_rows
+        .into_iter()
+        .map(|recipe| (recipe.id, recipe))
+        .collect::<HashMap<_, _>>();
+
+    let mut seen_node_ids = HashSet::new();
     let mut node_ids = relationships
         .iter()
+        .filter(|relationship| {
+            let Some(source) = relationship.original_recipe_key() else {
+                return false;
+            };
+            let Some(target) = relationship.forked_recipe_key() else {
+                return false;
+            };
+            relationship
+                .forked_version_number
+                .is_some_and(|version| version > 0)
+                && source != target
+                && visible_graph_relationship(
+                    relationship,
+                    &live_recipes,
+                    selected_recipe_id,
+                    viewer_id,
+                )
+        })
         .filter_map(|relationship| {
             if neighbor_is_source {
                 Some(crate::types::VersionGraphNodeId {
@@ -1983,15 +2249,24 @@ async fn load_fork_direction_page(
                 })
             }
         })
+        .filter(|node_id| {
+            !excluded_recipe_ids.contains(&node_id.recipe_id) && seen_node_ids.insert(*node_id)
+        })
         .collect::<Vec<_>>();
-    node_ids.sort_by_key(|node_id| (node_id.recipe_id, node_id.version_number));
-    node_ids.dedup();
+    let hidden_count = bounded_graph_frontier_hidden_count(
+        node_ids
+            .len()
+            .saturating_add(usize::from(has_more_raw_rows)),
+    );
+    node_ids.truncate(limit);
     Ok(VersionGraphDirectionPage {
         node_ids,
-        hidden_count: usize::try_from(count).unwrap_or(usize::MAX),
+        hidden_count,
+        next_fork_cursor,
         work: VersionGraphPageReadWork {
-            relationship_rows_read: relationships.len(),
-            relationship_queries: 1 + usize::from(limit > 0),
+            recipe_rows_returned,
+            relationship_rows_returned,
+            relationship_queries: 1,
             ..Default::default()
         },
     })
@@ -2001,28 +2276,28 @@ async fn load_graph_direction_page(
     pool: &PgPool,
     selected_recipe_id: Uuid,
     viewer_id: Option<Uuid>,
-    anchor: crate::types::VersionGraphNodeId,
-    kind: crate::types::VersionGraphFrontierKind,
-    excluded_node_ids: &HashSet<crate::types::VersionGraphNodeId>,
-    limit: usize,
+    request: VersionGraphDirectionRequest<'_>,
 ) -> Result<VersionGraphDirectionPage, DbError> {
-    match kind {
+    match request.kind {
         crate::types::VersionGraphFrontierKind::OlderVersions
         | crate::types::VersionGraphFrontierKind::NewerVersions => {
-            load_version_direction_page(pool, anchor, kind, excluded_node_ids, limit).await
+            if request.fork_cursor.is_some() {
+                return Err(invalid_version_graph_expansion(
+                    "version frontier contains a fork cursor",
+                ));
+            }
+            load_version_direction_page(
+                pool,
+                request.anchor,
+                request.kind,
+                request.excluded_node_ids,
+                request.limit,
+            )
+            .await
         }
         crate::types::VersionGraphFrontierKind::ParentFork
         | crate::types::VersionGraphFrontierKind::ChildForks => {
-            load_fork_direction_page(
-                pool,
-                selected_recipe_id,
-                viewer_id,
-                anchor,
-                kind,
-                excluded_node_ids,
-                limit,
-            )
-            .await
+            load_fork_direction_page(pool, selected_recipe_id, viewer_id, request).await
         }
     }
 }
@@ -2036,6 +2311,13 @@ async fn discover_initial_version_graph_node_ids(
     (
         Vec<crate::types::VersionGraphNodeId>,
         VersionGraphPageReadWork,
+        HashMap<
+            (
+                crate::types::VersionGraphNodeId,
+                crate::types::VersionGraphFrontierKind,
+            ),
+            Uuid,
+        >,
     ),
     DbError,
 > {
@@ -2043,6 +2325,7 @@ async fn discover_initial_version_graph_node_ids(
     let mut selected_set = HashSet::from([seed]);
     let mut queue = VecDeque::from([seed]);
     let mut work = VersionGraphPageReadWork::default();
+    let mut fork_continuations = HashMap::new();
     while let Some(anchor) = queue.pop_front() {
         if selected.len() >= INITIAL_VERSION_GRAPH_NODE_LIMIT {
             break;
@@ -2061,13 +2344,19 @@ async fn discover_initial_version_graph_node_ids(
                 pool,
                 selected_recipe_id,
                 viewer_id,
-                anchor,
-                kind,
-                &selected_set,
-                remaining,
+                VersionGraphDirectionRequest {
+                    anchor,
+                    kind,
+                    excluded_node_ids: &selected_set,
+                    fork_cursor: None,
+                    limit: remaining,
+                },
             )
             .await?;
             work.absorb(page.work);
+            if let Some(cursor) = page.next_fork_cursor {
+                fork_continuations.insert((anchor, kind), cursor);
+            }
             for node_id in page.node_ids {
                 if selected_set.insert(node_id) {
                     selected.push(node_id);
@@ -2076,7 +2365,7 @@ async fn discover_initial_version_graph_node_ids(
             }
         }
     }
-    Ok((selected, work))
+    Ok((selected, work, fork_continuations))
 }
 
 async fn build_bounded_version_graph_frontiers(
@@ -2085,6 +2374,13 @@ async fn build_bounded_version_graph_frontiers(
     viewer_id: Option<Uuid>,
     loaded_node_ids: &HashSet<crate::types::VersionGraphNodeId>,
     allowed_anchor_ids: &HashSet<crate::types::VersionGraphNodeId>,
+    fork_continuations: &HashMap<
+        (
+            crate::types::VersionGraphNodeId,
+            crate::types::VersionGraphFrontierKind,
+        ),
+        Uuid,
+    >,
 ) -> Result<
     (
         Vec<crate::types::VersionGraphFrontier>,
@@ -2143,14 +2439,18 @@ async fn build_bounded_version_graph_frontiers(
         if !allowed_anchor_ids.contains(&anchor) {
             continue;
         }
+        let fork_cursor = fork_continuations.get(&(anchor, kind)).copied();
         let page = load_graph_direction_page(
             pool,
             selected_recipe_id,
             viewer_id,
-            anchor,
-            kind,
-            loaded_node_ids,
-            0,
+            VersionGraphDirectionRequest {
+                anchor,
+                kind,
+                excluded_node_ids: loaded_node_ids,
+                fork_cursor,
+                limit: 0,
+            },
         )
         .await?;
         work.absorb(page.work);
@@ -2159,6 +2459,7 @@ async fn build_bounded_version_graph_frontiers(
                 anchor,
                 kind,
                 hidden_count: page.hidden_count,
+                fork_cursor,
             });
         }
     }
@@ -2172,6 +2473,9 @@ fn checked_graph_snapshot_byte_total(
 ) -> Result<usize, DbError> {
     let mut total = 0usize;
     for size in sizes {
+        if size > crate::security::MAX_RECIPE_SNAPSHOT_BYTES {
+            return Err(DbError::ResourceLimitExceeded(label));
+        }
         total = total
             .checked_add(size)
             .ok_or(DbError::ResourceLimitExceeded(label))?;
@@ -2252,12 +2556,12 @@ async fn load_bounded_version_graph_nodes(
     let versions = if requested_snapshot_ids.is_empty() {
         Vec::new()
     } else {
-        sqlx::query_as::<_, RecipeVersion>(
+        sqlx::query_as::<_, BoundedRecipeVersionPayloadRow>(
             "WITH requested(recipe_id, version_number) AS (\
                  SELECT * FROM UNNEST($1::UUID[], $2::INTEGER[])\
              ) \
-             SELECT version.id, version.recipe_id, version.version_number, \
-                    version.snapshot, version.notes, version.created_at \
+             SELECT version.recipe_id, version.version_number, \
+                    version.snapshot::text AS snapshot_text, version.notes, version.created_at \
                FROM recipe_versions AS version \
                JOIN requested USING (recipe_id, version_number) \
               ORDER BY version.recipe_id, version.version_number",
@@ -2272,9 +2576,7 @@ async fn load_bounded_version_graph_nodes(
     let mut snapshots = HashMap::new();
     for version in &versions {
         let snapshot = version.decoded_snapshot()?;
-        let decoded_bytes = serde_json::to_vec(&snapshot)
-            .map_err(DbError::SerdeJson)?
-            .len();
+        let decoded_bytes = recipe_snapshot_decoded_heap_bytes(&snapshot)?;
         decoded_snapshot_bytes = decoded_snapshot_bytes.checked_add(decoded_bytes).ok_or(
             DbError::ResourceLimitExceeded("version graph decoded snapshot bytes"),
         )?;
@@ -2315,7 +2617,7 @@ async fn load_bounded_version_graph_nodes(
                             version_number: previous_id.version_number,
                         })?;
                 diff_operations = diff_operations.saturating_add(1);
-                super::diff::change_summary(&compute_diff(previous_snapshot, snapshot)?)
+                bounded_snapshot_change_summary(previous_snapshot, snapshot)
             };
             nodes.push(crate::types::VersionGraphNode::visible(
                 *node_id,
@@ -2352,7 +2654,8 @@ async fn load_bounded_version_graph_nodes(
     Ok((
         nodes,
         VersionGraphPageReadWork {
-            snapshot_rows_read: versions.len(),
+            snapshot_metadata_rows_returned: size_rows.len(),
+            snapshot_payload_rows_returned: versions.len(),
             encoded_snapshot_bytes,
             decoded_snapshot_bytes,
             snapshots_decoded: snapshots.len(),
@@ -2398,7 +2701,7 @@ pub async fn get_initial_recipe_version_graph_with_work(
         version_number: current_version_number,
     };
     let lineage_counts = load_version_graph_lineage_counts(pool, selected_recipe_id).await?;
-    let (node_ids, discovery_work) =
+    let (node_ids, discovery_work, fork_continuations) =
         discover_initial_version_graph_node_ids(pool, selected_recipe_id, viewer_id, seed).await?;
     let node_id_set = node_ids.iter().copied().collect::<HashSet<_>>();
     let context =
@@ -2418,6 +2721,7 @@ pub async fn get_initial_recipe_version_graph_with_work(
         viewer_id,
         &node_id_set,
         &node_id_set,
+        &fork_continuations,
     )
     .await?;
     let node_limit_reached =
@@ -2433,7 +2737,7 @@ pub async fn get_initial_recipe_version_graph_with_work(
         node_limit_reached,
     );
     let mut work = VersionGraphPageReadWork {
-        recipe_rows_read: 1,
+        recipe_rows_returned: 1,
         ..Default::default()
     };
     work.absorb(discovery_work);
@@ -2460,10 +2764,13 @@ pub async fn expand_recipe_version_graph_with_work(
         pool,
         selected_recipe_id,
         viewer_id,
-        frontier.anchor,
-        frontier.kind,
-        &loaded_node_id_set,
-        VERSION_GRAPH_EXPANSION_NODE_LIMIT,
+        VersionGraphDirectionRequest {
+            anchor: frontier.anchor,
+            kind: frontier.kind,
+            excluded_node_ids: &loaded_node_id_set,
+            fork_cursor: frontier.fork_cursor,
+            limit: VERSION_GRAPH_EXPANSION_NODE_LIMIT,
+        },
     )
     .await?;
     if direction_page.hidden_count == 0 {
@@ -2475,6 +2782,10 @@ pub async fn expand_recipe_version_graph_with_work(
         return Err(invalid_version_graph_expansion("frontier is stale"));
     }
     let new_node_ids = direction_page.node_ids;
+    let fork_continuations = direction_page
+        .next_fork_cursor
+        .map(|cursor| HashMap::from([((frontier.anchor, frontier.kind), cursor)]))
+        .unwrap_or_default();
     let new_node_id_set = new_node_ids.iter().copied().collect::<HashSet<_>>();
     let combined_node_ids = loaded_node_id_set
         .union(&new_node_id_set)
@@ -2499,6 +2810,7 @@ pub async fn expand_recipe_version_graph_with_work(
         viewer_id,
         &combined_node_ids,
         &allowed_frontier_anchors,
+        &fork_continuations,
     )
     .await?;
     let edges = context
@@ -3940,6 +4252,7 @@ mod tests {
                 anchor: initial.nodes[24].id(),
                 kind: crate::types::VersionGraphFrontierKind::OlderVersions,
                 hidden_count: 6,
+                fork_cursor: None,
             }]
         );
     }
@@ -4001,10 +4314,11 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(initial.graph.nodes.len(), INITIAL_VERSION_GRAPH_NODE_LIMIT);
-        assert_eq!(initial.work.snapshot_rows_read, 26);
+        assert_eq!(initial.work.snapshot_metadata_rows_returned, 26);
+        assert_eq!(initial.work.snapshot_payload_rows_returned, 26);
         assert_eq!(initial.work.snapshots_decoded, 26);
         assert_eq!(initial.work.diff_operations, 25);
-        assert!(initial.work.relationship_rows_read <= 2 * INITIAL_VERSION_GRAPH_NODE_LIMIT);
+        assert!(initial.work.relationship_rows_returned <= 2 * INITIAL_VERSION_GRAPH_NODE_LIMIT);
         assert!(
             initial.work.encoded_snapshot_bytes
                 <= crate::security::MAX_INITIAL_GRAPH_ENCODED_SNAPSHOT_BYTES
@@ -4057,7 +4371,8 @@ mod tests {
             .nodes
             .iter()
             .all(|node| !loaded.contains(&node.id())));
-        assert_eq!(expansion.work.snapshot_rows_read, 6);
+        assert_eq!(expansion.work.snapshot_metadata_rows_returned, 6);
+        assert_eq!(expansion.work.snapshot_payload_rows_returned, 6);
         assert_eq!(expansion.work.snapshots_decoded, 6);
         assert_eq!(expansion.work.diff_operations, 5);
         assert!(
@@ -4155,6 +4470,7 @@ mod tests {
             anchor: root.id(),
             kind: crate::types::VersionGraphFrontierKind::ChildForks,
             hidden_count: 2,
+            fork_cursor: None,
         };
 
         let expanded = expanded_version_graph_batch(&graph, frontier, vec![root.id()]).unwrap();
@@ -4182,6 +4498,7 @@ mod tests {
             anchor: current,
             kind: crate::types::VersionGraphFrontierKind::OlderVersions,
             hidden_count: 1,
+            fork_cursor: None,
         };
         assert!(
             expanded_version_graph_batch(&graph, older_frontier, vec![current, current]).is_err()
@@ -4509,7 +4826,8 @@ mod tests {
         assert!(first.page.items[0].is_current);
         assert_eq!(first.page.items[24].version_number, 36);
         assert_eq!(first.page.next_before_version_number, Some(36));
-        assert_eq!(first.work.rows_read, 26);
+        assert_eq!(first.work.snapshot_metadata_rows_returned, 26);
+        assert_eq!(first.work.snapshot_payload_rows_returned, 26);
         assert_eq!(first.work.snapshots_decoded, 26);
         assert_eq!(first.work.diff_operations, 25);
         assert!(first.work.encoded_snapshot_bytes > 0);
@@ -4548,7 +4866,8 @@ mod tests {
         assert_eq!(final_page.page.items[9].version_number, 1);
         assert_eq!(final_page.page.items[9].change_summary, "Initial version");
         assert_eq!(final_page.page.next_before_version_number, None);
-        assert_eq!(final_page.work.rows_read, 10);
+        assert_eq!(final_page.work.snapshot_metadata_rows_returned, 10);
+        assert_eq!(final_page.work.snapshot_payload_rows_returned, 10);
         assert_eq!(final_page.work.snapshots_decoded, 10);
         assert_eq!(final_page.work.diff_operations, 9);
     }
@@ -4564,6 +4883,15 @@ mod tests {
         ));
         assert!(matches!(
             checked_snapshot_byte_total([usize::MAX, 1], usize::MAX),
+            Err(DbError::ResourceLimitExceeded(
+                "version history encoded snapshot bytes"
+            ))
+        ));
+        assert!(matches!(
+            checked_snapshot_byte_total(
+                [crate::security::MAX_RECIPE_SNAPSHOT_BYTES + 1],
+                crate::security::MAX_VERSION_HISTORY_ENCODED_SNAPSHOT_BYTES,
+            ),
             Err(DbError::ResourceLimitExceeded(
                 "version history encoded snapshot bytes"
             ))
@@ -4754,6 +5082,7 @@ mod tests {
                 anchor: hidden_node_id,
                 kind: crate::types::VersionGraphFrontierKind::ParentFork,
                 hidden_count: 1,
+                fork_cursor: None,
             };
             assert!(expand_recipe_version_graph(
                 &pool,
@@ -4857,7 +5186,8 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(expansion.graph.nodes.len(), 5);
-        assert_eq!(expansion.work.snapshot_rows_read, 5);
+        assert_eq!(expansion.work.snapshot_metadata_rows_returned, 5);
+        assert_eq!(expansion.work.snapshot_payload_rows_returned, 5);
         assert_eq!(expansion.work.snapshots_decoded, 5);
         assert!(expansion
             .graph
@@ -4878,6 +5208,84 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn fork_cursor_crosses_hidden_raw_pages_without_unbounded_reads() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let source_owner = owner(&pool, "cursor_source").await;
+        let fork_owner = owner(&pool, "cursor_children").await;
+        let source = create_published_recipe(
+            &pool,
+            source_owner.id,
+            &snapshot("Cursor source", "public"),
+            None,
+        )
+        .await
+        .unwrap();
+
+        for child_number in 1_u128..=30 {
+            let hidden = publish_fork_with_visibility(
+                &pool,
+                source.id,
+                &fork_owner,
+                &format!("Hidden {child_number}"),
+                "private",
+            )
+            .await;
+            sqlx::query("UPDATE fork_relationships SET id = $1 WHERE forked_recipe_key = $2")
+                .bind(Uuid::from_u128(child_number))
+                .bind(hidden.id)
+                .execute(&pool)
+                .await
+                .unwrap();
+        }
+        let visible = publish_fork(&pool, source.id, &fork_owner, "Visible after hidden").await;
+        sqlx::query("UPDATE fork_relationships SET id = $1 WHERE forked_recipe_key = $2")
+            .bind(Uuid::from_u128(u128::MAX - 1))
+            .bind(visible.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let anchor = crate::types::VersionGraphNodeId {
+            recipe_id: source.id,
+            version_number: 1,
+        };
+        let excluded = HashSet::from([anchor]);
+        let mut cursor = None;
+        let mut found = Vec::new();
+        for _ in 0..=6 {
+            let page = load_fork_direction_page(
+                &pool,
+                source.id,
+                None,
+                VersionGraphDirectionRequest {
+                    anchor,
+                    kind: crate::types::VersionGraphFrontierKind::ChildForks,
+                    excluded_node_ids: &excluded,
+                    fork_cursor: cursor,
+                    limit: VERSION_GRAPH_EXPANSION_NODE_LIMIT,
+                },
+            )
+            .await
+            .unwrap();
+            assert!(page.work.relationship_rows_returned <= 6);
+            found.extend(page.node_ids);
+            cursor = page.next_fork_cursor;
+            if cursor.is_none() {
+                break;
+            }
+        }
+
+        assert_eq!(
+            found,
+            vec![crate::types::VersionGraphNodeId {
+                recipe_id: visible.id,
+                version_number: 1,
+            }]
+        );
+        assert_eq!(cursor, None);
+    }
+
     #[test]
     fn graph_snapshot_byte_accounting_accepts_exact_limit_and_rejects_one_over() {
         assert_eq!(
@@ -4892,6 +5300,67 @@ mod tests {
             checked_graph_snapshot_byte_total([usize::MAX, 1], usize::MAX, "graph bytes"),
             Err(DbError::ResourceLimitExceeded("graph bytes"))
         ));
+        assert!(matches!(
+            checked_graph_snapshot_byte_total(
+                [crate::security::MAX_RECIPE_SNAPSHOT_BYTES + 1],
+                crate::security::MAX_INITIAL_GRAPH_ENCODED_SNAPSHOT_BYTES,
+                "graph bytes",
+            ),
+            Err(DbError::ResourceLimitExceeded("graph bytes"))
+        ));
+    }
+
+    #[test]
+    fn decoded_snapshot_heap_accounting_measures_allocations_not_json_length() {
+        let mut decoded = snapshot("x", "public").content;
+        decoded.title.reserve(4_096);
+
+        let heap_bytes = recipe_snapshot_decoded_heap_bytes(&decoded).unwrap();
+        let json_bytes = serde_json::to_vec(&decoded).unwrap().len();
+
+        assert!(heap_bytes >= decoded.title.capacity());
+        assert!(heap_bytes > json_bytes);
+    }
+
+    #[test]
+    fn bounded_snapshot_change_summary_matches_the_full_diff_summary() {
+        let older = snapshot("Old title", "public").content;
+        let mut newer = older.clone();
+        newer.title = "New title".to_string();
+        newer.tags = vec!["dinner".to_string()];
+
+        assert_eq!(
+            bounded_snapshot_change_summary(&older, &newer),
+            crate::db::diff::change_summary(&compute_diff(&older, &newer).unwrap())
+        );
+    }
+
+    #[test]
+    fn graph_frontier_counts_use_only_a_bounded_probe() {
+        assert_eq!(graph_fork_raw_page_limit(0), 5);
+        assert_eq!(graph_fork_raw_page_limit(5), 5);
+        assert_eq!(graph_fork_raw_page_limit(25), 25);
+        assert_eq!(graph_fork_query_limit(0), 6);
+        assert_eq!(graph_fork_query_limit(5), 6);
+        assert_eq!(graph_fork_query_limit(25), 26);
+        assert_eq!(bounded_graph_frontier_hidden_count(0), 0);
+        assert_eq!(bounded_graph_frontier_hidden_count(6), 6);
+        assert_eq!(bounded_graph_frontier_hidden_count(7), 6);
+
+        let source = include_str!("versioning.rs");
+        let fork_page = source
+            .split("async fn load_fork_direction_page")
+            .nth(1)
+            .expect("fork direction page")
+            .split("async fn load_graph_direction_page")
+            .next()
+            .expect("fork direction page body");
+        assert!(!fork_page.contains("COUNT(*)"));
+        assert!(!fork_page.contains("OR relationship.id"));
+
+        let schema = include_str!("../../migrations/schema.sql");
+        assert!(schema.contains("idx_forks_original_version_cursor"));
+        assert!(schema.contains("idx_forks_result_cursor"));
     }
 
     #[tokio::test]
