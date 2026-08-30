@@ -367,7 +367,7 @@ mod server_tests {
     }
 
     #[tokio::test]
-    async fn production_dioxus_router_propagates_identity_and_refreshes_session() {
+    async fn production_dioxus_router_serializes_identity_and_refreshes_session() {
         crate::auth::session::set_test_secret("router-test-secret-32-bytes-long!!");
         let (_database, pool) = crate::test_utils::setup_test_db().await;
         let user = crate::db::insert_user(
@@ -416,6 +416,14 @@ mod server_tests {
         assert!(
             html.contains("Router Auth User"),
             "authenticated identity extensions should reach Dioxus SSR"
+        );
+        // Dioxus only emits server hydration entries in the server-only feature
+        // build used by `dx serve`; the repository's broad unit-test build also
+        // enables `web`, where the transport intentionally behaves as a client.
+        #[cfg(not(feature = "web"))]
+        assert!(
+            html.contains("noms::auth::context::AuthContext"),
+            "authenticated SSR state should be serialized for client hydration"
         );
     }
 
@@ -466,7 +474,8 @@ fn App() -> Element {
     // Provide AuthContext as a signal at the root of the component tree so it's available
     // on both server (SSR) and client (hydration + client-side navigation).
     // We use a signal so we can update the context after fetching user profile.
-    let auth_context = use_signal(build_context_from_fullstack);
+    let initial_auth_context = use_server_cached(build_context_from_fullstack);
+    let auth_context = use_signal(move || initial_auth_context);
     provide_context(auth_context);
 
     // On client, fetch user profile after hydration to update AuthContext
