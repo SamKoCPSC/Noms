@@ -11,7 +11,7 @@
     "suppliedUrl": "https://example.test/silver-hash",
     "normalizedUrl": "https://example.test/silver-hash",
     "provider": null,
-    "author": "Nova Cook",
+    "author": null,
     "attribution": "Photo by Nova Cook",
     "provenance": {
       "suppliedUrl": [
@@ -21,9 +21,7 @@
         { "representation": "source_url", "locator": "normalized from supplied URL" }
       ],
       "provider": [],
-      "author": [
-        { "representation": "text/html", "locator": "figure > figcaption" }
-      ],
+      "author": [],
       "attribution": [
         { "representation": "text/html", "locator": "figure > figcaption" }
       ]

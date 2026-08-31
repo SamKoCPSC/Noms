@@ -10,6 +10,33 @@ const CONFIDENCES = new Set(["high", "medium", "low"]);
 const TIERS = new Set(["generic_html", "generic_text", "source_adapter", "none"]);
 const REPRESENTATIONS = new Set(["text/html", "text/plain", "source_url"]);
 const SEVERITIES = new Set(["info", "warning", "error"]);
+const JSON_SCHEMA_TYPES = new Set(["array", "boolean", "integer", "null", "number", "object", "string"]);
+const JSON_SCHEMA_KEYWORDS = new Set([
+  "$schema",
+  "$id",
+  "$ref",
+  "$defs",
+  "title",
+  "description",
+  "type",
+  "const",
+  "enum",
+  "required",
+  "properties",
+  "additionalProperties",
+  "oneOf",
+  "allOf",
+  "if",
+  "then",
+  "else",
+  "items",
+  "minItems",
+  "maxItems",
+  "minLength",
+  "minimum",
+  "pattern",
+  "format",
+]);
 
 function isObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -17,6 +44,191 @@ function isObject(value) {
 
 function nonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function schemaChildEntries(schema) {
+  const children = [];
+  for (const keyword of ["properties", "$defs"]) {
+    if (isObject(schema[keyword])) children.push(...Object.entries(schema[keyword]));
+  }
+  for (const keyword of ["items", "additionalProperties", "if", "then", "else"]) {
+    if (isObject(schema[keyword])) children.push([keyword, schema[keyword]]);
+  }
+  for (const keyword of ["oneOf", "allOf"]) {
+    if (Array.isArray(schema[keyword])) {
+      schema[keyword].forEach((child, index) => children.push([`${keyword}[${index}]`, child]));
+    }
+  }
+  return children;
+}
+
+function assertSupportedSchema(schema, at = "schema") {
+  if (!isObject(schema)) throw new Error(`${at} must be a schema object`);
+  for (const keyword of Object.keys(schema)) {
+    if (!JSON_SCHEMA_KEYWORDS.has(keyword)) {
+      throw new Error(`${at} uses unsupported JSON Schema keyword: ${keyword}`);
+    }
+  }
+  const types = Array.isArray(schema.type) ? schema.type : schema.type === undefined ? [] : [schema.type];
+  for (const type of types) {
+    if (!JSON_SCHEMA_TYPES.has(type)) throw new Error(`${at}.type is unsupported: ${type}`);
+  }
+  if (schema.format !== undefined && schema.format !== "uri") {
+    throw new Error(`${at}.format is unsupported: ${schema.format}`);
+  }
+  if (schema.$ref !== undefined && (!nonEmptyString(schema.$ref) || !schema.$ref.startsWith("#/"))) {
+    throw new Error(`${at} supports only local JSON Pointer references`);
+  }
+  if (schema.pattern !== undefined) {
+    try {
+      new RegExp(schema.pattern);
+    } catch {
+      throw new Error(`${at}.pattern is not a valid regular expression`);
+    }
+  }
+  for (const [name, child] of schemaChildEntries(schema)) {
+    assertSupportedSchema(child, `${at}.${name}`);
+  }
+}
+
+function resolveLocalReference(rootSchema, reference) {
+  let current = rootSchema;
+  for (const rawSegment of reference.slice(2).split("/")) {
+    const segment = rawSegment.replaceAll("~1", "/").replaceAll("~0", "~");
+    if (!isObject(current) || !Object.hasOwn(current, segment)) {
+      throw new Error(`Unresolvable local JSON Schema reference: ${reference}`);
+    }
+    current = current[segment];
+  }
+  if (!isObject(current)) throw new Error(`JSON Schema reference is not an object: ${reference}`);
+  return current;
+}
+
+function valueHasType(value, type) {
+  if (type === "null") return value === null;
+  if (type === "array") return Array.isArray(value);
+  if (type === "object") return isObject(value);
+  if (type === "integer") return Number.isInteger(value);
+  if (type === "number") return typeof value === "number" && Number.isFinite(value);
+  return typeof value === type;
+}
+
+function sameJsonValue(left, right) {
+  if (Object.is(left, right)) return true;
+  if (Array.isArray(left) && Array.isArray(right)) {
+    return left.length === right.length && left.every((value, index) => sameJsonValue(value, right[index]));
+  }
+  if (isObject(left) && isObject(right)) {
+    const leftKeys = Object.keys(left).sort();
+    const rightKeys = Object.keys(right).sort();
+    return sameJsonValue(leftKeys, rightKeys) && leftKeys.every((key) => sameJsonValue(left[key], right[key]));
+  }
+  return false;
+}
+
+function containsLowConfidence(value) {
+  if (Array.isArray(value)) return value.some(containsLowConfidence);
+  if (!isObject(value)) return false;
+  if (value.confidence === "low") return true;
+  return Object.values(value).some(containsLowConfidence);
+}
+
+function evaluateSchema(value, schema, rootSchema, at, errors) {
+  if (schema.$ref !== undefined) {
+    evaluateSchema(value, resolveLocalReference(rootSchema, schema.$ref), rootSchema, at, errors);
+  }
+  if (schema.type !== undefined) {
+    const types = Array.isArray(schema.type) ? schema.type : [schema.type];
+    if (!types.some((type) => valueHasType(value, type))) {
+      errors.push(`${at} must have type ${types.join(" or ")}`);
+      return;
+    }
+  }
+  if (Object.hasOwn(schema, "const") && !sameJsonValue(value, schema.const)) {
+    errors.push(`${at} must equal the schema constant`);
+  }
+  if (schema.enum !== undefined && !schema.enum.some((entry) => sameJsonValue(value, entry))) {
+    errors.push(`${at} must match one of the enumerated values`);
+  }
+  if (schema.oneOf !== undefined) {
+    const branchResults = schema.oneOf.map((branch) => {
+      const branchErrors = [];
+      evaluateSchema(value, branch, rootSchema, at, branchErrors);
+      return branchErrors;
+    });
+    const matches = branchResults.filter((branchErrors) => branchErrors.length === 0).length;
+    if (matches !== 1) {
+      errors.push(`${at} must match exactly one oneOf branch; matched ${matches}`);
+      if (matches === 0 && branchResults.length > 0) {
+        errors.push(...branchResults.flat());
+      }
+    }
+  }
+  if (schema.allOf !== undefined) {
+    schema.allOf.forEach((branch) => evaluateSchema(value, branch, rootSchema, at, errors));
+  }
+  if (schema.if !== undefined) {
+    const conditionErrors = [];
+    evaluateSchema(value, schema.if, rootSchema, at, conditionErrors);
+    const selected = conditionErrors.length === 0 ? schema.then : schema.else;
+    if (selected !== undefined) evaluateSchema(value, selected, rootSchema, at, errors);
+  }
+  if (typeof value === "string") {
+    if (schema.minLength !== undefined && value.length < schema.minLength) {
+      errors.push(`${at} must contain at least ${schema.minLength} characters`);
+    }
+    if (schema.pattern !== undefined && !new RegExp(schema.pattern).test(value)) {
+      errors.push(`${at} does not match pattern ${schema.pattern}`);
+    }
+    if (schema.format === "uri") {
+      try {
+        const parsed = new URL(value);
+        if (!parsed.protocol) errors.push(`${at} is not an absolute URI`);
+      } catch {
+        errors.push(`${at} is not a valid URI`);
+      }
+    }
+  }
+  if (typeof value === "number" && schema.minimum !== undefined && value < schema.minimum) {
+    errors.push(`${at} must be at least ${schema.minimum}`);
+  }
+  if (Array.isArray(value)) {
+    if (schema.minItems !== undefined && value.length < schema.minItems) {
+      errors.push(`${at} must contain at least ${schema.minItems} items`);
+    }
+    if (schema.maxItems !== undefined && value.length > schema.maxItems) {
+      errors.push(`${at} must contain at most ${schema.maxItems} items`);
+    }
+    if (schema.items !== undefined) {
+      value.forEach((entry, index) => evaluateSchema(entry, schema.items, rootSchema, `${at}[${index}]`, errors));
+    }
+  }
+  if (isObject(value)) {
+    if (schema.required !== undefined) {
+      for (const key of schema.required) {
+        if (!Object.hasOwn(value, key)) errors.push(`${at}.${key} is required`);
+      }
+    }
+    if (schema.properties !== undefined) {
+      for (const [key, childSchema] of Object.entries(schema.properties)) {
+        if (Object.hasOwn(value, key)) evaluateSchema(value[key], childSchema, rootSchema, `${at}.${key}`, errors);
+      }
+      for (const key of Object.keys(value)) {
+        if (Object.hasOwn(schema.properties, key)) continue;
+        if (schema.additionalProperties === false) errors.push(`${at}.${key} is not allowed by the schema`);
+        else if (isObject(schema.additionalProperties)) {
+          evaluateSchema(value[key], schema.additionalProperties, rootSchema, `${at}.${key}`, errors);
+        }
+      }
+    }
+  }
+}
+
+export function validateJsonSchema(value, schema) {
+  assertSupportedSchema(schema);
+  const errors = [];
+  evaluateSchema(value, schema, schema, "candidate", errors);
+  return errors;
 }
 
 function validateAllowedKeys(value, at, allowedKeys, errors) {
@@ -360,6 +572,17 @@ export function validateImportCandidate(candidate) {
       errors.push("unsupported candidates must include an error warning");
     }
   }
+  if (candidate.status === "ready") {
+    if (candidate.warnings?.some((warning) => warning.severity === "warning" || warning.severity === "error")) {
+      errors.push("ready candidates cannot contain warning or error severity warnings");
+    }
+    if ((candidate.competingCandidates?.length ?? 0) > 0) {
+      errors.push("ready candidates cannot contain competing candidates");
+    }
+    if (containsLowConfidence(candidate.fields)) {
+      errors.push("ready candidates cannot contain low-confidence recovered values");
+    }
+  }
   return errors;
 }
 
@@ -406,6 +629,10 @@ export async function loadAndValidateFixtureCorpus(fixtureRoot) {
     if (html !== null && Buffer.byteLength(html) >= 20_000) throw new Error(`Fixture ${fixture.id} HTML is not compact`);
     if (plainText !== null && Buffer.byteLength(plainText) >= 10_000) throw new Error(`Fixture ${fixture.id} text is not compact`);
     const expected = JSON.parse(await fs.readFile(resolveInside(root, fixture.expected), "utf8"));
+    const schemaErrors = validateJsonSchema(expected, schema);
+    if (schemaErrors.length > 0) {
+      throw new Error(`Fixture ${fixture.id} does not match the import candidate JSON Schema:\n- ${schemaErrors.join("\n- ")}`);
+    }
     const errors = validateImportCandidate(expected);
     if (errors.length > 0) {
       throw new Error(`Fixture ${fixture.id} expected candidate is invalid:\n- ${errors.join("\n- ")}`);

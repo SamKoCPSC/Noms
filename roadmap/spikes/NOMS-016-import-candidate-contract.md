@@ -11,7 +11,7 @@ The executable validator is `scripts/validate-recipe-import-fixtures.mjs`. The v
 - `null` means that the parser did not recover a candidate for that singular field. It does not mean the source asserted an empty value.
 - An empty array means that no items of that category were recovered. A supported candidate must still have at least one ingredient and one instruction; an unsupported candidate instead preserves unclassified evidence and an error warning.
 - Normalized empty strings are invalid. `raw` preserves the visible source text whenever a value was recovered, even if its normalized `value` is `null` or low-confidence.
-- `ready` means the candidate has the minimum recipe regions and no blocking ambiguity. `needs_review` means it is usable but includes a material choice or lossy mapping. `unsupported` means deterministic extraction stopped.
+- `ready` means the candidate has the minimum recipe regions, no warning/error-severity warning, no competing region, and no low-confidence recovered value. `needs_review` means it is usable but includes a material choice or lossy mapping. `unsupported` means deterministic extraction stopped.
 - Every recovered field or line carries a clipboard representation and a human-readable locator. Warnings use stable codes plus a candidate path.
 - `source.provenance` has one array for each source value. A non-null URL, provider, author, or attribution requires at least one evidence entry; the corresponding array must be empty when the value is `null`.
 - `competingCandidates`, `unclassifiedLines`, and `discardedContent` make selection and sanitization decisions visible without retaining the complete clipboard payload.
@@ -20,7 +20,7 @@ The raw `text/html` and `text/plain` values exist only during the active preview
 
 ## Mapping into `RecipeEditorState`
 
-Mapping happens only after explicit user confirmation and starts with `visibility = "private"` and no ownership claims.
+Mapping happens only after explicit user confirmation and starts with `visibility = "private"` and no ownership claims. Before confirmation can be implemented, the canonical recipe draft, snapshot, and export contracts—and `RecipeEditorState` at their client boundary—must gain durable source URL, source author, and attribution fields. This is a hard prerequisite: Noms must not discard those values when the preview closes or force the user to save them in commentary.
 
 | Candidate | Editor mapping |
 | --- | --- |
@@ -32,7 +32,7 @@ Mapping happens only after explicit user confirmation and starts with `visibilit
 | `equipment[].value` | `equipment[].name` |
 | Confirmed image references | `images`; parsing itself never downloads an image |
 
-`totalTime`, textual/range yields, section names, source URL, source author, attribution, notes, competing candidates, warnings, and unclassified lines have no lossless current editor destination. They remain visible during review. Notes are not silently placed in `commentary`; that requires a deliberate user choice. If an ingredient cannot be split deterministically, its complete `raw` line becomes the ingredient name with blank amount/unit and a warning.
+`totalTime`, textual/range yields, section names, notes, competing candidates, warnings, and unclassified lines have no lossless current editor destination. They remain visible during review. Source URL, source author, and attribution also have no current destination, but unlike transient review evidence they must be added to the durable canonical model before import confirmation ships. Notes are not silently placed in `commentary`; that requires a deliberate user choice. If an ingredient cannot be split deterministically, its complete `raw` line becomes the ingredient name with blank amount/unit and a warning.
 
 ## Safety boundary
 

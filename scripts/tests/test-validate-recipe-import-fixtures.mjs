@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { promises as fs } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -7,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import {
   loadAndValidateFixtureCorpus,
   validateImportCandidate,
+  validateJsonSchema,
 } from "../validate-recipe-import-fixtures.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -210,4 +212,84 @@ test("unsupported candidates preserve evidence and explain why parsing stopped",
   };
 
   assert.deepEqual(validateImportCandidate(candidate), []);
+});
+
+test("the fixture loader enforces the executable JSON Schema", async (context) => {
+  const corpus = await loadAndValidateFixtureCorpus(fixtureRoot);
+  const basic = structuredClone(
+    corpus.fixtures.find(({ fixture }) => fixture.id === "basic-visible-recipe").expected,
+  );
+
+  const extraYieldProperty = structuredClone(basic);
+  extraYieldProperty.fields.yield = {
+    raw: "4 bowls",
+    value: { display: "4 bowls", servings: 4, unexpected: true },
+    confidence: "high",
+    provenance: [{ representation: "text/html", locator: "article .yield" }],
+  };
+  assert.ok(
+    validateJsonSchema(extraYieldProperty, corpus.schema).some(
+      (error) => /yield\.value\.unexpected.*not allowed/i.test(error),
+    ),
+  );
+
+  const copiedCorpus = await fs.mkdtemp(path.join(os.tmpdir(), "noms-import-fixtures-"));
+  context.after(() => fs.rm(copiedCorpus, { recursive: true, force: true }));
+  await fs.cp(fixtureRoot, copiedCorpus, { recursive: true });
+  const copiedExpectedPath = path.join(
+    copiedCorpus,
+    "basic-visible-recipe",
+    "expected.json",
+  );
+  await fs.writeFile(copiedExpectedPath, JSON.stringify(extraYieldProperty));
+  await assert.rejects(
+    loadAndValidateFixtureCorpus(copiedCorpus),
+    /JSON Schema[\s\S]*yield\.value\.unexpected.*not allowed/i,
+  );
+
+  const wrongUrlScheme = structuredClone(basic);
+  wrongUrlScheme.source.suppliedUrl = "ftp://example.test/moonbean-soup";
+  assert.ok(
+    validateJsonSchema(wrongUrlScheme, corpus.schema).some(
+      (error) => /source\.suppliedUrl.*oneOf|source\.suppliedUrl.*pattern/i.test(error),
+    ),
+  );
+  await fs.writeFile(copiedExpectedPath, JSON.stringify(wrongUrlScheme));
+  await assert.rejects(
+    loadAndValidateFixtureCorpus(copiedCorpus),
+    /JSON Schema[\s\S]*source\.suppliedUrl/i,
+  );
+
+  assert.throws(
+    () => validateJsonSchema(basic, { ...corpus.schema, unevaluatedProperties: false }),
+    /unsupported JSON Schema keyword/i,
+  );
+});
+
+test("ready candidates contain no material review signals", async () => {
+  const corpus = await loadAndValidateFixtureCorpus(fixtureRoot);
+  const basic = corpus.fixtures.find(
+    ({ fixture }) => fixture.id === "basic-visible-recipe",
+  ).expected;
+
+  const warned = structuredClone(basic);
+  warned.warnings.push({
+    code: "REVIEW_REQUIRED",
+    severity: "warning",
+    path: "fields.title",
+    message: "Confirm the recovered title.",
+  });
+  assert.ok(validateImportCandidate(warned).some((error) => /ready.*warning/i.test(error)));
+
+  const competing = structuredClone(basic);
+  competing.competingCandidates.push({
+    title: "Other Moonbean Soup",
+    reason: "Another complete region was found.",
+    provenance: [{ representation: "text/html", locator: "aside.recipe" }],
+  });
+  assert.ok(validateImportCandidate(competing).some((error) => /ready.*competing/i.test(error)));
+
+  const uncertain = structuredClone(basic);
+  uncertain.fields.title.confidence = "low";
+  assert.ok(validateImportCandidate(uncertain).some((error) => /ready.*low-confidence/i.test(error)));
 });
