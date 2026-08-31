@@ -68,6 +68,11 @@ test("every fixture is compact, synthetic, and has a valid expected candidate", 
     assert.equal(expected.schemaVersion, 1);
     assert.ok(["ready", "needs_review", "unsupported"].includes(expected.status));
     assert.equal(validateImportCandidate(expected).length, 0);
+    assert.equal(
+      input.sourceUrl,
+      expected.source.suppliedUrl,
+      `fixture ${fixture.id} source URL input must match its reviewed provenance`,
+    );
 
     const serialized = JSON.stringify({ fixture, input, expected });
     assert.doesNotMatch(

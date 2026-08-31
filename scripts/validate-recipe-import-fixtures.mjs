@@ -625,7 +625,13 @@ export async function loadAndValidateFixtureCorpus(fixtureRoot) {
     }
     const html = await readOptional(root, fixture.input.html);
     const plainText = await readOptional(root, fixture.input.plainText);
+    const sourceUrl = fixture.input.sourceUrl;
     if (html === null && plainText === null) throw new Error(`Fixture ${fixture.id} has no input`);
+    if (sourceUrl !== null) {
+      const sourceUrlErrors = [];
+      validateSourceUrl(sourceUrl, `Fixture ${fixture.id} input.sourceUrl`, sourceUrlErrors);
+      if (sourceUrlErrors.length > 0) throw new Error(sourceUrlErrors.join("\n"));
+    }
     if (html !== null && Buffer.byteLength(html) >= 20_000) throw new Error(`Fixture ${fixture.id} HTML is not compact`);
     if (plainText !== null && Buffer.byteLength(plainText) >= 10_000) throw new Error(`Fixture ${fixture.id} text is not compact`);
     const expected = JSON.parse(await fs.readFile(resolveInside(root, fixture.expected), "utf8"));
@@ -637,7 +643,7 @@ export async function loadAndValidateFixtureCorpus(fixtureRoot) {
     if (errors.length > 0) {
       throw new Error(`Fixture ${fixture.id} expected candidate is invalid:\n- ${errors.join("\n- ")}`);
     }
-    fixtures.push({ fixture, input: { html, plainText }, expected });
+    fixtures.push({ fixture, input: { html, plainText, sourceUrl }, expected });
   }
   return { manifest, schema, fixtures };
 }

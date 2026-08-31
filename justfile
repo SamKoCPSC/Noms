@@ -98,6 +98,10 @@ recipe-import-fixture-test:
 	@node --test scripts/tests/test-analyze-recipe-corpus.mjs
 	@node --test scripts/tests/test-validate-recipe-import-fixtures.mjs
 
+# Red until the deterministic clipboard parser is implemented.
+recipe-import-parser-acceptance-test:
+	@node --test scripts/tests/test-recipe-import-parser-acceptance.mjs
+
 # Run all checks and tests (mirrors what CI does)
 ci: fmt check lint test schema-check-test security-policy-test security-check recipe-import-fixture-test
 	@echo ""

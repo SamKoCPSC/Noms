@@ -51,3 +51,9 @@ Run both fixture suites with:
 ```sh
 just recipe-import-fixture-test
 ```
+
+## Parser acceptance boundary
+
+The spike parser must export `parseRecipeClipboard` from `scripts/recipe-import-parser.mjs`. It accepts one object containing `html`, `plainText`, and `sourceUrl`, each either a string or `null`, and returns a Noms recipe import candidate v1. The function may be synchronous or asynchronous, but it must be deterministic and must not mutate or fetch from its inputs.
+
+`just recipe-import-parser-acceptance-test` runs every synthetic input through that boundary twice, validates the result against the executable JSON Schema and semantic invariants, and compares it with the reviewed expected candidate. The target intentionally remains outside `just ci` and fails with a missing-module error until the parser implementation begins. An implementation must derive its result from the supplied input; reading the fixture's `expected.json` is not parser behavior.
