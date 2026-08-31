@@ -98,7 +98,7 @@ recipe-import-fixture-test:
 	@node --test scripts/tests/test-analyze-recipe-corpus.mjs
 	@node --test scripts/tests/test-validate-recipe-import-fixtures.mjs
 
-# Red until the deterministic clipboard parser is implemented.
+# Full suite stays red until every incremental parser slice is implemented.
 recipe-import-parser-acceptance-test:
 	@node --test scripts/tests/test-recipe-import-parser-acceptance.mjs
 
