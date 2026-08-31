@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "status": "unsupported",
+  "parser": {
+    "id": "none",
+    "version": "1",
+    "tier": "none",
+    "sourceAdapter": null
+  },
+  "source": {
+    "suppliedUrl": null,
+    "normalizedUrl": null,
+    "provider": null,
+    "author": null,
+    "attribution": null,
+    "provenance": { "suppliedUrl": [], "normalizedUrl": [], "provider": [], "author": [], "attribution": [] }
+  },
+  "fields": {
+    "title": null,
+    "description": null,
+    "prepTime": null,
+    "cookTime": null,
+    "totalTime": null,
+    "yield": null,
+    "ingredientSections": [],
+    "instructionSections": [],
+    "equipment": [],
+    "notes": [],
+    "images": []
+  },
+  "unclassifiedLines": [
+    {
+      "raw": "Members only",
+      "provenance": [
+        {
+          "representation": "text/plain",
+          "locator": "line 1"
+        }
+      ]
+    },
+    {
+      "raw": "Sign in to continue",
+      "provenance": [
+        {
+          "representation": "text/plain",
+          "locator": "line 2"
+        }
+      ]
+    }
+  ],
+  "competingCandidates": [],
+  "warnings": [
+    {
+      "code": "NO_RECIPE_REGION",
+      "severity": "error",
+      "path": "fields",
+      "message": "No ingredient and instruction regions were found."
+    }
+  ],
+  "discardedContent": [
+    {
+      "kind": "link",
+      "count": 1,
+      "reason": "Access controls are not recipe content."
+    }
+  ]
+}

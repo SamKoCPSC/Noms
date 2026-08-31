@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "status": "needs_review",
+  "parser": {
+    "id": "generic-region-scorer",
+    "version": "1",
+    "tier": "generic_html",
+    "sourceAdapter": null
+  },
+  "source": {
+    "suppliedUrl": null,
+    "normalizedUrl": null,
+    "provider": null,
+    "author": null,
+    "attribution": null,
+    "provenance": { "suppliedUrl": [], "normalizedUrl": [], "provider": [], "author": [], "attribution": [] }
+  },
+  "fields": {
+    "title": {
+      "raw": "Lantern Bean Soup",
+      "value": "Lantern Bean Soup",
+      "confidence": "high",
+      "provenance": [
+        {
+          "representation": "text/html",
+          "locator": "article > h1"
+        }
+      ]
+    },
+    "description": null,
+    "prepTime": null,
+    "cookTime": null,
+    "totalTime": null,
+    "yield": null,
+    "ingredientSections": [
+      {
+        "name": null,
+        "items": [
+          {
+            "raw": "4 lantern beans",
+            "amount": "4",
+            "unit": null,
+            "name": "lantern beans",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/html",
+                "locator": "article ul > li"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "instructionSections": [
+      {
+        "name": null,
+        "steps": [
+          {
+            "raw": "Simmer until bright.",
+            "text": "Simmer until bright.",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/html",
+                "locator": "article ol > li"
+              }
+            ],
+            "substeps": []
+          }
+        ]
+      }
+    ],
+    "equipment": [],
+    "notes": [],
+    "images": []
+  },
+  "unclassifiedLines": [],
+  "competingCandidates": [
+    {
+      "reason": "Earlier ingredient-like editorial region",
+      "title": "Ingredients for Better Soup",
+      "provenance": [
+        {
+          "representation": "text/html",
+          "locator": "main > section"
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "code": "COMPETING_RECIPE_REGION",
+      "severity": "warning",
+      "path": "competingCandidates[0]",
+      "message": "A lower-scoring ingredient-like region was excluded; confirm the selected card."
+    }
+  ],
+  "discardedContent": []
+}

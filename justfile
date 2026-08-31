@@ -93,7 +93,12 @@ security-check:
 	@./scripts/check-tracked-secrets.sh
 	@./scripts/check-deployment-artifacts.sh
 
+# Validate the NOMS-016 corpus analyzer and synthetic import contract fixtures.
+recipe-import-fixture-test:
+	@node --test scripts/tests/test-analyze-recipe-corpus.mjs
+	@node --test scripts/tests/test-validate-recipe-import-fixtures.mjs
+
 # Run all checks and tests (mirrors what CI does)
-ci: fmt check lint test schema-check-test security-policy-test security-check
+ci: fmt check lint test schema-check-test security-policy-test security-check recipe-import-fixture-test
 	@echo ""
 	@echo "✅ All checks passed."

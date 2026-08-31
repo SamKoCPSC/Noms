@@ -31,8 +31,8 @@ test("the v1 corpus covers the first distinct parser risks", async () => {
       "notes-equipment-and-media",
       "plain-text-fallback",
       "remote-content-and-controls",
-      "unsupported-access-shell",
       "unit-yield-and-duration-ambiguity",
+      "unsupported-access-shell",
     ],
   );
 
@@ -85,6 +85,7 @@ test("candidate validation rejects lossy or unsafe contract shapes", () => {
   const invalidCandidate = {
     schemaVersion: 1,
     status: "ready",
+    unexpected: true,
     parser: {
       id: "generic-html",
       version: "1",
@@ -97,6 +98,13 @@ test("candidate validation rejects lossy or unsafe contract shapes", () => {
       provider: null,
       author: null,
       attribution: null,
+      provenance: {
+        suppliedUrl: [],
+        normalizedUrl: [],
+        provider: [],
+        author: [],
+        attribution: [],
+      },
     },
     fields: {
       title: {
@@ -131,15 +139,19 @@ test("candidate validation rejects lossy or unsafe contract shapes", () => {
       images: [{ sourceUrl: "javascript:alert(1)", alt: null, credit: null }],
     },
     unclassifiedLines: [],
-    competingCandidates: [],
+    competingCandidates: [{ title: "", reason: "", provenance: [] }],
     warnings: [],
-    discardedContent: [],
+    discardedContent: [{ kind: "", count: 0, reason: "" }],
   };
 
   const errors = validateImportCandidate(invalidCandidate);
   assert.ok(errors.some((error) => /provenance/i.test(error)));
   assert.ok(errors.some((error) => /instruction/i.test(error)));
   assert.ok(errors.some((error) => /image|url|scheme/i.test(error)));
+  assert.ok(errors.some((error) => /source\.provenance\.normalizedUrl/i.test(error)));
+  assert.ok(errors.some((error) => /competingCandidates/i.test(error)));
+  assert.ok(errors.some((error) => /discardedContent/i.test(error)));
+  assert.ok(errors.some((error) => /unexpected.*not allowed/i.test(error)));
 });
 
 test("unsupported candidates preserve evidence and explain why parsing stopped", () => {
@@ -158,6 +170,13 @@ test("unsupported candidates preserve evidence and explain why parsing stopped",
       provider: null,
       author: null,
       attribution: null,
+      provenance: {
+        suppliedUrl: [],
+        normalizedUrl: [],
+        provider: [],
+        author: [],
+        attribution: [],
+      },
     },
     fields: {
       title: null,

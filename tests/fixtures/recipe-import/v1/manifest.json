@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "contract": "import-candidate.schema.json",
+  "fixtures": [
+    { "id": "basic-visible-recipe", "description": "A clean heading-and-list recipe region.", "risks": ["generic-heading-pair"], "input": { "html": "basic-visible-recipe/input.html", "plainText": "basic-visible-recipe/input.txt" }, "expected": "basic-visible-recipe/expected.json" },
+    { "id": "grouped-components", "description": "Ingredient and instruction groups must remain ordered.", "risks": ["grouped-ingredients"], "input": { "html": "grouped-components/input.html", "plainText": null }, "expected": "grouped-components/expected.json" },
+    { "id": "competing-recipe-regions", "description": "Editorial and card-like regions compete.", "risks": ["competing-regions"], "input": { "html": "competing-recipe-regions/input.html", "plainText": null }, "expected": "competing-recipe-regions/expected.json" },
+    { "id": "unit-yield-and-duration-ambiguity", "description": "Only active variants are candidates and suspicious times remain raw.", "risks": ["active-variants", "suspicious-duration"], "input": { "html": "unit-yield-and-duration-ambiguity/input.html", "plainText": null }, "expected": "unit-yield-and-duration-ambiguity/expected.json" },
+    { "id": "notes-equipment-and-media", "description": "Notes, tools, and media do not become steps.", "risks": ["notes", "equipment", "images"], "input": { "html": "notes-equipment-and-media/input.html", "plainText": null }, "expected": "notes-equipment-and-media/expected.json" },
+    { "id": "remote-content-and-controls", "description": "Active content and controls are discarded without network access.", "risks": ["remote-resources", "form-controls"], "input": { "html": "remote-content-and-controls/input.html", "plainText": null }, "expected": "remote-content-and-controls/expected.json" },
+    { "id": "plain-text-fallback", "description": "Recognizable text headings work without HTML.", "risks": ["plain-text-only"], "input": { "html": null, "plainText": "plain-text-fallback/input.txt" }, "expected": "plain-text-fallback/expected.json" },
+    { "id": "unsupported-access-shell", "description": "An access shell preserves evidence and stops safely.", "risks": ["no-recipe-region"], "input": { "html": "unsupported-access-shell/input.html", "plainText": "unsupported-access-shell/input.txt" }, "expected": "unsupported-access-shell/expected.json" }
+  ]
+}
