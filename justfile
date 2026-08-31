@@ -102,6 +102,10 @@ recipe-import-fixture-test:
 recipe-import-parser-acceptance-test:
 	@node --test scripts/tests/test-recipe-import-parser-acceptance.mjs
 
+# First parser slice: clean HTML plus generic plain-text fallback.
+recipe-import-parser-basic-test:
+	@node --test --test-name-pattern='basic-visible-recipe|plain-text-fallback' scripts/tests/test-recipe-import-parser-acceptance.mjs
+
 # Run all checks and tests (mirrors what CI does)
 ci: fmt check lint test schema-check-test security-policy-test security-check recipe-import-fixture-test
 	@echo ""
