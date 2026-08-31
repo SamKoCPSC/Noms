@@ -312,6 +312,7 @@ mod server_tests {
             format!("/collections/{RESOURCE_ID}/edit"),
             "/settings/profile".to_string(),
             "/settings/accounts".to_string(),
+            "/search?q=pasta%20salad&scope=recipes".to_string(),
         ];
 
         for path in owner_routes {

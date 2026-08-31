@@ -28,6 +28,7 @@ fn is_protected_path(path: &str) -> bool {
     matches!(
         path,
         "/dashboard"
+            | "/search"
             | "/recipes/new"
             | "/collections"
             | "/collections/new"
@@ -100,6 +101,10 @@ pub async fn handle_auth(
     next: Next,
 ) -> Response<Body> {
     let path = req.uri().path().to_string();
+    let original_target = req
+        .uri()
+        .path_and_query()
+        .map_or_else(|| path.clone(), |target| target.as_str().to_string());
 
     // Extract session cookie from headers
     let jar = CookieJar::from_headers(req.headers());
@@ -126,9 +131,11 @@ pub async fn handle_auth(
 
     // Redirect unauthenticated users from protected paths to login
     if !is_authenticated && is_protected {
-        let encoded =
-            percent_encoding::utf8_percent_encode(&path, percent_encoding::NON_ALPHANUMERIC)
-                .to_string();
+        let encoded = percent_encoding::utf8_percent_encode(
+            &original_target,
+            percent_encoding::NON_ALPHANUMERIC,
+        )
+        .to_string();
         let location = format!("/login?redirect_uri={encoded}");
         return redirect_to(&location);
     }
@@ -192,6 +199,11 @@ mod tests {
     use super::is_protected_path;
 
     const COLLECTION_ID: &str = "550e8400-e29b-41d4-a716-446655440000";
+
+    #[test]
+    fn search_requires_authentication() {
+        assert!(is_protected_path("/search"));
+    }
 
     #[test]
     fn collection_owner_routes_require_authentication_but_detail_is_shareable() {
