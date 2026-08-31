@@ -8,8 +8,6 @@ mod auth;
 mod components;
 #[cfg(feature = "server")]
 mod config;
-#[cfg(all(feature = "server", test))]
-mod cp5_quota_tests;
 #[cfg(feature = "server")]
 mod db;
 #[cfg(feature = "server")]
@@ -24,6 +22,8 @@ mod storage;
 #[cfg(all(feature = "server", test))]
 mod test_utils;
 mod types;
+#[cfg(all(feature = "server", test))]
+mod user_quota_tests;
 mod utils;
 #[cfg(feature = "server")]
 mod worker;
