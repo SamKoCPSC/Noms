@@ -32,6 +32,7 @@ const UNIT_PATTERN = [
   "slices?",
   "pieces?",
 ].join("|");
+const AMOUNT_PATTERN = "(?:\\d+(?:[.,]\\d+)?(?:\\s+\\d+/\\d+)?|\\d+/\\d+|[\\u00bc-\\u00be\\u2150-\\u215e])";
 
 function normalizeWhitespace(value) {
   return value.replace(/\s+/gu, " ").trim();
@@ -65,17 +66,18 @@ function scalar(raw, representation, locator) {
 }
 
 function ingredient(raw, representation, locator) {
-  const match = raw.match(
+  const amountAndUnit = raw.match(
     new RegExp(
-      `^(\\d+(?:[.,]\\d+)?(?:\\s+\\d+/\\d+)?|\\d+/\\d+|[\\u00bc-\\u00be\\u2150-\\u215e])\\s+(${UNIT_PATTERN})[.,]?\\s+(.+)$`,
+      `^(${AMOUNT_PATTERN})\\s+(${UNIT_PATTERN})[.,]?\\s+(.+)$`,
       "iu",
     ),
   );
+  const amountOnly = amountAndUnit ? null : raw.match(new RegExp(`^(${AMOUNT_PATTERN})\\s+(.+)$`, "iu"));
   return {
     raw,
-    amount: match?.[1] ?? null,
-    unit: match?.[2] ?? null,
-    name: match?.[3] ?? raw,
+    amount: amountAndUnit?.[1] ?? amountOnly?.[1] ?? null,
+    unit: amountAndUnit?.[2] ?? null,
+    name: amountAndUnit?.[3] ?? amountOnly?.[2] ?? raw,
     confidence: "high",
     provenance: provenance(representation, locator),
   };
@@ -157,9 +159,16 @@ function headingKind(value) {
 
 function htmlHeadings(html) {
   const headings = [];
-  const pattern = /<h[1-6]\b[^>]*>([\s\S]*?)<\/h[1-6]\s*>/giu;
+  const pattern = /<(h([1-6]))\b[^>]*>([\s\S]*?)<\/\1\s*>/giu;
   for (const match of html.matchAll(pattern)) {
-    headings.push({ kind: headingKind(htmlText(match[1])), index: match.index, end: match.index + match[0].length });
+    headings.push({
+      kind: headingKind(htmlText(match[3])),
+      text: htmlText(match[3]),
+      tag: match[1].toLowerCase(),
+      level: Number.parseInt(match[2], 10),
+      index: match.index,
+      end: match.index + match[0].length,
+    });
   }
   return headings;
 }
@@ -173,6 +182,57 @@ function listItems(sectionHtml) {
   return items.length > 0 ? { tag: list[1].toLowerCase(), items } : null;
 }
 
+function recipeRegion(headings) {
+  for (const ingredientHeading of headings.filter(({ kind }) => kind === "ingredients")) {
+    const instructionHeading = headings.find(
+      ({ kind, index }) => kind === "instructions" && index > ingredientHeading.index,
+    );
+    if (instructionHeading) return { ingredientHeading, instructionHeading };
+  }
+  return null;
+}
+
+function containingRoot(html, start, end) {
+  const openings = [...html.slice(0, start).matchAll(/<(main|article)\b[^>]*>/giu)];
+  for (const opening of openings.reverse()) {
+    const tag = opening[1].toLowerCase();
+    const absoluteEnd = html.indexOf(`</${tag}`, end);
+    if (absoluteEnd >= 0) {
+      return {
+        selector: tag,
+        contentStart: (opening.index ?? 0) + opening[0].length,
+        contentEnd: absoluteEnd,
+      };
+    }
+  }
+  return { selector: null, contentStart: 0, contentEnd: html.length };
+}
+
+function headingOrdinal(html, root, heading) {
+  const beforeHeading = html.slice(root.contentStart, heading.index);
+  const matches = beforeHeading.match(new RegExp(`<${heading.tag}\\b`, "giu"));
+  return (matches?.length ?? 0) + 1;
+}
+
+function groupedLists(html, headings, startHeading, endIndex, expectedListTag, root) {
+  const componentHeadings = headings.filter(
+    ({ level, index }) => level === 3 && index > startHeading.index && index < endIndex,
+  );
+  if (componentHeadings.length === 0) return null;
+
+  const sections = [];
+  for (const componentHeading of componentHeadings) {
+    const nextHeading = headings.find(({ index }) => index > componentHeading.index && index < endIndex);
+    const componentHtml = html.slice(componentHeading.end, nextHeading?.index ?? endIndex);
+    const list = listItems(componentHtml);
+    if (!list || list.tag !== expectedListTag) continue;
+    const ordinal = headingOrdinal(html, root, componentHeading);
+    const listLocator = `h3:nth-of-type(${ordinal}) + ${list.tag}`;
+    sections.push({ name: componentHeading.text, list, listLocator });
+  }
+  return sections.length > 0 ? sections : null;
+}
+
 function parseHtml(html, sourceUrl) {
   // Remove active/raw-text regions before scanning. No markup is inserted into a DOM.
   const inertHtml = html.replace(
@@ -180,19 +240,39 @@ function parseHtml(html, sourceUrl) {
     "",
   );
   const headings = htmlHeadings(inertHtml);
-  const ingredientHeading = headings.find((heading) => heading.kind === "ingredients");
-  const instructionHeading = headings.find((heading) => heading.kind === "instructions");
-  if (!ingredientHeading || !instructionHeading) return null;
+  const region = recipeRegion(headings);
+  if (!region) return null;
+  const { ingredientHeading, instructionHeading } = region;
 
   const nextHeadingIndex = (heading) =>
     headings.find((candidateHeading) => candidateHeading.index > heading.index)?.index ?? inertHtml.length;
-  const ingredients = listItems(
+  const instructionEnd = headings.find(
+    ({ index, level }) => index > instructionHeading.index && level <= instructionHeading.level,
+  )?.index ?? inertHtml.length;
+  const root = containingRoot(inertHtml, ingredientHeading.index, instructionHeading.end);
+  const groupedIngredients = groupedLists(
+    inertHtml,
+    headings,
+    ingredientHeading,
+    instructionHeading.index,
+    "ul",
+    root,
+  );
+  const groupedInstructions = groupedLists(
+    inertHtml,
+    headings,
+    instructionHeading,
+    instructionEnd,
+    "ol",
+    root,
+  );
+  const ingredients = groupedIngredients ? null : listItems(
     inertHtml.slice(ingredientHeading.end, nextHeadingIndex(ingredientHeading)),
   );
-  const instructions = listItems(
+  const instructions = groupedInstructions ? null : listItems(
     inertHtml.slice(instructionHeading.end, nextHeadingIndex(instructionHeading)),
   );
-  if (!ingredients || !instructions) return null;
+  if ((!groupedIngredients && !ingredients) || (!groupedInstructions && !instructions)) return null;
 
   const result = candidate(
     { id: "generic-headings", version: "1", tier: "generic_html", sourceAdapter: null },
@@ -202,7 +282,10 @@ function parseHtml(html, sourceUrl) {
   const titleMatch = [...beforeIngredients.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1\s*>/giu)].at(-1);
   if (titleMatch) {
     const title = htmlText(titleMatch[1]);
-    if (title) result.fields.title = scalar(title, "text/html", "article > h1");
+    if (title) {
+      const titleRoot = root.selector ?? "article";
+      result.fields.title = scalar(title, "text/html", `${titleRoot} > h1`);
+    }
   }
   const afterTitle = titleMatch
     ? beforeIngredients.slice((titleMatch.index ?? 0) + titleMatch[0].length)
@@ -212,16 +295,45 @@ function parseHtml(html, sourceUrl) {
     const description = htmlText(descriptionMatch[1]);
     if (description) result.fields.description = scalar(description, "text/html", "article > p");
   }
-  result.fields.ingredientSections = [{
-    name: null,
-    items: ingredients.items.map((raw, index) =>
-      ingredient(raw, "text/html", `${ingredients.tag} > li:nth-child(${index + 1})`)),
-  }];
-  result.fields.instructionSections = [{
-    name: null,
-    steps: instructions.items.map((raw, index) =>
-      instruction(raw, "text/html", `${instructions.tag} > li:nth-child(${index + 1})`)),
-  }];
+  result.fields.ingredientSections = groupedIngredients
+    ? groupedIngredients.map(({ name, list, listLocator }) => ({
+      name,
+      items: list.items.map((raw, index) =>
+        ingredient(
+          raw,
+          "text/html",
+          `${listLocator} > li${list.items.length > 1 ? `:nth-child(${index + 1})` : ""}`,
+        )),
+    }))
+    : [{
+      name: null,
+      items: ingredients.items.map((raw, index) =>
+        ingredient(raw, "text/html", `${ingredients.tag} > li:nth-child(${index + 1})`)),
+    }];
+  result.fields.instructionSections = groupedInstructions
+    ? groupedInstructions.map(({ name, list, listLocator }) => ({
+      name,
+      steps: list.items.map((raw, index) =>
+        instruction(
+          raw,
+          "text/html",
+          `${listLocator} > li${list.items.length > 1 ? `:nth-child(${index + 1})` : ""}`,
+        )),
+    }))
+    : [{
+      name: null,
+      steps: instructions.items.map((raw, index) =>
+        instruction(raw, "text/html", `${instructions.tag} > li:nth-child(${index + 1})`)),
+    }];
+  if (groupedIngredients || groupedInstructions) {
+    result.status = "needs_review";
+    result.warnings.push({
+      code: "SECTION_NAMES_NOT_PERSISTED",
+      severity: "warning",
+      path: "fields.ingredientSections",
+      message: "Section names remain in preview but the current editor stores flat ingredients.",
+    });
+  }
   return result;
 }
 
