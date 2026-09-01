@@ -418,16 +418,18 @@ export function renderMarkdown(evaluation) {
     `- Invalid candidates: ${summary.invalidCandidates}`,
     `- Unexpected parser errors: ${summary.unexpectedErrors}`,
     `- HTML / plain-text accepted: ${summary.htmlAccepted} / ${summary.plainTextAccepted}`,
+    `- Accepted candidates with a title: ${summary.titlePresent} of ${summary.accepted}`,
+    `- Captured-page title mismatches: ${summary.titleMismatch}`,
     `- Integrity verified: ${summary.integrityVerified ? "yes" : "no"}`,
     "",
     "## Provider coverage",
     "",
-    "| Provider | Samples | Accepted | Acceptance | HTML | Text | Rejected | Invalid | Errors | Needs review |",
-    "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    "| Provider | Samples | Accepted | Acceptance | HTML | Text | Rejected | Invalid | Errors | Needs review | Title | Title mismatch |",
+    "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
   ];
   for (const provider of evaluation.providers) {
     lines.push(
-      `| ${markdownCell(provider.provider)} | ${provider.sampleCount} | ${provider.accepted} | ${formatPercent(provider.acceptancePercent)} | ${provider.htmlAccepted} | ${provider.plainTextAccepted} | ${provider.rejected} | ${provider.invalidCandidates} | ${provider.unexpectedErrors} | ${provider.needsReview} |`,
+      `| ${markdownCell(provider.provider)} | ${provider.sampleCount} | ${provider.accepted} | ${formatPercent(provider.acceptancePercent)} | ${provider.htmlAccepted} | ${provider.plainTextAccepted} | ${provider.rejected} | ${provider.invalidCandidates} | ${provider.unexpectedErrors} | ${provider.needsReview} | ${provider.titlePresent} | ${provider.titleMismatch} |`,
     );
   }
 
