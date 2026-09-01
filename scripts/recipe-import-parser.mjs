@@ -173,13 +173,15 @@ function htmlHeadings(html) {
   return headings;
 }
 
-function listItems(sectionHtml) {
+function listItems(sectionHtml, absoluteOffset = 0) {
   const list = sectionHtml.match(/<(ul|ol)\b[^>]*>([\s\S]*?)<\/\1\s*>/iu);
   if (!list) return null;
   const items = [...list[2].matchAll(/<li\b[^>]*>([\s\S]*?)<\/li\s*>/giu)]
     .map((match) => htmlText(match[1]))
     .filter(Boolean);
-  return items.length > 0 ? { tag: list[1].toLowerCase(), items } : null;
+  return items.length > 0
+    ? { tag: list[1].toLowerCase(), items, index: absoluteOffset + (list.index ?? 0) }
+    : null;
 }
 
 function rootRanges(html) {
@@ -276,6 +278,26 @@ function elementLocator(html, root, element, { ordinal = false, omitDirectRoot =
   return `${root ? `${root.tag} ` : ""}${wrapperSelector} > ${elementSelector}`;
 }
 
+function sameTagStack(left, right) {
+  return left.length === right.length && left.every(({ start }, index) => start === right[index].start);
+}
+
+function adjacentListAfterHeading(html, heading, list) {
+  const sameParent = sameTagStack(
+    tagStackContext(html, heading.index),
+    tagStackContext(html, list.index),
+  );
+  if (!sameParent) return false;
+  const interveningHtml = html.slice(heading.end, list.index).replace(/<!--[\s\S]*?-->/gu, "");
+  return interveningHtml.trim() === "";
+}
+
+function listItemsWithinRoot(html, start, end, roots, root) {
+  const list = listItems(html.slice(start, end), start);
+  if (!list || !sameRoot(closestRoot(roots, list.index), root)) return null;
+  return list;
+}
+
 function groupedLists(html, headings, roots, startHeading, endIndex, expectedListTag, root) {
   const componentHeadings = headings.filter(
     ({ level, index }) =>
@@ -289,9 +311,19 @@ function groupedLists(html, headings, roots, startHeading, endIndex, expectedLis
   const sections = [];
   for (const componentHeading of componentHeadings) {
     const nextHeading = headings.find(({ index }) => index > componentHeading.index && index < endIndex);
-    const componentHtml = html.slice(componentHeading.end, nextHeading?.index ?? endIndex);
-    const list = listItems(componentHtml);
-    if (!list || list.tag !== expectedListTag) continue;
+    const componentEnd = nextHeading?.index ?? endIndex;
+    const list = listItemsWithinRoot(
+      html,
+      componentHeading.end,
+      componentEnd,
+      roots,
+      root,
+    );
+    if (
+      !list ||
+      list.tag !== expectedListTag ||
+      !adjacentListAfterHeading(html, componentHeading, list)
+    ) continue;
     const headingLocator = elementLocator(html, root, componentHeading, {
       ordinal: true,
       omitDirectRoot: true,
@@ -339,17 +371,19 @@ function parseHtml(html, sourceUrl) {
     "ol",
     root,
   );
-  const ingredients = groupedIngredients ? null : listItems(
-    inertHtml.slice(
-      ingredientHeading.end,
-      Math.min(nextHeadingIndex(ingredientHeading), rootContentEnd),
-    ),
+  const ingredients = groupedIngredients ? null : listItemsWithinRoot(
+    inertHtml,
+    ingredientHeading.end,
+    Math.min(nextHeadingIndex(ingredientHeading), rootContentEnd),
+    roots,
+    root,
   );
-  const instructions = groupedInstructions ? null : listItems(
-    inertHtml.slice(
-      instructionHeading.end,
-      Math.min(nextHeadingIndex(instructionHeading), rootContentEnd),
-    ),
+  const instructions = groupedInstructions ? null : listItemsWithinRoot(
+    inertHtml,
+    instructionHeading.end,
+    Math.min(nextHeadingIndex(instructionHeading), rootContentEnd),
+    roots,
+    root,
   );
   if ((!groupedIngredients && !ingredients) || (!groupedInstructions && !instructions)) return null;
 
