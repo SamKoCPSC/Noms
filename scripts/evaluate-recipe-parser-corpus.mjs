@@ -17,9 +17,10 @@ const schemaPath = fileURLToPath(
 );
 const outcomeOrder = new Map([
   ["accepted", 0],
-  ["rejected", 1],
-  ["invalid_candidate", 2],
-  ["unexpected_error", 3],
+  ["unsupported", 1],
+  ["rejected", 2],
+  ["invalid_candidate", 3],
+  ["unexpected_error", 4],
 ]);
 
 function compareText(left, right) {
@@ -197,6 +198,18 @@ async function evaluateSample(sample, dataRoot, rootRealPath, schema) {
       validationErrorCount,
     };
   }
+  if (candidate.status === "unsupported") {
+    return {
+      id: sample.id,
+      provider: sample.provider,
+      outcome: "unsupported",
+      reason: "parser_reported_unsupported",
+      parserId: candidate.parser.id,
+      parserTier: candidate.parser.tier,
+      status: candidate.status,
+      warningCodes: [...new Set(candidate.warnings.map(({ code }) => code))].sort(compareText),
+    };
+  }
   return summarizeAcceptedSample(sample, candidate);
 }
 
@@ -236,13 +249,16 @@ function addSample(counts, sample) {
     counts.unexpectedErrors += 1;
     return;
   }
+  if (sample.outcome === "unsupported") {
+    counts.unsupported += 1;
+    return;
+  }
 
   counts.accepted += 1;
   if (sample.parserTier === "generic_html") counts.htmlAccepted += 1;
   if (sample.parserTier === "generic_text") counts.plainTextAccepted += 1;
   if (sample.status === "ready") counts.ready += 1;
   if (sample.status === "needs_review") counts.needsReview += 1;
-  if (sample.status === "unsupported") counts.unsupported += 1;
   if (sample.titlePresent) counts.titlePresent += 1;
   if (sample.descriptionPresent) counts.descriptionPresent += 1;
   if (sample.titleAgreement === "exact") counts.titleExact += 1;
@@ -417,6 +433,7 @@ export function renderMarkdown(evaluation) {
     `- Rejected as unrecognized: ${summary.rejected}`,
     `- Invalid candidates: ${summary.invalidCandidates}`,
     `- Unexpected parser errors: ${summary.unexpectedErrors}`,
+    `- Explicitly unsupported candidates: ${summary.unsupported}`,
     `- HTML / plain-text accepted: ${summary.htmlAccepted} / ${summary.plainTextAccepted}`,
     `- Accepted candidates with a title: ${summary.titlePresent} of ${summary.accepted}`,
     `- Captured-page title mismatches: ${summary.titleMismatch}`,
@@ -424,12 +441,12 @@ export function renderMarkdown(evaluation) {
     "",
     "## Provider coverage",
     "",
-    "| Provider | Samples | Accepted | Acceptance | HTML | Text | Rejected | Invalid | Errors | Needs review | Title | Title mismatch |",
-    "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    "| Provider | Samples | Accepted | Acceptance | HTML | Text | Rejected | Invalid | Errors | Needs review | Title | Title mismatch | Unsupported |",
+    "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
   ];
   for (const provider of evaluation.providers) {
     lines.push(
-      `| ${markdownCell(provider.provider)} | ${provider.sampleCount} | ${provider.accepted} | ${formatPercent(provider.acceptancePercent)} | ${provider.htmlAccepted} | ${provider.plainTextAccepted} | ${provider.rejected} | ${provider.invalidCandidates} | ${provider.unexpectedErrors} | ${provider.needsReview} | ${provider.titlePresent} | ${provider.titleMismatch} |`,
+      `| ${markdownCell(provider.provider)} | ${provider.sampleCount} | ${provider.accepted} | ${formatPercent(provider.acceptancePercent)} | ${provider.htmlAccepted} | ${provider.plainTextAccepted} | ${provider.rejected} | ${provider.invalidCandidates} | ${provider.unexpectedErrors} | ${provider.needsReview} | ${provider.titlePresent} | ${provider.titleMismatch} | ${provider.unsupported} |`,
     );
   }
 
