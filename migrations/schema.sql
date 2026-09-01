@@ -120,6 +120,55 @@ CREATE INDEX IF NOT EXISTS idx_media_upload_families_owner_lifecycle
 CREATE INDEX IF NOT EXISTS idx_media_upload_families_expiry
     ON media_upload_families(expires_at) WHERE lifecycle = 'uncommitted';
 
+-- Durable object-deletion authority created before an account row is removed.
+-- `former_owner_id` intentionally has no foreign key: these rows must survive
+-- the users/media_upload_families cascades and remain retryable afterwards.
+CREATE TABLE IF NOT EXISTS account_media_cleanup_tombstones (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    source_family_id UUID UNIQUE,
+    former_owner_id UUID NOT NULL,
+    purpose TEXT NOT NULL CHECK (purpose IN ('recipe', 'collection_cover', 'avatar')),
+    full_url TEXT,
+    thumbnail_url TEXT,
+    original_url TEXT,
+    full_key TEXT,
+    thumbnail_key TEXT,
+    original_key TEXT,
+    lifecycle TEXT NOT NULL DEFAULT 'pending'
+        CHECK (lifecycle IN ('pending', 'claimed', 'retained', 'deleted')),
+    attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    claim_started_at TIMESTAMPTZ,
+    cleanup_checked_at TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ,
+    delete_failure TEXT,
+    CHECK (
+        (purpose IN ('recipe', 'collection_cover')
+            AND source_family_id IS NOT NULL
+            AND full_url IS NOT NULL
+            AND thumbnail_url IS NOT NULL
+            AND full_key IS NOT NULL
+            AND thumbnail_key IS NOT NULL)
+        OR
+        (purpose = 'avatar'
+            AND source_family_id IS NULL
+            AND (full_key IS NOT NULL OR thumbnail_key IS NOT NULL OR original_key IS NOT NULL))
+    ),
+    CHECK (full_key IS NULL OR thumbnail_key IS NULL OR full_key <> thumbnail_key)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_account_media_cleanup_full_key
+    ON account_media_cleanup_tombstones(full_key) WHERE full_key IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_account_media_cleanup_thumbnail_key
+    ON account_media_cleanup_tombstones(thumbnail_key) WHERE thumbnail_key IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_account_media_cleanup_original_key
+    ON account_media_cleanup_tombstones(original_key) WHERE original_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_account_media_cleanup_candidates
+    ON account_media_cleanup_tombstones(lifecycle, cleanup_checked_at, created_at)
+    WHERE lifecycle <> 'deleted';
+CREATE INDEX IF NOT EXISTS idx_account_media_cleanup_former_owner
+    ON account_media_cleanup_tombstones(former_owner_id);
+
 -- ── Recipe management ──────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS recipes (

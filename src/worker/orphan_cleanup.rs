@@ -4,7 +4,6 @@
 //! Storage listings are preflight/observability only; unknown legacy objects
 //! are never treated as deletion authority.
 
-#[cfg(test)]
 use std::collections::HashSet;
 use std::time::Duration;
 
@@ -69,6 +68,11 @@ pub async fn run_cleanup(
     pool: &PgPool,
     storage: &StorageClient,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // Account deletion tombstones are independent of the legacy corpus
+    // preflights below. Process them first so a listing failure cannot strand
+    // objects after their owning user and media-family rows have cascaded.
+    let account_objects_deleted = run_account_media_cleanup(pool, storage).await?;
+
     // Reference inventory remains useful observability, but deletion authority
     // comes exclusively from a locked, tracked upload-family claim.
     let db_references = db::get_all_owned_image_references(pool)
@@ -112,10 +116,88 @@ pub async fn run_cleanup(
     info!(
         objects_in_db = db_references.len(),
         objects_in_storage = recipe_keys.len() + collection_keys.len(),
+        account_objects_deleted,
         orphans_deleted = deleted_count,
         "Orphan cleanup cycle complete"
     );
     Ok(())
+}
+
+fn account_media_cleanup_keys(claim: &db::AccountMediaCleanupClaim) -> Result<Vec<String>, String> {
+    let mut keys = HashSet::new();
+    match claim.purpose {
+        db::AccountMediaPurpose::Recipe | db::AccountMediaPurpose::CollectionCover => {
+            let full_key = claim
+                .full_key
+                .as_deref()
+                .ok_or_else(|| "tracked account media is missing its full key".to_string())?;
+            let thumbnail_key = claim
+                .thumbnail_key
+                .as_deref()
+                .ok_or_else(|| "tracked account media is missing its thumbnail key".to_string())?;
+            keys.insert(full_key.to_string());
+            keys.insert(thumbnail_key.to_string());
+        }
+        db::AccountMediaPurpose::Avatar => {
+            if let Some(full_key) = claim.full_key.as_deref() {
+                keys.insert(full_key.to_string());
+            }
+            if let Some(thumbnail_key) = claim.thumbnail_key.as_deref() {
+                keys.insert(thumbnail_key.to_string());
+            }
+            if let Some(original_key) = claim.original_key.as_deref() {
+                keys.insert(original_key.to_string());
+            }
+            if keys.is_empty() {
+                return Err("account avatar cleanup has no validated object keys".to_string());
+            }
+        }
+    }
+    let mut keys = keys.into_iter().collect::<Vec<_>>();
+    keys.sort();
+    Ok(keys)
+}
+
+pub(crate) async fn run_account_media_cleanup(
+    pool: &PgPool,
+    storage: &StorageClient,
+) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+    let candidates = db::list_account_media_cleanup_candidates(pool, 500).await?;
+    let mut deleted_count = 0u64;
+    for tombstone_id in candidates {
+        let db::AccountMediaCleanupDecision::Claimed(claim) =
+            db::claim_account_media_cleanup(pool, tombstone_id).await?
+        else {
+            continue;
+        };
+        let keys = match account_media_cleanup_keys(&claim) {
+            Ok(keys) => keys,
+            Err(error) => {
+                db::finish_account_media_cleanup(pool, claim.id, Some(&error)).await?;
+                warn!(claim_id = %claim.id, %error, "Invalid account-media cleanup claim");
+                continue;
+            }
+        };
+        let mut failures = Vec::new();
+        for key in &keys {
+            if let Err(error) = storage.delete_object(key).await {
+                failures.push(format!("{key}: {error}"));
+            }
+        }
+        let failure = if failures.is_empty() {
+            None
+        } else {
+            Some(failures.join("; ").chars().take(4096).collect::<String>())
+        };
+        db::finish_account_media_cleanup(pool, claim.id, failure.as_deref()).await?;
+        if let Some(error) = failure {
+            warn!(claim_id = %claim.id, %error, "Failed to delete account media; retry queued");
+        } else {
+            deleted_count += keys.len() as u64;
+            debug!(claim_id = %claim.id, objects = keys.len(), "Deleted account media tombstone");
+        }
+    }
+    Ok(deleted_count)
 }
 
 #[cfg(test)]
@@ -379,5 +461,81 @@ mod tests {
             .await;
 
         assert!(run_cleanup(&pool, &storage).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn account_media_cleanup_retries_after_the_user_is_gone() {
+        let (_database, pool) = crate::test_utils::setup_test_db().await;
+        let suffix = crate::test_utils::uid();
+        let user = crate::db::insert_user(
+            &pool,
+            &format!("cleanup_retry_{suffix}"),
+            "Cleanup Retry",
+            &format!("cleanup-retry-{suffix}@example.test"),
+            None,
+        )
+        .await
+        .unwrap();
+        let object_id = uuid::Uuid::new_v4();
+        let mock_server = wiremock::MockServer::start().await;
+        let storage = crate::storage::StorageClient::for_test_with_endpoint_and_public_url(
+            &mock_server.uri(),
+            "https://media.example.test",
+        );
+        let full_url = storage.object_url(&format!("avatars/{}/{object_id}.webp", user.id));
+        let original_url = storage.object_url(&format!("avatars/{}/{object_id}-original", user.id));
+        sqlx::query("UPDATE users SET avatar_url = $2, avatar_original_url = $3 WHERE id = $1")
+            .bind(user.id)
+            .bind(&full_url)
+            .bind(&original_url)
+            .execute(&pool)
+            .await
+            .unwrap();
+        crate::db::delete_user_with_media_cleanup(&pool, user.id, &storage)
+            .await
+            .unwrap();
+
+        wiremock::Mock::given(wiremock::matchers::method("DELETE"))
+            .respond_with(wiremock::ResponseTemplate::new(500))
+            .expect(3)
+            .mount(&mock_server)
+            .await;
+        run_account_media_cleanup(&pool, &storage).await.unwrap();
+
+        let (lifecycle, attempts, failure): (String, i32, Option<String>) = sqlx::query_as(
+            "SELECT lifecycle, attempt_count, delete_failure \
+             FROM account_media_cleanup_tombstones WHERE former_owner_id = $1",
+        )
+        .bind(user.id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(lifecycle, "pending");
+        assert_eq!(attempts, 1);
+        assert!(failure.is_some());
+        assert!(crate::db::get_user_by_id(&pool, user.id)
+            .await
+            .unwrap()
+            .is_none());
+
+        mock_server.reset().await;
+        wiremock::Mock::given(wiremock::matchers::method("DELETE"))
+            .respond_with(wiremock::ResponseTemplate::new(204))
+            .expect(3)
+            .mount(&mock_server)
+            .await;
+        run_account_media_cleanup(&pool, &storage).await.unwrap();
+
+        let (lifecycle, attempts, failure): (String, i32, Option<String>) = sqlx::query_as(
+            "SELECT lifecycle, attempt_count, delete_failure \
+             FROM account_media_cleanup_tombstones WHERE former_owner_id = $1",
+        )
+        .bind(user.id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(lifecycle, "deleted");
+        assert_eq!(attempts, 2);
+        assert!(failure.is_none());
     }
 }

@@ -109,6 +109,8 @@ pub async fn apply_test_schema(pool: &PgPool) {
          display_name VARCHAR(100) NOT NULL,\
          email VARCHAR(255) UNIQUE NOT NULL,\
          avatar_url TEXT,\
+         avatar_original_url TEXT,\
+         avatar_edit JSONB,\
          bio TEXT,\
          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
@@ -211,6 +213,82 @@ pub async fn apply_test_schema(pool: &PgPool) {
     .execute(pool)
     .await
     .expect("failed to create media upload family table");
+
+    sqlx::query(
+        r#"CREATE TABLE IF NOT EXISTS account_media_cleanup_tombstones (
+             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+             source_family_id UUID UNIQUE,
+             former_owner_id UUID NOT NULL,
+             purpose TEXT NOT NULL CHECK (purpose IN ('recipe', 'collection_cover', 'avatar')),
+             full_url TEXT,
+             thumbnail_url TEXT,
+             original_url TEXT,
+             full_key TEXT,
+             thumbnail_key TEXT,
+             original_key TEXT,
+             lifecycle TEXT NOT NULL DEFAULT 'pending'
+                 CHECK (lifecycle IN ('pending', 'claimed', 'retained', 'deleted')),
+             attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+             claim_started_at TIMESTAMPTZ,
+             cleanup_checked_at TIMESTAMPTZ,
+             deleted_at TIMESTAMPTZ,
+             delete_failure TEXT,
+             CHECK (
+                 (purpose IN ('recipe', 'collection_cover')
+                     AND source_family_id IS NOT NULL
+                     AND full_url IS NOT NULL
+                     AND thumbnail_url IS NOT NULL
+                     AND full_key IS NOT NULL
+                     AND thumbnail_key IS NOT NULL)
+                 OR
+                 (purpose = 'avatar'
+                     AND source_family_id IS NULL
+                     AND (full_key IS NOT NULL OR thumbnail_key IS NOT NULL OR original_key IS NOT NULL))
+             ),
+             CHECK (full_key IS NULL OR thumbnail_key IS NULL OR full_key <> thumbnail_key)
+         )"#,
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create account media cleanup tombstone table");
+
+    sqlx::query(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_account_media_cleanup_full_key \
+         ON account_media_cleanup_tombstones(full_key) WHERE full_key IS NOT NULL",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create account media cleanup full-key index");
+    sqlx::query(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_account_media_cleanup_thumbnail_key \
+         ON account_media_cleanup_tombstones(thumbnail_key) WHERE thumbnail_key IS NOT NULL",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create account media cleanup thumbnail-key index");
+    sqlx::query(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_account_media_cleanup_original_key \
+         ON account_media_cleanup_tombstones(original_key) WHERE original_key IS NOT NULL",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create account media cleanup original-key index");
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_account_media_cleanup_candidates \
+         ON account_media_cleanup_tombstones(lifecycle, cleanup_checked_at, created_at) \
+         WHERE lifecycle <> 'deleted'",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create account media cleanup candidate index");
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_account_media_cleanup_former_owner \
+         ON account_media_cleanup_tombstones(former_owner_id)",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create account media cleanup former-owner index");
 
     // ── Recipe tables ──────────────────────────────────────────────────────
 

@@ -642,6 +642,62 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn recreated_provider_identity_does_not_orphan_old_account_media() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let suffix = test_utils::uid();
+        let provider_uid = format!("account-cleanup-{suffix}");
+        let email = format!("account-cleanup-{suffix}@example.test");
+        let login = || OauthUserInfo {
+            provider: Provider::Google,
+            provider_uid: provider_uid.clone(),
+            email: Some(email.clone()),
+            email_verified: true,
+            display_name: "Account Cleanup".to_string(),
+            avatar_url: None,
+        };
+        let original = login_or_create(&pool, login(), None).await.unwrap();
+        let object = uuid::Uuid::new_v4();
+        let upload = crate::db::NewMediaUploadFamily {
+            owner_id: original.user_id,
+            purpose: crate::db::MediaPurpose::Recipe,
+            thumbnail_url: format!(
+                "https://media.example.test/recipes/{}/{}_thumb.webp",
+                original.user_id, object
+            ),
+            full_url: format!(
+                "https://media.example.test/recipes/{}/{}_full.webp",
+                original.user_id, object
+            ),
+            full_key: format!("recipes/{}/{}_full.webp", original.user_id, object),
+            thumbnail_key: format!("recipes/{}/{}_thumb.webp", original.user_id, object),
+            capability_digest: vec![41; 32],
+            expires_at: chrono::Utc::now() + chrono::Duration::minutes(10),
+        };
+        crate::db::register_media_upload_family(&pool, &upload)
+            .await
+            .unwrap();
+
+        crate::db::delete_user(&pool, original.user_id)
+            .await
+            .unwrap();
+        let recreated = login_or_create(&pool, login(), None).await.unwrap();
+
+        assert_ne!(recreated.user_id, original.user_id);
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>(
+                "SELECT COUNT(*) FROM account_media_cleanup_tombstones \
+                 WHERE former_owner_id = $1 AND lifecycle <> 'deleted'",
+            )
+            .bind(original.user_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            1,
+            "old-UUID objects must remain represented in cleanup accounting after re-login"
+        );
+    }
+
+    #[tokio::test]
     async fn test_username_collision_retry() {
         let (_db, pool) = test_utils::setup_test_db().await;
 

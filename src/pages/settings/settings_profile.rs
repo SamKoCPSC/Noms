@@ -51,16 +51,19 @@ mod avatar_action_tests {
 
 /// Delete the authenticated user's account.
 ///
-/// Deletes the user row from the database (oauth_accounts cascade automatically).
-/// On the client side, the caller is responsible for logging out and redirecting.
+/// Atomically stages durable storage cleanup authority before deleting the user
+/// row (oauth_accounts cascade automatically). On the client side, the caller
+/// is responsible for logging out and redirecting.
 #[server]
 pub async fn delete_account() -> Result<(), ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
     let pool = crate::db::get_pool();
+    let storage = crate::storage::get_storage_client();
+    let _media_lifecycle_guard = crate::api::upload::acquire_media_lifecycle_guard(user_id).await;
 
-    crate::db::delete_user(&pool, user_id)
+    crate::db::delete_user_with_media_cleanup(&pool, user_id, &storage)
         .await
         .map_err(|e| ServerFnError::new(e.to_string()))?;
 
@@ -1843,12 +1846,6 @@ mod avatar_media_ownership_tests {
     #[tokio::test]
     async fn avatar_database_failure_compensates_new_objects_and_preserves_previous_state() {
         let (_database, pool) = crate::test_utils::setup_test_db().await;
-        sqlx::query(
-            "ALTER TABLE users ADD COLUMN avatar_original_url TEXT, ADD COLUMN avatar_edit JSONB",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
         let user = crate::db::insert_user(
             &pool,
             "avatar_db_failure",

@@ -2789,16 +2789,118 @@ async fn snapshot_owned_recipe_lineage(
 ///
 /// Revokes all OAuth tokens with providers before deletion. Revocation
 /// failures are logged but never block deletion.
+#[cfg(test)]
 pub async fn delete_user(pool: &PgPool, user_id: Uuid) -> Result<(), DbError> {
+    delete_user_inner(pool, user_id, None).await
+}
+
+/// Delete a user while durably staging any exact, canonical avatar object keys.
+/// The storage parser runs only after the user row is locked, so a concurrent
+/// avatar replacement cannot swap in an untracked object before the cascade.
+pub async fn delete_user_with_media_cleanup(
+    pool: &PgPool,
+    user_id: Uuid,
+    storage: &crate::storage::StorageClient,
+) -> Result<(), DbError> {
+    delete_user_inner(pool, user_id, Some(storage)).await
+}
+
+async fn delete_user_inner(
+    pool: &PgPool,
+    user_id: Uuid,
+    storage: Option<&crate::storage::StorageClient>,
+) -> Result<(), DbError> {
     // Revoke all OAuth tokens before deletion (non-blocking — failures are logged)
     crate::auth::revoke::revoke_all_user_tokens(pool, user_id).await;
 
     let mut transaction = pool.begin().await.map_err(DbError::Query)?;
-    sqlx::query_scalar::<_, Uuid>("SELECT id FROM users WHERE id = $1 FOR UPDATE")
+    let avatar_urls = sqlx::query_as::<_, (Option<String>, Option<String>)>(
+        "SELECT avatar_url, avatar_original_url FROM users WHERE id = $1 FOR UPDATE",
+    )
+    .bind(user_id)
+    .fetch_optional(&mut *transaction)
+    .await
+    .map_err(DbError::Query)?
+    .ok_or(DbError::Query(sqlx::Error::RowNotFound))?;
+
+    // Serialize with any in-flight upload-family claim before copying the
+    // exact object authority out of the user-owned table. The copied rows have
+    // no user foreign key and therefore survive the account cascade.
+    sqlx::query_scalar::<_, Uuid>(
+        "SELECT id FROM media_upload_families WHERE owner_id = $1 FOR UPDATE",
+    )
+    .bind(user_id)
+    .fetch_all(&mut *transaction)
+    .await
+    .map_err(DbError::Query)?;
+    sqlx::query(
+        "INSERT INTO account_media_cleanup_tombstones (source_family_id, former_owner_id, \
+             purpose, full_url, thumbnail_url, full_key, thumbnail_key) \
+         SELECT id, owner_id, purpose, full_url, thumbnail_url, full_key, thumbnail_key \
+         FROM media_upload_families \
+         WHERE owner_id = $1 AND lifecycle <> 'discarded' \
+         ON CONFLICT (source_family_id) DO NOTHING",
+    )
+    .bind(user_id)
+    .execute(&mut *transaction)
+    .await
+    .map_err(DbError::Query)?;
+
+    let mut avatar_full_key = None;
+    let mut avatar_thumbnail_key = None;
+    let mut avatar_original_key = None;
+    if let Some(storage) = storage {
+        if let Some(full_url) = avatar_urls.0.as_deref() {
+            if let Ok(object) = storage.parse_media_url(full_url) {
+                if object.owner_id() == user_id
+                    && object.kind() == crate::storage::MediaObjectKind::AvatarFull
+                {
+                    avatar_thumbnail_key = object.paired_thumbnail_key();
+                    avatar_full_key = Some(object.key().to_string());
+                } else {
+                    tracing::warn!(
+                        %user_id,
+                        object_owner_id = %object.owner_id(),
+                        object_key = %object.key(),
+                        "Ignoring non-owned avatar URL while staging account deletion"
+                    );
+                }
+            }
+        }
+        if let Some(original_url) = avatar_urls.1.as_deref() {
+            if let Ok(object) = storage.parse_media_url(original_url) {
+                if object.owner_id() == user_id
+                    && object.kind() == crate::storage::MediaObjectKind::AvatarOriginal
+                {
+                    avatar_original_key = Some(object.key().to_string());
+                } else {
+                    tracing::warn!(
+                        %user_id,
+                        object_owner_id = %object.owner_id(),
+                        object_key = %object.key(),
+                        "Ignoring non-owned avatar original while staging account deletion"
+                    );
+                }
+            }
+        }
+    }
+    if avatar_full_key.is_some() || avatar_thumbnail_key.is_some() || avatar_original_key.is_some()
+    {
+        sqlx::query(
+            "INSERT INTO account_media_cleanup_tombstones (former_owner_id, purpose, \
+                 full_url, original_url, full_key, thumbnail_key, original_key) \
+             VALUES ($1, 'avatar', $2, $3, $4, $5, $6)",
+        )
         .bind(user_id)
-        .fetch_optional(&mut *transaction)
+        .bind(avatar_urls.0)
+        .bind(avatar_urls.1)
+        .bind(avatar_full_key)
+        .bind(avatar_thumbnail_key)
+        .bind(avatar_original_key)
+        .execute(&mut *transaction)
         .await
         .map_err(DbError::Query)?;
+    }
     snapshot_owned_recipe_lineage(&mut transaction, user_id, None).await?;
 
     // Now delete the user (oauth_accounts and recipes cascade automatically)
@@ -3452,6 +3554,50 @@ pub enum MediaPurpose {
     CollectionCover,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type)]
+#[sqlx(type_name = "text", rename_all = "snake_case")]
+pub enum AccountMediaPurpose {
+    Recipe,
+    CollectionCover,
+    Avatar,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AccountMediaCleanupClaim {
+    pub id: Uuid,
+    pub former_owner_id: Uuid,
+    pub purpose: AccountMediaPurpose,
+    pub full_url: Option<String>,
+    pub thumbnail_url: Option<String>,
+    pub original_url: Option<String>,
+    pub full_key: Option<String>,
+    pub thumbnail_key: Option<String>,
+    pub original_key: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AccountMediaCleanupDecision {
+    Claimed(AccountMediaCleanupClaim),
+    Retained,
+    Busy,
+    Gone,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+struct LockedAccountMediaCleanupRow {
+    id: Uuid,
+    former_owner_id: Uuid,
+    purpose: AccountMediaPurpose,
+    full_url: Option<String>,
+    thumbnail_url: Option<String>,
+    original_url: Option<String>,
+    full_key: Option<String>,
+    thumbnail_key: Option<String>,
+    original_key: Option<String>,
+    lifecycle: String,
+    claim_started_at: Option<DateTime<Utc>>,
+}
+
 #[derive(Debug, Clone)]
 pub struct NewMediaUploadFamily {
     pub owner_id: Uuid,
@@ -3787,6 +3933,147 @@ pub async fn list_media_cleanup_candidates(
     .fetch_all(pool)
     .await
     .map_err(DbError::Query)
+}
+
+/// Return a bounded batch of account-deletion tombstones eligible for a claim.
+/// Fresh claims are leased for ten minutes so parallel workers cannot delete
+/// the same objects concurrently; abandoned claims become retryable.
+pub async fn list_account_media_cleanup_candidates(
+    pool: &PgPool,
+    limit: i64,
+) -> Result<Vec<Uuid>, DbError> {
+    let bounded_limit = limit.clamp(1, 500);
+    sqlx::query_scalar(
+        "SELECT id FROM account_media_cleanup_tombstones \
+         WHERE lifecycle IN ('pending', 'retained') \
+            OR (lifecycle = 'claimed' \
+                AND claim_started_at <= NOW() - INTERVAL '10 minutes') \
+         ORDER BY CASE lifecycle WHEN 'pending' THEN 0 WHEN 'claimed' THEN 1 ELSE 2 END, \
+                  cleanup_checked_at ASC NULLS FIRST, created_at, id \
+         LIMIT $1",
+    )
+    .bind(bounded_limit)
+    .fetch_all(pool)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Atomically claim one durable account-media tombstone after checking whether
+/// a surviving recipe/fork still references its object family.
+pub async fn claim_account_media_cleanup(
+    pool: &PgPool,
+    tombstone_id: Uuid,
+) -> Result<AccountMediaCleanupDecision, DbError> {
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    let row = sqlx::query_as::<_, LockedAccountMediaCleanupRow>(
+        "SELECT id, former_owner_id, purpose, full_url, thumbnail_url, original_url, \
+                full_key, thumbnail_key, original_key, lifecycle, claim_started_at \
+         FROM account_media_cleanup_tombstones WHERE id = $1 FOR UPDATE",
+    )
+    .bind(tombstone_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    let Some(row) = row else {
+        tx.commit().await.map_err(DbError::Query)?;
+        return Ok(AccountMediaCleanupDecision::Gone);
+    };
+    if row.lifecycle == "deleted" {
+        tx.commit().await.map_err(DbError::Query)?;
+        return Ok(AccountMediaCleanupDecision::Gone);
+    }
+    if row.lifecycle == "claimed"
+        && row
+            .claim_started_at
+            .is_some_and(|started| started > Utc::now() - chrono::Duration::minutes(10))
+    {
+        tx.commit().await.map_err(DbError::Query)?;
+        return Ok(AccountMediaCleanupDecision::Busy);
+    }
+
+    let media_purpose = match row.purpose {
+        AccountMediaPurpose::Recipe => Some(MediaPurpose::Recipe),
+        AccountMediaPurpose::CollectionCover => Some(MediaPurpose::CollectionCover),
+        AccountMediaPurpose::Avatar => None,
+    };
+    if let (Some(purpose), Some(full_url), Some(thumbnail_url)) = (
+        media_purpose,
+        row.full_url.as_deref(),
+        row.thumbnail_url.as_deref(),
+    ) {
+        if media_family_is_referenced(
+            &mut tx,
+            row.former_owner_id,
+            purpose,
+            full_url,
+            thumbnail_url,
+        )
+        .await?
+        {
+            sqlx::query(
+                "UPDATE account_media_cleanup_tombstones \
+                 SET lifecycle = 'retained', cleanup_checked_at = NOW(), \
+                     claim_started_at = NULL, delete_failure = NULL WHERE id = $1",
+            )
+            .bind(row.id)
+            .execute(&mut *tx)
+            .await
+            .map_err(DbError::Query)?;
+            tx.commit().await.map_err(DbError::Query)?;
+            return Ok(AccountMediaCleanupDecision::Retained);
+        }
+    }
+
+    sqlx::query(
+        "UPDATE account_media_cleanup_tombstones \
+         SET lifecycle = 'claimed', claim_started_at = NOW(), cleanup_checked_at = NOW(), \
+             attempt_count = attempt_count + 1, delete_failure = NULL WHERE id = $1",
+    )
+    .bind(row.id)
+    .execute(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    tx.commit().await.map_err(DbError::Query)?;
+    Ok(AccountMediaCleanupDecision::Claimed(
+        AccountMediaCleanupClaim {
+            id: row.id,
+            former_owner_id: row.former_owner_id,
+            purpose: row.purpose,
+            full_url: row.full_url,
+            thumbnail_url: row.thumbnail_url,
+            original_url: row.original_url,
+            full_key: row.full_key,
+            thumbnail_key: row.thumbnail_key,
+            original_key: row.original_key,
+        },
+    ))
+}
+
+/// Record the idempotent storage result for an account-media claim. Failures
+/// return immediately to `pending`; successful claims become terminal.
+pub async fn finish_account_media_cleanup(
+    pool: &PgPool,
+    tombstone_id: Uuid,
+    delete_failure: Option<&str>,
+) -> Result<(), DbError> {
+    let lifecycle = if delete_failure.is_some() {
+        "pending"
+    } else {
+        "deleted"
+    };
+    sqlx::query(
+        "UPDATE account_media_cleanup_tombstones \
+         SET lifecycle = $2, claim_started_at = NULL, delete_failure = $3, \
+             deleted_at = CASE WHEN $2 = 'deleted' THEN NOW() ELSE deleted_at END \
+         WHERE id = $1 AND lifecycle = 'claimed'",
+    )
+    .bind(tombstone_id)
+    .bind(lifecycle)
+    .bind(delete_failure)
+    .execute(pool)
+    .await
+    .map_err(DbError::Query)?;
+    Ok(())
 }
 
 /// Get every retained media URL together with an owner authorized to reference it.
