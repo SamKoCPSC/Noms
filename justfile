@@ -110,6 +110,10 @@ recipe-import-parser-basic-test:
 recipe-import-parser-grouped-test:
 	@node --test --test-name-pattern='basic-visible-recipe|grouped-components|plain-text-fallback' scripts/tests/test-recipe-import-parser-acceptance.mjs
 
+# Validate the privacy-preserving real-corpus parser evaluator.
+recipe-import-parser-corpus-test:
+	@node --test scripts/tests/test-evaluate-recipe-parser-corpus.mjs
+
 # Run all checks and tests (mirrors what CI does)
 ci: fmt check lint test schema-check-test security-policy-test security-check recipe-import-fixture-test
 	@echo ""
