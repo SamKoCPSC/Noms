@@ -182,41 +182,107 @@ function listItems(sectionHtml) {
   return items.length > 0 ? { tag: list[1].toLowerCase(), items } : null;
 }
 
-function recipeRegion(headings) {
+function rootRanges(html) {
+  const ranges = [];
+  const stack = [];
+  const pattern = /<\/?(main|article)\b[^>]*>/giu;
+  for (const match of html.matchAll(pattern)) {
+    const tag = match[1].toLowerCase();
+    if (!match[0].startsWith("</")) {
+      stack.push({ tag, start: match.index, contentStart: match.index + match[0].length });
+      continue;
+    }
+    const openingIndex = stack.findLastIndex((opening) => opening.tag === tag);
+    if (openingIndex < 0) continue;
+    const [opening] = stack.splice(openingIndex, 1);
+    ranges.push({ ...opening, end: match.index + match[0].length, contentEnd: match.index });
+  }
+  return ranges;
+}
+
+function closestRoot(roots, index) {
+  return roots
+    .filter(({ start, end }) => start < index && index < end)
+    .sort((left, right) => right.start - left.start)[0] ?? null;
+}
+
+function sameRoot(left, right) {
+  if (left === null || right === null) return left === right;
+  return left.start === right.start && left.end === right.end;
+}
+
+function recipeRegion(headings, roots) {
   for (const ingredientHeading of headings.filter(({ kind }) => kind === "ingredients")) {
+    const root = closestRoot(roots, ingredientHeading.index);
     const instructionHeading = headings.find(
-      ({ kind, index }) => kind === "instructions" && index > ingredientHeading.index,
+      ({ kind, index }) =>
+        kind === "instructions" &&
+        index > ingredientHeading.index &&
+        sameRoot(closestRoot(roots, index), root),
     );
-    if (instructionHeading) return { ingredientHeading, instructionHeading };
+    if (instructionHeading) return { ingredientHeading, instructionHeading, root };
   }
   return null;
 }
 
-function containingRoot(html, start, end) {
-  const openings = [...html.slice(0, start).matchAll(/<(main|article)\b[^>]*>/giu)];
-  for (const opening of openings.reverse()) {
-    const tag = opening[1].toLowerCase();
-    const absoluteEnd = html.indexOf(`</${tag}`, end);
-    if (absoluteEnd >= 0) {
-      return {
-        selector: tag,
-        contentStart: (opening.index ?? 0) + opening[0].length,
-        contentEnd: absoluteEnd,
-      };
+const VOID_TAGS = new Set([
+  "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param",
+  "source", "track", "wbr",
+]);
+
+function tagStackContext(html, index) {
+  const stack = [];
+  const pattern = /<\/?([a-z][a-z0-9:-]*)\b[^>]*>/giu;
+  for (const match of html.matchAll(pattern)) {
+    if ((match.index ?? 0) >= index) break;
+    const tag = match[1].toLowerCase();
+    if (match[0].startsWith("</")) {
+      const openingIndex = stack.findLastIndex((opening) => opening.tag === tag);
+      if (openingIndex >= 0) stack.splice(openingIndex);
+      continue;
+    }
+    const parent = stack.at(-1);
+    const ordinal = (parent?.childTagCounts.get(tag) ?? 0) + 1;
+    if (parent) parent.childTagCounts.set(tag, ordinal);
+    if (!VOID_TAGS.has(tag) && !match[0].endsWith("/>")) {
+      stack.push({
+        tag,
+        start: match.index,
+        ordinal,
+        childTagCounts: new Map(),
+      });
     }
   }
-  return { selector: null, contentStart: 0, contentEnd: html.length };
+  return stack;
 }
 
-function headingOrdinal(html, root, heading) {
-  const beforeHeading = html.slice(root.contentStart, heading.index);
-  const matches = beforeHeading.match(new RegExp(`<${heading.tag}\\b`, "giu"));
-  return (matches?.length ?? 0) + 1;
+function elementLocator(html, root, element, { ordinal = false, omitDirectRoot = false } = {}) {
+  const context = tagStackContext(html, element.index);
+  const rootIndex = root
+    ? context.findLastIndex(({ start }) => start === root.start)
+    : -1;
+  const parent = context.at(-1);
+  const elementOrdinal = (parent?.childTagCounts.get(element.tag) ?? 0) + 1;
+  const elementSelector = `${element.tag}${ordinal ? `:nth-of-type(${elementOrdinal})` : ""}`;
+  const wrappers = rootIndex >= 0 ? context.slice(rootIndex + 1) : context;
+
+  if (wrappers.length === 0) {
+    if (omitDirectRoot || !root) return elementSelector;
+    return `${root.tag} > ${elementSelector}`;
+  }
+  const wrapperSelector = wrappers
+    .map(({ tag, ordinal: wrapperOrdinal }) => `${tag}:nth-of-type(${wrapperOrdinal})`)
+    .join(" > ");
+  return `${root ? `${root.tag} ` : ""}${wrapperSelector} > ${elementSelector}`;
 }
 
-function groupedLists(html, headings, startHeading, endIndex, expectedListTag, root) {
+function groupedLists(html, headings, roots, startHeading, endIndex, expectedListTag, root) {
   const componentHeadings = headings.filter(
-    ({ level, index }) => level === 3 && index > startHeading.index && index < endIndex,
+    ({ level, index }) =>
+      level === 3 &&
+      index > startHeading.index &&
+      index < endIndex &&
+      sameRoot(closestRoot(roots, index), root),
   );
   if (componentHeadings.length === 0) return null;
 
@@ -226,8 +292,11 @@ function groupedLists(html, headings, startHeading, endIndex, expectedListTag, r
     const componentHtml = html.slice(componentHeading.end, nextHeading?.index ?? endIndex);
     const list = listItems(componentHtml);
     if (!list || list.tag !== expectedListTag) continue;
-    const ordinal = headingOrdinal(html, root, componentHeading);
-    const listLocator = `h3:nth-of-type(${ordinal}) + ${list.tag}`;
+    const headingLocator = elementLocator(html, root, componentHeading, {
+      ordinal: true,
+      omitDirectRoot: true,
+    });
+    const listLocator = `${headingLocator} + ${list.tag}`;
     sections.push({ name: componentHeading.text, list, listLocator });
   }
   return sections.length > 0 ? sections : null;
@@ -240,19 +309,21 @@ function parseHtml(html, sourceUrl) {
     "",
   );
   const headings = htmlHeadings(inertHtml);
-  const region = recipeRegion(headings);
+  const roots = rootRanges(inertHtml);
+  const region = recipeRegion(headings, roots);
   if (!region) return null;
-  const { ingredientHeading, instructionHeading } = region;
+  const { ingredientHeading, instructionHeading, root } = region;
 
   const nextHeadingIndex = (heading) =>
     headings.find((candidateHeading) => candidateHeading.index > heading.index)?.index ?? inertHtml.length;
-  const instructionEnd = headings.find(
+  const followingSectionEnd = headings.find(
     ({ index, level }) => index > instructionHeading.index && level <= instructionHeading.level,
   )?.index ?? inertHtml.length;
-  const root = containingRoot(inertHtml, ingredientHeading.index, instructionHeading.end);
+  const instructionEnd = Math.min(followingSectionEnd, root?.contentEnd ?? inertHtml.length);
   const groupedIngredients = groupedLists(
     inertHtml,
     headings,
+    roots,
     ingredientHeading,
     instructionHeading.index,
     "ul",
@@ -261,6 +332,7 @@ function parseHtml(html, sourceUrl) {
   const groupedInstructions = groupedLists(
     inertHtml,
     headings,
+    roots,
     instructionHeading,
     instructionEnd,
     "ol",
@@ -283,8 +355,12 @@ function parseHtml(html, sourceUrl) {
   if (titleMatch) {
     const title = htmlText(titleMatch[1]);
     if (title) {
-      const titleRoot = root.selector ?? "article";
-      result.fields.title = scalar(title, "text/html", `${titleRoot} > h1`);
+      const titleElement = { tag: "h1", index: titleMatch.index ?? 0 };
+      result.fields.title = scalar(
+        title,
+        "text/html",
+        elementLocator(inertHtml, root, titleElement),
+      );
     }
   }
   const afterTitle = titleMatch
@@ -327,12 +403,19 @@ function parseHtml(html, sourceUrl) {
     }];
   if (groupedIngredients || groupedInstructions) {
     result.status = "needs_review";
-    result.warnings.push({
-      code: "SECTION_NAMES_NOT_PERSISTED",
-      severity: "warning",
-      path: "fields.ingredientSections",
-      message: "Section names remain in preview but the current editor stores flat ingredients.",
-    });
+    result.warnings.push(groupedIngredients
+      ? {
+        code: "SECTION_NAMES_NOT_PERSISTED",
+        severity: "warning",
+        path: "fields.ingredientSections",
+        message: "Section names remain in preview but the current editor stores flat ingredients.",
+      }
+      : {
+        code: "SECTION_NAMES_NOT_PERSISTED",
+        severity: "warning",
+        path: "fields.instructionSections",
+        message: "Section names remain in preview but the current editor stores flat instructions.",
+      });
   }
   return result;
 }
