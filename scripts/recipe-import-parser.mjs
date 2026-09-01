@@ -319,7 +319,8 @@ function parseHtml(html, sourceUrl) {
   const followingSectionEnd = headings.find(
     ({ index, level }) => index > instructionHeading.index && level <= instructionHeading.level,
   )?.index ?? inertHtml.length;
-  const instructionEnd = Math.min(followingSectionEnd, root?.contentEnd ?? inertHtml.length);
+  const rootContentEnd = root?.contentEnd ?? inertHtml.length;
+  const instructionEnd = Math.min(followingSectionEnd, rootContentEnd);
   const groupedIngredients = groupedLists(
     inertHtml,
     headings,
@@ -339,10 +340,16 @@ function parseHtml(html, sourceUrl) {
     root,
   );
   const ingredients = groupedIngredients ? null : listItems(
-    inertHtml.slice(ingredientHeading.end, nextHeadingIndex(ingredientHeading)),
+    inertHtml.slice(
+      ingredientHeading.end,
+      Math.min(nextHeadingIndex(ingredientHeading), rootContentEnd),
+    ),
   );
   const instructions = groupedInstructions ? null : listItems(
-    inertHtml.slice(instructionHeading.end, nextHeadingIndex(instructionHeading)),
+    inertHtml.slice(
+      instructionHeading.end,
+      Math.min(nextHeadingIndex(instructionHeading), rootContentEnd),
+    ),
   );
   if ((!groupedIngredients && !ingredients) || (!groupedInstructions && !instructions)) return null;
 
@@ -350,12 +357,13 @@ function parseHtml(html, sourceUrl) {
     { id: "generic-headings", version: "1", tier: "generic_html", sourceAdapter: null },
     sourceUrl,
   );
-  const beforeIngredients = inertHtml.slice(0, ingredientHeading.index);
+  const recipeContentStart = root?.contentStart ?? 0;
+  const beforeIngredients = inertHtml.slice(recipeContentStart, ingredientHeading.index);
   const titleMatch = [...beforeIngredients.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1\s*>/giu)].at(-1);
   if (titleMatch) {
     const title = htmlText(titleMatch[1]);
     if (title) {
-      const titleElement = { tag: "h1", index: titleMatch.index ?? 0 };
+      const titleElement = { tag: "h1", index: recipeContentStart + (titleMatch.index ?? 0) };
       result.fields.title = scalar(
         title,
         "text/html",
@@ -363,13 +371,24 @@ function parseHtml(html, sourceUrl) {
       );
     }
   }
-  const afterTitle = titleMatch
-    ? beforeIngredients.slice((titleMatch.index ?? 0) + titleMatch[0].length)
-    : beforeIngredients;
+  const afterTitleStart = titleMatch
+    ? recipeContentStart + (titleMatch.index ?? 0) + titleMatch[0].length
+    : recipeContentStart;
+  const afterTitle = inertHtml.slice(afterTitleStart, ingredientHeading.index);
   const descriptionMatch = afterTitle.match(/<p\b[^>]*>([\s\S]*?)<\/p\s*>/iu);
   if (descriptionMatch) {
     const description = htmlText(descriptionMatch[1]);
-    if (description) result.fields.description = scalar(description, "text/html", "article > p");
+    if (description) {
+      const descriptionElement = {
+        tag: "p",
+        index: afterTitleStart + (descriptionMatch.index ?? 0),
+      };
+      result.fields.description = scalar(
+        description,
+        "text/html",
+        elementLocator(inertHtml, root, descriptionElement),
+      );
+    }
   }
   result.fields.ingredientSections = groupedIngredients
     ? groupedIngredients.map(({ name, list, listLocator }) => ({
