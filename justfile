@@ -114,11 +114,15 @@ recipe-import-parser-grouped-test:
 recipe-import-parser-region-test:
 	@node --test --test-name-pattern='basic-visible-recipe|grouped-components|competing-recipe-regions|collection-page-embedded-recipe|navigation-ingredient-region|missing-recipe-title|plain-text-fallback' scripts/tests/test-recipe-import-parser-acceptance.mjs
 
+# Cumulative parser slices through active measurement variants, yield, and durations.
+recipe-import-parser-variant-test:
+	@node --test --test-name-pattern='basic-visible-recipe|grouped-components|competing-recipe-regions|collection-page-embedded-recipe|navigation-ingredient-region|missing-recipe-title|unit-yield-and-duration-ambiguity|plain-text-fallback' scripts/tests/test-recipe-import-parser-acceptance.mjs
+
 # Validate the privacy-preserving real-corpus parser evaluator.
 recipe-import-parser-corpus-test:
 	@node --test scripts/tests/test-evaluate-recipe-parser-corpus.mjs
 
 # Run all checks and tests (mirrors what CI does)
-ci: fmt check lint test schema-check-test security-policy-test security-check recipe-import-fixture-test recipe-import-parser-region-test recipe-import-parser-corpus-test
+ci: fmt check lint test schema-check-test security-policy-test security-check recipe-import-fixture-test recipe-import-parser-variant-test recipe-import-parser-corpus-test
 	@echo ""
 	@echo "✅ All checks passed."

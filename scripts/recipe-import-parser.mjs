@@ -174,14 +174,70 @@ function htmlHeadings(html) {
 }
 
 function listItems(sectionHtml, absoluteOffset = 0) {
-  const list = sectionHtml.match(/<(ul|ol)\b[^>]*>([\s\S]*?)<\/\1\s*>/iu);
+  const list = sectionHtml.match(/<(ul|ol)\b([^>]*)>([\s\S]*?)<\/\1\s*>/iu);
   if (!list) return null;
-  const items = [...list[2].matchAll(/<li\b[^>]*>([\s\S]*?)<\/li\s*>/giu)]
+  const items = [...list[3].matchAll(/<li\b[^>]*>([\s\S]*?)<\/li\s*>/giu)]
     .map((match) => htmlText(match[1]))
     .filter(Boolean);
   return items.length > 0
-    ? { tag: list[1].toLowerCase(), items, index: absoluteOffset + (list.index ?? 0) }
+    ? {
+      tag: list[1].toLowerCase(),
+      attributes: htmlAttributes(list[2]),
+      items,
+      index: absoluteOffset + (list.index ?? 0),
+    }
     : null;
+}
+
+function htmlAttributes(rawAttributes) {
+  const attributes = new Map();
+  const pattern = /([^\s=/>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/gu;
+  for (const match of rawAttributes.matchAll(pattern)) {
+    attributes.set(match[1].toLowerCase(), decodeHtml(match[2] ?? match[3] ?? match[4] ?? ""));
+  }
+  return attributes;
+}
+
+function listsWithinRoot(html, start, end, roots, root, expectedTag = null) {
+  const sectionHtml = html.slice(start, end);
+  const lists = [];
+  const pattern = /<(ul|ol)\b([^>]*)>([\s\S]*?)<\/\1\s*>/giu;
+  for (const match of sectionHtml.matchAll(pattern)) {
+    const tag = match[1].toLowerCase();
+    if (expectedTag && tag !== expectedTag) continue;
+    const index = start + (match.index ?? 0);
+    if (!sameRoot(closestRoot(roots, index), root)) continue;
+    const items = [...match[3].matchAll(/<li\b[^>]*>([\s\S]*?)<\/li\s*>/giu)]
+      .map((itemMatch) => htmlText(itemMatch[1]))
+      .filter(Boolean);
+    if (items.length === 0) continue;
+    lists.push({ tag, attributes: htmlAttributes(match[2]), items, index });
+  }
+  return lists;
+}
+
+function listIsHidden(list) {
+  if (list.attributes.has("hidden")) return true;
+  if (list.attributes.get("aria-hidden")?.toLowerCase() === "true") return true;
+  return /(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*hidden)\s*(?:!important\s*)?(?:;|$)/iu.test(
+    list.attributes.get("style") ?? "",
+  );
+}
+
+function ingredientListSelection(html, start, end, roots, root) {
+  const lists = listsWithinRoot(html, start, end, roots, root, "ul");
+  if (lists.length === 0) return null;
+
+  const measurementLists = lists.filter((list) => list.attributes.has("data-unit"));
+  const visibleMeasurementLists = measurementLists.filter((list) => !listIsHidden(list));
+  if (measurementLists.length > 1 && visibleMeasurementLists.length === 1) {
+    const selected = visibleMeasurementLists[0];
+    return {
+      selected,
+      inactiveMeasurementVariants: measurementLists.filter((list) => list !== selected),
+    };
+  }
+  return { selected: lists[0], inactiveMeasurementVariants: [] };
 }
 
 function rootRanges(html) {
@@ -398,13 +454,14 @@ function extractRegionLists(html, headings, roots, region) {
     "ol",
     root,
   );
-  const ingredients = groupedIngredients ? null : listItemsWithinRoot(
+  const ingredientSelection = groupedIngredients ? null : ingredientListSelection(
     html,
     ingredientHeading.end,
     Math.min(nextHeadingIndex(ingredientHeading), rootContentEnd),
     roots,
     root,
   );
+  const ingredients = ingredientSelection?.selected ?? null;
   const instructions = groupedInstructions ? null : listItemsWithinRoot(
     html,
     instructionHeading.end,
@@ -413,7 +470,13 @@ function extractRegionLists(html, headings, roots, region) {
     root,
   );
   if ((!groupedIngredients && !ingredients) || (!groupedInstructions && !instructions)) return null;
-  return { groupedIngredients, groupedInstructions, ingredients, instructions };
+  return {
+    groupedIngredients,
+    groupedInstructions,
+    ingredients,
+    instructions,
+    inactiveMeasurementVariants: ingredientSelection?.inactiveMeasurementVariants ?? [],
+  };
 }
 
 function listItemCount({ groupedIngredients, groupedInstructions, ingredients, instructions }) {
@@ -464,6 +527,130 @@ function editorialIngredientRegions(html, headings, roots, selectedRegion) {
       provenance: provenance("text/html", locator),
     }];
   });
+}
+
+function listLocator(list) {
+  const dataUnit = list.attributes.get("data-unit");
+  if (dataUnit && /^[a-z0-9_-]+$/iu.test(dataUnit)) {
+    return `${list.tag}[data-unit=${dataUnit}]`;
+  }
+  return list.tag;
+}
+
+function inactiveMeasurementVariantReason(list) {
+  const unitSystem = normalizeWhitespace(list.attributes.get("data-unit") ?? "").toLowerCase();
+  return unitSystem
+    ? `Inactive ${unitSystem} measurement variant`
+    : "Inactive measurement variant";
+}
+
+function durationMinutes(value) {
+  let minutes = 0;
+  let matched = false;
+  const seenUnits = new Set();
+  const pattern = /(\d+(?:[.,]\d+)?)\s*(days?|d|hours?|hrs?|hr|h|minutes?|mins?|min|m)\b/giu;
+  for (const match of value.matchAll(pattern)) {
+    const amount = Number.parseFloat(match[1].replace(",", "."));
+    if (!Number.isFinite(amount)) continue;
+    const unit = match[2].toLowerCase();
+    const canonicalUnit = unit.startsWith("d")
+      ? "day"
+      : unit.startsWith("h")
+        ? "hour"
+        : "minute";
+    // Clipboard HTML can expose both visible and accessibility renderings of
+    // the same duration. A second canonical unit is evidence duplication, not
+    // an additional duration component.
+    if (seenUnits.has(canonicalUnit)) continue;
+    seenUnits.add(canonicalUnit);
+    if (canonicalUnit === "day") minutes += amount * 24 * 60;
+    else if (canonicalUnit === "hour") minutes += amount * 60;
+    else minutes += amount;
+    matched = true;
+  }
+  return matched && Number.isSafeInteger(minutes) && minutes >= 0 ? minutes : null;
+}
+
+function labeledDuration(raw) {
+  const match = raw.match(
+    /^(prep(?:aration)?(?:\s+time)?|active(?:\s+time)?|cook(?:ing)?(?:\s+time)?|total(?:\s+time)?)\s*:?\s*(.+)$/iu,
+  );
+  if (!match) return null;
+  const value = durationMinutes(match[2]);
+  if (value === null) return null;
+  const label = match[1].toLowerCase();
+  const field = label.startsWith("prep")
+    ? "prepTime"
+    : label.startsWith("total")
+      ? "totalTime"
+      : "cookTime";
+  return { field, value };
+}
+
+function regionDurations(html, start, end, root) {
+  const result = new Map();
+  const sectionHtml = html.slice(start, end);
+  const pattern = /<(div|p|span|li|time)\b[^>]*>([\s\S]*?)<\/\1\s*>/giu;
+  for (const match of sectionHtml.matchAll(pattern)) {
+    const raw = htmlText(match[2]);
+    const parsed = labeledDuration(raw);
+    if (!parsed || result.has(parsed.field)) continue;
+    const element = { tag: match[1].toLowerCase(), index: start + (match.index ?? 0) };
+    result.set(parsed.field, {
+      raw,
+      value: parsed.value,
+      confidence: "high",
+      provenance: provenance(
+        "text/html",
+        elementLocator(html, root, element, { ordinal: true }),
+      ),
+    });
+  }
+  return result;
+}
+
+function selectedYield(html, start, end) {
+  const sectionHtml = html.slice(start, end);
+  const labels = /<label\b[^>]*>([\s\S]*?)<\/label\s*>/giu;
+  for (const label of sectionHtml.matchAll(labels)) {
+    const select = label[1].match(/<select\b([^>]*)>([\s\S]*?)<\/select\s*>/iu);
+    if (!select) continue;
+    const prompt = htmlText(label[1].slice(0, select.index ?? 0));
+    const selectAttributes = htmlAttributes(select[1]);
+    const describedAsYield = [
+      prompt,
+      selectAttributes.get("aria-label") ?? "",
+      selectAttributes.get("name") ?? "",
+      selectAttributes.get("id") ?? "",
+    ].some((value) => /\b(?:yield|servings?)\b/iu.test(value));
+    if (!describedAsYield) continue;
+
+    const selectedOption = [...select[2].matchAll(/<option\b([^>]*)>([\s\S]*?)<\/option\s*>/giu)]
+      .find((option) => htmlAttributes(option[1]).has("selected"));
+    if (!selectedOption) continue;
+    const raw = htmlText(selectedOption[2]);
+    if (!raw) continue;
+    const servingsMatch = raw.match(/^(\d+(?:[.,]\d+)?)(?:\s|$)/u);
+    const servings = servingsMatch
+      ? Number.parseFloat(servingsMatch[1].replace(",", "."))
+      : null;
+    return {
+      raw,
+      value: {
+        display: raw,
+        servings: Number.isSafeInteger(servings) && servings > 0 ? servings : null,
+      },
+      confidence: "high",
+      provenance: provenance("text/html", "select > option[selected]"),
+    };
+  }
+  return null;
+}
+
+function formControlCount(html, root) {
+  const start = root?.contentStart ?? 0;
+  const end = root?.contentEnd ?? html.length;
+  return [...html.slice(start, end).matchAll(/<(?:button|input|select|textarea)\b/giu)].length;
 }
 
 function unsupportedNavigationCandidate(html, sourceUrl, root, ingredients) {
@@ -552,7 +739,13 @@ function parseHtml(html, sourceUrl) {
 
   const region = regions[0];
   const { ingredientHeading, root, title, collectionTitle, lists } = region;
-  const { groupedIngredients, groupedInstructions, ingredients, instructions } = lists;
+  const {
+    groupedIngredients,
+    groupedInstructions,
+    ingredients,
+    instructions,
+    inactiveMeasurementVariants,
+  } = lists;
   if (region.navigationIngredientList) {
     return unsupportedNavigationCandidate(
       inertHtml,
@@ -590,7 +783,18 @@ function parseHtml(html, sourceUrl) {
   const recipeContentStart = root?.contentStart ?? 0;
   const afterTitleStart = title.end ?? recipeContentStart;
   const afterTitle = inertHtml.slice(afterTitleStart, ingredientHeading.index);
-  const descriptionMatch = afterTitle.match(/<p\b[^>]*>([\s\S]*?)<\/p\s*>/iu);
+  const durations = regionDurations(
+    inertHtml,
+    afterTitleStart,
+    ingredientHeading.index,
+    root,
+  );
+  result.fields.prepTime = durations.get("prepTime") ?? null;
+  result.fields.cookTime = durations.get("cookTime") ?? null;
+  result.fields.totalTime = durations.get("totalTime") ?? null;
+  result.fields.yield = selectedYield(inertHtml, afterTitleStart, ingredientHeading.index);
+  const descriptionMatch = [...afterTitle.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p\s*>/giu)]
+    .find((match) => labeledDuration(htmlText(match[1])) === null);
   if (descriptionMatch) {
     const description = htmlText(descriptionMatch[1]);
     if (description) {
@@ -621,7 +825,9 @@ function parseHtml(html, sourceUrl) {
         ingredient(
           raw,
           "text/html",
-          editorialRegions.length > 0 && root
+          inactiveMeasurementVariants.length > 0
+            ? `${listLocator(ingredients)} > li${ingredients.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
+            : editorialRegions.length > 0 && root
             ? `${root.tag} ${ingredients.tag} > li${ingredients.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
             : `${ingredients.tag} > li:nth-child(${index + 1})`,
         )),
@@ -642,7 +848,9 @@ function parseHtml(html, sourceUrl) {
         instruction(
           raw,
           "text/html",
-          editorialRegions.length > 0 && root
+          inactiveMeasurementVariants.length > 0
+            ? `${instructions.tag} > li${instructions.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
+            : editorialRegions.length > 0 && root
             ? `${root.tag} ${instructions.tag} > li${instructions.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
             : `${instructions.tag} > li:nth-child(${index + 1})`,
         )),
@@ -698,6 +906,36 @@ function parseHtml(html, sourceUrl) {
       message: editorialRegions.length > 0
         ? "A lower-scoring ingredient-like region was excluded; confirm the selected card."
         : "A lower-scoring recipe region was excluded; confirm the selected card.",
+    });
+  }
+  if (inactiveMeasurementVariants.length > 0) {
+    result.status = "needs_review";
+    result.competingCandidates.push(...inactiveMeasurementVariants.map((alternative) => ({
+      reason: inactiveMeasurementVariantReason(alternative),
+      title: null,
+      provenance: provenance("text/html", listLocator(alternative)),
+    })));
+  }
+  if (
+    result.fields.cookTime &&
+    result.fields.totalTime &&
+    result.fields.cookTime.value > result.fields.totalTime.value
+  ) {
+    result.status = "needs_review";
+    result.fields.cookTime.confidence = "low";
+    result.warnings.push({
+      code: "SUSPICIOUS_DURATION",
+      severity: "warning",
+      path: "fields.cookTime",
+      message: "Active time exceeds total time; preserve the source value for review.",
+    });
+  }
+  const controlCount = formControlCount(inertHtml, root);
+  if (controlCount > 0) {
+    result.discardedContent.push({
+      kind: "form_control",
+      count: controlCount,
+      reason: "Controls are evidence of active state, not recipe content.",
     });
   }
   return result;

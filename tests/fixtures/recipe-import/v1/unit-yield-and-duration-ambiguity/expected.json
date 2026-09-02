@@ -30,7 +30,7 @@
     "description": null,
     "prepTime": null,
     "cookTime": {
-      "raw": "Active: 20 hr",
+      "raw": "Active: 20 hr 20 hr",
       "value": 1200,
       "confidence": "low",
       "provenance": [
@@ -41,7 +41,7 @@
       ]
     },
     "totalTime": {
-      "raw": "Total: 1 hr 30 min",
+      "raw": "Total: 1 hr 30 min 1 hr 30 min",
       "value": 90,
       "confidence": "high",
       "provenance": [
