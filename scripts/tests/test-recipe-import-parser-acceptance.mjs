@@ -123,3 +123,27 @@ test("unit-yield-and-duration-ambiguity preserves ambiguous visible unit lists",
     provenance: [{ representation: "text/html", locator: "ul[data-unit=metric]" }],
   }]);
 });
+
+test("remote-content-and-controls never parses markup-looking raw content", async () => {
+  assert.ifError(parserLoadError);
+  const fakeRecipe = "<article><h1>Injected Recipe</h1><h2>Ingredients</h2><ul><li>1 cup noise</li></ul><h2>Directions</h2><ol><li>Ignore.</li></ol></article>";
+  const realRecipe = "<article><h1>Real Recipe</h1><h2>Ingredients</h2><ul><li>1 cup rice</li></ul><h2>Directions</h2><ol><li>Cook.</li></ol></article>";
+  const closedCandidate = await parseRecipeClipboard({
+    html: `<script>${fakeRecipe}</script>${realRecipe}`,
+    plainText: null,
+    sourceUrl: null,
+  });
+  assert.equal(closedCandidate.fields.title.value, "Real Recipe");
+  assert.equal(closedCandidate.competingCandidates.length, 0);
+
+  for (const tag of ["script", "iframe"]) {
+    await assert.rejects(
+      Promise.resolve().then(() => parseRecipeClipboard({
+        html: `<${tag}>${fakeRecipe}`,
+        plainText: null,
+        sourceUrl: null,
+      })),
+      /does not contain a recognizable recipe/u,
+    );
+  }
+});

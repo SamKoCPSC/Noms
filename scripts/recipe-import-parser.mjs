@@ -710,10 +710,117 @@ function selectedYield(html, start, end) {
   return null;
 }
 
-function formControlCount(html, root) {
-  const start = root?.contentStart ?? 0;
-  const end = root?.contentEnd ?? html.length;
-  return [...html.slice(start, end).matchAll(/<(?:button|input|select|textarea)\b/giu)].length;
+const DISCARDED_RAW_CONTENT_TAGS = "script|style|iframe|template|noscript";
+const REMOTE_RESOURCE_ATTRIBUTES = new Set(["action", "href", "poster", "src", "srcset"]);
+
+function discardRawContent(html, preserveOpeningTags = false) {
+  const pattern = new RegExp(
+    `(<(${DISCARDED_RAW_CONTENT_TAGS})\\b(?:"[^"]*"|'[^']*'|[^>"'])*>)(?:[\\s\\S]*?<\\/\\2\\s*>|[\\s\\S]*$)`,
+    "giu",
+  );
+  return html.replace(pattern, preserveOpeningTags ? "$1" : "");
+}
+
+function openingHtmlElements(html) {
+  // Raw element bodies are intentionally opaque so markup-looking script text is
+  // not mistaken for page controls or resources during the safety audit.
+  const auditableHtml = discardRawContent(html.replace(/<!--[\s\S]*?-->/gu, ""), true);
+  const elements = [];
+  const pattern = /<([a-z][a-z0-9:-]*)\b((?:"[^"]*"|'[^']*'|[^>"'])*)>/giu;
+  for (const match of auditableHtml.matchAll(pattern)) {
+    elements.push({
+      tag: match[1].toLowerCase(),
+      attributes: htmlAttributes(match[2]),
+    });
+  }
+  return elements;
+}
+
+function isRemoteHttpResource(value) {
+  if (typeof value !== "string") return false;
+  return /(?:^|[\s,])https?:\/\/[^\s,]+/iu.test(value.trim());
+}
+
+function clipboardHtmlAudit(html) {
+  const elements = openingHtmlElements(html);
+  const remoteResources = [];
+  for (const element of elements) {
+    for (const [attribute, value] of element.attributes) {
+      if (REMOTE_RESOURCE_ATTRIBUTES.has(attribute) && isRemoteHttpResource(value)) {
+        remoteResources.push({ tag: element.tag, attribute, value: normalizeWhitespace(value) });
+      }
+    }
+  }
+  return {
+    scriptCount: elements.filter(({ tag }) => tag === "script").length,
+    iframeCount: elements.filter(({ tag }) => tag === "iframe").length,
+    formControlCount: elements.filter(({ tag }) =>
+      tag === "button" || tag === "input" || tag === "select" || tag === "textarea").length,
+    remoteResources,
+  };
+}
+
+function discardedRemoteResourceCount(audit, retainedImages) {
+  const retainedImageSources = new Map();
+  for (const image of retainedImages) {
+    retainedImageSources.set(image.sourceUrl, (retainedImageSources.get(image.sourceUrl) ?? 0) + 1);
+  }
+
+  let count = 0;
+  for (const resource of audit.remoteResources) {
+    const retainedCount = resource.tag === "img" && resource.attribute === "src"
+      ? retainedImageSources.get(resource.value) ?? 0
+      : 0;
+    if (retainedCount > 0) {
+      retainedImageSources.set(resource.value, retainedCount - 1);
+    } else {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function appendHtmlAuditEvidence(result, audit, remoteResourceCount) {
+  const activeOrRemoteContentDiscarded =
+    audit.scriptCount > 0 || audit.iframeCount > 0 || remoteResourceCount > 0;
+  if (audit.scriptCount > 0) {
+    result.discardedContent.push({
+      kind: "script",
+      count: audit.scriptCount,
+      reason: "Executable content is never parsed or rendered.",
+    });
+  }
+  if (audit.iframeCount > 0) {
+    result.discardedContent.push({
+      kind: "iframe",
+      count: audit.iframeCount,
+      reason: "Frames are never loaded.",
+    });
+  }
+  if (audit.formControlCount > 0) {
+    result.discardedContent.push({
+      kind: "form_control",
+      count: audit.formControlCount,
+      reason: activeOrRemoteContentDiscarded
+        ? "Interactive controls are not recipe content."
+        : "Controls are evidence of active state, not recipe content.",
+    });
+  }
+  if (remoteResourceCount > 0) {
+    result.discardedContent.push({
+      kind: "remote_resource",
+      count: remoteResourceCount,
+      reason: "Parsing performs no network requests.",
+    });
+  }
+  if (activeOrRemoteContentDiscarded) {
+    result.warnings.push({
+      code: "ACTIVE_CONTENT_DISCARDED",
+      severity: "info",
+      path: "discardedContent",
+      message: "Active and remote page elements were removed before parsing.",
+    });
+  }
 }
 
 function supplementarySections(html, headings, roots, root) {
@@ -871,11 +978,9 @@ function unsupportedTitlelessCandidate(sourceUrl, root, lists) {
 }
 
 function parseHtml(html, sourceUrl) {
+  const htmlAudit = clipboardHtmlAudit(html);
   // Remove active/raw-text regions before scanning. No markup is inserted into a DOM.
-  const inertHtml = html.replace(
-    /<(script|style|iframe|template|noscript)\b[^>]*>[\s\S]*?<\/\1\s*>/giu,
-    "",
-  );
+  const inertHtml = discardRawContent(html);
   const headings = htmlHeadings(inertHtml);
   const roots = rootRanges(inertHtml);
   const regions = recipeRegions(headings, roots)
@@ -974,6 +1079,10 @@ function parseHtml(html, sourceUrl) {
   result.fields.notes = supplementary.notes;
   const imageExtraction = imageReferences(inertHtml, roots, root);
   result.fields.images = imageExtraction.images;
+  const remoteResourceCount = discardedRemoteResourceCount(htmlAudit, result.fields.images);
+  const usesSafetyScopedListLocators = root && (
+    htmlAudit.scriptCount > 0 || htmlAudit.iframeCount > 0 || remoteResourceCount > 0
+  );
   const usesRootedListLocators =
     result.fields.equipment.length > 0 ||
     result.fields.notes.length > 0 ||
@@ -996,6 +1105,8 @@ function parseHtml(html, sourceUrl) {
           "text/html",
           usesRootedListLocators
             ? `${rootedElementLocator(inertHtml, root, ingredients)} > li${ingredients.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
+            : usesSafetyScopedListLocators
+            ? `${root.tag} ${ingredients.tag} > li${ingredients.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
             : competingMeasurementVariants.length > 0
             ? `${listLocator(ingredients)} > li${ingredients.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
             : editorialRegions.length > 0 && root
@@ -1021,6 +1132,8 @@ function parseHtml(html, sourceUrl) {
           "text/html",
           usesRootedListLocators
             ? `${rootedElementLocator(inertHtml, root, instructions)} > li${instructions.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
+            : usesSafetyScopedListLocators
+            ? `${root.tag} ${instructions.tag} > li${instructions.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
             : competingMeasurementVariants.length > 0
             ? `${instructions.tag} > li${instructions.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
             : editorialRegions.length > 0 && root
@@ -1125,14 +1238,7 @@ function parseHtml(html, sourceUrl) {
       message: "Notes remain separate until the user chooses where to place them.",
     });
   }
-  const controlCount = formControlCount(inertHtml, root);
-  if (controlCount > 0) {
-    result.discardedContent.push({
-      kind: "form_control",
-      count: controlCount,
-      reason: "Controls are evidence of active state, not recipe content.",
-    });
-  }
+  appendHtmlAuditEvidence(result, htmlAudit, remoteResourceCount);
   return result;
 }
 
