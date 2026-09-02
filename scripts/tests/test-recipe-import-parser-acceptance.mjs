@@ -147,3 +147,49 @@ test("remote-content-and-controls never parses markup-looking raw content", asyn
     );
   }
 });
+
+test("remote-content-and-controls rejects malformed quoted raw-content openings", async () => {
+  assert.ifError(parserLoadError);
+  const fakeRecipe = "<article><h1>Injected Recipe</h1><h2>Ingredients</h2><ul><li>1 cup noise</li></ul><h2>Directions</h2><ol><li>Ignore.</li></ol></article>";
+  for (const tag of ["script", "iframe", "template", "noscript", "style"]) {
+    await assert.rejects(
+      Promise.resolve().then(() => parseRecipeClipboard({
+        html: `<${tag} data-state="unterminated>${fakeRecipe}`,
+        plainText: null,
+        sourceUrl: null,
+      })),
+      /does not contain a recognizable recipe/u,
+    );
+  }
+});
+
+test("remote-content-and-controls preserves audit evidence on unsupported and text fallback paths", async () => {
+  assert.ifError(parserLoadError);
+  const activeHtml = "<script src=https://example.invalid/app.js></script>";
+  const navigationCandidate = await parseRecipeClipboard({
+    html: `${activeHtml}<main><h1>Menu</h1><h2>Ingredients</h2><nav><ul><li>Rice</li></ul></nav><h2>Directions</h2><ol><li>Cook.</li></ol></main>`,
+    plainText: null,
+    sourceUrl: null,
+  });
+  assert.equal(navigationCandidate.status, "unsupported");
+  assert.deepEqual(
+    navigationCandidate.discardedContent.map(({ kind, count }) => ({ kind, count })),
+    [{ kind: "navigation", count: 1 }, { kind: "script", count: 1 }, { kind: "remote_resource", count: 1 }],
+  );
+  assert.equal(
+    navigationCandidate.warnings.some(({ code }) => code === "ACTIVE_CONTENT_DISCARDED"),
+    true,
+  );
+
+  const textCandidate = await parseRecipeClipboard({
+    html: activeHtml,
+    plainText: "Fallback Rice\nIngredients\n- 1 cup rice\nDirections\n1. Cook.",
+    sourceUrl: null,
+  });
+  assert.equal(textCandidate.parser.id, "generic-text-headings");
+  assert.deepEqual(
+    textCandidate.discardedContent.map(({ kind, count }) => ({ kind, count })),
+    [{ kind: "script", count: 1 }, { kind: "remote_resource", count: 1 }],
+  );
+  assert.equal(textCandidate.warnings.at(-1).code, "ACTIVE_CONTENT_DISCARDED");
+});

@@ -710,21 +710,82 @@ function selectedYield(html, start, end) {
   return null;
 }
 
-const DISCARDED_RAW_CONTENT_TAGS = "script|style|iframe|template|noscript";
+const DISCARDED_RAW_CONTENT_TAGS = new Set(["script", "style", "iframe", "template", "noscript"]);
 const REMOTE_RESOURCE_ATTRIBUTES = new Set(["action", "href", "poster", "src", "srcset"]);
 
+function htmlTagEnd(html, start) {
+  let quote = null;
+  for (let index = start; index < html.length; index += 1) {
+    const character = html[index];
+    if (quote !== null) {
+      if (character === quote) quote = null;
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === ">") {
+      return index + 1;
+    }
+  }
+  return null;
+}
+
 function discardRawContent(html, preserveOpeningTags = false) {
-  const pattern = new RegExp(
-    `(<(${DISCARDED_RAW_CONTENT_TAGS})\\b(?:"[^"]*"|'[^']*'|[^>"'])*>)(?:[\\s\\S]*?<\\/\\2\\s*>|[\\s\\S]*$)`,
-    "giu",
-  );
-  return html.replace(pattern, preserveOpeningTags ? "$1" : "");
+  const output = [];
+  let retainedStart = 0;
+  let scanIndex = 0;
+
+  while (scanIndex < html.length) {
+    const openingIndex = html.indexOf("<", scanIndex);
+    if (openingIndex < 0) break;
+    if (html.startsWith("<!--", openingIndex)) {
+      const commentEnd = html.indexOf("-->", openingIndex + 4);
+      output.push(html.slice(retainedStart, openingIndex));
+      retainedStart = commentEnd < 0 ? html.length : commentEnd + 3;
+      scanIndex = retainedStart;
+      continue;
+    }
+
+    const tagMatch = html.slice(openingIndex + 1).match(/^([a-z][a-z0-9:-]*)\b/iu);
+    if (!tagMatch) {
+      scanIndex = openingIndex + 1;
+      continue;
+    }
+    const tag = tagMatch[1].toLowerCase();
+    const tagNameEnd = openingIndex + 1 + tagMatch[0].length;
+    const openingEnd = htmlTagEnd(html, tagNameEnd);
+    if (!DISCARDED_RAW_CONTENT_TAGS.has(tag)) {
+      scanIndex = openingEnd ?? html.length;
+      continue;
+    }
+
+    output.push(html.slice(retainedStart, openingIndex));
+    if (openingEnd === null) {
+      if (preserveOpeningTags) output.push(`<${tag}>`);
+      retainedStart = html.length;
+      scanIndex = html.length;
+      break;
+    }
+
+    if (preserveOpeningTags) output.push(html.slice(openingIndex, openingEnd));
+    const closingPattern = new RegExp(`<\\/${tag}\\s*>`, "giu");
+    closingPattern.lastIndex = openingEnd;
+    const closingMatch = closingPattern.exec(html);
+    const discardedEnd = closingMatch
+      ? (closingMatch.index ?? 0) + closingMatch[0].length
+      : html.length;
+    retainedStart = discardedEnd;
+    scanIndex = discardedEnd;
+  }
+
+  output.push(html.slice(retainedStart));
+  return output.join("");
 }
 
 function openingHtmlElements(html) {
   // Raw element bodies are intentionally opaque so markup-looking script text is
   // not mistaken for page controls or resources during the safety audit.
-  const auditableHtml = discardRawContent(html.replace(/<!--[\s\S]*?-->/gu, ""), true);
+  const auditableHtml = discardRawContent(html, true);
   const elements = [];
   const pattern = /<([a-z][a-z0-9:-]*)\b((?:"[^"]*"|'[^']*'|[^>"'])*)>/giu;
   for (const match of auditableHtml.matchAll(pattern)) {
@@ -977,8 +1038,7 @@ function unsupportedTitlelessCandidate(sourceUrl, root, lists) {
   return result;
 }
 
-function parseHtml(html, sourceUrl) {
-  const htmlAudit = clipboardHtmlAudit(html);
+function parseHtml(html, sourceUrl, htmlAudit) {
   // Remove active/raw-text regions before scanning. No markup is inserted into a DOM.
   const inertHtml = discardRawContent(html);
   const headings = htmlHeadings(inertHtml);
@@ -1012,15 +1072,27 @@ function parseHtml(html, sourceUrl) {
     competingMeasurementVariants,
   } = lists;
   if (region.navigationIngredientList) {
-    return unsupportedNavigationCandidate(
+    const unsupported = unsupportedNavigationCandidate(
       inertHtml,
       sourceUrl,
       root,
       region.navigationIngredientList,
     );
+    appendHtmlAuditEvidence(
+      unsupported,
+      htmlAudit,
+      discardedRemoteResourceCount(htmlAudit, []),
+    );
+    return unsupported;
   }
   if (!title) {
-    return unsupportedTitlelessCandidate(sourceUrl, root, lists);
+    const unsupported = unsupportedTitlelessCandidate(sourceUrl, root, lists);
+    appendHtmlAuditEvidence(
+      unsupported,
+      htmlAudit,
+      discardedRemoteResourceCount(htmlAudit, []),
+    );
+    return unsupported;
   }
 
   const editorialRegions = editorialIngredientRegions(inertHtml, headings, roots, region);
@@ -1295,8 +1367,20 @@ export function parseRecipeClipboard(input) {
   const plainText = typeof input?.plainText === "string" ? input.plainText : "";
   const sourceUrl = input?.sourceUrl ?? null;
   if (html) {
-    const htmlCandidate = parseHtml(html, sourceUrl);
+    const htmlAudit = clipboardHtmlAudit(html);
+    const htmlCandidate = parseHtml(html, sourceUrl, htmlAudit);
     if (htmlCandidate) return htmlCandidate;
+    if (plainText.trim()) {
+      const textCandidate = parsePlainText(plainText, sourceUrl);
+      if (textCandidate) {
+        appendHtmlAuditEvidence(
+          textCandidate,
+          htmlAudit,
+          discardedRemoteResourceCount(htmlAudit, []),
+        );
+        return textCandidate;
+      }
+    }
   }
   if (plainText.trim()) {
     const textCandidate = parsePlainText(plainText, sourceUrl);
