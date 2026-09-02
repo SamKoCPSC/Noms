@@ -213,18 +213,24 @@ function sameRoot(left, right) {
   return left.start === right.start && left.end === right.end;
 }
 
-function recipeRegion(headings, roots) {
-  for (const ingredientHeading of headings.filter(({ kind }) => kind === "ingredients")) {
+function recipeRegions(headings, roots) {
+  const regions = [];
+  const ingredientHeadings = headings.filter(({ kind }) => kind === "ingredients");
+  for (const ingredientHeading of ingredientHeadings) {
     const root = closestRoot(roots, ingredientHeading.index);
+    const nextIngredientIndex = ingredientHeadings.find(
+      ({ index }) => index > ingredientHeading.index,
+    )?.index ?? Number.POSITIVE_INFINITY;
     const instructionHeading = headings.find(
       ({ kind, index }) =>
         kind === "instructions" &&
         index > ingredientHeading.index &&
+        index < nextIngredientIndex &&
         sameRoot(closestRoot(roots, index), root),
     );
-    if (instructionHeading) return { ingredientHeading, instructionHeading, root };
+    if (instructionHeading) regions.push({ ingredientHeading, instructionHeading, root });
   }
-  return null;
+  return regions;
 }
 
 const VOID_TAGS = new Set([
@@ -282,6 +288,16 @@ function sameTagStack(left, right) {
   return left.length === right.length && left.every(({ start }, index) => start === right[index].start);
 }
 
+function headingsDescribeSameRecipe(left, right) {
+  const leftText = left.text.toLocaleLowerCase("en-US");
+  const rightText = right.text.toLocaleLowerCase("en-US");
+  if (leftText === rightText) return true;
+  const [shorter, longer] = leftText.length < rightText.length
+    ? [leftText, rightText]
+    : [rightText, leftText];
+  return shorter.length >= 8 && shorter.split(/\s+/u).length >= 2 && longer.includes(shorter);
+}
+
 function adjacentListAfterHeading(html, heading, list) {
   const sameParent = sameTagStack(
     tagStackContext(html, heading.index),
@@ -334,27 +350,53 @@ function groupedLists(html, headings, roots, startHeading, endIndex, expectedLis
   return sections.length > 0 ? sections : null;
 }
 
-function parseHtml(html, sourceUrl) {
-  // Remove active/raw-text regions before scanning. No markup is inserted into a DOM.
-  const inertHtml = html.replace(
-    /<(script|style|iframe|template|noscript)\b[^>]*>[\s\S]*?<\/\1\s*>/giu,
-    "",
+function regionTitle(html, headings, roots, region) {
+  const { ingredientHeading, root } = region;
+  const contentStart = root?.contentStart ?? 0;
+  const precedingHeadings = headings.filter(
+    ({ index, kind }) =>
+      kind === null &&
+      index >= contentStart &&
+      index < ingredientHeading.index &&
+      sameRoot(closestRoot(roots, index), root),
   );
-  const headings = htmlHeadings(inertHtml);
-  const roots = rootRanges(inertHtml);
-  const region = recipeRegion(headings, roots);
-  if (!region) return null;
-  const { ingredientHeading, instructionHeading, root } = region;
+  const pageTitle = precedingHeadings.filter(({ tag }) => tag === "h1").at(-1) ?? null;
+  const nearestHeading = precedingHeadings.at(-1) ?? null;
+  const hierarchicalTitle = precedingHeadings.filter(
+    ({ tag, level }) => tag !== "h1" && level < ingredientHeading.level,
+  ).at(-1) ?? null;
 
+  // A heading in the ingredient heading's immediate container is stronger evidence
+  // than a page-level h1. Recipe cards also commonly put an h2 title above h3
+  // metadata sections whose wrappers separate the title from Ingredients.
+  const immediateTitle = nearestHeading && nearestHeading.tag !== "h1" &&
+    sameTagStack(
+      tagStackContext(html, nearestHeading.index),
+      tagStackContext(html, ingredientHeading.index),
+    )
+    ? nearestHeading
+    : null;
+  const embeddedTitle = immediateTitle ?? hierarchicalTitle;
+  return {
+    title: embeddedTitle ?? pageTitle,
+    collectionTitle: embeddedTitle && pageTitle && pageTitle.index < embeddedTitle.index &&
+      !headingsDescribeSameRecipe(embeddedTitle, pageTitle)
+      ? pageTitle
+      : null,
+  };
+}
+
+function extractRegionLists(html, headings, roots, region) {
+  const { ingredientHeading, instructionHeading, root } = region;
   const nextHeadingIndex = (heading) =>
-    headings.find((candidateHeading) => candidateHeading.index > heading.index)?.index ?? inertHtml.length;
+    headings.find((candidateHeading) => candidateHeading.index > heading.index)?.index ?? html.length;
   const followingSectionEnd = headings.find(
     ({ index, level }) => index > instructionHeading.index && level <= instructionHeading.level,
-  )?.index ?? inertHtml.length;
-  const rootContentEnd = root?.contentEnd ?? inertHtml.length;
+  )?.index ?? html.length;
+  const rootContentEnd = root?.contentEnd ?? html.length;
   const instructionEnd = Math.min(followingSectionEnd, rootContentEnd);
   const groupedIngredients = groupedLists(
-    inertHtml,
+    html,
     headings,
     roots,
     ingredientHeading,
@@ -363,7 +405,7 @@ function parseHtml(html, sourceUrl) {
     root,
   );
   const groupedInstructions = groupedLists(
-    inertHtml,
+    html,
     headings,
     roots,
     instructionHeading,
@@ -372,42 +414,196 @@ function parseHtml(html, sourceUrl) {
     root,
   );
   const ingredients = groupedIngredients ? null : listItemsWithinRoot(
-    inertHtml,
+    html,
     ingredientHeading.end,
     Math.min(nextHeadingIndex(ingredientHeading), rootContentEnd),
     roots,
     root,
   );
   const instructions = groupedInstructions ? null : listItemsWithinRoot(
-    inertHtml,
+    html,
     instructionHeading.end,
     Math.min(nextHeadingIndex(instructionHeading), rootContentEnd),
     roots,
     root,
   );
   if ((!groupedIngredients && !ingredients) || (!groupedInstructions && !instructions)) return null;
+  return { groupedIngredients, groupedInstructions, ingredients, instructions };
+}
 
+function listItemCount({ groupedIngredients, groupedInstructions, ingredients, instructions }) {
+  const ingredientCount = groupedIngredients
+    ? groupedIngredients.reduce((count, section) => count + section.list.items.length, 0)
+    : ingredients.items.length;
+  const instructionCount = groupedInstructions
+    ? groupedInstructions.reduce((count, section) => count + section.list.items.length, 0)
+    : instructions.items.length;
+  return ingredientCount + instructionCount;
+}
+
+function hasAncestorTag(html, index, tag) {
+  return tagStackContext(html, index).some((element) => element.tag === tag);
+}
+
+function scoreRegion(region) {
+  let score = region.title ? 100 : 0;
+  score += Math.min(listItemCount(region.lists), 20);
+  if (region.root?.tag === "article") score += 20;
+  if (region.title && region.title.tag !== "h1") score += 10;
+  if (region.navigationIngredientList) score -= 1_000;
+  return score;
+}
+
+function editorialIngredientRegions(html, headings, roots, selectedRegion) {
+  return headings.flatMap((heading) => {
+    if (
+      heading.index >= selectedRegion.ingredientHeading.index ||
+      !/^ingredients?\s+for\b/iu.test(heading.text)
+    ) return [];
+    const root = closestRoot(roots, heading.index);
+    const nextHeadingIndex = headings.find(({ index }) => index > heading.index)?.index ?? html.length;
+    const list = listItemsWithinRoot(html, heading.end, nextHeadingIndex, roots, root);
+    if (!list || !adjacentListAfterHeading(html, heading, list)) return [];
+
+    const context = tagStackContext(html, heading.index);
+    const rootIndex = root
+      ? context.findLastIndex(({ start }) => start === root.start)
+      : -1;
+    const wrappers = rootIndex >= 0 ? context.slice(rootIndex + 1) : context;
+    const locator = root && wrappers.length > 0
+      ? `${root.tag} > ${wrappers.map(({ tag }) => tag).join(" > ")}`
+      : elementLocator(html, root, heading);
+    return [{
+      reason: "Earlier ingredient-like editorial region",
+      title: heading.text,
+      provenance: provenance("text/html", locator),
+    }];
+  });
+}
+
+function unsupportedNavigationCandidate(html, sourceUrl, root, ingredients) {
   const result = candidate(
-    { id: "generic-headings", version: "1", tier: "generic_html", sourceAdapter: null },
+    { id: "generic-region-scorer", version: "1", tier: "generic_html", sourceAdapter: null },
     sourceUrl,
   );
-  const recipeContentStart = root?.contentStart ?? 0;
-  const beforeIngredients = inertHtml.slice(recipeContentStart, ingredientHeading.index);
-  const titleMatch = [...beforeIngredients.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1\s*>/giu)].at(-1);
-  if (titleMatch) {
-    const title = htmlText(titleMatch[1]);
-    if (title) {
-      const titleElement = { tag: "h1", index: recipeContentStart + (titleMatch.index ?? 0) };
-      result.fields.title = scalar(
-        title,
-        "text/html",
-        elementLocator(inertHtml, root, titleElement),
-      );
-    }
+  result.status = "unsupported";
+  const listLocator = elementLocator(html, root, ingredients, { ordinal: true });
+  result.unclassifiedLines = ingredients.items.map((raw, index) => ({
+    raw,
+    provenance: provenance("text/html", `${listLocator} > li:nth-child(${index + 1})`),
+  }));
+  result.warnings.push({
+    code: "NAVIGATION_INGREDIENT_LIST",
+    severity: "error",
+    path: "fields.ingredientSections",
+    message: "The ingredient-like list is inside navigation and is not safe to import as recipe content.",
+  });
+  result.discardedContent.push({
+    kind: "navigation",
+    count: 1,
+    reason: "Navigation lists are not recipe ingredients.",
+  });
+  return result;
+}
+
+function unsupportedTitlelessCandidate(sourceUrl, root, lists) {
+  const result = candidate(
+    { id: "generic-region-scorer", version: "1", tier: "generic_html", sourceAdapter: null },
+    sourceUrl,
+  );
+  result.status = "unsupported";
+  const rootPrefix = root ? `${root.tag} ` : "";
+  const ingredientLists = lists.groupedIngredients
+    ? lists.groupedIngredients.map((section) => section.list)
+    : [lists.ingredients];
+  const instructionLists = lists.groupedInstructions
+    ? lists.groupedInstructions.map((section) => section.list)
+    : [lists.instructions];
+  result.unclassifiedLines = [
+    ...ingredientLists.flatMap((list) => list.items.map((raw, index) => ({
+      raw,
+      provenance: provenance("text/html", `${rootPrefix}${list.tag} > li:nth-child(${index + 1})`),
+    }))),
+    ...instructionLists.flatMap((list) => list.items.map((raw, index) => ({
+      raw,
+      provenance: provenance("text/html", `${rootPrefix}${list.tag} > li:nth-child(${index + 1})`),
+    }))),
+  ];
+  result.warnings.push({
+    code: "MISSING_RECIPE_TITLE",
+    severity: "error",
+    path: "fields.title",
+    message: "An ingredient and instruction region was found without a coherent recipe title.",
+  });
+  return result;
+}
+
+function parseHtml(html, sourceUrl) {
+  // Remove active/raw-text regions before scanning. No markup is inserted into a DOM.
+  const inertHtml = html.replace(
+    /<(script|style|iframe|template|noscript)\b[^>]*>[\s\S]*?<\/\1\s*>/giu,
+    "",
+  );
+  const headings = htmlHeadings(inertHtml);
+  const roots = rootRanges(inertHtml);
+  const regions = recipeRegions(headings, roots)
+    .map((region) => {
+      const lists = extractRegionLists(inertHtml, headings, roots, region);
+      if (!lists) return null;
+      const title = regionTitle(inertHtml, headings, roots, region);
+      return {
+        ...region,
+        ...title,
+        lists,
+        navigationIngredientList: (lists.groupedIngredients
+          ? lists.groupedIngredients.map((section) => section.list)
+          : [lists.ingredients])
+          .find((list) => hasAncestorTag(inertHtml, list.index, "nav")) ?? null,
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => scoreRegion(right) - scoreRegion(left));
+  if (regions.length === 0) return null;
+
+  const region = regions[0];
+  const { ingredientHeading, root, title, collectionTitle, lists } = region;
+  const { groupedIngredients, groupedInstructions, ingredients, instructions } = lists;
+  if (region.navigationIngredientList) {
+    return unsupportedNavigationCandidate(
+      inertHtml,
+      sourceUrl,
+      root,
+      region.navigationIngredientList,
+    );
   }
-  const afterTitleStart = titleMatch
-    ? recipeContentStart + (titleMatch.index ?? 0) + titleMatch[0].length
-    : recipeContentStart;
+  if (!title) {
+    return unsupportedTitlelessCandidate(sourceUrl, root, lists);
+  }
+
+  const editorialRegions = editorialIngredientRegions(inertHtml, headings, roots, region);
+  const lowerScoringRegions = regions.slice(1).filter(
+    ({ title: alternativeTitle, navigationIngredientList }) =>
+      alternativeTitle && navigationIngredientList === null,
+  );
+  const hasCompetingRegions = editorialRegions.length > 0 || lowerScoringRegions.length > 0;
+  const usesRegionScorer = hasCompetingRegions || collectionTitle !== null;
+
+  const result = candidate(
+    {
+      id: usesRegionScorer ? "generic-region-scorer" : "generic-headings",
+      version: "1",
+      tier: "generic_html",
+      sourceAdapter: null,
+    },
+    sourceUrl,
+  );
+  result.fields.title = scalar(
+    title.text,
+    "text/html",
+    elementLocator(inertHtml, root, title, { ordinal: title.tag !== "h1" }),
+  );
+  const recipeContentStart = root?.contentStart ?? 0;
+  const afterTitleStart = title.end ?? recipeContentStart;
   const afterTitle = inertHtml.slice(afterTitleStart, ingredientHeading.index);
   const descriptionMatch = afterTitle.match(/<p\b[^>]*>([\s\S]*?)<\/p\s*>/iu);
   if (descriptionMatch) {
@@ -437,7 +633,13 @@ function parseHtml(html, sourceUrl) {
     : [{
       name: null,
       items: ingredients.items.map((raw, index) =>
-        ingredient(raw, "text/html", `${ingredients.tag} > li:nth-child(${index + 1})`)),
+        ingredient(
+          raw,
+          "text/html",
+          editorialRegions.length > 0 && root
+            ? `${root.tag} ${ingredients.tag} > li${ingredients.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
+            : `${ingredients.tag} > li:nth-child(${index + 1})`,
+        )),
     }];
   result.fields.instructionSections = groupedInstructions
     ? groupedInstructions.map(({ name, list, listLocator }) => ({
@@ -452,7 +654,13 @@ function parseHtml(html, sourceUrl) {
     : [{
       name: null,
       steps: instructions.items.map((raw, index) =>
-        instruction(raw, "text/html", `${instructions.tag} > li:nth-child(${index + 1})`)),
+        instruction(
+          raw,
+          "text/html",
+          editorialRegions.length > 0 && root
+            ? `${root.tag} ${instructions.tag} > li${instructions.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
+            : `${instructions.tag} > li:nth-child(${index + 1})`,
+        )),
     }];
   if (groupedIngredients || groupedInstructions) {
     result.status = "needs_review";
@@ -469,6 +677,43 @@ function parseHtml(html, sourceUrl) {
         path: "fields.instructionSections",
         message: "Section names remain in preview but the current editor stores flat instructions.",
       });
+  }
+  if (collectionTitle) {
+    result.status = "needs_review";
+    result.competingCandidates.push({
+      reason: "Page title describes a collection above the selected recipe region",
+      title: collectionTitle.text,
+      provenance: provenance("text/html", elementLocator(inertHtml, root, collectionTitle)),
+    });
+    result.warnings.push({
+      code: "COMPETING_RECIPE_REGION",
+      severity: "warning",
+      path: "competingCandidates[0]",
+      message: "The selected recipe is nested below a different page title; confirm the embedded recipe title.",
+    });
+  } else if (hasCompetingRegions) {
+    result.status = "needs_review";
+    result.competingCandidates.push(
+      ...editorialRegions,
+      ...lowerScoringRegions.map((alternative) => ({
+        reason: "Lower-scoring coherent recipe region",
+        title: alternative.title.text,
+        provenance: provenance(
+          "text/html",
+          elementLocator(inertHtml, alternative.root, alternative.title, {
+            ordinal: alternative.title.tag !== "h1",
+          }),
+        ),
+      })),
+    );
+    result.warnings.push({
+      code: "COMPETING_RECIPE_REGION",
+      severity: "warning",
+      path: "competingCandidates[0]",
+      message: editorialRegions.length > 0
+        ? "A lower-scoring ingredient-like region was excluded; confirm the selected card."
+        : "A lower-scoring recipe region was excluded; confirm the selected card.",
+    });
   }
   return result;
 }
