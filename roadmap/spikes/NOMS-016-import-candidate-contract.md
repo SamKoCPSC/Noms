@@ -44,7 +44,7 @@ The parser must not bypass sign-in, subscription, consent, or other access bound
 
 The external characterization corpus measured 1,500 paired samples from 15 providers, with 153 structural signatures. Ingredient and instruction signals appeared in 1,498 samples, while all 1,500 contained remote-resource signals; scripts appeared in 1,215 and frames in 1,027. Provider samples also exposed grouped and duplicate regions, unit/yield controls, notes, equipment, and images at materially different rates.
 
-The eight fixtures reproduce those structural risk classes with invented names, values, reserved example URLs, and minimal markup. They contain no copied provider page or recipe content. They are parser acceptance cases rather than compatibility claims: real-corpus evaluation remains external, and a provider adapter is justified only when generic parsing fails a stable, synthetic reproduction.
+The eleven fixtures reproduce those structural risk classes with invented names, values, reserved example URLs, and minimal markup. They include the navigation-list, missing-title, and collection-page failure modes found during the first semantic corpus review. They contain no copied provider page or recipe content. They are parser acceptance cases rather than compatibility claims: real-corpus evaluation remains external, and a provider adapter is justified only when generic parsing fails a stable, synthetic reproduction.
 
 Run both fixture suites with:
 
@@ -61,3 +61,5 @@ The spike parser must export `parseRecipeClipboard` from `scripts/recipe-import-
 The first implementation slice is measured by `just recipe-import-parser-basic-test`. It covers the clean HTML recipe and plain-text fallback while the full acceptance target remains red for the six advanced ambiguity, grouping, media, sanitization-reporting, and unsupported-input cases.
 
 The grouped-components slice is measured cumulatively by `just recipe-import-parser-grouped-test`. It adds ordered named ingredient and instruction sections, preserves those names in the preview candidate, and warns that the current editor cannot persist them. Five advanced acceptance cases remain intentionally red.
+
+The region-quality slice is measured cumulatively by `just recipe-import-parser-region-test`. It enumerates coherent ingredient/instruction regions, prefers titled and tightly bounded candidates, rejects navigation ingredients and titleless candidates with preserved evidence, and marks collection pages or competing regions for review. This cumulative slice and the real-corpus evaluator test run in `just ci`; four metadata, media, active-content-reporting, and access-shell cases remain intentionally red in the full acceptance target.

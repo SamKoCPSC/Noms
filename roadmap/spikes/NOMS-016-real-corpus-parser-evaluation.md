@@ -6,7 +6,7 @@ The current generic clipboard parser was evaluated against the external NOMS-016
 
 The raw provider captures remain outside the repository. The committed evaluator and generated reports retain aggregate measurements, parser classifications, counts, warning codes, and corpus sample IDs only. They do not retain extracted titles, source URLs, ingredient text, instruction text, or raw parser errors.
 
-## Structural results
+## Baseline structural results
 
 Structural acceptance means that the parser returned a contract-valid candidate with at least one recognized ingredient list and instruction list. It does not mean that the selected title, lists, or section boundaries were semantically correct.
 
@@ -60,11 +60,43 @@ A purposive sample of 26 structurally accepted candidates was compared with its 
 
 The five providers with zero structural acceptance—BBCGoodFood, BonAppetit, Epicurious, KingArthurBaking, and SimplyRecipes—had no accepted candidates to review. Their captures are not yet supported by the current generic heading/list rules.
 
+## Region-quality rerun
+
+After adding competing-region selection and conservative title/navigation gates, the same verified corpus was evaluated again. Structural acceptance fell from 800 to 719 candidates (47.9%). This decrease is intentional: the parser no longer reports incomplete titleless candidates as accepted.
+
+- Accepted: 719; rejected: 781
+- Invalid candidates: 0; unexpected parser errors: 0
+- Accepted candidates with a title: 719 of 719, up from 720 of 800
+- `ready`: 682; `needs_review`: 37
+- HTML / plain-text accepted: 719 / 0
+- Food Network: 0 accepted, down from 80 titleless false positives
+- The two previously identified Sally's collection pages now select the embedded recipe title and return `needs_review` with the page title recorded as competing evidence
+
+| Provider | Baseline accepted | Region-quality accepted | Needs review after rerun |
+| --- | ---: | ---: | ---: |
+| AllRecipes | 100 | 100 | 0 |
+| BBCGoodFood | 0 | 0 | 0 |
+| BonAppetit | 0 | 0 | 0 |
+| BudgetBytes | 66 | 65 | 7 |
+| Epicurious | 0 | 0 | 0 |
+| Food.com | 90 | 90 | 0 |
+| Food52 | 83 | 83 | 19 |
+| FoodNetwork | 80 | 0 | 0 |
+| KingArthurBaking | 0 | 0 | 0 |
+| NYTCooking | 100 | 100 | 2 |
+| RecipeTinEats | 19 | 19 | 3 |
+| SallysBakingAddiction | 64 | 64 | 6 |
+| SeriousEats | 98 | 98 | 0 |
+| SimplyRecipes | 0 | 0 | 0 |
+| Tasty | 100 | 100 | 0 |
+
+The collection-page check is a targeted regression review, not a new accuracy estimate. The remaining 719 accepted candidates still require broader semantic sampling before making provider-support claims.
+
 ## Conclusions
 
-1. The generic HTML parser already recognizes useful candidates from several providers, but 53.3% is only an upper bound on compatibility because it includes false positives.
-2. Food Network demonstrates that the current heading-pair rule can combine recipe instructions with a navigation ingredient list. Candidate completeness and region scoring must improve before a provider can be called supported.
-3. Collection pages can pair a page-level title with an embedded recipe. Competing-region detection should explicitly identify and warn about this shape.
+1. The generic HTML parser recognizes useful candidates from several providers, but structural acceptance remains only an upper bound on compatibility.
+2. Navigation-contained ingredients and titleless candidates are now rejected conservatively; this removes the observed Food Network false positives without provider-specific code.
+3. Collection pages now select a coherent embedded title when heading hierarchy supports it and expose the page title as competing evidence instead of silently returning `ready`.
 4. The current plain-text grammar did not recover any real HTML rejection. Its bullet and numbering assumptions should be measured against the captured text before further investment.
 5. Provider adapters or Schema.org/JSON-LD extraction are justified where stable provider structures cannot be represented by the generic visible-HTML rules.
 

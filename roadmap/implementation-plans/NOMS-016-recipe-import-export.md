@@ -300,3 +300,12 @@ Automated and manual verification must cover:
 - [ ] The canonical portable recipe schema, portable identity, digest, and missing-field semantics are documented.
 - [ ] Collection, lineage, image, renderer, and client-orchestration contracts are documented.
 - [ ] Checkpoints, acceptance evidence, and release gates are defined.
+
+## Spike progress (2026-09-01)
+
+- The private/local clipboard corpus contains 1,500 paired HTML and plain-text samples across 15 providers; only aggregate reports and invented fixtures are committed.
+- The import-candidate v1 contract and eleven synthetic fixtures are executable. The cumulative region-quality slice covers clean HTML, plain text, grouped components, competing regions, embedded collection recipes, navigation false positives, and missing titles.
+- The generic parser's region-quality rerun structurally accepted 719 of 1,500 samples with no invalid candidates or unexpected errors. All accepted candidates have titles; the 80 observed Food Network false positives are no longer accepted, and the two reviewed Sally's collection cases require confirmation.
+- Remaining parser slices cover unit/yield/time variants, notes/equipment/images, active-content reporting, and unsupported access shells. After those generic rules, provider adapters or Schema.org JSON-LD extraction should target stable gaps rather than broad heuristics.
+
+Evidence and reproduction commands are recorded in [the real-corpus parser evaluation](../spikes/NOMS-016-real-corpus-parser-evaluation.md) and [the import-candidate contract](../spikes/NOMS-016-import-candidate-contract.md).
