@@ -95,6 +95,11 @@ pub fn Navbar(theme: UseTheme) -> Element {
     }
 
     let auth = use_auth();
+    let current_route = use_route::<Route>();
+    let home_is_current = current_route == (Route::Home {});
+    let explore_is_current = current_route == (Route::Explore {});
+    let about_is_current = current_route == (Route::About {});
+    let how_to_is_current = current_route == (Route::HowTo {});
 
     let is_signed_in = auth.is_authenticated;
     let display_name = auth
@@ -146,10 +151,10 @@ pub fn Navbar(theme: UseTheme) -> Element {
 
                 // Desktop nav links (center) — hidden on mobile
                 div { class: "navbar-links",
-                    Link { to: Route::Home {}, class: "navbar-link", "Home" }
-                    Link { to: Route::Dashboard {}, class: "navbar-link", "Dashboard" }
-                    Link { to: Route::Explore {}, class: "navbar-link", "Explore" }
-                    Link { to: Route::RecipeNew {}, class: "navbar-link", "New Recipe" }
+                    Link { to: Route::Home {}, class: if home_is_current { "navbar-link navbar-link--current" } else { "navbar-link" }, aria_current: if home_is_current { "page" } else { "false" }, "Home" }
+                    Link { to: Route::Explore {}, class: if explore_is_current { "navbar-link navbar-link--current" } else { "navbar-link" }, aria_current: if explore_is_current { "page" } else { "false" }, "Explore" }
+                    Link { to: Route::About {}, class: if about_is_current { "navbar-link navbar-link--current" } else { "navbar-link" }, aria_current: if about_is_current { "page" } else { "false" }, "About" }
+                    Link { to: Route::HowTo {}, class: if how_to_is_current { "navbar-link navbar-link--current" } else { "navbar-link" }, aria_current: if how_to_is_current { "page" } else { "false" }, "How to" }
                 }
 
                 // Right side: auth + theme toggle (desktop)
@@ -279,6 +284,18 @@ pub fn Navbar(theme: UseTheme) -> Element {
                             "Explore"
                         }
                         Link {
+                            to: Route::About {},
+                            class: "navbar-drawer-link",
+                            onclick: move |_| menu_open.set(false),
+                            "About"
+                        }
+                        Link {
+                            to: Route::HowTo {},
+                            class: "navbar-drawer-link",
+                            onclick: move |_| menu_open.set(false),
+                            "How to"
+                        }
+                        Link {
                             to: Route::RecipeNew {},
                             class: "navbar-drawer-link",
                             onclick: move |_| menu_open.set(false),
@@ -374,6 +391,19 @@ pub fn Navbar(theme: UseTheme) -> Element {
                             class: "sidebar-link",
                             onclick: move |_| sidebar_open.set(false),
                             "Collections"
+                        }
+                        div { class: "sidebar-divider" }
+                        Link {
+                            to: Route::About {},
+                            class: "sidebar-link",
+                            onclick: move |_| sidebar_open.set(false),
+                            "About"
+                        }
+                        Link {
+                            to: Route::HowTo {},
+                            class: "sidebar-link",
+                            onclick: move |_| sidebar_open.set(false),
+                            "How to"
                         }
                         if is_signed_in {
                             div { class: "sidebar-divider" }

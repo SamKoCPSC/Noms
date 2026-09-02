@@ -1,3 +1,4 @@
+mod about;
 mod collection_detail;
 mod collection_edit;
 mod collection_list;
@@ -6,7 +7,10 @@ mod dashboard;
 mod draft_save;
 mod explore;
 mod home;
+mod how_to;
 mod login;
+#[cfg(test)]
+mod marketing_contract_tests;
 mod not_found;
 mod recipe_detail;
 mod recipe_edit;
@@ -16,6 +20,7 @@ mod recipe_version_graph;
 mod settings;
 mod user_profile;
 
+pub use about::About;
 pub use collection_detail::CollectionDetail;
 pub use collection_edit::CollectionEdit;
 pub use collection_list::CollectionList;
@@ -23,6 +28,7 @@ pub use collection_new::CollectionNew;
 pub use dashboard::Dashboard;
 pub use explore::Explore;
 pub use home::Home;
+pub use how_to::HowTo;
 pub use login::Login;
 pub use not_found::NotFound;
 pub use recipe_detail::{RecipeDetail, RecipeVersionDetail};

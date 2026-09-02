@@ -5,6 +5,7 @@ pub use footer::Footer;
 pub use navbar::Navbar;
 
 pub mod base;
+pub mod marketing;
 
 mod app_layout;
 mod auth_required;

@@ -25,9 +25,9 @@ use auth::context::build_context_from_fullstack;
 use auth::context::AuthContext;
 use components::{AppLayout, ErrorFallback};
 use pages::{
-    CollectionDetail, CollectionEdit, CollectionList, CollectionNew, Dashboard, Explore, Home,
-    Login, NotFound, RecipeDetail, RecipeDraftEdit, RecipeEdit, RecipeNew, RecipeVersionDetail,
-    RecipeVersionGraph, SettingsAccounts, SettingsProfile, UserProfile,
+    About, CollectionDetail, CollectionEdit, CollectionList, CollectionNew, Dashboard, Explore,
+    Home, HowTo, Login, NotFound, RecipeDetail, RecipeDraftEdit, RecipeEdit, RecipeNew,
+    RecipeVersionDetail, RecipeVersionGraph, SettingsAccounts, SettingsProfile, UserProfile,
 };
 
 /// Application routes.
@@ -37,6 +37,10 @@ pub enum Route {
     #[layout(AppLayout)]
         #[route("/")]
         Home {},
+        #[route("/about")]
+        About {},
+        #[route("/how-to")]
+        HowTo {},
         #[route("/login")]
         Login {},
         #[route("/dashboard")]
@@ -238,5 +242,17 @@ fn App() -> Element {
             },
             Router::<Route> {}
         }
+    }
+}
+
+#[cfg(test)]
+mod marketing_route_tests {
+    use super::Route;
+
+    #[test]
+    fn marketing_routes_have_stable_public_paths() {
+        assert_eq!(Route::Home {}.to_string(), "/");
+        assert_eq!(Route::About {}.to_string(), "/about");
+        assert_eq!(Route::HowTo {}.to_string(), "/how-to");
     }
 }
