@@ -352,31 +352,6 @@ impl StorageClient {
         Ok(())
     }
 
-    /// List all object keys in the bucket, optionally filtered by prefix.
-    ///
-    /// Uses the S3 `ListObjectsV2` paginator to handle pagination automatically.
-    pub async fn list_objects(&self, prefix: Option<&str>) -> Result<Vec<String>, StorageError> {
-        let mut builder = self.inner.list_objects_v2().bucket(&self.bucket);
-        if let Some(p) = prefix {
-            builder = builder.prefix(p);
-        }
-        let mut stream = builder.into_paginator().send();
-        let mut keys = Vec::new();
-        while let Some(page) = stream.next().await {
-            match page {
-                Ok(resp) => {
-                    for obj in resp.contents() {
-                        if let Some(key) = obj.key() {
-                            keys.push(key.to_string());
-                        }
-                    }
-                }
-                Err(e) => return Err(StorageError::ListFailed(e.to_string())),
-            }
-        }
-        Ok(keys)
-    }
-
     /// Sum object count and encoded bytes below one owner namespace.
     ///
     /// Listing stops once the global object ceiling is crossed; callers only

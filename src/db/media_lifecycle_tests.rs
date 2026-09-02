@@ -456,6 +456,212 @@ async fn account_cleanup_retains_media_referenced_by_a_surviving_fork() {
     );
 }
 
+#[tokio::test]
+async fn cleanup_claim_does_not_parse_unrelated_recipe_documents() {
+    let (_database, pool) = crate::test_utils::setup_test_db().await;
+    let media_owner = owner(&pool, "bound_owner").await;
+    let unrelated_owner = owner(&pool, "bound_other").await;
+    let mut upload = family(media_owner.id, MediaPurpose::Recipe, 35);
+    upload.expires_at = Utc::now() - Duration::minutes(1);
+    register_media_upload_family(&pool, &upload).await.unwrap();
+
+    let unrelated_recipe = insert_recipe(
+        &pool,
+        unrelated_owner.id,
+        "Unrelated legacy document",
+        None,
+        None,
+        None,
+        None,
+        None,
+        &[],
+        &[],
+        &[],
+        &[],
+        "private",
+    )
+    .await
+    .unwrap();
+    sqlx::query("UPDATE recipes SET instructions = '{}'::jsonb WHERE id = $1")
+        .bind(unrelated_recipe.id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    assert!(matches!(
+        claim_retained_media_cleanup(&pool, media_owner.id, &upload.full_url)
+            .await
+            .unwrap(),
+        MediaDiscardDecision::Claimed(_)
+    ));
+}
+
+#[tokio::test]
+async fn exact_reference_lookup_preserves_nested_immutable_version_media() {
+    let (_database, pool) = crate::test_utils::setup_test_db().await;
+    let user = owner(&pool, "bound_version").await;
+    let upload = family(user.id, MediaPurpose::Recipe, 36);
+    register_media_upload_family(&pool, &upload).await.unwrap();
+    let recipe = insert_recipe(
+        &pool,
+        user.id,
+        "Version holder",
+        None,
+        None,
+        None,
+        None,
+        None,
+        &[],
+        &[],
+        &[],
+        &[],
+        "private",
+    )
+    .await
+    .unwrap();
+    let image = RecipeImage::new(
+        upload.full_url.clone(),
+        Some(upload.thumbnail_url.clone()),
+        crate::types::RecipeImageEdit::default_rect_16x9(),
+    );
+    let snapshot = crate::db::diff::RecipeSnapshot {
+        title: "Immutable holder".to_string(),
+        description: Some("description".to_string()),
+        commentary: None,
+        prep_time_minutes: Some(5),
+        cook_time_minutes: Some(10),
+        servings: Some(2),
+        ingredients: vec![crate::types::RecipeIngredient {
+            amount: "1".to_string(),
+            unit: "cup".to_string(),
+            name: "beans".to_string(),
+        }],
+        instructions: vec![crate::types::RecipeStep {
+            text: "Parent".to_string(),
+            photos: vec![],
+            sub_steps: vec![crate::types::RecipeStep {
+                text: "Nested".to_string(),
+                photos: vec![image],
+                sub_steps: vec![],
+            }],
+        }],
+        equipment: vec![crate::types::RecipeEquipment {
+            name: "Pot".to_string(),
+        }],
+        images: vec![],
+        tags: vec!["test".to_string()],
+    };
+    let mut transaction = pool.begin().await.unwrap();
+    insert_recipe_version(&mut transaction, recipe.id, user.id, 1, &snapshot, None)
+        .await
+        .unwrap();
+    transaction.commit().await.unwrap();
+
+    assert_eq!(
+        claim_retained_media_cleanup(&pool, user.id, &upload.full_url)
+            .await
+            .unwrap(),
+        MediaDiscardDecision::Retained
+    );
+}
+
+#[tokio::test]
+async fn exact_reference_lookup_preserves_owned_collection_cover() {
+    let (_database, pool) = crate::test_utils::setup_test_db().await;
+    let user = owner(&pool, "bound_cover").await;
+    let upload = family(user.id, MediaPurpose::CollectionCover, 37);
+    register_media_upload_family(&pool, &upload).await.unwrap();
+    let image = RecipeImage::new(
+        upload.full_url.clone(),
+        Some(upload.thumbnail_url.clone()),
+        crate::types::RecipeImageEdit::default_rect_16x9(),
+    );
+    insert_collection(
+        &pool,
+        user.id,
+        None,
+        "Retained cover",
+        None,
+        crate::types::CollectionVisibility::Private,
+        Some(&image),
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(
+        claim_retained_media_cleanup(&pool, user.id, &upload.full_url)
+            .await
+            .unwrap(),
+        MediaDiscardDecision::Retained
+    );
+}
+
+#[tokio::test]
+async fn exact_reference_lookup_retains_on_bounded_match_overflow() {
+    let (_database, pool) = crate::test_utils::setup_test_db().await;
+    let media_owner = owner(&pool, "bound_overflow").await;
+    let unrelated_owner = owner(&pool, "bound_legacy").await;
+    let mut upload = family(media_owner.id, MediaPurpose::Recipe, 38);
+    upload.expires_at = Utc::now() - Duration::minutes(1);
+    register_media_upload_family(&pool, &upload).await.unwrap();
+
+    sqlx::query(
+        "INSERT INTO recipes (user_id, title, images)
+         SELECT $1, 'Legacy foreign reference ' || ordinal,
+                jsonb_build_array(jsonb_build_object('url', $2::text))
+         FROM generate_series(1, 501) AS ordinal",
+    )
+    .bind(unrelated_owner.id)
+    .bind(&upload.full_url)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    assert_eq!(
+        claim_retained_media_cleanup(&pool, media_owner.id, &upload.full_url)
+            .await
+            .unwrap(),
+        MediaDiscardDecision::Retained,
+        "an exact-match overflow must retain safely instead of doing unbounded work or deleting"
+    );
+}
+
+#[test]
+fn cleanup_reference_check_never_materializes_the_complete_inventory() {
+    let database_source = include_str!("mod.rs");
+    let schema_source = include_str!("../../migrations/schema.sql");
+    let check_start = database_source
+        .find("async fn media_family_is_referenced")
+        .expect("media reference check must exist");
+    let check_end = database_source[check_start..]
+        .find("async fn claim_media_family_by_digest")
+        .map(|offset| check_start + offset)
+        .expect("media reference check must have a bounded end");
+    let check_source = &database_source[check_start..check_end];
+
+    assert!(check_source.contains("SELECT EXISTS"));
+    assert!(check_source.contains("@? $2::jsonpath"));
+    assert!(check_source.contains("LIMIT 501"));
+    assert!(check_source.contains("reference_count > 500"));
+    assert!(!check_source.contains("get_all_owned_image_references"));
+    assert!(!check_source.contains("fetch_all"));
+
+    for index in [
+        "idx_recipes_images_media_lookup",
+        "idx_recipes_instructions_media_lookup",
+        "idx_recipe_drafts_media_lookup",
+        "idx_recipe_versions_media_lookup",
+        "idx_collections_image_media_lookup",
+        "idx_forks_result_cursor",
+        "idx_forks_parent",
+    ] {
+        assert!(
+            schema_source.contains(index),
+            "exact media lookup index {index} must remain declared"
+        );
+    }
+}
+
 #[test]
 fn client_discard_api_is_capability_only() {
     let upload_api = include_str!("../api/upload.rs");

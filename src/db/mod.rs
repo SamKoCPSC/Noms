@@ -3452,9 +3452,11 @@ pub async fn get_public_recipe_tags(
     .map_err(DbError::Query)
 }
 
-/// Get all distinct image URLs referenced by recipes or collection covers.
+/// Get all distinct image URLs for compatibility-focused database tests.
 ///
-/// Used by the orphan cleanup worker to determine which storage objects are still needed.
+/// Production cleanup deliberately uses exact indexed lookups instead of this
+/// complete-corpus projection.
+#[cfg(test)]
 pub async fn get_all_image_urls(pool: &PgPool) -> Result<Vec<String>, DbError> {
     let rows = sqlx::query_scalar::<_, String>(
         "WITH RECURSIVE recipe_documents(images, instructions) AS (
@@ -3531,12 +3533,14 @@ pub async fn get_all_image_urls(pool: &PgPool) -> Result<Vec<String>, DbError> {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type)]
 #[sqlx(type_name = "text", rename_all = "snake_case")]
+#[cfg(test)]
 pub enum OwnedMediaKind {
     Recipe,
     CollectionCover,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
+#[cfg(test)]
 pub struct OwnedImageReference {
     pub owner_id: Uuid,
     pub image_url: String,
@@ -3754,19 +3758,90 @@ async fn media_family_is_referenced(
     full_url: &str,
     thumbnail_url: &str,
 ) -> Result<bool, DbError> {
-    let expected_kind = match purpose {
-        MediaPurpose::Recipe => OwnedMediaKind::Recipe,
-        MediaPurpose::CollectionCover => OwnedMediaKind::CollectionCover,
-    };
-    Ok(get_all_owned_image_references(&mut **tx)
-        .await?
-        .into_iter()
-        .any(|reference| {
-            (reference.image_url == full_url || reference.image_url == thumbnail_url)
-                && reference.media_kind == expected_kind
-                && (reference.owner_id == family_owner_id
-                    || (purpose == MediaPurpose::Recipe && reference.allows_inherited_owner))
-        }))
+    let full_literal = serde_json::to_string(full_url).map_err(DbError::SerdeJson)?;
+    let thumbnail_literal = serde_json::to_string(thumbnail_url).map_err(DbError::SerdeJson)?;
+    let reference_path = format!(
+        "$.** ? (@.url == {full_literal} || @.url == {thumbnail_literal} || \
+         @.thumb_url == {full_literal} || @.thumb_url == {thumbnail_literal})"
+    );
+
+    match purpose {
+        MediaPurpose::CollectionCover => sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(\
+                 SELECT 1 FROM collections \
+                 WHERE owner_id = $1 AND image @? $2::jsonpath\
+             )",
+        )
+        .bind(family_owner_id)
+        .bind(reference_path)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(DbError::Query),
+        MediaPurpose::Recipe => sqlx::query_scalar::<_, bool>(
+            "WITH RECURSIVE exact_recipe_holders(recipe_id, direct_authority) AS MATERIALIZED (
+                 SELECT recipe.id, recipe.user_id = $1
+                 FROM recipes AS recipe
+                 WHERE recipe.images @? $2::jsonpath
+                    OR recipe.instructions @? $2::jsonpath
+                 UNION ALL
+                 SELECT version.recipe_id, recipe.user_id = $1
+                 FROM recipe_versions AS version
+                 JOIN recipes AS recipe ON recipe.id = version.recipe_id
+                 WHERE version.snapshot @? $2::jsonpath
+                 UNION ALL
+                 SELECT COALESCE(draft.recipe_id, draft.forked_from_recipe_id),
+                        draft.user_id = $1
+                        OR draft.forked_from_version_number IS NOT NULL
+                        OR source.user_id = $1
+                 FROM recipe_drafts AS draft
+                 LEFT JOIN recipes AS source
+                   ON source.id = COALESCE(draft.recipe_id, draft.forked_from_recipe_id)
+                 WHERE draft.snapshot @? $2::jsonpath
+                 LIMIT 501
+             ),
+             holder_summary(reference_count, direct_authority) AS (
+                 SELECT COUNT(*), COALESCE(BOOL_OR(direct_authority), FALSE)
+                 FROM exact_recipe_holders
+             ),
+             holder_lineage(
+                 recipe_id, relationship_id, original_owner_id, visited, depth
+             ) AS (
+                 SELECT holder.recipe_id, relationship.id,
+                        relationship.original_owner_id, ARRAY[relationship.id], 1
+                 FROM exact_recipe_holders AS holder
+                 JOIN fork_relationships AS relationship
+                   ON COALESCE(
+                        relationship.forked_recipe_key,
+                        relationship.forked_recipe_id
+                      ) = holder.recipe_id
+                 WHERE holder.recipe_id IS NOT NULL
+                 UNION ALL
+                 SELECT holder_lineage.recipe_id, parent.id,
+                        parent.original_owner_id,
+                        holder_lineage.visited || parent.id,
+                        holder_lineage.depth + 1
+                 FROM holder_lineage
+                 JOIN fork_relationships AS child
+                   ON child.id = holder_lineage.relationship_id
+                 JOIN fork_relationships AS parent
+                   ON parent.id = child.parent_relationship_id
+                 WHERE holder_lineage.depth < 32
+                   AND NOT parent.id = ANY(holder_lineage.visited)
+             )
+             SELECT CASE
+                 WHEN reference_count > 500 OR direct_authority THEN TRUE
+                 ELSE EXISTS(
+                     SELECT 1 FROM holder_lineage WHERE original_owner_id = $1
+                 )
+             END
+             FROM holder_summary",
+        )
+        .bind(family_owner_id)
+        .bind(reference_path)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(DbError::Query),
+    }
 }
 
 async fn claim_media_family_by_digest(
@@ -3916,20 +3991,39 @@ pub async fn finish_media_discard(
 
 /// Bounded set of tracked families eligible for centralized cleanup. Unknown
 /// legacy storage keys are intentionally absent and therefore never deleted.
-pub async fn list_media_cleanup_candidates(
-    pool: &PgPool,
-    limit: i64,
-) -> Result<Vec<(Uuid, String)>, DbError> {
+pub async fn list_media_cleanup_candidates(pool: &PgPool) -> Result<Vec<(Uuid, String)>, DbError> {
+    const BATCH_LIMIT: i64 = 500;
     sqlx::query_as(
-        "SELECT owner_id, full_url FROM media_upload_families \
-         WHERE lifecycle IN ('retained', 'discard_claimed') \
-            OR (lifecycle = 'uncommitted' AND expires_at <= NOW()) \
-         ORDER BY CASE WHEN lifecycle = 'discard_claimed' THEN 0 \
-                       WHEN lifecycle = 'uncommitted' THEN 1 ELSE 2 END, \
-                  cleanup_checked_at ASC NULLS FIRST, created_at \
+        "WITH candidates AS (
+             (SELECT owner_id, full_url, 0 AS priority,
+                     (cleanup_checked_at IS NOT NULL) AS cleanup_was_checked,
+                     cleanup_checked_at, created_at, id
+              FROM media_upload_families
+              WHERE lifecycle = 'discard_claimed'
+              ORDER BY (cleanup_checked_at IS NOT NULL), cleanup_checked_at, created_at, id
+              LIMIT $1)
+             UNION ALL
+             (SELECT owner_id, full_url, 1 AS priority,
+                     (cleanup_checked_at IS NOT NULL) AS cleanup_was_checked,
+                     cleanup_checked_at, created_at, id
+              FROM media_upload_families
+              WHERE lifecycle = 'uncommitted' AND expires_at <= NOW()
+              ORDER BY expires_at, created_at, id
+              LIMIT $1)
+             UNION ALL
+             (SELECT owner_id, full_url, 2 AS priority,
+                     (cleanup_checked_at IS NOT NULL) AS cleanup_was_checked,
+                     cleanup_checked_at, created_at, id
+              FROM media_upload_families
+              WHERE lifecycle = 'retained'
+              ORDER BY (cleanup_checked_at IS NOT NULL), cleanup_checked_at, created_at, id
+              LIMIT $1)
+         )
+         SELECT owner_id, full_url FROM candidates
+         ORDER BY priority, cleanup_was_checked, cleanup_checked_at, created_at, id
          LIMIT $1",
     )
-    .bind(limit)
+    .bind(BATCH_LIMIT)
     .fetch_all(pool)
     .await
     .map_err(DbError::Query)
@@ -4076,12 +4170,12 @@ pub async fn finish_account_media_cleanup(
     Ok(())
 }
 
-/// Get every retained media URL together with an owner authorized to reference it.
+/// Get every retained media URL together with an authorized owner for tests.
 ///
-/// The orphan worker needs an authorized owner alongside each reference; a bare
-/// URL is insufficient proof that one user's document may retain another user's
-/// storage key. Drafts, immutable versions, collection covers, and inherited
-/// fork media all remain live references even when they are not in `recipes`.
+/// This complete projection preserves coverage of legacy reference semantics,
+/// but production cleanup must use `media_family_is_referenced` so work remains
+/// scoped to one exact tracked family.
+#[cfg(test)]
 pub async fn get_all_owned_image_references<'e, E>(
     executor: E,
 ) -> Result<Vec<OwnedImageReference>, DbError>

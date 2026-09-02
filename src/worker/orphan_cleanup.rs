@@ -1,8 +1,8 @@
 //! Orphan image cleanup worker.
 //!
-//! Periodically reconciles tracked upload families against database references.
-//! Storage listings are preflight/observability only; unknown legacy objects
-//! are never treated as deletion authority.
+//! Periodically reconciles a bounded batch of tracked upload families against
+//! exact database references. Unknown legacy objects are never enumerated or
+//! treated as deletion authority.
 
 use std::collections::HashSet;
 use std::time::Duration;
@@ -68,29 +68,15 @@ pub async fn run_cleanup(
     pool: &PgPool,
     storage: &StorageClient,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // Account deletion tombstones are independent of the legacy corpus
-    // preflights below. Process them first so a listing failure cannot strand
-    // objects after their owning user and media-family rows have cascaded.
+    // Account deletion tombstones survive their owning user and media-family
+    // rows, so process their bounded batch before ordinary tracked families.
     let account_objects_deleted = run_account_media_cleanup(pool, storage).await?;
 
-    // Reference inventory remains useful observability, but deletion authority
-    // comes exclusively from a locked, tracked upload-family claim.
-    let db_references = db::get_all_owned_image_references(pool)
-        .await
-        .map_err(|e| format!("Failed to query image URLs from DB: {e}"))?;
-
-    // Complete both namespace preflights before any mutation. Listings are
-    // observability only: unknown legacy objects never become delete targets.
-    let recipe_keys = storage
-        .list_objects(Some("recipes/"))
-        .await
-        .map_err(|e| format!("Failed to list recipe storage objects: {e}"))?;
-    let collection_keys = storage
-        .list_objects(Some("collections/"))
-        .await
-        .map_err(|e| format!("Failed to list collection storage objects: {e}"))?;
-
-    let candidates = db::list_media_cleanup_candidates(pool, 500).await?;
+    // Candidate selection and each exact reference check are independently
+    // bounded. Never list the bucket or materialize the complete document
+    // reference corpus merely to process this batch.
+    let candidates = db::list_media_cleanup_candidates(pool).await?;
+    let candidates_examined = candidates.len();
     let mut deleted_count = 0u64;
     for (owner_id, full_url) in candidates {
         let db::MediaDiscardDecision::Claimed(claim) =
@@ -114,8 +100,7 @@ pub async fn run_cleanup(
     }
 
     info!(
-        objects_in_db = db_references.len(),
-        objects_in_storage = recipe_keys.len() + collection_keys.len(),
+        candidates_examined,
         account_objects_deleted,
         orphans_deleted = deleted_count,
         "Orphan cleanup cycle complete"
@@ -432,35 +417,62 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn cleanup_preflights_both_namespaces_before_any_deletion() {
+    async fn cleanup_never_lists_the_untracked_storage_corpus() {
         let (_database, pool) = crate::test_utils::setup_test_db().await;
-        let owner_id = uuid::Uuid::new_v4();
+        let suffix = crate::test_utils::uid();
+        let owner = crate::db::insert_user(
+            &pool,
+            &format!("bounded_{suffix}"),
+            "Bounded Cleanup",
+            &format!("bounded-{suffix}@example.test"),
+            None,
+        )
+        .await
+        .unwrap();
         let object_id = uuid::Uuid::new_v4();
-        let recipe_key = format!("recipes/{owner_id}/{object_id}_full.webp");
         let mock_server = wiremock::MockServer::start().await;
         let storage = crate::storage::StorageClient::for_test_with_endpoint(&mock_server.uri());
+        let full_key = format!("recipes/{}/{object_id}_full.webp", owner.id);
+        let thumbnail_key = format!("recipes/{}/{object_id}_thumb.webp", owner.id);
+        crate::db::register_media_upload_family(
+            &pool,
+            &crate::db::NewMediaUploadFamily {
+                owner_id: owner.id,
+                purpose: crate::db::MediaPurpose::Recipe,
+                full_url: storage.object_url(&full_key),
+                thumbnail_url: storage.object_url(&thumbnail_key),
+                full_key,
+                thumbnail_key,
+                capability_digest: vec![61; 32],
+                expires_at: chrono::Utc::now() - chrono::Duration::minutes(1),
+            },
+        )
+        .await
+        .unwrap();
 
         wiremock::Mock::given(wiremock::matchers::method("GET"))
-            .and(wiremock::matchers::query_param("prefix", "recipes/"))
-            .respond_with(wiremock::ResponseTemplate::new(200).set_body_string(format!(
-                "<?xml version=\"1.0\" encoding=\"UTF-8\"?><ListBucketResult><Name>noms-media</Name><KeyCount>1</KeyCount><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>{recipe_key}</Key></Contents></ListBucketResult>"
-            )))
-            .expect(1)
-            .mount(&mock_server)
-            .await;
-        wiremock::Mock::given(wiremock::matchers::method("GET"))
-            .and(wiremock::matchers::query_param("prefix", "collections/"))
-            .respond_with(wiremock::ResponseTemplate::new(500))
-            .expect(1)
+            .respond_with(wiremock::ResponseTemplate::new(200))
+            .expect(0)
             .mount(&mock_server)
             .await;
         wiremock::Mock::given(wiremock::matchers::method("DELETE"))
             .respond_with(wiremock::ResponseTemplate::new(204))
-            .expect(0)
+            .expect(2)
             .mount(&mock_server)
             .await;
 
-        assert!(run_cleanup(&pool, &storage).await.is_err());
+        run_cleanup(&pool, &storage).await.unwrap();
+        mock_server.verify().await;
+        assert_eq!(
+            sqlx::query_scalar::<_, String>(
+                "SELECT lifecycle FROM media_upload_families WHERE owner_id = $1",
+            )
+            .bind(owner.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            "discarded"
+        );
     }
 
     #[tokio::test]

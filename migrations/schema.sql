@@ -119,6 +119,12 @@ CREATE INDEX IF NOT EXISTS idx_media_upload_families_owner_lifecycle
     ON media_upload_families(owner_id, lifecycle);
 CREATE INDEX IF NOT EXISTS idx_media_upload_families_expiry
     ON media_upload_families(expires_at) WHERE lifecycle = 'uncommitted';
+CREATE INDEX IF NOT EXISTS idx_media_upload_cleanup_claimed
+    ON media_upload_families((cleanup_checked_at IS NOT NULL), cleanup_checked_at, created_at, id)
+    WHERE lifecycle = 'discard_claimed';
+CREATE INDEX IF NOT EXISTS idx_media_upload_cleanup_retained
+    ON media_upload_families((cleanup_checked_at IS NOT NULL), cleanup_checked_at, created_at, id)
+    WHERE lifecycle = 'retained';
 
 -- Durable object-deletion authority created before an account row is removed.
 -- `former_owner_id` intentionally has no foreign key: these rows must survive
@@ -221,6 +227,8 @@ CREATE TABLE IF NOT EXISTS recipe_versions (
 
 CREATE INDEX IF NOT EXISTS idx_recipe_versions_recipe
     ON recipe_versions(recipe_id, version_number DESC);
+CREATE INDEX IF NOT EXISTS idx_recipe_versions_media_lookup
+    ON recipe_versions USING GIN (snapshot jsonb_path_ops);
 
 -- Mutable, owner-only work in progress. Existing recipes have one draft per
 -- owner/recipe pair; users may keep multiple new-recipe drafts.
@@ -243,6 +251,8 @@ CREATE TABLE IF NOT EXISTS recipe_drafts (
 
 CREATE INDEX IF NOT EXISTS idx_recipe_drafts_user
     ON recipe_drafts(user_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_recipe_drafts_media_lookup
+    ON recipe_drafts USING GIN (snapshot jsonb_path_ops);
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_recipe_drafts_existing_recipe
     ON recipe_drafts(user_id, recipe_id)
@@ -297,6 +307,10 @@ CREATE INDEX IF NOT EXISTS idx_recipe_tags_tag ON recipe_tags(tag);
 
 CREATE INDEX IF NOT EXISTS idx_recipes_user_id ON recipes(user_id);
 CREATE INDEX IF NOT EXISTS idx_recipes_created_at ON recipes(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_recipes_images_media_lookup
+    ON recipes USING GIN (images jsonb_path_ops);
+CREATE INDEX IF NOT EXISTS idx_recipes_instructions_media_lookup
+    ON recipes USING GIN (instructions jsonb_path_ops);
 
 -- Partial index for public recipe discovery (explore page)
 CREATE INDEX IF NOT EXISTS idx_recipes_visibility_created ON recipes(visibility, created_at DESC)
@@ -325,6 +339,9 @@ CREATE TABLE IF NOT EXISTS collections (
 
 CREATE INDEX IF NOT EXISTS idx_collections_owner_updated
     ON collections(owner_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_collections_image_media_lookup
+    ON collections USING GIN (image jsonb_path_ops)
+    WHERE image IS NOT NULL;
 
 -- Partial index for public collection discovery.
 CREATE INDEX IF NOT EXISTS idx_collections_public_updated
