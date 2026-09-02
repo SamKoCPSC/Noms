@@ -105,6 +105,12 @@ A supplemental aggregate field audit of the 719 accepted candidates found:
 
 A targeted duration review exposed duplicated visual/accessibility text such as a full and abbreviated time appearing together. The parser now collapses a complete, exactly repeated amount/unit sequence while retaining the complete raw source value; repeated units that are not an exact duplicate remain additive. Rechecked examples from each provider with recovered durations normalized to the displayed time rather than double-counting duplicated tokens.
 
+## Supplementary-content rerun
+
+The notes/equipment/image slice kept structural acceptance stable at 719 accepted and 781 rejected, with no invalid candidates or unexpected parser errors. Because any extracted note or image requires confirmation, the status mix moved from 661 ready and 58 needing review to 360 ready and 359 needing review.
+
+Across the 719 accepted candidates, the generic rules found 58 note paragraphs in 40 candidates, 2,140 absolute HTTP(S) figure references in 338 candidates, and a first figure caption suitable for preserved attribution evidence in 108 candidates. No accepted sample exposed an explicit Equipment heading/list structure matching the generic rule, so equipment extraction remains synthetically verified only. Image volume is especially high for some providers and may include multiple instructional or duplicated presentation figures; these counts establish structural reach, not semantic accuracy, and the references remain unfetched and review-gated.
+
 ## Conclusions
 
 1. The generic HTML parser recognizes useful candidates from several providers, but structural acceptance remains only an upper bound on compatibility.
