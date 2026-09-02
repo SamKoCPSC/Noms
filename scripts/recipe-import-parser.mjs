@@ -229,15 +229,22 @@ function ingredientListSelection(html, start, end, roots, root) {
   if (lists.length === 0) return null;
 
   const measurementLists = lists.filter((list) => list.attributes.has("data-unit"));
-  const visibleMeasurementLists = measurementLists.filter((list) => !listIsHidden(list));
-  if (measurementLists.length > 1 && visibleMeasurementLists.length === 1) {
-    const selected = visibleMeasurementLists[0];
+  if (measurementLists.length > 1) {
+    const visibleMeasurementLists = measurementLists.filter((list) => !listIsHidden(list));
+    const selected = visibleMeasurementLists.length > 0
+      ? visibleMeasurementLists[0]
+      : measurementLists[0];
     return {
       selected,
-      inactiveMeasurementVariants: measurementLists.filter((list) => list !== selected),
+      competingMeasurementVariants: measurementLists
+        .filter((list) => list !== selected)
+        .map((list) => ({
+          list,
+          state: listIsHidden(list) ? "inactive" : "ambiguous",
+        })),
     };
   }
-  return { selected: lists[0], inactiveMeasurementVariants: [] };
+  return { selected: lists[0], competingMeasurementVariants: [] };
 }
 
 function rootRanges(html) {
@@ -475,7 +482,7 @@ function extractRegionLists(html, headings, roots, region) {
     groupedInstructions,
     ingredients,
     instructions,
-    inactiveMeasurementVariants: ingredientSelection?.inactiveMeasurementVariants ?? [],
+    competingMeasurementVariants: ingredientSelection?.competingMeasurementVariants ?? [],
   };
 }
 
@@ -537,17 +544,16 @@ function listLocator(list) {
   return list.tag;
 }
 
-function inactiveMeasurementVariantReason(list) {
+function measurementVariantReason(list, state) {
   const unitSystem = normalizeWhitespace(list.attributes.get("data-unit") ?? "").toLowerCase();
+  const stateLabel = state === "ambiguous" ? "Ambiguous" : "Inactive";
   return unitSystem
-    ? `Inactive ${unitSystem} measurement variant`
-    : "Inactive measurement variant";
+    ? `${stateLabel} ${unitSystem} measurement variant`
+    : `${stateLabel} measurement variant`;
 }
 
 function durationMinutes(value) {
-  let minutes = 0;
-  let matched = false;
-  const seenUnits = new Set();
+  const tokens = [];
   const pattern = /(\d+(?:[.,]\d+)?)\s*(days?|d|hours?|hrs?|hr|h|minutes?|mins?|min|m)\b/giu;
   for (const match of value.matchAll(pattern)) {
     const amount = Number.parseFloat(match[1].replace(",", "."));
@@ -558,17 +564,33 @@ function durationMinutes(value) {
       : unit.startsWith("h")
         ? "hour"
         : "minute";
-    // Clipboard HTML can expose both visible and accessibility renderings of
-    // the same duration. A second canonical unit is evidence duplication, not
-    // an additional duration component.
-    if (seenUnits.has(canonicalUnit)) continue;
-    seenUnits.add(canonicalUnit);
+    tokens.push({ amount, canonicalUnit });
+  }
+  if (tokens.length === 0) return null;
+
+  // Clipboard HTML can expose an accessible duration immediately after its
+  // visible equivalent. Collapse only a complete repeated token sequence so
+  // legitimate repeated units in a longer duration remain additive.
+  let normalizedTokens = tokens;
+  for (let sequenceLength = 1; sequenceLength <= Math.floor(tokens.length / 2); sequenceLength += 1) {
+    if (tokens.length % sequenceLength !== 0) continue;
+    const repeatsExactly = tokens.every((token, index) => {
+      const expected = tokens[index % sequenceLength];
+      return token.amount === expected.amount && token.canonicalUnit === expected.canonicalUnit;
+    });
+    if (repeatsExactly) {
+      normalizedTokens = tokens.slice(0, sequenceLength);
+      break;
+    }
+  }
+
+  let minutes = 0;
+  for (const { amount, canonicalUnit } of normalizedTokens) {
     if (canonicalUnit === "day") minutes += amount * 24 * 60;
     else if (canonicalUnit === "hour") minutes += amount * 60;
     else minutes += amount;
-    matched = true;
   }
-  return matched && Number.isSafeInteger(minutes) && minutes >= 0 ? minutes : null;
+  return Number.isSafeInteger(minutes) && minutes >= 0 ? minutes : null;
 }
 
 function labeledDuration(raw) {
@@ -611,18 +633,28 @@ function regionDurations(html, start, end, root) {
 
 function selectedYield(html, start, end) {
   const sectionHtml = html.slice(start, end);
-  const labels = /<label\b[^>]*>([\s\S]*?)<\/label\s*>/giu;
-  for (const label of sectionHtml.matchAll(labels)) {
-    const select = label[1].match(/<select\b([^>]*)>([\s\S]*?)<\/select\s*>/iu);
-    if (!select) continue;
-    const prompt = htmlText(label[1].slice(0, select.index ?? 0));
+  const labels = [...sectionHtml.matchAll(/<label\b([^>]*)>([\s\S]*?)<\/label\s*>/giu)]
+    .map((label) => ({
+      attributes: htmlAttributes(label[1]),
+      text: htmlText(label[2].replace(/<select\b[^>]*>[\s\S]*?<\/select\s*>/giu, " ")),
+      start: label.index ?? 0,
+      end: (label.index ?? 0) + label[0].length,
+    }));
+  for (const select of sectionHtml.matchAll(/<select\b([^>]*)>([\s\S]*?)<\/select\s*>/giu)) {
     const selectAttributes = htmlAttributes(select[1]);
+    const selectIndex = select.index ?? 0;
+    const selectId = selectAttributes.get("id") ?? "";
+    const associatedLabelText = labels
+      .filter((label) =>
+        (label.start < selectIndex && selectIndex < label.end) ||
+        (selectId !== "" && label.attributes.get("for") === selectId))
+      .map((label) => label.text);
     const describedAsYield = [
-      prompt,
+      ...associatedLabelText,
       selectAttributes.get("aria-label") ?? "",
       selectAttributes.get("name") ?? "",
-      selectAttributes.get("id") ?? "",
-    ].some((value) => /\b(?:yield|servings?)\b/iu.test(value));
+      selectId,
+    ].some((value) => /(?:yield|servings?)/iu.test(value));
     if (!describedAsYield) continue;
 
     const selectedOption = [...select[2].matchAll(/<option\b([^>]*)>([\s\S]*?)<\/option\s*>/giu)]
@@ -744,7 +776,7 @@ function parseHtml(html, sourceUrl) {
     groupedInstructions,
     ingredients,
     instructions,
-    inactiveMeasurementVariants,
+    competingMeasurementVariants,
   } = lists;
   if (region.navigationIngredientList) {
     return unsupportedNavigationCandidate(
@@ -825,7 +857,7 @@ function parseHtml(html, sourceUrl) {
         ingredient(
           raw,
           "text/html",
-          inactiveMeasurementVariants.length > 0
+          competingMeasurementVariants.length > 0
             ? `${listLocator(ingredients)} > li${ingredients.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
             : editorialRegions.length > 0 && root
             ? `${root.tag} ${ingredients.tag} > li${ingredients.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
@@ -848,7 +880,7 @@ function parseHtml(html, sourceUrl) {
         instruction(
           raw,
           "text/html",
-          inactiveMeasurementVariants.length > 0
+          competingMeasurementVariants.length > 0
             ? `${instructions.tag} > li${instructions.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
             : editorialRegions.length > 0 && root
             ? `${root.tag} ${instructions.tag} > li${instructions.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
@@ -908,12 +940,12 @@ function parseHtml(html, sourceUrl) {
         : "A lower-scoring recipe region was excluded; confirm the selected card.",
     });
   }
-  if (inactiveMeasurementVariants.length > 0) {
+  if (competingMeasurementVariants.length > 0) {
     result.status = "needs_review";
-    result.competingCandidates.push(...inactiveMeasurementVariants.map((alternative) => ({
-      reason: inactiveMeasurementVariantReason(alternative),
+    result.competingCandidates.push(...competingMeasurementVariants.map(({ list, state }) => ({
+      reason: measurementVariantReason(list, state),
       title: null,
-      provenance: provenance("text/html", listLocator(alternative)),
+      provenance: provenance("text/html", listLocator(list)),
     })));
   }
   if (
