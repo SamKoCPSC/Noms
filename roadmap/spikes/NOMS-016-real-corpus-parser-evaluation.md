@@ -103,7 +103,7 @@ A supplemental aggregate field audit of the 719 accepted candidates found:
 - Zero selected yields and zero inactive `data-unit` alternatives recognized in the currently accepted real samples; these behaviors are verified synthetically, but the captured provider structures need additional generic rules or adapters
 - Form controls reported as discarded structural evidence on all 719 accepted candidates
 
-A targeted duration review exposed duplicated visual/accessibility text such as a full and abbreviated time appearing together. The parser now counts each canonical day/hour/minute unit once within a labeled duration while retaining the complete raw source value. Rechecked examples from each provider with recovered durations normalized to the displayed time rather than double-counting duplicated tokens.
+A targeted duration review exposed duplicated visual/accessibility text such as a full and abbreviated time appearing together. The parser now collapses a complete, exactly repeated amount/unit sequence while retaining the complete raw source value; repeated units that are not an exact duplicate remain additive. Rechecked examples from each provider with recovered durations normalized to the displayed time rather than double-counting duplicated tokens.
 
 ## Conclusions
 
