@@ -67,7 +67,7 @@ After adding competing-region selection and conservative title/navigation gates,
 - Accepted: 719; rejected: 781
 - Invalid candidates: 0; unexpected parser errors: 0
 - Accepted candidates with a title: 719 of 719, up from 720 of 800
-- `ready`: 682; `needs_review`: 37
+- `ready`: 661; `needs_review`: 58
 - HTML / plain-text accepted: 719 / 0
 - Food Network: 0 accepted, down from 80 titleless false positives
 - The two previously identified Sally's collection pages now select the embedded recipe title and return `needs_review` with the page title recorded as competing evidence
@@ -77,15 +77,15 @@ After adding competing-region selection and conservative title/navigation gates,
 | AllRecipes | 100 | 100 | 0 |
 | BBCGoodFood | 0 | 0 | 0 |
 | BonAppetit | 0 | 0 | 0 |
-| BudgetBytes | 66 | 65 | 7 |
+| BudgetBytes | 66 | 65 | 17 |
 | Epicurious | 0 | 0 | 0 |
 | Food.com | 90 | 90 | 0 |
 | Food52 | 83 | 83 | 19 |
 | FoodNetwork | 80 | 0 | 0 |
 | KingArthurBaking | 0 | 0 | 0 |
 | NYTCooking | 100 | 100 | 2 |
-| RecipeTinEats | 19 | 19 | 3 |
-| SallysBakingAddiction | 64 | 64 | 6 |
+| RecipeTinEats | 19 | 19 | 5 |
+| SallysBakingAddiction | 64 | 64 | 15 |
 | SeriousEats | 98 | 98 | 0 |
 | SimplyRecipes | 0 | 0 | 0 |
 | Tasty | 100 | 100 | 0 |

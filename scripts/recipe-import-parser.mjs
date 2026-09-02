@@ -288,14 +288,8 @@ function sameTagStack(left, right) {
   return left.length === right.length && left.every(({ start }, index) => start === right[index].start);
 }
 
-function headingsDescribeSameRecipe(left, right) {
-  const leftText = left.text.toLocaleLowerCase("en-US");
-  const rightText = right.text.toLocaleLowerCase("en-US");
-  if (leftText === rightText) return true;
-  const [shorter, longer] = leftText.length < rightText.length
-    ? [leftText, rightText]
-    : [rightText, leftText];
-  return shorter.length >= 8 && shorter.split(/\s+/u).length >= 2 && longer.includes(shorter);
+function headingsMatchExactly(left, right) {
+  return left.text.toLocaleLowerCase("en-US") === right.text.toLocaleLowerCase("en-US");
 }
 
 function adjacentListAfterHeading(html, heading, list) {
@@ -350,7 +344,7 @@ function groupedLists(html, headings, roots, startHeading, endIndex, expectedLis
   return sections.length > 0 ? sections : null;
 }
 
-function regionTitle(html, headings, roots, region) {
+function regionTitle(headings, roots, region) {
   const { ingredientHeading, root } = region;
   const contentStart = root?.contentStart ?? 0;
   const precedingHeadings = headings.filter(
@@ -361,26 +355,17 @@ function regionTitle(html, headings, roots, region) {
       sameRoot(closestRoot(roots, index), root),
   );
   const pageTitle = precedingHeadings.filter(({ tag }) => tag === "h1").at(-1) ?? null;
-  const nearestHeading = precedingHeadings.at(-1) ?? null;
-  const hierarchicalTitle = precedingHeadings.filter(
+
+  // Recipe cards commonly put an h2 title above h3 metadata sections whose
+  // wrappers separate the title from Ingredients. Same-level metadata headings
+  // are not sufficient evidence to displace the page h1.
+  const embeddedTitle = precedingHeadings.filter(
     ({ tag, level }) => tag !== "h1" && level < ingredientHeading.level,
   ).at(-1) ?? null;
-
-  // A heading in the ingredient heading's immediate container is stronger evidence
-  // than a page-level h1. Recipe cards also commonly put an h2 title above h3
-  // metadata sections whose wrappers separate the title from Ingredients.
-  const immediateTitle = nearestHeading && nearestHeading.tag !== "h1" &&
-    sameTagStack(
-      tagStackContext(html, nearestHeading.index),
-      tagStackContext(html, ingredientHeading.index),
-    )
-    ? nearestHeading
-    : null;
-  const embeddedTitle = immediateTitle ?? hierarchicalTitle;
   return {
     title: embeddedTitle ?? pageTitle,
     collectionTitle: embeddedTitle && pageTitle && pageTitle.index < embeddedTitle.index &&
-      !headingsDescribeSameRecipe(embeddedTitle, pageTitle)
+      !headingsMatchExactly(embeddedTitle, pageTitle)
       ? pageTitle
       : null,
   };
@@ -550,7 +535,7 @@ function parseHtml(html, sourceUrl) {
     .map((region) => {
       const lists = extractRegionLists(inertHtml, headings, roots, region);
       if (!lists) return null;
-      const title = regionTitle(inertHtml, headings, roots, region);
+      const title = regionTitle(headings, roots, region);
       return {
         ...region,
         ...title,
