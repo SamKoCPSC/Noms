@@ -44,6 +44,7 @@ pub fn Home() -> Element {
     } else {
         Route::Login {}
     };
+    let final_primary_href = (!auth.is_authenticated).then_some("/login?redirect_uri=/recipes/new");
 
     rsx! {
         MarketingPageMeta {
@@ -159,6 +160,7 @@ pub fn Home() -> Element {
                 body: "Start with one recipe. Add the details you care about, organize it your way, and let it improve each time you cook.",
                 primary_label: final_primary_label,
                 primary_route: final_primary_route,
+                primary_href: final_primary_href,
                 secondary_label: "See how Noms works",
                 secondary_route: Route::HowTo {},
             }

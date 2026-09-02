@@ -18,8 +18,9 @@
 
 Capture the details that make a recipe yours. Organize it, improve it over time, and share it when you’re ready.
 
-**Signed-out primary CTA:** Start creating  
-**Signed-in primary CTA:** Open dashboard  
+**Signed-out primary CTA:** Start creating
+
+**Signed-in primary CTA:** Open dashboard
 **Secondary CTA:** Explore recipes
 
 **Supporting note:** Private drafts give you room to work before anything is published.
@@ -80,7 +81,7 @@ Scale ingredient quantities, servings, and timing from the recipe page while kee
 
 Explore public recipes and visit creator profiles to see the recipes and collections they have chosen to share. When a recipe sparks an idea, fork it into a private draft with its source attached.
 
-**Primary CTA:** Explore recipes  
+**Primary CTA:** Explore recipes
 **Secondary CTA:** How forking works
 
 ### Final CTA
@@ -89,8 +90,9 @@ Explore public recipes and visit creator profiles to see the recipes and collect
 
 Start with one recipe. Add the details you care about, organize it your way, and let it improve each time you cook.
 
-**Signed-out primary CTA:** Start your first recipe  
-**Signed-in primary CTA:** Create a recipe  
+**Signed-out primary CTA:** Start your first recipe
+
+**Signed-in primary CTA:** Create a recipe
 **Secondary CTA:** See how Noms works
 
 ---
@@ -170,8 +172,9 @@ Do not include this section unless the product wants roadmap material on a publi
 
 ## Keep a recipe. Improve it. Pass it on.
 
-**Signed-out primary CTA:** Explore recipes  
-**Signed-in primary CTA:** Open your recipe library  
+**Signed-out primary CTA:** Explore recipes
+
+**Signed-in primary CTA:** Open your recipe library
 **Secondary CTA:** Learn how Noms works
 
 ---

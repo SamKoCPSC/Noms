@@ -5,9 +5,16 @@ use super::how_to::HOW_TO_SECTIONS;
 #[test]
 fn signed_out_home_cta_starts_recipe_creation_through_login() {
     let cta = home_cta(false);
+    let home_source = include_str!("home.rs");
 
     assert_eq!(cta.label, "Start creating");
     assert_eq!(cta.destination, HomeCtaDestination::LoginThenCreateRecipe);
+    assert!(
+        home_source
+            .matches("/login?redirect_uri=/recipes/new")
+            .count()
+            >= 2
+    );
 }
 
 #[test]

@@ -46,6 +46,8 @@ pub struct MarketingCtaPanelProps {
     pub body: &'static str,
     pub primary_label: &'static str,
     pub primary_route: Route,
+    #[props(default)]
+    pub primary_href: Option<&'static str>,
     pub secondary_label: &'static str,
     pub secondary_route: Route,
 }
@@ -60,10 +62,18 @@ pub fn MarketingCtaPanel(props: MarketingCtaPanelProps) -> Element {
                     p { "{props.body}" }
                 }
                 div { class: "marketing-actions",
-                    Link {
-                        to: props.primary_route,
-                        class: "btn btn-primary touch-target",
-                        "{props.primary_label}"
+                    if let Some(primary_href) = props.primary_href {
+                        a {
+                            href: primary_href,
+                            class: "btn btn-primary touch-target",
+                            "{props.primary_label}"
+                        }
+                    } else {
+                        Link {
+                            to: props.primary_route,
+                            class: "btn btn-primary touch-target",
+                            "{props.primary_label}"
+                        }
                     }
                     Link {
                         to: props.secondary_route,
