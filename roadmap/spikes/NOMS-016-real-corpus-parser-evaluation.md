@@ -111,6 +111,12 @@ The notes/equipment/image slice kept structural acceptance stable at 719 accepte
 
 Across the 719 accepted candidates, the generic rules found 58 note paragraphs in 40 candidates, 2,140 absolute HTTP(S) figure references in 338 candidates, and a first figure caption suitable for preserved attribution evidence in 108 candidates. Within individual candidates, 2,136 references had a distinct URL and four repeated another URL in the same candidate; this does not measure duplicate URLs across different candidates. No candidate contained more than 30 references. No accepted sample exposed an explicit Equipment heading/list structure matching the generic rule, so equipment extraction remains synthetically verified only. Image volume is especially high for some providers and may include multiple instructional or presentation figures; these counts establish structural reach, not semantic accuracy, and the references remain unfetched and review-gated.
 
+## Active-content rerun
+
+The active-content slice again kept structural acceptance stable at 719 accepted and 781 rejected, with no invalid candidates or unexpected parser errors. Status counts also remained at 360 ready and 359 needing review because discarded active-content evidence is informational rather than a mapping ambiguity.
+
+All 719 accepted clipboard pages contained form controls and unretained HTTP(S) references, 533 contained script elements, and 391 contained iframes. The aggregate audit counted 7,666 scripts, 711 iframes, 48,213 controls, and 97,986 unretained remote-reference attributes; one candidate contained at most 326 such references. These large page-wide counts demonstrate why the parser records only inert aggregate evidence. It does not retain those URLs, instantiate a DOM, execute content, or make network requests. Preserved figure image candidates are excluded from the discarded-remote count.
+
 ## Conclusions
 
 1. The generic HTML parser recognizes useful candidates from several providers, but structural acceptance remains only an upper bound on compatibility.
