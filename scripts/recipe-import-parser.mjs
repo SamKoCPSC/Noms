@@ -7,6 +7,8 @@ const INSTRUCTION_HEADINGS = new Set([
   "method",
   "preparation",
 ]);
+const EQUIPMENT_HEADINGS = new Set(["equipment"]);
+const NOTE_HEADINGS = new Set(["note", "notes"]);
 const UNIT_PATTERN = [
   "cups?",
   "tablespoons?",
@@ -154,6 +156,13 @@ function headingKind(value) {
   const heading = value.toLowerCase().replace(/:\s*$/u, "");
   if (INGREDIENT_HEADINGS.has(heading)) return "ingredients";
   if (INSTRUCTION_HEADINGS.has(heading)) return "instructions";
+  return null;
+}
+
+function supplementaryHeadingKind(value) {
+  const heading = value.toLowerCase().replace(/:\s*$/u, "");
+  if (EQUIPMENT_HEADINGS.has(heading)) return "equipment";
+  if (NOTE_HEADINGS.has(heading)) return "notes";
   return null;
 }
 
@@ -345,6 +354,28 @@ function elementLocator(html, root, element, { ordinal = false, omitDirectRoot =
     .map(({ tag, ordinal: wrapperOrdinal }) => `${tag}:nth-of-type(${wrapperOrdinal})`)
     .join(" > ");
   return `${root ? `${root.tag} ` : ""}${wrapperSelector} > ${elementSelector}`;
+}
+
+function elementNeedsOrdinal(html, root, element) {
+  const parentContext = tagStackContext(html, element.index);
+  const start = root?.contentStart ?? 0;
+  const end = root?.contentEnd ?? html.length;
+  let count = 0;
+  const pattern = new RegExp(`<${element.tag}\\b`, "giu");
+  for (const match of html.slice(start, end).matchAll(pattern)) {
+    const index = start + (match.index ?? 0);
+    if (!sameRoot(closestRoot(root ? [root] : [], index), root)) continue;
+    if (!sameTagStack(tagStackContext(html, index), parentContext)) continue;
+    count += 1;
+    if (count > 1) return true;
+  }
+  return false;
+}
+
+function rootedElementLocator(html, root, element) {
+  return elementLocator(html, root, element, {
+    ordinal: elementNeedsOrdinal(html, root, element),
+  });
 }
 
 function sameTagStack(left, right) {
@@ -685,6 +716,103 @@ function formControlCount(html, root) {
   return [...html.slice(start, end).matchAll(/<(?:button|input|select|textarea)\b/giu)].length;
 }
 
+function supplementarySections(html, headings, roots, root) {
+  const rootEnd = root?.contentEnd ?? html.length;
+  const sectionHeadings = headings.filter(
+    (heading) =>
+      supplementaryHeadingKind(heading.text) !== null &&
+      sameRoot(closestRoot(roots, heading.index), root),
+  );
+  const equipment = [];
+  const notes = [];
+
+  for (const heading of sectionHeadings) {
+    const kind = supplementaryHeadingKind(heading.text);
+    const sectionEnd = headings.find(
+      (candidateHeading) =>
+        candidateHeading.index > heading.index &&
+        candidateHeading.level <= heading.level &&
+        sameRoot(closestRoot(roots, candidateHeading.index), root),
+    )?.index ?? rootEnd;
+
+    if (kind === "equipment") {
+      for (const list of listsWithinRoot(html, heading.end, sectionEnd, roots, root)) {
+        const locator = rootedElementLocator(html, root, list);
+        equipment.push(...list.items.map((raw, index) =>
+          scalar(
+            raw,
+            "text/html",
+            `${locator} > li${list.items.length > 1 ? `:nth-child(${index + 1})` : ""}`,
+          )));
+      }
+      continue;
+    }
+
+    const sectionHtml = html.slice(heading.end, sectionEnd);
+    for (const match of sectionHtml.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p\s*>/giu)) {
+      const raw = htmlText(match[1]);
+      if (!raw) continue;
+      const paragraph = { tag: "p", index: heading.end + (match.index ?? 0) };
+      if (!sameRoot(closestRoot(roots, paragraph.index), root)) continue;
+      const adjacent = sameTagStack(
+        tagStackContext(html, heading.index),
+        tagStackContext(html, paragraph.index),
+      ) && html.slice(heading.end, paragraph.index).replace(/<!--[\s\S]*?-->/gu, "").trim() === "";
+      const locator = adjacent
+        ? `${elementLocator(html, root, heading, { ordinal: true, omitDirectRoot: true })} + p`
+        : rootedElementLocator(html, root, paragraph);
+      notes.push(scalar(raw, "text/html", locator));
+    }
+  }
+  return { equipment, notes };
+}
+
+function imageReferences(html, roots, root) {
+  const start = root?.contentStart ?? 0;
+  const end = root?.contentEnd ?? html.length;
+  const images = [];
+  let attribution = null;
+  for (const match of html.slice(start, end).matchAll(/<figure\b[^>]*>([\s\S]*?)<\/figure\s*>/giu)) {
+    const figure = { tag: "figure", index: start + (match.index ?? 0) };
+    if (!sameRoot(closestRoot(roots, figure.index), root)) continue;
+    const imageMatch = match[1].match(/<img\b([^>]*)>/iu);
+    if (!imageMatch) continue;
+    const attributes = htmlAttributes(imageMatch[1]);
+    const sourceUrl = normalizeWhitespace(attributes.get("src") ?? "");
+    try {
+      const parsed = new URL(sourceUrl);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") continue;
+    } catch {
+      continue;
+    }
+    const captionMatch = match[1].match(/<figcaption\b[^>]*>([\s\S]*?)<\/figcaption\s*>/iu);
+    const credit = captionMatch ? htmlText(captionMatch[1]) || null : null;
+    const figureNeedsOrdinal = elementNeedsOrdinal(html, root, figure);
+    if (credit !== null && attribution === null) {
+      attribution = {
+        value: credit,
+        provenance: provenance(
+          "text/html",
+          `${elementLocator(html, root, figure, {
+            ordinal: figureNeedsOrdinal,
+            omitDirectRoot: true,
+          })} > figcaption`,
+        ),
+      };
+    }
+    images.push({
+      sourceUrl,
+      alt: normalizeWhitespace(attributes.get("alt") ?? "") || null,
+      credit,
+      provenance: provenance(
+        "text/html",
+        elementLocator(html, root, figure, { ordinal: figureNeedsOrdinal }),
+      ),
+    });
+  }
+  return { images, attribution };
+}
+
 function unsupportedNavigationCandidate(html, sourceUrl, root, ingredients) {
   const result = candidate(
     { id: "generic-region-scorer", version: "1", tier: "generic_html", sourceAdapter: null },
@@ -841,6 +969,15 @@ function parseHtml(html, sourceUrl) {
       );
     }
   }
+  const supplementary = supplementarySections(inertHtml, headings, roots, root);
+  result.fields.equipment = supplementary.equipment;
+  result.fields.notes = supplementary.notes;
+  const imageExtraction = imageReferences(inertHtml, roots, root);
+  result.fields.images = imageExtraction.images;
+  const usesRootedListLocators =
+    result.fields.equipment.length > 0 ||
+    result.fields.notes.length > 0 ||
+    result.fields.images.length > 0;
   result.fields.ingredientSections = groupedIngredients
     ? groupedIngredients.map(({ name, list, listLocator }) => ({
       name,
@@ -857,7 +994,9 @@ function parseHtml(html, sourceUrl) {
         ingredient(
           raw,
           "text/html",
-          competingMeasurementVariants.length > 0
+          usesRootedListLocators
+            ? `${rootedElementLocator(inertHtml, root, ingredients)} > li${ingredients.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
+            : competingMeasurementVariants.length > 0
             ? `${listLocator(ingredients)} > li${ingredients.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
             : editorialRegions.length > 0 && root
             ? `${root.tag} ${ingredients.tag} > li${ingredients.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
@@ -880,7 +1019,9 @@ function parseHtml(html, sourceUrl) {
         instruction(
           raw,
           "text/html",
-          competingMeasurementVariants.length > 0
+          usesRootedListLocators
+            ? `${rootedElementLocator(inertHtml, root, instructions)} > li${instructions.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
+            : competingMeasurementVariants.length > 0
             ? `${instructions.tag} > li${instructions.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
             : editorialRegions.length > 0 && root
             ? `${root.tag} ${instructions.tag} > li${instructions.items.length > 1 ? `:nth-child(${index + 1})` : ""}`
@@ -960,6 +1101,28 @@ function parseHtml(html, sourceUrl) {
       severity: "warning",
       path: "fields.cookTime",
       message: "Active time exceeds total time; preserve the source value for review.",
+    });
+  }
+  if (result.fields.images.length > 0) {
+    result.status = "needs_review";
+    if (imageExtraction.attribution) {
+      result.source.attribution = imageExtraction.attribution.value;
+      result.source.provenance.attribution = imageExtraction.attribution.provenance;
+    }
+    result.warnings.push(...result.fields.images.map((_, index) => ({
+      code: "IMAGE_REFERENCE_REQUIRES_CONFIRMATION",
+      severity: "info",
+      path: `fields.images[${index}]`,
+      message: "The image reference is not fetched and requires confirmation before mapping.",
+    })));
+  }
+  if (result.fields.notes.length > 0) {
+    result.status = "needs_review";
+    result.warnings.push({
+      code: "NOTES_REQUIRE_MAPPING",
+      severity: "info",
+      path: "fields.notes",
+      message: "Notes remain separate until the user chooses where to place them.",
     });
   }
   const controlCount = formControlCount(inertHtml, root);
