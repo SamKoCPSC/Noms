@@ -56,6 +56,8 @@ pub const MAX_GRAPH_LOADED_NODE_IDS: usize = 250;
 pub const MAX_VERSION_HISTORY_PAGE_SIZE: usize = crate::types::VERSION_HISTORY_PAGE_SIZE;
 pub const MAX_VERSION_HISTORY_ENCODED_SNAPSHOT_BYTES: usize = 32 * 1024 * 1024;
 pub const MAX_VERSION_HISTORY_DECODED_SNAPSHOT_BYTES: usize = 32 * 1024 * 1024;
+pub const MAX_VERSION_COMPARISON_CHANGES: usize = 4_096;
+pub const MAX_VERSION_COMPARISON_OUTPUT_BYTES: usize = 512 * 1024;
 pub const MAX_INITIAL_GRAPH_ENCODED_SNAPSHOT_BYTES: usize = 32 * 1024 * 1024;
 pub const MAX_INITIAL_GRAPH_DECODED_SNAPSHOT_BYTES: usize = 32 * 1024 * 1024;
 pub const MAX_EXPANSION_GRAPH_ENCODED_SNAPSHOT_BYTES: usize = 12 * 1024 * 1024;
@@ -83,6 +85,7 @@ pub enum SecurityLimitError {
     RequestBudgetExceeded,
     DatabaseBudgetExceeded,
     ConcurrentReadBudgetExceeded,
+    VersionComparisonOutputExceeded,
 }
 
 impl std::fmt::Display for SecurityLimitError {
@@ -96,7 +99,10 @@ impl std::fmt::Display for SecurityLimitError {
             Self::MediaQuotaExceeded => "media quota exceeded",
             Self::RequestBudgetExceeded => "request rate limit exceeded",
             Self::DatabaseBudgetExceeded => "database operation timed out",
-            Self::ConcurrentReadBudgetExceeded => "graph/history work budget exhausted",
+            Self::ConcurrentReadBudgetExceeded => "graph/history/comparison work budget exhausted",
+            Self::VersionComparisonOutputExceeded => {
+                "version comparison output exceeds an application limit"
+            }
         };
         formatter.write_str(message)
     }
@@ -612,7 +618,7 @@ impl ConcurrentReadBudget {
         let _permit = self.permits.clone().try_acquire_owned().map_err(|_| {
             tracing::warn!(
                 available_permits = self.permits.available_permits(),
-                "rejected graph/history request because the shared work budget is exhausted"
+                "rejected graph/history/comparison request because the shared work budget is exhausted"
             );
             SecurityLimitError::ConcurrentReadBudgetExceeded
         })?;

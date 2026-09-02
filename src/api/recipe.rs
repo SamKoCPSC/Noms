@@ -721,65 +721,96 @@ pub async fn get_recipe_version_api(
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
     let pool = crate::db::get_pool();
-    let recipe = bounded_database_operation(crate::db::get_recipe_by_id(&pool, recipe_id))
-        .await?
-        .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
-        .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
-    let version = bounded_database_operation(crate::db::get_recipe_version(
-        &pool,
-        recipe_id,
-        version_number,
-    ))
-    .await?;
-    let snapshot = version
-        .decoded_snapshot()
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
-    let latest =
-        bounded_database_operation(crate::db::get_latest_recipe_version(&pool, recipe_id)).await?;
-    let changes_from_previous = if version_number > 1 {
-        recipe_version_changes_to_view(
+    crate::security::run_with_graph_history_work_budget(async move {
+        let recipe = bounded_database_operation(crate::db::get_recipe_by_id(&pool, recipe_id))
+            .await?
+            .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
+            .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
+        let version = bounded_database_operation(crate::db::get_recipe_version(
+            &pool,
+            recipe_id,
+            version_number,
+        ))
+        .await?;
+        let snapshot = version
+            .decoded_snapshot()
+            .map_err(|error| ServerFnError::new(error.to_string()))?;
+        let latest =
+            bounded_database_operation(crate::db::get_latest_recipe_version(&pool, recipe_id))
+                .await?;
+        let changes_from_previous = if version_number > 1 {
             bounded_database_operation(crate::db::compare_recipe_versions(
                 &pool,
                 recipe_id,
                 version_number - 1,
                 version_number,
             ))
-            .await?,
-        )
-    } else {
-        Vec::new()
-    };
-    let (changes_to_current, changes_from_original) = (
-        recipe_version_changes_to_view(
+            .await?
+        } else {
+            Vec::new()
+        };
+        let changes_to_current =
             bounded_database_operation(crate::db::compare_recipe_versions(
                 &pool,
                 recipe_id,
                 version_number,
                 latest.version_number,
             ))
-            .await?,
-        ),
-        recipe_version_changes_to_view(
+            .await?;
+        let changes_from_original =
             bounded_database_operation(crate::db::compare_recipe_versions(
                 &pool,
                 recipe_id,
                 1,
                 version_number,
             ))
-            .await?,
-        ),
-    );
-    Ok(crate::types::RecipeVersionView {
-        version_number,
-        current_version_number: latest.version_number,
-        editor: snapshot_to_editor(snapshot, recipe.visibility),
-        notes: version.notes,
-        created_at: version.created_at,
-        comparisons_available: true,
-        changes_from_previous,
-        changes_to_current,
-        changes_from_original,
+            .await?;
+
+        let (comparisons_available, changes_from_previous, changes_to_current, changes_from_original) =
+            match bounded_recipe_version_change_sets_to_view([
+                changes_from_previous,
+                changes_to_current,
+                changes_from_original,
+            ]) {
+                Ok(change_sets) => {
+                    let [changes_from_previous, changes_to_current, changes_from_original] =
+                        change_sets
+                            .try_into()
+                            .expect("three comparison inputs produce three outputs");
+                    (
+                        true,
+                        changes_from_previous,
+                        changes_to_current,
+                        changes_from_original,
+                    )
+                }
+                Err(crate::security::SecurityLimitError::VersionComparisonOutputExceeded) => {
+                    tracing::warn!(
+                        recipe_id = %recipe_id,
+                        version_number,
+                        maximum_changes = crate::security::MAX_VERSION_COMPARISON_CHANGES,
+                        maximum_output_bytes = crate::security::MAX_VERSION_COMPARISON_OUTPUT_BYTES,
+                        "omitted historical version comparisons because their aggregate output limit was exceeded"
+                    );
+                    (false, Vec::new(), Vec::new(), Vec::new())
+                }
+                Err(error) => return Err(ServerFnError::new(error.to_string())),
+            };
+
+        Ok(crate::types::RecipeVersionView {
+            version_number,
+            current_version_number: latest.version_number,
+            editor: snapshot_to_editor(snapshot, recipe.visibility),
+            notes: version.notes,
+            created_at: version.created_at,
+            comparisons_available,
+            changes_from_previous,
+            changes_to_current,
+            changes_from_original,
+        })
     })
+    .await
+    .map_err(|error| ServerFnError::new(error.to_string()))?
 }
 
 #[cfg(feature = "server")]
@@ -798,6 +829,34 @@ fn recipe_version_changes_to_view(
 }
 
 #[cfg(feature = "server")]
+fn bounded_recipe_version_change_sets_to_view(
+    change_sets: impl IntoIterator<Item = Vec<crate::db::diff::SnapshotChange>>,
+) -> Result<Vec<Vec<crate::types::RecipeVersionChange>>, crate::security::SecurityLimitError> {
+    let mut total_changes = 0usize;
+    let mut total_output_bytes = 0usize;
+    let mut bounded_change_sets = Vec::new();
+
+    for changes in change_sets {
+        total_changes = total_changes
+            .checked_add(changes.len())
+            .filter(|count| *count <= crate::security::MAX_VERSION_COMPARISON_CHANGES)
+            .ok_or(crate::security::SecurityLimitError::VersionComparisonOutputExceeded)?;
+
+        let changes = recipe_version_changes_to_view(changes);
+        let encoded_bytes = serde_json::to_vec(&changes)
+            .map_err(|_| crate::security::SecurityLimitError::VersionComparisonOutputExceeded)?
+            .len();
+        total_output_bytes = total_output_bytes
+            .checked_add(encoded_bytes)
+            .filter(|bytes| *bytes <= crate::security::MAX_VERSION_COMPARISON_OUTPUT_BYTES)
+            .ok_or(crate::security::SecurityLimitError::VersionComparisonOutputExceeded)?;
+        bounded_change_sets.push(changes);
+    }
+
+    Ok(bounded_change_sets)
+}
+
+#[cfg(feature = "server")]
 fn snapshot_change_value_to_string(value: serde_json::Value) -> String {
     match value {
         serde_json::Value::Null => "Not set".to_string(),
@@ -809,15 +868,116 @@ fn snapshot_change_value_to_string(value: serde_json::Value) -> String {
     }
 }
 
+#[server]
+pub async fn compare_recipe_versions_api(
+    recipe_id: String,
+    from_version_number: i32,
+    to_version_number: i32,
+) -> Result<crate::types::RecipeVersionComparison, ServerFnError> {
+    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
+    enforce_graph_budget(viewer_id)?;
+    let recipe_id = uuid::Uuid::parse_str(&recipe_id)
+        .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
+    let pool = crate::db::get_pool();
+    crate::security::run_with_graph_history_work_budget(async move {
+        bounded_database_operation(crate::db::get_recipe_by_id(&pool, recipe_id))
+            .await?
+            .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
+            .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
+        let changes = bounded_database_operation(crate::db::compare_recipe_versions(
+            &pool,
+            recipe_id,
+            from_version_number,
+            to_version_number,
+        ))
+        .await?;
+        let change_sets = bounded_recipe_version_change_sets_to_view([changes])
+            .map_err(|error| ServerFnError::new(error.to_string()))?;
+        let [changes] = change_sets
+            .try_into()
+            .expect("one comparison input produces one output");
+
+        Ok(crate::types::RecipeVersionComparison {
+            from_version_number,
+            to_version_number,
+            changes,
+        })
+    })
+    .await
+    .map_err(|error| ServerFnError::new(error.to_string()))?
+}
+
+/// Compare two graph snapshots after independently authorizing both recipes.
+#[server]
+pub async fn compare_version_graph_snapshots_api(
+    from: crate::types::VersionGraphNodeId,
+    to: crate::types::VersionGraphNodeId,
+) -> Result<crate::types::VersionGraphComparison, ServerFnError> {
+    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
+    enforce_graph_budget(viewer_id)?;
+    let pool = crate::db::get_pool();
+
+    crate::security::run_with_graph_history_work_budget(async move {
+        for snapshot in [from, to] {
+            bounded_database_operation(crate::db::get_recipe_by_id(&pool, snapshot.recipe_id))
+                .await?
+                .filter(|recipe| {
+                    viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id)
+                })
+                .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
+        }
+
+        let changes = crate::security::run_with_database_budget(
+            crate::security::DATABASE_EXECUTION_BUDGET,
+            crate::db::compare_recipe_version_snapshots(&pool, from, to),
+        )
+        .await
+        .map_err(|_| ServerFnError::new("Database operation timed out"))?
+        .map_err(|error| match error {
+            crate::db::DbError::VersionNotFound { .. } => {
+                ServerFnError::new("Recipe snapshot not found")
+            }
+            other => ServerFnError::new(other.to_string()),
+        })?;
+        let change_sets = bounded_recipe_version_change_sets_to_view([changes])
+            .map_err(|error| ServerFnError::new(error.to_string()))?;
+        let [changes] = change_sets
+            .try_into()
+            .expect("one comparison input produces one output");
+
+        Ok(crate::types::VersionGraphComparison { from, to, changes })
+    })
+    .await
+    .map_err(|error| ServerFnError::new(error.to_string()))?
+}
+
 #[cfg(all(test, feature = "server"))]
 mod version_change_tests {
-    use super::{recipe_version_changes_to_view, version_graph_image, version_summary_image_url};
+    use super::{
+        bounded_recipe_version_change_sets_to_view, version_graph_image, version_summary_image_url,
+    };
     use crate::db::diff::SnapshotChange;
+    use crate::security::{
+        SecurityLimitError, MAX_VERSION_COMPARISON_CHANGES, MAX_VERSION_COMPARISON_OUTPUT_BYTES,
+    };
     use serde_json::json;
+
+    fn scalar_change(
+        index: usize,
+        old_value: serde_json::Value,
+        value: serde_json::Value,
+    ) -> SnapshotChange {
+        SnapshotChange {
+            op: "replace".to_string(),
+            path: format!("/ingredients/{index}/name"),
+            old_value: Some(old_value),
+            value: Some(value),
+        }
+    }
 
     #[test]
     fn comparison_values_are_transported_as_display_strings() {
-        let changes = recipe_version_changes_to_view(vec![SnapshotChange {
+        let mut change_sets = bounded_recipe_version_change_sets_to_view([vec![SnapshotChange {
             op: "replace".to_string(),
             path: "/images/0".to_string(),
             old_value: Some(json!({
@@ -828,7 +988,9 @@ mod version_change_tests {
                 "url": "https://example.test/new.webp",
                 "edits": [{"name": "rectangle:16:9", "version": 1}]
             })),
-        }]);
+        }]])
+        .expect("small comparison output is accepted");
+        let changes = change_sets.pop().expect("one converted change set");
 
         let comparison = crate::types::RecipeVersionComparison {
             from_version_number: 1,
@@ -847,6 +1009,85 @@ mod version_change_tests {
             .as_str()
             .expect("old value string")
             .contains("old.webp"));
+    }
+
+    #[test]
+    fn comparison_change_count_is_bounded_across_every_returned_change_set() {
+        let boundary = (0..MAX_VERSION_COMPARISON_CHANGES)
+            .map(|index| scalar_change(index, json!("old"), json!("new")))
+            .collect::<Vec<_>>();
+        assert!(bounded_recipe_version_change_sets_to_view([boundary.clone()]).is_ok());
+
+        assert_eq!(
+            bounded_recipe_version_change_sets_to_view([
+                boundary,
+                vec![scalar_change(
+                    MAX_VERSION_COMPARISON_CHANGES,
+                    json!("old"),
+                    json!("new"),
+                )],
+            ]),
+            Err(SecurityLimitError::VersionComparisonOutputExceeded)
+        );
+    }
+
+    #[test]
+    fn comparison_encoded_bytes_are_bounded_across_every_returned_change_set() {
+        let quarter_limit = "x".repeat(MAX_VERSION_COMPARISON_OUTPUT_BYTES / 4);
+        let first = vec![scalar_change(
+            0,
+            json!(quarter_limit.clone()),
+            json!(quarter_limit.clone()),
+        )];
+        let second = vec![scalar_change(
+            1,
+            json!(quarter_limit.clone()),
+            json!(quarter_limit),
+        )];
+
+        assert!(bounded_recipe_version_change_sets_to_view([first.clone()]).is_ok());
+        assert!(bounded_recipe_version_change_sets_to_view([second.clone()]).is_ok());
+        assert_eq!(
+            bounded_recipe_version_change_sets_to_view([first, second]),
+            Err(SecurityLimitError::VersionComparisonOutputExceeded)
+        );
+    }
+
+    #[test]
+    fn version_comparison_endpoints_share_the_graph_history_work_budget() {
+        let source = include_str!("recipe.rs");
+        for (function, next_function) in [
+            (
+                "pub async fn get_recipe_version_api",
+                "fn recipe_version_changes_to_view",
+            ),
+            (
+                "pub async fn compare_recipe_versions_api",
+                "pub async fn compare_version_graph_snapshots_api",
+            ),
+            (
+                "pub async fn compare_version_graph_snapshots_api",
+                "#[cfg(all(test, feature = \"server\"))]\nmod version_change_tests",
+            ),
+        ] {
+            let start = source.find(function).expect("comparison endpoint exists");
+            let end = source[start..]
+                .find(next_function)
+                .map(|offset| start + offset)
+                .expect("comparison endpoint has a bounded source slice");
+            let endpoint = &source[start..end];
+            assert_eq!(
+                endpoint
+                    .matches("run_with_graph_history_work_budget")
+                    .count(),
+                1,
+                "{function} must acquire exactly one shared comparison-work permit"
+            );
+            assert!(
+                endpoint.contains("bounded_recipe_version_change_sets_to_view"),
+                "{function} must enforce the aggregate comparison-output budget"
+            );
+        }
     }
 
     #[test]
@@ -902,73 +1143,6 @@ mod version_change_tests {
         );
         assert_eq!(version_graph_image(&[]), None);
     }
-}
-
-#[server]
-pub async fn compare_recipe_versions_api(
-    recipe_id: String,
-    from_version_number: i32,
-    to_version_number: i32,
-) -> Result<crate::types::RecipeVersionComparison, ServerFnError> {
-    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
-    enforce_graph_budget(viewer_id)?;
-    let recipe_id = uuid::Uuid::parse_str(&recipe_id)
-        .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
-    let pool = crate::db::get_pool();
-    bounded_database_operation(crate::db::get_recipe_by_id(&pool, recipe_id))
-        .await?
-        .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
-        .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
-    let changes = bounded_database_operation(crate::db::compare_recipe_versions(
-        &pool,
-        recipe_id,
-        from_version_number,
-        to_version_number,
-    ))
-    .await?;
-
-    Ok(crate::types::RecipeVersionComparison {
-        from_version_number,
-        to_version_number,
-        changes: recipe_version_changes_to_view(changes),
-    })
-}
-
-/// Compare two graph snapshots after independently authorizing both recipes.
-#[server]
-pub async fn compare_version_graph_snapshots_api(
-    from: crate::types::VersionGraphNodeId,
-    to: crate::types::VersionGraphNodeId,
-) -> Result<crate::types::VersionGraphComparison, ServerFnError> {
-    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
-    enforce_graph_budget(viewer_id)?;
-    let pool = crate::db::get_pool();
-
-    for snapshot in [from, to] {
-        bounded_database_operation(crate::db::get_recipe_by_id(&pool, snapshot.recipe_id))
-            .await?
-            .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
-            .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
-    }
-
-    let changes = crate::security::run_with_database_budget(
-        crate::security::DATABASE_EXECUTION_BUDGET,
-        crate::db::compare_recipe_version_snapshots(&pool, from, to),
-    )
-    .await
-    .map_err(|_| ServerFnError::new("Database operation timed out"))?
-    .map_err(|error| match error {
-        crate::db::DbError::VersionNotFound { .. } => {
-            ServerFnError::new("Recipe snapshot not found")
-        }
-        other => ServerFnError::new(other.to_string()),
-    })?;
-
-    Ok(crate::types::VersionGraphComparison {
-        from,
-        to,
-        changes: recipe_version_changes_to_view(changes),
-    })
 }
 
 #[server]

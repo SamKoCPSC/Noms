@@ -2830,7 +2830,7 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
             } else {
                 Card {
                     h2 { class: "recipe-detail__section-title", "Version comparisons" }
-                    p { "Version comparisons are available to the recipe owner." }
+                    p { "Version comparisons are unavailable for this snapshot." }
                 }
             }
         }
