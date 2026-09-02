@@ -92,6 +92,19 @@ After adding competing-region selection and conservative title/navigation gates,
 
 The collection-page check is a targeted regression review, not a new accuracy estimate. The remaining 719 accepted candidates still require broader semantic sampling before making provider-support claims.
 
+## Measurement-field rerun
+
+The same 1,500 verified samples were evaluated after adding labeled durations, selected yields, and visible measurement-variant handling. Structural results remained stable at 719 accepted and 781 rejected, with no invalid candidates or unexpected parser errors.
+
+A supplemental aggregate field audit of the 719 accepted candidates found:
+
+- 165 candidates with prep time, 152 with cook/active time, and 250 with total time
+- Duration recovery across BudgetBytes, NYT Cooking, RecipeTinEats, and Tasty
+- Zero selected yields and zero inactive `data-unit` alternatives recognized in the currently accepted real samples; these behaviors are verified synthetically, but the captured provider structures need additional generic rules or adapters
+- Form controls reported as discarded structural evidence on all 719 accepted candidates
+
+A targeted duration review exposed duplicated visual/accessibility text such as a full and abbreviated time appearing together. The parser now counts each canonical day/hour/minute unit once within a labeled duration while retaining the complete raw source value. Rechecked examples from each provider with recovered durations normalized to the displayed time rather than double-counting duplicated tokens.
+
 ## Conclusions
 
 1. The generic HTML parser recognizes useful candidates from several providers, but structural acceptance remains only an upper bound on compatibility.
