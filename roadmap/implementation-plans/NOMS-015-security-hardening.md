@@ -1,6 +1,6 @@
 # NOMS-015: Security Hardening to a Good-Enough Baseline — Agentic Implementation Plan
 
-**Status:** In progress — CP0–CP6 implemented and reviewed; CP7 remains
+**Status:** In progress — CP8 completed with a `NOT GOOD ENOUGH` verdict; CP8D–CP8E remediation and CP9 final re-review remain
 **Created:** 2026-07-29
 **Issue:** [NOMS-015-security-hardening.md](../issues/NOMS-015-security-hardening.md)
 **Source:** Authentication, authorization, and application security review completed 2026-07-28
@@ -13,13 +13,54 @@
 
 This plan is complete only when the application can be reassessed as **good enough for general consumer usage**.
 
-The following are release blockers:
+The original review identified the following release blockers:
 
 1. An OAuth login flow started without a session can become an account-link flow when its callback is opened by a signed-in victim.
 2. A user can cause another user's recipe or avatar object to be deleted by persisting that public object URL in their own recipe and deleting the recipe.
 3. OAuth rate limiting groups all production requests under the fallback `0.0.0.0` address because the server does not attach Axum `ConnectInfo`.
 
 The stable-provider-identity work is also required before declaring completion for deployments that support organization-managed, changeable, or recyclable email addresses. If migration constraints prevent that work from shipping with the three blockers, the release decision must explicitly exclude those environments and track the remaining risk.
+
+The integrated CP7 review on 2026-08-20 confirmed that the original blockers
+were materially hardened, but found seven additional, realistically reachable
+issues that keep the release verdict at `NOT GOOD ENOUGH`:
+
+1. A logged-out OAuth callback is transferable to a browser that did not start
+   the authorization transaction.
+2. The public recipe-image deletion server function can remove an object still
+   retained by another tenant's valid fork or immutable history.
+3. Redacted version-graph nodes and edges expose stable UUIDs for adjacent
+   unlisted recipes, turning graph access into an unlisted-resource discovery
+   channel.
+4. Initial and expansion graph requests build the complete graph before
+   selecting their 25- or 5-node response, permitting close to 1 GiB of valid
+   snapshot materialization per request at the configured limits.
+5. Version-summary reads fetch, decode, and diff all 250 permitted snapshots,
+   allowing roughly 250 MiB of valid snapshot processing per request.
+6. Fork attribution returns the stored title and UUID of a source recipe after
+   that source becomes private.
+7. `GET /auth/logout` revokes the current session without same-origin intent
+   validation and can be chained before the transferable-login attack.
+
+CP7A–CP7D below are release-blocking remediation checkpoints derived from that
+review. CP8 repeats the integrated adversarial gate after all four land.
+
+The integrated CP8 review on 2026-09-02 verified the exact release candidate at
+revision `1ec3766`, including the CP8A account-media cleanup, CP8B bounded media
+cleanup, and CP8C bounded version-comparison changes. It found two additional
+medium-severity release blockers:
+
+1. Recipe-media retention walks at most 32 fork ancestors and treats a
+   truncated ancestry search as proof that no owner-authorized reference
+   remains. A 33-plus-generation fork chain can therefore allow deletion of
+   media that a surviving recipe still renders.
+2. A public collection page can return 100 complete recipes. Because each valid
+   recipe snapshot may approach 1 MiB, one anonymous request can materialize
+   roughly 100 MiB before JSON overhead without an aggregate byte or shared
+   concurrency budget.
+
+CP8D and CP8E below are the release-blocking remediation checkpoints derived
+from that review. CP9 repeats the integrated adversarial gate after both land.
 
 Passing ordinary happy-path tests is not sufficient. Completion requires tests that reproduce each attack and prove that it is rejected without damaging the victim's session, linked accounts, database records, or storage objects.
 
@@ -33,7 +74,9 @@ that will actually ship.
 ### Progress summary
 
 - **Implemented and independently reviewed:** CP0 baseline reliability, CP1 OAuth intent/session binding and same-origin redirects, CP2 integrated media ownership and orphan retention, CP3 trusted-proxy client identity and per-client OAuth limits, CP4 stable provider identities without legacy email reconciliation, CP4A completed-router and collection-media alignment, CP5 integrated resource-abuse bounds, CP5A typed media-upload unification, and CP6 dependency/secret/deployment verification.
-- **Remaining before the final consumer-security verdict:** CP7 adversarial review against the complete release candidate.
+- **Completed reviews:** CP7 at revision `cb57bdd` returned `NOT GOOD ENOUGH` with five medium- and two low-severity findings; CP8 at revision `1ec3766` returned `NOT GOOD ENOUGH` with two medium- and seven low-severity findings.
+- **Implemented since CP7:** CP7A browser-bound OAuth and logout intent, CP7B reference-aware media deletion, CP7C hidden graph/lineage privacy, CP7D byte-bounded history and graph reads, CP8A account-media cleanup authority, CP8B bounded media cleanup, and CP8C bounded version comparisons.
+- **Remaining before the final consumer-security verdict:** CP8D fail-closed deep-fork media retention, CP8E bounded collection recipe projections, and CP9 final integrated adversarial re-review. The seven low-severity CP8 findings remain documented residual follow-up unless their aggregate risk is reassessed upward.
 
 ---
 
@@ -123,9 +166,16 @@ security-integration CP4A after the integrated rebase
 security-abuse       CP5 after CP4A controls settle
 security-media       CP5A after CP5 upload/quota controls settle
 security-release     CP6–CP7 integration and review
+security-auth-tx     CP7A browser-bound OAuth and logout intent
+security-retention   CP7B reference-aware media deletion
+security-graph       CP7C graph and lineage privacy, then CP7D bounded reads
+security-review      CP8 integrated review of the first remediated candidate
+security-deep-forks  CP8D fail-closed media retention
+security-collections CP8E bounded collection recipe projections
+security-re-review   CP9 final integrated adversarial release gate
 ```
 
-CP2 and CP3 may run in parallel after CP0. CP1 must land before CP4 because both alter OAuth state, user-info extraction, account linking, schema, and tests. CP4A runs after the feature integration and before CP5 so the final router and every media-bearing feature share the intended controls. CP5 starts after those interfaces stabilize. CP5A then unifies the now-bounded upload implementations without changing their product behavior. CP6 and CP7 run on the integrated branch only.
+CP2 and CP3 may run in parallel after CP0. CP1 must land before CP4 because both alter OAuth state, user-info extraction, account linking, schema, and tests. CP4A runs after the feature integration and before CP5 so the final router and every media-bearing feature share the intended controls. CP5 starts after those interfaces stabilize. CP5A then unifies the now-bounded upload implementations without changing their product behavior. CP6 and CP7 run on the integrated branch only. After CP7, CP7A and CP7B may proceed independently. CP7C and CP7D are serialized because both change version-graph/history contracts and tests. CP8 reviewed the exact integrated candidate. CP8D and CP8E may proceed independently, but both must be rebased onto the integrated branch before CP9 reviews the exact resulting release candidate.
 
 Each implementation branch uses the `codex/` prefix unless the operator selects another repository convention. Agents must not share a source checkout, database, MinIO bucket, browser cookie name, or Dioxus cache.
 
@@ -944,6 +994,677 @@ The security reviewer may return `GOOD ENOUGH` only when:
 - no security control relies only on client UI state;
 - residual risks are operational or specialized rather than straightforward cross-user compromise.
 
+### CP7 completion evidence (2026-08-20)
+
+- The review ran from a fresh detached worktree at revision `cb57bdd2` with an
+  isolated application, ParadeDB/PostgreSQL, MinIO, and Mock OAuth stack.
+- `just ci` completed its compile, Clippy, 656-test, schema, policy, secret, and
+  deployment checks. The dependency audit passed the repository policy with 17
+  explicitly allowed warnings. All nine focused ParadeDB search authorization
+  tests passed separately against the live pinned database.
+- Ordinary browser OAuth login worked. Separate cookie-jar attack validation
+  proved that a logged-out victim could consume an attacker-authorized callback
+  and receive the attacker's session. Replay returned 401, an already signed-in
+  victim received 409 and retained their session, and a state-changing GET
+  logout revoked a valid session.
+- Independent source-to-sink review confirmed the reference-blind recipe image
+  deletion, unlisted graph-identifier disclosure, private fork-attribution
+  leak, eager complete-graph construction, and unpaginated history-summary
+  amplification paths.
+- The canonical scan recorded seven high-confidence findings: five medium and
+  two low. The final CP7 verdict was `NOT GOOD ENOUGH`.
+- Review artifacts were written outside the repository at
+  `/tmp/noms-cp7-security-review.html` and the canonical Codex Security scan
+  directory for scan `4d7c78e2-2ce7-43e2-ad90-2274fccd29fa`.
+
+---
+
+## Checkpoint 7A: Bind OAuth transactions to the initiating browser
+
+**Goal:** A valid OAuth callback must create or link authority only in the
+browser context that initiated that exact transaction, and logout must require
+an intentional same-origin state-changing request.
+
+**Findings addressed:** Transferable logged-out OAuth login callbacks and
+state-changing GET logout.
+
+**Depends on:** CP7. May proceed independently of CP7B. Must land before CP8.
+
+**Primary files:** `src/auth/oauth.rs`, `src/auth/logout.rs`,
+`src/auth/session.rs`, `src/db/mod.rs`, `src/main.rs`, auth-state schema and SQLx
+metadata, and OAuth/logout integration tests.
+
+### Tests first
+
+Add attack-regression tests that prove the pre-fix candidate fails for the
+expected reason:
+
+1. Browser A starts login and authorizes provider identity A; logged-out
+   browser B attempts the unconsumed callback and receives no application
+   session.
+2. Browser A completes its own callback successfully exactly once.
+3. A callback with a missing, malformed, expired, or mismatched browser
+   transaction binding fails before token exchange and never returns a session
+   cookie.
+4. Existing state expiry, provider mismatch, replay, login-session conflict,
+   link-session requirement, and link-user mismatch cases remain rejected.
+5. Two explicitly supported concurrent authorization attempts behave according
+   to a documented policy; one flow must not silently authorize the other.
+6. `GET /auth/logout` does not revoke or clear a session.
+7. Logout POST with a missing, duplicate, `null`, malformed, or non-matching
+   `Origin` header returns 403 without changing the session. A POST whose
+   parsed origin exactly matches the configured `BASE_URL` origin revokes the
+   database session and clears the cookie.
+8. A forced-logout navigation followed by an attacker callback still cannot
+   swap the browser into the attacker account.
+
+### Implementation tasks
+
+- Generate a high-entropy browser transaction binding at OAuth start.
+- Store only a digest or keyed representation with the auth-state row; do not
+  store or log the raw browser secret.
+- Deliver the browser value in a short-lived `HttpOnly`, `Secure` in
+  production, `SameSite=Lax` cookie with the narrowest practical host/path
+  scope and lifetime no longer than the auth-state lifetime.
+- Require an exact binding match at callback before exchanging the provider
+  code or issuing/linking authority. Preserve atomic one-time state handling.
+- Clear the transaction cookie on success and terminal failure without
+  weakening the application session cookie.
+- Define and test the concurrent-flow policy rather than accidentally relying
+  on one global cookie value.
+- Remove state mutation from GET logout. Make revocation POST-only and require
+  exactly one syntactically valid `Origin` header whose scheme, host, and
+  effective port exactly match the configured `BASE_URL` origin. Reject
+  missing, duplicate, `null`, malformed, or mismatched origins with 403; do not
+  fall back to `Host`, `Referer`, forwarded headers, or a permissive no-header
+  path.
+- Preserve normalized same-origin redirects and sanitized OAuth error/log
+  behavior.
+- Add aggregate metrics for binding mismatches and rejected logout intent;
+  never include state, code, verifier, cookie, token, or provider response
+  values.
+
+### Acceptance criteria
+
+- Possession of an otherwise valid callback URL is insufficient to create or
+  link an application session in another browser context.
+- The correct initiating browser can complete ordinary Google and GitHub login
+  and explicit account linking.
+- A mismatched callback cannot replace, attach to, or clear an existing
+  application session.
+- PKCE, one-time state, provider, purpose, user, expiry, and redirect controls
+  remain intact.
+- No safe/idempotent HTTP method revokes a session, and no POST without the
+  exact configured origin revokes a session.
+- The forced-logout plus transferred-callback chain fails end to end.
+
+### Validation and review gate
+
+Run focused auth tests, `just ci`, and a fresh two-context Mock OAuth browser
+walkthrough. Capture the exact Set-Cookie/status/profile outcomes for the
+correct, missing-binding, wrong-binding, replay, signed-in conflict, explicit
+link, GET logout, every rejected Origin category, and exact-origin POST logout
+cases.
+
+**Gate:** The security reviewer returns `PASS` only when no callback authority
+can cross browser transaction boundaries and logout revocation requires an
+exact configured-origin POST without regressing ordinary login/link/logout.
+
+**Risk:** High. Cookie scope, concurrency, callback ordering, and state
+consumption mistakes can create login failures, session fixation, or a new
+account-linking path.
+
+---
+
+## Checkpoint 7B: Make recipe-media deletion reference-aware
+
+**Goal:** An object must not be deleted while any authorized live recipe,
+draft, immutable version, fork, or collection projection still retains it,
+even when the deletion caller owns the storage namespace.
+
+**Finding addressed:** The public `delete_image` server function can remove
+media inherited by another tenant's valid fork and history.
+
+**Depends on:** CP7. May proceed independently of CP7A. Must land before CP8.
+
+**Primary files:** `src/api/upload.rs`, `src/db/mod.rs`,
+`src/db/versioning.rs`, `src/worker/orphan_cleanup.rs`, `src/storage.rs`, shared
+typed-upload components, and mock-storage integration tests.
+
+### Tests first
+
+Add mock-storage attack-regression tests covering:
+
+1. User A uploads recipe media, user B forks A's public/unlisted recipe, and A
+   attempts direct deletion; neither full nor thumbnail object is deleted.
+2. Retention holds when the source recipe is later private or deleted and the
+   surviving reference exists only in B's draft, live fork, immutable history,
+   or a collection recipe preview.
+3. A caller cannot use encoded, malformed, wrong-kind, wrong-owner, or external
+   URLs to influence a deletion decision.
+4. A genuinely unsaved, unreferenced upload can still be discarded immediately
+   with its one-use attempt-bound capability, and only objects created by that
+   upload attempt are removed.
+5. A concurrent save/reference operation cannot race a successful discard into
+   deleting a newly retained object.
+6. Recipe, collection-cover, and avatar replacement/removal preserve their
+   purpose-specific lifecycle and compensation behavior.
+
+### Implementation tasks
+
+- Replace the generic client-callable `delete_image(full_url)` authority with
+  an opaque, short-lived, one-use discard capability issued by the server for
+  one exact upload family. Retirement without an immediate server-managed
+  discard replacement does not satisfy this checkpoint.
+- Store only a digest of the discard capability with its authenticated owner,
+  media purpose, exact full/thumbnail keys, expiry, and lifecycle state. A
+  caller must not supply or change the URL, owner, kind, or key set at discard
+  time.
+- Serialize the upload family lifecycle under the same database transaction and
+  per-owner/object coordination used by persistence: `uncommitted` may become
+  either `retained` or `discarded` exactly once. Publish, fork, and persistence
+  may retain only an eligible family; discard may claim only an uncommitted,
+  unreferenced family. After `retained`, the attempt capability can never
+  authorize storage deletion.
+- Centralize the retained-reference decision used by normal recipe deletion,
+  direct discard, and orphan cleanup. Include live recipes, drafts, immutable
+  versions, authorized inherited fork provenance, and any collection view that
+  depends on the recipe object.
+- Make the final reference check and deletion authorization race-safe. Do not
+  perform a stale read followed by an uncoordinated storage delete while a
+  publish/fork operation can establish a new reference.
+- Keep exact canonical URL, owner UUID, object kind, filename, full/thumbnail
+  pairing, and external-URL rejection checks.
+- Do not broaden inherited-owner exceptions to collection-cover or avatar
+  namespaces.
+- Ensure failed or partial deletion has explicit, observable behavior and does
+  not report successful cleanup while leaving an inconsistent pair.
+
+### Acceptance criteria
+
+- Namespace ownership alone is never treated as proof that a recipe object is
+  safe to delete.
+- Another tenant's valid fork, draft, live recipe, immutable history, or
+  collection display cannot be broken by the original object owner.
+- The user can still immediately remove an abandoned upload without waiting for
+  orphan cleanup, but only with a one-use capability bound to that exact
+  unreferenced attempt and lifecycle transition.
+- Existing recipe, collection-cover, and avatar upload/replacement UX continues
+  to work with the shared typed transaction and quota accounting.
+- Orphan cleanup and direct deletion use one consistent retention contract.
+
+### Validation and review gate
+
+Run the focused mock-storage suite with exact ordered storage-call assertions,
+the fork/deleted-source retention tests, unified upload compensation tests, and
+`just ci`. Manually exercise upload/cancel, publish/fork, source deletion, fork
+rendering, collection preview, and eventual unreferenced cleanup in a fresh
+two-user environment.
+
+**Gate:** The security reviewer returns `PASS` only when every deletion sink
+re-proves both namespace authority and absence of retained references, including
+the concurrent save/delete boundary.
+
+**Risk:** High. An incomplete reference inventory can cause irreversible
+cross-tenant data loss, while an overly broad retention rule can leak storage
+indefinitely.
+
+---
+
+## Checkpoint 7C: Remove stable identifiers from hidden graph and attribution projections
+
+**Goal:** Public graph and fork-attribution responses may preserve explicitly
+accepted topology, but must not reveal a stable locator or private metadata for
+a recipe the viewer could not discover under current visibility rules.
+
+**Findings addressed:** Redacted graph nodes/edges disclose unlisted recipe
+UUIDs, and fork attribution discloses a private source title and UUID.
+
+**Depends on:** CP7. Serialize before CP7D because both modify version graph
+contracts, queries, wire types, and tests. Must land before CP8.
+
+**Primary files:** `src/types.rs`, `src/api/recipe.rs`,
+`src/db/versioning.rs`, `src/pages/recipe_detail.rs`, graph/lineage components,
+and serialization/authorization tests.
+
+### Tests first
+
+Add response-level tests proving:
+
+1. An anonymous viewer of a public recipe connected to an unlisted recipe
+   receives no stable UUID in hidden nodes, edges, frontiers, counts, links, or
+   serialized auxiliary fields that can be passed to `get_public_recipe`.
+2. URL-known unlisted recipe pages and their intentionally readable history
+   still work when the caller already possesses that recipe ID.
+3. Adjacent private recipes reveal no ID, title, owner, image, timestamp,
+   change summary, fork message, or deleted snapshot metadata.
+4. A public/unlisted fork whose source later becomes private returns redacted
+   attribution without source UUID or title.
+5. Deleted-private source attribution remains redacted; public source
+   attribution remains complete.
+6. Graph expansion works with the chosen opaque/topology representation and
+   does not accept a handle from a different recipe, viewer, response, or
+   expired context.
+
+### Implementation tasks
+
+- Replace stable recipe/version IDs for inaccessible graph endpoints with
+  either omitted hidden endpoints or opaque, scoped graph handles that cannot
+  be reused as direct recipe locators.
+- Apply the same rule to node IDs, fork-edge source/target values, frontiers,
+  comparison affordances, links, and any client cache key serialized to the
+  viewer.
+- If opaque handles are retained across expansion requests, authenticate their
+  selected recipe, viewer/anonymous context, direction, expiry, and integrity
+  server-side. Do not expose a reversible UUID encoding.
+- Resolve the source recipe and apply current visibility before returning fork
+  attribution. Redact deleted-private sources using their captured visibility.
+- Keep the product decision that non-owners may read public and URL-known
+  unlisted history/snapshots. Do not reintroduce blanket owner-only history.
+- Document whether hidden-branch existence/count topology remains intentionally
+  visible; no content-bearing or reusable identifier may be included.
+
+### Acceptance criteria
+
+- Public graph access cannot be used to discover a related unlisted recipe's
+  direct-access UUID.
+- Private and inaccessible source metadata remains redacted after visibility
+  changes and deletion.
+- Known public/unlisted graph, history, comparison, and attribution workflows
+  continue to work with deterministic expansion and no cross-context handles.
+- No client UI state is relied on to hide a stable identifier already present
+  in the server response.
+
+### Validation and review gate
+
+Run graph serialization snapshots, public/unlisted/private visibility matrices,
+source visibility-transition tests, deleted-lineage tests, and `just ci`.
+Inspect raw server-function responses rather than only the rendered UI. In a
+fresh two-user walkthrough, attempt to extract and reuse every hidden node,
+edge, frontier, attribution, DOM, and network identifier.
+
+**Gate:** The security reviewer returns `PASS` only when an inaccessible graph
+endpoint or attribution cannot be converted into a direct recipe locator or
+private metadata read while intentional URL-known unlisted access still works.
+
+**Risk:** High. Graph topology depends on stable internal identity; careless
+redaction can either leak the same UUID elsewhere or break expansion,
+comparison, caching, and accessibility behavior.
+
+---
+
+## Checkpoint 7D: Make history and graph work page- and byte-bounded
+
+**Goal:** CPU, decoded bytes, database rows, and transient memory for history
+and graph requests must scale with the requested response page, not the entire
+tenant-controlled history or connected graph.
+
+**Findings addressed:** Complete-graph construction before 25/5-node paging and
+unpaginated 250-snapshot version-summary decoding/diffing.
+
+**Depends on:** CP7C. Must land before CP8.
+
+**Primary files:** `src/api/recipe.rs`, `src/db/versioning.rs`,
+`src/db/diff.rs`, `src/security.rs`, recipe history/graph types and pages,
+schema/SQLx metadata if summary projection is persisted, and resource-bound
+tests.
+
+### Tests first
+
+Create large but non-exhaustive fixtures with instrumented query/decode counts
+and prove the pre-fix behavior exceeds the intended bounds:
+
+1. Initial graph returns at most 25 nodes while fetching/decoding at most the
+   response page plus a small documented lookahead, not 1,000 full snapshots.
+2. Expansion returns at most five new nodes and does not reconstruct already
+   loaded or unrelated branches.
+3. Version-summary reads use cursor pagination and fetch/decode at most one page
+   plus the minimum adjacent data required for summaries.
+4. Aggregate encoded and decoded bytes are capped independently of row count;
+   one oversized page fails safely before large allocation.
+5. Concurrent maximum-cost graph/history requests are bounded by a dedicated
+   semaphore or equivalent work budget and do not starve ordinary reads for
+   another user.
+6. Stale, forged, duplicate, cross-recipe, and over-limit expansion cursors or
+   loaded-node state fail without triggering complete-graph work.
+7. Current-visibility authorization and CP7C opaque hidden-endpoint behavior
+   remain identical across every page.
+
+### Implementation tasks
+
+- Replace `get_recipe_version_graph(...complete...)` followed by in-memory
+  batching with bounded frontier queries that fetch only the requested nodes
+  and a small lookahead needed to describe further frontiers.
+- Push ordering, traversal limits, and lightweight projection into bounded SQL
+  where practical. Do not load full snapshots for nodes whose response needs
+  only title/image/change-summary metadata.
+- Add a cursor/page contract for version summaries. Persist or derive bounded
+  lightweight summary metadata at publish time instead of decoding all
+  historical snapshots on every read.
+- If schema-denormalized summary metadata is introduced, define and review its
+  migration/backfill policy explicitly. Do not preserve old rows through an
+  unbounded fallback that recreates the finding.
+- Enforce an aggregate snapshot-byte budget before or during decoding, with
+  checked accounting for encoded JSON, decoded structures, and diff inputs.
+- Add a dedicated concurrency/work budget for graph and history operations in
+  addition to sustained per-user/IP request rates.
+- Preserve deterministic ordering, comparison direction, truncation metadata,
+  and no-duplicate expansion behavior.
+- Instrument bounded rows/bytes/duration/rejection counts without logging
+  recipe content or identifiers.
+
+### Acceptance criteria
+
+- Initial and expansion work has a documented constant relationship to the
+  25/5-node response size and lookahead; it cannot fetch/decode the 1,000-node
+  maximum first.
+- Version-summary work has a documented constant relationship to its page size
+  and cannot decode all 250 snapshots in one request.
+- Aggregate bytes and concurrent expensive operations have explicit server-side
+  ceilings below process-memory and database-pool danger levels.
+- A patient attacker who fills every valid quota cannot turn one anonymous read
+  into hundreds of megabytes of snapshot allocation.
+- History, graph, comparisons, visibility, and CP7C privacy behavior remain
+  functionally correct.
+
+### Validation and review gate
+
+Run focused query-count/decoded-byte tests, maximum and one-over-maximum cursor
+and page tests, concurrent work-budget tests, current-visibility matrices, and
+`just ci`. Record SQL row counts and application byte counters for large valid
+fixtures. Use a controlled load test with conservative host limits; do not prove
+the fix by intentionally exhausting the workstation.
+
+**Gate:** The security reviewer returns `PASS` only with measured evidence that
+database rows, decoded snapshots, diff operations, peak bytes, and concurrent
+work remain within the documented page-level bounds.
+
+**Risk:** High. This changes core graph/history query shapes and may require
+schema projection changes; incorrect cursors can omit, duplicate, reorder, or
+de-authorize historical data.
+
+---
+
+## Checkpoint 8: Integrated review of the first remediated candidate
+
+**Goal:** Repeat CP7 against the exact integrated candidate after CP7A–CP7D and
+determine whether that candidate meets the consumer-security release gate.
+
+**Environment:** A fresh detached worktree and isolated NOMS-014 application,
+database, storage, Mock OAuth server, browser profiles, cookie name, ports, and
+build cache. Rebuild and inspect the production image from the candidate
+revision; do not reuse CP7 runtime state or an implementer's environment.
+
+### Required gate
+
+- Run `just ci`, the current dependency/secret/deployment policy, all focused
+  search tests, and the production image/runtime inspection.
+- Repeat every CP7 automated and manual adversarial case.
+- Repeat the exact transferred-callback attack with logged-out and signed-in
+  victims, the forced-logout chain, correct-browser completion, explicit link,
+  replay, expiry, and mismatch variants.
+- Repeat the fork-retained image deletion attack across live forks, drafts,
+  immutable versions, deleted sources, and collection projections.
+- Inspect raw graph/attribution responses for reusable hidden identifiers and
+  private metadata, then attempt direct unlisted reads with every value exposed.
+- Measure graph/history rows, decodes, diff operations, bytes, duration, and
+  concurrent work on large valid fixtures.
+- Re-run the ordinary login, linking, logout, recipe CRUD/history/fork,
+  collection sharing/cover, unified upload/avatar, search, profile, and account
+  deletion regression walkthroughs.
+- Obtain a separate independent security review of the complete diff and exact
+  candidate, not only one review per remediation checkpoint.
+
+### Review acceptance criteria
+
+All original CP7 release criteria still apply. In addition:
+
+- another browser cannot redeem or link any OAuth transaction it did not start;
+- logout state changes require a POST with exactly one valid `Origin` matching
+  the configured `BASE_URL` origin;
+- no deletion sink can remove a recipe object retained by an authorized
+  reference, including inherited cross-tenant forks;
+- no hidden graph or attribution response exposes a stable direct-access
+  locator or private metadata;
+- graph and history work is demonstrably page-, byte-, and concurrency-bounded;
+- no CP7A–CP7D reviewer has an unresolved blocking or should-fix finding;
+- the exact seven CP7 findings have regression tests and end-to-end evidence;
+- remaining limitations are operational/specialized and do not provide a
+  straightforward cross-user compromise or feasible single-actor service
+  exhaustion path.
+
+Produce a new self-contained HTML report under `/tmp` with the candidate
+revision, threat model, all attack outcomes, measured resource evidence,
+screenshots where browser identity matters, regression evidence, limitations,
+and a final `GOOD ENOUGH` or `NOT GOOD ENOUGH` verdict.
+
+**Gate result:** The independent CP8 reviewer returned `NOT GOOD ENOUGH` and
+created CP8D and CP8E below. NOMS-015 completion now requires the CP9 re-review;
+do not weaken the original CP8 release criteria.
+
+---
+
+### CP8 completion evidence (2026-09-02)
+
+- The review ran against revision `1ec37667` in a fresh detached worktree and
+  isolated application, ParadeDB/PostgreSQL, MinIO, and Mock OAuth stack.
+- `just ci` passed 699 tests with 10 ignored. All nine ignored ParadeDB search
+  integration tests passed separately against the live pinned database.
+- The production image built successfully, ran as the unprivileged `noms` user,
+  exposed no world-writable application files, and failed closed when required
+  production configuration was absent.
+- Focused runtime checks passed for ordinary Mock OAuth login, missing and
+  mismatched browser bindings, callback replay, signed-in login rejection,
+  cross-origin logout rejection, and exact-origin logout.
+- The canonical scan recorded two medium- and seven low-severity findings. The
+  two medium findings below remain release blocking; the final CP8 verdict was
+  `NOT GOOD ENOUGH`.
+- The self-contained review report is `/tmp/noms-cp8-security-review.html`; the
+  canonical scan ID is `227e6e84-2f54-4f8a-aa17-22c8a2e95514`.
+
+---
+
+## Checkpoint 8D: Fail closed when media-reference ancestry is truncated
+
+**Goal:** A bounded ancestry search must never turn incomplete knowledge into
+authority to delete recipe media that a surviving fork still references.
+
+**Finding addressed:** Depth-limited fork ancestry can authorize deletion of
+still-referenced media.
+
+**Depends on:** CP8B and the CP8 candidate at revision `1ec3766`. May proceed
+independently of CP8E. Must land before CP9.
+
+**Primary files:** `src/db/mod.rs`, `src/db/versioning.rs`,
+`src/db/media_lifecycle_tests.rs`, `src/worker/orphan_cleanup.rs`, and focused
+media-retention integration tests.
+
+### Tests first
+
+1. Build a 33-plus-generation cross-owner fork chain, leave only the deepest
+   exact holder live, and prove the original media family cannot be claimed or
+   deleted.
+2. Repeat the deep-chain case after the original recipe becomes private and
+   after its source row is deleted; the surviving fork must continue rendering
+   the media.
+3. Exercise the exact depth boundary on both sides of the configured cap and
+   prove a truncated result is distinguishable from a complete negative result.
+4. Prove the scheduled worker and any direct lifecycle claim use the same
+   fail-closed decision.
+5. Keep a shallow, genuinely unreferenced media family reclaimable so the fix
+   does not convert all bounded ancestry checks into permanent retention.
+6. Preserve the existing fail-closed behavior when the holder-count cap,
+   database timeout, malformed lineage, or another safety limit prevents a
+   complete proof.
+
+### Implementation tasks
+
+- Change the retained-reference query contract to report whether the ancestry
+  proof was complete. Reaching the recursion, holder, row, timeout, or decoding
+  limit is `incomplete`, not `unreferenced`.
+- Select the conservative rollout: retain the media family whenever the proof
+  is incomplete. Do not silently increase or remove the recursion cap merely to
+  make the test pass.
+- Keep the complete negative path capable of granting a cleanup claim only
+  after every exact holder has been checked against the original owner or a
+  server-established inherited-authority relationship.
+- Centralize the result so orphan cleanup, account-deletion cleanup, and any
+  other recipe-media claim path cannot interpret truncation differently.
+- Record aggregate, non-sensitive metrics for conservative retention caused by
+  depth, holder, row, and timeout limits. Do not record recipe, owner, media, or
+  lineage identifiers.
+- Document durable reference-authority persistence as a possible later
+  optimization, not as a prerequisite for the conservative correctness fix.
+
+### Acceptance criteria
+
+- A fork chain of any permitted depth cannot cause a still-rendered media object
+  to be claimed for deletion merely because its authority lies beyond a search
+  cap.
+- Every incomplete safety proof retains the object and remains observable
+  through aggregate metrics.
+- A complete proof that no authorized reference remains still allows eventual
+  reclamation.
+- Existing shallow fork, draft, immutable-version, collection projection,
+  account deletion, and ordinary orphan-cleanup behavior remains intact.
+
+### Validation and review gate
+
+Run the focused media lifecycle and cleanup suites, the 32/33-plus-generation
+database integration cases, account-deletion cleanup tests, and `just ci`.
+Manually verify that the deepest surviving fork still renders the image after
+the source is deleted and cleanup runs.
+
+**Gate:** The reviewer returns `PASS` only when a complete ancestry proof is
+required before deletion authority is granted and every truncated/error path
+retains conservatively.
+
+**Risk:** High. A false negative can permanently break another tenant's live
+content; an overly broad fail-closed result can retain unused objects until a
+later complete scan.
+
+---
+
+## Checkpoint 8E: Bound collection recipe projections and anonymous read work
+
+**Goal:** Collection pages return only the lightweight recipe-card data they
+render, with endpoint-specific page, byte, rate, timeout, and shared concurrency
+bounds.
+
+**Finding addressed:** Public collection pages can materialize roughly 100 MiB
+of recipe JSON per request.
+
+**Depends on:** CP8C and the CP8 candidate at revision `1ec3766`. May proceed
+independently of CP8D. Must land before CP9.
+
+**Primary files:** `src/types.rs`, `src/security.rs`, `src/api/collection.rs`,
+`src/db/mod.rs`, `src/pages/collection_detail.rs`, recipe-card components, and
+collection authorization/resource-bound tests.
+
+### Tests first
+
+1. Publish a collection containing 100 maximum-size valid recipes and prove a
+   page response omits ingredients, instructions, equipment, commentary, and
+   every other full-snapshot field not rendered by a recipe card.
+2. Assert the server independently caps each collection recipe page at the
+   endpoint's existing 12-card display size even when a client requests 100 or
+   supplies a forged larger value.
+3. Measure selected rows, serialized bytes, duration, and peak decoded data for
+   maximum-size fixtures; each request must remain under documented aggregate
+   ceilings derived from the lightweight projection rather than the 1 MiB
+   recipe snapshot limit.
+4. Prove public anonymous and identifier-known unlisted collection reads acquire
+   the same shared expensive-read permit and actor/client rate budget without
+   changing visibility filtering or existence-hiding behavior.
+5. Exercise concurrent requests above the shared limit and prove excess work is
+   rejected or queued within the documented database execution budget without
+   exhausting the connection pool.
+6. Preserve stable pagination, owner-only removal/reordering, recipe-card
+   rendering, visibility intersections, and loading every permitted membership
+   over multiple bounded pages.
+
+### Implementation tasks
+
+- Introduce a serialized collection recipe-card projection containing only the
+  fields the card and owner controls require: stable recipe identity, title,
+  bounded description, timing/servings metadata, one display image with bounded
+  edit metadata, visibility as required by owner controls, and bounded author
+  display data.
+- Define endpoint-specific constants of 12 cards, 500 Unicode scalar values of
+  description per card, and 512 KiB of serialized card data per response. Full
+  recipe detail remains available only through the individually authorized
+  recipe-detail endpoint.
+- Replace both owned and public collection membership queries that construct
+  complete `Recipe` values with explicit projection queries. Do not fetch or
+  decode ingredients, instructions, equipment, commentary, or complete image
+  arrays and discard them after allocation.
+- Enforce the 12-card endpoint limit inside the server/database boundary rather
+  than trusting the client-provided limit. Preserve deterministic keyset or
+  otherwise bounded pagination and `has_more` semantics.
+- Enforce the 512 KiB serialized output ceiling with checked accounting. A
+  ceiling breach must fail safely without returning a partial ambiguous page.
+- Wrap collection recipe reads in the shared expensive-read concurrency budget
+  and an anonymous-aware rate budget keyed by the existing trusted client
+  identity contract. Keep the five-second database budget as a backstop, not
+  the primary memory-control mechanism.
+- Reuse the lightweight projection for the initial collection contents and
+  subsequent pages so no alternate route retains the full-recipe amplification
+  path.
+
+### Acceptance criteria
+
+- No collection list/read endpoint selects, decodes, or serializes full recipe
+  snapshots merely to render cards.
+- One request returns at most 12 bounded card projections, no description over
+  500 Unicode scalar values, and no more than 512 KiB of serialized card data,
+  regardless of valid recipe snapshot size.
+- Repeated anonymous reads are constrained by both per-client rate policy and
+  the shared expensive-read concurrency budget.
+- Public, unlisted, private, owner, membership mutation, pagination, and reorder
+  behavior remains functionally correct.
+
+### Validation and review gate
+
+Run focused collection database/API/UI tests, maximum-fixture byte and row
+instrumentation tests, concurrent anonymous-read tests, visibility matrices,
+and `just ci`. In a fresh isolated browser environment, load and paginate a
+large public collection and verify cards, loading states, removal, and owner
+reordering remain functional.
+
+**Gate:** The reviewer returns `PASS` only with measured evidence that every
+collection page performs work proportional to at most 12 lightweight cards and
+that concurrent anonymous reads share the intended rate and concurrency limits.
+
+**Risk:** Medium. Projection or cursor mistakes can omit card fields, duplicate
+or skip memberships, break reordering, or accidentally widen recipe visibility.
+
+---
+
+## Checkpoint 9: Final integrated adversarial re-review and release verdict
+
+**Goal:** Repeat the integrated release review against the exact candidate after
+CP8D and CP8E without weakening any CP7 or CP8 acceptance criterion.
+
+**Depends on:** CP8D and CP8E.
+
+### Required gate
+
+- Repeat the complete CP8 validation matrix and production image/runtime
+  inspection against a fresh isolated environment.
+- Reproduce the 33-plus-generation retained-media case before the fix and prove
+  it fails closed on the candidate through every deletion/cleanup entry point.
+- Measure maximum-size public collection pages and concurrent anonymous reads,
+  recording selected columns, rows, serialized bytes, duration, permits, and
+  rate-limit outcomes.
+- Re-run the seven low-severity CP8 findings to ensure neither remediation
+  increases their reachability or impact; promote any aggregate or changed risk
+  to an explicit checkpoint.
+- Obtain an independent security review of the complete candidate and issue a
+  new self-contained report with a `GOOD ENOUGH` or `NOT GOOD ENOUGH` verdict.
+
+**Gate:** NOMS-015 is complete only if the independent CP9 reviewer returns
+`GOOD ENOUGH` with no unresolved blocking or should-fix findings.
+
 ---
 
 ## Rollout and rollback
@@ -958,26 +1679,48 @@ The security reviewer may return `GOOD ENOUGH` only when:
 6. Pause collection/recipe orphan cleanup, atomically apply the selected legacy-cover database policy and typed `collections/` upload cutover, verify every surviving cover has a recognized retention path, then re-enable strict dual-namespace cleanup.
 7. Deploy the unified internal upload transaction; no media-object or schema migration is required because canonical key formats remain unchanged.
 8. Execute the selected stable-identity rollout policy, including the approved no-compatibility path where applicable.
-9. If the rollout uses temporary legacy compatibility, remove it only after evidence shows it is unused; omit this step for the approved no-compatibility path.
+9. Deploy the browser-bound OAuth transaction schema and code together after clearing or expiring all pre-deployment auth-state rows; those rows are ephemeral and must not receive a compatibility bypass.
+10. Deploy POST-only logout and the exact configured-Origin client/server change in the same release so users are not left without a working logout action.
+11. Deploy the attempt-bound discard capability and reference-aware recipe-media deletion together; remove the generic URL endpoint only when the replacement client flow is active, and retain orphan cleanup as fallback reclamation rather than the normal immediate-discard path.
+12. Deploy the opaque graph/attribution contract before the bounded graph/history query contract, then invalidate incompatible client caches or generated bundles.
+13. Apply any CP7D summary-projection schema/migration policy before switching reads; do not enable an unbounded legacy fallback.
+14. Record the CP8 `NOT GOOD ENOUGH` verdict and preserve its exact candidate and report artifacts as review evidence.
+15. Deploy CP8D's fail-closed ancestry result before running any recipe-media cleanup worker built from the new candidate.
+16. Deploy CP8E's collection card projection, endpoint page limit, and anonymous read budgets together so no public route retains the full-recipe fallback.
+17. Complete CP9 against the exact remediated production candidate before general release.
 
 ### Monitoring
 
 Track structured counts without sensitive values:
 
 - OAuth state-purpose mismatches;
+- OAuth browser-transaction binding mismatches by non-sensitive category;
+- rejected GET logout and rejected POST logout attempts by missing, duplicate, `null`, malformed, or mismatched Origin category;
 - rejected link callbacks by mismatch category;
 - provider-subject migration successes/conflicts;
 - rejected foreign storage references;
 - rejected media-kind/namespace mismatches and orphan cleanup outcomes per managed namespace;
+- deletion attempts blocked by retained live, draft, version, fork, or collection references;
+- media-retention proofs that fail closed by depth, holder, row, or timeout category;
 - skipped unsafe legacy deletions;
 - OAuth rate-limit responses by hashed/anonymized client key;
 - mutation-limit responses;
+- graph/history rows, decoded bytes, duration, concurrency rejections, and stale/invalid cursor rejections;
+- collection recipe-card rows and serialized bytes, plus anonymous rate and shared-concurrency rejections;
+- redacted graph/attribution responses by visibility category, without recipe IDs;
 - session verification and revocation failures at aggregate level.
 
 ### Rollback constraints
 
 - Do not roll back to code that treats a callback cookie as authorization to link.
+- Do not roll back to OAuth callbacks that accept a state without the matching initiating-browser transaction binding.
+- Do not restore state-changing GET logout.
 - Do not roll back to unconditional URL-derived storage deletion.
+- Do not roll back to namespace-only deletion that ignores retained references.
+- Do not treat a truncated or failed media ancestry search as a complete negative reference proof.
+- Do not restore stable recipe UUIDs in inaccessible graph nodes, edges, frontiers, or attribution.
+- Do not restore complete-graph or full-history materialization as a compatibility fallback.
+- Do not restore full-recipe collection membership responses or a client-selectable 100-recipe collection page.
 - Additive schema may remain during rollback.
 - If rate-limit client identity fails in production, disable only the faulty limiter through a controlled configuration while preserving OAuth state/PKCE checks; do not restore the global fallback bucket.
 - Preserve audit evidence and rejected-event metrics during rollback analysis.
@@ -989,21 +1732,30 @@ Track structured counts without sensitive values:
 - [ ] CP0 baseline is deterministic and `just ci` passes.
 - [ ] OAuth login and linking have explicit purposes and complete state/session binding.
 - [ ] The login-CSRF account-takeover regression test passes through the real callback handler.
+- [ ] Every OAuth callback is bound to the initiating browser transaction; a transferred callback cannot create or link authority even after forced logout.
+- [ ] Logout revocation is POST-only and rejects missing, duplicate, `null`, malformed, or mismatched Origin headers; only the exact configured `BASE_URL` origin may revoke a session.
 - [ ] OAuth and logout redirects remain same-origin after browser-compatible parsing and normalization, including raw and encoded slash/backslash confusion cases.
 - [ ] The production-composed Dioxus router applies authentication middleware to intended routes while public/unlisted recipe history remains governed by application authorization rather than a blanket login redirect.
 - [ ] All media persistence and deletion paths enforce exact tenant ownership.
 - [ ] New custom collection covers use dedicated collection object kinds, upload handling, and the `collections/` namespace through the shared typed parser; exact pairing, owner-aware retention, unsaved-upload deletion, and orphan reclamation are verified.
 - [ ] Recipe, collection-cover, and avatar uploads use one typed internal transaction with shared quota locking, exact variant accounting, attempt-scoped compensation, and purpose-specific authorization; generic upload callers cannot acquire avatar persistence authority.
 - [ ] Cross-tenant image and avatar deletion tests prove no victim storage request occurs.
+- [ ] Recipe-media deletion proves both exact namespace authority and absence of retained live, draft, version, fork, or collection references at a race-safe boundary; immediate abandoned-upload cleanup uses a one-use attempt-bound capability and lifecycle transition rather than a caller-supplied URL.
 - [ ] The production serving path attaches trustworthy connection information.
 - [ ] OAuth rate limits are independent per client and cannot be globally exhausted by one attacker.
 - [ ] New OAuth accounts use stable provider subjects and verified-email semantics.
 - [ ] Existing identity handling follows an explicitly approved migration or no-compatibility policy.
 - [ ] Current live recipe visibility governs version lists, snapshots, comparisons, lineage, and graph access consistently; drafts remain owner-only and inaccessible branches reveal at most redacted topology.
+- [ ] Hidden graph nodes, edges, frontiers, links, and attribution expose no stable direct-access recipe locator or private source metadata; URL-known unlisted access remains intentional and functional.
 - [ ] Collection hierarchy, membership, sharing, cover media, and search projections preserve both collection ownership and member-recipe visibility.
 - [ ] Search results, grouped sections, counts, facets, and autocomplete cannot reveal another user's private/unlisted entities.
 - [ ] Graph expansion state, collection hierarchy/reorders, active drafts, immutable-version growth, and search/autocomplete workloads have proportionate per-request and sustained-abuse controls.
+- [ ] Initial/expansion graph queries and version-summary reads are page-, aggregate-byte-, and concurrency-bounded with measured evidence; they never construct the complete 1,000-node graph or decode all 250 snapshots before returning a page.
 - [ ] Public queries, structured recipe inputs, uploads, and mutations have proportionate server-side bounds.
 - [x] Dependency audit and production security configuration are enforced in CI/deployment.
-- [ ] Independent integrated security review returns `GOOD ENOUGH`.
+- [x] CP7 independent integrated security review completed and returned `NOT GOOD ENOUGH`; all seven findings have explicit remediation checkpoints.
+- [x] CP8 independent integrated security review completed at revision `1ec3766` and returned `NOT GOOD ENOUGH` with two medium- and seven low-severity findings.
+- [ ] Incomplete or depth-truncated fork ancestry retains recipe media; only a complete negative authority proof permits cleanup.
+- [ ] Collection membership reads return at most 12 lightweight card projections under aggregate byte, anonymous rate, database timeout, and shared concurrency bounds.
+- [ ] CP9 independent integrated security re-review of the CP8D/CP8E candidate returns `GOOD ENOUGH`.
 - [ ] Remaining specialized risks, exclusions, owners, and expiry dates are documented.
