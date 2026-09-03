@@ -187,6 +187,23 @@ test("remote-content-and-controls keeps template comments and attributes opaque"
   }
 });
 
+test("remote-content-and-controls resumes after iframe and noscript raw text", async () => {
+  assert.ifError(parserLoadError);
+  const realRecipe = "<article><h1>Real Recipe</h1><h2>Ingredients</h2><ul><li>1 cup rice</li></ul><h2>Directions</h2><ol><li>Cook.</li></ol></article>";
+  for (const leadingContent of [
+    `<iframe><script>literal fallback</iframe>`,
+    `<iframe><template>literal fallback</iframe>`,
+    `<noscript><template>literal fallback</noscript>`,
+  ]) {
+    const candidate = await parseRecipeClipboard({
+      html: `${leadingContent}${realRecipe}`,
+      plainText: null,
+      sourceUrl: null,
+    });
+    assert.equal(candidate.fields.title.value, "Real Recipe");
+  }
+});
+
 test("remote-content-and-controls preserves audit evidence on unsupported and text fallback paths", async () => {
   assert.ifError(parserLoadError);
   const activeHtml = "<script src=https://example.invalid/app.js></script>";

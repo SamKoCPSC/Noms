@@ -711,8 +711,8 @@ function selectedYield(html, start, end) {
 }
 
 const DISCARDED_RAW_CONTENT_TAGS = new Set(["script", "style", "iframe", "template", "noscript"]);
-const TEXT_CONTENT_TAGS = new Set(["script", "style", "textarea", "title"]);
-const STRUCTURED_OPAQUE_TAGS = new Set(["iframe", "template", "noscript"]);
+const TEXT_CONTENT_TAGS = new Set(["script", "style", "textarea", "title", "iframe", "noscript"]);
+const STRUCTURED_OPAQUE_TAGS = new Set(["template"]);
 const REMOTE_RESOURCE_ATTRIBUTES = new Set(["action", "href", "poster", "src", "srcset"]);
 
 function htmlTagEnd(html, start) {
