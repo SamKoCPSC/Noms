@@ -755,6 +755,12 @@ function rawContentEnd(html, start, tag) {
       scanIndex = commentEnd + 3;
       continue;
     }
+    if (html.startsWith("<!", tagIndex) || html.startsWith("<?", tagIndex)) {
+      const declarationEnd = html.indexOf(">", tagIndex + 2);
+      if (declarationEnd < 0) return html.length;
+      scanIndex = declarationEnd + 1;
+      continue;
+    }
 
     const closingMatch = html.slice(tagIndex).match(/^<\/\s*([a-z][a-z0-9:-]*)\s*>/iu);
     if (closingMatch) {

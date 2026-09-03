@@ -175,6 +175,9 @@ test("remote-content-and-controls keeps template comments and attributes opaque"
     `<style>x::after { content: "</template>"; }</style>${fakeRecipe}`,
     `<iframe></template></iframe>${fakeRecipe}`,
     `<noscript></template></noscript>${fakeRecipe}`,
+    `<![CDATA[ </template> ]]>${fakeRecipe}`,
+    `<?probe </template> ?>${fakeRecipe}`,
+    `<!probe </template> >${fakeRecipe}`,
   ]) {
     await assert.rejects(
       Promise.resolve().then(() => parseRecipeClipboard({
