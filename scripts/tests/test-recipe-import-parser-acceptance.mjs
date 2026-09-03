@@ -163,6 +163,30 @@ test("remote-content-and-controls rejects malformed quoted raw-content openings"
   }
 });
 
+test("remote-content-and-controls keeps template comments and attributes opaque", async () => {
+  assert.ifError(parserLoadError);
+  const fakeRecipe = "<article><h1>Injected Recipe</h1><h2>Ingredients</h2><ul><li>1 cup noise</li></ul><h2>Directions</h2><ol><li>Ignore.</li></ol></article>";
+  for (const templateBody of [
+    `<!-- </template> -->${fakeRecipe}`,
+    `<div title="</template>">${fakeRecipe}</div>`,
+    `<textarea></template></textarea>${fakeRecipe}`,
+    `<title></template></title>${fakeRecipe}`,
+    `<script>const boundary = "</template>";</script>${fakeRecipe}`,
+    `<style>x::after { content: "</template>"; }</style>${fakeRecipe}`,
+    `<iframe></template></iframe>${fakeRecipe}`,
+    `<noscript></template></noscript>${fakeRecipe}`,
+  ]) {
+    await assert.rejects(
+      Promise.resolve().then(() => parseRecipeClipboard({
+        html: `<template>${templateBody}</template>`,
+        plainText: null,
+        sourceUrl: null,
+      })),
+      /does not contain a recognizable recipe/u,
+    );
+  }
+});
+
 test("remote-content-and-controls preserves audit evidence on unsupported and text fallback paths", async () => {
   assert.ifError(parserLoadError);
   const activeHtml = "<script src=https://example.invalid/app.js></script>";

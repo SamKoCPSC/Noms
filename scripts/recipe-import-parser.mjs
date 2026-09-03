@@ -711,6 +711,8 @@ function selectedYield(html, start, end) {
 }
 
 const DISCARDED_RAW_CONTENT_TAGS = new Set(["script", "style", "iframe", "template", "noscript"]);
+const TEXT_CONTENT_TAGS = new Set(["script", "style", "textarea", "title"]);
+const STRUCTURED_OPAQUE_TAGS = new Set(["iframe", "template", "noscript"]);
 const REMOTE_RESOURCE_ATTRIBUTES = new Set(["action", "href", "poster", "src", "srcset"]);
 
 function htmlTagEnd(html, start) {
@@ -728,6 +730,61 @@ function htmlTagEnd(html, start) {
     }
   }
   return null;
+}
+
+function textContentEnd(html, start, tag) {
+  const closingPattern = new RegExp(`<\\/${tag}\\s*>`, "giu");
+  closingPattern.lastIndex = start;
+  const closingMatch = closingPattern.exec(html);
+  return closingMatch
+    ? (closingMatch.index ?? 0) + closingMatch[0].length
+    : html.length;
+}
+
+function rawContentEnd(html, start, tag) {
+  if (TEXT_CONTENT_TAGS.has(tag)) return textContentEnd(html, start, tag);
+
+  const openContainers = [tag];
+  let scanIndex = start;
+  while (scanIndex < html.length) {
+    const tagIndex = html.indexOf("<", scanIndex);
+    if (tagIndex < 0) return html.length;
+    if (html.startsWith("<!--", tagIndex)) {
+      const commentEnd = html.indexOf("-->", tagIndex + 4);
+      if (commentEnd < 0) return html.length;
+      scanIndex = commentEnd + 3;
+      continue;
+    }
+
+    const closingMatch = html.slice(tagIndex).match(/^<\/\s*([a-z][a-z0-9:-]*)\s*>/iu);
+    if (closingMatch) {
+      if (closingMatch[1].toLowerCase() === openContainers.at(-1)) {
+        openContainers.pop();
+        if (openContainers.length === 0) return tagIndex + closingMatch[0].length;
+      }
+      scanIndex = tagIndex + closingMatch[0].length;
+      continue;
+    }
+
+    const openingMatch = html.slice(tagIndex + 1).match(/^([a-z][a-z0-9:-]*)\b/iu);
+    if (!openingMatch) {
+      scanIndex = tagIndex + 1;
+      continue;
+    }
+    const openingEnd = htmlTagEnd(html, tagIndex + 1 + openingMatch[0].length);
+    if (openingEnd === null) return html.length;
+    const openingTag = openingMatch[1].toLowerCase();
+    const selfClosing = /\/\s*>$/u.test(html.slice(tagIndex, openingEnd));
+    if (!selfClosing && TEXT_CONTENT_TAGS.has(openingTag)) {
+      scanIndex = textContentEnd(html, openingEnd, openingTag);
+      continue;
+    }
+    if (!selfClosing && STRUCTURED_OPAQUE_TAGS.has(openingTag)) {
+      openContainers.push(openingTag);
+    }
+    scanIndex = openingEnd;
+  }
+  return html.length;
 }
 
 function discardRawContent(html, preserveOpeningTags = false) {
@@ -768,12 +825,7 @@ function discardRawContent(html, preserveOpeningTags = false) {
     }
 
     if (preserveOpeningTags) output.push(html.slice(openingIndex, openingEnd));
-    const closingPattern = new RegExp(`<\\/${tag}\\s*>`, "giu");
-    closingPattern.lastIndex = openingEnd;
-    const closingMatch = closingPattern.exec(html);
-    const discardedEnd = closingMatch
-      ? (closingMatch.index ?? 0) + closingMatch[0].length
-      : html.length;
+    const discardedEnd = rawContentEnd(html, openingEnd, tag);
     retainedStart = discardedEnd;
     scanIndex = discardedEnd;
   }
