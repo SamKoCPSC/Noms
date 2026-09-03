@@ -130,7 +130,11 @@ recipe-import-parser-active-content-test:
 recipe-import-parser-corpus-test:
 	@node --test scripts/tests/test-evaluate-recipe-parser-corpus.mjs
 
+# Validate privacy-preserving, digest-bound manual semantic review scoring.
+recipe-import-parser-semantic-test:
+	@node --test scripts/tests/test-evaluate-recipe-parser-semantic.mjs
+
 # Run all checks and tests (mirrors what CI does)
-ci: fmt check lint test schema-check-test security-policy-test security-check recipe-import-fixture-test recipe-import-parser-active-content-test recipe-import-parser-corpus-test
+ci: fmt check lint test schema-check-test security-policy-test security-check recipe-import-fixture-test recipe-import-parser-active-content-test recipe-import-parser-corpus-test recipe-import-parser-semantic-test
 	@echo ""
 	@echo "✅ All checks passed."
