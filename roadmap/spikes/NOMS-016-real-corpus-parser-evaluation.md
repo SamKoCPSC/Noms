@@ -115,6 +115,8 @@ Across the 719 accepted candidates, the generic rules found 58 note paragraphs i
 
 The active-content slice again kept structural acceptance stable at 719 accepted and 781 rejected, with no invalid candidates or unexpected parser errors. Status counts also remained at 360 ready and 359 needing review because discarded active-content evidence is informational rather than a mapping ambiguity.
 
+The same corpus remained unchanged after review hardened malformed quoted raw-content openings and preserved audit evidence across unsupported and HTML-to-plain-text fallback paths.
+
 All 719 accepted clipboard pages contained form controls and unretained HTTP(S) references, 533 contained script elements, and 391 contained iframes. The aggregate audit counted 7,666 scripts, 711 iframes, 48,213 controls, and 97,986 unretained remote-reference attributes; one candidate contained at most 326 such references. These large page-wide counts demonstrate why the parser records only inert aggregate evidence. It does not retain those URLs, instantiate a DOM, execute content, or make network requests. Preserved figure image candidates are excluded from the discarded-remote count.
 
 ## Conclusions
