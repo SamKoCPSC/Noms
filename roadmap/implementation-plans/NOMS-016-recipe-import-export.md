@@ -316,7 +316,7 @@ Evidence and reproduction commands are recorded in [the real-corpus parser evalu
 
 ## Provider-adapter rollout
 
-Provider adapters share the inert clipboard normalization and candidate contract with the generic parser. An adapter must use an exact supplied hostname plus stable visible structure, must never fetch or execute content, and may activate only when it can establish one complete recipe. Missing, changed, or ambiguous provider structure falls back to generic parsing and review rather than producing a partial authoritative result.
+Provider adapters share the inert clipboard normalization and candidate contract with the generic parser. An adapter must use an exact supplied hostname plus stable visible structure, must never fetch or execute content, and may activate only when it can establish one complete recipe. Adapter-owned core fields may be reconciled with safe supplementary evidence from the shared parser, such as image references and attribution, so stronger structural extraction does not discard independently reviewable evidence. Missing, changed, or ambiguous provider structure falls back to generic parsing and review rather than producing a partial authoritative result.
 
 Each adapter requires synthetic exact-host, lookalike-host, complete-field, ambiguity, and fallback tests; a contract-valid full-provider corpus rerun; refreshed digest-bound semantic labels; and evidence that generic-provider results did not regress. Prefer data-driven selectors and shared extractors over provider code where structures are genuinely equivalent.
 

@@ -125,7 +125,7 @@ The first source adapter uses the explicitly supplied RecipeTinEats hostname and
 
 Across the same verified corpus, RecipeTinEats structural acceptance increased from 19 of 100 to 81 of 100. All 81 adapter candidates passed the import-candidate contract; 19 remained rejected, with no invalid candidates or unexpected errors. Across the full corpus, accepted candidates increased from 719 to 781 (52.1%), entirely from 62 newly accepted RecipeTinEats samples.
 
-The adapter recovered 1,082 ingredient items and 723 instruction steps across its 81 accepted samples, including named and unnamed groups, structured WPRM amount/unit/name fields, descriptions, times when present, and servings. It does not fetch resources or execute page content. These are structural reach measurements; the digest-bound semantic rerun provides the separate quality check.
+The adapter recovered 1,082 ingredient items and 723 instruction steps across its 81 accepted samples, including named and unnamed groups, structured WPRM amount/unit/name fields, descriptions, times when present, and servings. It also preserves safe image-reference and attribution evidence recognized by the shared inert extraction rules, with the same review warnings and audit accounting as generic candidates. It does not fetch resources or execute page content. These are structural reach measurements; the digest-bound semantic rerun provides the separate quality check.
 
 ## Conclusions
 
