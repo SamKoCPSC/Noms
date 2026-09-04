@@ -1096,9 +1096,253 @@ function unsupportedTitlelessCandidate(sourceUrl, root, lists) {
   return result;
 }
 
+function hasClass(attributes, className) {
+  return (attributes.get("class") ?? "").split(/\s+/u).includes(className);
+}
+
+function matchingElementEnd(html, tag, openingEnd) {
+  const pattern = new RegExp(`<\\/?${tag}\\b(?:"[^"]*"|'[^']*'|[^>"'])*>`, "giu");
+  pattern.lastIndex = openingEnd;
+  let depth = 1;
+  for (const match of html.matchAll(pattern)) {
+    if (match[0].startsWith("</")) {
+      depth -= 1;
+      if (depth === 0) return { contentEnd: match.index, end: match.index + match[0].length };
+    } else if (!match[0].endsWith("/>")) {
+      depth += 1;
+    }
+  }
+  return null;
+}
+
+function elementsWithClass(html, className) {
+  const elements = [];
+  const pattern = /<([a-z][a-z0-9:-]*)\b((?:"[^"]*"|'[^']*'|[^>"'])*)>/giu;
+  for (const match of html.matchAll(pattern)) {
+    const attributes = htmlAttributes(match[2]);
+    if (!hasClass(attributes, className)) continue;
+    const openingEnd = (match.index ?? 0) + match[0].length;
+    const range = VOID_TAGS.has(match[1].toLowerCase())
+      ? { contentEnd: openingEnd, end: openingEnd }
+      : matchingElementEnd(html, match[1], openingEnd);
+    if (!range) continue;
+    elements.push({
+      tag: match[1].toLowerCase(),
+      attributes,
+      index: match.index ?? 0,
+      openingEnd,
+      ...range,
+      innerHtml: html.slice(openingEnd, range.contentEnd),
+    });
+  }
+  return elements;
+}
+
+function firstClassText(html, className) {
+  const element = elementsWithClass(html, className)[0];
+  if (!element) return null;
+  const text = htmlText(element.innerHtml);
+  return text ? { text, element } : null;
+}
+
+function recipeTinEatsHostname(sourceUrl) {
+  if (typeof sourceUrl !== "string") return null;
+  try {
+    const parsed = new URL(sourceUrl);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+    const hostname = parsed.hostname.toLowerCase();
+    return hostname === "recipetineats.com" || hostname.endsWith(".recipetineats.com")
+      ? hostname
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function wprmDuration(cardHtml, className) {
+  const components = elementsWithClass(cardHtml, className).filter(
+    (component, componentIndex, matches) => !matches.some(
+      (possibleParent, parentIndex) =>
+        parentIndex !== componentIndex &&
+        possibleParent.index < component.index &&
+        component.end <= possibleParent.contentEnd,
+    ),
+  );
+  const raw = normalizeWhitespace(
+    components.map(({ innerHtml }) => htmlText(innerHtml)).filter(Boolean).join(" "),
+  );
+  if (!raw) return null;
+  const value = durationMinutes(raw);
+  if (value === null) return null;
+  return {
+    raw,
+    value,
+    confidence: "high",
+    provenance: provenance("text/html", `.${className}`),
+  };
+}
+
+function wprmIngredient(itemHtml, locator) {
+  const amount = firstClassText(itemHtml, "wprm-recipe-ingredient-amount")?.text ?? null;
+  const sourceUnit = firstClassText(itemHtml, "wprm-recipe-ingredient-unit")?.text ?? null;
+  const ingredientName = firstClassText(itemHtml, "wprm-recipe-ingredient-name")?.text ?? null;
+  const notes = firstClassText(itemHtml, "wprm-recipe-ingredient-notes")?.text ?? "";
+  if (!ingredientName) return null;
+
+  // WPRM can repeat the final unit of a dual-system amount in its unit span.
+  // Suppress only that repeated suffix; a separate package unit still matters.
+  const unitIsAmountSuffix = amount && sourceUnit &&
+    amount.toLocaleLowerCase("en-US").endsWith(sourceUnit.toLocaleLowerCase("en-US"));
+  const unit = unitIsAmountSuffix ? null : sourceUnit;
+  const notesSeparator = notes && !/^[,.;:!?]/u.test(notes) ? " " : "";
+  const name = normalizeWhitespace(`${ingredientName}${notesSeparator}${notes}`);
+  const raw = normalizeWhitespace([amount, unit, name].filter(Boolean).join(" "));
+  return {
+    raw,
+    amount,
+    unit,
+    name,
+    confidence: "high",
+    provenance: provenance("text/html", locator),
+  };
+}
+
+function wprmIngredientSections(containerHtml) {
+  const groups = elementsWithClass(containerHtml, "wprm-recipe-ingredient-group");
+  const sectionSources = groups.length > 0
+    ? groups.map((group) => group.innerHtml)
+    : [containerHtml];
+  const sections = [];
+  for (const [sectionIndex, sectionHtml] of sectionSources.entries()) {
+    const name = firstClassText(sectionHtml, "wprm-recipe-ingredient-group-name")?.text ?? null;
+    const itemElements = elementsWithClass(sectionHtml, "wprm-recipe-ingredient");
+    const items = itemElements.map((item, itemIndex) => wprmIngredient(
+      item.innerHtml,
+      `.wprm-recipe-ingredient-group:nth-child(${sectionIndex + 1}) .wprm-recipe-ingredient:nth-child(${itemIndex + 1})`,
+    ));
+    if (items.length === 0 || items.some((item) => item === null)) return null;
+    sections.push({ name, items });
+  }
+  return sections;
+}
+
+function wprmInstructionSections(containerHtml) {
+  const groups = elementsWithClass(containerHtml, "wprm-recipe-instruction-group");
+  const sectionSources = groups.length > 0
+    ? groups.map((group) => group.innerHtml)
+    : [containerHtml];
+  const sections = [];
+  for (const [sectionIndex, sectionHtml] of sectionSources.entries()) {
+    const name = firstClassText(sectionHtml, "wprm-recipe-instruction-group-name")?.text ?? null;
+    const itemElements = elementsWithClass(sectionHtml, "wprm-recipe-instruction");
+    const steps = itemElements.map((item, itemIndex) => {
+      const raw = firstClassText(item.innerHtml, "wprm-recipe-instruction-text")?.text ??
+        htmlText(item.innerHtml);
+      return raw
+        ? instruction(
+          raw,
+          "text/html",
+          `.wprm-recipe-instruction-group:nth-child(${sectionIndex + 1}) .wprm-recipe-instruction:nth-child(${itemIndex + 1})`,
+        )
+        : null;
+    });
+    if (steps.length === 0 || steps.some((step) => step === null)) return null;
+    sections.push({ name, steps });
+  }
+  return sections;
+}
+
+function parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit) {
+  if (!recipeTinEatsHostname(sourceUrl)) return null;
+  const completeCards = elementsWithClass(inertHtml, "wprm-recipe-container").flatMap((card) => {
+    const title = firstClassText(card.innerHtml, "wprm-recipe-name");
+    const ingredientContainer = elementsWithClass(
+      card.innerHtml,
+      "wprm-recipe-ingredients-container",
+    )[0];
+    const instructionContainer = elementsWithClass(
+      card.innerHtml,
+      "wprm-recipe-instructions-container",
+    )[0];
+    if (!title || !ingredientContainer || !instructionContainer) return [];
+    const ingredientSections = wprmIngredientSections(ingredientContainer.innerHtml);
+    const instructionSections = wprmInstructionSections(instructionContainer.innerHtml);
+    return ingredientSections && instructionSections
+      ? [{ card, title, ingredientSections, instructionSections }]
+      : [];
+  });
+  // Generic region scoring retains competing-card evidence; an adapter must not
+  // silently erase that ambiguity by selecting the first structurally valid card.
+  if (completeCards.length !== 1) return null;
+  const [{ card, title, ingredientSections, instructionSections }] = completeCards;
+
+  const result = candidate(
+    {
+      id: "recipetineats-wprm",
+      version: "1",
+      tier: "source_adapter",
+      sourceAdapter: "recipetineats",
+    },
+    sourceUrl,
+  );
+  result.source.provider = "RecipeTinEats";
+  result.source.provenance.provider = provenance("source_url", "hostname recipetineats.com");
+  const author = firstClassText(card.innerHtml, "wprm-recipe-author");
+  if (author) {
+    result.source.author = author.text;
+    result.source.provenance.author = provenance("text/html", ".wprm-recipe-author");
+  }
+  result.fields.title = scalar(title.text, "text/html", ".wprm-recipe-name");
+  const summary = firstClassText(card.innerHtml, "wprm-recipe-summary");
+  if (summary) result.fields.description = scalar(summary.text, "text/html", ".wprm-recipe-summary");
+  result.fields.prepTime = wprmDuration(card.innerHtml, "wprm-recipe-prep_time");
+  result.fields.cookTime = wprmDuration(card.innerHtml, "wprm-recipe-cook_time");
+  result.fields.totalTime = wprmDuration(card.innerHtml, "wprm-recipe-total_time");
+
+  const servings = firstClassText(card.innerHtml, "wprm-recipe-servings");
+  const servingsUnit = firstClassText(card.innerHtml, "wprm-recipe-servings-unit");
+  if (servings) {
+    const display = normalizeWhitespace([servings.text, servingsUnit?.text].filter(Boolean).join(" "));
+    const numericServings = Number.parseFloat(servings.text.replace(",", "."));
+    result.fields.yield = {
+      raw: display,
+      value: {
+        display,
+        servings: Number.isSafeInteger(numericServings) && numericServings > 0
+          ? numericServings
+          : null,
+      },
+      confidence: "high",
+      provenance: provenance("text/html", ".wprm-recipe-servings"),
+    };
+  }
+  result.fields.ingredientSections = ingredientSections;
+  result.fields.instructionSections = instructionSections;
+
+  const hasNamedSections = ingredientSections.some(({ name }) => name !== null) ||
+    instructionSections.some(({ name }) => name !== null);
+  if (hasNamedSections) {
+    result.status = "needs_review";
+    result.warnings.push({
+      code: "SECTION_NAMES_NOT_PERSISTED",
+      severity: "warning",
+      path: "fields.ingredientSections",
+      message: "Section names remain in preview but the current editor stores flat recipe content.",
+    });
+  }
+  appendHtmlAuditEvidence(
+    result,
+    htmlAudit,
+    discardedRemoteResourceCount(htmlAudit, []),
+  );
+  return result;
+}
+
 function parseHtml(html, sourceUrl, htmlAudit) {
   // Remove active/raw-text regions before scanning. No markup is inserted into a DOM.
   const inertHtml = discardRawContent(html);
+  const sourceAdapterCandidate = parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit);
+  if (sourceAdapterCandidate) return sourceAdapterCandidate;
   const headings = htmlHeadings(inertHtml);
   const roots = rootRanges(inertHtml);
   const regions = recipeRegions(headings, roots)

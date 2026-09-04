@@ -134,7 +134,11 @@ recipe-import-parser-corpus-test:
 recipe-import-parser-semantic-test:
 	@node --test scripts/tests/test-evaluate-recipe-parser-semantic.mjs
 
+# Validate source-scoped adapters and conservative generic fallback.
+recipe-import-provider-adapter-test:
+	@node --test scripts/tests/test-recipe-import-provider-adapters.mjs
+
 # Run all checks and tests (mirrors what CI does)
-ci: fmt check lint test schema-check-test security-policy-test security-check recipe-import-fixture-test recipe-import-parser-active-content-test recipe-import-parser-corpus-test recipe-import-parser-semantic-test
+ci: fmt check lint test schema-check-test security-policy-test security-check recipe-import-fixture-test recipe-import-parser-active-content-test recipe-import-parser-corpus-test recipe-import-parser-semantic-test recipe-import-provider-adapter-test
 	@echo ""
 	@echo "✅ All checks passed."
