@@ -3558,6 +3558,56 @@ pub enum MediaPurpose {
     CollectionCover,
 }
 
+const MAX_MEDIA_REFERENCE_HOLDERS: i64 = 500;
+const MAX_MEDIA_REFERENCE_LINEAGE_DEPTH: i32 = 32;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MediaReferenceUncertainty {
+    HolderLimit,
+    LineageDepth,
+    LineageCycle,
+    LineageMismatch,
+    MissingLineageAuthority,
+}
+
+impl MediaReferenceUncertainty {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::HolderLimit => "holder_limit",
+            Self::LineageDepth => "lineage_depth",
+            Self::LineageCycle => "lineage_cycle",
+            Self::LineageMismatch => "lineage_mismatch",
+            Self::MissingLineageAuthority => "missing_lineage_authority",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MediaReferenceStatus {
+    Referenced,
+    Unreferenced,
+    Incomplete(MediaReferenceUncertainty),
+}
+
+impl MediaReferenceStatus {
+    /// Cleanup is destructive, so an incomplete proof is equivalent to a live
+    /// reference until a later check can prove otherwise.
+    fn requires_retention(self, purpose: MediaPurpose) -> bool {
+        match self {
+            Self::Referenced => true,
+            Self::Unreferenced => false,
+            Self::Incomplete(reason) => {
+                tracing::warn!(
+                    reason = reason.as_str(),
+                    media_purpose = ?purpose,
+                    "retaining media because its reference proof was incomplete"
+                );
+                true
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type)]
 #[sqlx(type_name = "text", rename_all = "snake_case")]
 pub enum AccountMediaPurpose {
@@ -3751,13 +3801,13 @@ pub(crate) async fn retain_inherited_recipe_media_urls(
     Ok(())
 }
 
-async fn media_family_is_referenced(
+async fn media_family_reference_status(
     tx: &mut sqlx::Transaction<'_, Postgres>,
     family_owner_id: Uuid,
     purpose: MediaPurpose,
     full_url: &str,
     thumbnail_url: &str,
-) -> Result<bool, DbError> {
+) -> Result<MediaReferenceStatus, DbError> {
     let full_literal = serde_json::to_string(full_url).map_err(DbError::SerdeJson)?;
     let thumbnail_literal = serde_json::to_string(thumbnail_url).map_err(DbError::SerdeJson)?;
     let reference_path = format!(
@@ -3766,19 +3816,35 @@ async fn media_family_is_referenced(
     );
 
     match purpose {
-        MediaPurpose::CollectionCover => sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(\
-                 SELECT 1 FROM collections \
-                 WHERE owner_id = $1 AND image @? $2::jsonpath\
-             )",
-        )
-        .bind(family_owner_id)
-        .bind(reference_path)
-        .fetch_one(&mut **tx)
-        .await
-        .map_err(DbError::Query),
-        MediaPurpose::Recipe => sqlx::query_scalar::<_, bool>(
-            "WITH RECURSIVE exact_recipe_holders(recipe_id, direct_authority) AS MATERIALIZED (
+        MediaPurpose::CollectionCover => {
+            let referenced = sqlx::query_scalar::<_, bool>(
+                "SELECT EXISTS(\
+                     SELECT 1 FROM collections \
+                     WHERE owner_id = $1 AND image @? $2::jsonpath\
+                 )",
+            )
+            .bind(family_owner_id)
+            .bind(reference_path)
+            .fetch_one(&mut **tx)
+            .await
+            .map_err(DbError::Query)?;
+            Ok(if referenced {
+                MediaReferenceStatus::Referenced
+            } else {
+                MediaReferenceStatus::Unreferenced
+            })
+        }
+        MediaPurpose::Recipe => {
+            let (
+                reference_count,
+                direct_authority,
+                inherited_authority,
+                lineage_truncated,
+                lineage_cycle,
+                lineage_mismatch,
+                missing_lineage_authority,
+            ) = sqlx::query_as::<_, (i64, bool, bool, bool, bool, bool, bool)>(
+                "WITH RECURSIVE exact_recipe_holders(recipe_id, direct_authority) AS MATERIALIZED (
                  SELECT recipe.id, recipe.user_id = $1
                  FROM recipes AS recipe
                  WHERE recipe.images @? $2::jsonpath
@@ -3797,7 +3863,7 @@ async fn media_family_is_referenced(
                  LEFT JOIN recipes AS source
                    ON source.id = COALESCE(draft.recipe_id, draft.forked_from_recipe_id)
                  WHERE draft.snapshot @? $2::jsonpath
-                 LIMIT 501
+                 LIMIT $3
              ),
              holder_summary(reference_count, direct_authority) AS (
                  SELECT COUNT(*), COALESCE(BOOL_OR(direct_authority), FALSE)
@@ -3825,22 +3891,86 @@ async fn media_family_is_referenced(
                    ON child.id = holder_lineage.relationship_id
                  JOIN fork_relationships AS parent
                    ON parent.id = child.parent_relationship_id
-                 WHERE holder_lineage.depth < 32
+                 WHERE holder_lineage.depth < $4
                    AND NOT parent.id = ANY(holder_lineage.visited)
+             ),
+             lineage_summary(
+                 inherited_authority,
+                 lineage_truncated,
+                 lineage_cycle,
+                 lineage_mismatch,
+                 missing_lineage_authority
+             ) AS (
+                 SELECT
+                     EXISTS(
+                         SELECT 1 FROM holder_lineage WHERE original_owner_id = $1
+                     ),
+                     EXISTS(
+                         SELECT 1
+                         FROM holder_lineage AS lineage
+                         JOIN fork_relationships AS child
+                           ON child.id = lineage.relationship_id
+                         WHERE lineage.depth = $4
+                           AND child.parent_relationship_id IS NOT NULL
+                           AND NOT child.parent_relationship_id = ANY(lineage.visited)
+                     ),
+                     EXISTS(
+                         SELECT 1
+                         FROM holder_lineage AS lineage
+                         JOIN fork_relationships AS child
+                           ON child.id = lineage.relationship_id
+                         WHERE child.parent_relationship_id = ANY(lineage.visited)
+                     ),
+                     EXISTS(
+                         SELECT 1
+                         FROM holder_lineage AS lineage
+                         JOIN fork_relationships AS child
+                           ON child.id = lineage.relationship_id
+                         JOIN fork_relationships AS parent
+                           ON parent.id = child.parent_relationship_id
+                         WHERE COALESCE(parent.forked_recipe_key, parent.forked_recipe_id)
+                               IS DISTINCT FROM
+                               COALESCE(child.original_recipe_key, child.original_recipe_id)
+                     ),
+                     EXISTS(
+                         SELECT 1 FROM holder_lineage
+                         WHERE original_owner_id IS NULL
+                     )
              )
-             SELECT CASE
-                 WHEN reference_count > 500 OR direct_authority THEN TRUE
-                 ELSE EXISTS(
-                     SELECT 1 FROM holder_lineage WHERE original_owner_id = $1
-                 )
-             END
-             FROM holder_summary",
-        )
-        .bind(family_owner_id)
-        .bind(reference_path)
-        .fetch_one(&mut **tx)
-        .await
-        .map_err(DbError::Query),
+             SELECT holder_summary.reference_count,
+                    holder_summary.direct_authority,
+                    lineage_summary.inherited_authority,
+                    lineage_summary.lineage_truncated,
+                    lineage_summary.lineage_cycle,
+                    lineage_summary.lineage_mismatch,
+                    lineage_summary.missing_lineage_authority
+             FROM holder_summary CROSS JOIN lineage_summary",
+            )
+            .bind(family_owner_id)
+            .bind(reference_path)
+            .bind(MAX_MEDIA_REFERENCE_HOLDERS + 1)
+            .bind(MAX_MEDIA_REFERENCE_LINEAGE_DEPTH)
+            .fetch_one(&mut **tx)
+            .await
+            .map_err(DbError::Query)?;
+
+            let status = if direct_authority || inherited_authority {
+                MediaReferenceStatus::Referenced
+            } else if reference_count > MAX_MEDIA_REFERENCE_HOLDERS {
+                MediaReferenceStatus::Incomplete(MediaReferenceUncertainty::HolderLimit)
+            } else if lineage_truncated {
+                MediaReferenceStatus::Incomplete(MediaReferenceUncertainty::LineageDepth)
+            } else if lineage_cycle {
+                MediaReferenceStatus::Incomplete(MediaReferenceUncertainty::LineageCycle)
+            } else if lineage_mismatch {
+                MediaReferenceStatus::Incomplete(MediaReferenceUncertainty::LineageMismatch)
+            } else if missing_lineage_authority {
+                MediaReferenceStatus::Incomplete(MediaReferenceUncertainty::MissingLineageAuthority)
+            } else {
+                MediaReferenceStatus::Unreferenced
+            };
+            Ok(status)
+        }
     }
 }
 
@@ -3888,9 +4018,14 @@ async fn claim_locked_media_family(
     if actual_owner != owner_id {
         return Ok(MediaDiscardDecision::Denied);
     }
-    if (protect_retained && state == "retained")
-        || media_family_is_referenced(tx, actual_owner, purpose, &full_url, &thumbnail_url).await?
-    {
+    let requires_retention = if protect_retained && state == "retained" {
+        true
+    } else {
+        media_family_reference_status(tx, actual_owner, purpose, &full_url, &thumbnail_url)
+            .await?
+            .requires_retention(purpose)
+    };
+    if requires_retention {
         if state == "uncommitted" {
             sqlx::query("UPDATE media_upload_families SET lifecycle = 'retained', retained_at = NOW() WHERE id = $1")
                 .bind(id).execute(&mut **tx).await.map_err(DbError::Query)?;
@@ -4095,7 +4230,7 @@ pub async fn claim_account_media_cleanup(
         row.full_url.as_deref(),
         row.thumbnail_url.as_deref(),
     ) {
-        if media_family_is_referenced(
+        if media_family_reference_status(
             &mut tx,
             row.former_owner_id,
             purpose,
@@ -4103,6 +4238,7 @@ pub async fn claim_account_media_cleanup(
             thumbnail_url,
         )
         .await?
+        .requires_retention(purpose)
         {
             sqlx::query(
                 "UPDATE account_media_cleanup_tombstones \
@@ -4173,7 +4309,7 @@ pub async fn finish_account_media_cleanup(
 /// Get every retained media URL together with an authorized owner for tests.
 ///
 /// This complete projection preserves coverage of legacy reference semantics,
-/// but production cleanup must use `media_family_is_referenced` so work remains
+/// but production cleanup must use `media_family_reference_status` so work remains
 /// scoped to one exact tracked family.
 #[cfg(test)]
 pub async fn get_all_owned_image_references<'e, E>(

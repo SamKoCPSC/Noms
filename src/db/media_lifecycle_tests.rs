@@ -35,6 +35,81 @@ fn family(owner_id: Uuid, purpose: MediaPurpose, marker: u8) -> NewMediaUploadFa
     }
 }
 
+async fn insert_published_fork_holder_with_deleted_intermediates(
+    pool: &PgPool,
+    media_owner_id: Uuid,
+    holder_owner_id: Uuid,
+    upload: &NewMediaUploadFamily,
+    relationship_count: usize,
+) -> Vec<Uuid> {
+    assert!(relationship_count > 0);
+    let image = RecipeImage::new(
+        upload.full_url.clone(),
+        Some(upload.thumbnail_url.clone()),
+        crate::types::RecipeImageEdit::default_rect_16x9(),
+    );
+    let holder = insert_recipe(
+        pool,
+        holder_owner_id,
+        "Deep surviving fork",
+        None,
+        None,
+        None,
+        None,
+        None,
+        &[],
+        &[],
+        &[],
+        &[image],
+        "public",
+    )
+    .await
+    .unwrap();
+
+    let mut parent_relationship_id = None;
+    let mut original_recipe_key = Uuid::new_v4();
+    let mut relationship_ids = Vec::with_capacity(relationship_count);
+    for relationship_index in 0..relationship_count {
+        let relationship_id = Uuid::new_v4();
+        let forked_recipe_key = if relationship_index + 1 == relationship_count {
+            holder.id
+        } else {
+            Uuid::new_v4()
+        };
+        let forked_recipe_id = (relationship_index + 1 == relationship_count).then_some(holder.id);
+        let original_owner_id = if relationship_index == 0 {
+            media_owner_id
+        } else {
+            holder_owner_id
+        };
+        sqlx::query(
+            "INSERT INTO fork_relationships (\
+                 id, original_recipe_id, forked_recipe_id, forked_by, parent_relationship_id, \
+                 original_recipe_key, forked_recipe_key, forked_version_number, \
+                 original_title, forked_title, original_owner_id, forked_owner_id, \
+                 original_visibility, forked_visibility\
+             ) VALUES ($1, NULL, $2, $3, $4, $5, $6, 1, $7, $8, $9, $3, 'public', 'public')",
+        )
+        .bind(relationship_id)
+        .bind(forked_recipe_id)
+        .bind(holder_owner_id)
+        .bind(parent_relationship_id)
+        .bind(original_recipe_key)
+        .bind(forked_recipe_key)
+        .bind(format!("Fork source {relationship_index}"))
+        .bind(format!("Fork result {relationship_index}"))
+        .bind(original_owner_id)
+        .execute(pool)
+        .await
+        .unwrap();
+        relationship_ids.push(relationship_id);
+        parent_relationship_id = Some(relationship_id);
+        original_recipe_key = forked_recipe_key;
+    }
+
+    relationship_ids
+}
+
 #[tokio::test]
 async fn account_deletion_tombstones_tracked_and_avatar_media_before_cascades() {
     let (_database, pool) = crate::test_utils::setup_test_db().await;
@@ -457,6 +532,371 @@ async fn account_cleanup_retains_media_referenced_by_a_surviving_fork() {
 }
 
 #[tokio::test]
+async fn published_fork_reference_is_retained_at_and_beyond_the_lineage_depth_limit() {
+    for (relationship_count, marker) in [(32, 70), (33, 71)] {
+        let (_database, pool) = crate::test_utils::setup_test_db().await;
+        let media_owner = owner(&pool, "lineage_media_owner").await;
+        let holder_owner = owner(&pool, "lineage_holder_owner").await;
+        let upload = family(media_owner.id, MediaPurpose::Recipe, marker);
+        register_media_upload_family(&pool, &upload).await.unwrap();
+        insert_published_fork_holder_with_deleted_intermediates(
+            &pool,
+            media_owner.id,
+            holder_owner.id,
+            &upload,
+            relationship_count,
+        )
+        .await;
+
+        let mut tx = pool.begin().await.unwrap();
+        let status = media_family_reference_status(
+            &mut tx,
+            media_owner.id,
+            MediaPurpose::Recipe,
+            &upload.full_url,
+            &upload.thumbnail_url,
+        )
+        .await
+        .unwrap();
+        tx.rollback().await.unwrap();
+        assert_eq!(
+            status,
+            if relationship_count == 32 {
+                MediaReferenceStatus::Referenced
+            } else {
+                MediaReferenceStatus::Incomplete(MediaReferenceUncertainty::LineageDepth)
+            },
+            "the exact depth boundary must distinguish a complete authority proof from truncation"
+        );
+
+        assert_eq!(
+            claim_retained_media_cleanup(&pool, media_owner.id, &upload.full_url)
+                .await
+                .unwrap(),
+            MediaDiscardDecision::Retained,
+            "a surviving holder {relationship_count} relationships from the media owner must retain the family"
+        );
+    }
+}
+
+#[tokio::test]
+async fn deep_fork_reference_stays_incomplete_after_source_becomes_private_and_is_deleted() {
+    let (_database, pool) = crate::test_utils::setup_test_db().await;
+    let media_owner = owner(&pool, "source_state_media").await;
+    let holder_owner = owner(&pool, "source_state_holder").await;
+    let upload = family(media_owner.id, MediaPurpose::Recipe, 76);
+    register_media_upload_family(&pool, &upload).await.unwrap();
+    let relationship_ids = insert_published_fork_holder_with_deleted_intermediates(
+        &pool,
+        media_owner.id,
+        holder_owner.id,
+        &upload,
+        33,
+    )
+    .await;
+    let source_id = sqlx::query_scalar::<_, Uuid>(
+        "SELECT original_recipe_key FROM fork_relationships WHERE id = $1",
+    )
+    .bind(relationship_ids[0])
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO recipes (id, user_id, title, images, visibility) \
+         VALUES ($1, $2, 'Deep source', '[]'::jsonb, 'public')",
+    )
+    .bind(source_id)
+    .bind(media_owner.id)
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query("UPDATE fork_relationships SET original_recipe_id = $1 WHERE id = $2")
+        .bind(source_id)
+        .bind(relationship_ids[0])
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query("UPDATE recipes SET visibility = 'private' WHERE id = $1")
+        .bind(source_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    for source_exists in [true, false] {
+        if !source_exists {
+            delete_recipe(&pool, source_id, media_owner.id)
+                .await
+                .unwrap();
+        }
+        let mut tx = pool.begin().await.unwrap();
+        let status = media_family_reference_status(
+            &mut tx,
+            media_owner.id,
+            MediaPurpose::Recipe,
+            &upload.full_url,
+            &upload.thumbnail_url,
+        )
+        .await
+        .unwrap();
+        tx.rollback().await.unwrap();
+        assert_eq!(
+            status,
+            MediaReferenceStatus::Incomplete(MediaReferenceUncertainty::LineageDepth),
+            "source visibility or row deletion must not turn truncated ancestry into a complete negative"
+        );
+    }
+}
+
+#[tokio::test]
+async fn malformed_fork_lineage_cycle_fails_closed() {
+    let (_database, pool) = crate::test_utils::setup_test_db().await;
+    let media_owner = owner(&pool, "cycle_media_owner").await;
+    let holder_owner = owner(&pool, "cycle_holder_owner").await;
+    let upload = family(media_owner.id, MediaPurpose::Recipe, 75);
+    register_media_upload_family(&pool, &upload).await.unwrap();
+    let relationship_ids = insert_published_fork_holder_with_deleted_intermediates(
+        &pool,
+        media_owner.id,
+        holder_owner.id,
+        &upload,
+        3,
+    )
+    .await;
+    sqlx::query(
+        "UPDATE fork_relationships \
+         SET original_owner_id = $1, \
+             parent_relationship_id = CASE WHEN id = $2 THEN $3 ELSE parent_relationship_id END \
+         WHERE id = ANY($4)",
+    )
+    .bind(holder_owner.id)
+    .bind(relationship_ids[0])
+    .bind(relationship_ids[2])
+    .bind(&relationship_ids)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    assert_eq!(
+        claim_retained_media_cleanup(&pool, media_owner.id, &upload.full_url)
+            .await
+            .unwrap(),
+        MediaDiscardDecision::Retained,
+        "a cyclic ancestry proof must never authorize media deletion"
+    );
+}
+
+#[tokio::test]
+async fn misdirected_fork_parent_fails_closed() {
+    let (_database, pool) = crate::test_utils::setup_test_db().await;
+    let media_owner = owner(&pool, "mismatch_media_owner").await;
+    let holder_owner = owner(&pool, "mismatch_holder_owner").await;
+    let upload = family(media_owner.id, MediaPurpose::Recipe, 77);
+    register_media_upload_family(&pool, &upload).await.unwrap();
+    let relationship_ids = insert_published_fork_holder_with_deleted_intermediates(
+        &pool,
+        media_owner.id,
+        holder_owner.id,
+        &upload,
+        3,
+    )
+    .await;
+    let decoy_relationship_id = Uuid::new_v4();
+    sqlx::query(
+        "INSERT INTO fork_relationships (\
+             id, original_recipe_id, forked_recipe_id, forked_by, parent_relationship_id, \
+             original_recipe_key, forked_recipe_key, forked_version_number, \
+             original_title, forked_title, original_owner_id, forked_owner_id, \
+             original_visibility, forked_visibility\
+         ) VALUES ($1, NULL, NULL, $2, NULL, $3, $4, 1, \
+                   'Decoy source', 'Decoy result', $2, $2, 'public', 'public')",
+    )
+    .bind(decoy_relationship_id)
+    .bind(holder_owner.id)
+    .bind(Uuid::new_v4())
+    .bind(Uuid::new_v4())
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query("UPDATE fork_relationships SET parent_relationship_id = $1 WHERE id = $2")
+        .bind(decoy_relationship_id)
+        .bind(relationship_ids[2])
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let mut tx = pool.begin().await.unwrap();
+    let status = media_family_reference_status(
+        &mut tx,
+        media_owner.id,
+        MediaPurpose::Recipe,
+        &upload.full_url,
+        &upload.thumbnail_url,
+    )
+    .await
+    .unwrap();
+    tx.rollback().await.unwrap();
+    assert_eq!(
+        status,
+        MediaReferenceStatus::Incomplete(MediaReferenceUncertainty::LineageMismatch),
+        "a parent link that does not continue the child's source key is not a complete negative"
+    );
+    assert_eq!(
+        claim_retained_media_cleanup(&pool, media_owner.id, &upload.full_url)
+            .await
+            .unwrap(),
+        MediaDiscardDecision::Retained
+    );
+}
+
+#[tokio::test]
+async fn cleanup_worker_does_not_delete_media_when_lineage_proof_is_depth_limited() {
+    let (_database, pool) = crate::test_utils::setup_test_db().await;
+    let media_owner = owner(&pool, "worker_depth_media").await;
+    let holder_owner = owner(&pool, "worker_depth_holder").await;
+    let mut upload = family(media_owner.id, MediaPurpose::Recipe, 72);
+    upload.expires_at = Utc::now() - Duration::minutes(1);
+    register_media_upload_family(&pool, &upload).await.unwrap();
+    insert_published_fork_holder_with_deleted_intermediates(
+        &pool,
+        media_owner.id,
+        holder_owner.id,
+        &upload,
+        33,
+    )
+    .await;
+
+    let mock_server = wiremock::MockServer::start().await;
+    let storage = crate::storage::StorageClient::for_test_with_endpoint_and_public_url(
+        &mock_server.uri(),
+        "https://media.example.test",
+    );
+    wiremock::Mock::given(wiremock::matchers::method("DELETE"))
+        .respond_with(wiremock::ResponseTemplate::new(204))
+        .expect(0)
+        .mount(&mock_server)
+        .await;
+
+    crate::worker::orphan_cleanup::run_cleanup(&pool, &storage)
+        .await
+        .unwrap();
+    mock_server.verify().await;
+    assert_eq!(
+        sqlx::query_scalar::<_, String>(
+            "SELECT lifecycle FROM media_upload_families WHERE full_url = $1",
+        )
+        .bind(&upload.full_url)
+        .fetch_one(&pool)
+        .await
+        .unwrap(),
+        "retained"
+    );
+}
+
+#[tokio::test]
+async fn account_cleanup_retains_media_when_lineage_proof_is_depth_limited() {
+    let (_database, pool) = crate::test_utils::setup_test_db().await;
+    let media_owner = owner(&pool, "account_depth_media").await;
+    let holder_owner = owner(&pool, "account_depth_holder").await;
+    let upload = family(media_owner.id, MediaPurpose::Recipe, 73);
+    register_media_upload_family(&pool, &upload).await.unwrap();
+    insert_published_fork_holder_with_deleted_intermediates(
+        &pool,
+        media_owner.id,
+        holder_owner.id,
+        &upload,
+        33,
+    )
+    .await;
+
+    delete_user(&pool, media_owner.id).await.unwrap();
+    let tombstone_id = sqlx::query_scalar::<_, Uuid>(
+        "SELECT id FROM account_media_cleanup_tombstones \
+         WHERE former_owner_id = $1 AND full_url = $2",
+    )
+    .bind(media_owner.id)
+    .bind(&upload.full_url)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+
+    assert_eq!(
+        claim_account_media_cleanup(&pool, tombstone_id)
+            .await
+            .unwrap(),
+        AccountMediaCleanupDecision::Retained,
+        "account deletion must retain media when fork authority lies beyond the lineage depth limit"
+    );
+}
+
+#[tokio::test]
+async fn published_orphaned_fork_draft_keeps_inherited_media() {
+    let (_database, pool) = crate::test_utils::setup_test_db().await;
+    let media_owner = owner(&pool, "orphaned_draft_media").await;
+    let fork_owner = owner(&pool, "orphaned_draft_fork").await;
+    let upload = family(media_owner.id, MediaPurpose::Recipe, 74);
+    register_media_upload_family(&pool, &upload).await.unwrap();
+    let image = RecipeImage::new(
+        upload.full_url.clone(),
+        Some(upload.thumbnail_url.clone()),
+        crate::types::RecipeImageEdit::default_rect_16x9(),
+    );
+    let source = create_published_recipe(
+        &pool,
+        media_owner.id,
+        &crate::db::diff::RecipeDraftPayload {
+            initial_visibility: Some("public".to_string()),
+            content: crate::db::diff::RecipeSnapshot {
+                title: "Source deleted before fork publication".to_string(),
+                description: None,
+                commentary: None,
+                prep_time_minutes: None,
+                cook_time_minutes: None,
+                servings: None,
+                ingredients: vec![crate::types::RecipeIngredient {
+                    amount: "1".to_string(),
+                    unit: "cup".to_string(),
+                    name: "beans".to_string(),
+                }],
+                instructions: vec![crate::types::RecipeStep {
+                    text: "Cook".to_string(),
+                    photos: vec![],
+                    sub_steps: vec![],
+                }],
+                equipment: vec![crate::types::RecipeEquipment {
+                    name: "Pot".to_string(),
+                }],
+                images: vec![image],
+                tags: vec![],
+            },
+        },
+        None,
+    )
+    .await
+    .unwrap();
+    let draft = create_fork_draft(&pool, source.id, fork_owner.id, None)
+        .await
+        .unwrap();
+    delete_recipe(&pool, source.id, media_owner.id)
+        .await
+        .unwrap();
+    let published = publish_recipe_draft(&pool, draft.id, fork_owner.id, None)
+        .await
+        .unwrap();
+    assert!(published
+        .images
+        .iter()
+        .any(|candidate| candidate.url == upload.full_url));
+
+    assert_eq!(
+        claim_retained_media_cleanup(&pool, media_owner.id, &upload.full_url)
+            .await
+            .unwrap(),
+        MediaDiscardDecision::Retained,
+        "missing source-owner lineage after fork publication must fail closed"
+    );
+}
+
+#[tokio::test]
 async fn cleanup_claim_does_not_parse_unrelated_recipe_documents() {
     let (_database, pool) = crate::test_utils::setup_test_db().await;
     let media_owner = owner(&pool, "bound_owner").await;
@@ -631,7 +1071,7 @@ fn cleanup_reference_check_never_materializes_the_complete_inventory() {
     let database_source = include_str!("mod.rs");
     let schema_source = include_str!("../../migrations/schema.sql");
     let check_start = database_source
-        .find("async fn media_family_is_referenced")
+        .find("async fn media_family_reference_status")
         .expect("media reference check must exist");
     let check_end = database_source[check_start..]
         .find("async fn claim_media_family_by_digest")
@@ -641,8 +1081,12 @@ fn cleanup_reference_check_never_materializes_the_complete_inventory() {
 
     assert!(check_source.contains("SELECT EXISTS"));
     assert!(check_source.contains("@? $2::jsonpath"));
-    assert!(check_source.contains("LIMIT 501"));
-    assert!(check_source.contains("reference_count > 500"));
+    assert!(check_source.contains("LIMIT $3"));
+    assert!(check_source.contains("MAX_MEDIA_REFERENCE_HOLDERS"));
+    assert!(check_source.contains("lineage_truncated"));
+    assert!(check_source.contains("lineage_cycle"));
+    assert!(check_source.contains("lineage_mismatch"));
+    assert!(check_source.contains("missing_lineage_authority"));
     assert!(!check_source.contains("get_all_owned_image_references"));
     assert!(!check_source.contains("fetch_all"));
 
