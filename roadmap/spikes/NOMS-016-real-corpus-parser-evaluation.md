@@ -119,13 +119,21 @@ The same corpus remained unchanged after review hardened malformed quoted raw-co
 
 All 719 accepted clipboard pages contained form controls and unretained HTTP(S) references, 533 contained script elements, and 391 contained iframes. The aggregate audit counted 7,666 scripts, 711 iframes, 48,213 controls, and 97,986 unretained remote-reference attributes; one candidate contained at most 326 such references. These large page-wide counts demonstrate why the parser records only inert aggregate evidence. It does not retain those URLs, instantiate a DOM, execute content, or make network requests. Preserved figure image candidates are excluded from the discarded-remote count.
 
+## RecipeTinEats adapter rerun
+
+The first source adapter uses the explicitly supplied RecipeTinEats hostname and visible WPRM recipe-card structure after active content has been made inert. It activates only when exactly one complete card contains a title, ingredients, and instructions; zero or multiple complete cards fall back to the generic parser. Exact-host matching prevents lookalike domains from activating the adapter.
+
+Across the same verified corpus, RecipeTinEats structural acceptance increased from 19 of 100 to 81 of 100. All 81 adapter candidates passed the import-candidate contract; 19 remained rejected, with no invalid candidates or unexpected errors. Across the full corpus, accepted candidates increased from 719 to 781 (52.1%), entirely from 62 newly accepted RecipeTinEats samples.
+
+The adapter recovered 1,082 ingredient items and 723 instruction steps across its 81 accepted samples, including named and unnamed groups, structured WPRM amount/unit/name fields, descriptions, times when present, and servings. It does not fetch resources or execute page content. These are structural reach measurements; the digest-bound semantic rerun provides the separate quality check.
+
 ## Conclusions
 
 1. The generic HTML parser recognizes useful candidates from several providers, but structural acceptance remains only an upper bound on compatibility.
 2. Navigation-contained ingredients and titleless candidates are now rejected conservatively; this removes the observed Food Network false positives without provider-specific code.
 3. Collection pages now select a coherent embedded title when heading hierarchy supports it and expose the page title as competing evidence instead of silently returning `ready`.
 4. The current plain-text grammar did not recover any real HTML rejection. Its bullet and numbering assumptions should be measured against the captured text before further investment.
-5. Provider adapters or Schema.org/JSON-LD extraction are justified where stable provider structures cannot be represented by the generic visible-HTML rules.
+5. The first provider adapter materially improves RecipeTinEats reach and reviewed semantic quality while retaining conservative fallback. Additional adapters or Schema.org/JSON-LD extraction should use the same evidence and safety gates.
 
 ## Reproduction
 
