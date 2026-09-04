@@ -196,19 +196,37 @@ test("RecipeTinEats adapter extracts complete WPRM groups and structured fields"
 });
 
 test("RecipeTinEats adapter ignores empty instruction placeholders when complete groups remain", () => {
-  const emptyPlaceholder = `
-      <div class="wprm-recipe-instruction-group">
-        <h4 class="wprm-recipe-instruction-group-name">FULL RECIPE</h4>
-        <ul class="wprm-recipe-instructions"></ul>
-      </div>`;
-  const html = recipeTinHtml.replace(
-    '<div class="wprm-recipe-instruction-group">\n        <h4 class="wprm-recipe-instruction-group-name">Finish:</h4>',
-    `${emptyPlaceholder}\n      <div class="wprm-recipe-instruction-group">\n        <h4 class="wprm-recipe-instruction-group-name">Finish:</h4>`,
-  );
   const candidate = parseRecipeClipboard({
-    html,
+    html: `
+      <main>
+        <div class="wprm-recipe-container">
+          <h2 class="wprm-recipe-name">Moon Soup</h2>
+          <div class="wprm-recipe-ingredients-container">
+            <div class="wprm-recipe-ingredient-group">
+              <ul class="wprm-recipe-ingredients">
+                <li class="wprm-recipe-ingredient">
+                  <span class="wprm-recipe-ingredient-name">moon broth</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="wprm-recipe-instructions-container">
+            <div class="wprm-recipe-instruction-group">
+              <ul class="wprm-recipe-instructions">
+                <li class="wprm-recipe-instruction">
+                  <div class="wprm-recipe-instruction-text">Warm the broth.</div>
+                </li>
+              </ul>
+            </div>
+            <div class="wprm-recipe-instruction-group">
+              <h4 class="wprm-recipe-instruction-group-name">FULL RECIPE</h4>
+              <ul class="wprm-recipe-instructions"></ul>
+            </div>
+          </div>
+        </div>
+      </main>`,
     plainText: null,
-    sourceUrl: "https://www.recipetineats.com/moonlit-noodles/#recipe",
+    sourceUrl: "https://www.recipetineats.com/moon-soup/#recipe",
   });
 
   assert.equal(candidate.parser.id, "recipetineats-wprm");
@@ -218,11 +236,16 @@ test("RecipeTinEats adapter ignores empty instruction placeholders when complete
       steps: steps.map(({ text }) => text),
     })),
     [
-      { name: null, steps: ["Simmer: Warm the sauce."] },
-      { name: "Finish:", steps: ["Fold in the noodles."] },
+      { name: null, steps: ["Warm the broth."] },
     ],
   );
-  assert(candidate.warnings.some(({ code }) => code === "EMPTY_PROVIDER_SECTION_IGNORED"));
+  assert.equal(candidate.status, "needs_review");
+  assert.deepEqual(candidate.warnings, [{
+    code: "EMPTY_PROVIDER_SECTION_IGNORED",
+    severity: "warning",
+    path: "fields.instructionSections",
+    message: "Empty provider instruction sections were ignored while complete sections were retained.",
+  }]);
   assert.deepEqual(validateJsonSchema(candidate, schema), []);
   assert.deepEqual(validateImportCandidate(candidate), []);
 });
@@ -253,6 +276,38 @@ test("RecipeTinEats adapter rejects a card with only empty instruction groups", 
         </main>`,
       plainText: null,
       sourceUrl: "https://www.recipetineats.com/empty-moon-soup/",
+    }),
+    /does not contain a recognizable recipe/u,
+  );
+});
+
+test("RecipeTinEats adapter rejects non-empty instruction groups without structured steps", () => {
+  assert.throws(
+    () => parseRecipeClipboard({
+      html: `
+        <main>
+          <div class="wprm-recipe-container">
+            <h2 class="wprm-recipe-name">Malformed Moon Soup</h2>
+            <div class="wprm-recipe-ingredients-container">
+              <div class="wprm-recipe-ingredient-group">
+                <ul class="wprm-recipe-ingredients">
+                  <li class="wprm-recipe-ingredient">
+                    <span class="wprm-recipe-ingredient-name">moon broth</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div class="wprm-recipe-instructions-container">
+              <div class="wprm-recipe-instruction-group">
+                <ul class="wprm-recipe-instructions">
+                  <li class="wprm-recipe-instruction">Unstructured instruction text.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </main>`,
+      plainText: null,
+      sourceUrl: "https://www.recipetineats.com/malformed-moon-soup/",
     }),
     /does not contain a recognizable recipe/u,
   );
