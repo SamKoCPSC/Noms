@@ -1,6 +1,6 @@
 # NOMS-015: Security Hardening to a Good-Enough Baseline — Agentic Implementation Plan
 
-**Status:** In progress — CP8 completed with a `NOT GOOD ENOUGH` verdict; CP8D–CP8E remediation and CP9 final re-review remain
+**Status:** In progress — CP8D–CP8E are implemented; CP8F explicit media references and the CP9 final re-review remain
 **Created:** 2026-07-29
 **Issue:** [NOMS-015-security-hardening.md](../issues/NOMS-015-security-hardening.md)
 **Source:** Authentication, authorization, and application security review completed 2026-07-28
@@ -60,7 +60,11 @@ medium-severity release blockers:
    concurrency budget.
 
 CP8D and CP8E below are the release-blocking remediation checkpoints derived
-from that review. CP9 repeats the integrated adversarial gate after both land.
+from that review. Both are now implemented. Because the application remains in
+pre-production with no user data to preserve, CP8F replaces cleanup-time media
+ownership inference with explicit durable asset references before CP9 repeats
+the integrated adversarial gate. No legacy backfill or compatibility rollout is
+required for that clean cutover.
 
 Passing ordinary happy-path tests is not sufficient. Completion requires tests that reproduce each attack and prove that it is rejected without damaging the victim's session, linked accounts, database records, or storage objects.
 
@@ -75,8 +79,8 @@ that will actually ship.
 
 - **Implemented and independently reviewed:** CP0 baseline reliability, CP1 OAuth intent/session binding and same-origin redirects, CP2 integrated media ownership and orphan retention, CP3 trusted-proxy client identity and per-client OAuth limits, CP4 stable provider identities without legacy email reconciliation, CP4A completed-router and collection-media alignment, CP5 integrated resource-abuse bounds, CP5A typed media-upload unification, and CP6 dependency/secret/deployment verification.
 - **Completed reviews:** CP7 at revision `cb57bdd` returned `NOT GOOD ENOUGH` with five medium- and two low-severity findings; CP8 at revision `1ec3766` returned `NOT GOOD ENOUGH` with two medium- and seven low-severity findings.
-- **Implemented since CP7:** CP7A browser-bound OAuth and logout intent, CP7B reference-aware media deletion, CP7C hidden graph/lineage privacy, CP7D byte-bounded history and graph reads, CP8A account-media cleanup authority, CP8B bounded media cleanup, and CP8C bounded version comparisons.
-- **Remaining before the final consumer-security verdict:** CP8D fail-closed deep-fork media retention, CP8E bounded collection recipe projections, and CP9 final integrated adversarial re-review. The seven low-severity CP8 findings remain documented residual follow-up unless their aggregate risk is reassessed upward.
+- **Implemented since CP7:** CP7A browser-bound OAuth and logout intent, CP7B reference-aware media deletion, CP7C hidden graph/lineage privacy, CP7D byte-bounded history and graph reads, CP8A account-media cleanup authority, CP8B bounded media cleanup, CP8C bounded version comparisons, CP8D fail-closed deep-fork media retention, and CP8E bounded collection recipe projections.
+- **Remaining before the final consumer-security verdict:** CP8F explicit durable media references and CP9 final integrated adversarial re-review. The seven low-severity CP8 findings remain documented residual follow-up unless their aggregate risk is reassessed upward.
 
 ---
 
@@ -107,11 +111,14 @@ A product decision may later introduce an explicit account-switch flow, but it m
 
 Possession of a public media URL is not proof of ownership.
 
-- Recipe media uploaded by user A belongs to the exact `recipes/{user-A-id}/` namespace.
-- Avatar media belongs to the exact `avatars/{user-A-id}/` namespace.
+- Recipe and avatar object keys remain namespace-scoped storage details, but the
+  canonical identity and lifetime authority for managed media is its asset ID.
 - Only server-derived, ownership-validated object keys may be sent to `delete_object`.
 - An external image URL may be displayed or referenced if product behavior permits it, but the application must never translate an external URL into a storage deletion.
-- An internal storage URL belonging to another user must be rejected when a recipe is created or updated.
+- A client-supplied managed URL or asset ID never proves attachment or retention
+  authority. Direct attachment is permitted only for an uploader-owned asset or
+  an asset already authorized for that exact holder; cross-owner references are
+  created only by a server-authorized fork or explicit sharing operation.
 - Nested step photos follow the same rules as top-level recipe images.
 
 ### Client identity for rate limiting
@@ -172,10 +179,11 @@ security-graph       CP7C graph and lineage privacy, then CP7D bounded reads
 security-review      CP8 integrated review of the first remediated candidate
 security-deep-forks  CP8D fail-closed media retention
 security-collections CP8E bounded collection recipe projections
+security-media-refs  CP8F explicit media assets and durable references
 security-re-review   CP9 final integrated adversarial release gate
 ```
 
-CP2 and CP3 may run in parallel after CP0. CP1 must land before CP4 because both alter OAuth state, user-info extraction, account linking, schema, and tests. CP4A runs after the feature integration and before CP5 so the final router and every media-bearing feature share the intended controls. CP5 starts after those interfaces stabilize. CP5A then unifies the now-bounded upload implementations without changing their product behavior. CP6 and CP7 run on the integrated branch only. After CP7, CP7A and CP7B may proceed independently. CP7C and CP7D are serialized because both change version-graph/history contracts and tests. CP8 reviewed the exact integrated candidate. CP8D and CP8E may proceed independently, but both must be rebased onto the integrated branch before CP9 reviews the exact resulting release candidate.
+CP2 and CP3 may run in parallel after CP0. CP1 must land before CP4 because both alter OAuth state, user-info extraction, account linking, schema, and tests. CP4A runs after the feature integration and before CP5 so the final router and every media-bearing feature share the intended controls. CP5 starts after those interfaces stabilize. CP5A then unifies the now-bounded upload implementations without changing their product behavior. CP6 and CP7 run on the integrated branch only. After CP7, CP7A and CP7B may proceed independently. CP7C and CP7D are serialized because both change version-graph/history contracts and tests. CP8 reviewed the exact integrated candidate. CP8D and CP8E may proceed independently and are now integrated. CP8F follows them as a clean pre-production schema and media-model cutover; CP9 reviews the exact candidate after all three checkpoints land.
 
 Each implementation branch uses the `codex/` prefix unless the operator selects another repository convention. Agents must not share a source checkout, database, MinIO bucket, browser cookie name, or Dioxus cache.
 
@@ -1543,6 +1551,10 @@ retains conservatively.
 content; an overly broad fail-closed result can retain unused objects until a
 later complete scan.
 
+**Implementation:** Completed at revision `5bc2939` with explicit incomplete
+lineage states that retain conservatively at the holder, depth, cycle,
+mismatch, and missing-authority boundaries.
+
 ---
 
 ## Checkpoint 8E: Bound collection recipe projections and anonymous read work
@@ -1638,24 +1650,196 @@ that concurrent anonymous reads share the intended rate and concurrency limits.
 **Risk:** Medium. Projection or cursor mistakes can omit card fields, duplicate
 or skip memberships, break reordering, or accidentally widen recipe visibility.
 
+**Implementation:** Completed at revision `e9527f8` with a 12-card database
+projection, aggregate response validation, and shared anonymous-aware read
+budgets.
+
+---
+
+## Checkpoint 8F: Replace cleanup-time media liveness inference with explicit durable references
+
+**Goal:** Make managed-media lifetime depend on indexed, transactionally
+maintained asset references rather than cleanup-time URL scans and fork-lineage
+reconstruction.
+
+**Architectural decision:** The application is pre-production and has no user
+data that must survive this change. Implement a clean schema and model cutover;
+do not add legacy backfills, dual writes, compatibility reads, or rollout flags.
+Development databases and object-storage fixtures may be reset.
+
+**Depends on:** The integrated CP8D and CP8E candidate. Must land before CP9.
+
+**Primary files:** `migrations/schema.sql`, managed-media types and upload APIs,
+`src/db/mod.rs`, `src/db/diff.rs`, `src/db/versioning.rs`, recipe/draft/fork,
+collection-cover and avatar persistence, `src/worker/orphan_cleanup.rs`, SQLx
+metadata, and focused media lifecycle integration tests.
+
+### Tests first
+
+1. Prove every successful recipe or collection-cover upload creates one typed
+   media asset with its original, full, and thumbnail variants as applicable.
+   The uncommitted asset has no durable holder reference but remains attachable
+   until its upload-attempt expiry. An avatar flow may instead attach its asset
+   and avatar reference atomically.
+2. Prove recipe, recipe-version, draft, collection-cover, and avatar saves add
+   and remove explicit asset references in the same transaction as the holder
+   mutation, including both top-level recipe images and nested step photos; a
+   failed mutation must leave neither stale content nor stale references.
+3. Fork a recipe across owners and prove the server-authorized fork creates a
+   durable reference to each inherited asset. After the source becomes private
+   or is deleted, the fork owner can edit a draft, publish an immutable version,
+   and restore or re-save the fork with those assets. That inherited authority
+   must not permit attaching the assets to an unrelated recipe.
+4. Prove an arbitrary user cannot pin another user's managed object by copying
+   its URL or submitting its asset ID outside an authorized fork or explicit
+   sharing operation.
+5. Keep immutable versions and restorable drafts visually complete for as long
+   as they exist, then prove deleting their final holder removes their asset
+   references.
+6. Resolve asset IDs safely and within existing response bounds on every read
+   surface: recipe detail/editor, draft editor, immutable version/history/graph,
+   collection cards/mosaics, search projections, managed avatars, and managed
+   collection covers. Derived projections consume references but do not become
+   durable holders themselves.
+7. Race final-reference removal and a new authorized attachment. Both paths
+   must lock the asset consistently so cleanup cannot delete an object after a
+   new reference commits.
+8. Prove an asset with any reference cannot be claimed. An uncommitted asset
+   cannot be swept before its attempt expires; before then only its exact
+   one-use attempt-bound discard capability may claim it. After expiry, or
+   after the final durable reference is removed, cleanup can claim the asset
+   exactly once and eventually delete every variant with retry-safe state.
+9. Delete an uploader account in three cases: while a foreign authorized
+   reference survives, while only the uploader's own holder survives, and while
+   the asset is uncommitted. Holder deletion removes its references
+   transactionally, the asset row survives without the user row, every
+   surviving foreign reference remains renderable, and every resulting
+   unreferenced asset remains reclaimable by ordinary cleanup.
+10. Preserve explicitly external recipe images and OAuth/external avatars
+    without treating them as managed asset references or allowing them to
+    influence managed-object retention.
+11. Prove cleanup work uses indexed exact asset references and never scans JSON
+    documents or traverses fork lineage to decide liveness.
+
+### Implementation tasks
+
+- Replace user-owned `media_upload_families` as the lifetime authority with a
+  first-class media-asset record. Keep uploader/custodian attribution for
+  authorization, quotas, abuse response, and audit, with a nullable uploader
+  foreign key that uses `ON DELETE SET NULL` so the asset survives account
+  deletion.
+- Represent original, full, and thumbnail objects as typed variants of one
+  asset. An object URL must never be the authoritative asset identity.
+- Store managed asset IDs in canonical recipe/draft/version media values and
+  resolve their display URLs through bounded server projections. Keep external
+  URLs, including OAuth avatar URLs, explicitly tagged and distinct from
+  managed assets.
+- Add strongly constrained references for every durable holder. Prefer
+  holder-specific reference tables with foreign keys for recipes, immutable
+  versions, drafts, collection covers, and avatars over an unenforced
+  polymorphic holder ID. Extract both top-level recipe images and nested step
+  photos into those references. Collection cards, mosaics, search results, and
+  other derived projections resolve asset IDs as consumers; they are not
+  additional durable holders.
+- Create and delete references transactionally with holder writes. Lock the
+  media asset before attaching it, and reject attachment when its lifecycle is
+  already deletion-claimed or deleted.
+- Keep each uncommitted recipe or collection-cover asset attachable until its
+  upload-attempt expiry. Before expiry, only the exact one-use attempt-bound
+  discard capability may claim it; the cleanup worker must lock and recheck
+  both references and expiry before claiming it.
+- During a server-authorized fork, copy asset references while source access is
+  still authorized. Carry that scoped authority through the fork's drafts,
+  immutable versions, and restore/re-save operations, but do not turn it into
+  permission to attach the asset to unrelated recipes. Retention then depends
+  on durable references, while fork lineage remains responsible only for
+  attribution and version-graph history.
+- Replace cleanup-time recipe JSONPath scans and recursive lineage proofs with
+  an indexed `NOT EXISTS` reference check performed while the asset row is
+  locked. Recheck liveness before transitioning to deletion-claimed.
+- Preserve the existing claim/delete/finish lifecycle around object storage;
+  database references remove lineage ambiguity but do not make database and
+  object-storage operations atomic.
+- Use this single asset lifecycle for account deletion. Remove managed-media
+  `account_media_cleanup_tombstones` and any parallel cleanup authority: holder
+  deletion removes its references transactionally, the uploader foreign key is
+  cleared, a surviving reference outlives the uploader, and an unreferenced
+  service-custodied asset remains reclaimable without the user row.
+- Remove superseded lineage-retention code and compatibility-only schema after
+  the new tests pass. Do not retain a fallback URL/lineage cleanup path.
+
+### Acceptance criteria
+
+- Every managed object variant belongs to exactly one typed media asset, and
+  every durable use is represented by an explicit database reference.
+- Cleanup may claim an asset only after a locked, indexed check proves that no
+  reference exists; reference creation and cleanup claims serialize on the
+  same asset row.
+- A legitimate cross-owner fork keeps inherited assets alive without any
+  cleanup-time lineage traversal, while arbitrary foreign URLs or asset IDs
+  cannot create retention authority.
+- Recipe versions, drafts, collection covers, and avatars retain their assets
+  for their documented lifetime, and removal of the final holder permits
+  eventual reclamation.
+- Uncommitted uploads remain attachable until expiry and cannot be claimed
+  early except by their exact one-use attempt-bound discard capability.
+- Account deletion neither breaks surviving foreign references nor removes the
+  system's authority to reclaim the asset later; managed-media account
+  tombstones and parallel deletion authority no longer exist.
+- Fork lineage remains available for attribution and graph history but is not
+  consulted for media liveness.
+- The clean development cutover contains no backfill, compatibility read, dual
+  write, or legacy fallback path.
+
+### Validation and review gate
+
+Run focused media lifecycle, upload, recipe/draft/version/fork,
+collection-cover, avatar, account-deletion, race, and cleanup-worker suites;
+then run `just migrate-plan`, `just sqlx-prepare`, `just schema-check-test`, and
+`just ci`. The destructive schema plan is acceptable only for disposable
+pre-production databases and must be recorded explicitly.
+
+In a fresh isolated environment created from an empty database and bucket,
+exercise upload, recipe save, fork, source deletion, account deletion, final
+reference removal, and cleanup. Verify the object remains renderable until its
+last authorized reference disappears and that every variant is removed only
+afterward.
+
+**Gate:** The reviewer returns `PASS` only when cleanup authorization derives
+solely from explicit durable references, attachment and cleanup are race-safe,
+and no legacy URL/lineage inference remains reachable.
+
+**Risk:** High. This intentionally changes the canonical media identity and
+every persistence path that can hold media. The lack of production data removes
+backfill and compatibility risk, but incomplete reference maintenance could
+still cause premature deletion or indefinite retention.
+
 ---
 
 ## Checkpoint 9: Final integrated adversarial re-review and release verdict
 
 **Goal:** Repeat the integrated release review against the exact candidate after
-CP8D and CP8E without weakening any CP7 or CP8 acceptance criterion.
+CP8D, CP8E, and the clean CP8F media-reference cutover without weakening any CP7
+or CP8 acceptance criterion.
 
-**Depends on:** CP8D and CP8E.
+**Depends on:** CP8D, CP8E, and CP8F.
 
 ### Required gate
 
 - Repeat the complete CP8 validation matrix and production image/runtime
   inspection against a fresh isolated environment.
-- Reproduce the 33-plus-generation retained-media case before the fix and prove
-  it fails closed on the candidate through every deletion/cleanup entry point.
+- Reproduce the former 33-plus-generation retained-media exploit and prove an
+  explicit surviving reference keeps the asset alive regardless of lineage
+  depth; confirm that no deletion or cleanup authorization decision consults
+  fork ancestry.
 - Measure maximum-size public collection pages and concurrent anonymous reads,
   recording selected columns, rows, serialized bytes, duration, permits, and
   rate-limit outcomes.
+- Verify every managed media holder creates an explicit reference, cleanup uses
+  only the indexed reference proof, and a surviving cross-owner fork remains
+  renderable without cleanup-time lineage traversal.
+- Confirm the candidate starts from an empty schema without any CP8F legacy
+  backfill, dual-write, or compatibility path.
 - Re-run the seven low-severity CP8 findings to ensure neither remediation
   increases their reachability or impact; promote any aggregate or changed risk
   to an explicit checkpoint.
@@ -1687,7 +1871,8 @@ CP8D and CP8E without weakening any CP7 or CP8 acceptance criterion.
 14. Record the CP8 `NOT GOOD ENOUGH` verdict and preserve its exact candidate and report artifacts as review evidence.
 15. Deploy CP8D's fail-closed ancestry result before running any recipe-media cleanup worker built from the new candidate.
 16. Deploy CP8E's collection card projection, endpoint page limit, and anonymous read budgets together so no public route retains the full-recipe fallback.
-17. Complete CP9 against the exact remediated production candidate before general release.
+17. Before CP9, reset disposable development databases and buckets and deploy CP8F's media-asset schema, explicit references, and code as one clean cutover. Do not carry the superseded URL/lineage retention path into the candidate.
+18. Complete CP9 against the exact remediated production candidate before general release.
 
 ### Monitoring
 
@@ -1755,7 +1940,8 @@ Track structured counts without sensitive values:
 - [x] Dependency audit and production security configuration are enforced in CI/deployment.
 - [x] CP7 independent integrated security review completed and returned `NOT GOOD ENOUGH`; all seven findings have explicit remediation checkpoints.
 - [x] CP8 independent integrated security review completed at revision `1ec3766` and returned `NOT GOOD ENOUGH` with two medium- and seven low-severity findings.
-- [ ] Incomplete or depth-truncated fork ancestry retains recipe media; only a complete negative authority proof permits cleanup.
-- [ ] Collection membership reads return at most 12 lightweight card projections under aggregate byte, anonymous rate, database timeout, and shared concurrency bounds.
-- [ ] CP9 independent integrated security re-review of the CP8D/CP8E candidate returns `GOOD ENOUGH`.
+- [x] Incomplete or depth-truncated fork ancestry retains recipe media; only a complete negative authority proof permits cleanup.
+- [x] Collection membership reads return at most 12 lightweight card projections under aggregate byte, anonymous rate, database timeout, and shared concurrency bounds.
+- [ ] Managed media uses first-class asset identity and explicit durable references for every holder; cleanup relies on a locked indexed no-reference proof rather than URL scans or fork-lineage traversal.
+- [ ] CP9 independent integrated security re-review of the CP8D/CP8E/CP8F candidate returns `GOOD ENOUGH`.
 - [ ] Remaining specialized risks, exclusions, owners, and expiry dates are documented.
