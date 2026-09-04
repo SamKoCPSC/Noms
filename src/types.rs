@@ -258,6 +258,76 @@ pub struct Recipe {
     pub author_avatar_url: Option<String>,
 }
 
+/// The bounded fields needed to render one recipe card.
+///
+/// Collection reads use this projection directly so card pages never transport
+/// a complete recipe snapshot.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecipeCardImage {
+    pub url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thumb_url: Option<String>,
+    pub edits: Vec<RecipeImageEdit>,
+}
+
+impl RecipeCardImage {
+    pub fn into_recipe_image(self) -> RecipeImage {
+        RecipeImage {
+            url: self.url,
+            thumb_url: self.thumb_url,
+            file_name: None,
+            file_size: None,
+            edits: self.edits,
+        }
+    }
+}
+
+impl From<RecipeImage> for RecipeCardImage {
+    fn from(image: RecipeImage) -> Self {
+        Self {
+            url: image.url,
+            thumb_url: image.thumb_url,
+            edits: image
+                .edits
+                .into_iter()
+                .find(|edit| edit.name == "rectangle:16:9")
+                .into_iter()
+                .collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecipeCardSummary {
+    pub id: Uuid,
+    pub title: String,
+    pub description: Option<String>,
+    pub prep_time_minutes: Option<i32>,
+    pub cook_time_minutes: Option<i32>,
+    pub servings: Option<i32>,
+    pub image: Option<RecipeCardImage>,
+    pub visibility: String,
+    pub author_username: String,
+    pub author_avatar_url: Option<String>,
+}
+
+impl From<Recipe> for RecipeCardSummary {
+    fn from(recipe: Recipe) -> Self {
+        Self {
+            id: recipe.id,
+            title: recipe.title,
+            description: recipe.description,
+            prep_time_minutes: recipe.prep_time_minutes,
+            cook_time_minutes: recipe.cook_time_minutes,
+            servings: recipe.servings,
+            image: recipe.images.into_iter().next().map(RecipeCardImage::from),
+            visibility: recipe.visibility,
+            author_username: recipe.author_username,
+            author_avatar_url: recipe.author_avatar_url,
+        }
+    }
+}
+
 /// Paginated recipe list response for server functions.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RecipeListResponse {
@@ -847,7 +917,7 @@ pub struct PublicCollectionListResponse {
 /// Paginated direct recipe membership for a collection.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CollectionRecipeList {
-    pub recipes: Vec<Recipe>,
+    pub recipes: Vec<RecipeCardSummary>,
     pub total_count: i64,
     pub has_more: bool,
 }

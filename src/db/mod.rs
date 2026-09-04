@@ -22,11 +22,14 @@ pub use versioning::*;
 
 use crate::security::{
     MAX_COLLECTIONS_PER_USER, MAX_COLLECTION_CHILDREN, MAX_COLLECTION_DEPTH,
-    MAX_COLLECTION_MEMBERSHIPS, MAX_PUBLIC_TAGS,
+    MAX_COLLECTION_MEMBERSHIPS, MAX_COLLECTION_RECIPE_CARDS_PER_PAGE,
+    MAX_COLLECTION_RECIPE_CARD_AUTHOR_AVATAR_URL_CHARS,
+    MAX_COLLECTION_RECIPE_CARD_DESCRIPTION_CHARS, MAX_IMAGE_METADATA_BYTES, MAX_PUBLIC_TAGS,
 };
 use crate::types::{
     Collection, CollectionContents, CollectionRecipeList, CollectionSharePreview,
-    CollectionSummary, CollectionVisibility, PublicCollectionListResponse,
+    CollectionSummary, CollectionVisibility, PublicCollectionListResponse, RecipeCardImage,
+    RecipeCardSummary, RecipeImageEdit,
 };
 
 mod recipe_search;
@@ -591,6 +594,41 @@ fn collection_summary_from_row(
         recipe_count: row.try_get("recipe_count")?,
         updated_at: row.try_get("updated_at")?,
     })
+}
+
+fn collection_recipe_card_from_row(
+    row: &sqlx::postgres::PgRow,
+) -> Result<RecipeCardSummary, sqlx::Error> {
+    let image_url: Option<String> = row.try_get("image_url")?;
+    let image_edit = row
+        .try_get::<Option<serde_json::Value>, _>("image_edit")?
+        .map(serde_json::from_value::<RecipeImageEdit>)
+        .transpose()
+        .map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
+    let image_thumb_url: Option<String> = row.try_get("image_thumb_url")?;
+    let image = image_url.map(|url| RecipeCardImage {
+        url,
+        thumb_url: image_thumb_url,
+        edits: image_edit.into_iter().collect(),
+    });
+
+    Ok(RecipeCardSummary {
+        id: row.try_get("id")?,
+        title: row.try_get("title")?,
+        description: row.try_get("description")?,
+        prep_time_minutes: row.try_get("prep_time_minutes")?,
+        cook_time_minutes: row.try_get("cook_time_minutes")?,
+        servings: row.try_get("servings")?,
+        image,
+        visibility: row.try_get("visibility")?,
+        author_username: row.try_get("author_username")?,
+        author_avatar_url: row.try_get("author_avatar_url")?,
+    })
+}
+
+fn validate_collection_recipe_card_output(recipes: &[RecipeCardSummary]) -> Result<(), DbError> {
+    crate::security::validate_collection_recipe_card_page(recipes)
+        .map_err(|_| DbError::ResourceLimitExceeded("collection recipe card page bytes"))
 }
 
 fn collection_query_error(error: sqlx::Error) -> DbError {
@@ -1642,12 +1680,47 @@ pub async fn get_collection_recipes(
     .fetch_one(pool)
     .await
     .map_err(DbError::Query)?;
+    let bounded_limit = limit.clamp(0, MAX_COLLECTION_RECIPE_CARDS_PER_PAGE as i64);
+    let bounded_offset = offset.max(0);
     let rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary,
+        "SELECT r.id, r.title,
+                LEFT(r.description, $5::INTEGER) AS description,
                 r.prep_time_minutes, r.cook_time_minutes, r.servings,
-                r.ingredients, r.instructions, r.equipment, r.images,
-                r.visibility, r.created_at, r.updated_at,
-                u.username AS author_username, u.avatar_url AS author_avatar_url
+                CASE
+                    WHEN octet_length((r.images -> 0)::TEXT) <= $6
+                    THEN CASE
+                        WHEN jsonb_typeof(r.images -> 0) = 'string'
+                        THEN r.images -> 0 #>> '{}'
+                        WHEN jsonb_typeof(r.images -> 0) = 'object'
+                        THEN r.images -> 0 ->> 'url'
+                    END
+                END AS image_url,
+                CASE
+                    WHEN jsonb_typeof(r.images -> 0) = 'object'
+                     AND octet_length((r.images -> 0)::TEXT) <= $6
+                    THEN r.images -> 0 ->> 'thumb_url'
+                END AS image_thumb_url,
+                CASE
+                    WHEN jsonb_typeof(r.images -> 0) = 'object'
+                     AND octet_length((r.images -> 0)::TEXT) <= $6
+                    THEN (
+                        SELECT edit.value
+                        FROM jsonb_array_elements(
+                            CASE
+                                WHEN jsonb_typeof((r.images -> 0) -> 'edits') = 'array'
+                                THEN (r.images -> 0) -> 'edits'
+                                ELSE '[]'::JSONB
+                            END
+                        ) WITH ORDINALITY AS edit(value, ordinal)
+                        WHERE edit.value ->> 'name' = 'rectangle:16:9'
+                        ORDER BY edit.ordinal
+                        LIMIT 1
+                    )
+                END AS image_edit,
+                r.visibility,
+                u.username AS author_username,
+                CASE WHEN char_length(u.avatar_url) <= $7
+                     THEN u.avatar_url END AS author_avatar_url
          FROM collection_recipes cr
          INNER JOIN collections c ON c.id = cr.collection_id AND c.owner_id = $2
          INNER JOIN recipes r ON r.id = cr.recipe_id
@@ -1659,18 +1732,22 @@ pub async fn get_collection_recipes(
     )
     .bind(collection_id)
     .bind(owner_id)
-    .bind(limit.max(0))
-    .bind(offset.max(0))
+    .bind(bounded_limit)
+    .bind(bounded_offset)
+    .bind(MAX_COLLECTION_RECIPE_CARD_DESCRIPTION_CHARS as i64)
+    .bind(MAX_IMAGE_METADATA_BYTES as i64)
+    .bind(MAX_COLLECTION_RECIPE_CARD_AUTHOR_AVATAR_URL_CHARS as i64)
     .fetch_all(pool)
     .await
     .map_err(DbError::Query)?;
     let recipes = rows
         .iter()
-        .map(Recipe::from_row)
+        .map(collection_recipe_card_from_row)
         .collect::<Result<Vec<_>, _>>()
         .map_err(DbError::Query)?;
+    validate_collection_recipe_card_output(&recipes)?;
     Ok(CollectionRecipeList {
-        has_more: offset.max(0) + (recipes.len() as i64) < total_count,
+        has_more: bounded_offset + (recipes.len() as i64) < total_count,
         recipes,
         total_count,
     })
@@ -1928,12 +2005,47 @@ pub async fn get_collection_contents_for_viewer(
     .fetch_one(&mut *tx)
     .await
     .map_err(DbError::Query)?;
+    let bounded_limit = limit.clamp(0, MAX_COLLECTION_RECIPE_CARDS_PER_PAGE as i64);
+    let bounded_offset = offset.max(0);
     let recipe_rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary,
+        "SELECT r.id, r.title,
+                LEFT(r.description, $6::INTEGER) AS description,
                 r.prep_time_minutes, r.cook_time_minutes, r.servings,
-                r.ingredients, r.instructions, r.equipment, r.images,
-                r.visibility, r.created_at, r.updated_at,
-                u.username AS author_username, u.avatar_url AS author_avatar_url
+                CASE
+                    WHEN octet_length((r.images -> 0)::TEXT) <= $7
+                    THEN CASE
+                        WHEN jsonb_typeof(r.images -> 0) = 'string'
+                        THEN r.images -> 0 #>> '{}'
+                        WHEN jsonb_typeof(r.images -> 0) = 'object'
+                        THEN r.images -> 0 ->> 'url'
+                    END
+                END AS image_url,
+                CASE
+                    WHEN jsonb_typeof(r.images -> 0) = 'object'
+                     AND octet_length((r.images -> 0)::TEXT) <= $7
+                    THEN r.images -> 0 ->> 'thumb_url'
+                END AS image_thumb_url,
+                CASE
+                    WHEN jsonb_typeof(r.images -> 0) = 'object'
+                     AND octet_length((r.images -> 0)::TEXT) <= $7
+                    THEN (
+                        SELECT edit.value
+                        FROM jsonb_array_elements(
+                            CASE
+                                WHEN jsonb_typeof((r.images -> 0) -> 'edits') = 'array'
+                                THEN (r.images -> 0) -> 'edits'
+                                ELSE '[]'::JSONB
+                            END
+                        ) WITH ORDINALITY AS edit(value, ordinal)
+                        WHERE edit.value ->> 'name' = 'rectangle:16:9'
+                        ORDER BY edit.ordinal
+                        LIMIT 1
+                    )
+                END AS image_edit,
+                r.visibility,
+                u.username AS author_username,
+                CASE WHEN char_length(u.avatar_url) <= $8
+                     THEN u.avatar_url END AS author_avatar_url
          FROM collection_recipes cr
          INNER JOIN collections c ON c.id = cr.collection_id AND c.owner_id = $2
          INNER JOIN recipes r ON r.id = cr.recipe_id
@@ -1947,18 +2059,22 @@ pub async fn get_collection_contents_for_viewer(
     .bind(collection_id)
     .bind(owner_id)
     .bind(include_unlisted)
-    .bind(limit.max(0))
-    .bind(offset.max(0))
+    .bind(bounded_limit)
+    .bind(bounded_offset)
+    .bind(MAX_COLLECTION_RECIPE_CARD_DESCRIPTION_CHARS as i64)
+    .bind(MAX_IMAGE_METADATA_BYTES as i64)
+    .bind(MAX_COLLECTION_RECIPE_CARD_AUTHOR_AVATAR_URL_CHARS as i64)
     .fetch_all(&mut *tx)
     .await
     .map_err(DbError::Query)?;
     let returned_recipes = recipe_rows
         .iter()
-        .map(Recipe::from_row)
+        .map(collection_recipe_card_from_row)
         .collect::<Result<Vec<_>, _>>()
         .map_err(DbError::Query)?;
+    validate_collection_recipe_card_output(&returned_recipes)?;
     let recipes = CollectionRecipeList {
-        has_more: offset.max(0) + (returned_recipes.len() as i64) < total_count,
+        has_more: bounded_offset + (returned_recipes.len() as i64) < total_count,
         recipes: returned_recipes,
         total_count,
     };
@@ -8577,6 +8693,143 @@ mod tests {
                 .id,
             nested_recipe.id
         );
+    }
+
+    #[tokio::test]
+    async fn collection_recipe_pages_are_lightweight_and_capped_at_twelve_cards() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let collection = insert_collection(
+            &pool,
+            owner.id,
+            None,
+            "Large public collection",
+            None,
+            CollectionVisibility::Public,
+            None,
+        )
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "WITH large_instructions AS (
+                 SELECT jsonb_agg(jsonb_build_object(
+                     'text', repeat('s', 5000),
+                     'sub_steps', '[]'::jsonb,
+                     'photos', '[]'::jsonb
+                 )) AS value
+                 FROM generate_series(1, 180)
+             ), inserted AS (
+                 INSERT INTO recipes (
+                     user_id, title, description, commentary, ingredients,
+                     instructions, equipment, images, visibility
+                 )
+                 SELECT $1,
+                        'Large card recipe ' || lpad(ordinal::text, 3, '0'),
+                        repeat('é', 600), repeat('c', 10000),
+                        jsonb_build_array(jsonb_build_object(
+                            'amount', repeat('a', 64),
+                            'unit', repeat('u', 64),
+                            'name', repeat('n', 500)
+                        )),
+                        large_instructions.value,
+                        jsonb_build_array(jsonb_build_object('name', repeat('e', 200))),
+                        '[]'::jsonb, 'public'
+                 FROM generate_series(1, 100) AS ordinal
+                 CROSS JOIN large_instructions
+                 RETURNING id, title
+             )
+             INSERT INTO collection_recipes (collection_id, recipe_id, sort_order)
+             SELECT $2, id, (ROW_NUMBER() OVER (ORDER BY title) - 1)::INTEGER
+             FROM inserted",
+        )
+        .bind(owner.id)
+        .bind(collection.id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let first_recipe_id: Uuid = sqlx::query_scalar(
+            "SELECT id FROM recipes WHERE user_id = $1 AND title = 'Large card recipe 001'",
+        )
+        .bind(owner.id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        let mut display_image = RecipeImage::new(
+            "https://images.example.test/full.webp".to_string(),
+            Some("https://images.example.test/thumb.webp".to_string()),
+            crate::types::RecipeImageEdit::default_ellipse_1x1(),
+        )
+        .with_file_metadata("private-original-name.webp".to_string(), 123_456);
+        display_image
+            .edits
+            .push(crate::types::RecipeImageEdit::default_rect_16x9());
+        sqlx::query("UPDATE recipes SET images = $2 WHERE id = $1")
+            .bind(first_recipe_id)
+            .bind(serde_json::json!([display_image]))
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let first_page = get_collection_recipes(&pool, collection.id, owner.id, 0, 100)
+            .await
+            .unwrap();
+        assert_eq!(first_page.recipes.len(), 12);
+        assert_eq!(first_page.total_count, 100);
+        assert!(first_page.has_more);
+        assert!(first_page.recipes.iter().all(|recipe| recipe
+            .description
+            .as_ref()
+            .unwrap()
+            .chars()
+            .count()
+            == 500));
+        let serialized = serde_json::to_value(&first_page).unwrap();
+        let first_card = &serialized["recipes"][0];
+        for excluded in [
+            "commentary",
+            "ingredients",
+            "instructions",
+            "equipment",
+            "images",
+            "user_id",
+            "created_at",
+            "updated_at",
+        ] {
+            assert!(
+                first_card.get(excluded).is_none(),
+                "collection cards must not serialize {excluded}"
+            );
+        }
+        let card_image = &first_card["image"];
+        assert_eq!(card_image["url"], "https://images.example.test/full.webp");
+        assert_eq!(card_image["edits"].as_array().unwrap().len(), 1);
+        assert_eq!(card_image["edits"][0]["name"], "rectangle:16:9");
+        assert!(card_image.get("file_name").is_none());
+        assert!(card_image.get("file_size").is_none());
+        assert!(serde_json::to_vec(&first_page.recipes).unwrap().len() <= 512 * 1024);
+
+        let second_page = get_collection_recipes(&pool, collection.id, owner.id, 12, 100)
+            .await
+            .unwrap();
+        assert_eq!(second_page.recipes.len(), 12);
+        assert!(second_page.has_more);
+        let first_ids = first_page
+            .recipes
+            .iter()
+            .map(|recipe| recipe.id)
+            .collect::<std::collections::HashSet<_>>();
+        assert!(second_page
+            .recipes
+            .iter()
+            .all(|recipe| !first_ids.contains(&recipe.id)));
+
+        let final_page = get_collection_recipes(&pool, collection.id, owner.id, 96, 100)
+            .await
+            .unwrap();
+        assert_eq!(final_page.recipes.len(), 4);
+        assert!(!final_page.has_more);
     }
 
     #[tokio::test]

@@ -12,10 +12,10 @@ use crate::components::base::{
     Button, ButtonVariant, CollectionCover, CollectionVisibilityBadge, EmptyState, Input,
     LoadingSpinner, PageHeader, RecipeCard, ReorderHandle,
 };
-use crate::types::{CollectionSummary, CollectionVisibility, Recipe};
+use crate::types::{CollectionSummary, CollectionVisibility, RecipeCardSummary};
 use crate::Route;
 
-const MAX_RECIPE_PAGE_SIZE: i64 = 100;
+const MAX_RECIPE_PAGE_SIZE: i64 = 12;
 #[cfg(any(test, target_arch = "wasm32"))]
 const RECIPE_REORDER_DEBOUNCE_MS: u32 = 500;
 const RECURSIVE_DELETE_WARNING: &str = "Deleting this collection also deletes all nested collections and their memberships. Your recipes will remain.";
@@ -241,7 +241,7 @@ pub fn CollectionDetail(id: String) -> Element {
     let mut removing_recipes = use_signal(HashSet::<uuid::Uuid>::new);
     let mut removal_error = use_signal(|| None::<String>);
     let mut child_order_override = use_signal(|| None::<Vec<CollectionSummary>>);
-    let mut recipe_order_override = use_signal(|| None::<Vec<Recipe>>);
+    let mut recipe_order_override = use_signal(|| None::<Vec<RecipeCardSummary>>);
     let mut folder_save_in_flight = use_signal(|| false);
     let mut recipe_reorder_pending = use_signal(|| false);
     let mut recipe_save_in_flight = use_signal(|| false);
@@ -899,7 +899,7 @@ mod tests {
 
     #[test]
     fn recipe_pagination_requests_every_remaining_page() {
-        assert_eq!(next_recipe_page_request(12, 30), Some((12, 18)));
+        assert_eq!(next_recipe_page_request(12, 30), Some((12, 12)));
         assert_eq!(next_recipe_page_request(30, 30), None);
         assert_eq!(next_recipe_page_request(0, 0), None);
     }
@@ -941,9 +941,7 @@ mod tests {
     #[test]
     fn stale_or_non_progressing_recipe_pages_trigger_a_reload() {
         assert!(!collection_recipe_page_is_stale(30, 12, 30, 18, 18, false,));
-        assert!(!collection_recipe_page_is_stale(
-            200, 12, 200, 100, 100, true,
-        ));
+        assert!(!collection_recipe_page_is_stale(200, 12, 200, 12, 12, true,));
         assert!(collection_recipe_page_is_stale(30, 12, 31, 18, 18, true,));
         assert!(collection_recipe_page_is_stale(30, 12, 30, 18, 17, false,));
         assert!(collection_recipe_page_is_stale(30, 12, 30, 0, 0, true,));

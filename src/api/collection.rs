@@ -7,9 +7,6 @@ use uuid::Uuid;
 use sqlx::PgPool;
 
 #[cfg(feature = "server")]
-const COLLECTION_CONTENTS_RECIPE_LIMIT: i64 = 12;
-
-#[cfg(feature = "server")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CollectionApiError {
     NotAuthenticated,
@@ -29,6 +26,9 @@ enum CollectionApiError {
     InvalidPagination,
     QuotaExceeded,
     RateLimited,
+    ReadRateLimited,
+    ReadCapacityExceeded,
+    OutputTooLarge,
     TimedOut,
     Internal,
 }
@@ -54,6 +54,9 @@ impl std::fmt::Display for CollectionApiError {
             Self::InvalidPagination => "Invalid collection pagination",
             Self::QuotaExceeded => "Collection quota exceeded",
             Self::RateLimited => "Mutation rate limit exceeded",
+            Self::ReadRateLimited => "Collection read rate limit exceeded",
+            Self::ReadCapacityExceeded => "Collection read capacity exhausted",
+            Self::OutputTooLarge => "Collection recipe card page exceeds the output limit",
             Self::TimedOut => "Database operation timed out",
             Self::Internal => "Collection operation failed",
         };
@@ -182,6 +185,9 @@ fn map_db_error(error: crate::db::DbError) -> CollectionApiError {
         }
         crate::db::DbError::InvalidCollectionOrder => CollectionApiError::InvalidOrder,
         crate::db::DbError::CollectionLimitExceeded(_) => CollectionApiError::QuotaExceeded,
+        crate::db::DbError::ResourceLimitExceeded("collection recipe card page bytes") => {
+            CollectionApiError::OutputTooLarge
+        }
         crate::db::DbError::ResourceLimitExceeded(_) => CollectionApiError::InvalidImage,
         _ => CollectionApiError::Internal,
     }
@@ -205,6 +211,21 @@ async fn with_database_budget<T>(
     crate::security::run_with_database_budget(crate::security::DATABASE_EXECUTION_BUDGET, operation)
         .await
         .map_err(|_| CollectionApiError::TimedOut)?
+}
+
+#[cfg(feature = "server")]
+async fn with_collection_read_budget<T>(
+    viewer_id: Option<Uuid>,
+    operation: impl std::future::Future<Output = Result<T, CollectionApiError>>,
+) -> Result<T, CollectionApiError> {
+    crate::security::enforce_request_budget(
+        viewer_id,
+        crate::security::RequestClass::CollectionRead,
+    )
+    .map_err(|_| CollectionApiError::ReadRateLimited)?;
+    crate::security::run_with_expensive_read_work_budget(with_database_budget(operation))
+        .await
+        .map_err(|_| CollectionApiError::ReadCapacityExceeded)?
 }
 
 #[cfg(feature = "server")]
@@ -254,7 +275,7 @@ impl<'pool> CollectionReadService<'pool> {
             collection_id,
             self.viewer_id,
             0,
-            COLLECTION_CONTENTS_RECIPE_LIMIT,
+            crate::security::MAX_COLLECTION_RECIPE_CARDS_PER_PAGE as i64,
         )
         .await
         .map_err(map_db_error)?
@@ -343,7 +364,7 @@ impl<'pool> CollectionService<'pool> {
             collection_id,
             self.user_id,
             0,
-            COLLECTION_CONTENTS_RECIPE_LIMIT,
+            crate::security::MAX_COLLECTION_RECIPE_CARDS_PER_PAGE as i64,
         )
         .await
         .map_err(map_db_error)?;
@@ -579,9 +600,12 @@ pub async fn get_collection(
 ) -> Result<crate::types::CollectionContents, ServerFnError> {
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
     let pool = crate::db::get_pool();
-    with_database_budget(CollectionReadService::new(&pool, viewer_id).get(collection_id))
-        .await
-        .map_err(server_error)
+    with_collection_read_budget(
+        viewer_id,
+        CollectionReadService::new(&pool, viewer_id).get(collection_id),
+    )
+    .await
+    .map_err(server_error)
 }
 
 /// List public collections for a user profile without requiring a session.
@@ -604,9 +628,12 @@ pub async fn get_owned_collection(
 ) -> Result<crate::types::CollectionContents, ServerFnError> {
     let user_id = authenticated_user_id().await.map_err(server_error)?;
     let pool = crate::db::get_pool();
-    with_database_budget(CollectionService::new(&pool, user_id).get(collection_id))
-        .await
-        .map_err(server_error)
+    with_collection_read_budget(
+        Some(user_id),
+        CollectionService::new(&pool, user_id).get(collection_id),
+    )
+    .await
+    .map_err(server_error)
 }
 
 /// List root collections owned by the authenticated user.
@@ -805,11 +832,10 @@ pub async fn get_collection_recipes(
         .map_err(|_| server_error(CollectionApiError::InvalidPagination))?;
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
     let pool = crate::db::get_pool();
-    with_database_budget(CollectionReadService::new(&pool, viewer_id).recipes(
-        collection_id,
-        offset,
-        limit,
-    ))
+    with_collection_read_budget(
+        viewer_id,
+        CollectionReadService::new(&pool, viewer_id).recipes(collection_id, offset, limit),
+    )
     .await
     .map_err(server_error)
 }
@@ -874,6 +900,33 @@ mod tests {
         assert!(db_source.contains("image: Option<&RecipeImage>"));
         assert!(type_source.contains("pub image: Option<RecipeImage>"));
         assert!(schema_source.contains("image JSONB"));
+    }
+
+    #[test]
+    fn collection_recipe_reads_share_bounded_rate_concurrency_and_output_guards() {
+        let api_source = include_str!("collection.rs");
+        let database_source = include_str!("../db/mod.rs");
+        let security_source = include_str!("../security.rs");
+        let type_source = include_str!("../types.rs");
+
+        assert!(api_source.contains("with_collection_read_budget"));
+        assert_eq!(
+            api_source.matches("with_collection_read_budget(").count(),
+            4
+        );
+        assert!(api_source.contains("RequestClass::CollectionRead"));
+        assert!(api_source.contains("run_with_expensive_read_work_budget"));
+        assert!(security_source.contains("MAX_COLLECTION_RECIPE_CARDS_PER_PAGE: usize = 12"));
+        assert!(
+            security_source.contains("MAX_COLLECTION_RECIPE_CARD_DESCRIPTION_CHARS: usize = 500")
+        );
+        assert!(
+            security_source.contains("MAX_COLLECTION_RECIPE_CARD_PAGE_BYTES: usize = 512 * 1024")
+        );
+        assert!(database_source.contains("END AS image_url"));
+        assert!(database_source.contains("MAX_COLLECTION_RECIPE_CARDS_PER_PAGE as i64"));
+        assert!(type_source.contains("pub struct RecipeCardSummary"));
+        assert!(type_source.contains("pub recipes: Vec<RecipeCardSummary>"));
     }
 
     #[test]

@@ -10,7 +10,8 @@ use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use crate::types::{
-    RecipeEditorState, RecipeImage, RecipeImageEdit, VersionGraphFrontier, VersionGraphNodeId,
+    RecipeCardSummary, RecipeEditorState, RecipeImage, RecipeImageEdit, VersionGraphFrontier,
+    VersionGraphNodeId,
 };
 use uuid::Uuid;
 
@@ -48,6 +49,11 @@ pub const MAX_COLLECTION_CHILDREN: usize = 100;
 pub const MAX_COLLECTION_MEMBERSHIPS: usize = 1_000;
 pub const MAX_COLLECTION_NAME_CHARS: usize = 100;
 pub const MAX_COLLECTION_DESCRIPTION_CHARS: usize = 500;
+pub const MAX_COLLECTION_RECIPE_CARDS_PER_PAGE: usize = 12;
+pub const MAX_COLLECTION_RECIPE_CARD_DESCRIPTION_CHARS: usize = 500;
+pub const MAX_COLLECTION_RECIPE_CARD_AUTHOR_USERNAME_CHARS: usize = 30;
+pub const MAX_COLLECTION_RECIPE_CARD_AUTHOR_AVATAR_URL_CHARS: usize = 2_048;
+pub const MAX_COLLECTION_RECIPE_CARD_PAGE_BYTES: usize = 512 * 1024;
 
 pub const MAX_ACTIVE_DRAFTS_PER_USER: usize = 50;
 pub const MAX_VERSIONS_PER_RECIPE: usize = 250;
@@ -62,7 +68,7 @@ pub const MAX_INITIAL_GRAPH_ENCODED_SNAPSHOT_BYTES: usize = 32 * 1024 * 1024;
 pub const MAX_INITIAL_GRAPH_DECODED_SNAPSHOT_BYTES: usize = 32 * 1024 * 1024;
 pub const MAX_EXPANSION_GRAPH_ENCODED_SNAPSHOT_BYTES: usize = 12 * 1024 * 1024;
 pub const MAX_EXPANSION_GRAPH_DECODED_SNAPSHOT_BYTES: usize = 12 * 1024 * 1024;
-pub const MAX_CONCURRENT_GRAPH_HISTORY_READS: usize = 4;
+pub const MAX_CONCURRENT_EXPENSIVE_READS: usize = 4;
 
 pub const MAX_MEDIA_BYTES_PER_USER: u64 = 512 * 1024 * 1024;
 pub const MAX_MEDIA_OBJECTS_PER_USER: u64 = 2_048;
@@ -86,6 +92,7 @@ pub enum SecurityLimitError {
     DatabaseBudgetExceeded,
     ConcurrentReadBudgetExceeded,
     VersionComparisonOutputExceeded,
+    CollectionRecipeCardPageExceeded,
 }
 
 impl std::fmt::Display for SecurityLimitError {
@@ -99,9 +106,12 @@ impl std::fmt::Display for SecurityLimitError {
             Self::MediaQuotaExceeded => "media quota exceeded",
             Self::RequestBudgetExceeded => "request rate limit exceeded",
             Self::DatabaseBudgetExceeded => "database operation timed out",
-            Self::ConcurrentReadBudgetExceeded => "graph/history/comparison work budget exhausted",
+            Self::ConcurrentReadBudgetExceeded => "expensive read work budget exhausted",
             Self::VersionComparisonOutputExceeded => {
                 "version comparison output exceeds an application limit"
+            }
+            Self::CollectionRecipeCardPageExceeded => {
+                "collection recipe card page exceeds an application limit"
             }
         };
         formatter.write_str(message)
@@ -188,6 +198,55 @@ pub fn validate_image_metadata(image: &RecipeImage) -> Result<(), SecurityLimitE
         serde_json::to_vec(image).map_err(|_| SecurityLimitError::InvalidImageMetadata)?;
     if serialized.len() > MAX_IMAGE_METADATA_BYTES {
         return Err(SecurityLimitError::InvalidImageMetadata);
+    }
+    Ok(())
+}
+
+/// Validate the complete serialized collection card page before it is returned.
+pub fn validate_collection_recipe_card_page(
+    recipes: &[RecipeCardSummary],
+) -> Result<(), SecurityLimitError> {
+    if recipes.len() > MAX_COLLECTION_RECIPE_CARDS_PER_PAGE {
+        return Err(SecurityLimitError::CollectionRecipeCardPageExceeded);
+    }
+
+    for recipe in recipes {
+        if !chars_within(&recipe.title, MAX_RECIPE_TITLE_CHARS)
+            || recipe.description.as_deref().is_some_and(|description| {
+                !chars_within(description, MAX_COLLECTION_RECIPE_CARD_DESCRIPTION_CHARS)
+            })
+            || !chars_within(
+                &recipe.author_username,
+                MAX_COLLECTION_RECIPE_CARD_AUTHOR_USERNAME_CHARS,
+            )
+            || recipe.author_avatar_url.as_deref().is_some_and(|url| {
+                !chars_within(url, MAX_COLLECTION_RECIPE_CARD_AUTHOR_AVATAR_URL_CHARS)
+            })
+            || !matches!(
+                recipe.visibility.as_str(),
+                "private" | "unlisted" | "public"
+            )
+        {
+            return Err(SecurityLimitError::CollectionRecipeCardPageExceeded);
+        }
+
+        if let Some(image) = &recipe.image {
+            if image.edits.len() > 1
+                || image
+                    .edits
+                    .first()
+                    .is_some_and(|edit| edit.name != "rectangle:16:9")
+                || validate_image_metadata(&image.clone().into_recipe_image()).is_err()
+            {
+                return Err(SecurityLimitError::CollectionRecipeCardPageExceeded);
+            }
+        }
+    }
+
+    let encoded = serde_json::to_vec(recipes)
+        .map_err(|_| SecurityLimitError::CollectionRecipeCardPageExceeded)?;
+    if encoded.len() > MAX_COLLECTION_RECIPE_CARD_PAGE_BYTES {
+        return Err(SecurityLimitError::CollectionRecipeCardPageExceeded);
     }
     Ok(())
 }
@@ -406,6 +465,7 @@ pub enum RequestClass {
     Search,
     Autocomplete,
     Graph,
+    CollectionRead,
     Mutation,
     Publication,
     Upload,
@@ -437,6 +497,7 @@ impl UserRequestLimiter {
                 RequestClass::Search,
                 RequestClass::Autocomplete,
                 RequestClass::Graph,
+                RequestClass::CollectionRead,
                 RequestClass::Mutation,
                 RequestClass::Publication,
                 RequestClass::Upload,
@@ -470,6 +531,13 @@ impl UserRequestLimiter {
                     RequestClass::Graph,
                     RequestBudget {
                         maximum: 240,
+                        window: hour,
+                    },
+                ),
+                (
+                    RequestClass::CollectionRead,
+                    RequestBudget {
+                        maximum: 600,
                         window: hour,
                     },
                 ),
@@ -618,7 +686,7 @@ impl ConcurrentReadBudget {
         let _permit = self.permits.clone().try_acquire_owned().map_err(|_| {
             tracing::warn!(
                 available_permits = self.permits.available_permits(),
-                "rejected graph/history/comparison request because the shared work budget is exhausted"
+                "rejected expensive read because the shared work budget is exhausted"
             );
             SecurityLimitError::ConcurrentReadBudgetExceeded
         })?;
@@ -627,16 +695,23 @@ impl ConcurrentReadBudget {
 }
 
 #[cfg(feature = "server")]
-static GRAPH_HISTORY_READ_BUDGET: OnceLock<ConcurrentReadBudget> = OnceLock::new();
+static EXPENSIVE_READ_BUDGET: OnceLock<ConcurrentReadBudget> = OnceLock::new();
+
+#[cfg(feature = "server")]
+pub async fn run_with_expensive_read_work_budget<T>(
+    operation: impl Future<Output = T>,
+) -> Result<T, SecurityLimitError> {
+    EXPENSIVE_READ_BUDGET
+        .get_or_init(|| ConcurrentReadBudget::new(MAX_CONCURRENT_EXPENSIVE_READS))
+        .run(operation)
+        .await
+}
 
 #[cfg(feature = "server")]
 pub async fn run_with_graph_history_work_budget<T>(
     operation: impl Future<Output = T>,
 ) -> Result<T, SecurityLimitError> {
-    GRAPH_HISTORY_READ_BUDGET
-        .get_or_init(|| ConcurrentReadBudget::new(MAX_CONCURRENT_GRAPH_HISTORY_READS))
-        .run(operation)
-        .await
+    run_with_expensive_read_work_budget(operation).await
 }
 
 #[cfg(all(test, feature = "server"))]
@@ -989,6 +1064,46 @@ mod tests {
         assert!(limiter
             .check_at(first_user, RequestClass::Autocomplete, now)
             .is_ok());
+        assert!(limiter
+            .check_at(first_user, RequestClass::CollectionRead, now)
+            .is_ok());
+        assert_eq!(
+            UserRequestLimiter::consumer_defaults().budgets[&RequestClass::CollectionRead].maximum,
+            600
+        );
+    }
+
+    #[test]
+    fn collection_recipe_card_pages_enforce_shape_and_unicode_bounds() {
+        let card = RecipeCardSummary {
+            id: Uuid::new_v4(),
+            title: "Bounded card".to_string(),
+            description: Some("é".repeat(MAX_COLLECTION_RECIPE_CARD_DESCRIPTION_CHARS)),
+            prep_time_minutes: Some(10),
+            cook_time_minutes: Some(20),
+            servings: Some(4),
+            image: None,
+            visibility: "public".to_string(),
+            author_username: "chef".to_string(),
+            author_avatar_url: None,
+        };
+        let page = vec![card.clone(); MAX_COLLECTION_RECIPE_CARDS_PER_PAGE];
+        assert_eq!(validate_collection_recipe_card_page(&page), Ok(()));
+
+        let mut too_many = page.clone();
+        too_many.push(card.clone());
+        assert_eq!(
+            validate_collection_recipe_card_page(&too_many),
+            Err(SecurityLimitError::CollectionRecipeCardPageExceeded)
+        );
+
+        let mut oversized_description = card;
+        oversized_description.description =
+            Some("é".repeat(MAX_COLLECTION_RECIPE_CARD_DESCRIPTION_CHARS + 1));
+        assert_eq!(
+            validate_collection_recipe_card_page(&[oversized_description]),
+            Err(SecurityLimitError::CollectionRecipeCardPageExceeded)
+        );
     }
 
     #[test]
@@ -1029,7 +1144,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn expensive_history_and_graph_work_rejects_excess_concurrency() {
+    async fn expensive_read_work_rejects_excess_concurrency() {
         let budget = std::sync::Arc::new(ConcurrentReadBudget::new(1));
         let started = std::sync::Arc::new(tokio::sync::Notify::new());
         let release = std::sync::Arc::new(tokio::sync::Notify::new());
