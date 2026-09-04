@@ -89,6 +89,10 @@ const recipeTinHtml = `
       </div>
     </div>
   </div>
+  <figure>
+    <img src="https://images.example.invalid/moonlit-noodles.webp" alt="Moonlit noodles in a bowl">
+    <figcaption>Photo by Aster Vale</figcaption>
+  </figure>
 </main>`;
 
 test("RecipeTinEats adapter extracts complete WPRM groups and structured fields", () => {
@@ -172,8 +176,18 @@ test("RecipeTinEats adapter extracts complete WPRM groups and structured fields"
       { name: "Finish:", steps: ["Fold in the noodles."] },
     ],
   );
+  assert.deepEqual(
+    candidate.fields.images.map(({ sourceUrl, alt, credit }) => ({ sourceUrl, alt, credit })),
+    [{
+      sourceUrl: "https://images.example.invalid/moonlit-noodles.webp",
+      alt: "Moonlit noodles in a bowl",
+      credit: "Photo by Aster Vale",
+    }],
+  );
+  assert.equal(candidate.source.attribution, "Photo by Aster Vale");
   assert.equal(candidate.status, "needs_review");
   assert(candidate.warnings.some(({ code }) => code === "SECTION_NAMES_NOT_PERSISTED"));
+  assert(candidate.warnings.some(({ code }) => code === "IMAGE_REFERENCE_REQUIRES_CONFIRMATION"));
   assert(candidate.discardedContent.some(({ kind }) => kind === "script"));
   assert.doesNotMatch(JSON.stringify(candidate), /Injected recipe|bad token|Run script/u);
 

@@ -1330,10 +1330,27 @@ function parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit) {
       message: "Section names remain in preview but the current editor stores flat recipe content.",
     });
   }
+  const roots = rootRanges(inertHtml);
+  const root = closestRoot(roots, card.index);
+  const imageExtraction = imageReferences(inertHtml, roots, root);
+  result.fields.images = imageExtraction.images;
+  if (result.fields.images.length > 0) {
+    result.status = "needs_review";
+    if (imageExtraction.attribution) {
+      result.source.attribution = imageExtraction.attribution.value;
+      result.source.provenance.attribution = imageExtraction.attribution.provenance;
+    }
+    result.warnings.push(...result.fields.images.map((_, index) => ({
+      code: "IMAGE_REFERENCE_REQUIRES_CONFIRMATION",
+      severity: "info",
+      path: `fields.images[${index}]`,
+      message: "The image reference is not fetched and requires confirmation before mapping.",
+    })));
+  }
   appendHtmlAuditEvidence(
     result,
     htmlAudit,
-    discardedRemoteResourceCount(htmlAudit, []),
+    discardedRemoteResourceCount(htmlAudit, result.fields.images),
   );
   return result;
 }
