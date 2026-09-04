@@ -1232,12 +1232,33 @@ function wprmInstructionSections(containerHtml) {
     ? groups.map((group) => group.innerHtml)
     : [containerHtml];
   const sections = [];
+  let ignoredEmptySections = 0;
   for (const [sectionIndex, sectionHtml] of sectionSources.entries()) {
     const name = firstClassText(sectionHtml, "wprm-recipe-instruction-group-name")?.text ?? null;
     const itemElements = elementsWithClass(sectionHtml, "wprm-recipe-instruction");
+    if (itemElements.length === 0) {
+      const instructionLists = elementsWithClass(sectionHtml, "wprm-recipe-instructions");
+      const recognizedEmptyStructure = [
+        ...elementsWithClass(sectionHtml, "wprm-recipe-instruction-group-name"),
+        ...instructionLists,
+      ].sort((left, right) => right.index - left.index);
+      let remainingHtml = sectionHtml;
+      for (const element of recognizedEmptyStructure) {
+        remainingHtml = remainingHtml.slice(0, element.index) + remainingHtml.slice(element.end);
+      }
+      const residualMarkup = remainingHtml
+        .replace(/<!--[\s\S]*?-->/gu, "")
+        .replace(/<\/?(?:div|section)\b[^>]*>/giu, "")
+        .trim();
+      const structurallyEmpty = instructionLists.length > 0 &&
+        instructionLists.every(({ innerHtml }) => htmlText(innerHtml) === "") &&
+        residualMarkup === "";
+      if (!structurallyEmpty) return null;
+      ignoredEmptySections += 1;
+      continue;
+    }
     const steps = itemElements.map((item, itemIndex) => {
-      const raw = firstClassText(item.innerHtml, "wprm-recipe-instruction-text")?.text ??
-        htmlText(item.innerHtml);
+      const raw = firstClassText(item.innerHtml, "wprm-recipe-instruction-text")?.text ?? null;
       return raw
         ? instruction(
           raw,
@@ -1249,7 +1270,7 @@ function wprmInstructionSections(containerHtml) {
     if (steps.length === 0 || steps.some((step) => step === null)) return null;
     sections.push({ name, steps });
   }
-  return sections;
+  return sections.length > 0 ? { sections, ignoredEmptySections } : null;
 }
 
 function parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit) {
@@ -1266,15 +1287,27 @@ function parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit) {
     )[0];
     if (!title || !ingredientContainer || !instructionContainer) return [];
     const ingredientSections = wprmIngredientSections(ingredientContainer.innerHtml);
-    const instructionSections = wprmInstructionSections(instructionContainer.innerHtml);
-    return ingredientSections && instructionSections
-      ? [{ card, title, ingredientSections, instructionSections }]
+    const instructionExtraction = wprmInstructionSections(instructionContainer.innerHtml);
+    return ingredientSections && instructionExtraction
+      ? [{
+        card,
+        title,
+        ingredientSections,
+        instructionSections: instructionExtraction.sections,
+        ignoredEmptySections: instructionExtraction.ignoredEmptySections,
+      }]
       : [];
   });
   // Generic region scoring retains competing-card evidence; an adapter must not
   // silently erase that ambiguity by selecting the first structurally valid card.
   if (completeCards.length !== 1) return null;
-  const [{ card, title, ingredientSections, instructionSections }] = completeCards;
+  const [{
+    card,
+    title,
+    ingredientSections,
+    instructionSections,
+    ignoredEmptySections,
+  }] = completeCards;
 
   const result = candidate(
     {
@@ -1328,6 +1361,15 @@ function parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit) {
       severity: "warning",
       path: "fields.ingredientSections",
       message: "Section names remain in preview but the current editor stores flat recipe content.",
+    });
+  }
+  if (ignoredEmptySections > 0) {
+    result.status = "needs_review";
+    result.warnings.push({
+      code: "EMPTY_PROVIDER_SECTION_IGNORED",
+      severity: "warning",
+      path: "fields.instructionSections",
+      message: "Empty provider instruction sections were ignored while complete sections were retained.",
     });
   }
   const roots = rootRanges(inertHtml);

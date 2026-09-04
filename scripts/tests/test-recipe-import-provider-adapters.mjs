@@ -195,6 +195,69 @@ test("RecipeTinEats adapter extracts complete WPRM groups and structured fields"
   assert.deepEqual(validateImportCandidate(candidate), []);
 });
 
+test("RecipeTinEats adapter ignores empty instruction placeholders when complete groups remain", () => {
+  const emptyPlaceholder = `
+      <div class="wprm-recipe-instruction-group">
+        <h4 class="wprm-recipe-instruction-group-name">FULL RECIPE</h4>
+        <ul class="wprm-recipe-instructions"></ul>
+      </div>`;
+  const html = recipeTinHtml.replace(
+    '<div class="wprm-recipe-instruction-group">\n        <h4 class="wprm-recipe-instruction-group-name">Finish:</h4>',
+    `${emptyPlaceholder}\n      <div class="wprm-recipe-instruction-group">\n        <h4 class="wprm-recipe-instruction-group-name">Finish:</h4>`,
+  );
+  const candidate = parseRecipeClipboard({
+    html,
+    plainText: null,
+    sourceUrl: "https://www.recipetineats.com/moonlit-noodles/#recipe",
+  });
+
+  assert.equal(candidate.parser.id, "recipetineats-wprm");
+  assert.deepEqual(
+    candidate.fields.instructionSections.map(({ name, steps }) => ({
+      name,
+      steps: steps.map(({ text }) => text),
+    })),
+    [
+      { name: null, steps: ["Simmer: Warm the sauce."] },
+      { name: "Finish:", steps: ["Fold in the noodles."] },
+    ],
+  );
+  assert(candidate.warnings.some(({ code }) => code === "EMPTY_PROVIDER_SECTION_IGNORED"));
+  assert.deepEqual(validateJsonSchema(candidate, schema), []);
+  assert.deepEqual(validateImportCandidate(candidate), []);
+});
+
+test("RecipeTinEats adapter rejects a card with only empty instruction groups", () => {
+  assert.throws(
+    () => parseRecipeClipboard({
+      html: `
+        <main>
+          <div class="wprm-recipe-container">
+            <h2 class="wprm-recipe-name">Empty Moon Soup</h2>
+            <div class="wprm-recipe-ingredients-container">
+              <div class="wprm-recipe-ingredient-group">
+                <ul class="wprm-recipe-ingredients">
+                  <li class="wprm-recipe-ingredient">
+                    <span class="wprm-recipe-ingredient-name">moon broth</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div class="wprm-recipe-instructions-container">
+              <div class="wprm-recipe-instruction-group">
+                <h4 class="wprm-recipe-instruction-group-name">FULL RECIPE</h4>
+                <ul class="wprm-recipe-instructions"></ul>
+              </div>
+            </div>
+          </div>
+        </main>`,
+      plainText: null,
+      sourceUrl: "https://www.recipetineats.com/empty-moon-soup/",
+    }),
+    /does not contain a recognizable recipe/u,
+  );
+});
+
 test("provider detection requires the exact RecipeTinEats hostname", () => {
   const candidate = parseRecipeClipboard({
     html: recipeTinHtml,
