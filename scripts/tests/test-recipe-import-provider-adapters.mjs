@@ -222,6 +222,13 @@ test("RecipeTinEats adapter ignores empty instruction placeholders when complete
               <h4 class="wprm-recipe-instruction-group-name">FULL RECIPE</h4>
               <ul class="wprm-recipe-instructions"></ul>
             </div>
+            <div class="wprm-recipe-instruction-group">
+              <ul class="wprm-recipe-instructions">
+                <li class="wprm-recipe-instruction">
+                  <div class="wprm-recipe-instruction-text">Serve the soup.</div>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </main>`,
@@ -237,6 +244,7 @@ test("RecipeTinEats adapter ignores empty instruction placeholders when complete
     })),
     [
       { name: null, steps: ["Warm the broth."] },
+      { name: null, steps: ["Serve the soup."] },
     ],
   );
   assert.equal(candidate.status, "needs_review");
