@@ -4,6 +4,8 @@
 
 The clipboard parser stack was manually reviewed against 27 accepted candidates from the verified external NOMS-016 corpus. The sample contains three recipes from each of nine providers: AllRecipes, BudgetBytes, Food.com, Food52, NYT Cooking, RecipeTinEats, Sally's Baking Addiction, Serious Eats, and Tasty. RecipeTinEats was reviewed again after its first source adapter was added.
 
+The Tasty source adapter was implemented after this complete benchmark. It changes exactly the three reviewed Tasty candidate digests while leaving the other 24 stable. Manual review of those replacements has been postponed, so the Tasty row and overall totals below describe the previous generic-parser candidates and must not be used as adapter-quality results. The evaluator rejects the stale labels as designed.
+
 The purposive sample includes candidates marked both ready and needs-review, title mismatches, competing regions, grouped components, and recipes with relatively complex page structures. It is intended to expose failure modes, not estimate provider-wide accuracy.
 
 | Result | Samples |

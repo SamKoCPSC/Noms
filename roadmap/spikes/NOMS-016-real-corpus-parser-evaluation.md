@@ -127,13 +127,23 @@ Across the original verified corpus, the initial RecipeTinEats adapter increased
 
 The adapter recovered 1,356 ingredient items and 946 instruction steps across its 100 accepted samples, including named and unnamed groups, structured WPRM amount/unit/name fields, descriptions, times when present, and servings. Each of the 17 placeholder recoveries carries `EMPTY_PROVIDER_SECTION_IGNORED`; no emitted instruction section is empty. The adapter also preserves safe image-reference and attribution evidence recognized by the shared inert extraction rules, with the same review warnings and audit accounting as generic candidates. It does not fetch resources or execute page content. These are structural reach measurements; the digest-bound semantic rerun remains unchanged at 79 of 108 correct core fields overall and 10 of 12 for RecipeTinEats, with no stale review labels.
 
+## Tasty adapter rerun
+
+The second source adapter uses the supplied `tasty.co` hostname and Tasty's visible recipe classes after active content has been made inert. It activates only when there is exactly one title, ingredient container, preparation container, and complete preparation list; missing or ambiguous structures fall back to the generic parser. Exact-host and lookalike-host tests enforce the same boundary as the RecipeTinEats adapter.
+
+Tasty was already structurally accepted at 100 of 100 by generic heading rules, so the adapter does not change corpus acceptance. It instead corrects repeated completeness gaps. The generic parser retained only the first ingredient group and included the provider's app-download row as an instruction. Across the same 100 verified captures, the adapter retains all 192 visible ingredient sections, including 138 named sections, and increases ingredient recovery from 773 to 1,265 rows. It retains 743 recipe steps after excluding 99 rows that contain the exact Tasty `/download?ct=prepsteps` link; ordinary linked instruction text remains intact.
+
+All 100 candidates include title, description, servings, total time, and one deduplicated visible recipe image. The 86 pages with separately labeled prep and cook times retain those fields, and 99 expose a visible author. Each candidate is contract-valid and review-gated because it contains an image reference, a named ingredient section, or both. Full-corpus acceptance remains 800 of 1,500, with no invalid candidates or unexpected errors; 600 candidates now use generic HTML and 200 use source adapters. No non-Tasty sample changed its structural evaluation summary.
+
+The adapter changes the candidate digest for the three previously reviewed Tasty samples and leaves the other 24 reviewed candidate digests stable. Their old semantic labels must not be reused. Manual re-review was deliberately deferred, so the last complete 27-sample semantic benchmark remains historical evidence for the pre-adapter Tasty output rather than a quality score for this adapter.
+
 ## Conclusions
 
 1. The generic HTML parser recognizes useful candidates from several providers, but structural acceptance remains only an upper bound on compatibility.
 2. Navigation-contained ingredients and titleless candidates are now rejected conservatively; this removes the observed Food Network false positives without provider-specific code.
 3. Collection pages now select a coherent embedded title when heading hierarchy supports it and expose the page title as competing evidence instead of silently returning `ready`.
 4. The current plain-text grammar did not recover any real HTML rejection. Its bullet and numbering assumptions should be measured against the captured text before further investment.
-5. The first provider adapter materially improves RecipeTinEats reach and reviewed semantic quality while retaining conservative fallback. Additional adapters or Schema.org/JSON-LD extraction should use the same evidence and safety gates.
+5. The RecipeTinEats and Tasty adapters retain conservative fallback while targeting different measured gaps: structural reach for RecipeTinEats and field completeness for Tasty. Additional adapters or Schema.org/JSON-LD extraction should use the same evidence and safety gates.
 
 ## Reproduction
 
