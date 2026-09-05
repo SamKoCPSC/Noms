@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::auth::context::use_auth;
-use crate::components::marketing::{MarketingCtaPanel, MarketingPageMeta};
+use crate::components::informational::{CallToActionPanel, PageMeta};
 use crate::Route;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -47,7 +47,7 @@ pub fn Home() -> Element {
     let final_primary_href = (!auth.is_authenticated).then_some("/login?redirect_uri=/recipes/new");
 
     rsx! {
-        MarketingPageMeta {
+        PageMeta {
             title: "Noms — Recipes worth keeping",
             description: "Capture recipes in detail, organize your library, preserve every published version, and share on your terms.",
             path: "/",
@@ -155,7 +155,7 @@ pub fn Home() -> Element {
                 }
             }
 
-            MarketingCtaPanel {
+            CallToActionPanel {
                 title: "Make room for the recipes you return to.",
                 body: "Start with one recipe. Add the details you care about, organize it your way, and let it improve each time you cook.",
                 primary_label: final_primary_label,

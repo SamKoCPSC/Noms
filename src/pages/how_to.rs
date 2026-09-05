@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::components::marketing::{MarketingCtaPanel, MarketingPageMeta};
+use crate::components::informational::{CallToActionPanel, PageMeta};
 use crate::Route;
 
 pub(super) struct HowToSection {
@@ -54,7 +54,7 @@ pub(super) const HOW_TO_SECTIONS: &[HowToSection] = &[
 #[component]
 pub fn HowTo() -> Element {
     rsx! {
-        MarketingPageMeta {
+        PageMeta {
             title: "How to use Noms",
             description: "Learn how to create, organize, revise, scale, discover, and share recipes with Noms.",
             path: "/how-to",
@@ -172,7 +172,7 @@ pub fn HowTo() -> Element {
                 }
             }
 
-            MarketingCtaPanel {
+            CallToActionPanel {
                 title: "Ready to keep your first recipe?",
                 body: "Start with the version you cook today. There will be room for what you learn next time.",
                 primary_label: "Create a recipe",

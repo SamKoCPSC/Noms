@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::Route;
 
 #[derive(Props, Clone, PartialEq)]
-pub struct MarketingPageMetaProps {
+pub struct PageMetaProps {
     pub title: &'static str,
     pub description: &'static str,
     pub path: &'static str,
@@ -12,7 +12,7 @@ pub struct MarketingPageMetaProps {
 /// Route-specific metadata kept next to semantic page content so SSR responses
 /// remain useful before hydration.
 #[component]
-pub fn MarketingPageMeta(props: MarketingPageMetaProps) -> Element {
+pub fn PageMeta(props: PageMetaProps) -> Element {
     let canonical_url = canonical_url(props.path);
 
     rsx! {
@@ -41,7 +41,7 @@ fn canonical_url(path: &str) -> String {
 }
 
 #[derive(Props, Clone, PartialEq)]
-pub struct MarketingCtaPanelProps {
+pub struct CallToActionPanelProps {
     pub title: &'static str,
     pub body: &'static str,
     pub primary_label: &'static str,
@@ -53,7 +53,7 @@ pub struct MarketingCtaPanelProps {
 }
 
 #[component]
-pub fn MarketingCtaPanel(props: MarketingCtaPanelProps) -> Element {
+pub fn CallToActionPanel(props: CallToActionPanelProps) -> Element {
     rsx! {
         section { class: "marketing-cta-panel container", aria_labelledby: "marketing-final-cta",
             div { class: "marketing-cta-panel__inner",

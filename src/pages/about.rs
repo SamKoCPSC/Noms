@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::auth::context::use_auth;
-use crate::components::marketing::{MarketingCtaPanel, MarketingPageMeta};
+use crate::components::informational::{CallToActionPanel, PageMeta};
 use crate::Route;
 
 pub(super) struct AboutSection {
@@ -78,7 +78,7 @@ pub fn About() -> Element {
     };
 
     rsx! {
-        MarketingPageMeta {
+        PageMeta {
             title: "About Noms — A better home for working recipes",
             description: "Learn why Noms treats recipes as living knowledge: detailed, organized, versioned, and shared with intention.",
             path: "/about",
@@ -124,7 +124,7 @@ pub fn About() -> Element {
                 }
             }
 
-            MarketingCtaPanel {
+            CallToActionPanel {
                 title: "Keep a recipe. Improve it. Pass it on.",
                 body: "Make a place for the recipes you return to and the knowledge that makes them work.",
                 primary_label,

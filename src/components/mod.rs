@@ -5,10 +5,21 @@ pub use footer::Footer;
 pub use navbar::Navbar;
 
 pub mod base;
-pub mod marketing;
+pub mod informational;
 
 mod app_layout;
 mod auth_required;
 mod error_fallback;
 mod footer;
 mod navbar;
+
+#[cfg(test)]
+mod informational_module_tests {
+    use super::informational::{CallToActionPanel, PageMeta};
+
+    #[test]
+    fn shared_authored_page_components_use_the_informational_namespace() {
+        assert!(std::any::type_name_of_val(&PageMeta).contains("informational"));
+        assert!(std::any::type_name_of_val(&CallToActionPanel).contains("informational"));
+    }
+}
