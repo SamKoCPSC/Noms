@@ -135,7 +135,7 @@ Tasty was already structurally accepted at 100 of 100 by generic heading rules, 
 
 All 100 candidates include title, description, servings, total time, and one deduplicated visible recipe image. The 86 pages with separately labeled prep and cook times retain those fields, and 99 expose a visible author. Each candidate is contract-valid and review-gated because it contains an image reference, a named ingredient section, or both. Full-corpus acceptance remains 800 of 1,500, with no invalid candidates or unexpected errors; 600 candidates now use generic HTML and 200 use source adapters. No non-Tasty sample changed its structural evaluation summary.
 
-The adapter changes the candidate digest for the three previously reviewed Tasty samples and leaves the other 24 reviewed candidate digests stable. Their old semantic labels must not be reused. Manual re-review was deliberately deferred, so the last complete 27-sample semantic benchmark remains historical evidence for the pre-adapter Tasty output rather than a quality score for this adapter.
+The adapter changes the candidate digest for the three previously reviewed Tasty samples and leaves the other 24 reviewed candidate digests stable. After re-review, Tasty improves from 6 of 12 to 11 of 12 correct core fields: two candidates are usable without correction and one is usable after correction because a compound quantity cannot be represented exactly by the simple amount/unit/name split. The refreshed 27-sample benchmark has no stale labels and improves to 84 of 108 correct core fields (77.8%), with 8 candidates usable without correction, 19 after correction, and none unusable.
 
 ## Conclusions
 
