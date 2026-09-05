@@ -17,11 +17,6 @@ use crate::types::{
     VisibilityFacetBucket,
 };
 
-const RESULT_COLUMNS: &str = "r.id, r.user_id, r.title, r.description, r.commentary, \
-    r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, \
-    r.equipment, r.images, r.visibility, r.created_at, r.updated_at, \
-    u.username AS author_username, u.avatar_url AS author_avatar_url";
-
 const TITLE_WORDS: &str = "(r.title::pdb.simple('alias=recipe_title_words'))";
 const TITLE_PARTIAL: &str = "(r.title::pdb.ngram(2, 15, 'alias=recipe_title_partial'))";
 const DESCRIPTION_WORDS: &str = "(r.description::pdb.simple('alias=recipe_description_words'))";
@@ -93,11 +88,18 @@ struct SearchRecipeRow {
     updated_at: DateTime<Utc>,
     author_username: String,
     author_avatar_url: Option<String>,
+    media_asset_urls: serde_json::Value,
     relevance: Option<f32>,
 }
 
 impl SearchRecipeRow {
     fn into_result(self) -> Result<SearchResult, DbError> {
+        let mut instructions = serde_json::from_value::<Vec<RecipeStep>>(self.instructions)
+            .map_err(DbError::SerdeJson)?;
+        let mut images =
+            serde_json::from_value::<Vec<RecipeImage>>(self.images).map_err(DbError::SerdeJson)?;
+        super::resolve_recipe_media_urls(&mut images, &mut instructions, &self.media_asset_urls)
+            .map_err(DbError::InvalidRecipeSnapshot)?;
         Ok(SearchResult {
             recipe: Recipe {
                 id: self.id,
@@ -110,12 +112,10 @@ impl SearchRecipeRow {
                 servings: self.servings,
                 ingredients: serde_json::from_value::<Vec<RecipeIngredient>>(self.ingredients)
                     .map_err(DbError::SerdeJson)?,
-                instructions: serde_json::from_value::<Vec<RecipeStep>>(self.instructions)
-                    .map_err(DbError::SerdeJson)?,
+                instructions,
                 equipment: serde_json::from_value::<Vec<RecipeEquipment>>(self.equipment)
                     .map_err(DbError::SerdeJson)?,
-                images: serde_json::from_value::<Vec<RecipeImage>>(self.images)
-                    .map_err(DbError::SerdeJson)?,
+                images,
                 visibility: self.visibility,
                 created_at: self.created_at,
                 updated_at: self.updated_at,
@@ -229,7 +229,7 @@ async fn fetch_results(
     positive_text: bool,
 ) -> Result<Vec<SearchResult>, DbError> {
     let mut query = QueryBuilder::<Postgres>::new("SELECT ");
-    query.push(RESULT_COLUMNS).push(", ");
+    query.push(super::recipe_read_columns("r", "u")).push(", ");
     if positive_text {
         query.push("pdb.score(r.id)::real AS relevance ");
     } else {

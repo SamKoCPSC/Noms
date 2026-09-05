@@ -156,12 +156,13 @@ async fn fetch_results(
     request: &UserSearchRequest,
     positive_text: bool,
 ) -> Result<Vec<UserSearchResult>, DbError> {
-    let mut query = QueryBuilder::<Postgres>::new(
-        "SELECT u.id, u.username, u.display_name, u.avatar_url, u.bio, \
+    let mut query = QueryBuilder::<Postgres>::new(format!(
+        "SELECT u.id, u.username, u.display_name, {} AS avatar_url, u.bio, \
          (SELECT COUNT(*) FROM recipes public_recipe \
           WHERE public_recipe.user_id = u.id AND public_recipe.visibility = 'public')::bigint \
           AS public_recipe_count, ",
-    );
+        super::managed_avatar_url_projection("u")
+    ));
     if positive_text {
         query.push("pdb.score(u.id)::real AS relevance ");
     } else {

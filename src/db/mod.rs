@@ -480,6 +480,19 @@ pub use crate::types::{Recipe, RecipeImage};
 /// Implement `sqlx::FromRow` for `Recipe` so it can be used with raw queries.
 impl sqlx::FromRow<'_, sqlx::postgres::PgRow> for Recipe {
     fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, sqlx::Error> {
+        let mut instructions =
+            serde_json::from_value::<Vec<RecipeStep>>(row.try_get("instructions")?)
+                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+        let mut images = serde_json::from_value::<Vec<RecipeImage>>(row.try_get("images")?)
+            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+        let media_asset_urls = row.try_get::<serde_json::Value, _>("media_asset_urls")?;
+        media_assets::resolve_recipe_media_urls(&mut images, &mut instructions, &media_asset_urls)
+            .map_err(|error| {
+                sqlx::Error::Decode(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    error,
+                )))
+            })?;
         Ok(Self {
             id: row.try_get("id")?,
             user_id: row.try_get("user_id")?,
@@ -491,12 +504,10 @@ impl sqlx::FromRow<'_, sqlx::postgres::PgRow> for Recipe {
             servings: row.try_get("servings")?,
             ingredients: serde_json::from_value(row.try_get("ingredients")?)
                 .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
-            instructions: serde_json::from_value(row.try_get("instructions")?)
-                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
+            instructions,
             equipment: serde_json::from_value(row.try_get("equipment")?)
                 .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
-            images: serde_json::from_value(row.try_get("images")?)
-                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
+            images,
             visibility: row.try_get("visibility")?,
             created_at: row.try_get("created_at")?,
             updated_at: row.try_get("updated_at")?,
@@ -546,11 +557,12 @@ fn collection_visibility_from_row(
 }
 
 fn collection_from_row(row: &sqlx::postgres::PgRow) -> Result<Collection, sqlx::Error> {
-    let image = row
+    let mut image = row
         .try_get::<Option<serde_json::Value>, _>("image")?
         .map(serde_json::from_value)
         .transpose()
         .map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
+    resolve_collection_image_from_row(row, &mut image)?;
     Ok(Collection {
         id: row.try_get("id")?,
         owner_id: row.try_get("owner_id")?,
@@ -568,11 +580,12 @@ fn collection_from_row(row: &sqlx::postgres::PgRow) -> Result<Collection, sqlx::
 fn collection_summary_from_row(
     row: &sqlx::postgres::PgRow,
 ) -> Result<CollectionSummary, sqlx::Error> {
-    let image = row
+    let mut image = row
         .try_get::<Option<serde_json::Value>, _>("image")?
         .map(serde_json::from_value)
         .transpose()
         .map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
+    resolve_collection_image_from_row(row, &mut image)?;
     // Recipe image JSON predates collections and is not schema-constrained.
     // A malformed legacy entry must not make the entire collection unreadable.
     let preview_images = row
@@ -595,6 +608,20 @@ fn collection_summary_from_row(
         child_count: row.try_get("child_count")?,
         recipe_count: row.try_get("recipe_count")?,
         updated_at: row.try_get("updated_at")?,
+    })
+}
+
+fn resolve_collection_image_from_row(
+    row: &sqlx::postgres::PgRow,
+    image: &mut Option<RecipeImage>,
+) -> Result<(), sqlx::Error> {
+    let media_asset_urls = row.try_get::<serde_json::Value, _>("media_asset_urls")?;
+    let images = image.as_mut().map(std::slice::from_mut).unwrap_or_default();
+    media_assets::resolve_recipe_media_urls(images, &mut [], &media_asset_urls).map_err(|error| {
+        sqlx::Error::Decode(Box::new(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            error,
+        )))
     })
 }
 
@@ -666,9 +693,20 @@ fn collection_preview_images_select(recipe_visibility_predicate: &str) -> String
         "COALESCE((
              SELECT jsonb_agg(preview.image ORDER BY preview.sort_order, preview.created_at, preview.recipe_id)
              FROM (
-                 SELECT r.images -> 0 AS image, cr.sort_order, cr.created_at, cr.recipe_id
+                 SELECT CASE
+                            WHEN recipe_asset.id IS NULL THEN r.images -> 0
+                            ELSE (r.images -> 0) || jsonb_build_object(
+                                'asset_id', recipe_asset.id,
+                                'url', recipe_asset.full_url,
+                                'thumb_url', recipe_asset.thumbnail_url)
+                        END AS image,
+                        cr.sort_order, cr.created_at, cr.recipe_id
                  FROM collection_recipes cr
                  INNER JOIN recipes r ON r.id = cr.recipe_id
+                 LEFT JOIN recipe_media_refs recipe_ref
+                   ON recipe_ref.recipe_id = r.id
+                  AND recipe_ref.asset_id::text = r.images -> 0 ->> 'asset_id'
+                 LEFT JOIN media_assets recipe_asset ON recipe_asset.id = recipe_ref.asset_id
                  WHERE cr.collection_id = c.id
                    AND {recipe_visibility_predicate}
                    AND jsonb_typeof(r.images) = 'array'
@@ -680,6 +718,10 @@ fn collection_preview_images_select(recipe_visibility_predicate: &str) -> String
                            AND jsonb_typeof(r.images -> 0 -> 'url') = 'string'
                        )
                    )
+                   AND (
+                       NOT (r.images -> 0 ? 'asset_id')
+                       OR recipe_asset.id IS NOT NULL
+                   )
                  ORDER BY cr.sort_order, cr.created_at, cr.recipe_id
                  LIMIT 4
              ) preview
@@ -687,9 +729,18 @@ fn collection_preview_images_select(recipe_visibility_predicate: &str) -> String
     )
 }
 
+fn collection_media_asset_urls_select(collection_alias: &str) -> String {
+    media_assets::media_asset_urls_projection(
+        "collection_media_refs",
+        "collection_id",
+        &format!("{collection_alias}.id"),
+    )
+}
+
 fn collection_summary_select() -> String {
     format!(
-        "SELECT c.id, c.parent_collection_id, c.name, c.description, c.image, c.visibility,
+        "SELECT c.id, c.parent_collection_id, c.name, c.description, c.image,
+            {} AS media_asset_urls, c.visibility,
             c.sort_order, c.updated_at,
             {} AS preview_images,
             (SELECT COUNT(*) FROM collections child
@@ -700,6 +751,7 @@ fn collection_summary_select() -> String {
              WHERE cr.collection_id = c.id
                AND (r.user_id = c.owner_id OR r.visibility IN ('public', 'unlisted'))) AS recipe_count
      FROM collections c",
+        collection_media_asset_urls_select("c"),
         collection_preview_images_select(
             "(r.user_id = c.owner_id OR r.visibility IN ('public', 'unlisted'))"
         )
@@ -869,7 +921,8 @@ pub async fn insert_collection(
             (owner_id, parent_collection_id, name, description, sort_order, visibility, image)
          VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING id, owner_id, parent_collection_id, name, description, image,
-                   visibility, sort_order, created_at, updated_at",
+                   visibility, sort_order, created_at, updated_at,
+                   'null'::jsonb AS media_asset_urls",
     )
     .bind(owner_id)
     .bind(parent_collection_id)
@@ -908,12 +961,12 @@ pub async fn get_collection_by_id_and_owner(
     collection_id: Uuid,
     owner_id: Uuid,
 ) -> Result<Option<Collection>, DbError> {
-    sqlx::query(
-        "SELECT id, owner_id, parent_collection_id, name, description, image,
-                visibility, sort_order, created_at, updated_at
-         FROM collections
-         WHERE id = $1 AND owner_id = $2",
-    )
+    sqlx::query(&format!(
+        "SELECT c.id, c.owner_id, c.parent_collection_id, c.name, c.description, c.image,
+                {} AS media_asset_urls, c.visibility, c.sort_order, c.created_at, c.updated_at
+         FROM collections c WHERE c.id = $1 AND c.owner_id = $2",
+        collection_media_asset_urls_select("c")
+    ))
     .bind(collection_id)
     .bind(owner_id)
     .fetch_optional(executor)
@@ -1083,7 +1136,8 @@ pub async fn get_public_collections_by_username(
                     THEN c.parent_collection_id
                     ELSE NULL
                 END AS parent_collection_id,
-                c.name, c.description, c.image, c.visibility,
+                c.name, c.description, c.image,
+                {} AS media_asset_urls, c.visibility,
                 ((ROW_NUMBER() OVER (ORDER BY c.updated_at DESC, c.id) - 1)::INTEGER)
                     AS sort_order,
                 c.updated_at,
@@ -1103,6 +1157,7 @@ pub async fn get_public_collections_by_username(
          WHERE c.owner_id = $1 AND c.visibility = 'public'
          ORDER BY c.updated_at DESC, c.id
          LIMIT $2 OFFSET $3",
+        collection_media_asset_urls_select("c"),
         collection_preview_images_select("r.visibility = 'public'")
     );
     let rows = sqlx::query(&query)
@@ -1147,7 +1202,8 @@ pub async fn get_collection_breadcrumbs(
                AND NOT parent.id = ANY(ancestors.path)
                AND ancestors.depth < {maximum_parent_depth}
          )
-         SELECT c.id, c.parent_collection_id, c.name, c.description, c.image, c.visibility,
+         SELECT c.id, c.parent_collection_id, c.name, c.description, c.image,
+                {} AS media_asset_urls, c.visibility,
                 c.sort_order, c.updated_at,
                 {} AS preview_images,
                 (SELECT COUNT(*) FROM collections child
@@ -1160,6 +1216,7 @@ pub async fn get_collection_breadcrumbs(
          INNER JOIN collections c ON c.id = ancestors.id
          ORDER BY ancestors.depth DESC
          LIMIT {maximum_depth}",
+        collection_media_asset_urls_select("c"),
         collection_preview_images_select(
             "(r.user_id = c.owner_id OR r.visibility IN ('public', 'unlisted'))"
         ),
@@ -1227,7 +1284,8 @@ pub async fn update_collection(
          SET name = $3, description = $4, image = $5, updated_at = NOW()
          WHERE id = $1 AND owner_id = $2
          RETURNING id, owner_id, parent_collection_id, name, description, image,
-                   visibility, sort_order, created_at, updated_at",
+                   visibility, sort_order, created_at, updated_at,
+                   'null'::jsonb AS media_asset_urls",
     )
     .bind(collection_id)
     .bind(owner_id)
@@ -1273,7 +1331,8 @@ pub async fn update_collection_visibility(
              updated_at = GREATEST(NOW(), updated_at + INTERVAL '1 microsecond')
          WHERE id = $1 AND owner_id = $2
          RETURNING id, owner_id, parent_collection_id, name, description, image,
-                   visibility, sort_order, created_at, updated_at",
+                   visibility, sort_order, created_at, updated_at,
+                   'null'::jsonb AS media_asset_urls",
     )
     .bind(collection_id)
     .bind(owner_id)
@@ -1503,7 +1562,8 @@ pub async fn move_collection(
 
     let row = sqlx::query(
         "SELECT id, owner_id, parent_collection_id, name, description, image,
-                visibility, sort_order, created_at, updated_at
+                visibility, sort_order, created_at, updated_at,
+                'null'::jsonb AS media_asset_urls
          FROM collections WHERE id = $1 AND owner_id = $2",
     )
     .bind(collection_id)
@@ -1736,15 +1796,18 @@ pub async fn get_collection_recipes(
                 END AS image_edit,
                 r.visibility,
                 u.username AS author_username,
-                CASE WHEN char_length(u.avatar_url) <= $7
-                     THEN u.avatar_url END AS author_avatar_url
+                CASE WHEN char_length(COALESCE(avatar_asset.full_url, u.avatar_url)) <= $7
+                     THEN COALESCE(avatar_asset.full_url, u.avatar_url) END AS author_avatar_url
          FROM collection_recipes cr
          INNER JOIN collections c ON c.id = cr.collection_id AND c.owner_id = $2
          INNER JOIN recipes r ON r.id = cr.recipe_id
-         LEFT JOIN media_assets asset
-           ON asset.id = CASE WHEN r.images -> 0 ? 'asset_id'
-                              THEN (r.images -> 0 ->> 'asset_id')::UUID END
+         LEFT JOIN recipe_media_refs image_ref
+           ON image_ref.recipe_id = r.id
+          AND image_ref.asset_id::text = r.images -> 0 ->> 'asset_id'
+         LEFT JOIN media_assets asset ON asset.id = image_ref.asset_id
          LEFT JOIN users u ON u.id = r.user_id
+         LEFT JOIN avatar_media_refs avatar_ref ON avatar_ref.user_id = u.id
+         LEFT JOIN media_assets avatar_asset ON avatar_asset.id = avatar_ref.asset_id
          WHERE cr.collection_id = $1
            AND (r.user_id = $2 OR r.visibility IN ('public', 'unlisted'))
          ORDER BY cr.sort_order, cr.created_at, cr.recipe_id
@@ -1927,7 +1990,8 @@ pub async fn get_collection_contents_for_viewer(
                     THEN c.parent_collection_id
                     ELSE NULL
                 END AS parent_collection_id,
-                c.name, c.description, c.image, c.visibility,
+                c.name, c.description, c.image,
+                {} AS media_asset_urls, c.visibility,
                 0::INTEGER AS sort_order, c.updated_at,
                 {} AS preview_images,
                 (SELECT COUNT(*)
@@ -1946,6 +2010,7 @@ pub async fn get_collection_contents_for_viewer(
          INNER JOIN collections c ON c.id = ancestors.id
          ORDER BY ancestors.depth DESC
          LIMIT {maximum_depth}",
+        collection_media_asset_urls_select("c"),
         collection_preview_images_select(
             "(r.visibility = 'public' OR ($3 AND r.visibility = 'unlisted'))"
         ),
@@ -1969,7 +2034,8 @@ pub async fn get_collection_contents_for_viewer(
     };
 
     let child_query = format!(
-        "SELECT c.id, c.parent_collection_id, c.name, c.description, c.image, c.visibility,
+        "SELECT c.id, c.parent_collection_id, c.name, c.description, c.image,
+                {} AS media_asset_urls, c.visibility,
                 ((ROW_NUMBER() OVER (
                     ORDER BY c.sort_order, lower(c.name), c.id
                  ) - 1)::INTEGER) AS sort_order,
@@ -1992,6 +2058,7 @@ pub async fn get_collection_contents_for_viewer(
            AND (c.visibility = 'public' OR ($3 AND c.visibility = 'unlisted'))
          ORDER BY c.sort_order, lower(c.name), c.id
          LIMIT {maximum_children}",
+        collection_media_asset_urls_select("c"),
         collection_preview_images_select(
             "(r.visibility = 'public' OR ($3 AND r.visibility = 'unlisted'))"
         ),
@@ -2067,15 +2134,18 @@ pub async fn get_collection_contents_for_viewer(
                 END AS image_edit,
                 r.visibility,
                 u.username AS author_username,
-                CASE WHEN char_length(u.avatar_url) <= $8
-                     THEN u.avatar_url END AS author_avatar_url
+                CASE WHEN char_length(COALESCE(avatar_asset.full_url, u.avatar_url)) <= $8
+                     THEN COALESCE(avatar_asset.full_url, u.avatar_url) END AS author_avatar_url
          FROM collection_recipes cr
          INNER JOIN collections c ON c.id = cr.collection_id AND c.owner_id = $2
          INNER JOIN recipes r ON r.id = cr.recipe_id
-         LEFT JOIN media_assets asset
-           ON asset.id = CASE WHEN r.images -> 0 ? 'asset_id'
-                              THEN (r.images -> 0 ->> 'asset_id')::UUID END
+         LEFT JOIN recipe_media_refs image_ref
+           ON image_ref.recipe_id = r.id
+          AND image_ref.asset_id::text = r.images -> 0 ->> 'asset_id'
+         LEFT JOIN media_assets asset ON asset.id = image_ref.asset_id
          LEFT JOIN users u ON u.id = r.user_id
+         LEFT JOIN avatar_media_refs avatar_ref ON avatar_ref.user_id = u.id
+         LEFT JOIN media_assets avatar_asset ON avatar_asset.id = avatar_ref.asset_id
          WHERE cr.collection_id = $1
            AND (c.visibility = 'public' OR ($3 AND c.visibility = 'unlisted'))
            AND (r.visibility = 'public' OR ($3 AND r.visibility = 'unlisted'))
@@ -2808,12 +2878,12 @@ pub async fn get_user_by_id(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     id: Uuid,
 ) -> Result<Option<User>, DbError> {
-    sqlx::query_as!(
-        User,
-        "SELECT id, username, display_name, email, avatar_url, bio, created_at, updated_at \
-         FROM users WHERE id = $1",
-        id,
-    )
+    sqlx::query_as::<_, User>(&format!(
+        "SELECT u.id, u.username, u.display_name, u.email, {} AS avatar_url, \
+             u.bio, u.created_at, u.updated_at FROM users u WHERE u.id = $1",
+        media_assets::managed_avatar_url_projection("u")
+    ))
+    .bind(id)
     .fetch_optional(executor)
     .await
     .map_err(DbError::Query)
@@ -2841,12 +2911,12 @@ pub async fn get_user_by_email(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     email: &str,
 ) -> Result<Option<User>, DbError> {
-    sqlx::query_as!(
-        User,
-        "SELECT id, username, display_name, email, avatar_url, bio, \
-          created_at, updated_at FROM users WHERE email = $1",
-        email,
-    )
+    sqlx::query_as::<_, User>(&format!(
+        "SELECT u.id, u.username, u.display_name, u.email, {} AS avatar_url, \
+             u.bio, u.created_at, u.updated_at FROM users u WHERE u.email = $1",
+        media_assets::managed_avatar_url_projection("u")
+    ))
+    .bind(email)
     .fetch_optional(executor)
     .await
     .map_err(DbError::Query)
@@ -3063,6 +3133,26 @@ pub async fn update_avatar_url(
 
 // ── Recipe queries ──────────────────────────────────────────────────────────
 
+pub(crate) fn recipe_read_columns(recipe_alias: &str, user_alias: &str) -> String {
+    let media_asset_urls = media_assets::media_asset_urls_projection(
+        "recipe_media_refs",
+        "recipe_id",
+        &format!("{recipe_alias}.id"),
+    );
+    let author_avatar_url = media_assets::managed_avatar_url_projection(user_alias);
+    format!(
+        "{recipe_alias}.id, {recipe_alias}.user_id, {recipe_alias}.title, \
+         {recipe_alias}.description, {recipe_alias}.commentary, \
+         {recipe_alias}.prep_time_minutes, {recipe_alias}.cook_time_minutes, \
+         {recipe_alias}.servings, {recipe_alias}.ingredients, \
+         {recipe_alias}.instructions, {recipe_alias}.equipment, {recipe_alias}.images, \
+         {recipe_alias}.visibility, {recipe_alias}.created_at, {recipe_alias}.updated_at, \
+         {user_alias}.username AS author_username, \
+         {author_avatar_url} AS author_avatar_url, \
+         {media_asset_urls} AS media_asset_urls"
+    )
+}
+
 /// Insert a new recipe. Returns the created recipe with the generated ID.
 #[allow(clippy::too_many_arguments)]
 pub async fn insert_recipe(
@@ -3090,7 +3180,8 @@ pub async fn insert_recipe(
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) \
          RETURNING id, user_id, title, description, commentary, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, images, visibility, created_at, updated_at, \
             (SELECT username FROM users WHERE users.id = $1) AS author_username, \
-            (SELECT avatar_url FROM users WHERE users.id = $1) AS author_avatar_url",
+            (SELECT avatar_url FROM users WHERE users.id = $1) AS author_avatar_url, \
+            'null'::jsonb AS media_asset_urls",
     )
     .bind(user_id)
     .bind(title)
@@ -3116,10 +3207,10 @@ pub async fn get_recipe_by_id(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     id: Uuid,
 ) -> Result<Option<Recipe>, DbError> {
-    let row = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
-         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.id = $1",
-    )
+    let row = sqlx::query(&format!(
+        "SELECT {} FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.id = $1",
+        recipe_read_columns("r", "u")
+    ))
     .bind(id)
     .fetch_optional(executor)
     .await
@@ -3137,10 +3228,11 @@ pub async fn get_recipe_by_id_and_owner(
     id: Uuid,
     user_id: Uuid,
 ) -> Result<Recipe, DbError> {
-    let row = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
-         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.id = $1 AND r.user_id = $2",
-    )
+    let row = sqlx::query(&format!(
+        "SELECT {} FROM recipes r LEFT JOIN users u ON u.id = r.user_id \
+         WHERE r.id = $1 AND r.user_id = $2",
+        recipe_read_columns("r", "u")
+    ))
     .bind(id)
     .bind(user_id)
     .fetch_one(executor)
@@ -3158,11 +3250,11 @@ pub async fn get_recipes_by_owner(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     user_id: Uuid,
 ) -> Result<Vec<Recipe>, DbError> {
-    let rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
-         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.user_id = $1 \
-         ORDER BY r.created_at DESC",
-    )
+    let rows = sqlx::query(&format!(
+        "SELECT {} FROM recipes r LEFT JOIN users u ON u.id = r.user_id \
+         WHERE r.user_id = $1 ORDER BY r.created_at DESC",
+        recipe_read_columns("r", "u")
+    ))
     .bind(user_id)
     .fetch_all(executor)
     .await
@@ -3208,7 +3300,8 @@ pub async fn update_recipe(
          WHERE id = $1 AND user_id = $2 \
          RETURNING id, user_id, title, description, commentary, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, images, visibility, created_at, updated_at, \
             (SELECT username FROM users WHERE users.id = $2) AS author_username, \
-            (SELECT avatar_url FROM users WHERE users.id = $2) AS author_avatar_url",
+            (SELECT avatar_url FROM users WHERE users.id = $2) AS author_avatar_url, \
+            'null'::jsonb AS media_asset_urls",
     )
     .bind(id)
     .bind(user_id)
@@ -3248,7 +3341,8 @@ pub async fn update_recipe_visibility(
              cook_time_minutes, servings, ingredients, instructions, equipment, images, \
              visibility, created_at, updated_at, \
              (SELECT username FROM users WHERE users.id = $2) AS author_username, \
-             (SELECT avatar_url FROM users WHERE users.id = $2) AS author_avatar_url",
+             (SELECT avatar_url FROM users WHERE users.id = $2) AS author_avatar_url, \
+             'null'::jsonb AS media_asset_urls",
     )
     .bind(id)
     .bind(user_id)
@@ -3333,12 +3427,11 @@ pub async fn get_recipes_by_owner_paginated(
     limit: i64,
     offset: i64,
 ) -> Result<Vec<Recipe>, DbError> {
-    let rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
-         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.user_id = $1 \
-         ORDER BY r.created_at DESC \
-         LIMIT $2 OFFSET $3",
-    )
+    let rows = sqlx::query(&format!(
+        "SELECT {} FROM recipes r LEFT JOIN users u ON u.id = r.user_id \
+         WHERE r.user_id = $1 ORDER BY r.created_at DESC LIMIT $2 OFFSET $3",
+        recipe_read_columns("r", "u")
+    ))
     .bind(user_id)
     .bind(limit)
     .bind(offset)
@@ -3372,10 +3465,11 @@ pub async fn get_user_by_username(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     username: &str,
 ) -> Result<Option<User>, DbError> {
-    sqlx::query_as::<_, User>(
-        "SELECT id, username, display_name, email, avatar_url, bio, created_at, updated_at \
-         FROM users WHERE (username || '') = $1",
-    )
+    sqlx::query_as::<_, User>(&format!(
+        "SELECT u.id, u.username, u.display_name, u.email, {} AS avatar_url, \
+             u.bio, u.created_at, u.updated_at FROM users u WHERE (u.username || '') = $1",
+        media_assets::managed_avatar_url_projection("u")
+    ))
     .bind(username)
     .fetch_optional(executor)
     .await
@@ -3388,12 +3482,11 @@ pub async fn get_public_recipes_paginated(
     limit: i64,
     offset: i64,
 ) -> Result<Vec<Recipe>, DbError> {
-    let rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
-         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.visibility = 'public' \
-         ORDER BY r.created_at DESC \
-         LIMIT $1 OFFSET $2",
-    )
+    let rows = sqlx::query(&format!(
+        "SELECT {} FROM recipes r LEFT JOIN users u ON u.id = r.user_id \
+         WHERE r.visibility = 'public' ORDER BY r.created_at DESC LIMIT $1 OFFSET $2",
+        recipe_read_columns("r", "u")
+    ))
     .bind(limit)
     .bind(offset)
     .fetch_all(executor)
@@ -3423,10 +3516,11 @@ pub async fn get_recipe_by_id_public(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     id: Uuid,
 ) -> Result<Option<Recipe>, DbError> {
-    let row = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
-         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.id = $1 AND r.visibility IN ('public', 'unlisted')",
-    )
+    let row = sqlx::query(&format!(
+        "SELECT {} FROM recipes r LEFT JOIN users u ON u.id = r.user_id \
+         WHERE r.id = $1 AND r.visibility IN ('public', 'unlisted')",
+        recipe_read_columns("r", "u")
+    ))
     .bind(id)
     .fetch_optional(executor)
     .await
@@ -3444,12 +3538,12 @@ pub async fn get_user_public_recipes(
     limit: i64,
     offset: i64,
 ) -> Result<Vec<Recipe>, DbError> {
-    let rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
-         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.user_id = $1 AND r.visibility = 'public' \
-         ORDER BY r.created_at DESC \
-         LIMIT $2 OFFSET $3",
-    )
+    let rows = sqlx::query(&format!(
+        "SELECT {} FROM recipes r LEFT JOIN users u ON u.id = r.user_id \
+         WHERE r.user_id = $1 AND r.visibility = 'public' \
+         ORDER BY r.created_at DESC LIMIT $2 OFFSET $3",
+        recipe_read_columns("r", "u")
+    ))
     .bind(user_id)
     .bind(limit)
     .bind(offset)

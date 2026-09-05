@@ -46,6 +46,87 @@ struct LockedMediaAsset {
     expires_at: Option<chrono::DateTime<Utc>>,
 }
 
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+pub(crate) struct MediaAssetDisplayUrls {
+    pub full_url: String,
+    pub thumbnail_url: String,
+    pub original_url: Option<String>,
+}
+
+pub(crate) fn resolve_recipe_media_urls(
+    images: &mut [RecipeImage],
+    steps: &mut [RecipeStep],
+    media_asset_urls: &serde_json::Value,
+) -> Result<(), String> {
+    if media_asset_urls.is_null() {
+        // Mutation RETURNING rows have already been validated against locked
+        // asset rows and intentionally do not run a second read projection.
+        return Ok(());
+    }
+    let urls =
+        serde_json::from_value::<HashMap<Uuid, MediaAssetDisplayUrls>>(media_asset_urls.clone())
+            .map_err(|error| format!("invalid media asset projection: {error}"))?;
+
+    fn resolve_image(
+        image: &mut RecipeImage,
+        urls: &HashMap<Uuid, MediaAssetDisplayUrls>,
+    ) -> Result<(), String> {
+        let Some(asset_id) = image.asset_id else {
+            return Ok(());
+        };
+        let asset = urls.get(&asset_id).ok_or_else(|| {
+            format!("managed media asset {asset_id} is missing from its holder projection")
+        })?;
+        image.url.clone_from(&asset.full_url);
+        image.thumb_url = Some(asset.thumbnail_url.clone());
+        Ok(())
+    }
+
+    fn resolve_steps(
+        steps: &mut [RecipeStep],
+        urls: &HashMap<Uuid, MediaAssetDisplayUrls>,
+    ) -> Result<(), String> {
+        for step in steps {
+            for image in &mut step.photos {
+                resolve_image(image, urls)?;
+            }
+            resolve_steps(&mut step.sub_steps, urls)?;
+        }
+        Ok(())
+    }
+
+    for image in images {
+        resolve_image(image, &urls)?;
+    }
+    resolve_steps(steps, &urls)
+}
+
+pub(crate) fn media_asset_urls_projection(
+    reference_table: &str,
+    holder_column: &str,
+    holder_expression: &str,
+) -> String {
+    format!(
+        "COALESCE((SELECT jsonb_object_agg( \
+             asset.id::text, jsonb_build_object( \
+                 'full_url', asset.full_url, \
+                 'thumbnail_url', asset.thumbnail_url, \
+                 'original_url', asset.original_url)) \
+         FROM {reference_table} media_ref \
+         INNER JOIN media_assets asset ON asset.id = media_ref.asset_id \
+         WHERE media_ref.{holder_column} = {holder_expression}), '{{}}'::jsonb)"
+    )
+}
+
+pub(crate) fn managed_avatar_url_projection(user_alias: &str) -> String {
+    format!(
+        "COALESCE((SELECT asset.full_url \
+         FROM avatar_media_refs media_ref \
+         INNER JOIN media_assets asset ON asset.id = media_ref.asset_id \
+         WHERE media_ref.user_id = {user_alias}.id), {user_alias}.avatar_url)"
+    )
+}
+
 pub fn recipe_media_asset_ids(images: &[RecipeImage], steps: &[RecipeStep]) -> Vec<Uuid> {
     fn collect_steps(steps: &[RecipeStep], ids: &mut Vec<Uuid>) {
         for step in steps {

@@ -1764,6 +1764,7 @@ mod version_graph_tests {
             created_at: Utc
                 .with_ymd_and_hms(2026, 7, 20, version_number as u32, 0, 0)
                 .unwrap(),
+            media_asset_urls: serde_json::Value::Null,
         }
     }
 

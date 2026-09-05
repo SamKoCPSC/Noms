@@ -327,13 +327,24 @@ pub async fn get_avatar_edit_source() -> Result<Option<AvatarEditSource>, Server
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
     let pool = crate::db::get_pool();
-    let row =
-        sqlx::query("SELECT avatar_url, avatar_original_url, avatar_edit FROM users WHERE id = $1")
-            .bind(user_id)
-            .fetch_optional(&pool)
-            .await
-            .map_err(|e| ServerFnError::new(format!("Failed to load avatar edit: {e}")))?
-            .ok_or_else(|| ServerFnError::new("User not found"))?;
+    let row = sqlx::query(
+        "SELECT CASE WHEN media_ref.asset_id IS NOT NULL \
+                     THEN asset.full_url ELSE users.avatar_url END AS avatar_url, \
+                CASE WHEN media_ref.asset_id IS NOT NULL \
+                     THEN COALESCE(asset.original_url, asset.full_url) \
+                     ELSE COALESCE(users.avatar_original_url, users.avatar_url) \
+                END AS avatar_original_url, \
+                users.avatar_edit \
+         FROM users \
+         LEFT JOIN avatar_media_refs media_ref ON media_ref.user_id = users.id \
+         LEFT JOIN media_assets asset ON asset.id = media_ref.asset_id \
+         WHERE users.id = $1",
+    )
+    .bind(user_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Failed to load avatar edit: {e}")))?
+    .ok_or_else(|| ServerFnError::new("User not found"))?;
     let avatar_url: Option<String> = row.try_get("avatar_url").ok();
     let original_url: Option<String> = row.try_get("avatar_original_url").ok();
     let edit_json: Option<serde_json::Value> = row.try_get("avatar_edit").ok();

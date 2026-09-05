@@ -22,11 +22,20 @@ pub struct RecipeVersion {
     pub snapshot: serde_json::Value,
     pub notes: Option<String>,
     pub created_at: DateTime<Utc>,
+    #[serde(skip, default)]
+    pub(crate) media_asset_urls: serde_json::Value,
 }
 
 impl RecipeVersion {
     pub fn decoded_snapshot(&self) -> Result<RecipeSnapshot, DbError> {
-        json_to_snapshot(&self.snapshot)
+        let mut snapshot = json_to_snapshot(&self.snapshot)?;
+        super::resolve_recipe_media_urls(
+            &mut snapshot.images,
+            &mut snapshot.instructions,
+            &self.media_asset_urls,
+        )
+        .map_err(DbError::InvalidRecipeSnapshot)?;
+        Ok(snapshot)
     }
 }
 
@@ -44,11 +53,21 @@ pub struct RecipeDraft {
     pub fork_message: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    #[serde(skip, default)]
+    pub(crate) media_asset_urls: serde_json::Value,
 }
 
 impl RecipeDraft {
     pub fn decoded_snapshot(&self) -> Result<RecipeDraftPayload, DbError> {
-        serde_json::from_value(self.snapshot.clone()).map_err(DbError::SerdeJson)
+        let mut snapshot = serde_json::from_value::<RecipeDraftPayload>(self.snapshot.clone())
+            .map_err(DbError::SerdeJson)?;
+        super::resolve_recipe_media_urls(
+            &mut snapshot.content.images,
+            &mut snapshot.content.instructions,
+            &self.media_asset_urls,
+        )
+        .map_err(DbError::InvalidRecipeSnapshot)?;
+        Ok(snapshot)
     }
 }
 
@@ -118,18 +137,47 @@ struct LineageNodeSnapshot {
     fork_message: Option<String>,
 }
 
-const VERSION_COLUMNS: &str = "id, recipe_id, version_number, snapshot, notes, created_at";
+const VERSION_COLUMNS: &str = "id, recipe_id, version_number, snapshot, notes, created_at, \
+     'null'::jsonb AS media_asset_urls";
 const DRAFT_COLUMNS: &str = "id, recipe_id, user_id, base_version_number, snapshot, revision, \
      forked_from_recipe_id, forked_from_version_number, forked_from_title, fork_message, \
-     created_at, updated_at";
+     created_at, updated_at, 'null'::jsonb AS media_asset_urls";
+
+fn version_read_columns(alias: &str) -> String {
+    let media_asset_urls = super::media_asset_urls_projection(
+        "recipe_version_media_refs",
+        "recipe_version_id",
+        &format!("{alias}.id"),
+    );
+    format!(
+        "{alias}.id, {alias}.recipe_id, {alias}.version_number, {alias}.snapshot, \
+         {alias}.notes, {alias}.created_at, {media_asset_urls} AS media_asset_urls"
+    )
+}
+
+fn draft_read_columns(alias: &str) -> String {
+    let media_asset_urls = super::media_asset_urls_projection(
+        "recipe_draft_media_refs",
+        "recipe_draft_id",
+        &format!("{alias}.id"),
+    );
+    format!(
+        "{alias}.id, {alias}.recipe_id, {alias}.user_id, {alias}.base_version_number, \
+         {alias}.snapshot, {alias}.revision, {alias}.forked_from_recipe_id, \
+         {alias}.forked_from_version_number, {alias}.forked_from_title, \
+         {alias}.fork_message, {alias}.created_at, {alias}.updated_at, \
+         {media_asset_urls} AS media_asset_urls"
+    )
+}
 
 pub async fn get_recipe_versions(
     pool: &PgPool,
     recipe_id: Uuid,
 ) -> Result<Vec<RecipeVersion>, DbError> {
     sqlx::query_as::<_, RecipeVersion>(&format!(
-        "SELECT {VERSION_COLUMNS} FROM recipe_versions \
-         WHERE recipe_id = $1 ORDER BY version_number DESC"
+        "SELECT {} FROM recipe_versions AS version \
+         WHERE version.recipe_id = $1 ORDER BY version.version_number DESC",
+        version_read_columns("version")
     ))
     .bind(recipe_id)
     .fetch_all(pool)
@@ -170,11 +218,20 @@ struct BoundedRecipeVersionPayloadRow {
     snapshot_text: String,
     notes: Option<String>,
     created_at: DateTime<Utc>,
+    media_asset_urls: serde_json::Value,
 }
 
 impl BoundedRecipeVersionPayloadRow {
     fn decoded_snapshot(&self) -> Result<RecipeSnapshot, DbError> {
-        serde_json::from_str(&self.snapshot_text).map_err(DbError::SerdeJson)
+        let mut snapshot = serde_json::from_str::<RecipeSnapshot>(&self.snapshot_text)
+            .map_err(DbError::SerdeJson)?;
+        super::resolve_recipe_media_urls(
+            &mut snapshot.images,
+            &mut snapshot.instructions,
+            &self.media_asset_urls,
+        )
+        .map_err(DbError::InvalidRecipeSnapshot)?;
+        Ok(snapshot)
     }
 }
 
@@ -439,12 +496,19 @@ pub async fn get_recipe_version_summary_page(
     let versions = if version_numbers.is_empty() {
         Vec::new()
     } else {
-        sqlx::query_as::<_, BoundedRecipeVersionPayloadRow>(
-            "SELECT recipe_id, version_number, snapshot::text AS snapshot_text, notes, created_at \
-               FROM recipe_versions \
-             WHERE recipe_id = $1 AND version_number = ANY($2) \
-             ORDER BY version_number DESC",
-        )
+        let media_asset_urls = super::media_asset_urls_projection(
+            "recipe_version_media_refs",
+            "recipe_version_id",
+            "version.id",
+        );
+        sqlx::query_as::<_, BoundedRecipeVersionPayloadRow>(&format!(
+            "SELECT version.recipe_id, version.version_number, \
+                    version.snapshot::text AS snapshot_text, version.notes, version.created_at, \
+                    {media_asset_urls} AS media_asset_urls \
+               FROM recipe_versions AS version \
+             WHERE version.recipe_id = $1 AND version.version_number = ANY($2) \
+             ORDER BY version.version_number DESC"
+        ))
         .bind(recipe_id)
         .bind(&version_numbers)
         .fetch_all(pool)
@@ -529,8 +593,9 @@ pub async fn get_latest_recipe_version(
     recipe_id: Uuid,
 ) -> Result<RecipeVersion, DbError> {
     sqlx::query_as::<_, RecipeVersion>(&format!(
-        "SELECT {VERSION_COLUMNS} FROM recipe_versions \
-         WHERE recipe_id = $1 ORDER BY version_number DESC LIMIT 1"
+        "SELECT {} FROM recipe_versions AS version \
+         WHERE version.recipe_id = $1 ORDER BY version.version_number DESC LIMIT 1",
+        version_read_columns("version")
     ))
     .bind(recipe_id)
     .fetch_optional(executor)
@@ -548,8 +613,9 @@ pub async fn get_recipe_version(
     version_number: i32,
 ) -> Result<RecipeVersion, DbError> {
     sqlx::query_as::<_, RecipeVersion>(&format!(
-        "SELECT {VERSION_COLUMNS} FROM recipe_versions \
-         WHERE recipe_id = $1 AND version_number = $2"
+        "SELECT {} FROM recipe_versions AS version \
+         WHERE version.recipe_id = $1 AND version.version_number = $2",
+        version_read_columns("version")
     ))
     .bind(recipe_id)
     .bind(version_number)
@@ -1029,16 +1095,11 @@ async fn load_version_graph_recipes(
     pool: &PgPool,
     recipe_keys: &[Uuid],
 ) -> Result<HashMap<Uuid, Recipe>, DbError> {
-    sqlx::query_as::<_, Recipe>(
-        "SELECT recipes.id, recipes.user_id, recipes.title, recipes.description, \
-             recipes.commentary, recipes.prep_time_minutes, recipes.cook_time_minutes, \
-             recipes.servings, recipes.ingredients, recipes.instructions, recipes.equipment, \
-             recipes.images, recipes.visibility, recipes.created_at, recipes.updated_at, \
-             users.username AS author_username, users.avatar_url AS author_avatar_url \
-         FROM recipes JOIN users ON users.id = recipes.user_id \
-         WHERE recipes.id = ANY($1) \
-         ORDER BY recipes.id",
-    )
+    sqlx::query_as::<_, Recipe>(&format!(
+        "SELECT {} FROM recipes JOIN users ON users.id = recipes.user_id \
+         WHERE recipes.id = ANY($1) ORDER BY recipes.id",
+        super::recipe_read_columns("recipes", "users")
+    ))
     .bind(recipe_keys)
     .fetch_all(pool)
     .await
@@ -1062,10 +1123,11 @@ async fn load_version_graph_versions(
     }
 
     sqlx::query_as::<_, RecipeVersion>(&format!(
-        "SELECT {VERSION_COLUMNS} FROM recipe_versions \
-         WHERE recipe_id = ANY($1) \
-         ORDER BY (recipe_id = $2) DESC, recipe_id, version_number \
-         LIMIT $3"
+        "SELECT {} FROM recipe_versions AS version \
+         WHERE version.recipe_id = ANY($1) \
+         ORDER BY (version.recipe_id = $2) DESC, version.recipe_id, version.version_number \
+         LIMIT $3",
+        version_read_columns("version")
     ))
     .bind(recipe_ids)
     .bind(selected_recipe_id)
@@ -2539,16 +2601,22 @@ async fn load_bounded_version_graph_nodes(
     let versions = if requested_snapshot_ids.is_empty() {
         Vec::new()
     } else {
-        sqlx::query_as::<_, BoundedRecipeVersionPayloadRow>(
+        let media_asset_urls = super::media_asset_urls_projection(
+            "recipe_version_media_refs",
+            "recipe_version_id",
+            "version.id",
+        );
+        sqlx::query_as::<_, BoundedRecipeVersionPayloadRow>(&format!(
             "WITH requested(recipe_id, version_number) AS (\
                  SELECT * FROM UNNEST($1::UUID[], $2::INTEGER[])\
              ) \
              SELECT version.recipe_id, version.version_number, \
-                    version.snapshot::text AS snapshot_text, version.notes, version.created_at \
+                    version.snapshot::text AS snapshot_text, version.notes, version.created_at, \
+                    {media_asset_urls} AS media_asset_urls \
                FROM recipe_versions AS version \
                JOIN requested USING (recipe_id, version_number) \
-              ORDER BY version.recipe_id, version.version_number",
-        )
+              ORDER BY version.recipe_id, version.version_number"
+        ))
         .bind(&recipe_ids)
         .bind(&version_numbers)
         .fetch_all(pool)
@@ -3133,7 +3201,9 @@ pub async fn get_recipe_draft(
     user_id: Uuid,
 ) -> Result<RecipeDraft, DbError> {
     sqlx::query_as::<_, RecipeDraft>(&format!(
-        "SELECT {DRAFT_COLUMNS} FROM recipe_drafts WHERE id = $1 AND user_id = $2"
+        "SELECT {} FROM recipe_drafts AS draft \
+         WHERE draft.id = $1 AND draft.user_id = $2",
+        draft_read_columns("draft")
     ))
     .bind(draft_id)
     .bind(user_id)
@@ -3149,8 +3219,9 @@ pub async fn get_recipe_draft_for_recipe(
     user_id: Uuid,
 ) -> Result<Option<RecipeDraft>, DbError> {
     sqlx::query_as::<_, RecipeDraft>(&format!(
-        "SELECT {DRAFT_COLUMNS} FROM recipe_drafts \
-         WHERE recipe_id = $1 AND user_id = $2"
+        "SELECT {} FROM recipe_drafts AS draft \
+         WHERE draft.recipe_id = $1 AND draft.user_id = $2",
+        draft_read_columns("draft")
     ))
     .bind(recipe_id)
     .bind(user_id)
@@ -3164,8 +3235,9 @@ pub async fn list_recipe_drafts(
     user_id: Uuid,
 ) -> Result<Vec<RecipeDraft>, DbError> {
     sqlx::query_as::<_, RecipeDraft>(&format!(
-        "SELECT {DRAFT_COLUMNS} FROM recipe_drafts \
-         WHERE user_id = $1 ORDER BY updated_at DESC LIMIT $2"
+        "SELECT {} FROM recipe_drafts AS draft \
+         WHERE draft.user_id = $1 ORDER BY draft.updated_at DESC LIMIT $2",
+        draft_read_columns("draft")
     ))
     .bind(user_id)
     .bind(resource_limit_as_i64(MAX_ACTIVE_DRAFTS_PER_USER))
@@ -3414,8 +3486,9 @@ async fn locked_draft(
     user_id: Uuid,
 ) -> Result<RecipeDraft, DbError> {
     sqlx::query_as::<_, RecipeDraft>(&format!(
-        "SELECT {DRAFT_COLUMNS} FROM recipe_drafts \
-         WHERE id = $1 AND user_id = $2 FOR UPDATE"
+        "SELECT {} FROM recipe_drafts AS draft \
+         WHERE draft.id = $1 AND draft.user_id = $2 FOR UPDATE OF draft",
+        draft_read_columns("draft")
     ))
     .bind(draft_id)
     .bind(user_id)
@@ -3462,10 +3535,16 @@ async fn publish_new_draft(
             sqlx::query_as::<_, LiveLineageNode>(
                 "SELECT recipes.id, recipes.user_id, recipes.title, recipes.visibility, \
                      users.username AS owner_username, \
-                     COALESCE(recipes.images -> 0 ->> 'thumb_url', \
-                              recipes.images -> 0 ->> 'url', \
-                              recipes.images ->> 0) AS image_url \
+                     CASE WHEN recipes.images -> 0 ? 'asset_id' \
+                          THEN COALESCE(asset.thumbnail_url, asset.full_url) \
+                          ELSE COALESCE(recipes.images -> 0 ->> 'thumb_url', \
+                                        recipes.images -> 0 ->> 'url', \
+                                        recipes.images ->> 0) END AS image_url \
                  FROM recipes JOIN users ON users.id = recipes.user_id \
+                 LEFT JOIN recipe_media_refs media_ref \
+                   ON media_ref.recipe_id = recipes.id \
+                  AND media_ref.asset_id::text = recipes.images -> 0 ->> 'asset_id' \
+                 LEFT JOIN media_assets asset ON asset.id = media_ref.asset_id \
                  WHERE recipes.id = $1",
             )
             .bind(source_recipe_id)
@@ -3921,10 +4000,16 @@ pub async fn get_recipe_lineage(
     let current_live = sqlx::query_as::<_, LiveLineageNode>(
         "SELECT recipes.id, recipes.user_id, recipes.title, recipes.visibility, \
              users.username AS owner_username, \
-             COALESCE(recipes.images -> 0 ->> 'thumb_url', \
-                      recipes.images -> 0 ->> 'url', \
-                      recipes.images ->> 0) AS image_url \
+             CASE WHEN recipes.images -> 0 ? 'asset_id' \
+                  THEN COALESCE(asset.thumbnail_url, asset.full_url) \
+                  ELSE COALESCE(recipes.images -> 0 ->> 'thumb_url', \
+                                recipes.images -> 0 ->> 'url', \
+                                recipes.images ->> 0) END AS image_url \
          FROM recipes JOIN users ON users.id = recipes.user_id \
+         LEFT JOIN recipe_media_refs media_ref \
+           ON media_ref.recipe_id = recipes.id \
+          AND media_ref.asset_id::text = recipes.images -> 0 ->> 'asset_id' \
+         LEFT JOIN media_assets asset ON asset.id = media_ref.asset_id \
          WHERE recipes.id = $1",
     )
     .bind(recipe_id)
@@ -4007,10 +4092,16 @@ pub async fn get_recipe_lineage(
     let live_nodes = sqlx::query_as::<_, LiveLineageNode>(
         "SELECT recipes.id, recipes.user_id, recipes.title, recipes.visibility, \
              users.username AS owner_username, \
-             COALESCE(recipes.images -> 0 ->> 'thumb_url', \
-                      recipes.images -> 0 ->> 'url', \
-                      recipes.images ->> 0) AS image_url \
+             CASE WHEN recipes.images -> 0 ? 'asset_id' \
+                  THEN COALESCE(asset.thumbnail_url, asset.full_url) \
+                  ELSE COALESCE(recipes.images -> 0 ->> 'thumb_url', \
+                                recipes.images -> 0 ->> 'url', \
+                                recipes.images ->> 0) END AS image_url \
          FROM recipes JOIN users ON users.id = recipes.user_id \
+         LEFT JOIN recipe_media_refs media_ref \
+           ON media_ref.recipe_id = recipes.id \
+          AND media_ref.asset_id::text = recipes.images -> 0 ->> 'asset_id' \
+         LEFT JOIN media_assets asset ON asset.id = media_ref.asset_id \
          WHERE recipes.id = ANY($1)",
     )
     .bind(&recipe_keys)

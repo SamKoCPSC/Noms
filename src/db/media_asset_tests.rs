@@ -488,3 +488,247 @@ async fn collection_and_avatar_references_share_the_asset_lifecycle() {
         ));
     }
 }
+
+#[tokio::test]
+async fn managed_read_surfaces_resolve_urls_from_the_asset_registry() {
+    let (_database, pool) = crate::test_utils::setup_test_db().await;
+    let user = owner(&pool, "asset_read_projection").await;
+    let recipe_asset = asset(user.id, MediaPurpose::Recipe, 51);
+    let nested_asset = asset(user.id, MediaPurpose::Recipe, 52);
+    let cover_asset = asset(user.id, MediaPurpose::CollectionCover, 53);
+    let avatar_asset = asset(user.id, MediaPurpose::Avatar, 54);
+    for media_asset in [&recipe_asset, &nested_asset, &cover_asset, &avatar_asset] {
+        register_media_asset(&pool, media_asset).await.unwrap();
+    }
+
+    let recipe = create_published_recipe(
+        &pool,
+        user.id,
+        &diff::RecipeDraftPayload {
+            initial_visibility: Some("private".to_string()),
+            content: snapshot(
+                "Registry-backed reads",
+                vec![managed_image(&recipe_asset)],
+                vec![RecipeStep {
+                    text: "Cook".to_string(),
+                    sub_steps: Vec::new(),
+                    photos: vec![managed_image(&nested_asset)],
+                }],
+            ),
+        },
+        None,
+    )
+    .await
+    .unwrap();
+    let draft = create_edit_draft(&pool, recipe.id, user.id).await.unwrap();
+    let collection = insert_collection(
+        &pool,
+        user.id,
+        None,
+        "Registry-backed collection",
+        None,
+        crate::types::CollectionVisibility::Private,
+        Some(&managed_image(&cover_asset)),
+    )
+    .await
+    .unwrap();
+    add_recipe_to_collection(&pool, collection.id, user.id, recipe.id)
+        .await
+        .unwrap();
+    replace_avatar_media_reference(&pool, user.id, avatar_asset.id)
+        .await
+        .unwrap();
+    sqlx::query(
+        "UPDATE users SET avatar_url = 'https://stale.example/avatar.webp', \
+             avatar_original_url = 'https://stale.example/avatar-original.webp' WHERE id = $1",
+    )
+    .bind(user.id)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let stale_image = serde_json::json!([{
+        "asset_id": recipe_asset.id,
+        "url": "https://stale.example/recipe.webp",
+        "thumb_url": "https://stale.example/recipe-thumb.webp",
+        "edits": []
+    }]);
+    let stale_instructions = serde_json::json!([{
+        "text": "Cook",
+        "sub_steps": [],
+        "photos": [{
+            "asset_id": nested_asset.id,
+            "url": "https://stale.example/nested.webp",
+            "thumb_url": "https://stale.example/nested-thumb.webp",
+            "edits": []
+        }]
+    }]);
+    sqlx::query("UPDATE recipes SET images = $2, instructions = $3 WHERE id = $1")
+        .bind(recipe.id)
+        .bind(&stale_image)
+        .bind(&stale_instructions)
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query(
+        "UPDATE recipe_versions SET snapshot = jsonb_set(\
+             jsonb_set(snapshot, '{images}', $2), '{instructions}', $3) \
+         WHERE recipe_id = $1",
+    )
+    .bind(recipe.id)
+    .bind(&stale_image)
+    .bind(&stale_instructions)
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "UPDATE recipe_drafts SET snapshot = jsonb_set(\
+             jsonb_set(snapshot, '{content,images}', $2), '{content,instructions}', $3) \
+         WHERE id = $1",
+    )
+    .bind(draft.id)
+    .bind(&stale_image)
+    .bind(&stale_instructions)
+    .execute(&pool)
+    .await
+    .unwrap();
+    let stale_cover = serde_json::json!({
+        "asset_id": cover_asset.id,
+        "url": "https://stale.example/cover.webp",
+        "thumb_url": "https://stale.example/cover-thumb.webp",
+        "edits": []
+    });
+    sqlx::query("UPDATE collections SET image = $2 WHERE id = $1")
+        .bind(collection.id)
+        .bind(stale_cover)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let loaded_recipe = get_recipe_by_id(&pool, recipe.id).await.unwrap().unwrap();
+    assert_eq!(loaded_recipe.images[0].url, recipe_asset.full_url);
+    assert_eq!(
+        loaded_recipe.instructions[0].photos[0].thumb_url.as_deref(),
+        Some(nested_asset.thumbnail_url.as_str())
+    );
+    assert_eq!(
+        loaded_recipe.author_avatar_url.as_deref(),
+        Some(avatar_asset.full_url.as_str())
+    );
+
+    let loaded_version = get_recipe_version(&pool, recipe.id, 1)
+        .await
+        .unwrap()
+        .decoded_snapshot()
+        .unwrap();
+    assert_eq!(loaded_version.images[0].url, recipe_asset.full_url);
+    assert_eq!(
+        loaded_version.instructions[0].photos[0].url,
+        nested_asset.full_url
+    );
+    let loaded_draft = get_recipe_draft(&pool, draft.id, user.id)
+        .await
+        .unwrap()
+        .decoded_snapshot()
+        .unwrap();
+    assert_eq!(loaded_draft.content.images[0].url, recipe_asset.full_url);
+    let history = get_recipe_version_summary_page(&pool, recipe.id, None, 20)
+        .await
+        .unwrap();
+    assert_eq!(
+        history.page.items[0].image_url.as_deref(),
+        Some(recipe_asset.thumbnail_url.as_str())
+    );
+    let graph = get_initial_recipe_version_graph(&pool, recipe.id, Some(user.id))
+        .await
+        .unwrap();
+    assert_eq!(
+        graph.nodes[0].thumbnail_url(),
+        Some(recipe_asset.thumbnail_url.as_str())
+    );
+
+    let loaded_collection = get_collection_by_id_and_owner(&pool, collection.id, user.id)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(loaded_collection.image.unwrap().url, cover_asset.full_url);
+    let collection_summaries = get_root_collections(&pool, user.id).await.unwrap();
+    assert_eq!(
+        collection_summaries[0].image.as_ref().unwrap().url,
+        cover_asset.full_url
+    );
+    assert_eq!(
+        collection_summaries[0].preview_images[0].url,
+        recipe_asset.full_url
+    );
+
+    let loaded_user = get_user_by_id(&pool, user.id).await.unwrap().unwrap();
+    assert_eq!(loaded_user.avatar_url, Some(avatar_asset.full_url.clone()));
+
+    let recipe_search = search_recipes(
+        &pool,
+        user.id,
+        &crate::types::RecipeSearchRequest {
+            visibility: crate::types::RecipeSearchVisibility::MineOnly,
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+    let searched_recipe = recipe_search
+        .results
+        .iter()
+        .find(|result| result.recipe.id == recipe.id)
+        .unwrap();
+    assert_eq!(searched_recipe.recipe.images[0].url, recipe_asset.full_url);
+    assert_eq!(
+        searched_recipe.recipe.author_avatar_url.as_deref(),
+        Some(avatar_asset.full_url.as_str())
+    );
+    let user_search = search_users(&pool, &crate::types::UserSearchRequest::default())
+        .await
+        .unwrap();
+    let searched_user = user_search
+        .results
+        .iter()
+        .find(|result| result.user.id == user.id)
+        .unwrap();
+    assert_eq!(
+        searched_user.user.avatar_url.as_deref(),
+        Some(avatar_asset.full_url.as_str())
+    );
+}
+
+#[tokio::test]
+async fn managed_recipe_reads_fail_closed_without_the_holder_reference() {
+    let (_database, pool) = crate::test_utils::setup_test_db().await;
+    let user = owner(&pool, "asset_missing").await;
+    let recipe_asset = asset(user.id, MediaPurpose::Recipe, 61);
+    register_media_asset(&pool, &recipe_asset).await.unwrap();
+    let recipe = create_published_recipe(
+        &pool,
+        user.id,
+        &diff::RecipeDraftPayload {
+            initial_visibility: Some("private".to_string()),
+            content: snapshot(
+                "Missing reference",
+                vec![managed_image(&recipe_asset)],
+                Vec::new(),
+            ),
+        },
+        None,
+    )
+    .await
+    .unwrap();
+
+    sqlx::query("DELETE FROM recipe_media_refs WHERE recipe_id = $1")
+        .bind(recipe.id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    assert!(matches!(
+        get_recipe_by_id(&pool, recipe.id).await,
+        Err(DbError::Query(sqlx::Error::Decode(_)))
+    ));
+}
