@@ -1,11 +1,38 @@
 # NOMS-013: Marketing Pages & 3D Feasibility Experiment — Implementation Plan
 
 **Created:** 2026-07-16
-**Revised:** 2026-08-14
-**Status:** Ready for implementation
+**Revised:** 2026-09-04
+**Status:** In progress — traditional pages are merged; content evidence, icons, the full release gate, and the 3D experiment remain
 **Depends on:** The current application shell, design tokens, authentication context, and canonical recipe/application routes
 **Coordination:** NOMS-012 may later replace the Home Explore CTA with a search-first CTA. NOMS-013 must use canonical application routes and must not duplicate product functionality inside marketing pages.
 **Approach:** Ship polished, conventional, server-rendered Home, About, and How-to pages using semantic HTML, responsive CSS, optimized screenshots, and original SVG illustrations. Do not put a 3D runtime or scene on production pages. After the complete traditional experience passes its release gate, conduct an isolated 3D feasibility experiment and record whether a separately scoped follow-up is justified.
+
+---
+
+## Progress snapshot (verified 2026-09-04)
+
+NOMS-013's first implementation increment was merged into local `main` at `866404e`. The production application now has the conventional Home, About, and How-to experience; this does not complete the icon, release-gate, or experimental work.
+
+| Checkpoint | State | Evidence completed | Work remaining |
+|---|---|---|---|
+| 1. Content, wireframes, and asset inventory | Partial | Draft page copy and the content inventory are checked in under `docs/design/NOMS-013/`. | Resolve the open editorial decisions and complete workflow replay/approval; add explicit mobile/desktop wireframes, `assets.md`, licensing records where applicable, and recorded performance/accessibility baselines. |
+| 2. Routes, navigation, shell, and metadata | Implementation complete; acceptance pending | `/`, `/about`, and `/how-to` are typed routes with SSR metadata, canonical URLs, current-route navigation, mobile/drawer links, and Footer links. Route and metadata behavior was exercised in an isolated application instance. | Complete the checkpoint's no-JavaScript SSR/content verification and reconfirm after later icon/content changes. |
+| 3. Shared informational components and Home | Implementation complete; acceptance pending | `informational::{PageMeta, CallToActionPanel}`, the auth-aware Home CTA contract, full Home composition, responsive styles, and reduced-motion/forced-color rules are implemented. | Verify authenticated SSR/hydration, dark-theme, image-disabled, approved visual, and production-bundle states. |
+| 4. Traditional About page | Implementation complete; acceptance pending | The six-part editorial narrative, anchors, responsive alternating layout, static DOM/CSS visuals, metadata, and final CTA are implemented. | Verify keyboard/restoration behavior, image removal, dark theme, reduced motion, 200% zoom, and forced colors. |
+| 5. How-to instructional page | Partial | The task-oriented page, table of contents, ten stable workflow anchors, privacy notes, troubleshooting, metadata, and canonical route links are implemented. | Add the formal task replay matrix and approved fictional screenshots with refresh documentation; replay every procedure end to end. |
+| 6. Custom icon family and scoped migration | Not started | No NOMS-013 icon-system deliverables have been added. | Complete the icon inventory, contact-sheet approval, typed icon API, generated sprite, tests, and scoped glyph migration. |
+| 7. Production release gate | Partial | Focused marketing tests pass, WASM/server checks pass, `git diff --check` passes, and isolated desktop/mobile review found no page overflow or application console errors. Independent implementation review passed. | Resolve or baseline repository-wide Clippy and upload-test failures, then complete production bundling, axe-style checks, cross-browser/device coverage, signed-in/dark/reduced-motion/zoom/keyboard/forced-color/image-disabled/slow-network states, and performance budgets. |
+| 8. Isolated 3D feasibility experiment | Not started | Production remains free of a 3D runtime. | Build the isolated comparison under `experiments/NOMS-013-3d/`, record reproducible measurements, and publish the decision report. |
+
+### Merge and validation record
+
+- `19537ff` — content plan and page-copy artifacts.
+- `c17306c` — public Home, About, and How-to implementation.
+- `57585ea` — recipe-creation redirect and copy-document cleanup.
+- `866404e` — shared component namespace renamed from `marketing` to `informational`.
+- Focused route/content/component tests passed: 7 tests total.
+- `cargo check --target wasm32-unknown-unknown` and `SQLX_OFFLINE=true cargo check --features server` passed.
+- At merge time, the repository-wide lint gate remained blocked by 26 pre-existing image-editor Clippy findings, and the full server test run had 525 passing tests with two pre-existing upload tests failing because storage was not initialized. These are release-gate blockers, not evidence that Checkpoint 7 is complete.
 
 ---
 
@@ -21,7 +48,7 @@ The issue is complete when:
 - No production page imports Three.js, `three-d`, Bevy, `wgpu`, or experimental 3D assets.
 - A final isolated experiment compares viable 3D approaches and produces a written decision. Shipping 3D is not required to complete NOMS-013.
 
-## Implementation baseline (verified 2026-08-14)
+## Initial implementation baseline (verified 2026-08-14; superseded by the progress snapshot)
 
 - Dioxus `0.7.x` fullstack SSR and hydration are configured. Routes live in `src/main.rs`; page exports live in `src/pages/mod.rs`.
 - `/`, `/login`, `/dashboard`, recipe CRUD, version history, drafts, `/collections`, `/explore`, public profiles, and settings routes exist.
@@ -32,7 +59,7 @@ The issue is complete when:
 - `assets/main.css` contains existing design tokens and component styles. `assets/tailwind.css` is generated and must not be edited manually.
 - The repository has no browser-test runner, screenshot harness, JavaScript bundler, or 3D asset pipeline.
 
-If this baseline changes before implementation begins, update this section and affected checkpoints before changing production code.
+This section records the state from which implementation began. Use the progress snapshot above for current status.
 
 ## Scope
 
@@ -67,14 +94,14 @@ All three routes remain under `AppLayout`. Add About and How-to to desktop navig
 
 ## Fixed implementation decisions
 
-- Page copy lives in typed Rust data beside the relevant page or shared marketing component.
+- Page copy lives in typed Rust data beside the relevant page or shared informational component.
 - Marketing pages use ordinary DOM content and CSS. JavaScript is not required for comprehension, navigation, or visual completeness.
 - Production visuals use checked-in SVG illustrations, CSS compositions, or WebP/AVIF screenshots with explicit dimensions.
 - CSS transitions are limited to short interface feedback and simple reveal/hover states. They respect `prefers-reduced-motion` and never control reading progress.
 - No scroll interception, parallax framework, animation timeline library, carousel dependency, or continuously running animation loop is introduced.
 - Screenshots contain fictional, non-sensitive data and are accompanied by text that remains meaningful when images are unavailable.
 - Canonical URLs derive from configured `BASE_URL`; production origin strings are not hard-coded.
-- NOMS-013 owns icons used by Home, About, How-to, Navbar variants, Footer, and shared marketing components. Other glyph migrations are inventoried as follow-up work.
+- NOMS-013 owns icons used by Home, About, How-to, Navbar variants, Footer, and shared informational components. Other glyph migrations are inventoried as follow-up work.
 - Experimental code lives under `experiments/NOMS-013-3d/`, is excluded from production imports and build requirements, and may be removed without altering production pages.
 
 ## Content truth contract
@@ -159,7 +186,7 @@ Each section uses semantic headings, concise copy, an optional optimized visual,
 |---|---|---|
 | 1 | Content, wireframes, and visual inventory | Claims, layouts, asset sources, and baselines approved |
 | 2 | Routes, navigation, shell, and metadata | SSR routes work without client JavaScript |
-| 3 | Shared marketing UI and Home | Responsive Home and CTA tests pass |
+| 3 | Shared informational UI and Home | Responsive Home and CTA tests pass |
 | 4 | Traditional About page | Six-section editorial story passes responsive/a11y review |
 | 5 | How-to page | Every procedure is replayed against the current app |
 | 6 | Core icon system | Typed icon tests and scoped glyph audit pass |
@@ -210,14 +237,14 @@ Production release does not wait for a favorable result from Checkpoint 8. Check
 - Navigation does not wrap, overflow, obscure content, or break the catch-all route.
 - The pages remain usable without client JavaScript.
 
-## Checkpoint 3: Shared marketing components and Home
+## Checkpoint 3: Shared informational components and Home
 
-**Files:** `src/pages/home.rs`, new `src/components/marketing/`, `src/components/mod.rs`, approved assets, `assets/main.css`
+**Files:** `src/pages/home.rs`, `src/components/informational/`, `src/components/mod.rs`, approved assets, `assets/main.css`
 
 ### Tasks
 
 - Add tests for pure auth-aware CTA selection and feature availability mapping.
-- Build only the reusable primitives demonstrated by at least two sections: marketing CTA, feature section, status badge, media frame, and final CTA panel.
+- Build only the reusable primitives demonstrated by at least two sections: informational CTA, feature section, status badge, media frame, and final CTA panel.
 - Replace inline Home styles with semantic classes and existing tokens.
 - Build the approved static hero composition using DOM/CSS/SVG or an optimized image.
 - Implement the value strip, feature stories, differentiator, community section, and final CTA.
@@ -232,7 +259,7 @@ Production release does not wait for a favorable result from Checkpoint 8. Check
 
 ## Checkpoint 4: Traditional About page
 
-**Files:** `src/pages/about.rs`, shared marketing components, approved About illustrations/screenshots, `assets/main.css`
+**Files:** `src/pages/about.rs`, shared informational components, approved About illustrations/screenshots, `assets/main.css`
 
 ### Tasks
 
@@ -252,7 +279,7 @@ Production release does not wait for a favorable result from Checkpoint 8. Check
 
 ## Checkpoint 5: How-to instructional page
 
-**Files:** `src/pages/how_to.rs`, new `src/components/marketing/step_guide.rs`, assets under `assets/how-to/`, `assets/main.css`
+**Files:** `src/pages/how_to.rs`, optional shared guide primitives under `src/components/informational/`, assets under `assets/how-to/`, `assets/main.css`
 
 ### Tasks
 
