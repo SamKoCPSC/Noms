@@ -95,6 +95,217 @@ const recipeTinHtml = `
   </figure>
 </main>`;
 
+const tastyHtml = `
+<main>
+  <script>
+    <h1 class="recipe-name">Injected Moon Pie</h1>
+    <div class="ingredients-prep">
+      <div class="ingredients__section"><ul><li class="ingredient">1 bad token</li></ul></div>
+    </div>
+    <div class="preparation"><ol class="prep-steps"><li>Run script.</li></ol></div>
+  </script>
+  <div class="recipe-header--content">
+    <h1 class="recipe-name extra-bold">Starlight Hand Pies</h1>
+    <p class="description">Flaky hand pies with a bright lunar filling.</p>
+    <div class="recipe-attribution">
+      <div class="byline extra-bold">Aster Vale</div>
+      <div class="role">Tasty Team</div>
+    </div>
+    <div class="desktop-cooktimes">
+      <div class="recipe-time-container">
+        <div class="recipe-time">
+          <h5>Total Time</h5>
+          <p class="xs-hide md-block">1 hr 15 min</p>
+          <p class="md-hide">1 hr 15 min</p>
+        </div>
+        <div class="recipe-time">
+          <h5>Prep Time</h5>
+          <p class="xs-hide md-block">25 minutes</p>
+          <p class="md-hide">25 min</p>
+        </div>
+        <div class="recipe-time">
+          <h5>Cook Time</h5>
+          <p class="xs-hide md-block">50 minutes</p>
+          <p class="md-hide">50 min</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="video-thumbnail">
+    <img src="https://images.example.invalid/starlight-hand-pies.webp" alt="Starlight hand pies">
+  </div>
+  <div id="recipe" class="two-columns-recipe">
+    <div id="recipe-ingredients" class="ingredients-prep recipe-ingredients">
+      <div>
+        <h2>Ingredients</h2>
+        <p class="servings-display">for 6 servings</p>
+        <div class="ingredients__section">
+          <p class="ingredient-section-name">Dough:</p>
+          <ul>
+            <li class="ingredient">1 ½ cups moon flour</li>
+            <li class="ingredient">2 tbsp comet butter, chilled</li>
+          </ul>
+        </div>
+        <div class="ingredients__section">
+          <p class="ingredient-section-name">Filling:</p>
+          <ul>
+            <li class="ingredient">3 star pears, diced</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="preparation">
+      <h2>Preparation</h2>
+      <ol class="prep-steps">
+        <li class="xs-mb2">Mix the dough.</li>
+        <li class="xs-mb2">Read the <a href="/helpful-baking-tip">helpful baking tip</a>, then fill the pies.</li>
+        <li class="xs-mb2">Enjoy!</li>
+        <li class="xs-mb2">Cook smarter with the Tasty app. <a href="https://tasty.co/download?ct=prepsteps">Download now</a>.</li>
+      </ol>
+    </div>
+  </div>
+  <div class="video-thumbnail">
+    <img src="https://images.example.invalid/starlight-hand-pies.webp" alt="Starlight hand pies">
+  </div>
+</main>`;
+
+test("Tasty adapter preserves all visible recipe groups and excludes its app promotion", () => {
+  const candidate = parseRecipeClipboard({
+    html: tastyHtml,
+    plainText: null,
+    sourceUrl: "https://tasty.co/recipe/starlight-hand-pies",
+  });
+
+  assert.deepEqual(candidate.parser, {
+    id: "tasty-visible-recipe",
+    version: "1",
+    tier: "source_adapter",
+    sourceAdapter: "tasty",
+  });
+  assert.equal(candidate.source.provider, "Tasty");
+  assert.deepEqual(candidate.source.provenance.provider, [{
+    representation: "source_url",
+    locator: "hostname tasty.co",
+  }]);
+  assert.equal(candidate.source.author, "Aster Vale");
+  assert.equal(candidate.fields.title.value, "Starlight Hand Pies");
+  assert.equal(candidate.fields.description.value, "Flaky hand pies with a bright lunar filling.");
+  assert.equal(candidate.fields.prepTime.value, 25);
+  assert.equal(candidate.fields.cookTime.value, 50);
+  assert.equal(candidate.fields.totalTime.value, 75);
+  assert.deepEqual(candidate.fields.yield.value, { display: "for 6 servings", servings: 6 });
+  assert.deepEqual(
+    candidate.fields.ingredientSections.map(({ name, items }) => ({
+      name,
+      items: items.map(({ raw, amount, unit, name: ingredientName }) => ({
+        raw,
+        amount,
+        unit,
+        name: ingredientName,
+      })),
+    })),
+    [
+      {
+        name: "Dough:",
+        items: [
+          { raw: "1 ½ cups moon flour", amount: "1 ½", unit: "cups", name: "moon flour" },
+          { raw: "2 tbsp comet butter, chilled", amount: "2", unit: "tbsp", name: "comet butter, chilled" },
+        ],
+      },
+      {
+        name: "Filling:",
+        items: [
+          { raw: "3 star pears, diced", amount: "3", unit: null, name: "star pears, diced" },
+        ],
+      },
+    ],
+  );
+  assert.deepEqual(
+    candidate.fields.instructionSections.flatMap(({ steps }) => steps.map(({ text }) => text)),
+    ["Mix the dough.", "Read the helpful baking tip, then fill the pies.", "Enjoy!"],
+  );
+  assert.deepEqual(
+    candidate.fields.images.map(({ sourceUrl, alt, credit }) => ({ sourceUrl, alt, credit })),
+    [{
+      sourceUrl: "https://images.example.invalid/starlight-hand-pies.webp",
+      alt: "Starlight hand pies",
+      credit: null,
+    }],
+  );
+  assert.equal(candidate.status, "needs_review");
+  assert(candidate.warnings.some(({ code }) => code === "SECTION_NAMES_NOT_PERSISTED"));
+  assert(candidate.warnings.some(({ code }) => code === "IMAGE_REFERENCE_REQUIRES_CONFIRMATION"));
+  assert(candidate.discardedContent.some(({ kind }) => kind === "script"));
+  assert.doesNotMatch(JSON.stringify(candidate), /Injected Moon Pie|bad token|Run script|Cook smarter/u);
+  assert.deepEqual(validateJsonSchema(candidate, schema), []);
+  assert.deepEqual(validateImportCandidate(candidate), []);
+});
+
+test("Tasty adapter maps its compact unlabeled duration to total time", () => {
+  const candidate = parseRecipeClipboard({
+    html: tastyHtml.replace(
+      /<div class="desktop-cooktimes">[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/u,
+      `<div class="desktop-cooktimes">
+        <div class="recipe-time-container"><p>4 hr 10 min</p></div>
+      </div>`,
+    ),
+    plainText: null,
+    sourceUrl: "https://www.tasty.co/recipe/starlight-hand-pies",
+  });
+
+  assert.equal(candidate.parser.id, "tasty-visible-recipe");
+  assert.equal(candidate.fields.prepTime, null);
+  assert.equal(candidate.fields.cookTime, null);
+  assert.equal(candidate.fields.totalTime.value, 250);
+});
+
+test("Tasty provider detection rejects lookalike hostnames", () => {
+  const candidate = parseRecipeClipboard({
+    html: tastyHtml,
+    plainText: null,
+    sourceUrl: "https://tasty.co.evil.example/recipe/starlight-hand-pies",
+  });
+
+  assert.equal(candidate.parser.tier, "generic_html");
+  assert.equal(candidate.parser.sourceAdapter, null);
+  assert.equal(candidate.source.provider, null);
+});
+
+test("Tasty URLs fall back safely when its visible recipe structure is incomplete", () => {
+  const candidate = parseRecipeClipboard({
+    html: `
+      <main>
+        <h1>Archived Star Soup</h1>
+        <h2>Ingredients</h2><ul><li>2 cups moon broth</li></ul>
+        <h2>Preparation</h2><ol><li>Simmer gently.</li></ol>
+      </main>`,
+    plainText: null,
+    sourceUrl: "https://tasty.co/recipe/archived-star-soup",
+  });
+
+  assert.equal(candidate.parser.tier, "generic_html");
+  assert.equal(candidate.parser.sourceAdapter, null);
+  assert.equal(candidate.fields.title.value, "Archived Star Soup");
+});
+
+test("Tasty adapter does not silently choose between multiple visible recipes", () => {
+  const secondRecipe = `
+    <h1 class="recipe-name">Moon Soup</h1>
+    <div class="ingredients-prep">
+      <h2>Ingredients</h2>
+      <div class="ingredients__section"><ul><li class="ingredient">moon broth</li></ul></div>
+    </div>
+    <div class="preparation"><h2>Preparation</h2><ol class="prep-steps"><li>Simmer.</li></ol></div>`;
+  const candidate = parseRecipeClipboard({
+    html: tastyHtml.replace("</main>", `${secondRecipe}</main>`),
+    plainText: null,
+    sourceUrl: "https://tasty.co/recipe/two-visible-recipes",
+  });
+
+  assert.equal(candidate.parser.tier, "generic_html");
+  assert.equal(candidate.parser.sourceAdapter, null);
+});
+
 test("RecipeTinEats adapter extracts complete WPRM groups and structured fields", () => {
   const candidate = parseRecipeClipboard({
     html: recipeTinHtml,

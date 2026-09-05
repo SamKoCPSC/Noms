@@ -35,6 +35,7 @@ const UNIT_PATTERN = [
   "pieces?",
 ].join("|");
 const AMOUNT_PATTERN = "(?:\\d+(?:[.,]\\d+)?(?:\\s+\\d+/\\d+)?|\\d+/\\d+|[\\u00bc-\\u00be\\u2150-\\u215e])";
+const TASTY_AMOUNT_PATTERN = "(?:\\d+(?:[.,]\\d+)?(?:\\s+(?:\\d+/\\d+|[\\u00bc-\\u00be\\u2150-\\u215e]))?|\\d+/\\d+|[\\u00bc-\\u00be\\u2150-\\u215e])";
 
 function normalizeWhitespace(value) {
   return value.replace(/\s+/gu, " ").trim();
@@ -67,14 +68,16 @@ function scalar(raw, representation, locator) {
   return { raw, value: raw, confidence: "high", provenance: provenance(representation, locator) };
 }
 
-function ingredient(raw, representation, locator) {
+function ingredient(raw, representation, locator, amountPattern = AMOUNT_PATTERN) {
   const amountAndUnit = raw.match(
     new RegExp(
-      `^(${AMOUNT_PATTERN})\\s+(${UNIT_PATTERN})[.,]?\\s+(.+)$`,
+      `^(${amountPattern})\\s+(${UNIT_PATTERN})[.,]?\\s+(.+)$`,
       "iu",
     ),
   );
-  const amountOnly = amountAndUnit ? null : raw.match(new RegExp(`^(${AMOUNT_PATTERN})\\s+(.+)$`, "iu"));
+  const amountOnly = amountAndUnit
+    ? null
+    : raw.match(new RegExp(`^(${amountPattern})\\s+(.+)$`, "iu"));
   return {
     raw,
     amount: amountAndUnit?.[1] ?? amountOnly?.[1] ?? null,
@@ -1145,6 +1148,260 @@ function firstClassText(html, className) {
   return text ? { text, element } : null;
 }
 
+function tastyHostname(sourceUrl) {
+  if (typeof sourceUrl !== "string") return null;
+  try {
+    const parsed = new URL(sourceUrl);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+    const hostname = parsed.hostname.toLowerCase();
+    return hostname === "tasty.co" || hostname.endsWith(".tasty.co") ? hostname : null;
+  } catch {
+    return null;
+  }
+}
+
+function tastyIngredientSections(containerHtml) {
+  const sections = elementsWithClass(containerHtml, "ingredients__section");
+  if (sections.length === 0) return null;
+  const extractedSections = [];
+  for (const [sectionIndex, section] of sections.entries()) {
+    const itemElements = elementsWithClass(section.innerHtml, "ingredient");
+    if (itemElements.length === 0) return null;
+    const sectionName = firstClassText(section.innerHtml, "ingredient-section-name")?.text ?? null;
+    const items = [];
+    for (const [itemIndex, item] of itemElements.entries()) {
+      const raw = htmlText(item.innerHtml);
+      if (!raw) return null;
+      items.push(ingredient(
+        raw,
+        "text/html",
+        `.ingredients__section:nth-child(${sectionIndex + 1}) .ingredient:nth-child(${itemIndex + 1})`,
+        TASTY_AMOUNT_PATTERN,
+      ));
+    }
+    extractedSections.push({
+      name: sectionName,
+      items,
+    });
+  }
+  return extractedSections;
+}
+
+function tastyDownloadPromotion(stepHtml) {
+  for (const anchor of stepHtml.matchAll(/<a\b([^>]*)>/giu)) {
+    const href = htmlAttributes(anchor[1]).get("href");
+    if (!href) continue;
+    try {
+      const url = new URL(href, "https://tasty.co");
+      if (
+        tastyHostname(url.href) &&
+        url.pathname === "/download" &&
+        url.searchParams.get("ct") === "prepsteps"
+      ) return true;
+    } catch {
+      // A malformed link is ordinary visible step content, not a provider CTA.
+    }
+  }
+  return false;
+}
+
+function tastyInstructionSections(preparationHtml) {
+  const stepLists = elementsWithClass(preparationHtml, "prep-steps");
+  if (stepLists.length !== 1) return null;
+  const steps = [];
+  let discardedPromotionCount = 0;
+  for (const [itemIndex, item] of [...stepLists[0].innerHtml.matchAll(
+    /<li\b[^>]*>([\s\S]*?)<\/li\s*>/giu,
+  )].entries()) {
+    if (tastyDownloadPromotion(item[1])) {
+      discardedPromotionCount += 1;
+      continue;
+    }
+    const text = htmlText(item[1]).replace(/\s+([,.;:!?])/gu, "$1");
+    if (!text) return null;
+    steps.push(instruction(
+      text,
+      "text/html",
+      `.prep-steps > li:nth-child(${itemIndex + 1})`,
+    ));
+  }
+  return steps.length > 0
+    ? { sections: [{ name: null, steps }], discardedPromotionCount }
+    : null;
+}
+
+function tastyDurations(html) {
+  const durations = new Map();
+  for (const [index, time] of elementsWithClass(html, "recipe-time").entries()) {
+    const headingMatch = time.innerHtml.match(/<h[1-6]\b[^>]*>([\s\S]*?)<\/h[1-6]\s*>/iu);
+    if (!headingMatch) continue;
+    const label = htmlText(headingMatch[1]);
+    const field = /^prep(?:aration)?\s*time$/iu.test(label)
+      ? "prepTime"
+      : /^cook(?:ing)?\s*time$/iu.test(label)
+        ? "cookTime"
+        : /^total\s*time$/iu.test(label)
+          ? "totalTime"
+          : null;
+    if (!field || durations.has(field)) continue;
+    const paragraphValues = [...time.innerHtml.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p\s*>/giu)]
+      .map((match) => htmlText(match[1]));
+    const raw = paragraphValues.find((value) => durationMinutes(value) !== null) ?? null;
+    const value = raw === null ? null : durationMinutes(raw);
+    if (value === null) continue;
+    durations.set(field, {
+      raw,
+      value,
+      confidence: "high",
+      provenance: provenance("text/html", `.recipe-time:nth-child(${index + 1})`),
+    });
+  }
+
+  if (!durations.has("totalTime")) {
+    const compactContainer = elementsWithClass(html, "recipe-time-container").find(
+      (container) => elementsWithClass(container.innerHtml, "recipe-time").length === 0,
+    );
+    const raw = compactContainer
+      ? [...compactContainer.innerHtml.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p\s*>/giu)]
+        .map((match) => htmlText(match[1]))
+        .find((value) => durationMinutes(value) !== null) ?? null
+      : null;
+    const value = raw === null ? null : durationMinutes(raw);
+    if (value !== null) {
+      durations.set("totalTime", {
+        raw,
+        value,
+        confidence: "high",
+        provenance: provenance("text/html", ".recipe-time-container > p"),
+      });
+    }
+  }
+  return durations;
+}
+
+function tastyImageReferences(html) {
+  const containers = [
+    ...elementsWithClass(html, "video-thumbnail"),
+    ...elementsWithClass(html, "main-image"),
+  ].sort((left, right) => left.index - right.index);
+  const images = [];
+  const seenSourceUrls = new Set();
+  for (const container of containers) {
+    for (const match of container.innerHtml.matchAll(/<img\b([^>]*)>/giu)) {
+      const attributes = htmlAttributes(match[1]);
+      const sourceUrl = normalizeWhitespace(attributes.get("src") ?? "");
+      if (seenSourceUrls.has(sourceUrl)) continue;
+      try {
+        const parsed = new URL(sourceUrl);
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") continue;
+      } catch {
+        continue;
+      }
+      seenSourceUrls.add(sourceUrl);
+      images.push({
+        sourceUrl,
+        alt: normalizeWhitespace(attributes.get("alt") ?? "") || null,
+        credit: null,
+        provenance: provenance("text/html", `.${hasClass(container.attributes, "video-thumbnail") ? "video-thumbnail" : "main-image"} img`),
+      });
+    }
+  }
+  return images;
+}
+
+function parseTastyVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
+  if (!tastyHostname(sourceUrl)) return null;
+  const titles = elementsWithClass(inertHtml, "recipe-name");
+  const ingredientContainers = elementsWithClass(inertHtml, "ingredients-prep");
+  const preparationContainers = elementsWithClass(inertHtml, "preparation");
+  if (titles.length !== 1 || ingredientContainers.length !== 1 || preparationContainers.length !== 1) {
+    return null;
+  }
+  const title = htmlText(titles[0].innerHtml);
+  const ingredientSections = tastyIngredientSections(ingredientContainers[0].innerHtml);
+  const instructionExtraction = tastyInstructionSections(preparationContainers[0].innerHtml);
+  if (!title || !ingredientSections || !instructionExtraction) return null;
+
+  const result = candidate(
+    {
+      id: "tasty-visible-recipe",
+      version: "1",
+      tier: "source_adapter",
+      sourceAdapter: "tasty",
+    },
+    sourceUrl,
+  );
+  result.source.provider = "Tasty";
+  result.source.provenance.provider = provenance("source_url", "hostname tasty.co");
+  const author = firstClassText(inertHtml, "byline");
+  if (author) {
+    result.source.author = author.text;
+    result.source.provenance.author = provenance("text/html", ".byline");
+  }
+  result.fields.title = scalar(title, "text/html", ".recipe-name");
+  const description = firstClassText(inertHtml, "description");
+  if (description) result.fields.description = scalar(description.text, "text/html", ".description");
+  const durations = tastyDurations(inertHtml);
+  result.fields.prepTime = durations.get("prepTime") ?? null;
+  result.fields.cookTime = durations.get("cookTime") ?? null;
+  result.fields.totalTime = durations.get("totalTime") ?? null;
+
+  const servings = firstClassText(ingredientContainers[0].innerHtml, "servings-display");
+  if (servings) {
+    const servingsMatch = servings.text.match(/\b(\d+(?:[.,]\d+)?)\s+servings?\b/iu);
+    const numericServings = servingsMatch
+      ? Number.parseFloat(servingsMatch[1].replace(",", "."))
+      : null;
+    result.fields.yield = {
+      raw: servings.text,
+      value: {
+        display: servings.text,
+        servings: Number.isSafeInteger(numericServings) && numericServings > 0
+          ? numericServings
+          : null,
+      },
+      confidence: "high",
+      provenance: provenance("text/html", ".servings-display"),
+    };
+  }
+  result.fields.ingredientSections = ingredientSections;
+  result.fields.instructionSections = instructionExtraction.sections;
+
+  if (ingredientSections.some(({ name }) => name !== null)) {
+    result.status = "needs_review";
+    result.warnings.push({
+      code: "SECTION_NAMES_NOT_PERSISTED",
+      severity: "warning",
+      path: "fields.ingredientSections",
+      message: "Section names remain in preview but the current editor stores flat recipe content.",
+    });
+  }
+  if (instructionExtraction.discardedPromotionCount > 0) {
+    result.discardedContent.push({
+      kind: "provider_promotion",
+      count: instructionExtraction.discardedPromotionCount,
+      reason: "Tasty app download prompts are not recipe instructions.",
+    });
+  }
+
+  result.fields.images = tastyImageReferences(inertHtml);
+  if (result.fields.images.length > 0) {
+    result.status = "needs_review";
+    result.warnings.push(...result.fields.images.map((_, index) => ({
+      code: "IMAGE_REFERENCE_REQUIRES_CONFIRMATION",
+      severity: "info",
+      path: `fields.images[${index}]`,
+      message: "The image reference is not fetched and requires confirmation before mapping.",
+    })));
+  }
+  appendHtmlAuditEvidence(
+    result,
+    htmlAudit,
+    discardedRemoteResourceCount(htmlAudit, result.fields.images),
+  );
+  return result;
+}
+
 function recipeTinEatsHostname(sourceUrl) {
   if (typeof sourceUrl !== "string") return null;
   try {
@@ -1400,7 +1657,8 @@ function parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit) {
 function parseHtml(html, sourceUrl, htmlAudit) {
   // Remove active/raw-text regions before scanning. No markup is inserted into a DOM.
   const inertHtml = discardRawContent(html);
-  const sourceAdapterCandidate = parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit);
+  const sourceAdapterCandidate = parseTastyVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
+    parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit);
   if (sourceAdapterCandidate) return sourceAdapterCandidate;
   const headings = htmlHeadings(inertHtml);
   const roots = rootRanges(inertHtml);
