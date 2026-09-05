@@ -1,6 +1,6 @@
 # NOMS-015: Security Hardening to a Good-Enough Baseline — Agentic Implementation Plan
 
-**Status:** In progress — CP8D–CP8E are implemented; CP8F explicit media references and the CP9 final re-review remain
+**Status:** In progress — CP8D–CP8F are implemented; the CP9 final integrated adversarial re-review remains
 **Created:** 2026-07-29
 **Issue:** [NOMS-015-security-hardening.md](../issues/NOMS-015-security-hardening.md)
 **Source:** Authentication, authorization, and application security review completed 2026-07-28
@@ -79,8 +79,8 @@ that will actually ship.
 
 - **Implemented and independently reviewed:** CP0 baseline reliability, CP1 OAuth intent/session binding and same-origin redirects, CP2 integrated media ownership and orphan retention, CP3 trusted-proxy client identity and per-client OAuth limits, CP4 stable provider identities without legacy email reconciliation, CP4A completed-router and collection-media alignment, CP5 integrated resource-abuse bounds, CP5A typed media-upload unification, and CP6 dependency/secret/deployment verification.
 - **Completed reviews:** CP7 at revision `cb57bdd` returned `NOT GOOD ENOUGH` with five medium- and two low-severity findings; CP8 at revision `1ec3766` returned `NOT GOOD ENOUGH` with two medium- and seven low-severity findings.
-- **Implemented since CP7:** CP7A browser-bound OAuth and logout intent, CP7B reference-aware media deletion, CP7C hidden graph/lineage privacy, CP7D byte-bounded history and graph reads, CP8A account-media cleanup authority, CP8B bounded media cleanup, CP8C bounded version comparisons, CP8D fail-closed deep-fork media retention, and CP8E bounded collection recipe projections.
-- **Remaining before the final consumer-security verdict:** CP8F explicit durable media references and CP9 final integrated adversarial re-review. The seven low-severity CP8 findings remain documented residual follow-up unless their aggregate risk is reassessed upward.
+- **Implemented since CP7:** CP7A browser-bound OAuth and logout intent, CP7B reference-aware media deletion, CP7C hidden graph/lineage privacy, CP7D byte-bounded history and graph reads, CP8A account-media cleanup authority, CP8B bounded media cleanup, CP8C bounded version comparisons, CP8D fail-closed deep-fork media retention, CP8E bounded collection recipe projections, and CP8F explicit durable media references.
+- **Remaining before the final consumer-security verdict:** CP9 final integrated adversarial re-review. The seven low-severity CP8 findings remain documented residual follow-up unless their aggregate risk is reassessed upward.
 
 ---
 
@@ -1814,6 +1814,25 @@ every persistence path that can hold media. The lack of production data removes
 backfill and compatibility risk, but incomplete reference maintenance could
 still cause premature deletion or indefinite retention.
 
+**Implementation:** Completed at revisions `694c349`, `7894f10`, and `26cd8c7`.
+Managed object families now have first-class asset rows and holder-specific
+recipe, version, draft, collection, and avatar references. Holder writes and
+reference synchronization are transactional; attachment and cleanup serialize
+on the asset row; cleanup uses only the indexed reference tables and stored
+object keys. Registry-backed projections resolve managed media on ordinary
+reads and client-facing mutation responses, while missing managed references
+fail closed and explicitly external images and identity-provider avatars remain
+readable.
+
+The intentional disposable-database cutover added six schema objects, modified
+four, and dropped the superseded upload-family and account-cleanup-tombstone
+objects. SQLx metadata generation, the fresh-schema migration plan, schema-plan
+tests, and `just ci` passed. Final CI reported 682 passing tests and 10 documented
+integration-test ignores. A fresh empty database and bucket passed browser smoke
+coverage for OAuth login, draft save, publication, detail projection, visibility
+mutation, and search. The independent implementation review returned `PASS`
+with no actionable findings.
+
 ---
 
 ## Checkpoint 9: Final integrated adversarial re-review and release verdict
@@ -1942,6 +1961,6 @@ Track structured counts without sensitive values:
 - [x] CP8 independent integrated security review completed at revision `1ec3766` and returned `NOT GOOD ENOUGH` with two medium- and seven low-severity findings.
 - [x] Incomplete or depth-truncated fork ancestry retains recipe media; only a complete negative authority proof permits cleanup.
 - [x] Collection membership reads return at most 12 lightweight card projections under aggregate byte, anonymous rate, database timeout, and shared concurrency bounds.
-- [ ] Managed media uses first-class asset identity and explicit durable references for every holder; cleanup relies on a locked indexed no-reference proof rather than URL scans or fork-lineage traversal.
+- [x] Managed media uses first-class asset identity and explicit durable references for every holder; cleanup relies on a locked indexed no-reference proof rather than URL scans or fork-lineage traversal.
 - [ ] CP9 independent integrated security re-review of the CP8D/CP8E/CP8F candidate returns `GOOD ENOUGH`.
 - [ ] Remaining specialized risks, exclusions, owners, and expiry dates are documented.
