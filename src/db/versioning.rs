@@ -14,25 +14,6 @@ use crate::security::{
     MAX_VERSIONS_PER_RECIPE, MAX_VERSIONS_PER_USER, MAX_VERSION_NOTE_CHARS,
 };
 
-fn recipe_snapshot_media_urls(snapshot: &RecipeSnapshot) -> Vec<String> {
-    fn collect_steps(steps: &[crate::types::RecipeStep], urls: &mut Vec<String>) {
-        for step in steps {
-            for image in &step.photos {
-                urls.push(image.url.clone());
-                urls.extend(image.thumb_url.iter().cloned());
-            }
-            collect_steps(&step.sub_steps, urls);
-        }
-    }
-    let mut urls = Vec::new();
-    for image in &snapshot.images {
-        urls.push(image.url.clone());
-        urls.extend(image.thumb_url.iter().cloned());
-    }
-    collect_steps(&snapshot.instructions, &mut urls);
-    urls
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::FromRow)]
 pub struct RecipeVersion {
     pub id: Uuid,
@@ -3025,16 +3006,8 @@ pub async fn insert_recipe_version(
     let visibility = lock_owned_recipe(transaction, recipe_id, user_id).await?;
     validate_snapshot_for_publish(snapshot, &visibility)?;
     enforce_version_quotas(transaction, recipe_id, user_id).await?;
-    super::retain_media_urls(
-        transaction,
-        user_id,
-        super::MediaPurpose::Recipe,
-        &recipe_snapshot_media_urls(snapshot),
-    )
-    .await?;
-
     let snapshot = snapshot_to_json(snapshot)?;
-    sqlx::query_as::<_, RecipeVersion>(&format!(
+    let inserted = sqlx::query_as::<_, RecipeVersion>(&format!(
         "INSERT INTO recipe_versions (recipe_id, version_number, snapshot, notes) \
          VALUES ($1, $2, $3, $4) RETURNING {VERSION_COLUMNS}"
     ))
@@ -3044,7 +3017,19 @@ pub async fn insert_recipe_version(
     .bind(notes)
     .fetch_one(&mut **transaction)
     .await
-    .map_err(DbError::Query)
+    .map_err(DbError::Query)?;
+    let decoded = inserted.decoded_snapshot()?;
+    super::sync_recipe_media_references(
+        transaction,
+        super::MediaHolder::Version(inserted.id),
+        user_id,
+        super::MediaPurpose::Recipe,
+        &decoded.images,
+        &decoded.instructions,
+        super::MediaAttachAuthority::Recipe(recipe_id),
+    )
+    .await?;
+    Ok(inserted)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -3067,21 +3052,6 @@ async fn insert_recipe_draft_with_source(
     validate_draft_payload(snapshot)?;
     lock_resource_owner(transaction, user_id).await?;
     enforce_active_draft_quota(transaction, user_id).await?;
-    super::retain_media_urls(
-        transaction,
-        user_id,
-        super::MediaPurpose::Recipe,
-        &recipe_snapshot_media_urls(&snapshot.content),
-    )
-    .await?;
-    if forked_from_version_number.is_some() {
-        super::retain_inherited_recipe_media_urls(
-            transaction,
-            &recipe_snapshot_media_urls(&snapshot.content),
-        )
-        .await?;
-    }
-
     let snapshot = serde_json::to_value(snapshot).map_err(DbError::SerdeJson)?;
     let inserted = sqlx::query_as::<_, RecipeDraft>(&format!(
         "INSERT INTO recipe_drafts (recipe_id, user_id, base_version_number, snapshot, \
@@ -3102,11 +3072,27 @@ async fn insert_recipe_draft_with_source(
     .fetch_optional(&mut **transaction)
     .await
     .map_err(DbError::Query)?;
-    inserted.ok_or_else(|| {
+    let inserted = inserted.ok_or_else(|| {
         recipe_id
             .map(DbError::RecipeNotFound)
             .unwrap_or(DbError::DraftNotFound(Uuid::nil()))
-    })
+    })?;
+    let decoded = inserted.decoded_snapshot()?;
+    let authority = forked_from_recipe_id
+        .map(super::MediaAttachAuthority::Recipe)
+        .or_else(|| recipe_id.map(super::MediaAttachAuthority::Recipe))
+        .unwrap_or(super::MediaAttachAuthority::UploaderOnly);
+    super::sync_recipe_media_references(
+        transaction,
+        super::MediaHolder::Draft(inserted.id),
+        user_id,
+        super::MediaPurpose::Recipe,
+        &decoded.content.images,
+        &decoded.content.instructions,
+        authority,
+    )
+    .await?;
+    Ok(inserted)
 }
 
 pub async fn insert_recipe_draft(
@@ -3197,13 +3183,6 @@ pub async fn update_recipe_draft(
 ) -> Result<RecipeDraft, DbError> {
     validate_draft_payload(payload)?;
     let mut transaction = pool.begin().await.map_err(DbError::Query)?;
-    super::retain_media_urls(
-        &mut transaction,
-        user_id,
-        super::MediaPurpose::Recipe,
-        &recipe_snapshot_media_urls(&payload.content),
-    )
-    .await?;
     let snapshot = serde_json::to_value(payload).map_err(DbError::SerdeJson)?;
     let updated = sqlx::query_as::<_, RecipeDraft>(&format!(
         "UPDATE recipe_drafts SET snapshot = $4, revision = revision + 1, updated_at = NOW() \
@@ -3217,6 +3196,16 @@ pub async fn update_recipe_draft(
     .await
     .map_err(DbError::Query)?;
     if let Some(updated) = updated {
+        super::sync_recipe_media_references(
+            &mut transaction,
+            super::MediaHolder::Draft(updated.id),
+            user_id,
+            super::MediaPurpose::Recipe,
+            &payload.content.images,
+            &payload.content.instructions,
+            super::MediaAttachAuthority::Draft(updated.id),
+        )
+        .await?;
         transaction.commit().await.map_err(DbError::Query)?;
         return Ok(updated);
     }
@@ -3319,8 +3308,14 @@ pub async fn create_published_recipe(
     validate_snapshot_for_publish(&snapshot, visibility)?;
     let mut transaction = pool.begin().await.map_err(DbError::Query)?;
     lock_resource_owner(&mut transaction, user_id).await?;
-    let recipe =
-        insert_recipe_from_snapshot(&mut transaction, user_id, &snapshot, visibility).await?;
+    let recipe = insert_recipe_from_snapshot(
+        &mut transaction,
+        user_id,
+        &snapshot,
+        visibility,
+        super::MediaAttachAuthority::UploaderOnly,
+    )
+    .await?;
     insert_recipe_version(&mut transaction, recipe.id, user_id, 1, &snapshot, notes).await?;
     super::insert_recipe_tags(&mut transaction, recipe.id, &snapshot.tags).await?;
     transaction.commit().await.map_err(DbError::Query)?;
@@ -3332,8 +3327,9 @@ async fn insert_recipe_from_snapshot(
     user_id: Uuid,
     snapshot: &RecipeSnapshot,
     visibility: &str,
+    authority: super::MediaAttachAuthority,
 ) -> Result<Recipe, DbError> {
-    super::insert_recipe(
+    let recipe = super::insert_recipe(
         &mut **transaction,
         user_id,
         &snapshot.title,
@@ -3348,7 +3344,18 @@ async fn insert_recipe_from_snapshot(
         &snapshot.images,
         visibility,
     )
-    .await
+    .await?;
+    super::sync_recipe_media_references(
+        transaction,
+        super::MediaHolder::Recipe(recipe.id),
+        user_id,
+        super::MediaPurpose::Recipe,
+        &snapshot.images,
+        &snapshot.instructions,
+        authority,
+    )
+    .await?;
+    Ok(recipe)
 }
 
 async fn update_recipe_from_snapshot(
@@ -3372,6 +3379,16 @@ async fn update_recipe_from_snapshot(
         &snapshot.equipment,
         &snapshot.images,
         None,
+    )
+    .await?;
+    super::sync_recipe_media_references(
+        transaction,
+        super::MediaHolder::Recipe(recipe_id),
+        user_id,
+        super::MediaPurpose::Recipe,
+        &snapshot.images,
+        &snapshot.instructions,
+        super::MediaAttachAuthority::Recipe(recipe_id),
     )
     .await?;
     super::insert_recipe_tags(transaction, recipe_id, &snapshot.tags).await?;
@@ -3426,8 +3443,14 @@ async fn publish_new_draft(
         DbError::InvalidRecipeSnapshot("initial visibility is required".to_string())
     })?;
     validate_snapshot_for_publish(&snapshot, visibility)?;
-    let recipe =
-        insert_recipe_from_snapshot(&mut transaction, user_id, &snapshot, visibility).await?;
+    let recipe = insert_recipe_from_snapshot(
+        &mut transaction,
+        user_id,
+        &snapshot,
+        visibility,
+        super::MediaAttachAuthority::Draft(draft_id),
+    )
+    .await?;
     insert_recipe_version(&mut transaction, recipe.id, user_id, 1, &snapshot, notes).await?;
     super::insert_recipe_tags(&mut transaction, recipe.id, &snapshot.tags).await?;
 
@@ -6542,188 +6565,5 @@ mod tests {
                 .version_number,
             2
         );
-    }
-
-    #[tokio::test]
-    async fn orphan_reference_scan_keeps_draft_and_historical_version_images() {
-        let (_db, pool) = test_utils::setup_test_db().await;
-        let user = owner(&pool, "image_refs").await;
-        let mut v1 = snapshot("Images", "private");
-        v1.images.push(crate::types::RecipeImage::new(
-            "https://cdn.test/historical_full.webp".into(),
-            Some("https://cdn.test/historical_thumb.webp".into()),
-            crate::types::RecipeImageEdit::default_rect_16x9(),
-        ));
-        let recipe = create_published_recipe(&pool, user.id, &v1, None)
-            .await
-            .unwrap();
-        publish_snapshot(
-            &pool,
-            recipe.id,
-            user.id,
-            1,
-            &snapshot("V2", "private"),
-            None,
-        )
-        .await
-        .unwrap();
-        let mut draft_snapshot = snapshot("Draft image", "private");
-        draft_snapshot.images.push(crate::types::RecipeImage::new(
-            "https://cdn.test/draft_full.webp".into(),
-            None,
-            crate::types::RecipeImageEdit::default_rect_16x9(),
-        ));
-        create_new_recipe_draft(&pool, user.id, &draft_snapshot)
-            .await
-            .unwrap();
-
-        let urls = crate::db::get_all_image_urls(&pool).await.unwrap();
-        assert!(urls.contains(&"https://cdn.test/historical_full.webp".to_string()));
-        assert!(urls.contains(&"https://cdn.test/historical_thumb.webp".to_string()));
-        assert!(urls.contains(&"https://cdn.test/draft_full.webp".to_string()));
-
-        let references = crate::db::get_all_owned_image_references(&pool)
-            .await
-            .unwrap();
-        for expected_url in [
-            "https://cdn.test/historical_full.webp",
-            "https://cdn.test/historical_thumb.webp",
-            "https://cdn.test/draft_full.webp",
-        ] {
-            assert!(references.iter().any(|reference| {
-                reference.owner_id == user.id
-                    && reference.image_url == expected_url
-                    && !reference.allows_inherited_owner
-            }));
-        }
-    }
-
-    #[tokio::test]
-    async fn orphan_reference_scan_preserves_fork_draft_media_after_source_is_deleted() {
-        let (_db, pool) = test_utils::setup_test_db().await;
-        let source_owner = owner(&pool, "draft_image_source").await;
-        let fork_owner = owner(&pool, "draft_image_fork").await;
-        let object_id = Uuid::new_v4();
-        let storage = crate::storage::StorageClient::for_test();
-        let inherited_url = storage.object_url(&format!(
-            "recipes/{}/{object_id}_full.webp",
-            source_owner.id
-        ));
-
-        let mut source_snapshot = snapshot("Draft source", "public");
-        source_snapshot.images.push(crate::types::RecipeImage::new(
-            inherited_url.clone(),
-            None,
-            crate::types::RecipeImageEdit::default_rect_16x9(),
-        ));
-        let source = create_published_recipe(&pool, source_owner.id, &source_snapshot, None)
-            .await
-            .unwrap();
-        create_fork_draft(&pool, source.id, fork_owner.id, None)
-            .await
-            .unwrap();
-
-        sqlx::query("DELETE FROM recipes WHERE id = $1")
-            .bind(source.id)
-            .execute(&pool)
-            .await
-            .unwrap();
-
-        let references = crate::db::get_all_owned_image_references(&pool)
-            .await
-            .unwrap();
-        assert!(references.iter().any(|reference| {
-            reference.owner_id == fork_owner.id
-                && reference.image_url == inherited_url
-                && reference.allows_inherited_owner
-        }));
-
-        let retained =
-            crate::worker::orphan_cleanup::collect_retained_media_keys(&storage, &references);
-        assert!(retained.contains(&format!(
-            "recipes/{}/{object_id}_full.webp",
-            source_owner.id
-        )));
-        assert!(retained.contains(&format!(
-            "recipes/{}/{object_id}_thumb.webp",
-            source_owner.id
-        )));
-    }
-
-    #[tokio::test]
-    async fn orphan_reference_scan_preserves_inherited_media_after_sources_are_deleted() {
-        let (_db, pool) = test_utils::setup_test_db().await;
-        let root_owner = owner(&pool, "image_root").await;
-        let first_fork_owner = owner(&pool, "image_fork_one").await;
-        let second_fork_owner = owner(&pool, "image_fork_two").await;
-        let inherited_url = "https://cdn.test/inherited_full.webp".to_string();
-
-        let mut root_snapshot = snapshot("Root", "public");
-        root_snapshot.images.push(crate::types::RecipeImage::new(
-            inherited_url.clone(),
-            None,
-            crate::types::RecipeImageEdit::default_rect_16x9(),
-        ));
-        let root = create_published_recipe(&pool, root_owner.id, &root_snapshot, None)
-            .await
-            .unwrap();
-
-        let first_draft = create_fork_draft(&pool, root.id, first_fork_owner.id, None)
-            .await
-            .unwrap();
-        let mut first_payload = first_draft.decoded_snapshot().unwrap();
-        first_payload.title = "First fork".to_string();
-        update_recipe_draft(
-            &pool,
-            first_draft.id,
-            first_fork_owner.id,
-            first_draft.revision,
-            &first_payload,
-        )
-        .await
-        .unwrap();
-        let first_fork = publish_recipe_draft(&pool, first_draft.id, first_fork_owner.id, None)
-            .await
-            .unwrap();
-
-        let second_draft = create_fork_draft(&pool, first_fork.id, second_fork_owner.id, None)
-            .await
-            .unwrap();
-        let mut second_payload = second_draft.decoded_snapshot().unwrap();
-        second_payload.title = "Second fork".to_string();
-        update_recipe_draft(
-            &pool,
-            second_draft.id,
-            second_fork_owner.id,
-            second_draft.revision,
-            &second_payload,
-        )
-        .await
-        .unwrap();
-        let second_fork = publish_recipe_draft(&pool, second_draft.id, second_fork_owner.id, None)
-            .await
-            .unwrap();
-
-        sqlx::query("DELETE FROM recipes WHERE id = $1 OR id = $2")
-            .bind(root.id)
-            .bind(first_fork.id)
-            .execute(&pool)
-            .await
-            .unwrap();
-
-        let references = crate::db::get_all_owned_image_references(&pool)
-            .await
-            .unwrap();
-        for expected_owner in [root_owner.id, first_fork_owner.id, second_fork_owner.id] {
-            assert!(references.iter().any(|reference| {
-                reference.owner_id == expected_owner
-                    && reference.image_url == inherited_url
-                    && !reference.allows_inherited_owner
-            }));
-        }
-        assert!(crate::db::get_recipe_by_id(&pool, second_fork.id)
-            .await
-            .unwrap()
-            .is_some());
     }
 }

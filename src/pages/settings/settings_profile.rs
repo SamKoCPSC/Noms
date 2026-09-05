@@ -60,10 +60,9 @@ pub async fn delete_account() -> Result<(), ServerFnError> {
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
     let pool = crate::db::get_pool();
-    let storage = crate::storage::get_storage_client();
     let _media_lifecycle_guard = crate::api::upload::acquire_media_lifecycle_guard(user_id).await;
 
-    crate::db::delete_user_with_media_cleanup(&pool, user_id, &storage)
+    crate::db::delete_user_with_media_cleanup(&pool, user_id)
         .await
         .map_err(|e| ServerFnError::new(e.to_string()))?;
 
@@ -211,17 +210,62 @@ async fn persist_uploaded_avatar(
     };
     let original_url = original_url.to_string();
     let full_url = full_url.to_string();
-
-    let updated = sqlx::query_as::<_, crate::db::User>(
+    let original_key = uploaded
+        .key(crate::storage::MediaObjectKind::AvatarOriginal)
+        .ok_or_else(|| ServerFnError::new("Uploaded avatar is missing its original key"))?
+        .to_string();
+    let full_key = uploaded
+        .key(crate::storage::MediaObjectKind::AvatarFull)
+        .ok_or_else(|| ServerFnError::new("Uploaded avatar is missing its full key"))?
+        .to_string();
+    let thumbnail_key = uploaded
+        .key(crate::storage::MediaObjectKind::AvatarThumbnail)
+        .ok_or_else(|| ServerFnError::new("Uploaded avatar is missing its thumbnail key"))?
+        .to_string();
+    let thumbnail_url = uploaded
+        .url(crate::storage::MediaObjectKind::AvatarThumbnail)
+        .expect("validated above")
+        .to_string();
+    let asset = crate::db::NewMediaAsset {
+        id: uploaded.asset_id(),
+        uploader_id: user_id,
+        purpose: crate::db::MediaPurpose::Avatar,
+        full_url: full_url.clone(),
+        thumbnail_url,
+        original_url: Some(original_url.clone()),
+        full_key,
+        thumbnail_key,
+        original_key: Some(original_key),
+        capability_digest: None,
+        expires_at: None,
+    };
+    let mut transaction = pool
+        .begin()
+        .await
+        .map_err(|error| ServerFnError::new(format!("Failed to save avatar: {error}")))?;
+    let updated = async {
+        crate::db::register_media_asset_in_transaction(&mut transaction, &asset).await?;
+        crate::db::replace_avatar_media_reference_in_transaction(
+            &mut transaction,
+            user_id,
+            asset.id,
+        )
+        .await?;
+        let updated = sqlx::query_as::<_, crate::db::User>(
         "UPDATE users SET avatar_url = $2, avatar_original_url = $3, avatar_edit = $4, updated_at = NOW() \
          WHERE id = $1 \
          RETURNING id, username, display_name, email, avatar_url, bio, created_at, updated_at",
-    )
-    .bind(user_id)
-    .bind(Some(full_url))
-    .bind(Some(original_url))
-    .bind(Some(edit_json))
-    .fetch_one(pool)
+        )
+        .bind(user_id)
+        .bind(Some(full_url))
+        .bind(Some(original_url))
+        .bind(Some(edit_json))
+        .fetch_one(&mut *transaction)
+        .await
+        .map_err(crate::db::DbError::Query)?;
+        transaction.commit().await.map_err(crate::db::DbError::Query)?;
+        Ok::<_, crate::db::DbError>(updated)
+    }
     .await;
     match updated {
         Ok(updated) => Ok((updated, uploaded)),
@@ -256,14 +300,6 @@ pub async fn upload_avatar(
         .await
         .map_err(|error| map_avatar_upload_error(error, user_id))?;
 
-    let (previous_avatar, previous_original): (Option<String>, Option<String>) =
-        sqlx::query_as("SELECT avatar_url, avatar_original_url FROM users WHERE id = $1")
-            .bind(user_id)
-            .fetch_optional(&pool)
-            .await
-            .map_err(|e| ServerFnError::new(format!("Failed to fetch current avatar: {e}")))?
-            .ok_or_else(|| ServerFnError::new("User not found"))?;
-
     let edit_json = serde_json::to_value(&edit)
         .map_err(|e| ServerFnError::new(format!("Failed to serialize avatar edit: {e}")))?;
     let uploaded = upload_permit
@@ -272,16 +308,6 @@ pub async fn upload_avatar(
         .map_err(|error| map_avatar_upload_error(error, user_id))?;
     let (updated, _uploaded_lifecycle_guard) =
         persist_uploaded_avatar(&pool, &storage, user_id, uploaded, edit_json).await?;
-
-    // Stored URLs are legacy/user-influenced data, so cleanup requires exact
-    // typed ownership proof even though failures remain best-effort.
-    delete_owned_avatar_objects(
-        &storage,
-        user_id,
-        previous_avatar.as_deref(),
-        previous_original.as_deref(),
-    )
-    .await;
 
     Ok(UserProfile {
         id: updated.id,
@@ -325,8 +351,8 @@ pub async fn get_avatar_edit_source() -> Result<Option<AvatarEditSource>, Server
 
 /// Remove the authenticated user's avatar.
 ///
-/// Clears the database fields first, then deletes avatar storage objects on a
-/// best-effort basis so a database failure never leaves dangling URLs.
+/// Clears the user fields and durable avatar reference atomically. The shared
+/// media worker reclaims the asset only after its final reference disappears.
 #[server]
 pub async fn remove_avatar() -> Result<UserProfile, ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
@@ -335,35 +361,27 @@ pub async fn remove_avatar() -> Result<UserProfile, ServerFnError> {
     crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
         .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
     let pool = crate::db::get_pool();
-    let storage = crate::storage::get_storage_client();
     let _media_lifecycle_guard = crate::api::upload::acquire_media_lifecycle_guard(user_id).await;
-
-    let (avatar_url, original_url): (Option<String>, Option<String>) =
-        sqlx::query_as("SELECT avatar_url, avatar_original_url FROM users WHERE id = $1")
-            .bind(user_id)
-            .fetch_optional(&pool)
-            .await
-            .map_err(|e| ServerFnError::new(format!("Failed to fetch current avatar: {e}")))?
-            .ok_or_else(|| ServerFnError::new("User not found"))?;
-
+    let mut transaction = pool
+        .begin()
+        .await
+        .map_err(|error| ServerFnError::new(format!("Failed to remove avatar: {error}")))?;
+    crate::db::clear_avatar_media_reference_in_transaction(&mut transaction, user_id)
+        .await
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
     let updated = sqlx::query_as::<_, crate::db::User>(
         "UPDATE users SET avatar_url = NULL, avatar_original_url = NULL, avatar_edit = NULL, updated_at = NOW() \
          WHERE id = $1 \
          RETURNING id, username, display_name, email, avatar_url, bio, created_at, updated_at",
     )
         .bind(user_id)
-        .fetch_one(&pool)
+        .fetch_one(&mut *transaction)
         .await
         .map_err(|e| ServerFnError::new(format!("Failed to remove avatar: {e}")))?;
-
-    // Delete old avatar objects only after the database update succeeds.
-    delete_owned_avatar_objects(
-        &storage,
-        user_id,
-        avatar_url.as_deref(),
-        original_url.as_deref(),
-    )
-    .await;
+    transaction
+        .commit()
+        .await
+        .map_err(|error| ServerFnError::new(format!("Failed to remove avatar: {error}")))?;
 
     Ok(UserProfile {
         id: updated.id,
@@ -373,69 +391,6 @@ pub async fn remove_avatar() -> Result<UserProfile, ServerFnError> {
         avatar_url: updated.avatar_url,
         bio: updated.bio,
     })
-}
-
-#[cfg(feature = "server")]
-async fn delete_owned_avatar_objects(
-    storage: &crate::storage::StorageClient,
-    owner_id: uuid::Uuid,
-    avatar_url: Option<&str>,
-    original_url: Option<&str>,
-) {
-    if let Some(avatar_url) = avatar_url {
-        match storage.parse_media_url(avatar_url) {
-            Ok(object)
-                if object.owner_id() == owner_id
-                    && object.kind() == crate::storage::MediaObjectKind::AvatarFull =>
-            {
-                let _ = storage.delete_object(object.key()).await;
-                if let Some(thumbnail_key) = object.paired_thumbnail_key() {
-                    let _ = storage.delete_object(&thumbnail_key).await;
-                }
-            }
-            Ok(object) => {
-                tracing::warn!(
-                    owner_id = %owner_id,
-                    object_owner_id = %object.owner_id(),
-                    object_key = %object.key(),
-                    "Skipping foreign or non-avatar media during avatar cleanup"
-                );
-            }
-            Err(error) => {
-                tracing::warn!(
-                    owner_id = %owner_id,
-                    error = %error,
-                    "Skipping unverified avatar media during cleanup"
-                );
-            }
-        }
-    }
-
-    if let Some(original_url) = original_url {
-        match storage.parse_media_url(original_url) {
-            Ok(object)
-                if object.owner_id() == owner_id
-                    && object.kind() == crate::storage::MediaObjectKind::AvatarOriginal =>
-            {
-                let _ = storage.delete_object(object.key()).await;
-            }
-            Ok(object) => {
-                tracing::warn!(
-                    owner_id = %owner_id,
-                    object_owner_id = %object.owner_id(),
-                    object_key = %object.key(),
-                    "Skipping foreign or non-original media during avatar cleanup"
-                );
-            }
-            Err(error) => {
-                tracing::warn!(
-                    owner_id = %owner_id,
-                    error = %error,
-                    "Skipping unverified avatar original during cleanup"
-                );
-            }
-        }
-    }
 }
 
 /// Source rectangle in original-image pixels used when rendering an avatar.
@@ -1736,7 +1691,7 @@ pub fn SettingsProfile() -> Element {
 
 #[cfg(all(feature = "server", test))]
 mod avatar_media_ownership_tests {
-    use super::{delete_owned_avatar_objects, persist_uploaded_avatar, validate_avatar_payload};
+    use super::{persist_uploaded_avatar, validate_avatar_payload};
     use crate::types::RecipeImageEdit;
 
     const VALID_WEBP_BYTES: &[u8] = b"RIFF\x24\x00\x00\x00WEBP";
@@ -1788,59 +1743,6 @@ mod avatar_media_ownership_tests {
                 2 * 1024 * 1024
             )
         );
-    }
-
-    #[tokio::test]
-    async fn avatar_cleanup_deletes_only_exact_owned_avatar_keys() {
-        let owner_id = uuid::Uuid::new_v4();
-        let victim_id = uuid::Uuid::new_v4();
-        let owned_object = uuid::Uuid::new_v4();
-        let victim_object = uuid::Uuid::new_v4();
-        let mock_server = wiremock::MockServer::start().await;
-        wiremock::Mock::given(wiremock::matchers::method("DELETE"))
-            .respond_with(wiremock::ResponseTemplate::new(204))
-            .expect(3)
-            .mount(&mock_server)
-            .await;
-        let storage = crate::storage::StorageClient::for_test_with_endpoint_and_public_url(
-            &mock_server.uri(),
-            "https://cdn.example.com/media",
-        );
-        let owned_full = storage.object_url(&format!("avatars/{owner_id}/{owned_object}.webp"));
-        let owned_original =
-            storage.object_url(&format!("avatars/{owner_id}/{owned_object}-original"));
-        let victim_full = storage.object_url(&format!("avatars/{victim_id}/{victim_object}.webp"));
-        let victim_original =
-            storage.object_url(&format!("avatars/{victim_id}/{victim_object}-original"));
-
-        delete_owned_avatar_objects(
-            &storage,
-            owner_id,
-            Some(&victim_full),
-            Some(&victim_original),
-        )
-        .await;
-        delete_owned_avatar_objects(&storage, owner_id, Some(&owned_full), Some(&owned_original))
-            .await;
-
-        let requests = mock_server.received_requests().await.unwrap();
-        let deleted_paths: Vec<_> = requests
-            .iter()
-            .map(|request| request.url.path().to_string())
-            .collect();
-        assert_eq!(requests.len(), 3);
-        assert!(deleted_paths
-            .iter()
-            .any(|path| path.ends_with(&format!("/{owned_object}.webp"))));
-        assert!(deleted_paths
-            .iter()
-            .any(|path| path.ends_with(&format!("/{owned_object}-thumb.webp"))));
-        assert!(deleted_paths
-            .iter()
-            .any(|path| path.ends_with(&format!("/{owned_object}-original"))));
-        assert!(deleted_paths
-            .iter()
-            .all(|path| !path.contains(&victim_id.to_string())));
     }
 
     #[tokio::test]

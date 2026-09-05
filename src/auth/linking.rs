@@ -657,8 +657,9 @@ mod tests {
         };
         let original = login_or_create(&pool, login(), None).await.unwrap();
         let object = uuid::Uuid::new_v4();
-        let upload = crate::db::NewMediaUploadFamily {
-            owner_id: original.user_id,
+        let upload = crate::db::NewMediaAsset {
+            id: object,
+            uploader_id: original.user_id,
             purpose: crate::db::MediaPurpose::Recipe,
             thumbnail_url: format!(
                 "https://media.example.test/recipes/{}/{}_thumb.webp",
@@ -670,10 +671,12 @@ mod tests {
             ),
             full_key: format!("recipes/{}/{}_full.webp", original.user_id, object),
             thumbnail_key: format!("recipes/{}/{}_thumb.webp", original.user_id, object),
-            capability_digest: vec![41; 32],
-            expires_at: chrono::Utc::now() + chrono::Duration::minutes(10),
+            original_url: None,
+            original_key: None,
+            capability_digest: Some(vec![41; 32]),
+            expires_at: Some(chrono::Utc::now() + chrono::Duration::minutes(10)),
         };
-        crate::db::register_media_upload_family(&pool, &upload)
+        crate::db::register_media_asset(&pool, &upload)
             .await
             .unwrap();
 
@@ -685,15 +688,15 @@ mod tests {
         assert_ne!(recreated.user_id, original.user_id);
         assert_eq!(
             sqlx::query_scalar::<_, i64>(
-                "SELECT COUNT(*) FROM account_media_cleanup_tombstones \
-                 WHERE former_owner_id = $1 AND lifecycle <> 'deleted'",
+                "SELECT COUNT(*) FROM media_assets \
+                 WHERE id = $1 AND uploader_id IS NULL AND lifecycle <> 'deleted'",
             )
-            .bind(original.user_id)
+            .bind(object)
             .fetch_one(&pool)
             .await
             .unwrap(),
             1,
-            "old-UUID objects must remain represented in cleanup accounting after re-login"
+            "old-UUID objects must remain represented in asset cleanup after re-login"
         );
     }
 

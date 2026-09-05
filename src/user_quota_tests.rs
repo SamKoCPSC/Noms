@@ -441,6 +441,7 @@ async fn collection_image_metadata_limit_rejects_before_persistence() {
     let mut edit = crate::types::RecipeImageEdit::default_rect_16x9();
     edit.name = "e".repeat(crate::security::MAX_IMAGE_EDIT_NAME_CHARS + 1);
     let image = crate::types::RecipeImage {
+        asset_id: None,
         url: "https://media.example.test/collection.webp".to_string(),
         thumb_url: Some("https://media.example.test/collection-thumb.webp".to_string()),
         file_name: Some("cover.webp".to_string()),

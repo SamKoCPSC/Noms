@@ -150,6 +150,9 @@ fn validate_collection_image_urls(
     };
     crate::security::validate_image_metadata(image)
         .map_err(|_| CollectionApiError::InvalidImage)?;
+    if image.asset_id.is_none() {
+        return Err(CollectionApiError::InvalidImage);
+    }
     storage
         .validate_owned_media_pair(
             &image.url,
@@ -939,7 +942,8 @@ mod tests {
             "http://127.0.0.1:9",
             public_url,
         );
-        let image = crate::types::RecipeImage::new(
+        let image = crate::types::RecipeImage::managed(
+            upload_id,
             format!("{public_url}/collections/{owner_id}/{upload_id}_full.webp"),
             Some(format!(
                 "{public_url}/collections/{owner_id}/{upload_id}_thumb.webp"

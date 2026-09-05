@@ -115,11 +115,14 @@ impl RecipeImageEdit {
 
 /// A recipe image stored in `recipes.images`.
 ///
-/// Older rows stored image entries as plain URL strings. The custom
-/// deserializer keeps those rows readable by converting each string to a
-/// structured image record with no saved edits.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+/// Managed images carry an asset ID; structured entries without one are
+/// explicitly external and never grant managed-object authority.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RecipeImage {
+    /// Stable identity for application-managed media. `None` means the URL is
+    /// an explicitly external display resource and grants no storage authority.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub asset_id: Option<Uuid>,
     /// Full-size image URL.
     pub url: String,
     /// Smaller image variant for compact UI surfaces.
@@ -135,6 +138,23 @@ pub struct RecipeImage {
 impl RecipeImage {
     pub fn new(url: String, thumb_url: Option<String>, edit: RecipeImageEdit) -> Self {
         Self {
+            asset_id: None,
+            url,
+            thumb_url,
+            file_name: None,
+            file_size: None,
+            edits: vec![edit],
+        }
+    }
+
+    pub fn managed(
+        asset_id: Uuid,
+        url: String,
+        thumb_url: Option<String>,
+        edit: RecipeImageEdit,
+    ) -> Self {
+        Self {
+            asset_id: Some(asset_id),
             url,
             thumb_url,
             file_name: None,
@@ -154,53 +174,6 @@ impl RecipeImage {
             self.thumb_url.as_deref().unwrap_or(&self.url)
         } else {
             &self.url
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for RecipeImage {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        #[serde(untagged)]
-        enum RecipeImageCompat {
-            Url(String),
-            Object {
-                url: String,
-                #[serde(default)]
-                thumb_url: Option<String>,
-                #[serde(default)]
-                file_name: Option<String>,
-                #[serde(default)]
-                file_size: Option<u64>,
-                #[serde(default)]
-                edits: Vec<RecipeImageEdit>,
-            },
-        }
-
-        match RecipeImageCompat::deserialize(deserializer)? {
-            RecipeImageCompat::Url(url) => Ok(Self {
-                url,
-                thumb_url: None,
-                file_name: None,
-                file_size: None,
-                edits: Vec::new(),
-            }),
-            RecipeImageCompat::Object {
-                url,
-                thumb_url,
-                file_name,
-                file_size,
-                edits,
-            } => Ok(Self {
-                url,
-                thumb_url,
-                file_name,
-                file_size,
-                edits,
-            }),
         }
     }
 }
@@ -264,6 +237,8 @@ pub struct Recipe {
 /// a complete recipe snapshot.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RecipeCardImage {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub asset_id: Option<Uuid>,
     pub url: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thumb_url: Option<String>,
@@ -273,6 +248,7 @@ pub struct RecipeCardImage {
 impl RecipeCardImage {
     pub fn into_recipe_image(self) -> RecipeImage {
         RecipeImage {
+            asset_id: self.asset_id,
             url: self.url,
             thumb_url: self.thumb_url,
             file_name: None,
@@ -285,6 +261,7 @@ impl RecipeCardImage {
 impl From<RecipeImage> for RecipeCardImage {
     fn from(image: RecipeImage) -> Self {
         Self {
+            asset_id: image.asset_id,
             url: image.url,
             thumb_url: image.thumb_url,
             edits: image
@@ -1627,16 +1604,6 @@ mod tests {
     }
 
     #[test]
-    fn recipe_image_deserializes_legacy_url_string() {
-        let image: RecipeImage =
-            serde_json::from_value(serde_json::json!("https://example.com/image.webp")).unwrap();
-
-        assert_eq!(image.url, "https://example.com/image.webp");
-        assert_eq!(image.thumb_url, None);
-        assert!(image.edits.is_empty());
-    }
-
-    #[test]
     fn recipe_image_deserializes_object_without_thumbnail() {
         let image: RecipeImage = serde_json::from_value(serde_json::json!({
             "url": "https://example.com/image_full.webp",
@@ -1711,6 +1678,7 @@ mod tests {
             sub_steps: Vec::new(),
             photos: vec![
                 RecipeImage {
+                    asset_id: None,
                     url: "https://example.com/step_1.webp".to_string(),
                     thumb_url: None,
                     file_name: None,
@@ -1718,6 +1686,7 @@ mod tests {
                     edits: Vec::new(),
                 },
                 RecipeImage {
+                    asset_id: None,
                     url: "https://example.com/step_2.webp".to_string(),
                     thumb_url: None,
                     file_name: None,

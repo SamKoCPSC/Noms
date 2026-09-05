@@ -196,99 +196,39 @@ pub async fn apply_test_schema(pool: &PgPool) {
         .expect("failed to create sessions cleanup index");
 
     sqlx::query(
-        "CREATE TABLE IF NOT EXISTS media_upload_families (\
-         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\
-         owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,\
-         purpose TEXT NOT NULL CHECK (purpose IN ('recipe', 'collection_cover')),\
-         full_url TEXT NOT NULL, thumbnail_url TEXT NOT NULL,\
-         full_key TEXT NOT NULL UNIQUE, thumbnail_key TEXT NOT NULL UNIQUE,\
-         capability_digest BYTEA NOT NULL UNIQUE CHECK (octet_length(capability_digest) = 32),\
+        "CREATE TABLE IF NOT EXISTS media_assets (\
+         id UUID PRIMARY KEY,\
+         uploader_id UUID REFERENCES users(id) ON DELETE SET NULL,\
+         purpose TEXT NOT NULL CHECK (purpose IN ('recipe', 'collection_cover', 'avatar')),\
+         full_url TEXT NOT NULL, thumbnail_url TEXT NOT NULL, original_url TEXT,\
+         full_key TEXT NOT NULL UNIQUE, thumbnail_key TEXT NOT NULL UNIQUE, original_key TEXT UNIQUE,\
+         capability_digest BYTEA UNIQUE CHECK (capability_digest IS NULL OR octet_length(capability_digest) = 32),\
          lifecycle TEXT NOT NULL DEFAULT 'uncommitted'\
-             CHECK (lifecycle IN ('uncommitted', 'retained', 'discard_claimed', 'discarded')),\
-         expires_at TIMESTAMPTZ NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
-         retained_at TIMESTAMPTZ, discard_claimed_at TIMESTAMPTZ, discarded_at TIMESTAMPTZ,\
+             CHECK (lifecycle IN ('uncommitted', 'retained', 'delete_claimed', 'deleted')),\
+         expires_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
+         retained_at TIMESTAMPTZ, delete_claimed_at TIMESTAMPTZ, deleted_at TIMESTAMPTZ,\
          cleanup_checked_at TIMESTAMPTZ, delete_failure TEXT,\
-         CHECK (full_url <> thumbnail_url), CHECK (full_key <> thumbnail_key))",
+         CHECK (full_url <> thumbnail_url), CHECK (full_key <> thumbnail_key),\
+         CHECK ((purpose IN ('recipe', 'collection_cover') AND original_url IS NULL \
+                    AND original_key IS NULL AND capability_digest IS NOT NULL AND expires_at IS NOT NULL) \
+                OR (purpose = 'avatar' AND original_url IS NOT NULL AND original_key IS NOT NULL \
+                    AND capability_digest IS NULL AND expires_at IS NULL)))"
     )
     .execute(pool)
     .await
-    .expect("failed to create media upload family table");
+    .expect("failed to create media assets table");
 
-    sqlx::query(
-        r#"CREATE TABLE IF NOT EXISTS account_media_cleanup_tombstones (
-             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-             source_family_id UUID UNIQUE,
-             former_owner_id UUID NOT NULL,
-             purpose TEXT NOT NULL CHECK (purpose IN ('recipe', 'collection_cover', 'avatar')),
-             full_url TEXT,
-             thumbnail_url TEXT,
-             original_url TEXT,
-             full_key TEXT,
-             thumbnail_key TEXT,
-             original_key TEXT,
-             lifecycle TEXT NOT NULL DEFAULT 'pending'
-                 CHECK (lifecycle IN ('pending', 'claimed', 'retained', 'deleted')),
-             attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
-             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-             claim_started_at TIMESTAMPTZ,
-             cleanup_checked_at TIMESTAMPTZ,
-             deleted_at TIMESTAMPTZ,
-             delete_failure TEXT,
-             CHECK (
-                 (purpose IN ('recipe', 'collection_cover')
-                     AND source_family_id IS NOT NULL
-                     AND full_url IS NOT NULL
-                     AND thumbnail_url IS NOT NULL
-                     AND full_key IS NOT NULL
-                     AND thumbnail_key IS NOT NULL)
-                 OR
-                 (purpose = 'avatar'
-                     AND source_family_id IS NULL
-                     AND (full_key IS NOT NULL OR thumbnail_key IS NOT NULL OR original_key IS NOT NULL))
-             ),
-             CHECK (full_key IS NULL OR thumbnail_key IS NULL OR full_key <> thumbnail_key)
-         )"#,
-    )
-    .execute(pool)
-    .await
-    .expect("failed to create account media cleanup tombstone table");
-
-    sqlx::query(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_account_media_cleanup_full_key \
-         ON account_media_cleanup_tombstones(full_key) WHERE full_key IS NOT NULL",
-    )
-    .execute(pool)
-    .await
-    .expect("failed to create account media cleanup full-key index");
-    sqlx::query(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_account_media_cleanup_thumbnail_key \
-         ON account_media_cleanup_tombstones(thumbnail_key) WHERE thumbnail_key IS NOT NULL",
-    )
-    .execute(pool)
-    .await
-    .expect("failed to create account media cleanup thumbnail-key index");
-    sqlx::query(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_account_media_cleanup_original_key \
-         ON account_media_cleanup_tombstones(original_key) WHERE original_key IS NOT NULL",
-    )
-    .execute(pool)
-    .await
-    .expect("failed to create account media cleanup original-key index");
-    sqlx::query(
-        "CREATE INDEX IF NOT EXISTS idx_account_media_cleanup_candidates \
-         ON account_media_cleanup_tombstones(lifecycle, cleanup_checked_at, created_at) \
-         WHERE lifecycle <> 'deleted'",
-    )
-    .execute(pool)
-    .await
-    .expect("failed to create account media cleanup candidate index");
-    sqlx::query(
-        "CREATE INDEX IF NOT EXISTS idx_account_media_cleanup_former_owner \
-         ON account_media_cleanup_tombstones(former_owner_id)",
-    )
-    .execute(pool)
-    .await
-    .expect("failed to create account media cleanup former-owner index");
+    for statement in [
+        "CREATE INDEX IF NOT EXISTS idx_media_assets_uploader_lifecycle ON media_assets(uploader_id, lifecycle)",
+        "CREATE INDEX IF NOT EXISTS idx_media_assets_expiry ON media_assets(expires_at, created_at, id) WHERE lifecycle = 'uncommitted'",
+        "CREATE INDEX IF NOT EXISTS idx_media_assets_cleanup_claimed ON media_assets((cleanup_checked_at IS NOT NULL), cleanup_checked_at, created_at, id) WHERE lifecycle = 'delete_claimed'",
+        "CREATE INDEX IF NOT EXISTS idx_media_assets_cleanup_retained ON media_assets((cleanup_checked_at IS NOT NULL), cleanup_checked_at, created_at, id) WHERE lifecycle = 'retained'",
+    ] {
+        sqlx::query(statement)
+            .execute(pool)
+            .await
+            .expect("failed to create media asset index");
+    }
 
     // ── Recipe tables ──────────────────────────────────────────────────────
 
@@ -439,6 +379,24 @@ pub async fn apply_test_schema(pool: &PgPool) {
     .execute(pool)
     .await
     .expect("failed to create collections table");
+
+    for statement in [
+        "CREATE TABLE IF NOT EXISTS recipe_media_refs (recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE, asset_id UUID NOT NULL REFERENCES media_assets(id) ON DELETE RESTRICT, PRIMARY KEY (recipe_id, asset_id))",
+        "CREATE INDEX IF NOT EXISTS idx_recipe_media_refs_asset ON recipe_media_refs(asset_id)",
+        "CREATE TABLE IF NOT EXISTS recipe_version_media_refs (recipe_version_id UUID NOT NULL REFERENCES recipe_versions(id) ON DELETE CASCADE, asset_id UUID NOT NULL REFERENCES media_assets(id) ON DELETE RESTRICT, PRIMARY KEY (recipe_version_id, asset_id))",
+        "CREATE INDEX IF NOT EXISTS idx_recipe_version_media_refs_asset ON recipe_version_media_refs(asset_id)",
+        "CREATE TABLE IF NOT EXISTS recipe_draft_media_refs (recipe_draft_id UUID NOT NULL REFERENCES recipe_drafts(id) ON DELETE CASCADE, asset_id UUID NOT NULL REFERENCES media_assets(id) ON DELETE RESTRICT, PRIMARY KEY (recipe_draft_id, asset_id))",
+        "CREATE INDEX IF NOT EXISTS idx_recipe_draft_media_refs_asset ON recipe_draft_media_refs(asset_id)",
+        "CREATE TABLE IF NOT EXISTS collection_media_refs (collection_id UUID PRIMARY KEY REFERENCES collections(id) ON DELETE CASCADE, asset_id UUID NOT NULL REFERENCES media_assets(id) ON DELETE RESTRICT)",
+        "CREATE INDEX IF NOT EXISTS idx_collection_media_refs_asset ON collection_media_refs(asset_id)",
+        "CREATE TABLE IF NOT EXISTS avatar_media_refs (user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, asset_id UUID NOT NULL REFERENCES media_assets(id) ON DELETE RESTRICT)",
+        "CREATE INDEX IF NOT EXISTS idx_avatar_media_refs_asset ON avatar_media_refs(asset_id)",
+    ] {
+        sqlx::query(statement)
+            .execute(pool)
+            .await
+            .expect("failed to create media holder reference table or index");
+    }
 
     sqlx::query(
         "CREATE INDEX IF NOT EXISTS idx_collections_owner_updated

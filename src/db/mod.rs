@@ -12,11 +12,13 @@ use std::collections::HashSet;
 use uuid::Uuid;
 
 pub mod diff;
+mod media_assets;
 mod versioning;
 
 #[cfg(test)]
-mod media_lifecycle_tests;
+mod media_asset_tests;
 
+pub use media_assets::*;
 #[allow(unused_imports)]
 pub use versioning::*;
 
@@ -599,6 +601,7 @@ fn collection_summary_from_row(
 fn collection_recipe_card_from_row(
     row: &sqlx::postgres::PgRow,
 ) -> Result<RecipeCardSummary, sqlx::Error> {
+    let image_asset_id: Option<Uuid> = row.try_get("image_asset_id")?;
     let image_url: Option<String> = row.try_get("image_url")?;
     let image_edit = row
         .try_get::<Option<serde_json::Value>, _>("image_edit")?
@@ -607,6 +610,7 @@ fn collection_recipe_card_from_row(
         .map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
     let image_thumb_url: Option<String> = row.try_get("image_thumb_url")?;
     let image = image_url.map(|url| RecipeCardImage {
+        asset_id: image_asset_id,
         url,
         thumb_url: image_thumb_url,
         edits: image_edit.into_iter().collect(),
@@ -806,11 +810,6 @@ pub async fn insert_collection(
     }
     let mut tx = pool.begin().await.map_err(DbError::Query)?;
     lock_owner(&mut tx, owner_id).await?;
-    if let Some(image) = image {
-        let mut urls = vec![image.url.clone()];
-        urls.extend(image.thumb_url.iter().cloned());
-        retain_media_urls(&mut tx, owner_id, MediaPurpose::CollectionCover, &urls).await?;
-    }
 
     let collection_count: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM collections WHERE owner_id = $1")
@@ -889,6 +888,16 @@ pub async fn insert_collection(
     .map_err(collection_query_error)?;
 
     let collection = collection_from_row(&row).map_err(DbError::Query)?;
+    media_assets::sync_recipe_media_references(
+        &mut tx,
+        media_assets::MediaHolder::Collection(collection.id),
+        owner_id,
+        MediaPurpose::CollectionCover,
+        image.map(std::slice::from_ref).unwrap_or_default(),
+        &[],
+        media_assets::MediaAttachAuthority::UploaderOnly,
+    )
+    .await?;
     tx.commit().await.map_err(DbError::Query)?;
     Ok(collection)
 }
@@ -1213,11 +1222,6 @@ pub async fn update_collection(
         return Err(DbError::ResourceLimitExceeded("collection image metadata"));
     }
     let mut tx = pool.begin().await.map_err(DbError::Query)?;
-    if let Some(image) = image {
-        let mut urls = vec![image.url.clone()];
-        urls.extend(image.thumb_url.iter().cloned());
-        retain_media_urls(&mut tx, owner_id, MediaPurpose::CollectionCover, &urls).await?;
-    }
     let row = sqlx::query(
         "UPDATE collections
          SET name = $3, description = $4, image = $5, updated_at = NOW()
@@ -1242,6 +1246,16 @@ pub async fn update_collection(
         other => collection_query_error(other),
     })?;
     let collection = collection_from_row(&row).map_err(DbError::Query)?;
+    media_assets::sync_recipe_media_references(
+        &mut tx,
+        media_assets::MediaHolder::Collection(collection.id),
+        owner_id,
+        MediaPurpose::CollectionCover,
+        image.map(std::slice::from_ref).unwrap_or_default(),
+        &[],
+        media_assets::MediaAttachAuthority::UploaderOnly,
+    )
+    .await?;
     tx.commit().await.map_err(DbError::Query)?;
     Ok(collection)
 }
@@ -1686,7 +1700,9 @@ pub async fn get_collection_recipes(
         "SELECT r.id, r.title,
                 LEFT(r.description, $5::INTEGER) AS description,
                 r.prep_time_minutes, r.cook_time_minutes, r.servings,
+                CASE WHEN r.images -> 0 ? 'asset_id' THEN asset.id ELSE NULL END AS image_asset_id,
                 CASE
+                    WHEN r.images -> 0 ? 'asset_id' THEN asset.full_url
                     WHEN octet_length((r.images -> 0)::TEXT) <= $6
                     THEN CASE
                         WHEN jsonb_typeof(r.images -> 0) = 'string'
@@ -1696,6 +1712,7 @@ pub async fn get_collection_recipes(
                     END
                 END AS image_url,
                 CASE
+                    WHEN r.images -> 0 ? 'asset_id' THEN asset.thumbnail_url
                     WHEN jsonb_typeof(r.images -> 0) = 'object'
                      AND octet_length((r.images -> 0)::TEXT) <= $6
                     THEN r.images -> 0 ->> 'thumb_url'
@@ -1724,6 +1741,9 @@ pub async fn get_collection_recipes(
          FROM collection_recipes cr
          INNER JOIN collections c ON c.id = cr.collection_id AND c.owner_id = $2
          INNER JOIN recipes r ON r.id = cr.recipe_id
+         LEFT JOIN media_assets asset
+           ON asset.id = CASE WHEN r.images -> 0 ? 'asset_id'
+                              THEN (r.images -> 0 ->> 'asset_id')::UUID END
          LEFT JOIN users u ON u.id = r.user_id
          WHERE cr.collection_id = $1
            AND (r.user_id = $2 OR r.visibility IN ('public', 'unlisted'))
@@ -2011,7 +2031,9 @@ pub async fn get_collection_contents_for_viewer(
         "SELECT r.id, r.title,
                 LEFT(r.description, $6::INTEGER) AS description,
                 r.prep_time_minutes, r.cook_time_minutes, r.servings,
+                CASE WHEN r.images -> 0 ? 'asset_id' THEN asset.id ELSE NULL END AS image_asset_id,
                 CASE
+                    WHEN r.images -> 0 ? 'asset_id' THEN asset.full_url
                     WHEN octet_length((r.images -> 0)::TEXT) <= $7
                     THEN CASE
                         WHEN jsonb_typeof(r.images -> 0) = 'string'
@@ -2021,6 +2043,7 @@ pub async fn get_collection_contents_for_viewer(
                     END
                 END AS image_url,
                 CASE
+                    WHEN r.images -> 0 ? 'asset_id' THEN asset.thumbnail_url
                     WHEN jsonb_typeof(r.images -> 0) = 'object'
                      AND octet_length((r.images -> 0)::TEXT) <= $7
                     THEN r.images -> 0 ->> 'thumb_url'
@@ -2049,6 +2072,9 @@ pub async fn get_collection_contents_for_viewer(
          FROM collection_recipes cr
          INNER JOIN collections c ON c.id = cr.collection_id AND c.owner_id = $2
          INNER JOIN recipes r ON r.id = cr.recipe_id
+         LEFT JOIN media_assets asset
+           ON asset.id = CASE WHEN r.images -> 0 ? 'asset_id'
+                              THEN (r.images -> 0 ->> 'asset_id')::UUID END
          LEFT JOIN users u ON u.id = r.user_id
          WHERE cr.collection_id = $1
            AND (c.visibility = 'public' OR ($3 AND c.visibility = 'unlisted'))
@@ -2907,116 +2933,37 @@ async fn snapshot_owned_recipe_lineage(
 /// failures are logged but never block deletion.
 #[cfg(test)]
 pub async fn delete_user(pool: &PgPool, user_id: Uuid) -> Result<(), DbError> {
-    delete_user_inner(pool, user_id, None).await
+    delete_user_inner(pool, user_id).await
 }
 
-/// Delete a user while durably staging any exact, canonical avatar object keys.
-/// The storage parser runs only after the user row is locked, so a concurrent
-/// avatar replacement cannot swap in an untracked object before the cascade.
-pub async fn delete_user_with_media_cleanup(
-    pool: &PgPool,
-    user_id: Uuid,
-    storage: &crate::storage::StorageClient,
-) -> Result<(), DbError> {
-    delete_user_inner(pool, user_id, Some(storage)).await
+/// Delete a user while preserving service-owned media assets for ordinary,
+/// reference-aware cleanup. Deletion authority remains entirely database-backed.
+pub async fn delete_user_with_media_cleanup(pool: &PgPool, user_id: Uuid) -> Result<(), DbError> {
+    delete_user_inner(pool, user_id).await
 }
 
-async fn delete_user_inner(
-    pool: &PgPool,
-    user_id: Uuid,
-    storage: Option<&crate::storage::StorageClient>,
-) -> Result<(), DbError> {
+async fn delete_user_inner(pool: &PgPool, user_id: Uuid) -> Result<(), DbError> {
     // Revoke all OAuth tokens before deletion (non-blocking — failures are logged)
     crate::auth::revoke::revoke_all_user_tokens(pool, user_id).await;
 
     let mut transaction = pool.begin().await.map_err(DbError::Query)?;
-    let avatar_urls = sqlx::query_as::<_, (Option<String>, Option<String>)>(
-        "SELECT avatar_url, avatar_original_url FROM users WHERE id = $1 FOR UPDATE",
-    )
-    .bind(user_id)
-    .fetch_optional(&mut *transaction)
-    .await
-    .map_err(DbError::Query)?
-    .ok_or(DbError::Query(sqlx::Error::RowNotFound))?;
+    sqlx::query_scalar::<_, Uuid>("SELECT id FROM users WHERE id = $1 FOR UPDATE")
+        .bind(user_id)
+        .fetch_optional(&mut *transaction)
+        .await
+        .map_err(DbError::Query)?
+        .ok_or(DbError::Query(sqlx::Error::RowNotFound))?;
 
-    // Serialize with any in-flight upload-family claim before copying the
-    // exact object authority out of the user-owned table. The copied rows have
-    // no user foreign key and therefore survive the account cascade.
+    // Serialize with attachment and cleanup. Holder rows cascade with their
+    // recipes, drafts, collections, and avatar; uploader attribution becomes
+    // NULL while the service-owned asset and its object keys survive.
     sqlx::query_scalar::<_, Uuid>(
-        "SELECT id FROM media_upload_families WHERE owner_id = $1 FOR UPDATE",
+        "SELECT id FROM media_assets WHERE uploader_id = $1 ORDER BY id FOR UPDATE",
     )
     .bind(user_id)
     .fetch_all(&mut *transaction)
     .await
     .map_err(DbError::Query)?;
-    sqlx::query(
-        "INSERT INTO account_media_cleanup_tombstones (source_family_id, former_owner_id, \
-             purpose, full_url, thumbnail_url, full_key, thumbnail_key) \
-         SELECT id, owner_id, purpose, full_url, thumbnail_url, full_key, thumbnail_key \
-         FROM media_upload_families \
-         WHERE owner_id = $1 AND lifecycle <> 'discarded' \
-         ON CONFLICT (source_family_id) DO NOTHING",
-    )
-    .bind(user_id)
-    .execute(&mut *transaction)
-    .await
-    .map_err(DbError::Query)?;
-
-    let mut avatar_full_key = None;
-    let mut avatar_thumbnail_key = None;
-    let mut avatar_original_key = None;
-    if let Some(storage) = storage {
-        if let Some(full_url) = avatar_urls.0.as_deref() {
-            if let Ok(object) = storage.parse_media_url(full_url) {
-                if object.owner_id() == user_id
-                    && object.kind() == crate::storage::MediaObjectKind::AvatarFull
-                {
-                    avatar_thumbnail_key = object.paired_thumbnail_key();
-                    avatar_full_key = Some(object.key().to_string());
-                } else {
-                    tracing::warn!(
-                        %user_id,
-                        object_owner_id = %object.owner_id(),
-                        object_key = %object.key(),
-                        "Ignoring non-owned avatar URL while staging account deletion"
-                    );
-                }
-            }
-        }
-        if let Some(original_url) = avatar_urls.1.as_deref() {
-            if let Ok(object) = storage.parse_media_url(original_url) {
-                if object.owner_id() == user_id
-                    && object.kind() == crate::storage::MediaObjectKind::AvatarOriginal
-                {
-                    avatar_original_key = Some(object.key().to_string());
-                } else {
-                    tracing::warn!(
-                        %user_id,
-                        object_owner_id = %object.owner_id(),
-                        object_key = %object.key(),
-                        "Ignoring non-owned avatar original while staging account deletion"
-                    );
-                }
-            }
-        }
-    }
-    if avatar_full_key.is_some() || avatar_thumbnail_key.is_some() || avatar_original_key.is_some()
-    {
-        sqlx::query(
-            "INSERT INTO account_media_cleanup_tombstones (former_owner_id, purpose, \
-                 full_url, original_url, full_key, thumbnail_key, original_key) \
-             VALUES ($1, 'avatar', $2, $3, $4, $5, $6)",
-        )
-        .bind(user_id)
-        .bind(avatar_urls.0)
-        .bind(avatar_urls.1)
-        .bind(avatar_full_key)
-        .bind(avatar_thumbnail_key)
-        .bind(avatar_original_key)
-        .execute(&mut *transaction)
-        .await
-        .map_err(DbError::Query)?;
-    }
     snapshot_owned_recipe_lineage(&mut transaction, user_id, None).await?;
 
     // Now delete the user (oauth_accounts and recipes cascade automatically)
@@ -3568,225 +3515,35 @@ pub async fn get_public_recipe_tags(
     .map_err(DbError::Query)
 }
 
-/// Get all distinct image URLs for compatibility-focused database tests.
-///
-/// Production cleanup deliberately uses exact indexed lookups instead of this
-/// complete-corpus projection.
-#[cfg(test)]
-pub async fn get_all_image_urls(pool: &PgPool) -> Result<Vec<String>, DbError> {
-    let rows = sqlx::query_scalar::<_, String>(
-        "WITH RECURSIVE recipe_documents(images, instructions) AS (
-             SELECT images, instructions FROM recipes
-             UNION ALL
-             SELECT snapshot -> 'images', snapshot -> 'instructions' FROM recipe_drafts
-             UNION ALL
-             SELECT snapshot -> 'images', snapshot -> 'instructions' FROM recipe_versions
-         ),
-         step_entries(step_entry) AS (
-             SELECT step_entry
-             FROM recipe_documents
-             CROSS JOIN LATERAL jsonb_array_elements(instructions) AS step_entry
-             WHERE instructions IS NOT NULL
-                AND jsonb_typeof(instructions) = 'array'
-             UNION ALL
-             SELECT child_step
-             FROM step_entries
-             CROSS JOIN LATERAL jsonb_array_elements(
-                 CASE
-                     WHEN jsonb_typeof(step_entry -> 'sub_steps') = 'array'
-                     THEN step_entry -> 'sub_steps'
-                     ELSE '[]'::jsonb
-                 END
-             ) AS child_step
-         ),
-         image_urls(image_url) AS (
-             SELECT image_urls.image_url
-             FROM recipe_documents
-             CROSS JOIN LATERAL jsonb_array_elements(images) AS image_entry
-             CROSS JOIN LATERAL (
-                 VALUES (image_entry ->> 'url'), (image_entry ->> 'thumb_url')
-             ) AS image_urls(image_url)
-             WHERE images IS NOT NULL
-                AND jsonb_array_length(images) > 0
-                AND jsonb_typeof(image_entry) = 'object'
-                UNION ALL
-                SELECT step_photo_urls.image_url
-                FROM step_entries
-                CROSS JOIN LATERAL jsonb_array_elements(
-                    CASE
-                        WHEN jsonb_typeof(step_entry -> 'photos') = 'array'
-                        THEN step_entry -> 'photos'
-                        ELSE '[]'::jsonb
-                    END
-                ) AS step_photo
-                CROSS JOIN LATERAL (
-                    VALUES (
-                        step_photo ->> 'url'
-                    ), (
-                        step_photo ->> 'thumb_url'
-                    )
-                ) AS step_photo_urls(image_url)
-                WHERE jsonb_typeof(step_photo) = 'object'
-                UNION ALL
-                SELECT collection_image_urls.image_url
-                FROM collections
-                CROSS JOIN LATERAL (
-                    VALUES (image ->> 'url'), (image ->> 'thumb_url')
-                ) AS collection_image_urls(image_url)
-                WHERE image IS NOT NULL
-                  AND jsonb_typeof(image) = 'object'
-            )
-         SELECT DISTINCT image_url
-         FROM image_urls
-         WHERE image_url IS NOT NULL
-            AND image_url <> ''",
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(DbError::Query)?;
-    Ok(rows)
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type)]
-#[sqlx(type_name = "text", rename_all = "snake_case")]
-#[cfg(test)]
-pub enum OwnedMediaKind {
-    Recipe,
-    CollectionCover,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
-#[cfg(test)]
-pub struct OwnedImageReference {
-    pub owner_id: Uuid,
-    pub image_url: String,
-    /// True only for a server-created fork draft. Such a draft may retain the
-    /// canonical foreign objects copied from its source snapshot even after
-    /// the source recipe is deleted and its foreign key is set to NULL.
-    pub allows_inherited_owner: bool,
-    pub media_kind: OwnedMediaKind,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type)]
 #[sqlx(type_name = "text", rename_all = "snake_case")]
 pub enum MediaPurpose {
     Recipe,
     CollectionCover,
-}
-
-const MAX_MEDIA_REFERENCE_HOLDERS: i64 = 500;
-const MAX_MEDIA_REFERENCE_LINEAGE_DEPTH: i32 = 32;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum MediaReferenceUncertainty {
-    HolderLimit,
-    LineageDepth,
-    LineageCycle,
-    LineageMismatch,
-    MissingLineageAuthority,
-}
-
-impl MediaReferenceUncertainty {
-    fn as_str(self) -> &'static str {
-        match self {
-            Self::HolderLimit => "holder_limit",
-            Self::LineageDepth => "lineage_depth",
-            Self::LineageCycle => "lineage_cycle",
-            Self::LineageMismatch => "lineage_mismatch",
-            Self::MissingLineageAuthority => "missing_lineage_authority",
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum MediaReferenceStatus {
-    Referenced,
-    Unreferenced,
-    Incomplete(MediaReferenceUncertainty),
-}
-
-impl MediaReferenceStatus {
-    /// Cleanup is destructive, so an incomplete proof is equivalent to a live
-    /// reference until a later check can prove otherwise.
-    fn requires_retention(self, purpose: MediaPurpose) -> bool {
-        match self {
-            Self::Referenced => true,
-            Self::Unreferenced => false,
-            Self::Incomplete(reason) => {
-                tracing::warn!(
-                    reason = reason.as_str(),
-                    media_purpose = ?purpose,
-                    "retaining media because its reference proof was incomplete"
-                );
-                true
-            }
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type)]
-#[sqlx(type_name = "text", rename_all = "snake_case")]
-pub enum AccountMediaPurpose {
-    Recipe,
-    CollectionCover,
     Avatar,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AccountMediaCleanupClaim {
-    pub id: Uuid,
-    pub former_owner_id: Uuid,
-    pub purpose: AccountMediaPurpose,
-    pub full_url: Option<String>,
-    pub thumbnail_url: Option<String>,
-    pub original_url: Option<String>,
-    pub full_key: Option<String>,
-    pub thumbnail_key: Option<String>,
-    pub original_key: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum AccountMediaCleanupDecision {
-    Claimed(AccountMediaCleanupClaim),
-    Retained,
-    Busy,
-    Gone,
-}
-
-#[derive(Debug, sqlx::FromRow)]
-struct LockedAccountMediaCleanupRow {
-    id: Uuid,
-    former_owner_id: Uuid,
-    purpose: AccountMediaPurpose,
-    full_url: Option<String>,
-    thumbnail_url: Option<String>,
-    original_url: Option<String>,
-    full_key: Option<String>,
-    thumbnail_key: Option<String>,
-    original_key: Option<String>,
-    lifecycle: String,
-    claim_started_at: Option<DateTime<Utc>>,
-}
-
 #[derive(Debug, Clone)]
-pub struct NewMediaUploadFamily {
-    pub owner_id: Uuid,
+pub struct NewMediaAsset {
+    pub id: Uuid,
+    pub uploader_id: Uuid,
     pub purpose: MediaPurpose,
     pub full_url: String,
     pub thumbnail_url: String,
+    pub original_url: Option<String>,
     pub full_key: String,
     pub thumbnail_key: String,
-    pub capability_digest: Vec<u8>,
-    pub expires_at: DateTime<Utc>,
+    pub original_key: Option<String>,
+    pub capability_digest: Option<Vec<u8>>,
+    pub expires_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
 pub struct MediaDiscardClaim {
     pub id: Uuid,
-    pub owner_id: Uuid,
-    pub purpose: MediaPurpose,
     pub full_key: String,
     pub thumbnail_key: String,
+    pub original_key: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -3796,424 +3553,12 @@ pub enum MediaDiscardDecision {
     Denied,
 }
 
-type LockedMediaFamilyRow = (
-    Uuid,
-    Uuid,
-    MediaPurpose,
-    String,
-    String,
-    String,
-    String,
-    String,
-    DateTime<Utc>,
-);
-
-pub async fn register_media_upload_family(
-    pool: &PgPool,
-    family: &NewMediaUploadFamily,
-) -> Result<(), DbError> {
-    sqlx::query(
-        "INSERT INTO media_upload_families (owner_id, purpose, full_url, thumbnail_url, \
-             full_key, thumbnail_key, capability_digest, expires_at) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-    )
-    .bind(family.owner_id)
-    .bind(family.purpose)
-    .bind(&family.full_url)
-    .bind(&family.thumbnail_url)
-    .bind(&family.full_key)
-    .bind(&family.thumbnail_key)
-    .bind(&family.capability_digest)
-    .bind(family.expires_at)
-    .execute(pool)
-    .await
-    .map_err(DbError::Query)?;
-    Ok(())
-}
-
-/// Retain tracked uploads while holding the transaction that will persist the
-/// referencing document. The row lock serializes save against discard.
-pub async fn retain_media_urls(
-    tx: &mut sqlx::Transaction<'_, Postgres>,
-    owner_id: Uuid,
-    purpose: MediaPurpose,
-    urls: &[String],
-) -> Result<(), DbError> {
-    if urls.is_empty() {
-        return Ok(());
-    }
-    let rows = sqlx::query_as::<_, (Uuid, String)>(
-        "SELECT id, lifecycle FROM media_upload_families \
-         WHERE owner_id = $1 AND purpose = $2 \
-           AND (full_url = ANY($3) OR thumbnail_url = ANY($3)) FOR UPDATE",
-    )
-    .bind(owner_id)
-    .bind(purpose)
-    .bind(urls)
-    .fetch_all(&mut **tx)
-    .await
-    .map_err(DbError::Query)?;
-    if rows
-        .iter()
-        .any(|(_, state)| matches!(state.as_str(), "discard_claimed" | "discarded"))
-    {
-        return Err(DbError::InvalidRecipeSnapshot(
-            "media upload is no longer available".to_string(),
-        ));
-    }
-    let ids = rows.into_iter().map(|(id, _)| id).collect::<Vec<_>>();
-    if !ids.is_empty() {
-        sqlx::query(
-            "UPDATE media_upload_families SET lifecycle = 'retained', \
-                 retained_at = COALESCE(retained_at, NOW()) \
-             WHERE id = ANY($1) AND lifecycle = 'uncommitted'",
-        )
-        .bind(&ids)
-        .execute(&mut **tx)
-        .await
-        .map_err(DbError::Query)?;
-    }
-    Ok(())
-}
-
-/// Retain recipe families copied by the server from an authorized fork source.
-/// This is intentionally not exposed for collection covers or browser input.
-pub(crate) async fn retain_inherited_recipe_media_urls(
-    tx: &mut sqlx::Transaction<'_, Postgres>,
-    urls: &[String],
-) -> Result<(), DbError> {
-    if urls.is_empty() {
-        return Ok(());
-    }
-    let rows = sqlx::query_as::<_, (Uuid, String)>(
-        "SELECT id, lifecycle FROM media_upload_families \
-         WHERE purpose = 'recipe' AND (full_url = ANY($1) OR thumbnail_url = ANY($1)) \
-         FOR UPDATE",
-    )
-    .bind(urls)
-    .fetch_all(&mut **tx)
-    .await
-    .map_err(DbError::Query)?;
-    if rows
-        .iter()
-        .any(|(_, state)| matches!(state.as_str(), "discard_claimed" | "discarded"))
-    {
-        return Err(DbError::ForkError(
-            "source media is no longer available".to_string(),
-        ));
-    }
-    let ids = rows.into_iter().map(|(id, _)| id).collect::<Vec<_>>();
-    if !ids.is_empty() {
-        sqlx::query(
-            "UPDATE media_upload_families SET lifecycle = 'retained', \
-                 retained_at = COALESCE(retained_at, NOW()) \
-             WHERE id = ANY($1) AND lifecycle = 'uncommitted'",
-        )
-        .bind(ids)
-        .execute(&mut **tx)
-        .await
-        .map_err(DbError::Query)?;
-    }
-    Ok(())
-}
-
-async fn media_family_reference_status(
-    tx: &mut sqlx::Transaction<'_, Postgres>,
-    family_owner_id: Uuid,
-    purpose: MediaPurpose,
-    full_url: &str,
-    thumbnail_url: &str,
-) -> Result<MediaReferenceStatus, DbError> {
-    let full_literal = serde_json::to_string(full_url).map_err(DbError::SerdeJson)?;
-    let thumbnail_literal = serde_json::to_string(thumbnail_url).map_err(DbError::SerdeJson)?;
-    let reference_path = format!(
-        "$.** ? (@.url == {full_literal} || @.url == {thumbnail_literal} || \
-         @.thumb_url == {full_literal} || @.thumb_url == {thumbnail_literal})"
-    );
-
-    match purpose {
-        MediaPurpose::CollectionCover => {
-            let referenced = sqlx::query_scalar::<_, bool>(
-                "SELECT EXISTS(\
-                     SELECT 1 FROM collections \
-                     WHERE owner_id = $1 AND image @? $2::jsonpath\
-                 )",
-            )
-            .bind(family_owner_id)
-            .bind(reference_path)
-            .fetch_one(&mut **tx)
-            .await
-            .map_err(DbError::Query)?;
-            Ok(if referenced {
-                MediaReferenceStatus::Referenced
-            } else {
-                MediaReferenceStatus::Unreferenced
-            })
-        }
-        MediaPurpose::Recipe => {
-            let (
-                reference_count,
-                direct_authority,
-                inherited_authority,
-                lineage_truncated,
-                lineage_cycle,
-                lineage_mismatch,
-                missing_lineage_authority,
-            ) = sqlx::query_as::<_, (i64, bool, bool, bool, bool, bool, bool)>(
-                "WITH RECURSIVE exact_recipe_holders(recipe_id, direct_authority) AS MATERIALIZED (
-                 SELECT recipe.id, recipe.user_id = $1
-                 FROM recipes AS recipe
-                 WHERE recipe.images @? $2::jsonpath
-                    OR recipe.instructions @? $2::jsonpath
-                 UNION ALL
-                 SELECT version.recipe_id, recipe.user_id = $1
-                 FROM recipe_versions AS version
-                 JOIN recipes AS recipe ON recipe.id = version.recipe_id
-                 WHERE version.snapshot @? $2::jsonpath
-                 UNION ALL
-                 SELECT COALESCE(draft.recipe_id, draft.forked_from_recipe_id),
-                        draft.user_id = $1
-                        OR draft.forked_from_version_number IS NOT NULL
-                        OR source.user_id = $1
-                 FROM recipe_drafts AS draft
-                 LEFT JOIN recipes AS source
-                   ON source.id = COALESCE(draft.recipe_id, draft.forked_from_recipe_id)
-                 WHERE draft.snapshot @? $2::jsonpath
-                 LIMIT $3
-             ),
-             holder_summary(reference_count, direct_authority) AS (
-                 SELECT COUNT(*), COALESCE(BOOL_OR(direct_authority), FALSE)
-                 FROM exact_recipe_holders
-             ),
-             holder_lineage(
-                 recipe_id, relationship_id, original_owner_id, visited, depth
-             ) AS (
-                 SELECT holder.recipe_id, relationship.id,
-                        relationship.original_owner_id, ARRAY[relationship.id], 1
-                 FROM exact_recipe_holders AS holder
-                 JOIN fork_relationships AS relationship
-                   ON COALESCE(
-                        relationship.forked_recipe_key,
-                        relationship.forked_recipe_id
-                      ) = holder.recipe_id
-                 WHERE holder.recipe_id IS NOT NULL
-                 UNION ALL
-                 SELECT holder_lineage.recipe_id, parent.id,
-                        parent.original_owner_id,
-                        holder_lineage.visited || parent.id,
-                        holder_lineage.depth + 1
-                 FROM holder_lineage
-                 JOIN fork_relationships AS child
-                   ON child.id = holder_lineage.relationship_id
-                 JOIN fork_relationships AS parent
-                   ON parent.id = child.parent_relationship_id
-                 WHERE holder_lineage.depth < $4
-                   AND NOT parent.id = ANY(holder_lineage.visited)
-             ),
-             lineage_summary(
-                 inherited_authority,
-                 lineage_truncated,
-                 lineage_cycle,
-                 lineage_mismatch,
-                 missing_lineage_authority
-             ) AS (
-                 SELECT
-                     EXISTS(
-                         SELECT 1 FROM holder_lineage WHERE original_owner_id = $1
-                     ),
-                     EXISTS(
-                         SELECT 1
-                         FROM holder_lineage AS lineage
-                         JOIN fork_relationships AS child
-                           ON child.id = lineage.relationship_id
-                         WHERE lineage.depth = $4
-                           AND child.parent_relationship_id IS NOT NULL
-                           AND NOT child.parent_relationship_id = ANY(lineage.visited)
-                     ),
-                     EXISTS(
-                         SELECT 1
-                         FROM holder_lineage AS lineage
-                         JOIN fork_relationships AS child
-                           ON child.id = lineage.relationship_id
-                         WHERE child.parent_relationship_id = ANY(lineage.visited)
-                     ),
-                     EXISTS(
-                         SELECT 1
-                         FROM holder_lineage AS lineage
-                         JOIN fork_relationships AS child
-                           ON child.id = lineage.relationship_id
-                         JOIN fork_relationships AS parent
-                           ON parent.id = child.parent_relationship_id
-                         WHERE COALESCE(parent.forked_recipe_key, parent.forked_recipe_id)
-                               IS DISTINCT FROM
-                               COALESCE(child.original_recipe_key, child.original_recipe_id)
-                     ),
-                     EXISTS(
-                         SELECT 1 FROM holder_lineage
-                         WHERE original_owner_id IS NULL
-                     )
-             )
-             SELECT holder_summary.reference_count,
-                    holder_summary.direct_authority,
-                    lineage_summary.inherited_authority,
-                    lineage_summary.lineage_truncated,
-                    lineage_summary.lineage_cycle,
-                    lineage_summary.lineage_mismatch,
-                    lineage_summary.missing_lineage_authority
-             FROM holder_summary CROSS JOIN lineage_summary",
-            )
-            .bind(family_owner_id)
-            .bind(reference_path)
-            .bind(MAX_MEDIA_REFERENCE_HOLDERS + 1)
-            .bind(MAX_MEDIA_REFERENCE_LINEAGE_DEPTH)
-            .fetch_one(&mut **tx)
-            .await
-            .map_err(DbError::Query)?;
-
-            let status = if direct_authority || inherited_authority {
-                MediaReferenceStatus::Referenced
-            } else if reference_count > MAX_MEDIA_REFERENCE_HOLDERS {
-                MediaReferenceStatus::Incomplete(MediaReferenceUncertainty::HolderLimit)
-            } else if lineage_truncated {
-                MediaReferenceStatus::Incomplete(MediaReferenceUncertainty::LineageDepth)
-            } else if lineage_cycle {
-                MediaReferenceStatus::Incomplete(MediaReferenceUncertainty::LineageCycle)
-            } else if lineage_mismatch {
-                MediaReferenceStatus::Incomplete(MediaReferenceUncertainty::LineageMismatch)
-            } else if missing_lineage_authority {
-                MediaReferenceStatus::Incomplete(MediaReferenceUncertainty::MissingLineageAuthority)
-            } else {
-                MediaReferenceStatus::Unreferenced
-            };
-            Ok(status)
-        }
-    }
-}
-
-async fn claim_media_family_by_digest(
-    pool: &PgPool,
-    owner_id: Uuid,
-    capability_digest: &[u8],
-) -> Result<MediaDiscardDecision, DbError> {
-    let mut tx = pool.begin().await.map_err(DbError::Query)?;
-    let row = sqlx::query_as::<_, LockedMediaFamilyRow>(
-        "SELECT id, owner_id, purpose, full_key, thumbnail_key, full_url, thumbnail_url, \
-                lifecycle, expires_at FROM media_upload_families \
-         WHERE capability_digest = $1 FOR UPDATE",
-    )
-    .bind(capability_digest)
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(DbError::Query)?;
-    let decision = claim_locked_media_family(&mut tx, row, owner_id, true, true).await?;
-    tx.commit().await.map_err(DbError::Query)?;
-    Ok(decision)
-}
-
-async fn claim_locked_media_family(
-    tx: &mut sqlx::Transaction<'_, Postgres>,
-    row: Option<LockedMediaFamilyRow>,
-    owner_id: Uuid,
-    enforce_expiry: bool,
-    protect_retained: bool,
-) -> Result<MediaDiscardDecision, DbError> {
-    let Some((
-        id,
-        actual_owner,
-        purpose,
-        full_key,
-        thumbnail_key,
-        full_url,
-        thumbnail_url,
-        state,
-        expires_at,
-    )) = row
-    else {
-        return Ok(MediaDiscardDecision::Denied);
-    };
-    if actual_owner != owner_id {
-        return Ok(MediaDiscardDecision::Denied);
-    }
-    let requires_retention = if protect_retained && state == "retained" {
-        true
-    } else {
-        media_family_reference_status(tx, actual_owner, purpose, &full_url, &thumbnail_url)
-            .await?
-            .requires_retention(purpose)
-    };
-    if requires_retention {
-        if state == "uncommitted" {
-            sqlx::query("UPDATE media_upload_families SET lifecycle = 'retained', retained_at = NOW() WHERE id = $1")
-                .bind(id).execute(&mut **tx).await.map_err(DbError::Query)?;
-        }
-        if !protect_retained {
-            sqlx::query(
-                "UPDATE media_upload_families SET cleanup_checked_at = NOW() WHERE id = $1",
-            )
-            .bind(id)
-            .execute(&mut **tx)
-            .await
-            .map_err(DbError::Query)?;
-        }
-        return Ok(MediaDiscardDecision::Retained);
-    }
-    if state == "discard_claimed" && !protect_retained {
-        return Ok(MediaDiscardDecision::Claimed(MediaDiscardClaim {
-            id,
-            owner_id,
-            purpose,
-            full_key,
-            thumbnail_key,
-        }));
-    }
-    if matches!(state.as_str(), "discard_claimed" | "discarded")
-        || (enforce_expiry && expires_at <= Utc::now())
-    {
-        return Ok(MediaDiscardDecision::Denied);
-    }
-    sqlx::query(
-        "UPDATE media_upload_families SET lifecycle = 'discard_claimed', \
-             discard_claimed_at = NOW(), delete_failure = NULL WHERE id = $1",
-    )
-    .bind(id)
-    .execute(&mut **tx)
-    .await
-    .map_err(DbError::Query)?;
-    Ok(MediaDiscardDecision::Claimed(MediaDiscardClaim {
-        id,
-        owner_id,
-        purpose,
-        full_key,
-        thumbnail_key,
-    }))
-}
-
 pub async fn claim_media_discard(
     pool: &PgPool,
     owner_id: Uuid,
     capability_digest: &[u8],
 ) -> Result<MediaDiscardDecision, DbError> {
-    claim_media_family_by_digest(pool, owner_id, capability_digest).await
-}
-
-pub async fn claim_retained_media_cleanup(
-    pool: &PgPool,
-    owner_id: Uuid,
-    full_url: &str,
-) -> Result<MediaDiscardDecision, DbError> {
-    let mut tx = pool.begin().await.map_err(DbError::Query)?;
-    let row = sqlx::query_as::<_, LockedMediaFamilyRow>(
-        "SELECT id, owner_id, purpose, full_key, thumbnail_key, full_url, thumbnail_url, \
-                lifecycle, expires_at FROM media_upload_families \
-         WHERE full_url = $1 FOR UPDATE",
-    )
-    .bind(full_url)
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(DbError::Query)?;
-    let decision = claim_locked_media_family(&mut tx, row, owner_id, false, false).await?;
-    tx.commit().await.map_err(DbError::Query)?;
-    Ok(decision)
+    media_assets::claim_media_discard_by_digest(pool, owner_id, capability_digest).await
 }
 
 pub async fn finish_media_discard(
@@ -4221,390 +3566,7 @@ pub async fn finish_media_discard(
     claim_id: Uuid,
     delete_failure: Option<&str>,
 ) -> Result<(), DbError> {
-    let lifecycle = if delete_failure.is_some() {
-        "discard_claimed"
-    } else {
-        "discarded"
-    };
-    sqlx::query(
-        "UPDATE media_upload_families SET lifecycle = $2, \
-             discarded_at = CASE WHEN $2 = 'discarded' THEN NOW() ELSE discarded_at END, \
-             delete_failure = $3 WHERE id = $1 AND lifecycle = 'discard_claimed'",
-    )
-    .bind(claim_id)
-    .bind(lifecycle)
-    .bind(delete_failure)
-    .execute(pool)
-    .await
-    .map_err(DbError::Query)?;
-    Ok(())
-}
-
-/// Bounded set of tracked families eligible for centralized cleanup. Unknown
-/// legacy storage keys are intentionally absent and therefore never deleted.
-pub async fn list_media_cleanup_candidates(pool: &PgPool) -> Result<Vec<(Uuid, String)>, DbError> {
-    const BATCH_LIMIT: i64 = 500;
-    sqlx::query_as(
-        "WITH candidates AS (
-             (SELECT owner_id, full_url, 0 AS priority,
-                     (cleanup_checked_at IS NOT NULL) AS cleanup_was_checked,
-                     cleanup_checked_at, created_at, id
-              FROM media_upload_families
-              WHERE lifecycle = 'discard_claimed'
-              ORDER BY (cleanup_checked_at IS NOT NULL), cleanup_checked_at, created_at, id
-              LIMIT $1)
-             UNION ALL
-             (SELECT owner_id, full_url, 1 AS priority,
-                     (cleanup_checked_at IS NOT NULL) AS cleanup_was_checked,
-                     cleanup_checked_at, created_at, id
-              FROM media_upload_families
-              WHERE lifecycle = 'uncommitted' AND expires_at <= NOW()
-              ORDER BY expires_at, created_at, id
-              LIMIT $1)
-             UNION ALL
-             (SELECT owner_id, full_url, 2 AS priority,
-                     (cleanup_checked_at IS NOT NULL) AS cleanup_was_checked,
-                     cleanup_checked_at, created_at, id
-              FROM media_upload_families
-              WHERE lifecycle = 'retained'
-              ORDER BY (cleanup_checked_at IS NOT NULL), cleanup_checked_at, created_at, id
-              LIMIT $1)
-         )
-         SELECT owner_id, full_url FROM candidates
-         ORDER BY priority, cleanup_was_checked, cleanup_checked_at, created_at, id
-         LIMIT $1",
-    )
-    .bind(BATCH_LIMIT)
-    .fetch_all(pool)
-    .await
-    .map_err(DbError::Query)
-}
-
-/// Return a bounded batch of account-deletion tombstones eligible for a claim.
-/// Fresh claims are leased for ten minutes so parallel workers cannot delete
-/// the same objects concurrently; abandoned claims become retryable.
-pub async fn list_account_media_cleanup_candidates(
-    pool: &PgPool,
-    limit: i64,
-) -> Result<Vec<Uuid>, DbError> {
-    let bounded_limit = limit.clamp(1, 500);
-    sqlx::query_scalar(
-        "SELECT id FROM account_media_cleanup_tombstones \
-         WHERE lifecycle IN ('pending', 'retained') \
-            OR (lifecycle = 'claimed' \
-                AND claim_started_at <= NOW() - INTERVAL '10 minutes') \
-         ORDER BY CASE lifecycle WHEN 'pending' THEN 0 WHEN 'claimed' THEN 1 ELSE 2 END, \
-                  cleanup_checked_at ASC NULLS FIRST, created_at, id \
-         LIMIT $1",
-    )
-    .bind(bounded_limit)
-    .fetch_all(pool)
-    .await
-    .map_err(DbError::Query)
-}
-
-/// Atomically claim one durable account-media tombstone after checking whether
-/// a surviving recipe/fork still references its object family.
-pub async fn claim_account_media_cleanup(
-    pool: &PgPool,
-    tombstone_id: Uuid,
-) -> Result<AccountMediaCleanupDecision, DbError> {
-    let mut tx = pool.begin().await.map_err(DbError::Query)?;
-    let row = sqlx::query_as::<_, LockedAccountMediaCleanupRow>(
-        "SELECT id, former_owner_id, purpose, full_url, thumbnail_url, original_url, \
-                full_key, thumbnail_key, original_key, lifecycle, claim_started_at \
-         FROM account_media_cleanup_tombstones WHERE id = $1 FOR UPDATE",
-    )
-    .bind(tombstone_id)
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(DbError::Query)?;
-    let Some(row) = row else {
-        tx.commit().await.map_err(DbError::Query)?;
-        return Ok(AccountMediaCleanupDecision::Gone);
-    };
-    if row.lifecycle == "deleted" {
-        tx.commit().await.map_err(DbError::Query)?;
-        return Ok(AccountMediaCleanupDecision::Gone);
-    }
-    if row.lifecycle == "claimed"
-        && row
-            .claim_started_at
-            .is_some_and(|started| started > Utc::now() - chrono::Duration::minutes(10))
-    {
-        tx.commit().await.map_err(DbError::Query)?;
-        return Ok(AccountMediaCleanupDecision::Busy);
-    }
-
-    let media_purpose = match row.purpose {
-        AccountMediaPurpose::Recipe => Some(MediaPurpose::Recipe),
-        AccountMediaPurpose::CollectionCover => Some(MediaPurpose::CollectionCover),
-        AccountMediaPurpose::Avatar => None,
-    };
-    if let (Some(purpose), Some(full_url), Some(thumbnail_url)) = (
-        media_purpose,
-        row.full_url.as_deref(),
-        row.thumbnail_url.as_deref(),
-    ) {
-        if media_family_reference_status(
-            &mut tx,
-            row.former_owner_id,
-            purpose,
-            full_url,
-            thumbnail_url,
-        )
-        .await?
-        .requires_retention(purpose)
-        {
-            sqlx::query(
-                "UPDATE account_media_cleanup_tombstones \
-                 SET lifecycle = 'retained', cleanup_checked_at = NOW(), \
-                     claim_started_at = NULL, delete_failure = NULL WHERE id = $1",
-            )
-            .bind(row.id)
-            .execute(&mut *tx)
-            .await
-            .map_err(DbError::Query)?;
-            tx.commit().await.map_err(DbError::Query)?;
-            return Ok(AccountMediaCleanupDecision::Retained);
-        }
-    }
-
-    sqlx::query(
-        "UPDATE account_media_cleanup_tombstones \
-         SET lifecycle = 'claimed', claim_started_at = NOW(), cleanup_checked_at = NOW(), \
-             attempt_count = attempt_count + 1, delete_failure = NULL WHERE id = $1",
-    )
-    .bind(row.id)
-    .execute(&mut *tx)
-    .await
-    .map_err(DbError::Query)?;
-    tx.commit().await.map_err(DbError::Query)?;
-    Ok(AccountMediaCleanupDecision::Claimed(
-        AccountMediaCleanupClaim {
-            id: row.id,
-            former_owner_id: row.former_owner_id,
-            purpose: row.purpose,
-            full_url: row.full_url,
-            thumbnail_url: row.thumbnail_url,
-            original_url: row.original_url,
-            full_key: row.full_key,
-            thumbnail_key: row.thumbnail_key,
-            original_key: row.original_key,
-        },
-    ))
-}
-
-/// Record the idempotent storage result for an account-media claim. Failures
-/// return immediately to `pending`; successful claims become terminal.
-pub async fn finish_account_media_cleanup(
-    pool: &PgPool,
-    tombstone_id: Uuid,
-    delete_failure: Option<&str>,
-) -> Result<(), DbError> {
-    let lifecycle = if delete_failure.is_some() {
-        "pending"
-    } else {
-        "deleted"
-    };
-    sqlx::query(
-        "UPDATE account_media_cleanup_tombstones \
-         SET lifecycle = $2, claim_started_at = NULL, delete_failure = $3, \
-             deleted_at = CASE WHEN $2 = 'deleted' THEN NOW() ELSE deleted_at END \
-         WHERE id = $1 AND lifecycle = 'claimed'",
-    )
-    .bind(tombstone_id)
-    .bind(lifecycle)
-    .bind(delete_failure)
-    .execute(pool)
-    .await
-    .map_err(DbError::Query)?;
-    Ok(())
-}
-
-/// Get every retained media URL together with an authorized owner for tests.
-///
-/// This complete projection preserves coverage of legacy reference semantics,
-/// but production cleanup must use `media_family_reference_status` so work remains
-/// scoped to one exact tracked family.
-#[cfg(test)]
-pub async fn get_all_owned_image_references<'e, E>(
-    executor: E,
-) -> Result<Vec<OwnedImageReference>, DbError>
-where
-    E: sqlx::Executor<'e, Database = Postgres>,
-{
-    sqlx::query_as::<_, OwnedImageReference>(
-        "WITH RECURSIVE lineage_owners(
-             recipe_id, relationship_id, owner_id, visited, depth
-         ) AS (
-             SELECT COALESCE(forked_recipe_key, forked_recipe_id), id,
-                    original_owner_id, ARRAY[id], 1
-             FROM fork_relationships
-             WHERE COALESCE(forked_recipe_key, forked_recipe_id) IS NOT NULL
-               AND original_owner_id IS NOT NULL
-             UNION ALL
-             SELECT lineage_owners.recipe_id, parent.id, parent.original_owner_id,
-                    lineage_owners.visited || parent.id, lineage_owners.depth + 1
-             FROM lineage_owners
-             JOIN fork_relationships AS child
-               ON child.id = lineage_owners.relationship_id
-             JOIN fork_relationships AS parent
-               ON parent.id = child.parent_relationship_id
-             WHERE parent.original_owner_id IS NOT NULL
-               AND lineage_owners.depth < 32
-               AND NOT parent.id = ANY(lineage_owners.visited)
-         ),
-         recipe_owner_grants(recipe_id, owner_id) AS (
-             SELECT id, user_id FROM recipes
-             UNION
-             SELECT recipe_id, owner_id FROM lineage_owners
-         ),
-         draft_owner_grants(draft_id, owner_id) AS (
-             SELECT id, user_id FROM recipe_drafts
-             UNION
-             SELECT recipe_drafts.id, recipe_owner_grants.owner_id
-             FROM recipe_drafts
-             JOIN recipe_owner_grants
-               ON recipe_owner_grants.recipe_id = COALESCE(
-                    recipe_drafts.recipe_id,
-                    recipe_drafts.forked_from_recipe_id
-                  )
-         ),
-         recipe_documents(owner_id, images, instructions, allows_inherited_owner) AS (
-             SELECT recipe_owner_grants.owner_id, recipes.images, recipes.instructions, FALSE
-             FROM recipes
-             JOIN recipe_owner_grants ON recipe_owner_grants.recipe_id = recipes.id
-             UNION ALL
-             SELECT draft_owner_grants.owner_id,
-                    recipe_drafts.snapshot -> 'images',
-                    recipe_drafts.snapshot -> 'instructions',
-                    recipe_drafts.forked_from_version_number IS NOT NULL
-             FROM recipe_drafts
-             JOIN draft_owner_grants ON draft_owner_grants.draft_id = recipe_drafts.id
-             UNION ALL
-             SELECT recipe_owner_grants.owner_id,
-                    recipe_versions.snapshot -> 'images',
-                    recipe_versions.snapshot -> 'instructions',
-                    FALSE
-             FROM recipe_versions
-             JOIN recipe_owner_grants
-               ON recipe_owner_grants.recipe_id = recipe_versions.recipe_id
-         ),
-         step_entries(owner_id, step_entry, allows_inherited_owner) AS (
-             SELECT recipe_documents.owner_id, step_entry,
-                    recipe_documents.allows_inherited_owner
-             FROM recipe_documents
-             CROSS JOIN LATERAL jsonb_array_elements(instructions) AS step_entry
-             WHERE instructions IS NOT NULL
-               AND jsonb_typeof(instructions) = 'array'
-             UNION ALL
-             SELECT step_entries.owner_id, child_step,
-                    step_entries.allows_inherited_owner
-             FROM step_entries
-             CROSS JOIN LATERAL jsonb_array_elements(
-                 CASE
-                     WHEN jsonb_typeof(step_entry -> 'sub_steps') = 'array'
-                     THEN step_entry -> 'sub_steps'
-                     ELSE '[]'::jsonb
-                 END
-             ) AS child_step
-         ),
-         image_urls(owner_id, image_url, allows_inherited_owner, media_kind) AS (
-             SELECT recipe_documents.owner_id, image_urls.image_url,
-                    recipe_documents.allows_inherited_owner, 'recipe'::text
-             FROM recipe_documents
-             CROSS JOIN LATERAL jsonb_array_elements(images) AS image_entry
-             CROSS JOIN LATERAL (
-                 VALUES (image_entry ->> 'url'), (image_entry ->> 'thumb_url')
-             ) AS image_urls(image_url)
-             WHERE images IS NOT NULL
-                AND jsonb_array_length(images) > 0
-                AND jsonb_typeof(image_entry) = 'object'
-             UNION ALL
-             SELECT step_entries.owner_id, step_photo_urls.image_url,
-                    step_entries.allows_inherited_owner, 'recipe'::text
-             FROM step_entries
-             CROSS JOIN LATERAL jsonb_array_elements(
-                 CASE
-                     WHEN jsonb_typeof(step_entry -> 'photos') = 'array'
-                     THEN step_entry -> 'photos'
-                     ELSE '[]'::jsonb
-                 END
-             ) AS step_photo
-             CROSS JOIN LATERAL (
-                 VALUES (step_photo ->> 'url'), (step_photo ->> 'thumb_url')
-             ) AS step_photo_urls(image_url)
-             WHERE jsonb_typeof(step_photo) = 'object'
-             UNION ALL
-             SELECT collections.owner_id, collection_image_urls.image_url, FALSE,
-                    'collection_cover'::text
-             FROM collections
-             CROSS JOIN LATERAL (
-                 VALUES (image ->> 'url'), (image ->> 'thumb_url')
-             ) AS collection_image_urls(image_url)
-             WHERE image IS NOT NULL
-               AND jsonb_typeof(image) = 'object'
-         )
-         SELECT DISTINCT owner_id, image_url, allows_inherited_owner, media_kind
-         FROM image_urls
-         WHERE image_url IS NOT NULL AND image_url <> ''",
-    )
-    .fetch_all(executor)
-    .await
-    .map_err(DbError::Query)
-}
-
-/// Atomically clear collection images that are not canonical owned covers.
-///
-/// This is the intentional no-compatibility cutover from the former recipe
-/// namespace. It does not copy or reinterpret historical URLs.
-pub async fn clear_non_collection_cover_references(
-    pool: &PgPool,
-    storage: &crate::storage::StorageClient,
-) -> Result<u64, DbError> {
-    let mut transaction = pool.begin().await.map_err(DbError::Query)?;
-    let rows = sqlx::query_as::<_, (Uuid, Uuid, serde_json::Value)>(
-        "SELECT id, owner_id, image
-         FROM collections
-         WHERE image IS NOT NULL
-         FOR UPDATE",
-    )
-    .fetch_all(&mut *transaction)
-    .await
-    .map_err(DbError::Query)?;
-
-    let mut invalid_collection_ids = Vec::new();
-    for (collection_id, owner_id, image_value) in rows {
-        let is_valid = serde_json::from_value::<RecipeImage>(image_value)
-            .ok()
-            .is_some_and(|image| {
-                storage
-                    .validate_owned_media_pair(
-                        &image.url,
-                        image.thumb_url.as_deref(),
-                        owner_id,
-                        crate::storage::MediaObjectKind::CollectionFull,
-                    )
-                    .is_ok()
-            });
-        if !is_valid {
-            invalid_collection_ids.push(collection_id);
-        }
-    }
-
-    let cleared = if invalid_collection_ids.is_empty() {
-        0
-    } else {
-        sqlx::query("UPDATE collections SET image = NULL WHERE id = ANY($1)")
-            .bind(&invalid_collection_ids)
-            .execute(&mut *transaction)
-            .await
-            .map_err(DbError::Query)?
-            .rows_affected()
-    };
-    transaction.commit().await.map_err(DbError::Query)?;
-    Ok(cleared)
+    media_assets::finish_media_asset_delete(pool, claim_id, delete_failure).await
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -7372,398 +6334,6 @@ mod tests {
         assert_eq!(fetched.commentary, None);
     }
 
-    // ── get_all_image_urls tests ──────────────────────────────────────────
-
-    #[tokio::test]
-    async fn test_get_all_image_urls_empty_recipes() {
-        let (_db, pool) = test_utils::setup_test_db().await;
-
-        // No recipes at all — should return empty vec
-        let urls = get_all_image_urls(&pool).await.unwrap();
-        assert!(urls.is_empty());
-    }
-
-    #[tokio::test]
-    async fn owned_image_references_preserve_recipe_owner_for_nested_media() {
-        let (_db, pool) = test_utils::setup_test_db().await;
-        let suffix = test_utils::uid();
-        let first_user = insert_user(
-            &pool,
-            &format!("owned_media_a_{suffix}"),
-            "Owned Media A",
-            &format!("owned-media-a-{suffix}@example.com"),
-            None,
-        )
-        .await
-        .unwrap();
-        let second_user = insert_user(
-            &pool,
-            &format!("owned_media_b_{suffix}"),
-            "Owned Media B",
-            &format!("owned-media-b-{suffix}@example.com"),
-            None,
-        )
-        .await
-        .unwrap();
-        let first_url = format!("https://cdn.example/recipes/{}/first.webp", first_user.id);
-        let nested_url = format!("https://cdn.example/recipes/{}/nested.webp", second_user.id);
-
-        insert_recipe(
-            &pool,
-            first_user.id,
-            "Top-level media",
-            None,
-            None,
-            None,
-            None,
-            None,
-            &[],
-            &[],
-            &[],
-            &[RecipeImage {
-                url: first_url.clone(),
-                thumb_url: None,
-                file_name: None,
-                file_size: None,
-                edits: Vec::new(),
-            }],
-            "private",
-        )
-        .await
-        .unwrap();
-        insert_recipe(
-            &pool,
-            second_user.id,
-            "Nested media",
-            None,
-            None,
-            None,
-            None,
-            None,
-            &[],
-            &[RecipeStep {
-                text: "parent".to_string(),
-                photos: Vec::new(),
-                sub_steps: vec![RecipeStep {
-                    text: "child".to_string(),
-                    photos: vec![RecipeImage {
-                        url: nested_url.clone(),
-                        thumb_url: None,
-                        file_name: None,
-                        file_size: None,
-                        edits: Vec::new(),
-                    }],
-                    sub_steps: Vec::new(),
-                }],
-            }],
-            &[],
-            &[],
-            "private",
-        )
-        .await
-        .unwrap();
-
-        let references = get_all_owned_image_references(&pool).await.unwrap();
-
-        assert!(references.iter().any(|reference| {
-            reference.owner_id == first_user.id
-                && reference.image_url == first_url
-                && !reference.allows_inherited_owner
-        }));
-        assert!(references.iter().any(|reference| {
-            reference.owner_id == second_user.id
-                && reference.image_url == nested_url
-                && !reference.allows_inherited_owner
-        }));
-    }
-
-    #[tokio::test]
-    async fn test_get_all_image_urls_recipe_with_no_images() {
-        let (_db, pool) = test_utils::setup_test_db().await;
-        let u = test_utils::uid();
-
-        let user = insert_user(
-            &pool,
-            &format!("imguser_{u}"),
-            "Image User",
-            &format!("img{u}@example.com"),
-            None,
-        )
-        .await
-        .unwrap();
-
-        // Recipe with empty images array (the default)
-        insert_recipe(
-            &pool,
-            user.id,
-            "No Images",
-            None,
-            None,
-            None,
-            None,
-            None,
-            &[],
-            &[],
-            &[],
-            &[],
-            "private",
-        )
-        .await
-        .unwrap();
-
-        let urls = get_all_image_urls(&pool).await.unwrap();
-        assert!(urls.is_empty());
-    }
-
-    #[tokio::test]
-    async fn test_get_all_image_urls_single_recipe_multiple_images() {
-        let (_db, pool) = test_utils::setup_test_db().await;
-        let u = test_utils::uid();
-
-        let user = insert_user(
-            &pool,
-            &format!("imguser2_{u}"),
-            "Image User 2",
-            &format!("img2{u}@example.com"),
-            None,
-        )
-        .await
-        .unwrap();
-
-        let images = vec![
-            RecipeImage {
-                url: format!("https://storage.example.com/recipes/{u}_full.webp"),
-                thumb_url: Some(format!(
-                    "https://storage.example.com/recipes/{u}_thumb.webp"
-                )),
-                file_name: None,
-                file_size: None,
-                edits: Vec::new(),
-            },
-            RecipeImage {
-                url: format!("https://storage.example.com/recipes/{u}_no_thumb.webp"),
-                thumb_url: None,
-                file_name: None,
-                file_size: None,
-                edits: Vec::new(),
-            },
-            RecipeImage {
-                url: format!("https://storage.example.com/recipes/{u}_2_full.webp"),
-                thumb_url: Some(format!(
-                    "https://storage.example.com/recipes/{u}_2_thumb.webp"
-                )),
-                file_name: None,
-                file_size: None,
-                edits: Vec::new(),
-            },
-        ];
-        let instructions = vec![RecipeStep {
-            text: "Prep the filling".to_string(),
-            photos: vec![
-                RecipeImage {
-                    url: format!("https://storage.example.com/recipes/{u}_step_full.webp"),
-                    thumb_url: Some(format!(
-                        "https://storage.example.com/recipes/{u}_step_thumb.webp"
-                    )),
-                    file_name: None,
-                    file_size: None,
-                    edits: Vec::new(),
-                },
-                RecipeImage {
-                    url: format!("https://storage.example.com/recipes/{u}_step_extra_1_full.webp"),
-                    thumb_url: Some(format!(
-                        "https://storage.example.com/recipes/{u}_step_extra_1_thumb.webp"
-                    )),
-                    file_name: None,
-                    file_size: None,
-                    edits: Vec::new(),
-                },
-                RecipeImage {
-                    url: format!("https://storage.example.com/recipes/{u}_step_extra_2_full.webp"),
-                    thumb_url: None,
-                    file_name: None,
-                    file_size: None,
-                    edits: Vec::new(),
-                },
-            ],
-            sub_steps: vec![RecipeStep {
-                text: "Check the texture".to_string(),
-                photos: vec![RecipeImage {
-                    url: format!("https://storage.example.com/recipes/{u}_nested_step_full.webp"),
-                    thumb_url: None,
-                    file_name: None,
-                    file_size: None,
-                    edits: Vec::new(),
-                }],
-                sub_steps: Vec::new(),
-            }],
-        }];
-
-        insert_recipe(
-            &pool,
-            user.id,
-            "Image Recipe",
-            None,
-            None,
-            None,
-            None,
-            None,
-            &[],
-            &instructions,
-            &[],
-            &images,
-            "private",
-        )
-        .await
-        .unwrap();
-
-        let urls = get_all_image_urls(&pool).await.unwrap();
-        assert_eq!(urls.len(), 11);
-        // Results may be in any order, so sort for comparison
-        let mut actual = urls;
-        actual.sort();
-        let mut expected = vec![
-            format!("https://storage.example.com/recipes/{u}_2_full.webp"),
-            format!("https://storage.example.com/recipes/{u}_2_thumb.webp"),
-            format!("https://storage.example.com/recipes/{u}_full.webp"),
-            format!("https://storage.example.com/recipes/{u}_nested_step_full.webp"),
-            format!("https://storage.example.com/recipes/{u}_step_extra_1_full.webp"),
-            format!("https://storage.example.com/recipes/{u}_step_extra_1_thumb.webp"),
-            format!("https://storage.example.com/recipes/{u}_step_extra_2_full.webp"),
-            format!("https://storage.example.com/recipes/{u}_step_full.webp"),
-            format!("https://storage.example.com/recipes/{u}_step_thumb.webp"),
-            format!("https://storage.example.com/recipes/{u}_thumb.webp"),
-            format!("https://storage.example.com/recipes/{u}_no_thumb.webp"),
-        ];
-        expected.sort();
-        assert_eq!(actual, expected);
-    }
-
-    #[tokio::test]
-    async fn test_get_all_image_urls_deduplicates_across_recipes() {
-        let (_db, pool) = test_utils::setup_test_db().await;
-        let u = test_utils::uid();
-
-        let user = insert_user(
-            &pool,
-            &format!("imguser3_{u}"),
-            "Image User 3",
-            &format!("img3{u}@example.com"),
-            None,
-        )
-        .await
-        .unwrap();
-
-        let shared_url = format!("https://storage.example.com/recipes/shared_{u}.webp");
-
-        // Recipe 1 has shared_url + unique1
-        let images1 = vec![
-            RecipeImage {
-                url: shared_url.clone(),
-                thumb_url: Some(format!(
-                    "https://storage.example.com/recipes/shared_{u}_thumb.webp"
-                )),
-                file_name: None,
-                file_size: None,
-                edits: Vec::new(),
-            },
-            RecipeImage {
-                url: format!("https://storage.example.com/recipes/unique1_{u}.webp"),
-                thumb_url: None,
-                file_name: None,
-                file_size: None,
-                edits: Vec::new(),
-            },
-        ];
-        insert_recipe(
-            &pool,
-            user.id,
-            "Recipe 1",
-            None,
-            None,
-            None,
-            None,
-            None,
-            &[],
-            &[],
-            &[],
-            &images1,
-            "private",
-        )
-        .await
-        .unwrap();
-
-        // Recipe 2 has shared_url + unique2
-        let images2 = vec![
-            RecipeImage {
-                url: shared_url.clone(),
-                thumb_url: Some(format!(
-                    "https://storage.example.com/recipes/shared_{u}_thumb.webp"
-                )),
-                file_name: None,
-                file_size: None,
-                edits: Vec::new(),
-            },
-            RecipeImage {
-                url: format!("https://storage.example.com/recipes/unique2_{u}.webp"),
-                thumb_url: None,
-                file_name: None,
-                file_size: None,
-                edits: Vec::new(),
-            },
-        ];
-        insert_recipe(
-            &pool,
-            user.id,
-            "Recipe 2",
-            None,
-            None,
-            None,
-            None,
-            None,
-            &[],
-            &[],
-            &[],
-            &images2,
-            "private",
-        )
-        .await
-        .unwrap();
-
-        // Recipe 3 has no images
-        insert_recipe(
-            &pool,
-            user.id,
-            "Recipe 3 No Images",
-            None,
-            None,
-            None,
-            None,
-            None,
-            &[],
-            &[],
-            &[],
-            &[],
-            "private",
-        )
-        .await
-        .unwrap();
-
-        // DISTINCT should deduplicate: 4 unique URLs, not 6
-        let urls = get_all_image_urls(&pool).await.unwrap();
-        assert_eq!(urls.len(), 4);
-        assert!(urls.contains(&shared_url));
-        assert!(urls.contains(&format!(
-            "https://storage.example.com/recipes/shared_{u}_thumb.webp"
-        )));
-        assert!(urls.contains(&format!(
-            "https://storage.example.com/recipes/unique1_{u}.webp"
-        )));
-        assert!(urls.contains(&format!(
-            "https://storage.example.com/recipes/unique2_{u}.webp"
-        )));
-    }
-
     #[tokio::test]
     async fn test_update_avatar_url_sets_url() {
         let (_db, pool) = test_utils::setup_test_db().await;
@@ -7824,198 +6394,6 @@ mod tests {
         .await;
 
         assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_collection_cover_round_trips_and_is_retained_by_orphan_scan() {
-        let (_db, pool) = test_utils::setup_test_db().await;
-        let owner = test_utils::insert_test_user(&pool).await;
-        let object_id = Uuid::new_v4();
-        let storage = crate::storage::StorageClient::for_test();
-        let cover = RecipeImage::new(
-            storage.object_url(&format!("collections/{}/{object_id}_full.webp", owner.id)),
-            Some(storage.object_url(&format!("collections/{}/{object_id}_thumb.webp", owner.id))),
-            crate::types::RecipeImageEdit::default_rect_16x9(),
-        )
-        .with_file_metadata("cover.webp".to_string(), 42);
-
-        let collection = insert_collection(
-            &pool,
-            owner.id,
-            None,
-            "Covered collection",
-            Some("A visible cover"),
-            CollectionVisibility::Public,
-            Some(&cover),
-        )
-        .await
-        .unwrap();
-        assert_eq!(collection.image.as_ref(), Some(&cover));
-
-        let owned = get_root_collections(&pool, owner.id).await.unwrap();
-        assert_eq!(owned[0].image.as_ref(), Some(&cover));
-        let breadcrumbs = get_collection_breadcrumbs(&pool, collection.id, owner.id)
-            .await
-            .unwrap();
-        assert_eq!(breadcrumbs[0].image.as_ref(), Some(&cover));
-
-        let child = insert_collection(
-            &pool,
-            owner.id,
-            Some(collection.id),
-            "Covered child",
-            None,
-            CollectionVisibility::Public,
-            Some(&cover),
-        )
-        .await
-        .unwrap();
-        let public_contents = get_collection_contents_for_viewer(&pool, collection.id, None, 0, 10)
-            .await
-            .unwrap()
-            .unwrap();
-        assert_eq!(public_contents.collection.image.as_ref(), Some(&cover));
-        assert_eq!(public_contents.child_collections.len(), 1);
-        assert_eq!(public_contents.child_collections[0].id, child.id);
-        assert_eq!(
-            public_contents.child_collections[0].image.as_ref(),
-            Some(&cover)
-        );
-
-        let unlisted = insert_collection(
-            &pool,
-            owner.id,
-            None,
-            "Unlisted cover",
-            None,
-            CollectionVisibility::Unlisted,
-            Some(&cover),
-        )
-        .await
-        .unwrap();
-        assert_eq!(
-            get_collection_contents_for_viewer(&pool, unlisted.id, None, 0, 10)
-                .await
-                .unwrap()
-                .unwrap()
-                .collection
-                .image
-                .as_ref(),
-            Some(&cover)
-        );
-        let public = get_public_collections_by_username(&pool, &owner.username, 0, 10)
-            .await
-            .unwrap();
-        assert!(public
-            .collections
-            .iter()
-            .any(|summary| summary.id == collection.id && summary.image.as_ref() == Some(&cover)));
-
-        let urls = get_all_image_urls(&pool).await.unwrap();
-        assert!(urls.contains(&cover.url));
-        assert!(urls.contains(cover.thumb_url.as_ref().unwrap()));
-
-        let references = get_all_owned_image_references(&pool).await.unwrap();
-        assert!(references.iter().any(|reference| {
-            reference.owner_id == owner.id
-                && reference.image_url == cover.url
-                && !reference.allows_inherited_owner
-                && reference.media_kind == OwnedMediaKind::CollectionCover
-        }));
-        assert!(references.iter().any(|reference| {
-            reference.owner_id == owner.id
-                && reference.image_url == *cover.thumb_url.as_ref().unwrap()
-                && !reference.allows_inherited_owner
-                && reference.media_kind == OwnedMediaKind::CollectionCover
-        }));
-
-        let updated = update_collection(
-            &pool,
-            collection.id,
-            owner.id,
-            "Covered collection",
-            Some("Cover removed"),
-            None,
-        )
-        .await
-        .unwrap();
-        assert!(updated.image.is_none());
-        assert!(
-            get_collection_by_id_and_owner(&pool, collection.id, owner.id)
-                .await
-                .unwrap()
-                .unwrap()
-                .image
-                .is_none()
-        );
-    }
-
-    #[tokio::test]
-    async fn collection_cover_cutover_clears_legacy_recipe_keys_and_keeps_collection_keys() {
-        let (_db, pool) = test_utils::setup_test_db().await;
-        let owner = test_utils::insert_test_user(&pool).await;
-        let storage = crate::storage::StorageClient::for_test();
-        let legacy_object = Uuid::new_v4();
-        let collection_object = Uuid::new_v4();
-        let legacy_cover = RecipeImage::new(
-            storage.object_url(&format!("recipes/{}/{legacy_object}_full.webp", owner.id)),
-            Some(storage.object_url(&format!("recipes/{}/{legacy_object}_thumb.webp", owner.id))),
-            crate::types::RecipeImageEdit::default_rect_16x9(),
-        );
-        let collection_cover = RecipeImage::new(
-            storage.object_url(&format!(
-                "collections/{}/{collection_object}_full.webp",
-                owner.id
-            )),
-            Some(storage.object_url(&format!(
-                "collections/{}/{collection_object}_thumb.webp",
-                owner.id
-            ))),
-            crate::types::RecipeImageEdit::default_rect_16x9(),
-        );
-        let legacy = insert_collection(
-            &pool,
-            owner.id,
-            None,
-            "Legacy cover",
-            None,
-            CollectionVisibility::Private,
-            Some(&legacy_cover),
-        )
-        .await
-        .unwrap();
-        let current = insert_collection(
-            &pool,
-            owner.id,
-            None,
-            "Current cover",
-            None,
-            CollectionVisibility::Private,
-            Some(&collection_cover),
-        )
-        .await
-        .unwrap();
-
-        let cleared = clear_non_collection_cover_references(&pool, &storage)
-            .await
-            .unwrap();
-
-        assert_eq!(cleared, 1);
-        assert!(get_collection_by_id_and_owner(&pool, legacy.id, owner.id)
-            .await
-            .unwrap()
-            .unwrap()
-            .image
-            .is_none());
-        assert_eq!(
-            get_collection_by_id_and_owner(&pool, current.id, owner.id)
-                .await
-                .unwrap()
-                .unwrap()
-                .image
-                .as_ref(),
-            Some(&collection_cover)
-        );
     }
 
     #[tokio::test]

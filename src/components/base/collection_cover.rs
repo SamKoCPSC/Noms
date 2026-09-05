@@ -158,6 +158,7 @@ mod tests {
     #[test]
     fn recipe_mosaic_keys_remain_unique_when_recipes_share_an_image() {
         let image = RecipeImage {
+            asset_id: None,
             url: "https://example.com/shared.webp".to_string(),
             thumb_url: None,
             file_name: None,

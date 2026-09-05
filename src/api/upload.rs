@@ -141,6 +141,8 @@ async fn enforce_media_upload_quota(
 /// ensuring reliability for all upload scenarios.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct UploadResponse {
+    /// Stable managed-media identity used for every durable attachment.
+    pub asset_id: uuid::Uuid,
     /// Full-size WebP image URL
     pub full_url: String,
     /// Thumbnail WebP image URL — explicitly computed, not derived
@@ -342,6 +344,7 @@ struct UploadedMediaObject {
 #[cfg(feature = "server")]
 #[derive(Debug)]
 pub(crate) struct UploadedMedia {
+    asset_id: Uuid,
     purpose: UploadPurpose,
     objects: Vec<UploadedMediaObject>,
     _upload_guard: Option<tokio::sync::OwnedMutexGuard<()>>,
@@ -354,6 +357,17 @@ impl UploadedMedia {
             .iter()
             .find(|object| object.kind == kind)
             .map(|object| object.url.as_str())
+    }
+
+    pub(crate) fn asset_id(&self) -> Uuid {
+        self.asset_id
+    }
+
+    pub(crate) fn key(&self, kind: crate::storage::MediaObjectKind) -> Option<&str> {
+        self.objects
+            .iter()
+            .find(|object| object.kind == kind)
+            .map(|object| object.key.as_str())
     }
 
     pub(crate) async fn compensate(&self, storage: &crate::storage::StorageClient) {
@@ -384,6 +398,7 @@ impl UploadedMedia {
             .find(|object| object.kind == thumbnail_kind)
             .ok_or("Uploaded media is missing its thumbnail object")?;
         Ok(UploadResponse {
+            asset_id: self.asset_id,
             full_url: full.url.clone(),
             thumb_url: thumbnail.url.clone(),
             key: full.key.clone(),
@@ -418,17 +433,20 @@ async fn register_uploaded_media(
         UploadPurpose::CollectionCover => crate::db::MediaPurpose::CollectionCover,
         UploadPurpose::Avatar => return Err("Avatar media is not discard-capability media".into()),
     };
-    let family = crate::db::NewMediaUploadFamily {
-        owner_id,
+    let family = crate::db::NewMediaAsset {
+        id: uploaded.asset_id,
+        uploader_id: owner_id,
         purpose,
         full_url: response.full_url.clone(),
         thumbnail_url: response.thumb_url.clone(),
+        original_url: None,
         full_key: response.key.clone(),
         thumbnail_key,
-        capability_digest: digest,
-        expires_at: chrono::Utc::now() + chrono::Duration::minutes(15),
+        original_key: None,
+        capability_digest: Some(digest),
+        expires_at: Some(chrono::Utc::now() + chrono::Duration::minutes(15)),
     };
-    if let Err(error) = crate::db::register_media_upload_family(pool, &family).await {
+    if let Err(error) = crate::db::register_media_asset(pool, &family).await {
         uploaded.compensate(storage).await;
         return Err(format!("failed to register upload lifecycle: {error}"));
     }
@@ -461,7 +479,8 @@ async fn upload_media_transaction(
     owner_id: Uuid,
     request: MediaUploadRequest<'_>,
 ) -> Result<UploadedMedia, crate::storage::StorageError> {
-    let keys = media_variant_keys(owner_id, Uuid::new_v4(), request.purpose);
+    let asset_id = Uuid::new_v4();
+    let keys = media_variant_keys(owner_id, asset_id, request.purpose);
     debug_assert_eq!(keys.len(), request.variants.len());
     let mut uploaded = Vec::with_capacity(request.variants.len());
 
@@ -484,6 +503,7 @@ async fn upload_media_transaction(
     }
 
     Ok(UploadedMedia {
+        asset_id,
         purpose: request.purpose,
         objects: uploaded,
         _upload_guard: None,
@@ -667,51 +687,6 @@ pub async fn discard_upload(discard_capability: String) -> Result<(), ServerFnEr
         return Err(ServerFnError::new("Upload discard will be retried"));
     }
     Ok(())
-}
-
-#[cfg(feature = "server")]
-#[cfg(test)]
-fn recipe_deletion_keys(
-    storage: &crate::storage::StorageClient,
-    owner_id: uuid::Uuid,
-    full_url: &str,
-) -> Result<(String, String), ServerFnError> {
-    let object = storage
-        .parse_media_url(full_url)
-        .map_err(ServerFnError::new)?;
-    if object.owner_id() != owner_id || object.kind() != crate::storage::MediaObjectKind::RecipeFull
-    {
-        return Err(ServerFnError::new(
-            "Access denied: image does not belong to this user",
-        ));
-    }
-    let thumbnail_key = object
-        .paired_thumbnail_key()
-        .ok_or_else(|| ServerFnError::new("Invalid full-size recipe image URL"))?;
-    Ok((object.key().to_string(), thumbnail_key))
-}
-
-#[cfg(feature = "server")]
-#[cfg(test)]
-fn collection_cover_deletion_keys(
-    storage: &crate::storage::StorageClient,
-    owner_id: uuid::Uuid,
-    full_url: &str,
-) -> Result<(String, String), ServerFnError> {
-    let object = storage
-        .parse_media_url(full_url)
-        .map_err(ServerFnError::new)?;
-    if object.owner_id() != owner_id
-        || object.kind() != crate::storage::MediaObjectKind::CollectionFull
-    {
-        return Err(ServerFnError::new(
-            "Access denied: collection cover does not belong to this user",
-        ));
-    }
-    let thumbnail_key = object
-        .paired_thumbnail_key()
-        .ok_or_else(|| ServerFnError::new("Invalid full-size collection cover URL"))?;
-    Ok((object.key().to_string(), thumbnail_key))
 }
 
 // -- Axum Handler (for direct API / fetch access) --
@@ -898,6 +873,7 @@ pub async fn upload_handler(
     (
         StatusCode::OK,
         Json(serde_json::json!({
+            "asset_id": response.asset_id,
             "full_url": response.full_url,
             "thumb_url": response.thumb_url,
             "key": response.key,
@@ -1497,7 +1473,11 @@ mod tests {
 
         let json = read_json(response).await;
 
-        // Verify response contains full_url, thumb_url, and key
+        // The response exposes the canonical asset identity required by saves.
+        let asset_id = json["asset_id"]
+            .as_str()
+            .and_then(|value| uuid::Uuid::parse_str(value).ok())
+            .expect("asset_id should be a UUID");
         assert!(
             json.get("full_url").is_some(),
             "Response should contain 'full_url'"
@@ -1514,6 +1494,19 @@ mod tests {
         assert!(discard_capability
             .bytes()
             .all(|byte| byte.is_ascii_hexdigit()));
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>(
+                "SELECT COUNT(*) FROM media_assets \
+                 WHERE id = $1 AND uploader_id = $2 AND purpose = 'recipe' \
+                   AND lifecycle = 'uncommitted'",
+            )
+            .bind(asset_id)
+            .bind(user_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            1
+        );
 
         // Verify the key format: recipes/{user_id}/{uuid}_full.webp
         let key = json["key"].as_str().expect("key should be a string");
@@ -2041,78 +2034,14 @@ mod tests {
             crate::security::MAX_MEDIA_BYTES_PER_USER
         );
     }
-
-    #[test]
-    fn direct_delete_requires_an_exact_owned_full_image_key() {
-        let owner_id = uuid::Uuid::new_v4();
-        let victim_id = uuid::Uuid::new_v4();
-        let object_id = uuid::Uuid::new_v4();
-        let storage = crate::storage::StorageClient::for_test();
-        let owned_url = storage.object_url(&format!("recipes/{owner_id}/{object_id}_full.webp"));
-
-        assert_eq!(
-            recipe_deletion_keys(&storage, owner_id, &owned_url).unwrap(),
-            (
-                format!("recipes/{owner_id}/{object_id}_full.webp"),
-                format!("recipes/{owner_id}/{object_id}_thumb.webp")
-            )
-        );
-
-        for unsafe_url in [
-            storage.object_url(&format!("recipes/{victim_id}/{object_id}_full.webp")),
-            storage.object_url(&format!("recipes/{owner_id}-suffix/{object_id}_full.webp")),
-            storage.object_url(&format!("recipes/{owner_id}/../{object_id}_full.webp")),
-            storage.object_url(&format!("avatars/{owner_id}/{object_id}.webp")),
-        ] {
-            assert!(
-                recipe_deletion_keys(&storage, owner_id, &unsafe_url).is_err(),
-                "unsafe direct deletion URL was accepted: {unsafe_url}"
-            );
-        }
-    }
-
-    #[test]
-    fn unsaved_collection_cover_delete_requires_an_exact_owned_collection_key() {
-        let owner_id = uuid::Uuid::new_v4();
-        let victim_id = uuid::Uuid::new_v4();
-        let object_id = uuid::Uuid::new_v4();
-        let storage = crate::storage::StorageClient::for_test();
-        let owned_url =
-            storage.object_url(&format!("collections/{owner_id}/{object_id}_full.webp"));
-
-        assert_eq!(
-            collection_cover_deletion_keys(&storage, owner_id, &owned_url).unwrap(),
-            (
-                format!("collections/{owner_id}/{object_id}_full.webp"),
-                format!("collections/{owner_id}/{object_id}_thumb.webp")
-            )
-        );
-
-        for unsafe_url in [
-            storage.object_url(&format!("collections/{victim_id}/{object_id}_full.webp")),
-            storage.object_url(&format!("recipes/{owner_id}/{object_id}_full.webp")),
-            storage.object_url(&format!("avatars/{owner_id}/{object_id}.webp")),
-        ] {
-            assert!(
-                collection_cover_deletion_keys(&storage, owner_id, &unsafe_url).is_err(),
-                "unsafe collection deletion URL was accepted: {unsafe_url}"
-            );
-        }
-    }
 }
 
 // ── Pure `validate_webp_magic` tests (cross-platform — S3) ─────────────────
-//
-// Split out of the server-gated `tests` module so they also run on the
-// wasm32 target. The validator is pure Rust (no server deps), so it is
-// safe to compile and run anywhere.
 
 #[cfg(test)]
 mod validate_webp_magic_tests {
     use super::validate_webp_magic;
 
-    /// Minimal valid WebP file bytes (RIFF....WEBP header).
-    /// 12 bytes: "RIFF" + 4-byte little-endian file size + "WEBP".
     const VALID_WEBP_BYTES: &[u8] = b"RIFF\x24\x00\x00\x00WEBP";
 
     #[test]

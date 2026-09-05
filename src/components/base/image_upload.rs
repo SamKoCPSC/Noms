@@ -533,7 +533,8 @@ async fn retry_upload(
             discard_capabilities
                 .write()
                 .insert(img_id, resp.discard_capability.clone());
-            let uploaded_image = RecipeImage::new(resp.full_url, Some(resp.thumb_url), edit);
+            let uploaded_image =
+                RecipeImage::managed(resp.asset_id, resp.full_url, Some(resp.thumb_url), edit);
             if let Some(p) = pending.write().iter_mut().find(|p| p.id == img_id) {
                 p.status = UploadStatus::Uploaded;
                 p.uploaded_image = Some(uploaded_image);
@@ -596,7 +597,8 @@ async fn upload_all(
                 discard_capabilities
                     .write()
                     .insert(id, resp.discard_capability.clone());
-                let uploaded_image = RecipeImage::new(resp.full_url, Some(resp.thumb_url), edit);
+                let uploaded_image =
+                    RecipeImage::managed(resp.asset_id, resp.full_url, Some(resp.thumb_url), edit);
                 if let Some(p) = pending.write().iter_mut().find(|p| p.id == id) {
                     p.status = UploadStatus::Uploaded;
                     p.uploaded_image = Some(uploaded_image);

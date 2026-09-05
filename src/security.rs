@@ -751,6 +751,7 @@ mod tests {
 
     fn external_image(index: usize) -> RecipeImage {
         RecipeImage {
+            asset_id: None,
             url: format!("https://images.example.test/{index}/full.webp"),
             thumb_url: Some(format!("https://images.example.test/{index}/thumb.webp")),
             file_name: Some(format!("image-{index}.webp")),

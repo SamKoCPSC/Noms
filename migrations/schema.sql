@@ -91,89 +91,62 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_cleanup ON sessions(expires_at, revoked)
     WHERE revoked = TRUE;
 
--- Paired object families uploaded by the generic media API. The browser keeps
--- the raw discard capability; the database stores only its digest.
-CREATE TABLE IF NOT EXISTS media_upload_families (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    purpose TEXT NOT NULL CHECK (purpose IN ('recipe', 'collection_cover')),
+-- First-class managed media identity and object-deletion authority. Holder
+-- references below, rather than uploader lifetime or document URL scans,
+-- determine whether an asset is live.
+CREATE TABLE IF NOT EXISTS media_assets (
+    id UUID PRIMARY KEY,
+    uploader_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    purpose TEXT NOT NULL CHECK (purpose IN ('recipe', 'collection_cover', 'avatar')),
     full_url TEXT NOT NULL,
     thumbnail_url TEXT NOT NULL,
+    original_url TEXT,
     full_key TEXT NOT NULL UNIQUE,
     thumbnail_key TEXT NOT NULL UNIQUE,
-    capability_digest BYTEA NOT NULL UNIQUE CHECK (octet_length(capability_digest) = 32),
+    original_key TEXT UNIQUE,
+    capability_digest BYTEA UNIQUE CHECK (
+        capability_digest IS NULL OR octet_length(capability_digest) = 32
+    ),
     lifecycle TEXT NOT NULL DEFAULT 'uncommitted'
-        CHECK (lifecycle IN ('uncommitted', 'retained', 'discard_claimed', 'discarded')),
-    expires_at TIMESTAMPTZ NOT NULL,
+        CHECK (lifecycle IN ('uncommitted', 'retained', 'delete_claimed', 'deleted')),
+    expires_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     retained_at TIMESTAMPTZ,
-    discard_claimed_at TIMESTAMPTZ,
-    discarded_at TIMESTAMPTZ,
+    delete_claimed_at TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ,
     cleanup_checked_at TIMESTAMPTZ,
     delete_failure TEXT,
     CHECK (full_url <> thumbnail_url),
-    CHECK (full_key <> thumbnail_key)
-);
-
-CREATE INDEX IF NOT EXISTS idx_media_upload_families_owner_lifecycle
-    ON media_upload_families(owner_id, lifecycle);
-CREATE INDEX IF NOT EXISTS idx_media_upload_families_expiry
-    ON media_upload_families(expires_at) WHERE lifecycle = 'uncommitted';
-CREATE INDEX IF NOT EXISTS idx_media_upload_cleanup_claimed
-    ON media_upload_families((cleanup_checked_at IS NOT NULL), cleanup_checked_at, created_at, id)
-    WHERE lifecycle = 'discard_claimed';
-CREATE INDEX IF NOT EXISTS idx_media_upload_cleanup_retained
-    ON media_upload_families((cleanup_checked_at IS NOT NULL), cleanup_checked_at, created_at, id)
-    WHERE lifecycle = 'retained';
-
--- Durable object-deletion authority created before an account row is removed.
--- `former_owner_id` intentionally has no foreign key: these rows must survive
--- the users/media_upload_families cascades and remain retryable afterwards.
-CREATE TABLE IF NOT EXISTS account_media_cleanup_tombstones (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    source_family_id UUID UNIQUE,
-    former_owner_id UUID NOT NULL,
-    purpose TEXT NOT NULL CHECK (purpose IN ('recipe', 'collection_cover', 'avatar')),
-    full_url TEXT,
-    thumbnail_url TEXT,
-    original_url TEXT,
-    full_key TEXT,
-    thumbnail_key TEXT,
-    original_key TEXT,
-    lifecycle TEXT NOT NULL DEFAULT 'pending'
-        CHECK (lifecycle IN ('pending', 'claimed', 'retained', 'deleted')),
-    attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    claim_started_at TIMESTAMPTZ,
-    cleanup_checked_at TIMESTAMPTZ,
-    deleted_at TIMESTAMPTZ,
-    delete_failure TEXT,
+    CHECK (full_key <> thumbnail_key),
+    CHECK (original_url IS NULL OR original_url <> full_url),
+    CHECK (original_url IS NULL OR original_url <> thumbnail_url),
+    CHECK (original_key IS NULL OR original_key <> full_key),
+    CHECK (original_key IS NULL OR original_key <> thumbnail_key),
     CHECK (
         (purpose IN ('recipe', 'collection_cover')
-            AND source_family_id IS NOT NULL
-            AND full_url IS NOT NULL
-            AND thumbnail_url IS NOT NULL
-            AND full_key IS NOT NULL
-            AND thumbnail_key IS NOT NULL)
+            AND original_url IS NULL
+            AND original_key IS NULL
+            AND capability_digest IS NOT NULL
+            AND expires_at IS NOT NULL)
         OR
         (purpose = 'avatar'
-            AND source_family_id IS NULL
-            AND (full_key IS NOT NULL OR thumbnail_key IS NOT NULL OR original_key IS NOT NULL))
-    ),
-    CHECK (full_key IS NULL OR thumbnail_key IS NULL OR full_key <> thumbnail_key)
+            AND original_url IS NOT NULL
+            AND original_key IS NOT NULL
+            AND capability_digest IS NULL
+            AND expires_at IS NULL)
+    )
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_account_media_cleanup_full_key
-    ON account_media_cleanup_tombstones(full_key) WHERE full_key IS NOT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_account_media_cleanup_thumbnail_key
-    ON account_media_cleanup_tombstones(thumbnail_key) WHERE thumbnail_key IS NOT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_account_media_cleanup_original_key
-    ON account_media_cleanup_tombstones(original_key) WHERE original_key IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_account_media_cleanup_candidates
-    ON account_media_cleanup_tombstones(lifecycle, cleanup_checked_at, created_at)
-    WHERE lifecycle <> 'deleted';
-CREATE INDEX IF NOT EXISTS idx_account_media_cleanup_former_owner
-    ON account_media_cleanup_tombstones(former_owner_id);
+CREATE INDEX IF NOT EXISTS idx_media_assets_uploader_lifecycle
+    ON media_assets(uploader_id, lifecycle);
+CREATE INDEX IF NOT EXISTS idx_media_assets_expiry
+    ON media_assets(expires_at, created_at, id) WHERE lifecycle = 'uncommitted';
+CREATE INDEX IF NOT EXISTS idx_media_assets_cleanup_claimed
+    ON media_assets((cleanup_checked_at IS NOT NULL), cleanup_checked_at, created_at, id)
+    WHERE lifecycle = 'delete_claimed';
+CREATE INDEX IF NOT EXISTS idx_media_assets_cleanup_retained
+    ON media_assets((cleanup_checked_at IS NOT NULL), cleanup_checked_at, created_at, id)
+    WHERE lifecycle = 'retained';
 
 -- ── Recipe management ──────────────────────────────────────────────────────
 
@@ -227,8 +200,6 @@ CREATE TABLE IF NOT EXISTS recipe_versions (
 
 CREATE INDEX IF NOT EXISTS idx_recipe_versions_recipe
     ON recipe_versions(recipe_id, version_number DESC);
-CREATE INDEX IF NOT EXISTS idx_recipe_versions_media_lookup
-    ON recipe_versions USING GIN (snapshot jsonb_path_ops);
 
 -- Mutable, owner-only work in progress. Existing recipes have one draft per
 -- owner/recipe pair; users may keep multiple new-recipe drafts.
@@ -251,8 +222,6 @@ CREATE TABLE IF NOT EXISTS recipe_drafts (
 
 CREATE INDEX IF NOT EXISTS idx_recipe_drafts_user
     ON recipe_drafts(user_id, updated_at DESC);
-CREATE INDEX IF NOT EXISTS idx_recipe_drafts_media_lookup
-    ON recipe_drafts USING GIN (snapshot jsonb_path_ops);
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_recipe_drafts_existing_recipe
     ON recipe_drafts(user_id, recipe_id)
@@ -307,10 +276,6 @@ CREATE INDEX IF NOT EXISTS idx_recipe_tags_tag ON recipe_tags(tag);
 
 CREATE INDEX IF NOT EXISTS idx_recipes_user_id ON recipes(user_id);
 CREATE INDEX IF NOT EXISTS idx_recipes_created_at ON recipes(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_recipes_images_media_lookup
-    ON recipes USING GIN (images jsonb_path_ops);
-CREATE INDEX IF NOT EXISTS idx_recipes_instructions_media_lookup
-    ON recipes USING GIN (instructions jsonb_path_ops);
 
 -- Partial index for public recipe discovery (explore page)
 CREATE INDEX IF NOT EXISTS idx_recipes_visibility_created ON recipes(visibility, created_at DESC)
@@ -337,11 +302,48 @@ CREATE TABLE IF NOT EXISTS collections (
     CHECK (btrim(name) <> '')
 );
 
+-- Holder-specific foreign keys make media liveness an indexed relational
+-- invariant. Cascading holder deletion removes only that holder's grant.
+CREATE TABLE IF NOT EXISTS recipe_media_refs (
+    recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+    asset_id UUID NOT NULL REFERENCES media_assets(id) ON DELETE RESTRICT,
+    PRIMARY KEY (recipe_id, asset_id)
+);
+CREATE INDEX IF NOT EXISTS idx_recipe_media_refs_asset
+    ON recipe_media_refs(asset_id);
+
+CREATE TABLE IF NOT EXISTS recipe_version_media_refs (
+    recipe_version_id UUID NOT NULL REFERENCES recipe_versions(id) ON DELETE CASCADE,
+    asset_id UUID NOT NULL REFERENCES media_assets(id) ON DELETE RESTRICT,
+    PRIMARY KEY (recipe_version_id, asset_id)
+);
+CREATE INDEX IF NOT EXISTS idx_recipe_version_media_refs_asset
+    ON recipe_version_media_refs(asset_id);
+
+CREATE TABLE IF NOT EXISTS recipe_draft_media_refs (
+    recipe_draft_id UUID NOT NULL REFERENCES recipe_drafts(id) ON DELETE CASCADE,
+    asset_id UUID NOT NULL REFERENCES media_assets(id) ON DELETE RESTRICT,
+    PRIMARY KEY (recipe_draft_id, asset_id)
+);
+CREATE INDEX IF NOT EXISTS idx_recipe_draft_media_refs_asset
+    ON recipe_draft_media_refs(asset_id);
+
+CREATE TABLE IF NOT EXISTS collection_media_refs (
+    collection_id UUID PRIMARY KEY REFERENCES collections(id) ON DELETE CASCADE,
+    asset_id UUID NOT NULL REFERENCES media_assets(id) ON DELETE RESTRICT
+);
+CREATE INDEX IF NOT EXISTS idx_collection_media_refs_asset
+    ON collection_media_refs(asset_id);
+
+CREATE TABLE IF NOT EXISTS avatar_media_refs (
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    asset_id UUID NOT NULL REFERENCES media_assets(id) ON DELETE RESTRICT
+);
+CREATE INDEX IF NOT EXISTS idx_avatar_media_refs_asset
+    ON avatar_media_refs(asset_id);
+
 CREATE INDEX IF NOT EXISTS idx_collections_owner_updated
     ON collections(owner_id, updated_at DESC);
-CREATE INDEX IF NOT EXISTS idx_collections_image_media_lookup
-    ON collections USING GIN (image jsonb_path_ops)
-    WHERE image IS NOT NULL;
 
 -- Partial index for public collection discovery.
 CREATE INDEX IF NOT EXISTS idx_collections_public_updated

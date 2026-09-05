@@ -404,8 +404,13 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                         step_photo_discard_capabilities
                             .write()
                             .insert(full_url.clone(), resp.discard_capability);
-                        let photo = RecipeImage::new(full_url, Some(resp.thumb_url), edit)
-                            .with_file_metadata(photo_file_name, photo_file_size);
+                        let photo = RecipeImage::managed(
+                            resp.asset_id,
+                            full_url,
+                            Some(resp.thumb_url),
+                            edit,
+                        )
+                        .with_file_metadata(photo_file_name, photo_file_size);
                         if let Some(step) = steps.write().get_mut(idx) {
                             let photo_idx = step.photos.len();
                             step.photos.push(photo);
