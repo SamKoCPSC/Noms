@@ -916,13 +916,11 @@ pub async fn insert_collection(
     .await
     .map_err(DbError::Query)?;
 
-    let row = sqlx::query(
+    let collection_id: Uuid = sqlx::query_scalar(
         "INSERT INTO collections
             (owner_id, parent_collection_id, name, description, sort_order, visibility, image)
          VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING id, owner_id, parent_collection_id, name, description, image,
-                   visibility, sort_order, created_at, updated_at,
-                   'null'::jsonb AS media_asset_urls",
+         RETURNING id",
     )
     .bind(owner_id)
     .bind(parent_collection_id)
@@ -940,10 +938,9 @@ pub async fn insert_collection(
     .await
     .map_err(collection_query_error)?;
 
-    let collection = collection_from_row(&row).map_err(DbError::Query)?;
     media_assets::sync_recipe_media_references(
         &mut tx,
-        media_assets::MediaHolder::Collection(collection.id),
+        media_assets::MediaHolder::Collection(collection_id),
         owner_id,
         MediaPurpose::CollectionCover,
         image.map(std::slice::from_ref).unwrap_or_default(),
@@ -951,6 +948,9 @@ pub async fn insert_collection(
         media_assets::MediaAttachAuthority::UploaderOnly,
     )
     .await?;
+    let collection = get_collection_by_id_and_owner(&mut *tx, collection_id, owner_id)
+        .await?
+        .ok_or(DbError::CollectionNotFound(collection_id))?;
     tx.commit().await.map_err(DbError::Query)?;
     Ok(collection)
 }
@@ -1279,13 +1279,11 @@ pub async fn update_collection(
         return Err(DbError::ResourceLimitExceeded("collection image metadata"));
     }
     let mut tx = pool.begin().await.map_err(DbError::Query)?;
-    let row = sqlx::query(
+    let updated_id: Uuid = sqlx::query_scalar(
         "UPDATE collections
          SET name = $3, description = $4, image = $5, updated_at = NOW()
          WHERE id = $1 AND owner_id = $2
-         RETURNING id, owner_id, parent_collection_id, name, description, image,
-                   visibility, sort_order, created_at, updated_at,
-                   'null'::jsonb AS media_asset_urls",
+         RETURNING id",
     )
     .bind(collection_id)
     .bind(owner_id)
@@ -1303,10 +1301,9 @@ pub async fn update_collection(
         sqlx::Error::RowNotFound => DbError::CollectionNotFound(collection_id),
         other => collection_query_error(other),
     })?;
-    let collection = collection_from_row(&row).map_err(DbError::Query)?;
     media_assets::sync_recipe_media_references(
         &mut tx,
-        media_assets::MediaHolder::Collection(collection.id),
+        media_assets::MediaHolder::Collection(updated_id),
         owner_id,
         MediaPurpose::CollectionCover,
         image.map(std::slice::from_ref).unwrap_or_default(),
@@ -1314,6 +1311,9 @@ pub async fn update_collection(
         media_assets::MediaAttachAuthority::UploaderOnly,
     )
     .await?;
+    let collection = get_collection_by_id_and_owner(&mut *tx, updated_id, owner_id)
+        .await?
+        .ok_or(DbError::CollectionNotFound(updated_id))?;
     tx.commit().await.map_err(DbError::Query)?;
     Ok(collection)
 }
@@ -1325,25 +1325,28 @@ pub async fn update_collection_visibility(
     owner_id: Uuid,
     visibility: CollectionVisibility,
 ) -> Result<Collection, DbError> {
-    let row = sqlx::query(
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    let rows = sqlx::query(
         "UPDATE collections
          SET visibility = $3,
              updated_at = GREATEST(NOW(), updated_at + INTERVAL '1 microsecond')
-         WHERE id = $1 AND owner_id = $2
-         RETURNING id, owner_id, parent_collection_id, name, description, image,
-                   visibility, sort_order, created_at, updated_at,
-                   'null'::jsonb AS media_asset_urls",
+         WHERE id = $1 AND owner_id = $2",
     )
     .bind(collection_id)
     .bind(owner_id)
     .bind(visibility.as_str())
-    .fetch_one(pool)
+    .execute(&mut *tx)
     .await
-    .map_err(|error| match error {
-        sqlx::Error::RowNotFound => DbError::CollectionNotFound(collection_id),
-        other => DbError::Query(other),
-    })?;
-    collection_from_row(&row).map_err(DbError::Query)
+    .map_err(DbError::Query)?
+    .rows_affected();
+    if rows == 0 {
+        return Err(DbError::CollectionNotFound(collection_id));
+    }
+    let collection = get_collection_by_id_and_owner(&mut *tx, collection_id, owner_id)
+        .await?
+        .ok_or(DbError::CollectionNotFound(collection_id))?;
+    tx.commit().await.map_err(DbError::Query)?;
+    Ok(collection)
 }
 
 async fn lock_siblings(
@@ -1432,14 +1435,11 @@ pub async fn move_collection(
     .fetch_optional(&mut *tx)
     .await
     .map_err(DbError::Query)?;
-    let current_parent: Option<Uuid> = current
+    let current_parent = current
         .as_ref()
-        .map(|row| row.try_get("parent_collection_id"))
-        .transpose()
+        .ok_or(DbError::CollectionNotFound(collection_id))?
+        .try_get::<Option<Uuid>, _>("parent_collection_id")
         .map_err(DbError::Query)?;
-    if current.is_none() {
-        return Err(DbError::CollectionNotFound(collection_id));
-    }
 
     let mut ids_to_lock = vec![collection_id];
     if let Some(parent_id) = current_parent {
@@ -1560,18 +1560,9 @@ pub async fn move_collection(
             .map_err(DbError::Query)?;
     }
 
-    let row = sqlx::query(
-        "SELECT id, owner_id, parent_collection_id, name, description, image,
-                visibility, sort_order, created_at, updated_at,
-                'null'::jsonb AS media_asset_urls
-         FROM collections WHERE id = $1 AND owner_id = $2",
-    )
-    .bind(collection_id)
-    .bind(owner_id)
-    .fetch_one(&mut *tx)
-    .await
-    .map_err(DbError::Query)?;
-    let moved = collection_from_row(&row).map_err(DbError::Query)?;
+    let moved = get_collection_by_id_and_owner(&mut *tx, collection_id, owner_id)
+        .await?
+        .ok_or(DbError::CollectionNotFound(collection_id))?;
     tx.commit().await.map_err(DbError::Query)?;
     Ok(moved)
 }
@@ -3052,23 +3043,27 @@ async fn delete_user_inner(pool: &PgPool, user_id: Uuid) -> Result<(), DbError> 
 
 /// Update a user's display name and bio. Returns the updated user record.
 pub async fn update_user_profile(
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    pool: &PgPool,
     user_id: Uuid,
     display_name: &str,
     bio: Option<&str>,
 ) -> Result<User, DbError> {
-    sqlx::query_as!(
-        User,
+    let mut transaction = pool.begin().await.map_err(DbError::Query)?;
+    sqlx::query(
         "UPDATE users SET display_name = $2, bio = $3, updated_at = NOW() \
-         WHERE id = $1 \
-         RETURNING id, username, display_name, email, avatar_url, bio, created_at, updated_at",
-        user_id,
-        display_name,
-        bio,
+         WHERE id = $1",
     )
-    .fetch_one(executor)
+    .bind(user_id)
+    .bind(display_name)
+    .bind(bio)
+    .execute(&mut *transaction)
     .await
-    .map_err(DbError::Query)
+    .map_err(DbError::Query)?;
+    let updated = get_user_by_id(&mut *transaction, user_id)
+        .await?
+        .ok_or(DbError::Query(sqlx::Error::RowNotFound))?;
+    transaction.commit().await.map_err(DbError::Query)?;
+    Ok(updated)
 }
 
 /// Update a user's username. Checks uniqueness first (excluding the current user).
@@ -3328,33 +3323,30 @@ pub async fn update_recipe(
 
 /// Change only recipe-level visibility, enforcing ownership.
 pub async fn update_recipe_visibility(
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    pool: &PgPool,
     id: Uuid,
     user_id: Uuid,
     visibility: &str,
 ) -> Result<Recipe, DbError> {
     versioning::validate_recipe_visibility(visibility)?;
-    let row = sqlx::query(
+    let mut transaction = pool.begin().await.map_err(DbError::Query)?;
+    let rows = sqlx::query(
         "UPDATE recipes SET visibility = $3, updated_at = NOW() \
-         WHERE id = $1 AND user_id = $2 \
-         RETURNING id, user_id, title, description, commentary, prep_time_minutes, \
-             cook_time_minutes, servings, ingredients, instructions, equipment, images, \
-             visibility, created_at, updated_at, \
-             (SELECT username FROM users WHERE users.id = $2) AS author_username, \
-             (SELECT avatar_url FROM users WHERE users.id = $2) AS author_avatar_url, \
-             'null'::jsonb AS media_asset_urls",
+         WHERE id = $1 AND user_id = $2",
     )
     .bind(id)
     .bind(user_id)
     .bind(visibility)
-    .fetch_one(executor)
+    .execute(&mut *transaction)
     .await
-    .map_err(|error| match error {
-        sqlx::Error::RowNotFound => DbError::RecipeNotFound(id),
-        other => DbError::Query(other),
-    })?;
-
-    Recipe::from_row(&row).map_err(DbError::Query)
+    .map_err(DbError::Query)?
+    .rows_affected();
+    if rows == 0 {
+        return Err(DbError::RecipeNotFound(id));
+    }
+    let updated = get_recipe_by_id_and_owner(&mut *transaction, id, user_id).await?;
+    transaction.commit().await.map_err(DbError::Query)?;
+    Ok(updated)
 }
 
 /// Delete a recipe, enforcing ownership via `user_id` in the WHERE clause.

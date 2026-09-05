@@ -3427,7 +3427,7 @@ async fn insert_recipe_from_snapshot(
         authority,
     )
     .await?;
-    Ok(recipe)
+    super::get_recipe_by_id_and_owner(&mut **transaction, recipe.id, user_id).await
 }
 
 async fn update_recipe_from_snapshot(
@@ -3436,7 +3436,7 @@ async fn update_recipe_from_snapshot(
     user_id: Uuid,
     snapshot: &RecipeSnapshot,
 ) -> Result<Recipe, DbError> {
-    let recipe = super::update_recipe(
+    super::update_recipe(
         &mut **transaction,
         recipe_id,
         user_id,
@@ -3464,7 +3464,7 @@ async fn update_recipe_from_snapshot(
     )
     .await?;
     super::insert_recipe_tags(transaction, recipe_id, &snapshot.tags).await?;
-    Ok(recipe)
+    super::get_recipe_by_id_and_owner(&mut **transaction, recipe_id, user_id).await
 }
 
 pub async fn publish_recipe_draft(

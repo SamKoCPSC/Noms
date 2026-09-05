@@ -605,6 +605,38 @@ async fn managed_read_surfaces_resolve_urls_from_the_asset_registry() {
         .await
         .unwrap();
 
+    let visibility_response = update_recipe_visibility(&pool, recipe.id, user.id, "unlisted")
+        .await
+        .unwrap();
+    assert_eq!(visibility_response.images[0].url, recipe_asset.full_url);
+    assert_eq!(
+        visibility_response.author_avatar_url.as_deref(),
+        Some(avatar_asset.full_url.as_str())
+    );
+    let collection_visibility_response = update_collection_visibility(
+        &pool,
+        collection.id,
+        user.id,
+        crate::types::CollectionVisibility::Unlisted,
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        collection_visibility_response.image.unwrap().url,
+        cover_asset.full_url
+    );
+    let moved_collection = move_collection(&pool, collection.id, user.id, None)
+        .await
+        .unwrap();
+    assert_eq!(moved_collection.image.unwrap().url, cover_asset.full_url);
+    let profile_response = update_user_profile(&pool, user.id, "Updated Owner", None)
+        .await
+        .unwrap();
+    assert_eq!(
+        profile_response.avatar_url.as_deref(),
+        Some(avatar_asset.full_url.as_str())
+    );
+
     let loaded_recipe = get_recipe_by_id(&pool, recipe.id).await.unwrap().unwrap();
     assert_eq!(loaded_recipe.images[0].url, recipe_asset.full_url);
     assert_eq!(
@@ -720,6 +752,25 @@ async fn managed_recipe_reads_fail_closed_without_the_holder_reference() {
     )
     .await
     .unwrap();
+    let draft = create_edit_draft(&pool, recipe.id, user.id).await.unwrap();
+    let cover_asset = asset(user.id, MediaPurpose::CollectionCover, 62);
+    let avatar_asset = asset(user.id, MediaPurpose::Avatar, 63);
+    register_media_asset(&pool, &cover_asset).await.unwrap();
+    register_media_asset(&pool, &avatar_asset).await.unwrap();
+    let collection = insert_collection(
+        &pool,
+        user.id,
+        None,
+        "Missing reference collection",
+        None,
+        crate::types::CollectionVisibility::Private,
+        Some(&managed_image(&cover_asset)),
+    )
+    .await
+    .unwrap();
+    replace_avatar_media_reference(&pool, user.id, avatar_asset.id)
+        .await
+        .unwrap();
 
     sqlx::query("DELETE FROM recipe_media_refs WHERE recipe_id = $1")
         .bind(recipe.id)
@@ -731,4 +782,85 @@ async fn managed_recipe_reads_fail_closed_without_the_holder_reference() {
         get_recipe_by_id(&pool, recipe.id).await,
         Err(DbError::Query(sqlx::Error::Decode(_)))
     ));
+
+    sqlx::query(
+        "DELETE FROM recipe_version_media_refs WHERE recipe_version_id IN (\
+             SELECT id FROM recipe_versions WHERE recipe_id = $1)",
+    )
+    .bind(recipe.id)
+    .execute(&pool)
+    .await
+    .unwrap();
+    let version = get_recipe_version(&pool, recipe.id, 1).await.unwrap();
+    assert!(matches!(
+        version.decoded_snapshot(),
+        Err(DbError::InvalidRecipeSnapshot(_))
+    ));
+
+    sqlx::query("DELETE FROM recipe_draft_media_refs WHERE recipe_draft_id = $1")
+        .bind(draft.id)
+        .execute(&pool)
+        .await
+        .unwrap();
+    let draft = get_recipe_draft(&pool, draft.id, user.id).await.unwrap();
+    assert!(matches!(
+        draft.decoded_snapshot(),
+        Err(DbError::InvalidRecipeSnapshot(_))
+    ));
+
+    sqlx::query("DELETE FROM collection_media_refs WHERE collection_id = $1")
+        .bind(collection.id)
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert!(matches!(
+        get_collection_by_id_and_owner(&pool, collection.id, user.id).await,
+        Err(DbError::Query(sqlx::Error::Decode(_)))
+    ));
+
+    sqlx::query("DELETE FROM avatar_media_refs WHERE user_id = $1")
+        .bind(user.id)
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        get_user_by_id(&pool, user.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .avatar_url,
+        None
+    );
+}
+
+#[tokio::test]
+async fn external_avatar_urls_remain_readable_without_a_managed_reference() {
+    let (_database, pool) = crate::test_utils::setup_test_db().await;
+    let user = owner(&pool, "external_avatar").await;
+    let external_url = "https://identity.example.test/avatar.png".to_string();
+    update_avatar_url(&pool, user.id, Some(external_url.clone()))
+        .await
+        .unwrap();
+
+    assert_eq!(
+        get_user_by_id(&pool, user.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .avatar_url,
+        Some(external_url.clone())
+    );
+    let search = search_users(&pool, &crate::types::UserSearchRequest::default())
+        .await
+        .unwrap();
+    assert_eq!(
+        search
+            .results
+            .into_iter()
+            .find(|result| result.user.id == user.id)
+            .unwrap()
+            .user
+            .avatar_url,
+        Some(external_url)
+    );
 }

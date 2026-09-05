@@ -251,19 +251,22 @@ async fn persist_uploaded_avatar(
             asset.id,
         )
         .await?;
-        let updated = sqlx::query_as::<_, crate::db::User>(
-        "UPDATE users SET avatar_url = $2, avatar_original_url = $3, avatar_edit = $4, updated_at = NOW() \
-         WHERE id = $1 \
-         RETURNING id, username, display_name, email, avatar_url, bio, created_at, updated_at",
+        sqlx::query(
+            "UPDATE users SET avatar_url = NULL, avatar_original_url = NULL, \
+                 avatar_edit = $2, updated_at = NOW() WHERE id = $1",
         )
         .bind(user_id)
-        .bind(Some(full_url))
-        .bind(Some(original_url))
         .bind(Some(edit_json))
-        .fetch_one(&mut *transaction)
+        .execute(&mut *transaction)
         .await
         .map_err(crate::db::DbError::Query)?;
-        transaction.commit().await.map_err(crate::db::DbError::Query)?;
+        let updated = crate::db::get_user_by_id(&mut *transaction, user_id)
+            .await?
+            .ok_or(crate::db::DbError::Query(sqlx::Error::RowNotFound))?;
+        transaction
+            .commit()
+            .await
+            .map_err(crate::db::DbError::Query)?;
         Ok::<_, crate::db::DbError>(updated)
     }
     .await;
@@ -329,10 +332,13 @@ pub async fn get_avatar_edit_source() -> Result<Option<AvatarEditSource>, Server
     let pool = crate::db::get_pool();
     let row = sqlx::query(
         "SELECT CASE WHEN media_ref.asset_id IS NOT NULL \
-                     THEN asset.full_url ELSE users.avatar_url END AS avatar_url, \
+                     THEN asset.full_url \
+                     WHEN users.avatar_original_url IS NULL AND users.avatar_edit IS NULL \
+                     THEN users.avatar_url END AS avatar_url, \
                 CASE WHEN media_ref.asset_id IS NOT NULL \
                      THEN COALESCE(asset.original_url, asset.full_url) \
-                     ELSE COALESCE(users.avatar_original_url, users.avatar_url) \
+                     WHEN users.avatar_original_url IS NULL AND users.avatar_edit IS NULL \
+                     THEN users.avatar_url \
                 END AS avatar_original_url, \
                 users.avatar_edit \
          FROM users \
@@ -380,15 +386,18 @@ pub async fn remove_avatar() -> Result<UserProfile, ServerFnError> {
     crate::db::clear_avatar_media_reference_in_transaction(&mut transaction, user_id)
         .await
         .map_err(|error| ServerFnError::new(error.to_string()))?;
-    let updated = sqlx::query_as::<_, crate::db::User>(
+    sqlx::query(
         "UPDATE users SET avatar_url = NULL, avatar_original_url = NULL, avatar_edit = NULL, updated_at = NOW() \
-         WHERE id = $1 \
-         RETURNING id, username, display_name, email, avatar_url, bio, created_at, updated_at",
+         WHERE id = $1",
     )
-        .bind(user_id)
-        .fetch_one(&mut *transaction)
+    .bind(user_id)
+    .execute(&mut *transaction)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Failed to remove avatar: {e}")))?;
+    let updated = crate::db::get_user_by_id(&mut *transaction, user_id)
         .await
-        .map_err(|e| ServerFnError::new(format!("Failed to remove avatar: {e}")))?;
+        .map_err(|e| ServerFnError::new(format!("Failed to remove avatar: {e}")))?
+        .ok_or_else(|| ServerFnError::new("User not found"))?;
     transaction
         .commit()
         .await
@@ -1753,6 +1762,74 @@ mod avatar_media_ownership_tests {
                 oversized.len(),
                 2 * 1024 * 1024
             )
+        );
+    }
+
+    #[tokio::test]
+    async fn managed_avatar_persistence_keeps_urls_in_the_asset_registry_only() {
+        let (_database, pool) = crate::test_utils::setup_test_db().await;
+        let user = crate::db::insert_user(
+            &pool,
+            "avatar_registry",
+            "Avatar Registry",
+            "avatar-registry@example.com",
+            None,
+        )
+        .await
+        .unwrap();
+        let mock_server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("PUT"))
+            .respond_with(wiremock::ResponseTemplate::new(200))
+            .expect(3)
+            .mount(&mock_server)
+            .await;
+        let storage = crate::storage::StorageClient::for_test_with_endpoint_and_public_url(
+            &mock_server.uri(),
+            "https://cdn.example.com/media",
+        );
+        let request = crate::api::upload::MediaUploadRequest::avatar(
+            b"original image bytes",
+            VALID_WEBP_BYTES,
+            VALID_WEBP_BYTES,
+        )
+        .unwrap();
+        let uploaded =
+            crate::api::upload::upload_media_transaction_for_test(&storage, user.id, request)
+                .await
+                .unwrap();
+        let asset_id = uploaded.asset_id();
+        let expected_full = uploaded
+            .url(crate::storage::MediaObjectKind::AvatarFull)
+            .unwrap()
+            .to_string();
+
+        let (projected, _guard) =
+            persist_uploaded_avatar(&pool, &storage, user.id, uploaded, serde_json::json!({}))
+                .await
+                .unwrap();
+        assert_eq!(
+            projected.avatar_url.as_deref(),
+            Some(expected_full.as_str())
+        );
+        assert_eq!(
+            sqlx::query_as::<_, (Option<String>, Option<String>)>(
+                "SELECT avatar_url, avatar_original_url FROM users WHERE id = $1",
+            )
+            .bind(user.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            (None, None)
+        );
+        assert_eq!(
+            sqlx::query_scalar::<_, uuid::Uuid>(
+                "SELECT asset_id FROM avatar_media_refs WHERE user_id = $1",
+            )
+            .bind(user.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            asset_id
         );
     }
 

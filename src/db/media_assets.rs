@@ -123,7 +123,10 @@ pub(crate) fn managed_avatar_url_projection(user_alias: &str) -> String {
         "COALESCE((SELECT asset.full_url \
          FROM avatar_media_refs media_ref \
          INNER JOIN media_assets asset ON asset.id = media_ref.asset_id \
-         WHERE media_ref.user_id = {user_alias}.id), {user_alias}.avatar_url)"
+         WHERE media_ref.user_id = {user_alias}.id), \
+         CASE WHEN {user_alias}.avatar_original_url IS NULL \
+                    AND {user_alias}.avatar_edit IS NULL \
+              THEN {user_alias}.avatar_url END)"
     )
 }
 
