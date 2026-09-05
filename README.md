@@ -12,8 +12,13 @@ Noms is a full-stack recipe management and sharing platform that combines person
 - **Collections** — Organize recipes in folders
 - **Community interactions** — Public profiles, shareable links, likes, and comments
 - **Built-in calculator** — Easily scale recipes to specific proportions
+- **Public informational pages** — Server-rendered Home, About, and task-oriented How-to pages
 
 Built with **Rust** and **Dioxus**, Noms compiles to a single codebase that runs on the web, desktop, and mobile.
+
+## Roadmap Status
+
+**NOMS-013 — Marketing Pages & 3D Feasibility Experiment:** In progress. The conventional Home, About, and How-to implementation is merged. Editorial approval, visual/asset documentation, the custom icon family, the complete production release gate, and the isolated 3D feasibility experiment remain outstanding. See the [NOMS-013 implementation plan](roadmap/implementation-plans/NOMS-013-marketing-pages-3d-experience.md) for checkpoint-level evidence and remaining work.
 
 ## Local Development Setup
 
