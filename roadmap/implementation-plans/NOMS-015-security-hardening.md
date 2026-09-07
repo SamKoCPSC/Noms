@@ -1,6 +1,6 @@
 # NOMS-015: Security Hardening to a Good-Enough Baseline — Agentic Implementation Plan
 
-**Status:** In progress — CP9 returned `NOT GOOD ENOUGH`; CP9A, CP9B, and the CP10 final re-review remain
+**Status:** In progress — CP9A and CP9B are implemented; the CP10 final re-review remains
 **Created:** 2026-07-29
 **Issue:** [NOMS-015-security-hardening.md](../issues/NOMS-015-security-hardening.md)
 **Source:** Authentication, authorization, and application security review completed 2026-07-28
@@ -104,7 +104,8 @@ that will actually ship.
 - **Implemented and independently reviewed:** CP0 baseline reliability, CP1 OAuth intent/session binding and same-origin redirects, CP2 integrated media ownership and orphan retention, CP3 trusted-proxy client identity and per-client OAuth limits, CP4 stable provider identities without legacy email reconciliation, CP4A completed-router and collection-media alignment, CP5 integrated resource-abuse bounds, CP5A typed media-upload unification, and CP6 dependency/secret/deployment verification.
 - **Completed reviews:** CP7 at revision `cb57bdd` returned `NOT GOOD ENOUGH` with five medium- and two low-severity findings; CP8 at revision `1ec3766` returned `NOT GOOD ENOUGH` with two medium- and seven low-severity findings; CP9 at revision `8cc22cd` returned `NOT GOOD ENOUGH` with three medium- and six low-severity findings.
 - **Implemented since CP7:** CP7A browser-bound OAuth and logout intent, CP7B reference-aware media deletion, CP7C hidden graph/lineage privacy, CP7D byte-bounded history and graph reads, CP8A account-media cleanup authority, CP8B bounded media cleanup, CP8C bounded version comparisons, CP8D fail-closed deep-fork media retention, CP8E bounded collection recipe projections, and CP8F explicit durable media references.
-- **Remaining before the final consumer-security verdict:** CP9A bounded public recipe discovery, CP9B bounded recipe search complexity/projections, and CP10 final integrated adversarial re-review. Six low-severity CP9 findings remain documented residual follow-up unless their aggregate risk is reassessed upward.
+- **Implemented after CP9:** CP9A bounded public recipe/collection discovery and CP9B bounded recipe-search complexity/projections.
+- **Remaining before the final consumer-security verdict:** CP10 final integrated adversarial re-review. The CP9 low-severity findings remain documented residual follow-up except the public collection-discovery admission gap addressed by CP9A; reassess their aggregate risk in CP10.
 
 ---
 
@@ -1963,6 +1964,30 @@ aggregate-output budgets.
 named row, byte, actor, permit, and aggregate-deadline limits, with no change to
 authorized discovery behavior.
 
+### Implementation evidence (2026-09-07)
+
+Implemented in `126e0f1`. Explore/profile return at most 12 card summaries with
+500-character descriptions and a 512 KiB complete response ceiling. Public
+recipe discovery has a dedicated four-permit pool, 600 requests/hour per actor,
+and one five-second deadline covering lookup, results, count, and validation.
+Public collection discovery shares the collection-read admission controls and
+has an 8 MiB aggregate ceiling for the existing 100-summary contract.
+
+Review caught and corrected truncated-description filtering: Explore now
+matches the complete description in SQL using a bound literal substring, caps
+the query at 256 characters, resets pagination, and discards stale responses.
+Regression tests cover words beyond character 500, literal `%`/`_`, private
+exclusion, maximum-size recipes, pagination, actor isolation, and admission
+before polling a fifth operation. Browser checks confirmed 12/24-card
+pagination, filtered and empty states, and public profile recipe cards.
+
+The fresh browser instance also exposed a **pre-existing** public collection
+profile failure: the unchanged `SELECT id FROM users WHERE username = $1`
+lookup can select an ambiguous ParadeDB plan because username has two indexed
+aliases. That blocked positive collection-profile browser verification; the
+existing automated collection tests and new admission checks passed. Record
+this as a separate correctness follow-up, not a CP9A-introduced regression.
+
 ---
 
 ## Checkpoint 9B: Bound recipe-search complexity and result projections
@@ -2002,6 +2027,39 @@ capacity through aggregate query expansion or full-recipe result pages.
 
 **Gate:** The two CP9 search reproductions fail closed before expensive shared
 work, and normal search semantics pass through the real pinned ParadeDB path.
+
+### Implementation evidence (2026-09-07)
+
+Implemented in `b6d44a9`. Recipe search returns at most 20 card summaries and
+512 KiB including facets. At most 64 normalized term occurrences are accepted
+across simple text and every advanced include/exclude criterion; duplicate
+occurrences count because each generates work. Grouped search and autocomplete
+also enforce their applicable term/output boundaries. Search endpoints share
+four permits in addition to existing per-actor limits and the aggregate
+five-second database deadline. Output is counted without allocating a second
+response-sized buffer.
+
+The 24-by-128-term reproduction is rejected before query construction. Tests
+cover exactly 64 versus 65 terms, Unicode normalization, 20 versus 21/100 cards,
+facets in the output ceiling, and fifth-operation rejection/permit release.
+All ten pinned ParadeDB integration tests passed, including the new 100-large-
+recipe fixture and existing ranking, ownership, filters, facets, pagination,
+grouped search, and autocomplete tests. Browser validation found and corrected
+silent invalid submissions: an inline alert now explains the limit while
+keeping the input editable.
+
+Final `just ci` passed: 691 server tests, 11 intentional ignores, WASM/server
+compilation and Clippy, schema guard tests, secret/deployment checks, and the
+dependency policy (17 existing allowed warnings). A schema dry run against the
+fresh isolated database reported no changes; no schema or compile-time SQL
+query changed, so SQLx cache regeneration was not needed. One intermediate CI
+run hit transient temporary-PostgreSQL connection failures; the full rerun
+passed. Independent code review and subsequent runtime validation returned
+`PASS`, with the pre-existing collection-profile limitation explicitly recorded.
+The portable validation report at `/tmp/noms-cp9ab-validation.html` was opened
+in the in-app browser and its seven embedded screenshots verified. Browser
+checks confirmed the visible 65-term rejection and recovery to a valid search.
+CP10's broader security and production-image verdict remains outstanding.
 
 ---
 
@@ -2128,7 +2186,7 @@ Track structured counts without sensitive values:
 - [x] Collection membership reads return at most 12 lightweight card projections under aggregate byte, anonymous rate, database timeout, and shared concurrency bounds.
 - [x] Managed media uses first-class asset identity and explicit durable references for every holder; cleanup relies on a locked indexed no-reference proof rather than URL scans or fork-lineage traversal.
 - [x] CP9 independently reviewed the CP8D/CP8E/CP8F candidate at revision `8cc22cd` and returned `NOT GOOD ENOUGH` with three medium- and six low-severity findings.
-- [ ] Public Explore/profile recipe reads return at most 12 lightweight cards and 512 KiB under actor, aggregate-deadline, and four-permit shared discovery budgets; public collection profile discovery uses the collection-read budget.
-- [ ] Recipe search returns at most 20 lightweight cards and 512 KiB, rejects aggregate advanced requests above 64 normalized terms before SQL construction, and shares a four-permit search admission budget.
+- [x] Public Explore/profile recipe reads return at most 12 lightweight cards and 512 KiB under actor, aggregate-deadline, and four-permit shared discovery budgets; public collection profile discovery uses the collection-read budget.
+- [x] Recipe search returns at most 20 lightweight cards and 512 KiB, rejects aggregate advanced requests above 64 normalized terms before SQL construction, and shares a four-permit search admission budget.
 - [ ] CP10 independent integrated security re-review of the CP9A/CP9B candidate returns `GOOD ENOUGH`.
 - [ ] Remaining specialized risks, exclusions, owners, and expiry dates are documented.
