@@ -1,6 +1,6 @@
 # NOMS-015: Security Hardening to a Good-Enough Baseline — Agentic Implementation Plan
 
-**Status:** In progress — CP9A and CP9B are implemented; the CP10 final re-review remains
+**Status:** In progress — CP9A and CP9B are implemented; CP9C fixes public collection identity lookup before the CP10 final re-review
 **Created:** 2026-07-29
 **Issue:** [NOMS-015-security-hardening.md](../issues/NOMS-015-security-hardening.md)
 **Source:** Authentication, authorization, and application security review completed 2026-07-28
@@ -2063,12 +2063,37 @@ CP10's broader security and production-image verdict remains outstanding.
 
 ---
 
+## Checkpoint 9C: Restore exact public collection profile lookup
+
+**Goal:** Resolve the ParadeDB username-alias ambiguity observed during CP9A/B
+browser validation without changing username identity or public visibility.
+
+**Depends on:** CP9A and CP9B. Must land before CP10.
+
+### Regression tests first
+
+- Reproduce public collection profile discovery against the pinned ParadeDB
+  image with both username search aliases installed.
+- Verify exact owner lookup, case-sensitive identity, unknown users, stable
+  pagination/counts, and exclusion of private/unlisted and other-owner collections.
+- Preserve CP9A's admission, timeout, projection, and aggregate response bounds.
+
+### Implementation and gate
+
+Use the established native PostgreSQL exact-text lookup pattern already used
+by other username identity reads; do not disable search indexes, broaden the
+match, or alter schema. Run CI and all pinned ParadeDB integration tests, then
+verify populated and empty public collection profiles in a fresh isolated
+browser deployment. Obtain independent code-review and validation passes.
+
+---
+
 ## Checkpoint 10: Final integrated adversarial re-review and release verdict
 
 **Goal:** Review the exact integrated CP9A/CP9B candidate and issue the final
 consumer-security verdict.
 
-**Depends on:** CP9A and CP9B.
+**Depends on:** CP9A, CP9B, and CP9C.
 
 ### Required gate
 
