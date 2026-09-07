@@ -1160,6 +1160,25 @@ function tastyHostname(sourceUrl) {
   }
 }
 
+function tastyIngredient(raw, representation, locator) {
+  const compoundAmount = raw.match(new RegExp(
+    `^((${TASTY_AMOUNT_PATTERN})\\s+(${UNIT_PATTERN})[.,]?\\s+plus\\s+(${TASTY_AMOUNT_PATTERN})\\s+(${UNIT_PATTERN}))\\s+(.+)$`,
+    "iu",
+  ));
+  if (!compoundAmount) return ingredient(raw, representation, locator, TASTY_AMOUNT_PATTERN);
+
+  // A compound measurement has two units, so preserve it as one amount instead
+  // of assigning either unit to the recipe editor's singular unit field.
+  return {
+    raw,
+    amount: compoundAmount[1],
+    unit: null,
+    name: compoundAmount[6],
+    confidence: "high",
+    provenance: provenance(representation, locator),
+  };
+}
+
 function tastyIngredientSections(containerHtml) {
   const sections = elementsWithClass(containerHtml, "ingredients__section");
   if (sections.length === 0) return null;
@@ -1172,11 +1191,10 @@ function tastyIngredientSections(containerHtml) {
     for (const [itemIndex, item] of itemElements.entries()) {
       const raw = htmlText(item.innerHtml);
       if (!raw) return null;
-      items.push(ingredient(
+      items.push(tastyIngredient(
         raw,
         "text/html",
         `.ingredients__section:nth-child(${sectionIndex + 1}) .ingredient:nth-child(${itemIndex + 1})`,
-        TASTY_AMOUNT_PATTERN,
       ));
     }
     extractedSections.push({

@@ -259,6 +259,35 @@ test("Tasty adapter maps its compact unlabeled duration to total time", () => {
   assert.equal(candidate.fields.totalTime.value, 250);
 });
 
+test("Tasty adapter preserves a compound measurement as one amount expression", () => {
+  const candidate = parseRecipeClipboard({
+    html: tastyHtml.replace(
+      "3 star pears, diced",
+      "3 tablespoons, plus 4 teaspoons curry powder, divided",
+    ),
+    plainText: null,
+    sourceUrl: "https://tasty.co/recipe/starlight-hand-pies",
+  });
+
+  const compoundIngredient = candidate.fields.ingredientSections[1].items[0];
+  assert.deepEqual(
+    {
+      raw: compoundIngredient.raw,
+      amount: compoundIngredient.amount,
+      unit: compoundIngredient.unit,
+      name: compoundIngredient.name,
+    },
+    {
+      raw: "3 tablespoons, plus 4 teaspoons curry powder, divided",
+      amount: "3 tablespoons, plus 4 teaspoons",
+      unit: null,
+      name: "curry powder, divided",
+    },
+  );
+  assert.deepEqual(validateJsonSchema(candidate, schema), []);
+  assert.deepEqual(validateImportCandidate(candidate), []);
+});
+
 test("Tasty provider detection rejects lookalike hostnames", () => {
   const candidate = parseRecipeClipboard({
     html: tastyHtml,
