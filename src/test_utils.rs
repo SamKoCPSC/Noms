@@ -624,6 +624,69 @@ mod search_integration_tests {
 
     #[tokio::test]
     #[ignore = "requires SEARCH_TEST_DATABASE_URL backed by the pinned ParadeDB image"]
+    async fn search_integration_public_collection_profiles_use_exact_identity() {
+        let pool = setup_search_test_db().await;
+        let owner_id = Uuid::new_v4();
+        let other_id = Uuid::new_v4();
+        let suffix = uid();
+        insert_search_user(&pool, owner_id, &suffix, "profileowner").await;
+        insert_search_user(&pool, other_id, &suffix, "profileother").await;
+        let username: String = sqlx::query_scalar("SELECT username FROM users WHERE id = $1")
+            .bind(owner_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        for (owner, visibility, name) in [
+            (owner_id, "public", "First public"),
+            (owner_id, "public", "Second public"),
+            (owner_id, "private", "Private"),
+            (owner_id, "unlisted", "Unlisted"),
+            (other_id, "public", "Other owner"),
+        ] {
+            sqlx::query("INSERT INTO collections (owner_id, name, visibility) VALUES ($1, $2, $3)")
+                .bind(owner)
+                .bind(name)
+                .bind(visibility)
+                .execute(&pool)
+                .await
+                .unwrap();
+        }
+        let first = crate::db::get_public_collections_by_username(&pool, &username, 0, 1)
+            .await
+            .unwrap();
+        let second = crate::db::get_public_collections_by_username(&pool, &username, 1, 1)
+            .await
+            .unwrap();
+        assert_eq!(first.total_count, 2);
+        assert_eq!(second.total_count, 2);
+        assert!(first.has_more);
+        assert!(!second.has_more);
+        assert_eq!(first.collections.len(), 1);
+        assert_eq!(second.collections.len(), 1);
+        assert_ne!(first.collections[0].id, second.collections[0].id);
+        for card in first.collections.iter().chain(&second.collections) {
+            assert!(matches!(
+                card.name.as_str(),
+                "First public" | "Second public"
+            ));
+        }
+        for missing in [username.to_uppercase(), format!("missing_{suffix}")] {
+            let page = crate::db::get_public_collections_by_username(&pool, &missing, 0, 12)
+                .await
+                .unwrap();
+            assert!(page.collections.is_empty());
+            assert_eq!(page.total_count, 0);
+            assert!(!page.has_more);
+        }
+        sqlx::query("DELETE FROM users WHERE id = ANY($1)")
+            .bind(vec![owner_id, other_id])
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires SEARCH_TEST_DATABASE_URL backed by the pinned ParadeDB image"]
     async fn search_integration_large_recipes_return_only_bounded_cards() {
         let pool = setup_search_test_db().await;
         let owner_id = Uuid::new_v4();

@@ -1175,11 +1175,14 @@ pub async fn get_public_collections_by_username(
         .await
         .map_err(DbError::Query)?;
 
-    let owner_id: Option<Uuid> = sqlx::query_scalar("SELECT id FROM users WHERE username = $1")
-        .bind(username)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(DbError::Query)?;
+    // Keep identity lookup on PostgreSQL's exact text comparison. Comparing the
+    // indexed username directly can invoke ParadeDB's ambiguous field alias.
+    let owner_id: Option<Uuid> =
+        sqlx::query_scalar("SELECT id FROM users WHERE (username || '') = $1")
+            .bind(username)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(DbError::Query)?;
     let Some(owner_id) = owner_id else {
         tx.commit().await.map_err(DbError::Query)?;
         return Ok(PublicCollectionListResponse {
