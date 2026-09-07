@@ -1,6 +1,6 @@
 # NOMS-015: Security Hardening to a Good-Enough Baseline — Agentic Implementation Plan
 
-**Status:** In progress — CP9A and CP9B are implemented; CP9C fixes public collection identity lookup before the CP10 final re-review
+**Status:** In progress — CP9A–CP9C are implemented; CP9C manual browser validation is blocked and CP10 final re-review remains
 **Created:** 2026-07-29
 **Issue:** [NOMS-015-security-hardening.md](../issues/NOMS-015-security-hardening.md)
 **Source:** Authentication, authorization, and application security review completed 2026-07-28
@@ -105,7 +105,7 @@ that will actually ship.
 - **Completed reviews:** CP7 at revision `cb57bdd` returned `NOT GOOD ENOUGH` with five medium- and two low-severity findings; CP8 at revision `1ec3766` returned `NOT GOOD ENOUGH` with two medium- and seven low-severity findings; CP9 at revision `8cc22cd` returned `NOT GOOD ENOUGH` with three medium- and six low-severity findings.
 - **Implemented since CP7:** CP7A browser-bound OAuth and logout intent, CP7B reference-aware media deletion, CP7C hidden graph/lineage privacy, CP7D byte-bounded history and graph reads, CP8A account-media cleanup authority, CP8B bounded media cleanup, CP8C bounded version comparisons, CP8D fail-closed deep-fork media retention, CP8E bounded collection recipe projections, and CP8F explicit durable media references.
 - **Implemented after CP9:** CP9A bounded public recipe/collection discovery and CP9B bounded recipe-search complexity/projections.
-- **Remaining before the final consumer-security verdict:** CP10 final integrated adversarial re-review. The CP9 low-severity findings remain documented residual follow-up except the public collection-discovery admission gap addressed by CP9A; reassess their aggregate risk in CP10.
+- **Remaining before the final consumer-security verdict:** CP9C manual browser validation and CP10 final integrated adversarial re-review. The CP9 low-severity findings remain documented residual follow-up except the public collection-discovery admission gap addressed by CP9A; reassess their aggregate risk in CP10.
 
 ---
 
@@ -1987,6 +1987,7 @@ lookup can select an ambiguous ParadeDB plan because username has two indexed
 aliases. That blocked positive collection-profile browser verification; the
 existing automated collection tests and new admission checks passed. Record
 this as a separate correctness follow-up, not a CP9A-introduced regression.
+CP9C below implements that follow-up.
 
 ---
 
@@ -2086,11 +2087,39 @@ match, or alter schema. Run CI and all pinned ParadeDB integration tests, then
 verify populated and empty public collection profiles in a fresh isolated
 browser deployment. Obtain independent code-review and validation passes.
 
+### Implementation and validation status (2026-09-07)
+
+Checkpoint definition committed in `cb410c5`; fix and regression test committed
+in `2f07bc2`. The new pinned-ParadeDB test first reproduced the exact `XX000`
+ambiguous-username error, then passed after changing the identity predicate to
+`(username || '') = $1`, matching the repository's existing exact-text pattern.
+No schema, index, API contract, visibility predicate, or admission limit changed.
+
+`just ci` passed (691 tests, 12 intentional ignores, compilation, Clippy,
+schema/security checks). The schema dry run reported no changes; dynamic SQL
+only changed, so SQLx cache regeneration was unnecessary. All 11 ParadeDB
+integration tests passed on a fresh isolated CP9C database. Earlier attempts
+against the old test database encountered leftover fixtures from deliberately
+failing tests; no assertions were weakened to accommodate them.
+
+Independent code review returned `PASS`. Fresh runtime HTTP checks confirmed
+12+1 unique public collections, total count 13, exact owner lookup, private and
+unlisted exclusion, and empty responses for unknown/case-mismatched usernames.
+The runtime remains available at `http://127.0.0.1:32773` for manual testing.
+
+**Gate remains open:** Phase 2 returned `FAIL` solely because manual browser and
+report-render verification could not run: the in-app browser was unavailable
+and fallback browser access was rejected by URL policy. No implementation
+finding remains, but do not claim full validation completion. The portable
+evidence report is `/tmp/noms-cp9c-validation.html`; it contains HTTP/test
+evidence without fabricated screenshots. Complete the populated profile,
+Load More, empty-state, and regression browser checks once access is restored.
+
 ---
 
 ## Checkpoint 10: Final integrated adversarial re-review and release verdict
 
-**Goal:** Review the exact integrated CP9A/CP9B candidate and issue the final
+**Goal:** Review the exact integrated CP9A/CP9B/CP9C candidate and issue the final
 consumer-security verdict.
 
 **Depends on:** CP9A, CP9B, and CP9C.
@@ -2213,5 +2242,6 @@ Track structured counts without sensitive values:
 - [x] CP9 independently reviewed the CP8D/CP8E/CP8F candidate at revision `8cc22cd` and returned `NOT GOOD ENOUGH` with three medium- and six low-severity findings.
 - [x] Public Explore/profile recipe reads return at most 12 lightweight cards and 512 KiB under actor, aggregate-deadline, and four-permit shared discovery budgets; public collection profile discovery uses the collection-read budget.
 - [x] Recipe search returns at most 20 lightweight cards and 512 KiB, rejects aggregate advanced requests above 64 normalized terms before SQL construction, and shares a four-permit search admission budget.
-- [ ] CP10 independent integrated security re-review of the CP9A/CP9B candidate returns `GOOD ENOUGH`.
+- [ ] CP9C restores exact public collection identity lookup and completes manual browser verification after the passing code review, CI, and pinned integration tests.
+- [ ] CP10 independent integrated security re-review of the CP9A/CP9B/CP9C candidate returns `GOOD ENOUGH`.
 - [ ] Remaining specialized risks, exclusions, owners, and expiry dates are documented.
