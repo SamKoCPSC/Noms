@@ -1,6 +1,6 @@
 # NOMS-015: Security Hardening to a Good-Enough Baseline — Agentic Implementation Plan
 
-**Status:** In progress — CP8D–CP8F are implemented; the CP9 final integrated adversarial re-review remains
+**Status:** In progress — CP9 returned `NOT GOOD ENOUGH`; CP9A, CP9B, and the CP10 final re-review remain
 **Created:** 2026-07-29
 **Issue:** [NOMS-015-security-hardening.md](../issues/NOMS-015-security-hardening.md)
 **Source:** Authentication, authorization, and application security review completed 2026-07-28
@@ -66,6 +66,30 @@ ownership inference with explicit durable asset references before CP9 repeats
 the integrated adversarial gate. No legacy backfill or compatibility rollout is
 required for that clean cutover.
 
+The integrated CP9 review on 2026-09-05 covered the immutable range
+`09795ae1ae766cd1227f5f563acb2289d4a6a2c6..8cc22cdcafe2e6055dbd0b57dcdddb36ecd9ffd0`
+and returned `NOT GOOD ENOUGH`. It verified that CP8F removed cleanup-time
+lineage inference and that exact recipe/version references retain a managed
+asset across a 34-generation fork. It also found three medium-severity release
+blockers:
+
+1. Anonymous Explore and public-profile recipe lists accept 100 complete
+   recipe snapshots; a valid maximum page serialized to 92,619,101 bytes.
+2. Advanced-search validation bounds each criterion but not the aggregate term
+   or generated-clause shape; an accepted 24-criterion, 128-terms-per-criterion
+   request consumed the complete 5,001 ms database deadline.
+3. Authenticated recipe search accepts 100 complete recipe snapshots without a
+   shared concurrency or aggregate output budget; the maximum underlying
+   operation materialized 92,624,132 bytes and ran for 56,940 ms before the real
+   API's five-second timeout would cancel it.
+
+CP9 also carried six low-severity residuals: two sibling-domain cookie binding
+or interpretation risks, two graph/lineage admission or deadline-composition
+gaps, one public collection-discovery admission gap, and the hidden-lineage
+deletion-state bit. CP9A and CP9B below address the medium blockers and the
+closely related collection-discovery gap. CP10 repeats the exact integrated
+gate and reassesses all remaining lows.
+
 Passing ordinary happy-path tests is not sufficient. Completion requires tests that reproduce each attack and prove that it is rejected without damaging the victim's session, linked accounts, database records, or storage objects.
 
 NOMS-010, NOMS-011, and NOMS-012 materially expand the integrated review
@@ -78,9 +102,9 @@ that will actually ship.
 ### Progress summary
 
 - **Implemented and independently reviewed:** CP0 baseline reliability, CP1 OAuth intent/session binding and same-origin redirects, CP2 integrated media ownership and orphan retention, CP3 trusted-proxy client identity and per-client OAuth limits, CP4 stable provider identities without legacy email reconciliation, CP4A completed-router and collection-media alignment, CP5 integrated resource-abuse bounds, CP5A typed media-upload unification, and CP6 dependency/secret/deployment verification.
-- **Completed reviews:** CP7 at revision `cb57bdd` returned `NOT GOOD ENOUGH` with five medium- and two low-severity findings; CP8 at revision `1ec3766` returned `NOT GOOD ENOUGH` with two medium- and seven low-severity findings.
+- **Completed reviews:** CP7 at revision `cb57bdd` returned `NOT GOOD ENOUGH` with five medium- and two low-severity findings; CP8 at revision `1ec3766` returned `NOT GOOD ENOUGH` with two medium- and seven low-severity findings; CP9 at revision `8cc22cd` returned `NOT GOOD ENOUGH` with three medium- and six low-severity findings.
 - **Implemented since CP7:** CP7A browser-bound OAuth and logout intent, CP7B reference-aware media deletion, CP7C hidden graph/lineage privacy, CP7D byte-bounded history and graph reads, CP8A account-media cleanup authority, CP8B bounded media cleanup, CP8C bounded version comparisons, CP8D fail-closed deep-fork media retention, CP8E bounded collection recipe projections, and CP8F explicit durable media references.
-- **Remaining before the final consumer-security verdict:** CP9 final integrated adversarial re-review. The seven low-severity CP8 findings remain documented residual follow-up unless their aggregate risk is reassessed upward.
+- **Remaining before the final consumer-security verdict:** CP9A bounded public recipe discovery, CP9B bounded recipe search complexity/projections, and CP10 final integrated adversarial re-review. Six low-severity CP9 findings remain documented residual follow-up unless their aggregate risk is reassessed upward.
 
 ---
 
@@ -180,10 +204,13 @@ security-review      CP8 integrated review of the first remediated candidate
 security-deep-forks  CP8D fail-closed media retention
 security-collections CP8E bounded collection recipe projections
 security-media-refs  CP8F explicit media assets and durable references
-security-re-review   CP9 final integrated adversarial release gate
+security-re-review   CP9 integrated gate (NOT GOOD ENOUGH)
+security-discovery   CP9A bounded public recipe and collection discovery
+security-search      CP9B bounded recipe-search complexity and projections
+security-final       CP10 final integrated adversarial release gate
 ```
 
-CP2 and CP3 may run in parallel after CP0. CP1 must land before CP4 because both alter OAuth state, user-info extraction, account linking, schema, and tests. CP4A runs after the feature integration and before CP5 so the final router and every media-bearing feature share the intended controls. CP5 starts after those interfaces stabilize. CP5A then unifies the now-bounded upload implementations without changing their product behavior. CP6 and CP7 run on the integrated branch only. After CP7, CP7A and CP7B may proceed independently. CP7C and CP7D are serialized because both change version-graph/history contracts and tests. CP8 reviewed the exact integrated candidate. CP8D and CP8E may proceed independently and are now integrated. CP8F follows them as a clean pre-production schema and media-model cutover; CP9 reviews the exact candidate after all three checkpoints land.
+CP2 and CP3 may run in parallel after CP0. CP1 must land before CP4 because both alter OAuth state, user-info extraction, account linking, schema, and tests. CP4A runs after the feature integration and before CP5 so the final router and every media-bearing feature share the intended controls. CP5 starts after those interfaces stabilize. CP5A then unifies the now-bounded upload implementations without changing their product behavior. CP6 and CP7 run on the integrated branch only. After CP7, CP7A and CP7B may proceed independently. CP7C and CP7D are serialized because both change version-graph/history contracts and tests. CP8 reviewed the exact integrated candidate. CP8D and CP8E may proceed independently and are now integrated. CP8F follows them as a clean pre-production schema and media-model cutover. CP9 reviewed that exact candidate and returned `NOT GOOD ENOUGH`. CP9A and CP9B may proceed independently; CP10 reviews the exact integrated result after both land.
 
 Each implementation branch uses the `codex/` prefix unless the operator selects another repository convention. Agents must not share a source checkout, database, MinIO bucket, browser cookie name, or Dioxus cache.
 
@@ -1835,7 +1862,7 @@ with no actionable findings.
 
 ---
 
-## Checkpoint 9: Final integrated adversarial re-review and release verdict
+## Checkpoint 9: Integrated adversarial re-review and release verdict
 
 **Goal:** Repeat the integrated release review against the exact candidate after
 CP8D, CP8E, and the clean CP8F media-reference cutover without weakening any CP7
@@ -1865,7 +1892,142 @@ or CP8 acceptance criterion.
 - Obtain an independent security review of the complete candidate and issue a
   new self-contained report with a `GOOD ENOUGH` or `NOT GOOD ENOUGH` verdict.
 
-**Gate:** NOMS-015 is complete only if the independent CP9 reviewer returns
+### Outcome
+
+Completed on 2026-09-05 against revision `8cc22cd` and immutable range
+`09795ae1ae766cd1227f5f563acb2289d4a6a2c6..8cc22cdcafe2e6055dbd0b57dcdddb36ecd9ffd0`.
+Codex Security scan `75c1259a-30ea-4439-bf3d-ec046bbbb915` covered all 69
+changed files and returned `NOT GOOD ENOUGH` with three medium- and six
+low-severity findings.
+
+The fresh detached environment passed OAuth login, draft autosave, publish,
+collection creation/membership, combined search, and a zero-error browser
+console. `just ci` passed 682 tests with 10 intentional ignores; all nine
+ParadeDB integration tests also passed against the isolated search database.
+Focused media/reference tests proved CP8F's explicit-reference model retains a
+deep surviving fork without cleanup-time ancestry or full-bucket scans.
+
+Maximum-shape instrumentation reproduced the three medium blockers: a
+92,619,101-byte anonymous public recipe page; an accepted advanced-search shape
+that consumed the full 5,001 ms database deadline; and a 92,624,132-byte full
+search projection whose underlying operation ran for 56,940 ms. The production
+Docker build passed formatting and Clippy but stalled for more than 24 minutes
+inside `runtime_grants_enforce_a_non_owning_data_plane_role`; the same test
+passes in ordinary CI. The build was canceled cleanly and must be repeated in
+CP10 rather than treated as verified.
+
+**Gate result:** `NOT GOOD ENOUGH`. NOMS-015 remains incomplete until CP9A,
+CP9B, and CP10 pass.
+
+---
+
+## Checkpoint 9A: Bound public recipe and collection discovery
+
+**Goal:** Ensure anonymous discovery endpoints return only small card
+projections and share application-level rate, concurrency, database-time, and
+aggregate-output budgets.
+
+**Depends on:** CP9.
+
+### Attack-regression tests first
+
+- Populate 100 valid near-maximum public recipes and prove Explore and public
+  profile reads never select, decode, or serialize full `Recipe` snapshots.
+- Assert public recipe discovery accepts at most the UI's 12-card page and
+  remains below a 512 KiB aggregate serialized response ceiling.
+- Hold all public-discovery permits and prove another anonymous recipe-list
+  request is rejected before database work; exhaust one actor's rolling budget
+  without affecting an independent actor.
+- Hold all collection-read permits and prove
+  `get_user_public_collections` cannot enter its summary/count query; retain the
+  existing 100-summary field/image bounds and add an aggregate byte assertion.
+- Preserve public/unlisted visibility behavior, stable pagination, cover and
+  preview rendering, and owner/profile attribution without reintroducing full
+  snapshot fallbacks.
+
+### Implementation
+
+- Replace public recipe list rows and response vectors with the existing
+  lightweight `RecipeCardSummary` contract, extending it only for fields the
+  actual Explore/profile cards require.
+- Add a dedicated 12-card public recipe page validator and 512 KiB aggregate
+  card-page validator; do not reuse the generic 100-row pagination ceiling for
+  this surface.
+- Introduce one public-discovery budget wrapper that composes the actor limiter,
+  a shared four-permit semaphore, and one aggregate database deadline. Apply it
+  to both public recipe list entrypoints.
+- Route `get_user_public_collections` through the existing collection-read
+  budget and enforce an aggregate serialized-size ceiling on its summary page.
+
+**Gate:** Maximum fixtures and concurrent anonymous requests remain within the
+named row, byte, actor, permit, and aggregate-deadline limits, with no change to
+authorized discovery behavior.
+
+---
+
+## Checkpoint 9B: Bound recipe-search complexity and result projections
+
+**Goal:** Prevent one authenticated tenant from monopolizing shared search
+capacity through aggregate query expansion or full-recipe result pages.
+
+**Depends on:** CP9. May proceed independently of CP9A.
+
+### Attack-regression tests first
+
+- Replay the accepted 24-criterion, 128-terms-per-criterion request and prove it
+  is rejected before SQL construction or database acquisition.
+- Test the exact aggregate-term boundary, one term over it, Unicode-normalized
+  duplicates, include/exclude combinations, and all recipe advanced fields.
+- Populate 100 near-maximum visible recipes and prove search never selects,
+  decodes, or serializes full `Recipe` snapshots; cap a recipe-search page at 20
+  cards and 512 KiB aggregate serialized bytes.
+- Hold all four shared search permits and prove a fifth request fails before
+  entering ParadeDB work; verify actors remain independently rate-limited.
+- Re-run all nine ignored ParadeDB integration tests against the pinned image
+  and preserve ranking, filters, counts, facets, pagination, authorization, and
+  autocomplete behavior.
+
+### Implementation
+
+- Add a centralized aggregate advanced-search complexity budget. Count at most
+  64 normalized terms across every include/exclude criterion and bound the
+  generated predicate/facet work before building SQL.
+- Replace the embedded full `Recipe` in recipe search results with a dedicated
+  lightweight search-card projection containing only fields rendered by the
+  search UI.
+- Reduce the recipe-search hard page ceiling from 100 to 20 and enforce a
+  512 KiB aggregate result-page ceiling after projection.
+- Add a four-permit shared search semaphore and compose it with the existing
+  per-actor limiter and one end-to-end database deadline.
+
+**Gate:** The two CP9 search reproductions fail closed before expensive shared
+work, and normal search semantics pass through the real pinned ParadeDB path.
+
+---
+
+## Checkpoint 10: Final integrated adversarial re-review and release verdict
+
+**Goal:** Review the exact integrated CP9A/CP9B candidate and issue the final
+consumer-security verdict.
+
+**Depends on:** CP9A and CP9B.
+
+### Required gate
+
+- Replay all CP7, CP8, and CP9 exploit fixtures, including maximum public recipe
+  discovery, full-result search, and aggregate advanced-search expansion.
+- Reassess the six CP9 low-severity residuals for reachability, aggregate risk,
+  and interaction with the new discovery/search wrappers.
+- Run `just ci`, all pinned ParadeDB integration tests, a fresh empty-data
+  browser smoke flow, and a clean production Docker image build/runtime check.
+- Verify the production image runs as the unprivileged `noms` user, fails closed
+  on missing production configuration, and contains no world-writable
+  application files.
+- Produce a new self-contained security report against one immutable commit
+  range and preserve the exact scan identifier, evidence, exclusions, and
+  deployment assumptions.
+
+**Gate:** NOMS-015 is complete only if the independent CP10 reviewer returns
 `GOOD ENOUGH` with no unresolved blocking or should-fix findings.
 
 ---
@@ -1891,7 +2053,10 @@ or CP8 acceptance criterion.
 15. Deploy CP8D's fail-closed ancestry result before running any recipe-media cleanup worker built from the new candidate.
 16. Deploy CP8E's collection card projection, endpoint page limit, and anonymous read budgets together so no public route retains the full-recipe fallback.
 17. Before CP9, reset disposable development databases and buckets and deploy CP8F's media-asset schema, explicit references, and code as one clean cutover. Do not carry the superseded URL/lineage retention path into the candidate.
-18. Complete CP9 against the exact remediated production candidate before general release.
+18. Complete CP9 against the exact remediated candidate, record its `NOT GOOD ENOUGH` verdict, and preserve scan `75c1259a-30ea-4439-bf3d-ec046bbbb915` as the next remediation baseline.
+19. Deploy CP9A's lightweight public recipe projections and public recipe/collection discovery budgets together so no anonymous fallback retains the 100-full-recipe path.
+20. Deploy CP9B's aggregate search-complexity validator, lightweight search projection, response ceiling, and shared admission control as one contract change.
+21. Complete CP10 against the exact integrated CP9A/CP9B production candidate before general release.
 
 ### Monitoring
 
@@ -1962,5 +2127,8 @@ Track structured counts without sensitive values:
 - [x] Incomplete or depth-truncated fork ancestry retains recipe media; only a complete negative authority proof permits cleanup.
 - [x] Collection membership reads return at most 12 lightweight card projections under aggregate byte, anonymous rate, database timeout, and shared concurrency bounds.
 - [x] Managed media uses first-class asset identity and explicit durable references for every holder; cleanup relies on a locked indexed no-reference proof rather than URL scans or fork-lineage traversal.
-- [ ] CP9 independent integrated security re-review of the CP8D/CP8E/CP8F candidate returns `GOOD ENOUGH`.
+- [x] CP9 independently reviewed the CP8D/CP8E/CP8F candidate at revision `8cc22cd` and returned `NOT GOOD ENOUGH` with three medium- and six low-severity findings.
+- [ ] Public Explore/profile recipe reads return at most 12 lightweight cards and 512 KiB under actor, aggregate-deadline, and four-permit shared discovery budgets; public collection profile discovery uses the collection-read budget.
+- [ ] Recipe search returns at most 20 lightweight cards and 512 KiB, rejects aggregate advanced requests above 64 normalized terms before SQL construction, and shares a four-permit search admission budget.
+- [ ] CP10 independent integrated security re-review of the CP9A/CP9B candidate returns `GOOD ENOUGH`.
 - [ ] Remaining specialized risks, exclusions, owners, and expiry dates are documented.
