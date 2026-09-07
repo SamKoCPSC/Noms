@@ -27,7 +27,7 @@ pub async fn search_all(
     let (users, user_total_count) =
         search_user_section(pool, &request.text, request.section_limit).await?;
 
-    Ok(SearchResponse {
+    let response = SearchResponse {
         scope: SearchScope::All,
         recipes,
         recipe_total_count,
@@ -35,5 +35,8 @@ pub async fn search_all(
         collection_total_count,
         users,
         user_total_count,
-    })
+    };
+    crate::search::validate_search_response(&response)
+        .map_err(|error| DbError::InvalidSearchRequest(error.to_string()))?;
+    Ok(response)
 }

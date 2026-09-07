@@ -3,18 +3,16 @@
 //! This module deliberately exposes no generic query language. Every SQL fragment is selected
 //! from a closed set below and every request value is passed through `QueryBuilder::push_bind`.
 
-use chrono::{DateTime, Utc};
-use sqlx::{PgPool, Postgres, QueryBuilder};
+use sqlx::{PgPool, Postgres, QueryBuilder, Row};
 use uuid::Uuid;
 
 use super::DbError;
 use crate::search::{normalize_search_tag, validate_recipe_search_request};
 use crate::types::{
-    AdvancedRecipeSearchCriteria, IntegerRange, IntegerRangeFacetBucket, Recipe, RecipeEquipment,
-    RecipeImage, RecipeIngredient, RecipeSearchFacets, RecipeSearchRequest, RecipeSearchResponse,
-    RecipeSearchSort, RecipeSearchVisibility, RecipeStep, RecipeVisibilityFacetValue, SearchResult,
-    SearchSuggestion, SearchSuggestionKind, TagFacetBucket, TextCriterion, TextMatchMode,
-    VisibilityFacetBucket,
+    AdvancedRecipeSearchCriteria, IntegerRange, IntegerRangeFacetBucket, RecipeSearchFacets,
+    RecipeSearchRequest, RecipeSearchResponse, RecipeSearchSort, RecipeSearchVisibility,
+    RecipeVisibilityFacetValue, SearchResult, SearchSuggestion, SearchSuggestionKind,
+    TagFacetBucket, TextCriterion, TextMatchMode, VisibilityFacetBucket,
 };
 
 const TITLE_WORDS: &str = "(r.title::pdb.simple('alias=recipe_title_words'))";
@@ -69,64 +67,6 @@ struct OmittedFilter {
     servings: bool,
 }
 
-#[derive(sqlx::FromRow)]
-struct SearchRecipeRow {
-    id: Uuid,
-    user_id: Uuid,
-    title: String,
-    description: Option<String>,
-    commentary: Option<String>,
-    prep_time_minutes: Option<i32>,
-    cook_time_minutes: Option<i32>,
-    servings: Option<i32>,
-    ingredients: serde_json::Value,
-    instructions: serde_json::Value,
-    equipment: serde_json::Value,
-    images: serde_json::Value,
-    visibility: String,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
-    author_username: String,
-    author_avatar_url: Option<String>,
-    media_asset_urls: serde_json::Value,
-    relevance: Option<f32>,
-}
-
-impl SearchRecipeRow {
-    fn into_result(self) -> Result<SearchResult, DbError> {
-        let mut instructions = serde_json::from_value::<Vec<RecipeStep>>(self.instructions)
-            .map_err(DbError::SerdeJson)?;
-        let mut images =
-            serde_json::from_value::<Vec<RecipeImage>>(self.images).map_err(DbError::SerdeJson)?;
-        super::resolve_recipe_media_urls(&mut images, &mut instructions, &self.media_asset_urls)
-            .map_err(DbError::InvalidRecipeSnapshot)?;
-        Ok(SearchResult {
-            recipe: Recipe {
-                id: self.id,
-                user_id: self.user_id,
-                title: self.title,
-                description: self.description,
-                commentary: self.commentary,
-                prep_time_minutes: self.prep_time_minutes,
-                cook_time_minutes: self.cook_time_minutes,
-                servings: self.servings,
-                ingredients: serde_json::from_value::<Vec<RecipeIngredient>>(self.ingredients)
-                    .map_err(DbError::SerdeJson)?,
-                instructions,
-                equipment: serde_json::from_value::<Vec<RecipeEquipment>>(self.equipment)
-                    .map_err(DbError::SerdeJson)?,
-                images,
-                visibility: self.visibility,
-                created_at: self.created_at,
-                updated_at: self.updated_at,
-                author_username: self.author_username,
-                author_avatar_url: self.author_avatar_url,
-            },
-            relevance: self.relevance,
-        })
-    }
-}
-
 /// Search the recipes visible to `resolved_user_id` using the fixed recipe contract.
 pub async fn search_recipes(
     pool: &PgPool,
@@ -148,7 +88,7 @@ pub async fn search_recipes(
     let servings =
         fetch_integer_facets(pool, resolved_user_id, request, IntegerFacet::Servings).await?;
 
-    Ok(RecipeSearchResponse {
+    let response = RecipeSearchResponse {
         results,
         total_count,
         facets: RecipeSearchFacets {
@@ -157,7 +97,10 @@ pub async fn search_recipes(
             total_time,
             servings,
         },
-    })
+    };
+    crate::search::validate_search_response(&response)
+        .map_err(|error| DbError::InvalidSearchRequest(error.to_string()))?;
+    Ok(response)
 }
 
 /// Fetch the lightweight recipe section used by grouped search.
@@ -229,13 +172,18 @@ async fn fetch_results(
     positive_text: bool,
 ) -> Result<Vec<SearchResult>, DbError> {
     let mut query = QueryBuilder::<Postgres>::new("SELECT ");
-    query.push(super::recipe_read_columns("r", "u")).push(", ");
+    query
+        .push(super::recipe_card_read_columns("r", "u"))
+        .push(", ");
     if positive_text {
         query.push("pdb.score(r.id)::real AS relevance ");
     } else {
         query.push("NULL::real AS relevance ");
     }
-    query.push("FROM recipes r JOIN users u ON u.id = r.user_id WHERE ");
+    query
+        .push("FROM recipes r ")
+        .push(super::recipe_card_read_joins("r", "u"))
+        .push(" WHERE ");
     push_criteria(&mut query, user_id, request, OmittedFilter::default());
     push_sort(&mut query, request.sort, positive_text);
     let offset = (request.page - 1) * request.page_size;
@@ -246,12 +194,17 @@ async fn fetch_results(
         .push_bind(i64::from(offset));
 
     query
-        .build_query_as::<SearchRecipeRow>()
+        .build()
         .fetch_all(pool)
         .await
         .map_err(DbError::Query)?
         .into_iter()
-        .map(SearchRecipeRow::into_result)
+        .map(|row| {
+            Ok(SearchResult {
+                recipe: super::recipe_card_from_row(&row).map_err(DbError::Query)?,
+                relevance: row.try_get("relevance").map_err(DbError::Query)?,
+            })
+        })
         .collect()
 }
 

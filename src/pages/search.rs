@@ -94,13 +94,6 @@ pub fn landing_search_route(text: &str) -> Option<Route> {
     })
 }
 
-fn navigate_search(request: ActiveSearchRequest, interaction: SearchInteraction) {
-    let Ok((target, action)) = search_transition(request, interaction) else {
-        return;
-    };
-    navigate_with_action(target, action);
-}
-
 fn navigate_route(target: Route, interaction: SearchInteraction) {
     navigate_with_action(target, history_action(interaction));
 }
@@ -224,6 +217,15 @@ pub fn Search(query: SearchRouteQuery) -> Element {
     let mut active_suggestion = use_signal(|| Option::<usize>::None);
     let mut suggestions_dismissed = use_signal(|| false);
     let mut search_focused = use_signal(|| false);
+    let mut navigation_error = use_signal(|| None::<crate::search_url::SearchUrlError>);
+    let mut navigate_search =
+        move |request, interaction| match search_transition(request, interaction) {
+            Ok((target, action)) => {
+                navigation_error.set(None);
+                navigate_with_action(target, action);
+            }
+            Err(error) => navigation_error.set(Some(error)),
+        };
 
     use_effect(use_reactive((&query,), move |(query,)| {
         if let Ok(parsed) = parse_search_query(query.as_str()) {
@@ -234,6 +236,7 @@ pub fn Search(query: SearchRouteQuery) -> Element {
             if let Ok((text, scope)) = restored_search_state(&query) {
                 input_text.set(text);
                 active_scope.set(scope);
+                navigation_error.set(None);
             }
             active_suggestion.set(None);
             suggestions_dismissed.set(false);
@@ -339,6 +342,12 @@ pub fn Search(query: SearchRouteQuery) -> Element {
                             },
                             onfocus: move |_| search_focused.set(true),
                             onblur: move |_| search_focused.set(false),
+                        }
+
+                        if let Some(message) = navigation_error() {
+                            div { class: "search-state-card search-state-error", role: "alert",
+                                p { "{message}" }
+                            }
                         }
 
                         ScopeTabs {
@@ -1328,6 +1337,21 @@ fn advanced_from_form(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn over_budget_search_submission_has_visible_feedback() {
+        let request = crate::search_url::ActiveSearchRequest::All(crate::types::AllSearchRequest {
+            text: vec!["x"; 65].join(" "),
+            ..Default::default()
+        });
+        assert!(super::search_transition(request, super::SearchInteraction::Submit).is_err());
+        let source = include_str!("search.rs");
+        let component = source.split("mod tests {").next().unwrap();
+        assert!(component.contains("navigation_error.set(Some(error))"));
+        assert!(component.contains("navigation_error.set(None)"));
+        assert!(component.contains("if let Some(message) = navigation_error()"));
+        assert!(component.contains("role: \"alert\""));
+    }
+
     use std::str::FromStr;
 
     use super::*;

@@ -622,6 +622,59 @@ mod search_integration_tests {
     };
     use chrono::{Duration, Utc};
 
+    #[tokio::test]
+    #[ignore = "requires SEARCH_TEST_DATABASE_URL backed by the pinned ParadeDB image"]
+    async fn search_integration_large_recipes_return_only_bounded_cards() {
+        let pool = setup_search_test_db().await;
+        let owner_id = Uuid::new_v4();
+        insert_search_user(&pool, owner_id, &uid(), "cardowner").await;
+        sqlx::query(
+            "INSERT INTO recipes (user_id, title, description, commentary, instructions, visibility)
+             SELECT $1, 'Large search ' || ordinal, repeat('é', 600), repeat('c', 10000),
+                    (SELECT jsonb_agg(jsonb_build_object('text', repeat('s', 5000),
+                        'sub_steps', '[]'::jsonb, 'photos', '[]'::jsonb))
+                     FROM generate_series(1, 180)), 'private'
+             FROM generate_series(1, 100) ordinal"
+        ).bind(owner_id).execute(&pool).await.unwrap();
+        let response = crate::db::search_recipes(
+            &pool,
+            owner_id,
+            &RecipeSearchRequest {
+                page_size: 20,
+                visibility: RecipeSearchVisibility::MineOnly,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(response.results.len(), 20);
+        assert_eq!(response.total_count, 100);
+        let value = serde_json::to_value(&response).unwrap();
+        for result in value["results"].as_array().unwrap() {
+            let card = &result["recipe"];
+            for excluded in [
+                "commentary",
+                "ingredients",
+                "instructions",
+                "equipment",
+                "images",
+                "user_id",
+            ] {
+                assert!(
+                    card.get(excluded).is_none(),
+                    "search must not serialize {excluded}"
+                );
+            }
+            assert!(card["description"].as_str().unwrap().chars().count() <= 500);
+        }
+        assert!(serde_json::to_vec(&response).unwrap().len() <= 512 * 1024);
+        sqlx::query("DELETE FROM users WHERE id = $1")
+            .bind(owner_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+
     async fn index_exists(pool: &PgPool, index_name: &str) -> bool {
         sqlx::query_scalar::<_, bool>("SELECT to_regclass($1) IS NOT NULL")
             .bind(format!("public.{index_name}"))
@@ -1228,17 +1281,23 @@ mod search_integration_tests {
         let mine_request = RecipeSearchRequest {
             visibility: RecipeSearchVisibility::MineOnly,
             tags_all: vec![anchor_tag.clone()],
-            page_size: 100,
+            page_size: 20,
             ..RecipeSearchRequest::default()
         };
         let mine = crate::db::search_recipes(&pool, owner_id, &mine_request)
             .await
             .expect("mine-only recipe search failed");
         assert_eq!(mine.total_count, 4);
+        let owned_recipe_ids: Vec<Uuid> =
+            sqlx::query_scalar("SELECT id FROM recipes WHERE user_id = $1")
+                .bind(owner_id)
+                .fetch_all(&pool)
+                .await
+                .unwrap();
         assert!(mine
             .results
             .iter()
-            .all(|result| result.recipe.user_id == owner_id));
+            .all(|result| owned_recipe_ids.contains(&result.recipe.id)));
         assert_eq!(
             mine.facets
                 .visibility
@@ -1259,7 +1318,7 @@ mod search_integration_tests {
                 lower_inclusive: Some(1),
                 upper_exclusive: Some(5),
             }),
-            page_size: 100,
+            page_size: 20,
             ..RecipeSearchRequest::default()
         };
         let ranged = crate::db::search_recipes(&pool, owner_id, &ranged_request)
@@ -1290,7 +1349,7 @@ mod search_integration_tests {
         let public_request = RecipeSearchRequest {
             visibility: RecipeSearchVisibility::PublicOnly,
             tags_all: vec![anchor_tag.clone()],
-            page_size: 100,
+            page_size: 20,
             ..RecipeSearchRequest::default()
         };
         let public = crate::db::search_recipes(&pool, owner_id, &public_request)
@@ -1409,7 +1468,7 @@ mod search_integration_tests {
         let search = |text: &str| RecipeSearchRequest {
             text: Some(text.to_string()),
             tags_all: vec![anchor_tag.clone()],
-            page_size: 100,
+            page_size: 20,
             ..RecipeSearchRequest::default()
         };
         let cross_field = crate::db::search_recipes(&pool, owner_id, &search("aurora nebula"))
@@ -1465,7 +1524,7 @@ mod search_integration_tests {
             &RecipeSearchRequest {
                 advanced: Some(advanced.clone()),
                 tags_all: vec![anchor_tag.clone()],
-                page_size: 100,
+                page_size: 20,
                 ..RecipeSearchRequest::default()
             },
         )
@@ -1482,7 +1541,7 @@ mod search_integration_tests {
             &RecipeSearchRequest {
                 advanced: Some(excluded),
                 tags_all: vec![anchor_tag.clone()],
-                page_size: 100,
+                page_size: 20,
                 ..RecipeSearchRequest::default()
             },
         )
@@ -1502,7 +1561,7 @@ mod search_integration_tests {
                     ..AdvancedRecipeSearchCriteria::default()
                 }),
                 tags_all: vec![anchor_tag.clone()],
-                page_size: 100,
+                page_size: 20,
                 ..RecipeSearchRequest::default()
             },
         )
@@ -2333,9 +2392,31 @@ mod search_integration_tests {
             .iter()
             .all(|result| result.relevance.is_none()));
         assert!(browse.users.iter().all(|result| result.relevance.is_none()));
+        let recipe_update_times: std::collections::HashMap<Uuid, chrono::DateTime<Utc>> =
+            sqlx::query_as::<_, (Uuid, chrono::DateTime<Utc>)>(
+                "SELECT id, updated_at FROM recipes WHERE id = ANY($1)",
+            )
+            .bind(
+                browse
+                    .recipes
+                    .iter()
+                    .map(|result| result.recipe.id)
+                    .collect::<Vec<_>>(),
+            )
+            .fetch_all(&pool)
+            .await
+            .unwrap()
+            .into_iter()
+            .collect();
         assert!(browse.recipes.windows(2).all(|recipes| {
-            let left = (recipes[0].recipe.updated_at, recipes[0].recipe.id);
-            let right = (recipes[1].recipe.updated_at, recipes[1].recipe.id);
+            let left = (
+                recipe_update_times[&recipes[0].recipe.id],
+                recipes[0].recipe.id,
+            );
+            let right = (
+                recipe_update_times[&recipes[1].recipe.id],
+                recipes[1].recipe.id,
+            );
             left.0 > right.0 || (left.0 == right.0 && left.1 <= right.1)
         }));
         assert!(browse.collections.windows(2).all(|collections| {

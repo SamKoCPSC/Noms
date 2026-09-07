@@ -1152,7 +1152,7 @@ impl Default for AllSearchRequest {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SearchResult {
-    pub recipe: Recipe,
+    pub recipe: RecipeCardSummary,
     pub relevance: Option<f32>,
 }
 

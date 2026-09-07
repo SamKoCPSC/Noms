@@ -17,6 +17,9 @@ pub const MAX_SEARCH_TAG_CHARS: usize = 100;
 pub const MAX_SEARCH_TAGS: usize = 25;
 pub const DEFAULT_SEARCH_PAGE_SIZE: u32 = 20;
 pub const MAX_SEARCH_PAGE_SIZE: u32 = 100;
+pub const MAX_RECIPE_SEARCH_PAGE_SIZE: u32 = 20;
+pub const MAX_SEARCH_TERMS: usize = 64;
+pub const MAX_SEARCH_RESPONSE_BYTES: usize = 512 * 1024;
 pub const MAX_SEARCH_OFFSET: u32 = 10_000;
 pub const DEFAULT_ALL_SECTION_LIMIT: u32 = 5;
 pub const MAX_ALL_SECTION_LIMIT: u32 = 10;
@@ -44,11 +47,19 @@ pub enum SearchValidationError {
     InvalidSectionLimit { max: u32 },
     AutocompleteTooShort { min: usize },
     AdvancedUrlTooLarge { encoded: bool, max: usize },
+    TooManyTerms { max: usize },
+    ResponseTooLarge,
 }
 
 impl std::fmt::Display for SearchValidationError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::TooManyTerms { max } => {
+                write!(formatter, "search supports at most {max} total terms")
+            }
+            Self::ResponseTooLarge => {
+                write!(formatter, "search response exceeds the output budget")
+            }
             Self::EmptyText { field } => write!(formatter, "{field} must not be blank"),
             Self::TextTooLong { field, max } => {
                 write!(formatter, "{field} must be {max} characters or fewer")
@@ -101,7 +112,27 @@ pub fn validate_recipe_search_request(
     request: &RecipeSearchRequest,
 ) -> Result<(), SearchValidationError> {
     validate_optional_simple_text(request.text.as_deref())?;
+    if request.page_size > MAX_RECIPE_SEARCH_PAGE_SIZE {
+        return Err(SearchValidationError::InvalidPageSize {
+            max: MAX_RECIPE_SEARCH_PAGE_SIZE,
+        });
+    }
     validate_pagination(request.page, request.page_size)?;
+
+    let mut term_count = request.text.as_deref().map_or(0, search_term_count);
+    if let Some(advanced) = &request.advanced {
+        for field in [
+            &advanced.title,
+            &advanced.description,
+            &advanced.ingredients,
+            &advanced.instructions,
+        ] {
+            for criterion in field.include.iter().chain(field.exclude.iter()) {
+                term_count += search_term_count(&criterion.text);
+            }
+        }
+    }
+    validate_term_count(term_count)?;
 
     if let Some(range) = request.total_time {
         validate_integer_range("total_time", range, 0)?;
@@ -144,6 +175,7 @@ pub fn validate_all_search_request(
     request: &AllSearchRequest,
 ) -> Result<(), SearchValidationError> {
     validate_optional_simple_text(Some(&request.text))?;
+    validate_term_count(search_term_count(&request.text))?;
     if request.section_limit == 0 || request.section_limit > MAX_ALL_SECTION_LIMIT {
         return Err(SearchValidationError::InvalidSectionLimit {
             max: MAX_ALL_SECTION_LIMIT,
@@ -153,6 +185,7 @@ pub fn validate_all_search_request(
 }
 
 pub fn validate_autocomplete_text(text: &str) -> Result<(), SearchValidationError> {
+    validate_term_count(search_term_count(text))?;
     let length = text.trim().chars().count();
     if length < MIN_AUTOCOMPLETE_CHARS {
         return Err(SearchValidationError::AutocompleteTooShort {
@@ -183,6 +216,42 @@ pub fn validate_advanced_url_size(
 
 pub fn normalize_search_tag(tag: &str) -> String {
     tag.trim().nfc().collect()
+}
+
+// Each occurrence generates work even when two terms normalize to the same text.
+// NFC preserves whitespace boundaries, matching the SQL builder's tokenization.
+fn search_term_count(text: &str) -> usize {
+    text.nfc().collect::<String>().split_whitespace().count()
+}
+
+fn validate_term_count(count: usize) -> Result<(), SearchValidationError> {
+    if count > MAX_SEARCH_TERMS {
+        return Err(SearchValidationError::TooManyTerms {
+            max: MAX_SEARCH_TERMS,
+        });
+    }
+    Ok(())
+}
+
+/// Count serialized output without allocating another response-sized buffer.
+pub fn validate_search_response<T: serde::Serialize + ?Sized>(
+    response: &T,
+) -> Result<(), SearchValidationError> {
+    struct OutputBudget(usize);
+    impl std::io::Write for OutputBudget {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            if bytes.len() > self.0 {
+                return Err(std::io::Error::other("search output budget exceeded"));
+            }
+            self.0 -= bytes.len();
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+    serde_json::to_writer(OutputBudget(MAX_SEARCH_RESPONSE_BYTES), response)
+        .map_err(|_| SearchValidationError::ResponseTooLarge)
 }
 
 fn validate_optional_simple_text(text: Option<&str>) -> Result<(), SearchValidationError> {
@@ -380,11 +449,105 @@ mod tests {
     }
 
     #[test]
+    fn search_serialization_budget_counts_the_entire_response() {
+        let mut response = crate::types::RecipeSearchResponse {
+            results: vec![],
+            total_count: 0,
+            facets: crate::types::RecipeSearchFacets {
+                tags: vec![],
+                visibility: vec![],
+                total_time: vec![],
+                servings: vec![],
+            },
+        };
+        assert!(validate_search_response(&response).is_ok());
+        response.facets.tags.push(crate::types::TagFacetBucket {
+            tag: "x".repeat(512 * 1024),
+            count: 1,
+        });
+        assert!(validate_search_response(&response).is_err());
+        let exactly_at_limit = "x".repeat(512 * 1024 - 2);
+        assert!(validate_search_response(&exactly_at_limit).is_ok());
+        assert!(validate_search_response(&(exactly_at_limit + "x")).is_err());
+    }
+
+    #[test]
+    fn recipe_search_rejects_aggregate_clause_amplification() {
+        let criterion = TextCriterion {
+            text: vec!["x"; 128].join(" "),
+            mode: TextMatchMode::AllTerms,
+        };
+        let field = AdvancedTextField {
+            include: Some(criterion.clone()),
+            exclude: vec![criterion; 5],
+        };
+        let request = RecipeSearchRequest {
+            advanced: Some(AdvancedRecipeSearchCriteria {
+                title: field.clone(),
+                description: field.clone(),
+                ingredients: field.clone(),
+                instructions: field,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert!(validate_recipe_search_request(&request).is_err());
+    }
+
+    #[test]
+    fn recipe_search_counts_terms_across_fields_and_exclusions() {
+        let criterion = |count| TextCriterion {
+            text: vec!["é"; count].join(" "),
+            mode: TextMatchMode::AnyTerm,
+        };
+        let mut request = RecipeSearchRequest {
+            advanced: Some(AdvancedRecipeSearchCriteria {
+                title: AdvancedTextField {
+                    include: Some(criterion(16)),
+                    exclude: vec![],
+                },
+                description: AdvancedTextField {
+                    include: Some(criterion(16)),
+                    exclude: vec![],
+                },
+                ingredients: AdvancedTextField {
+                    include: Some(criterion(16)),
+                    exclude: vec![],
+                },
+                instructions: AdvancedTextField {
+                    include: None,
+                    exclude: vec![criterion(16)],
+                },
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert!(validate_recipe_search_request(&request).is_ok());
+        request.advanced.as_mut().unwrap().instructions.exclude[0]
+            .text
+            .push_str(" e\u{301}");
+        assert!(validate_recipe_search_request(&request).is_err());
+    }
+
+    #[test]
+    fn recipe_search_page_ceiling_is_twenty() {
+        let mut request = RecipeSearchRequest {
+            page_size: 20,
+            ..Default::default()
+        };
+        assert!(validate_recipe_search_request(&request).is_ok());
+        request.page_size = 21;
+        assert!(validate_recipe_search_request(&request).is_err());
+        request.page_size = 100;
+        assert!(validate_recipe_search_request(&request).is_err());
+    }
+
+    #[test]
     fn accepts_boundary_sized_recipe_request() {
         let mut request = valid_recipe_request();
         request.text = Some("a".repeat(MAX_SEARCH_TEXT_CHARS));
-        request.page_size = MAX_SEARCH_PAGE_SIZE;
-        request.page = MAX_SEARCH_OFFSET / MAX_SEARCH_PAGE_SIZE + 1;
+        request.page_size = MAX_RECIPE_SEARCH_PAGE_SIZE;
+        request.page = MAX_SEARCH_OFFSET / MAX_RECIPE_SEARCH_PAGE_SIZE + 1;
 
         assert_eq!(validate_recipe_search_request(&request), Ok(()));
     }
@@ -484,8 +647,8 @@ mod tests {
             Err(SearchValidationError::InvalidPageSize { .. })
         ));
 
-        request.page_size = MAX_SEARCH_PAGE_SIZE;
-        request.page = MAX_SEARCH_OFFSET / MAX_SEARCH_PAGE_SIZE + 2;
+        request.page_size = MAX_RECIPE_SEARCH_PAGE_SIZE;
+        request.page = MAX_SEARCH_OFFSET / MAX_RECIPE_SEARCH_PAGE_SIZE + 2;
         assert!(matches!(
             validate_recipe_search_request(&request),
             Err(SearchValidationError::PageOffsetTooLarge { .. })

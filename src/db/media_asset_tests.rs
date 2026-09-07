@@ -712,7 +712,10 @@ async fn managed_read_surfaces_resolve_urls_from_the_asset_registry() {
         .iter()
         .find(|result| result.recipe.id == recipe.id)
         .unwrap();
-    assert_eq!(searched_recipe.recipe.images[0].url, recipe_asset.full_url);
+    assert_eq!(
+        searched_recipe.recipe.image.as_ref().unwrap().url,
+        recipe_asset.full_url
+    );
     assert_eq!(
         searched_recipe.recipe.author_avatar_url.as_deref(),
         Some(avatar_asset.full_url.as_str())

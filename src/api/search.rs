@@ -12,16 +12,28 @@ fn enforce_budget(
 }
 
 #[cfg(feature = "server")]
-async fn database_budget<T>(
+async fn database_budget<T: serde::Serialize>(
     operation: impl std::future::Future<Output = Result<T, crate::db::DbError>>,
 ) -> Result<T, ServerFnError> {
-    crate::security::run_with_database_budget(crate::security::DATABASE_EXECUTION_BUDGET, operation)
+    // Admission happens before the operation is polled. One permit and one deadline
+    // cover every result/count/facet query, including all grouped-search sections.
+    crate::security::run_with_search_work_budget(async {
+        let response = crate::security::run_with_database_budget(
+            crate::security::DATABASE_EXECUTION_BUDGET,
+            operation,
+        )
         .await
         .map_err(|_| ServerFnError::new("Database operation timed out"))?
         .map_err(|error| {
             tracing::error!(%error, "bounded search operation failed");
             ServerFnError::new("Search operation failed")
-        })
+        })?;
+        crate::search::validate_search_response(&response)
+            .map_err(|error| ServerFnError::new(error.to_string()))?;
+        Ok(response)
+    })
+    .await
+    .map_err(|_| ServerFnError::new("Search is busy; please try again"))?
 }
 
 /// Search the authenticated user's visible recipe corpus.
