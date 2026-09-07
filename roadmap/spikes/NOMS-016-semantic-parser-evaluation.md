@@ -8,17 +8,18 @@ The purposive sample includes candidates marked both ready and needs-review, tit
 
 | Result | Samples |
 | --- | ---: |
-| Usable without correction | 8 |
-| Usable after correction | 19 |
+| Usable without correction | 9 |
+| Usable after correction | 18 |
 | Unusable | 0 |
 
-Across the four core fields, 84 of 108 reviews were correct (77.8%), 21 were partial, and 3 were incorrect. Nine candidates had all four core fields correct. No reviewed candidate was stale: every human label was checked against the SHA-256 digest of the exact parser candidate that was reviewed.
+Across the four core fields, 85 of 108 reviews were correct (78.7%), 20 were partial, and 3 were incorrect. Ten candidates had all four core fields correct. No reviewed candidate was stale: every human label was checked against the SHA-256 digest of the exact parser candidate that was reviewed.
 
 | Benchmark | Core correct | Without correction | After correction | Unusable |
 | --- | ---: | ---: | ---: | ---: |
 | Generic baseline | 73 of 108 (67.6%) | 5 | 20 | 2 |
 | With RecipeTinEats adapter | 79 of 108 (73.1%) | 6 | 20 | 1 |
 | With Tasty adapter | 84 of 108 (77.8%) | 8 | 19 | 0 |
+| With Tasty compound quantities | 85 of 108 (78.7%) | 9 | 18 | 0 |
 
 ## Review rubric
 
@@ -37,7 +38,7 @@ Optional fields additionally permit `not_applicable` and `not_reviewed`. The fir
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Title | 26 | 1 | 0 | 0 | 0 |
 | Ingredients | 23 | 4 | 0 | 0 | 0 |
-| Ingredient parsing | 13 | 11 | 3 | 0 | 0 |
+| Ingredient parsing | 14 | 10 | 3 | 0 | 0 |
 | Instructions | 22 | 5 | 0 | 0 | 0 |
 | Description | 14 | 0 | 13 | 0 | 0 |
 | Times | 9 | 1 | 16 | 1 | 0 |
@@ -57,7 +58,7 @@ Optional fields additionally permit `not_applicable` and `not_reviewed`. The fir
 | RecipeTinEats | 3 | 10 of 12 (83.3%) | 1 | 2 | 0 |
 | Sally's Baking Addiction | 3 | 10 of 12 (83.3%) | 1 | 2 | 0 |
 | Serious Eats | 3 | 10 of 12 (83.3%) | 1 | 2 | 0 |
-| Tasty | 3 | 11 of 12 (91.7%) | 2 | 1 | 0 |
+| Tasty | 3 | 12 of 12 (100.0%) | 3 | 0 | 0 |
 
 Three samples per provider are too few for provider compatibility or ranking claims. The table is a diagnostic map for the next implementation slice only.
 
@@ -69,7 +70,7 @@ Three samples per provider are too few for provider compatibility or ranking cla
 - Instruction selection was generally usable. The Tasty adapter removed the provider's app promotion from each reviewed instruction list, while some other candidates still append photo credits, marketing text, or other page content.
 - The RecipeTinEats and Tasty adapters recovered yield for their six reviewed candidates; yield remains absent or unusable in the other 21.
 - Description and time extraction were inconsistent; selected descriptions sometimes contained author or page text rather than recipe descriptions.
-- No reviewed candidate remains unusable. One Tasty candidate still needs correction because a compound quantity cannot be represented exactly by the simple amount/unit/name split.
+- No reviewed candidate remains unusable. The Tasty-specific compound-quantity rule preserves two-unit expressions in the amount field while leaving the singular unit field empty; all three reviewed Tasty candidates are usable without correction.
 
 The next parser work should therefore prioritize yield recovery, ingredient normalization and section completeness, and tighter instruction/description boundaries. Provider adapters or Schema.org extraction should be considered where a stable provider-specific gap can be reproduced synthetically.
 
