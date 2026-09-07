@@ -313,6 +313,14 @@ pub struct RecipeListResponse {
     pub has_more: bool,
 }
 
+/// A public discovery page containing only fields rendered by recipe cards.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PublicRecipeListResponse {
+    pub recipes: Vec<RecipeCardSummary>,
+    pub total_count: i64,
+    pub has_more: bool,
+}
+
 /// Client-facing recipe editor state. The server converts this into its
 /// canonical persistence snapshot; IDs and presentation metadata stay out of it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

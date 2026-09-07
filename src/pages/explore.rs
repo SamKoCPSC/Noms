@@ -1,6 +1,6 @@
 //! Explore page — public recipe discovery.
 //!
-//! Displays a paginated grid of public recipes with client-side search
+//! Displays a paginated grid of public recipes with server-side substring search
 //! filtering and tag chips. No authentication required.
 
 use dioxus::prelude::*;
@@ -9,7 +9,7 @@ use crate::api::recipe::{get_public_recipe_tags, get_public_recipes};
 use crate::components::base::{
     Button, ButtonVariant, EmptyState, Input, LoadingSpinner, PageHeader, RecipeCard,
 };
-use crate::types::Recipe;
+use crate::types::RecipeCardSummary;
 
 const PAGE_SIZE: i64 = 12;
 
@@ -21,10 +21,11 @@ pub fn Explore() -> Element {
     let mut selected_tag = use_signal(String::new);
     let mut offset = use_signal(|| 0i64);
     let has_more = use_signal(|| true);
-    let loaded_recipes = use_signal(Vec::<Recipe>::new);
+    let loaded_recipes = use_signal(Vec::<RecipeCardSummary>::new);
     let tags = use_signal(Vec::<String>::new);
     let is_loading = use_signal(|| true);
     let error = use_signal(|| Option::<String>::None);
+    let mut request_generation = use_signal(|| 0u64);
 
     // ── Fetch tags on mount ──────────────────────────────────────────────
     use_hook(move || {
@@ -39,19 +40,40 @@ pub fn Explore() -> Element {
         });
     });
 
-    // ── Fetch recipes on mount and when offset changes ────────────────────
+    // Search the complete description on the server, not the bounded card excerpt.
     use_effect(move || {
         let off = offset();
+        let query = search_query();
+        let generation = *request_generation.peek() + 1;
+        request_generation.set(generation);
         let mut recipes = loaded_recipes;
         let mut more = has_more;
         let mut loading = is_loading;
         let mut err = error;
+        loading.set(true);
+        err.set(None);
 
         spawn(async move {
-            match get_public_recipes(off, PAGE_SIZE).await {
+            #[cfg(target_arch = "wasm32")]
+            if !query.is_empty() {
+                gloo_timers::future::TimeoutFuture::new(180).await;
+            }
+            if *request_generation.peek() != generation {
+                return;
+            }
+            let response = get_public_recipes(off, PAGE_SIZE, query).await;
+            // A previous search or page must never overwrite the newest result.
+            if *request_generation.peek() != generation {
+                return;
+            }
+            match response {
                 Ok(resp) => {
                     let new_count = resp.recipes.len();
-                    let mut current = recipes.read().clone();
+                    let mut current = if off == 0 {
+                        Vec::new()
+                    } else {
+                        recipes.peek().clone()
+                    };
                     current.extend(resp.recipes);
                     recipes.set(current);
                     more.set(resp.has_more);
@@ -67,27 +89,16 @@ pub fn Explore() -> Element {
         });
     });
 
-    // ── Client-side filtered recipes ─────────────────────────────────────
-    let filtered_recipes = {
-        let recipes = loaded_recipes.read().clone();
-        let query = search_query.read().to_lowercase();
-
-        recipes
-            .into_iter()
-            .filter(|r| {
-                query.is_empty()
-                    || r.title.to_lowercase().contains(&query)
-                    || r.description
-                        .as_deref()
-                        .unwrap_or("")
-                        .to_lowercase()
-                        .contains(&query)
-            })
-            .collect::<Vec<_>>()
-    };
+    let filtered_recipes = loaded_recipes.read().clone();
 
     // ── Handlers ─────────────────────────────────────────────────────────
     let on_search = move |value: String| {
+        // Invalidate an in-flight response immediately, before the effect reruns.
+        let generation = *request_generation.peek() + 1;
+        request_generation.set(generation);
+        let mut recipes = loaded_recipes;
+        recipes.set(Vec::new());
+        offset.set(0);
         search_query.set(value);
     };
 
@@ -101,7 +112,9 @@ pub fn Explore() -> Element {
     };
 
     let on_load_more = move |_| {
-        offset.set(offset() + PAGE_SIZE);
+        if !is_loading() {
+            offset.set(offset() + PAGE_SIZE);
+        }
     };
 
     // ── Derived state for rendering ──────────────────────────────────────
@@ -232,14 +245,15 @@ mod tests {
     fn pagination_fetch_reads_the_current_offset_reactively() {
         let source = include_str!("explore.rs");
         let pagination_fetch = source
-            .split("// ── Fetch recipes on mount and when offset changes")
+            .split("use_effect(move || {")
             .nth(1)
             .expect("pagination fetch section")
-            .split("// ── Client-side filtered recipes")
+            .split("let filtered_recipes =")
             .next()
             .expect("pagination fetch body");
 
         assert!(pagination_fetch.contains("let off = offset();"));
+        assert!(pagination_fetch.contains("let query = search_query();"));
         assert!(!pagination_fetch.contains("let current_offset = offset();"));
     }
 }

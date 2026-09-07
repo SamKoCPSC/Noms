@@ -619,9 +619,12 @@ pub async fn get_user_public_collections(
     limit: i64,
 ) -> Result<crate::types::PublicCollectionListResponse, ServerFnError> {
     let pool = crate::db::get_pool();
-    with_database_budget(CollectionDiscoveryService::new(&pool).list(username, offset, limit))
-        .await
-        .map_err(server_error)
+    with_collection_read_budget(
+        None,
+        CollectionDiscoveryService::new(&pool).list(username, offset, limit),
+    )
+    .await
+    .map_err(server_error)
 }
 
 /// Return an owned collection for authenticated management screens.
@@ -915,7 +918,7 @@ mod tests {
         assert!(api_source.contains("with_collection_read_budget"));
         assert_eq!(
             api_source.matches("with_collection_read_budget(").count(),
-            4
+            5
         );
         assert!(api_source.contains("RequestClass::CollectionRead"));
         assert!(api_source.contains("run_with_expensive_read_work_budget"));

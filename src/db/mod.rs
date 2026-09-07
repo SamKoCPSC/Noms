@@ -625,6 +625,74 @@ fn resolve_collection_image_from_row(
     })
 }
 
+/// Project only card fields; full ingredient, instruction and media arrays never leave PostgreSQL.
+pub(super) fn recipe_card_read_columns(recipe_alias: &str, user_alias: &str) -> String {
+    format!(
+        "{recipe_alias}.id, {recipe_alias}.title,
+                LEFT({recipe_alias}.description, {description_chars}) AS description,
+                {recipe_alias}.prep_time_minutes, {recipe_alias}.cook_time_minutes, {recipe_alias}.servings,
+                CASE WHEN {recipe_alias}.images -> 0 ? 'asset_id' THEN asset.id ELSE NULL END AS image_asset_id,
+                CASE
+                    WHEN {recipe_alias}.images -> 0 ? 'asset_id' THEN asset.full_url
+                    WHEN octet_length(({recipe_alias}.images -> 0)::TEXT) <= {image_bytes}
+                    THEN CASE
+                        WHEN jsonb_typeof({recipe_alias}.images -> 0) = 'string'
+                        THEN {recipe_alias}.images -> 0 #>> '{{}}'
+                        WHEN jsonb_typeof({recipe_alias}.images -> 0) = 'object'
+                        THEN {recipe_alias}.images -> 0 ->> 'url'
+                    END
+                END AS image_url,
+                CASE
+                    WHEN {recipe_alias}.images -> 0 ? 'asset_id' THEN asset.thumbnail_url
+                    WHEN jsonb_typeof({recipe_alias}.images -> 0) = 'object'
+                     AND octet_length(({recipe_alias}.images -> 0)::TEXT) <= {image_bytes}
+                    THEN {recipe_alias}.images -> 0 ->> 'thumb_url'
+                END AS image_thumb_url,
+                CASE
+                    WHEN jsonb_typeof({recipe_alias}.images -> 0) = 'object'
+                     AND octet_length(({recipe_alias}.images -> 0)::TEXT) <= {image_bytes}
+                    THEN (
+                        SELECT edit.value
+                        FROM jsonb_array_elements(
+                            CASE
+                                WHEN jsonb_typeof(({recipe_alias}.images -> 0) -> 'edits') = 'array'
+                                THEN ({recipe_alias}.images -> 0) -> 'edits'
+                                ELSE '[]'::JSONB
+                            END
+                        ) WITH ORDINALITY AS edit(value, ordinal)
+                        WHERE edit.value ->> 'name' = 'rectangle:16:9'
+                        ORDER BY edit.ordinal
+                        LIMIT 1
+                    )
+                END AS image_edit,
+                {recipe_alias}.visibility,
+                {user_alias}.username AS author_username,
+                CASE WHEN char_length(COALESCE(avatar_asset.full_url, {user_alias}.avatar_url)) <= {avatar_chars}
+                     THEN COALESCE(avatar_asset.full_url, {user_alias}.avatar_url) END AS author_avatar_url",
+        description_chars = MAX_COLLECTION_RECIPE_CARD_DESCRIPTION_CHARS,
+        image_bytes = MAX_IMAGE_METADATA_BYTES,
+        avatar_chars = MAX_COLLECTION_RECIPE_CARD_AUTHOR_AVATAR_URL_CHARS,
+    )
+}
+
+/// Resolve managed images only through the recipe's exact registered reference.
+pub(super) fn recipe_card_read_joins(recipe_alias: &str, user_alias: &str) -> String {
+    format!(
+        "LEFT JOIN users {user_alias} ON {user_alias}.id = {recipe_alias}.user_id
+        LEFT JOIN recipe_media_refs image_ref ON image_ref.recipe_id = {recipe_alias}.id
+          AND image_ref.asset_id::text = {recipe_alias}.images -> 0 ->> 'asset_id'
+        LEFT JOIN media_assets asset ON asset.id = image_ref.asset_id
+        LEFT JOIN avatar_media_refs avatar_ref ON avatar_ref.user_id = {user_alias}.id
+        LEFT JOIN media_assets avatar_asset ON avatar_asset.id = avatar_ref.asset_id"
+    )
+}
+
+pub(super) fn recipe_card_from_row(
+    row: &sqlx::postgres::PgRow,
+) -> Result<RecipeCardSummary, sqlx::Error> {
+    collection_recipe_card_from_row(row)
+}
+
 fn collection_recipe_card_from_row(
     row: &sqlx::postgres::PgRow,
 ) -> Result<RecipeCardSummary, sqlx::Error> {
@@ -1097,6 +1165,8 @@ pub async fn get_public_collections_by_username(
     offset: i64,
     limit: i64,
 ) -> Result<PublicCollectionListResponse, DbError> {
+    crate::security::validate_offset_pagination(offset, limit)
+        .map_err(|_| DbError::ResourceLimitExceeded("public collection pagination"))?;
     let offset = offset.max(0);
     let limit = limit.max(0);
     let mut tx = pool.begin().await.map_err(DbError::Query)?;
@@ -1175,11 +1245,14 @@ pub async fn get_public_collections_by_username(
     let has_more = offset.saturating_add(collections.len() as i64) < total_count;
 
     tx.commit().await.map_err(DbError::Query)?;
-    Ok(PublicCollectionListResponse {
+    let page = PublicCollectionListResponse {
         collections,
         total_count,
         has_more,
-    })
+    };
+    crate::security::validate_public_collection_page(&page)
+        .map_err(|_| DbError::ResourceLimitExceeded("public collection page bytes"))?;
+    Ok(page)
 }
 
 /// Return an owner-checked root-to-leaf breadcrumb path using a recursive CTE.
@@ -3473,22 +3546,62 @@ pub async fn get_public_recipes_paginated(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     limit: i64,
     offset: i64,
-) -> Result<Vec<Recipe>, DbError> {
+) -> Result<Vec<RecipeCardSummary>, DbError> {
+    get_public_recipes_filtered_paginated(executor, offset, limit, "").await
+}
+
+/// Match the complete title/description in SQL while returning only bounded cards.
+pub async fn get_public_recipes_filtered_paginated(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    offset: i64,
+    limit: i64,
+    query: &str,
+) -> Result<Vec<RecipeCardSummary>, DbError> {
+    crate::security::validate_public_recipe_pagination(offset, limit)
+        .map_err(|_| DbError::ResourceLimitExceeded("public recipe pagination"))?;
+    crate::security::validate_public_discovery_query(query)
+        .map_err(|_| DbError::ResourceLimitExceeded("public recipe query"))?;
     let rows = sqlx::query(&format!(
-        "SELECT {} FROM recipes r LEFT JOIN users u ON u.id = r.user_id \
-         WHERE r.visibility = 'public' ORDER BY r.created_at DESC LIMIT $1 OFFSET $2",
-        recipe_read_columns("r", "u")
+        "SELECT {} FROM recipes r {} \
+         WHERE r.visibility = 'public' AND \
+           ($3 = '' OR strpos(lower(r.title), lower($3)) > 0 \
+            OR strpos(lower(COALESCE(r.description, '')), lower($3)) > 0) \
+         ORDER BY r.created_at DESC, r.id LIMIT $1 OFFSET $2",
+        recipe_card_read_columns("r", "u"),
+        recipe_card_read_joins("r", "u")
     ))
     .bind(limit)
     .bind(offset)
+    .bind(query)
     .fetch_all(executor)
     .await
     .map_err(DbError::Query)?;
 
-    rows.into_iter()
-        .map(|r| Recipe::from_row(&r))
-        .collect::<Result<_, _>>()
-        .map_err(DbError::Query)
+    let cards = rows
+        .iter()
+        .map(recipe_card_from_row)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(DbError::Query)?;
+    validate_collection_recipe_card_output(&cards)?;
+    Ok(cards)
+}
+
+/// Use the same literal substring predicate for filtered pagination counts.
+pub async fn count_public_recipes_filtered(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    query: &str,
+) -> Result<i64, DbError> {
+    crate::security::validate_public_discovery_query(query)
+        .map_err(|_| DbError::ResourceLimitExceeded("public recipe query"))?;
+    sqlx::query_scalar(
+        "SELECT COUNT(*) FROM recipes r WHERE r.visibility = 'public'
+        AND ($1 = '' OR strpos(lower(r.title), lower($1)) > 0
+             OR strpos(lower(COALESCE(r.description, '')), lower($1)) > 0)",
+    )
+    .bind(query)
+    .fetch_one(executor)
+    .await
+    .map_err(DbError::Query)
 }
 
 /// Count total public recipes (for pagination has_more calculation).
@@ -3529,12 +3642,15 @@ pub async fn get_user_public_recipes(
     user_id: Uuid,
     limit: i64,
     offset: i64,
-) -> Result<Vec<Recipe>, DbError> {
+) -> Result<Vec<RecipeCardSummary>, DbError> {
+    crate::security::validate_public_recipe_pagination(offset, limit)
+        .map_err(|_| DbError::ResourceLimitExceeded("public recipe pagination"))?;
     let rows = sqlx::query(&format!(
-        "SELECT {} FROM recipes r LEFT JOIN users u ON u.id = r.user_id \
+        "SELECT {} FROM recipes r {} \
          WHERE r.user_id = $1 AND r.visibility = 'public' \
-         ORDER BY r.created_at DESC LIMIT $2 OFFSET $3",
-        recipe_read_columns("r", "u")
+         ORDER BY r.created_at DESC, r.id LIMIT $2 OFFSET $3",
+        recipe_card_read_columns("r", "u"),
+        recipe_card_read_joins("r", "u")
     ))
     .bind(user_id)
     .bind(limit)
@@ -3543,10 +3659,13 @@ pub async fn get_user_public_recipes(
     .await
     .map_err(DbError::Query)?;
 
-    rows.into_iter()
-        .map(|r| Recipe::from_row(&r))
-        .collect::<Result<_, _>>()
-        .map_err(DbError::Query)
+    let cards = rows
+        .iter()
+        .map(recipe_card_from_row)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(DbError::Query)?;
+    validate_collection_recipe_card_output(&cards)?;
+    Ok(cards)
 }
 
 /// Count a user's public recipes (for profile page pagination).
@@ -7294,6 +7413,74 @@ mod tests {
             .unwrap();
         assert_eq!(final_page.recipes.len(), 4);
         assert!(!final_page.has_more);
+    }
+
+    #[tokio::test]
+    async fn public_discovery_projects_bounded_cards_from_large_recipes() {
+        let (_database, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        sqlx::query(
+            "INSERT INTO recipes (user_id, title, description, commentary, instructions, visibility)
+             SELECT $1, 'Discovery ' || ordinal, repeat('é', 600), repeat('c', 10000),
+                    (SELECT jsonb_agg(jsonb_build_object('text', repeat('s', 5000),
+                        'sub_steps', '[]'::jsonb, 'photos', '[]'::jsonb))
+                     FROM generate_series(1, 180)), 'public'
+             FROM generate_series(1, 100) ordinal"
+        ).bind(owner.id).execute(&pool).await.unwrap();
+        for cards in [
+            get_public_recipes_paginated(&pool, 12, 0).await.unwrap(),
+            get_user_public_recipes(&pool, owner.id, 12, 0)
+                .await
+                .unwrap(),
+        ] {
+            assert_eq!(cards.len(), 12);
+            let value = serde_json::to_value(&cards).unwrap();
+            for card in value.as_array().unwrap() {
+                for excluded in [
+                    "commentary",
+                    "ingredients",
+                    "instructions",
+                    "equipment",
+                    "images",
+                    "user_id",
+                ] {
+                    assert!(
+                        card.get(excluded).is_none(),
+                        "discovery must not serialize {excluded}"
+                    );
+                }
+                assert!(card["description"].as_str().unwrap().chars().count() <= 500);
+            }
+            assert!(serde_json::to_vec(&cards).unwrap().len() <= 512 * 1024);
+        }
+        assert!(get_public_recipes_paginated(&pool, 13, 0).await.is_err());
+        assert!(get_user_public_recipes(&pool, owner.id, 100, 0)
+            .await
+            .is_err());
+    }
+
+    #[tokio::test]
+    async fn public_discovery_filters_full_descriptions_without_exposing_them() {
+        let (_database, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let public = test_utils::insert_test_recipe(&pool, owner.id, "public").await;
+        let private = test_utils::insert_test_recipe(&pool, owner.id, "private").await;
+        for id in [public.id, private.id] {
+            sqlx::query("UPDATE recipes SET description = repeat('x', 600) || ' late_keyword% ' WHERE id = $1")
+                .bind(id).execute(&pool).await.unwrap();
+        }
+        let cards = get_public_recipes_filtered_paginated(&pool, 0, 12, "LATE_KEYWORD%")
+            .await
+            .unwrap();
+        assert_eq!(cards.len(), 1);
+        assert_eq!(cards[0].id, public.id);
+        assert_eq!(cards[0].description.as_ref().unwrap().chars().count(), 500);
+        assert!(
+            get_public_recipes_filtered_paginated(&pool, 0, 12, "late_keyword_")
+                .await
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[tokio::test]

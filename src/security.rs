@@ -17,6 +17,12 @@ use uuid::Uuid;
 
 pub const MAX_PAGE_SIZE: i64 = 100;
 pub const MAX_PAGE_OFFSET: i64 = 10_000;
+pub const MAX_PUBLIC_RECIPE_CARDS_PER_PAGE: usize = 12;
+pub const MAX_PUBLIC_RECIPE_CARD_PAGE_BYTES: usize = 512 * 1024;
+pub const MAX_PUBLIC_DISCOVERY_QUERY_CHARS: usize = 256;
+// A 100-summary page can contain 500 images, each limited to 16 KiB.
+// The aggregate ceiling also includes the summary fields and response envelope.
+pub const MAX_PUBLIC_COLLECTION_PAGE_BYTES: usize = 8 * 1024 * 1024;
 
 pub const MAX_RECIPE_TITLE_CHARS: usize = 255;
 pub const MAX_RECIPE_DESCRIPTION_CHARS: usize = 10_000;
@@ -251,6 +257,77 @@ pub fn validate_collection_recipe_card_page(
     Ok(())
 }
 
+/// Reject excessive public discovery pages before any query starts.
+pub fn validate_public_recipe_pagination(
+    offset: i64,
+    limit: i64,
+) -> Result<(), SecurityLimitError> {
+    validate_offset_pagination(offset, limit)?;
+    if limit > MAX_PUBLIC_RECIPE_CARDS_PER_PAGE as i64 {
+        return Err(SecurityLimitError::InvalidPagination);
+    }
+    Ok(())
+}
+
+/// Bound literal search text before performing public discovery database work.
+pub fn validate_public_discovery_query(query: &str) -> Result<(), SecurityLimitError> {
+    if !chars_within(query, MAX_PUBLIC_DISCOVERY_QUERY_CHARS) {
+        return Err(SecurityLimitError::InvalidRecipePayload);
+    }
+    Ok(())
+}
+
+/// Include the response envelope in the public discovery byte ceiling.
+pub fn validate_public_recipe_card_page(
+    page: &crate::types::PublicRecipeListResponse,
+) -> Result<(), SecurityLimitError> {
+    validate_collection_recipe_card_page(&page.recipes)?;
+    if serde_json::to_vec(page)
+        .map_err(|_| SecurityLimitError::CollectionRecipeCardPageExceeded)?
+        .len()
+        > MAX_PUBLIC_RECIPE_CARD_PAGE_BYTES
+    {
+        return Err(SecurityLimitError::CollectionRecipeCardPageExceeded);
+    }
+    Ok(())
+}
+
+pub fn validate_public_collection_page(
+    page: &crate::types::PublicCollectionListResponse,
+) -> Result<(), SecurityLimitError> {
+    if page.collections.len() > MAX_PAGE_SIZE as usize {
+        return Err(SecurityLimitError::CollectionRecipeCardPageExceeded);
+    }
+    for collection in &page.collections {
+        if !chars_within(&collection.name, MAX_COLLECTION_NAME_CHARS)
+            || collection
+                .description
+                .as_deref()
+                .is_some_and(|description| {
+                    !chars_within(description, MAX_COLLECTION_DESCRIPTION_CHARS)
+                })
+            || collection.preview_images.len() > 4
+        {
+            return Err(SecurityLimitError::CollectionRecipeCardPageExceeded);
+        }
+        for image in collection
+            .image
+            .iter()
+            .chain(collection.preview_images.iter())
+        {
+            validate_image_metadata(image)?;
+        }
+    }
+    if serde_json::to_vec(page)
+        .map_err(|_| SecurityLimitError::CollectionRecipeCardPageExceeded)?
+        .len()
+        > MAX_PUBLIC_COLLECTION_PAGE_BYTES
+    {
+        return Err(SecurityLimitError::CollectionRecipeCardPageExceeded);
+    }
+    Ok(())
+}
+
 /// Validate shape and scalar bounds iteratively before serialization or media walking.
 pub fn validate_recipe_editor(
     editor: &RecipeEditorState,
@@ -462,6 +539,7 @@ pub fn validate_media_quota(
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RequestClass {
+    PublicDiscovery,
     Search,
     Autocomplete,
     Graph,
@@ -495,6 +573,7 @@ impl UserRequestLimiter {
         Self {
             budgets: [
                 RequestClass::Search,
+                RequestClass::PublicDiscovery,
                 RequestClass::Autocomplete,
                 RequestClass::Graph,
                 RequestClass::CollectionRead,
@@ -536,6 +615,13 @@ impl UserRequestLimiter {
                 ),
                 (
                     RequestClass::CollectionRead,
+                    RequestBudget {
+                        maximum: 600,
+                        window: hour,
+                    },
+                ),
+                (
+                    RequestClass::PublicDiscovery,
                     RequestBudget {
                         maximum: 600,
                         window: hour,
@@ -698,6 +784,31 @@ impl ConcurrentReadBudget {
 static EXPENSIVE_READ_BUDGET: OnceLock<ConcurrentReadBudget> = OnceLock::new();
 
 #[cfg(feature = "server")]
+static PUBLIC_DISCOVERY_WORK_BUDGET: OnceLock<ConcurrentReadBudget> = OnceLock::new();
+#[cfg(feature = "server")]
+static SEARCH_WORK_BUDGET: OnceLock<ConcurrentReadBudget> = OnceLock::new();
+
+#[cfg(feature = "server")]
+pub async fn run_with_public_discovery_work_budget<T>(
+    operation: impl Future<Output = T>,
+) -> Result<T, SecurityLimitError> {
+    PUBLIC_DISCOVERY_WORK_BUDGET
+        .get_or_init(|| ConcurrentReadBudget::new(MAX_CONCURRENT_EXPENSIVE_READS))
+        .run(operation)
+        .await
+}
+
+#[cfg(feature = "server")]
+pub async fn run_with_search_work_budget<T>(
+    operation: impl Future<Output = T>,
+) -> Result<T, SecurityLimitError> {
+    SEARCH_WORK_BUDGET
+        .get_or_init(|| ConcurrentReadBudget::new(MAX_CONCURRENT_EXPENSIVE_READS))
+        .run(operation)
+        .await
+}
+
+#[cfg(feature = "server")]
 pub async fn run_with_expensive_read_work_budget<T>(
     operation: impl Future<Output = T>,
 ) -> Result<T, SecurityLimitError> {
@@ -725,6 +836,70 @@ mod tests {
         VersionGraphFrontier, VersionGraphFrontierKind, VersionGraphNodeId,
     };
     use uuid::Uuid;
+
+    #[tokio::test]
+    async fn discovery_and_search_admission_reject_fifth_future_and_release_on_drop() {
+        for search in [false, true] {
+            let mut held = Vec::new();
+            for _ in 0..4 {
+                let future = async move {
+                    if search {
+                        run_with_search_work_budget(pending::<()>()).await
+                    } else {
+                        run_with_public_discovery_work_budget(pending::<()>()).await
+                    }
+                };
+                let mut future = Box::pin(future);
+                let mut context = std::task::Context::from_waker(std::task::Waker::noop());
+                assert!(future.as_mut().poll(&mut context).is_pending());
+                held.push(future);
+            }
+            let polled = std::sync::atomic::AtomicBool::new(false);
+            let work = async {
+                polled.store(true, std::sync::atomic::Ordering::SeqCst);
+            };
+            let result = if search {
+                run_with_search_work_budget(work).await
+            } else {
+                run_with_public_discovery_work_budget(work).await
+            };
+            assert_eq!(
+                result,
+                Err(SecurityLimitError::ConcurrentReadBudgetExceeded)
+            );
+            assert!(!polled.load(std::sync::atomic::Ordering::SeqCst));
+            drop(held);
+            let result = if search {
+                run_with_search_work_budget(async {}).await
+            } else {
+                run_with_public_discovery_work_budget(async {}).await
+            };
+            assert_eq!(result, Ok(()));
+        }
+    }
+
+    #[test]
+    fn public_discovery_actor_and_page_limits_are_enforced() {
+        assert!(validate_public_recipe_pagination(0, 12).is_ok());
+        for (offset, limit) in [(0, 13), (0, 100), (-1, 12), (0, 0), (10001, 12)] {
+            assert!(validate_public_recipe_pagination(offset, limit).is_err());
+        }
+        let limiter = UserRequestLimiter::consumer_defaults();
+        let now = Instant::now();
+        let first = RequestActor::Ip("192.0.2.1".parse().unwrap());
+        let second = RequestActor::Ip("192.0.2.2".parse().unwrap());
+        for _ in 0..600 {
+            assert!(limiter
+                .check_actor_at(first, RequestClass::PublicDiscovery, now)
+                .is_ok());
+        }
+        assert!(limiter
+            .check_actor_at(first, RequestClass::PublicDiscovery, now)
+            .is_err());
+        assert!(limiter
+            .check_actor_at(second, RequestClass::PublicDiscovery, now)
+            .is_ok());
+    }
 
     fn valid_editor() -> RecipeEditorState {
         RecipeEditorState {

@@ -1563,30 +1563,59 @@ pub async fn get_public_recipe(recipe_id: String) -> Result<crate::types::Recipe
         .ok_or_else(|| ServerFnError::new("Recipe not found"))
 }
 
+/// Hold one discovery permit across all queries and the complete response check.
+#[cfg(feature = "server")]
+async fn with_public_discovery_budget<T>(
+    operation: impl std::future::Future<Output = Result<T, ServerFnError>>,
+) -> Result<T, ServerFnError> {
+    crate::security::enforce_request_budget(None, crate::security::RequestClass::PublicDiscovery)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    crate::security::run_with_public_discovery_work_budget(
+        crate::security::run_with_database_budget(
+            crate::security::DATABASE_EXECUTION_BUDGET,
+            operation,
+        ),
+    )
+    .await
+    .map_err(|error| ServerFnError::new(error.to_string()))?
+    .map_err(|error| ServerFnError::new(error.to_string()))?
+}
+
 /// Get paginated public recipes for the explore page. No authentication required.
 #[server]
 pub async fn get_public_recipes(
     offset: i64,
     limit: i64,
-) -> Result<crate::types::RecipeListResponse, ServerFnError> {
-    crate::security::validate_offset_pagination(offset, limit)
+    query: String,
+) -> Result<crate::types::PublicRecipeListResponse, ServerFnError> {
+    crate::security::validate_public_recipe_pagination(offset, limit)
         .map_err(|error| ServerFnError::new(error.to_string()))?;
-    let pool = crate::db::get_pool();
+    crate::security::validate_public_discovery_query(&query)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    with_public_discovery_budget(async {
+        let pool = crate::db::get_pool();
 
-    let recipes = bounded_database_operation(crate::db::get_public_recipes_paginated(
-        &pool, limit, offset,
-    ))
-    .await?;
+        let recipes =
+            crate::db::get_public_recipes_filtered_paginated(&pool, offset, limit, &query)
+                .await
+                .map_err(|error| ServerFnError::new(error.to_string()))?;
 
-    let total_count = bounded_database_operation(crate::db::count_public_recipes(&pool)).await?;
+        let total_count = crate::db::count_public_recipes_filtered(&pool, &query)
+            .await
+            .map_err(|error| ServerFnError::new(error.to_string()))?;
 
-    let has_more = (offset + recipes.len() as i64) < total_count;
+        let has_more = (offset + recipes.len() as i64) < total_count;
 
-    Ok(crate::types::RecipeListResponse {
-        recipes,
-        total_count,
-        has_more,
+        let page = crate::types::PublicRecipeListResponse {
+            recipes,
+            total_count,
+            has_more,
+        };
+        crate::security::validate_public_recipe_card_page(&page)
+            .map_err(|error| ServerFnError::new(error.to_string()))?;
+        Ok(page)
     })
+    .await
 }
 
 /// Get user profile info by username. No authentication required.
@@ -1622,30 +1651,37 @@ pub async fn get_user_public_recipes(
     username: String,
     offset: i64,
     limit: i64,
-) -> Result<crate::types::RecipeListResponse, ServerFnError> {
-    crate::security::validate_offset_pagination(offset, limit)
+) -> Result<crate::types::PublicRecipeListResponse, ServerFnError> {
+    crate::security::validate_public_recipe_pagination(offset, limit)
         .map_err(|error| ServerFnError::new(error.to_string()))?;
-    let pool = crate::db::get_pool();
+    with_public_discovery_budget(async {
+        let pool = crate::db::get_pool();
 
-    let user = bounded_database_operation(crate::db::get_user_by_username(&pool, &username))
-        .await?
-        .ok_or_else(|| ServerFnError::new("User not found"))?;
+        let user = crate::db::get_user_by_username(&pool, &username)
+            .await
+            .map_err(|error| ServerFnError::new(error.to_string()))?
+            .ok_or_else(|| ServerFnError::new("User not found"))?;
 
-    let recipes = bounded_database_operation(crate::db::get_user_public_recipes(
-        &pool, user.id, limit, offset,
-    ))
-    .await?;
+        let recipes = crate::db::get_user_public_recipes(&pool, user.id, limit, offset)
+            .await
+            .map_err(|error| ServerFnError::new(error.to_string()))?;
 
-    let total_count =
-        bounded_database_operation(crate::db::count_user_public_recipes(&pool, user.id)).await?;
+        let total_count = crate::db::count_user_public_recipes(&pool, user.id)
+            .await
+            .map_err(|error| ServerFnError::new(error.to_string()))?;
 
-    let has_more = (offset + recipes.len() as i64) < total_count;
+        let has_more = (offset + recipes.len() as i64) < total_count;
 
-    Ok(crate::types::RecipeListResponse {
-        recipes,
-        total_count,
-        has_more,
+        let page = crate::types::PublicRecipeListResponse {
+            recipes,
+            total_count,
+            has_more,
+        };
+        crate::security::validate_public_recipe_card_page(&page)
+            .map_err(|error| ServerFnError::new(error.to_string()))?;
+        Ok(page)
     })
+    .await
 }
 
 /// Fetch distinct tags from all public recipes.

@@ -12,7 +12,7 @@ use crate::components::base::{
     Avatar, AvatarSize, Button, ButtonVariant, CollectionCover, CollectionVisibilityBadge,
     EmptyState, LoadingSpinner, RecipeCard,
 };
-use crate::types::{CollectionSummary, Recipe, UserProfile as UserProfileType};
+use crate::types::{CollectionSummary, RecipeCardSummary, UserProfile as UserProfileType};
 use crate::Route;
 
 const PAGE_SIZE: i64 = 12;
@@ -25,7 +25,7 @@ pub fn UserProfile(username: String) -> Element {
     let profile_error = use_signal(|| Option::<String>::None);
     let mut offset = use_signal(|| 0i64);
     let has_more = use_signal(|| true);
-    let loaded_recipes = use_signal(Vec::<Recipe>::new);
+    let loaded_recipes = use_signal(Vec::<RecipeCardSummary>::new);
     let is_loading = use_signal(|| true);
     let recipes_error = use_signal(|| Option::<String>::None);
     let mut collection_offset = use_signal(|| 0i64);
