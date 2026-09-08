@@ -1482,7 +1482,7 @@ function wprmIngredient(itemHtml, locator) {
   };
 }
 
-function wprmIngredientSections(containerHtml) {
+function wprmIngredientSections(containerHtml, parseIngredient = wprmIngredient) {
   const groups = elementsWithClass(containerHtml, "wprm-recipe-ingredient-group");
   const sectionSources = groups.length > 0
     ? groups.map((group) => group.innerHtml)
@@ -1491,7 +1491,7 @@ function wprmIngredientSections(containerHtml) {
   for (const [sectionIndex, sectionHtml] of sectionSources.entries()) {
     const name = firstClassText(sectionHtml, "wprm-recipe-ingredient-group-name")?.text ?? null;
     const itemElements = elementsWithClass(sectionHtml, "wprm-recipe-ingredient");
-    const items = itemElements.map((item, itemIndex) => wprmIngredient(
+    const items = itemElements.map((item, itemIndex) => parseIngredient(
       item.innerHtml,
       `.wprm-recipe-ingredient-group:nth-child(${sectionIndex + 1}) .wprm-recipe-ingredient:nth-child(${itemIndex + 1})`,
     ));
@@ -1672,10 +1672,118 @@ function parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit) {
   return result;
 }
 
+function budgetBytesIngredient(itemHtml, locator) {
+  const systems = elementsWithClass(itemHtml, "wprm-recipe-ingredient-unit-system")
+    .filter(({ innerHtml }) => htmlText(innerHtml));
+  // Parenthesized conversions are one source expression, not competing choices.
+  // Preserve both measurements without inferring numerical equivalence.
+  const hasConversion = systems.length === 2 && /^\([^()]+\)$/u.test(htmlText(systems[1].innerHtml));
+  if (systems.length > 1 && !hasConversion) return null;
+  for (const field of ["amount", "unit", "name", "notes"]) {
+    const fields = elementsWithClass(itemHtml, `wprm-recipe-ingredient-${field}`)
+      .filter(({ innerHtml }) => htmlText(innerHtml));
+    if (hasConversion && ["amount", "unit"].includes(field)) {
+      if (fields.length !== 2 || systems.some(({ innerHtml }) =>
+        elementsWithClass(innerHtml, `wprm-recipe-ingredient-${field}`).length !== 1)) return null;
+    } else if (fields.length > 1) return null;
+  }
+  const parsed = wprmIngredient(itemHtml, locator);
+  if (!parsed) return null;
+  // Strip only a terminal decimal dollar cost in a note. Keep footnote markers,
+  // preparation text and the untouched source row available in the preview.
+  const notes = firstClassText(itemHtml, "wprm-recipe-ingredient-notes")?.text ?? "";
+  const withoutCost = notes.replace(/\$\d+\.\d{2}(?=[*¹²³⁴⁵⁶⁷⁸⁹⁰†‡]*\s*\)+$)/u, "");
+  const cleanedNotes = withoutCost === notes ? notes : normalizeWhitespace(withoutCost
+    .replace(/\(\s*\)/gu, "").replace(/,?\s+\)/gu, ")"));
+  const ingredientName = firstClassText(itemHtml, "wprm-recipe-ingredient-name").text;
+  parsed.name = normalizeWhitespace(`${ingredientName}${cleanedNotes && !/^[,.;:!?]/u.test(cleanedNotes) ? " " : ""}${cleanedNotes}`);
+  if (hasConversion) {
+    parsed.amount = normalizeWhitespace(systems.map(({ innerHtml }) => htmlText(innerHtml)).join(" "))
+      .replace(/\(\s+/gu, "(").replace(/\s+\)/gu, ")");
+    parsed.unit = null;
+    parsed.raw = normalizeWhitespace([parsed.amount, ingredientName, notes].filter(Boolean).join(" "));
+  }
+  return parsed;
+}
+
+function parseBudgetBytesWprm(inertHtml, sourceUrl, htmlAudit) {
+  try {
+    const url = new URL(sourceUrl);
+    if (!["http:", "https:"].includes(url.protocol) ||
+      !(url.hostname === "budgetbytes.com" || url.hostname.endsWith(".budgetbytes.com"))) return null;
+  } catch { return null; }
+  const cards = elementsWithClass(inertHtml, "wprm-recipe-container");
+  if (cards.length !== 1) return null;
+  const cardHtml = cards[0].innerHtml;
+  const titles = elementsWithClass(cardHtml, "wprm-recipe-name");
+  const ingredients = elementsWithClass(cardHtml, "wprm-recipe-ingredients-container");
+  const instructions = elementsWithClass(cardHtml, "wprm-recipe-instructions-container");
+  if (titles.length !== 1 || !htmlText(titles[0].innerHtml) || ingredients.length !== 1 || instructions.length !== 1) return null;
+  // Each row must have one complete text block; selecting the first can lose steps.
+  if (elementsWithClass(instructions[0].innerHtml, "wprm-recipe-instruction")
+    .some(({ innerHtml }) => elementsWithClass(innerHtml, "wprm-recipe-instruction-text")
+      .filter((text) => htmlText(text.innerHtml)).length !== 1)) return null;
+  const ingredientSections = wprmIngredientSections(ingredients[0].innerHtml, budgetBytesIngredient);
+  const instructionExtraction = wprmInstructionSections(instructions[0].innerHtml);
+  if (!ingredientSections || !instructionExtraction) return null;
+  // Every row must belong to the retained groups; never drop stray card content.
+  if (ingredientSections.flatMap(({ items }) => items).length !== elementsWithClass(cardHtml, "wprm-recipe-ingredient").length ||
+    instructionExtraction.sections.flatMap(({ steps }) => steps).length !== elementsWithClass(cardHtml, "wprm-recipe-instruction").length) return null;
+  const result = candidate({ id: "budgetbytes-wprm", version: "1", tier: "source_adapter", sourceAdapter: "budgetbytes" }, sourceUrl);
+  result.source.provider = "BudgetBytes";
+  result.source.provenance.provider = provenance("source_url", "hostname budgetbytes.com");
+  const author = firstClassText(cardHtml, "wprm-recipe-author");
+  if (author) {
+    result.source.author = author.text;
+    result.source.provenance.author = provenance("text/html", ".wprm-recipe-author");
+  }
+  result.fields.title = scalar(htmlText(titles[0].innerHtml), "text/html", ".wprm-recipe-name");
+  const summary = firstClassText(cardHtml, "wprm-recipe-summary");
+  if (summary) result.fields.description = scalar(summary.text.replace(/\s+([,.;:!?])/gu, "$1"), "text/html", ".wprm-recipe-summary");
+  result.fields.prepTime = wprmDuration(cardHtml, "wprm-recipe-prep_time");
+  result.fields.cookTime = wprmDuration(cardHtml, "wprm-recipe-cook_time");
+  result.fields.totalTime = wprmDuration(cardHtml, "wprm-recipe-total_time");
+  const servings = elementsWithClass(cardHtml, "wprm-recipe-servings");
+  if (servings.length === 1) {
+    const rawServings = servings[0].tag === "input" ? servings[0].attributes.get("value") ?? "" : htmlText(servings[0].innerHtml);
+    const display = normalizeWhitespace(`${rawServings} ${firstClassText(cardHtml, "wprm-recipe-servings-unit")?.text ?? ""}`);
+    if (rawServings.trim()) {
+      const numeric = Number(rawServings);
+      result.fields.yield = { raw: display, value: { display, servings: Number.isSafeInteger(numeric) && numeric > 0 ? numeric : null }, confidence: "high", provenance: provenance("text/html", ".wprm-recipe-servings") };
+    }
+  }
+  result.fields.ingredientSections = ingredientSections;
+  result.fields.instructionSections = instructionExtraction.sections;
+  result.fields.notes = elementsWithClass(cardHtml, "wprm-recipe-notes")
+    .map(({ innerHtml }) => htmlText(innerHtml)).filter(Boolean)
+    .map((text) => scalar(text, "text/html", ".wprm-recipe-notes"));
+  for (const container of elementsWithClass(cardHtml, "wprm-recipe-image")) {
+    for (const match of container.innerHtml.matchAll(/<img\b([^>]*)>/giu)) {
+      const attributes = htmlAttributes(match[1]);
+      const imageUrl = normalizeWhitespace(attributes.get("src") ?? "");
+      try { if (!["http:", "https:"].includes(new URL(imageUrl).protocol)) continue; } catch { continue; }
+      if (result.fields.images.some(({ sourceUrl: existing }) => existing === imageUrl)) continue;
+      result.fields.images.push({ sourceUrl: imageUrl, alt: normalizeWhitespace(attributes.get("alt") ?? "") || null, credit: null, provenance: provenance("text/html", ".wprm-recipe-image img") });
+    }
+  }
+  if (ingredientSections.some(({ name }) => name) || instructionExtraction.sections.some(({ name }) => name)) {
+    result.warnings.push({ code: "SECTION_NAMES_NOT_PERSISTED", severity: "warning", path: "fields.ingredientSections", message: "Section names remain in preview but the current editor stores flat recipe content." });
+  }
+  if (instructionExtraction.ignoredEmptySections) {
+    result.warnings.push({ code: "EMPTY_PROVIDER_SECTION_IGNORED", severity: "warning", path: "fields.instructionSections", message: "Empty provider instruction sections were ignored while complete sections were retained." });
+  }
+  if (result.fields.notes.length) result.warnings.push({ code: "NOTES_REQUIRE_MAPPING", severity: "info", path: "fields.notes", message: "Notes remain separate until the user chooses where to place them." });
+  result.warnings.push(...result.fields.images.map((_, index) => ({ code: "IMAGE_REFERENCE_REQUIRES_CONFIRMATION", severity: "info", path: `fields.images[${index}]`, message: "The image reference is not fetched and requires confirmation before mapping." })));
+  if (result.warnings.length) result.status = "needs_review";
+  appendHtmlAuditEvidence(result, htmlAudit, discardedRemoteResourceCount(htmlAudit, result.fields.images));
+  return result;
+}
+
 function parseHtml(html, sourceUrl, htmlAudit) {
   // Remove active/raw-text regions before scanning. No markup is inserted into a DOM.
   const inertHtml = discardRawContent(html);
-  const sourceAdapterCandidate = parseTastyVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
+  const sourceAdapterCandidate = parseBudgetBytesWprm(inertHtml, sourceUrl, htmlAudit) ??
+    parseTastyVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit);
   if (sourceAdapterCandidate) return sourceAdapterCandidate;
   const headings = htmlHeadings(inertHtml);

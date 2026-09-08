@@ -15,6 +15,132 @@ const schemaPath = fileURLToPath(
 );
 const schema = JSON.parse(await fs.readFile(schemaPath, "utf8"));
 
+// Invented recipe text with the card structures observed in BudgetBytes captures.
+const budgetBytesHtml = `<main><h1>Editorial heading</h1>
+<input class="wprm-recipe-servings" value="99">
+<div class="wprm-recipe-container"><div class="bb-recipe-card">
+<h2 class="wprm-recipe-name">Comet Bean Bake</h2>
+<span class="wprm-recipe-author">Aster Vale</span>
+<div class="wprm-recipe-summary">A bright <strong>bean supper</strong>.</div>
+<input type="number" class="wprm-recipe-servings" value="4"><span class="wprm-recipe-servings-unit">servings (one bowl)</span>
+<span class="wprm-recipe-prep_time">15<span> minutes</span></span>
+<span class="wprm-recipe-cook_time">30<span> minutes</span></span>
+<span class="wprm-recipe-total_time">45<span> minutes</span></span>
+<div class="wprm-recipe-image"><img src="https://images.example.invalid/comet.webp" alt="Bean bake"></div>
+<div class="wprm-recipe-ingredients-container"><h3>Ingredients</h3>
+<div class="wprm-recipe-ingredient-group"><h4 class="wprm-recipe-ingredient-group-name">Base</h4><ul>
+<li class="wprm-recipe-ingredient"><span class="wprm-checkbox-container"><input type="checkbox"><span>▢</span></span><span class="wprm-recipe-ingredient-unit-system wprm-recipe-ingredient-unit-system-1"><span class="wprm-recipe-ingredient-amount">1½</span> <span class="wprm-recipe-ingredient-unit">cups</span></span><span class="wprm-recipe-ingredient-unit-system wprm-recipe-ingredient-unit-system-2"></span> <span class="wprm-recipe-ingredient-name">comet beans</span> <span class="wprm-recipe-ingredient-notes">(drained, $0.75*)</span></li>
+<li class="wprm-recipe-ingredient"><span class="wprm-recipe-ingredient-amount">1</span> <span class="wprm-recipe-ingredient-unit">14 oz. can</span> <span class="wprm-recipe-ingredient-name">moon tomatoes</span> <span class="wprm-recipe-ingredient-notes">($1.20)</span></li>
+</ul></div>
+<div class="wprm-recipe-ingredient-group"><h4 class="wprm-recipe-ingredient-group-name">Finish</h4><ul>
+<li class="wprm-recipe-ingredient"><span class="wprm-recipe-ingredient-name">salt</span> <span class="wprm-recipe-ingredient-notes">(to taste)</span></li>
+</ul></div></div>
+<div class="wprm-recipe-instructions-container"><h3>Instructions</h3><div class="wprm-recipe-instruction-group"><ul>
+<li class="wprm-recipe-instruction"><div class="wprm-recipe-instruction-text">Mix the beans and tomatoes.</div></li>
+<div class="adthrive-ad">Subscribe now.</div>
+<li class="wprm-recipe-instruction"><div class="wprm-recipe-instruction-text">Bake, then season.</div></li>
+</ul></div></div>
+<div class="wprm-recipe-notes"><span>*Drain well.</span><div class="wprm-spacer"></div><span>Keep leftovers chilled.</span></div>
+</div></div><figure><img src="https://images.example.invalid/unrelated.webp"></figure></main>`;
+
+function parseBudgetBytes(html = budgetBytesHtml, sourceUrl = "https://www.budgetbytes.com/comet-bean-bake/") {
+  return parseRecipeClipboard({ html, plainText: null, sourceUrl });
+}
+
+test("BudgetBytes adapter preserves groups, structured quantities and preparation notes without costs", () => {
+  const c = parseBudgetBytes();
+  assert.equal(c.parser.sourceAdapter, "budgetbytes");
+  assert.equal(c.source.provider, "BudgetBytes");
+  assert.equal(c.fields.title.value, "Comet Bean Bake");
+  assert.equal(c.fields.description.value, "A bright bean supper.");
+  assert.equal(c.source.author, "Aster Vale");
+  assert.deepEqual(c.fields.ingredientSections.map(s => s.name), ["Base", "Finish"]);
+  assert.deepEqual(c.fields.ingredientSections.flatMap(s => s.items).map(({amount,unit,name}) => ({amount,unit,name})), [
+    {amount: "1½", unit: "cups", name: "comet beans (drained, *)"},
+    {amount: "1", unit: "14 oz. can", name: "moon tomatoes"},
+    {amount: null, unit: null, name: "salt (to taste)"},
+  ]);
+  assert.match(c.fields.ingredientSections[0].items[0].raw, /\$0\.75/u);
+  assert.deepEqual(c.fields.instructionSections.flatMap(s => s.steps).map(s => s.raw), ["Mix the beans and tomatoes.", "Bake, then season."]);
+  assert.deepEqual(c.fields.yield.value, {display: "4 servings (one bowl)", servings: 4});
+  assert.deepEqual([c.fields.prepTime.value, c.fields.cookTime.value, c.fields.totalTime.value], [15,30,45]);
+  assert.equal(c.fields.images.length, 1);
+  assert.equal(c.fields.images[0].sourceUrl, "https://images.example.invalid/comet.webp");
+  assert.match(c.fields.notes.map(n => n.value).join(" "), /\*Drain well\..*Keep leftovers chilled\./u);
+  assert.equal(c.status, "needs_review");
+  assert.deepEqual(validateJsonSchema(c, schema), []);
+  assert.deepEqual(validateImportCandidate(c), []);
+});
+
+test("BudgetBytes costs are removed narrowly while raw notes and footnote markers survive", () => {
+  for (const [notes, expected] of [
+    ["(diced, (120g) $0.42**)", "comet beans (diced, (120g) **)"],
+    ["($0.42)", "comet beans"],
+    ["(about $2 per bag)", "comet beans (about $2 per bag)"],
+    ["(divided, 3 oz.)", "comet beans (divided, 3 oz.)"],
+    ["(sliced, $0.42²)", "comet beans (sliced, ²)"],
+    ["(divided ($0.12))", "comet beans (divided)"],
+    ["(freshly cracked, $0.08)", "comet beans (freshly cracked)"],
+  ]) {
+    const c = parseBudgetBytes(budgetBytesHtml.replace("(drained, $0.75*)", notes));
+    assert.equal(c.fields.ingredientSections[0].items[0].name, expected);
+    assert.ok(c.fields.ingredientSections[0].items[0].raw.endsWith(notes));
+  }
+});
+
+test("BudgetBytes servings use visible card values and preserve noninteger yields", () => {
+  const c = parseBudgetBytes(budgetBytesHtml.replace('value="4"', 'value="2.5"'));
+  assert.deepEqual(c.fields.yield.value, {display: "2.5 servings (one bowl)", servings: null});
+});
+
+test("BudgetBytes adapter ignores fake cards inside active content", () => {
+  const c = parseBudgetBytes(`<script>${budgetBytesHtml}</script>${budgetBytesHtml}`);
+  assert.equal(c.parser.sourceAdapter, "budgetbytes");
+  assert.equal(c.fields.ingredientSections.length, 2);
+  assert.ok(c.discardedContent.some(x => x.kind === "script"));
+});
+
+test("BudgetBytes adapter requires an exact provider hostname and HTTP(S)", () => {
+  for (const url of ["https://budgetbytes.com.evil.invalid/a", "https://notbudgetbytes.com/a", "file://budgetbytes.com/a", null]) {
+    let c;
+    try { c = parseBudgetBytes(budgetBytesHtml, url); } catch (error) { assert.match(error.message, /recognizable recipe/u); continue; }
+    assert.notEqual(c.parser.sourceAdapter, "budgetbytes");
+  }
+  assert.equal(parseBudgetBytes(budgetBytesHtml, "https://budgetbytes.com/a").parser.sourceAdapter, "budgetbytes");
+});
+
+test("BudgetBytes adapter falls back for missing, incomplete or competing cards", () => {
+  for (const html of [
+    budgetBytesHtml.replaceAll("wprm-recipe-container", "unknown-container"),
+    budgetBytesHtml.replaceAll("wprm-recipe-instruction-text", "unknown-step"),
+    budgetBytesHtml.replaceAll("wprm-recipe-ingredient-name", "unknown-name"),
+    budgetBytesHtml.replace("Mix the beans and tomatoes.</div>", 'Mix the beans and tomatoes.</div><div class="wprm-recipe-instruction-text">Cool completely before serving.</div>'),
+    budgetBytesHtml + budgetBytesHtml,
+    budgetBytesHtml.replace('<h2 class="wprm-recipe-name">', '<h2 class="wprm-recipe-name">Other</h2><h2 class="wprm-recipe-name">'),
+  ]) {
+    let c;
+    try { c = parseBudgetBytes(html); } catch (error) { assert.match(error.message, /recognizable recipe/u); continue; }
+    assert.notEqual(c.parser.sourceAdapter, "budgetbytes");
+  }
+});
+
+test("BudgetBytes adapter does not silently merge competing measurement systems", () => {
+  let c;
+  try { c = parseBudgetBytes(budgetBytesHtml.replace('wprm-recipe-ingredient-unit-system-2"></span>', 'wprm-recipe-ingredient-unit-system-2"><span class="wprm-recipe-ingredient-amount">350</span><span class="wprm-recipe-ingredient-unit">g</span></span>')); } catch (error) { assert.match(error.message, /recognizable recipe/u); return; }
+  assert.notEqual(c.parser.sourceAdapter, "budgetbytes");
+});
+
+test("BudgetBytes preserves an explicit parenthesized conversion as one measurement expression", () => {
+  const c = parseBudgetBytes(budgetBytesHtml.replace('wprm-recipe-ingredient-unit-system-2"></span>', 'wprm-recipe-ingredient-unit-system-2">(<span class="wprm-recipe-ingredient-amount">350</span> <span class="wprm-recipe-ingredient-unit">g</span>)</span>'));
+  const item = c.fields.ingredientSections[0].items[0];
+  assert.equal(c.parser.sourceAdapter, "budgetbytes");
+  assert.equal(item.amount, "1½ cups (350 g)");
+  assert.equal(item.unit, null);
+  assert.equal(item.name, "comet beans (drained, *)");
+  assert.equal(item.raw, "1½ cups (350 g) comet beans (drained, $0.75*)");
+  assert.deepEqual(validateImportCandidate(c), []);
+});
+
 const recipeTinHtml = `
 <main>
   <h1>Long editorial page title</h1>
