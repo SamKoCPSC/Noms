@@ -1,5 +1,30 @@
 use dioxus::prelude::*;
 
+#[cfg(test)]
+mod logout_tests {
+    /// Both responsive forms must survive the click until native POST submission.
+    #[test]
+    fn logout_forms_do_not_unmount_before_native_submission() {
+        let source = include_str!("navbar.rs")
+            .split_once("\npub fn Navbar(")
+            .unwrap()
+            .1;
+        let forms: Vec<_> = source
+            .split("form {")
+            .skip(1)
+            .filter_map(|section| section.split_once("\"Sign Out\"").map(|(form, _)| form))
+            .collect();
+        assert_eq!(forms.len(), 2);
+        for form in forms {
+            assert!(form.contains("method: \"post\""));
+            assert!(form.contains("action: \"/auth/logout?redirect_uri=/\""));
+            assert!(form.contains("r#type: \"submit\""));
+            assert!(!form.contains("dropdown_open.set(false)"));
+            assert!(!form.contains("menu_open.set(false)"));
+        }
+    }
+}
+
 use crate::auth::context::use_auth;
 use crate::components::base::{Avatar, AvatarSize};
 use crate::utils::theme::UseTheme;
@@ -191,10 +216,8 @@ pub fn Navbar(theme: UseTheme) -> Element {
                                         button {
                                             r#type: "submit",
                                             class: "navbar-dropdown-item navbar-dropdown-item-danger",
-                                            onclick: move |evt| {
-                                                evt.stop_propagation();
-                                                dropdown_open.set(false);
-                                            },
+                                            // Keep the form mounted until the browser submits it.
+                                            onclick: move |evt| evt.stop_propagation(),
                                             "Sign Out"
                                         }
                                     }
@@ -298,7 +321,8 @@ pub fn Navbar(theme: UseTheme) -> Element {
                                 button {
                                     r#type: "submit",
                                     class: "navbar-drawer-link navbar-drawer-link-danger",
-                                    onclick: move |_| menu_open.set(false),
+                                    // Closing the drawer here would remove the form before POST.
+                                    onclick: move |evt| evt.stop_propagation(),
                                     "Sign Out"
                                 }
                             }
