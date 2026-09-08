@@ -2117,6 +2117,36 @@ Load More, empty-state, and regression browser checks once access is restored.
 
 ---
 
+### Post-CP9C browser regression: logout submission (2026-09-08)
+
+The broader Chrome regression pass reproduced a desktop and mobile logout
+failure: clicking Sign Out closed its menu but did not submit the logout form;
+the session remained active after reloading. Commit `ff3e650` keeps both forms
+mounted until native submission by stopping click propagation without closing
+their parent menu. POST method, logout action, and server-side origin/session
+protections remain unchanged.
+
+A regression guard covers both responsive forms and preserves their POST,
+action, and submit-button contracts. It failed before the fix and passed after.
+`just ci` passed with 692 tests and 12 intentional ignores, plus compilation,
+Clippy, schema guard, and security checks. Independent code review returned
+`PASS`. A fresh detached validation checkout at `ff3e650` ran as the isolated
+`logoutcheck` instance, preserving the existing CP9C app and test data.
+Chrome checks passed for desktop and 390×844 mobile logout: each native POST
+returned 302 to the signed-out home page, revoked its session in PostgreSQL,
+and left Dashboard showing the sign-in requirement. Ordinary Settings/Explore
+menu navigation also worked, and the temporary viewport override was reset.
+The first fresh setup attempt under `/tmp` failed because Rancher Desktop could
+not mount its files; only that empty test instance was removed before retrying
+from the repository's shared worktree directory. No application workaround or
+security-policy change was required.
+Independent runtime validation returned `PASS` with no findings. The portable
+report `/tmp/noms-logout-validation.html` was rendered in Chrome and all five
+embedded screenshots loaded successfully. The final CP10 review remains a
+separate gate.
+
+---
+
 ## Checkpoint 10: Final integrated adversarial re-review and release verdict
 
 **Goal:** Review the exact integrated CP9A/CP9B/CP9C candidate and issue the final
