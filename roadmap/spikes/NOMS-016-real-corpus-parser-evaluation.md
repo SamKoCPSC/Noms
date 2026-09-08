@@ -137,6 +137,16 @@ All 100 candidates include title, description, servings, total time, and one ded
 
 The adapter changes the candidate digest for the three previously reviewed Tasty samples and leaves the other 24 reviewed candidate digests stable. After re-review, Tasty initially improved from 6 of 12 to 11 of 12 correct core fields. A follow-up Tasty-specific rule now preserves compound measurements such as two quantities with distinct units as one amount expression, leaving the singular unit field empty. It matched three of the 100 Tasty captures and did not change structural acceptance or any non-Tasty output. After re-reviewing the one affected benchmark candidate, Tasty reaches 12 of 12 correct core fields and all three candidates are usable without correction. The refreshed 27-sample benchmark has no stale labels and improves to 85 of 108 correct core fields (78.7%), with 9 candidates usable without correction, 18 after correction, and none unusable.
 
+## BudgetBytes adapter rerun
+
+All 100 BudgetBytes captures contain a WPRM recipe card. The adapter uses the supplied BudgetBytes hostname and one complete card to recover all ingredient and instruction groups, structured amounts and units, descriptions, authors, card servings controls, durations, notes and safe card image references. It excludes checkbox labels, surrounding promotions and editorial images. Narrow terminal dollar-price annotations are removed from parsed ingredient names while original ingredient text, preparation notes and footnote markers remain available.
+
+Fourteen captures contain explicit parenthesized measurement conversions in 66 ingredient rows. These are preserved as one amount expression with a null singular unit, without recalculating or assuming numerical equivalence. Unparenthesized competing measurements, duplicate core fields, incomplete cards and multiple cards retain generic fallback. Notes are currently flattened to text and require mapping; image references remain unfetched and require confirmation.
+
+BudgetBytes structural acceptance rises from 65 to 100 of 100, all through its adapter, retaining 159 ingredient sections, 1,297 ingredient rows and 764 steps. All 100 include descriptions and one card image; 94 include notes and 95 include card authors. Full-corpus acceptance rises from 800 to 835 of 1,500 (55.7%), with 535 generic HTML candidates and 300 adapter candidates, no invalid candidates and no unexpected errors. The 1,400 non-BudgetBytes parser outputs are unchanged. Twenty-six BudgetBytes card titles differ from captured page titles under the evaluator's normalized comparison; this is a review signal, not proof of incorrect card selection.
+
+Re-reviewing the three existing BudgetBytes benchmark candidates raises their core score from 6 of 12 to 12 of 12. The refreshed 27-sample benchmark reaches 91 of 108 correct core fields (84.3%), with 12 candidates usable without correction, 15 after correction and none unusable. Only the three BudgetBytes candidate digests changed; the other 24 assessments remain current. These deliberately selected reviews diagnose gaps and do not estimate accuracy across all 100 recipes.
+
 ## Conclusions
 
 1. The generic HTML parser recognizes useful candidates from several providers, but structural acceptance remains only an upper bound on compatibility.

@@ -8,11 +8,11 @@ The purposive sample includes candidates marked both ready and needs-review, tit
 
 | Result | Samples |
 | --- | ---: |
-| Usable without correction | 9 |
-| Usable after correction | 18 |
+| Usable without correction | 12 |
+| Usable after correction | 15 |
 | Unusable | 0 |
 
-Across the four core fields, 85 of 108 reviews were correct (78.7%), 20 were partial, and 3 were incorrect. Ten candidates had all four core fields correct. No reviewed candidate was stale: every human label was checked against the SHA-256 digest of the exact parser candidate that was reviewed.
+Across the four core fields, 91 of 108 reviews were correct (84.3%), 17 were partial, and none were incorrect. Thirteen candidates had all four core fields correct. No reviewed candidate was stale: every human label was checked against the SHA-256 digest of the exact parser candidate that was reviewed.
 
 | Benchmark | Core correct | Without correction | After correction | Unusable |
 | --- | ---: | ---: | ---: | ---: |
@@ -20,6 +20,7 @@ Across the four core fields, 85 of 108 reviews were correct (78.7%), 20 were par
 | With RecipeTinEats adapter | 79 of 108 (73.1%) | 6 | 20 | 1 |
 | With Tasty adapter | 84 of 108 (77.8%) | 8 | 19 | 0 |
 | With Tasty compound quantities | 85 of 108 (78.7%) | 9 | 18 | 0 |
+| With BudgetBytes adapter | 91 of 108 (84.3%) | 12 | 15 | 0 |
 
 ## Review rubric
 
@@ -30,28 +31,28 @@ Core fields use `correct`, `partial`, or `incorrect`:
 - **Ingredient parsing:** the amount, unit, and name split is usable.
 - **Instructions:** the selected steps are correct and complete and exclude unrelated page content.
 
-Optional fields additionally permit `not_applicable` and `not_reviewed`. The first review covered description, times, and yield. The Tasty re-review also covered notes/equipment and images for its three candidates; those fields remain unreviewed for the other 24. Each candidate also received an overall usability label based on the reviewed fields.
+Optional fields additionally permit `not_applicable` and `not_reviewed`. The first review covered description, times, and yield. The Tasty and BudgetBytes re-reviews also covered notes/equipment and image references for their six candidates; those fields remain unreviewed for the other 21. Each candidate also received an overall usability label based on the reviewed fields.
 
 ## Field results
 
 | Field | Correct | Partial | Incorrect | Not applicable | Not reviewed |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Title | 26 | 1 | 0 | 0 | 0 |
-| Ingredients | 23 | 4 | 0 | 0 | 0 |
-| Ingredient parsing | 14 | 10 | 3 | 0 | 0 |
+| Ingredients | 26 | 1 | 0 | 0 | 0 |
+| Ingredient parsing | 17 | 10 | 0 | 0 | 0 |
 | Instructions | 22 | 5 | 0 | 0 | 0 |
-| Description | 14 | 0 | 13 | 0 | 0 |
+| Description | 17 | 0 | 10 | 0 | 0 |
 | Times | 9 | 1 | 16 | 1 | 0 |
-| Yield | 6 | 0 | 21 | 0 | 0 |
-| Notes/equipment | 0 | 0 | 0 | 3 | 24 |
-| Images | 3 | 0 | 0 | 0 | 24 |
+| Yield | 9 | 0 | 18 | 0 | 0 |
+| Notes/equipment | 3 | 0 | 0 | 3 | 21 |
+| Images | 6 | 0 | 0 | 0 | 21 |
 
 ## Provider results
 
 | Provider | Reviewed | Correct core fields | Without correction | After correction | Unusable |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | AllRecipes | 3 | 10 of 12 (83.3%) | 1 | 2 | 0 |
-| BudgetBytes | 3 | 6 of 12 (50.0%) | 0 | 3 | 0 |
+| BudgetBytes | 3 | 12 of 12 (100.0%) | 3 | 0 | 0 |
 | Food.com | 3 | 8 of 12 (66.7%) | 0 | 3 | 0 |
 | Food52 | 3 | 9 of 12 (75.0%) | 1 | 2 | 0 |
 | NYT Cooking | 3 | 10 of 12 (83.3%) | 1 | 2 | 0 |
@@ -68,9 +69,10 @@ Three samples per provider are too few for provider compatibility or ranking cla
 - The RecipeTinEats and Tasty adapters recovered complete named and unnamed ingredient groups in the reviewed recipes; other providers can still lose a subgroup or treat a heading as an ingredient.
 - Structured ingredient splitting was the weakest core field. Checkbox and cost annotations and mixed-fraction typography commonly prevented usable amount/unit/name parsing.
 - Instruction selection was generally usable. The Tasty adapter removed the provider's app promotion from each reviewed instruction list, while some other candidates still append photo credits, marketing text, or other page content.
-- The RecipeTinEats and Tasty adapters recovered yield for their six reviewed candidates; yield remains absent or unusable in the other 21.
+- The RecipeTinEats, Tasty, and BudgetBytes adapters recovered yield for their nine reviewed candidates; yield remains absent or unusable in the other 18.
 - Description and time extraction were inconsistent; selected descriptions sometimes contained author or page text rather than recipe descriptions.
 - No reviewed candidate remains unusable. The Tasty-specific compound-quantity rule preserves two-unit expressions in the amount field while leaving the singular unit field empty; all three reviewed Tasty candidates are usable without correction.
+- BudgetBytes now preserves complete ingredient rows, structured quantities, preparation notes and footnotes while removing price annotations from parsed names. The three reviewed candidates also retain their descriptions, card servings, recipe notes and image references, and are usable without correction. Notes remain flattened into text and require mapping before saving.
 
 The next parser work should therefore prioritize yield recovery, ingredient normalization and section completeness, and tighter instruction/description boundaries. Provider adapters or Schema.org extraction should be considered where a stable provider-specific gap can be reproduced synthetically.
 
@@ -106,5 +108,5 @@ Run `just recipe-import-parser-semantic-test` for the evaluator contract. A chan
 - Only structurally accepted candidates were reviewed; this does not measure recall across all 1,500 corpus samples.
 - The 27 samples were selected purposively rather than randomly, so percentages are not population estimates.
 - One reviewer supplied the labels; inter-reviewer agreement has not been measured.
-- Notes/equipment and images remain unreviewed for 24 candidates; the three Tasty candidates were reviewed for these fields.
+- Notes/equipment and image references remain unreviewed for 21 candidates; the three Tasty and three BudgetBytes candidates were reviewed for these fields. Image bytes were not fetched or inspected.
 - Overall usability reflects the reviewed fields and assumes a user can correct a candidate before saving.
