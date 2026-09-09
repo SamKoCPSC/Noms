@@ -12,6 +12,14 @@
 
 The application presents one deliberate, accessible, responsive visual system across public pages, authenticated workflows, dense data views, forms, and transient states.
 
+## Planned application mark
+
+The current planned NOMS mark is **A3 — Tilted Label Book**. It is a compact, gently clockwise-tilted closed book with an olive cover, segmented cream spine and page block, a coral elastic strap and bookmark, and a warm-white rounded label carrying `NOMS` in the application's Fredoka display face. The shallow dimensional treatment and restrained matte texture should be retained when the mark is later translated into production artwork.
+
+Reference artwork: [`docs/design/NOMS-020/assets/noms-logo-planned-a3.png`](../../docs/design/NOMS-020/assets/noms-logo-planned-a3.png)
+
+This is the approved visual direction for planning, not yet a production SVG/favicon. Production work must preserve legibility at favicon and app-icon sizes, provide light/dark and single-colour variants, and use the actual Fredoka font or converted outlines.
+
 ## Proposed planning scope
 
 - Audit typography, spacing, color, elevation, density, iconography, and responsive layout.
