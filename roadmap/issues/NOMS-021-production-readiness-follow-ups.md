@@ -13,10 +13,10 @@ the completed OAuth, authorization, media-ownership, or visibility hardening.
 
 NOMS-015 may be reviewed and merged independently because no critical
 authorization bypass or data-loss path was found. Findings 1–4 below remain a
-release gate for public production deployment; findings 5–9 are lower-priority
-correctness and resilience follow-ups.
+release gate for public production deployment; findings 5–10 are lower-priority
+correctness, resilience, and maintainability follow-ups.
 
-## Findings carried forward
+## Findings and enhancement scope
 
 1. Dashboard recipe and draft lists return complete snapshots where lightweight
    card projections are sufficient. At current quotas, one draft-list response
@@ -45,6 +45,11 @@ correctness and resilience follow-ups.
    the displayed recipes.
 9. `NOMS_ORPHAN_CLEANUP_INTERVAL_SECS=0` is accepted even though Tokio rejects a
    zero interval, causing the detached cleanup task to terminate.
+10. As an additional maintainability enhancement, several older modules and
+    workflows predate the repository's current readability guidance. Large
+    multi-responsibility files, long endpoint and UI
+    workflows, repeated boundary logic, and comments that describe mechanics
+    instead of invariants make important behavior harder to review safely.
 
 ## Implementation checkpoints
 
@@ -114,7 +119,27 @@ correctness and resilience follow-ups.
 - Keep request-generation protection so stale responses cannot overwrite the
   latest text/tag selection.
 
-### CP9: Integrated release verification
+### CP9: Improve code readability and maintainability
+
+- Inventory readability hotspots in the code touched by NOMS-015 and CP1–CP8,
+  prioritizing security boundaries, media lifecycle transitions, database query
+  construction, and complex page-level state flows.
+- Establish concise repository guidance for descriptive domain names, focused
+  functions and modules, explicit error and state transitions, and comments that
+  explain invariants and cross-component relationships rather than restating
+  syntax.
+- Extract repeated validation, admission, projection, and error-mapping logic
+  where one shared abstraction makes the contract clearer without hiding
+  authorization or lifecycle decisions.
+- Split large modules only along stable responsibility boundaries; do not pursue
+  file-size or function-length targets mechanically.
+- Land refactors separately from behavior changes when practical, preserve the
+  existing public API and persistence contracts, and use characterization tests
+  before restructuring non-trivial behavior.
+- Review each refactor as a behavior-preserving change and reject abstractions
+  that reduce local clarity or make security-sensitive control flow implicit.
+
+### CP10: Integrated release verification
 
 - Run `just ci` and all pinned ParadeDB integration tests.
 - Complete a clean production Docker image build and runtime health check.
@@ -137,6 +162,9 @@ correctness and resilience follow-ups.
 - Exact username identity lookup remains ParadeDB-safe and index-backed.
 - Explore tag selection changes the recipe result set correctly across pages.
 - Graph and lineage reads consistently share admission and deadline controls.
+- Readability hotspots touched by this issue have clear ownership boundaries,
+  descriptive names, explicit state transitions, and durable invariant-focused
+  documentation without changing observable behavior.
 - The integrated code, production image, and fresh-browser regression gate pass.
 
 ## Out of scope
