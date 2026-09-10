@@ -9,7 +9,6 @@
 
 use std::collections::VecDeque;
 use std::net::{IpAddr, SocketAddr};
-use std::str::FromStr;
 use std::sync::{Arc, LazyLock};
 use std::time::Instant;
 
@@ -34,6 +33,14 @@ const START_LIMIT_PER_MIN: usize = 10;
 static X_FORWARDED_FOR: LazyLock<HeaderName> =
     LazyLock::new(|| HeaderName::from_static("x-forwarded-for"));
 
+/// The client address header supplied by Railway and some other reverse proxies.
+static X_REAL_IP: LazyLock<HeaderName> = LazyLock::new(|| HeaderName::from_static("x-real-ip"));
+
+/// Internal header overwritten from trusted connection metadata before a
+/// request reaches a server function. Clients cannot choose this value.
+pub(crate) static RESOLVED_CLIENT_IP: LazyLock<HeaderName> =
+    LazyLock::new(|| HeaderName::from_static("x-noms-resolved-client-ip"));
+
 /// Maximum OAuth callback requests per IP per 60-second window.
 const CALLBACK_LIMIT_PER_MIN: usize = 5;
 
@@ -46,16 +53,11 @@ const WINDOW_SECS: u64 = 60;
 /// task to prevent unbounded memory growth.
 const ENTRY_TTL_SECS: u64 = 300;
 
-/// Default trusted proxy addresses for local development.
-/// Always trusted regardless of the `TRUSTED_PROXIES` env var:
-/// - `127.0.0.1/32` -- IPv4 loopback
-/// - `::1/128`      -- IPv6 loopback
-/// - `172.17.0.1/32` -- Docker default gateway
-const DEFAULT_TRUSTED_PROXIES: [&str; 3] = ["127.0.0.1/32", "::1/128", "172.17.0.1/32"];
-
 /// A list of trusted proxy IP networks (single IPs or CIDR ranges).
-/// Thread-safe and cheap to clone (inner `Arc`). Initialized once at startup.
-#[derive(Clone, Debug)]
+///
+/// The default is deliberately empty. A reverse proxy may influence client
+/// identity only when its direct connection address is explicitly configured.
+#[derive(Clone, Debug, Default)]
 struct TrustedProxyList {
     networks: Arc<Vec<IpNet>>,
 }
@@ -66,45 +68,44 @@ impl TrustedProxyList {
         self.networks.iter().any(|net| net.contains(ip))
     }
 
-    /// Load from `TRUSTED_PROXIES` env var (comma-separated IPs or CIDRs).
-    /// Always includes `DEFAULT_TRUSTED_PROXIES`. Invalid entries logged + skipped.
-    fn load() -> Self {
-        let mut networks: Vec<IpNet> = DEFAULT_TRUSTED_PROXIES
-            .iter()
-            .filter_map(|s| IpNet::from_str(s).ok())
-            .collect();
+    /// Strictly parse comma-separated IP addresses or CIDR ranges.
+    fn parse(value: &str) -> Result<Self, String> {
+        if value.trim().is_empty() {
+            return Ok(Self::default());
+        }
 
-        if let Ok(env_value) = std::env::var("TRUSTED_PROXIES") {
-            for entry in env_value.split(',') {
-                let entry = entry.trim();
-                if entry.is_empty() {
-                    continue;
-                }
-                // Try parsing as CIDR first, then as bare IP
-                match entry.parse::<IpNet>() {
-                    Ok(net) => networks.push(net),
-                    Err(_) => {
-                        if let Ok(ip) = entry.parse::<IpAddr>() {
-                            networks.push(IpNet::from(ip));
-                        } else {
-                            tracing::warn!(
-                                trusted_proxy = %entry,
-                                "Failed to parse TRUSTED_PROXIES entry, skipping"
-                            );
-                        }
-                    }
-                }
+        let mut networks = Vec::new();
+        for raw_entry in value.split(',') {
+            let entry = raw_entry.trim();
+            if entry.is_empty() {
+                return Err("TRUSTED_PROXIES contains an empty entry".to_string());
             }
+
+            let network = entry
+                .parse::<IpNet>()
+                .or_else(|_| entry.parse::<IpAddr>().map(IpNet::from))
+                .map_err(|_| format!("invalid trusted proxy address or CIDR: {entry}"))?;
+            networks.push(network);
         }
 
-        Self {
+        Ok(Self {
             networks: Arc::new(networks),
-        }
+        })
     }
 }
 
-/// Globally shared trusted proxy list, initialized once at first access.
-static TRUSTED_PROXIES: LazyLock<TrustedProxyList> = LazyLock::new(TrustedProxyList::load);
+fn load_trusted_proxy_configuration(
+    configured: Option<&str>,
+    proxy_hosted_runtime: bool,
+) -> Result<TrustedProxyList, String> {
+    if proxy_hosted_runtime && configured.is_none_or(|value| value.trim().is_empty()) {
+        return Err(
+            "TRUSTED_PROXIES must be explicitly configured on a proxy-hosted runtime".to_string(),
+        );
+    }
+
+    configured.map_or_else(|| Ok(TrustedProxyList::default()), TrustedProxyList::parse)
+}
 
 // ── Endpoint categories ──────────────────────────────────────────────────────
 
@@ -140,6 +141,7 @@ impl EndpointCategory {
 pub struct RateLimitState {
     start_windows: Arc<DashMap<IpAddr, VecDeque<Instant>>>,
     callback_windows: Arc<DashMap<IpAddr, VecDeque<Instant>>>,
+    trusted_proxies: TrustedProxyList,
 }
 
 impl Default for RateLimitState {
@@ -147,11 +149,41 @@ impl Default for RateLimitState {
         Self {
             start_windows: Arc::new(DashMap::new()),
             callback_windows: Arc::new(DashMap::new()),
+            trusted_proxies: TrustedProxyList::default(),
         }
     }
 }
 
 impl RateLimitState {
+    /// Build the limiter with an explicit proxy trust boundary.
+    fn with_trusted_proxies(trusted_proxies: TrustedProxyList) -> Self {
+        Self {
+            trusted_proxies,
+            ..Self::default()
+        }
+    }
+
+    /// Load the explicit proxy trust boundary from `TRUSTED_PROXIES`.
+    ///
+    /// Invalid configuration is an error rather than a partially applied list,
+    /// because silently changing the trust boundary can merge users into a
+    /// proxy-wide bucket or make forwarding headers spoofable.
+    pub fn from_environment() -> Result<Self, String> {
+        let configured = match std::env::var("TRUSTED_PROXIES") {
+            Ok(value) => Some(value),
+            Err(std::env::VarError::NotPresent) => None,
+            Err(std::env::VarError::NotUnicode(_)) => {
+                return Err("TRUSTED_PROXIES is not valid Unicode".to_string());
+            }
+        };
+        let proxy_hosted_runtime = std::env::var_os("RAILWAY_PROJECT_ID").is_some()
+            || std::env::var_os("RAILWAY_ENVIRONMENT_ID").is_some();
+        let trusted_proxies =
+            load_trusted_proxy_configuration(configured.as_deref(), proxy_hosted_runtime)?;
+
+        Ok(Self::with_trusted_proxies(trusted_proxies))
+    }
+
     /// Check whether a request from `ip` in the given category is allowed.
     ///
     /// Returns `Ok(())` if the request is within the limit, or `Err(retry_after_secs)`
@@ -233,53 +265,102 @@ impl RateLimitState {
 
 /// Extract the client IP address from the request.
 ///
-/// Priority:
-/// 1. `ConnectInfo<SocketAddr>` from request extensions (TCP connection IP).
-/// 2. If the TCP connection IP is a trusted proxy, unwind `X-Forwarded-For` to find the
-///    rightmost non-proxy IP (the original client).
-/// 3. Fallback to `0.0.0.0` if no connection info is available.
+/// An untrusted direct peer is always its own identity, regardless of forwarding
+/// headers. For an explicitly trusted peer, all supplied forwarding headers are
+/// parsed strictly and must resolve to the same rightmost non-proxy address.
 ///
-/// Security: `X-Forwarded-For` is **never** trusted unless the direct TCP connection
-/// originates from a trusted proxy (see `TRUSTED_PROXIES`). This prevents IP spoofing
-/// by untrusted clients setting arbitrary XFF header values.
-fn extract_client_ip(req: &Request<Body>) -> IpAddr {
-    // 1. Get the TCP connection IP from ConnectInfo
-    let connect_ip = match req.extensions().get::<ConnectInfo<SocketAddr>>() {
-        Some(info) => info.0.ip(),
-        None => return IpAddr::from([0, 0, 0, 0]),
-    };
+/// Missing peer information or an unusable trusted-proxy chain returns `None`,
+/// causing rate-limited endpoints to fail closed instead of sharing a fallback.
+fn extract_client_ip(req: &Request<Body>, trusted_proxies: &TrustedProxyList) -> Option<IpAddr> {
+    let direct_peer = normalize_ip(req.extensions().get::<ConnectInfo<SocketAddr>>()?.0.ip());
 
-    // 2. If the connection is from a trusted proxy, check X-Forwarded-For
-    if TRUSTED_PROXIES.is_trusted(&connect_ip) {
-        if let Some(xff) = req.headers().get(X_FORWARDED_FOR.as_str()) {
-            if let Ok(xff_str) = xff.to_str() {
-                // XFF format: "client, proxy1, proxy2, ..."
-                // Unwind from right: skip trusted proxy IPs, return first non-proxy
-                let entries: Vec<&str> = xff_str.split(',').collect();
-                for entry in entries.iter().rev() {
-                    let trimmed = entry.trim();
-                    if let Ok(ip) = trimmed.parse::<IpAddr>() {
-                        if !TRUSTED_PROXIES.is_trusted(&ip) {
-                            return ip; // Found the original client IP
-                        }
-                        // Otherwise it is another trusted proxy, continue unwinding
-                    } else {
-                        // Malformed entry -- stop unwinding, fall through to connect_ip
-                        break;
-                    }
-                }
-                // All XFF entries were trusted proxies -- use the rightmost entry
-                if let Some(last) = entries.last() {
-                    if let Ok(ip) = last.trim().parse::<IpAddr>() {
-                        return ip;
-                    }
-                }
-            }
-        }
+    if !trusted_proxies.is_trusted(&direct_peer) {
+        return Some(direct_peer);
     }
 
-    // 3. Use TCP connection IP (direct connection or untrusted proxy)
-    connect_ip
+    let forwarded_for = parse_x_forwarded_for(req.headers(), trusted_proxies).ok()?;
+    let real_ip = parse_single_ip_header(req.headers(), &X_REAL_IP).ok()?;
+
+    match (forwarded_for, real_ip) {
+        (Some(forwarded), Some(real)) if forwarded == real => Some(forwarded),
+        (Some(_), Some(_)) => None,
+        (Some(forwarded), None) => Some(forwarded),
+        (None, Some(real)) if !trusted_proxies.is_trusted(&real) => Some(real),
+        _ => None,
+    }
+}
+
+fn parse_x_forwarded_for(
+    headers: &HeaderMap,
+    trusted_proxies: &TrustedProxyList,
+) -> Result<Option<IpAddr>, ()> {
+    let Some(value) = exactly_one_header(headers, &X_FORWARDED_FOR)? else {
+        return Ok(None);
+    };
+    let value = value.to_str().map_err(|_| ())?;
+    let entries: Vec<IpAddr> = value
+        .split(',')
+        .map(|entry| entry.trim().parse::<IpAddr>().map(normalize_ip))
+        .collect::<Result<_, _>>()
+        .map_err(|_| ())?;
+
+    if entries.is_empty() {
+        return Err(());
+    }
+
+    Ok(entries
+        .into_iter()
+        .rev()
+        .find(|ip| !trusted_proxies.is_trusted(ip)))
+}
+
+fn parse_single_ip_header(headers: &HeaderMap, name: &HeaderName) -> Result<Option<IpAddr>, ()> {
+    let Some(value) = exactly_one_header(headers, name)? else {
+        return Ok(None);
+    };
+    let value = value.to_str().map_err(|_| ())?.trim();
+    if value.is_empty() || value.contains(',') {
+        return Err(());
+    }
+    value
+        .parse::<IpAddr>()
+        .map(normalize_ip)
+        .map(Some)
+        .map_err(|_| ())
+}
+
+fn exactly_one_header<'a>(
+    headers: &'a HeaderMap,
+    name: &HeaderName,
+) -> Result<Option<&'a HeaderValue>, ()> {
+    let mut values = headers.get_all(name).iter();
+    let first = values.next();
+    if values.next().is_some() {
+        return Err(());
+    }
+    Ok(first)
+}
+
+fn normalize_ip(ip: IpAddr) -> IpAddr {
+    match ip {
+        IpAddr::V6(ipv6) => ipv6
+            .to_ipv4_mapped()
+            .map(IpAddr::V4)
+            .unwrap_or(IpAddr::V6(ipv6)),
+        IpAddr::V4(_) => ip,
+    }
+}
+
+/// Build a fail-closed response when no unique client identity is available.
+fn make_503_response() -> Response<Body> {
+    let mut headers = HeaderMap::new();
+    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("text/plain"));
+    (
+        StatusCode::SERVICE_UNAVAILABLE,
+        headers,
+        "Client identity unavailable",
+    )
+        .into_response()
 }
 
 /// Categorize a request path into an endpoint category, if applicable.
@@ -332,12 +413,34 @@ pub async fn rate_limit_middleware(
         None => return next.run(req).await,
     };
 
-    let ip = extract_client_ip(&req);
+    let Some(ip) = extract_client_ip(&req, &app_state.rate_limit.trusted_proxies) else {
+        tracing::warn!(
+            path,
+            "OAuth request rejected because no trustworthy client identity was available"
+        );
+        return make_503_response();
+    };
 
     match app_state.rate_limit.check(ip, category) {
         Ok(()) => next.run(req).await,
         Err(retry_after) => make_429_response(retry_after),
     }
+}
+
+/// Propagate the already-normalized client identity into Fullstack request
+/// parts, whose extension propagation is not reliable across all Dioxus paths.
+pub async fn resolved_client_ip_middleware(
+    State(rate_limit): State<RateLimitState>,
+    mut req: Request<Body>,
+    next: Next,
+) -> Response<Body> {
+    req.headers_mut().remove(&*RESOLVED_CLIENT_IP);
+    if let Some(ip) = extract_client_ip(&req, &rate_limit.trusted_proxies) {
+        if let Ok(value) = HeaderValue::from_str(&ip.to_string()) {
+            req.headers_mut().insert(RESOLVED_CLIENT_IP.clone(), value);
+        }
+    }
+    next.run(req).await
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -497,35 +600,49 @@ mod tests {
     // -- Trusted proxy tests --
 
     #[test]
-    fn test_trusted_proxy_defaults_include_loopback() {
-        assert!(TRUSTED_PROXIES.is_trusted(&IpAddr::from([127, 0, 0, 1])));
-        assert!(TRUSTED_PROXIES.is_trusted(&IpAddr::from([0, 0, 0, 0, 0, 0, 0, 1])));
-        assert!(TRUSTED_PROXIES.is_trusted(&IpAddr::from([172, 17, 0, 1])));
+    fn test_trusted_proxy_defaults_are_empty() {
+        let trusted_proxies = TrustedProxyList::default();
+        assert!(!trusted_proxies.is_trusted(&IpAddr::from([127, 0, 0, 1])));
+        assert!(!trusted_proxies.is_trusted(&IpAddr::from([172, 17, 0, 1])));
     }
 
     #[test]
     fn test_trusted_proxy_defaults_reject_external() {
-        assert!(!TRUSTED_PROXIES.is_trusted(&IpAddr::from([203, 0, 113, 1])));
-        assert!(!TRUSTED_PROXIES.is_trusted(&IpAddr::from([10, 0, 0, 1])));
-        assert!(!TRUSTED_PROXIES.is_trusted(&IpAddr::from([192, 168, 1, 1])));
+        let trusted_proxies = TrustedProxyList::default();
+        assert!(!trusted_proxies.is_trusted(&IpAddr::from([203, 0, 113, 1])));
+        assert!(!trusted_proxies.is_trusted(&IpAddr::from([10, 0, 0, 1])));
+        assert!(!trusted_proxies.is_trusted(&IpAddr::from([192, 168, 1, 1])));
+    }
+
+    #[test]
+    fn test_proxy_hosted_runtime_requires_explicit_trusted_proxy_configuration() {
+        assert!(load_trusted_proxy_configuration(None, true).is_err());
+        assert!(load_trusted_proxy_configuration(Some(""), true).is_err());
+        assert!(load_trusted_proxy_configuration(Some("100.0.0.0/8"), true).is_ok());
+    }
+
+    #[test]
+    fn test_direct_runtime_allows_empty_trusted_proxy_configuration() {
+        let trusted_proxies = load_trusted_proxy_configuration(None, false).unwrap();
+        assert!(!trusted_proxies.is_trusted(&IpAddr::from([127, 0, 0, 1])));
     }
 
     #[test]
     fn test_xff_unwind_single_client() {
-        // client(203.0.113.50) -> trusted_proxy(127.0.0.1)
-        // XFF: "203.0.113.50" -- not a proxy, returned immediately
-        let xff = "203.0.113.50";
-        let entries: Vec<&str> = xff.split(',').collect();
-        let mut result = None;
-        for entry in entries.iter().rev() {
-            if let Ok(ip) = entry.trim().parse::<IpAddr>() {
-                if !TRUSTED_PROXIES.is_trusted(&ip) {
-                    result = Some(ip);
-                    break;
-                }
-            }
-        }
-        assert_eq!(result, Some(IpAddr::from([203, 0, 113, 50])));
+        let trusted_proxies = TrustedProxyList::parse("127.0.0.1/32").unwrap();
+        let request = Request::builder()
+            .header(X_FORWARDED_FOR.as_str(), "203.0.113.50")
+            .body(Body::empty())
+            .unwrap();
+        let mut request = request;
+        request
+            .extensions_mut()
+            .insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 8080))));
+
+        assert_eq!(
+            extract_client_ip(&request, &trusted_proxies),
+            Some(IpAddr::from([203, 0, 113, 50]))
+        );
     }
 
     #[test]
@@ -533,43 +650,89 @@ mod tests {
         // XFF: "203.0.113.50, 172.17.0.1"
         // 172.17.0.1 is trusted (Docker gateway) -- skip it
         // 203.0.113.50 is not trusted -- return it
-        let xff = "203.0.113.50, 172.17.0.1";
-        let entries: Vec<&str> = xff.split(',').collect();
-        let mut result = None;
-        for entry in entries.iter().rev() {
-            if let Ok(ip) = entry.trim().parse::<IpAddr>() {
-                if !TRUSTED_PROXIES.is_trusted(&ip) {
-                    result = Some(ip);
-                    break;
-                }
-            }
-        }
-        assert_eq!(result, Some(IpAddr::from([203, 0, 113, 50])));
+        let trusted_proxies = TrustedProxyList::parse("127.0.0.1/32,172.17.0.1/32").unwrap();
+        let request = Request::builder()
+            .header(X_FORWARDED_FOR.as_str(), "203.0.113.50, 172.17.0.1")
+            .body(Body::empty())
+            .unwrap();
+        let mut request = request;
+        request
+            .extensions_mut()
+            .insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 8080))));
+
+        assert_eq!(
+            extract_client_ip(&request, &trusted_proxies),
+            Some(IpAddr::from([203, 0, 113, 50]))
+        );
     }
 
     #[test]
-    fn test_xff_unwind_all_trusted_returns_rightmost() {
-        // XFF: "127.0.0.1, ::1" -- both trusted by default
-        // All trusted -- return rightmost (::1)
-        let xff = "127.0.0.1, ::1";
-        let entries: Vec<&str> = xff.split(',').collect();
-        let mut result = None;
-        let mut all_trusted = true;
-        for entry in entries.iter().rev() {
-            if let Ok(ip) = entry.trim().parse::<IpAddr>() {
-                if !TRUSTED_PROXIES.is_trusted(&ip) {
-                    result = Some(ip);
-                    all_trusted = false;
-                    break;
-                }
-            }
-        }
-        if all_trusted {
-            if let Some(last) = entries.last() {
-                result = last.trim().parse::<IpAddr>().ok();
-            }
-        }
-        assert_eq!(result, Some(IpAddr::from([0, 0, 0, 0, 0, 0, 0, 1])));
+    fn test_xff_unwind_all_trusted_rejects_missing_client_identity() {
+        let trusted_proxies = TrustedProxyList::parse("127.0.0.1/32,::1/128").unwrap();
+        let request = Request::builder()
+            .header(X_FORWARDED_FOR.as_str(), "127.0.0.1, ::1")
+            .body(Body::empty())
+            .unwrap();
+        let mut request = request;
+        request
+            .extensions_mut()
+            .insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 8080))));
+
+        assert_eq!(extract_client_ip(&request, &trusted_proxies), None);
+    }
+
+    #[test]
+    fn test_trusted_proxy_accepts_x_real_ip() {
+        let trusted_proxies = TrustedProxyList::parse("127.0.0.1/32").unwrap();
+        let request = Request::builder()
+            .header("x-real-ip", "203.0.113.60")
+            .body(Body::empty())
+            .unwrap();
+        let mut request = request;
+        request
+            .extensions_mut()
+            .insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 8080))));
+
+        assert_eq!(
+            extract_client_ip(&request, &trusted_proxies),
+            Some(IpAddr::from([203, 0, 113, 60]))
+        );
+    }
+
+    #[test]
+    fn test_conflicting_trusted_proxy_headers_fail_closed() {
+        let trusted_proxies = TrustedProxyList::parse("127.0.0.1/32").unwrap();
+        let request = Request::builder()
+            .header(X_FORWARDED_FOR.as_str(), "203.0.113.60")
+            .header("x-real-ip", "203.0.113.61")
+            .body(Body::empty())
+            .unwrap();
+        let mut request = request;
+        request
+            .extensions_mut()
+            .insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 8080))));
+
+        assert_eq!(extract_client_ip(&request, &trusted_proxies), None);
+    }
+
+    #[test]
+    fn test_untrusted_peer_cannot_spoof_forwarded_headers() {
+        let trusted_proxies = TrustedProxyList::parse("10.0.0.0/8").unwrap();
+        let direct_peer = IpAddr::from([192, 0, 2, 5]);
+        let request = Request::builder()
+            .header(X_FORWARDED_FOR.as_str(), "203.0.113.60")
+            .header("x-real-ip", "203.0.113.60")
+            .body(Body::empty())
+            .unwrap();
+        let mut request = request;
+        request
+            .extensions_mut()
+            .insert(ConnectInfo(SocketAddr::new(direct_peer, 8080)));
+
+        assert_eq!(
+            extract_client_ip(&request, &trusted_proxies),
+            Some(direct_peer)
+        );
     }
 
     #[test]
@@ -595,21 +758,72 @@ mod tests {
         use crate::test_utils;
         use axum::body::Body;
         use axum::http::Request;
+        use tokio::sync::oneshot;
         use tower::ServiceExt;
 
         /// Build a test `AppState` with a real database pool.
         async fn make_test_state() -> AppState {
-            let (_db, pool) = test_utils::setup_test_db().await;
+            make_test_state_with_rate_limit(RateLimitState::default()).await
+        }
+
+        async fn make_test_state_with_rate_limit(rate_limit: RateLimitState) -> AppState {
+            let (_database, state) = make_test_state_with_database(rate_limit).await;
+            state
+        }
+
+        async fn make_test_state_with_database(
+            rate_limit: RateLimitState,
+        ) -> (pgtemp::PgTempDB, AppState) {
+            let (database, pool) = test_utils::setup_test_db().await;
             let (google_client, github_client) = build_oauth_clients("http://localhost:8080");
 
-            AppState {
-                pool,
-                google_client,
-                github_client,
-                http_client: reqwest::Client::new(),
-                rate_limit: RateLimitState::default(),
-                storage: crate::storage::StorageClient::for_test(),
-            }
+            (
+                database,
+                AppState {
+                    pool,
+                    base_url_origin: url::Url::parse("http://localhost:8080").unwrap().origin(),
+                    auth_security_metrics: crate::auth::oauth::AuthSecurityMetrics::default(),
+                    google_client,
+                    github_client,
+                    http_client: reqwest::Client::new(),
+                    google_userinfo_url: "http://localhost:8082/google/userinfo".to_string(),
+                    github_userinfo_url: "http://localhost:8082/github/userinfo".to_string(),
+                    github_emails_url: "http://localhost:8082/github/emails".to_string(),
+                    github_extra_scopes: Vec::new(),
+                    rate_limit,
+                    storage: crate::storage::StorageClient::for_test(),
+                },
+            )
+        }
+
+        async fn spawn_production_oauth_server(
+            rate_limit: RateLimitState,
+        ) -> (SocketAddr, oneshot::Sender<()>, tokio::task::JoinHandle<()>) {
+            let (database, state) = make_test_state_with_database(rate_limit).await;
+            let router = crate::build_oauth_router(state);
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+                .await
+                .expect("test listener should bind");
+            let address = listener.local_addr().unwrap();
+            let (shutdown_tx, shutdown_rx) = oneshot::channel();
+
+            let server = tokio::spawn(async move {
+                let _database = database;
+                crate::serve_router_with_connect_info(listener, router, async move {
+                    let _ = shutdown_rx.await;
+                })
+                .await
+                .expect("production server path should run");
+            });
+
+            (address, shutdown_tx, server)
+        }
+
+        fn oauth_http_client() -> reqwest::Client {
+            reqwest::Client::builder()
+                .redirect(reqwest::redirect::Policy::none())
+                .build()
+                .unwrap()
         }
 
         /// Build a minimal router with the rate limit middleware and a pass-through handler.
@@ -714,7 +928,10 @@ mod tests {
         async fn test_valid_xff_from_trusted_proxy_is_used() {
             // Trusted proxy (127.0.0.1) forwards with XFF: "203.0.113.50".
             // Middleware should use 203.0.113.50 as client IP.
-            let state = make_test_state().await;
+            let state = make_test_state_with_rate_limit(RateLimitState::with_trusted_proxies(
+                TrustedProxyList::parse("127.0.0.1/32").unwrap(),
+            ))
+            .await;
             let proxy_ip = SocketAddr::from(([127, 0, 0, 1], 8080));
             let app = make_router_with_connect_info(state, proxy_ip);
             let real_client = "203.0.113.50";
@@ -776,7 +993,10 @@ mod tests {
             // client(203.0.113.50) -> docker_gw(172.17.0.1) -> app
             // Connection IP: 127.0.0.1 (trusted). XFF: "203.0.113.50, 172.17.0.1"
             // 172.17.0.1 is trusted -- skip, 203.0.113.50 is not -- return it
-            let state = make_test_state().await;
+            let state = make_test_state_with_rate_limit(RateLimitState::with_trusted_proxies(
+                TrustedProxyList::parse("127.0.0.1/32,172.17.0.1/32").unwrap(),
+            ))
+            .await;
             let proxy_ip = SocketAddr::from(([127, 0, 0, 1], 8080));
             let app = make_router_with_connect_info(state, proxy_ip);
             let xff_value = "203.0.113.50, 172.17.0.1";
@@ -815,25 +1035,10 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn test_no_connect_info_falls_back_to_zero_ip() {
-            // No ConnectInfo extension -- extract_client_ip returns 0.0.0.0
+        async fn test_no_connect_info_fails_closed_without_global_bucket() {
             let state = make_test_state().await;
             let app = make_router(state); // No MockConnectInfo
 
-            for _ in 0..START_LIMIT_PER_MIN {
-                let response = app
-                    .clone()
-                    .oneshot(
-                        Request::builder()
-                            .method("GET")
-                            .uri("/auth/google/start")
-                            .body(Body::empty())
-                            .unwrap(),
-                    )
-                    .await
-                    .unwrap();
-                assert_eq!(response.status(), StatusCode::OK);
-            }
             let response = app
                 .oneshot(
                     Request::builder()
@@ -846,15 +1051,121 @@ mod tests {
                 .unwrap();
             assert_eq!(
                 response.status(),
-                StatusCode::TOO_MANY_REQUESTS,
-                "should be rate limited via 0.0.0.0 fallback"
+                StatusCode::SERVICE_UNAVAILABLE,
+                "missing peer identity must fail closed instead of sharing a global bucket"
             );
+        }
+
+        #[tokio::test]
+        async fn production_tcp_path_ignores_spoofed_xff_from_untrusted_peer() {
+            let (address, shutdown_tx, server) =
+                spawn_production_oauth_server(RateLimitState::default()).await;
+            let client = oauth_http_client();
+            let endpoint = format!("http://{address}/auth/google/start");
+
+            for request_number in 0..START_LIMIT_PER_MIN {
+                let response = client
+                    .get(&endpoint)
+                    .header(
+                        X_FORWARDED_FOR.as_str(),
+                        format!("203.0.113.{}", request_number + 1),
+                    )
+                    .send()
+                    .await
+                    .unwrap();
+                assert_ne!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+                assert_ne!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+            }
+
+            let response = client
+                .get(&endpoint)
+                .header(X_FORWARDED_FOR.as_str(), "198.51.100.200")
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+
+            let _ = shutdown_tx.send(());
+            server.await.unwrap();
+        }
+
+        #[tokio::test]
+        async fn production_tcp_path_keeps_trusted_forwarded_clients_independent() {
+            let trusted_proxies = TrustedProxyList::parse("127.0.0.1/32").unwrap();
+            let rate_limit = RateLimitState::with_trusted_proxies(trusted_proxies);
+            let (address, shutdown_tx, server) = spawn_production_oauth_server(rate_limit).await;
+            let client = oauth_http_client();
+            let start_endpoint = format!("http://{address}/auth/google/start");
+            let callback_endpoint =
+                format!("http://{address}/auth/google/callback?code=invalid&state=invalid");
+            let attacker_ip = "203.0.113.10";
+            let other_client_ip = "203.0.113.11";
+
+            for _ in 0..START_LIMIT_PER_MIN {
+                let response = client
+                    .get(&start_endpoint)
+                    .header(X_FORWARDED_FOR.as_str(), attacker_ip)
+                    .send()
+                    .await
+                    .unwrap();
+                assert_ne!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+            }
+            assert_eq!(
+                client
+                    .get(&start_endpoint)
+                    .header(X_FORWARDED_FOR.as_str(), attacker_ip)
+                    .send()
+                    .await
+                    .unwrap()
+                    .status(),
+                StatusCode::TOO_MANY_REQUESTS
+            );
+            assert_ne!(
+                client
+                    .get(&start_endpoint)
+                    .header(X_FORWARDED_FOR.as_str(), other_client_ip)
+                    .send()
+                    .await
+                    .unwrap()
+                    .status(),
+                StatusCode::TOO_MANY_REQUESTS
+            );
+
+            for _ in 0..CALLBACK_LIMIT_PER_MIN {
+                let response = client
+                    .get(&callback_endpoint)
+                    .header("x-real-ip", attacker_ip)
+                    .send()
+                    .await
+                    .unwrap();
+                assert_ne!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+            }
+            let limited = client
+                .get(&callback_endpoint)
+                .header("x-real-ip", attacker_ip)
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(limited.status(), StatusCode::TOO_MANY_REQUESTS);
+            assert!(limited.headers().contains_key(RETRY_AFTER));
+
+            let other_client = client
+                .get(&callback_endpoint)
+                .header("x-real-ip", other_client_ip)
+                .send()
+                .await
+                .unwrap();
+            assert_ne!(other_client.status(), StatusCode::TOO_MANY_REQUESTS);
+
+            let _ = shutdown_tx.send(());
+            server.await.unwrap();
         }
 
         #[tokio::test]
         async fn test_middleware_429_start_exceeded() {
             let state = make_test_state().await;
-            let app = make_router(state);
+            let app =
+                make_router_with_connect_info(state, SocketAddr::from(([192, 0, 2, 10], 54321)));
 
             // Send 10 requests — all should succeed
             for _ in 0..START_LIMIT_PER_MIN {
@@ -893,7 +1204,8 @@ mod tests {
         #[tokio::test]
         async fn test_middleware_429_callback_exceeded() {
             let state = make_test_state().await;
-            let app = make_router(state);
+            let app =
+                make_router_with_connect_info(state, SocketAddr::from(([192, 0, 2, 10], 54321)));
 
             // Send 5 requests — all should succeed
             for _ in 0..CALLBACK_LIMIT_PER_MIN {
@@ -950,7 +1262,8 @@ mod tests {
         #[tokio::test]
         async fn test_middleware_retry_after_header() {
             let state = make_test_state().await;
-            let app = make_router(state);
+            let app =
+                make_router_with_connect_info(state, SocketAddr::from(([192, 0, 2, 10], 54321)));
 
             // Exhaust the start limit
             for _ in 0..START_LIMIT_PER_MIN {

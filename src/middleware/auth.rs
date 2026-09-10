@@ -28,6 +28,7 @@ fn is_protected_path(path: &str) -> bool {
     matches!(
         path,
         "/dashboard"
+            | "/search"
             | "/recipes/new"
             | "/collections"
             | "/collections/new"
@@ -60,9 +61,6 @@ fn is_recipe_route(path: &str) -> bool {
     }
     match segments.as_slice() {
         [id, "edit"] => is_valid_uuid_string(id),
-        [id, "versions", version_number] => {
-            is_valid_uuid_string(id) && version_number.parse::<i32>().is_ok()
-        }
         _ => false,
     }
 }
@@ -103,6 +101,10 @@ pub async fn handle_auth(
     next: Next,
 ) -> Response<Body> {
     let path = req.uri().path().to_string();
+    let original_target = req
+        .uri()
+        .path_and_query()
+        .map_or_else(|| path.clone(), |target| target.as_str().to_string());
 
     // Extract session cookie from headers
     let jar = CookieJar::from_headers(req.headers());
@@ -129,9 +131,11 @@ pub async fn handle_auth(
 
     // Redirect unauthenticated users from protected paths to login
     if !is_authenticated && is_protected {
-        let encoded =
-            percent_encoding::utf8_percent_encode(&path, percent_encoding::NON_ALPHANUMERIC)
-                .to_string();
+        let encoded = percent_encoding::utf8_percent_encode(
+            &original_target,
+            percent_encoding::NON_ALPHANUMERIC,
+        )
+        .to_string();
         let location = format!("/login?redirect_uri={encoded}");
         return redirect_to(&location);
     }
@@ -197,6 +201,11 @@ mod tests {
     const COLLECTION_ID: &str = "550e8400-e29b-41d4-a716-446655440000";
 
     #[test]
+    fn search_requires_authentication() {
+        assert!(is_protected_path("/search"));
+    }
+
+    #[test]
     fn collection_owner_routes_require_authentication_but_detail_is_shareable() {
         assert!(is_protected_path("/collections"));
         assert!(is_protected_path("/collections/new"));
@@ -219,7 +228,7 @@ mod tests {
     fn published_recipe_detail_is_shareable_but_owner_recipe_routes_stay_protected() {
         assert!(!is_protected_path(&format!("/recipes/{COLLECTION_ID}")));
         assert!(is_protected_path(&format!("/recipes/{COLLECTION_ID}/edit")));
-        assert!(is_protected_path(&format!(
+        assert!(!is_protected_path(&format!(
             "/recipes/{COLLECTION_ID}/versions/1"
         )));
         assert!(is_protected_path(&format!(

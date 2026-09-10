@@ -258,6 +258,7 @@ assert_contains "Compose includes schema initialization" '^  schema-init:$' "$TE
 assert_contains "Compose includes PostgreSQL" '^  postgres:$' "$TEST_TMP/compose-config.yml"
 assert_contains "Compose includes MinIO" '^  minio:$' "$TEST_TMP/compose-config.yml"
 assert_contains "Compose includes Mock OAuth" '^  mock-oauth:$' "$TEST_TMP/compose-config.yml"
+assert_contains "Compose includes the GitHub API mock" '^  mock-github-api:$' "$TEST_TMP/compose-config.yml"
 assert_contains \
     "published ports bind only to loopback" \
     'host_ip: 127\.0\.0\.1' \

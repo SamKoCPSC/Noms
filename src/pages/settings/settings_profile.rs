@@ -51,16 +51,18 @@ mod avatar_action_tests {
 
 /// Delete the authenticated user's account.
 ///
-/// Deletes the user row from the database (oauth_accounts cascade automatically).
-/// On the client side, the caller is responsible for logging out and redirecting.
+/// Atomically stages durable storage cleanup authority before deleting the user
+/// row (oauth_accounts cascade automatically). On the client side, the caller
+/// is responsible for logging out and redirecting.
 #[server]
 pub async fn delete_account() -> Result<(), ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
     let pool = crate::db::get_pool();
+    let _media_lifecycle_guard = crate::api::upload::acquire_media_lifecycle_guard(user_id).await;
 
-    crate::db::delete_user(&pool, user_id)
+    crate::db::delete_user_with_media_cleanup(&pool, user_id)
         .await
         .map_err(|e| ServerFnError::new(e.to_string()))?;
 
@@ -148,8 +150,137 @@ pub async fn save_profile(
 /// thumbnail (100x100) variants. The images have already been
 /// processed client-side before being sent here.
 ///
-/// If the user already has an avatar, the old image files are deleted
-/// from storage (best-effort) before the new ones are uploaded.
+/// If the user already has an avatar, its old image files are deleted
+/// best-effort only after the new avatar is uploaded and persisted.
+#[cfg(feature = "server")]
+fn validate_avatar_payload<'a>(
+    original_bytes: &'a [u8],
+    full_bytes: &'a [u8],
+    thumbnail_bytes: &'a [u8],
+    edit: &RecipeImageEdit,
+) -> Result<crate::api::upload::MediaUploadRequest<'a>, String> {
+    if original_bytes.is_empty() || full_bytes.is_empty() || thumbnail_bytes.is_empty() {
+        return Err("Avatar image variants must not be empty".to_string());
+    }
+    crate::security::validate_image_edit_metadata(edit)
+        .map_err(|_| "Avatar edit metadata is invalid".to_string())?;
+    crate::api::upload::MediaUploadRequest::avatar(original_bytes, full_bytes, thumbnail_bytes)
+}
+
+#[cfg(feature = "server")]
+fn map_avatar_upload_error(
+    error: crate::api::upload::MediaUploadError,
+    user_id: uuid::Uuid,
+) -> ServerFnError {
+    match error {
+        crate::api::upload::MediaUploadError::RateLimited => {
+            ServerFnError::new("Upload rate limit exceeded")
+        }
+        crate::api::upload::MediaUploadError::UsageUnavailable => {
+            ServerFnError::new("Unable to verify media quota")
+        }
+        crate::api::upload::MediaUploadError::QuotaExceeded => {
+            ServerFnError::new("Media storage quota exceeded")
+        }
+        crate::api::upload::MediaUploadError::Storage(error) => {
+            tracing::error!(%error, %user_id, "Failed to upload avatar media variants");
+            ServerFnError::new("Failed to upload avatar")
+        }
+    }
+}
+
+#[cfg(feature = "server")]
+async fn persist_uploaded_avatar(
+    pool: &sqlx::PgPool,
+    storage: &crate::storage::StorageClient,
+    user_id: uuid::Uuid,
+    uploaded: crate::api::upload::UploadedMedia,
+    edit_json: serde_json::Value,
+) -> Result<(crate::db::User, crate::api::upload::UploadedMedia), ServerFnError> {
+    let uploaded_urls = (
+        uploaded.url(crate::storage::MediaObjectKind::AvatarOriginal),
+        uploaded.url(crate::storage::MediaObjectKind::AvatarFull),
+        uploaded.url(crate::storage::MediaObjectKind::AvatarThumbnail),
+    );
+    let (Some(original_url), Some(full_url), Some(_thumbnail_url)) = uploaded_urls else {
+        uploaded.compensate(storage).await;
+        return Err(ServerFnError::new(
+            "Uploaded avatar response was incomplete",
+        ));
+    };
+    let original_url = original_url.to_string();
+    let full_url = full_url.to_string();
+    let original_key = uploaded
+        .key(crate::storage::MediaObjectKind::AvatarOriginal)
+        .ok_or_else(|| ServerFnError::new("Uploaded avatar is missing its original key"))?
+        .to_string();
+    let full_key = uploaded
+        .key(crate::storage::MediaObjectKind::AvatarFull)
+        .ok_or_else(|| ServerFnError::new("Uploaded avatar is missing its full key"))?
+        .to_string();
+    let thumbnail_key = uploaded
+        .key(crate::storage::MediaObjectKind::AvatarThumbnail)
+        .ok_or_else(|| ServerFnError::new("Uploaded avatar is missing its thumbnail key"))?
+        .to_string();
+    let thumbnail_url = uploaded
+        .url(crate::storage::MediaObjectKind::AvatarThumbnail)
+        .expect("validated above")
+        .to_string();
+    let asset = crate::db::NewMediaAsset {
+        id: uploaded.asset_id(),
+        uploader_id: user_id,
+        purpose: crate::db::MediaPurpose::Avatar,
+        full_url: full_url.clone(),
+        thumbnail_url,
+        original_url: Some(original_url.clone()),
+        full_key,
+        thumbnail_key,
+        original_key: Some(original_key),
+        capability_digest: None,
+        expires_at: None,
+    };
+    let mut transaction = pool
+        .begin()
+        .await
+        .map_err(|error| ServerFnError::new(format!("Failed to save avatar: {error}")))?;
+    let updated = async {
+        crate::db::register_media_asset_in_transaction(&mut transaction, &asset).await?;
+        crate::db::replace_avatar_media_reference_in_transaction(
+            &mut transaction,
+            user_id,
+            asset.id,
+        )
+        .await?;
+        sqlx::query(
+            "UPDATE users SET avatar_url = NULL, avatar_original_url = NULL, \
+                 avatar_edit = $2, updated_at = NOW() WHERE id = $1",
+        )
+        .bind(user_id)
+        .bind(Some(edit_json))
+        .execute(&mut *transaction)
+        .await
+        .map_err(crate::db::DbError::Query)?;
+        let updated = crate::db::get_user_by_id(&mut *transaction, user_id)
+            .await?
+            .ok_or(crate::db::DbError::Query(sqlx::Error::RowNotFound))?;
+        transaction
+            .commit()
+            .await
+            .map_err(crate::db::DbError::Query)?;
+        Ok::<_, crate::db::DbError>(updated)
+    }
+    .await;
+    match updated {
+        Ok(updated) => Ok((updated, uploaded)),
+        Err(error) => {
+            uploaded.compensate(storage).await;
+            Err(ServerFnError::new(format!(
+                "Failed to save avatar URL: {error}"
+            )))
+        }
+    }
+}
+
 #[server]
 pub async fn upload_avatar(
     original_bytes: Vec<u8>,
@@ -163,135 +294,23 @@ pub async fn upload_avatar(
     let pool = crate::db::get_pool();
     let storage = crate::storage::get_storage_client();
 
-    // Validate WebP magic bytes (both variants)
-    if !crate::api::upload::validate_webp_magic(&full_bytes) {
-        return Err(ServerFnError::new("Invalid image format: must be WebP"));
-    }
-    if !crate::api::upload::validate_webp_magic(&thumb_bytes) {
-        return Err(ServerFnError::new("Invalid thumbnail format: must be WebP"));
-    }
-
-    // Enforce max file size (2MB for avatars)
-    const MAX_AVATAR_SIZE: usize = 2 * 1024 * 1024;
-    const MAX_AVATAR_ORIGINAL_SIZE: usize = 10 * 1024 * 1024;
-    if original_bytes.is_empty() || original_bytes.len() > MAX_AVATAR_ORIGINAL_SIZE {
-        return Err(ServerFnError::new(
-            "Original image must be between 1 byte and 10MB",
-        ));
-    }
-    if full_bytes.len() > MAX_AVATAR_SIZE {
-        return Err(ServerFnError::new(format!(
-            "Image too large: {} bytes (max {} bytes)",
-            full_bytes.len(),
-            MAX_AVATAR_SIZE
-        )));
-    }
-    if thumb_bytes.len() > MAX_AVATAR_SIZE {
-        return Err(ServerFnError::new(format!(
-            "Thumbnail too large: {} bytes (max {} bytes)",
-            thumb_bytes.len(),
-            MAX_AVATAR_SIZE
-        )));
-    }
-
-    // Fetch current user to get existing avatar URL for cleanup
-    let current_user = crate::db::get_user_by_id(&pool, user_id)
+    let upload_request = validate_avatar_payload(&original_bytes, &full_bytes, &thumb_bytes, &edit)
+        .map_err(ServerFnError::new)?;
+    // Serialize the complete read-upload-write-retire lifecycle. Acquiring the
+    // permit after reading the old URLs would let concurrent replacements both
+    // retire the same predecessor and leave the first new avatar unreferenced.
+    let upload_permit = crate::api::upload::acquire_media_upload_permit(user_id)
         .await
-        .map_err(|e| ServerFnError::new(format!("Failed to fetch user: {e}")))?
-        .ok_or_else(|| ServerFnError::new("User not found"))?;
-    let previous_original: Option<String> =
-        sqlx::query_scalar("SELECT avatar_original_url FROM users WHERE id = $1")
-            .bind(user_id)
-            .fetch_optional(&pool)
-            .await
-            .map_err(|e| ServerFnError::new(format!("Failed to fetch avatar original: {e}")))?
-            .flatten();
+        .map_err(|error| map_avatar_upload_error(error, user_id))?;
 
-    // Generate storage keys for the retained original and rendered caches.
-    let unique_id = uuid::Uuid::new_v4();
-    let original_key = format!("avatars/{}/{}-original", user_id, unique_id);
-    let full_key = format!("avatars/{}/{}.webp", user_id, unique_id);
-    let thumb_key = format!("avatars/{}/{}-thumb.webp", user_id, unique_id);
     let edit_json = serde_json::to_value(&edit)
         .map_err(|e| ServerFnError::new(format!("Failed to serialize avatar edit: {e}")))?;
-
-    let original_url = storage
-        .put_object(&original_key, &original_bytes, "application/octet-stream")
+    let uploaded = upload_permit
+        .upload(&storage, upload_request)
         .await
-        .map_err(|e| ServerFnError::new(format!("Failed to upload avatar original: {e}")))?;
-    let full_url = match storage
-        .put_object(&full_key, &full_bytes, "image/webp")
-        .await
-    {
-        Ok(url) => url,
-        Err(error) => {
-            let _ = storage.delete_object(&original_key).await;
-            return Err(ServerFnError::new(format!(
-                "Failed to upload avatar: {error}"
-            )));
-        }
-    };
-    if let Err(error) = storage
-        .put_object(&thumb_key, &thumb_bytes, "image/webp")
-        .await
-    {
-        let _ = storage.delete_object(&original_key).await;
-        let _ = storage.delete_object(&full_key).await;
-        return Err(ServerFnError::new(format!(
-            "Failed to upload avatar thumbnail: {error}"
-        )));
-    }
-
-    let updated_result = sqlx::query_as::<_, crate::db::User>(
-        "UPDATE users SET avatar_url = $2, avatar_original_url = $3, avatar_edit = $4, updated_at = NOW() \
-         WHERE id = $1 \
-         RETURNING id, username, display_name, email, avatar_url, bio, created_at, updated_at",
-    )
-        .bind(user_id)
-        .bind(Some(full_url.clone()))
-        .bind(Some(original_url.clone()))
-        .bind(Some(edit_json))
-        .fetch_one(&pool)
-        .await;
-    let updated = match updated_result {
-        Ok(updated) => updated,
-        Err(error) => {
-            let _ = storage.delete_object(&original_key).await;
-            let _ = storage.delete_object(&full_key).await;
-            let _ = storage.delete_object(&thumb_key).await;
-            return Err(ServerFnError::new(format!(
-                "Failed to save avatar URL: {error}"
-            )));
-        }
-    };
-
-    // Delete old avatar from storage (best-effort)
-    if let Some(ref old_url) = current_user.avatar_url {
-        let public_base = storage.public_url().trim_end_matches('/');
-        if let Some(old_key) = old_url
-            .strip_prefix(public_base)
-            .map(|s| s.trim_start_matches('/'))
-        {
-            let _ = storage.delete_object(old_key).await;
-            // Also try to delete old thumbnail
-            if let Some(old_base) = old_key.strip_suffix(".webp") {
-                let _ = storage
-                    .delete_object(&format!("{}-thumb.webp", old_base))
-                    .await;
-            }
-        }
-    }
-    if let Some(old_original_url) = previous_original {
-        if old_original_url != original_url {
-            let public_base = storage.public_url().trim_end_matches('/');
-            if let Some(old_key) = old_original_url
-                .strip_prefix(public_base)
-                .map(|value| value.trim_start_matches('/'))
-            {
-                let _ = storage.delete_object(old_key).await;
-            }
-        }
-    }
+        .map_err(|error| map_avatar_upload_error(error, user_id))?;
+    let (updated, _uploaded_lifecycle_guard) =
+        persist_uploaded_avatar(&pool, &storage, user_id, uploaded, edit_json).await?;
 
     Ok(UserProfile {
         id: updated.id,
@@ -311,13 +330,27 @@ pub async fn get_avatar_edit_source() -> Result<Option<AvatarEditSource>, Server
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
     let pool = crate::db::get_pool();
-    let row =
-        sqlx::query("SELECT avatar_url, avatar_original_url, avatar_edit FROM users WHERE id = $1")
-            .bind(user_id)
-            .fetch_optional(&pool)
-            .await
-            .map_err(|e| ServerFnError::new(format!("Failed to load avatar edit: {e}")))?
-            .ok_or_else(|| ServerFnError::new("User not found"))?;
+    let row = sqlx::query(
+        "SELECT CASE WHEN media_ref.asset_id IS NOT NULL \
+                     THEN asset.full_url \
+                     WHEN users.avatar_original_url IS NULL AND users.avatar_edit IS NULL \
+                     THEN users.avatar_url END AS avatar_url, \
+                CASE WHEN media_ref.asset_id IS NOT NULL \
+                     THEN COALESCE(asset.original_url, asset.full_url) \
+                     WHEN users.avatar_original_url IS NULL AND users.avatar_edit IS NULL \
+                     THEN users.avatar_url \
+                END AS avatar_original_url, \
+                users.avatar_edit \
+         FROM users \
+         LEFT JOIN avatar_media_refs media_ref ON media_ref.user_id = users.id \
+         LEFT JOIN media_assets asset ON asset.id = media_ref.asset_id \
+         WHERE users.id = $1",
+    )
+    .bind(user_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Failed to load avatar edit: {e}")))?
+    .ok_or_else(|| ServerFnError::new("User not found"))?;
     let avatar_url: Option<String> = row.try_get("avatar_url").ok();
     let original_url: Option<String> = row.try_get("avatar_original_url").ok();
     let edit_json: Option<serde_json::Value> = row.try_get("avatar_edit").ok();
@@ -335,64 +368,40 @@ pub async fn get_avatar_edit_source() -> Result<Option<AvatarEditSource>, Server
 
 /// Remove the authenticated user's avatar.
 ///
-/// Clears the database fields first, then deletes avatar storage objects on a
-/// best-effort basis so a database failure never leaves dangling URLs.
+/// Clears the user fields and durable avatar reference atomically. The shared
+/// media worker reclaims the asset only after its final reference disappears.
 #[server]
 pub async fn remove_avatar() -> Result<UserProfile, ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
     let pool = crate::db::get_pool();
-    let storage = crate::storage::get_storage_client();
-
-    // Fetch current user to get existing avatar URL for cleanup
-    let current_user = crate::db::get_user_by_id(&pool, user_id)
+    let _media_lifecycle_guard = crate::api::upload::acquire_media_lifecycle_guard(user_id).await;
+    let mut transaction = pool
+        .begin()
         .await
-        .map_err(|e| ServerFnError::new(format!("Failed to fetch user: {e}")))?
-        .ok_or_else(|| ServerFnError::new("User not found"))?;
-    let original_url: Option<String> =
-        sqlx::query_scalar("SELECT avatar_original_url FROM users WHERE id = $1")
-            .bind(user_id)
-            .fetch_optional(&pool)
-            .await
-            .map_err(|e| ServerFnError::new(format!("Failed to fetch avatar original: {e}")))?
-            .flatten();
-
-    let updated = sqlx::query_as::<_, crate::db::User>(
+        .map_err(|error| ServerFnError::new(format!("Failed to remove avatar: {error}")))?;
+    crate::db::clear_avatar_media_reference_in_transaction(&mut transaction, user_id)
+        .await
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    sqlx::query(
         "UPDATE users SET avatar_url = NULL, avatar_original_url = NULL, avatar_edit = NULL, updated_at = NOW() \
-         WHERE id = $1 \
-         RETURNING id, username, display_name, email, avatar_url, bio, created_at, updated_at",
+         WHERE id = $1",
     )
-        .bind(user_id)
-        .fetch_one(&pool)
+    .bind(user_id)
+    .execute(&mut *transaction)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Failed to remove avatar: {e}")))?;
+    let updated = crate::db::get_user_by_id(&mut *transaction, user_id)
         .await
-        .map_err(|e| ServerFnError::new(format!("Failed to remove avatar: {e}")))?;
-
-    // Delete old avatar from storage only after the database commit succeeds.
-    if let Some(ref old_url) = current_user.avatar_url {
-        let public_base = storage.public_url().trim_end_matches('/');
-        if let Some(old_key) = old_url
-            .strip_prefix(public_base)
-            .map(|s| s.trim_start_matches('/'))
-        {
-            let _ = storage.delete_object(old_key).await;
-            // Also try to delete old thumbnail
-            if let Some(old_base) = old_key.strip_suffix(".webp") {
-                let _ = storage
-                    .delete_object(&format!("{}-thumb.webp", old_base))
-                    .await;
-            }
-        }
-    }
-    if let Some(original_url) = original_url {
-        let public_base = storage.public_url().trim_end_matches('/');
-        if let Some(original_key) = original_url
-            .strip_prefix(public_base)
-            .map(|value| value.trim_start_matches('/'))
-        {
-            let _ = storage.delete_object(original_key).await;
-        }
-    }
+        .map_err(|e| ServerFnError::new(format!("Failed to remove avatar: {e}")))?
+        .ok_or_else(|| ServerFnError::new("User not found"))?;
+    transaction
+        .commit()
+        .await
+        .map_err(|error| ServerFnError::new(format!("Failed to remove avatar: {error}")))?;
 
     Ok(UserProfile {
         id: updated.id,
@@ -1031,12 +1040,15 @@ pub fn SettingsProfile() -> Element {
         spawn(async move {
             match delete_account().await {
                 Ok(()) => {
-                    // Full-page navigation to logout endpoint (clears cookie + redirects to /)
-                    // Browsers ignore Set-Cookie from XHR, so we navigate directly
+                    // Account deletion invalidates the database session. POST logout as
+                    // a final browser-side cleanup so the host-only cookie is removed too.
                     #[cfg(target_arch = "wasm32")]
                     {
+                        let _ = gloo_net::http::Request::post("/auth/logout?redirect_uri=/")
+                            .send()
+                            .await;
                         if let Some(window) = web_sys::window() {
-                            let _ = window.location().set_href("/auth/logout?redirect_uri=/");
+                            let _ = window.location().set_href("/");
                         }
                     }
                 }
@@ -1694,5 +1706,222 @@ pub fn SettingsProfile() -> Element {
             }
         }
         }
+    }
+}
+
+#[cfg(all(feature = "server", test))]
+mod avatar_media_ownership_tests {
+    use super::{persist_uploaded_avatar, validate_avatar_payload};
+    use crate::types::RecipeImageEdit;
+
+    const VALID_WEBP_BYTES: &[u8] = b"RIFF\x24\x00\x00\x00WEBP";
+
+    #[test]
+    fn avatar_payload_rejects_every_empty_variant() {
+        let edit = RecipeImageEdit::default_ellipse_1x1();
+        for result in [
+            validate_avatar_payload(&[], VALID_WEBP_BYTES, VALID_WEBP_BYTES, &edit),
+            validate_avatar_payload(b"original", &[], VALID_WEBP_BYTES, &edit),
+            validate_avatar_payload(b"original", VALID_WEBP_BYTES, &[], &edit),
+        ] {
+            assert_eq!(
+                result.unwrap_err(),
+                "Avatar image variants must not be empty"
+            );
+        }
+        assert!(
+            validate_avatar_payload(b"original", VALID_WEBP_BYTES, VALID_WEBP_BYTES, &edit).is_ok()
+        );
+    }
+
+    #[test]
+    fn avatar_payload_rejects_oversized_edit_metadata() {
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.name = "e".repeat(crate::security::MAX_IMAGE_EDIT_NAME_CHARS + 1);
+        assert!(
+            validate_avatar_payload(b"original", VALID_WEBP_BYTES, VALID_WEBP_BYTES, &edit,)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn avatar_payload_preserves_format_and_size_error_contracts() {
+        let edit = RecipeImageEdit::default_ellipse_1x1();
+        assert_eq!(
+            validate_avatar_payload(b"original", b"not webp", VALID_WEBP_BYTES, &edit).unwrap_err(),
+            "Invalid image format: must be WebP"
+        );
+
+        let mut oversized = vec![0_u8; 2 * 1024 * 1024 + 1];
+        oversized[0..4].copy_from_slice(b"RIFF");
+        oversized[8..12].copy_from_slice(b"WEBP");
+        assert_eq!(
+            validate_avatar_payload(b"original", &oversized, VALID_WEBP_BYTES, &edit).unwrap_err(),
+            format!(
+                "Image too large: {} bytes (max {} bytes)",
+                oversized.len(),
+                2 * 1024 * 1024
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn managed_avatar_persistence_keeps_urls_in_the_asset_registry_only() {
+        let (_database, pool) = crate::test_utils::setup_test_db().await;
+        let user = crate::db::insert_user(
+            &pool,
+            "avatar_registry",
+            "Avatar Registry",
+            "avatar-registry@example.com",
+            None,
+        )
+        .await
+        .unwrap();
+        let mock_server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("PUT"))
+            .respond_with(wiremock::ResponseTemplate::new(200))
+            .expect(3)
+            .mount(&mock_server)
+            .await;
+        let storage = crate::storage::StorageClient::for_test_with_endpoint_and_public_url(
+            &mock_server.uri(),
+            "https://cdn.example.com/media",
+        );
+        let request = crate::api::upload::MediaUploadRequest::avatar(
+            b"original image bytes",
+            VALID_WEBP_BYTES,
+            VALID_WEBP_BYTES,
+        )
+        .unwrap();
+        let uploaded =
+            crate::api::upload::upload_media_transaction_for_test(&storage, user.id, request)
+                .await
+                .unwrap();
+        let asset_id = uploaded.asset_id();
+        let expected_full = uploaded
+            .url(crate::storage::MediaObjectKind::AvatarFull)
+            .unwrap()
+            .to_string();
+
+        let (projected, _guard) =
+            persist_uploaded_avatar(&pool, &storage, user.id, uploaded, serde_json::json!({}))
+                .await
+                .unwrap();
+        assert_eq!(
+            projected.avatar_url.as_deref(),
+            Some(expected_full.as_str())
+        );
+        assert_eq!(
+            sqlx::query_as::<_, (Option<String>, Option<String>)>(
+                "SELECT avatar_url, avatar_original_url FROM users WHERE id = $1",
+            )
+            .bind(user.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            (None, None)
+        );
+        assert_eq!(
+            sqlx::query_scalar::<_, uuid::Uuid>(
+                "SELECT asset_id FROM avatar_media_refs WHERE user_id = $1",
+            )
+            .bind(user.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            asset_id
+        );
+    }
+
+    #[tokio::test]
+    async fn avatar_database_failure_compensates_new_objects_and_preserves_previous_state() {
+        let (_database, pool) = crate::test_utils::setup_test_db().await;
+        let user = crate::db::insert_user(
+            &pool,
+            "avatar_db_failure",
+            "Avatar DB Failure",
+            "avatar-db-failure@example.com",
+            None,
+        )
+        .await
+        .unwrap();
+        let owner_id = user.id;
+        let previous_object = uuid::Uuid::new_v4();
+        let previous_full =
+            format!("https://cdn.example.com/media/avatars/{owner_id}/{previous_object}.webp");
+        let previous_original =
+            format!("https://cdn.example.com/media/avatars/{owner_id}/{previous_object}-original");
+        sqlx::query("UPDATE users SET avatar_url = $2, avatar_original_url = $3 WHERE id = $1")
+            .bind(owner_id)
+            .bind(&previous_full)
+            .bind(&previous_original)
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "CREATE FUNCTION reject_avatar_update() RETURNS trigger AS $$ \
+             BEGIN RAISE EXCEPTION 'injected avatar update failure'; END; \
+             $$ LANGUAGE plpgsql",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "CREATE TRIGGER reject_avatar_update_trigger BEFORE UPDATE OF avatar_url ON users \
+             FOR EACH ROW EXECUTE FUNCTION reject_avatar_update()",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let mock_server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("PUT"))
+            .respond_with(wiremock::ResponseTemplate::new(200))
+            .expect(3)
+            .mount(&mock_server)
+            .await;
+        wiremock::Mock::given(wiremock::matchers::method("DELETE"))
+            .respond_with(wiremock::ResponseTemplate::new(204))
+            .expect(3)
+            .mount(&mock_server)
+            .await;
+        let storage = crate::storage::StorageClient::for_test_with_endpoint_and_public_url(
+            &mock_server.uri(),
+            "https://cdn.example.com/media",
+        );
+        let request = crate::api::upload::MediaUploadRequest::avatar(
+            b"original image bytes",
+            VALID_WEBP_BYTES,
+            VALID_WEBP_BYTES,
+        )
+        .unwrap();
+        let uploaded =
+            crate::api::upload::upload_media_transaction_for_test(&storage, owner_id, request)
+                .await
+                .unwrap();
+
+        let result =
+            persist_uploaded_avatar(&pool, &storage, owner_id, uploaded, serde_json::json!({}))
+                .await;
+        assert!(result.is_err());
+
+        let preserved: (Option<String>, Option<String>) =
+            sqlx::query_as("SELECT avatar_url, avatar_original_url FROM users WHERE id = $1")
+                .bind(owner_id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(preserved.0.as_deref(), Some(previous_full.as_str()));
+        assert_eq!(preserved.1.as_deref(), Some(previous_original.as_str()));
+        let requests = mock_server.received_requests().await.unwrap();
+        let deleted_paths: Vec<_> = requests
+            .iter()
+            .filter(|request| request.method.as_str() == "DELETE")
+            .map(|request| request.url.path().to_string())
+            .collect();
+        assert_eq!(deleted_paths.len(), 3);
+        assert!(deleted_paths
+            .iter()
+            .all(|path| !path.contains(&previous_object.to_string())));
     }
 }

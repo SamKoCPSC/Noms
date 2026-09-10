@@ -152,6 +152,8 @@ pub struct ImageUploadProps {
     /// Number of locally selected files that have not uploaded successfully.
     /// Parents use this to mark an otherwise unchanged draft dirty.
     pub pending_count: Signal<usize>,
+    /// Selects the server-controlled storage namespace for this uploader.
+    pub purpose: crate::api::upload::UploadPurpose,
     /// Optional gallery capacity. Recipe forms omit this to preserve their
     /// unlimited gallery behavior; collection covers set it to one.
     #[props(default)]
@@ -502,6 +504,8 @@ async fn retry_upload(
     img_id: usize,
     mut pending: Signal<Vec<PendingImage>>,
     images: Signal<Vec<RecipeImage>>,
+    purpose: crate::api::upload::UploadPurpose,
+    mut discard_capabilities: Signal<std::collections::HashMap<usize, String>>,
 ) {
     let item = pending().iter().find(|p| p.id == img_id).map(|p| {
         (
@@ -522,10 +526,15 @@ async fn retry_upload(
 
     // The one unavoidable `Vec<u8>` clone — to pass bytes by value to the
     // server fn. Happens once per retry, not per render.
-    let result = crate::api::upload::upload_image((*full).clone(), (*thumb).clone(), name).await;
+    let result =
+        crate::api::upload::upload_image((*full).clone(), (*thumb).clone(), name, purpose).await;
     match result {
         Ok(resp) => {
-            let uploaded_image = RecipeImage::new(resp.full_url, Some(resp.thumb_url), edit);
+            discard_capabilities
+                .write()
+                .insert(img_id, resp.discard_capability.clone());
+            let uploaded_image =
+                RecipeImage::managed(resp.asset_id, resp.full_url, Some(resp.thumb_url), edit);
             if let Some(p) = pending.write().iter_mut().find(|p| p.id == img_id) {
                 p.status = UploadStatus::Uploaded;
                 p.uploaded_image = Some(uploaded_image);
@@ -549,6 +558,8 @@ async fn retry_upload(
 async fn upload_all(
     mut pending: Signal<Vec<PendingImage>>,
     images: Signal<Vec<RecipeImage>>,
+    purpose: crate::api::upload::UploadPurpose,
+    mut discard_capabilities: Signal<std::collections::HashMap<usize, String>>,
 ) -> UploadOutcome {
     // Processing guard — abort if any item is still in `Processing`.
     if pending()
@@ -578,11 +589,16 @@ async fn upload_all(
         }
 
         let result =
-            crate::api::upload::upload_image((*full).clone(), (*thumb).clone(), name).await;
+            crate::api::upload::upload_image((*full).clone(), (*thumb).clone(), name, purpose)
+                .await;
 
         match result {
             Ok(resp) => {
-                let uploaded_image = RecipeImage::new(resp.full_url, Some(resp.thumb_url), edit);
+                discard_capabilities
+                    .write()
+                    .insert(id, resp.discard_capability.clone());
+                let uploaded_image =
+                    RecipeImage::managed(resp.asset_id, resp.full_url, Some(resp.thumb_url), edit);
                 if let Some(p) = pending.write().iter_mut().find(|p| p.id == id) {
                     p.status = UploadStatus::Uploaded;
                     p.uploaded_image = Some(uploaded_image);
@@ -615,7 +631,7 @@ fn remove_pending(
     img_id: usize,
     mut pending: Signal<Vec<PendingImage>>,
     mut images: Signal<Vec<RecipeImage>>,
-) {
+) -> Option<String> {
     let uploaded_url = pending()
         .iter()
         .find(|pending_image| pending_image.id == img_id)
@@ -634,10 +650,11 @@ fn remove_pending(
         }
     }
     pending.write().retain(|p| p.id != img_id);
-    if let Some(uploaded_url) = uploaded_url {
+    if let Some(uploaded_url) = uploaded_url.as_deref() {
         images.write().retain(|image| image.url != uploaded_url);
     }
     sync_uploaded_images(pending, images);
+    uploaded_url
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
@@ -656,6 +673,8 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     let mut editor_modal_url = use_signal(|| Option::<String>::None);
     let mut editor_modal_img_id = use_signal(|| Option::<usize>::None);
     let mut dragged_image_id = use_signal(|| Option::<usize>::None);
+    // Raw capabilities never enter RecipeImage or any persisted form payload.
+    let mut discard_capabilities = use_signal(std::collections::HashMap::<usize, String>::new);
 
     let images = props.images;
     let mut upload_now = props.upload_now;
@@ -664,6 +683,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     let on_remove_existing = props.on_remove_existing;
     let on_upload_complete = props.on_upload_complete;
     let max_images = props.max_images;
+    let purpose = props.purpose;
 
     // ── busy sync ────────────────────────────────────────────────────────
     // Memo over `pending` + `uploading`; an effect writes the result into
@@ -713,7 +733,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
         if upload_now() && !uploading() {
             uploading.set(true);
             spawn(async move {
-                let outcome = upload_all(pending, images).await;
+                let outcome = upload_all(pending, images, purpose, discard_capabilities).await;
                 upload_now.set(false);
                 uploading.set(false);
                 on_upload_complete.call(outcome);
@@ -776,7 +796,10 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                     let img_status = img.status.clone();
                     let img_error = img.error.clone();
                     let img_edit = img.edit.clone();
-                    let img_edit_key = format!(
+                    // The web renderer uses this key to remount the preview after an
+                    // edit. The server half of a full-stack bundle intentionally
+                    // discards DOM keys, so keep the binding warning-free there.
+                    let _img_edit_key = format!(
                         "{:.4}-{:.4}-{:.4}-{:.4}-{:.2}-{:.4}-{:.4}-{:.4}-{:.4}",
                         img_edit.crop.x,
                         img_edit.crop.y,
@@ -846,7 +869,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                         editor_modal_url.set(Some(url.clone()));
                                     },
                                     EditedRecipeImage {
-                                        key: "{img_id}-{img_edit_key}",
+                                        key: "{img_id}-{_img_edit_key}",
                                         image: RecipeImage::new(url.clone(), None, img_edit),
                                         class: "recipe-image-preview",
                                         alt: img_name.clone(),
@@ -932,7 +955,14 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                     disabled: retry_disabled,
                                     onclick: move |_| {
                                         spawn(async move {
-                                            retry_upload(img_id, pending, images).await;
+                                            retry_upload(
+                                                img_id,
+                                                pending,
+                                                images,
+                                                purpose,
+                                                discard_capabilities,
+                                            )
+                                            .await;
                                         });
                                     },
                                     "↻ Retry"
@@ -949,7 +979,18 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                             on_remove_existing.call(image.url.clone());
                                         }
                                     }
-                                    remove_pending(img_id, pending, images);
+                                    let _removed_uploaded_url = remove_pending(img_id, pending, images);
+                                    let discard_capability =
+                                        discard_capabilities.write().remove(&img_id);
+                                    if !img_persisted {
+                                        if let Some(discard_capability) = discard_capability {
+                                            spawn(async move {
+                                                if let Err(problem) = crate::api::upload::discard_upload(discard_capability).await {
+                                                    tracing::warn!("Failed to discard unsaved upload: {problem}");
+                                                }
+                                            });
+                                        }
+                                    }
                                 },
                                 "✕"
                             }

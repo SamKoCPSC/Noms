@@ -11,9 +11,12 @@ dioxus = { version = "0.7.1", features = ["router", "fullstack"] }
 tracing = "0.1"
 
 # Server-only — never compiled into the WASM client
-sqlx             = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"], optional = true }
-aws-sdk-s3       = { version = "1", optional = true }
-aws-config       = { version = "1", optional = true }
+sqlx             = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json", "macros"], optional = true }
+# The AWS defaults also enable their legacy Hyper 0.14 / rustls 0.21 connector.
+# R2 uses the modern HTTP 1.x default client, so keep the legacy TLS graph out
+# of the production binary explicitly.
+aws-sdk-s3       = { version = "1", default-features = false, features = ["http-1x", "default-https-client", "rt-tokio", "behavior-version-latest"], optional = true }
+aws-config       = { version = "1", default-features = false, features = ["default-https-client", "rt-tokio", "behavior-version-latest"], optional = true }
 tracing-subscriber = { version = "0.3", features = ["json"], optional = true }
 oauth2           = { version = "5", optional = true }
 jsonwebtoken     = { version = "9", optional = true }
@@ -23,14 +26,16 @@ reqwest          = { version = "0.12", features = ["json"], optional = true }
 uuid             = { version = "1", features = ["v4", "serde", "js"] }
 serde            = { version = "1", features = ["derive"] }
 percent-encoding = "2"
+url                = "2"
 serde_json       = "1"
 time             = { version = "0.3", optional = true }
 cookie           = { version = "0.18", optional = true }
 chrono           = { version = "0.4", features = ["serde"] }
 tokio            = { version = "1", features = ["rt-multi-thread", "macros"], optional = true }
-unicode-normalization = { version = "0.1", optional = true }
+unicode-normalization = "0.1"
 dashmap = { version = "6", optional = true }
 ipnet = { version = "2", optional = true }
+sha2 = { version = "0.10", optional = true }
 wasm-bindgen = "0.2"
 
 # Target-specific — only compiled for the WASM client build.
@@ -70,9 +75,9 @@ server  = [
     "time",
     "cookie",
     "tokio",
-    "unicode-normalization",
     "dashmap",
     "ipnet",
+    "sha2",
 ]
 
 [dev-dependencies]

@@ -1,11 +1,9 @@
 //! Orphan image cleanup worker.
 //!
-//! Periodically reconciles MinIO storage against the database:
-//! 1. Collects all image URLs referenced by recipes in the DB
-//! 2. Lists all objects in the storage bucket
-//! 3. Deletes any object whose key is not referenced by the DB
+//! Periodically reconciles a bounded batch of tracked media assets against
+//! exact database references. Unknown legacy objects are never enumerated or
+//! treated as deletion authority.
 
-use std::collections::HashSet;
 use std::time::Duration;
 
 use sqlx::PgPool;
@@ -21,14 +19,20 @@ pub struct OrphanCleanupConfig {
 }
 
 impl OrphanCleanupConfig {
+    const DEFAULT_INTERVAL_SECS: u64 = 3600;
+
     /// Read config from environment.
     ///
     /// `NOMS_ORPHAN_CLEANUP_INTERVAL_SECS` — interval in seconds (default: 3600 = 1 hour).
     pub fn from_env() -> Self {
-        let interval_secs = std::env::var("NOMS_ORPHAN_CLEANUP_INTERVAL_SECS")
-            .ok()
-            .and_then(|v| v.parse::<u64>().ok())
-            .unwrap_or(3600);
+        let value = std::env::var("NOMS_ORPHAN_CLEANUP_INTERVAL_SECS").ok();
+        Self::from_interval_value(value.as_deref())
+    }
+
+    fn from_interval_value(value: Option<&str>) -> Self {
+        let interval_secs = value
+            .and_then(|value| value.parse::<u64>().ok())
+            .unwrap_or(Self::DEFAULT_INTERVAL_SECS);
         Self {
             interval: Duration::from_secs(interval_secs),
         }
@@ -37,8 +41,8 @@ impl OrphanCleanupConfig {
 
 /// Spawn the orphan cleanup background task.
 ///
-/// The task runs on a periodic interval, querying all image URLs from the DB,
-/// listing all objects in storage, and deleting any orphans.
+/// The task runs on a periodic interval and retries only database-tracked,
+/// lock-claimed object-family cleanup.
 /// Dropped automatically on server shutdown.
 pub fn spawn_orphan_cleanup(pool: PgPool, storage: StorageClient, config: OrphanCleanupConfig) {
     info!(
@@ -63,50 +67,37 @@ pub async fn run_cleanup(
     pool: &PgPool,
     storage: &StorageClient,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // 1. Get all referenced image URLs from DB
-    let db_urls = db::get_all_image_urls(pool)
-        .await
-        .map_err(|e| format!("Failed to query image URLs from DB: {e}"))?;
-
-    // 2. Build set of referenced storage keys
-    let public_url = storage.public_url().trim_end_matches('/');
-    let mut referenced_keys = HashSet::new();
-    for url in &db_urls {
-        if let Some(key) = url
-            .strip_prefix(public_url)
-            .map(|s| s.trim_start_matches('/'))
-        {
-            referenced_keys.insert(key.to_string());
-            // Also mark the derived thumbnail key as referenced so it isn't
-            // deleted as an orphan (the DB stores only _full.webp URLs).
-            if let Some(base) = key.strip_suffix("_full.webp") {
-                referenced_keys.insert(format!("{base}_thumb.webp"));
+    // Candidate selection and each indexed reference check are independently
+    // bounded. The bucket and document corpus are never enumerated.
+    let candidates = db::list_media_asset_cleanup_candidates(pool).await?;
+    let candidates_examined = candidates.len();
+    let mut deleted_count = 0u64;
+    for asset_id in candidates {
+        let db::MediaDiscardDecision::Claimed(claim) =
+            db::claim_media_cleanup(pool, asset_id).await?
+        else {
+            continue;
+        };
+        let mut failures = Vec::new();
+        let mut keys = vec![claim.full_key, claim.thumbnail_key];
+        keys.extend(claim.original_key);
+        for key in &keys {
+            if let Err(error) = storage.delete_object(key).await {
+                failures.push(format!("{key}: {error}"));
             }
         }
-    }
-
-    // 3. List all objects in storage (recipes/ prefix)
-    let all_keys = storage
-        .list_objects(Some("recipes/"))
-        .await
-        .map_err(|e| format!("Failed to list storage objects: {e}"))?;
-
-    // 4. Delete orphans
-    let mut deleted_count = 0u64;
-    for key in &all_keys {
-        if !referenced_keys.contains(key.as_str()) {
-            if let Err(e) = storage.delete_object(key).await {
-                warn!(key = %key, error = %e, "Failed to delete orphan object");
-            } else {
-                deleted_count += 1;
-                debug!(key = %key, "Deleted orphan object");
-            }
+        let failure = (!failures.is_empty()).then(|| failures.join("; "));
+        db::finish_media_asset_delete(pool, claim.id, failure.as_deref()).await?;
+        if let Some(error) = failure {
+            warn!(claim_id = %claim.id, %error, "Failed to delete tracked orphan family");
+        } else {
+            deleted_count += keys.len() as u64;
+            debug!(claim_id = %claim.id, "Deleted unreferenced media asset");
         }
     }
 
     info!(
-        objects_in_db = db_urls.len(),
-        objects_in_storage = all_keys.len(),
+        candidates_examined,
         orphans_deleted = deleted_count,
         "Orphan cleanup cycle complete"
     );
@@ -119,100 +110,176 @@ mod tests {
 
     #[test]
     fn test_orphan_cleanup_config_default() {
-        // Ensure the env var is not set
-        std::env::remove_var("NOMS_ORPHAN_CLEANUP_INTERVAL_SECS");
-        let config = OrphanCleanupConfig::from_env();
+        let config = OrphanCleanupConfig::from_interval_value(None);
         assert_eq!(config.interval, Duration::from_secs(3600));
     }
 
     #[test]
     fn test_orphan_cleanup_config_from_env() {
-        std::env::set_var("NOMS_ORPHAN_CLEANUP_INTERVAL_SECS", "42");
-        let config = OrphanCleanupConfig::from_env();
+        let config = OrphanCleanupConfig::from_interval_value(Some("42"));
         assert_eq!(config.interval, Duration::from_secs(42));
-        // Clean up
-        std::env::remove_var("NOMS_ORPHAN_CLEANUP_INTERVAL_SECS");
     }
 
     #[test]
     fn test_orphan_cleanup_config_invalid_env() {
-        std::env::set_var("NOMS_ORPHAN_CLEANUP_INTERVAL_SECS", "not-a-number");
-        let config = OrphanCleanupConfig::from_env();
-        // Should fall back to default
+        let config = OrphanCleanupConfig::from_interval_value(Some("not-a-number"));
         assert_eq!(config.interval, Duration::from_secs(3600));
-        // Clean up
-        std::env::remove_var("NOMS_ORPHAN_CLEANUP_INTERVAL_SECS");
     }
 
-    #[test]
-    fn test_thumbnail_keys_derived_from_full_keys() {
-        // Simulate the key derivation that happens inside run_cleanup:
-        // for every "_full.webp" key, the corresponding "_thumb.webp" is
-        // also added to referenced_keys so thumbnails aren't deleted.
-        let public_url = "https://cdn.example.com";
-        let db_urls = vec![
-            format!("{public_url}/recipes/user1/abc123_full.webp"),
-            format!("{public_url}/recipes/user2/def456_full.webp"),
-        ];
+    #[tokio::test]
+    async fn cleanup_never_lists_the_untracked_storage_corpus() {
+        let (_database, pool) = crate::test_utils::setup_test_db().await;
+        let suffix = crate::test_utils::uid();
+        let owner = crate::db::insert_user(
+            &pool,
+            &format!("bounded_{suffix}"),
+            "Bounded Cleanup",
+            &format!("bounded-{suffix}@example.test"),
+            None,
+        )
+        .await
+        .unwrap();
+        let object_id = uuid::Uuid::new_v4();
+        let mock_server = wiremock::MockServer::start().await;
+        let storage = crate::storage::StorageClient::for_test_with_endpoint(&mock_server.uri());
+        let full_key = format!("recipes/{}/{object_id}_full.webp", owner.id);
+        let thumbnail_key = format!("recipes/{}/{object_id}_thumb.webp", owner.id);
+        crate::db::register_media_asset(
+            &pool,
+            &crate::db::NewMediaAsset {
+                id: object_id,
+                uploader_id: owner.id,
+                purpose: crate::db::MediaPurpose::Recipe,
+                full_url: storage.object_url(&full_key),
+                thumbnail_url: storage.object_url(&thumbnail_key),
+                full_key,
+                thumbnail_key,
+                original_url: None,
+                original_key: None,
+                capability_digest: Some(vec![61; 32]),
+                expires_at: Some(chrono::Utc::now() - chrono::Duration::minutes(1)),
+            },
+        )
+        .await
+        .unwrap();
 
-        let mut referenced_keys = HashSet::new();
-        for url in &db_urls {
-            if let Some(key) = url
-                .strip_prefix(public_url)
-                .map(|s| s.trim_start_matches('/'))
-            {
-                referenced_keys.insert(key.to_string());
-                if let Some(base) = key.strip_suffix("_full.webp") {
-                    referenced_keys.insert(format!("{base}_thumb.webp"));
-                }
-            }
-        }
+        wiremock::Mock::given(wiremock::matchers::method("GET"))
+            .respond_with(wiremock::ResponseTemplate::new(200))
+            .expect(0)
+            .mount(&mock_server)
+            .await;
+        wiremock::Mock::given(wiremock::matchers::method("DELETE"))
+            .respond_with(wiremock::ResponseTemplate::new(204))
+            .expect(2)
+            .mount(&mock_server)
+            .await;
 
-        // Full keys are present
-        assert!(referenced_keys.contains("recipes/user1/abc123_full.webp"));
-        assert!(referenced_keys.contains("recipes/user2/def456_full.webp"));
-
-        // Derived thumbnail keys are also present
-        assert!(referenced_keys.contains("recipes/user1/abc123_thumb.webp"));
-        assert!(referenced_keys.contains("recipes/user2/def456_thumb.webp"));
-
-        // A genuine orphan (not matching any full or thumb) is not referenced
-        assert!(!referenced_keys.contains("recipes/user3/orphan_full.webp"));
-        assert!(!referenced_keys.contains("recipes/user3/orphan_thumb.webp"));
-
-        // A non-image object is not referenced
-        assert!(!referenced_keys.contains("recipes/user1/some_other_file.txt"));
+        run_cleanup(&pool, &storage).await.unwrap();
+        mock_server.verify().await;
+        assert_eq!(
+            sqlx::query_scalar::<_, String>(
+                "SELECT lifecycle FROM media_assets WHERE uploader_id = $1",
+            )
+            .bind(owner.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            "deleted"
+        );
     }
 
-    #[test]
-    fn test_thumbnail_derivation_ignores_non_full_keys() {
-        // Keys that don't end with "_full.webp" should not produce spurious
-        // thumbnail entries.
-        let public_url = "https://cdn.example.com";
-        let db_urls = vec![
-            // This one has no _full suffix — no thumb should be derived
-            format!("{public_url}/recipes/user1/legacy_image.webp"),
-            // This one is a full key — thumb should be derived
-            format!("{public_url}/recipes/user1/abc123_full.webp"),
-        ];
+    #[tokio::test]
+    async fn media_asset_cleanup_retries_after_the_uploader_is_gone() {
+        let (_database, pool) = crate::test_utils::setup_test_db().await;
+        let suffix = crate::test_utils::uid();
+        let user = crate::db::insert_user(
+            &pool,
+            &format!("cleanup_retry_{suffix}"),
+            "Cleanup Retry",
+            &format!("cleanup-retry-{suffix}@example.test"),
+            None,
+        )
+        .await
+        .unwrap();
+        let object_id = uuid::Uuid::new_v4();
+        let mock_server = wiremock::MockServer::start().await;
+        let storage = crate::storage::StorageClient::for_test_with_endpoint_and_public_url(
+            &mock_server.uri(),
+            "https://media.example.test",
+        );
+        let full_key = format!("avatars/{}/{object_id}.webp", user.id);
+        let thumbnail_key = format!("avatars/{}/{object_id}-thumb.webp", user.id);
+        let original_key = format!("avatars/{}/{object_id}-original", user.id);
+        let full_url = storage.object_url(&full_key);
+        let thumbnail_url = storage.object_url(&thumbnail_key);
+        let original_url = storage.object_url(&original_key);
+        crate::db::register_media_asset(
+            &pool,
+            &crate::db::NewMediaAsset {
+                id: object_id,
+                uploader_id: user.id,
+                purpose: crate::db::MediaPurpose::Avatar,
+                full_url: full_url.clone(),
+                thumbnail_url,
+                original_url: Some(original_url.clone()),
+                full_key,
+                thumbnail_key,
+                original_key: Some(original_key),
+                capability_digest: None,
+                expires_at: None,
+            },
+        )
+        .await
+        .unwrap();
+        crate::db::replace_avatar_media_reference(&pool, user.id, object_id)
+            .await
+            .unwrap();
+        sqlx::query("UPDATE users SET avatar_url = $2, avatar_original_url = $3 WHERE id = $1")
+            .bind(user.id)
+            .bind(&full_url)
+            .bind(&original_url)
+            .execute(&pool)
+            .await
+            .unwrap();
+        crate::db::delete_user_with_media_cleanup(&pool, user.id)
+            .await
+            .unwrap();
 
-        let mut referenced_keys = HashSet::new();
-        for url in &db_urls {
-            if let Some(key) = url
-                .strip_prefix(public_url)
-                .map(|s| s.trim_start_matches('/'))
-            {
-                referenced_keys.insert(key.to_string());
-                if let Some(base) = key.strip_suffix("_full.webp") {
-                    referenced_keys.insert(format!("{base}_thumb.webp"));
-                }
-            }
-        }
+        wiremock::Mock::given(wiremock::matchers::method("DELETE"))
+            .respond_with(wiremock::ResponseTemplate::new(500))
+            .expect(3)
+            .mount(&mock_server)
+            .await;
+        run_cleanup(&pool, &storage).await.unwrap();
 
-        assert!(referenced_keys.contains("recipes/user1/legacy_image.webp"));
-        // No spurious thumb for the legacy key
-        assert!(!referenced_keys.contains("recipes/user1/legacy_image_thumb.webp"));
-        // Thumb for the full key is present
-        assert!(referenced_keys.contains("recipes/user1/abc123_thumb.webp"));
+        let (lifecycle, failure): (String, Option<String>) =
+            sqlx::query_as("SELECT lifecycle, delete_failure FROM media_assets WHERE id = $1")
+                .bind(object_id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(lifecycle, "delete_claimed");
+        assert!(failure.is_some());
+        assert!(crate::db::get_user_by_id(&pool, user.id)
+            .await
+            .unwrap()
+            .is_none());
+
+        mock_server.reset().await;
+        wiremock::Mock::given(wiremock::matchers::method("DELETE"))
+            .respond_with(wiremock::ResponseTemplate::new(204))
+            .expect(3)
+            .mount(&mock_server)
+            .await;
+        run_cleanup(&pool, &storage).await.unwrap();
+
+        let (lifecycle, failure): (String, Option<String>) =
+            sqlx::query_as("SELECT lifecycle, delete_failure FROM media_assets WHERE id = $1")
+                .bind(object_id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(lifecycle, "deleted");
+        assert!(failure.is_none());
     }
 }

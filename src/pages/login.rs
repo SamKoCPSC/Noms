@@ -18,7 +18,10 @@ pub fn Login() -> Element {
             percent_encoding::NON_ALPHANUMERIC,
         )
         .to_string();
-        format!("/auth/{}/start?redirect_uri={}", provider, encoded)
+        format!(
+            "/auth/{}/start?redirect_uri={}&purpose=login",
+            provider, encoded
+        )
     };
 
     rsx! {
@@ -114,8 +117,12 @@ fn extract_redirect_uri() -> String {
 fn parse_redirect_uri(query: &str) -> String {
     for param in query.split('&') {
         if let Some(value) = param.strip_prefix("redirect_uri=") {
-            if !value.is_empty() && is_safe_redirect_uri(value) {
-                return value.to_string();
+            if let Ok(decoded) = percent_encoding::percent_decode_str(value).decode_utf8() {
+                if let Some(redirect) =
+                    crate::auth::redirect::normalize_same_origin_redirect(&decoded)
+                {
+                    return redirect;
+                }
             }
         }
     }
@@ -126,17 +133,9 @@ fn parse_redirect_uri(query: &str) -> String {
 ///
 /// Rejects absolute URLs, protocol-relative URLs, data URIs, and
 /// javascript: URIs to prevent open redirect attacks.
+#[cfg(test)]
 fn is_safe_redirect_uri(uri: &str) -> bool {
-    let trimmed = uri.trim();
-    // Must start with / (relative path)
-    if !trimmed.starts_with('/') {
-        return false;
-    }
-    // Reject protocol-relative URLs like //evil.com
-    if trimmed.starts_with("//") {
-        return false;
-    }
-    true
+    crate::auth::redirect::normalize_same_origin_redirect(uri).is_some()
 }
 
 #[cfg(test)]
@@ -150,7 +149,6 @@ mod tests {
         assert!(is_safe_redirect_uri("/recipes/new?category=seafood"));
         assert!(is_safe_redirect_uri("/recipes/123/edit?draft=true"));
         assert!(is_safe_redirect_uri("/"));
-        assert!(is_safe_redirect_uri(" /dashboard ")); // trimmed
     }
 
     #[test]
@@ -164,6 +162,25 @@ mod tests {
         assert!(!is_safe_redirect_uri("//evil.com"));
         assert!(!is_safe_redirect_uri("//evil.com/phishing"));
 
+        // Raw, encoded, and double-encoded slash/backslash confusion
+        for uri in [
+            "/\\evil.example",
+            "/%5cevil.example",
+            "/%2fevil.example",
+            "/%255cevil.example",
+            "/%252fevil.example",
+            "/.//evil.example",
+            "/%2e%2e//evil.example",
+            "/%",
+            "/%zz",
+            "/%FF",
+        ] {
+            assert!(
+                !is_safe_redirect_uri(uri),
+                "unsafe redirect accepted: {uri}"
+            );
+        }
+
         // Data URIs
         assert!(!is_safe_redirect_uri(
             "data:text/html,<script>alert(1)</script>"
@@ -175,14 +192,27 @@ mod tests {
         // Empty / whitespace only
         assert!(!is_safe_redirect_uri(""));
         assert!(!is_safe_redirect_uri("   "));
+        assert!(!is_safe_redirect_uri(" /dashboard "));
     }
 
     #[test]
     fn parse_redirect_uri_valid() {
         assert_eq!(parse_redirect_uri("redirect_uri=/dashboard"), "/dashboard");
         assert_eq!(
+            parse_redirect_uri("redirect_uri=%2Fdashboard"),
+            "/dashboard"
+        );
+        assert_eq!(
             parse_redirect_uri("redirect_uri=/recipes/new?category=seafood"),
             "/recipes/new?category=seafood"
+        );
+        assert_eq!(
+            parse_redirect_uri("redirect_uri=%2Frecipes%2Fnew%3Fcategory%3Dseafood"),
+            "/recipes/new?category=seafood"
+        );
+        assert_eq!(
+            parse_redirect_uri("redirect_uri=%2Fsearch%3Fq%3D100%2525"),
+            "/search?q=100%25"
         );
         assert_eq!(
             parse_redirect_uri("foo=bar&redirect_uri=/recipes/new&baz=qux"),
@@ -197,6 +227,18 @@ mod tests {
             "/dashboard"
         );
         assert_eq!(parse_redirect_uri("redirect_uri=//evil.com"), "/dashboard");
+        assert_eq!(
+            parse_redirect_uri("redirect_uri=/%255cevil.example"),
+            "/dashboard"
+        );
+        assert_eq!(
+            parse_redirect_uri("redirect_uri=%2F.%2F%2Fevil.example"),
+            "/dashboard"
+        );
+        assert_eq!(
+            parse_redirect_uri("redirect_uri=%2F%252e%252e%2F%2Fevil.example"),
+            "/dashboard"
+        );
         assert_eq!(
             parse_redirect_uri("redirect_uri=javascript:alert(1)"),
             "/dashboard"

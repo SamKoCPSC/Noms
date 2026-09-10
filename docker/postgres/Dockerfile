@@ -1,4 +1,4 @@
-FROM postgres:17-bookworm
+FROM postgres:17-bookworm@sha256:84560e3b9c6874893fc4e2854f5dc3e7c1a37bc9d1dfd7a8c641310ae22ba5ad
 
 # Use a subdirectory under the persistent volume mount point for PGDATA.
 # Railway (and other orchestrators) mount storage at /var/lib/postgresql/data,
@@ -16,10 +16,14 @@ RUN apt-get update \
        > /etc/apt/sources.list.d/timescaledb.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-       postgresql-17-cron postgresql-17-pgvector timescaledb-2-postgresql-17 \
+       postgresql-17-cron=1.6.7-3.pgdg12+1 \
+       postgresql-17-pgvector=0.8.6-1.pgdg12+1 \
+       timescaledb-2-loader-postgresql-17=2.29.2~debian12-1710 \
+       timescaledb-2-postgresql-17=2.29.2~debian12-1710 \
     && curl -fsSL \
        "https://github.com/paradedb/paradedb/releases/download/v0.23.4/postgresql-17-pg-search_0.23.4-1PARADEDB-bookworm_amd64.deb" \
        -o /tmp/pg_search.deb \
+    && echo "95b4ef14a43c158e1b18cedc2c59024beeabcb8ab0520f55529cc1932781a495  /tmp/pg_search.deb" | sha256sum --check - \
     && dpkg -i /tmp/pg_search.deb \
     && rm /tmp/pg_search.deb \
     && rm -rf /var/lib/apt/lists/*

@@ -1,14 +1,14 @@
 # === Stage 1: Prepare dependency recipe ===
-FROM rust:1-slim-bookworm AS planner
+FROM rust:1-slim-bookworm@sha256:2775a09d208ff0d7c1f50490c45b62db929e87ba1dcbc3f2132ac71a704bcdd3 AS planner
 RUN apt-get update && apt-get install -y pkg-config libssl-dev curl && rm -rf /var/lib/apt/lists/*
-RUN cargo install cargo-chef
+RUN cargo install cargo-chef --version 0.1.78 --locked
 WORKDIR /usr/src/app
 COPY Cargo.toml Cargo.lock clippy.toml ./
 COPY src/ ./src/
 RUN cargo chef prepare --recipe-path recipe.json
 
 # === Stage 2: Compile dependencies (cached across builds) ===
-FROM rust:1-slim-bookworm AS builder
+FROM rust:1-slim-bookworm@sha256:2775a09d208ff0d7c1f50490c45b62db929e87ba1dcbc3f2132ac71a704bcdd3 AS builder
 # Install build deps + PostgreSQL server binaries + sudo for pgtemp integration tests.
 # pgtemp detects Docker's root user and shells out to `sudo -u postgres` to
 # run initdb/postgres — sudo must be available or tests will panic.
@@ -16,15 +16,15 @@ RUN apt-get update && apt-get install -y pkg-config libssl-dev curl postgresql p
     && ln -sf /usr/lib/postgresql/*/bin/initdb /usr/local/bin/initdb \
     && ln -sf /usr/lib/postgresql/*/bin/postgres /usr/local/bin/postgres
 RUN rustup component add rustfmt clippy
-RUN cargo install cargo-chef
+RUN cargo install cargo-chef --version 0.1.78 --locked
 RUN cargo install dioxus-cli@0.7.9 --locked
 WORKDIR /usr/src/app
 COPY --from=planner /usr/src/app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 
 # === Stage 2b: Build pgschema ===
-FROM golang:1.24-bookworm AS pgschema-builder
-RUN go install github.com/pgplex/pgschema@latest
+FROM golang:1.24-bookworm@sha256:1a6d4452c65dea36aac2e2d606b01b4a029ec90cc1ae53890540ce6173ea77ac AS pgschema-builder
+RUN go install github.com/pgplex/pgschema@v1.12.1
 
 # === Stage 3: Checks + final build ===
 # Must switch back to the Rust builder context — the pgschema-builder stage
@@ -37,7 +37,7 @@ RUN cargo test --no-default-features --features server
 RUN dx bundle --platform web --release
 
 # === Stage 4: Runtime ===
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim@sha256:abd67ffcfa541b485a3dff59865ab629aa048a6c613e639d36e7456b0b229241
 RUN apt-get update && apt-get install -y curl postgresql-client perl && rm -rf /var/lib/apt/lists/* \
     && groupadd -r noms && useradd -r -g noms -d /usr/local/app -s /sbin/nologin noms \
     && mkdir -p /usr/local/bin
@@ -46,8 +46,8 @@ COPY --from=pgschema-builder /go/bin/pgschema /usr/local/bin/pgschema
 COPY --from=build-check /usr/src/app/target/dx/noms/release/web/ /usr/local/app
 COPY --from=build-check /usr/src/app/migrations/ /usr/local/app/migrations/
 COPY entrypoint.sh /usr/local/app/entrypoint.sh
-RUN chmod +x /usr/local/app/entrypoint.sh \
-    && chown -R noms:noms /usr/local/app
+RUN chmod 0555 /usr/local/app /usr/local/app/entrypoint.sh \
+    && chmod -R go-w /usr/local/app
 
 USER noms
 WORKDIR /usr/local/app

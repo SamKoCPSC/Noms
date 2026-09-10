@@ -27,19 +27,13 @@ fi
 # ? starts the query string and # starts the fragment. In practice, Railway always
 # URL-encodes these. If you set DATABASE_URL manually, encode ? as %3F and # as %23.
 parse_database_url() {
-    local url="${DATABASE_URL:?DATABASE_URL environment variable is not set}"
+    local database_url="${1:?database URL is required}"
 
-    {
-        read -r PGUSER
-        read -r PGPASSWORD
-        read -r PGHOST
-        read -r PGPORT
-        read -r PGDATABASE
-    } < <(perl -e '
+    NOMS_DATABASE_URL_TO_PARSE="$database_url" perl -e '
         use strict;
         use warnings;
 
-        my $url = $ENV{"DATABASE_URL"};
+        my $url = $ENV{"NOMS_DATABASE_URL_TO_PARSE"};
 
         # Remove scheme (postgres:// or postgresql://)
         $url =~ s|^postgres(?:ql)?://||;
@@ -89,9 +83,7 @@ parse_database_url() {
         print decode($host) . "\n";
         print decode($port) . "\n";
         print decode($dbname) . "\n";
-    ')
-
-    export PGUSER PGPASSWORD PGHOST PGPORT PGDATABASE
+    '
 }
 
 # Apply database extensions (pgcrypto, pg_cron) before schema.
@@ -102,39 +94,90 @@ parse_database_url() {
 #   3. The PG* variables are already percent-decoded by parse_database_url
 apply_extensions() {
     echo "Applying database extensions..."
-    PGPASSWORD="$PGPASSWORD" psql \
-        -h "$PGHOST" \
-        -p "$PGPORT" \
-        -U "$PGUSER" \
-        -d "$PGDATABASE" \
+    PGPASSWORD="$MIGRATION_PGPASSWORD" psql \
+        -h "$MIGRATION_PGHOST" \
+        -p "$MIGRATION_PGPORT" \
+        -U "$MIGRATION_PGUSER" \
+        -d "$MIGRATION_PGDATABASE" \
         -w \
         -f /usr/local/app/migrations/extensions.sql
     echo "Extensions applied."
 }
 
-# Apply database schema using pgschema
+# Apply the declarative schema using the extension-enabled target as pgschema's
+# plan database so extension-provided types and index methods can be inspected.
 apply_schema() {
     echo "Applying database schema..."
+    PGPASSWORD="$MIGRATION_PGPASSWORD" \
+    PGSCHEMA_PLAN_PASSWORD="$MIGRATION_PGPASSWORD" \
     pgschema apply \
-        --host "$PGHOST" \
-        --port "$PGPORT" \
-        --db "$PGDATABASE" \
-        --user "$PGUSER" \
-        --password "$PGPASSWORD" \
+        --host "$MIGRATION_PGHOST" \
+        --port "$MIGRATION_PGPORT" \
+        --db "$MIGRATION_PGDATABASE" \
+        --user "$MIGRATION_PGUSER" \
+        --plan-host "$MIGRATION_PGHOST" \
+        --plan-port "$MIGRATION_PGPORT" \
+        --plan-db "$MIGRATION_PGDATABASE" \
+        --plan-user "$MIGRATION_PGUSER" \
         --file /usr/local/app/migrations/schema.sql \
         --schema public \
+        --lock-timeout 30s \
         --auto-approve
     echo "Database schema applied."
 }
 
+grant_runtime_access() {
+    echo "Applying least-privilege runtime database grants..."
+    PGPASSWORD="$MIGRATION_PGPASSWORD" psql \
+        -h "$MIGRATION_PGHOST" \
+        -p "$MIGRATION_PGPORT" \
+        -U "$MIGRATION_PGUSER" \
+        -d "$MIGRATION_PGDATABASE" \
+        -w \
+        --set=runtime_role="$APP_PGUSER" \
+        --set=runtime_database="$APP_PGDATABASE" \
+        -f /usr/local/app/migrations/runtime-grants.sql
+    echo "Runtime database grants applied."
+}
+
 # Main entrypoint
-if [ -n "${DATABASE_URL:-}" ]; then
-    parse_database_url
-    apply_extensions
-    apply_schema
-else
-    echo "DATABASE_URL not set — skipping database migration."
+runtime_database_url="${DATABASE_URL:?DATABASE_URL environment variable is not set}"
+migration_database_url="${MIGRATION_DATABASE_URL:?MIGRATION_DATABASE_URL environment variable is not set}"
+
+{
+    read -r APP_PGUSER
+    read -r APP_PGPASSWORD
+    read -r APP_PGHOST
+    read -r APP_PGPORT
+    read -r APP_PGDATABASE
+} < <(parse_database_url "$runtime_database_url")
+{
+    read -r MIGRATION_PGUSER
+    read -r MIGRATION_PGPASSWORD
+    read -r MIGRATION_PGHOST
+    read -r MIGRATION_PGPORT
+    read -r MIGRATION_PGDATABASE
+} < <(parse_database_url "$migration_database_url")
+
+if [ "$APP_PGUSER" = "$MIGRATION_PGUSER" ]; then
+    echo "DATABASE_URL and MIGRATION_DATABASE_URL must use separate roles." >&2
+    exit 1
 fi
+if [ "$APP_PGHOST" != "$MIGRATION_PGHOST" ] \
+    || [ "$APP_PGPORT" != "$MIGRATION_PGPORT" ] \
+    || [ "$APP_PGDATABASE" != "$MIGRATION_PGDATABASE" ]; then
+    echo "DATABASE_URL and MIGRATION_DATABASE_URL must target the same database server and database." >&2
+    exit 1
+fi
+
+apply_extensions
+apply_schema
+grant_runtime_access
+
+# The application process receives only its runtime URL. Migration credentials
+# are removed from the inherited environment before exec.
+unset MIGRATION_DATABASE_URL migration_database_url MIGRATION_PGPASSWORD APP_PGPASSWORD
+export NOMS_MIGRATIONS_APPLIED=1
 
 # Launch the server
 exec /usr/local/app/server

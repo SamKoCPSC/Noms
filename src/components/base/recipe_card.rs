@@ -6,14 +6,15 @@
 use crate::components::base::avatar::Avatar;
 use crate::components::base::avatar::AvatarSize;
 use crate::components::base::EditedRecipeImage;
-use crate::types::Recipe;
+use crate::types::RecipeCardSummary;
 use dioxus::prelude::*;
 
 /// Props for the [`RecipeCard`] component.
 #[derive(Props, Clone, PartialEq)]
 pub struct RecipeCardProps {
     /// The recipe to display.
-    pub recipe: Recipe,
+    #[props(into)]
+    pub recipe: RecipeCardSummary,
 }
 
 /// A clickable card showing a recipe preview.
@@ -62,10 +63,10 @@ pub fn RecipeCard(props: RecipeCardProps) -> Element {
                 class: "recipe-card__link",
                 div {
                     class: "recipe-card__image",
-                    if let Some(first_image) = recipe.images.first() {
+                    if let Some(first_image) = recipe.image.as_ref() {
                         if !image_failed() {
                             EditedRecipeImage {
-                                image: first_image.clone(),
+                                image: first_image.clone().into_recipe_image(),
                                 class: "recipe-card__image-img",
                                 alt: recipe.title.clone(),
                                 prefer_thumbnail: true,

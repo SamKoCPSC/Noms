@@ -3,6 +3,8 @@
 //! Used by `ImageUpload` to open the image editor for a pending image after
 //! the user selects a file.
 
+#![allow(clippy::too_many_arguments)]
+
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use dioxus::prelude::*;
@@ -106,7 +108,7 @@ fn editor_transform_fit_scale(
         1.0
     };
 
-    fit_x.min(fit_y).min(1.0).max(0.1)
+    fit_x.min(fit_y).clamp(0.1, 1.0)
 }
 
 /// Props for [`ImageEditorModal`].
@@ -484,9 +486,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
 
     // Memo: compute final bounding box percentages from img_dims, scale, offset.
     let crop_rect = use_memo(move || {
-        let Some((img_w, img_h)) = img_dims() else {
-            return None;
-        };
+        let (img_w, img_h) = img_dims()?;
 
         let img_ratio = img_w / img_h;
 
@@ -525,9 +525,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
 
     // Memo: translation slider bounds (max offset per axis).
     let translation_bounds = use_memo(move || {
-        let Some((img_w, img_h)) = img_dims() else {
-            return None;
-        };
+        let (img_w, img_h) = img_dims()?;
 
         let img_ratio = img_w / img_h;
         let (base_crop_w, base_crop_h) = if img_ratio < target_ratio {
@@ -1136,6 +1134,7 @@ fn editor_state_from_edit(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn current_editor_state(
     scale: Signal<f64>,
     offset: Signal<(f64, f64)>,
@@ -1164,6 +1163,7 @@ fn current_editor_state(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn apply_editor_state(
     state: EditorEditState,
     mut scale: Signal<f64>,
@@ -1205,6 +1205,7 @@ fn push_editor_history(
     redo_stack.write().clear();
 }
 
+#[allow(clippy::too_many_arguments)]
 fn begin_editor_edit(
     mut active_edit_start: Signal<Option<EditorEditState>>,
     scale: Signal<f64>,
@@ -1229,6 +1230,7 @@ fn begin_editor_edit(
     )));
 }
 
+#[allow(clippy::too_many_arguments)]
 fn commit_editor_edit(
     undo_stack: Signal<Vec<EditorEditState>>,
     redo_stack: Signal<Vec<EditorEditState>>,
@@ -1255,6 +1257,7 @@ fn commit_editor_edit(
     push_editor_history(undo_stack, redo_stack, before, after);
 }
 
+#[allow(clippy::too_many_arguments)]
 fn set_editor_state_with_history(
     undo_stack: Signal<Vec<EditorEditState>>,
     redo_stack: Signal<Vec<EditorEditState>>,
@@ -1286,6 +1289,7 @@ fn set_editor_state_with_history(
     );
 }
 
+#[allow(clippy::too_many_arguments)]
 fn undo_editor_state(
     mut undo_stack: Signal<Vec<EditorEditState>>,
     mut redo_stack: Signal<Vec<EditorEditState>>,
@@ -1342,6 +1346,7 @@ fn undo_editor_state(
     );
 }
 
+#[allow(clippy::too_many_arguments)]
 fn redo_editor_state(
     mut undo_stack: Signal<Vec<EditorEditState>>,
     mut redo_stack: Signal<Vec<EditorEditState>>,
@@ -1484,7 +1489,7 @@ fn ImageWithCrop(
 
         // --- Image onload: capture natural dimensions ---
         let img_id_load = img_id.clone();
-        let mut on_img_load = move |_evt: dioxus::html::events::ImageEvent| {
+        let on_img_load = move |_evt: dioxus::html::events::ImageEvent| {
             let doc = match web_sys::window().and_then(|w| w.document()) {
                 Some(d) => d,
                 None => return,
@@ -1539,7 +1544,7 @@ fn ImageWithCrop(
         let resize_handle_g = resize_handle;
         let resize_start_g = resize_start;
         let mut scale_g = scale;
-        let on_edit_commit_g = on_edit_commit.clone();
+        let on_edit_commit_g = on_edit_commit;
 
         // Store closures in a signal so use_drop can access them for cleanup.
         let global_closures = use_signal(|| {
@@ -1617,7 +1622,6 @@ fn ImageWithCrop(
                                 (start_scale_val + dir * delta_px / base_dim).clamp(0.1, 1.0);
                             scale_g.set(new_scale);
                         }
-                        return;
                     }
                 })
                     as Box<dyn FnMut(web_sys::MouseEvent)>);
@@ -1671,8 +1675,8 @@ fn ImageWithCrop(
         });
 
         // --- Mouse drag ---
-        let on_drag_start = on_edit_start.clone();
-        let mut on_crop_mousedown = move |evt: dioxus::html::events::MouseEvent| {
+        let on_drag_start = on_edit_start;
+        let on_crop_mousedown = move |evt: dioxus::html::events::MouseEvent| {
             evt.prevent_default(); // prevent browser's native image drag
             evt.stop_propagation();
             on_drag_start.call(());
@@ -1683,7 +1687,7 @@ fn ImageWithCrop(
         };
 
         let img_id_move = img_id.clone();
-        let mut on_crop_mousemove = move |evt: dioxus::html::events::MouseEvent| {
+        let on_crop_mousemove = move |evt: dioxus::html::events::MouseEvent| {
             if !is_dragging() {
                 return;
             }
@@ -1703,8 +1707,8 @@ fn ImageWithCrop(
             }
         };
 
-        let on_drag_commit = on_edit_commit.clone();
-        let mut on_crop_mouseup = move |_: dioxus::html::events::MouseEvent| {
+        let on_drag_commit = on_edit_commit;
+        let on_crop_mouseup = move |_: dioxus::html::events::MouseEvent| {
             let was_dragging = is_dragging();
             is_dragging.set(false);
             if was_dragging {
@@ -1714,8 +1718,8 @@ fn ImageWithCrop(
         };
 
         // --- Touch drag ---
-        let on_touch_start = on_edit_start.clone();
-        let mut on_crop_touchstart = move |evt: dioxus::html::events::TouchEvent| {
+        let on_touch_start = on_edit_start;
+        let on_crop_touchstart = move |evt: dioxus::html::events::TouchEvent| {
             evt.stop_propagation();
             if let Some(pos) = touch_client_pos(&evt) {
                 on_touch_start.call(());
@@ -1725,7 +1729,7 @@ fn ImageWithCrop(
         };
 
         let img_id_tm = img_id.clone();
-        let mut on_crop_touchmove = move |evt: dioxus::html::events::TouchEvent| {
+        let on_crop_touchmove = move |evt: dioxus::html::events::TouchEvent| {
             if !is_dragging() {
                 return;
             }
@@ -1746,8 +1750,8 @@ fn ImageWithCrop(
             }
         };
 
-        let on_touch_commit = on_edit_commit.clone();
-        let mut on_crop_touchend = move |_: dioxus::html::events::TouchEvent| {
+        let on_touch_commit = on_edit_commit;
+        let on_crop_touchend = move |_: dioxus::html::events::TouchEvent| {
             let was_dragging = is_dragging();
             is_dragging.set(false);
             if was_dragging {
@@ -1757,7 +1761,7 @@ fn ImageWithCrop(
         };
 
         // --- Resize handle mousedown ---
-        let on_resize_start = on_edit_start.clone();
+        let on_resize_start = on_edit_start;
         let mut on_resize_mousedown =
             move |handle: ResizeHandle, evt: dioxus::html::events::MouseEvent| {
                 evt.prevent_default();
@@ -1798,12 +1802,12 @@ fn ImageWithCrop(
                 style: wrapper_style.unwrap_or_default(),
                 // Drag handlers on the wrapper so they fire even when the cursor
                 // leaves the crop rectangle but is still over the image.
-                onmousedown: move |evt| on_crop_mousedown(evt),
-                onmousemove: move |evt| on_crop_mousemove(evt),
-                onmouseup: move |evt| on_crop_mouseup(evt),
-                ontouchstart: move |evt| on_crop_touchstart(evt),
-                ontouchmove: move |evt| on_crop_touchmove(evt),
-                ontouchend: move |evt| on_crop_touchend(evt),
+                onmousedown: on_crop_mousedown,
+                onmousemove: on_crop_mousemove,
+                onmouseup: on_crop_mouseup,
+                ontouchstart: on_crop_touchstart,
+                ontouchmove: on_crop_touchmove,
+                ontouchend: on_crop_touchend,
                 div {
                     class: "image-editor__transform-stage",
                     style: transform_style,
@@ -1840,7 +1844,7 @@ fn ImageWithCrop(
                         class: "image-editor__image",
                         src: url,
                         alt: "Image editor",
-                        onload: move |evt| on_img_load(evt),
+                        onload: on_img_load,
                         style: image_filter_style,
                     }
                 }
@@ -1958,6 +1962,7 @@ struct CropRectPct {
     right: f64,
 }
 
+#[allow(clippy::too_many_arguments)]
 fn current_recipe_image_edit(
     crop_mode: ImageEditorCropMode,
     crop_rect: Option<CropRectPct>,

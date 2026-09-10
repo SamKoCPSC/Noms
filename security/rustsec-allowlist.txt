@@ -1,0 +1,5 @@
+# RUSTSEC-ID|expires-on|narrow reachability rationale
+#
+# Keep this empty when possible. Every exception must identify a concrete
+# non-reachable path and expire so CI forces re-evaluation.
+RUSTSEC-2023-0071|2026-11-30|RSA is retained only by SQLx's optional MySQL metadata; the production graph disables SQLx defaults, enables PostgreSQL only, and cargo tree has no RSA path.

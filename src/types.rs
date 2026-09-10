@@ -8,6 +8,9 @@ use chrono::{DateTime, Utc};
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 
+/// Fixed client page size for bounded immutable-version history reads.
+pub const VERSION_HISTORY_PAGE_SIZE: usize = 25;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ImageAspectRatio {
     pub width: u32,
@@ -112,11 +115,14 @@ impl RecipeImageEdit {
 
 /// A recipe image stored in `recipes.images`.
 ///
-/// Older rows stored image entries as plain URL strings. The custom
-/// deserializer keeps those rows readable by converting each string to a
-/// structured image record with no saved edits.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+/// Managed images carry an asset ID; structured entries without one are
+/// explicitly external and never grant managed-object authority.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RecipeImage {
+    /// Stable identity for application-managed media. `None` means the URL is
+    /// an explicitly external display resource and grants no storage authority.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub asset_id: Option<Uuid>,
     /// Full-size image URL.
     pub url: String,
     /// Smaller image variant for compact UI surfaces.
@@ -132,6 +138,23 @@ pub struct RecipeImage {
 impl RecipeImage {
     pub fn new(url: String, thumb_url: Option<String>, edit: RecipeImageEdit) -> Self {
         Self {
+            asset_id: None,
+            url,
+            thumb_url,
+            file_name: None,
+            file_size: None,
+            edits: vec![edit],
+        }
+    }
+
+    pub fn managed(
+        asset_id: Uuid,
+        url: String,
+        thumb_url: Option<String>,
+        edit: RecipeImageEdit,
+    ) -> Self {
+        Self {
+            asset_id: Some(asset_id),
             url,
             thumb_url,
             file_name: None,
@@ -151,53 +174,6 @@ impl RecipeImage {
             self.thumb_url.as_deref().unwrap_or(&self.url)
         } else {
             &self.url
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for RecipeImage {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        #[serde(untagged)]
-        enum RecipeImageCompat {
-            Url(String),
-            Object {
-                url: String,
-                #[serde(default)]
-                thumb_url: Option<String>,
-                #[serde(default)]
-                file_name: Option<String>,
-                #[serde(default)]
-                file_size: Option<u64>,
-                #[serde(default)]
-                edits: Vec<RecipeImageEdit>,
-            },
-        }
-
-        match RecipeImageCompat::deserialize(deserializer)? {
-            RecipeImageCompat::Url(url) => Ok(Self {
-                url,
-                thumb_url: None,
-                file_name: None,
-                file_size: None,
-                edits: Vec::new(),
-            }),
-            RecipeImageCompat::Object {
-                url,
-                thumb_url,
-                file_name,
-                file_size,
-                edits,
-            } => Ok(Self {
-                url,
-                thumb_url,
-                file_name,
-                file_size,
-                edits,
-            }),
         }
     }
 }
@@ -255,10 +231,92 @@ pub struct Recipe {
     pub author_avatar_url: Option<String>,
 }
 
+/// The bounded fields needed to render one recipe card.
+///
+/// Collection reads use this projection directly so card pages never transport
+/// a complete recipe snapshot.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecipeCardImage {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub asset_id: Option<Uuid>,
+    pub url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thumb_url: Option<String>,
+    pub edits: Vec<RecipeImageEdit>,
+}
+
+impl RecipeCardImage {
+    pub fn into_recipe_image(self) -> RecipeImage {
+        RecipeImage {
+            asset_id: self.asset_id,
+            url: self.url,
+            thumb_url: self.thumb_url,
+            file_name: None,
+            file_size: None,
+            edits: self.edits,
+        }
+    }
+}
+
+impl From<RecipeImage> for RecipeCardImage {
+    fn from(image: RecipeImage) -> Self {
+        Self {
+            asset_id: image.asset_id,
+            url: image.url,
+            thumb_url: image.thumb_url,
+            edits: image
+                .edits
+                .into_iter()
+                .find(|edit| edit.name == "rectangle:16:9")
+                .into_iter()
+                .collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecipeCardSummary {
+    pub id: Uuid,
+    pub title: String,
+    pub description: Option<String>,
+    pub prep_time_minutes: Option<i32>,
+    pub cook_time_minutes: Option<i32>,
+    pub servings: Option<i32>,
+    pub image: Option<RecipeCardImage>,
+    pub visibility: String,
+    pub author_username: String,
+    pub author_avatar_url: Option<String>,
+}
+
+impl From<Recipe> for RecipeCardSummary {
+    fn from(recipe: Recipe) -> Self {
+        Self {
+            id: recipe.id,
+            title: recipe.title,
+            description: recipe.description,
+            prep_time_minutes: recipe.prep_time_minutes,
+            cook_time_minutes: recipe.cook_time_minutes,
+            servings: recipe.servings,
+            image: recipe.images.into_iter().next().map(RecipeCardImage::from),
+            visibility: recipe.visibility,
+            author_username: recipe.author_username,
+            author_avatar_url: recipe.author_avatar_url,
+        }
+    }
+}
+
 /// Paginated recipe list response for server functions.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RecipeListResponse {
     pub recipes: Vec<Recipe>,
+    pub total_count: i64,
+    pub has_more: bool,
+}
+
+/// A public discovery page containing only fields rendered by recipe cards.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PublicRecipeListResponse {
+    pub recipes: Vec<RecipeCardSummary>,
     pub total_count: i64,
     pub has_more: bool,
 }
@@ -386,6 +444,14 @@ pub struct RecipeVersionSummary {
     pub change_summary: String,
 }
 
+/// One descending cursor page of lightweight immutable-version summaries.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct RecipeVersionSummaryPage {
+    pub items: Vec<RecipeVersionSummary>,
+    /// Pass this value as `before_version_number` to request the next page.
+    pub next_before_version_number: Option<i32>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RecipeVersionView {
     pub version_number: i32,
@@ -427,7 +493,9 @@ pub struct VersionGraphComparison {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ForkAttribution {
     pub original_recipe_id: Option<Uuid>,
-    pub original_title: String,
+    /// Present only when the viewer may discover the source under its current
+    /// visibility, or under its captured visibility after deletion.
+    pub original_title: Option<String>,
     pub message: Option<String>,
 }
 
@@ -692,22 +760,22 @@ impl Serialize for VersionGraphNode {
     where
         S: Serializer,
     {
-        let redact_content = self.is_redacted;
+        if self.is_redacted {
+            return Err(serde::ser::Error::custom(
+                "redacted version graph nodes must be omitted before serialization",
+            ));
+        }
         VersionGraphNodeWire {
             id: self.id,
-            title: (!redact_content).then(|| self.title.clone()).flatten(),
-            owner_username: (!redact_content)
-                .then(|| self.owner_username.clone())
-                .flatten(),
-            image: (!redact_content).then(|| self.image.clone()).flatten(),
-            created_at: (!redact_content).then_some(self.created_at).flatten(),
-            change_summary: (!redact_content)
-                .then(|| self.change_summary.clone())
-                .flatten(),
+            title: self.title.clone(),
+            owner_username: self.owner_username.clone(),
+            image: self.image.clone(),
+            created_at: self.created_at,
+            change_summary: self.change_summary.clone(),
             is_selected_recipe: self.is_selected_recipe,
             is_current_version: self.is_current_version,
             is_deleted: self.is_deleted,
-            is_redacted: self.is_redacted,
+            is_redacted: false,
         }
         .serialize(serializer)
     }
@@ -762,6 +830,9 @@ pub struct VersionGraphLineageCount {
     pub is_capped: bool,
 }
 
+/// Aggregate topology intentionally includes inaccessible lineage branches.
+/// Counts disclose only existence and size; hidden nodes and their reusable
+/// identifiers are omitted from every graph page.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VersionGraphLineageCounts {
     pub ancestors: VersionGraphLineageCount,
@@ -785,6 +856,10 @@ pub struct VersionGraphFrontier {
     pub anchor: VersionGraphNodeId,
     pub kind: VersionGraphFrontierKind,
     pub hidden_count: usize,
+    /// Random relationship key used as an opaque keyset continuation for
+    /// bounded fork pages. Version-only directions leave this unset.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fork_cursor: Option<Uuid>,
 }
 
 /// Normalized graph payload. Relationships refer to nodes by stable identity.
@@ -827,7 +902,7 @@ pub struct PublicCollectionListResponse {
 /// Paginated direct recipe membership for a collection.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CollectionRecipeList {
-    pub recipes: Vec<Recipe>,
+    pub recipes: Vec<RecipeCardSummary>,
     pub total_count: i64,
     pub has_more: bool,
 }
@@ -873,6 +948,333 @@ pub struct UserProfile {
     pub avatar_url: Option<String>,
     pub bio: Option<String>,
     pub public_recipe_count: i64,
+}
+
+// ── Search contract ────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TextMatchMode {
+    #[default]
+    AllTerms,
+    AnyTerm,
+    ExactPhrase,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TextCriterion {
+    pub text: String,
+    pub mode: TextMatchMode,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct AdvancedTextField {
+    pub include: Option<TextCriterion>,
+    pub exclude: Vec<TextCriterion>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct IntegerRange {
+    pub lower_inclusive: Option<i32>,
+    pub upper_exclusive: Option<i32>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TimestampRange {
+    pub lower_inclusive: Option<DateTime<Utc>>,
+    pub upper_exclusive: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct AdvancedRecipeSearchCriteria {
+    pub title: AdvancedTextField,
+    pub description: AdvancedTextField,
+    pub ingredients: AdvancedTextField,
+    pub instructions: AdvancedTextField,
+    pub tags_any: Vec<String>,
+    pub tags_excluded: Vec<String>,
+    pub created_at: Option<TimestampRange>,
+    pub updated_at: Option<TimestampRange>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RecipeSearchVisibility {
+    #[default]
+    AllVisible,
+    MineOnly,
+    PublicOnly,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RecipeSearchSort {
+    #[default]
+    Relevance,
+    UpdatedNewest,
+    UpdatedOldest,
+    TitleAscending,
+    TitleDescending,
+    Quickest,
+    Longest,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct RecipeSearchRequest {
+    pub text: Option<String>,
+    pub advanced: Option<AdvancedRecipeSearchCriteria>,
+    pub visibility: RecipeSearchVisibility,
+    pub tags_all: Vec<String>,
+    pub total_time: Option<IntegerRange>,
+    pub servings: Option<IntegerRange>,
+    pub sort: RecipeSearchSort,
+    pub page: u32,
+    pub page_size: u32,
+}
+
+impl Default for RecipeSearchRequest {
+    fn default() -> Self {
+        Self {
+            text: None,
+            advanced: None,
+            visibility: RecipeSearchVisibility::default(),
+            tags_all: Vec::new(),
+            total_time: None,
+            servings: None,
+            sort: RecipeSearchSort::default(),
+            page: 1,
+            page_size: crate::search::DEFAULT_SEARCH_PAGE_SIZE,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct AdvancedCollectionSearchCriteria {
+    pub name: AdvancedTextField,
+    pub description: AdvancedTextField,
+    pub updated_at: Option<TimestampRange>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CollectionSearchSort {
+    #[default]
+    Relevance,
+    UpdatedNewest,
+    UpdatedOldest,
+    NameAscending,
+    NameDescending,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct CollectionSearchRequest {
+    pub text: Option<String>,
+    pub advanced: Option<AdvancedCollectionSearchCriteria>,
+    pub sort: CollectionSearchSort,
+    pub page: u32,
+    pub page_size: u32,
+}
+
+impl Default for CollectionSearchRequest {
+    fn default() -> Self {
+        Self {
+            text: None,
+            advanced: None,
+            sort: CollectionSearchSort::default(),
+            page: 1,
+            page_size: crate::search::DEFAULT_SEARCH_PAGE_SIZE,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct AdvancedUserSearchCriteria {
+    pub username: AdvancedTextField,
+    pub display_name: AdvancedTextField,
+    pub bio: AdvancedTextField,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UserSearchSort {
+    #[default]
+    Relevance,
+    UsernameAscending,
+    DisplayNameAscending,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct UserSearchRequest {
+    pub text: Option<String>,
+    pub advanced: Option<AdvancedUserSearchCriteria>,
+    pub sort: UserSearchSort,
+    pub page: u32,
+    pub page_size: u32,
+}
+
+impl Default for UserSearchRequest {
+    fn default() -> Self {
+        Self {
+            text: None,
+            advanced: None,
+            sort: UserSearchSort::default(),
+            page: 1,
+            page_size: crate::search::DEFAULT_SEARCH_PAGE_SIZE,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct AllSearchRequest {
+    pub text: String,
+    pub section_limit: u32,
+}
+
+impl Default for AllSearchRequest {
+    fn default() -> Self {
+        Self {
+            text: String::new(),
+            section_limit: crate::search::DEFAULT_ALL_SECTION_LIMIT,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SearchResult {
+    pub recipe: RecipeCardSummary,
+    pub relevance: Option<f32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TagFacetBucket {
+    pub tag: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RecipeVisibilityFacetValue {
+    Private,
+    Unlisted,
+    Public,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VisibilityFacetBucket {
+    pub visibility: RecipeVisibilityFacetValue,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct IntegerRangeFacetBucket {
+    pub lower_inclusive: Option<i32>,
+    pub upper_exclusive: Option<i32>,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecipeSearchFacets {
+    pub tags: Vec<TagFacetBucket>,
+    pub visibility: Vec<VisibilityFacetBucket>,
+    pub total_time: Vec<IntegerRangeFacetBucket>,
+    pub servings: Vec<IntegerRangeFacetBucket>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecipeSearchResponse {
+    pub results: Vec<SearchResult>,
+    pub total_count: i64,
+    pub facets: RecipeSearchFacets,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CollectionSearchSummary {
+    pub id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CollectionSearchResult {
+    pub collection: CollectionSearchSummary,
+    pub breadcrumb: Vec<String>,
+    pub relevance: Option<f32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CollectionSearchResponse {
+    pub results: Vec<CollectionSearchResult>,
+    pub total_count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UserSearchSummary {
+    pub id: Uuid,
+    pub username: String,
+    pub display_name: String,
+    pub avatar_url: Option<String>,
+    pub bio: Option<String>,
+    pub public_recipe_count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UserSearchResult {
+    pub user: UserSearchSummary,
+    pub relevance: Option<f32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UserSearchResponse {
+    pub results: Vec<UserSearchResult>,
+    pub total_count: i64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SearchScope {
+    All,
+    Recipes,
+    Collections,
+    Users,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SearchResponse {
+    pub scope: SearchScope,
+    pub recipes: Vec<SearchResult>,
+    pub recipe_total_count: i64,
+    pub collections: Vec<CollectionSearchResult>,
+    pub collection_total_count: i64,
+    pub users: Vec<UserSearchResult>,
+    pub user_total_count: i64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SearchSuggestionKind {
+    Recipe,
+    Collection,
+    User,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SearchSuggestion {
+    pub kind: SearchSuggestionKind,
+    pub id: Uuid,
+    pub label: String,
+    pub secondary_text: Option<String>,
 }
 
 #[cfg(test)]
@@ -1060,7 +1462,7 @@ mod tests {
     }
 
     #[test]
-    fn redacted_version_graph_nodes_expose_only_topology_and_state() {
+    fn redacted_version_graph_nodes_cannot_cross_the_wire_with_stable_ids() {
         let id = VersionGraphNodeId {
             recipe_id: Uuid::new_v4(),
             version_number: 3,
@@ -1084,13 +1486,7 @@ mod tests {
         assert!(node.is_deleted);
         assert!(node.is_redacted);
 
-        let serialized = serde_json::to_value(node).unwrap();
-        assert!(serialized["title"].is_null());
-        assert!(serialized["owner_username"].is_null());
-        assert!(serialized["image"].is_null());
-        assert!(serialized.get("thumbnail_url").is_none());
-        assert!(serialized["created_at"].is_null());
-        assert!(serialized["change_summary"].is_null());
+        assert!(serde_json::to_value(node).is_err());
 
         let inconsistent_redacted_node = serde_json::json!({
             "id": id,
@@ -1106,12 +1502,7 @@ mod tests {
         });
         let sanitized: VersionGraphNode =
             serde_json::from_value(inconsistent_redacted_node).unwrap();
-        let reserialized = serde_json::to_value(sanitized).unwrap();
-        assert!(reserialized["title"].is_null());
-        assert!(reserialized["owner_username"].is_null());
-        assert!(reserialized["thumbnail_url"].is_null());
-        assert!(reserialized["created_at"].is_null());
-        assert!(reserialized["change_summary"].is_null());
+        assert!(serde_json::to_value(sanitized).is_err());
     }
 
     #[test]
@@ -1221,16 +1612,6 @@ mod tests {
     }
 
     #[test]
-    fn recipe_image_deserializes_legacy_url_string() {
-        let image: RecipeImage =
-            serde_json::from_value(serde_json::json!("https://example.com/image.webp")).unwrap();
-
-        assert_eq!(image.url, "https://example.com/image.webp");
-        assert_eq!(image.thumb_url, None);
-        assert!(image.edits.is_empty());
-    }
-
-    #[test]
     fn recipe_image_deserializes_object_without_thumbnail() {
         let image: RecipeImage = serde_json::from_value(serde_json::json!({
             "url": "https://example.com/image_full.webp",
@@ -1305,6 +1686,7 @@ mod tests {
             sub_steps: Vec::new(),
             photos: vec![
                 RecipeImage {
+                    asset_id: None,
                     url: "https://example.com/step_1.webp".to_string(),
                     thumb_url: None,
                     file_name: None,
@@ -1312,6 +1694,7 @@ mod tests {
                     edits: Vec::new(),
                 },
                 RecipeImage {
+                    asset_id: None,
                     url: "https://example.com/step_2.webp".to_string(),
                     thumb_url: None,
                     file_name: None,
@@ -1339,6 +1722,7 @@ mod tests {
                 anchor,
                 kind: VersionGraphFrontierKind::ChildForks,
                 hidden_count: 7,
+                fork_cursor: None,
             }],
             ..Default::default()
         };
@@ -1349,5 +1733,26 @@ mod tests {
         assert_eq!(restored.frontiers, graph.frontiers);
         assert_eq!(restored.frontiers[0].anchor, anchor);
         assert_eq!(restored.frontiers[0].hidden_count, 7);
+    }
+
+    #[test]
+    fn version_summary_page_round_trips_cursor_and_items() {
+        let page = RecipeVersionSummaryPage {
+            items: vec![RecipeVersionSummary {
+                version_number: 25,
+                title: "Bounded history".to_string(),
+                image_url: None,
+                notes: None,
+                created_at: Utc::now(),
+                is_current: true,
+                change_summary: "Title changed".to_string(),
+            }],
+            next_before_version_number: Some(25),
+        };
+
+        let restored: RecipeVersionSummaryPage =
+            serde_json::from_value(serde_json::to_value(&page).unwrap()).unwrap();
+
+        assert_eq!(restored, page);
     }
 }

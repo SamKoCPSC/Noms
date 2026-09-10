@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "DELETE FROM auth_states WHERE id = $1 RETURNING id, redirect_uri, provider, code_verifier, user_id, created_at",
+  "query": "DELETE FROM auth_states WHERE id = $1 RETURNING id, redirect_uri, provider, code_verifier, purpose, user_id, created_at",
   "describe": {
     "columns": [
       {
@@ -25,11 +25,16 @@
       },
       {
         "ordinal": 4,
+        "name": "purpose",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
         "name": "user_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "created_at",
         "type_info": "Timestamptz"
       }
@@ -44,9 +49,10 @@
       false,
       false,
       true,
+      false,
       true,
       false
     ]
   },
-  "hash": "ee0f8e38a629b7d57c2539c55e29d25597b78cbdc082f4eaad8e5cf6e952dbb2"
+  "hash": "49cce9d301bdf0bcda1407faf8f1566ff2dc29c5ddff78024a0f399c399b7eda"
 }

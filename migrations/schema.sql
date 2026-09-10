@@ -1,10 +1,10 @@
 -- NOMS Schema
--- Applied by pgschema: `just migrate` (local), entrypoint.sh (Docker/Railway).
+-- Applied declaratively by pgschema using an extension-enabled plan database.
 -- Additive-only: never DROP or ALTER existing columns.
 -- All statements are idempotent (IF NOT EXISTS) for safe repeated application.
 --
 -- PREREQUISITES: Run migrations/extensions.sql first to install required extensions
--- (pgcrypto, pg_cron). This file only manages schema objects that pgschema tracks.
+-- (pgcrypto, pg_cron, pg_search).
 
 -- Core user table
 CREATE TABLE IF NOT EXISTS users (
@@ -19,6 +19,17 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_users_search
+ON users USING bm25 (
+    id,
+    (username::pdb.simple('alias=user_username_words')),
+    (username::pdb.ngram(2, 20, 'alias=user_username_partial')),
+    (display_name::pdb.simple('alias=user_display_name_words')),
+    (display_name::pdb.ngram(2, 20, 'alias=user_display_name_partial')),
+    (bio::pdb.simple('alias=user_bio_words'))
+)
+WITH (key_field = 'id');
 
 -- OAuth provider accounts linked to users
 CREATE TABLE IF NOT EXISTS oauth_accounts (
@@ -48,6 +59,9 @@ CREATE TABLE IF NOT EXISTS auth_states (
     redirect_uri TEXT NOT NULL,
     provider TEXT NOT NULL,
     code_verifier TEXT,
+    browser_binding_digest BYTEA NOT NULL
+        CHECK (octet_length(browser_binding_digest) = 32),
+    purpose TEXT NOT NULL CHECK (purpose IN ('login', 'link')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     user_id UUID
 );
@@ -77,6 +91,63 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_cleanup ON sessions(expires_at, revoked)
     WHERE revoked = TRUE;
 
+-- First-class managed media identity and object-deletion authority. Holder
+-- references below, rather than uploader lifetime or document URL scans,
+-- determine whether an asset is live.
+CREATE TABLE IF NOT EXISTS media_assets (
+    id UUID PRIMARY KEY,
+    uploader_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    purpose TEXT NOT NULL CHECK (purpose IN ('recipe', 'collection_cover', 'avatar')),
+    full_url TEXT NOT NULL,
+    thumbnail_url TEXT NOT NULL,
+    original_url TEXT,
+    full_key TEXT NOT NULL UNIQUE,
+    thumbnail_key TEXT NOT NULL UNIQUE,
+    original_key TEXT UNIQUE,
+    capability_digest BYTEA UNIQUE CHECK (
+        capability_digest IS NULL OR octet_length(capability_digest) = 32
+    ),
+    lifecycle TEXT NOT NULL DEFAULT 'uncommitted'
+        CHECK (lifecycle IN ('uncommitted', 'retained', 'delete_claimed', 'deleted')),
+    expires_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    retained_at TIMESTAMPTZ,
+    delete_claimed_at TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ,
+    cleanup_checked_at TIMESTAMPTZ,
+    delete_failure TEXT,
+    CHECK (full_url <> thumbnail_url),
+    CHECK (full_key <> thumbnail_key),
+    CHECK (original_url IS NULL OR original_url <> full_url),
+    CHECK (original_url IS NULL OR original_url <> thumbnail_url),
+    CHECK (original_key IS NULL OR original_key <> full_key),
+    CHECK (original_key IS NULL OR original_key <> thumbnail_key),
+    CHECK (
+        (purpose IN ('recipe', 'collection_cover')
+            AND original_url IS NULL
+            AND original_key IS NULL
+            AND capability_digest IS NOT NULL
+            AND expires_at IS NOT NULL)
+        OR
+        (purpose = 'avatar'
+            AND original_url IS NOT NULL
+            AND original_key IS NOT NULL
+            AND capability_digest IS NULL
+            AND expires_at IS NULL)
+    )
+);
+
+CREATE INDEX IF NOT EXISTS idx_media_assets_uploader_lifecycle
+    ON media_assets(uploader_id, lifecycle);
+CREATE INDEX IF NOT EXISTS idx_media_assets_expiry
+    ON media_assets(expires_at, created_at, id) WHERE lifecycle = 'uncommitted';
+CREATE INDEX IF NOT EXISTS idx_media_assets_cleanup_claimed
+    ON media_assets((cleanup_checked_at IS NOT NULL), cleanup_checked_at, created_at, id)
+    WHERE lifecycle = 'delete_claimed';
+CREATE INDEX IF NOT EXISTS idx_media_assets_cleanup_retained
+    ON media_assets((cleanup_checked_at IS NOT NULL), cleanup_checked_at, created_at, id)
+    WHERE lifecycle = 'retained';
+
 -- ── Recipe management ──────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS recipes (
@@ -97,6 +168,18 @@ CREATE TABLE IF NOT EXISTS recipes (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_recipes_search
+ON recipes USING bm25 (
+    id,
+    (title::pdb.simple('alias=recipe_title_words')),
+    (title::pdb.ngram(2, 15, 'alias=recipe_title_partial')),
+    (description::pdb.simple('alias=recipe_description_words')),
+    (description::pdb.ngram(2, 15, 'alias=recipe_description_partial')),
+    (jsonb_path_query_array(ingredients, 'strict $.** ? (@.type() == "string")')::pdb.simple('alias=recipe_ingredients_words')),
+    (jsonb_path_query_array(instructions, 'strict $.**.text')::pdb.simple('alias=recipe_instructions_words'))
+)
+WITH (key_field = 'id');
 
 CREATE TABLE IF NOT EXISTS recipe_tags (
     recipe_id UUID REFERENCES recipes(id) ON DELETE CASCADE,
@@ -176,7 +259,20 @@ CREATE INDEX IF NOT EXISTS idx_forks_result ON fork_relationships(forked_recipe_
 CREATE INDEX IF NOT EXISTS idx_forks_original_key ON fork_relationships(original_recipe_key);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_forks_result_key
     ON fork_relationships(forked_recipe_key) WHERE forked_recipe_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_forks_original_version_cursor
+    ON fork_relationships(
+        (COALESCE(original_recipe_key, original_recipe_id)),
+        forked_version_number,
+        id
+    );
+CREATE INDEX IF NOT EXISTS idx_forks_result_cursor
+    ON fork_relationships(
+        (COALESCE(forked_recipe_key, forked_recipe_id)),
+        id
+    );
 CREATE INDEX IF NOT EXISTS idx_forks_parent ON fork_relationships(parent_relationship_id);
+
+CREATE INDEX IF NOT EXISTS idx_recipe_tags_tag ON recipe_tags(tag);
 
 CREATE INDEX IF NOT EXISTS idx_recipes_user_id ON recipes(user_id);
 CREATE INDEX IF NOT EXISTS idx_recipes_created_at ON recipes(created_at DESC);
@@ -206,6 +302,46 @@ CREATE TABLE IF NOT EXISTS collections (
     CHECK (btrim(name) <> '')
 );
 
+-- Holder-specific foreign keys make media liveness an indexed relational
+-- invariant. Cascading holder deletion removes only that holder's grant.
+CREATE TABLE IF NOT EXISTS recipe_media_refs (
+    recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+    asset_id UUID NOT NULL REFERENCES media_assets(id) ON DELETE RESTRICT,
+    PRIMARY KEY (recipe_id, asset_id)
+);
+CREATE INDEX IF NOT EXISTS idx_recipe_media_refs_asset
+    ON recipe_media_refs(asset_id);
+
+CREATE TABLE IF NOT EXISTS recipe_version_media_refs (
+    recipe_version_id UUID NOT NULL REFERENCES recipe_versions(id) ON DELETE CASCADE,
+    asset_id UUID NOT NULL REFERENCES media_assets(id) ON DELETE RESTRICT,
+    PRIMARY KEY (recipe_version_id, asset_id)
+);
+CREATE INDEX IF NOT EXISTS idx_recipe_version_media_refs_asset
+    ON recipe_version_media_refs(asset_id);
+
+CREATE TABLE IF NOT EXISTS recipe_draft_media_refs (
+    recipe_draft_id UUID NOT NULL REFERENCES recipe_drafts(id) ON DELETE CASCADE,
+    asset_id UUID NOT NULL REFERENCES media_assets(id) ON DELETE RESTRICT,
+    PRIMARY KEY (recipe_draft_id, asset_id)
+);
+CREATE INDEX IF NOT EXISTS idx_recipe_draft_media_refs_asset
+    ON recipe_draft_media_refs(asset_id);
+
+CREATE TABLE IF NOT EXISTS collection_media_refs (
+    collection_id UUID PRIMARY KEY REFERENCES collections(id) ON DELETE CASCADE,
+    asset_id UUID NOT NULL REFERENCES media_assets(id) ON DELETE RESTRICT
+);
+CREATE INDEX IF NOT EXISTS idx_collection_media_refs_asset
+    ON collection_media_refs(asset_id);
+
+CREATE TABLE IF NOT EXISTS avatar_media_refs (
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    asset_id UUID NOT NULL REFERENCES media_assets(id) ON DELETE RESTRICT
+);
+CREATE INDEX IF NOT EXISTS idx_avatar_media_refs_asset
+    ON avatar_media_refs(asset_id);
+
 CREATE INDEX IF NOT EXISTS idx_collections_owner_updated
     ON collections(owner_id, updated_at DESC);
 
@@ -220,6 +356,16 @@ CREATE INDEX IF NOT EXISTS idx_collections_parent_order
 CREATE UNIQUE INDEX IF NOT EXISTS idx_collections_sibling_name
     ON collections(owner_id, parent_collection_id, lower(name))
     NULLS NOT DISTINCT;
+
+CREATE INDEX IF NOT EXISTS idx_collections_search
+ON collections USING bm25 (
+    id,
+    (name::pdb.simple('alias=collection_name_words')),
+    (name::pdb.ngram(2, 15, 'alias=collection_name_partial')),
+    (description::pdb.simple('alias=collection_description_words')),
+    (description::pdb.ngram(2, 15, 'alias=collection_description_partial'))
+)
+WITH (key_field = 'id');
 
 CREATE TABLE IF NOT EXISTS collection_recipes (
     collection_id UUID NOT NULL REFERENCES collections(id) ON DELETE CASCADE,

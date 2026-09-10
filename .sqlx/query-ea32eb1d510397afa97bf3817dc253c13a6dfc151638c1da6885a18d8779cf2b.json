@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO oauth_accounts (user_id, provider, provider_user_id, email, profile_data, refresh_token) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, user_id, provider, provider_user_id, email, email_verified, profile_data, refresh_token, created_at, last_used_at",
+  "query": "INSERT INTO oauth_accounts (user_id, provider, provider_user_id, email, email_verified, profile_data, refresh_token) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, user_id, provider, provider_user_id, email, email_verified, profile_data, refresh_token, created_at, last_used_at",
   "describe": {
     "columns": [
       {
@@ -60,6 +60,7 @@
         "Varchar",
         "Varchar",
         "Varchar",
+        "Bool",
         "Jsonb",
         "Text"
       ]
@@ -77,5 +78,5 @@
       false
     ]
   },
-  "hash": "bcacf87fc62ba3c4a604ada2ee148494cb03a092c0c72e139c691e33a2084f53"
+  "hash": "ea32eb1d510397afa97bf3817dc253c13a6dfc151638c1da6885a18d8779cf2b"
 }

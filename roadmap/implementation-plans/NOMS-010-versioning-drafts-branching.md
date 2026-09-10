@@ -55,6 +55,27 @@ Presentation-only fields such as author username, avatar URL, and timestamps are
 - Diffs for the history UI are computed between adjacent full snapshots when requested. They are not persisted as part of version history.
 - The denormalized `recipes` row remains the current published snapshot for existing list/detail/search queries.
 
+### Historical snapshot access policy
+
+The live recipe's current visibility intentionally governs its complete published history:
+
+- owners may read every version of their own recipe;
+- anyone may read every version of a `public` recipe;
+- anyone with the URL may read every version of an `unlisted` recipe;
+- non-owners cannot list, read, compare, or traverse snapshots of a `private` recipe.
+
+Changing the live recipe's visibility changes access to all of its immutable
+snapshots. In particular, changing a private recipe to public or unlisted makes
+older versions available under that new visibility, including content removed
+from the current version. This is intentional product behavior rather than a
+per-version visibility model. Drafts remain owner-only and never inherit the
+published recipe's non-owner access policy.
+
+Version lists, individual snapshots, comparisons, compact lineage views, and
+the version graph must apply this policy consistently. Inaccessible adjacent
+branches may preserve topology through redacted nodes, but must not expose
+snapshot content or protected recipe metadata.
+
 ### Draft storage
 
 - Drafts live in `recipe_drafts`, not in `recipes`.
@@ -336,7 +357,7 @@ Show published recipes and owner-only drafts as separate sections or filters. Dr
 
 Add:
 
-- `get_recipe_versions_api(recipe_id)` — owner-only history access
+- `get_recipe_versions_api(recipe_id)` — history access governed by the live recipe's current visibility
 - `get_recipe_version_api(recipe_id, version_number)`
 - `VersionSummary` with version number, title, notes, created date, and current marker
 - `VersionTimeline` with all immutable published versions
@@ -349,7 +370,11 @@ Historical content is read directly from the selected full snapshot. No reconstr
 
 - v1, v2, and v3 render exactly as published.
 - History labels and diffs work for scalar, array, nested-step, image, and tag changes.
-- Only the owner can access version history and historical snapshots.
+- Owners can access all history for their own recipes.
+- Non-owners can access every historical snapshot of public and unlisted recipes.
+- Non-owners cannot access version lists, snapshots, or comparisons for private recipes.
+- Changing a private recipe to public or unlisted exposes its earlier snapshots; changing it back to private removes non-owner access again.
+- Drafts never appear in history or become readable through the historical snapshot APIs.
 
 ---
 
@@ -556,6 +581,7 @@ enum VersionGraphEdgeKind {
 - Schema tests for fresh creation, constraints, indexes, and the one-draft-per-existing-recipe invariant.
 - Transaction tests for rollback, stale draft saves, stale publication, concurrent publication, and exactly one consistent latest version.
 - Authorization tests for owner, public, unlisted, private, and draft access.
+- Visibility-transition tests proving that the current live visibility is applied consistently to version lists, snapshots, comparisons, lineage, and graph endpoints.
 - UI/server tests for draft validation, autosave, publish, discard, restore, and fork flows.
 - `cargo test --features server`
 - `cargo check --features server`

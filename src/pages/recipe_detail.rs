@@ -1762,7 +1762,9 @@ pub fn RecipeDetail(id: String) -> Element {
     let id_for_versions = id.clone();
     let versions_resource = use_resource(move || {
         let recipe_id = id_for_versions.clone();
-        async move { get_recipe_versions_api(recipe_id).await }
+        async move {
+            get_recipe_versions_api(recipe_id, None, crate::types::VERSION_HISTORY_PAGE_SIZE).await
+        }
     });
     let id_for_lineage = id.clone();
     let lineage_resource = use_resource(move || {
@@ -1775,6 +1777,11 @@ pub fn RecipeDetail(id: String) -> Element {
     let mut version_difference = use_signal(|| Option::<RecipeVersionComparison>::None);
     let mut version_difference_error = use_signal(|| Option::<String>::None);
     let mut is_loading_version_difference = use_signal(|| false);
+    let mut older_versions = use_signal(Vec::<RecipeVersionSummary>::new);
+    let mut older_versions_requested = use_signal(|| false);
+    let mut older_versions_cursor = use_signal(|| Option::<i32>::None);
+    let mut older_versions_loading = use_signal(|| false);
+    let mut older_versions_error = use_signal(|| Option::<String>::None);
     let mut is_forking = use_signal(|| false);
     let mut selected_visibility = use_signal(|| "private".to_string());
     let mut is_saving_visibility = use_signal(|| false);
@@ -1867,11 +1874,44 @@ pub fn RecipeDetail(id: String) -> Element {
         .clone()
         .and_then(Result::ok)
         .flatten();
-    let versions: Vec<RecipeVersionSummary> = versions_resource
+    let initial_version_page = versions_resource
         .read()
         .clone()
         .and_then(Result::ok)
         .unwrap_or_default();
+    let mut versions = initial_version_page.items.clone();
+    versions.extend(older_versions.read().iter().cloned());
+    let next_version_cursor = if older_versions_requested() {
+        older_versions_cursor()
+    } else {
+        initial_version_page.next_before_version_number
+    };
+    let recipe_id_for_older_versions = id.clone();
+    let load_older_versions = move |_| {
+        let Some(before_version_number) = next_version_cursor else {
+            return;
+        };
+        let recipe_id = recipe_id_for_older_versions.clone();
+        older_versions_loading.set(true);
+        older_versions_error.set(None);
+        spawn(async move {
+            match get_recipe_versions_api(
+                recipe_id,
+                Some(before_version_number),
+                crate::types::VERSION_HISTORY_PAGE_SIZE,
+            )
+            .await
+            {
+                Ok(page) => {
+                    older_versions.write().extend(page.items);
+                    older_versions_requested.set(true);
+                    older_versions_cursor.set(page.next_before_version_number);
+                }
+                Err(error) => older_versions_error.set(Some(error.to_string())),
+            }
+            older_versions_loading.set(false);
+        });
+    };
     let lineage = lineage_resource.read().clone().and_then(Result::ok);
     let recipe_id_for_visibility = id.clone();
     let save_visibility = move |_| {
@@ -2079,13 +2119,17 @@ pub fn RecipeDetail(id: String) -> Element {
                 if let Some(source) = &attribution {
                     div {
                         class: "recipe-detail__tags",
-                        if let Some(source_id) = source.original_recipe_id {
+                        if let (Some(source_id), Some(source_title)) =
+                            (source.original_recipe_id, source.original_title.as_deref())
+                        {
                             Link {
                                 to: crate::Route::RecipeDetail { id: source_id.to_string() },
-                                "Forked from {source.original_title}"
+                                "Forked from {source_title}"
                             }
+                        } else if let Some(source_title) = source.original_title.as_deref() {
+                            span { "Forked from {source_title}" }
                         } else {
-                            span { "Forked from {source.original_title}" }
+                            span { "Forked from a private recipe" }
                         }
                         if let Some(message) = &source.message {
                             span { " · {message}" }
@@ -2455,6 +2499,21 @@ pub fn RecipeDetail(id: String) -> Element {
                                 }
                             }
                         }
+                        if let Some(error) = older_versions_error() {
+                            p { color: "var(--error)", role: "alert", "Unable to load older versions: {error}" }
+                        }
+                        if next_version_cursor.is_some() {
+                            Button {
+                                variant: ButtonVariant::Secondary,
+                                disabled: older_versions_loading(),
+                                onclick: load_older_versions,
+                                if older_versions_loading() {
+                                    "Loading older versions..."
+                                } else {
+                                    "Load older versions"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -2470,11 +2529,6 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
         let recipe_id = recipe_id.clone();
         async move { get_recipe_version_api(recipe_id, version_number).await }
     });
-    let versions_recipe_id = id.clone();
-    let versions_resource = use_resource(move || {
-        let recipe_id = versions_recipe_id.clone();
-        async move { get_recipe_versions_api(recipe_id).await }
-    });
     let mut comparison_from = use_signal(|| 1i32);
     let mut comparison_to = use_signal(|| version_number);
     let mut custom_comparison = use_signal(|| Option::<RecipeVersionComparison>::None);
@@ -2485,8 +2539,6 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
     // even after the server function has completed.
     let version_result: Option<Result<RecipeVersionView, ServerFnError>> =
         version_resource.read().clone();
-    let versions_result: Option<Result<Vec<RecipeVersionSummary>, ServerFnError>> =
-        versions_resource.read().clone();
 
     if version_resource.pending() {
         return rsx! {
@@ -2529,7 +2581,9 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
         };
     };
     let editor = &detail.editor;
-    let versions = versions_result.and_then(Result::ok).unwrap_or_default();
+    let version_numbers = (1..=detail.current_version_number)
+        .rev()
+        .collect::<Vec<_>>();
     let recipe_id_for_comparison = id.clone();
     let compare_selected_versions = move |_| {
         let recipe_id = recipe_id_for_comparison.clone();
@@ -2715,11 +2769,11 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
                                             custom_comparison.set(None);
                                         }
                                     },
-                                    for version in &versions {
+                                    for candidate_version in &version_numbers {
                                         option {
-                                            value: "{version.version_number}",
-                                            selected: comparison_from() == version.version_number,
-                                            "v{version.version_number} · {version.title}"
+                                            value: "{candidate_version}",
+                                            selected: comparison_from() == *candidate_version,
+                                            "v{candidate_version}"
                                         }
                                     }
                                 }
@@ -2735,18 +2789,18 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
                                             custom_comparison.set(None);
                                         }
                                     },
-                                    for version in &versions {
+                                    for candidate_version in &version_numbers {
                                         option {
-                                            value: "{version.version_number}",
-                                            selected: comparison_to() == version.version_number,
-                                            "v{version.version_number} · {version.title}"
+                                            value: "{candidate_version}",
+                                            selected: comparison_to() == *candidate_version,
+                                            "v{candidate_version}"
                                         }
                                     }
                                 }
                             }
                             Button {
                                 variant: ButtonVariant::Primary,
-                                disabled: versions.is_empty() || is_comparing(),
+                                disabled: version_numbers.is_empty() || is_comparing(),
                                 onclick: compare_selected_versions,
                                 if is_comparing() { "Comparing..." } else { "Generate comparison" }
                             }
@@ -2776,7 +2830,7 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
             } else {
                 Card {
                     h2 { class: "recipe-detail__section-title", "Version comparisons" }
-                    p { "Version comparisons are available to the recipe owner." }
+                    p { "Version comparisons are unavailable for this snapshot." }
                 }
             }
         }

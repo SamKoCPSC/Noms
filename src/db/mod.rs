@@ -12,15 +12,38 @@ use std::collections::HashSet;
 use uuid::Uuid;
 
 pub mod diff;
+mod media_assets;
 mod versioning;
 
+#[cfg(test)]
+mod media_asset_tests;
+
+pub use media_assets::*;
 #[allow(unused_imports)]
 pub use versioning::*;
 
+use crate::security::{
+    MAX_COLLECTIONS_PER_USER, MAX_COLLECTION_CHILDREN, MAX_COLLECTION_DEPTH,
+    MAX_COLLECTION_MEMBERSHIPS, MAX_COLLECTION_RECIPE_CARDS_PER_PAGE,
+    MAX_COLLECTION_RECIPE_CARD_AUTHOR_AVATAR_URL_CHARS,
+    MAX_COLLECTION_RECIPE_CARD_DESCRIPTION_CHARS, MAX_IMAGE_METADATA_BYTES, MAX_PUBLIC_TAGS,
+};
 use crate::types::{
     Collection, CollectionContents, CollectionRecipeList, CollectionSharePreview,
-    CollectionSummary, CollectionVisibility, PublicCollectionListResponse,
+    CollectionSummary, CollectionVisibility, PublicCollectionListResponse, RecipeCardImage,
+    RecipeCardSummary, RecipeImageEdit,
 };
+
+mod recipe_search;
+pub use recipe_search::search_recipes;
+mod user_search;
+pub use user_search::search_users;
+mod collection_search;
+pub use collection_search::search_collections;
+mod all_search;
+pub use all_search::search_all;
+mod autocomplete;
+pub use autocomplete::autocomplete_entities;
 
 // Re-export typed recipe sub-structs for use in DB layer
 pub use crate::types::RecipeEquipment;
@@ -36,6 +59,8 @@ pub enum DbError {
     MissingUrl,
     /// Failed to connect to the database.
     Connection(sqlx::Error),
+    /// Database pool limits are malformed or unsafe.
+    InvalidConfiguration(DatabaseConfigError),
     /// A query failed.
     Query(sqlx::Error),
     /// The requested username is already taken by another user.
@@ -83,6 +108,12 @@ pub enum DbError {
     RecipeAlreadyInCollection,
     /// The submitted order does not exactly match the current direct members.
     InvalidCollectionOrder,
+    /// A collection operation would exceed a documented per-user resource bound.
+    CollectionLimitExceeded(&'static str),
+    /// A recipe, draft, or version operation would exceed a documented resource bound.
+    ResourceLimitExceeded(&'static str),
+    /// A search request failed bounded server-side validation.
+    InvalidSearchRequest(String),
 }
 
 impl std::fmt::Display for DbError {
@@ -90,6 +121,7 @@ impl std::fmt::Display for DbError {
         match self {
             DbError::MissingUrl => write!(f, "DATABASE_URL not set"),
             DbError::Connection(e) => write!(f, "database connection failed: {e}"),
+            DbError::InvalidConfiguration(e) => write!(f, "database configuration failed: {e}"),
             DbError::Query(e) => write!(f, "database query failed: {e}"),
             DbError::UsernameTaken => write!(f, "username is already taken"),
             DbError::SessionInvalid => write!(f, "session is invalid, revoked, or expired"),
@@ -131,6 +163,15 @@ impl std::fmt::Display for DbError {
             DbError::InvalidCollectionOrder => {
                 write!(f, "collection order does not match membership")
             }
+            DbError::CollectionLimitExceeded(limit) => {
+                write!(f, "collection limit exceeded: {limit}")
+            }
+            DbError::ResourceLimitExceeded(limit) => {
+                write!(f, "resource limit exceeded: {limit}")
+            }
+            DbError::InvalidSearchRequest(message) => {
+                write!(f, "invalid search request: {message}")
+            }
         }
     }
 }
@@ -138,7 +179,7 @@ impl std::fmt::Display for DbError {
 impl std::error::Error for DbError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            DbError::MissingUrl => None,
+            DbError::MissingUrl | DbError::InvalidConfiguration(_) => None,
             DbError::Connection(e) | DbError::Query(e) => Some(e),
             DbError::UsernameTaken => None,
             DbError::SessionInvalid => None,
@@ -156,12 +197,159 @@ impl std::error::Error for DbError {
             | DbError::CollectionCycle
             | DbError::RecipeNotAccessible(_)
             | DbError::RecipeAlreadyInCollection
-            | DbError::InvalidCollectionOrder => None,
+            | DbError::InvalidCollectionOrder
+            | DbError::CollectionLimitExceeded(_)
+            | DbError::ResourceLimitExceeded(_) => None,
+            DbError::InvalidSearchRequest(_) => None,
         }
     }
 }
 
 // ── Connection pool ─────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DatabaseConfigError {
+    variable: &'static str,
+    reason: &'static str,
+}
+
+impl std::fmt::Display for DatabaseConfigError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "{} {}", self.variable, self.reason)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct DatabasePoolConfig {
+    max_connections: u32,
+    acquire_timeout: std::time::Duration,
+    idle_timeout: std::time::Duration,
+    statement_timeout: std::time::Duration,
+    transaction_timeout: std::time::Duration,
+    idle_in_transaction_timeout: std::time::Duration,
+}
+
+impl DatabasePoolConfig {
+    fn from_environment() -> Result<Self, DatabaseConfigError> {
+        Self::from_lookup(|name| std::env::var(name).ok())
+    }
+
+    fn from_lookup<F>(lookup: F) -> Result<Self, DatabaseConfigError>
+    where
+        F: Fn(&str) -> Option<String>,
+    {
+        let max_connections = parse_bounded_u64(&lookup, "DB_MAX_CONNECTIONS", 5, 1, 100)? as u32;
+        let acquire_timeout = duration_from_seconds(&lookup, "DB_ACQUIRE_TIMEOUT_SECS", 10, 1, 60)?;
+        let idle_timeout = duration_from_seconds(&lookup, "DB_IDLE_TIMEOUT_SECS", 300, 1, 3600)?;
+        let statement_timeout =
+            duration_from_millis(&lookup, "DB_STATEMENT_TIMEOUT_MS", 15_000, 100, 300_000)?;
+        let transaction_timeout =
+            duration_from_millis(&lookup, "DB_TRANSACTION_TIMEOUT_MS", 30_000, 100, 600_000)?;
+        let idle_in_transaction_timeout = duration_from_millis(
+            &lookup,
+            "DB_IDLE_TRANSACTION_TIMEOUT_MS",
+            30_000,
+            100,
+            600_000,
+        )?;
+
+        if transaction_timeout < statement_timeout {
+            return Err(DatabaseConfigError {
+                variable: "DB_TRANSACTION_TIMEOUT_MS",
+                reason: "must be greater than or equal to DB_STATEMENT_TIMEOUT_MS",
+            });
+        }
+        if idle_in_transaction_timeout < statement_timeout {
+            return Err(DatabaseConfigError {
+                variable: "DB_IDLE_TRANSACTION_TIMEOUT_MS",
+                reason: "must be greater than or equal to DB_STATEMENT_TIMEOUT_MS",
+            });
+        }
+
+        Ok(Self {
+            max_connections,
+            acquire_timeout,
+            idle_timeout,
+            statement_timeout,
+            transaction_timeout,
+            idle_in_transaction_timeout,
+        })
+    }
+}
+
+fn parse_bounded_u64<F>(
+    lookup: &F,
+    variable: &'static str,
+    default: u64,
+    minimum: u64,
+    maximum: u64,
+) -> Result<u64, DatabaseConfigError>
+where
+    F: Fn(&str) -> Option<String>,
+{
+    let Some(raw) = lookup(variable) else {
+        return Ok(default);
+    };
+    let value = raw.parse::<u64>().map_err(|_| DatabaseConfigError {
+        variable,
+        reason: "must be an integer",
+    })?;
+    if !(minimum..=maximum).contains(&value) {
+        return Err(DatabaseConfigError {
+            variable,
+            reason: "is outside the supported safety range",
+        });
+    }
+    Ok(value)
+}
+
+fn duration_from_seconds<F>(
+    lookup: &F,
+    variable: &'static str,
+    default: u64,
+    minimum: u64,
+    maximum: u64,
+) -> Result<std::time::Duration, DatabaseConfigError>
+where
+    F: Fn(&str) -> Option<String>,
+{
+    parse_bounded_u64(lookup, variable, default, minimum, maximum)
+        .map(std::time::Duration::from_secs)
+}
+
+fn duration_from_millis<F>(
+    lookup: &F,
+    variable: &'static str,
+    default: u64,
+    minimum: u64,
+    maximum: u64,
+) -> Result<std::time::Duration, DatabaseConfigError>
+where
+    F: Fn(&str) -> Option<String>,
+{
+    parse_bounded_u64(lookup, variable, default, minimum, maximum)
+        .map(std::time::Duration::from_millis)
+}
+
+async fn apply_database_session_limits(
+    connection: &mut sqlx::PgConnection,
+    config: &DatabasePoolConfig,
+) -> Result<(), sqlx::Error> {
+    let statement_timeout = format!("{}ms", config.statement_timeout.as_millis());
+    let transaction_timeout = format!("{}ms", config.transaction_timeout.as_millis());
+    let idle_transaction_timeout = format!("{}ms", config.idle_in_transaction_timeout.as_millis());
+    sqlx::query(
+        "SELECT set_config('statement_timeout', $1, false), \
+                set_config('transaction_timeout', $2, false), \
+                set_config('idle_in_transaction_session_timeout', $3, false)",
+    )
+    .bind(statement_timeout)
+    .bind(transaction_timeout)
+    .bind(idle_transaction_timeout)
+    .execute(connection)
+    .await?;
+    Ok(())
+}
 
 /// Create a new connection pool from the `DATABASE_URL` environment variable.
 ///
@@ -174,18 +362,24 @@ impl std::error::Error for DbError {
 /// - `min_connections`: 1 (avoids cold-start latency on first request)
 /// - `idle_timeout`: 5min (releases unused connections promptly)
 ///
-/// Override `max_connections` via the `DB_MAX_CONNECTIONS` env var if needed.
+/// Every pooled connection also receives bounded statement, transaction, and
+/// idle-in-transaction budgets. All pool values have narrow environment
+/// overrides that fail closed on malformed or unsafe values.
 pub async fn create_pool() -> Result<PgPool, DbError> {
     let url = std::env::var("DATABASE_URL").map_err(|_| DbError::MissingUrl)?;
-    let max_connections: u32 = std::env::var("DB_MAX_CONNECTIONS")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(5);
+    let config = DatabasePoolConfig::from_environment().map_err(DbError::InvalidConfiguration)?;
+    let connection_config = config.clone();
 
     sqlx::postgres::PgPoolOptions::new()
-        .max_connections(max_connections)
-        .acquire_timeout(std::time::Duration::from_secs(10))
-        .idle_timeout(std::time::Duration::from_secs(300))
+        .max_connections(config.max_connections)
+        .min_connections(1)
+        .acquire_timeout(config.acquire_timeout)
+        .idle_timeout(config.idle_timeout)
+        .max_lifetime(std::time::Duration::from_secs(1800))
+        .after_connect(move |connection, _metadata| {
+            let config = connection_config.clone();
+            Box::pin(async move { apply_database_session_limits(connection, &config).await })
+        })
         .connect(&url)
         .await
         .map_err(DbError::Connection)
@@ -250,6 +444,7 @@ pub struct AuthState {
     pub redirect_uri: String,
     pub provider: String,
     pub code_verifier: Option<String>,
+    pub purpose: String,
     pub user_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
 }
@@ -285,6 +480,19 @@ pub use crate::types::{Recipe, RecipeImage};
 /// Implement `sqlx::FromRow` for `Recipe` so it can be used with raw queries.
 impl sqlx::FromRow<'_, sqlx::postgres::PgRow> for Recipe {
     fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, sqlx::Error> {
+        let mut instructions =
+            serde_json::from_value::<Vec<RecipeStep>>(row.try_get("instructions")?)
+                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+        let mut images = serde_json::from_value::<Vec<RecipeImage>>(row.try_get("images")?)
+            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+        let media_asset_urls = row.try_get::<serde_json::Value, _>("media_asset_urls")?;
+        media_assets::resolve_recipe_media_urls(&mut images, &mut instructions, &media_asset_urls)
+            .map_err(|error| {
+                sqlx::Error::Decode(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    error,
+                )))
+            })?;
         Ok(Self {
             id: row.try_get("id")?,
             user_id: row.try_get("user_id")?,
@@ -296,12 +504,10 @@ impl sqlx::FromRow<'_, sqlx::postgres::PgRow> for Recipe {
             servings: row.try_get("servings")?,
             ingredients: serde_json::from_value(row.try_get("ingredients")?)
                 .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
-            instructions: serde_json::from_value(row.try_get("instructions")?)
-                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
+            instructions,
             equipment: serde_json::from_value(row.try_get("equipment")?)
                 .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
-            images: serde_json::from_value(row.try_get("images")?)
-                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
+            images,
             visibility: row.try_get("visibility")?,
             created_at: row.try_get("created_at")?,
             updated_at: row.try_get("updated_at")?,
@@ -351,11 +557,12 @@ fn collection_visibility_from_row(
 }
 
 fn collection_from_row(row: &sqlx::postgres::PgRow) -> Result<Collection, sqlx::Error> {
-    let image = row
+    let mut image = row
         .try_get::<Option<serde_json::Value>, _>("image")?
         .map(serde_json::from_value)
         .transpose()
         .map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
+    resolve_collection_image_from_row(row, &mut image)?;
     Ok(Collection {
         id: row.try_get("id")?,
         owner_id: row.try_get("owner_id")?,
@@ -373,11 +580,12 @@ fn collection_from_row(row: &sqlx::postgres::PgRow) -> Result<Collection, sqlx::
 fn collection_summary_from_row(
     row: &sqlx::postgres::PgRow,
 ) -> Result<CollectionSummary, sqlx::Error> {
-    let image = row
+    let mut image = row
         .try_get::<Option<serde_json::Value>, _>("image")?
         .map(serde_json::from_value)
         .transpose()
         .map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
+    resolve_collection_image_from_row(row, &mut image)?;
     // Recipe image JSON predates collections and is not schema-constrained.
     // A malformed legacy entry must not make the entire collection unreadable.
     let preview_images = row
@@ -401,6 +609,125 @@ fn collection_summary_from_row(
         recipe_count: row.try_get("recipe_count")?,
         updated_at: row.try_get("updated_at")?,
     })
+}
+
+fn resolve_collection_image_from_row(
+    row: &sqlx::postgres::PgRow,
+    image: &mut Option<RecipeImage>,
+) -> Result<(), sqlx::Error> {
+    let media_asset_urls = row.try_get::<serde_json::Value, _>("media_asset_urls")?;
+    let images = image.as_mut().map(std::slice::from_mut).unwrap_or_default();
+    media_assets::resolve_recipe_media_urls(images, &mut [], &media_asset_urls).map_err(|error| {
+        sqlx::Error::Decode(Box::new(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            error,
+        )))
+    })
+}
+
+/// Project only card fields; full ingredient, instruction and media arrays never leave PostgreSQL.
+pub(super) fn recipe_card_read_columns(recipe_alias: &str, user_alias: &str) -> String {
+    format!(
+        "{recipe_alias}.id, {recipe_alias}.title,
+                LEFT({recipe_alias}.description, {description_chars}) AS description,
+                {recipe_alias}.prep_time_minutes, {recipe_alias}.cook_time_minutes, {recipe_alias}.servings,
+                CASE WHEN {recipe_alias}.images -> 0 ? 'asset_id' THEN asset.id ELSE NULL END AS image_asset_id,
+                CASE
+                    WHEN {recipe_alias}.images -> 0 ? 'asset_id' THEN asset.full_url
+                    WHEN octet_length(({recipe_alias}.images -> 0)::TEXT) <= {image_bytes}
+                    THEN CASE
+                        WHEN jsonb_typeof({recipe_alias}.images -> 0) = 'string'
+                        THEN {recipe_alias}.images -> 0 #>> '{{}}'
+                        WHEN jsonb_typeof({recipe_alias}.images -> 0) = 'object'
+                        THEN {recipe_alias}.images -> 0 ->> 'url'
+                    END
+                END AS image_url,
+                CASE
+                    WHEN {recipe_alias}.images -> 0 ? 'asset_id' THEN asset.thumbnail_url
+                    WHEN jsonb_typeof({recipe_alias}.images -> 0) = 'object'
+                     AND octet_length(({recipe_alias}.images -> 0)::TEXT) <= {image_bytes}
+                    THEN {recipe_alias}.images -> 0 ->> 'thumb_url'
+                END AS image_thumb_url,
+                CASE
+                    WHEN jsonb_typeof({recipe_alias}.images -> 0) = 'object'
+                     AND octet_length(({recipe_alias}.images -> 0)::TEXT) <= {image_bytes}
+                    THEN (
+                        SELECT edit.value
+                        FROM jsonb_array_elements(
+                            CASE
+                                WHEN jsonb_typeof(({recipe_alias}.images -> 0) -> 'edits') = 'array'
+                                THEN ({recipe_alias}.images -> 0) -> 'edits'
+                                ELSE '[]'::JSONB
+                            END
+                        ) WITH ORDINALITY AS edit(value, ordinal)
+                        WHERE edit.value ->> 'name' = 'rectangle:16:9'
+                        ORDER BY edit.ordinal
+                        LIMIT 1
+                    )
+                END AS image_edit,
+                {recipe_alias}.visibility,
+                {user_alias}.username AS author_username,
+                CASE WHEN char_length(COALESCE(avatar_asset.full_url, {user_alias}.avatar_url)) <= {avatar_chars}
+                     THEN COALESCE(avatar_asset.full_url, {user_alias}.avatar_url) END AS author_avatar_url",
+        description_chars = MAX_COLLECTION_RECIPE_CARD_DESCRIPTION_CHARS,
+        image_bytes = MAX_IMAGE_METADATA_BYTES,
+        avatar_chars = MAX_COLLECTION_RECIPE_CARD_AUTHOR_AVATAR_URL_CHARS,
+    )
+}
+
+/// Resolve managed images only through the recipe's exact registered reference.
+pub(super) fn recipe_card_read_joins(recipe_alias: &str, user_alias: &str) -> String {
+    format!(
+        "LEFT JOIN users {user_alias} ON {user_alias}.id = {recipe_alias}.user_id
+        LEFT JOIN recipe_media_refs image_ref ON image_ref.recipe_id = {recipe_alias}.id
+          AND image_ref.asset_id::text = {recipe_alias}.images -> 0 ->> 'asset_id'
+        LEFT JOIN media_assets asset ON asset.id = image_ref.asset_id
+        LEFT JOIN avatar_media_refs avatar_ref ON avatar_ref.user_id = {user_alias}.id
+        LEFT JOIN media_assets avatar_asset ON avatar_asset.id = avatar_ref.asset_id"
+    )
+}
+
+pub(super) fn recipe_card_from_row(
+    row: &sqlx::postgres::PgRow,
+) -> Result<RecipeCardSummary, sqlx::Error> {
+    collection_recipe_card_from_row(row)
+}
+
+fn collection_recipe_card_from_row(
+    row: &sqlx::postgres::PgRow,
+) -> Result<RecipeCardSummary, sqlx::Error> {
+    let image_asset_id: Option<Uuid> = row.try_get("image_asset_id")?;
+    let image_url: Option<String> = row.try_get("image_url")?;
+    let image_edit = row
+        .try_get::<Option<serde_json::Value>, _>("image_edit")?
+        .map(serde_json::from_value::<RecipeImageEdit>)
+        .transpose()
+        .map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
+    let image_thumb_url: Option<String> = row.try_get("image_thumb_url")?;
+    let image = image_url.map(|url| RecipeCardImage {
+        asset_id: image_asset_id,
+        url,
+        thumb_url: image_thumb_url,
+        edits: image_edit.into_iter().collect(),
+    });
+
+    Ok(RecipeCardSummary {
+        id: row.try_get("id")?,
+        title: row.try_get("title")?,
+        description: row.try_get("description")?,
+        prep_time_minutes: row.try_get("prep_time_minutes")?,
+        cook_time_minutes: row.try_get("cook_time_minutes")?,
+        servings: row.try_get("servings")?,
+        image,
+        visibility: row.try_get("visibility")?,
+        author_username: row.try_get("author_username")?,
+        author_avatar_url: row.try_get("author_avatar_url")?,
+    })
+}
+
+fn validate_collection_recipe_card_output(recipes: &[RecipeCardSummary]) -> Result<(), DbError> {
+    crate::security::validate_collection_recipe_card_page(recipes)
+        .map_err(|_| DbError::ResourceLimitExceeded("collection recipe card page bytes"))
 }
 
 fn collection_query_error(error: sqlx::Error) -> DbError {
@@ -434,9 +761,20 @@ fn collection_preview_images_select(recipe_visibility_predicate: &str) -> String
         "COALESCE((
              SELECT jsonb_agg(preview.image ORDER BY preview.sort_order, preview.created_at, preview.recipe_id)
              FROM (
-                 SELECT r.images -> 0 AS image, cr.sort_order, cr.created_at, cr.recipe_id
+                 SELECT CASE
+                            WHEN recipe_asset.id IS NULL THEN r.images -> 0
+                            ELSE (r.images -> 0) || jsonb_build_object(
+                                'asset_id', recipe_asset.id,
+                                'url', recipe_asset.full_url,
+                                'thumb_url', recipe_asset.thumbnail_url)
+                        END AS image,
+                        cr.sort_order, cr.created_at, cr.recipe_id
                  FROM collection_recipes cr
                  INNER JOIN recipes r ON r.id = cr.recipe_id
+                 LEFT JOIN recipe_media_refs recipe_ref
+                   ON recipe_ref.recipe_id = r.id
+                  AND recipe_ref.asset_id::text = r.images -> 0 ->> 'asset_id'
+                 LEFT JOIN media_assets recipe_asset ON recipe_asset.id = recipe_ref.asset_id
                  WHERE cr.collection_id = c.id
                    AND {recipe_visibility_predicate}
                    AND jsonb_typeof(r.images) = 'array'
@@ -448,6 +786,10 @@ fn collection_preview_images_select(recipe_visibility_predicate: &str) -> String
                            AND jsonb_typeof(r.images -> 0 -> 'url') = 'string'
                        )
                    )
+                   AND (
+                       NOT (r.images -> 0 ? 'asset_id')
+                       OR recipe_asset.id IS NOT NULL
+                   )
                  ORDER BY cr.sort_order, cr.created_at, cr.recipe_id
                  LIMIT 4
              ) preview
@@ -455,9 +797,18 @@ fn collection_preview_images_select(recipe_visibility_predicate: &str) -> String
     )
 }
 
+fn collection_media_asset_urls_select(collection_alias: &str) -> String {
+    media_assets::media_asset_urls_projection(
+        "collection_media_refs",
+        "collection_id",
+        &format!("{collection_alias}.id"),
+    )
+}
+
 fn collection_summary_select() -> String {
     format!(
-        "SELECT c.id, c.parent_collection_id, c.name, c.description, c.image, c.visibility,
+        "SELECT c.id, c.parent_collection_id, c.name, c.description, c.image,
+            {} AS media_asset_urls, c.visibility,
             c.sort_order, c.updated_at,
             {} AS preview_images,
             (SELECT COUNT(*) FROM collections child
@@ -468,6 +819,7 @@ fn collection_summary_select() -> String {
              WHERE cr.collection_id = c.id
                AND (r.user_id = c.owner_id OR r.visibility IN ('public', 'unlisted'))) AS recipe_count
      FROM collections c",
+        collection_media_asset_urls_select("c"),
         collection_preview_images_select(
             "(r.user_id = c.owner_id OR r.visibility IN ('public', 'unlisted'))"
         )
@@ -489,6 +841,76 @@ async fn lock_owner(
     Ok(())
 }
 
+fn collection_limit_as_i64(limit: usize) -> i64 {
+    i64::try_from(limit).expect("collection security limits fit in PostgreSQL bigint")
+}
+
+async fn collection_ancestor_count(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    collection_id: Uuid,
+    owner_id: Uuid,
+) -> Result<i64, DbError> {
+    sqlx::query_scalar(
+        "WITH RECURSIVE ancestors AS (
+             SELECT id, parent_collection_id
+             FROM collections
+             WHERE id = $1 AND owner_id = $2
+             UNION ALL
+             SELECT parent.id, parent.parent_collection_id
+             FROM collections parent
+             INNER JOIN ancestors child ON parent.id = child.parent_collection_id
+             WHERE parent.owner_id = $2
+         )
+         SELECT COUNT(*) FROM ancestors",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(DbError::Query)
+}
+
+async fn collection_subtree_height(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    collection_id: Uuid,
+    owner_id: Uuid,
+) -> Result<i64, DbError> {
+    sqlx::query_scalar(
+        "WITH RECURSIVE subtree AS (
+             SELECT id, 1::bigint AS depth
+             FROM collections
+             WHERE id = $1 AND owner_id = $2
+             UNION ALL
+             SELECT child.id, subtree.depth + 1
+             FROM collections child
+             INNER JOIN subtree ON child.parent_collection_id = subtree.id
+             WHERE child.owner_id = $2
+         )
+         SELECT COALESCE(MAX(depth), 0) FROM subtree",
+    )
+    .bind(collection_id)
+    .bind(owner_id)
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(DbError::Query)
+}
+
+async fn collection_sibling_count(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    owner_id: Uuid,
+    parent_collection_id: Option<Uuid>,
+) -> Result<i64, DbError> {
+    sqlx::query_scalar(
+        "SELECT COUNT(*) FROM collections
+         WHERE owner_id = $1 AND parent_collection_id IS NOT DISTINCT FROM $2",
+    )
+    .bind(owner_id)
+    .bind(parent_collection_id)
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(DbError::Query)
+}
+
 /// Insert a root or nested collection with explicit visibility.
 pub async fn insert_collection(
     pool: &PgPool,
@@ -499,8 +921,27 @@ pub async fn insert_collection(
     visibility: CollectionVisibility,
     image: Option<&RecipeImage>,
 ) -> Result<Collection, DbError> {
+    if image
+        .map(crate::security::validate_image_metadata)
+        .transpose()
+        .is_err()
+    {
+        return Err(DbError::ResourceLimitExceeded("collection image metadata"));
+    }
     let mut tx = pool.begin().await.map_err(DbError::Query)?;
     lock_owner(&mut tx, owner_id).await?;
+
+    let collection_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM collections WHERE owner_id = $1")
+            .bind(owner_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(DbError::Query)?;
+    if collection_count >= collection_limit_as_i64(MAX_COLLECTIONS_PER_USER) {
+        return Err(DbError::CollectionLimitExceeded(
+            "total collections per user",
+        ));
+    }
 
     if let Some(parent_id) = parent_collection_id {
         let parent_exists: Option<Uuid> = sqlx::query_scalar(
@@ -516,6 +957,20 @@ pub async fn insert_collection(
         if parent_exists.is_none() {
             return Err(DbError::CollectionParentNotFound(parent_id));
         }
+
+        if collection_ancestor_count(&mut tx, parent_id, owner_id).await?
+            >= collection_limit_as_i64(MAX_COLLECTION_DEPTH)
+        {
+            return Err(DbError::CollectionLimitExceeded(
+                "collection hierarchy depth",
+            ));
+        }
+    }
+
+    if collection_sibling_count(&mut tx, owner_id, parent_collection_id).await?
+        >= collection_limit_as_i64(MAX_COLLECTION_CHILDREN)
+    {
+        return Err(DbError::CollectionLimitExceeded("direct child collections"));
     }
 
     let next_order: i32 = sqlx::query_scalar(
@@ -529,12 +984,11 @@ pub async fn insert_collection(
     .await
     .map_err(DbError::Query)?;
 
-    let row = sqlx::query(
+    let collection_id: Uuid = sqlx::query_scalar(
         "INSERT INTO collections
             (owner_id, parent_collection_id, name, description, sort_order, visibility, image)
          VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING id, owner_id, parent_collection_id, name, description, image,
-                   visibility, sort_order, created_at, updated_at",
+         RETURNING id",
     )
     .bind(owner_id)
     .bind(parent_collection_id)
@@ -552,7 +1006,19 @@ pub async fn insert_collection(
     .await
     .map_err(collection_query_error)?;
 
-    let collection = collection_from_row(&row).map_err(DbError::Query)?;
+    media_assets::sync_recipe_media_references(
+        &mut tx,
+        media_assets::MediaHolder::Collection(collection_id),
+        owner_id,
+        MediaPurpose::CollectionCover,
+        image.map(std::slice::from_ref).unwrap_or_default(),
+        &[],
+        media_assets::MediaAttachAuthority::UploaderOnly,
+    )
+    .await?;
+    let collection = get_collection_by_id_and_owner(&mut *tx, collection_id, owner_id)
+        .await?
+        .ok_or(DbError::CollectionNotFound(collection_id))?;
     tx.commit().await.map_err(DbError::Query)?;
     Ok(collection)
 }
@@ -563,12 +1029,12 @@ pub async fn get_collection_by_id_and_owner(
     collection_id: Uuid,
     owner_id: Uuid,
 ) -> Result<Option<Collection>, DbError> {
-    sqlx::query(
-        "SELECT id, owner_id, parent_collection_id, name, description, image,
-                visibility, sort_order, created_at, updated_at
-         FROM collections
-         WHERE id = $1 AND owner_id = $2",
-    )
+    sqlx::query(&format!(
+        "SELECT c.id, c.owner_id, c.parent_collection_id, c.name, c.description, c.image,
+                {} AS media_asset_urls, c.visibility, c.sort_order, c.created_at, c.updated_at
+         FROM collections c WHERE c.id = $1 AND c.owner_id = $2",
+        collection_media_asset_urls_select("c")
+    ))
     .bind(collection_id)
     .bind(owner_id)
     .fetch_optional(executor)
@@ -586,8 +1052,10 @@ pub async fn get_root_collections(
 ) -> Result<Vec<CollectionSummary>, DbError> {
     let query = format!(
         "{} WHERE c.owner_id = $1 AND c.parent_collection_id IS NULL
-         ORDER BY c.sort_order, lower(c.name), c.id",
-        collection_summary_select()
+         ORDER BY c.sort_order, lower(c.name), c.id
+         LIMIT {}",
+        collection_summary_select(),
+        MAX_COLLECTION_CHILDREN
     );
     let rows = sqlx::query(&query)
         .bind(owner_id)
@@ -608,8 +1076,10 @@ pub async fn get_child_collections(
 ) -> Result<Vec<CollectionSummary>, DbError> {
     let query = format!(
         "{} WHERE c.owner_id = $1 AND c.parent_collection_id = $2
-         ORDER BY c.sort_order, lower(c.name), c.id",
-        collection_summary_select()
+         ORDER BY c.sort_order, lower(c.name), c.id
+         LIMIT {}",
+        collection_summary_select(),
+        MAX_COLLECTION_CHILDREN
     );
     let rows = sqlx::query(&query)
         .bind(owner_id)
@@ -644,6 +1114,50 @@ pub async fn get_all_collections_by_owner(
         .map_err(DbError::Query)
 }
 
+/// Return one bounded page of an owner's collection summaries.
+pub async fn get_collections_by_owner_paginated(
+    pool: &PgPool,
+    owner_id: Uuid,
+    offset: i64,
+    limit: i64,
+) -> Result<PublicCollectionListResponse, DbError> {
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        .execute(&mut *tx)
+        .await
+        .map_err(DbError::Query)?;
+    let total_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM collections WHERE owner_id = $1")
+            .bind(owner_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(DbError::Query)?;
+    let query = format!(
+        "{} WHERE c.owner_id = $1
+         ORDER BY c.parent_collection_id NULLS FIRST, c.sort_order, lower(c.name), c.id
+         OFFSET $2 LIMIT $3",
+        collection_summary_select()
+    );
+    let rows = sqlx::query(&query)
+        .bind(owner_id)
+        .bind(offset)
+        .bind(limit)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(DbError::Query)?;
+    let collections = rows
+        .iter()
+        .map(collection_summary_from_row)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(DbError::Query)?;
+    tx.commit().await.map_err(DbError::Query)?;
+    Ok(PublicCollectionListResponse {
+        has_more: offset.saturating_add(collections.len() as i64) < total_count,
+        collections,
+        total_count,
+    })
+}
+
 /// List public-safe collection summaries for a public user profile.
 pub async fn get_public_collections_by_username(
     pool: &PgPool,
@@ -651,6 +1165,8 @@ pub async fn get_public_collections_by_username(
     offset: i64,
     limit: i64,
 ) -> Result<PublicCollectionListResponse, DbError> {
+    crate::security::validate_offset_pagination(offset, limit)
+        .map_err(|_| DbError::ResourceLimitExceeded("public collection pagination"))?;
     let offset = offset.max(0);
     let limit = limit.max(0);
     let mut tx = pool.begin().await.map_err(DbError::Query)?;
@@ -659,11 +1175,14 @@ pub async fn get_public_collections_by_username(
         .await
         .map_err(DbError::Query)?;
 
-    let owner_id: Option<Uuid> = sqlx::query_scalar("SELECT id FROM users WHERE username = $1")
-        .bind(username)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(DbError::Query)?;
+    // Keep identity lookup on PostgreSQL's exact text comparison. Comparing the
+    // indexed username directly can invoke ParadeDB's ambiguous field alias.
+    let owner_id: Option<Uuid> =
+        sqlx::query_scalar("SELECT id FROM users WHERE (username || '') = $1")
+            .bind(username)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(DbError::Query)?;
     let Some(owner_id) = owner_id else {
         tx.commit().await.map_err(DbError::Query)?;
         return Ok(PublicCollectionListResponse {
@@ -690,7 +1209,8 @@ pub async fn get_public_collections_by_username(
                     THEN c.parent_collection_id
                     ELSE NULL
                 END AS parent_collection_id,
-                c.name, c.description, c.image, c.visibility,
+                c.name, c.description, c.image,
+                {} AS media_asset_urls, c.visibility,
                 ((ROW_NUMBER() OVER (ORDER BY c.updated_at DESC, c.id) - 1)::INTEGER)
                     AS sort_order,
                 c.updated_at,
@@ -710,6 +1230,7 @@ pub async fn get_public_collections_by_username(
          WHERE c.owner_id = $1 AND c.visibility = 'public'
          ORDER BY c.updated_at DESC, c.id
          LIMIT $2 OFFSET $3",
+        collection_media_asset_urls_select("c"),
         collection_preview_images_select("r.visibility = 'public'")
     );
     let rows = sqlx::query(&query)
@@ -727,11 +1248,14 @@ pub async fn get_public_collections_by_username(
     let has_more = offset.saturating_add(collections.len() as i64) < total_count;
 
     tx.commit().await.map_err(DbError::Query)?;
-    Ok(PublicCollectionListResponse {
+    let page = PublicCollectionListResponse {
         collections,
         total_count,
         has_more,
-    })
+    };
+    crate::security::validate_public_collection_page(&page)
+        .map_err(|_| DbError::ResourceLimitExceeded("public collection page bytes"))?;
+    Ok(page)
 }
 
 /// Return an owner-checked root-to-leaf breadcrumb path using a recursive CTE.
@@ -752,8 +1276,10 @@ pub async fn get_collection_breadcrumbs(
              INNER JOIN ancestors ON parent.id = ancestors.parent_collection_id
              WHERE parent.owner_id = $2
                AND NOT parent.id = ANY(ancestors.path)
+               AND ancestors.depth < {maximum_parent_depth}
          )
-         SELECT c.id, c.parent_collection_id, c.name, c.description, c.image, c.visibility,
+         SELECT c.id, c.parent_collection_id, c.name, c.description, c.image,
+                {} AS media_asset_urls, c.visibility,
                 c.sort_order, c.updated_at,
                 {} AS preview_images,
                 (SELECT COUNT(*) FROM collections child
@@ -764,10 +1290,14 @@ pub async fn get_collection_breadcrumbs(
                    AND (r.user_id = c.owner_id OR r.visibility IN ('public', 'unlisted'))) AS recipe_count
          FROM ancestors
          INNER JOIN collections c ON c.id = ancestors.id
-         ORDER BY ancestors.depth DESC",
+         ORDER BY ancestors.depth DESC
+         LIMIT {maximum_depth}",
+        collection_media_asset_urls_select("c"),
         collection_preview_images_select(
             "(r.user_id = c.owner_id OR r.visibility IN ('public', 'unlisted'))"
-        )
+        ),
+        maximum_parent_depth = MAX_COLLECTION_DEPTH - 1,
+        maximum_depth = MAX_COLLECTION_DEPTH,
     );
     let rows = sqlx::query(&query)
         .bind(collection_id)
@@ -817,12 +1347,19 @@ pub async fn update_collection(
     description: Option<&str>,
     image: Option<&RecipeImage>,
 ) -> Result<Collection, DbError> {
-    let row = sqlx::query(
+    if image
+        .map(crate::security::validate_image_metadata)
+        .transpose()
+        .is_err()
+    {
+        return Err(DbError::ResourceLimitExceeded("collection image metadata"));
+    }
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    let updated_id: Uuid = sqlx::query_scalar(
         "UPDATE collections
          SET name = $3, description = $4, image = $5, updated_at = NOW()
          WHERE id = $1 AND owner_id = $2
-         RETURNING id, owner_id, parent_collection_id, name, description, image,
-                   visibility, sort_order, created_at, updated_at",
+         RETURNING id",
     )
     .bind(collection_id)
     .bind(owner_id)
@@ -834,13 +1371,27 @@ pub async fn update_collection(
             .transpose()
             .map_err(|error| DbError::Query(sqlx::Error::Encode(Box::new(error))))?,
     )
-    .fetch_one(pool)
+    .fetch_one(&mut *tx)
     .await
     .map_err(|error| match error {
         sqlx::Error::RowNotFound => DbError::CollectionNotFound(collection_id),
         other => collection_query_error(other),
     })?;
-    collection_from_row(&row).map_err(DbError::Query)
+    media_assets::sync_recipe_media_references(
+        &mut tx,
+        media_assets::MediaHolder::Collection(updated_id),
+        owner_id,
+        MediaPurpose::CollectionCover,
+        image.map(std::slice::from_ref).unwrap_or_default(),
+        &[],
+        media_assets::MediaAttachAuthority::UploaderOnly,
+    )
+    .await?;
+    let collection = get_collection_by_id_and_owner(&mut *tx, updated_id, owner_id)
+        .await?
+        .ok_or(DbError::CollectionNotFound(updated_id))?;
+    tx.commit().await.map_err(DbError::Query)?;
+    Ok(collection)
 }
 
 /// Change visibility only when the collection belongs to the supplied owner.
@@ -850,24 +1401,28 @@ pub async fn update_collection_visibility(
     owner_id: Uuid,
     visibility: CollectionVisibility,
 ) -> Result<Collection, DbError> {
-    let row = sqlx::query(
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    let rows = sqlx::query(
         "UPDATE collections
          SET visibility = $3,
              updated_at = GREATEST(NOW(), updated_at + INTERVAL '1 microsecond')
-         WHERE id = $1 AND owner_id = $2
-         RETURNING id, owner_id, parent_collection_id, name, description, image,
-                   visibility, sort_order, created_at, updated_at",
+         WHERE id = $1 AND owner_id = $2",
     )
     .bind(collection_id)
     .bind(owner_id)
     .bind(visibility.as_str())
-    .fetch_one(pool)
+    .execute(&mut *tx)
     .await
-    .map_err(|error| match error {
-        sqlx::Error::RowNotFound => DbError::CollectionNotFound(collection_id),
-        other => DbError::Query(other),
-    })?;
-    collection_from_row(&row).map_err(DbError::Query)
+    .map_err(DbError::Query)?
+    .rows_affected();
+    if rows == 0 {
+        return Err(DbError::CollectionNotFound(collection_id));
+    }
+    let collection = get_collection_by_id_and_owner(&mut *tx, collection_id, owner_id)
+        .await?
+        .ok_or(DbError::CollectionNotFound(collection_id))?;
+    tx.commit().await.map_err(DbError::Query)?;
+    Ok(collection)
 }
 
 async fn lock_siblings(
@@ -956,14 +1511,11 @@ pub async fn move_collection(
     .fetch_optional(&mut *tx)
     .await
     .map_err(DbError::Query)?;
-    let current_parent: Option<Uuid> = current
+    let current_parent = current
         .as_ref()
-        .map(|row| row.try_get("parent_collection_id"))
-        .transpose()
+        .ok_or(DbError::CollectionNotFound(collection_id))?
+        .try_get::<Option<Uuid>, _>("parent_collection_id")
         .map_err(DbError::Query)?;
-    if current.is_none() {
-        return Err(DbError::CollectionNotFound(collection_id));
-    }
 
     let mut ids_to_lock = vec![collection_id];
     if let Some(parent_id) = current_parent {
@@ -1020,6 +1572,25 @@ pub async fn move_collection(
         lock_siblings(&mut tx, owner_id, None).await?;
     }
 
+    if new_parent_collection_id != current_parent {
+        if collection_sibling_count(&mut tx, owner_id, new_parent_collection_id).await?
+            >= collection_limit_as_i64(MAX_COLLECTION_CHILDREN)
+        {
+            return Err(DbError::CollectionLimitExceeded("direct child collections"));
+        }
+
+        let destination_depth = match new_parent_collection_id {
+            Some(parent_id) => collection_ancestor_count(&mut tx, parent_id, owner_id).await?,
+            None => 0,
+        };
+        let subtree_height = collection_subtree_height(&mut tx, collection_id, owner_id).await?;
+        if destination_depth + subtree_height > collection_limit_as_i64(MAX_COLLECTION_DEPTH) {
+            return Err(DbError::CollectionLimitExceeded(
+                "collection hierarchy depth",
+            ));
+        }
+    }
+
     let next_order: i32 = sqlx::query_scalar(
         "SELECT COALESCE(MAX(sort_order), -1) + 1
          FROM collections
@@ -1065,17 +1636,9 @@ pub async fn move_collection(
             .map_err(DbError::Query)?;
     }
 
-    let row = sqlx::query(
-        "SELECT id, owner_id, parent_collection_id, name, description, image,
-                visibility, sort_order, created_at, updated_at
-         FROM collections WHERE id = $1 AND owner_id = $2",
-    )
-    .bind(collection_id)
-    .bind(owner_id)
-    .fetch_one(&mut *tx)
-    .await
-    .map_err(DbError::Query)?;
-    let moved = collection_from_row(&row).map_err(DbError::Query)?;
+    let moved = get_collection_by_id_and_owner(&mut *tx, collection_id, owner_id)
+        .await?
+        .ok_or(DbError::CollectionNotFound(collection_id))?;
     tx.commit().await.map_err(DbError::Query)?;
     Ok(moved)
 }
@@ -1131,6 +1694,32 @@ pub async fn add_recipe_to_collection(
     .map_err(DbError::Query)?;
     if recipe_exists.is_none() {
         return Err(DbError::RecipeNotAccessible(recipe_id));
+    }
+
+    let membership_state = sqlx::query(
+        "SELECT COUNT(*) AS membership_count,
+                COUNT(*) FILTER (WHERE recipe_id = $2) > 0 AS already_member
+         FROM collection_recipes
+         WHERE collection_id = $1",
+    )
+    .bind(collection_id)
+    .bind(recipe_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    if membership_state
+        .try_get("already_member")
+        .map_err(DbError::Query)?
+    {
+        return Err(DbError::RecipeAlreadyInCollection);
+    }
+    let membership_count: i64 = membership_state
+        .try_get("membership_count")
+        .map_err(DbError::Query)?;
+    if membership_count >= collection_limit_as_i64(MAX_COLLECTION_MEMBERSHIPS) {
+        return Err(DbError::CollectionLimitExceeded(
+            "recipe memberships per collection",
+        ));
     }
 
     let next_order: i32 = sqlx::query_scalar(
@@ -1232,16 +1821,60 @@ pub async fn get_collection_recipes(
     .fetch_one(pool)
     .await
     .map_err(DbError::Query)?;
+    let bounded_limit = limit.clamp(0, MAX_COLLECTION_RECIPE_CARDS_PER_PAGE as i64);
+    let bounded_offset = offset.max(0);
     let rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary,
+        "SELECT r.id, r.title,
+                LEFT(r.description, $5::INTEGER) AS description,
                 r.prep_time_minutes, r.cook_time_minutes, r.servings,
-                r.ingredients, r.instructions, r.equipment, r.images,
-                r.visibility, r.created_at, r.updated_at,
-                u.username AS author_username, u.avatar_url AS author_avatar_url
+                CASE WHEN r.images -> 0 ? 'asset_id' THEN asset.id ELSE NULL END AS image_asset_id,
+                CASE
+                    WHEN r.images -> 0 ? 'asset_id' THEN asset.full_url
+                    WHEN octet_length((r.images -> 0)::TEXT) <= $6
+                    THEN CASE
+                        WHEN jsonb_typeof(r.images -> 0) = 'string'
+                        THEN r.images -> 0 #>> '{}'
+                        WHEN jsonb_typeof(r.images -> 0) = 'object'
+                        THEN r.images -> 0 ->> 'url'
+                    END
+                END AS image_url,
+                CASE
+                    WHEN r.images -> 0 ? 'asset_id' THEN asset.thumbnail_url
+                    WHEN jsonb_typeof(r.images -> 0) = 'object'
+                     AND octet_length((r.images -> 0)::TEXT) <= $6
+                    THEN r.images -> 0 ->> 'thumb_url'
+                END AS image_thumb_url,
+                CASE
+                    WHEN jsonb_typeof(r.images -> 0) = 'object'
+                     AND octet_length((r.images -> 0)::TEXT) <= $6
+                    THEN (
+                        SELECT edit.value
+                        FROM jsonb_array_elements(
+                            CASE
+                                WHEN jsonb_typeof((r.images -> 0) -> 'edits') = 'array'
+                                THEN (r.images -> 0) -> 'edits'
+                                ELSE '[]'::JSONB
+                            END
+                        ) WITH ORDINALITY AS edit(value, ordinal)
+                        WHERE edit.value ->> 'name' = 'rectangle:16:9'
+                        ORDER BY edit.ordinal
+                        LIMIT 1
+                    )
+                END AS image_edit,
+                r.visibility,
+                u.username AS author_username,
+                CASE WHEN char_length(COALESCE(avatar_asset.full_url, u.avatar_url)) <= $7
+                     THEN COALESCE(avatar_asset.full_url, u.avatar_url) END AS author_avatar_url
          FROM collection_recipes cr
          INNER JOIN collections c ON c.id = cr.collection_id AND c.owner_id = $2
          INNER JOIN recipes r ON r.id = cr.recipe_id
+         LEFT JOIN recipe_media_refs image_ref
+           ON image_ref.recipe_id = r.id
+          AND image_ref.asset_id::text = r.images -> 0 ->> 'asset_id'
+         LEFT JOIN media_assets asset ON asset.id = image_ref.asset_id
          LEFT JOIN users u ON u.id = r.user_id
+         LEFT JOIN avatar_media_refs avatar_ref ON avatar_ref.user_id = u.id
+         LEFT JOIN media_assets avatar_asset ON avatar_asset.id = avatar_ref.asset_id
          WHERE cr.collection_id = $1
            AND (r.user_id = $2 OR r.visibility IN ('public', 'unlisted'))
          ORDER BY cr.sort_order, cr.created_at, cr.recipe_id
@@ -1249,18 +1882,22 @@ pub async fn get_collection_recipes(
     )
     .bind(collection_id)
     .bind(owner_id)
-    .bind(limit.max(0))
-    .bind(offset.max(0))
+    .bind(bounded_limit)
+    .bind(bounded_offset)
+    .bind(MAX_COLLECTION_RECIPE_CARD_DESCRIPTION_CHARS as i64)
+    .bind(MAX_IMAGE_METADATA_BYTES as i64)
+    .bind(MAX_COLLECTION_RECIPE_CARD_AUTHOR_AVATAR_URL_CHARS as i64)
     .fetch_all(pool)
     .await
     .map_err(DbError::Query)?;
     let recipes = rows
         .iter()
-        .map(Recipe::from_row)
+        .map(collection_recipe_card_from_row)
         .collect::<Result<Vec<_>, _>>()
         .map_err(DbError::Query)?;
+    validate_collection_recipe_card_output(&recipes)?;
     Ok(CollectionRecipeList {
-        has_more: offset.max(0) + (recipes.len() as i64) < total_count,
+        has_more: bounded_offset + (recipes.len() as i64) < total_count,
         recipes,
         total_count,
     })
@@ -1409,6 +2046,7 @@ pub async fn get_collection_contents_for_viewer(
                AND (parent.visibility = 'public'
                     OR ($3 AND parent.visibility = 'unlisted'))
                AND NOT parent.id = ANY(ancestors.path)
+               AND ancestors.depth < {maximum_parent_depth}
          )
          SELECT c.id,
                 CASE
@@ -1419,7 +2057,8 @@ pub async fn get_collection_contents_for_viewer(
                     THEN c.parent_collection_id
                     ELSE NULL
                 END AS parent_collection_id,
-                c.name, c.description, c.image, c.visibility,
+                c.name, c.description, c.image,
+                {} AS media_asset_urls, c.visibility,
                 0::INTEGER AS sort_order, c.updated_at,
                 {} AS preview_images,
                 (SELECT COUNT(*)
@@ -1436,10 +2075,14 @@ pub async fn get_collection_contents_for_viewer(
                         OR ($3 AND r.visibility = 'unlisted'))) AS recipe_count
          FROM ancestors
          INNER JOIN collections c ON c.id = ancestors.id
-         ORDER BY ancestors.depth DESC",
+         ORDER BY ancestors.depth DESC
+         LIMIT {maximum_depth}",
+        collection_media_asset_urls_select("c"),
         collection_preview_images_select(
             "(r.visibility = 'public' OR ($3 AND r.visibility = 'unlisted'))"
-        )
+        ),
+        maximum_parent_depth = MAX_COLLECTION_DEPTH - 1,
+        maximum_depth = MAX_COLLECTION_DEPTH,
     );
     let breadcrumb_rows = sqlx::query(&breadcrumb_query)
         .bind(collection_id)
@@ -1458,7 +2101,8 @@ pub async fn get_collection_contents_for_viewer(
     };
 
     let child_query = format!(
-        "SELECT c.id, c.parent_collection_id, c.name, c.description, c.image, c.visibility,
+        "SELECT c.id, c.parent_collection_id, c.name, c.description, c.image,
+                {} AS media_asset_urls, c.visibility,
                 ((ROW_NUMBER() OVER (
                     ORDER BY c.sort_order, lower(c.name), c.id
                  ) - 1)::INTEGER) AS sort_order,
@@ -1479,10 +2123,13 @@ pub async fn get_collection_contents_for_viewer(
          FROM collections c
          WHERE c.parent_collection_id = $1 AND c.owner_id = $2
            AND (c.visibility = 'public' OR ($3 AND c.visibility = 'unlisted'))
-         ORDER BY c.sort_order, lower(c.name), c.id",
+         ORDER BY c.sort_order, lower(c.name), c.id
+         LIMIT {maximum_children}",
+        collection_media_asset_urls_select("c"),
         collection_preview_images_select(
             "(r.visibility = 'public' OR ($3 AND r.visibility = 'unlisted'))"
-        )
+        ),
+        maximum_children = MAX_COLLECTION_CHILDREN,
     );
     let child_rows = sqlx::query(&child_query)
         .bind(collection_id)
@@ -1512,16 +2159,60 @@ pub async fn get_collection_contents_for_viewer(
     .fetch_one(&mut *tx)
     .await
     .map_err(DbError::Query)?;
+    let bounded_limit = limit.clamp(0, MAX_COLLECTION_RECIPE_CARDS_PER_PAGE as i64);
+    let bounded_offset = offset.max(0);
     let recipe_rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary,
+        "SELECT r.id, r.title,
+                LEFT(r.description, $6::INTEGER) AS description,
                 r.prep_time_minutes, r.cook_time_minutes, r.servings,
-                r.ingredients, r.instructions, r.equipment, r.images,
-                r.visibility, r.created_at, r.updated_at,
-                u.username AS author_username, u.avatar_url AS author_avatar_url
+                CASE WHEN r.images -> 0 ? 'asset_id' THEN asset.id ELSE NULL END AS image_asset_id,
+                CASE
+                    WHEN r.images -> 0 ? 'asset_id' THEN asset.full_url
+                    WHEN octet_length((r.images -> 0)::TEXT) <= $7
+                    THEN CASE
+                        WHEN jsonb_typeof(r.images -> 0) = 'string'
+                        THEN r.images -> 0 #>> '{}'
+                        WHEN jsonb_typeof(r.images -> 0) = 'object'
+                        THEN r.images -> 0 ->> 'url'
+                    END
+                END AS image_url,
+                CASE
+                    WHEN r.images -> 0 ? 'asset_id' THEN asset.thumbnail_url
+                    WHEN jsonb_typeof(r.images -> 0) = 'object'
+                     AND octet_length((r.images -> 0)::TEXT) <= $7
+                    THEN r.images -> 0 ->> 'thumb_url'
+                END AS image_thumb_url,
+                CASE
+                    WHEN jsonb_typeof(r.images -> 0) = 'object'
+                     AND octet_length((r.images -> 0)::TEXT) <= $7
+                    THEN (
+                        SELECT edit.value
+                        FROM jsonb_array_elements(
+                            CASE
+                                WHEN jsonb_typeof((r.images -> 0) -> 'edits') = 'array'
+                                THEN (r.images -> 0) -> 'edits'
+                                ELSE '[]'::JSONB
+                            END
+                        ) WITH ORDINALITY AS edit(value, ordinal)
+                        WHERE edit.value ->> 'name' = 'rectangle:16:9'
+                        ORDER BY edit.ordinal
+                        LIMIT 1
+                    )
+                END AS image_edit,
+                r.visibility,
+                u.username AS author_username,
+                CASE WHEN char_length(COALESCE(avatar_asset.full_url, u.avatar_url)) <= $8
+                     THEN COALESCE(avatar_asset.full_url, u.avatar_url) END AS author_avatar_url
          FROM collection_recipes cr
          INNER JOIN collections c ON c.id = cr.collection_id AND c.owner_id = $2
          INNER JOIN recipes r ON r.id = cr.recipe_id
+         LEFT JOIN recipe_media_refs image_ref
+           ON image_ref.recipe_id = r.id
+          AND image_ref.asset_id::text = r.images -> 0 ->> 'asset_id'
+         LEFT JOIN media_assets asset ON asset.id = image_ref.asset_id
          LEFT JOIN users u ON u.id = r.user_id
+         LEFT JOIN avatar_media_refs avatar_ref ON avatar_ref.user_id = u.id
+         LEFT JOIN media_assets avatar_asset ON avatar_asset.id = avatar_ref.asset_id
          WHERE cr.collection_id = $1
            AND (c.visibility = 'public' OR ($3 AND c.visibility = 'unlisted'))
            AND (r.visibility = 'public' OR ($3 AND r.visibility = 'unlisted'))
@@ -1531,18 +2222,22 @@ pub async fn get_collection_contents_for_viewer(
     .bind(collection_id)
     .bind(owner_id)
     .bind(include_unlisted)
-    .bind(limit.max(0))
-    .bind(offset.max(0))
+    .bind(bounded_limit)
+    .bind(bounded_offset)
+    .bind(MAX_COLLECTION_RECIPE_CARD_DESCRIPTION_CHARS as i64)
+    .bind(MAX_IMAGE_METADATA_BYTES as i64)
+    .bind(MAX_COLLECTION_RECIPE_CARD_AUTHOR_AVATAR_URL_CHARS as i64)
     .fetch_all(&mut *tx)
     .await
     .map_err(DbError::Query)?;
     let returned_recipes = recipe_rows
         .iter()
-        .map(Recipe::from_row)
+        .map(collection_recipe_card_from_row)
         .collect::<Result<Vec<_>, _>>()
         .map_err(DbError::Query)?;
+    validate_collection_recipe_card_output(&returned_recipes)?;
     let recipes = CollectionRecipeList {
-        has_more: offset.max(0) + (returned_recipes.len() as i64) < total_count,
+        has_more: bounded_offset + (returned_recipes.len() as i64) < total_count,
         recipes: returned_recipes,
         total_count,
     };
@@ -1619,6 +2314,11 @@ pub async fn reorder_collection_recipes(
     owner_id: Uuid,
     ordered_recipe_ids: &[Uuid],
 ) -> Result<(), DbError> {
+    if ordered_recipe_ids.len() > MAX_COLLECTION_MEMBERSHIPS {
+        return Err(DbError::CollectionLimitExceeded(
+            "recipe membership reorder length",
+        ));
+    }
     let mut tx = pool.begin().await.map_err(DbError::Query)?;
     let collection_exists: Option<Uuid> =
         sqlx::query_scalar("SELECT id FROM collections WHERE id = $1 AND owner_id = $2 FOR UPDATE")
@@ -1687,6 +2387,11 @@ pub async fn reorder_child_collections(
     parent_collection_id: Option<Uuid>,
     ordered_collection_ids: &[Uuid],
 ) -> Result<(), DbError> {
+    if ordered_collection_ids.len() > MAX_COLLECTION_CHILDREN {
+        return Err(DbError::CollectionLimitExceeded(
+            "child collection reorder length",
+        ));
+    }
     let mut tx = pool.begin().await.map_err(DbError::Query)?;
     lock_owner(&mut tx, owner_id).await?;
     if let Some(parent_id) = parent_collection_id {
@@ -1745,24 +2450,120 @@ pub async fn reorder_child_collections(
 // ── Auth state queries ──────────────────────────────────────────────────────
 
 /// Insert an auth state for OAuth CSRF protection.
+#[cfg(test)]
 pub async fn insert_auth_state(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     id: &str,
     provider: &str,
     redirect_uri: &str,
     code_verifier: &str,
+    purpose: &str,
     user_id: Option<Uuid>,
 ) -> Result<(), DbError> {
-    sqlx::query("INSERT INTO auth_states (id, provider, redirect_uri, code_verifier, user_id) VALUES ($1, $2, $3, $4, $5)")
+    // This compatibility helper is retained for low-level state tests. Real
+    // OAuth starts use `insert_bound_auth_state` with a random digest.
+    sqlx::query("INSERT INTO auth_states (id, provider, redirect_uri, code_verifier, purpose, user_id, browser_binding_digest) VALUES ($1, $2, $3, $4, $5, $6, $7)")
         .bind(id)
         .bind(provider)
         .bind(redirect_uri)
         .bind(code_verifier)
+        .bind(purpose)
         .bind(user_id)
+        .bind([0_u8; 32].as_slice())
         .execute(executor)
         .await
         .map_err(DbError::Query)?;
     Ok(())
+}
+
+/// Insert an OAuth state bound to a digest of a browser-held transaction secret.
+///
+/// The raw secret must never cross this database boundary.
+#[allow(clippy::too_many_arguments)]
+pub async fn insert_bound_auth_state(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    id: &str,
+    provider: &str,
+    redirect_uri: &str,
+    code_verifier: &str,
+    purpose: &str,
+    user_id: Option<Uuid>,
+    browser_binding_digest: &[u8],
+) -> Result<(), DbError> {
+    sqlx::query(
+        "INSERT INTO auth_states \
+         (id, provider, redirect_uri, code_verifier, purpose, user_id, browser_binding_digest) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    )
+    .bind(id)
+    .bind(provider)
+    .bind(redirect_uri)
+    .bind(code_verifier)
+    .bind(purpose)
+    .bind(user_id)
+    .bind(browser_binding_digest)
+    .execute(executor)
+    .await
+    .map_err(DbError::Query)?;
+    Ok(())
+}
+
+/// Result of attempting to consume a browser-bound OAuth state.
+pub enum BoundAuthStateConsume {
+    Consumed(AuthState),
+    StateNotFound,
+    BindingMismatch,
+}
+
+/// Consume an OAuth state only when its browser-binding digest matches.
+///
+/// Locking the row serializes competing callbacks. A mismatch commits no
+/// mutation, while the matching callback deletes and returns the row in the
+/// same transaction.
+pub async fn consume_bound_auth_state(
+    pool: &PgPool,
+    id: &str,
+    browser_binding_digest: &[u8],
+) -> Result<BoundAuthStateConsume, DbError> {
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    let stored: Option<(Vec<u8>,)> =
+        sqlx::query_as("SELECT browser_binding_digest FROM auth_states WHERE id = $1 FOR UPDATE")
+            .bind(id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(DbError::Query)?;
+
+    let Some((stored_digest,)) = stored else {
+        tx.commit().await.map_err(DbError::Query)?;
+        return Ok(BoundAuthStateConsume::StateNotFound);
+    };
+
+    // Both values are SHA-256 digests. Keep comparison time independent of the
+    // first differing byte so the browser secret remains an all-or-nothing key.
+    let digest_matches = stored_digest.len() == browser_binding_digest.len()
+        && stored_digest
+            .iter()
+            .zip(browser_binding_digest)
+            .fold(0_u8, |difference, (stored, supplied)| {
+                difference | (stored ^ supplied)
+            })
+            == 0;
+    if !digest_matches {
+        tx.commit().await.map_err(DbError::Query)?;
+        return Ok(BoundAuthStateConsume::BindingMismatch);
+    }
+
+    let auth_state = sqlx::query_as::<_, AuthState>(
+        "DELETE FROM auth_states WHERE id = $1 \
+         RETURNING id, redirect_uri, provider, code_verifier, purpose, user_id, created_at",
+    )
+    .bind(id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(DbError::Query)?
+    .ok_or_else(|| DbError::Query(sqlx::Error::RowNotFound))?;
+    tx.commit().await.map_err(DbError::Query)?;
+    Ok(BoundAuthStateConsume::Consumed(auth_state))
 }
 
 /// Atomically delete an auth state by ID and return the deleted row.
@@ -1775,7 +2576,7 @@ pub async fn delete_auth_state(
 ) -> Result<Option<AuthState>, DbError> {
     sqlx::query_as!(
         AuthState,
-        "DELETE FROM auth_states WHERE id = $1 RETURNING id, redirect_uri, provider, code_verifier, user_id, created_at",
+        "DELETE FROM auth_states WHERE id = $1 RETURNING id, redirect_uri, provider, code_verifier, purpose, user_id, created_at",
         id,
     )
     .fetch_optional(executor)
@@ -1915,7 +2716,8 @@ pub async fn get_oauth_account_by_provider(
     .map_err(DbError::Query)
 }
 
-/// Get an OAuth account by email.
+/// Get an OAuth account by email for database-layer regression tests.
+#[cfg(test)]
 pub async fn get_oauth_account_by_email(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     email: &str,
@@ -1944,6 +2746,27 @@ pub async fn update_oauth_last_used(
         .execute(executor)
         .await
         .map_err(DbError::Query)?;
+    Ok(())
+}
+
+/// Refresh mutable provider metadata for an existing stable identity.
+pub async fn update_oauth_last_used_and_email(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    id: Uuid,
+    email: Option<&str>,
+    email_verified: bool,
+) -> Result<(), DbError> {
+    sqlx::query(
+        "UPDATE oauth_accounts \
+         SET last_used_at = NOW(), email = $2, email_verified = $3 \
+         WHERE id = $1",
+    )
+    .bind(id)
+    .bind(email)
+    .bind(email_verified)
+    .execute(executor)
+    .await
+    .map_err(DbError::Query)?;
     Ok(())
 }
 
@@ -2073,16 +2896,42 @@ pub async fn insert_oauth_account(
     profile_data: Option<&serde_json::Value>,
     refresh_token: Option<&str>,
 ) -> Result<OauthAccount, DbError> {
+    insert_oauth_account_with_email_verification(
+        executor,
+        user_id,
+        provider,
+        provider_user_id,
+        email,
+        false,
+        profile_data,
+        refresh_token,
+    )
+    .await
+}
+
+/// Insert an OAuth account while preserving provider email verification state.
+#[allow(clippy::too_many_arguments)] // Mirrors the OAuth account columns explicitly.
+pub async fn insert_oauth_account_with_email_verification(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    user_id: Uuid,
+    provider: &str,
+    provider_user_id: &str,
+    email: Option<&str>,
+    email_verified: bool,
+    profile_data: Option<&serde_json::Value>,
+    refresh_token: Option<&str>,
+) -> Result<OauthAccount, DbError> {
     sqlx::query_as!(
         OauthAccount,
-        "INSERT INTO oauth_accounts (user_id, provider, provider_user_id, email, profile_data, refresh_token) \
-         VALUES ($1, $2, $3, $4, $5, $6) \
+        "INSERT INTO oauth_accounts (user_id, provider, provider_user_id, email, email_verified, profile_data, refresh_token) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7) \
          RETURNING id, user_id, provider, provider_user_id, email, email_verified, \
          profile_data, refresh_token, created_at, last_used_at",
         user_id,
         provider,
         provider_user_id,
         email,
+        email_verified,
         profile_data,
         refresh_token,
     )
@@ -2096,12 +2945,12 @@ pub async fn get_user_by_id(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     id: Uuid,
 ) -> Result<Option<User>, DbError> {
-    sqlx::query_as!(
-        User,
-        "SELECT id, username, display_name, email, avatar_url, bio, created_at, updated_at \
-         FROM users WHERE id = $1",
-        id,
-    )
+    sqlx::query_as::<_, User>(&format!(
+        "SELECT u.id, u.username, u.display_name, u.email, {} AS avatar_url, \
+             u.bio, u.created_at, u.updated_at FROM users u WHERE u.id = $1",
+        media_assets::managed_avatar_url_projection("u")
+    ))
+    .bind(id)
     .fetch_optional(executor)
     .await
     .map_err(DbError::Query)
@@ -2112,11 +2961,15 @@ pub async fn username_exists(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     username: &str,
 ) -> Result<bool, DbError> {
-    let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)")
-        .bind(username)
-        .fetch_one(executor)
-        .await
-        .map_err(DbError::Query)?;
+    // Concatenating the empty string keeps identity lookup on PostgreSQL's
+    // native text equality path instead of matching either ParadeDB expression
+    // index. This remains portable to the plain PostgreSQL unit-test database.
+    let exists: bool =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE (username || '') = $1)")
+            .bind(username)
+            .fetch_one(executor)
+            .await
+            .map_err(DbError::Query)?;
     Ok(exists)
 }
 
@@ -2125,12 +2978,12 @@ pub async fn get_user_by_email(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     email: &str,
 ) -> Result<Option<User>, DbError> {
-    sqlx::query_as!(
-        User,
-        "SELECT id, username, display_name, email, avatar_url, bio, \
-          created_at, updated_at FROM users WHERE email = $1",
-        email,
-    )
+    sqlx::query_as::<_, User>(&format!(
+        "SELECT u.id, u.username, u.display_name, u.email, {} AS avatar_url, \
+             u.bio, u.created_at, u.updated_at FROM users u WHERE u.email = $1",
+        media_assets::managed_avatar_url_projection("u")
+    ))
+    .bind(email)
     .fetch_optional(executor)
     .await
     .map_err(DbError::Query)
@@ -2215,7 +3068,18 @@ async fn snapshot_owned_recipe_lineage(
 ///
 /// Revokes all OAuth tokens with providers before deletion. Revocation
 /// failures are logged but never block deletion.
+#[cfg(test)]
 pub async fn delete_user(pool: &PgPool, user_id: Uuid) -> Result<(), DbError> {
+    delete_user_inner(pool, user_id).await
+}
+
+/// Delete a user while preserving service-owned media assets for ordinary,
+/// reference-aware cleanup. Deletion authority remains entirely database-backed.
+pub async fn delete_user_with_media_cleanup(pool: &PgPool, user_id: Uuid) -> Result<(), DbError> {
+    delete_user_inner(pool, user_id).await
+}
+
+async fn delete_user_inner(pool: &PgPool, user_id: Uuid) -> Result<(), DbError> {
     // Revoke all OAuth tokens before deletion (non-blocking — failures are logged)
     crate::auth::revoke::revoke_all_user_tokens(pool, user_id).await;
 
@@ -2224,7 +3088,19 @@ pub async fn delete_user(pool: &PgPool, user_id: Uuid) -> Result<(), DbError> {
         .bind(user_id)
         .fetch_optional(&mut *transaction)
         .await
-        .map_err(DbError::Query)?;
+        .map_err(DbError::Query)?
+        .ok_or(DbError::Query(sqlx::Error::RowNotFound))?;
+
+    // Serialize with attachment and cleanup. Holder rows cascade with their
+    // recipes, drafts, collections, and avatar; uploader attribution becomes
+    // NULL while the service-owned asset and its object keys survive.
+    sqlx::query_scalar::<_, Uuid>(
+        "SELECT id FROM media_assets WHERE uploader_id = $1 ORDER BY id FOR UPDATE",
+    )
+    .bind(user_id)
+    .fetch_all(&mut *transaction)
+    .await
+    .map_err(DbError::Query)?;
     snapshot_owned_recipe_lineage(&mut transaction, user_id, None).await?;
 
     // Now delete the user (oauth_accounts and recipes cascade automatically)
@@ -2243,23 +3119,27 @@ pub async fn delete_user(pool: &PgPool, user_id: Uuid) -> Result<(), DbError> {
 
 /// Update a user's display name and bio. Returns the updated user record.
 pub async fn update_user_profile(
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    pool: &PgPool,
     user_id: Uuid,
     display_name: &str,
     bio: Option<&str>,
 ) -> Result<User, DbError> {
-    sqlx::query_as!(
-        User,
+    let mut transaction = pool.begin().await.map_err(DbError::Query)?;
+    sqlx::query(
         "UPDATE users SET display_name = $2, bio = $3, updated_at = NOW() \
-         WHERE id = $1 \
-         RETURNING id, username, display_name, email, avatar_url, bio, created_at, updated_at",
-        user_id,
-        display_name,
-        bio,
+         WHERE id = $1",
     )
-    .fetch_one(executor)
+    .bind(user_id)
+    .bind(display_name)
+    .bind(bio)
+    .execute(&mut *transaction)
     .await
-    .map_err(DbError::Query)
+    .map_err(DbError::Query)?;
+    let updated = get_user_by_id(&mut *transaction, user_id)
+        .await?
+        .ok_or(DbError::Query(sqlx::Error::RowNotFound))?;
+    transaction.commit().await.map_err(DbError::Query)?;
+    Ok(updated)
 }
 
 /// Update a user's username. Checks uniqueness first (excluding the current user).
@@ -2273,13 +3153,15 @@ pub async fn update_username(
     new_username: &str,
 ) -> Result<User, DbError> {
     // Check uniqueness (exclude the current user's own username)
-    let exists: bool =
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1 AND id != $2)")
-            .bind(new_username)
-            .bind(user_id)
-            .fetch_one(executor.clone())
-            .await
-            .map_err(DbError::Query)?;
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM users \
+         WHERE (username || '') = $1 AND id != $2)",
+    )
+    .bind(new_username)
+    .bind(user_id)
+    .fetch_one(executor.clone())
+    .await
+    .map_err(DbError::Query)?;
 
     if exists {
         return Err(DbError::UsernameTaken);
@@ -2322,6 +3204,26 @@ pub async fn update_avatar_url(
 
 // ── Recipe queries ──────────────────────────────────────────────────────────
 
+pub(crate) fn recipe_read_columns(recipe_alias: &str, user_alias: &str) -> String {
+    let media_asset_urls = media_assets::media_asset_urls_projection(
+        "recipe_media_refs",
+        "recipe_id",
+        &format!("{recipe_alias}.id"),
+    );
+    let author_avatar_url = media_assets::managed_avatar_url_projection(user_alias);
+    format!(
+        "{recipe_alias}.id, {recipe_alias}.user_id, {recipe_alias}.title, \
+         {recipe_alias}.description, {recipe_alias}.commentary, \
+         {recipe_alias}.prep_time_minutes, {recipe_alias}.cook_time_minutes, \
+         {recipe_alias}.servings, {recipe_alias}.ingredients, \
+         {recipe_alias}.instructions, {recipe_alias}.equipment, {recipe_alias}.images, \
+         {recipe_alias}.visibility, {recipe_alias}.created_at, {recipe_alias}.updated_at, \
+         {user_alias}.username AS author_username, \
+         {author_avatar_url} AS author_avatar_url, \
+         {media_asset_urls} AS media_asset_urls"
+    )
+}
+
 /// Insert a new recipe. Returns the created recipe with the generated ID.
 #[allow(clippy::too_many_arguments)]
 pub async fn insert_recipe(
@@ -2349,7 +3251,8 @@ pub async fn insert_recipe(
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) \
          RETURNING id, user_id, title, description, commentary, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, images, visibility, created_at, updated_at, \
             (SELECT username FROM users WHERE users.id = $1) AS author_username, \
-            (SELECT avatar_url FROM users WHERE users.id = $1) AS author_avatar_url",
+            (SELECT avatar_url FROM users WHERE users.id = $1) AS author_avatar_url, \
+            'null'::jsonb AS media_asset_urls",
     )
     .bind(user_id)
     .bind(title)
@@ -2375,10 +3278,10 @@ pub async fn get_recipe_by_id(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     id: Uuid,
 ) -> Result<Option<Recipe>, DbError> {
-    let row = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
-         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.id = $1",
-    )
+    let row = sqlx::query(&format!(
+        "SELECT {} FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.id = $1",
+        recipe_read_columns("r", "u")
+    ))
     .bind(id)
     .fetch_optional(executor)
     .await
@@ -2396,10 +3299,11 @@ pub async fn get_recipe_by_id_and_owner(
     id: Uuid,
     user_id: Uuid,
 ) -> Result<Recipe, DbError> {
-    let row = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
-         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.id = $1 AND r.user_id = $2",
-    )
+    let row = sqlx::query(&format!(
+        "SELECT {} FROM recipes r LEFT JOIN users u ON u.id = r.user_id \
+         WHERE r.id = $1 AND r.user_id = $2",
+        recipe_read_columns("r", "u")
+    ))
     .bind(id)
     .bind(user_id)
     .fetch_one(executor)
@@ -2417,11 +3321,11 @@ pub async fn get_recipes_by_owner(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     user_id: Uuid,
 ) -> Result<Vec<Recipe>, DbError> {
-    let rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
-         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.user_id = $1 \
-         ORDER BY r.created_at DESC",
-    )
+    let rows = sqlx::query(&format!(
+        "SELECT {} FROM recipes r LEFT JOIN users u ON u.id = r.user_id \
+         WHERE r.user_id = $1 ORDER BY r.created_at DESC",
+        recipe_read_columns("r", "u")
+    ))
     .bind(user_id)
     .fetch_all(executor)
     .await
@@ -2467,7 +3371,8 @@ pub async fn update_recipe(
          WHERE id = $1 AND user_id = $2 \
          RETURNING id, user_id, title, description, commentary, prep_time_minutes, cook_time_minutes, servings, ingredients, instructions, equipment, images, visibility, created_at, updated_at, \
             (SELECT username FROM users WHERE users.id = $2) AS author_username, \
-            (SELECT avatar_url FROM users WHERE users.id = $2) AS author_avatar_url",
+            (SELECT avatar_url FROM users WHERE users.id = $2) AS author_avatar_url, \
+            'null'::jsonb AS media_asset_urls",
     )
     .bind(id)
     .bind(user_id)
@@ -2494,32 +3399,30 @@ pub async fn update_recipe(
 
 /// Change only recipe-level visibility, enforcing ownership.
 pub async fn update_recipe_visibility(
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    pool: &PgPool,
     id: Uuid,
     user_id: Uuid,
     visibility: &str,
 ) -> Result<Recipe, DbError> {
     versioning::validate_recipe_visibility(visibility)?;
-    let row = sqlx::query(
+    let mut transaction = pool.begin().await.map_err(DbError::Query)?;
+    let rows = sqlx::query(
         "UPDATE recipes SET visibility = $3, updated_at = NOW() \
-         WHERE id = $1 AND user_id = $2 \
-         RETURNING id, user_id, title, description, commentary, prep_time_minutes, \
-             cook_time_minutes, servings, ingredients, instructions, equipment, images, \
-             visibility, created_at, updated_at, \
-             (SELECT username FROM users WHERE users.id = $2) AS author_username, \
-             (SELECT avatar_url FROM users WHERE users.id = $2) AS author_avatar_url",
+         WHERE id = $1 AND user_id = $2",
     )
     .bind(id)
     .bind(user_id)
     .bind(visibility)
-    .fetch_one(executor)
+    .execute(&mut *transaction)
     .await
-    .map_err(|error| match error {
-        sqlx::Error::RowNotFound => DbError::RecipeNotFound(id),
-        other => DbError::Query(other),
-    })?;
-
-    Recipe::from_row(&row).map_err(DbError::Query)
+    .map_err(DbError::Query)?
+    .rows_affected();
+    if rows == 0 {
+        return Err(DbError::RecipeNotFound(id));
+    }
+    let updated = get_recipe_by_id_and_owner(&mut *transaction, id, user_id).await?;
+    transaction.commit().await.map_err(DbError::Query)?;
+    Ok(updated)
 }
 
 /// Delete a recipe, enforcing ownership via `user_id` in the WHERE clause.
@@ -2592,12 +3495,11 @@ pub async fn get_recipes_by_owner_paginated(
     limit: i64,
     offset: i64,
 ) -> Result<Vec<Recipe>, DbError> {
-    let rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
-         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.user_id = $1 \
-         ORDER BY r.created_at DESC \
-         LIMIT $2 OFFSET $3",
-    )
+    let rows = sqlx::query(&format!(
+        "SELECT {} FROM recipes r LEFT JOIN users u ON u.id = r.user_id \
+         WHERE r.user_id = $1 ORDER BY r.created_at DESC LIMIT $2 OFFSET $3",
+        recipe_read_columns("r", "u")
+    ))
     .bind(user_id)
     .bind(limit)
     .bind(offset)
@@ -2631,12 +3533,12 @@ pub async fn get_user_by_username(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     username: &str,
 ) -> Result<Option<User>, DbError> {
-    sqlx::query_as!(
-        User,
-        "SELECT id, username, display_name, email, avatar_url, bio, created_at, updated_at \
-         FROM users WHERE username = $1",
-        username,
-    )
+    sqlx::query_as::<_, User>(&format!(
+        "SELECT u.id, u.username, u.display_name, u.email, {} AS avatar_url, \
+             u.bio, u.created_at, u.updated_at FROM users u WHERE (u.username || '') = $1",
+        media_assets::managed_avatar_url_projection("u")
+    ))
+    .bind(username)
     .fetch_optional(executor)
     .await
     .map_err(DbError::Query)
@@ -2647,23 +3549,62 @@ pub async fn get_public_recipes_paginated(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     limit: i64,
     offset: i64,
-) -> Result<Vec<Recipe>, DbError> {
-    let rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
-         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.visibility = 'public' \
-         ORDER BY r.created_at DESC \
-         LIMIT $1 OFFSET $2",
-    )
+) -> Result<Vec<RecipeCardSummary>, DbError> {
+    get_public_recipes_filtered_paginated(executor, offset, limit, "").await
+}
+
+/// Match the complete title/description in SQL while returning only bounded cards.
+pub async fn get_public_recipes_filtered_paginated(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    offset: i64,
+    limit: i64,
+    query: &str,
+) -> Result<Vec<RecipeCardSummary>, DbError> {
+    crate::security::validate_public_recipe_pagination(offset, limit)
+        .map_err(|_| DbError::ResourceLimitExceeded("public recipe pagination"))?;
+    crate::security::validate_public_discovery_query(query)
+        .map_err(|_| DbError::ResourceLimitExceeded("public recipe query"))?;
+    let rows = sqlx::query(&format!(
+        "SELECT {} FROM recipes r {} \
+         WHERE r.visibility = 'public' AND \
+           ($3 = '' OR strpos(lower(r.title), lower($3)) > 0 \
+            OR strpos(lower(COALESCE(r.description, '')), lower($3)) > 0) \
+         ORDER BY r.created_at DESC, r.id LIMIT $1 OFFSET $2",
+        recipe_card_read_columns("r", "u"),
+        recipe_card_read_joins("r", "u")
+    ))
     .bind(limit)
     .bind(offset)
+    .bind(query)
     .fetch_all(executor)
     .await
     .map_err(DbError::Query)?;
 
-    rows.into_iter()
-        .map(|r| Recipe::from_row(&r))
-        .collect::<Result<_, _>>()
-        .map_err(DbError::Query)
+    let cards = rows
+        .iter()
+        .map(recipe_card_from_row)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(DbError::Query)?;
+    validate_collection_recipe_card_output(&cards)?;
+    Ok(cards)
+}
+
+/// Use the same literal substring predicate for filtered pagination counts.
+pub async fn count_public_recipes_filtered(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    query: &str,
+) -> Result<i64, DbError> {
+    crate::security::validate_public_discovery_query(query)
+        .map_err(|_| DbError::ResourceLimitExceeded("public recipe query"))?;
+    sqlx::query_scalar(
+        "SELECT COUNT(*) FROM recipes r WHERE r.visibility = 'public'
+        AND ($1 = '' OR strpos(lower(r.title), lower($1)) > 0
+             OR strpos(lower(COALESCE(r.description, '')), lower($1)) > 0)",
+    )
+    .bind(query)
+    .fetch_one(executor)
+    .await
+    .map_err(DbError::Query)
 }
 
 /// Count total public recipes (for pagination has_more calculation).
@@ -2683,10 +3624,11 @@ pub async fn get_recipe_by_id_public(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     id: Uuid,
 ) -> Result<Option<Recipe>, DbError> {
-    let row = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
-         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.id = $1 AND r.visibility IN ('public', 'unlisted')",
-    )
+    let row = sqlx::query(&format!(
+        "SELECT {} FROM recipes r LEFT JOIN users u ON u.id = r.user_id \
+         WHERE r.id = $1 AND r.visibility IN ('public', 'unlisted')",
+        recipe_read_columns("r", "u")
+    ))
     .bind(id)
     .fetch_optional(executor)
     .await
@@ -2703,13 +3645,16 @@ pub async fn get_user_public_recipes(
     user_id: Uuid,
     limit: i64,
     offset: i64,
-) -> Result<Vec<Recipe>, DbError> {
-    let rows = sqlx::query(
-        "SELECT r.id, r.user_id, r.title, r.description, r.commentary, r.prep_time_minutes, r.cook_time_minutes, r.servings, r.ingredients, r.instructions, r.equipment, r.images, r.visibility, r.created_at, r.updated_at, u.username AS author_username, u.avatar_url AS author_avatar_url \
-         FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.user_id = $1 AND r.visibility = 'public' \
-         ORDER BY r.created_at DESC \
-         LIMIT $2 OFFSET $3",
-    )
+) -> Result<Vec<RecipeCardSummary>, DbError> {
+    crate::security::validate_public_recipe_pagination(offset, limit)
+        .map_err(|_| DbError::ResourceLimitExceeded("public recipe pagination"))?;
+    let rows = sqlx::query(&format!(
+        "SELECT {} FROM recipes r {} \
+         WHERE r.user_id = $1 AND r.visibility = 'public' \
+         ORDER BY r.created_at DESC, r.id LIMIT $2 OFFSET $3",
+        recipe_card_read_columns("r", "u"),
+        recipe_card_read_joins("r", "u")
+    ))
     .bind(user_id)
     .bind(limit)
     .bind(offset)
@@ -2717,10 +3662,13 @@ pub async fn get_user_public_recipes(
     .await
     .map_err(DbError::Query)?;
 
-    rows.into_iter()
-        .map(|r| Recipe::from_row(&r))
-        .collect::<Result<_, _>>()
-        .map_err(DbError::Query)
+    let cards = rows
+        .iter()
+        .map(recipe_card_from_row)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(DbError::Query)?;
+    validate_collection_recipe_card_output(&cards)?;
+    Ok(cards)
 }
 
 /// Count a user's public recipes (for profile page pagination).
@@ -2742,12 +3690,13 @@ pub async fn count_user_public_recipes(
 pub async fn get_distinct_public_tags(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
 ) -> Result<Vec<String>, DbError> {
-    sqlx::query_scalar::<_, String>(
+    sqlx::query_scalar::<_, String>(&format!(
         "SELECT DISTINCT tag FROM recipe_tags
          INNER JOIN recipes ON recipe_tags.recipe_id = recipes.id
          WHERE recipes.visibility = 'public'
-         ORDER BY tag",
-    )
+         ORDER BY tag
+         LIMIT {MAX_PUBLIC_TAGS}",
+    ))
     .fetch_all(executor)
     .await
     .map_err(DbError::Query)
@@ -2774,81 +3723,58 @@ pub async fn get_public_recipe_tags(
     .map_err(DbError::Query)
 }
 
-/// Get all distinct image URLs referenced by recipes or collection covers.
-///
-/// Used by the orphan cleanup worker to determine which storage objects are still needed.
-pub async fn get_all_image_urls(pool: &PgPool) -> Result<Vec<String>, DbError> {
-    let rows = sqlx::query_scalar::<_, String>(
-        "WITH RECURSIVE recipe_documents(images, instructions) AS (
-             SELECT images, instructions FROM recipes
-             UNION ALL
-             SELECT snapshot -> 'images', snapshot -> 'instructions' FROM recipe_drafts
-             UNION ALL
-             SELECT snapshot -> 'images', snapshot -> 'instructions' FROM recipe_versions
-         ),
-         step_entries(step_entry) AS (
-             SELECT step_entry
-             FROM recipe_documents
-             CROSS JOIN LATERAL jsonb_array_elements(instructions) AS step_entry
-             WHERE instructions IS NOT NULL
-                AND jsonb_typeof(instructions) = 'array'
-             UNION ALL
-             SELECT child_step
-             FROM step_entries
-             CROSS JOIN LATERAL jsonb_array_elements(
-                 CASE
-                     WHEN jsonb_typeof(step_entry -> 'sub_steps') = 'array'
-                     THEN step_entry -> 'sub_steps'
-                     ELSE '[]'::jsonb
-                 END
-             ) AS child_step
-         ),
-         image_urls(image_url) AS (
-             SELECT image_urls.image_url
-             FROM recipe_documents
-             CROSS JOIN LATERAL jsonb_array_elements(images) AS image_entry
-             CROSS JOIN LATERAL (
-                 VALUES (image_entry ->> 'url'), (image_entry ->> 'thumb_url')
-             ) AS image_urls(image_url)
-             WHERE images IS NOT NULL
-                AND jsonb_array_length(images) > 0
-                AND jsonb_typeof(image_entry) = 'object'
-                UNION ALL
-                SELECT step_photo_urls.image_url
-                FROM step_entries
-                CROSS JOIN LATERAL jsonb_array_elements(
-                    CASE
-                        WHEN jsonb_typeof(step_entry -> 'photos') = 'array'
-                        THEN step_entry -> 'photos'
-                        ELSE '[]'::jsonb
-                    END
-                ) AS step_photo
-                CROSS JOIN LATERAL (
-                    VALUES (
-                        step_photo ->> 'url'
-                    ), (
-                        step_photo ->> 'thumb_url'
-                    )
-                ) AS step_photo_urls(image_url)
-                WHERE jsonb_typeof(step_photo) = 'object'
-                UNION ALL
-                SELECT collection_image_urls.image_url
-                FROM collections
-                CROSS JOIN LATERAL (
-                    VALUES (image ->> 'url'), (image ->> 'thumb_url')
-                ) AS collection_image_urls(image_url)
-                WHERE image IS NOT NULL
-                  AND jsonb_typeof(image) = 'object'
-            )
-         SELECT DISTINCT image_url
-         FROM image_urls
-         WHERE image_url IS NOT NULL
-            AND image_url <> ''",
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(DbError::Query)?;
-    Ok(rows)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type)]
+#[sqlx(type_name = "text", rename_all = "snake_case")]
+pub enum MediaPurpose {
+    Recipe,
+    CollectionCover,
+    Avatar,
+}
+
+#[derive(Debug, Clone)]
+pub struct NewMediaAsset {
+    pub id: Uuid,
+    pub uploader_id: Uuid,
+    pub purpose: MediaPurpose,
+    pub full_url: String,
+    pub thumbnail_url: String,
+    pub original_url: Option<String>,
+    pub full_key: String,
+    pub thumbnail_key: String,
+    pub original_key: Option<String>,
+    pub capability_digest: Option<Vec<u8>>,
+    pub expires_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
+pub struct MediaDiscardClaim {
+    pub id: Uuid,
+    pub full_key: String,
+    pub thumbnail_key: String,
+    pub original_key: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MediaDiscardDecision {
+    Claimed(MediaDiscardClaim),
+    Retained,
+    Denied,
+}
+
+pub async fn claim_media_discard(
+    pool: &PgPool,
+    owner_id: Uuid,
+    capability_digest: &[u8],
+) -> Result<MediaDiscardDecision, DbError> {
+    media_assets::claim_media_discard_by_digest(pool, owner_id, capability_digest).await
+}
+
+pub async fn finish_media_discard(
+    pool: &PgPool,
+    claim_id: Uuid,
+    delete_failure: Option<&str>,
+) -> Result<(), DbError> {
+    media_assets::finish_media_asset_delete(pool, claim_id, delete_failure).await
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -2857,6 +3783,194 @@ pub async fn get_all_image_urls(pool: &PgPool) -> Result<Vec<String>, DbError> {
 mod tests {
     use super::*;
     use crate::test_utils;
+
+    #[test]
+    fn production_pool_limits_have_bounded_defaults() {
+        let config = DatabasePoolConfig::from_lookup(|_| None).unwrap();
+
+        assert_eq!(config.max_connections, 5);
+        assert_eq!(config.acquire_timeout, std::time::Duration::from_secs(10));
+        assert_eq!(config.idle_timeout, std::time::Duration::from_secs(300));
+        assert_eq!(config.statement_timeout, std::time::Duration::from_secs(15));
+        assert_eq!(
+            config.transaction_timeout,
+            std::time::Duration::from_secs(30)
+        );
+        assert_eq!(
+            config.idle_in_transaction_timeout,
+            std::time::Duration::from_secs(30)
+        );
+    }
+
+    #[test]
+    fn production_pool_limits_reject_zero_invalid_and_unbounded_values() {
+        for (name, value) in [
+            ("DB_MAX_CONNECTIONS", "0"),
+            ("DB_MAX_CONNECTIONS", "101"),
+            ("DB_STATEMENT_TIMEOUT_MS", "0"),
+            ("DB_TRANSACTION_TIMEOUT_MS", "not-a-number"),
+            ("DB_IDLE_TRANSACTION_TIMEOUT_MS", "600001"),
+        ] {
+            let result = DatabasePoolConfig::from_lookup(|requested| {
+                (requested == name).then(|| value.to_string())
+            });
+            let error = result.expect_err("unsafe pool configuration must be rejected");
+            assert!(error.to_string().contains(name));
+        }
+    }
+
+    #[test]
+    fn transaction_timeout_cannot_be_shorter_than_statement_timeout() {
+        let result = DatabasePoolConfig::from_lookup(|name| match name {
+            "DB_STATEMENT_TIMEOUT_MS" => Some("30000".into()),
+            "DB_TRANSACTION_TIMEOUT_MS" => Some("15000".into()),
+            _ => None,
+        });
+
+        let error = result.expect_err("transaction timeout must cover a statement budget");
+        assert!(error.to_string().contains("DB_TRANSACTION_TIMEOUT_MS"));
+    }
+
+    #[tokio::test]
+    async fn database_session_limits_are_applied_to_a_connection() {
+        let (_database, pool) = test_utils::setup_test_db().await;
+        let config = DatabasePoolConfig::from_lookup(|_| None).unwrap();
+        let mut connection = pool.acquire().await.unwrap();
+        let server_version =
+            sqlx::query_scalar::<_, i32>("SELECT current_setting('server_version_num')::INTEGER")
+                .fetch_one(&mut *connection)
+                .await
+                .unwrap();
+        if server_version < 170_000 {
+            eprintln!("PostgreSQL 17 is required to exercise transaction_timeout");
+            return;
+        }
+
+        apply_database_session_limits(&mut connection, &config)
+            .await
+            .unwrap();
+        let settings: (String, String, String) = sqlx::query_as(
+            "SELECT current_setting('statement_timeout'), \
+                    current_setting('transaction_timeout'), \
+                    current_setting('idle_in_transaction_session_timeout')",
+        )
+        .fetch_one(&mut *connection)
+        .await
+        .unwrap();
+
+        assert_eq!(settings.0, "15s");
+        assert_eq!(settings.1, "30s");
+        assert_eq!(settings.2, "30s");
+    }
+
+    #[tokio::test]
+    async fn runtime_grants_enforce_a_non_owning_data_plane_role() {
+        use std::process::Command;
+
+        let (database, pool) = test_utils::setup_test_db().await;
+        sqlx::query("CREATE ROLE noms_runtime LOGIN PASSWORD 'runtime-test-password'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let database_name = sqlx::query_scalar::<_, String>("SELECT current_database()")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        let quoted_database_name = database_name.replace('"', "\"\"");
+        sqlx::query(&format!(
+            "GRANT CREATE, TEMPORARY ON DATABASE \"{quoted_database_name}\" TO noms_runtime"
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let output = Command::new("psql")
+            .arg(database.connection_uri())
+            .args([
+                "--set",
+                "ON_ERROR_STOP=1",
+                "--set",
+                "runtime_role=noms_runtime",
+                "--set",
+                &format!("runtime_database={database_name}"),
+                "--file",
+                concat!(env!("CARGO_MANIFEST_DIR"), "/migrations/runtime-grants.sql"),
+            ])
+            .output()
+            .expect("psql is required for the production grants regression test");
+        assert!(
+            output.status.success(),
+            "runtime grants failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        let privileges: (bool, bool, bool, bool, bool, bool, bool) = sqlx::query_as(
+            "SELECT \
+                has_database_privilege('noms_runtime', current_database(), 'CONNECT'), \
+                has_database_privilege('noms_runtime', current_database(), 'TEMPORARY'), \
+                has_database_privilege('noms_runtime', current_database(), 'CREATE'), \
+                has_schema_privilege('noms_runtime', 'public', 'USAGE'), \
+                has_schema_privilege('noms_runtime', 'public', 'CREATE'), \
+                has_table_privilege('noms_runtime', 'users', 'SELECT,INSERT,UPDATE,DELETE'), \
+                has_table_privilege('noms_runtime', 'users', 'TRUNCATE,REFERENCES,TRIGGER')",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(privileges, (true, false, false, true, false, true, false));
+
+        sqlx::query("CREATE ROLE unsafe_runtime LOGIN SUPERUSER")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let rejected = Command::new("psql")
+            .arg(database.connection_uri())
+            .args([
+                "--set",
+                "ON_ERROR_STOP=1",
+                "--set",
+                "runtime_role=unsafe_runtime",
+                "--set",
+                &format!("runtime_database={database_name}"),
+                "--file",
+                concat!(env!("CARGO_MANIFEST_DIR"), "/migrations/runtime-grants.sql"),
+            ])
+            .output()
+            .expect("psql is required for the production grants regression test");
+        assert!(
+            !rejected.status.success(),
+            "administrative runtime roles must fail closed"
+        );
+
+        sqlx::query("CREATE ROLE owner_runtime LOGIN")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(&format!(
+            "ALTER DATABASE \"{quoted_database_name}\" OWNER TO owner_runtime"
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
+        let owner_rejected = Command::new("psql")
+            .arg(database.connection_uri())
+            .args([
+                "--set",
+                "ON_ERROR_STOP=1",
+                "--set",
+                "runtime_role=owner_runtime",
+                "--set",
+                &format!("runtime_database={database_name}"),
+                "--file",
+                concat!(env!("CARGO_MANIFEST_DIR"), "/migrations/runtime-grants.sql"),
+            ])
+            .output()
+            .expect("psql is required for the production grants regression test");
+        assert!(
+            !owner_rejected.status.success(),
+            "database-owning runtime roles must fail closed"
+        );
+    }
 
     #[tokio::test]
     async fn test_insert_and_get_user() {
@@ -2895,9 +4009,17 @@ mod tests {
         let (_db, pool) = test_utils::setup_test_db().await;
         let state_id = format!("test-state-{}", test_utils::uid());
         let verifier = "test-verifier-that-is-at-least-43-chars-long!";
-        insert_auth_state(&pool, &state_id, "google", "/dashboard", verifier, None)
-            .await
-            .unwrap();
+        insert_auth_state(
+            &pool,
+            &state_id,
+            "google",
+            "/dashboard",
+            verifier,
+            "login",
+            None,
+        )
+        .await
+        .unwrap();
 
         let state = delete_auth_state(&pool, &state_id).await.unwrap();
         assert!(state.is_some());
@@ -2906,6 +4028,26 @@ mod tests {
         assert_eq!(state.redirect_uri, "/dashboard");
         assert_eq!(state.provider, "google");
         assert_eq!(state.code_verifier, Some(verifier.to_string()));
+        assert_eq!(state.purpose, "login");
+    }
+
+    #[tokio::test]
+    async fn test_auth_state_requires_explicit_purpose() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let state_id = format!("missing-purpose-{}", test_utils::uid());
+
+        let result = sqlx::query(
+            "INSERT INTO auth_states \
+             (id, provider, redirect_uri, code_verifier, user_id, browser_binding_digest) \
+             VALUES ($1, 'google', '/dashboard', $2, NULL, $3)",
+        )
+        .bind(state_id)
+        .bind("test-verifier-minimum-43-characters-long-enough")
+        .bind([0_u8; 32].as_slice())
+        .execute(&pool)
+        .await;
+
+        assert!(result.is_err(), "auth state purpose must be mandatory");
     }
 
     #[tokio::test]
@@ -2918,6 +4060,7 @@ mod tests {
             "github",
             "/login",
             "dummy-verifier-minimum-43-chars-long!!",
+            "login",
             None,
         )
         .await
@@ -2949,6 +4092,7 @@ mod tests {
             "google",
             "/dashboard",
             "fresh-verifier-minimum-43-chars-long!!",
+            "login",
             None,
         )
         .await
@@ -2962,6 +4106,7 @@ mod tests {
             "github",
             "/login",
             "stale-verifier-minimum-43-chars-long!!",
+            "login",
             None,
         )
         .await
@@ -5397,304 +6542,6 @@ mod tests {
         assert_eq!(fetched.commentary, None);
     }
 
-    // ── get_all_image_urls tests ──────────────────────────────────────────
-
-    #[tokio::test]
-    async fn test_get_all_image_urls_empty_recipes() {
-        let (_db, pool) = test_utils::setup_test_db().await;
-
-        // No recipes at all — should return empty vec
-        let urls = get_all_image_urls(&pool).await.unwrap();
-        assert!(urls.is_empty());
-    }
-
-    #[tokio::test]
-    async fn test_get_all_image_urls_recipe_with_no_images() {
-        let (_db, pool) = test_utils::setup_test_db().await;
-        let u = test_utils::uid();
-
-        let user = insert_user(
-            &pool,
-            &format!("imguser_{u}"),
-            "Image User",
-            &format!("img{u}@example.com"),
-            None,
-        )
-        .await
-        .unwrap();
-
-        // Recipe with empty images array (the default)
-        insert_recipe(
-            &pool,
-            user.id,
-            "No Images",
-            None,
-            None,
-            None,
-            None,
-            None,
-            &[],
-            &[],
-            &[],
-            &[],
-            "private",
-        )
-        .await
-        .unwrap();
-
-        let urls = get_all_image_urls(&pool).await.unwrap();
-        assert!(urls.is_empty());
-    }
-
-    #[tokio::test]
-    async fn test_get_all_image_urls_single_recipe_multiple_images() {
-        let (_db, pool) = test_utils::setup_test_db().await;
-        let u = test_utils::uid();
-
-        let user = insert_user(
-            &pool,
-            &format!("imguser2_{u}"),
-            "Image User 2",
-            &format!("img2{u}@example.com"),
-            None,
-        )
-        .await
-        .unwrap();
-
-        let images = vec![
-            RecipeImage {
-                url: format!("https://storage.example.com/recipes/{u}_full.webp"),
-                thumb_url: Some(format!(
-                    "https://storage.example.com/recipes/{u}_thumb.webp"
-                )),
-                file_name: None,
-                file_size: None,
-                edits: Vec::new(),
-            },
-            RecipeImage {
-                url: format!("https://storage.example.com/recipes/{u}_no_thumb.webp"),
-                thumb_url: None,
-                file_name: None,
-                file_size: None,
-                edits: Vec::new(),
-            },
-            RecipeImage {
-                url: format!("https://storage.example.com/recipes/{u}_2_full.webp"),
-                thumb_url: Some(format!(
-                    "https://storage.example.com/recipes/{u}_2_thumb.webp"
-                )),
-                file_name: None,
-                file_size: None,
-                edits: Vec::new(),
-            },
-        ];
-        let instructions = vec![RecipeStep {
-            text: "Prep the filling".to_string(),
-            photos: vec![
-                RecipeImage {
-                    url: format!("https://storage.example.com/recipes/{u}_step_full.webp"),
-                    thumb_url: Some(format!(
-                        "https://storage.example.com/recipes/{u}_step_thumb.webp"
-                    )),
-                    file_name: None,
-                    file_size: None,
-                    edits: Vec::new(),
-                },
-                RecipeImage {
-                    url: format!("https://storage.example.com/recipes/{u}_step_extra_1_full.webp"),
-                    thumb_url: Some(format!(
-                        "https://storage.example.com/recipes/{u}_step_extra_1_thumb.webp"
-                    )),
-                    file_name: None,
-                    file_size: None,
-                    edits: Vec::new(),
-                },
-                RecipeImage {
-                    url: format!("https://storage.example.com/recipes/{u}_step_extra_2_full.webp"),
-                    thumb_url: None,
-                    file_name: None,
-                    file_size: None,
-                    edits: Vec::new(),
-                },
-            ],
-            sub_steps: vec![RecipeStep {
-                text: "Check the texture".to_string(),
-                photos: vec![RecipeImage {
-                    url: format!("https://storage.example.com/recipes/{u}_nested_step_full.webp"),
-                    thumb_url: None,
-                    file_name: None,
-                    file_size: None,
-                    edits: Vec::new(),
-                }],
-                sub_steps: Vec::new(),
-            }],
-        }];
-
-        insert_recipe(
-            &pool,
-            user.id,
-            "Image Recipe",
-            None,
-            None,
-            None,
-            None,
-            None,
-            &[],
-            &instructions,
-            &[],
-            &images,
-            "private",
-        )
-        .await
-        .unwrap();
-
-        let urls = get_all_image_urls(&pool).await.unwrap();
-        assert_eq!(urls.len(), 11);
-        // Results may be in any order, so sort for comparison
-        let mut actual = urls;
-        actual.sort();
-        let mut expected = vec![
-            format!("https://storage.example.com/recipes/{u}_2_full.webp"),
-            format!("https://storage.example.com/recipes/{u}_2_thumb.webp"),
-            format!("https://storage.example.com/recipes/{u}_full.webp"),
-            format!("https://storage.example.com/recipes/{u}_nested_step_full.webp"),
-            format!("https://storage.example.com/recipes/{u}_step_extra_1_full.webp"),
-            format!("https://storage.example.com/recipes/{u}_step_extra_1_thumb.webp"),
-            format!("https://storage.example.com/recipes/{u}_step_extra_2_full.webp"),
-            format!("https://storage.example.com/recipes/{u}_step_full.webp"),
-            format!("https://storage.example.com/recipes/{u}_step_thumb.webp"),
-            format!("https://storage.example.com/recipes/{u}_thumb.webp"),
-            format!("https://storage.example.com/recipes/{u}_no_thumb.webp"),
-        ];
-        expected.sort();
-        assert_eq!(actual, expected);
-    }
-
-    #[tokio::test]
-    async fn test_get_all_image_urls_deduplicates_across_recipes() {
-        let (_db, pool) = test_utils::setup_test_db().await;
-        let u = test_utils::uid();
-
-        let user = insert_user(
-            &pool,
-            &format!("imguser3_{u}"),
-            "Image User 3",
-            &format!("img3{u}@example.com"),
-            None,
-        )
-        .await
-        .unwrap();
-
-        let shared_url = format!("https://storage.example.com/recipes/shared_{u}.webp");
-
-        // Recipe 1 has shared_url + unique1
-        let images1 = vec![
-            RecipeImage {
-                url: shared_url.clone(),
-                thumb_url: Some(format!(
-                    "https://storage.example.com/recipes/shared_{u}_thumb.webp"
-                )),
-                file_name: None,
-                file_size: None,
-                edits: Vec::new(),
-            },
-            RecipeImage {
-                url: format!("https://storage.example.com/recipes/unique1_{u}.webp"),
-                thumb_url: None,
-                file_name: None,
-                file_size: None,
-                edits: Vec::new(),
-            },
-        ];
-        insert_recipe(
-            &pool,
-            user.id,
-            "Recipe 1",
-            None,
-            None,
-            None,
-            None,
-            None,
-            &[],
-            &[],
-            &[],
-            &images1,
-            "private",
-        )
-        .await
-        .unwrap();
-
-        // Recipe 2 has shared_url + unique2
-        let images2 = vec![
-            RecipeImage {
-                url: shared_url.clone(),
-                thumb_url: Some(format!(
-                    "https://storage.example.com/recipes/shared_{u}_thumb.webp"
-                )),
-                file_name: None,
-                file_size: None,
-                edits: Vec::new(),
-            },
-            RecipeImage {
-                url: format!("https://storage.example.com/recipes/unique2_{u}.webp"),
-                thumb_url: None,
-                file_name: None,
-                file_size: None,
-                edits: Vec::new(),
-            },
-        ];
-        insert_recipe(
-            &pool,
-            user.id,
-            "Recipe 2",
-            None,
-            None,
-            None,
-            None,
-            None,
-            &[],
-            &[],
-            &[],
-            &images2,
-            "private",
-        )
-        .await
-        .unwrap();
-
-        // Recipe 3 has no images
-        insert_recipe(
-            &pool,
-            user.id,
-            "Recipe 3 No Images",
-            None,
-            None,
-            None,
-            None,
-            None,
-            &[],
-            &[],
-            &[],
-            &[],
-            "private",
-        )
-        .await
-        .unwrap();
-
-        // DISTINCT should deduplicate: 4 unique URLs, not 6
-        let urls = get_all_image_urls(&pool).await.unwrap();
-        assert_eq!(urls.len(), 4);
-        assert!(urls.contains(&shared_url));
-        assert!(urls.contains(&format!(
-            "https://storage.example.com/recipes/shared_{u}_thumb.webp"
-        )));
-        assert!(urls.contains(&format!(
-            "https://storage.example.com/recipes/unique1_{u}.webp"
-        )));
-        assert!(urls.contains(&format!(
-            "https://storage.example.com/recipes/unique2_{u}.webp"
-        )));
-    }
-
     #[tokio::test]
     async fn test_update_avatar_url_sets_url() {
         let (_db, pool) = test_utils::setup_test_db().await;
@@ -5755,114 +6602,6 @@ mod tests {
         .await;
 
         assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_collection_cover_round_trips_and_is_retained_by_orphan_scan() {
-        let (_db, pool) = test_utils::setup_test_db().await;
-        let owner = test_utils::insert_test_user(&pool).await;
-        let cover = RecipeImage::new(
-            "https://storage.example.com/collections/cover-full.webp".to_string(),
-            Some("https://storage.example.com/collections/cover-thumb.webp".to_string()),
-            crate::types::RecipeImageEdit::default_rect_16x9(),
-        )
-        .with_file_metadata("cover.webp".to_string(), 42);
-
-        let collection = insert_collection(
-            &pool,
-            owner.id,
-            None,
-            "Covered collection",
-            Some("A visible cover"),
-            CollectionVisibility::Public,
-            Some(&cover),
-        )
-        .await
-        .unwrap();
-        assert_eq!(collection.image.as_ref(), Some(&cover));
-
-        let owned = get_root_collections(&pool, owner.id).await.unwrap();
-        assert_eq!(owned[0].image.as_ref(), Some(&cover));
-        let breadcrumbs = get_collection_breadcrumbs(&pool, collection.id, owner.id)
-            .await
-            .unwrap();
-        assert_eq!(breadcrumbs[0].image.as_ref(), Some(&cover));
-
-        let child = insert_collection(
-            &pool,
-            owner.id,
-            Some(collection.id),
-            "Covered child",
-            None,
-            CollectionVisibility::Public,
-            Some(&cover),
-        )
-        .await
-        .unwrap();
-        let public_contents = get_collection_contents_for_viewer(&pool, collection.id, None, 0, 10)
-            .await
-            .unwrap()
-            .unwrap();
-        assert_eq!(public_contents.collection.image.as_ref(), Some(&cover));
-        assert_eq!(public_contents.child_collections.len(), 1);
-        assert_eq!(public_contents.child_collections[0].id, child.id);
-        assert_eq!(
-            public_contents.child_collections[0].image.as_ref(),
-            Some(&cover)
-        );
-
-        let unlisted = insert_collection(
-            &pool,
-            owner.id,
-            None,
-            "Unlisted cover",
-            None,
-            CollectionVisibility::Unlisted,
-            Some(&cover),
-        )
-        .await
-        .unwrap();
-        assert_eq!(
-            get_collection_contents_for_viewer(&pool, unlisted.id, None, 0, 10)
-                .await
-                .unwrap()
-                .unwrap()
-                .collection
-                .image
-                .as_ref(),
-            Some(&cover)
-        );
-        let public = get_public_collections_by_username(&pool, &owner.username, 0, 10)
-            .await
-            .unwrap();
-        assert!(public
-            .collections
-            .iter()
-            .any(|summary| summary.id == collection.id && summary.image.as_ref() == Some(&cover)));
-
-        let urls = get_all_image_urls(&pool).await.unwrap();
-        assert!(urls.contains(&cover.url));
-        assert!(urls.contains(cover.thumb_url.as_ref().unwrap()));
-
-        let updated = update_collection(
-            &pool,
-            collection.id,
-            owner.id,
-            "Covered collection",
-            Some("Cover removed"),
-            None,
-        )
-        .await
-        .unwrap();
-        assert!(updated.image.is_none());
-        assert!(
-            get_collection_by_id_and_owner(&pool, collection.id, owner.id)
-                .await
-                .unwrap()
-                .unwrap()
-                .image
-                .is_none()
-        );
     }
 
     #[tokio::test]
@@ -6539,6 +7278,211 @@ mod tests {
                 .recipes[0]
                 .id,
             nested_recipe.id
+        );
+    }
+
+    #[tokio::test]
+    async fn collection_recipe_pages_are_lightweight_and_capped_at_twelve_cards() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let collection = insert_collection(
+            &pool,
+            owner.id,
+            None,
+            "Large public collection",
+            None,
+            CollectionVisibility::Public,
+            None,
+        )
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "WITH large_instructions AS (
+                 SELECT jsonb_agg(jsonb_build_object(
+                     'text', repeat('s', 5000),
+                     'sub_steps', '[]'::jsonb,
+                     'photos', '[]'::jsonb
+                 )) AS value
+                 FROM generate_series(1, 180)
+             ), inserted AS (
+                 INSERT INTO recipes (
+                     user_id, title, description, commentary, ingredients,
+                     instructions, equipment, images, visibility
+                 )
+                 SELECT $1,
+                        'Large card recipe ' || lpad(ordinal::text, 3, '0'),
+                        repeat('é', 600), repeat('c', 10000),
+                        jsonb_build_array(jsonb_build_object(
+                            'amount', repeat('a', 64),
+                            'unit', repeat('u', 64),
+                            'name', repeat('n', 500)
+                        )),
+                        large_instructions.value,
+                        jsonb_build_array(jsonb_build_object('name', repeat('e', 200))),
+                        '[]'::jsonb, 'public'
+                 FROM generate_series(1, 100) AS ordinal
+                 CROSS JOIN large_instructions
+                 RETURNING id, title
+             )
+             INSERT INTO collection_recipes (collection_id, recipe_id, sort_order)
+             SELECT $2, id, (ROW_NUMBER() OVER (ORDER BY title) - 1)::INTEGER
+             FROM inserted",
+        )
+        .bind(owner.id)
+        .bind(collection.id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let first_recipe_id: Uuid = sqlx::query_scalar(
+            "SELECT id FROM recipes WHERE user_id = $1 AND title = 'Large card recipe 001'",
+        )
+        .bind(owner.id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        let mut display_image = RecipeImage::new(
+            "https://images.example.test/full.webp".to_string(),
+            Some("https://images.example.test/thumb.webp".to_string()),
+            crate::types::RecipeImageEdit::default_ellipse_1x1(),
+        )
+        .with_file_metadata("private-original-name.webp".to_string(), 123_456);
+        display_image
+            .edits
+            .push(crate::types::RecipeImageEdit::default_rect_16x9());
+        sqlx::query("UPDATE recipes SET images = $2 WHERE id = $1")
+            .bind(first_recipe_id)
+            .bind(serde_json::json!([display_image]))
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let first_page = get_collection_recipes(&pool, collection.id, owner.id, 0, 100)
+            .await
+            .unwrap();
+        assert_eq!(first_page.recipes.len(), 12);
+        assert_eq!(first_page.total_count, 100);
+        assert!(first_page.has_more);
+        assert!(first_page.recipes.iter().all(|recipe| recipe
+            .description
+            .as_ref()
+            .unwrap()
+            .chars()
+            .count()
+            == 500));
+        let serialized = serde_json::to_value(&first_page).unwrap();
+        let first_card = &serialized["recipes"][0];
+        for excluded in [
+            "commentary",
+            "ingredients",
+            "instructions",
+            "equipment",
+            "images",
+            "user_id",
+            "created_at",
+            "updated_at",
+        ] {
+            assert!(
+                first_card.get(excluded).is_none(),
+                "collection cards must not serialize {excluded}"
+            );
+        }
+        let card_image = &first_card["image"];
+        assert_eq!(card_image["url"], "https://images.example.test/full.webp");
+        assert_eq!(card_image["edits"].as_array().unwrap().len(), 1);
+        assert_eq!(card_image["edits"][0]["name"], "rectangle:16:9");
+        assert!(card_image.get("file_name").is_none());
+        assert!(card_image.get("file_size").is_none());
+        assert!(serde_json::to_vec(&first_page.recipes).unwrap().len() <= 512 * 1024);
+
+        let second_page = get_collection_recipes(&pool, collection.id, owner.id, 12, 100)
+            .await
+            .unwrap();
+        assert_eq!(second_page.recipes.len(), 12);
+        assert!(second_page.has_more);
+        let first_ids = first_page
+            .recipes
+            .iter()
+            .map(|recipe| recipe.id)
+            .collect::<std::collections::HashSet<_>>();
+        assert!(second_page
+            .recipes
+            .iter()
+            .all(|recipe| !first_ids.contains(&recipe.id)));
+
+        let final_page = get_collection_recipes(&pool, collection.id, owner.id, 96, 100)
+            .await
+            .unwrap();
+        assert_eq!(final_page.recipes.len(), 4);
+        assert!(!final_page.has_more);
+    }
+
+    #[tokio::test]
+    async fn public_discovery_projects_bounded_cards_from_large_recipes() {
+        let (_database, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        sqlx::query(
+            "INSERT INTO recipes (user_id, title, description, commentary, instructions, visibility)
+             SELECT $1, 'Discovery ' || ordinal, repeat('é', 600), repeat('c', 10000),
+                    (SELECT jsonb_agg(jsonb_build_object('text', repeat('s', 5000),
+                        'sub_steps', '[]'::jsonb, 'photos', '[]'::jsonb))
+                     FROM generate_series(1, 180)), 'public'
+             FROM generate_series(1, 100) ordinal"
+        ).bind(owner.id).execute(&pool).await.unwrap();
+        for cards in [
+            get_public_recipes_paginated(&pool, 12, 0).await.unwrap(),
+            get_user_public_recipes(&pool, owner.id, 12, 0)
+                .await
+                .unwrap(),
+        ] {
+            assert_eq!(cards.len(), 12);
+            let value = serde_json::to_value(&cards).unwrap();
+            for card in value.as_array().unwrap() {
+                for excluded in [
+                    "commentary",
+                    "ingredients",
+                    "instructions",
+                    "equipment",
+                    "images",
+                    "user_id",
+                ] {
+                    assert!(
+                        card.get(excluded).is_none(),
+                        "discovery must not serialize {excluded}"
+                    );
+                }
+                assert!(card["description"].as_str().unwrap().chars().count() <= 500);
+            }
+            assert!(serde_json::to_vec(&cards).unwrap().len() <= 512 * 1024);
+        }
+        assert!(get_public_recipes_paginated(&pool, 13, 0).await.is_err());
+        assert!(get_user_public_recipes(&pool, owner.id, 100, 0)
+            .await
+            .is_err());
+    }
+
+    #[tokio::test]
+    async fn public_discovery_filters_full_descriptions_without_exposing_them() {
+        let (_database, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let public = test_utils::insert_test_recipe(&pool, owner.id, "public").await;
+        let private = test_utils::insert_test_recipe(&pool, owner.id, "private").await;
+        for id in [public.id, private.id] {
+            sqlx::query("UPDATE recipes SET description = repeat('x', 600) || ' late_keyword% ' WHERE id = $1")
+                .bind(id).execute(&pool).await.unwrap();
+        }
+        let cards = get_public_recipes_filtered_paginated(&pool, 0, 12, "LATE_KEYWORD%")
+            .await
+            .unwrap();
+        assert_eq!(cards.len(), 1);
+        assert_eq!(cards[0].id, public.id);
+        assert_eq!(cards[0].description.as_ref().unwrap().chars().count(), 500);
+        assert!(
+            get_public_recipes_filtered_paginated(&pool, 0, 12, "late_keyword_")
+                .await
+                .unwrap()
+                .is_empty()
         );
     }
 

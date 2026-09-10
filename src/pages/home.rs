@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 
 use crate::auth::context::use_auth;
 use crate::components::informational::{CallToActionPanel, PageMeta};
+use crate::pages::search::landing_search_route;
 use crate::Route;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -33,6 +34,7 @@ pub(super) fn home_cta(is_authenticated: bool) -> HomeCta {
 #[component]
 pub fn Home() -> Element {
     let auth = use_auth();
+    let mut search_text = use_signal(String::new);
     let primary_cta = home_cta(auth.is_authenticated);
     let final_primary_label = if auth.is_authenticated {
         "Create a recipe"
@@ -60,6 +62,26 @@ pub fn Home() -> Element {
                     h1 { id: "home-title", "Recipes worth keeping, built to keep changing." }
                     p { class: "marketing-lede",
                         "Capture the details that make a recipe yours. Organize it, improve it over time, and share it when you’re ready."
+                    }
+                    form {
+                        class: "landing-search",
+                        role: "search",
+                        onsubmit: move |event| {
+                            event.prevent_default();
+                            if let Some(route) = landing_search_route(&search_text()) {
+                                navigator().push(route);
+                            }
+                        },
+                        label { r#for: "landing-search-query", class: "sr-only", "Search Noms" }
+                        input {
+                            id: "landing-search-query",
+                            r#type: "search",
+                            value: search_text(),
+                            placeholder: "Search recipes, collections, and cooks",
+                            autocomplete: "off",
+                            oninput: move |event| search_text.set(event.value()),
+                        }
+                        button { class: "btn btn-primary", r#type: "submit", "Search" }
                     }
                     div { class: "marketing-actions",
                         match primary_cta.destination {

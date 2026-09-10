@@ -374,9 +374,11 @@ write_runtime_environment() {
         printf 'GOOGLE_USERINFO_URL=http://mock-oauth:8080/google/userinfo\n'
         printf 'GITHUB_CLIENT_ID=github\n'
         printf 'GITHUB_CLIENT_SECRET=secret\n'
+        printf 'GITHUB_OAUTH_EXTRA_SCOPES=openid\n'
         printf 'GITHUB_AUTH_URL=%s/github/authorize\n' "$mock_oauth_url"
         printf 'GITHUB_TOKEN_URL=http://mock-oauth:8080/github/token\n'
-        printf 'GITHUB_USERINFO_URL=http://mock-oauth:8080/github/userinfo\n'
+        printf 'GITHUB_USERINFO_URL=http://mock-github-api:8080/github/userinfo\n'
+        printf 'GITHUB_EMAILS_URL=http://mock-github-api:8080/github/emails\n'
         printf 'APPLE_SERVICES_ID=\n'
         printf 'APPLE_TEAM_ID=\n'
         printf 'APPLE_KEY_ID=\n'

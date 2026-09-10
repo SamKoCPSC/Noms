@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 use dioxus::prelude::*;
 use uuid::Uuid;
 
-use crate::api::collection::list_my_collections;
+use crate::api::collection::load_all_my_collections;
 use crate::types::CollectionSummary;
 use crate::Route;
 
@@ -172,7 +172,7 @@ fn CollectionTreeItem(mut props: CollectionTreeItemProps) -> Element {
 /// Owner-scoped collection navigation for the recipe dashboard.
 #[component]
 pub fn CollectionSidebar() -> Element {
-    let collections = use_resource(list_my_collections);
+    let collections = use_resource(load_all_my_collections);
     let expanded = use_signal(HashSet::<Uuid>::new);
     let tree = collections
         .read()

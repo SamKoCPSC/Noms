@@ -1,5 +1,30 @@
 use dioxus::prelude::*;
 
+#[cfg(test)]
+mod logout_tests {
+    /// Both responsive forms must survive the click until native POST submission.
+    #[test]
+    fn logout_forms_do_not_unmount_before_native_submission() {
+        let source = include_str!("navbar.rs")
+            .split_once("\npub fn Navbar(")
+            .unwrap()
+            .1;
+        let forms: Vec<_> = source
+            .split("form {")
+            .skip(1)
+            .filter_map(|section| section.split_once("\"Sign Out\"").map(|(form, _)| form))
+            .collect();
+        assert_eq!(forms.len(), 2);
+        for form in forms {
+            assert!(form.contains("method: \"post\""));
+            assert!(form.contains("action: \"/auth/logout?redirect_uri=/\""));
+            assert!(form.contains("r#type: \"submit\""));
+            assert!(!form.contains("dropdown_open.set(false)"));
+            assert!(!form.contains("menu_open.set(false)"));
+        }
+    }
+}
+
 use crate::auth::context::use_auth;
 use crate::components::base::{Avatar, AvatarSize};
 use crate::utils::theme::UseTheme;
@@ -97,6 +122,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
     let auth = use_auth();
     let current_route = use_route::<Route>();
     let home_is_current = current_route == (Route::Home {});
+    let search_is_current = matches!(current_route, Route::Search { .. });
     let explore_is_current = current_route == (Route::Explore {});
     let about_is_current = current_route == (Route::About {});
     let how_to_is_current = current_route == (Route::HowTo {});
@@ -117,18 +143,6 @@ pub fn Navbar(theme: UseTheme) -> Element {
         .current_user
         .as_ref()
         .and_then(|u| u.avatar_url.clone());
-
-    // Sign out handler: navigate to /auth/logout which clears the session cookie
-    // and redirects to "/". Full-page navigation is required because browsers
-    // ignore Set-Cookie headers from XHR/fetch responses.
-    let on_sign_out = move |_evt: dioxus::prelude::Event<dioxus::prelude::MouseData>| {
-        #[cfg(target_arch = "wasm32")]
-        {
-            if let Some(window) = web_sys::window() {
-                let _ = window.location().set_href("/auth/logout?redirect_uri=/");
-            }
-        }
-    };
 
     rsx! {
         nav {
@@ -152,6 +166,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
                 // Desktop nav links (center) — hidden on mobile
                 div { class: "navbar-links",
                     Link { to: Route::Home {}, class: if home_is_current { "navbar-link navbar-link--current" } else { "navbar-link" }, aria_current: if home_is_current { "page" } else { "false" }, "Home" }
+                    Link { to: Route::Search { query: Default::default() }, class: if search_is_current { "navbar-link navbar-link--current" } else { "navbar-link" }, aria_current: if search_is_current { "page" } else { "false" }, "Search" }
                     Link { to: Route::Explore {}, class: if explore_is_current { "navbar-link navbar-link--current" } else { "navbar-link" }, aria_current: if explore_is_current { "page" } else { "false" }, "Explore" }
                     Link { to: Route::About {}, class: if about_is_current { "navbar-link navbar-link--current" } else { "navbar-link" }, aria_current: if about_is_current { "page" } else { "false" }, "About" }
                     Link { to: Route::HowTo {}, class: if how_to_is_current { "navbar-link navbar-link--current" } else { "navbar-link" }, aria_current: if how_to_is_current { "page" } else { "false" }, "How to" }
@@ -200,14 +215,17 @@ pub fn Navbar(theme: UseTheme) -> Element {
                                         onclick: move |_| dropdown_open.set(false),
                                         "Settings"
                                     }
-                                    button {
-                                        class: "navbar-dropdown-item navbar-dropdown-item-danger",
-                                        onclick: move |evt| {
-                                            evt.stop_propagation();
-                                            dropdown_open.set(false);
-                                            on_sign_out(evt);
-                                        },
-                                        "Sign Out"
+                                    form {
+                                        class: "navbar-logout-form",
+                                        method: "post",
+                                        action: "/auth/logout?redirect_uri=/",
+                                        button {
+                                            r#type: "submit",
+                                            class: "navbar-dropdown-item navbar-dropdown-item-danger",
+                                            // Keep the form mounted until the browser submits it.
+                                            onclick: move |evt| evt.stop_propagation(),
+                                            "Sign Out"
+                                        }
                                     }
                                 }
                             }
@@ -278,6 +296,12 @@ pub fn Navbar(theme: UseTheme) -> Element {
                             "Dashboard"
                         }
                         Link {
+                            to: Route::Search { query: Default::default() },
+                            class: "navbar-drawer-link",
+                            onclick: move |_| menu_open.set(false),
+                            "Search"
+                        }
+                        Link {
                             to: Route::Explore {},
                             class: "navbar-drawer-link",
                             onclick: move |_| menu_open.set(false),
@@ -308,13 +332,17 @@ pub fn Navbar(theme: UseTheme) -> Element {
                                 onclick: move |_| menu_open.set(false),
                                 "Settings"
                             }
-                            button {
-                                class: "navbar-drawer-link navbar-drawer-link-danger",
-                                onclick: move |evt| {
-                                    menu_open.set(false);
-                                    on_sign_out(evt);
-                                },
-                                "Sign Out"
+                            form {
+                                class: "navbar-logout-form",
+                                method: "post",
+                                action: "/auth/logout?redirect_uri=/",
+                                button {
+                                    r#type: "submit",
+                                    class: "navbar-drawer-link navbar-drawer-link-danger",
+                                    // Closing the drawer here would remove the form before POST.
+                                    onclick: move |evt| evt.stop_propagation(),
+                                    "Sign Out"
+                                }
                             }
                         } else {
                             Link {
@@ -373,6 +401,12 @@ pub fn Navbar(theme: UseTheme) -> Element {
                             class: "sidebar-link",
                             onclick: move |_| sidebar_open.set(false),
                             "Dashboard"
+                        }
+                        Link {
+                            to: Route::Search { query: Default::default() },
+                            class: "sidebar-link",
+                            onclick: move |_| sidebar_open.set(false),
+                            "Search"
                         }
                         Link {
                             to: Route::Explore {},

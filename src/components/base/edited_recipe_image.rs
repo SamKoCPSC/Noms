@@ -165,7 +165,7 @@ fn transform_fit_scale(edit: &RecipeImageEdit) -> f64 {
         1.0
     };
 
-    fit_x.min(fit_y).min(1.0).max(0.1)
+    fit_x.min(fit_y).clamp(0.1, 1.0)
 }
 
 fn inferred_original_aspect_ratio(edit: &RecipeImageEdit) -> f64 {

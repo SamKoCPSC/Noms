@@ -165,6 +165,8 @@ pub fn RecipeNew() -> Element {
     let mut step_editor_idx = use_signal(|| Option::<usize>::None);
     let mut step_editor_photo_idx = use_signal(|| Option::<usize>::None);
     let mut pending_step_photo_edits = use_signal(Vec::<PendingStepPhotoEdit>::new);
+    let mut step_photo_discard_capabilities =
+        use_signal(std::collections::HashMap::<String, String>::new);
     let step_photo_upload_count = use_signal(|| 0usize);
     let mut dragged_step_photo = use_signal(|| Option::<(usize, usize)>::None);
 
@@ -372,6 +374,10 @@ pub fn RecipeNew() -> Element {
     let on_step_photo_change = move |idx: usize| {
         move |files: Vec<dioxus::html::FileData>| {
             #[cfg(target_arch = "wasm32")]
+            if files.is_empty() {
+                return;
+            }
+            #[cfg(target_arch = "wasm32")]
             {
                 let mut steps = steps;
                 let mut step_editor_modal_url = step_editor_modal_url;
@@ -379,6 +385,7 @@ pub fn RecipeNew() -> Element {
                 let mut step_editor_photo_idx = step_editor_photo_idx;
                 let mut pending_step_photo_edits = pending_step_photo_edits;
                 let mut step_photo_upload_count = step_photo_upload_count;
+                let mut step_photo_discard_capabilities = step_photo_discard_capabilities;
                 spawn(async move {
                     use dioxus_web::WebFileExt;
 
@@ -414,6 +421,7 @@ pub fn RecipeNew() -> Element {
                             processed.full_bytes,
                             processed.thumb_bytes,
                             format!("step_{idx}_{file_idx}.webp"),
+                            crate::api::upload::UploadPurpose::Recipe,
                         )
                         .await
                         {
@@ -445,8 +453,16 @@ pub fn RecipeNew() -> Element {
                         }
 
                         let full_url = resp.full_url;
-                        let photo = RecipeImage::new(full_url, Some(resp.thumb_url), edit)
-                            .with_file_metadata(photo_file_name, photo_file_size);
+                        step_photo_discard_capabilities
+                            .write()
+                            .insert(full_url.clone(), resp.discard_capability);
+                        let photo = RecipeImage::managed(
+                            resp.asset_id,
+                            full_url,
+                            Some(resp.thumb_url),
+                            edit,
+                        )
+                        .with_file_metadata(photo_file_name, photo_file_size);
                         if let Some(step) = steps.write().get_mut(idx) {
                             let photo_idx = step.photos.len();
                             step.photos.push(photo);
@@ -786,6 +802,7 @@ pub fn RecipeNew() -> Element {
                             upload_now,
                             busy,
                             pending_count: pending_image_count,
+                            purpose: crate::api::upload::UploadPurpose::Recipe,
                             on_remove_existing: move |url: String| {
                                 images.write().retain(|image| image.url != url);
                             },
@@ -1109,7 +1126,14 @@ pub fn RecipeNew() -> Element {
                                                             class: "btn btn-ghost touch-target step-photo-item__remove",
                                                             aria_label: "Remove step photo",
                                                             onclick: move |_| {
-                                                                steps.write()[idx].photos.remove(photo_idx);
+                                                                let removed = steps.write()[idx].photos.remove(photo_idx);
+                                                                if let Some(capability) = step_photo_discard_capabilities.write().remove(&removed.url) {
+                                                                    spawn(async move {
+                                                                        if let Err(problem) = crate::api::upload::discard_upload(capability).await {
+                                                                            tracing::warn!("Failed to discard unsaved step photo: {problem}");
+                                                                        }
+                                                                    });
+                                                                }
                                                             },
                                                             "✕"
                                                         }
@@ -1190,6 +1214,15 @@ pub fn RecipeNew() -> Element {
                                     Button {
                                         variant: ButtonVariant::Ghost,
                                         onclick: move |_| {
+                                            for photo in steps()[idx].photos.clone() {
+                                                if let Some(capability) = step_photo_discard_capabilities.write().remove(&photo.url) {
+                                                    spawn(async move {
+                                                        if let Err(problem) = crate::api::upload::discard_upload(capability).await {
+                                                            tracing::warn!("Failed to discard unsaved step photo: {problem}");
+                                                        }
+                                                    });
+                                                }
+                                            }
                                             steps.write().remove(idx);
                                         },
                                         "✕"

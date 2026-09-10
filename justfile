@@ -36,11 +36,11 @@ isolated-dev-config-test:
 migrate-extensions:
 	@source .env.local && psql "$DATABASE_URL" -f migrations/extensions.sql
 
-# Apply the declarative database schema (run after modifying migrations/schema.sql)
+# Apply the declarative database schema using the extension-enabled target for planning.
 # Note: `just up` applies the schema but deliberately does not rewrite `.sqlx`.
 # After changing schema or compile-time queries, run `just sqlx-prepare` explicitly.
 migrate:
-	@source .env.local && pgschema apply --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" --user "$PGUSER" --password "$PGPASSWORD" --file migrations/schema.sql --schema public --auto-approve
+	@source .env.local && pgschema apply --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" --user "$PGUSER" --password "$PGPASSWORD" --plan-host "$PGHOST" --plan-port "$PGPORT" --plan-db "$PGDATABASE" --plan-user "$PGUSER" --plan-password "$PGPASSWORD" --file migrations/schema.sql --schema public --auto-approve
 
 # Regenerate the .sqlx/ offline query cache (requires a running DB with current schema)
 sqlx-prepare:
@@ -48,7 +48,7 @@ sqlx-prepare:
 
 # Preview what would change (dry run)
 migrate-plan:
-	@source .env.local && pgschema plan --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" --user "$PGUSER" --password "$PGPASSWORD" --file migrations/schema.sql --schema public --output-human stdout
+	@source .env.local && pgschema plan --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" --user "$PGUSER" --password "$PGPASSWORD" --plan-host "$PGHOST" --plan-port "$PGPORT" --plan-db "$PGDATABASE" --plan-user "$PGUSER" --plan-password "$PGPASSWORD" --file migrations/schema.sql --schema public --output-human stdout
 
 # Apply extensions + schema in one go
 migrate-full: migrate-extensions migrate
@@ -72,15 +72,28 @@ check:
 	cargo check --target wasm32-unknown-unknown
 	SQLX_OFFLINE=true cargo check --features server
 
-# Run tests (uses SQLx offline mode so no live DB is needed at compile time)
+# Run tests (uses SQLx offline mode so no live DB is needed at compile time).
+# Cap concurrency because database tests each start an isolated PostgreSQL
+# process; matching the host's full CPU count can exhaust startup resources.
 test:
-	SQLX_OFFLINE=true cargo test --features server
+	SQLX_OFFLINE=true cargo test --features server -- --test-threads=8
 
 # Run CI gate script tests
 schema-check-test:
 	@bash scripts/tests/test-check-schema-plan.sh
+	@bash scripts/tests/test-pgschema-workflow.sh
+
+# Run security policy regression tests without network access.
+security-policy-test:
+	@bash scripts/tests/test-security-policy.sh
+
+# Audit dependencies and deployment artifacts using pinned policy.
+security-check:
+	@./scripts/security-audit.sh
+	@./scripts/check-tracked-secrets.sh
+	@./scripts/check-deployment-artifacts.sh
 
 # Run all checks and tests (mirrors what CI does)
-ci: fmt check lint test schema-check-test
+ci: fmt check lint test schema-check-test security-policy-test security-check
 	@echo ""
 	@echo "✅ All checks passed."

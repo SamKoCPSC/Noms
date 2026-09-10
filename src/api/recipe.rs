@@ -9,8 +9,37 @@ use dioxus::prelude::*;
 
 #[cfg(feature = "server")]
 use crate::types::{RecipeImage, RecipeStep};
+
 #[cfg(feature = "server")]
-use std::collections::HashSet;
+fn enforce_graph_budget(viewer_id: Option<uuid::Uuid>) -> Result<(), ServerFnError> {
+    crate::security::enforce_request_budget(viewer_id, crate::security::RequestClass::Graph)
+        .map_err(|_| ServerFnError::new("Graph request rate limit exceeded"))
+}
+
+#[cfg(feature = "server")]
+fn enforce_mutation_budget(user_id: uuid::Uuid) -> Result<(), ServerFnError> {
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))
+}
+
+#[cfg(feature = "server")]
+fn enforce_publication_budget(user_id: uuid::Uuid) -> Result<(), ServerFnError> {
+    crate::security::enforce_user_request_budget(
+        user_id,
+        crate::security::RequestClass::Publication,
+    )
+    .map_err(|_| ServerFnError::new("Publication rate limit exceeded"))
+}
+
+#[cfg(feature = "server")]
+async fn bounded_database_operation<T>(
+    operation: impl std::future::Future<Output = Result<T, crate::db::DbError>>,
+) -> Result<T, ServerFnError> {
+    crate::security::run_with_database_budget(crate::security::DATABASE_EXECUTION_BUDGET, operation)
+        .await
+        .map_err(|_| ServerFnError::new("Database operation timed out"))?
+        .map_err(|error| ServerFnError::new(error.to_string()))
+}
 
 #[cfg(feature = "server")]
 fn editor_to_draft_payload(
@@ -81,6 +110,38 @@ fn draft_to_view(
     })
 }
 
+#[cfg(feature = "server")]
+struct RecipeCreateInput {
+    title: String,
+    description: Option<String>,
+    commentary: Option<String>,
+    prep_time_minutes: Option<i32>,
+    cook_time_minutes: Option<i32>,
+    servings: Option<i32>,
+    ingredients: Vec<crate::types::RecipeIngredient>,
+    instructions: Vec<RecipeStep>,
+    equipment: Vec<crate::types::RecipeEquipment>,
+    images: Vec<RecipeImage>,
+    tags: Vec<String>,
+    visibility: String,
+}
+
+#[cfg(feature = "server")]
+struct RecipeUpdateInput {
+    title: Option<String>,
+    description: Option<String>,
+    commentary: Option<String>,
+    prep_time_minutes: Option<i32>,
+    cook_time_minutes: Option<i32>,
+    servings: Option<i32>,
+    ingredients: Option<Vec<crate::types::RecipeIngredient>>,
+    instructions: Option<Vec<RecipeStep>>,
+    equipment: Option<Vec<crate::types::RecipeEquipment>>,
+    images: Option<Vec<RecipeImage>>,
+    tags: Option<Vec<String>>,
+    visibility: Option<String>,
+}
+
 /// Create a new recipe for the authenticated user.
 ///
 /// Tags are inserted after the recipe is created.
@@ -103,32 +164,31 @@ pub async fn create_recipe(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
+    enforce_publication_budget(user_id)?;
     let pool = crate::db::get_pool();
-
-    let snapshot = crate::db::diff::RecipeSnapshot {
-        title,
-        description,
-        commentary,
-        prep_time_minutes,
-        cook_time_minutes,
-        servings,
-        ingredients,
-        instructions,
-        equipment,
-        images,
-        tags,
-    };
-    crate::db::create_published_recipe(
+    let storage = crate::storage::get_storage_client();
+    create_recipe_for_user(
         &pool,
+        &storage,
         user_id,
-        &crate::db::diff::RecipeDraftPayload {
-            content: snapshot,
-            initial_visibility: Some(visibility),
+        RecipeCreateInput {
+            title,
+            description,
+            commentary,
+            prep_time_minutes,
+            cook_time_minutes,
+            servings,
+            ingredients,
+            instructions,
+            equipment,
+            images,
+            tags,
+            visibility,
         },
-        None,
     )
     .await
-    .map_err(|e| ServerFnError::new(e.to_string()))
 }
 
 /// Get a recipe by ID. Two-phase access: ownership-gated first, then public/unlisted fallback.
@@ -175,59 +235,34 @@ pub async fn update_recipe(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
+    enforce_publication_budget(user_id)?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|e| ServerFnError::new(format!("Invalid recipe ID: {e}")))?;
     let pool = crate::db::get_pool();
-
-    // Capture the base before reading the denormalized current state. If a
-    // concurrent publish happens during the reads below, `publish_snapshot`
-    // rejects this update instead of labeling stale content with the newer base.
-    let latest = crate::db::get_latest_recipe_version(&pool, recipe_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
-    let current = crate::db::get_recipe_by_id_and_owner(&pool, recipe_id, user_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
-    let current_tags = crate::db::get_recipe_tags(&pool, recipe_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?
-        .into_iter()
-        .map(|tag| tag.tag)
-        .collect();
-    let mut snapshot = crate::db::diff::recipe_to_snapshot(&current, current_tags);
-    if let Some(title) = title {
-        snapshot.title = title;
-    }
-    snapshot.description = description;
-    snapshot.commentary = commentary;
-    snapshot.prep_time_minutes = prep_time_minutes;
-    snapshot.cook_time_minutes = cook_time_minutes;
-    snapshot.servings = servings;
-    if let Some(ingredients) = ingredients {
-        snapshot.ingredients = ingredients;
-    }
-    if let Some(instructions) = instructions {
-        snapshot.instructions = instructions;
-    }
-    if let Some(equipment) = equipment {
-        snapshot.equipment = equipment;
-    }
-    if let Some(images) = images {
-        snapshot.images = images;
-    }
-    if let Some(tags) = tags {
-        snapshot.tags = tags;
-    }
-    crate::db::publish_snapshot(
+    let storage = crate::storage::get_storage_client();
+    update_recipe_for_user(
         &pool,
-        recipe_id,
+        &storage,
         user_id,
-        latest.version_number,
-        &snapshot,
-        None,
+        recipe_id,
+        RecipeUpdateInput {
+            title,
+            description,
+            commentary,
+            prep_time_minutes,
+            cook_time_minutes,
+            servings,
+            ingredients,
+            instructions,
+            equipment,
+            images,
+            tags,
+            visibility: None,
+        },
     )
     .await
-    .map_err(|e| ServerFnError::new(e.to_string()))
 }
 
 /// Change recipe-level visibility without creating or publishing a content version.
@@ -239,11 +274,16 @@ pub async fn update_recipe_visibility(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    enforce_mutation_budget(user_id)?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
-    crate::db::update_recipe_visibility(&crate::db::get_pool(), recipe_id, user_id, &visibility)
-        .await
-        .map_err(|error| ServerFnError::new(error.to_string()))
+    bounded_database_operation(crate::db::update_recipe_visibility(
+        &crate::db::get_pool(),
+        recipe_id,
+        user_id,
+        &visibility,
+    ))
+    .await
 }
 
 /// Start an incomplete, owner-only draft for a new recipe.
@@ -254,13 +294,18 @@ pub async fn create_recipe_draft(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
-    let draft = crate::db::create_new_recipe_draft(
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
+    crate::security::validate_recipe_editor(&editor, crate::security::RecipeValidationMode::Draft)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let storage = crate::storage::get_storage_client();
+    validate_recipe_media_references(&storage, &editor.images, &editor.instructions)?;
+    let draft = bounded_database_operation(crate::db::create_new_recipe_draft(
         &crate::db::get_pool(),
         user_id,
         &editor_to_draft_payload(editor),
-    )
-    .await
-    .map_err(|e| ServerFnError::new(e.to_string()))?;
+    ))
+    .await?;
     draft_to_view(draft).map_err(|e| ServerFnError::new(e.to_string()))
 }
 
@@ -272,11 +317,15 @@ pub async fn create_edit_draft(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    enforce_mutation_budget(user_id)?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
-    let draft = crate::db::create_edit_draft(&crate::db::get_pool(), recipe_id, user_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let draft = bounded_database_operation(crate::db::create_edit_draft(
+        &crate::db::get_pool(),
+        recipe_id,
+        user_id,
+    ))
+    .await?;
     draft_to_view(draft).map_err(|e| ServerFnError::new(e.to_string()))
 }
 
@@ -305,24 +354,29 @@ pub async fn save_recipe_draft(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
+    crate::security::validate_recipe_editor(&editor, crate::security::RecipeValidationMode::Draft)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
     let draft_id = uuid::Uuid::parse_str(&draft_id)
         .map_err(|error| ServerFnError::new(format!("Invalid draft ID: {error}")))?;
     let current_draft = crate::db::get_recipe_draft(&crate::db::get_pool(), draft_id, user_id)
         .await
         .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let storage = crate::storage::get_storage_client();
+    validate_recipe_media_references(&storage, &editor.images, &editor.instructions)?;
     let mut payload = editor_to_draft_payload(editor);
     if current_draft.recipe_id.is_some() {
         payload.initial_visibility = None;
     }
-    let draft = crate::db::update_recipe_draft(
+    let draft = bounded_database_operation(crate::db::update_recipe_draft(
         &crate::db::get_pool(),
         draft_id,
         user_id,
         expected_revision,
         &payload,
-    )
-    .await
-    .map_err(|e| ServerFnError::new(e.to_string()))?;
+    ))
+    .await?;
     draft_to_view(draft).map_err(|e| ServerFnError::new(e.to_string()))
 }
 
@@ -331,11 +385,15 @@ pub async fn discard_recipe_draft(draft_id: String) -> Result<(), ServerFnError>
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    enforce_mutation_budget(user_id)?;
     let draft_id = uuid::Uuid::parse_str(&draft_id)
         .map_err(|error| ServerFnError::new(format!("Invalid draft ID: {error}")))?;
-    crate::db::delete_recipe_draft(&crate::db::get_pool(), draft_id, user_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))
+    bounded_database_operation(crate::db::delete_recipe_draft(
+        &crate::db::get_pool(),
+        draft_id,
+        user_id,
+    ))
+    .await
 }
 
 #[server]
@@ -346,11 +404,47 @@ pub async fn publish_recipe_draft(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
+    enforce_publication_budget(user_id)?;
+    if notes
+        .as_deref()
+        .is_some_and(|value| value.chars().count() > crate::security::MAX_VERSION_NOTE_CHARS)
+    {
+        return Err(ServerFnError::new("Version note is too long"));
+    }
     let draft_id = uuid::Uuid::parse_str(&draft_id)
         .map_err(|error| ServerFnError::new(format!("Invalid draft ID: {error}")))?;
-    crate::db::publish_recipe_draft(&crate::db::get_pool(), draft_id, user_id, notes.as_deref())
+    let pool = crate::db::get_pool();
+    let draft = crate::db::get_recipe_draft(&pool, draft_id, user_id)
         .await
-        .map_err(|e| ServerFnError::new(e.to_string()))
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let payload = draft
+        .decoded_snapshot()
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let visibility = payload
+        .initial_visibility
+        .clone()
+        .unwrap_or_else(|| "private".to_string());
+    let editor = snapshot_to_editor(payload.content.clone(), visibility);
+    crate::security::validate_recipe_editor(
+        &editor,
+        crate::security::RecipeValidationMode::Publish,
+    )
+    .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let storage = crate::storage::get_storage_client();
+    validate_recipe_media_references(
+        &storage,
+        &payload.content.images,
+        &payload.content.instructions,
+    )?;
+    bounded_database_operation(crate::db::publish_recipe_draft(
+        &pool,
+        draft_id,
+        user_id,
+        notes.as_deref(),
+    ))
+    .await
 }
 
 #[server]
@@ -358,60 +452,61 @@ pub async fn list_recipe_drafts() -> Result<Vec<crate::types::RecipeDraftView>, 
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
-    crate::db::list_recipe_drafts(&crate::db::get_pool(), user_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?
-        .into_iter()
-        .map(|draft| draft_to_view(draft).map_err(|e| ServerFnError::new(e.to_string())))
-        .collect()
+    bounded_database_operation(crate::db::list_recipe_drafts(
+        &crate::db::get_pool(),
+        user_id,
+    ))
+    .await?
+    .into_iter()
+    .map(|draft| draft_to_view(draft).map_err(|e| ServerFnError::new(e.to_string())))
+    .collect()
 }
 
 #[server]
 pub async fn get_recipe_versions_api(
     recipe_id: String,
-) -> Result<Vec<crate::types::RecipeVersionSummary>, ServerFnError> {
+    before_version_number: Option<i32>,
+    page_size: usize,
+) -> Result<crate::types::RecipeVersionSummaryPage, ServerFnError> {
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
-    let recipe_id = uuid::Uuid::parse_str(&recipe_id)
-        .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
-    let pool = crate::db::get_pool();
-    crate::db::get_recipe_by_id(&pool, recipe_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?
-        .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
-        .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
-    let versions = crate::db::get_recipe_versions(&pool, recipe_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
-    let snapshots = versions
-        .iter()
-        .map(crate::db::RecipeVersion::decoded_snapshot)
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
-    versions
-        .iter()
-        .enumerate()
-        .map(|(index, version)| {
-            let change_summary = snapshots
-                .get(index + 1)
-                .map(|older| crate::db::diff::compute_diff(older, &snapshots[index]))
-                .transpose()
-                .map_err(|e| ServerFnError::new(e.to_string()))?
-                .map(|diff| crate::db::diff::change_summary(&diff))
-                .unwrap_or_else(|| "Initial version".to_string());
-            Ok(crate::types::RecipeVersionSummary {
-                version_number: version.version_number,
-                title: snapshots[index].title.clone(),
-                image_url: version_summary_image_url(&snapshots[index].images),
-                notes: version.notes.clone(),
-                created_at: version.created_at,
-                is_current: index == 0,
-                change_summary,
-            })
-        })
-        .collect()
+    enforce_graph_budget(viewer_id)?;
+    crate::security::validate_version_history_page(before_version_number, page_size)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    crate::security::run_with_graph_history_work_budget(async move {
+        let started_at = std::time::Instant::now();
+        let recipe_id = uuid::Uuid::parse_str(&recipe_id)
+            .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
+        let pool = crate::db::get_pool();
+        bounded_database_operation(crate::db::get_recipe_by_id(&pool, recipe_id))
+            .await?
+            .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
+            .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
+        let bounded_page = bounded_database_operation(crate::db::get_recipe_version_summary_page(
+            &pool,
+            recipe_id,
+            before_version_number,
+            page_size,
+        ))
+        .await?;
+        tracing::info!(
+            snapshot_metadata_rows_returned = bounded_page.work.snapshot_metadata_rows_returned,
+            snapshot_payload_rows_returned = bounded_page.work.snapshot_payload_rows_returned,
+            encoded_snapshot_bytes = bounded_page.work.encoded_snapshot_bytes,
+            decoded_snapshot_bytes = bounded_page.work.decoded_snapshot_bytes,
+            snapshots_decoded = bounded_page.work.snapshots_decoded,
+            diff_operations = bounded_page.work.diff_operations,
+            returned_items = bounded_page.page.items.len(),
+            has_more = bounded_page.page.next_before_version_number.is_some(),
+            duration_ms = started_at.elapsed().as_millis() as u64,
+            "completed bounded recipe version-summary page"
+        );
+        Ok(bounded_page.page)
+    })
+    .await
+    .map_err(|error| ServerFnError::new(error.to_string()))?
 }
 
-#[cfg(feature = "server")]
+#[cfg(all(feature = "server", test))]
 fn version_summary_image_url(images: &[crate::types::RecipeImage]) -> Option<String> {
     images
         .first()
@@ -506,14 +601,41 @@ pub async fn get_recipe_version_graph(
 ) -> Result<crate::types::VersionGraph, ServerFnError> {
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
-    let pool = crate::db::get_pool();
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
-    crate::db::get_initial_recipe_version_graph(&pool, recipe_id, viewer_id)
+    enforce_graph_budget(viewer_id)?;
+    let pool = crate::db::get_pool();
+    let started_at = std::time::Instant::now();
+    let bounded_page = crate::security::run_with_graph_history_work_budget(async move {
+        crate::security::run_with_database_budget(
+            crate::security::DATABASE_EXECUTION_BUDGET,
+            crate::db::get_initial_recipe_version_graph_with_work(&pool, recipe_id, viewer_id),
+        )
         .await
+        .map_err(|_| ServerFnError::new("Database operation timed out"))?
         .map_err(|error| match error {
             crate::db::DbError::RecipeNotFound(_) => ServerFnError::new("Recipe not found"),
             other => ServerFnError::new(other.to_string()),
         })
+    })
+    .await
+    .map_err(|error| ServerFnError::new(error.to_string()))??;
+    tracing::info!(
+        recipe_rows_returned = bounded_page.work.recipe_rows_returned,
+        validation_rows_returned = bounded_page.work.validation_rows_returned,
+        relationship_rows_returned = bounded_page.work.relationship_rows_returned,
+        relationship_queries = bounded_page.work.relationship_queries,
+        snapshot_metadata_rows_returned = bounded_page.work.snapshot_metadata_rows_returned,
+        snapshot_payload_rows_returned = bounded_page.work.snapshot_payload_rows_returned,
+        encoded_snapshot_bytes = bounded_page.work.encoded_snapshot_bytes,
+        decoded_snapshot_bytes = bounded_page.work.decoded_snapshot_bytes,
+        snapshots_decoded = bounded_page.work.snapshots_decoded,
+        diff_operations = bounded_page.work.diff_operations,
+        returned_nodes = bounded_page.graph.nodes.len(),
+        returned_edges = bounded_page.graph.edges.len(),
+        duration_ms = started_at.elapsed().as_millis() as u64,
+        "completed bounded initial version-graph page"
+    );
+    Ok(bounded_page.graph)
 }
 
 /// Expand one validated boundary of the progressively loaded version graph.
@@ -523,16 +645,51 @@ pub async fn expand_recipe_version_graph(
     frontier: crate::types::VersionGraphFrontier,
     loaded_node_ids: Vec<crate::types::VersionGraphNodeId>,
 ) -> Result<crate::types::VersionGraph, ServerFnError> {
+    crate::security::validate_graph_expansion(&frontier, &loaded_node_ids)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
-    let pool = crate::db::get_pool();
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
-    crate::db::expand_recipe_version_graph(&pool, recipe_id, viewer_id, frontier, loaded_node_ids)
+    enforce_graph_budget(viewer_id)?;
+    let pool = crate::db::get_pool();
+    let started_at = std::time::Instant::now();
+    let bounded_page = crate::security::run_with_graph_history_work_budget(async move {
+        crate::security::run_with_database_budget(
+            crate::security::DATABASE_EXECUTION_BUDGET,
+            crate::db::expand_recipe_version_graph_with_work(
+                &pool,
+                recipe_id,
+                viewer_id,
+                frontier,
+                loaded_node_ids,
+            ),
+        )
         .await
+        .map_err(|_| ServerFnError::new("Database operation timed out"))?
         .map_err(|error| match error {
             crate::db::DbError::RecipeNotFound(_) => ServerFnError::new("Recipe not found"),
             other => ServerFnError::new(other.to_string()),
         })
+    })
+    .await
+    .map_err(|error| ServerFnError::new(error.to_string()))??;
+    tracing::info!(
+        recipe_rows_returned = bounded_page.work.recipe_rows_returned,
+        validation_rows_returned = bounded_page.work.validation_rows_returned,
+        relationship_rows_returned = bounded_page.work.relationship_rows_returned,
+        relationship_queries = bounded_page.work.relationship_queries,
+        snapshot_metadata_rows_returned = bounded_page.work.snapshot_metadata_rows_returned,
+        snapshot_payload_rows_returned = bounded_page.work.snapshot_payload_rows_returned,
+        encoded_snapshot_bytes = bounded_page.work.encoded_snapshot_bytes,
+        decoded_snapshot_bytes = bounded_page.work.decoded_snapshot_bytes,
+        snapshots_decoded = bounded_page.work.snapshots_decoded,
+        diff_operations = bounded_page.work.diff_operations,
+        returned_nodes = bounded_page.graph.nodes.len(),
+        returned_edges = bounded_page.graph.edges.len(),
+        duration_ms = started_at.elapsed().as_millis() as u64,
+        "completed bounded version-graph expansion"
+    );
+    Ok(bounded_page.graph)
 }
 
 #[server]
@@ -541,65 +698,100 @@ pub async fn get_recipe_version_api(
     version_number: i32,
 ) -> Result<crate::types::RecipeVersionView, ServerFnError> {
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
+    enforce_graph_budget(viewer_id)?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
     let pool = crate::db::get_pool();
-    let recipe = crate::db::get_recipe_by_id(&pool, recipe_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?
-        .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
-        .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
-    let version = crate::db::get_recipe_version(&pool, recipe_id, version_number)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
-    let snapshot = version
-        .decoded_snapshot()
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
-    let latest = crate::db::get_latest_recipe_version(&pool, recipe_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
-    let changes_from_previous = if version_number > 1 {
-        recipe_version_changes_to_view(
-            crate::db::compare_recipe_versions(
+    crate::security::run_with_graph_history_work_budget(async move {
+        let recipe = bounded_database_operation(crate::db::get_recipe_by_id(&pool, recipe_id))
+            .await?
+            .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
+            .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
+        let version = bounded_database_operation(crate::db::get_recipe_version(
+            &pool,
+            recipe_id,
+            version_number,
+        ))
+        .await?;
+        let snapshot = version
+            .decoded_snapshot()
+            .map_err(|error| ServerFnError::new(error.to_string()))?;
+        let latest =
+            bounded_database_operation(crate::db::get_latest_recipe_version(&pool, recipe_id))
+                .await?;
+        let changes_from_previous = if version_number > 1 {
+            bounded_database_operation(crate::db::compare_recipe_versions(
                 &pool,
                 recipe_id,
                 version_number - 1,
                 version_number,
-            )
-            .await
-            .map_err(|e| ServerFnError::new(e.to_string()))?,
-        )
-    } else {
-        Vec::new()
-    };
-    let (changes_to_current, changes_from_original) = (
-        recipe_version_changes_to_view(
-            crate::db::compare_recipe_versions(
+            ))
+            .await?
+        } else {
+            Vec::new()
+        };
+        let changes_to_current =
+            bounded_database_operation(crate::db::compare_recipe_versions(
                 &pool,
                 recipe_id,
                 version_number,
                 latest.version_number,
-            )
-            .await
-            .map_err(|e| ServerFnError::new(e.to_string()))?,
-        ),
-        recipe_version_changes_to_view(
-            crate::db::compare_recipe_versions(&pool, recipe_id, 1, version_number)
-                .await
-                .map_err(|e| ServerFnError::new(e.to_string()))?,
-        ),
-    );
-    Ok(crate::types::RecipeVersionView {
-        version_number,
-        current_version_number: latest.version_number,
-        editor: snapshot_to_editor(snapshot, recipe.visibility),
-        notes: version.notes,
-        created_at: version.created_at,
-        comparisons_available: true,
-        changes_from_previous,
-        changes_to_current,
-        changes_from_original,
+            ))
+            .await?;
+        let changes_from_original =
+            bounded_database_operation(crate::db::compare_recipe_versions(
+                &pool,
+                recipe_id,
+                1,
+                version_number,
+            ))
+            .await?;
+
+        let (comparisons_available, changes_from_previous, changes_to_current, changes_from_original) =
+            match bounded_recipe_version_change_sets_to_view([
+                changes_from_previous,
+                changes_to_current,
+                changes_from_original,
+            ]) {
+                Ok(change_sets) => {
+                    let [changes_from_previous, changes_to_current, changes_from_original] =
+                        change_sets
+                            .try_into()
+                            .expect("three comparison inputs produce three outputs");
+                    (
+                        true,
+                        changes_from_previous,
+                        changes_to_current,
+                        changes_from_original,
+                    )
+                }
+                Err(crate::security::SecurityLimitError::VersionComparisonOutputExceeded) => {
+                    tracing::warn!(
+                        recipe_id = %recipe_id,
+                        version_number,
+                        maximum_changes = crate::security::MAX_VERSION_COMPARISON_CHANGES,
+                        maximum_output_bytes = crate::security::MAX_VERSION_COMPARISON_OUTPUT_BYTES,
+                        "omitted historical version comparisons because their aggregate output limit was exceeded"
+                    );
+                    (false, Vec::new(), Vec::new(), Vec::new())
+                }
+                Err(error) => return Err(ServerFnError::new(error.to_string())),
+            };
+
+        Ok(crate::types::RecipeVersionView {
+            version_number,
+            current_version_number: latest.version_number,
+            editor: snapshot_to_editor(snapshot, recipe.visibility),
+            notes: version.notes,
+            created_at: version.created_at,
+            comparisons_available,
+            changes_from_previous,
+            changes_to_current,
+            changes_from_original,
+        })
     })
+    .await
+    .map_err(|error| ServerFnError::new(error.to_string()))?
 }
 
 #[cfg(feature = "server")]
@@ -618,6 +810,34 @@ fn recipe_version_changes_to_view(
 }
 
 #[cfg(feature = "server")]
+fn bounded_recipe_version_change_sets_to_view(
+    change_sets: impl IntoIterator<Item = Vec<crate::db::diff::SnapshotChange>>,
+) -> Result<Vec<Vec<crate::types::RecipeVersionChange>>, crate::security::SecurityLimitError> {
+    let mut total_changes = 0usize;
+    let mut total_output_bytes = 0usize;
+    let mut bounded_change_sets = Vec::new();
+
+    for changes in change_sets {
+        total_changes = total_changes
+            .checked_add(changes.len())
+            .filter(|count| *count <= crate::security::MAX_VERSION_COMPARISON_CHANGES)
+            .ok_or(crate::security::SecurityLimitError::VersionComparisonOutputExceeded)?;
+
+        let changes = recipe_version_changes_to_view(changes);
+        let encoded_bytes = serde_json::to_vec(&changes)
+            .map_err(|_| crate::security::SecurityLimitError::VersionComparisonOutputExceeded)?
+            .len();
+        total_output_bytes = total_output_bytes
+            .checked_add(encoded_bytes)
+            .filter(|bytes| *bytes <= crate::security::MAX_VERSION_COMPARISON_OUTPUT_BYTES)
+            .ok_or(crate::security::SecurityLimitError::VersionComparisonOutputExceeded)?;
+        bounded_change_sets.push(changes);
+    }
+
+    Ok(bounded_change_sets)
+}
+
+#[cfg(feature = "server")]
 fn snapshot_change_value_to_string(value: serde_json::Value) -> String {
     match value {
         serde_json::Value::Null => "Not set".to_string(),
@@ -629,15 +849,116 @@ fn snapshot_change_value_to_string(value: serde_json::Value) -> String {
     }
 }
 
+#[server]
+pub async fn compare_recipe_versions_api(
+    recipe_id: String,
+    from_version_number: i32,
+    to_version_number: i32,
+) -> Result<crate::types::RecipeVersionComparison, ServerFnError> {
+    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
+    enforce_graph_budget(viewer_id)?;
+    let recipe_id = uuid::Uuid::parse_str(&recipe_id)
+        .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
+    let pool = crate::db::get_pool();
+    crate::security::run_with_graph_history_work_budget(async move {
+        bounded_database_operation(crate::db::get_recipe_by_id(&pool, recipe_id))
+            .await?
+            .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
+            .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
+        let changes = bounded_database_operation(crate::db::compare_recipe_versions(
+            &pool,
+            recipe_id,
+            from_version_number,
+            to_version_number,
+        ))
+        .await?;
+        let change_sets = bounded_recipe_version_change_sets_to_view([changes])
+            .map_err(|error| ServerFnError::new(error.to_string()))?;
+        let [changes] = change_sets
+            .try_into()
+            .expect("one comparison input produces one output");
+
+        Ok(crate::types::RecipeVersionComparison {
+            from_version_number,
+            to_version_number,
+            changes,
+        })
+    })
+    .await
+    .map_err(|error| ServerFnError::new(error.to_string()))?
+}
+
+/// Compare two graph snapshots after independently authorizing both recipes.
+#[server]
+pub async fn compare_version_graph_snapshots_api(
+    from: crate::types::VersionGraphNodeId,
+    to: crate::types::VersionGraphNodeId,
+) -> Result<crate::types::VersionGraphComparison, ServerFnError> {
+    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
+    enforce_graph_budget(viewer_id)?;
+    let pool = crate::db::get_pool();
+
+    crate::security::run_with_graph_history_work_budget(async move {
+        for snapshot in [from, to] {
+            bounded_database_operation(crate::db::get_recipe_by_id(&pool, snapshot.recipe_id))
+                .await?
+                .filter(|recipe| {
+                    viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id)
+                })
+                .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
+        }
+
+        let changes = crate::security::run_with_database_budget(
+            crate::security::DATABASE_EXECUTION_BUDGET,
+            crate::db::compare_recipe_version_snapshots(&pool, from, to),
+        )
+        .await
+        .map_err(|_| ServerFnError::new("Database operation timed out"))?
+        .map_err(|error| match error {
+            crate::db::DbError::VersionNotFound { .. } => {
+                ServerFnError::new("Recipe snapshot not found")
+            }
+            other => ServerFnError::new(other.to_string()),
+        })?;
+        let change_sets = bounded_recipe_version_change_sets_to_view([changes])
+            .map_err(|error| ServerFnError::new(error.to_string()))?;
+        let [changes] = change_sets
+            .try_into()
+            .expect("one comparison input produces one output");
+
+        Ok(crate::types::VersionGraphComparison { from, to, changes })
+    })
+    .await
+    .map_err(|error| ServerFnError::new(error.to_string()))?
+}
+
 #[cfg(all(test, feature = "server"))]
 mod version_change_tests {
-    use super::{recipe_version_changes_to_view, version_graph_image, version_summary_image_url};
+    use super::{
+        bounded_recipe_version_change_sets_to_view, version_graph_image, version_summary_image_url,
+    };
     use crate::db::diff::SnapshotChange;
+    use crate::security::{
+        SecurityLimitError, MAX_VERSION_COMPARISON_CHANGES, MAX_VERSION_COMPARISON_OUTPUT_BYTES,
+    };
     use serde_json::json;
+
+    fn scalar_change(
+        index: usize,
+        old_value: serde_json::Value,
+        value: serde_json::Value,
+    ) -> SnapshotChange {
+        SnapshotChange {
+            op: "replace".to_string(),
+            path: format!("/ingredients/{index}/name"),
+            old_value: Some(old_value),
+            value: Some(value),
+        }
+    }
 
     #[test]
     fn comparison_values_are_transported_as_display_strings() {
-        let changes = recipe_version_changes_to_view(vec![SnapshotChange {
+        let mut change_sets = bounded_recipe_version_change_sets_to_view([vec![SnapshotChange {
             op: "replace".to_string(),
             path: "/images/0".to_string(),
             old_value: Some(json!({
@@ -648,7 +969,9 @@ mod version_change_tests {
                 "url": "https://example.test/new.webp",
                 "edits": [{"name": "rectangle:16:9", "version": 1}]
             })),
-        }]);
+        }]])
+        .expect("small comparison output is accepted");
+        let changes = change_sets.pop().expect("one converted change set");
 
         let comparison = crate::types::RecipeVersionComparison {
             from_version_number: 1,
@@ -667,6 +990,85 @@ mod version_change_tests {
             .as_str()
             .expect("old value string")
             .contains("old.webp"));
+    }
+
+    #[test]
+    fn comparison_change_count_is_bounded_across_every_returned_change_set() {
+        let boundary = (0..MAX_VERSION_COMPARISON_CHANGES)
+            .map(|index| scalar_change(index, json!("old"), json!("new")))
+            .collect::<Vec<_>>();
+        assert!(bounded_recipe_version_change_sets_to_view([boundary.clone()]).is_ok());
+
+        assert_eq!(
+            bounded_recipe_version_change_sets_to_view([
+                boundary,
+                vec![scalar_change(
+                    MAX_VERSION_COMPARISON_CHANGES,
+                    json!("old"),
+                    json!("new"),
+                )],
+            ]),
+            Err(SecurityLimitError::VersionComparisonOutputExceeded)
+        );
+    }
+
+    #[test]
+    fn comparison_encoded_bytes_are_bounded_across_every_returned_change_set() {
+        let quarter_limit = "x".repeat(MAX_VERSION_COMPARISON_OUTPUT_BYTES / 4);
+        let first = vec![scalar_change(
+            0,
+            json!(quarter_limit.clone()),
+            json!(quarter_limit.clone()),
+        )];
+        let second = vec![scalar_change(
+            1,
+            json!(quarter_limit.clone()),
+            json!(quarter_limit),
+        )];
+
+        assert!(bounded_recipe_version_change_sets_to_view([first.clone()]).is_ok());
+        assert!(bounded_recipe_version_change_sets_to_view([second.clone()]).is_ok());
+        assert_eq!(
+            bounded_recipe_version_change_sets_to_view([first, second]),
+            Err(SecurityLimitError::VersionComparisonOutputExceeded)
+        );
+    }
+
+    #[test]
+    fn version_comparison_endpoints_share_the_graph_history_work_budget() {
+        let source = include_str!("recipe.rs");
+        for (function, next_function) in [
+            (
+                "pub async fn get_recipe_version_api",
+                "fn recipe_version_changes_to_view",
+            ),
+            (
+                "pub async fn compare_recipe_versions_api",
+                "pub async fn compare_version_graph_snapshots_api",
+            ),
+            (
+                "pub async fn compare_version_graph_snapshots_api",
+                "#[cfg(all(test, feature = \"server\"))]\nmod version_change_tests",
+            ),
+        ] {
+            let start = source.find(function).expect("comparison endpoint exists");
+            let end = source[start..]
+                .find(next_function)
+                .map(|offset| start + offset)
+                .expect("comparison endpoint has a bounded source slice");
+            let endpoint = &source[start..end];
+            assert_eq!(
+                endpoint
+                    .matches("run_with_graph_history_work_budget")
+                    .count(),
+                1,
+                "{function} must acquire exactly one shared comparison-work permit"
+            );
+            assert!(
+                endpoint.contains("bounded_recipe_version_change_sets_to_view"),
+                "{function} must enforce the aggregate comparison-output budget"
+            );
+        }
     }
 
     #[test]
@@ -725,70 +1127,6 @@ mod version_change_tests {
 }
 
 #[server]
-pub async fn compare_recipe_versions_api(
-    recipe_id: String,
-    from_version_number: i32,
-    to_version_number: i32,
-) -> Result<crate::types::RecipeVersionComparison, ServerFnError> {
-    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
-    let recipe_id = uuid::Uuid::parse_str(&recipe_id)
-        .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
-    let pool = crate::db::get_pool();
-    crate::db::get_recipe_by_id(&pool, recipe_id)
-        .await
-        .map_err(|error| ServerFnError::new(error.to_string()))?
-        .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
-        .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
-    let changes = crate::db::compare_recipe_versions(
-        &pool,
-        recipe_id,
-        from_version_number,
-        to_version_number,
-    )
-    .await
-    .map_err(|error| ServerFnError::new(error.to_string()))?;
-
-    Ok(crate::types::RecipeVersionComparison {
-        from_version_number,
-        to_version_number,
-        changes: recipe_version_changes_to_view(changes),
-    })
-}
-
-/// Compare two graph snapshots after independently authorizing both recipes.
-#[server]
-pub async fn compare_version_graph_snapshots_api(
-    from: crate::types::VersionGraphNodeId,
-    to: crate::types::VersionGraphNodeId,
-) -> Result<crate::types::VersionGraphComparison, ServerFnError> {
-    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
-    let pool = crate::db::get_pool();
-
-    for snapshot in [from, to] {
-        crate::db::get_recipe_by_id(&pool, snapshot.recipe_id)
-            .await
-            .map_err(|error| ServerFnError::new(error.to_string()))?
-            .filter(|recipe| viewer_may_read_recipe(&recipe.visibility, recipe.user_id, viewer_id))
-            .ok_or_else(|| ServerFnError::new("Recipe not found"))?;
-    }
-
-    let changes = crate::db::compare_recipe_version_snapshots(&pool, from, to)
-        .await
-        .map_err(|error| match error {
-            crate::db::DbError::VersionNotFound { .. } => {
-                ServerFnError::new("Recipe snapshot not found")
-            }
-            other => ServerFnError::new(other.to_string()),
-        })?;
-
-    Ok(crate::types::VersionGraphComparison {
-        from,
-        to,
-        changes: recipe_version_changes_to_view(changes),
-    })
-}
-
-#[server]
 pub async fn restore_version(
     recipe_id: String,
     version_number: i32,
@@ -797,17 +1135,19 @@ pub async fn restore_version(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
+    enforce_publication_budget(user_id)?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
-    crate::db::restore_recipe_version(
+    bounded_database_operation(crate::db::restore_recipe_version(
         &crate::db::get_pool(),
         recipe_id,
         user_id,
         version_number,
         expected_latest_version,
-    )
+    ))
     .await
-    .map_err(|e| ServerFnError::new(e.to_string()))
 }
 
 #[server]
@@ -818,16 +1158,23 @@ pub async fn fork_recipe(
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
+    if message
+        .as_deref()
+        .is_some_and(|value| value.chars().count() > crate::security::MAX_FORK_MESSAGE_CHARS)
+    {
+        return Err(ServerFnError::new("Fork message is too long"));
+    }
     let source_recipe_id = uuid::Uuid::parse_str(&source_recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
-    let draft = crate::db::create_fork_draft(
+    let draft = bounded_database_operation(crate::db::create_fork_draft(
         &crate::db::get_pool(),
         source_recipe_id,
         user_id,
         message.as_deref(),
-    )
-    .await
-    .map_err(|e| ServerFnError::new(e.to_string()))?;
+    ))
+    .await?;
     draft_to_view(draft).map_err(|e| ServerFnError::new(e.to_string()))
 }
 
@@ -837,25 +1184,20 @@ pub async fn get_fork_attribution(
 ) -> Result<Option<crate::types::ForkAttribution>, ServerFnError> {
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
+    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
+    enforce_graph_budget(viewer_id)?;
     let pool = crate::db::get_pool();
-    let recipe = crate::db::get_recipe_by_id(&pool, recipe_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let recipe = bounded_database_operation(crate::db::get_recipe_by_id(&pool, recipe_id)).await?;
     let Some(recipe) = recipe else {
         return Ok(None);
     };
-    let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
     if recipe.visibility == "private" && viewer_id != Some(recipe.user_id) {
         return Ok(None);
     }
-    Ok(crate::db::get_fork_relationship(&pool, recipe_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?
-        .map(|relationship| crate::types::ForkAttribution {
-            original_recipe_id: relationship.original_recipe_id,
-            original_title: relationship.original_title,
-            message: relationship.message,
-        }))
+    bounded_database_operation(crate::db::get_fork_attribution_for_viewer(
+        &pool, recipe_id, viewer_id,
+    ))
+    .await
 }
 
 /// Load the current recipe's ancestors and a bounded descendant tree.
@@ -874,16 +1216,16 @@ pub async fn get_recipe_lineage(
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
     let viewer_id = crate::auth::session::extract_user_id_from_fullstack().await;
+    enforce_graph_budget(viewer_id)?;
     let descendant_depth = normalize_lineage_descendant_depth(descendant_depth);
 
-    crate::db::get_recipe_lineage(
+    bounded_database_operation(crate::db::get_recipe_lineage(
         &crate::db::get_pool(),
         recipe_id,
         viewer_id,
         descendant_depth,
-    )
+    ))
     .await
-    .map_err(|error| ServerFnError::new(error.to_string()))
 }
 
 /// Delete a recipe (ownership-gated).
@@ -895,92 +1237,259 @@ pub async fn delete_recipe(recipe_id: String) -> Result<(), ServerFnError> {
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    enforce_mutation_budget(user_id)?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|e| ServerFnError::new(format!("Invalid recipe ID: {e}")))?;
     let pool = crate::db::get_pool();
+    let storage = crate::storage::get_storage_client();
+    delete_recipe_for_user(&pool, &storage, user_id, recipe_id).await
+}
 
-    // Fetch recipe first to get images (ownership-gated)
-    let recipe = crate::db::get_recipe_by_id_and_owner(&pool, recipe_id, user_id)
+#[cfg(feature = "server")]
+async fn create_recipe_for_user(
+    pool: &sqlx::PgPool,
+    storage: &crate::storage::StorageClient,
+    user_id: uuid::Uuid,
+    input: RecipeCreateInput,
+) -> Result<crate::types::Recipe, ServerFnError> {
+    let editor = crate::types::RecipeEditorState {
+        title: input.title.clone(),
+        description: input.description.clone(),
+        commentary: input.commentary.clone(),
+        prep_time_minutes: input.prep_time_minutes,
+        cook_time_minutes: input.cook_time_minutes,
+        servings: input.servings,
+        ingredients: input.ingredients.clone(),
+        instructions: input.instructions.clone(),
+        equipment: input.equipment.clone(),
+        images: input.images.clone(),
+        tags: input.tags.clone(),
+        visibility: input.visibility.clone(),
+    };
+    crate::security::validate_recipe_editor(
+        &editor,
+        crate::security::RecipeValidationMode::Publish,
+    )
+    .map_err(|error| ServerFnError::new(error.to_string()))?;
+    validate_recipe_media_references(storage, &input.images, &input.instructions)?;
+    bounded_database_operation(crate::db::create_published_recipe(
+        pool,
+        user_id,
+        &crate::db::diff::RecipeDraftPayload {
+            initial_visibility: Some(input.visibility),
+            content: crate::db::diff::RecipeSnapshot {
+                title: input.title,
+                description: input.description,
+                commentary: input.commentary,
+                prep_time_minutes: input.prep_time_minutes,
+                cook_time_minutes: input.cook_time_minutes,
+                servings: input.servings,
+                ingredients: input.ingredients,
+                instructions: input.instructions,
+                equipment: input.equipment,
+                images: input.images,
+                tags: input.tags,
+            },
+        },
+        None,
+    ))
+    .await
+}
+
+#[cfg(feature = "server")]
+async fn update_recipe_for_user(
+    pool: &sqlx::PgPool,
+    storage: &crate::storage::StorageClient,
+    user_id: uuid::Uuid,
+    recipe_id: uuid::Uuid,
+    input: RecipeUpdateInput,
+) -> Result<crate::types::Recipe, ServerFnError> {
+    let latest = crate::db::get_latest_recipe_version(pool, recipe_id)
+        .await
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let current = crate::db::get_recipe_by_id_and_owner(pool, recipe_id, user_id)
+        .await
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let current_tags = crate::db::get_recipe_tags(pool, recipe_id)
+        .await
+        .map_err(|error| ServerFnError::new(error.to_string()))?
+        .into_iter()
+        .map(|tag| tag.tag)
+        .collect();
+    let mut snapshot = crate::db::diff::recipe_to_snapshot(&current, current_tags);
+    if let Some(title) = input.title {
+        snapshot.title = title;
+    }
+    snapshot.description = input.description;
+    snapshot.commentary = input.commentary;
+    snapshot.prep_time_minutes = input.prep_time_minutes;
+    snapshot.cook_time_minutes = input.cook_time_minutes;
+    snapshot.servings = input.servings;
+    if let Some(ingredients) = input.ingredients {
+        snapshot.ingredients = ingredients;
+    }
+    if let Some(instructions) = input.instructions {
+        snapshot.instructions = instructions;
+    }
+    if let Some(equipment) = input.equipment {
+        snapshot.equipment = equipment;
+    }
+    if let Some(images) = input.images {
+        snapshot.images = images;
+    }
+    if let Some(tags) = input.tags {
+        snapshot.tags = tags;
+    }
+    let editor = snapshot_to_editor(snapshot.clone(), current.visibility.clone());
+    crate::security::validate_recipe_editor(
+        &editor,
+        crate::security::RecipeValidationMode::Publish,
+    )
+    .map_err(|error| ServerFnError::new(error.to_string()))?;
+    validate_recipe_media_references(storage, &snapshot.images, &snapshot.instructions)?;
+    let recipe = bounded_database_operation(crate::db::publish_snapshot(
+        pool,
+        recipe_id,
+        user_id,
+        latest.version_number,
+        &snapshot,
+        None,
+    ))
+    .await?;
+    if let Some(visibility) = input.visibility {
+        return crate::db::update_recipe_visibility(pool, recipe_id, user_id, &visibility)
+            .await
+            .map_err(|error| ServerFnError::new(error.to_string()));
+    }
+    Ok(recipe)
+}
+
+#[cfg(feature = "server")]
+async fn delete_recipe_for_user(
+    pool: &sqlx::PgPool,
+    storage: &crate::storage::StorageClient,
+    user_id: uuid::Uuid,
+    recipe_id: uuid::Uuid,
+) -> Result<(), ServerFnError> {
+    // Resolve canonical asset identities before the holder rows cascade away.
+    let recipe = crate::db::get_recipe_by_id_and_owner(pool, recipe_id, user_id)
         .await
         .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let asset_ids = crate::db::recipe_media_asset_ids(&recipe.images, &recipe.instructions);
 
-    // Delete from DB (enforces ownership via WHERE user_id = $2)
-    crate::db::delete_recipe(&pool, recipe_id, user_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    bounded_database_operation(crate::db::delete_recipe(pool, recipe_id, user_id)).await?;
 
-    // Clean up only objects which are no longer referenced by another recipe,
-    // draft, or immutable version. Forks and historical snapshots deliberately
-    // share object URLs with the source recipe.
-    let step_photos = collect_step_photos(&recipe.instructions);
-    if !recipe.images.is_empty() || !step_photos.is_empty() {
-        let retained_urls: HashSet<String> = match crate::db::get_all_image_urls(&pool).await {
-            Ok(urls) => urls.into_iter().collect(),
-            Err(error) => {
-                tracing::warn!(%error, "skipping recipe image cleanup because references could not be scanned");
-                return Ok(());
-            }
-        };
-        let storage = crate::storage::get_storage_client();
-        let public_url = storage.public_url().trim_end_matches('/');
-
-        for image in &recipe.images {
-            delete_recipe_image_objects(&storage, public_url, image, &retained_urls).await;
-        }
-
-        for image in step_photos {
-            delete_recipe_image_objects(&storage, public_url, &image, &retained_urls).await;
-        }
+    // The asset row, never a submitted URL, authorizes object deletion. A
+    // surviving recipe, draft, version, collection, avatar, or fork reference
+    // makes the claim retain the asset.
+    for asset_id in asset_ids {
+        cleanup_unreferenced_media_asset(pool, storage, asset_id).await;
     }
 
     Ok(())
 }
 
 #[cfg(feature = "server")]
-async fn delete_recipe_image_objects(
+async fn cleanup_unreferenced_media_asset(
+    pool: &sqlx::PgPool,
     storage: &crate::storage::StorageClient,
-    public_url: &str,
-    image: &RecipeImage,
-    retained_urls: &HashSet<String>,
+    asset_id: uuid::Uuid,
 ) {
-    if retained_urls.contains(&image.url) {
+    let decision = match crate::db::claim_media_cleanup(pool, asset_id).await {
+        Ok(decision) => decision,
+        Err(error) => {
+            tracing::warn!(%error, %asset_id, "Skipping media cleanup after claim failure");
+            return;
+        }
+    };
+    let crate::db::MediaDiscardDecision::Claimed(claim) = decision else {
         return;
+    };
+    let mut failures = Vec::new();
+    let mut keys = vec![claim.full_key, claim.thumbnail_key];
+    keys.extend(claim.original_key);
+    for key in keys {
+        if let Err(error) = storage.delete_object(&key).await {
+            failures.push(format!("{key}: {error}"));
+        }
     }
-
-    let Some(full_key) = image
-        .url
-        .strip_prefix(public_url)
-        .map(|s| s.trim_start_matches('/'))
-    else {
-        return;
-    };
-
-    let _ = storage.delete_object(full_key).await;
-
-    let thumb_key = if let Some(thumb_url) = image.thumb_url.as_deref() {
-        (!retained_urls.contains(thumb_url))
-            .then(|| thumb_url.strip_prefix(public_url))
-            .flatten()
-            .map(|s| s.trim_start_matches('/').to_string())
-    } else {
-        full_key
-            .strip_suffix("_full.webp")
-            .map(|base| format!("{base}_thumb.webp"))
-    };
-
-    if let Some(thumb_key) = thumb_key {
-        let _ = storage.delete_object(&thumb_key).await;
+    let failure = (!failures.is_empty()).then(|| failures.join("; "));
+    if let Err(error) =
+        crate::db::finish_media_asset_delete(pool, claim.id, failure.as_deref()).await
+    {
+        tracing::warn!(%error, claim_id = %claim.id, "Failed to finish media cleanup");
     }
 }
 
 #[cfg(feature = "server")]
-fn collect_step_photos(steps: &[RecipeStep]) -> Vec<RecipeImage> {
-    let mut photos = Vec::new();
-    for step in steps {
-        photos.extend(step.display_photos());
-        photos.extend(collect_step_photos(&step.sub_steps));
+fn validate_recipe_media_references(
+    storage: &crate::storage::StorageClient,
+    images: &[RecipeImage],
+    instructions: &[RecipeStep],
+) -> Result<(), ServerFnError> {
+    for image in images {
+        validate_recipe_image(storage, image)?;
     }
-    photos
+    for step in instructions {
+        for image in &step.photos {
+            validate_recipe_image(storage, image)?;
+        }
+        validate_recipe_media_references(storage, &[], &step.sub_steps)?;
+    }
+    Ok(())
+}
+
+#[cfg(feature = "server")]
+fn validate_recipe_image(
+    storage: &crate::storage::StorageClient,
+    image: &RecipeImage,
+) -> Result<(), ServerFnError> {
+    use crate::storage::{MediaObjectKind, MediaUrl};
+
+    match storage
+        .classify_media_url(&image.url)
+        .map_err(ServerFnError::new)?
+    {
+        MediaUrl::Internal(full) => {
+            if image.asset_id.is_none() || full.kind() != MediaObjectKind::RecipeFull {
+                return Err(ServerFnError::new(
+                    "Managed recipe media requires an asset identity and full-size recipe object",
+                ));
+            }
+            if let Some(thumb_url) = image.thumb_url.as_deref() {
+                let thumb = storage
+                    .parse_media_url(thumb_url)
+                    .map_err(ServerFnError::new)?;
+                if thumb.kind() != MediaObjectKind::RecipeThumbnail
+                    || thumb.owner_id() != full.owner_id()
+                    || thumb.object_id() != full.object_id()
+                {
+                    return Err(ServerFnError::new(
+                        "Recipe thumbnail must match its owned full-size object",
+                    ));
+                }
+            }
+        }
+        MediaUrl::ExternalHttps => {
+            if image.asset_id.is_some() {
+                return Err(ServerFnError::new(
+                    "External recipe media cannot claim a managed asset identity",
+                ));
+            }
+            if let Some(thumb_url) = image.thumb_url.as_deref() {
+                if storage
+                    .classify_media_url(thumb_url)
+                    .map_err(ServerFnError::new)?
+                    != MediaUrl::ExternalHttps
+                {
+                    return Err(ServerFnError::new(
+                        "External recipe media must use an external HTTPS thumbnail",
+                    ));
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 /// List recipes for the authenticated user with pagination.
@@ -989,18 +1498,20 @@ pub async fn list_my_recipes(
     offset: i64,
     limit: i64,
 ) -> Result<crate::types::RecipeListResponse, ServerFnError> {
+    crate::security::validate_offset_pagination(offset, limit)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
     let user_id = crate::auth::session::extract_user_id_from_fullstack()
         .await
         .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
     let pool = crate::db::get_pool();
 
-    let recipes = crate::db::get_recipes_by_owner_paginated(&pool, user_id, limit, offset)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let recipes = bounded_database_operation(crate::db::get_recipes_by_owner_paginated(
+        &pool, user_id, limit, offset,
+    ))
+    .await?;
 
-    let total_count = crate::db::count_recipes_by_owner(&pool, user_id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    let total_count =
+        bounded_database_operation(crate::db::count_recipes_by_owner(&pool, user_id)).await?;
 
     let has_more = (offset + recipes.len() as i64) < total_count;
 
@@ -1052,29 +1563,59 @@ pub async fn get_public_recipe(recipe_id: String) -> Result<crate::types::Recipe
         .ok_or_else(|| ServerFnError::new("Recipe not found"))
 }
 
+/// Hold one discovery permit across all queries and the complete response check.
+#[cfg(feature = "server")]
+async fn with_public_discovery_budget<T>(
+    operation: impl std::future::Future<Output = Result<T, ServerFnError>>,
+) -> Result<T, ServerFnError> {
+    crate::security::enforce_request_budget(None, crate::security::RequestClass::PublicDiscovery)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    crate::security::run_with_public_discovery_work_budget(
+        crate::security::run_with_database_budget(
+            crate::security::DATABASE_EXECUTION_BUDGET,
+            operation,
+        ),
+    )
+    .await
+    .map_err(|error| ServerFnError::new(error.to_string()))?
+    .map_err(|error| ServerFnError::new(error.to_string()))?
+}
+
 /// Get paginated public recipes for the explore page. No authentication required.
 #[server]
 pub async fn get_public_recipes(
     offset: i64,
     limit: i64,
-) -> Result<crate::types::RecipeListResponse, ServerFnError> {
-    let pool = crate::db::get_pool();
+    query: String,
+) -> Result<crate::types::PublicRecipeListResponse, ServerFnError> {
+    crate::security::validate_public_recipe_pagination(offset, limit)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    crate::security::validate_public_discovery_query(&query)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    with_public_discovery_budget(async {
+        let pool = crate::db::get_pool();
 
-    let recipes = crate::db::get_public_recipes_paginated(&pool, limit, offset)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+        let recipes =
+            crate::db::get_public_recipes_filtered_paginated(&pool, offset, limit, &query)
+                .await
+                .map_err(|error| ServerFnError::new(error.to_string()))?;
 
-    let total_count = crate::db::count_public_recipes(&pool)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+        let total_count = crate::db::count_public_recipes_filtered(&pool, &query)
+            .await
+            .map_err(|error| ServerFnError::new(error.to_string()))?;
 
-    let has_more = (offset + recipes.len() as i64) < total_count;
+        let has_more = (offset + recipes.len() as i64) < total_count;
 
-    Ok(crate::types::RecipeListResponse {
-        recipes,
-        total_count,
-        has_more,
+        let page = crate::types::PublicRecipeListResponse {
+            recipes,
+            total_count,
+            has_more,
+        };
+        crate::security::validate_public_recipe_card_page(&page)
+            .map_err(|error| ServerFnError::new(error.to_string()))?;
+        Ok(page)
     })
+    .await
 }
 
 /// Get user profile info by username. No authentication required.
@@ -1110,29 +1651,37 @@ pub async fn get_user_public_recipes(
     username: String,
     offset: i64,
     limit: i64,
-) -> Result<crate::types::RecipeListResponse, ServerFnError> {
-    let pool = crate::db::get_pool();
+) -> Result<crate::types::PublicRecipeListResponse, ServerFnError> {
+    crate::security::validate_public_recipe_pagination(offset, limit)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    with_public_discovery_budget(async {
+        let pool = crate::db::get_pool();
 
-    let user = crate::db::get_user_by_username(&pool, &username)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?
-        .ok_or_else(|| ServerFnError::new("User not found"))?;
+        let user = crate::db::get_user_by_username(&pool, &username)
+            .await
+            .map_err(|error| ServerFnError::new(error.to_string()))?
+            .ok_or_else(|| ServerFnError::new("User not found"))?;
 
-    let recipes = crate::db::get_user_public_recipes(&pool, user.id, limit, offset)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+        let recipes = crate::db::get_user_public_recipes(&pool, user.id, limit, offset)
+            .await
+            .map_err(|error| ServerFnError::new(error.to_string()))?;
 
-    let total_count = crate::db::count_user_public_recipes(&pool, user.id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
+        let total_count = crate::db::count_user_public_recipes(&pool, user.id)
+            .await
+            .map_err(|error| ServerFnError::new(error.to_string()))?;
 
-    let has_more = (offset + recipes.len() as i64) < total_count;
+        let has_more = (offset + recipes.len() as i64) < total_count;
 
-    Ok(crate::types::RecipeListResponse {
-        recipes,
-        total_count,
-        has_more,
+        let page = crate::types::PublicRecipeListResponse {
+            recipes,
+            total_count,
+            has_more,
+        };
+        crate::security::validate_public_recipe_card_page(&page)
+            .map_err(|error| ServerFnError::new(error.to_string()))?;
+        Ok(page)
     })
+    .await
 }
 
 /// Fetch distinct tags from all public recipes.
@@ -1140,12 +1689,16 @@ pub async fn get_user_public_recipes(
 #[server]
 pub async fn get_public_recipe_tags() -> Result<Vec<String>, ServerFnError> {
     let pool = crate::db::get_pool();
-    let tags = crate::db::get_distinct_public_tags(&pool)
-        .await
-        .map_err(|e| {
-            tracing::error!(error = ?e, "Failed to fetch distinct public tags");
-            ServerFnError::new("Failed to fetch tags")
-        })?;
+    let tags = crate::security::run_with_database_budget(
+        crate::security::DATABASE_EXECUTION_BUDGET,
+        crate::db::get_distinct_public_tags(&pool),
+    )
+    .await
+    .map_err(|_| ServerFnError::new("Database operation timed out"))?
+    .map_err(|e| {
+        tracing::error!(error = ?e, "Failed to fetch distinct public tags");
+        ServerFnError::new("Failed to fetch tags")
+    })?;
     Ok(tags)
 }
 
@@ -1224,6 +1777,7 @@ mod version_graph_tests {
             images: image_url
                 .map(|url| {
                     vec![crate::types::RecipeImage {
+                        asset_id: None,
                         url: url.to_string(),
                         thumb_url: None,
                         file_name: None,
@@ -1246,6 +1800,7 @@ mod version_graph_tests {
             created_at: Utc
                 .with_ymd_and_hms(2026, 7, 20, version_number as u32, 0, 0)
                 .unwrap(),
+            media_asset_urls: serde_json::Value::Null,
         }
     }
 
@@ -1348,5 +1903,264 @@ mod version_graph_tests {
             Some(another_user_id)
         ));
         assert!(viewer_may_read_recipe("private", owner_id, Some(owner_id)));
+    }
+}
+
+#[cfg(all(feature = "server", test))]
+mod media_ownership_tests {
+    use super::*;
+
+    fn image(url: String, thumb_url: Option<String>) -> RecipeImage {
+        RecipeImage {
+            asset_id: None,
+            url,
+            thumb_url,
+            file_name: None,
+            file_size: None,
+            edits: Vec::new(),
+        }
+    }
+
+    fn test_storage(endpoint: &str) -> crate::storage::StorageClient {
+        crate::storage::StorageClient::for_test_with_endpoint_and_public_url(
+            endpoint,
+            "https://cdn.example.com/media",
+        )
+    }
+
+    async fn create_test_user(pool: &sqlx::PgPool, label: &str) -> crate::db::User {
+        let unique = crate::test_utils::uid();
+        crate::db::insert_user(
+            pool,
+            &format!("{label}_{unique}"),
+            label,
+            &format!("{label}_{unique}@example.com"),
+            None,
+        )
+        .await
+        .expect("test user should be created")
+    }
+
+    fn create_input(images: Vec<RecipeImage>, instructions: Vec<RecipeStep>) -> RecipeCreateInput {
+        RecipeCreateInput {
+            title: "Ownership test".to_string(),
+            description: None,
+            commentary: None,
+            prep_time_minutes: None,
+            cook_time_minutes: None,
+            servings: None,
+            ingredients: Vec::new(),
+            instructions,
+            equipment: Vec::new(),
+            images,
+            tags: Vec::new(),
+            visibility: "private".to_string(),
+        }
+    }
+
+    fn update_input(images: Vec<RecipeImage>, instructions: Vec<RecipeStep>) -> RecipeUpdateInput {
+        RecipeUpdateInput {
+            title: Some("Changed title".to_string()),
+            description: None,
+            commentary: None,
+            prep_time_minutes: None,
+            cook_time_minutes: None,
+            servings: None,
+            ingredients: Some(Vec::new()),
+            instructions: Some(instructions),
+            equipment: Some(Vec::new()),
+            images: Some(images),
+            tags: None,
+            visibility: Some("private".to_string()),
+        }
+    }
+
+    #[test]
+    fn recipe_media_rejects_foreign_recipe_and_avatar_objects_at_any_depth() {
+        let owner_id = uuid::Uuid::new_v4();
+        let victim_id = uuid::Uuid::new_v4();
+        let victim_recipe_object = uuid::Uuid::new_v4();
+        let victim_avatar_object = uuid::Uuid::new_v4();
+        let storage = test_storage("http://127.0.0.1:9");
+
+        let victim_recipe = image(
+            storage.object_url(&format!(
+                "recipes/{victim_id}/{victim_recipe_object}_full.webp"
+            )),
+            Some(storage.object_url(&format!(
+                "recipes/{victim_id}/{victim_recipe_object}_thumb.webp"
+            ))),
+        );
+        let victim_avatar = image(
+            storage.object_url(&format!("avatars/{victim_id}/{victim_avatar_object}.webp")),
+            None,
+        );
+        let owner_recipe_object = uuid::Uuid::new_v4();
+        let mismatched_thumbnail_object = uuid::Uuid::new_v4();
+        let mismatched_pair = image(
+            storage.object_url(&format!(
+                "recipes/{owner_id}/{owner_recipe_object}_full.webp"
+            )),
+            Some(storage.object_url(&format!(
+                "recipes/{owner_id}/{mismatched_thumbnail_object}_thumb.webp"
+            ))),
+        );
+        let nested_steps = vec![RecipeStep {
+            text: "parent".to_string(),
+            photos: Vec::new(),
+            sub_steps: vec![RecipeStep {
+                text: "child".to_string(),
+                photos: vec![victim_avatar],
+                sub_steps: Vec::new(),
+            }],
+        }];
+
+        assert!(validate_recipe_media_references(&storage, &[victim_recipe], &[]).is_err());
+        assert!(validate_recipe_media_references(&storage, &[mismatched_pair], &[]).is_err());
+        assert!(validate_recipe_media_references(&storage, &[], &nested_steps).is_err());
+    }
+
+    #[test]
+    fn recipe_media_accepts_owned_pairs_and_external_https_urls() {
+        let owner_id = uuid::Uuid::new_v4();
+        let object_id = uuid::Uuid::new_v4();
+        let storage = test_storage("http://127.0.0.1:9");
+        let mut owned = image(
+            storage.object_url(&format!("recipes/{owner_id}/{object_id}_full.webp")),
+            Some(storage.object_url(&format!("recipes/{owner_id}/{object_id}_thumb.webp"))),
+        );
+        owned.asset_id = Some(object_id);
+        let external = image(
+            "https://images.example.net/recipe.webp".to_string(),
+            Some("https://images.example.net/recipe-thumb.webp".to_string()),
+        );
+
+        validate_recipe_media_references(&storage, &[owned, external], &[])
+            .expect("owned and external HTTPS media should remain supported");
+    }
+
+    #[tokio::test]
+    async fn create_rejects_foreign_media_without_database_change() {
+        let (_database, pool) = crate::test_utils::setup_test_db().await;
+        let owner = create_test_user(&pool, "media_owner").await;
+        let victim = create_test_user(&pool, "media_victim").await;
+        let object_id = uuid::Uuid::new_v4();
+        let storage = test_storage("http://127.0.0.1:9");
+        let foreign = image(
+            storage.object_url(&format!("recipes/{}/{object_id}_full.webp", victim.id)),
+            None,
+        );
+
+        let result = create_recipe_for_user(
+            &pool,
+            &storage,
+            owner.id,
+            create_input(vec![foreign], Vec::new()),
+        )
+        .await;
+
+        assert!(result.is_err());
+        assert_eq!(
+            crate::db::count_recipes_by_owner(&pool, owner.id)
+                .await
+                .unwrap(),
+            0
+        );
+    }
+
+    #[tokio::test]
+    async fn update_rejects_nested_foreign_media_without_database_change() {
+        let (_database, pool) = crate::test_utils::setup_test_db().await;
+        let owner = create_test_user(&pool, "update_owner").await;
+        let victim = create_test_user(&pool, "update_victim").await;
+        let storage = test_storage("http://127.0.0.1:9");
+        let original = crate::db::insert_recipe(
+            &pool,
+            owner.id,
+            "Original title",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            &[],
+            "private",
+        )
+        .await
+        .unwrap();
+        let victim_object = uuid::Uuid::new_v4();
+        let nested_steps = vec![RecipeStep {
+            text: "parent".to_string(),
+            photos: Vec::new(),
+            sub_steps: vec![RecipeStep {
+                text: "child".to_string(),
+                photos: vec![image(
+                    storage.object_url(&format!("recipes/{}/{victim_object}_full.webp", victim.id)),
+                    None,
+                )],
+                sub_steps: Vec::new(),
+            }],
+        }];
+
+        let result = update_recipe_for_user(
+            &pool,
+            &storage,
+            owner.id,
+            original.id,
+            update_input(Vec::new(), nested_steps),
+        )
+        .await;
+
+        assert!(result.is_err());
+        let unchanged = crate::db::get_recipe_by_id_and_owner(&pool, original.id, owner.id)
+            .await
+            .unwrap();
+        assert_eq!(unchanged.title, "Original title");
+        assert!(unchanged.instructions.is_empty());
+    }
+
+    #[tokio::test]
+    async fn deleting_legacy_recipe_skips_foreign_objects_but_removes_database_row() {
+        let (_database, pool) = crate::test_utils::setup_test_db().await;
+        let owner = create_test_user(&pool, "delete_owner").await;
+        let victim = create_test_user(&pool, "delete_victim").await;
+        let victim_object = uuid::Uuid::new_v4();
+        let mock_server = wiremock::MockServer::start().await;
+        let storage = test_storage(&mock_server.uri());
+        let foreign = image(
+            storage.object_url(&format!("recipes/{}/{victim_object}_full.webp", victim.id)),
+            Some(storage.object_url(&format!("recipes/{}/{victim_object}_thumb.webp", victim.id))),
+        );
+        let recipe = crate::db::insert_recipe(
+            &pool,
+            owner.id,
+            "Legacy foreign reference",
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+            &[],
+            &[foreign],
+            "private",
+        )
+        .await
+        .unwrap();
+
+        delete_recipe_for_user(&pool, &storage, owner.id, recipe.id)
+            .await
+            .expect("recipe deletion should proceed");
+
+        assert!(
+            crate::db::get_recipe_by_id_and_owner(&pool, recipe.id, owner.id)
+                .await
+                .is_err()
+        );
+        assert!(mock_server.received_requests().await.unwrap().is_empty());
     }
 }
