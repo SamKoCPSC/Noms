@@ -13,7 +13,7 @@ the completed OAuth, authorization, media-ownership, or visibility hardening.
 
 NOMS-015 may be reviewed and merged independently because no critical
 authorization bypass or data-loss path was found. Findings 1–4 below remain a
-release gate for public production deployment; findings 5–10 are lower-priority
+release gate for public production deployment; findings 5–12 are lower-priority
 correctness, resilience, and maintainability follow-ups.
 
 ## Findings and enhancement scope
@@ -50,6 +50,15 @@ correctness, resilience, and maintainability follow-ups.
     multi-responsibility files, long endpoint and UI
     workflows, repeated boundary logic, and comments that describe mechanics
     instead of invariants make important behavior harder to review safely.
+11. Route-specific document metadata is limited to the marketing pages. After
+    client-side navigation from Home, About, or How To, application pages retain
+    the previous page's title and metadata instead of describing the active
+    route.
+12. Search is intended to be available to anonymous visitors, but the page is
+    wrapped in `AuthRequired` and every search server function requires a user
+    session. The page also starts its search resources before rendering the
+    authentication prompt, so anonymous navigation both hides Search and emits
+    a misleading HTTP 500 for an expected signed-out request.
 
 ## Implementation checkpoints
 
@@ -139,7 +148,48 @@ correctness, resilience, and maintainability follow-ups.
 - Review each refactor as a behavior-preserving change and reject abstractions
   that reduce local clarity or make security-sensitive control flow implicit.
 
-### CP10: Integrated release verification
+### CP10: Make SPA document metadata route-correct
+
+- Define a shared metadata convention with a safe application default and
+  route-specific titles, descriptions, canonical URLs, and social metadata.
+- Inventory every routed page and apply the convention to Search, Explore,
+  Login, Dashboard, collection, recipe, public-profile, settings, and fallback
+  pages without allowing user-authored values to create unsafe or unbounded
+  document metadata.
+- Verify both server-rendered entry and client-side navigation so metadata is
+  replaced when the active route changes instead of leaking from the previous
+  page.
+- Add focused tests for navigation from each marketing page into representative
+  public, authenticated, dynamic, and not-found routes.
+
+### CP11: Restore visibility-aware anonymous search
+
+- Remove the unconditional authentication guard from the Search page and treat
+  a missing session as an anonymous viewer rather than an exceptional request.
+- Pass an optional viewer identity through search and autocomplete so anonymous
+  callers can discover public recipes, public collections, and public profiles,
+  while authenticated callers can additionally discover their own non-public
+  resources where the existing product contract permits it.
+- Give anonymous callers an abuse-resistant actor or request budget without
+  weakening the existing global concurrency, database-deadline, input, or
+  response-size bounds; derive any anonymous identity only from trusted request
+  context and prevent callers from selecting or spoofing the budget key.
+- Keep authorization in the database queries: every returned resource must be
+  public or owned by the authenticated viewer, and anonymous results must never
+  depend on client-side filtering.
+- Preserve projection-level privacy for public collection results: truncate
+  breadcrumbs before inaccessible ancestors and apply the collection/recipe
+  visibility intersection to covers, members, counts, and other derived data.
+- Ensure direct Search navigation, the Home search form, scoped searches,
+  autocomplete, pagination, and empty results work without authentication and
+  do not produce expected-authentication HTTP 500 responses.
+- Cover anonymous and authenticated visibility matrices, public children below
+  private or unlisted ancestors, mixed-visibility collection members, anonymous
+  quota exhaustion and spoof attempts, and mixed public/private result sets
+  with server and browser tests. Invalid or expired credentials must safely
+  degrade to the anonymous result set without granting viewer-only visibility.
+
+### CP12: Integrated release verification
 
 - Run `just ci` and all pinned ParadeDB integration tests.
 - Complete a clean production Docker image build and runtime health check.
@@ -162,6 +212,13 @@ correctness, resilience, and maintainability follow-ups.
 - Exact username identity lookup remains ParadeDB-safe and index-backed.
 - Explore tag selection changes the recipe result set correctly across pages.
 - Graph and lineage reads consistently share admission and deadline controls.
+- Every route replaces document metadata correctly during SSR and client-side
+  navigation.
+- Anonymous Search returns only public results without an authentication prompt
+  or server error; authenticated Search additionally returns resources visible
+  to that viewer without exposing another user's non-public data.
+- Anonymous Search remains bounded under abuse, and public collection results do
+  not reveal inaccessible ancestors or member-derived metadata.
 - Readability hotspots touched by this issue have clear ownership boundaries,
   descriptive names, explicit state transitions, and durable invariant-focused
   documentation without changing observable behavior.
