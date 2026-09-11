@@ -929,6 +929,7 @@ pub fn RecipeNew() -> Element {
                 PageHeader {
                     title: "New Recipe",
                     icon: Some(PageIconKind::Editor),
+                    action: rsx! { Link { to: crate::Route::RecipeImport {}, class: "btn btn-secondary", "Import Recipe" } },
                 }
                 div { class: "recipe-detail__tags",
                     span { class: "recipe-detail__tag", "DRAFT" }

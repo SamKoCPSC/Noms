@@ -73,6 +73,7 @@ fn DashboardWorkspace() -> Element {
                         NavigationArtwork { kind: Some(PageIconKind::Editor) } span { "Drafts" }
                         if let Some(items) = draft_list { span { class: "dashboard-nav-count", "{items.len()}" } }
                     }
+                    Link { to: Route::RecipeImport {}, NavigationArtwork { kind: Some(PageIconKind::Editor) } span { "Import Recipe" } }
                 }
                 div { class: "dashboard-collections",
                     h2 { class: "dashboard-eyebrow navigation-artwork-label", NavigationArtwork { kind: Some(PageIconKind::Collections) } span { "Collections" } }

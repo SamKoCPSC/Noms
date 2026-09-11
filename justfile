@@ -138,7 +138,11 @@ recipe-import-parser-semantic-test:
 recipe-import-provider-adapter-test:
 	@node --test scripts/tests/test-recipe-import-provider-adapters.mjs
 
+# Verify browser clipboard capture, bounds, cancellation, and parser handoff.
+recipe-import-bridge-test:
+	@node --test scripts/tests/test-recipe-import-bridge.mjs
+
 # Run all checks and tests (mirrors what CI does)
-ci: fmt check lint test schema-check-test security-policy-test security-check recipe-import-fixture-test recipe-import-parser-active-content-test recipe-import-parser-corpus-test recipe-import-parser-semantic-test recipe-import-provider-adapter-test
+ci: fmt check lint test schema-check-test security-policy-test security-check recipe-import-fixture-test recipe-import-parser-active-content-test recipe-import-parser-corpus-test recipe-import-parser-semantic-test recipe-import-provider-adapter-test recipe-import-bridge-test
 	@echo ""
 	@echo "✅ All checks passed."

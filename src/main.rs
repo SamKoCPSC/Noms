@@ -34,8 +34,8 @@ use components::{AppLayout, ErrorFallback};
 use pages::{
     About, CollectionDetail, CollectionEdit, CollectionList, CollectionNew, CommunityHome,
     Dashboard, Explore, Home, HowTo, Login, NotFound, RecipeDetail, RecipeDraftEdit, RecipeEdit,
-    RecipeNew, RecipeVersionDetail, RecipeVersionGraph, Search, SettingsAccounts, SettingsProfile,
-    UserProfile,
+    RecipeImport, RecipeNew, RecipeVersionDetail, RecipeVersionGraph, Search, SettingsAccounts,
+    SettingsProfile, UserProfile,
 };
 
 // The route inventory is shared by the generated renderer and the raw-query boundary.
@@ -58,6 +58,8 @@ enum GeneratedRoute {
         Dashboard {},
         #[route("/recipes/new")]
         RecipeNew {},
+        #[route("/recipes/import")]
+        RecipeImport {},
         #[route("/recipes/:id")]
         RecipeDetail { id: String },
         #[route("/recipes/:id/versions/:version_number")]
