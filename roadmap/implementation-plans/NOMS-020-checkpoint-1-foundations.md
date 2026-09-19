@@ -32,9 +32,30 @@ Run `just ci`, inspect generated CSS if startup/build regenerates it, obtain ind
 
 ## Remaining checkpoint-1 work
 
-- M4 overlay material/fallback primitives and existing modal/menu consumer migration require a separate reviewed slice; do not apply glass indiscriminately to the shared navbar or editor panels.
+- M4 ordinary-modal material is implemented in slice 2 below, with preference-emulation validation still pending. Remaining modal/menu consumers require separate reviewed slices; do not apply glass indiscriminately to the shared navbar or editor panels.
 - T2 feedback and P1–P3 overlay interaction contracts (focus, dismissal, live regions and picker semantics) still need implementation specification.
 - Remaining shared component/state coverage and visual review must be closed before the navigation/Explore checkpoint or parallel route rollout.
+
+### Slice 2: M4 ordinary-modal material
+
+Apply the selected warm frosted material to ordinary `.modal-card` consumers (collection and account deletion), preserving all existing handlers, wording, pending guards and typed confirmations. Exclude `.modal-card--editor`, the navbar, membership menus and regular neumorphic page panels from this first material migration. Their layout/interaction work remains separate. This is not acceptance of existing modal accessibility: account/image-editor dialog semantics and shared focus/inert/scroll-lock lifecycle still require a later behavioral slice.
+
+Acceptance contract before implementation:
+
+- Dedicated overlay tokens preserve the existing typography and cream/coral identity; do not repurpose global `.glass`/navbar tokens.
+- Opaque warm surface is the default; only enable translucent fill and blur inside a backdrop-filter support query. Use a thin light edge and floating shadow instead of the ordinary modal's raised bevel.
+- Modal primary and muted text remain at least 4.5:1 over worst-case black/white underlays in both themes. Fields stay opaque using existing surface roles; use overlay-scoped muted text only where needed.
+- Reduced-transparency preference restores opacity and removes blur. Forced colors uses system surface/text/border without shadow. Reduced motion disables ordinary-modal entrance animation and its backdrop animation.
+- Ordinary modal content remains reachable on short viewports with constrained height and scrolling; do not alter the image editor's independent flex/overflow contract.
+- Verify ordinary dialog open/cancel, supported glass, opaque preference fallback, light/dark, short/narrow viewport, and no changed destructive workflow. Full shared modal keyboard semantics remain explicitly pending rather than implied by a material change.
+
+Implementation: `948f4d0` adds dedicated overlay tokens, warm translucent ordinary-dialog shells with thin edges/floating shadows, support-gated blur, opaque reduced-transparency fallback, system-color fallback, entrance-motion suppression and viewport-constrained scrolling. `.modal-card--editor` and existing global/navigation glass are excluded. The 94%-opaque fill intentionally favors legibility over pronounced translucency; scoped muted text uses `#635D55` / `#B8B1A7` while the original theme colors and font families remain unchanged.
+
+Three new source/contrast tests first failed against the previous implementation (six existing tests passed), then all nine passed. Full server suite: 709 passed, 0 failed, 12 ignored. `just check`, formatting/diff checks, six schema guard cases, declarative workflow and security-policy tests pass. `just ci` again stops at the unchanged server Clippy issue described below. Independent Phase-1 review of the complete diff and consumers: **PASS**, no introduced P0–P2 findings.
+
+Fresh runtime: `just up instance=noms020-modal-material-20260919`, application `http://127.0.0.1:32778`, healthy infrastructure/schema and mock `testuser` sign-in. Chrome fallback was used because the in-app browser was unavailable. Actual light/dark fill, blur, border, floating shadow and text roles matched the implementation. At 800×180, the ordinary modal had 146px client height and 208px scroll height; keyboard focus scrolled it 62px to expose Cancel, and clicking Cancel removed the modal. A 390px viewport was also checked. Only the initial account-deletion confirmation was opened/canceled; no destructive confirmation was activated. Image-editor exclusion and unchanged collection handlers are source-review evidence, not separate runtime walkthroughs.
+
+Slice-2 Phase 2 remains **incomplete/FAIL (insufficient evidence, no implementation defect established)**: media emulation of reduced transparency/motion stalled despite requested timeouts, and no alternate media capability was available. Supported rendering and viewport behavior pass, but reduced-transparency and forced-color/motion fallbacks currently have source-test evidence only for this slice. Theme, media and viewport were restored. Report and screenshots: `/tmp/noms020-modal-material-20260919/report.html`; the report rendered with all four embedded images loaded, and captures have backend scaling/cropping limitations. Re-run the preference matrix before accepting slice 2. The full foundation/route-rollout gate remains closed.
 
 ## Implementation and checks
 
@@ -73,12 +94,20 @@ Chrome fallback loaded the app, authenticated and opened New Recipe. Direct comp
 
 Temporary portable report: `/tmp/noms020-foundations-20260919/report.html`; screenshots: `light-clipped.png` and `dark-clipped.png` in the same directory (the browser returned 963×1034 JPEG data despite the filenames; report embeds use the correct MIME type). The report distinguishes observed runtime checks from source-contract evidence and tool limitations. The report served HTTP 200, but its browser-render verification also timed out; embedded screenshot files were visually inspected separately. Theme was restored to light; temporary-tab closure and viewport reset are unconfirmed after the final tool timeout. Startup-only unrelated generated Tailwind utilities were removed from the working diff.
 
-Runtime verification remains **incomplete**; independent Phase 2 verdict is **FAIL (insufficient evidence, no implementation defect established)**. CDP viewport operations in Chrome also exceeded their requested timeouts. Hover/danger states, reduced-motion and forced-color emulation, narrow-layout verification, and the recipe-detail intrinsic visibility-selector layout have not been proved in this run. The editor's deliberately full-width visibility selector is a different control and is not regression evidence for recipe detail. Source tests and code review cover those contracts but do not replace the missing browser checks. Re-run this matrix before accepting the slice; no route-rollout gate is opened.
+The initial runtime attempt was **incomplete**; independent Phase 2 verdict was **FAIL (insufficient evidence, no implementation defect established)**. CDP viewport operations in Chrome also exceeded their requested timeouts. Hover/danger states, reduced-motion and forced-color emulation, narrow-layout verification, and the recipe-detail intrinsic visibility-selector layout were then unverified. The editor's deliberately full-width visibility selector is a different control and is not regression evidence for recipe detail.
+
+### Resumed slice-1 validation — PASS, 2026-09-19
+
+Continued the same unfinished isolated validation run with unchanged production revision. Chrome's documented viewport capability recovered the blocked checks. Independent Phase 2 now reports **PASS** for slice 1: actual light/dark default and hover button roles, disabled states, field focus/boundaries, reduced-motion background/shared transitions, forced-color borders/focus, 390px layout without horizontal overflow, and recipe-detail selector intrinsic width (144px) all verified. The private fixture exercised normal autosave/publication without public sharing; account-deletion confirmation was opened and canceled without confirming deletion. Spinner-specific reduced-motion behavior remains source-contract evidence because no live spinner was observed.
+
+The same portable report was updated and rendered in Chrome with all four embedded images loaded. Capture-backend tiling beyond the first image tile prevents a full-screenshot-fidelity claim; computed viewport/layout measurements and the reliable first tiles support the scoped verdict. Theme, media and viewport were restored. This supersedes the incomplete attempt above, not the separate pre-existing CI blockers or the unfinished checkpoint-1 work. After capturing evidence, `just down instance=noms020-foundations-20260919` removed only that disposable deployment, its fixture data and build caches to free the worktree/network slot for fresh slice-2 validation; the temporary report/screenshots remain.
 
 ## Status
 
 - [x] Scope and regression contracts recorded; tests fail before production changes.
 - [x] Production slice and automated checks executed; unrelated full-CI failures recorded above.
 - [x] Independent code review passes (P2 sizing regression fixed and guarded).
-- [ ] Fresh-runtime validation and evidence passes.
+- [x] Slice-1 fresh-runtime validation and evidence passes (Chrome fallback and capture limitations recorded).
+- [x] Slice-2 ordinary-modal material implemented, tested and code-reviewed.
+- [ ] Slice-2 accessibility-preference runtime checks complete.
 - [ ] Full checkpoint-1 gate complete (includes remaining slices above).
