@@ -272,7 +272,9 @@ Update the table with linked evidence as each stage is completed; generated does
 
 ## Implementation checkpoints
 
-Checkpoint 0 evidence: [2026-09-19 baseline inventory and runtime checks](NOMS-020-checkpoint-0-baseline.md). Application source already matches local main; representative fresh captures and mock-account flows are recorded there. Later slices still require their own detailed state baselines.
+Checkpoint 0 evidence: [2026-09-19 baseline inventory and runtime checks](NOMS-020-checkpoint-0-baseline.md). Application source matched local main at that baseline; representative fresh captures and mock-account flows are recorded there. Later slices still require their own detailed state baselines.
+
+Checkpoint 1 work: [shared-foundation slices and acceptance criteria](NOMS-020-checkpoint-1-foundations.md), started 2026-09-19. Completing a slice does not open the wider route-rollout gate until the full foundation and first navigation/Explore reviews pass.
 
 Proceed in reviewable slices; do not wait for every route's specification before starting foundations. Each checkpoint records decisions, tests and screenshots before progressing. This documentation cleanup does not itself start implementation, authorize deployment or commit existing work.
 
