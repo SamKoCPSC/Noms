@@ -53,6 +53,16 @@ a:hover {
     --shadow-light: #FAF7F1;
     --shadow-dark: #C8C1B4;
     --border-color: rgba(122, 117, 109, 0.28);
+    --elevation-raised: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
+    --elevation-inset: inset 5px 5px 4px var(--shadow-dark), inset -5px -5px 4px var(--shadow-light);
+
+    /* Contrast roles keep the original coral fills and warm surfaces intact. */
+    --on-accent: #12100D;
+    --on-danger: #FFFFFF;
+    --accent-ink: #95432F;
+    --field-placeholder: #706A61;
+    --focus-ring: #95432F;
+    --field-border: #847C70;
 
     /* Button edge color (inherits parent context) */
     --btn-edge: var(--surface);
@@ -110,6 +120,15 @@ a:hover {
     --shadow-light: #33302A;
     --shadow-dark: #0F0E0B;
     --border-color: rgba(237, 232, 223, 0.20);
+    /* Recompute shadow aliases here rather than inheriting light-mode values. */
+    --elevation-raised: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
+    --elevation-inset: inset 5px 5px 4px var(--shadow-dark), inset -5px -5px 4px var(--shadow-light);
+    --on-accent: #12100D;
+    --on-danger: #1E1C18;
+    --accent-ink: #E8896E;
+    --field-placeholder: #9E978C;
+    --focus-ring: #E8896E;
+    --field-border: #9E978C;
     --glass-fill: rgba(30, 28, 24, 0.50);
     --glass-border: rgba(255, 255, 255, 0.10);
     --glass-blur: blur(16px) saturate(150%);
@@ -157,18 +176,18 @@ a:hover {
    Neumorphic Utility Classes
    ============================================================ */
 .neumo-raised {
-    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
+    box-shadow: var(--elevation-raised);
     border-radius: var(--radius-md);
 }
 
 .neumo-inset {
-    box-shadow: inset 5px 5px 4px var(--shadow-dark), inset -5px -5px 4px var(--shadow-light);
+    box-shadow: var(--elevation-inset);
     border-radius: var(--radius-md);
 }
 
 .neumo-card {
     --btn-edge: var(--surface);
-    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
+    box-shadow: var(--elevation-raised);
     border-radius: var(--radius-lg);
 }
 
@@ -255,39 +274,39 @@ a:hover {
 
 .btn-primary {
     background: var(--accent);
-    color: white;
-    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
+    color: var(--on-accent);
+    box-shadow: var(--elevation-raised),
                 inset 0 0 0 5px var(--btn-edge);
 }
 
 .btn-primary:hover:not(:disabled) {
-    color: white;
+    color: var(--on-accent);
     background: var(--accent-hover);
-    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
+    box-shadow: var(--elevation-raised),
                 inset 0 0 0 5px var(--btn-edge);
 }
 
 .btn-primary:active:not(:disabled) {
-    box-shadow: inset 5px 5px 4px var(--shadow-dark), inset -5px -5px 4px var(--shadow-light);
+    box-shadow: var(--elevation-inset);
 }
 
 .btn-secondary {
     background: var(--surface);
-    color: var(--accent);
+    color: var(--accent-ink);
     border: 2px solid var(--accent);
-    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
+    box-shadow: var(--elevation-raised),
                 inset 0 0 0 5px var(--btn-edge);
 }
 
 .btn-secondary:hover:not(:disabled) {
     background: var(--accent);
-    color: white;
-    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
+    color: var(--on-accent);
+    box-shadow: var(--elevation-raised),
                 inset 0 0 0 5px var(--btn-edge);
 }
 
 .btn-secondary:active:not(:disabled) {
-    box-shadow: inset 5px 5px 4px var(--shadow-dark), inset -5px -5px 4px var(--shadow-light);
+    box-shadow: var(--elevation-inset);
 }
 
 .btn-ghost {
@@ -303,35 +322,56 @@ a:hover {
 
 .btn-danger {
     background: var(--error);
-    color: white;
-    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
+    color: var(--on-danger);
+    box-shadow: var(--elevation-raised),
                 inset 0 0 0 5px var(--btn-edge);
 }
 
 .btn-danger:hover:not(:disabled) {
-    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light),
+    color: var(--on-danger);
+    box-shadow: var(--elevation-raised),
                 inset 0 0 0 5px var(--btn-edge);
 }
 
 .btn-danger:active:not(:disabled) {
-    box-shadow: inset 5px 5px 4px var(--shadow-dark), inset -5px -5px 4px var(--shadow-light);
+    box-shadow: var(--elevation-inset);
 }
 
 /* ============================================================
     Input Component
     ============================================================ */
 .input {
-    border: none;
+    border: 1px solid var(--field-border);
     transition: box-shadow 0.2s ease;
 }
 
+/* Preserve page-owned field sizing; only the shared component is full width. */
+.input--shared {
+    padding: var(--space-sm) var(--space-md);
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--text-primary);
+    background-color: var(--surface);
+    width: 100%;
+}
+
+/* Legacy page-owned fields still suppress outlines inline; retain their cue
+   while the shared component uses the independent keyboard outline below. */
 .input:focus {
-    box-shadow: inset 5px 5px 4px var(--shadow-dark), inset -5px -5px 4px var(--shadow-light),
-                0 0 0 2px var(--accent);
+    box-shadow: var(--elevation-inset), 0 0 0 2px var(--focus-ring);
+}
+
+/* Low-specificity baseline leaves specialized graph focus treatments intact. */
+:where(button, a[href], input, select, textarea, summary, [tabindex]):focus-visible,
+.btn:focus-visible,
+.input:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
 }
 
 .input::placeholder {
-    color: var(--text-tertiary);
+    color: var(--field-placeholder);
+    opacity: 1;
 }
 
 /* ============================================================
@@ -5294,4 +5334,43 @@ a:hover {
     .advanced-field { grid-template-columns: 1fr; }
     .search-control, .search-control-wide, .search-sort-control { flex: 1 1 100%; margin-left: 0; }
     .search-hero { align-items: start; }
+}
+
+/* Shared accessibility fallbacks follow component rules in the cascade. */
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    .bg-gradient-animated,
+    .spinner {
+        animation: none;
+    }
+
+    .btn,
+    .input,
+    a {
+        transition: none;
+    }
+}
+
+@media (forced-colors: active) {
+    .btn,
+    .input,
+    .neumo-raised,
+    .neumo-inset,
+    .neumo-card {
+        border: 1px solid CanvasText;
+        box-shadow: none;
+    }
+
+    .btn:focus-visible,
+    .input:focus-visible {
+        /* Page-owned legacy fields may still suppress the outline inline. */
+        outline: 2px solid Highlight !important;
+    }
+
+    .input::placeholder {
+        color: GrayText;
+    }
 }

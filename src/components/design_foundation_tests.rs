@@ -1,0 +1,147 @@
+//! Source contracts for shared foundations; browser validation covers the cascade.
+//! Kept std-only so these checks can also run with `rustc --test` before a full build.
+
+const CSS: &str = include_str!("../../assets/main.css");
+const INPUT: &str = include_str!("base/input.rs");
+
+fn rule(selector: &str) -> &str {
+    CSS.split_once(&format!("{selector} {{"))
+        .unwrap_or_else(|| panic!("missing rule: {selector}"))
+        .1
+        .split_once('}')
+        .unwrap()
+        .0
+}
+
+fn token<'a>(block: &'a str, name: &str) -> &'a str {
+    block
+        .split_once(&format!("{name}:"))
+        .unwrap_or_else(|| panic!("missing token: {name}"))
+        .1
+        .split_once(';')
+        .unwrap()
+        .0
+        .trim()
+}
+
+fn luminance(hex: &str) -> f64 {
+    let hex = hex.trim_start_matches('#');
+    let channel = |start| {
+        let value = u8::from_str_radix(&hex[start..start + 2], 16).unwrap() as f64 / 255.0;
+        if value <= 0.04045 {
+            value / 12.92
+        } else {
+            ((value + 0.055) / 1.055).powf(2.4)
+        }
+    };
+    channel(0) * 0.2126 + channel(2) * 0.7152 + channel(4) * 0.0722
+}
+
+fn contrast(first: &str, second: &str) -> f64 {
+    let first = luminance(first);
+    let second = luminance(second);
+    (first.max(second) + 0.05) / (first.min(second) + 0.05)
+}
+
+#[test]
+fn existing_brand_palette_and_fonts_are_preserved() {
+    let light = rule(":root");
+    for (name, value) in [
+        ("--bg-base", "#FAF7F2"),
+        ("--surface", "#F5F0E8"),
+        ("--accent", "#D9735A"),
+        ("--accent-hover", "#C4613F"),
+        ("--text-primary", "#2D2A26"),
+    ] {
+        assert_eq!(token(light, name), value);
+    }
+    assert!(token(light, "--font-display").contains("Fredoka"));
+    assert!(token(light, "--font-body").contains("Nunito"));
+    assert_eq!(token(rule(".dark"), "--accent"), "#E8896E");
+}
+
+#[test]
+fn shared_elevation_has_one_token_contract() {
+    for selector in [".neumo-raised", ".neumo-card"] {
+        assert!(rule(selector).contains("box-shadow: var(--elevation-raised)"));
+    }
+    assert!(rule(".neumo-inset").contains("box-shadow: var(--elevation-inset)"));
+    assert!(rule(":root").contains("--elevation-raised:"));
+    assert!(
+        rule(".dark").contains("--elevation-raised:"),
+        "theme-dependent shadow aliases must recompute on the dark scope"
+    );
+}
+
+#[test]
+fn shared_button_text_roles_meet_aa_in_both_themes() {
+    for theme in [":root", ".dark"] {
+        let block = rule(theme);
+        for background in ["--accent", "--accent-hover"] {
+            assert!(
+                contrast(token(block, "--on-accent"), token(block, background)) >= 4.5,
+                "{theme} {background}"
+            );
+        }
+        assert!(contrast(token(block, "--on-danger"), token(block, "--error")) >= 4.5);
+        assert!(contrast(token(block, "--accent-ink"), token(block, "--surface")) >= 4.5);
+        assert!(
+            contrast(
+                token(block, "--field-placeholder"),
+                token(block, "--surface")
+            ) >= 4.5
+        );
+        assert!(contrast(token(block, "--focus-ring"), token(block, "--surface")) >= 3.0);
+    }
+    for selector in [
+        ".btn-primary",
+        ".btn-primary:hover:not(:disabled)",
+        ".btn-secondary:hover:not(:disabled)",
+    ] {
+        assert!(
+            rule(selector).contains("color: var(--on-accent)"),
+            "{selector}"
+        );
+    }
+    assert!(rule(".btn-danger").contains("color: var(--on-danger)"));
+    assert!(rule(".btn-secondary").contains("color: var(--accent-ink)"));
+}
+
+#[test]
+fn shared_fields_and_focus_do_not_depend_on_shadows() {
+    assert!(!INPUT.contains("outline: \"none\""));
+    assert!(rule(".input").contains("border: 1px solid var(--field-border)"));
+    assert!(rule(".input::placeholder").contains("var(--field-placeholder)"));
+    assert!(CSS.contains(":focus-visible"));
+    assert!(CSS.contains("outline: 2px solid var(--focus-ring)"));
+    assert!(CSS.contains("outline-offset: 3px"));
+}
+
+#[test]
+fn shared_input_presentation_does_not_resize_page_owned_controls() {
+    assert!(
+        !rule(".input").contains("width: 100%"),
+        "recipe visibility select uses the generic input class and must retain intrinsic width"
+    );
+    assert!(INPUT.contains("input--shared"));
+    assert!(rule(".input--shared").contains("width: 100%"));
+}
+
+#[test]
+fn motion_and_forced_colors_have_shared_fallbacks() {
+    let reduced = CSS
+        .rsplit_once("@media (prefers-reduced-motion: reduce)")
+        .unwrap()
+        .1;
+    assert!(reduced.contains(".bg-gradient-animated"));
+    assert!(reduced.contains(".spinner"));
+    assert!(reduced.contains("animation: none"));
+    let forced = CSS.rsplit_once("@media (forced-colors: active)").unwrap().1;
+    assert!(forced.contains(".btn"));
+    assert!(forced.contains(".input"));
+    assert!(forced.contains("CanvasText"));
+    assert!(
+        forced.contains("outline: 2px solid Highlight !important"),
+        "legacy page inputs suppress outlines inline; forced colors removes their shadow fallback"
+    );
+}

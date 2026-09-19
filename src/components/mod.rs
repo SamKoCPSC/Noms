@@ -14,6 +14,9 @@ mod footer;
 mod navbar;
 
 #[cfg(test)]
+mod design_foundation_tests;
+
+#[cfg(test)]
 mod informational_module_tests {
     use super::informational::{CallToActionPanel, PageMeta};
 

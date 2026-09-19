@@ -21,18 +21,11 @@ pub struct InputProps {
 pub fn Input(props: InputProps) -> Element {
     rsx! {
         input {
-            class: "neumo-inset input",
+            class: "neumo-inset input input--shared",
             r#type: "{props.input_type}",
             value: "{props.value}",
             placeholder: "{props.placeholder}",
             oninput: move |evt| props.oninput.call(evt.value()),
-            padding: "var(--space-sm) var(--space-md)",
-            font_family: "var(--font-body)",
-            font_size: "14px",
-            color: "var(--text-primary)",
-            background_color: "var(--surface)",
-            outline: "none",
-            width: "100%",
         }
     }
 }
