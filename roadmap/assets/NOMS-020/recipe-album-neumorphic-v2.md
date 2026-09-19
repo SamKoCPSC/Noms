@@ -1,0 +1,67 @@
+# R3 Recipe Album — neumorphic alternatives
+
+Generated 2026-09-13 with the built-in image generation tool using [R3](recipe-detail-history-r03-v1.png) as reference. The user prefers R3 with stronger neumorphism; these five refinements are alternatives, not individually selected. Desktop Recipe Detail/History pairs; mobile/tablet remain deferred. No app code changed.
+
+## Review notes
+
+Retain photo-led recipe detail and thumbnail history. Raised cream panels and tactile controls should have flat readable interiors; inset selected versions require explicit labels/borders. Generated fonts and A3 logos remain approximations. Dates, recipe copy and quantities are illustrative. R3A/C/E retain red-tinted draft headings despite instructions: neutralize them; a private draft is not an error. R3B most clearly explores deeper raised/pressed controls; R3D is subtler and uses sage section headers. Several servings controls are raised rather than inset; final interaction states need refinement. None of these boards authorizes changes to publishing, restore, permissions, sharing or comparison behavior. Existing history stays on restore, which creates a new version. Keep draft access owner-only. Contrast, focus, long content, missing photos, dark mode and confirmation states remain to validate.
+
+## R3A · Soft Album
+
+[View paired example](recipe-album-r3a-v2.png)
+
+Closest to R3. Broad hero image in lightly raised cream frame, ingredients and method in softly raised rounded panels. History thumbnail rows lightly raised, selected v2 inset sage.
+
+### Generation prompt
+
+Use case: ui-mockup. Create ONE landscape board with paired DESKTOP NOMS screens Recipe Detail LEFT and History RIGHT. Reference image is R3 Recipe Album, use its photo-led layout and thumbnail version-history structure as the baseline, not its blue accents or red draft warning. Explore a more visible NEUMORPHIC treatment while preserving usability. Warm buttery cream surfaces, dark olive high contrast text, sage and coral only, rounded Fredoka headings/Nunito body, soft upper-left highlights/lower-right shadows, visible fine borders, flat text surfaces. No blue, glass, heavy textures, decoration, ratings or new features. Keep identical N1/N4 cream floating rounded navigation with small tilted olive book/coral bookmark logo and coral Noms wordmark, Dashboard Collections Explore Search profile. Desktop only.
+Detail: generous tomato pasta photo hero, "Tomato pasta", Alex Chen, Public, 30 min, 4 servings, v3 Current. Edit recipe / Add to collection / Share / History. Ingredients and numbered Method below; inset servings +/- control. Recipe note "Save a little pasta water." Ingredients 400 g pasta, 600 g tomatoes, 3 cloves garlic, 2 tbsp olive oil, basil. Method cook pasta, simmer sauce, toss and serve.
+History: "Tomato pasta · History", three photo-thumbnail version rows: v3 Current / Published / Sep 12 / Added basil; v2 Selected / Published / Sep 10 / Reduced garlic; v1 / Published / Sep 8 / First published. Explicit Current and Selected labels, selected v2 pressed-in surface. View version, Compare v2 and v3, Restore v2; helper "Restoring creates a new version; existing history stays." Neutral cream separate owner-only Private draft panel, not a warning/error. Dates and text illustrative. All readable functional text horizontal, not shadowed or embossed. Title "R3A · Soft Album". Specific variant: Closest to R3. Broad hero image in lightly raised cream frame, ingredients and method in softly raised rounded panels. History thumbnail rows lightly raised, selected v2 inset sage.
+
+## R3B · Cushioned Cards
+
+[View paired example](recipe-album-r3b-v2.png)
+
+More pronounced rounded convex cream frames and tactile pill buttons, broad white upper-left highlights and warm lower-right shadows. Flat interiors for readable text. History plush thumbnail cards with selected card gently pressed in. Not glossy plastic.
+
+### Generation prompt
+
+Use case: ui-mockup. Create ONE landscape board with paired DESKTOP NOMS screens Recipe Detail LEFT and History RIGHT. Reference image is R3 Recipe Album, use its photo-led layout and thumbnail version-history structure as the baseline, not its blue accents or red draft warning. Explore a more visible NEUMORPHIC treatment while preserving usability. Warm buttery cream surfaces, dark olive high contrast text, sage and coral only, rounded Fredoka headings/Nunito body, soft upper-left highlights/lower-right shadows, visible fine borders, flat text surfaces. No blue, glass, heavy textures, decoration, ratings or new features. Keep identical N1/N4 cream floating rounded navigation with small tilted olive book/coral bookmark logo and coral Noms wordmark, Dashboard Collections Explore Search profile. Desktop only.
+Detail: generous tomato pasta photo hero, "Tomato pasta", Alex Chen, Public, 30 min, 4 servings, v3 Current. Edit recipe / Add to collection / Share / History. Ingredients and numbered Method below; inset servings +/- control. Recipe note "Save a little pasta water." Ingredients 400 g pasta, 600 g tomatoes, 3 cloves garlic, 2 tbsp olive oil, basil. Method cook pasta, simmer sauce, toss and serve.
+History: "Tomato pasta · History", three photo-thumbnail version rows: v3 Current / Published / Sep 12 / Added basil; v2 Selected / Published / Sep 10 / Reduced garlic; v1 / Published / Sep 8 / First published. Explicit Current and Selected labels, selected v2 pressed-in surface. View version, Compare v2 and v3, Restore v2; helper "Restoring creates a new version; existing history stays." Neutral cream separate owner-only Private draft panel, not a warning/error. Dates and text illustrative. All readable functional text horizontal, not shadowed or embossed. Title "R3B · Cushioned Cards". Specific variant: More pronounced rounded convex cream frames and tactile pill buttons, broad white upper-left highlights and warm lower-right shadows. Flat interiors for readable text. History plush thumbnail cards with selected card gently pressed in. Not glossy plastic.
+
+## R3C · Inset Photo Album
+
+[View paired example](recipe-album-r3c-v2.png)
+
+Hero photo seated in a shallow recessed cream well, raised title/actions strip below. Ingredients and method on elevated quiet panels. History entire list inset, individual version cards raised, selected v2 recessed with coral slim border.
+
+### Generation prompt
+
+Use case: ui-mockup. Create ONE landscape board with paired DESKTOP NOMS screens Recipe Detail LEFT and History RIGHT. Reference image is R3 Recipe Album, use its photo-led layout and thumbnail version-history structure as the baseline, not its blue accents or red draft warning. Explore a more visible NEUMORPHIC treatment while preserving usability. Warm buttery cream surfaces, dark olive high contrast text, sage and coral only, rounded Fredoka headings/Nunito body, soft upper-left highlights/lower-right shadows, visible fine borders, flat text surfaces. No blue, glass, heavy textures, decoration, ratings or new features. Keep identical N1/N4 cream floating rounded navigation with small tilted olive book/coral bookmark logo and coral Noms wordmark, Dashboard Collections Explore Search profile. Desktop only.
+Detail: generous tomato pasta photo hero, "Tomato pasta", Alex Chen, Public, 30 min, 4 servings, v3 Current. Edit recipe / Add to collection / Share / History. Ingredients and numbered Method below; inset servings +/- control. Recipe note "Save a little pasta water." Ingredients 400 g pasta, 600 g tomatoes, 3 cloves garlic, 2 tbsp olive oil, basil. Method cook pasta, simmer sauce, toss and serve.
+History: "Tomato pasta · History", three photo-thumbnail version rows: v3 Current / Published / Sep 12 / Added basil; v2 Selected / Published / Sep 10 / Reduced garlic; v1 / Published / Sep 8 / First published. Explicit Current and Selected labels, selected v2 pressed-in surface. View version, Compare v2 and v3, Restore v2; helper "Restoring creates a new version; existing history stays." Neutral cream separate owner-only Private draft panel, not a warning/error. Dates and text illustrative. All readable functional text horizontal, not shadowed or embossed. Title "R3C · Inset Photo Album". Specific variant: Hero photo seated in a shallow recessed cream well, raised title/actions strip below. Ingredients and method on elevated quiet panels. History entire list inset, individual version cards raised, selected v2 recessed with coral slim border.
+
+## R3D · Sage Edged Album
+
+[View paired example](recipe-album-r3d-v2.png)
+
+Cream photo-led layout with restrained sage-tinted panel edges and narrow sage section headers. Raised cream content cards, inset servings. History thumbnail cards with sage Current badge, coral Selected label and shallow pressed selection. No large dark color blocks.
+
+### Generation prompt
+
+Use case: ui-mockup. Create ONE landscape board with paired DESKTOP NOMS screens Recipe Detail LEFT and History RIGHT. Reference image is R3 Recipe Album, use its photo-led layout and thumbnail version-history structure as the baseline, not its blue accents or red draft warning. Explore a more visible NEUMORPHIC treatment while preserving usability. Warm buttery cream surfaces, dark olive high contrast text, sage and coral only, rounded Fredoka headings/Nunito body, soft upper-left highlights/lower-right shadows, visible fine borders, flat text surfaces. No blue, glass, heavy textures, decoration, ratings or new features. Keep identical N1/N4 cream floating rounded navigation with small tilted olive book/coral bookmark logo and coral Noms wordmark, Dashboard Collections Explore Search profile. Desktop only.
+Detail: generous tomato pasta photo hero, "Tomato pasta", Alex Chen, Public, 30 min, 4 servings, v3 Current. Edit recipe / Add to collection / Share / History. Ingredients and numbered Method below; inset servings +/- control. Recipe note "Save a little pasta water." Ingredients 400 g pasta, 600 g tomatoes, 3 cloves garlic, 2 tbsp olive oil, basil. Method cook pasta, simmer sauce, toss and serve.
+History: "Tomato pasta · History", three photo-thumbnail version rows: v3 Current / Published / Sep 12 / Added basil; v2 Selected / Published / Sep 10 / Reduced garlic; v1 / Published / Sep 8 / First published. Explicit Current and Selected labels, selected v2 pressed-in surface. View version, Compare v2 and v3, Restore v2; helper "Restoring creates a new version; existing history stays." Neutral cream separate owner-only Private draft panel, not a warning/error. Dates and text illustrative. All readable functional text horizontal, not shadowed or embossed. Title "R3D · Sage Edged Album". Specific variant: Cream photo-led layout with restrained sage-tinted panel edges and narrow sage section headers. Raised cream content cards, inset servings. History thumbnail cards with sage Current badge, coral Selected label and shallow pressed selection. No large dark color blocks.
+
+## R3E · Floating Album Panels
+
+[View paired example](recipe-album-r3e-v2.png)
+
+Airier R3 composition: photo hero and title as one floating cream panel, separate ingredients/method panels with larger gutters, compact raised action tray. History separated floating thumbnail rows, selected v2 inset; generous breathing room without oversized decoration.
+
+### Generation prompt
+
+Use case: ui-mockup. Create ONE landscape board with paired DESKTOP NOMS screens Recipe Detail LEFT and History RIGHT. Reference image is R3 Recipe Album, use its photo-led layout and thumbnail version-history structure as the baseline, not its blue accents or red draft warning. Explore a more visible NEUMORPHIC treatment while preserving usability. Warm buttery cream surfaces, dark olive high contrast text, sage and coral only, rounded Fredoka headings/Nunito body, soft upper-left highlights/lower-right shadows, visible fine borders, flat text surfaces. No blue, glass, heavy textures, decoration, ratings or new features. Keep identical N1/N4 cream floating rounded navigation with small tilted olive book/coral bookmark logo and coral Noms wordmark, Dashboard Collections Explore Search profile. Desktop only.
+Detail: generous tomato pasta photo hero, "Tomato pasta", Alex Chen, Public, 30 min, 4 servings, v3 Current. Edit recipe / Add to collection / Share / History. Ingredients and numbered Method below; inset servings +/- control. Recipe note "Save a little pasta water." Ingredients 400 g pasta, 600 g tomatoes, 3 cloves garlic, 2 tbsp olive oil, basil. Method cook pasta, simmer sauce, toss and serve.
+History: "Tomato pasta · History", three photo-thumbnail version rows: v3 Current / Published / Sep 12 / Added basil; v2 Selected / Published / Sep 10 / Reduced garlic; v1 / Published / Sep 8 / First published. Explicit Current and Selected labels, selected v2 pressed-in surface. View version, Compare v2 and v3, Restore v2; helper "Restoring creates a new version; existing history stays." Neutral cream separate owner-only Private draft panel, not a warning/error. Dates and text illustrative. All readable functional text horizontal, not shadowed or embossed. Title "R3E · Floating Album Panels". Specific variant: Airier R3 composition: photo hero and title as one floating cream panel, separate ingredients/method panels with larger gutters, compact raised action tray. History separated floating thumbnail rows, selected v2 inset; generous breathing room without oversized decoration.

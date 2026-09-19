@@ -1,6 +1,6 @@
 # NOMS-020: Application Visual Design Refinement — Implementation Plan
 
-**Status:** Visual direction selected — implementation scoping and validation required
+**Status:** Ready for staged implementation — desktop/light baseline selected; checkpoint-specific decisions remain
 **Created:** 2026-08-15
 **Depends on:** Current application routes, components, design tokens, and the visual direction established by NOMS-013
 **Coordination:** Feature tickets NOMS-016 through NOMS-019 should use shared primitives where stable; NOMS-020 must avoid redesigning feature behavior owned by those tickets.
@@ -8,48 +8,161 @@
 
 ---
 
+## Design reference organization
+
+Start with the [design catalog](../assets/NOMS-020/README.md): [finalized proposals](../assets/NOMS-020/finalized/README.md) are the selected implementation baselines; [intermediate ideas](../assets/NOMS-020/intermediate/README.md) are historical alternatives, superseded iterations and deferred studies. Most proposal files retain their paths; logo and audit assets are grouped under `logo/` and `old-designs/`, with references updated. Finalized means selected visual direction, not production-ready artwork or approval of every generated control.
+
+Precedence: explicit recorded user decisions and behavior/accessibility requirements → finalized reference notes → selected images → historical explorations. Never infer new functionality from incidental mockup content.
+
 ## Intended outcome
 
 The application presents one deliberate, accessible, responsive visual system across public pages, authenticated workflows, dense data views, forms, and transient states.
 
 ## Planned application mark
 
-The current planned NOMS mark is **A3 — Tilted Label Book**. It is a compact, gently clockwise-tilted closed book with an olive cover, segmented cream spine and page block, a coral elastic strap and bookmark, and a warm-white rounded label carrying `NOMS` in the application's Fredoka display face. The shallow dimensional treatment and restrained matte texture should be retained when the mark is later translated into production artwork.
+The current planned NOMS mark is **S1 — Rounded cream**, selected 2026-09-18 to replace F2. Preserve the gently clockwise-tilted closed olive book, continuous rounded cream spine with a subtle vertical hinge crease (no horizontal bands or segmentation), cream page block, coral elastic strap and bookmark, and warm-white rounded NOMS title label. Use smooth matte painted surfaces with restrained broad brush variation, sculpted bevels, crisp warm directional highlights and clearly separated shadow planes. Retain the cozy character without heavy impasto or glossy plastic shading.
 
-Reference artwork: [`docs/design/NOMS-020/assets/noms-logo-planned-a3.png`](../../docs/design/NOMS-020/assets/noms-logo-planned-a3.png)
+Reference artwork: [S1 — leftmost book in the comparison sheet](../assets/NOMS-020/logo/spine-options-s1-s3-v1.png); [selection and production notes](../assets/NOMS-020/logo/spine-options-s1-s3-v1.md). A3 and F2 remain historical only; S1 supersedes logo depictions in earlier page mockups.
 
 This is the approved visual direction for planning, not yet a production SVG/favicon. Production work must preserve legibility at favicon and app-icon sizes, provide light/dark and single-colour variants, and use the actual Fredoka font or converted outlines.
 
 ## Selected visual direction: Kitchen Console
+
+### Identity preservation — confirmed 2026-09-16
+
+This is a refinement, not a rebrand. The existing app is the source of truth for typography, colors and visual personality; generated proposals primarily guide layout, hierarchy and component composition. Preserve Fredoka display and Nunito body typography, the existing warm palette and familiar accent roles, rounded forms, and cozy raised/inset neumorphic treatment. Do not sample replacement fonts or colors from generated images.
+
+At kickoff, inventory actual current-main tokens and rendered styles before changing foundations. Reuse existing values by default and consolidate inconsistencies into semantic tokens rather than introducing a new palette or type system. Adjust sizes, spacing, contrast, borders or elevation only where needed for readability, accessibility or consistency, keeping the established character. Document such adjustments; material changes to typography, palette or overall feel require user review before adoption.
 
 Kitchen Console retains the warmth, tactility, and personality of the existing interface while making hierarchy and interaction state clearer. Neumorphism remains part of the product identity, but depth is functional rather than ornamental:
 
 - **Flat:** page canvases, long-form content, and low-priority supporting regions.
 - **Inset:** editors, graph canvases, input wells, and areas that receive content.
 - **Raised:** buttons, cards, tabs, selectors, and other directly interactive controls.
-- **Floating:** dialogs, inspectors, bottom sheets, transient trays, and focused overlays.
+- **Floating overlays:** M4 warm frosted glass for modal shells, menus/popovers, tooltips, toasts and other overlay surfaces where present. This treatment does not introduce new overlay features.
 
-Visible borders, color, labels, and focus treatments must communicate boundaries and state without relying on shadows alone. The working palette combines warm cream, deep charcoal-olive, sage/olive structure, and restrained tomato-coral emphasis. Food imagery and editorial typography provide the culinary character; generic dashboard styling, glassmorphism, and developer-tool motifs do not.
+Visible borders, color, labels, and focus treatments must communicate boundaries and state without relying on shadows alone. The working palette combines warm cream, deep charcoal-olive, sage/olive structure, and restrained tomato-coral emphasis. Food imagery and the existing typography provide the culinary character. Glassmorphism is selected specifically for overlays, not as a replacement for the page's neumorphic system; avoid generic dashboard and developer-tool styling.
+
+## Selected overlay direction — M4 Warm Frosted Glass
+
+User decision: [M4 modal example and notes](../assets/NOMS-020/modals-m4-warm-glass-v1.md) is the finalized modal direction, superseding M1–M3 and enhanced M2. Apply its warm frosted-glass surface language to overlay components: translucent ivory shells, backdrop blur, fine illuminated borders and soft floating shadows. Preserve actual app fonts, warm palette, coral actions and semantic danger styling. Keep fields and critical content sufficiently opaque for readability.
+
+Regular page cards, editor panels, inset wells and controls retain their selected neumorphic character. A visually “floating” navigation bar or detached editor sidebar is not automatically an overlay; retain N1/N4 and E3T1 unless explicitly revised.
+
+Modal artwork is selected; menus, popovers, tooltips and toasts inherit the material direction, not an unreviewed modal layout or behavior. Refine each component's sizing, placement and states within shared-foundation work. This supersedes opaque overlay-shell styling in older page/state images without changing their selected layout or interaction contracts.
+
+Validate contrast over varied underlying content and provide an opaque fallback where blur/transparency is unavailable or reduced transparency is requested. Preserve explicit focus, semantic roles, appropriate dismissal and status behavior; modal focus containment/background inertness must not be applied indiscriminately to nonmodal overlays. Dark-mode design remains deferred; mobile/tablet discovery follows the per-page workflow below.
 
 These concept boards are directional references, not pixel-perfect specifications. Generated copy, data, and incidental spacing may be approximate. Implementation decisions must follow the documented visual principles, established product behavior, accessibility requirements, and shared component contracts.
 
-## Responsive composition model
+### Selected tooltips and toasts — T2 Soft Capsule
 
-Phone, portrait tablet, and desktop are separate compositions within one system rather than scaled copies of one another. Initial visual-review targets are 390 × 844, 834 × 1194, and 1440 × 900; implementation breakpoints should be selected from content pressure and existing application conventions.
+Use [T2 Soft Capsule](../assets/NOMS-020/overlays-t2-soft-capsule-v1.png) for tooltips and toasts within M4's glass material language ([notes](../assets/NOMS-020/tooltip-toast-directions-v1.md)). Retain soft rounded shapes, compact tooltip text, small toast status-icon wells, dismiss controls and supported retry actions. Use actual Nunito and current palette tokens. T1/T3 remain alternatives, not implementation targets. Allow readable text wrapping; do not infer oversized components from the study crops. Define timing, placement, stacking and focus/live-region behavior in shared-foundation work. No page-wide dimming, blur or focus trapping for these nonmodal overlays.
 
-| Concern | Phone | Portrait tablet | Desktop |
-| --- | --- | --- | --- |
-| Primary navigation | Compact mobile navigation | Narrow collapsible icon rail | Persistent labeled sidebar |
-| Dense graph direction | Top-to-bottom guided path | Top-to-bottom spatial graph | Left-to-right spatial graph |
-| Version details | Bottom sheet or dedicated view | Resizable bottom sheet | Docked or floating side inspector |
-| Comparison controls | Sticky bottom action | Floating compare tray | Persistent compare tray |
-| Touch and density | Single focused task | Touch-first workspace | Pointer-efficient workspace |
+### Selected menus and collection picker — overlay P1–P3
 
-For version history specifically, NOMS-010 owns branching and comparison behavior. NOMS-020 owns the visual hierarchy, responsive composition, surface treatment, and accessibility of those experiences.
+User selection recorded 2026-09-17: [P1 Account menu, P2 Action menus and P3 Collection picker](../assets/NOMS-020/menu-popover-examples-v1.md) are the finalized composition references within M4's warm glass language. Retain identity/navigation/sign-out grouping, clear focused/disabled/destructive action states, exact graph menu actions, and the picker's searchable nested independent selections with explicit additive confirmation. Preserve current route permissions and destructive safeguards. Membership display, eligible collections, search semantics, partial failure, pending/cancel behavior and keyboard/edge positioning remain checkpoint-specific contracts; visual approval does not authorize unrelated feature expansion. Overlay P labels are distinct from profile/settings P1/P8.
+
+## Selected shared navigation direction — N1 + N4
+
+Decision recorded 2026-09-12: combine **N1 — Cozy Counter's familiar horizontal layout** with **N4 — Floating Pantry's floating, rounded silhouette**. This is the selected navigation-bar direction for further refinement, not a finished component specification.
+
+References: [N1](../assets/NOMS-020/navigation-n01-v1.png), [N4](../assets/NOMS-020/navigation-n04-v1.png), and [all ten explorations and prompts](../assets/NOMS-020/navigation-directions-v1.md).
+
+- Use a warm cream bar slightly inset from the viewport edges, with rounded corners and gentle neumorphic depth.
+- Use the S1 book logo direction and coral Noms wordmark, with Fredoka display and Nunito navigation-label typography.
+- Keep destinations compact and clearly labelled, with a sage selected state and explicit focus treatment; do not rely on shadows alone.
+- Include inset search access and a softly raised coral New recipe action in the appropriate authenticated context.
+- Keep surrounding content calm: N4's decorative kitchen props, heavy framing and incidental slogans are not part of the navigation direction.
+- Generated labels such as Meal plan are not approved feature additions. Resolve exact destinations against existing routes and authentication state.
+
+Before shared-shell migration, resolve desktop signed-out/signed-in variants, overflow, account/menu access, keyboard focus and touch targets. Dark-mode design remains deferred; discover phone/tablet adaptations with each page. Compact menus/drawers and any workspace-specific secondary navigation remain open decisions. The earlier persistent-sidebar/icon-rail model below is superseded for shared primary navigation; it is not a requirement to implement N2 or N7.
+
+## Preferred Settings and Profile directions — P1 and P8
+
+Decision recorded 2026-09-13: **P1 — Kitchen Passport** and **P8 — Cozy Accordion** are the preferred desktop Settings and public-profile references. Both remain preferred; the exact combination and disclosure behavior are still to be refined.
+
+References: [P1 Settings/Profile](../assets/NOMS-020/settings-profile-p01-v1.png), [P8 Settings/Profile](../assets/NOMS-020/settings-profile-p08-v1.png), and [exploration notes and prompts](../assets/NOMS-020/settings-profile-directions-v1.md).
+
+- Retain P1's clear identity panel, labelled profile form, separate linked-account card, and public collections/recipes hierarchy.
+- Explore P8's rounded disclosure sections for grouping profile settings, linked accounts and account deletion. Expanded/collapsed defaults, and whether public collection/recipe sections should collapse, remain open decisions rather than approved behavior.
+- Preserve warm cream, sage/olive and coral, Fredoka/Nunito, gentle neumorphic controls, selected N1/N4 navigation and C3 Kitchen Albums collection imagery.
+- Keep account details/actions private; public profiles show only public identity and content. Preserve existing avatar editing, validation, provider linking/unlinking safeguards and account-deletion confirmation behavior regardless of omissions in generated boards.
+- Generated text, counts, identities, provider graphics and A3 approximations are illustrative, not production specifications.
+
+Resolve desktop interaction/disclosure states within the profile/settings checkpoint. Dark-mode design remains deferred; discover phone/tablet adaptations within this page's workflow. Other P-series boards are exploration history, not preferred directions.
+
+## Preferred Recipe Editor direction — E3T1 raised section panels
+
+Decision recorded 2026-09-13: use **E3T1 — Raised Section Panels (v5)** as the preferred desktop editor direction. It combines E3's continuous top-down form, E3T1's detached neumorphic timeline sidebar, the restored top photo section, and individually raised section cards.
+
+References: [preferred full-page example](../assets/NOMS-020/recipe-editor-e3t1-panels-v5.png) and [prompt and review notes](../assets/NOMS-020/recipe-editor-e3t1-panels-v5.md). Earlier E3/E3T studies remain exploration history; v5 is the current composition reference.
+
+- Give Basics, Photos, Ingredients, Method, Equipment and Notes their own softly raised cream panels, with consistent rounded corners, subtle borders and clear gaps on the flat warm page background. Do not retain a large raised wrapper behind all panels.
+- Place Basics and Photos side by side at the top; stack the remaining panels below. Keep the photo preview and change/remove controls. Recipe visibility belongs with Basics, not photo privacy.
+- Retain a separate raised local contents sidebar with a thin connected timeline, sage inset active row and restrained coral active marker. Order links to match the document: Basics, Photos, Ingredients, Method, Equipment, Notes.
+- Sidebar links jump within one continuous form, not a mandatory wizard. Keep active-section indication independent of content/completion status. Define status semantics against actual validation; optional sections must not introduce publishing gates.
+- Use inset fields inside raised panels, roomy growing method textareas, actual Fredoka/Nunito fonts, the approved S1 logo direction and selected N1/N4 shared navigation. Preserve readable borders and keyboard focus without depending on shadows alone.
+- Preserve ingredient and nested-step editing, equipment, photo upload/edit/reorder, visibility, validation, save failures, publishing and discard safeguards. Generated controls, counts and save-status copy are illustrative, not behavior specifications.
+
+Resolve desktop sidebar scrolling/focus, nested steps and save/error feedback within the editing checkpoint. Dark-mode design remains deferred; discover phone/tablet adaptations within this page's workflow. This records planning only; application implementation has not started as part of this decision.
+
+## Preferred Image Editor direction — I1B Coral Control Deck
+
+Decision recorded 2026-09-14: **I1B — Coral Control Deck (v3)** is the preferred desktop image-editor direction. This selects the latest coral-slider refinement, not the earlier green-slider I1B board.
+
+References: [preferred example](../assets/NOMS-020/image-editor-i1b-coral-v3.png) and [prompt and review notes](../assets/NOMS-020/image-editor-i1b-coral-v3.md). Earlier I-series examples remain exploration history.
+
+- Keep a wide, neutral-color photo preview above three side-by-side, individually raised panels: Frame, Transform and Color. All controls remain exposed; do not use tabs, accordions or overflow menus to hide groups.
+- Use primary tomato-coral slider fills, neutral unfilled tracks, raised ivory thumbs and inset numeric fields. Retain warm cream panels, subtle pale-coral headers, dark olive labels and gentle neumorphic depth. Reserve the large solid coral button for Apply changes.
+- Preserve crop size and X/Y position; rotation, independent width/height scaling and both flips; saturation and red/green/blue channel contrast. Keep numeric entry alongside sliders, plus undo, redo, reset, close and cancel. Apply changes is clearer wording for the existing OK action, not a recipe publish action.
+- Keep the photo visually neutral and enforce actual crop-mode geometry; generated crop outlines, offsets and slider fills are illustrative. Use actual Fredoka/Nunito typography and shared design tokens.
+- Maintain visible boundaries, keyboard focus and accessible contrast; coral is an interaction accent, not an error signal. Keep modal focus contained, background inert and footer actions reachable.
+
+Resolve short-desktop viewport sizing, control hit targets, focus/disabled states, crop manipulation and cancel/reset behavior within the editing checkpoint without hiding control groups. Preserve context-specific capabilities, including avatar cropping. Dark-mode design remains deferred; discover phone/tablet composition within this page's workflow. This decision records visual planning only, not application implementation.
+
+## Additional preferred page directions — reconciled 2026-09-15
+
+These selections were established during exploration and are now reflected in the canonical coverage table. Preferred composition does not mean all states or implementation details are resolved.
+
+| Area | Preferred reference | Retained direction |
+| --- | --- | --- |
+| Search | [S2 scopes](../assets/NOMS-020/search-s2-scopes-v1.png), [states](../assets/NOMS-020/search-s2-states-v1.png), [notes](../assets/NOMS-020/search-s2-scopes-and-states-v1.md) | Recipe Finder: inset search, clear result scopes, chips and expandable filters; reconcile labels and behavior with current search contracts |
+| Home, About, How-to | [Home](../assets/NOMS-020/public-home-cozy-v2.png), [About](../assets/NOMS-020/public-about-cozy-v2.png), [How-to](../assets/NOMS-020/public-how-to-cozy-v2.png), [notes](../assets/NOMS-020/public-cozy-v2-prompts.md) | Accepted cozy v2 references: rounded typography, restrained kitchen illustrations, warm raised surfaces; generated slogans/copy are not requirements |
+| Collections | [C3 Kitchen Albums](../assets/NOMS-020/collections-c3-v1.png), [notes](../assets/NOMS-020/collections-directions-v1.md) | Photo-collage album cards, cream surfaces and coral bookmark accents; preserve nested collection structure |
+| Recipe detail and history | [R3A Soft Album](../assets/NOMS-020/recipe-album-r3a-v2.png), [notes](../assets/NOMS-020/recipe-album-neumorphic-v2.md) | Photo-led detail, soft raised panels, thumbnail history and sage selected-version treatment; neutral draft labels rather than error-red headings |
+
+Dashboard now has a preferred [Central Workspace design](../assets/NOMS-020/dashboard-central-workspace-v1.md) and [reference image](../assets/NOMS-020/dashboard-central-workspace-v1.png), superseding the earlier D-series compositions. Retain a persistent raised sidebar, nested collection navigation, private draft continuation, and a central library with search, status/visibility filters, sorting, grid/list views and bulk collection organization. These management capabilities are planned functional expansion, not merely visual changes or already implemented behavior. Keep the UI clean: no inspirational quotes, slogans, decorative people or unrelated props. Overview, selection behavior, draft collection membership, exact filter options, pagination and interaction states remain unresolved; bulk destructive/publication actions are not approved.
+
+Explore's preferred direction is **X7C — Framed Recipe Cards** ([image](../assets/NOMS-020/explore-x7c-vertical-v5.png), [notes](../assets/NOMS-020/explore-vertical-cards-v5.md)). Use vertical raised cream cards with inset 16:9 landscape photos, recipe title, brief description, and avatar/display-name/handle attribution. Let the grid fit as many readable columns as available container width allows; the four-column image is not a fixed limit. Keep search/tag controls simple, retain Load more, and omit inspirational quotes and decorative filler. Exact card minimum width, truncation, fallback imagery, interaction states and dark parity remain to be defined.
+
+Sign-in's preferred direction is **L6B — Sign-in and guest access** ([image](../assets/NOMS-020/signin-l6b-guest-access-v4.png), [notes](../assets/NOMS-020/signin-l6b-guest-access-v4.md)). Retain the raised controls panel with equal Google/GitHub choices, a clear Explore without an account link, and two concise sections explaining guest browsing and additional account features. Keep public/shared-content claims subject to visibility, preserve return destinations, and avoid inspirational quotes or decorative clutter. Pending/cancelled/error states, short-viewport layout, dark parity and exact production assets remain unresolved.
+
+Version graph's preferred direction is **G4A — Balanced Cards** ([image](../assets/NOMS-020/version-graph-g4a-v4.png), [notes](../assets/NOMS-020/version-graph-g4-variations-v4.md)). Retain the inset soft canvas, moderately sized raised snapshot cards with compact thumbnails and readable metadata, raised navigation toolbar, and separate Before → After comparison panel. Preserve exact version/fork connections, independent Current/relationship/comparison labels, lineage counts/filtering, snapshot menus, pan/zoom/Fit/Current, and accessible outline. The selected [integrated light page](../assets/NOMS-020/g4a-integrated-page-light-v1.md), [selection/comparison states](../assets/NOMS-020/g4a-selection-comparison-states-v1.md) and [density/expansion states](../assets/NOMS-020/g4a-dense-expansion-states-v1.md) complete the current visual baseline. Exact keyboard, async, viewport and accessibility contracts still require implementation validation; generated colors and assets are not final tokens.
+
+The [browser audit](../assets/NOMS-020/page-audit-and-revised-proposals-v2.md) records representative live states, remaining verification gaps, the existing Explore tag-filter wiring issue, and required graph/collection/pagination semantics. Visual selections do not resolve functional issues. Use the audit to qualify the [earlier exploration briefs](../assets/NOMS-020/dashboard-explore-signin-graph-briefs-v1.md).
+
+## Active scope and deferred work
+
+Implement the selected **desktop, light-mode** direction incrementally. User decision 2026-09-17: discover mobile and tablet adaptations page by page, during or after that page's desktop work. This supersedes earlier blanket mobile/tablet deferrals in historical design notes. Dark-mode redesign remains deferred.
+
+Preserve existing dark-mode and narrow-screen usability throughout desktop work: retain reachable controls and readable content and avoid light-only global overrides. Mobile/tablet discovery and implementation are part of each page's scope; a separate app-wide responsive mockup phase is not required. Material departures from selected design or behavior still require review. Dark-mode redesign requires explicit resumption.
+
+Use 1440 × 900 and a short desktop viewport such as 1280 × 720 for desktop review, 390 × 844 for phone and 834 × 1194 for portrait tablet, plus intermediate widths and orientation changes where relevant. Choose breakpoints from content pressure, not device labels.
+
+### Per-page desktop and responsive workflow
+
+1. Inspect current behavior and implement the selected desktop composition using shared components.
+2. During desktop work or immediately afterward, inspect the same page on phone and tablet. Identify content priority, wrapping, navigation overflow, sidebars, touch controls, overlays, scrolling and virtual-keyboard constraints.
+3. Propose only adaptations that need design judgment; use browser examples or targeted mockups where useful. Do not simply scale the desktop screenshot down or automatically adopt historical tablet ideas.
+4. Implement and test the agreed adaptations with the page's representative populated, empty, loading, error and focus states. Feed reusable patterns back into shared components and recheck affected pages.
+5. Review desktop, phone and tablet evidence together. Desktop completion may be an intermediate checkpoint, but track responsive discovery, implementation and validation separately; do not mark the whole page complete while those remain outstanding.
+
+G4A's desktop model is a pan/zoom canvas followed by comparison controls and inline results. Older side-inspector, history-lane, bottom-sheet and floating-tray studies are historical ideas, not requirements. NOMS-010 continues to own branching/comparison behavior; NOMS-020 owns visual integration and accessibility.
 
 ## Visual reference boards
 
-The following curated boards are checked into the repository so design decisions remain reviewable and do not depend on temporary generated-image locations.
+The following legacy boards are retained in the repository as exploration history. Where they differ from the preferred references above, the newer recorded decisions take precedence; none of these older boards supersedes a later selection.
 
 ### Core direction
 
@@ -73,7 +186,7 @@ The following curated boards are checked into the repository so design decisions
 | --- | --- |
 | [![History-lane graph](../assets/NOMS-020/version-graph-history-lanes.webp)](../assets/NOMS-020/version-graph-history-lanes.webp) | [![Guided version graph](../assets/NOMS-020/version-graph-guided.webp)](../assets/NOMS-020/version-graph-guided.webp) |
 
-The three graph treatments are complementary rather than final feature commitments. Spatial Canvas preserves an at-a-glance map, Guided Graph prioritizes comprehension, and History Lanes improves scanning when several contributors or forks are present. Product selection and interaction behavior should be coordinated with NOMS-010 before implementation.
+These earlier graph alternatives are superseded by G4A. They are not parallel implementation targets.
 
 ### Portrait-tablet adaptations
 
@@ -81,81 +194,162 @@ The three graph treatments are complementary rather than final feature commitmen
 | --- | --- | --- |
 | [![Portrait-tablet spatial canvas](../assets/NOMS-020/tablet-spatial-canvas.webp)](../assets/NOMS-020/tablet-spatial-canvas.webp) | [![Portrait-tablet guided history](../assets/NOMS-020/tablet-guided-history.webp)](../assets/NOMS-020/tablet-guided-history.webp) | [![Portrait-tablet history lanes](../assets/NOMS-020/tablet-history-lanes.webp)](../assets/NOMS-020/tablet-history-lanes.webp) |
 
-The tablet boards establish portrait tablet as a touch-first workspace: nodes retain usable size, the primary lineage turns vertical, the desktop inspector becomes a bottom sheet, and comparison controls remain available without covering the graph.
+These tablet boards are deferred explorations only. Their inspector, bottom-sheet and comparison-tray patterns are not selected implementation requirements.
 
 ## Consolidated planning home and provenance
 
 As of 2026-09-12, this document on `codex/NOMS-020-visual-design-refinement` is the canonical visual-overhaul plan. Continue design planning in `.worktrees/NOMS-020-visual-design-refinement`.
 
-- Current application baseline: `main` at `ce080b4`.
+- Historical 2026-09-12 application baseline: `main` at `ce080b4`; this is not a claim about current HEAD.
 - Kitchen Console principles, responsive guidance, and 21 reference/proposal boards: merged from `codex/noms-020-visual-examples` (`396d24b`).
-- Selected A3 logo and original application screenshots: inherited from `main` (visual documentation commit `257402f`).
-- [Original visual-audit screenshots](../../artifacts/noms-visual-audit/) are historical baselines, not screenshots of current main.
-- [Earlier logo proposals](../assets/NOMS-020/) are retained for history; A3 supersedes them as the planned application mark.
+- Historical A3 logo and original application screenshots: inherited from `main` (visual documentation commit `257402f`).
+- [Refreshed desktop audit (2026-09-17)](../assets/NOMS-020/old-designs/audit-2026-09-17/README.md) records the running checkout and fixture caveats; use it as the desktop baseline, not as a claim about later main revisions.
+- [Earlier logo proposals](../assets/NOMS-020/logo/) are retained for history; S1 now supersedes A3 and F2 as the planned application mark.
 - [NOMS-013 content inventory](../../docs/design/NOMS-013/content-inventory.md) and [page copy](../../docs/design/NOMS-013/page-copy.md) remain supporting references. Their search-related claims need reconciliation with the current Search page.
 
 The source branch is retained as history. Its missing temporary worktree is not an active planning location. Feature-specific behavior remains owned by the corresponding feature ticket; this plan owns its visual integration.
 
 ## Remaining page and state planning
 
-The 2026-09-12 review combined live desktop inspection of current main with route/component source review. Populated version history, all dialogs, dark mode, and responsive states still require dedicated browser review. Existing boards establish direction, not complete interaction specifications.
+Historical audits include representative populated graph and comparison flows as recorded in the browser-audit notes, but not every dialog, dense graph, error or responsive state. Re-audit current main at implementation kickoff; historical screenshots are not current regression baselines. Resolve the following details within the relevant checkpoint, not through another broad design exploration. Dark-mode items in this inventory are deferred.
 
 | Area | Existing direction | Remaining planning |
 | --- | --- | --- |
-| Shared shell | Kitchen Console navigation and responsive model | Public versus authenticated navigation, search access, sidebar hierarchy, footer density, A3 logo placement, focus and active states |
-| Search | No dedicated board | All/Recipes/Collections/Cooks results, suggestions, filters, advanced fields, facets, sorting, pagination, empty/error states, compact phone/tablet controls |
-| Home, About, How-to, sign-in | Public/sign-in board | Expanded marketing content, illustrations, reading widths, anchor navigation, callouts, troubleshooting disclosures, authentication feedback; reconcile guide copy with Search |
-| Dashboard and Explore | Core light/dark boards | Published versus draft cards, populated/empty/loading/error views, discovery controls, pagination and card metadata |
-| Recipe editor and drafts | Core direction | Ingredient and nested-step editing, equipment, image upload/edit/reorder, validation, autosave/save failure, publishing, visibility, discard confirmation and action placement |
-| Recipe detail and snapshots | Core and comparison boards | Scaling controls, historical-version context, comparisons, restore confirmation, fork attribution, sharing and collection membership |
-| Version graph | Spatial, guided, lane and tablet boards | Select treatment with existing product behavior, inspect populated graphs, selection/compare/inspector states, keyboard and touch navigation |
-| Collections | Collections board | Nested paths, breadcrumbs, covers, create/edit forms, recipe/child reordering, membership picker, sharing and deletion-impact preview |
-| Public profile and settings | Profile/empty-state board | Public recipe/collection sections, avatar editing, validation, save feedback, linked accounts, linking failures, unlink and account-deletion dialogs |
+| Shared shell | Selected N1 + N4 navigation-bar direction | Public versus authenticated variants, exact destinations, search/account access, responsive overflow, secondary navigation if needed, footer density, S1 sizing, focus and active states |
+| Search | Preferred S2 Recipe Finder; scopes and state boards exist | Validate scopes, suggestions, filters/facets, sorting and pagination against current behavior; refine empty/error states and dark parity; phone/tablet discovery per page |
+| Home, About, How-to | Accepted cozy v2 boards | Reconcile actual copy, illustration restraint, reading widths, anchor navigation and guide claims with Search; deferred dark parity and per-page responsive discovery |
+| Sign-in | Preferred L6B: raised provider controls, guest-access link and guest/account feature sections | Preserve Google/GitHub flow and return destination; refine visibility-qualified copy, pending/cancelled/error feedback, short-viewport sizing, dark parity and signed-out shell |
+| Dashboard | Preferred Central Workspace v1: persistent sidebar and central content management | Scope library search/filters/sort, list/grid and bulk collection organization; define Overview, selection, multiple memberships, draft eligibility, pagination, empty/loading/error states and dark parity |
+| Explore | Preferred X7C Framed Recipe Cards: vertical neumo cards, inset 16:9 images, author details, adaptive columns | Define readable minimum width, long text and image/avatar fallbacks, focus/link semantics, tag behavior, loading/no-results/error states and dark parity; track existing tag-filter wiring separately |
+| Recipe editor and drafts | Preferred E3T1 raised section panels (v5), restored photo and detached timeline sidebar | Desktop/dark interaction states, tracker semantics and focus, ingredient and nested-step editing, equipment, image upload/edit/reorder, validation, autosave/save failure, publishing, visibility and discard confirmation; phone/tablet discovery per page |
+| Image editor | Preferred I1B Coral Control Deck (v3): wide preview above three raised panels, all controls exposed, coral sliders | Short-desktop sizing, dark mode, numeric entry, crop geometry, keyboard/focus and disabled states, undo/redo/reset/cancel/apply, context-specific avatar cropping; phone/tablet discovery per page |
+| Recipe detail and snapshots | Preferred R3A Soft Album, plus earlier comparison studies | Scaling controls, historical-version context, comparisons, restore confirmation, fork attribution, sharing and collection membership |
+| Version graph | Preferred G4A Balanced Cards on an inset soft canvas, raised toolbar and separate comparison panel | Selected integrated page and state studies cover visual direction; validate lineage, routing, viewport stability, same-snapshot feedback, stale async results, focus and accessible outline; dark redesign deferred; phone/tablet discovery per page |
+| Collections | Preferred C3 Kitchen Albums | Nested paths, breadcrumbs, covers, create/edit forms, recipe/child reordering, membership picker, sharing and deletion-impact preview |
+| Public profile and settings | Preferred P1 Kitchen Passport and P8 Cozy Accordion | Resolve combination/disclosure behavior; desktop public recipe/collection sections, avatar editing, validation, save feedback, linked accounts, linking failures, unlink and account-deletion dialogs; phone/tablet discovery per page |
 | Shared feedback | Empty-state examples | Loading, retry, permission/sign-in required, missing content/404, success notices, disabled/pending controls and image failures |
 | Upcoming feature integration | NOMS-016 through NOMS-019 coordination | Import/export, taxonomy, pantry/planning and visual recipe flow must receive visual specifications when their behavior is sufficiently defined; do not treat them as implemented main routes |
 
-For each area, specify light/dark mode, phone (390 × 844), portrait tablet (834 × 1194), desktop (1440 × 900), keyboard focus, touch targets and reduced motion. Retain Fredoka display and Nunito body typography, with exact sizes, contrast, colors, spacing and elevation tokens still to be defined and validated.
+For each migrated area, cover desktop light-mode happy/loading/empty/error/disabled/focus states as applicable, keyboard access and reduced motion. Retain Fredoka display and Nunito body. Establish exact typography, contrast, colors, spacing and elevation in checkpoint 1; keep dark-mode regression protection and apply the per-page mobile/tablet discovery and acceptance workflow above.
 
-## Next planning sequence
+## Page illustration and icon design tracker
 
-1. Define shared tokens and navigation; produce Search layouts and interaction states.
-2. Adapt Home, About, How-to and sign-in to the selected system.
-3. Complete editor, collection and settings states against current behavior.
-4. Resolve graph presentation and validate populated detail/history/comparison flows.
-5. Produce production A3 artwork using the actual Fredoka face, including favicon, small-size, monochrome and light/dark variants.
-6. Turn the coverage table into implementation checkpoints with screenshot baselines and accessibility acceptance criteria.
+Added 2026-09-18. Explore this family one page at a time, starting with Dashboard, then Explore, Collections and Recipe editor. This is design planning, not authorization to change the app. The ideas below are starting points, not approved assets or placements; existing page-layout selections remain unchanged.
 
-Consolidation does not mark the visual audit or implementation readiness complete. No application behavior changes are part of this planning merge.
+### Existing identity decisions
 
-## Proposed planning scope
+- [x] Select the canonical app logo: [S1 — Rounded cream](../assets/NOMS-020/logo/spine-options-s1-s3-v1.md), replacing F2; continuous cream spine, olive cover, coral strap/bookmark, tilted painted form.
+- [x] Generate [initial mascot concepts](../assets/NOMS-020/mascots/README.md); exploration only.
+- [ ] Select a mascot and approve specific uses, if pursued; no mascot is currently approved.
+- [ ] Prepare standalone production S1 artwork, verified Fredoka lettering, SVG/favicon variants and the separately discussed 3D model.
 
-- Audit typography, spacing, color, elevation, density, iconography, and responsive layout.
-- Inventory duplicated or inconsistent components and interaction states.
-- Refine design tokens and reusable primitives before migrating product screens.
-- Cover navigation, cards, forms, dialogs, tables, diagrams, empty states, loading states, errors, and feedback.
-- Define light and dark mode parity, focus visibility, motion, touch targets, and reduced-motion behavior.
-- Validate representative phone, tablet, desktop, ultrawide, keyboard, and assistive-technology experiences.
-- Separate cohesive system improvements from unrelated product behavior changes.
+### Page-by-page exploration queue
 
-## Questions to resolve
+Dashboard icon **P1 — Classic pinboard**, Explore icon **EC1 — Pocket compass**, Search icon **EX3 — Lifted pages**, Collections icon **CT4 — Lived-in shelves**, Recipe editor icon **ED3 — Editing clipboard**, History icon **HI5 — Timeline ledger + clock**, Profile icon **PB2 — Rounded rim**, and Settings icon **ST4B — Compact control panel** are selected (2026-09-18). EX3 was reassigned from Explore to Search; its original asset filenames and sheet title remain historical provenance. Dashboard represents an active workspace; Explore uses a pocket compass; Search uses an open book and magnifying glass; Collections uses a three-level bookcase; Recipe editor uses a clipboard and coral pencil; History combines revision entries with a clock; Profile uses a landscape identity card with a continuous coral inner rim. Settings uses a compact panel with three horizontal sliders, one rotary knob and three buttons. All eight queued page-icon directions are now selected; production preparation, placement review and integration remain pending for all. Any additional page-specific directions remain unapproved. The suggested order is an exploration order, not a change to implementation checkpoints.
 
-- Which parts of the existing Noms visual identity are retained, evolved, or removed?
-- What density and elevation rules replace one-off styling decisions?
-- Which shared components must be consolidated before route migration?
-- How will visual regressions be reviewed and approved consistently?
-- Does the work ship incrementally by component family or behind a coordinated release gate?
+| Order | Area | Starting concept (unapproved) | Examples generated | Direction approved | Production assets ready | Integrated and verified |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Dashboard | Active workspace / P1 Classic pinboard, not storage | [P1–P6 pinboards](../assets/NOMS-020/page-icons/dashboard-pinboards-p1-p6-v3.md); [D3A–D3F](../assets/NOMS-020/page-icons/dashboard-d3-workspaces-v2.md); [initial D1–D5](../assets/NOMS-020/page-icons/dashboard-d1-d5-v1.md) | P1 Classic selected 2026-09-18 (top-left in sheet) | Pending | Pending |
+| 2 | Explore | EC1 Pocket compass / discovery; former EX3 moved to Search | [EC1–EC6 generated 2026-09-18](../assets/NOMS-020/page-icons/explore-compasses-ec1-ec6-v1.md) | EC1 selected 2026-09-18 (top-left in sheet) | Pending | Pending |
+| 3 | Collections | CT4 Lived-in shelves: three-level bookcase with mixed book arrangements | [CT1–CT4 three-level cases](../assets/NOMS-020/page-icons/collections-three-level-ct1-ct4-v3.md); [CL1A–CL1F history](../assets/NOMS-020/page-icons/collections-cl1-refinements-v2.md); [initial CL1–CL6](../assets/NOMS-020/page-icons/collections-bookshelves-cl1-cl6-v1.md) | CT4 selected 2026-09-18 (bottom-right in sheet); supersedes CL1 preference | Pending | Pending |
+| 4 | Recipe editor | ED3 Editing clipboard with coral clip and pencil | [ED1–ED4 generated 2026-09-18](../assets/NOMS-020/page-icons/editor-ed1-ed4-v1.md) | ED3 selected 2026-09-18 (bottom-left in sheet) | Pending | Pending |
+| 5 | Search | EX3 Lifted pages: magnifying glass over an open book | [EX1–EX4 sheet, originally titled Explore](../assets/NOMS-020/page-icons/explore-open-book-ex1-ex4-v1.md) | EX3 reassigned to Search 2026-09-18 (bottom-left in sheet) | Pending | Pending |
+| 6 | History / versions | HI5 Timeline ledger + clock; no separate branching graph icon selected | [HI5 generated 2026-09-18](../assets/NOMS-020/page-icons/history-hi5-ledger-clock-v1.md) | HI5 selected 2026-09-18 | Pending | Pending |
+| 7 | Profile | PB2 Rounded rim: landscape identity card with continuous coral inner border | [PB1–PB3 inner borders](../assets/NOMS-020/page-icons/profile-coral-inner-border-v3.md); [PA1–PA6 history](../assets/NOMS-020/page-icons/profile-pr2a-refinements-v2.md); [initial identity/portrait studies](../assets/NOMS-020/page-icons/profile-identity-portrait-v1.md) | PB2 selected 2026-09-18 (center in sheet); refines PR2A preference | Pending | Pending |
+| 8 | Settings | ST4B compact panel combines three horizontal sliders, a rotary knob and three buttons | [ST4B compact panel](../assets/NOMS-020/page-icons/settings-st4b-compact-v3.md); [ST4 history](../assets/NOMS-020/page-icons/settings-st4-combined-v2.md); [ST2A–ST2C panels and ST3A–ST3C dials](../assets/NOMS-020/page-icons/settings-controls-dials-v1.md) | ST4B selected 2026-09-18; supersedes wider ST4 | Pending | Pending |
 
-## Required implementation-plan deliverables
+### TODOs for each area
 
-- Route, component, state, icon, and accessibility audit.
-- Approved visual principles, tokens, component contracts, and migration boundaries.
-- Representative high-fidelity designs for core workflows and responsive states.
-- Reviewable implementation checkpoints with screenshot baselines.
-- Automated accessibility checks and a comprehensive manual visual QA matrix.
+- [ ] Agree the metaphor and intended placement before generating alternatives; a separate illustration is optional, not required for every route.
+- [ ] Generate and save labeled alternatives in the design assets; link the exploration from this tracker.
+- [ ] Record the user's selected direction and date, preserving rejected/superseded concepts as intermediate ideas.
+- [ ] Decide whether a detailed header/empty-state illustration, a simplified navigation icon, or both are appropriate. These are supporting page identities, not competing app logos.
+- [ ] Prepare approved assets and verify legibility at actual display sizes. Explore S1's olive/cream/coral palette, rounded shapes, gentle tilt, restrained painted surfaces and directional lighting without changing existing accent semantics.
+- [ ] Review the asset in its actual page composition before integration: avoid clutter, random decorative props or inspirational quotes; retain clear conventional icons for small controls.
+- [ ] Integrate only within the corresponding implementation slice; verify accessible names or decorative treatment, contrast where meaningful, loading behavior and responsive sizing. Mobile/tablet discovery remains per page; dark redesign remains deferred.
 
-## Definition of ready
+Update the table with linked evidence as each stage is completed; generated does not mean approved, and approved does not mean production-ready or implemented. Evaluate any additional routes (Home/About/How-to, sign-in, recipe detail and image editor) during their page work rather than assuming each needs a new emblem. This optional art exploration does not block shared foundations or approved page-layout implementation.
 
-- [ ] The visual audit and retained identity are approved.
-- [ ] Token and component changes are explicitly scoped.
-- [ ] Representative responsive designs and states are documented.
-- [ ] Checkpoints, screenshot evidence, and release gates are defined.
+## Implementation checkpoints
+
+Proceed in reviewable slices; do not wait for every route's specification before starting foundations. Each checkpoint records decisions, tests and screenshots before progressing. This documentation cleanup does not itself start implementation, authorize deployment or commit existing work.
+
+| Checkpoint | Scope and decisions | Exit evidence |
+| --- | --- | --- |
+| 0 — Baseline and boundaries | Inspect current main and project guidance; inventory affected routes/primitives; reconcile intervening changes; capture current desktop screenshots and behavior; record existing defects separately | Baseline revision, route/state checklist, commands and fixtures documented; no unrelated changes absorbed |
+| 1 — Shared foundations | Inventory and reuse current typography, palette and accent roles; consolidate existing values into semantic tokens and reusable components. Preserve Fredoka/Nunito, rounded forms and neumorphic character; refine spacing, elevation, borders, focus and motion only as needed | Before/after identity review; justified token changes documented; measured contrast and visible focus; existing dark/narrow layouts remain usable; no broad light-only overrides or unapproved rebrand |
+| 2 — First complete slice | N1/N4 desktop shared navigation plus Explore X7C; resolve signed-in/out destinations, overflow, card minimum width, truncation, fallbacks and nested link semantics; retain current search/pagination behavior | Before/after screenshots, populated/empty/loading/error states, keyboard walkthrough, phone/tablet discovery and validation, dark smoke tests; explicit review before wider rollout |
+| 3 — Public and account entry | Home/About/How-to cozy v2, Search S2 and sign-in L6B using established primitives; reconcile copy/scopes with current behavior; retain providers and return destination | Route tests and screenshots, search empty/error cases, auth pending/cancel/error and visibility-qualified guest copy |
+| 4 — Content browsing and account management | C3 collections, R3A detail/history, P1/P8 profile/settings; settle disclosure defaults before coding; preserve membership, sharing, linking and destructive-action safeguards | Representative nested/multi-membership and public/private states; dialogs, validation and save failure verified; no accidental disclosure |
+| 5 — Editing | E3T1 v5 recipe editor and I1B coral image editor; settle progress semantics and focus/scroll behavior; preserve continuous form and all visible image controls | Draft/autosave/save failure, publish/discard, nested steps, image crop/undo/reset/cancel/apply tested; short-desktop layout and keyboard checks |
+| 6 — Version graph | Integrated G4A with selected comparison and dense/expansion states; preserve menus, solid/dashed topology, labels and accessible outline; define same-snapshot feedback, async request identity, focus after expansion and viewport stability | Populated fork fixture, comparison/no-difference/error/retry, concurrent/stale request checks, dense routing, pan/zoom and outline keyboard evidence |
+| 7 — Dashboard scoped expansion | Central Workspace visual direction; first agree Overview content, exact filters/sort, selection scope/persistence, draft membership, multiple collections, pagination and count semantics | Written behavior decisions and tests before adding features; separate visual migration from backend/data changes; no assumed bulk delete/publish/visibility actions |
+| 8 — Release review | Review migrated routes as one system, remove obsolete styles only when safe, finalize production S1 artwork if replacing current mark | Screenshot review, regression/accessibility checks, known-issue/deferred-work list and rollback notes; deployment remains a separate action |
+
+Suggested order is foundations → navigation/Explore → other route slices. Dashboard functional expansion is gated independently and must not block safe visual work elsewhere. Checkpoints may be split further; do not bundle unrelated feature changes to finish a design board.
+
+### Parallel workstreams and dependency gates
+
+Added 2026-09-18. Checkpoint numbers describe scope and acceptance gates, not a requirement to implement every page sequentially. The shared critical path is **checkpoint 0 baseline → checkpoint 1 foundations → checkpoint 2 navigation/Explore review**. After that review is accepted and its shared changes are integrated, independent route workstreams may proceed concurrently. Route discovery and asset preparation can happen earlier, but should not introduce competing shared implementations.
+
+| Workstream | Prerequisites | Ownership and coordination boundary |
+| --- | --- | --- |
+| Shared foundations and shell (0–2) | Refreshed current-main baseline and resolved route/component inventory | One coordinating owner for tokens, global styles, typography, shared controls, overlays, navigation and reusable recipe/collection cards. Validate the first complete Explore slice before wider route rollout |
+| Public pages, Search and sign-in (3) | Accepted 0–2; current copy, search and auth contracts verified | Own route composition and route-specific states; consume shared cards, search controls and provider controls without changing auth behavior |
+| Collections and recipe detail/history (part of 4) | Accepted 0–2; membership, sharing and historical-version behavior resolved | Own browsing compositions and route-local states; coordinate collection picker changes with the shared owner and version/comparison interfaces with the graph stream |
+| Profile and Settings (part of 4) | Accepted 0–2; P1/P8 disclosure and privacy decisions resolved | Own account/public-profile composition and validation presentation; coordinate avatar image-editor interfaces with Editing and shared account/confirmation overlays with the shared owner |
+| Recipe editor and image editor (5) | Accepted 0–2; continuous-form, tracker and image-control behavior resolved | Own editor composition and context-specific image controls; maintain a stable image-editor contract for avatar and recipe callers. Keep these editors together initially; split only after their interface and file ownership are explicit |
+| Version graph (6) | Accepted 0–2; graph interaction contracts and populated fixtures defined | Own graph canvas, topology presentation and comparison states; coordinate shared snapshot/comparison components with detail/history. Need not wait for all of checkpoint 4 if the shared interfaces are already stable |
+| Dashboard (7) | Accepted 0–2 for visual migration; explicit written behavior approval before functional expansion | Separate existing-behavior visual work from new management capabilities. Coordinate cards and collection interfaces with their owners; unresolved expansion must not block other streams |
+| Logo and page-icon production | Selected references and agreed export/size requirements; may run alongside baseline/foundations | Own production artwork and asset manifest, not app-wide integration. Route owners integrate reviewed assets in their slices; unready assets do not block foundations. SVG/favicon/3D remain distinct deliverables, not prerequisites for unrelated page code |
+| Release integration and review (8) | All in-scope streams integrated with acceptance evidence; deferred work explicitly recorded | Review the combined system, cross-route regressions, asset readiness and rollback notes. Deployment remains separately authorized |
+
+Dependencies follow actual shared contracts, not just page names. For example, an avatar caller waits for an image-editor interface change it needs, but unrelated profile layout can proceed. Inventory exact files at kickoff rather than assuming today's component boundaries match current main.
+
+#### Ownership and shared changes
+
+- Before starting a stream, record its owner, branch/worktree, base revision, exact owned paths, dependencies, unresolved decisions and acceptance evidence location. Assign one coordinating owner for shared files; do not let parallel streams independently rewrite global CSS, token definitions, shell components or shared primitives.
+- Use separate branches/worktrees per active stream. Keep the NOMS-020 plan and finalized reference index canonical; coordinate planning updates through one owner to avoid conflicting decisions. This section defines execution structure, not authorization to launch tasks or start implementation.
+- A route needing a shared change proposes the contract and affected consumers to the shared owner. Implement and review that change once in a focused dependency slice, integrate it, then update consumers from that revision. Avoid copied primitives, page-specific global overrides and duplicate competing component APIs.
+- Shared contracts include props/events, state and accessibility behavior, styling variants and responsive expectations. Prefer compatible additions; breaking changes require an explicit consumer migration order. Coordinate feature-ticket-owned behavior with its ticket owner rather than expanding visual scope.
+- If two streams need the same file, assign that edit to one owner or serialize the overlapping portion. They may continue unrelated work in parallel. Shared fixtures, test configuration and asset manifests follow the same ownership rule.
+
+#### Integration and review gates
+
+1. Start route implementation from the accepted shared baseline; close that route's open behavior decisions first. Record dependencies explicitly rather than relying on an unmerged branch's incidental state.
+2. Deliver small, independently reversible slices with the per-slice evidence below. Each page owns its mobile/tablet discovery during or after desktop work; desktop-done is not page-complete while responsive validation remains outstanding. Dark redesign stays deferred, with existing dark-mode regression protection.
+3. Before integration, synchronize with the latest agreed integration baseline, resolve conflicts under the relevant ownership rules, rerun affected tests/build checks and review code plus screenshots. Shared-component changes must exercise representative consumers, not only the originating route.
+4. Integrate accepted slices one at a time in dependency order, even when implementation is concurrent. Recheck affected cross-route flows such as collection membership, avatar/recipe image editing, detail-to-graph navigation and auth return destinations.
+5. Perform checkpoint 8 against the combined revision. Completion of isolated branches is not release acceptance; preserve a known-issues/deferred-work list and rollback path.
+
+### Behavior boundaries
+
+- Preserve existing server/API, auth, visibility, draft and destructive-action contracts unless a change is explicitly scoped.
+- The recorded Explore tag-filter wiring defect is not silently fixed or represented as working merely by restyling chips. Re-verify against current main, track separately and obtain explicit scope for functional changes.
+- Generated controls, copy, counts and image assets are not feature authority. Preserve existing navigation destinations, menus and safeguards omitted by an image.
+- Use the approved S1 reference; do not ship superseded A3/F2 or generated open-book approximations. Standalone production artwork, SVG/favicon and 3D-model work remain separate pending asset deliverables; remove the proposal caption/background and use verified Fredoka lettering.
+- Do not add upcoming feature-ticket routes from old mockups.
+
+### Acceptance and evidence for every slice
+
+- Record tested revision, route, auth/data fixture, viewport and state with before/after screenshots. Use a representative populated fixture as well as empty/error cases; document source-only or untested cases honestly.
+- Run repository-required formatting, relevant unit/integration tests and build checks discovered at kickoff. Add tests for changed interaction contracts; report actual commands/results, not generic “tested” claims.
+- Check keyboard order, named controls, visible focus, semantic links/buttons, modal focus/escape, error association, status announcements and reduced motion. Measure WCAG AA text/control contrast; shadows cannot be the only state cue.
+- Keep 16:9 Explore photos and adaptive columns, short-desktop actions reachable, long text usable and image fallbacks intentional.
+- Smoke-test existing dark mode. Record phone/tablet discovery decisions and implementation evidence for every page; distinguish desktop-done from page-complete when responsive work remains.
+- Review code and screenshots before accepting a slice. Address regressions before widening rollout; retain independently reversible changes and document known limitations.
+- Pixel differences from generated artwork are acceptable when needed for actual fonts, assets, behavior or accessibility; record material departures from the selected composition for user review.
+
+## Readiness and remaining gates
+
+- [x] Major visual directions selected and indexed.
+- [x] G4A full-page and key interaction-state directions selected.
+- [x] Desktop-first implementation, per-page mobile/tablet discovery and dark-mode deferral recorded.
+- [x] Staged checkpoints and acceptance evidence defined.
+- [x] Parallel workstreams, shared ownership rules and integration gates defined.
+- [ ] Current-main baseline refreshed at kickoff.
+- [ ] Exact shared tokens/components implemented and reviewed in checkpoint 1.
+- [ ] Per-route unresolved behavior decisions closed before that route's change.
+- [ ] Production S1 artwork and release-wide validation completed before final overhaul sign-off.
+
+**Ready to begin checkpoints 0–2, not a claim that the entire overhaul is fully specified or shipped.** Dark-mode and new phone/tablet designs remain deferred; selected direction does not waive behavioral or accessibility validation.
