@@ -32,7 +32,7 @@ Run `just ci`, inspect generated CSS if startup/build regenerates it, obtain ind
 
 ## Remaining checkpoint-1 work
 
-- M4 ordinary-modal material is implemented in slice 2 below, with preference-emulation validation still pending. Remaining modal/menu consumers require separate reviewed slices; do not apply glass indiscriminately to the shared navbar or editor panels.
+- M4 ordinary-modal material is implemented in slice 2 below. Remaining modal/menu consumers require separate reviewed slices; do not apply glass indiscriminately to the shared navbar or editor panels.
 - T2 feedback and P1–P3 overlay interaction contracts (focus, dismissal, live regions and picker semantics) still need implementation specification.
 - Remaining shared component/state coverage and visual review must be closed before the navigation/Explore checkpoint or parallel route rollout.
 
@@ -55,7 +55,11 @@ Three new source/contrast tests first failed against the previous implementation
 
 Fresh runtime: `just up instance=noms020-modal-material-20260919`, application `http://127.0.0.1:32778`, healthy infrastructure/schema and mock `testuser` sign-in. Chrome fallback was used because the in-app browser was unavailable. Actual light/dark fill, blur, border, floating shadow and text roles matched the implementation. At 800×180, the ordinary modal had 146px client height and 208px scroll height; keyboard focus scrolled it 62px to expose Cancel, and clicking Cancel removed the modal. A 390px viewport was also checked. Only the initial account-deletion confirmation was opened/canceled; no destructive confirmation was activated. Image-editor exclusion and unchanged collection handlers are source-review evidence, not separate runtime walkthroughs.
 
-Slice-2 Phase 2 remains **incomplete/FAIL (insufficient evidence, no implementation defect established)**: media emulation of reduced transparency/motion stalled despite requested timeouts, and no alternate media capability was available. Supported rendering and viewport behavior pass, but reduced-transparency and forced-color/motion fallbacks currently have source-test evidence only for this slice. Theme, media and viewport were restored. Report and screenshots: `/tmp/noms020-modal-material-20260919/report.html`; the report rendered with all four embedded images loaded, and captures have backend scaling/cropping limitations. Re-run the preference matrix before accepting slice 2. The full foundation/route-rollout gate remains closed.
+The initial slice-2 Phase 2 attempt was **incomplete/FAIL (insufficient evidence, no implementation defect established)**: media emulation stalled despite requested timeouts. Supported rendering and viewport behavior passed, but accessibility-preference runtime checks were initially unavailable. Report and screenshots: `/tmp/noms020-modal-material-20260919/report.html`; the original report rendered with all four embedded images loaded, and those captures have backend scaling/cropping limitations.
+
+On the user's requested browser retry (2026-09-19), the existing isolated app remained healthy (HTTP 200), so no restart was needed. The main agent verified all six light/dark × reduced-transparency/forced-colors/reduced-motion cases through the **Codex in-app browser using CUA**. Actual `matchMedia` results were true: reduced transparency yielded opaque theme fills with no blur; forced colors yielded Canvas/CanvasText, visible 1px borders and no blur/shadow; reduced motion yielded no modal or backdrop animation. Main restored light theme, cleared all media overrides and canceled the confirmation (zero open modals); no destructive confirmation was activated. Exact observations are recorded at `/tmp/noms020-modal-material-20260919/iab-preference-verification.json`.
+
+These are main-agent in-app-browser observations, distinct from the validator's earlier independent material/layout checks. A separate earlier headless-browser evidence appendix is historical provenance, not the basis for this browser retry. The full foundation/route-rollout gate remains closed pending the remaining behavioral and consumer slices, independently of this material verification.
 
 ## Implementation and checks
 
@@ -109,5 +113,5 @@ The same portable report was updated and rendered in Chrome with all four embedd
 - [x] Independent code review passes (P2 sizing regression fixed and guarded).
 - [x] Slice-1 fresh-runtime validation and evidence passes (Chrome fallback and capture limitations recorded).
 - [x] Slice-2 ordinary-modal material implemented, tested and code-reviewed.
-- [ ] Slice-2 accessibility-preference runtime checks complete.
+- [x] Slice-2 accessibility-preference runtime checks complete (six CUA in-app-browser cases, main-agent observations).
 - [ ] Full checkpoint-1 gate complete (includes remaining slices above).
