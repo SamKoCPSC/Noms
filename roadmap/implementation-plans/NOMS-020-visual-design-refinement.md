@@ -272,6 +272,8 @@ Update the table with linked evidence as each stage is completed; generated does
 
 ## Implementation checkpoints
 
+Checkpoint 0 evidence: [2026-09-19 baseline inventory and runtime checks](NOMS-020-checkpoint-0-baseline.md). Application source already matches local main; representative fresh captures and mock-account flows are recorded there. Later slices still require their own detailed state baselines.
+
 Proceed in reviewable slices; do not wait for every route's specification before starting foundations. Each checkpoint records decisions, tests and screenshots before progressing. This documentation cleanup does not itself start implementation, authorize deployment or commit existing work.
 
 | Checkpoint | Scope and decisions | Exit evidence |
@@ -347,7 +349,7 @@ Dependencies follow actual shared contracts, not just page names. For example, a
 - [x] Desktop-first implementation, per-page mobile/tablet discovery and dark-mode deferral recorded.
 - [x] Staged checkpoints and acceptance evidence defined.
 - [x] Parallel workstreams, shared ownership rules and integration gates defined.
-- [ ] Current-main baseline refreshed at kickoff.
+- [x] Current-main baseline refreshed at kickoff — [checkpoint 0 evidence](NOMS-020-checkpoint-0-baseline.md), 2026-09-19; representative runtime/source baseline, not exhaustive per-route acceptance.
 - [ ] Exact shared tokens/components implemented and reviewed in checkpoint 1.
 - [ ] Per-route unresolved behavior decisions closed before that route's change.
 - [ ] Production S1 artwork and release-wide validation completed before final overhaul sign-off.
