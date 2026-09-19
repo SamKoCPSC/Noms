@@ -145,3 +145,84 @@ fn motion_and_forced_colors_have_shared_fallbacks() {
         "legacy page inputs suppress outlines inline; forced colors removes their shadow fallback"
     );
 }
+
+#[test]
+fn ordinary_modal_material_is_scoped_and_opaque_by_default() {
+    let modal = rule(".modal-card:not(.modal-card--editor)");
+    assert!(modal.contains("background: var(--overlay-opaque)"));
+    assert!(modal.contains("border: 1px solid var(--overlay-border)"));
+    assert!(modal.contains("box-shadow: var(--overlay-shadow)"));
+    assert!(modal.contains("--text-secondary: var(--overlay-muted)"));
+    assert!(modal.contains("overflow-y: auto"));
+    assert!(modal.contains("max-height: calc(100dvh - 2 * var(--space-md))"));
+    assert!(rule(".modal-card--editor").contains("background: var(--bg-base)"));
+    assert!(rule(".glass").contains("background: var(--glass-fill)"));
+    let supported = CSS
+        .split_once(
+            "@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)))",
+        )
+        .unwrap()
+        .1;
+    assert!(supported.contains("background: var(--overlay-fill)"));
+    assert!(supported.contains("backdrop-filter: var(--overlay-blur)"));
+}
+
+#[test]
+fn modal_text_contrast_survives_extreme_underlays_in_both_themes() {
+    for theme in [":root", ".dark"] {
+        let block = rule(theme);
+        let fill = token(block, "--overlay-fill");
+        let channels: Vec<f64> = fill
+            .strip_prefix("rgba(")
+            .unwrap()
+            .strip_suffix(')')
+            .unwrap()
+            .split(',')
+            .map(|part| part.trim().parse().unwrap())
+            .collect();
+        assert_eq!(channels.len(), 4);
+        assert!(channels[3] > 0.0 && channels[3] < 1.0);
+        for underlay in [0.0, 255.0] {
+            let composite: Vec<u8> = channels[..3]
+                .iter()
+                .map(|channel| {
+                    (channel * channels[3] + underlay * (1.0 - channels[3])).round() as u8
+                })
+                .collect();
+            let background = format!(
+                "#{:02X}{:02X}{:02X}",
+                composite[0], composite[1], composite[2]
+            );
+            for foreground in ["--text-primary", "--overlay-muted"] {
+                assert!(
+                    contrast(token(block, foreground), &background) >= 4.5,
+                    "{theme} {foreground} on {background}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn ordinary_modal_material_has_preference_and_system_fallbacks() {
+    let transparency = CSS
+        .rsplit_once("@media (prefers-reduced-transparency: reduce)")
+        .unwrap()
+        .1;
+    assert!(transparency.contains(".modal-card:not(.modal-card--editor)"));
+    assert!(transparency.contains("background: var(--overlay-opaque)"));
+    assert!(transparency.contains("backdrop-filter: none"));
+    let motion = CSS
+        .rsplit_once("@media (prefers-reduced-motion: reduce)")
+        .unwrap()
+        .1;
+    assert!(motion.contains(".modal-overlay"));
+    assert!(motion.contains(".modal-card:not(.modal-card--editor)"));
+    assert!(motion.contains("animation: none"));
+    let forced = CSS.rsplit_once("@media (forced-colors: active)").unwrap().1;
+    assert!(forced.contains(".modal-card:not(.modal-card--editor)"));
+    assert!(forced.contains("background: Canvas"));
+    assert!(forced.contains("--text-secondary: CanvasText"));
+    assert!(forced.contains("border: 1px solid CanvasText"));
+    assert!(forced.contains("backdrop-filter: none"));
+}
