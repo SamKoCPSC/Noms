@@ -1,9 +1,9 @@
-// Native modal dialogs own focus containment and background inertness. The shared
-// registry owns only scroll locking and restoration, including nested lifetimes.
+// Native modal dialogs own background inertness. Supplement their Tab boundaries
+// so browser chrome does not become a stop inside a modal keyboard sequence.
 const dialogs = new Map();
 let scrollSnapshot = null;
 
-export function syncModal(id, focusSelector) {
+export function syncModal(id, focusSelector, pending = false) {
     const dialog = document.getElementById(id);
     if (!dialog || !dialog.isConnected) return;
     let state = dialogs.get(id);
@@ -22,13 +22,22 @@ export function syncModal(id, focusSelector) {
             }));
             for (const {element} of scrollSnapshot) element.style.setProperty('overflow', 'hidden', 'important');
         }
-        state = {dialog, previousFocus, focusSelector: null};
+        state = {dialog, previousFocus, focusSelector: null, pending: false};
         dialogs.set(id, state);
     }
     // Do not steal focus on typing, failure messages, or unrelated parent renders.
-    if (state.focusSelector !== focusSelector) {
-        dialog.querySelector(focusSelector)?.focus({preventScroll: false});
+    if (state.focusSelector !== focusSelector || state.pending !== pending) {
+        // Disabling the focused submit button can move focus to body. Keep an
+        // explicit focus owner while controls are unavailable, then restore the
+        // safe action after a failed request permits interaction again.
+        if (pending) {
+            dialog.setAttribute('tabindex', '-1');
+            dialog.focus({preventScroll: true});
+        } else {
+            dialog.querySelector(focusSelector)?.focus({preventScroll: false});
+        }
         state.focusSelector = focusSelector;
+        state.pending = pending;
     }
 }
 
@@ -48,4 +57,36 @@ export function disposeModal(id) {
     if (state.previousFocus?.isConnected && (!top || top.contains(state.previousFocus))) {
         state.previousFocus.focus({preventScroll: true});
     }
+}
+
+// Return true only when the caller must suppress native Tab navigation. Interior
+// controls retain their platform behavior and only the top modal can wrap focus.
+export function wrapModalTab(id, backwards) {
+    const state = dialogs.get(id);
+    if (!state || state !== [...dialogs.values()].at(-1) || !state.dialog.open || !state.dialog.isConnected) return false;
+    const dialog = state.dialog;
+    const controls = [...dialog.querySelectorAll(
+        'button, input, select, textarea, a[href], area[href], summary, [tabindex], [contenteditable="true"]'
+    )].filter(control => {
+        if (control.disabled || control.hidden || (control.tabIndex ?? 0) < 0 || !control.getClientRects().length) return false;
+        if (control.matches?.(':disabled') || control.closest?.('[inert]')) return false;
+        const visibility = typeof getComputedStyle === 'function' ? getComputedStyle(control).visibility : 'visible';
+        return visibility !== 'hidden' && visibility !== 'collapse';
+    }).sort((left, right) => {
+        // Positive tabindex precedes ordinary document order; stable sort retains
+        // the DOM order for equal priorities (including the normal zero case).
+        const priority = control => control.tabIndex > 0 ? control.tabIndex : Infinity;
+        return priority(left) - priority(right);
+    });
+    if (!controls.length) {
+        dialog.setAttribute('tabindex', '-1');
+        dialog.focus();
+        return true;
+    }
+    const activeIndex = controls.indexOf(document.activeElement);
+    if (activeIndex === -1 || (backwards ? activeIndex === 0 : activeIndex === controls.length - 1)) {
+        controls[backwards ? controls.length - 1 : 0].focus();
+        return true;
+    }
+    return false;
 }

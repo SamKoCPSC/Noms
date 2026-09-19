@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const source = await readFile(new URL('../../src/components/base/shared_modal.js', import.meta.url), 'utf8');
-const { syncModal, disposeModal } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+const { syncModal, disposeModal, wrapModalTab } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
 let fixture;
 
 function element() {
@@ -13,6 +13,10 @@ function element() {
     return {
         isConnected: true,
         focusCalls: 0,
+        disabled: false,
+        hidden: false,
+        visibility: 'visible',
+        getClientRects() { return this.hidden ? [] : [{}]; },
         style: {
             setProperty(name, value, priority = '') { styles.set(name, { value, priority }); },
             getPropertyValue(name) { return styles.get(name)?.value ?? ''; },
@@ -34,6 +38,7 @@ function setup() {
         getElementById(id) { return dialogs.get(id); },
     } };
     globalThis.document = fixture.document;
+    globalThis.getComputedStyle = control => ({ visibility: control.visibility });
     return fixture;
 }
 
@@ -41,6 +46,7 @@ function addDialog(id) {
     const dialog = Object.assign(element(), {
         open: false, showCalls: 0, controls: new Map(),
         querySelector(selector) { return this.controls.get(selector); },
+        querySelectorAll() { return [...this.controls.values()].filter(control => !control.disabled); },
         contains(control) { return [...this.controls.values()].includes(control); },
         showModal() { this.open = true; this.showCalls++; },
         close() { this.open = false; },
@@ -54,6 +60,7 @@ function addDialog(id) {
 afterEach(() => {
     for (const id of [...fixture.dialogs.keys()].reverse()) disposeModal(id);
     delete globalThis.document;
+    delete globalThis.getComputedStyle;
 });
 
 test('open focuses the safe target, locks both roots, and close restores focus', () => {
@@ -125,4 +132,54 @@ test('missing mounts and duplicate cleanup are safe and disconnected triggers ar
     disposeModal('one'); disposeModal('one');
     assert.equal(trigger.focusCalls, 0);
     assert.equal(document.body.style.getPropertyValue('overflow'), '');
+});
+
+test('Tab wraps last to first and Shift+Tab wraps first to last inside the modal', () => {
+    const { document } = setup();
+    const dialog = addDialog('one'); syncModal('one', 'button');
+    const first = dialog.controls.get('button'), last = dialog.controls.get('input');
+    assert.equal(wrapModalTab('one', false), false, 'interior Tab retains native order');
+    assert.equal(wrapModalTab('one', true), true);
+    assert.equal(document.activeElement, last);
+    assert.equal(wrapModalTab('one', true), false, 'interior reverse Tab retains native order');
+    assert.equal(wrapModalTab('one', false), true);
+    assert.equal(document.activeElement, first);
+});
+
+test('Tab wrapping excludes hidden/disabled controls and contains focus when all controls are disabled', () => {
+    const { document, trigger } = setup();
+    const dialog = addDialog('one'); syncModal('one', 'button');
+    const first = dialog.controls.get('button'), last = dialog.controls.get('input');
+    last.hidden = true;
+    assert.equal(wrapModalTab('one', false), true);
+    assert.equal(document.activeElement, first);
+    last.hidden = false; last.visibility = 'hidden';
+    assert.equal(wrapModalTab('one', false), true);
+    assert.equal(document.activeElement, first);
+    last.visibility = 'visible'; last.disabled = true;
+    assert.equal(wrapModalTab('one', true), true);
+    assert.equal(document.activeElement, first);
+    first.disabled = true;
+    assert.equal(wrapModalTab('one', false), true);
+    assert.equal(document.activeElement, dialog);
+    first.disabled = false; trigger.focus();
+    assert.equal(wrapModalTab('one', false), true);
+    assert.equal(document.activeElement, first);
+    disposeModal('one');
+    assert.equal(wrapModalTab('one', false), false, 'disposed dialogs cannot intercept Tab');
+});
+
+test('pending transition proactively anchors focus on the dialog and failure restores safe focus', () => {
+    const { document } = setup();
+    const dialog = addDialog('one'); syncModal('one', 'button', false);
+    for (const control of dialog.controls.values()) control.disabled = true;
+    // Browsers may move focus to body as the focused submit control is disabled.
+    document.body.focus();
+    syncModal('one', 'button', true);
+    assert.equal(document.activeElement, dialog);
+    assert.equal(wrapModalTab('one', false), true);
+    assert.equal(document.activeElement, dialog);
+    for (const control of dialog.controls.values()) control.disabled = false;
+    syncModal('one', 'button', false);
+    assert.equal(document.activeElement, dialog.controls.get('button'));
 });
