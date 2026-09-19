@@ -1026,6 +1026,19 @@ a:hover {
     padding: var(--space-md);
 }
 
+/* Native top-layer shell; preserve the existing M4 inner card and dim exactly once. */
+dialog.shared-modal {
+    margin: 0;
+    border: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    color: inherit;
+}
+dialog.shared-modal:not([open]) { display: none; }
+dialog.shared-modal::backdrop { background: transparent; }
+
 .modal-card {
     background: var(--bg-base);
     border-radius: var(--radius-lg);

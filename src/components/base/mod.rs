@@ -16,6 +16,7 @@ pub use page_header::*;
 pub use recipe_card::*;
 pub use reorder_handle::*;
 pub use settings_tabs::{SettingsTab, SettingsTabs};
+pub use shared_modal::SharedModal;
 
 mod add_to_collection_dropdown;
 mod avatar;
@@ -35,3 +36,4 @@ mod page_header;
 mod recipe_card;
 mod reorder_handle;
 mod settings_tabs;
+mod shared_modal;

@@ -2,10 +2,11 @@ use dioxus::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 
+use super::account_delete_flow::{AccountDeleteStep as DeleteStep, AccountDeletionState};
 use crate::auth::context::{use_auth, AuthContext, UserProfile};
 use crate::components::base::{
     Avatar, AvatarSize, Button, ButtonVariant, Card, ImageEditorCropMode, ImageEditorModal, Input,
-    PageHeader, SettingsTab, SettingsTabs,
+    PageHeader, SettingsTab, SettingsTabs, SharedModal,
 };
 use crate::components::AuthRequired;
 use crate::types::RecipeImageEdit;
@@ -14,17 +15,6 @@ use crate::types::RecipeImageEdit;
 pub struct AvatarEditSource {
     pub original_url: String,
     pub edit: RecipeImageEdit,
-}
-
-/// Steps in the 3-layer account deletion confirmation flow.
-#[derive(Debug, Clone, Copy, PartialEq)]
-enum DeleteStep {
-    /// Layer 1: Initial confirmation dialog.
-    Confirming,
-    /// Layer 2: Typed confirmation ("delete <username>").
-    Typing,
-    /// Layer 3: Final confirmation ("This cannot be undone").
-    Final,
 }
 
 fn avatar_photo_actions(has_avatar: bool) -> &'static [&'static str] {
@@ -776,10 +766,7 @@ pub fn SettingsProfile() -> Element {
     let mut saved_message = use_signal(|| Option::<String>::None);
 
     // Delete account state
-    let mut delete_step = use_signal(|| None::<DeleteStep>);
-    let mut delete_input = use_signal(String::new);
-    let mut deleting = use_signal(|| false);
-    let mut delete_error = use_signal(|| Option::<String>::None);
+    let mut deletion = use_signal(AccountDeletionState::default);
 
     // Avatar upload state
     let avatar_uploading = use_signal(|| false);
@@ -1010,32 +997,33 @@ pub fn SettingsProfile() -> Element {
 
     // Current username for typed confirmation
     let expected_confirm = format!("delete {}", delete_username);
-    let input_matches = delete_input() == expected_confirm;
+    let input_matches = deletion.read().confirmation == expected_confirm;
+    let deleting = deletion.read().pending;
 
     // Delete account handlers
     let on_delete_confirm = move |_| {
-        delete_step.set(Some(DeleteStep::Typing));
-        delete_input.set(String::new());
-        delete_error.set(None);
+        deletion.write().confirm();
     };
 
     let on_delete_cancel = move |_| {
-        delete_step.set(None);
-        delete_input.set(String::new());
-        delete_error.set(None);
+        deletion.write().cancel();
     };
 
+    let continue_username = delete_username.clone();
     let on_delete_continue = move |_| {
-        delete_step.set(Some(DeleteStep::Final));
+        deletion.write().advance(&continue_username);
     };
 
     let on_delete_go_back = move |_| {
-        delete_step.set(Some(DeleteStep::Typing));
+        deletion.write().go_back();
     };
 
+    let final_username = delete_username.clone();
     let on_delete_final = move |_| {
-        deleting.set(true);
-        delete_error.set(None);
+        // Synchronous claim prevents queued/double clicks from spawning two requests.
+        if !deletion.write().begin_delete(&final_username) {
+            return;
+        }
 
         spawn(async move {
             match delete_account().await {
@@ -1057,8 +1045,7 @@ pub fn SettingsProfile() -> Element {
                         ServerFnError::ServerError { message, .. } => message.clone(),
                         _ => e.to_string(),
                     };
-                    delete_error.set(Some(msg));
-                    deleting.set(false);
+                    deletion.write().fail_delete(msg);
                 }
             }
         });
@@ -1548,8 +1535,7 @@ pub fn SettingsProfile() -> Element {
                         Button {
                             variant: ButtonVariant::Danger,
                             onclick: move |_| {
-                                delete_step.set(Some(DeleteStep::Confirming));
-                                delete_error.set(None);
+                                deletion.write().open();
                             },
                             "Delete Account"
                         }
@@ -1566,15 +1552,17 @@ pub fn SettingsProfile() -> Element {
                 on_close: on_avatar_editor_close,
             }
 
-            if let Some(step) = delete_step() {
-                div {
-                    class: "modal-overlay",
-                    onclick: move |_| {
-                        // Close on backdrop click (only for Confirming and Final steps)
-                        if step == DeleteStep::Confirming || step == DeleteStep::Final {
-                            delete_step.set(None);
-                        }
+            if let Some(step) = deletion.read().step {
+                SharedModal {
+                    aria_labelledby: "account-delete-title",
+                    focus_selector: match step {
+                        DeleteStep::Confirming => "#account-delete-cancel button",
+                        DeleteStep::Typing => "#account-delete-phrase",
+                        DeleteStep::Final => "#account-delete-back button",
                     },
+                    pending: deleting,
+                    dismiss_on_backdrop: step != DeleteStep::Typing,
+                    on_dismiss: move |_| deletion.write().cancel(),
 
                     // Layer 1: Initial Confirmation
                     if step == DeleteStep::Confirming {
@@ -1585,6 +1573,7 @@ pub fn SettingsProfile() -> Element {
                             flex_direction: "column",
                             gap: "var(--space-md)",
                             h2 {
+                                id: "account-delete-title",
                                 "Are you sure?"
                             }
                             p {
@@ -1596,13 +1585,17 @@ pub fn SettingsProfile() -> Element {
                                 display: "flex",
                                 justify_content: "flex-end",
                                 gap: "var(--space-sm)",
-                                Button {
-                                    variant: ButtonVariant::Ghost,
-                                    onclick: on_delete_cancel,
-                                    "Cancel"
+                                span { id: "account-delete-cancel",
+                                    Button {
+                                        variant: ButtonVariant::Ghost,
+                                        disabled: deleting,
+                                        onclick: on_delete_cancel,
+                                        "Cancel"
+                                    }
                                 }
                                 Button {
                                     variant: ButtonVariant::Danger,
+                                    disabled: deleting,
                                     onclick: on_delete_confirm,
                                     "Confirm"
                                 }
@@ -1618,7 +1611,9 @@ pub fn SettingsProfile() -> Element {
                             display: "flex",
                             flex_direction: "column",
                             gap: "var(--space-md)",
-                            p {
+                            label {
+                                id: "account-delete-title",
+                                r#for: "account-delete-phrase",
                                 font_size: "14px",
                                 color: "var(--text-secondary)",
                                 "Type "
@@ -1627,13 +1622,14 @@ pub fn SettingsProfile() -> Element {
                                 }
                                 " to continue"
                             }
-                            Input {
-                                value: delete_input().clone(),
+                            input {
+                                id: "account-delete-phrase",
+                                class: "neumo-inset input input--shared",
+                                r#type: "text",
+                                value: deletion.read().confirmation.clone(),
                                 placeholder: "delete ...",
-                                oninput: move |v| {
-                                    delete_input.set(v);
-                                    delete_error.set(None);
-                                },
+                                disabled: deleting,
+                                oninput: move |event| deletion.write().set_confirmation(event.value()),
                             }
                             div {
                                 display: "flex",
@@ -1641,12 +1637,13 @@ pub fn SettingsProfile() -> Element {
                                 gap: "var(--space-sm)",
                                 Button {
                                     variant: ButtonVariant::Ghost,
+                                    disabled: deleting,
                                     onclick: on_delete_cancel,
                                     "Cancel"
                                 }
                                 Button {
                                     variant: ButtonVariant::Danger,
-                                    disabled: !input_matches,
+                                    disabled: deleting || !input_matches,
                                     onclick: on_delete_continue,
                                     "Continue"
                                 }
@@ -1663,6 +1660,7 @@ pub fn SettingsProfile() -> Element {
                             flex_direction: "column",
                             gap: "var(--space-md)",
                             h2 {
+                                id: "account-delete-title",
                                 "This cannot be undone"
                             }
                             p {
@@ -1670,8 +1668,9 @@ pub fn SettingsProfile() -> Element {
                                 color: "var(--text-secondary)",
                                 "All your data will be permanently deleted."
                             }
-                            if let Some(err) = delete_error() {
+                            if let Some(err) = deletion.read().error.clone() {
                                 div {
+                                    role: "alert",
                                     padding: "var(--space-sm) var(--space-md)",
                                     background_color: "var(--error-bg)",
                                     border_radius: "var(--radius-md)",
@@ -1684,16 +1683,19 @@ pub fn SettingsProfile() -> Element {
                                 display: "flex",
                                 justify_content: "flex-end",
                                 gap: "var(--space-sm)",
-                                Button {
-                                    variant: ButtonVariant::Ghost,
-                                    onclick: on_delete_go_back,
-                                    "Go Back"
+                                span { id: "account-delete-back",
+                                    Button {
+                                        variant: ButtonVariant::Ghost,
+                                        disabled: deleting,
+                                        onclick: on_delete_go_back,
+                                        "Go Back"
+                                    }
                                 }
                                 Button {
                                     variant: ButtonVariant::Danger,
-                                    disabled: deleting(),
+                                    disabled: deleting,
                                     onclick: on_delete_final,
-                                    if deleting() {
+                                    if deleting {
                                         "Deleting..."
                                     } else {
                                         "Delete My Account"

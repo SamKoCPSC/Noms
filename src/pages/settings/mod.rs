@@ -1,3 +1,4 @@
+mod account_delete_flow;
 mod settings_accounts;
 mod settings_profile;
 
