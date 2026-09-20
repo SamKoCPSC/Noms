@@ -33,7 +33,7 @@ Run `just ci`, inspect generated CSS if startup/build regenerates it, obtain ind
 ## Remaining checkpoint-1 work
 
 - M4 ordinary-modal material is implemented in slice 2 below. Remaining modal/menu consumers require separate reviewed slices; do not apply glass indiscriminately to the shared navbar or editor panels.
-- T2 feedback and P1–P3 overlay interaction contracts (focus, dismissal, live regions and picker semantics) still need implementation specification.
+- T2 feedback foundations and the collection Copy link/Share consumer are implemented (slice 6). Broader feedback adoption and P1–P3 overlay interaction contracts/picker semantics remain outstanding.
 - Remaining shared component/state coverage and visual review must be closed before the navigation/Explore checkpoint or parallel route rollout.
 
 ### Slice 2: M4 ordinary-modal material
@@ -126,6 +126,18 @@ The same portable report was updated and rendered in Chrome with all four embedd
 
 ## Status
 
+### Slice 6 — T2 tooltips and toast feedback, 2026-09-20
+
+Based on `10211a9`, shared `TooltipAction` and `FeedbackToast` introduce the selected soft warm-glass capsules using existing Nunito, palette and overlay tokens. Collection Copy link/Share are the first consumers; their API calls and edit/visibility gating remain unchanged. Duplicate pending actions are guarded. No global notification migration, page redesign, menus or image-editor layout changes are included.
+
+The first-slice lifetime contract is one persistent toast per page, replaced by the next completed action or explicitly dismissed, without auto-dismiss or invented Retry/Undo actions. Pending actions retain the previous result. A permanently mounted polite live region receives a new keyed child per completion, including repeated identical results; notification presentation does not take focus, dim the page or lock scrolling. Tooltips supplement named buttons on hover/focus, support Escape and a hoverable gap, clamp/flip at viewport edges, follow scroll/resize and clean up listeners on unmount. Long messages wrap; opaque and forced-color fallbacks are defined without introducing motion.
+
+Tests were added before implementation and failed on missing modules. Independent review found a P2: starting another action cleared the persistent toast prematurely. A failing regression test was added, that clearing was removed, and renewed review returned **PASS**, no blocking/should-fix findings. Focused Rust feedback contracts: three passed. `node --test scripts/tests/test-feedback.mjs scripts/tests/test-shared-modal.mjs`: 12 passed. Formatting, client/server compilation, WASM Clippy, whitespace, six schema cases and security-policy checks pass. Final `just ci` still fails the untouched server Clippy `needless_return` at `informational/mod.rs:34`. The bounded full Rust suite stalled again on unchanged `db::tests::runtime_grants_enforce_a_non_owning_data_plane_role`; no full-suite pass is claimed.
+
+Fresh isolated `noms020-feedback-20260920` at port 32798 was rebuilt with the reviewed source. Main-agent CUA browser checks on a disposable unlisted collection verify actual clipboard success, one toast after repeated Copy link actions, preserved action focus, explicit toast dismissal, Escape dismissal of the tooltip, keyboard focus opening Share help, and no native modal or body scroll lock. The desktop screenshot was visually inspected, including the right-edge tooltip placement. Native Share-sheet success/failure, real assistive-technology announcements, narrow layouts and media-preference rendering are not newly browser-verified; geometry/lifecycle and fallback contracts have automated/source evidence. This is scoped foundation acceptance, not completion of checkpoint 1.
+
+Evidence: `/tmp/noms020-feedback-20260920/browser-proof.json` and `tooltip-toast.png`; logs `/tmp/noms020-feedback-red.log`, `/tmp/noms020-feedback-persistence-red.log`, `/tmp/noms020-feedback-ci-final.log` and `/tmp/noms020-feedback-full-tests.log`. Previous disposable image-editor deployment/data/caches were removed, retaining its evidence. Startup-only generated Tailwind utilities were excluded.
+
 ### Slice 5 — image-editor modal migration, 2026-09-20
 
 Implementation `df993f8`, based on `073867f`, mounts `SharedModal` while the editor has an image. The existing specialized editor card, crop modes, controls and save/close callbacks remain unchanged. The shell provides a named dialog, initial Cancel focus, Tab containment, native background inertness, scroll locking and cleanup. An optional backdrop-specific callback preserves the crop drag-release guard without suppressing Escape; ordinary modal consumers retain their existing fallback callback. Close now has an explicit accessible name. No artificial pending state was added: the editor reports adjustments synchronously and upload persistence belongs to its consumers.
@@ -157,4 +169,5 @@ Evidence: `/tmp/noms020-collection-modal-20260920/browser-proof.json` and `dialo
 - [x] Slice-3 shared modal behavior implemented and code-reviewed; account deletion is the first consumer.
 - [x] Slice-4 collection deletion migrated, code-reviewed and browser-checked without executing deletion.
 - [x] Slice-5 image editor migrated, code-reviewed and scoped browser flows checked; full-suite stall recorded.
+- [x] Slice-6 T2 tooltip/toast foundations implemented; collection Copy link/Share adopted and scoped browser checks recorded.
 - [ ] Full checkpoint-1 gate complete (includes remaining slices above).

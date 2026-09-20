@@ -6,6 +6,12 @@ Status: T2 — Soft Capsule is the user-selected tooltip and toast direction, re
 
 ![T1](overlays-t1-quiet-glass-v1.png)
 
+## Implementation decisions — 2026-09-20
+
+The first T2 implementation is shared tooltip/toast components plus collection Copy link/Share. One toast remains until explicit dismissal or the next completed result; it is not cleared while an action is pending and has no automatic timer. Results use a persistent polite live region, with repeat completions updating its child. No Retry/Undo is exposed without a supported action contract. Tooltips supplement named buttons, appear on hover/focus, dismiss with Escape, remain hoverable across the gap and follow viewport/scroll positioning. Messages wrap; existing material tokens supply glass, opaque and forced-color fallbacks. Broader adoption and responsive visual sign-off remain follow-up work. See [foundation implementation status](../../implementation-plans/NOMS-020-checkpoint-1-foundations.md).
+
+The historical generation notes below describe the proposals, not additional implemented behavior.
+
 ## T2 — Soft Capsule
 
 ![T2](overlays-t2-soft-capsule-v1.png)
