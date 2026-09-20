@@ -126,6 +126,16 @@ The same portable report was updated and rendered in Chrome with all four embedd
 
 ## Status
 
+### Slice 4 — collection deletion migration, 2026-09-20
+
+Implementation `821287e`, based on `6c7837c`, reuses `SharedModal` for collection deletion. The inner M4 card, warning about recursive collection/membership deletion and retained recipes, exact case-sensitive phrase, initial phrase-field focus, API call and Dashboard destination are preserved. The page-specific document keyboard listener/eval lifecycle is removed. Shared native inertness, Tab boundaries, scroll locking, pending focus and cleanup now apply. Open/input/Cancel handlers explicitly reject pending interaction; dismissal clears phrase/error, failure retains phrase, and success closes the modal before navigation.
+
+Tests-first: the updated migration contract failed because `SharedModal` was absent. `just fmt`, `just check`, full `just test` (714 Rust passed, 12 ignored; nine JS passed), and a final `cargo test --features server recursive_delete` (four passed, SQLx offline) pass. Schema/workflow/security-policy checks pass. `just ci` passes both compilations and WASM Clippy, then stops at the same pre-existing server `needless_return` warning in `informational/mod.rs:34`. Independent review of the complete migration and shared lifecycle call paths: **PASS**, no introduced P0–P2 findings.
+
+Fresh `just up instance=noms020-collection-modal-20260920` completed infrastructure/schema/build and served HTTP 200 at port 32788. The previous disposable modal-behavior deployment and its test data/caches were removed; its evidence remains under `/tmp`. CUA in-app-browser checks authenticated mock `testuser`, created one private `Modal validation` collection, and verified the named native dialog, labelled phrase-field initial focus, reverse/forward Tab boundaries with disabled/enabled submit, case-sensitive invalid phrase rejection, exact phrase enabling, Escape/Cancel/backdrop dismissal, empty phrase on reopen, trigger-focus restoration and root/body overflow restoration. The captured desktop card preserves the existing styling. No deletion request was submitted. Pending/failure integration and success navigation are source-review evidence plus shared lifecycle tests, not newly executed destructive flows; this is not a responsive redesign sign-off.
+
+Evidence: `/tmp/noms020-collection-modal-20260920/browser-proof.json` and `dialog.png`; automated logs `/tmp/noms020-collection-tests.log`, `/tmp/noms020-collection-focused.log`, `/tmp/noms020-collection-ci.log`, and tests-first `/tmp/noms020-collection-red.log`. No full portable HTML report was needed for this bounded consumer migration. Image-editor migration and the rest of checkpoint 1 remain outstanding.
+
 - [x] Scope and regression contracts recorded; tests fail before production changes.
 - [x] Production slice and automated checks executed; unrelated full-CI failures recorded above.
 - [x] Independent code review passes (P2 sizing regression fixed and guarded).
@@ -133,4 +143,5 @@ The same portable report was updated and rendered in Chrome with all four embedd
 - [x] Slice-2 ordinary-modal material implemented, tested and code-reviewed.
 - [x] Slice-2 accessibility-preference runtime checks complete (six CUA in-app-browser cases, main-agent observations).
 - [x] Slice-3 shared modal behavior implemented and code-reviewed; account deletion is the first consumer.
+- [x] Slice-4 collection deletion migrated, code-reviewed and browser-checked without executing deletion.
 - [ ] Full checkpoint-1 gate complete (includes remaining slices above).
