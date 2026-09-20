@@ -126,6 +126,18 @@ The same portable report was updated and rendered in Chrome with all four embedd
 
 ## Status
 
+### Slice 5 — image-editor modal migration, 2026-09-20
+
+Implementation `df993f8`, based on `073867f`, mounts `SharedModal` while the editor has an image. The existing specialized editor card, crop modes, controls and save/close callbacks remain unchanged. The shell provides a named dialog, initial Cancel focus, Tab containment, native background inertness, scroll locking and cleanup. An optional backdrop-specific callback preserves the crop drag-release guard without suppressing Escape; ordinary modal consumers retain their existing fallback callback. Close now has an explicit accessible name. No artificial pending state was added: the editor reports adjustments synchronously and upload persistence belongs to its consumers.
+
+Tests-first migration contract failed before implementation. Runtime then exposed a pre-existing adjacent defect: clicking Flip inside the collection form submitted that form. A second failing regression test required explicit `type="button"` for every editor button; all eight now have it. This created one private fixture collection in the disposable environment before correction; no real user data was changed. Independent review of the complete corrected diff: **PASS**, no introduced blocking/should-fix findings. Enter-based implicit form submission from numeric fields was not exercised and is not claimed as covered by the button-type fix.
+
+Final focused `SQLX_OFFLINE=true cargo test --features server image_editor`: four passed. Shared lifecycle Node tests: nine passed. `just fmt`, both `just check` targets, WASM Clippy, whitespace, schema/workflow and security-policy checks pass. Full `just test` stalled on unchanged `db::tests::runtime_grants_enforce_a_non_owning_data_plane_role` and was interrupted; a bounded 120-second full-suite retry stalled on the same test and timed out. No full-suite pass is claimed, and no test was weakened or skipped. `just ci` still fails the pre-existing server Clippy warning at `informational/mod.rs:34`.
+
+Fresh `just up instance=noms020-image-modal-20260920` completed build/schema/health at port 32793. The previous collection deployment/test data/caches were removed, retaining its evidence. Main CUA in-app-browser checks used mock `testuser` and a prior disposable screenshot as the image fixture: upload opened the named editor with Cancel focused; Tab and Shift+Tab wrapped; native modal/overflow locks were observed; crop resizing/dragging preserved the drag-release backdrop guard; Escape restored the file-picker focus. After rebuilding the button fix, Flip and keyboard undo/redo kept the editor open; OK updated the local image preview and closed only the editor, remaining on the unsaved collection form; reopening and Cancel restored overflow. No collection Save/Create was intentionally invoked in the corrected flow. Avatar-specific behavior, mobile layout and Enter-based implicit submission are not newly browser-verified.
+
+Evidence: `/tmp/noms020-image-modal-20260920/browser-proof.json` (includes initial failure and corrected checks) and `editor.png`. Logs: `/tmp/noms020-image-modal-red.log`, `image-modal-button-red.log` with the same `noms020-` prefix, `/tmp/noms020-image-modal-focused-final.log`, `/tmp/noms020-image-modal-tests.log`, `/tmp/noms020-image-modal-tests-retry.log`, and `/tmp/noms020-image-modal-ci-final.log`. The upload tool had a prolonged response delay; no non-CUA automation workaround was used. This is a scoped behavior migration, not an I1B layout implementation or full checkpoint-1 acceptance.
+
 ### Slice 4 — collection deletion migration, 2026-09-20
 
 Implementation `821287e`, based on `6c7837c`, reuses `SharedModal` for collection deletion. The inner M4 card, warning about recursive collection/membership deletion and retained recipes, exact case-sensitive phrase, initial phrase-field focus, API call and Dashboard destination are preserved. The page-specific document keyboard listener/eval lifecycle is removed. Shared native inertness, Tab boundaries, scroll locking, pending focus and cleanup now apply. Open/input/Cancel handlers explicitly reject pending interaction; dismissal clears phrase/error, failure retains phrase, and success closes the modal before navigation.
@@ -144,4 +156,5 @@ Evidence: `/tmp/noms020-collection-modal-20260920/browser-proof.json` and `dialo
 - [x] Slice-2 accessibility-preference runtime checks complete (six CUA in-app-browser cases, main-agent observations).
 - [x] Slice-3 shared modal behavior implemented and code-reviewed; account deletion is the first consumer.
 - [x] Slice-4 collection deletion migrated, code-reviewed and browser-checked without executing deletion.
+- [x] Slice-5 image editor migrated, code-reviewed and scoped browser flows checked; full-suite stall recorded.
 - [ ] Full checkpoint-1 gate complete (includes remaining slices above).
