@@ -10,7 +10,7 @@ use crate::api::collection::{
 };
 use crate::components::base::{
     Button, ButtonVariant, CollectionCover, CollectionVisibilityBadge, EmptyState, Input,
-    LoadingSpinner, PageHeader, RecipeCard, ReorderHandle,
+    LoadingSpinner, PageHeader, RecipeCard, ReorderHandle, SharedModal,
 };
 use crate::types::{CollectionSummary, CollectionVisibility, RecipeCardSummary};
 use crate::Route;
@@ -19,65 +19,6 @@ const MAX_RECIPE_PAGE_SIZE: i64 = 12;
 #[cfg(any(test, target_arch = "wasm32"))]
 const RECIPE_REORDER_DEBOUNCE_MS: u32 = 500;
 const RECURSIVE_DELETE_WARNING: &str = "Deleting this collection also deletes all nested collections and their memberships. Your recipes will remain.";
-
-#[cfg(target_arch = "wasm32")]
-const OPEN_DELETE_DIALOG_KEYBOARD_LIFECYCLE: &str = r#"
-    window.__nomsCollectionDeleteKeyboard?.abort();
-    const controller = new AbortController();
-    window.__nomsCollectionDeleteKeyboard = controller;
-    const dialog = document.getElementById('delete-collection-dialog');
-    if (!dialog) {
-        controller.abort();
-        return;
-    }
-
-    dialog.querySelector('input')?.focus();
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-            if (dialog.dataset.deleting !== 'true') {
-                event.preventDefault();
-                document.getElementById('delete-collection-cancel')
-                    ?.querySelector('button')?.click();
-            }
-            return;
-        }
-
-        if (event.key === 'Tab') {
-            const controls = [...dialog.querySelectorAll(
-                'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-            )].filter((element) => element.getClientRects().length > 0);
-            if (controls.length === 0) {
-                event.preventDefault();
-                dialog.focus();
-                return;
-            }
-
-            const first = controls[0];
-            const last = controls[controls.length - 1];
-            if (event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) {
-                event.preventDefault();
-                last.focus();
-            } else if (!event.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) {
-                event.preventDefault();
-                first.focus();
-            }
-        }
-    }, { signal: controller.signal });
-"#;
-
-#[cfg(target_arch = "wasm32")]
-const CLOSE_DELETE_DIALOG_KEYBOARD_LIFECYCLE: &str = r#"
-    window.__nomsCollectionDeleteKeyboard?.abort();
-    window.__nomsCollectionDeleteKeyboard = null;
-    document.getElementById('delete-collection-trigger')
-        ?.querySelector('button')?.focus();
-"#;
-
-#[cfg(target_arch = "wasm32")]
-const ABORT_DELETE_DIALOG_KEYBOARD_LIFECYCLE: &str = r#"
-    window.__nomsCollectionDeleteKeyboard?.abort();
-    window.__nomsCollectionDeleteKeyboard = null;
-"#;
 
 fn collection_delete_confirmation_phrase(collection_name: &str) -> String {
     format!("delete {collection_name}")
@@ -251,15 +192,6 @@ pub fn CollectionDetail(id: String) -> Element {
     let refreshing_contents = contents.pending();
     let loaded = contents.read().clone();
 
-    #[cfg(target_arch = "wasm32")]
-    use_effect(move || {
-        if delete_modal_open() {
-            spawn(async move {
-                let _ = document::eval(OPEN_DELETE_DIALOG_KEYBOARD_LIFECYCLE).await;
-            });
-        }
-    });
-
     rsx! { div { class: "container",
         match loaded {
             None => rsx! { LoadingSpinner {} },
@@ -369,6 +301,7 @@ pub fn CollectionDetail(id: String) -> Element {
                                 span {
                                     id: "delete-collection-trigger",
                                     Button { variant: ButtonVariant::Danger, disabled: deleting(), onclick: move |_| {
+                                        if deleting() { return; }
                                         delete_confirmation_input.set(String::new());
                                         delete_error.set(None);
                                         delete_modal_open.set(true);
@@ -737,26 +670,20 @@ pub fn CollectionDetail(id: String) -> Element {
                         }, if loading_more() { "Loading…" } else { "Load more" } }
                     }
                     if collection_contents.can_edit && delete_modal_open() {
-                        div {
-                            class: "modal-overlay",
-                            onclick: move |_| {
+                        SharedModal {
+                            aria_labelledby: "delete-collection-title",
+                            focus_selector: "#delete-collection-dialog input",
+                            pending: deleting(),
+                            on_dismiss: move |_| {
                                 if !deleting() {
                                     delete_modal_open.set(false);
                                     delete_confirmation_input.set(String::new());
-                                    #[cfg(target_arch = "wasm32")]
-                                    spawn(async move {
-                                        let _ = document::eval(CLOSE_DELETE_DIALOG_KEYBOARD_LIFECYCLE).await;
-                                    });
+                                    delete_error.set(None);
                                 }
                             },
                             div {
                                 id: "delete-collection-dialog",
                                 class: "modal-card",
-                                role: "dialog",
-                                aria_modal: "true",
-                                aria_labelledby: "delete-collection-title",
-                                tabindex: "-1",
-                                "data-deleting": if deleting() { "true" } else { "false" },
                                 onclick: move |event| event.stop_propagation(),
                                 display: "flex",
                                 flex_direction: "column",
@@ -793,6 +720,7 @@ pub fn CollectionDetail(id: String) -> Element {
                                             value: delete_confirmation_input(),
                                             placeholder: delete_confirmation_phrase.clone(),
                                             oninput: move |value| {
+                                                if deleting() { return; }
                                                 delete_confirmation_input.set(value);
                                                 delete_error.set(None);
                                             },
@@ -812,12 +740,10 @@ pub fn CollectionDetail(id: String) -> Element {
                                             variant: ButtonVariant::Ghost,
                                             disabled: deleting(),
                                             onclick: move |_| {
+                                                if deleting() { return; }
                                                 delete_modal_open.set(false);
                                                 delete_confirmation_input.set(String::new());
-                                                #[cfg(target_arch = "wasm32")]
-                                                spawn(async move {
-                                                    let _ = document::eval(CLOSE_DELETE_DIALOG_KEYBOARD_LIFECYCLE).await;
-                                                });
+                                                delete_error.set(None);
                                             },
                                             "Cancel"
                                         }
@@ -841,11 +767,9 @@ pub fn CollectionDetail(id: String) -> Element {
                                             spawn(async move {
                                                 match delete_collection(id).await {
                                                     Ok(()) => {
-                                                        #[cfg(target_arch = "wasm32")]
-                                                        let _ = document::eval(
-                                                            ABORT_DELETE_DIALOG_KEYBOARD_LIFECYCLE,
-                                                        )
-                                                        .await;
+                                                        // Unmount before navigating so shared focus/scroll
+                                                        // cleanup runs even if the router retains this page.
+                                                        delete_modal_open.set(false);
                                                         navigator.push(Route::Dashboard {});
                                                     }
                                                     Err(error) => {
@@ -1004,10 +928,18 @@ mod tests {
         assert!(source.contains("delete-collection-dialog"));
         assert!(source.contains("delete-collection-trigger"));
         assert!(source.contains("delete-collection-cancel"));
-        assert!(source.contains("AbortController"));
-        assert!(source.contains("event.key === 'Tab'"));
-        assert!(source.contains("event.key === 'Escape'"));
-        assert!(source.contains("querySelector('input')?.focus()"));
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        assert!(production.contains("SharedModal {"));
+        assert!(production.contains("focus_selector: \"#delete-collection-dialog input\""));
+        assert!(production.contains("pending: deleting()"));
+        assert!(!production.contains("__nomsCollectionDeleteKeyboard"));
+        // Controls must guard the handler as well as their disabled appearance.
+        let compact: String = production.chars().filter(|c| !c.is_whitespace()).collect();
+        assert!(compact.contains("oninput:move|value|{ifdeleting(){return;}"));
+        assert!(
+            compact.contains("onclick:move|_|{ifdeleting(){return;}delete_modal_open.set(false);")
+        );
+        assert!(compact.contains("deleting.set(true);delete_error.set(None);"));
         assert!(source.contains("label {"));
     }
 
