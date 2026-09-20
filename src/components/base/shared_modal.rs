@@ -24,6 +24,9 @@ pub fn SharedModal(
     #[props(default)] pending: bool,
     #[props(default = true)] dismiss_on_backdrop: bool,
     on_dismiss: EventHandler<()>,
+    // Specialized editors may suppress a drag-ending backdrop click without
+    // suppressing keyboard dismissal. Ordinary dialogs use on_dismiss for both.
+    #[props(default)] on_backdrop_dismiss: Option<EventHandler<()>>,
     children: Element,
 ) -> Element {
     let id = use_hook(|| format!("shared-modal-{}", uuid::Uuid::new_v4()));
@@ -70,7 +73,9 @@ pub fn SharedModal(
                 if !pending { on_dismiss.call(()); }
             },
             onclick: move |_| {
-                if dismiss_on_backdrop && !pending { on_dismiss.call(()); }
+                if dismiss_on_backdrop && !pending {
+                    on_backdrop_dismiss.unwrap_or(on_dismiss).call(());
+                }
             },
             {children}
         }

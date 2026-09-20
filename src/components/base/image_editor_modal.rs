@@ -9,6 +9,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use dioxus::prelude::*;
 
+use crate::components::base::SharedModal;
+
 use crate::types::{ImageColorEdit, ImageCropRect, ImageTransformEdit, RecipeImageEdit};
 
 /// Global counter for unique image element IDs.
@@ -601,9 +603,11 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
     let redo_disabled = redo_stack().is_empty();
 
     rsx! {
-        div {
-            class: "modal-overlay",
-            onclick: move |_| {
+        SharedModal {
+            aria_labelledby: "image-editor-title",
+            focus_selector: "#image-editor-cancel",
+            on_dismiss: move |_| on_close.call(()),
+            on_backdrop_dismiss: move |_| {
                 // Don't close if the user just finished dragging the crop box.
                 let released = just_released_drag();
                 just_released_drag.set(false);
@@ -617,7 +621,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                 div {
                     class: "image-editor__header",
                     div {
-                        h2 { "Edit image" }
+                        h2 { id: "image-editor-title", "Edit image" }
                         span { class: "image-editor__subtitle", "Visual preview" }
                     }
                     div {
@@ -625,6 +629,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                         div {
                             class: "image-editor__history-actions",
                             button {
+                                r#type: "button",
                                 class: "image-editor__icon-button",
                                 title: "Undo (Ctrl+Z / Cmd+Z)",
                                 disabled: undo_disabled,
@@ -650,6 +655,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                 "↶"
                             }
                             button {
+                                r#type: "button",
                                 class: "image-editor__icon-button",
                                 title: "Redo (Ctrl+Y / Cmd+Shift+Z)",
                                 disabled: redo_disabled,
@@ -676,6 +682,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                             }
                         }
                         button {
+                            r#type: "button",
                             class: "image-editor__soft-button",
                             title: "Reset adjustments",
                             onclick: move |evt| {
@@ -701,8 +708,10 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                             "Reset"
                         }
                         button {
+                            r#type: "button",
                             class: "image-editor__icon-button",
                             title: "Close editor",
+                            aria_label: "Close editor",
                             onclick: move |evt| {
                                 evt.stop_propagation();
                                 on_close.call(());
@@ -850,6 +859,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                     div {
                                         class: "image-editor__toggle-group",
                                         button {
+                                            r#type: "button",
                                             class: format!("image-editor__flip-toggle {}", if flip_x() { "image-editor__flip-toggle--active" } else { "" }),
                                             title: "Flip horizontally",
                                             onclick: move |evt| {
@@ -889,6 +899,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                             "↔"
                                         }
                                         button {
+                                            r#type: "button",
                                             class: format!("image-editor__flip-toggle {}", if flip_y() { "image-editor__flip-toggle--active" } else { "" }),
                                             title: "Flip vertically",
                                             onclick: move |evt| {
@@ -997,6 +1008,8 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                 div {
                     class: "image-editor__footer",
                     button {
+                        r#type: "button",
+                        id: "image-editor-cancel",
                         class: "image-editor__soft-button",
                         title: "Cancel edits and close",
                         onclick: move |evt| {
@@ -1006,6 +1019,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                         "Cancel"
                     }
                     button {
+                        r#type: "button",
                         class: "image-editor__primary-button",
                         title: "Confirm edits and close",
                         onclick: move |evt| {
@@ -1037,6 +1051,28 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
 mod crop_mode_tests {
     use super::{editor_state_from_edit, ImageEditorCropMode};
     use crate::types::{ImageCropRect, RecipeImageEdit};
+
+    #[test]
+    fn editor_uses_named_shared_modal_with_independent_escape_and_drag_dismissal() {
+        let source = include_str!("image_editor_modal.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        assert!(source.contains("SharedModal {"));
+        assert!(source.contains("aria_labelledby: \"image-editor-title\""));
+        assert!(source.contains("focus_selector: \"#image-editor-cancel\""));
+        assert!(source.contains("on_dismiss: move |_| on_close.call(())"));
+        assert!(source.contains("on_backdrop_dismiss: move |_|"));
+        assert!(source.contains("just_released_drag.set(false)"));
+        assert!(source.contains("class: \"modal-card modal-card--editor\""));
+        assert!(!source.contains("class: \"modal-overlay\""));
+        for button in source.split("button {").skip(1) {
+            assert!(
+                button.trim_start().starts_with("r#type: \"button\","),
+                "editor buttons must not submit a surrounding form"
+            );
+        }
+    }
 
     #[test]
     fn editor_layout_bounds_preview_and_keeps_content_reachable() {
