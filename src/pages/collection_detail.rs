@@ -9,8 +9,8 @@ use crate::api::collection::{
     reorder_child_collections,
 };
 use crate::components::base::{
-    Button, ButtonVariant, CollectionCover, CollectionVisibilityBadge, EmptyState, Input,
-    LoadingSpinner, PageHeader, RecipeCard, ReorderHandle, SharedModal,
+    Button, ButtonVariant, CollectionCover, CollectionVisibilityBadge, EmptyState, FeedbackToast,
+    Input, LoadingSpinner, PageHeader, RecipeCard, ReorderHandle, SharedModal, TooltipAction,
 };
 use crate::types::{CollectionSummary, CollectionVisibility, RecipeCardSummary};
 use crate::Route;
@@ -189,6 +189,8 @@ pub fn CollectionDetail(id: String) -> Element {
     let mut recipe_reorder_generation = use_signal(|| 0_u64);
     let mut reorder_error = use_signal(|| None::<String>);
     let mut link_status = use_signal(|| None::<Result<String, String>>);
+    let mut link_pending = use_signal(|| false);
+    let mut link_generation = use_signal(|| 0_u64);
     let refreshing_contents = contents.pending();
     let loaded = contents.read().clone();
 
@@ -309,35 +311,43 @@ pub fn CollectionDetail(id: String) -> Element {
                                 }
                             }
                             if can_edit && collection_contents.collection.visibility != CollectionVisibility::Private {
-                                Button {
-                                    variant: ButtonVariant::Secondary,
+                                TooltipAction {
+                                    label: "Copy link",
+                                    description: "Copy this collection's shareable link to your clipboard.",
+                                    disabled: link_pending(),
                                     onclick: {
                                         let url = format!("/collections/{collection_id}");
                                         move |_| {
-                                            link_status.set(None);
+                                            if link_pending() { return; }
+                                            link_pending.set(true);
                                             let url = url.clone();
                                             spawn(async move {
                                                 link_status.set(Some(copy_collection_link(url).await));
+                                                link_generation += 1;
+                                                link_pending.set(false);
                                             });
                                         }
                                     },
-                                    "Copy link"
                                 }
-                                Button {
-                                    variant: ButtonVariant::Secondary,
+                                TooltipAction {
+                                    label: "Share",
+                                    description: "Open sharing options for this collection.",
+                                    disabled: link_pending(),
                                     onclick: {
                                         let title = collection_name.clone();
                                         let url = format!("/collections/{collection_id}");
                                         move |_| {
-                                            link_status.set(None);
+                                            if link_pending() { return; }
+                                            link_pending.set(true);
                                             let title = title.clone();
                                             let url = url.clone();
                                             spawn(async move {
                                                 link_status.set(Some(share_collection_link(title, url).await));
+                                                link_generation += 1;
+                                                link_pending.set(false);
                                             });
                                         }
                                     },
-                                    "Share"
                                 }
                             }
                         }
@@ -362,11 +372,10 @@ pub fn CollectionDetail(id: String) -> Element {
                         if let Some(error) = delete_error() { p { role: "alert", color: "var(--error)", "{error}" } }
                     }
                     if can_edit {
-                        if let Some(status) = link_status() {
-                            match status {
-                                Ok(message) => rsx! { p { role: "status", aria_live: "polite", color: "var(--success)", "{message}" } },
-                                Err(error) => rsx! { p { role: "alert", aria_live: "assertive", color: "var(--error)", "Collection link action failed: {error}" } },
-                            }
+                        FeedbackToast {
+                            generation: link_generation(),
+                            message: link_status().map(|result| result.map_err(|error| format!("Collection link action failed: {error}"))),
+                            on_dismiss: move |_| link_status.set(None),
                         }
                     }
                     if can_edit {

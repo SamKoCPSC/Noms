@@ -20,6 +20,9 @@ mod design_foundation_tests;
 mod modal_behavior_tests;
 
 #[cfg(test)]
+mod feedback_tests;
+
+#[cfg(test)]
 mod informational_module_tests {
     use super::informational::{CallToActionPanel, PageMeta};
 

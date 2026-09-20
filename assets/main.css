@@ -5385,9 +5385,72 @@ dialog.shared-modal::backdrop { background: transparent; }
     .search-hero { align-items: start; }
 }
 
+/* T2 nonmodal feedback: local warm glass, never a page-wide backdrop. */
+.feedback-surface {
+    background: var(--overlay-opaque);
+    color: var(--text-primary);
+    border: 1px solid var(--overlay-border);
+    box-shadow: var(--overlay-shadow);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+.feedback-trigger { display: inline-flex; }
+.feedback-tooltip {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    z-index: 1100;
+    max-width: min(20rem, calc(100vw - 16px));
+    padding: 8px 14px;
+    border-radius: 18px;
+}
+.feedback-tooltip[hidden] { display: none; }
+.feedback-host {
+    position: fixed;
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(16px, env(safe-area-inset-bottom));
+    max-width: min(28rem, calc(100vw - 32px));
+    z-index: 1000;
+    pointer-events: none;
+}
+.feedback-toast {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-radius: 24px;
+    padding: 12px 14px;
+    pointer-events: auto;
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+}
+.feedback-toast--empty { pointer-events: none; }
+.feedback-toast__message { min-width: 0; flex: 1; }
+.feedback-toast__icon {
+    flex: 0 0 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    border: 1px solid var(--success);
+    font-weight: 800;
+}
+.feedback-toast__icon--error { border-color: var(--error); }
+.feedback-toast__close { min-width: 44px; min-height: 44px; padding: 4px; flex-shrink: 0; }
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .feedback-surface {
+        background: var(--overlay-fill);
+        backdrop-filter: var(--overlay-blur);
+        -webkit-backdrop-filter: var(--overlay-blur);
+    }
+}
+
 /* Shared accessibility fallbacks follow component rules in the cascade. */
 @media (prefers-reduced-transparency: reduce) {
-    .modal-card:not(.modal-card--editor) {
+    .modal-card:not(.modal-card--editor), .feedback-surface {
         background: var(--overlay-opaque);
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
@@ -5414,7 +5477,7 @@ dialog.shared-modal::backdrop { background: transparent; }
 }
 
 @media (forced-colors: active) {
-    .modal-card:not(.modal-card--editor) {
+    .modal-card:not(.modal-card--editor), .feedback-surface {
         --text-primary: CanvasText;
         --text-secondary: CanvasText;
         --text-tertiary: CanvasText;

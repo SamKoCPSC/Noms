@@ -93,7 +93,7 @@ jobs:
         run: cargo test --features server
 
       - name: Test shared modal lifecycle
-        run: node --test scripts/tests/test-shared-modal.mjs
+        run: node --test scripts/tests/test-shared-modal.mjs scripts/tests/test-feedback.mjs
 
   # Search tests require the repository's pinned PostgreSQL image because
   # pg_search cannot be installed into the runner's plain PostgreSQL service.
