@@ -10,6 +10,8 @@ Implementation contract (2026-09-20): desktop P1 uses actual avatar/name/handle,
 
 ## P2 — Action menus
 
+Implementation contract (2026-09-21): [foundation slice 9](../../implementation-plans/NOMS-020-checkpoint-1-foundations.md) adapts this illustrative board to existing routes. Recipe detail groups View version graph, Fork and owner-only Edit/Delete; its authenticated collection picker remains separate pending P3. Graph retains its eight snapshot actions plus the existing background navigation menu. Shared Rust menu handling, warm glass, viewport-bounded top-layer presentation and internal scrolling replace neither server permissions nor deletion confirmation. See slice 9 for validation status and limitations.
+
 ![P2](overlays-p2-action-menus-v1.png)
 
 ## P3 — Collection picker
