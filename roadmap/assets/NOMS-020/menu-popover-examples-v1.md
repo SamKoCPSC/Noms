@@ -4,6 +4,8 @@ Status: user-selected overlay compositions, confirmed 2026-09-17: P1 Account men
 
 ## P1 — Account menu
 
+Implementation contract (2026-09-20): desktop P1 uses actual avatar/name/handle, Dashboard, My profile, Settings and neutral Sign Out. The panel stays mounted to preserve native logout POST. Named menu-button semantics, arrow/Home/End/typeahead navigation, Escape focus return, Tab exit, outside dismissal and bounded scrolling/positioning are defined in [foundation slice 7](../../implementation-plans/NOMS-020-checkpoint-1-foundations.md). Mobile drawer and broader navbar redesign are unchanged; P2/P3 are still separate work.
+
 ![P1](overlays-p1-account-menu-v1.png)
 
 ## P2 — Action menus
