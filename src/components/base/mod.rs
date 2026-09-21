@@ -39,3 +39,18 @@ mod recipe_card;
 mod reorder_handle;
 mod settings_tabs;
 mod shared_modal;
+
+#[cfg(target_arch = "wasm32")]
+pub(crate) mod account_menu;
+#[cfg(any(target_arch = "wasm32", test))]
+mod modal_lifecycle;
+#[cfg(test)]
+mod modal_lifecycle_tests;
+#[cfg(target_arch = "wasm32")]
+mod overlay_dom;
+#[cfg(any(target_arch = "wasm32", test))]
+mod overlay_logic;
+#[cfg(test)]
+mod overlay_logic_tests;
+#[cfg(target_arch = "wasm32")]
+mod tooltip_lifecycle;

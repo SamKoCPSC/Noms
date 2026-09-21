@@ -3,13 +3,7 @@
 use dioxus::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
-#[wasm_bindgen::prelude::wasm_bindgen(module = "/src/components/base/feedback.js")]
-extern "C" {
-    #[wasm_bindgen::prelude::wasm_bindgen(js_name = mountTooltip)]
-    fn mount_tooltip(id: &str);
-    #[wasm_bindgen::prelude::wasm_bindgen(js_name = disposeTooltip)]
-    fn dispose_tooltip(id: &str);
-}
+use super::tooltip_lifecycle::{dispose_tooltip, mount_tooltip};
 
 /// One persistent, politely announced result. Errors are not automatically urgent.
 /// Render even without a message so the live region exists before updates arrive.

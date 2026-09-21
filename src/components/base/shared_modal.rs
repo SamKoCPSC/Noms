@@ -3,20 +3,12 @@
 use dioxus::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
-#[wasm_bindgen::prelude::wasm_bindgen(module = "/src/components/base/shared_modal.js")]
-extern "C" {
-    #[wasm_bindgen::prelude::wasm_bindgen(js_name = syncModal)]
-    fn sync_modal(id: &str, focus_selector: &str, pending: bool);
-    #[wasm_bindgen::prelude::wasm_bindgen(js_name = disposeModal)]
-    fn dispose_modal(id: &str);
-    #[wasm_bindgen::prelude::wasm_bindgen(js_name = wrapModalTab)]
-    fn wrap_modal_tab(id: &str, backwards: bool) -> bool;
-}
+use super::modal_lifecycle::browser::{dispose_modal, sync_modal, wrap_modal_tab};
 
 /// Mount while open. Native showModal makes the background inert; explicit Tab
 /// wrapping keeps keyboard navigation inside, including when pending disables
 /// every control. The caller retains authority over dismissal; the lifecycle
-/// bridge restores prior scroll styles and focus on unmount.
+/// controller restores prior scroll styles and focus on unmount.
 #[component]
 pub fn SharedModal(
     aria_labelledby: String,

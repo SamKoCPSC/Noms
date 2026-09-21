@@ -77,9 +77,6 @@ check:
 # process; matching the host's full CPU count can exhaust startup resources.
 test:
 	SQLX_OFFLINE=true cargo test --features server -- --test-threads=8
-	@node --test scripts/tests/test-shared-modal.mjs
-	@node --test scripts/tests/test-feedback.mjs
-	@node --test scripts/tests/test-account-menu.mjs
 
 # Run CI gate script tests
 schema-check-test:

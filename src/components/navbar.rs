@@ -31,13 +31,7 @@ use crate::utils::theme::UseTheme;
 use crate::Route;
 
 #[cfg(target_arch = "wasm32")]
-#[wasm_bindgen::prelude::wasm_bindgen(module = "/src/components/base/account-menu.js")]
-extern "C" {
-    #[wasm_bindgen::prelude::wasm_bindgen(js_name = mountAccountMenu)]
-    fn mount_account_menu(id: &str);
-    #[wasm_bindgen::prelude::wasm_bindgen(js_name = disposeAccountMenu)]
-    fn dispose_account_menu(id: &str);
-}
+use crate::components::base::account_menu::{dispose_account_menu, mount_account_menu};
 
 /// Top navigation bar with glassmorphic styling.
 ///
