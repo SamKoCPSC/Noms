@@ -30,6 +30,15 @@ use crate::components::base::{Avatar, AvatarSize};
 use crate::utils::theme::UseTheme;
 use crate::Route;
 
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen::prelude::wasm_bindgen(module = "/src/components/base/account-menu.js")]
+extern "C" {
+    #[wasm_bindgen::prelude::wasm_bindgen(js_name = mountAccountMenu)]
+    fn mount_account_menu(id: &str);
+    #[wasm_bindgen::prelude::wasm_bindgen(js_name = disposeAccountMenu)]
+    fn dispose_account_menu(id: &str);
+}
+
 /// Top navigation bar with glassmorphic styling.
 ///
 /// Responsive: collapses to a hamburger menu on screens < 768px.
@@ -37,87 +46,10 @@ use crate::Route;
 #[component]
 pub fn Navbar(theme: UseTheme) -> Element {
     let mut menu_open = use_signal(|| false);
-    let mut dropdown_open = use_signal(|| false);
     let mut sidebar_open = use_signal(|| false);
 
-    // Close dropdown when clicking outside — document-level listener via web_sys
-    // Only runs on web platform; no-op on server (SSR)
     #[cfg(target_arch = "wasm32")]
-    {
-        use dioxus::core::use_hook;
-        use dioxus::prelude::use_drop;
-        use wasm_bindgen::closure::Closure;
-        use wasm_bindgen::JsCast;
-
-        let dropdown_id = "navbar-user-dropdown";
-
-        // Store the closure for cleanup in use_drop
-        let closure_signal = use_signal(|| None::<Closure<dyn FnMut(web_sys::MouseEvent)>>);
-
-        use_hook({
-            let mut closure_sig = closure_signal;
-            move || {
-                let window = web_sys::window().expect("no window");
-                let document = window.document().expect("no document");
-                let mut dropdown_signal = dropdown_open;
-                // Clone document for use inside the closure (Document is a thin JS wrapper)
-                let doc_for_closure = document.clone();
-
-                let closure: Closure<dyn FnMut(web_sys::MouseEvent)> =
-                    Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
-                        // If dropdown is not open, nothing to do
-                        if !dropdown_signal() {
-                            return;
-                        }
-
-                        // Find the dropdown container in the DOM
-                        let Some(dropdown_el) = doc_for_closure.get_element_by_id(dropdown_id)
-                        else {
-                            return;
-                        };
-
-                        // Get the click target
-                        let Some(target) = event.target() else {
-                            return;
-                        };
-
-                        // Check if the target is a descendant of (or is) the dropdown container
-                        let target_node: Option<web_sys::Node> = target.dyn_into().ok();
-                        if let Some(target_node) = target_node {
-                            if !dropdown_el.contains(Some(&target_node)) {
-                                // Click was outside — close the dropdown
-                                dropdown_signal.set(false);
-                            }
-                        }
-                    })
-                        as Box<dyn FnMut(web_sys::MouseEvent)>);
-
-                document
-                    .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
-                    .expect("failed to add click listener");
-
-                // Store closure for cleanup
-                closure_sig.set(Some(closure));
-            }
-        });
-
-        // Cleanup: remove the event listener when component unmounts
-        use_drop({
-            let mut closure_sig = closure_signal;
-            move || {
-                if let Some(closure) = closure_sig.take() {
-                    if let Some(window) = web_sys::window() {
-                        if let Some(document) = window.document() {
-                            let _ = document.remove_event_listener_with_callback(
-                                "click",
-                                closure.as_ref().unchecked_ref(),
-                            );
-                        }
-                    }
-                }
-            }
-        });
-    }
+    use_drop(|| dispose_account_menu("navbar-user-dropdown"));
 
     let auth = use_auth();
     let current_route = use_route::<Route>();
@@ -175,17 +107,24 @@ pub fn Navbar(theme: UseTheme) -> Element {
                 // Right side: auth + theme toggle (desktop)
                 div { class: "navbar-actions",
                     if is_signed_in {
-                        // User dropdown container with stable id for outside-click detection
+                        // Persistent P1 menu: hiding must not unmount the logout form.
                         div {
                             class: "navbar-user-menu",
                             id: "navbar-user-dropdown",
+                            onmounted: move |_| {
+                                #[cfg(target_arch = "wasm32")]
+                                mount_account_menu("navbar-user-dropdown");
+                            },
                             // User dropdown trigger
-                            div {
+                            button {
+                                r#type: "button",
                                 class: "navbar-user-dropdown",
-                                onclick: move |evt| {
-                                    evt.stop_propagation();
-                                    dropdown_open.set(!dropdown_open());
-                                },
+                                "data-account-trigger": "",
+                                id: "account-menu-trigger",
+                                aria_label: "Account menu",
+                                aria_haspopup: "menu",
+                                aria_expanded: "false",
+                                aria_controls: "account-menu-panel",
                                 Avatar {
                                     size: AvatarSize::Small,
                                     src: avatar_src.clone(),
@@ -195,35 +134,49 @@ pub fn Navbar(theme: UseTheme) -> Element {
                             }
 
                             // User dropdown menu
-                            if dropdown_open() {
-                                div {
-                                    class: "navbar-dropdown-menu",
-                                    onclick: move |evt| evt.stop_propagation(),
-                                    div { class: "navbar-dropdown-header",
-                                        "{display_name}"
+                            div {
+                                id: "account-menu-panel",
+                                class: "feedback-surface account-menu-panel",
+                                "data-account-panel": "",
+                                hidden: true,
+                                div { class: "account-menu-identity",
+                                    Avatar { size: AvatarSize::Medium, src: avatar_src.clone(), username: display_name.clone() }
+                                    div { class: "account-menu-identity-text",
+                                        strong { "{display_name}" }
+                                        span { "@{auth.current_user.as_ref().map(|u| u.username.clone()).unwrap_or_default()}" }
                                     }
-                                    div { class: "navbar-dropdown-divider" }
+                                }
+                                div { class: "account-menu-divider" }
+                                div {
+                                    role: "menu",
+                                    aria_labelledby: "account-menu-trigger",
+                                    Link {
+                                        to: Route::Dashboard {}, class: "account-menu-item", role: "menuitem", tabindex: "-1",
+                                        AccountMenuIcon { kind: "dashboard" }
+                                        "Dashboard"
+                                    }
                                     a {
                                         href: format!("/u/{}", auth.current_user.as_ref().map(|u| u.username.clone()).unwrap_or_default()),
-                                        class: "navbar-dropdown-item",
-                                        onclick: move |_| dropdown_open.set(false),
-                                        "View Profile"
+                                        class: "account-menu-item", role: "menuitem", tabindex: "-1",
+                                        AccountMenuIcon { kind: "profile" }
+                                        "My profile"
                                     }
                                     Link {
                                         to: Route::SettingsProfile {},
-                                        class: "navbar-dropdown-item",
-                                        onclick: move |_| dropdown_open.set(false),
+                                        class: "account-menu-item", role: "menuitem", tabindex: "-1",
+                                        AccountMenuIcon { kind: "settings" }
                                         "Settings"
                                     }
+                                    div { class: "account-menu-divider", role: "separator" }
                                     form {
                                         class: "navbar-logout-form",
                                         method: "post",
                                         action: "/auth/logout?redirect_uri=/",
                                         button {
                                             r#type: "submit",
-                                            class: "navbar-dropdown-item navbar-dropdown-item-danger",
+                                            class: "account-menu-item", role: "menuitem", tabindex: "-1",
                                             // Keep the form mounted until the browser submits it.
-                                            onclick: move |evt| evt.stop_propagation(),
+                                            AccountMenuIcon { kind: "logout" }
                                             "Sign Out"
                                         }
                                     }
@@ -453,4 +406,15 @@ pub fn Navbar(theme: UseTheme) -> Element {
             }
         }
     }
+}
+
+#[component]
+fn AccountMenuIcon(kind: &'static str) -> Element {
+    let path = match kind {
+        "dashboard" => "M3 10 12 3l9 7v11h-6v-7H9v7H3Z",
+        "profile" => "M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM4 21v-2a8 5 0 0 1 16 0v2Z",
+        "settings" => "M4 5h16M4 12h16M4 19h16M8 2v6M16 9v6M10 16v6",
+        _ => "M14 4H4v16h10M10 12h11m-4-4 4 4-4 4",
+    };
+    rsx! { svg { view_box: "0 0 24 24", width: "20", height: "20", fill: "none", stroke: "currentColor", stroke_width: "1.8", stroke_linecap: "round", stroke_linejoin: "round", "aria-hidden": "true", path { d: path } } }
 }

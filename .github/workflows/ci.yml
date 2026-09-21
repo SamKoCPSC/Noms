@@ -92,8 +92,8 @@ jobs:
           SQLX_OFFLINE: true
         run: cargo test --features server
 
-      - name: Test shared modal lifecycle
-        run: node --test scripts/tests/test-shared-modal.mjs scripts/tests/test-feedback.mjs
+      - name: Test shared overlay lifecycles
+        run: node --test scripts/tests/test-shared-modal.mjs scripts/tests/test-feedback.mjs scripts/tests/test-account-menu.mjs
 
   # Search tests require the repository's pinned PostgreSQL image because
   # pg_search cannot be installed into the runner's plain PostgreSQL service.

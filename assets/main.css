@@ -612,6 +612,10 @@ a:hover {
 
 /* User dropdown trigger */
 .navbar-user-dropdown {
+    border: 1px solid transparent;
+    background: transparent;
+    font-family: var(--font-body);
+    color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: var(--space-sm);
@@ -5449,6 +5453,43 @@ dialog.shared-modal::backdrop { background: transparent; }
 }
 
 /* Shared accessibility fallbacks follow component rules in the cascade. */
+.account-menu-panel {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    width: min(280px, calc(100vw - 16px));
+    padding: 10px;
+    border-radius: 22px;
+    z-index: 1100;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+.account-menu-panel[hidden] { display: none; }
+.account-menu-identity { display: flex; align-items: center; gap: 12px; padding: 12px 10px; }
+.account-menu-identity-text { min-width: 0; display: grid; gap: 2px; }
+.account-menu-identity-text strong { font-size: 16px; }
+.account-menu-identity-text span { color: var(--overlay-muted); }
+.account-menu-divider { height: 1px; background: var(--overlay-border); margin: 6px 10px; }
+.account-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid transparent;
+    border-radius: 16px;
+    background: transparent;
+    color: var(--text-primary);
+    text-decoration: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.account-menu-item svg { flex-shrink: 0; }
+.account-menu-item:hover, .account-menu-item:focus-visible { background: var(--surface); color: var(--text-primary); }
+.account-menu-item:focus-visible, .navbar-user-dropdown:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
 @media (prefers-reduced-transparency: reduce) {
     .modal-card:not(.modal-card--editor), .feedback-surface {
         background: var(--overlay-opaque);
@@ -5470,6 +5511,7 @@ dialog.shared-modal::backdrop { background: transparent; }
     }
 
     .btn,
+    .navbar-user-dropdown,
     .input,
     a {
         transition: none;
