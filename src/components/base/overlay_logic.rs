@@ -80,6 +80,23 @@ pub(super) struct MenuPosition {
 pub(super) fn natural_height(scroll_height: i32, offset_height: i32, client_height: i32) -> f64 {
     f64::from(scroll_height + offset_height - client_height)
 }
+pub(super) fn context_menu_position(
+    left: f64,
+    top: f64,
+    width: f64,
+    height: f64,
+    viewport_width: f64,
+    viewport_height: f64,
+) -> MenuPosition {
+    let max_height = (viewport_height - 16.).max(0.);
+    MenuPosition {
+        left: left.min(viewport_width - width - 8.).max(8.),
+        top: top
+            .min(viewport_height - height.min(max_height) - 8.)
+            .max(8.),
+        max_height,
+    }
+}
 pub(super) fn menu_position(
     trigger: Rect,
     width: f64,

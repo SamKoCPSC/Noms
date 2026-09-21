@@ -1,6 +1,39 @@
 use super::overlay_logic::*;
 
 #[test]
+fn graph_menu_position_clamps_to_browser_not_only_canvas() {
+    let source = include_str!("action_menu.rs");
+    assert!(
+        source.find("dom::show_popover(&panel)").unwrap()
+            < source.find("panel.offset_width()").unwrap()
+    );
+    assert_eq!(
+        context_menu_position(482., 139., 256., 450., 800., 500.),
+        MenuPosition {
+            left: 482.,
+            top: 42.,
+            max_height: 484.
+        }
+    );
+    assert_eq!(
+        context_menu_position(300., 200., 256., 460., 320., 180.),
+        MenuPosition {
+            left: 56.,
+            top: 8.,
+            max_height: 164.
+        }
+    );
+    assert_eq!(
+        context_menu_position(-5., -20., 256., 460., 800., 600.),
+        MenuPosition {
+            left: 8.,
+            top: 8.,
+            max_height: 584.
+        }
+    );
+}
+
+#[test]
 fn tooltip_geometry_preserves_centering_clamping_and_flip() {
     assert_eq!(
         tooltip_position(
@@ -205,4 +238,41 @@ fn overlay_consumers_no_longer_import_javascript_lifecycle_modules() {
             .join(file)
             .exists());
     }
+}
+
+#[test]
+fn p2_recipe_actions_preserve_existing_workflows() {
+    let source = include_str!("../../pages/recipe_detail.rs");
+    assert!(source.contains("ActionMenu {"));
+    assert!(source.contains("if is_owner"));
+    assert!(source.contains("window.confirm()"));
+    assert!(source.contains("AddToCollectionDropdown {"));
+    assert!(source.contains("onclick: on_delete"));
+    assert!(source.contains("onclick: on_fork"));
+}
+
+#[test]
+fn p2_graph_menu_keeps_actions_and_uses_shared_glass() {
+    let source = include_str!("../../pages/recipe_version_graph.rs");
+    assert!(source.contains("feedback-surface recipe-version-graph__context-menu"));
+    for label in [
+        "View snapshot",
+        "View recipe",
+        "Set as main recipe",
+        "Select as Before",
+        "Select as After",
+        "Compare with current",
+        "Center snapshot",
+        "Zoom to snapshot",
+    ] {
+        assert!(source.contains(label), "missing {label}");
+    }
+    assert!(source.contains("Key::Tab"));
+    assert!(source.contains("onwheel: move |event| event.stop_propagation()"));
+    let css = include_str!("../../../assets/main.css");
+    assert!(css.contains("--context-menu-top"));
+    assert!(
+        css.rfind(".action-menu-item--danger").unwrap()
+            > css.rfind(".account-menu-item:hover,").unwrap()
+    );
 }

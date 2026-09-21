@@ -121,10 +121,10 @@ const GRAPH_WHEEL_ZOOM_SENSITIVITY: f64 = 0.002;
 const GRAPH_WHEEL_LINE_HEIGHT_PX: f64 = 40.0;
 const GRAPH_PAN_STEP_PX: f64 = 96.0;
 const GRAPH_DEFAULT_VIEWPORT: (f64, f64) = (900.0, 560.0);
-const GRAPH_CONTEXT_MENU_WIDTH_PX: f64 = 224.0;
-const GRAPH_CONTEXT_MENU_HEIGHT_PX: f64 = 300.0;
+const GRAPH_CONTEXT_MENU_WIDTH_PX: f64 = 256.0;
+const GRAPH_CONTEXT_MENU_HEIGHT_PX: f64 = 360.0;
 // The menu scrolls when its expanded action set exceeds this positioning box.
-const GRAPH_SNAPSHOT_CONTEXT_MENU_HEIGHT_PX: f64 = 336.0;
+const GRAPH_SNAPSHOT_CONTEXT_MENU_HEIGHT_PX: f64 = 460.0;
 const GRAPH_CONTEXT_MENU_MARGIN_PX: f64 = 8.0;
 const GRAPH_SNAPSHOT_FOCUS_ZOOM: f64 = 1.0;
 const GRAPH_FRONTIER_CONTROL_GAP_PX: f64 = 12.0;
@@ -933,6 +933,46 @@ fn center_version_graph_at(
         offset_y: viewport.1 / 2.0 - graph_point_y * transform.scale,
         ..transform
     }
+}
+
+fn context_menu_typeahead(
+    key: &str,
+    current: usize,
+    enabled: [bool; 8],
+    snapshot: bool,
+) -> Option<usize> {
+    if key.chars().count() != 1 || key.trim().is_empty() {
+        return None;
+    }
+    let labels = if snapshot {
+        [
+            "View snapshot",
+            "View recipe",
+            "Set as main recipe",
+            "Select as Before",
+            "Select as After",
+            "Compare with current",
+            "Center snapshot",
+            "Zoom to snapshot",
+        ]
+    } else {
+        [
+            "Zoom in here",
+            "Zoom out here",
+            "Center here",
+            "Center current snapshot",
+            "Fit graph to viewport",
+            "Show",
+            "",
+            "",
+        ]
+    };
+    (1..=8).map(|offset| (current + offset) % 8).find(|&index| {
+        enabled[index]
+            && labels[index]
+                .to_lowercase()
+                .starts_with(&key.to_lowercase())
+    })
 }
 
 fn next_context_menu_focus_index<const ACTION_COUNT: usize>(
@@ -2559,18 +2599,32 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                             }
                         }
                         if let Some(context_menu) = active_context_menu {
+                          crate::components::base::ActionMenuBoundary {
+                            on_dismiss: move |_| graph_context_menu.set(None),
                             div {
-                                class: "recipe-version-graph__context-menu",
+                                class: "feedback-surface recipe-version-graph__context-menu",
                                 role: "menu",
                                 aria_label: if is_snapshot_context_menu {
                                     "Snapshot context menu"
                                 } else {
                                     "Graph navigation menu"
                                 },
-                                style: "left: {context_menu.position.0:.2}px; top: {context_menu.position.1:.2}px;",
+                                style: "left: {context_menu.position.0:.2}px; top: {context_menu.position.1:.2}px; --context-menu-top: {context_menu.position.1:.2}px;",
                                 onclick: move |event| event.stop_propagation(),
+                                // Scroll the menu, not the graph canvas behind it.
+                                onwheel: move |event| event.stop_propagation(),
+                                onmousedown: move |event| event.stop_propagation(),
+                                oncontextmenu: move |event| {
+                                    event.prevent_default();
+                                    event.stop_propagation();
+                                },
                                 onkeydown: move |event| {
                                     let next_index = match event.data().key() {
+                                        Key::Tab => {
+                                            // Leave native sequential focus traversal intact. Outside
+                                            // focus dismisses the menu through ActionMenuBoundary.
+                                            return;
+                                        }
                                         Key::ArrowDown => next_context_menu_focus_index(
                                             graph_context_menu_focus_index(),
                                             1,
@@ -2601,6 +2655,13 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                 &graph_node_elements(),
                                             );
                                             return;
+                                        }
+                                        Key::Character(character) if !event.modifiers().ctrl() && !event.modifiers().alt() && !event.modifiers().meta() => {
+                                            let Some(index) = context_menu_typeahead(
+                                                &character, graph_context_menu_focus_index(),
+                                                context_menu_actions_enabled, is_snapshot_context_menu,
+                                            ) else { return; };
+                                            index
                                         }
                                         _ => return,
                                     };
@@ -3042,6 +3103,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                             }
                         }
                     }
+                    }
                     div {
                         class: "recipe-version-graph__expansion-live",
                         role: "status",
@@ -3320,6 +3382,33 @@ pub fn RecipeVersionGraph(id: String) -> Element {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn action_menu_typeahead_cycles_and_skips_unavailable_actions() {
+        let mut enabled = [true; 8];
+        assert_eq!(
+            super::context_menu_typeahead("v", 0, enabled, true),
+            Some(1)
+        );
+        assert_eq!(
+            super::context_menu_typeahead("V", 1, enabled, true),
+            Some(0)
+        );
+        enabled[5] = false;
+        assert_eq!(
+            super::context_menu_typeahead("c", 4, enabled, true),
+            Some(6)
+        );
+        assert_eq!(super::context_menu_typeahead(" ", 0, enabled, true), None);
+        assert_eq!(super::context_menu_typeahead("xx", 0, enabled, true), None);
+        assert_eq!(
+            super::context_menu_typeahead("z", 0, [false; 8], false),
+            None
+        );
+        assert_eq!(
+            super::context_menu_typeahead("z", 0, enabled, false),
+            Some(1)
+        );
+    }
     use super::is_recipe_unavailable_error;
     use crate::types::{
         VersionGraph, VersionGraphEdge, VersionGraphEdgeKind, VersionGraphFrontier,
@@ -4049,7 +4138,16 @@ mod tests {
         );
 
         assert_eq!(menu.anchor, (895.0, 555.0));
-        assert_eq!(menu.position, (668.0, 216.0));
+        // P2's wider shell and 44px targets reserve more space than the old menu.
+        assert_eq!(menu.position, (636.0, 92.0));
+        assert_eq!(menu.position.0 + super::GRAPH_CONTEXT_MENU_WIDTH_PX, 892.0);
+        assert_eq!(
+            menu.position.1 + super::GRAPH_SNAPSHOT_CONTEXT_MENU_HEIGHT_PX,
+            552.0
+        );
+        let narrow =
+            super::VersionGraphContextMenu::at((180.0, 150.0), (200.0, 180.0), menu.target);
+        assert_eq!(narrow.position, (8.0, 8.0));
     }
 
     #[test]

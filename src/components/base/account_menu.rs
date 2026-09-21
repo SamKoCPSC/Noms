@@ -135,6 +135,11 @@ fn listen(
     })
 }
 pub(crate) fn mount_account_menu(id: &str) {
+    mount_menu(id, "[data-account-trigger]", "[data-account-panel]");
+}
+
+/// Shared nonmodal menu lifecycle; consumers retain their own actions and permissions.
+pub(crate) fn mount_menu(id: &str, trigger_selector: &str, panel_selector: &str) {
     let Some(root) = dom::element(id) else {
         return;
     };
@@ -146,10 +151,10 @@ pub(crate) fn mount_account_menu(id: &str) {
             return;
         }
         registry.remove(id);
-        let Some(trigger) = dom::query(&root, "[data-account-trigger]") else {
+        let Some(trigger) = dom::query(&root, trigger_selector) else {
             return;
         };
-        let Some(panel) = dom::query(&root, "[data-account-panel]") else {
+        let Some(panel) = dom::query(&root, panel_selector) else {
             return;
         };
         let menu = Rc::new(AccountMenu {

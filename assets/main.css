@@ -2812,14 +2812,12 @@ dialog.shared-modal::backdrop { background: transparent; }
     position: absolute;
     z-index: 4;
     display: grid;
-    width: min(224px, calc(100% - 16px));
-    max-height: calc(100% - 16px);
-    padding: 6px;
+    width: min(256px, calc(100% - 16px));
+    max-height: calc(100% - var(--context-menu-top, 8px) - 8px);
+    padding: 10px;
     overflow-y: auto;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--surface);
-    box-shadow: 4px 6px 14px var(--shadow-dark), -2px -2px 8px var(--shadow-light);
+    overscroll-behavior: contain;
+    border-radius: 22px;
     cursor: default;
 }
 
@@ -2853,9 +2851,10 @@ dialog.shared-modal::backdrop { background: transparent; }
 
 .recipe-version-graph__context-menu-item {
     width: 100%;
-    padding: 9px 10px;
+    min-height: 44px;
+    padding: 10px 14px;
     border: 0;
-    border-radius: calc(var(--radius-md) - 3px);
+    border-radius: 16px;
     background: transparent;
     color: var(--text-primary);
     cursor: pointer;
@@ -2867,18 +2866,19 @@ dialog.shared-modal::backdrop { background: transparent; }
 
 .recipe-version-graph__context-menu-item:hover:not(:disabled),
 .recipe-version-graph__context-menu-item:focus-visible {
-    background: color-mix(in srgb, var(--accent) 13%, transparent);
-    color: var(--accent);
+    background: var(--surface);
+    color: var(--text-primary);
     outline: none;
 }
 
 .recipe-version-graph__context-menu-item:focus-visible {
-    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
 }
 
 .recipe-version-graph__context-menu-item:disabled {
     cursor: not-allowed;
-    opacity: 0.48;
+    color: var(--overlay-muted);
 }
 
 .recipe-version-graph__context-menu-separator {
@@ -5465,6 +5465,8 @@ dialog.shared-modal::backdrop { background: transparent; }
     overscroll-behavior: contain;
 }
 .account-menu-panel[hidden] { display: none; }
+.action-menu-panel { width: min(256px, calc(100vw - 16px)); }
+.account-menu-item:disabled { color: var(--overlay-muted); cursor: not-allowed; }
 .account-menu-identity { display: flex; align-items: center; gap: 12px; padding: 12px 10px; }
 .account-menu-identity-text { min-width: 0; display: grid; gap: 2px; }
 .account-menu-identity-text strong { font-size: 16px; }
@@ -5489,6 +5491,7 @@ dialog.shared-modal::backdrop { background: transparent; }
 .account-menu-item svg { flex-shrink: 0; }
 .account-menu-item:hover, .account-menu-item:focus-visible { background: var(--surface); color: var(--text-primary); }
 .account-menu-item:focus-visible, .navbar-user-dropdown:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.action-menu-item--danger, .action-menu-item--danger:hover, .action-menu-item--danger:focus-visible { color: var(--error); }
 
 @media (prefers-reduced-transparency: reduce) {
     .modal-card:not(.modal-card--editor), .feedback-surface {

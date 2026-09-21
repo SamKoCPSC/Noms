@@ -20,8 +20,8 @@ use crate::api::recipe::{
 };
 use crate::auth::context::use_auth;
 use crate::components::base::{
-    AddToCollectionDropdown, Button, ButtonVariant, Card, EditedRecipeImage, LoadingSpinner,
-    PageHeader,
+    ActionMenu, AddToCollectionDropdown, Button, ButtonVariant, Card, EditedRecipeImage,
+    LoadingSpinner, PageHeader,
 };
 use crate::types::{
     ForkAttribution, Recipe, RecipeEquipment, RecipeIngredient, RecipeLineageBranch,
@@ -2077,17 +2077,20 @@ pub fn RecipeDetail(id: String) -> Element {
                                 display: "flex",
                                 flex_wrap: "wrap",
                                 gap: "var(--space-sm)",
-                                Link {
-                                    to: crate::Route::RecipeVersionGraph { id: recipe.id.to_string() },
-                                    class: "btn btn-secondary touch-target",
-                                    "View version graph"
-                                }
                                 if auth.is_authenticated {
                                     AddToCollectionDropdown {
                                         recipe_id: recipe.id.to_string(),
                                     }
-                                    Button {
-                                        variant: ButtonVariant::Secondary,
+                                }
+                                ActionMenu {
+                                  Link {
+                                    to: crate::Route::RecipeVersionGraph { id: recipe.id.to_string() },
+                                    class: "account-menu-item", role: "menuitem", tabindex: "-1",
+                                    "View version graph"
+                                  }
+                                  if auth.is_authenticated {
+                                    button {
+                                        r#type: "button", class: "account-menu-item", role: "menuitem", tabindex: "-1",
                                         disabled: is_forking(),
                                         onclick: on_fork,
                                         if is_forking() { "Forking..." } else { "Fork" }
@@ -2095,22 +2098,24 @@ pub fn RecipeDetail(id: String) -> Element {
                                 } else {
                                     a {
                                         href: fork_sign_in_url.clone(),
-                                        class: "btn btn-secondary touch-target",
+                                        class: "account-menu-item", role: "menuitem", tabindex: "-1",
                                         "Fork"
                                     }
                                 }
                                 if is_owner {
                                     Link {
                                         to: crate::Route::RecipeEdit { id: recipe.id.to_string() },
-                                        class: "btn btn-secondary touch-target",
-                                        "Edit"
+                                        class: "account-menu-item", role: "menuitem", tabindex: "-1",
+                                        "Edit recipe"
                                     }
-                                    Button {
-                                        variant: ButtonVariant::Danger,
+                                    div { class: "account-menu-divider", role: "separator" }
+                                    button {
+                                        r#type: "button", class: "account-menu-item action-menu-item--danger", role: "menuitem", tabindex: "-1",
                                         disabled: is_deleting(),
                                         onclick: on_delete,
-                                        if is_deleting() { "Deleting..." } else { "Delete" }
+                                        if is_deleting() { "Deleting..." } else { "Delete recipe" }
                                     }
+                                }
                                 }
                             }
                         }),

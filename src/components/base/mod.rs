@@ -1,3 +1,4 @@
+pub use action_menu::{ActionMenu, ActionMenuBoundary};
 pub use add_to_collection_dropdown::*;
 pub use avatar::*;
 pub use button::*;
@@ -19,6 +20,7 @@ pub use reorder_handle::*;
 pub use settings_tabs::{SettingsTab, SettingsTabs};
 pub use shared_modal::SharedModal;
 
+mod action_menu;
 mod add_to_collection_dropdown;
 mod avatar;
 mod button;
