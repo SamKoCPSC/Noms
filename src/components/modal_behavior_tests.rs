@@ -109,3 +109,13 @@ fn account_dialog_uses_shared_semantics_and_announces_failure() {
     assert!(page.contains("account-delete-title"));
     assert!(!page.contains("delete_step.set("));
 }
+
+#[test]
+fn linked_account_unlink_confirmation_uses_the_shared_modal_contract() {
+    let page = include_str!("../pages/settings/settings_accounts.rs");
+    assert!(page.contains("SharedModal {"));
+    assert!(page.contains("aria_labelledby: \"unlink-account-title\""));
+    assert!(page.contains("focus_selector: \"#unlink-account-cancel button\""));
+    assert!(page.contains("class: \"modal-card\""));
+    assert!(!page.contains("background_color: \"rgba(0, 0, 0, 0.5)\""));
+}

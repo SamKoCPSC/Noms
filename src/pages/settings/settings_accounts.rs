@@ -6,6 +6,7 @@ use uuid::Uuid;
 use crate::auth::context::use_auth;
 use crate::components::base::{
     Button, ButtonVariant, Card, EmptyState, LoadingSpinner, PageHeader, SettingsTab, SettingsTabs,
+    SharedModal,
 };
 use crate::components::AuthRequired;
 
@@ -492,30 +493,17 @@ pub fn SettingsAccounts() -> Element {
 
             // Confirmation modal
             if let Some((confirm_id, confirm_provider)) = show_confirm() {
-                div {
-                    position: "fixed",
-                    top: "0",
-                    left: "0",
-                    right: "0",
-                    bottom: "0",
-                    background_color: "rgba(0, 0, 0, 0.5)",
-                    display: "flex",
-                    align_items: "center",
-                    justify_content: "center",
-                    z_index: "1000",
-                    onclick: move |_| {
-                        on_cancel_unlink(());
-                    },
+                SharedModal {
+                    aria_labelledby: "unlink-account-title",
+                    focus_selector: "#unlink-account-cancel button",
+                    on_dismiss: move |_| on_cancel_unlink(()),
                     div {
-                        class: "neumo-card",
-                        padding: "var(--space-xl)",
-                        max_width: "400px",
-                        width: "90%",
-                        background_color: "var(--surface)",
+                        class: "modal-card",
                         onclick: move |evt| {
                             evt.stop_propagation();
                         },
-                        h3 {
+                        h2 {
+                            id: "unlink-account-title",
                             margin_bottom: "var(--space-sm)",
                             "Unlink {confirm_provider}?"
                         }
@@ -529,12 +517,14 @@ pub fn SettingsAccounts() -> Element {
                             display: "flex",
                             gap: "var(--space-sm)",
                             justify_content: "flex-end",
-                            Button {
-                                variant: ButtonVariant::Secondary,
-                                onclick: move |_| {
-                                    on_cancel_unlink(());
-                                },
-                                "Cancel"
+                            span { id: "unlink-account-cancel",
+                                Button {
+                                    variant: ButtonVariant::Secondary,
+                                    onclick: move |_| {
+                                        on_cancel_unlink(());
+                                    },
+                                    "Cancel"
+                                }
                             }
                             Button {
                                 variant: ButtonVariant::Danger,

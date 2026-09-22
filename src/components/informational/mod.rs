@@ -26,18 +26,16 @@ pub fn PageMeta(props: PageMetaProps) -> Element {
     }
 }
 
+#[cfg(feature = "server")]
 fn canonical_url(path: &str) -> String {
-    #[cfg(feature = "server")]
-    {
-        let base_url =
-            std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:8080".to_string());
-        return format!("{}{}", base_url.trim_end_matches('/'), path);
-    }
+    let base_url =
+        std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:8080".to_string());
+    format!("{}{}", base_url.trim_end_matches('/'), path)
+}
 
-    #[cfg(not(feature = "server"))]
-    {
-        path.to_string()
-    }
+#[cfg(not(feature = "server"))]
+fn canonical_url(path: &str) -> String {
+    path.to_string()
 }
 
 #[derive(Props, Clone, PartialEq)]
