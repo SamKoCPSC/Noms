@@ -1,6 +1,9 @@
 use dioxus::prelude::*;
 
 #[cfg(test)]
+mod navigation_tests;
+
+#[cfg(test)]
 mod logout_tests {
     /// Both responsive forms must survive the click until native POST submission.
     #[test]
@@ -26,33 +29,23 @@ mod logout_tests {
 }
 
 use crate::auth::context::use_auth;
-use crate::components::base::{Avatar, AvatarSize};
+use crate::components::base::{Avatar, AvatarSize, SharedModal};
 use crate::utils::theme::UseTheme;
 use crate::Route;
 
 #[cfg(target_arch = "wasm32")]
 use crate::components::base::account_menu::{dispose_account_menu, mount_account_menu};
 
-/// Top navigation bar with glassmorphic styling.
-///
-/// Responsive: collapses to a hamburger menu on screens < 768px.
-/// Auth state is read from the `AuthContext` provided by the server.
+/// N1/N4 opaque raised shell; the account menu and navigation dialog alone use glass.
 #[component]
 pub fn Navbar(theme: UseTheme) -> Element {
     let mut menu_open = use_signal(|| false);
-    let mut sidebar_open = use_signal(|| false);
-
     #[cfg(target_arch = "wasm32")]
     use_drop(|| dispose_account_menu("navbar-user-dropdown"));
-
     let auth = use_auth();
     let current_route = use_route::<Route>();
-    let home_is_current = current_route == (Route::Home {});
-    let search_is_current = matches!(current_route, Route::Search { .. });
-    let explore_is_current = current_route == (Route::Explore {});
-    let about_is_current = current_route == (Route::About {});
-    let how_to_is_current = current_route == (Route::HowTo {});
-
+    // Browser Back/Forward or another route transition must not leave a stale dialog.
+    use_effect(use_reactive(&current_route, move |_| menu_open.set(false)));
     let is_signed_in = auth.is_authenticated;
     let display_name = auth
         .current_user
@@ -71,36 +64,26 @@ pub fn Navbar(theme: UseTheme) -> Element {
         .and_then(|u| u.avatar_url.clone());
 
     rsx! {
-        nav {
-            class: "navbar",
-            div { class: "navbar-inner container",
-                // Left drawer toggle (top left)
-                button {
-                    class: "navbar-drawer-toggle touch-target",
-                    aria_label: "Open sidebar",
-                    onclick: move |_| sidebar_open.set(!sidebar_open()),
-                    "☰"
+        nav { class: "navbar", aria_label: "Primary navigation",
+            div { class: "navbar-inner",
+                Link { to: Route::Home {}, class: "navbar-logo", aria_label: "Noms home",
+                    span { "aria-hidden": "true", "🍴" }
+                    span { "Noms" }
                 }
-
-                // Logo (left)
-                Link {
-                    to: Route::Home {},
-                    class: "navbar-logo",
-                    "🍴 Noms"
-                }
-
-                // Desktop nav links (center) — hidden on mobile
                 div { class: "navbar-links",
-                    Link { to: Route::Home {}, class: if home_is_current { "navbar-link navbar-link--current" } else { "navbar-link" }, aria_current: if home_is_current { "page" } else { "false" }, "Home" }
-                    Link { to: Route::Search { query: Default::default() }, class: if search_is_current { "navbar-link navbar-link--current" } else { "navbar-link" }, aria_current: if search_is_current { "page" } else { "false" }, "Search" }
-                    Link { to: Route::Explore {}, class: if explore_is_current { "navbar-link navbar-link--current" } else { "navbar-link" }, aria_current: if explore_is_current { "page" } else { "false" }, "Explore" }
-                    Link { to: Route::About {}, class: if about_is_current { "navbar-link navbar-link--current" } else { "navbar-link" }, aria_current: if about_is_current { "page" } else { "false" }, "About" }
-                    Link { to: Route::HowTo {}, class: if how_to_is_current { "navbar-link navbar-link--current" } else { "navbar-link" }, aria_current: if how_to_is_current { "page" } else { "false" }, "How to" }
+                    for (route, label) in primary_navigation(is_signed_in) {
+                        Link {
+                            class: if navigation_is_current(&route, &current_route) { "navbar-link navbar-link--current" } else { "navbar-link" },
+                            aria_current: if navigation_is_current(&route, &current_route) { "page" } else { "false" },
+                            to: route,
+                            "{label}"
+                        }
+                    }
                 }
-
-                // Right side: auth + theme toggle (desktop)
+                NavigationSearch { compact: true }
                 div { class: "navbar-actions",
                     if is_signed_in {
+                        Link { to: Route::RecipeNew {}, class: "btn btn-primary navbar-create", "New recipe" }
                         // Persistent P1 menu: hiding must not unmount the logout form.
                         div {
                             class: "navbar-user-menu",
@@ -177,228 +160,142 @@ pub fn Navbar(theme: UseTheme) -> Element {
                                 }
                             }
                         }
-                    } else {
-                        Link {
-                            to: Route::Login {},
-                            class: "navbar-link",
-                            "Sign In"
-                        }
-                    }
 
-                    // Theme toggle
+                    } else {
+                        Link { to: Route::Login {}, class: "navbar-link navbar-sign-in", "Sign In" }
+                    }
                     button {
-                        class: "navbar-theme-toggle touch-target",
-                        onclick: move |_| theme.toggle(),
-                        aria_label: "Toggle theme",
-                        if theme.is_dark() {
-                            "☀️"
-                        } else {
-                            "🌙"
-                        }
+                        r#type: "button", class: "navbar-theme-toggle touch-target",
+                        onclick: move |_| theme.toggle(), aria_label: "Toggle theme",
+                        if theme.is_dark() { "☀️" } else { "🌙" }
                     }
                 }
-
-                // Hamburger button (mobile only)
                 button {
-                    class: "navbar-hamburger touch-target",
-                    onclick: move |_| menu_open.toggle(),
-                    aria_label: "Toggle menu",
-                    span { class: "hamburger-line" }
-                    span { class: "hamburger-line" }
-                    span { class: "hamburger-line" }
+                    id: "navigation-menu-trigger", r#type: "button", class: "navbar-menu-toggle",
+                    aria_label: "Open navigation menu", aria_haspopup: "dialog", aria_expanded: menu_open(),
+                    onclick: move |_| menu_open.set(true),
+                    span { "aria-hidden": "true", "☰" }
+                    span { "Menu" }
                 }
             }
         }
-
-        // Mobile slide-out drawer — rendered OUTSIDE the <nav> so that the
-        // navbar's backdrop-filter does not create a containing block that
-        // clips the drawer's `position: fixed; bottom: 0` to the navbar height.
         if menu_open() {
-            div {
-                class: "navbar-drawer",
-                onclick: move |_| menu_open.set(false),
-                div {
-                    class: "navbar-drawer-content",
-                    onclick: move |evt| evt.stop_propagation(),
-                    // Close button
-                    button {
-                        class: "navbar-drawer-close touch-target",
-                        onclick: move |_| menu_open.set(false),
-                        aria_label: "Close menu",
-                        "✕"
+            SharedModal {
+                aria_labelledby: "navigation-menu-title",
+                focus_selector: "#navigation-menu-close",
+                on_dismiss: move |_| menu_open.set(false),
+                div { class: "feedback-surface navigation-drawer", onclick: move |event| event.stop_propagation(),
+                    div { class: "navigation-drawer-header",
+                        h2 { id: "navigation-menu-title", "Navigation" }
+                        button { id: "navigation-menu-close", r#type: "button", class: "navigation-close",
+                            aria_label: "Close navigation menu", onclick: move |_| menu_open.set(false), "✕" }
                     }
-
-                    // Drawer nav links
-                    div { class: "navbar-drawer-links",
-                        Link {
-                            to: Route::Home {},
-                            class: "navbar-drawer-link",
-                            onclick: move |_| menu_open.set(false),
-                            "Home"
+                    if is_signed_in {
+                        div { class: "navigation-identity",
+                            Avatar { size: AvatarSize::Small, src: avatar_src.clone(), username: display_name.clone() }
+                            strong { "{display_name}" }
                         }
-                        Link {
-                            to: Route::Dashboard {},
-                            class: "navbar-drawer-link",
-                            onclick: move |_| menu_open.set(false),
-                            "Dashboard"
-                        }
-                        Link {
-                            to: Route::Search { query: Default::default() },
-                            class: "navbar-drawer-link",
-                            onclick: move |_| menu_open.set(false),
-                            "Search"
-                        }
-                        Link {
-                            to: Route::Explore {},
-                            class: "navbar-drawer-link",
-                            onclick: move |_| menu_open.set(false),
-                            "Explore"
-                        }
-                        Link {
-                            to: Route::About {},
-                            class: "navbar-drawer-link",
-                            onclick: move |_| menu_open.set(false),
-                            "About"
-                        }
-                        Link {
-                            to: Route::HowTo {},
-                            class: "navbar-drawer-link",
-                            onclick: move |_| menu_open.set(false),
-                            "How to"
-                        }
-                        Link {
-                            to: Route::RecipeNew {},
-                            class: "navbar-drawer-link",
-                            onclick: move |_| menu_open.set(false),
-                            "New Recipe"
-                        }
-                        if is_signed_in {
+                    }
+                    NavigationSearch { compact: false, on_navigate: move |_| menu_open.set(false) }
+                    nav { class: "navigation-drawer-links", aria_label: "All destinations",
+                        for (route, label) in [
+                            (Route::Home {}, "Home"),
+                            (Route::Dashboard {}, "Dashboard"),
+                            (Route::CollectionList {}, "Collections"),
+                            (Route::Explore {}, "Explore"),
+                            (Route::Search { query: Default::default() }, "Search"),
+                            (Route::RecipeNew {}, "New recipe"),
+                            (Route::About {}, "About"),
+                            (Route::HowTo {}, "How to"),
+                        ] {
                             Link {
-                                to: Route::SettingsProfile {},
-                                class: "navbar-drawer-link",
-                                onclick: move |_| menu_open.set(false),
-                                "Settings"
+                                class: if navigation_is_current(&route, &current_route) { "navbar-link navbar-link--current" } else { "navbar-link" },
+                                aria_current: if navigation_is_current(&route, &current_route) { "page" } else { "false" },
+                                to: route, onclick: move |_| menu_open.set(false), "{label}"
                             }
-                            form {
-                                class: "navbar-logout-form",
-                                method: "post",
-                                action: "/auth/logout?redirect_uri=/",
-                                button {
-                                    r#type: "submit",
-                                    class: "navbar-drawer-link navbar-drawer-link-danger",
-                                    // Closing the drawer here would remove the form before POST.
-                                    onclick: move |evt| evt.stop_propagation(),
+                        }
+                    }
+                    div { class: "navigation-drawer-account",
+                        if is_signed_in {
+                            a { href: format!("/u/{}", auth.current_user.as_ref().map(|u| u.username.clone()).unwrap_or_default()),
+                                class: "navbar-link", "My profile" }
+                            Link { to: Route::SettingsProfile {}, class: "navbar-link", onclick: move |_| menu_open.set(false), "Settings" }
+                            form { class: "navbar-logout-form", method: "post", action: "/auth/logout?redirect_uri=/",
+                                button { r#type: "submit", class: "navbar-link",
+                                    // Keep the form mounted until native POST completes.
                                     "Sign Out"
                                 }
                             }
                         } else {
-                            Link {
-                                to: Route::Login {},
-                                class: "navbar-drawer-link",
-                                onclick: move |_| menu_open.set(false),
-                                "Sign In"
-                            }
+                            Link { to: Route::Login {}, class: "navbar-link", onclick: move |_| menu_open.set(false), "Sign In" }
                         }
-                    }
-
-                    // Drawer theme toggle
-                    button {
-                        class: "navbar-drawer-theme touch-target",
-                        onclick: move |_| {
-                            theme.toggle();
-                            menu_open.set(false);
-                        },
-                        if theme.is_dark() {
-                            "☀️ Light Mode"
-                        } else {
-                            "🌙 Dark Mode"
+                        button { r#type: "button", class: "navbar-link", onclick: move |_| theme.toggle(),
+                            if theme.is_dark() { "☀️ Light Mode" } else { "🌙 Dark Mode" }
                         }
                     }
                 }
             }
         }
+    }
+}
 
-        // Left sidebar drawer — rendered OUTSIDE the <nav> so backdrop-filter
-        // does not create a containing block that clips the drawer.
-        if sidebar_open() {
-            div {
-                class: "sidebar-overlay",
-                onclick: move |_| sidebar_open.set(false),
-                div {
-                    class: "sidebar-drawer",
-                    onclick: move |evt| evt.stop_propagation(),
-                    // Close button
-                    button {
-                        class: "sidebar-close touch-target",
-                        onclick: move |_| sidebar_open.set(false),
-                        aria_label: "Close sidebar",
-                        "✕"
-                    }
-
-                    // Sidebar nav links
-                    div { class: "sidebar-links",
-                        Link {
-                            to: Route::Home {},
-                            class: "sidebar-link",
-                            onclick: move |_| sidebar_open.set(false),
-                            "Home"
-                        }
-                        Link {
-                            to: Route::Dashboard {},
-                            class: "sidebar-link",
-                            onclick: move |_| sidebar_open.set(false),
-                            "Dashboard"
-                        }
-                        Link {
-                            to: Route::Search { query: Default::default() },
-                            class: "sidebar-link",
-                            onclick: move |_| sidebar_open.set(false),
-                            "Search"
-                        }
-                        Link {
-                            to: Route::Explore {},
-                            class: "sidebar-link",
-                            onclick: move |_| sidebar_open.set(false),
-                            "Explore"
-                        }
-                        Link {
-                            to: Route::RecipeNew {},
-                            class: "sidebar-link",
-                            onclick: move |_| sidebar_open.set(false),
-                            "New Recipe"
-                        }
-                        Link {
-                            to: Route::CollectionList {},
-                            class: "sidebar-link",
-                            onclick: move |_| sidebar_open.set(false),
-                            "Collections"
-                        }
-                        div { class: "sidebar-divider" }
-                        Link {
-                            to: Route::About {},
-                            class: "sidebar-link",
-                            onclick: move |_| sidebar_open.set(false),
-                            "About"
-                        }
-                        Link {
-                            to: Route::HowTo {},
-                            class: "sidebar-link",
-                            onclick: move |_| sidebar_open.set(false),
-                            "How to"
-                        }
-                        if is_signed_in {
-                            div { class: "sidebar-divider" }
-                            Link {
-                                to: Route::SettingsProfile {},
-                                class: "sidebar-link",
-                                onclick: move |_| sidebar_open.set(false),
-                                "Settings"
-                            }
-                        }
-                    }
+/// Reuse the landing page's canonical search route and ordinary browser history.
+#[component]
+fn NavigationSearch(compact: bool, #[props(default)] on_navigate: EventHandler<()>) -> Element {
+    let mut text = use_signal(String::new);
+    rsx! {
+        form {
+            class: if compact { "navigation-search navigation-search--header" } else { "navigation-search" },
+            role: "search", aria_label: if compact { "Site search" } else { "Navigation search" },
+            method: "get", action: "/search",
+            onsubmit: move |event| {
+                event.prevent_default();
+                let route = crate::pages::search::landing_search_route(&text())
+                    .unwrap_or(Route::Search { query: Default::default() });
+                navigator().push(route);
+                // Same-route searches must dismiss the drawer too.
+                on_navigate.call(());
+            },
+            input { r#type: "search", name: "q", aria_label: "Search Noms", placeholder: "Search Noms…", maxlength: "256",
+                value: text(), oninput: move |event| text.set(event.value()) }
+            button { r#type: "submit", aria_label: "Submit search",
+                svg { view_box: "0 0 24 24", width: "20", height: "20", fill: "none", stroke: "currentColor", stroke_width: "2", "aria-hidden": "true",
+                    circle { cx: "10", cy: "10", r: "6" }
+                    path { d: "m15 15 5 5" }
                 }
             }
         }
+    }
+}
+
+fn primary_navigation(signed_in: bool) -> Vec<(Route, &'static str)> {
+    if signed_in {
+        vec![
+            (Route::Dashboard {}, "Dashboard"),
+            (Route::CollectionList {}, "Collections"),
+            (Route::Explore {}, "Explore"),
+        ]
+    } else {
+        vec![
+            (Route::Home {}, "Home"),
+            (Route::Explore {}, "Explore"),
+            (Route::About {}, "About"),
+            (Route::HowTo {}, "How to"),
+        ]
+    }
+}
+
+fn navigation_is_current(destination: &Route, current: &Route) -> bool {
+    match (destination, current) {
+        (
+            Route::CollectionList {},
+            Route::CollectionList {}
+            | Route::CollectionNew {}
+            | Route::CollectionDetail { .. }
+            | Route::CollectionEdit { .. },
+        ) => true,
+        (Route::Search { .. }, Route::Search { .. }) => true,
+        _ => destination == current,
     }
 }
 
