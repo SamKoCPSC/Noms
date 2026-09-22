@@ -18,6 +18,7 @@ Implementation contract (2026-09-21): [foundation slice 9](../../implementation-
 
 ![P3](overlays-p3-collection-picker-v1.png)
 
+Implementation contract (2026-09-22): [foundation slice 10](../../implementation-plans/NOMS-020-checkpoint-1-foundations.md) implements the picker in Rust as an anchored nonmodal dialog with native search, independent disclosure buttons and checkboxes. Owned collections only; published recipes only. Existing memberships are checked/disabled, path search finds collapsed descendants, and staged additions require explicit confirmation. Cancel before submission writes nothing. Partial success is retained, memberships are reconciled after errors, and explicit retry submits only remaining selections. Removal stays on collection pages. Coral is the consistent checkbox accent; no new backend features or mobile redesign are included. Slice 10 supersedes the open implementation questions below and records validation and limitations.
 
 ## Review / boundaries
 

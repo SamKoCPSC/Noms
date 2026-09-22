@@ -33,8 +33,28 @@ Run `just ci`, inspect generated CSS if startup/build regenerates it, obtain ind
 ## Remaining checkpoint-1 work
 
 - M4 ordinary-modal material is implemented in slice 2 below. Remaining modal/menu consumers require separate reviewed slices; do not apply glass indiscriminately to the shared navbar or editor panels.
-- T2 feedback foundations and the collection Copy link/Share consumer are implemented (slice 6). P1 account-menu implementation is recorded in slice 7. P2 action-menu work is recorded in slice 9 below. Broader feedback adoption and P3 picker semantics remain outstanding.
+- T2 feedback foundations and the collection Copy link/Share consumer are implemented (slice 6). P1 account-menu implementation is recorded in slice 7, P2 action menus in slice 9, and P3 collection picker in slice 10. Broader feedback adoption remains outstanding.
 - Remaining shared component/state coverage and visual review must be closed before the navigation/Explore checkpoint or parallel route rollout.
+
+### Slice 10 — Collection picker, 2026-09-22
+
+Implementation commit: `b2046ff`.
+
+Continue the existing NOMS-020 worktree from `adf327b`. Implement the approved P3 additive picker, replacing immediate add/remove checkboxes on recipe detail. Membership removal remains on collection pages. Eligible targets are the authenticated viewer's owned collections, loaded using existing bounded pagination (at most 500); only accessible published recipes are supported, not drafts. No API/schema/authorization changes or new collection-creation affordance are part of this slice.
+
+Contract: warm-glass, anchored, nonmodal dialog with native search/checkbox/disclosure controls, not an action-menu role. Start a fresh selection session and refresh data on each open. Already-added collections are checked/disabled and labelled; selected additions are independent of parent expansion and search visibility. Browse by sorted breadcrumb hierarchy; path search ignores case and whitespace and shows matching full paths, even under collapsed parents. Parent selection never cascades. Missing/cyclic hierarchy data must terminate and stay reachable. Cancel, Escape and outside dismissal before submission discard staged choices without writes. Tab traverses normally; leaving the popover dismisses only when not pending.
+
+Submit claims pending state synchronously, prevents duplicate submission/edits/dismissal, and sends bounded sequential existing add requests. Keep prior toast visible until the next completed result. On errors, refresh owner-scoped memberships to reconcile uncertain responses or other-tab additions without parsing error text. Retain confirmed successes and only failed selections for explicit retry; if reconciliation also fails, surface the original errors and keep those choices. This is not an atomic transaction and Cancel after a partial result does not undo successful additions. No automatic retry. Success reports a persistent toast and closes; restore trigger focus only if focus is still inside the picker. Unmount/navigation can interrupt observation, so the next open refreshes server state.
+
+Tests-first `PickerSelection` contracts failed before implementation. State tests cover staging, existing memberships, independent selection, pending/duplicate guards, partial retries and uncertain-success reconciliation. Existing breadcrumb tests remain; new visibility tests cover collapsed parent/grandchild behavior, full-path search and missing/cyclic parents. The former opaque-only source test is updated for the selected shared opaque-first glass material. Full suite: 737 passed, 12 ignored; client/server compilation, formatting, WASM Clippy, six schema cases and security-policy checks pass. Independent review: **PASS** after hierarchy/search coverage was added. Server Clippy remains blocked by the pre-existing `needless_return` at `src/components/informational/mod.rs:34`; full CI is not claimed green.
+
+Runtime preparation: removed only prior disposable `noms020-p2-20260921` containers/data/caches via scoped teardown, preserving `/tmp` evidence, to free a Docker network. Fresh `noms020-picker-20260922` starts at `http://127.0.0.1:32779`.
+
+CUA browser checks on a private disposable recipe verify empty state, initial search focus, Escape focus return, independent parent/child selection, trimmed case-insensitive search through collapsed paths, retained selections across no-match search, Cancel without writes, outside dismissal, success toast/focus return and checked/disabled existing memberships. Database readback confirms exactly the selected memberships. Deleting one newly created empty test collection after staging induces partial failure: the valid addition persists, the missing collection stays selected with an error, and recreating that same fixture lets explicit retry add only the remaining selection. No real user records were removed. The search field was corrected to use the shared input styling after visual inspection.
+
+The final rebuilt desktop screenshot was visually inspected. At a constrained 320×300 viewport, the panel stayed within bounds, native Tab scrolled the footer Cancel control into view, and the next Tab exited the nonmodal picker. The viewport was restored afterward; this is an overflow safety check, not a mobile design sign-off.
+
+Evidence: `/tmp/noms020-picker-browser/proof.json`, `staged.png` and `final.png`; automated logs `/tmp/noms020-picker-red.log`, `/tmp/noms020-picker-tests-final.log`, `/tmp/noms020-picker-check-final.log`, `/tmp/noms020-picker-client-lint.log`, `/tmp/noms020-picker-server-lint.log`, `/tmp/noms020-picker-schema.log` and `/tmp/noms020-picker-policy.log`. Real assistive-technology announcements and loading/reconciliation network-failure integration are not newly browser-verified; pending/duplicate and uncertain-success behavior have deterministic state tests. This is scoped P3 acceptance, not the entire foundation gate or mobile/tablet redesign.
 
 ### Slice 9 — P2 action menus, 2026-09-21
 
@@ -227,4 +247,5 @@ Evidence: `/tmp/noms020-collection-modal-20260920/browser-proof.json` and `dialo
 - [x] Slice-7 P1 desktop account menu implemented, reviewed and browser-checked, including native logout and corrected short-height scrolling.
 - [x] Slice-8 shared modal, tooltip and account-menu browser behavior converted to Rust, reviewed, tested and browser-verified after shutdown recovery.
 - [x] Slice-9 P2 recipe/graph action menus implemented in Rust, reviewed, tested and scoped browser-verified, including corrected short/narrow viewport and wheel behavior; native-confirm tooling limitation recorded.
+- [x] Slice-10 P3 additive collection picker implemented in Rust, reviewed, tested and browser-verified, including partial success and targeted retry.
 - [ ] Full checkpoint-1 gate complete (includes remaining slices above).
