@@ -32,9 +32,23 @@ Run `just ci`, inspect generated CSS if startup/build regenerates it, obtain ind
 
 ## Remaining checkpoint-1 work
 
-- M4 ordinary-modal material is implemented in slice 2 below. Remaining modal/menu consumers require separate reviewed slices; do not apply glass indiscriminately to the shared navbar or editor panels.
-- T2 feedback foundations and the collection Copy link/Share consumer are implemented (slice 6). P1 account-menu implementation is recorded in slice 7, P2 action menus in slice 9, and P3 collection picker in slice 10. Broader feedback adoption remains outstanding.
-- Remaining shared component/state coverage and visual review must be closed before the navigation/Explore checkpoint or parallel route rollout.
+- Checkpoint 1 is closed by slice 11 below. M4 ordinary-modal material and all current custom application modal consumers use the shared lifecycle. Native browser confirmation retained by recipe deletion is a separate destructive safeguard, not a custom overlay.
+- T2 feedback foundations and the collection Copy link/Share consumer are implemented (slice 6). P1 account-menu implementation is recorded in slice 7, P2 action menus in slice 9, and P3 collection picker in slice 10. Broader route-specific feedback adoption remains with the corresponding page checkpoints.
+- Mobile navigation composition and its existing page overlay belong to checkpoint 2's N1/N4 navigation work. Editor panel material, page layouts, and responsive page discovery are likewise not foundation gaps.
+
+### Slice 11 — Foundation close-out, 2026-09-22
+
+Implementation commits: `4d3064f` (dialog migration and lint close-out), `976caac` (Rustls security patch).
+
+The final shared-overlay inventory found one remaining custom application dialog: linked-account unlink confirmation used a fixed inline-styled div overlay. A tests-first source contract failed against that implementation. It now uses `SharedModal` and the ordinary M4 `modal-card`, with a persistent heading label and Cancel as the safe initial focus. Provider text, server-side ownership/last-account safeguards, request behavior, success/error reporting and available actions are unchanged. The dialog unmounts before the unlink request as before; this slice does not add artificial pending UI or submit an unlink during browser validation.
+
+The pre-existing server Clippy blocker in `canonical_url` was removed by splitting the mutually exclusive server/client implementations with `cfg`, preserving the tested output. The resulting complete CI run exposed new `RUSTSEC-2026-0285` against locked `rustls 0.23.40`; a compatible lockfile-only update to `rustls 0.23.45` and its patch-compatible cryptography/webpki dependencies clears the vulnerability. Eight repository-allowed dependency warnings remain visible and unchanged in policy status.
+
+Final `just ci`: **PASS**. Both compilation targets, formatting, WASM/server Clippy with warnings denied, 750 Rust tests (738 passed, 12 environment-dependent ignored), schema/workflow tests, secret/deployment/security-policy checks and dependency audit pass. The audit confirms `modal-overlay` is now emitted only by `SharedModal`; account, action and graph menus, tooltips, toast feedback and the collection picker use their reviewed shared Rust lifecycles. Route-local inline success/error notices and wider toast adoption are deferred to their route checkpoints rather than forcing a global behavior change here.
+
+Fresh runtime validation used the rebuilt disposable `noms020-picker-20260922` deployment. Main-agent CUA signed in through mock OAuth, opened Linked Accounts and invoked—but did not confirm—the Google unlink dialog. The named native dialog focused Cancel; Shift+Tab/Tab wrapped across the two actions; body overflow changed to hidden; Escape dismissed, restored visible overflow and returned focus to the Unlink trigger. Computed material was the warm translucent overlay fill with illuminated border, and the captured desktop image was visually inspected. No account or other data was deleted.
+
+Evidence: `/tmp/noms020-foundation-closeout-unlink.png`; tests-first failure and focused pass are present in this turn's command evidence; the final full gate is the successful `just ci` run on the close-out revision. Real assistive-technology announcements are not independently exercised. Checkpoint 1 is complete; checkpoint 2 navigation/Explore discovery and implementation are next.
 
 ### Slice 10 — Collection picker, 2026-09-22
 
@@ -248,4 +262,5 @@ Evidence: `/tmp/noms020-collection-modal-20260920/browser-proof.json` and `dialo
 - [x] Slice-8 shared modal, tooltip and account-menu browser behavior converted to Rust, reviewed, tested and browser-verified after shutdown recovery.
 - [x] Slice-9 P2 recipe/graph action menus implemented in Rust, reviewed, tested and scoped browser-verified, including corrected short/narrow viewport and wheel behavior; native-confirm tooling limitation recorded.
 - [x] Slice-10 P3 additive collection picker implemented in Rust, reviewed, tested and browser-verified, including partial success and targeted retry.
-- [ ] Full checkpoint-1 gate complete (includes remaining slices above).
+- [x] Slice-11 remaining custom dialog migrated, full CI restored, runtime keyboard/material lifecycle verified without unlinking data.
+- [x] Full checkpoint-1 gate complete; checkpoint 2 navigation/Explore is next.
