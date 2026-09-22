@@ -276,6 +276,8 @@ Checkpoint 0 evidence: [2026-09-19 baseline inventory and runtime checks](NOMS-0
 
 Checkpoint 1 work: [shared-foundation slices and acceptance criteria](NOMS-020-checkpoint-1-foundations.md), completed 2026-09-22 after eleven reviewed slices and a green full CI gate. Checkpoint 2 navigation/Explore is now the active next gate; wider parallel route rollout still waits for its review.
 
+Checkpoint 2 navigation: [N1/N4 implementation contract and verification](NOMS-020-checkpoint-2-navigation.md), started 2026-09-22. Explore X7C and combined checkpoint acceptance remain separate; existing encoded-character Search routing needs follow-up in its route slice.
+
 Proceed in reviewable slices; do not wait for every route's specification before starting foundations. Each checkpoint records decisions, tests and screenshots before progressing. This documentation cleanup does not itself start implementation, authorize deployment or commit existing work.
 
 | Checkpoint | Scope and decisions | Exit evidence |
