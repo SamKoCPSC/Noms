@@ -241,7 +241,7 @@ fn overlay_consumers_no_longer_import_javascript_lifecycle_modules() {
 }
 
 #[test]
-fn p2_recipe_actions_preserve_existing_workflows() {
+fn recipe_action_menu_preserves_existing_workflows() {
     let source = include_str!("../../pages/recipe_detail.rs");
     assert!(source.contains("ActionMenu {"));
     assert!(source.contains("if is_owner"));
@@ -252,7 +252,7 @@ fn p2_recipe_actions_preserve_existing_workflows() {
 }
 
 #[test]
-fn p2_graph_menu_keeps_actions_and_uses_shared_glass() {
+fn graph_action_menu_preserves_actions_and_uses_shared_glass() {
     let source = include_str!("../../pages/recipe_version_graph.rs");
     assert!(source.contains("feedback-surface recipe-version-graph__context-menu"));
     for label in [
