@@ -205,11 +205,25 @@ a:hover {
     border-radius: var(--radius-lg);
 }
 
-/* Collection membership menus must cover the recipe content beneath them. */
-.collection-membership-dropdown {
-    background: var(--surface) !important;
-    opacity: 1;
-}
+/* Collection picker uses the shared opaque-first warm-glass overlay material. */
+.collection-picker { position: fixed; inset: auto; margin: 0; width: min(400px, calc(100vw - 16px)); padding: 18px; border-radius: 22px; overflow-y: auto; overscroll-behavior: contain; z-index: 1100; }
+.collection-picker__header h2 { font-size: 20px; margin: 0 0 6px; }
+.collection-picker__header p { margin: 6px 0 12px; }
+.collection-picker__help { color: var(--overlay-muted); }
+.collection-picker__search { display: grid; gap: 6px; margin-bottom: 12px; }
+.collection-picker__list { min-width: 0; padding: 0; margin: 0; border: 0; }
+.collection-picker__list legend { font-weight: 700; margin-bottom: 8px; }
+.collection-picker__row { display: flex; align-items: center; min-width: 0; margin-bottom: 4px; }
+.collection-picker__expand { flex: 0 0 32px; min-height: 44px; border: 0; border-radius: 12px; background: transparent; color: var(--text-primary); cursor: pointer; }
+.collection-picker__spacer { flex: 0 0 32px; }
+.collection-picker__choice { display: flex; align-items: center; gap: 10px; padding: 10px; min-height: 44px; flex: 1; min-width: 0; border-radius: 14px; cursor: pointer; }
+.collection-picker__choice--checked { background: var(--surface); }
+.collection-picker__choice input { accent-color: var(--accent); flex-shrink: 0; width: 18px; height: 18px; }
+.collection-picker__choice small { display: block; color: var(--overlay-muted); }
+.collection-picker__choice .collection-picker__error { color: var(--error); }
+.collection-picker__footer { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--overlay-border); padding-top: 14px; margin-top: 12px; }
+.collection-picker__footer span { margin-right: auto; }
+.collection-picker button:focus-visible, .collection-picker input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 /* ============================================================
    Glassmorphism Utility

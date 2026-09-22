@@ -2079,7 +2079,9 @@ pub fn RecipeDetail(id: String) -> Element {
                                 gap: "var(--space-sm)",
                                 if auth.is_authenticated {
                                     AddToCollectionDropdown {
+                                        key: "{recipe.id}",
                                         recipe_id: recipe.id.to_string(),
+                                        recipe_title: recipe.title.clone(),
                                     }
                                 }
                                 ActionMenu {

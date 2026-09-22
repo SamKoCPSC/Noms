@@ -27,6 +27,10 @@ mod button;
 mod card;
 mod collection_cover;
 mod collection_form;
+mod collection_picker_popover;
+mod collection_picker_state;
+#[cfg(test)]
+mod collection_picker_tests;
 mod collection_sidebar;
 mod collection_visibility;
 mod edited_recipe_image;
