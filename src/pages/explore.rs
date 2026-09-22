@@ -1,31 +1,39 @@
 //! Explore page — public recipe discovery.
 //!
 //! Displays a paginated grid of public recipes with server-side substring search
-//! filtering and tag chips. No authentication required.
+//! filtering and community tag labels. No authentication required.
 
 use dioxus::prelude::*;
 
 use crate::api::recipe::{get_public_recipe_tags, get_public_recipes};
 use crate::components::base::{
-    Button, ButtonVariant, EmptyState, Input, LoadingSpinner, PageHeader, RecipeCard,
+    Button, ButtonVariant, EmptyState, LoadingSpinner, PageHeader, RecipeCard,
 };
 use crate::types::RecipeCardSummary;
 
 const PAGE_SIZE: i64 = 12;
 
-/// Public recipe discovery page with search and tag filtering.
+fn next_page_offset(offset: i64, loading: bool, has_more: bool, has_error: bool) -> Option<i64> {
+    if loading || !has_more || has_error {
+        None
+    } else {
+        offset.checked_add(PAGE_SIZE)
+    }
+}
+
+/// Public recipe discovery page with server-side search.
 #[component]
 pub fn Explore() -> Element {
     // ── Signal state ─────────────────────────────────────────────────────
     let mut search_query = use_signal(String::new);
-    let mut selected_tag = use_signal(String::new);
     let mut offset = use_signal(|| 0i64);
     let has_more = use_signal(|| true);
     let loaded_recipes = use_signal(Vec::<RecipeCardSummary>::new);
     let tags = use_signal(Vec::<String>::new);
-    let is_loading = use_signal(|| true);
+    let mut is_loading = use_signal(|| true);
     let error = use_signal(|| Option::<String>::None);
     let mut request_generation = use_signal(|| 0u64);
+    let mut retry_generation = use_signal(|| 0u64);
 
     // ── Fetch tags on mount ──────────────────────────────────────────────
     use_hook(move || {
@@ -44,6 +52,7 @@ pub fn Explore() -> Element {
     use_effect(move || {
         let off = offset();
         let query = search_query();
+        let _retry = retry_generation();
         let generation = *request_generation.peek() + 1;
         request_generation.set(generation);
         let mut recipes = loaded_recipes;
@@ -92,28 +101,34 @@ pub fn Explore() -> Element {
     let filtered_recipes = loaded_recipes.read().clone();
 
     // ── Handlers ─────────────────────────────────────────────────────────
-    let on_search = move |value: String| {
+    let mut on_search = move |value: String| {
+        if value == *search_query.peek() {
+            return;
+        }
         // Invalidate an in-flight response immediately, before the effect reruns.
         let generation = *request_generation.peek() + 1;
         request_generation.set(generation);
         let mut recipes = loaded_recipes;
         recipes.set(Vec::new());
+        is_loading.set(true);
         offset.set(0);
         search_query.set(value);
     };
 
-    let on_tag_click = move |tag_name: String| {
-        let current = selected_tag.read().clone();
-        if current == tag_name {
-            selected_tag.set(String::new());
-        } else {
-            selected_tag.set(tag_name);
+    let on_load_more = move |_| {
+        if let Some(next) = next_page_offset(offset(), is_loading(), has_more(), error().is_some())
+        {
+            // Claim the request synchronously so rapid clicks cannot skip a page.
+            is_loading.set(true);
+            offset.set(next);
         }
     };
-
-    let on_load_more = move |_| {
+    let on_retry = move |_| {
         if !is_loading() {
-            offset.set(offset() + PAGE_SIZE);
+            is_loading.set(true);
+            // Retry the failed offset, rather than moving past its results.
+            let next = *retry_generation.peek() + 1;
+            retry_generation.set(next);
         }
     };
 
@@ -121,7 +136,6 @@ pub fn Explore() -> Element {
     let is_loading_initial = is_loading() && loaded_recipes.read().is_empty();
     let has_error = error().is_some();
     let tags_list = tags.read().clone();
-    let selected_tag_value = selected_tag.read().clone();
 
     // Empty state messages (computed outside rsx! for compatibility)
     let empty_title = if search_query.read().is_empty() {
@@ -140,25 +154,28 @@ pub fn Explore() -> Element {
             PageHeader {
                 title: "Explore",
             }
+            p { class: "explore-intro", "Public recipes from the community." }
 
             // ── Search bar ─────────────────────────────────────────────────
             div { class: "explore-search",
-                Input {
+                label { r#for: "explore-query", "Search public recipes" }
+                input {
+                    id: "explore-query",
+                    class: "neumo-inset input input--shared",
+                    r#type: "search",
+                    aria_label: "Search public recipes",
                     value: search_query(),
-                    placeholder: "Search recipes...",
-                    oninput: on_search,
+                    placeholder: "Search titles and descriptions…",
+                    oninput: move |event| on_search(event.value()),
                 }
             }
 
             // ── Tag chips ──────────────────────────────────────────────────
             if !tags_list.is_empty() {
                 div { class: "explore-tags",
+                    span { class: "explore-tags__label", "Community tags" }
                     for tag in tags_list {
-                        TagChip {
-                            name: tag.clone(),
-                            is_active: selected_tag_value == tag,
-                            on_click: on_tag_click,
-                        }
+                        span { key: "{tag}", class: "explore-tag", "{tag}" }
                     }
                 }
             }
@@ -166,52 +183,50 @@ pub fn Explore() -> Element {
             // ── Loading state (initial load) ───────────────────────────────
             if is_loading_initial {
                 div {
-                    display: "flex",
-                    align_items: "center",
-                    justify_content: "center",
-                    min_height: "200px",
+                    class: "explore-status",
+                    role: "status",
                     LoadingSpinner {}
+                    "Loading recipes…"
                 }
             }
 
             // ── Error state ────────────────────────────────────────────────
-            if let Some(err_msg) = error() {
+            if has_error && !is_loading() {
                 div {
-                    display: "flex",
-                    align_items: "center",
-                    justify_content: "center",
-                    min_height: "200px",
-                    color: "var(--error)",
-                    "Failed to load recipes: {err_msg}"
+                    class: "explore-status explore-status--error",
+                    role: "alert",
+                    p { "We couldn’t load recipes. Please try again." }
+                    Button { variant: ButtonVariant::Secondary, onclick: on_retry, "Retry" }
                 }
             }
 
             // ── Recipe grid ────────────────────────────────────────────────
-            if !is_loading_initial && !has_error {
-                if filtered_recipes.is_empty() {
+            if !is_loading_initial {
+                if filtered_recipes.is_empty() && !has_error {
                     // Empty state: no recipes match or no recipes at all
                     EmptyState {
                         icon: rsx! { "🔍" },
                         title: empty_title,
                         description: empty_description,
                     }
-                } else {
-                    // Recipe grid — responsive: 1 col mobile, 2 col tablet, 3 col desktop
+                } else if !filtered_recipes.is_empty() {
+                    p { class: "explore-results", role: "status", "{filtered_recipes.len()} recipes loaded" }
                     div {
-                        class: "recipe-grid",
+                        class: "explore-grid",
                         for recipe in &filtered_recipes {
-                            RecipeCard { recipe: recipe.clone() }
+                            RecipeCard { key: "{recipe.id}", recipe: recipe.clone(), framed: true }
                         }
                     }
 
                     // Load more button if there are additional pages
-                    if has_more() {
+                    if has_more() && !has_error {
                         div {
                             class: "load-more",
                             Button {
                                 variant: ButtonVariant::Secondary,
+                                disabled: is_loading(),
                                 onclick: on_load_more,
-                                "Load more"
+                                if is_loading() { "Loading recipes…" } else { "Load more" }
                             }
                         }
                     }
@@ -221,26 +236,47 @@ pub fn Explore() -> Element {
     }
 }
 
-/// Individual tag chip button for the explore page.
-#[component]
-fn TagChip(name: String, is_active: bool, on_click: EventHandler<String>) -> Element {
-    let chip_class = if is_active {
-        "tag-chip tag-chip--active"
-    } else {
-        "tag-chip"
-    };
-
-    rsx! {
-        button {
-            class: chip_class,
-            onclick: move |_| on_click.call(name.clone()),
-            "{name}"
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    #[test]
+    fn pagination_advances_only_when_ready_and_never_skips_a_failed_page() {
+        assert_eq!(next_page_offset(0, false, true, false), Some(12));
+        assert_eq!(next_page_offset(12, false, true, false), Some(24));
+        assert_eq!(next_page_offset(12, true, true, false), None);
+        assert_eq!(next_page_offset(12, false, true, true), None);
+        assert_eq!(next_page_offset(12, false, false, false), None);
+        assert_eq!(next_page_offset(i64::MAX, false, true, false), None);
+    }
+
+    #[test]
+    fn explore_uses_framed_cards_and_honest_accessible_states() {
+        let source = include_str!("explore.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        assert!(source.contains("framed: true"));
+        assert!(source.contains("key: \"{recipe.id}\""));
+        assert!(source.contains("aria_label: \"Search public recipes\""));
+        assert!(source.contains("retry_generation()"));
+        assert!(source.contains("\"Retry\""));
+        assert!(!source.contains("selected_tag"));
+        assert!(!source.contains("TagChip"));
+        assert!(source.contains("role: \"alert\""));
+    }
+
+    #[test]
+    fn framed_cards_are_opt_in_with_container_driven_columns() {
+        let card = include_str!("../components/base/recipe_card.rs");
+        assert!(card.contains("pub framed: bool"));
+        assert!(card.contains("if framed"));
+        assert!(card.contains("Route::UserProfile"));
+        let css = include_str!("../../assets/main.css");
+        assert!(css.contains("repeat(auto-fill, minmax(min(100%, 260px), 1fr))"));
+        assert!(css.contains(".recipe-card--framed"));
+    }
+
     #[test]
     fn pagination_fetch_reads_the_current_offset_reactively() {
         let source = include_str!("explore.rs");
