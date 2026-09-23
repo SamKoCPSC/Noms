@@ -1750,7 +1750,8 @@ dialog.shared-modal::backdrop { background: transparent; }
 .recipe-card--framed {
     padding: 12px;
     min-width: 0;
-    background: var(--bg-base);
+    /* Let the moving page gradient tint the card so its relief reads as one material. */
+    background: color-mix(in srgb, var(--surface) 42%, transparent);
     border: 1px solid color-mix(in srgb, var(--shadow-light) 78%, var(--shadow-dark));
     box-shadow:
         0 12px 26px color-mix(in srgb, var(--shadow-dark) 46%, transparent),
