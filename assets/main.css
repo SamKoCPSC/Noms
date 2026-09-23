@@ -1704,7 +1704,12 @@ dialog.shared-modal::backdrop { background: transparent; }
     min-height: 44px;
     padding-left: 44px;
     border-radius: var(--radius-full);
-    box-shadow: var(--elevation-inset);
+    background: var(--bg-base);
+    border-color: color-mix(in srgb, var(--shadow-dark) 55%, transparent);
+    box-shadow:
+        inset 2px 2px 5px color-mix(in srgb, var(--shadow-dark) 48%, transparent),
+        inset -2px -2px 5px color-mix(in srgb, var(--shadow-light) 72%, transparent),
+        2px 3px 9px color-mix(in srgb, var(--shadow-dark) 20%, transparent);
 }
 .explore-search .input:focus-visible {
     outline: 2px solid var(--focus-ring);
@@ -1742,7 +1747,24 @@ dialog.shared-modal::backdrop { background: transparent; }
     gap: 24px;
     margin: 0 0 32px;
 }
-.recipe-card--framed { padding: 12px; min-width: 0; border: 1px solid transparent; }
+.recipe-card--framed {
+    padding: 12px;
+    min-width: 0;
+    background: var(--bg-base);
+    border: 1px solid color-mix(in srgb, var(--shadow-light) 78%, var(--shadow-dark));
+    box-shadow:
+        0 9px 22px color-mix(in srgb, var(--shadow-dark) 38%, transparent),
+        3px 4px 8px color-mix(in srgb, var(--shadow-dark) 30%, transparent),
+        -5px -5px 13px color-mix(in srgb, var(--shadow-light) 75%, transparent),
+        inset 1px 1px 0 color-mix(in srgb, var(--shadow-light) 85%, transparent);
+}
+.recipe-card--framed:hover {
+    box-shadow:
+        0 12px 26px color-mix(in srgb, var(--shadow-dark) 44%, transparent),
+        4px 5px 10px color-mix(in srgb, var(--shadow-dark) 34%, transparent),
+        -5px -5px 13px color-mix(in srgb, var(--shadow-light) 75%, transparent),
+        inset 1px 1px 0 color-mix(in srgb, var(--shadow-light) 85%, transparent);
+}
 .recipe-card--framed .recipe-card__link {
     display: flex;
     flex-direction: column;
@@ -1754,12 +1776,16 @@ dialog.shared-modal::backdrop { background: transparent; }
     aspect-ratio: 16 / 9;
     border-radius: var(--radius-md);
     flex-shrink: 0;
+    border: 3px solid color-mix(in srgb, var(--shadow-light) 68%, var(--bg-base));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--shadow-dark) 30%, transparent);
 }
 .recipe-card--framed .recipe-card__image::after {
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    box-shadow: inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light);
+    box-shadow:
+        inset 2px 2px 5px color-mix(in srgb, var(--shadow-dark) 46%, transparent),
+        inset -2px -2px 5px color-mix(in srgb, var(--shadow-light) 65%, transparent);
     content: "";
     pointer-events: none;
 }
@@ -1824,7 +1850,10 @@ dialog.shared-modal::backdrop { background: transparent; }
     color: var(--overlay-muted);
 }
 @media (forced-colors: active) {
-    .recipe-card--framed { border-color: CanvasText; }
+    .recipe-card--framed,
+    .recipe-card--framed:hover { border-color: CanvasText; box-shadow: none; }
+    .recipe-card--framed .recipe-card__image { border-color: CanvasText; box-shadow: none; }
+    .recipe-card--framed .recipe-card__image::after { box-shadow: none; }
     .explore-tag { border-color: CanvasText; }
 }
 
