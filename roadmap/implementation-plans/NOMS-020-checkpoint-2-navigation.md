@@ -2,6 +2,8 @@
 
 Implementation commit: `12473b7`.
 
+2026-09-23 visual follow-up: the original green-tinted, bordered active destination below was superseded. Active navigation now matches the opaque navbar/search surface, uses the shared inset elevation, and has no decorative dark border; keyboard focus and forced-colors boundaries remain explicit.
+
 Started 2026-09-22 from `56b5028`, after checkpoint-1 close-out. Reuse the user's existing isolated `codex/NOMS-020-visual-design-refinement` worktree; no main changes, rebase or additional worktree is needed. This slice implements N1/N4 shared navigation, not Explore or the full checkpoint-2 exit gate.
 
 ## Contract and boundaries

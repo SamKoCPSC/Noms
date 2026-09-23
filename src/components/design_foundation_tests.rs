@@ -66,11 +66,42 @@ fn shared_elevation_has_one_token_contract() {
         assert!(rule(selector).contains("box-shadow: var(--elevation-raised)"));
     }
     assert!(rule(".neumo-inset").contains("box-shadow: var(--elevation-inset)"));
-    assert!(rule(":root").contains("--elevation-raised:"));
-    assert!(
-        rule(".dark").contains("--elevation-raised:"),
-        "theme-dependent shadow aliases must recompute on the dark scope"
-    );
+    let shared = rule(":root, .dark");
+    for name in [
+        "--neumo-surface",
+        "--elevation-raised",
+        "--elevation-raised-hover",
+        "--elevation-raised-compact",
+        "--elevation-inset",
+        "--elevation-inset-compact",
+    ] {
+        assert!(
+            shared.contains(&format!("{name}:")),
+            "missing shared material token: {name}"
+        );
+    }
+    for selector in [".recipe-card", ".recipe-card--framed"] {
+        assert!(
+            rule(selector).contains("background: var(--neumo-surface)"),
+            "{selector}"
+        );
+        assert!(
+            rule(selector).contains("box-shadow: var(--elevation-raised)"),
+            "{selector}"
+        );
+    }
+    assert!(rule(".explore-search .input").contains("box-shadow: var(--elevation-inset)"));
+    assert!(rule(".input--shared").contains("background-color: var(--neumo-surface)"));
+    for selector in [".recipe-scaler", ".search-input-row", ".entity-result-card"] {
+        assert!(
+            rule(selector).contains("background: var(--neumo-surface)"),
+            "{selector}"
+        );
+        assert!(
+            rule(selector).contains("box-shadow: var(--elevation-raised)"),
+            "{selector}"
+        );
+    }
 }
 
 #[test]

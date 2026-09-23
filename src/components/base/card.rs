@@ -14,7 +14,7 @@ pub fn Card(props: CardProps) -> Element {
         div {
             class: "neumo-card",
             padding: "var(--space-lg)",
-            background_color: "var(--surface)",
+            background_color: "var(--neumo-surface)",
             {&props.children}
         }
     }

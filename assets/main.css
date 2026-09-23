@@ -53,8 +53,6 @@ a:hover {
     --shadow-light: #FAF7F1;
     --shadow-dark: #C8C1B4;
     --border-color: rgba(122, 117, 109, 0.28);
-    --elevation-raised: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
-    --elevation-inset: inset 5px 5px 4px var(--shadow-dark), inset -5px -5px 4px var(--shadow-light);
 
     /* Contrast roles keep the original coral fills and warm surfaces intact. */
     --on-accent: #12100D;
@@ -128,9 +126,6 @@ a:hover {
     --shadow-light: #33302A;
     --shadow-dark: #0F0E0B;
     --border-color: rgba(237, 232, 223, 0.20);
-    /* Recompute shadow aliases here rather than inheriting light-mode values. */
-    --elevation-raised: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
-    --elevation-inset: inset 5px 5px 4px var(--shadow-dark), inset -5px -5px 4px var(--shadow-light);
     --on-accent: #12100D;
     --on-danger: #1E1C18;
     --accent-ink: #E8896E;
@@ -163,6 +158,33 @@ a:hover {
     --bg-gradient-4: #1E1820;
 }
 
+/* Resolve the shared material and relief against each theme's own palette. */
+:root, .dark {
+    --neumo-surface: color-mix(in srgb, var(--surface) 42%, transparent);
+    --elevation-raised:
+        0 12px 26px color-mix(in srgb, var(--shadow-dark) 46%, transparent),
+        4px 6px 10px color-mix(in srgb, var(--shadow-dark) 38%, transparent),
+        -5px -5px 13px color-mix(in srgb, var(--shadow-light) 75%, transparent),
+        inset 2px 2px 1px color-mix(in srgb, var(--shadow-light) 85%, transparent);
+    --elevation-raised-hover:
+        0 16px 30px color-mix(in srgb, var(--shadow-dark) 52%, transparent),
+        5px 7px 12px color-mix(in srgb, var(--shadow-dark) 42%, transparent),
+        -5px -5px 13px color-mix(in srgb, var(--shadow-light) 75%, transparent),
+        inset 2px 2px 1px color-mix(in srgb, var(--shadow-light) 85%, transparent);
+    --elevation-raised-compact:
+        0 5px 12px color-mix(in srgb, var(--shadow-dark) 35%, transparent),
+        2px 3px 6px color-mix(in srgb, var(--shadow-dark) 26%, transparent),
+        -3px -3px 8px color-mix(in srgb, var(--shadow-light) 70%, transparent);
+    --elevation-inset:
+        inset 4px 4px 7px color-mix(in srgb, var(--shadow-dark) 64%, transparent),
+        inset -3px -3px 7px color-mix(in srgb, var(--shadow-light) 82%, transparent),
+        1px 2px 5px color-mix(in srgb, var(--shadow-dark) 18%, transparent);
+    --elevation-inset-compact:
+        inset 2px 2px 4px color-mix(in srgb, var(--shadow-dark) 60%, transparent),
+        inset -2px -2px 5px color-mix(in srgb, var(--shadow-light) 75%, transparent),
+        1px 1px 3px color-mix(in srgb, var(--shadow-dark) 12%, transparent);
+}
+
 /* ============================================================
    Animated Background Gradient (Layer 0)
    ============================================================ */
@@ -190,17 +212,20 @@ a:hover {
    Neumorphic Utility Classes
    ============================================================ */
 .neumo-raised {
+    background: var(--neumo-surface);
     box-shadow: var(--elevation-raised);
     border-radius: var(--radius-md);
 }
 
 .neumo-inset {
+    background: var(--neumo-surface);
     box-shadow: var(--elevation-inset);
     border-radius: var(--radius-md);
 }
 
 .neumo-card {
-    --btn-edge: var(--surface);
+    --btn-edge: var(--neumo-surface);
+    background: var(--neumo-surface);
     box-shadow: var(--elevation-raised);
     border-radius: var(--radius-lg);
 }
@@ -379,7 +404,7 @@ a:hover {
     font-family: var(--font-body);
     font-size: 14px;
     color: var(--text-primary);
-    background-color: var(--surface);
+    background-color: var(--neumo-surface);
     width: 100%;
 }
 
@@ -1462,10 +1487,10 @@ dialog.shared-modal::backdrop { background: transparent; }
     Recipe Card
     ============================================================ */
 .recipe-card {
-    --btn-edge: var(--surface);
-    background: var(--surface);
+    --btn-edge: var(--neumo-surface);
+    background: var(--neumo-surface);
     border-radius: var(--radius-lg);
-    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
+    box-shadow: var(--elevation-raised);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1474,7 +1499,7 @@ dialog.shared-modal::backdrop { background: transparent; }
 
 .recipe-card:hover {
     transform: translateY(-2px);
-    box-shadow: 6px 6px 6px var(--shadow-dark), -6px -6px 6px var(--shadow-light);
+    box-shadow: var(--elevation-raised-hover);
 }
 
 .recipe-card__author {
@@ -1705,13 +1730,9 @@ dialog.shared-modal::backdrop { background: transparent; }
     min-height: 44px;
     padding-left: 44px;
     border-radius: var(--radius-full);
-    /* Share the page's material while the inset shadows define the recess. */
-    background: color-mix(in srgb, var(--surface) 42%, transparent);
+    background: var(--neumo-surface);
     border-color: color-mix(in srgb, var(--shadow-light) 58%, transparent);
-    box-shadow:
-        inset 4px 4px 7px color-mix(in srgb, var(--shadow-dark) 64%, transparent),
-        inset -3px -3px 7px color-mix(in srgb, var(--shadow-light) 82%, transparent),
-        1px 2px 5px color-mix(in srgb, var(--shadow-dark) 18%, transparent);
+    box-shadow: var(--elevation-inset);
 }
 .explore-search .input:focus-visible {
     outline: 2px solid var(--focus-ring);
@@ -1752,21 +1773,12 @@ dialog.shared-modal::backdrop { background: transparent; }
 .recipe-card--framed {
     padding: 12px;
     min-width: 0;
-    /* Let the moving page gradient tint the card so its relief reads as one material. */
-    background: color-mix(in srgb, var(--surface) 42%, transparent);
+    background: var(--neumo-surface);
     border: 1px solid color-mix(in srgb, var(--shadow-light) 78%, var(--shadow-dark));
-    box-shadow:
-        0 12px 26px color-mix(in srgb, var(--shadow-dark) 46%, transparent),
-        4px 6px 10px color-mix(in srgb, var(--shadow-dark) 38%, transparent),
-        -5px -5px 13px color-mix(in srgb, var(--shadow-light) 75%, transparent),
-        inset 2px 2px 1px color-mix(in srgb, var(--shadow-light) 85%, transparent);
+    box-shadow: var(--elevation-raised);
 }
 .recipe-card--framed:hover {
-    box-shadow:
-        0 16px 30px color-mix(in srgb, var(--shadow-dark) 52%, transparent),
-        5px 7px 12px color-mix(in srgb, var(--shadow-dark) 42%, transparent),
-        -5px -5px 13px color-mix(in srgb, var(--shadow-light) 75%, transparent),
-        inset 2px 2px 1px color-mix(in srgb, var(--shadow-light) 85%, transparent);
+    box-shadow: var(--elevation-raised-hover);
 }
 .recipe-card--framed .recipe-card__link {
     display: flex;
@@ -1960,9 +1972,9 @@ dialog.shared-modal::backdrop { background: transparent; }
    ============================================================ */
 
 .recipe-scaler {
-    background: var(--surface);
+    background: var(--neumo-surface);
     border-radius: var(--radius-lg);
-    box-shadow: 5px 5px 4px var(--shadow-dark), -5px -5px 4px var(--shadow-light);
+    box-shadow: var(--elevation-raised);
     overflow: hidden;
 }
 
@@ -2006,18 +2018,17 @@ dialog.shared-modal::backdrop { background: transparent; }
     padding: var(--space-xs) var(--space-sm);
     border: 1px solid var(--surface);
     border-radius: var(--radius-sm);
-    background: var(--bg-base);
+    background: var(--neumo-surface);
     font-family: var(--font-body);
     font-size: 14px;
     color: var(--text-primary);
     text-align: center;
-    box-shadow: inset 2px 2px 3px var(--shadow-dark), inset -2px -2px 3px var(--shadow-light);
+    box-shadow: var(--elevation-inset-compact);
 }
 
 .recipe-scaler__input:focus {
     outline: none;
-    box-shadow: inset 2px 2px 3px var(--shadow-dark), inset -2px -2px 3px var(--shadow-light),
-                0 0 0 2px var(--accent);
+    box-shadow: var(--elevation-inset-compact), 0 0 0 2px var(--accent);
 }
 
 .recipe-scaler__presets {
@@ -2028,7 +2039,7 @@ dialog.shared-modal::backdrop { background: transparent; }
 
 .recipe-scaler__preset {
     padding: var(--space-xs) var(--space-sm);
-    background: var(--bg-base);
+    background: var(--neumo-surface);
     border: 1px solid var(--surface);
     border-radius: var(--radius-sm);
     font-family: var(--font-body);
@@ -2037,7 +2048,7 @@ dialog.shared-modal::backdrop { background: transparent; }
     color: var(--text-secondary);
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 2px 2px 3px var(--shadow-dark), -2px -2px 3px var(--shadow-light);
+    box-shadow: var(--elevation-raised-compact);
 }
 
 .recipe-scaler__preset:hover {
@@ -2057,17 +2068,16 @@ dialog.shared-modal::backdrop { background: transparent; }
     padding: var(--space-xs) var(--space-sm);
     border: 1px solid var(--surface);
     border-radius: var(--radius-sm);
-    background: var(--bg-base);
+    background: var(--neumo-surface);
     font-family: var(--font-body);
     font-size: 14px;
     color: var(--text-primary);
-    box-shadow: inset 2px 2px 3px var(--shadow-dark), inset -2px -2px 3px var(--shadow-light);
+    box-shadow: var(--elevation-inset-compact);
 }
 
 .recipe-scaler__select:focus {
     outline: none;
-    box-shadow: inset 2px 2px 3px var(--shadow-dark), inset -2px -2px 3px var(--shadow-light),
-                0 0 0 2px var(--accent);
+    box-shadow: var(--elevation-inset-compact), 0 0 0 2px var(--accent);
 }
 
 .recipe-scaler__reset {
@@ -5138,8 +5148,8 @@ dialog.shared-modal::backdrop { background: transparent; }
     gap: var(--space-sm);
     padding: 8px;
     border-radius: var(--radius-lg);
-    background: var(--surface);
-    box-shadow: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light);
+    background: var(--neumo-surface);
+    box-shadow: var(--elevation-raised);
 }
 .search-icon { padding-left: 10px; color: var(--accent); font-size: 28px; line-height: 1; }
 .search-query-input { flex: 1; border: 0 !important; background: transparent !important; font-size: 18px !important; outline: 0; }
@@ -5199,8 +5209,8 @@ dialog.shared-modal::backdrop { background: transparent; }
 .results-heading span { color: var(--text-secondary); }
 .grouped-section + .grouped-section { margin-top: var(--space-xl); }
 .search-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-md); }
-.entity-result-card { display: flex; gap: 14px; min-height: 130px; padding: var(--space-lg); border-radius: var(--radius-lg); background: var(--surface); color: var(--text-primary); box-shadow: 4px 4px 10px var(--shadow-dark), -4px -4px 10px var(--shadow-light); }
-.entity-result-card:hover { color: var(--text-primary); transform: translateY(-2px); }
+.entity-result-card { display: flex; gap: 14px; min-height: 130px; padding: var(--space-lg); border-radius: var(--radius-lg); background: var(--neumo-surface); color: var(--text-primary); box-shadow: var(--elevation-raised); }
+.entity-result-card:hover { color: var(--text-primary); transform: translateY(-2px); box-shadow: var(--elevation-raised-hover); }
 .entity-result-card h3 { color: var(--accent); }
 .entity-result-card p { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .entity-icon { font-size: 26px; }
@@ -5372,7 +5382,13 @@ dialog.shared-modal::backdrop { background: transparent; }
     .input,
     .neumo-raised,
     .neumo-inset,
-    .neumo-card {
+    .neumo-card,
+    .recipe-scaler,
+    .recipe-scaler__input,
+    .recipe-scaler__select,
+    .recipe-scaler__preset,
+    .search-input-row,
+    .entity-result-card {
         border: 1px solid CanvasText;
         box-shadow: none;
     }

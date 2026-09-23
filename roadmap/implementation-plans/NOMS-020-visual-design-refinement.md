@@ -34,6 +34,8 @@ This is a refinement, not a rebrand. The existing app is the source of truth for
 
 At kickoff, inventory actual current-main tokens and rendered styles before changing foundations. Reuse existing values by default and consolidate inconsistencies into semantic tokens rather than introducing a new palette or type system. Adjust sizes, spacing, contrast, borders or elevation only where needed for readability, accessibility or consistency, keeping the established character. Document such adjustments; material changes to typography, palette or overall feel require user review before adoption.
 
+2026-09-23 elevation refinement: raised and inset page components now share theme-aware `--neumo-surface`, `--elevation-raised`, `--elevation-raised-hover`, and `--elevation-inset` tokens; compact controls use the corresponding compact elevation tokens. Their translucent surface picks up the local page color, so depth comes from light and shadow rather than a contrasting fill. Use these shared values for new cards, wells, and controls instead of copying Explore-specific shadows. The navbar retains an opaque shell; its active link and search use that shell's color with shared inset elevation. Frosted overlays, accent-filled controls, and illustration-specific shadows remain separate materials.
+
 Kitchen Console retains the warmth, tactility, and personality of the existing interface while making hierarchy and interaction state clearer. Neumorphism remains part of the product identity, but depth is functional rather than ornamental:
 
 - **Flat:** page canvases, long-form content, and low-priority supporting regions.
