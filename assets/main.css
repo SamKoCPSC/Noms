@@ -1704,12 +1704,13 @@ dialog.shared-modal::backdrop { background: transparent; }
     min-height: 44px;
     padding-left: 44px;
     border-radius: var(--radius-full);
-    background: var(--bg-base);
-    border-color: color-mix(in srgb, var(--shadow-dark) 55%, transparent);
+    /* Share the page's material while the inset shadows define the recess. */
+    background: color-mix(in srgb, var(--surface) 42%, transparent);
+    border-color: color-mix(in srgb, var(--shadow-light) 58%, transparent);
     box-shadow:
-        inset 3px 3px 6px color-mix(in srgb, var(--shadow-dark) 56%, transparent),
-        inset -2px -2px 5px color-mix(in srgb, var(--shadow-light) 72%, transparent),
-        2px 4px 10px color-mix(in srgb, var(--shadow-dark) 26%, transparent);
+        inset 4px 4px 7px color-mix(in srgb, var(--shadow-dark) 64%, transparent),
+        inset -3px -3px 7px color-mix(in srgb, var(--shadow-light) 82%, transparent),
+        1px 2px 5px color-mix(in srgb, var(--shadow-dark) 18%, transparent);
 }
 .explore-search .input:focus-visible {
     outline: 2px solid var(--focus-ring);
