@@ -6,9 +6,7 @@
 use dioxus::prelude::*;
 
 use crate::api::recipe::{get_public_recipe_tags, get_public_recipes};
-use crate::components::base::{
-    Button, ButtonVariant, EmptyState, LoadingSpinner, PageHeader, RecipeCard,
-};
+use crate::components::base::{Button, ButtonVariant, EmptyState, LoadingSpinner, RecipeCard};
 use crate::types::RecipeCardSummary;
 
 const PAGE_SIZE: i64 = 12;
@@ -151,31 +149,34 @@ pub fn Explore() -> Element {
 
     rsx! {
         div { class: "container explore-page",
-            PageHeader {
-                title: "Explore",
-            }
-            p { class: "explore-intro", "Public recipes from the community." }
-
-            // ── Search bar ─────────────────────────────────────────────────
-            div { class: "explore-search",
-                label { r#for: "explore-query", "Search public recipes" }
-                input {
-                    id: "explore-query",
-                    class: "neumo-inset input input--shared",
-                    r#type: "search",
-                    aria_label: "Search public recipes",
-                    value: search_query(),
-                    placeholder: "Search titles and descriptions…",
-                    oninput: move |event| on_search(event.value()),
+            header { class: "explore-heading",
+                div { class: "explore-heading__copy",
+                    h1 { "Explore" }
+                    p { class: "explore-intro", "Public recipes from the community." }
                 }
-            }
-
-            // ── Tag chips ──────────────────────────────────────────────────
-            if !tags_list.is_empty() {
-                div { class: "explore-tags",
-                    span { class: "explore-tags__label", "Community tags" }
-                    for tag in tags_list {
-                        span { key: "{tag}", class: "explore-tag", "{tag}" }
+                div { class: "explore-tools",
+                    div { class: "explore-search",
+                        label { class: "explore-visually-hidden", r#for: "explore-query", "Search public recipes" }
+                        svg { class: "explore-search__icon", view_box: "0 0 24 24", width: "20", height: "20", fill: "none", stroke: "currentColor", stroke_width: "1.8", stroke_linecap: "round", "aria-hidden": "true",
+                            circle { cx: "11", cy: "11", r: "7" }
+                            path { d: "m16 16 4 4" }
+                        }
+                        input {
+                            id: "explore-query",
+                            class: "input input--shared",
+                            r#type: "search",
+                            aria_label: "Search public recipes",
+                            value: search_query(),
+                            placeholder: "Search recipes…",
+                            oninput: move |event| on_search(event.value()),
+                        }
+                    }
+                    if !tags_list.is_empty() {
+                        div { class: "explore-tags", role: "group", aria_label: "Community tags", tabindex: "0",
+                            for tag in tags_list {
+                                span { key: "{tag}", class: "explore-tag", "{tag}" }
+                            }
+                        }
                     }
                 }
             }
@@ -210,7 +211,7 @@ pub fn Explore() -> Element {
                         description: empty_description,
                     }
                 } else if !filtered_recipes.is_empty() {
-                    p { class: "explore-results", role: "status", "{filtered_recipes.len()} recipes loaded" }
+                    p { class: "explore-results explore-visually-hidden", role: "status", "{filtered_recipes.len()} recipes loaded" }
                     div {
                         class: "explore-grid",
                         for recipe in &filtered_recipes {

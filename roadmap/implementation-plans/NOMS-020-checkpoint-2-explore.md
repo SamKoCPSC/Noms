@@ -4,6 +4,8 @@ Started 2026-09-22 from `56c120f` in the user's existing isolated `codex/NOMS-02
 
 Implementation commit: `dab9d77`. Documentation is a separate local commit; nothing is pushed.
 
+The first user review of the running page identified a composition mismatch: controls were stacked beneath the title and the author row had an X7B-style divider. The follow-up layout revision moves the compact search and tag labels beside the title on wide screens, stacks them at narrower widths, aligns the framed grid with a more deliberate content inset, and restores X7C's unboxed author row. Long tag lists scroll within their labelled, keyboard-focusable region. The recipe count remains available to assistive technology without adding a visual row ahead of the cards. Real recipe metadata remains visible even though the generated reference omits it. Final screenshot comparison remains open under the browser-access limitation below.
+
 ## Contract and implementation
 
 - X7C opt-in framed vertical recipe cards: existing cream surface, raised shadow, Fredoka/Nunito, 12px frame, inset 16:9 image, title (two lines), description (two lines), available preparation/cooking time and servings. No disabled decorative rating/bookmark controls in this variant.
