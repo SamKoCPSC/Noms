@@ -440,7 +440,7 @@ a:hover {
 .navbar-link { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 14px; border: 1px solid transparent; border-radius: 18px; font: 600 14px var(--font-body); color: var(--text-primary); text-decoration: none; background: transparent; cursor: pointer; }
 .navbar-link:hover { background: var(--bg-base); color: var(--accent-ink); }
 .navbar-link--current,
-.navbar-link--current:hover { background: var(--surface); border-color: var(--field-border); box-shadow: var(--elevation-inset); }
+.navbar-link--current:hover { background: var(--surface); border-color: transparent; box-shadow: var(--elevation-inset); }
 .navbar-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .navbar-create { white-space: nowrap; font-size: 14px; min-height: 44px; padding: 8px 14px; border-radius: 18px; }
 .navbar-user-menu { position: relative; }
