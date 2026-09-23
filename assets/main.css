@@ -1652,7 +1652,7 @@ dialog.shared-modal::backdrop { background: transparent; }
     margin: 0 0 18px;
 }
 .explore-heading__copy {
-    flex: 0 0 38%;
+    flex: 0 0 44%;
     min-width: 0;
 }
 .explore-heading h1 {
