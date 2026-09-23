@@ -4,7 +4,9 @@ Started 2026-09-22 from `56c120f` in the user's existing isolated `codex/NOMS-02
 
 Implementation commit: `dab9d77`. Documentation is a separate local commit; nothing is pushed.
 
-The first user review of the running page identified a composition mismatch: controls were stacked beneath the title and the author row had an X7B-style divider. The follow-up layout revision moves the compact search and tag labels beside the title on wide screens, stacks them at narrower widths, aligns the framed grid with a more deliberate content inset, and restores X7C's unboxed author row. Long tag lists scroll within their labelled, keyboard-focusable region. The recipe count remains available to assistive technology without adding a visual row ahead of the cards. Real recipe metadata remains visible even though the generated reference omits it. Final screenshot comparison remains open under the browser-access limitation below.
+The first user review of the running page identified a composition mismatch: controls were stacked beneath the title and the author row had an X7B-style divider. The initial layout revision moved the compact search and tag labels beside the title on wide screens, stacked them at narrower widths, aligned the framed grid with a more deliberate content inset, and restored X7C's unboxed author row. Long tag lists scroll within their labelled, keyboard-focusable region. The recipe count remains available to assistive technology without adding a visual row ahead of the cards. Real recipe metadata remains visible even though the generated reference omits it. The later user correction below supersedes the initial control placement.
+
+The 2026-09-23 user review clarified the alignment: search and tag labels should form a row **below the subtitle**, sharing the heading/card grid's left edge at every width. A CSS-only follow-up replaces the desktop 44% title column. Live browser geometry after rebuilding: at desktop width, heading/search/grid start at x=70.4px; at 768px, x=16px for all three; at 390px, x=16px for all three. No horizontal document overflow appeared at 768px or 390px. These measurements validate alignment, not the remaining interaction-state checklist.
 
 ## Contract and implementation
 
@@ -29,7 +31,7 @@ Final gate: `just ci` passes (`/tmp/noms020-explore-ci-final.log`), including bo
 
 Deployment: restarted only `noms-noms020-picker-20260922-app-1` in the existing isolated deployment, preserving all user fixtures. Server logs show a successful rebuild and healthy local responses. Local review URL: `http://127.0.0.1:32779/explore`. Startup is not feature acceptance. Startup-only Tailwind utility churn is excluded.
 
-Browser verification was attempted but the browser tool explicitly rejected access under its URL policy. No alternate surface, raw browser command or network workaround was attempted. No new screenshot, viewport geometry, keyboard flow or live search/pagination claim is made for this slice.
+Browser verification was initially rejected by URL policy. After the user adjusted browser settings on 2026-09-23, the local Explore page became accessible and the alignment measurements above were taken. The keyboard and live search/pagination states below remain unverified.
 
 ## Remaining acceptance checklist
 
