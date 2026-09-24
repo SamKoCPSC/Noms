@@ -345,6 +345,7 @@ a:hover {
 
 .btn-secondary {
     position: relative;
+    isolation: isolate;
     background: var(--neumo-surface);
     color: var(--accent-ink);
     border: 1px solid transparent;
@@ -362,9 +363,19 @@ a:hover {
 }
 
 .btn-secondary:hover:not(:disabled) {
-    background: var(--accent);
     color: var(--on-accent);
     box-shadow: var(--elevation-raised);
+}
+
+/* The hover fill begins inside the 5px inset stroke, leaving the raised rim exposed. */
+.btn-secondary:hover:not(:disabled)::before {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    z-index: -1;
+    background: var(--accent);
+    border-radius: calc(var(--radius-md) - 6px);
+    pointer-events: none;
 }
 
 .btn-secondary:hover:not(:disabled)::after {
@@ -5379,7 +5390,7 @@ dialog.shared-modal::backdrop { background: transparent; }
 }
 
 @media (forced-colors: active) {
-    .btn-secondary::after { display: none; }
+    .btn-secondary::before, .btn-secondary::after { display: none; }
 
     .modal-card:not(.modal-card--editor), .feedback-surface {
         --text-primary: CanvasText;

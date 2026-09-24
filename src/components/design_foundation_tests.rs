@@ -144,6 +144,7 @@ fn outlined_buttons_use_shared_neumorphic_material_and_depth() {
     assert!(resting.contains("background: var(--neumo-surface)"));
     assert!(resting.contains("box-shadow: var(--elevation-raised-compact)"));
     assert!(resting.contains("position: relative"));
+    assert!(resting.contains("isolation: isolate"));
     assert!(resting.contains("border: 1px solid transparent"));
     assert!(!resting.contains("var(--btn-edge)"));
 
@@ -154,11 +155,16 @@ fn outlined_buttons_use_shared_neumorphic_material_and_depth() {
 
     let hovered = rule(".btn-secondary:hover:not(:disabled)");
     assert!(hovered.contains("box-shadow: var(--elevation-raised)"));
+    assert!(!hovered.contains("background: var(--accent)"));
+    let hover_fill = rule(".btn-secondary:hover:not(:disabled)::before");
+    assert!(hover_fill.contains("inset: 6px"));
+    assert!(hover_fill.contains("background: var(--accent)"));
+    assert!(hover_fill.contains("pointer-events: none"));
     assert!(rule(".btn-secondary:hover:not(:disabled)::after")
         .contains("border-color: var(--on-accent)"));
     assert!(rule(".btn-secondary:active:not(:disabled)")
         .contains("box-shadow: var(--elevation-inset-compact)"));
-    assert!(CSS.contains(".btn-secondary::after { display: none; }"));
+    assert!(CSS.contains(".btn-secondary::before, .btn-secondary::after { display: none; }"));
 }
 
 #[test]
