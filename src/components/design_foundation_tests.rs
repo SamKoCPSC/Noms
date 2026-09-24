@@ -239,6 +239,16 @@ fn navbar_contained_actions_keep_comfortable_padding() {
 }
 
 #[test]
+fn navbar_search_keeps_inset_depth_without_a_visible_border() {
+    let header = navbar_rule(".navigation-search--header");
+    assert!(header.contains("border: 0"));
+    assert!(navbar_rule(".navigation-search").contains("box-shadow: var(--elevation-inset)"));
+    assert!(navbar_rule(".navigation-search input").contains("border: 0"));
+    assert!(CSS.contains(".navbar :is(a, button, input):focus-visible"));
+    assert!(CSS.contains(".navbar, .navigation-search, .navbar-link--current { border: 1px solid CanvasText; box-shadow: none; }"));
+}
+
+#[test]
 fn shared_fields_and_focus_do_not_depend_on_shadows() {
     assert!(!INPUT.contains("outline: \"none\""));
     assert!(rule(".input").contains("border: 1px solid var(--field-border)"));
