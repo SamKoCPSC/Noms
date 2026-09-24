@@ -422,8 +422,18 @@ a:hover {
     Input Component
     ============================================================ */
 .input {
-    border: 1px solid var(--field-border);
-    transition: box-shadow 0.2s ease;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+select.input { border: 1px solid var(--field-border); }
+
+/* Text entry shares one borderless, inset material; selects and other controls
+   retain their own presentation. Page-specific rules may still own sizing. */
+.input:is(input, textarea),
+.landing-search input,
+.search-page input:not([type="date"]) {
+    border: 0;
+    background: var(--neumo-surface);
+    box-shadow: var(--elevation-inset);
 }
 
 /* Preserve page-owned field sizing; only the shared component is full width. */
@@ -436,18 +446,20 @@ a:hover {
     width: 100%;
 }
 
-/* Legacy page-owned fields still suppress outlines inline; retain their cue
-   while the shared component uses the independent keyboard outline below. */
-.input:focus {
-    box-shadow: var(--elevation-inset), 0 0 0 2px var(--focus-ring);
-}
-
 /* Low-specificity baseline leaves specialized graph focus treatments intact. */
 :where(button, a[href], input, select, textarea, summary, [tabindex]):focus-visible,
 .btn:focus-visible,
-.input:focus-visible {
+select.input:focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 3px;
+}
+
+.input:is(input, textarea):focus-visible,
+.landing-search input:focus-visible,
+.search-page input:not([type="date"]):focus-visible {
+    outline: none;
+    background: color-mix(in srgb, var(--neumo-surface) 88%, var(--accent) 12%);
+    box-shadow: var(--elevation-inset);
 }
 
 .input::placeholder {
@@ -503,13 +515,15 @@ a:hover {
 .navbar-logout-form { width: 100%; margin: 0; }
 .navbar-theme-toggle, .navbar-menu-toggle, .navigation-close { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; min-width: 44px; padding: 8px; border: 1px solid var(--border-color); border-radius: 16px; background: var(--surface); color: var(--text-primary); font: 600 14px var(--font-body); cursor: pointer; flex-shrink: 0; }
 .navbar-menu-toggle:hover, .navbar-theme-toggle:hover, .navigation-close:hover { background: var(--bg-base); }
-.navigation-search { display: flex; align-items: center; min-width: 0; border: 1px solid var(--field-border); border-radius: 18px; background: var(--surface); box-shadow: var(--elevation-inset); }
+.navigation-search { display: flex; align-items: center; min-width: 0; border: 0; border-radius: 18px; background: var(--neumo-surface); box-shadow: var(--elevation-inset); }
 .navigation-search--header { flex: 1 1 180px; margin-left: auto; border: 0; }
-.navigation-search input { width: 100%; min-width: 0; min-height: 44px; padding: 10px 0 10px 14px; border: 0; border-radius: 18px; background: transparent; color: var(--text-primary); font: 400 14px var(--font-body); }
+.navigation-search input { width: 100%; min-width: 0; min-height: 44px; padding: 10px 0 10px 14px; border: 0; border-radius: 18px; background: transparent; box-shadow: none; color: var(--text-primary); font: 400 14px var(--font-body); }
 .navigation-search input::placeholder { color: var(--field-placeholder); opacity: 1; }
 .navigation-search button { display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; border: 0; border-radius: 16px; background: transparent; color: var(--text-primary); cursor: pointer; }
 .navbar :is(a, button, input):focus-visible, .navigation-drawer :is(a, button, input):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-.navbar .navigation-search--header:focus-within { background: color-mix(in srgb, var(--surface) 88%, var(--accent) 12%); }
+.navigation-search:focus-within { background: color-mix(in srgb, var(--neumo-surface) 88%, var(--accent) 12%); }
+.navigation-search input:focus-visible { outline: none; background: transparent; box-shadow: none; }
+.navbar .navigation-search--header:focus-within { background: color-mix(in srgb, var(--neumo-surface) 88%, var(--accent) 12%); }
 .navbar .navigation-search--header input:focus-visible { outline: none; }
 .navbar .navigation-search--header:focus-within button { color: var(--accent-ink); }
 .navigation-drawer { position: fixed; top: 16px; right: 16px; bottom: 16px; width: min(360px, calc(100% - 32px)); padding: 20px; border-radius: 24px; overflow-y: auto; overscroll-behavior: contain; }
@@ -1752,12 +1766,8 @@ dialog.shared-modal::backdrop { background: transparent; }
     padding-left: 44px;
     border-radius: var(--radius-full);
     background: var(--neumo-surface);
-    border-color: color-mix(in srgb, var(--shadow-light) 58%, transparent);
+    border: 0;
     box-shadow: var(--elevation-inset);
-}
-.explore-search .input:focus-visible {
-    outline: 2px solid var(--focus-ring);
-    outline-offset: 2px;
 }
 .explore-tags {
     display: flex;
@@ -2037,7 +2047,7 @@ dialog.shared-modal::backdrop { background: transparent; }
 .recipe-scaler__input {
     width: 80px;
     padding: var(--space-xs) var(--space-sm);
-    border: 1px solid var(--surface);
+    border: 0;
     border-radius: var(--radius-sm);
     background: var(--neumo-surface);
     font-family: var(--font-body);
@@ -2049,7 +2059,8 @@ dialog.shared-modal::backdrop { background: transparent; }
 
 .recipe-scaler__input:focus {
     outline: none;
-    box-shadow: var(--elevation-inset-compact), 0 0 0 2px var(--accent);
+    background: color-mix(in srgb, var(--neumo-surface) 88%, var(--accent) 12%);
+    box-shadow: var(--elevation-inset-compact);
 }
 
 .recipe-scaler__presets {
@@ -5131,17 +5142,21 @@ dialog.shared-modal::backdrop { background: transparent; }
 .search-page input,
 .search-page select {
     min-width: 0;
-    border: 1px solid color-mix(in srgb, var(--text-tertiary) 45%, transparent);
     border-radius: var(--radius-md);
     padding: 11px 13px;
     color: var(--text-primary);
-    background: color-mix(in srgb, var(--surface) 82%, white);
     font: inherit;
 }
 
 .landing-search input {
     flex: 1;
     font-size: 16px;
+}
+
+.search-page select,
+.search-page input[type="date"] {
+    border: 1px solid color-mix(in srgb, var(--text-tertiary) 45%, transparent);
+    background: color-mix(in srgb, var(--surface) 82%, white);
 }
 
 .search-page {
@@ -5170,11 +5185,12 @@ dialog.shared-modal::backdrop { background: transparent; }
     padding: 8px;
     border-radius: var(--radius-lg);
     background: var(--neumo-surface);
-    box-shadow: var(--elevation-raised);
+    box-shadow: var(--elevation-inset);
 }
+.search-input-row:focus-within { background: color-mix(in srgb, var(--neumo-surface) 88%, var(--accent) 12%); }
 .search-icon { padding-left: 10px; color: var(--accent); font-size: 28px; line-height: 1; }
-.search-query-input { flex: 1; border: 0 !important; background: transparent !important; font-size: 18px !important; outline: 0; }
-.search-query-input:focus-visible { box-shadow: inset 0 -2px var(--accent); }
+.search-query-input { flex: 1; border: 0; background: transparent !important; box-shadow: none !important; font-size: 18px !important; }
+.search-query-input:focus-visible { background: transparent !important; }
 .search-submit { min-width: 104px; }
 
 .search-suggestions {
@@ -5403,6 +5419,8 @@ dialog.shared-modal::backdrop { background: transparent; }
 
     .btn,
     .input,
+    .landing-search input,
+    .search-page input,
     .neumo-raised,
     .neumo-inset,
     .neumo-card,
@@ -5417,8 +5435,10 @@ dialog.shared-modal::backdrop { background: transparent; }
     }
 
     .btn:focus-visible,
-    .input:focus-visible {
-        /* Page-owned legacy fields may still suppress the outline inline. */
+    .input:focus-visible,
+    .landing-search input:focus-visible,
+    .search-page input:focus-visible,
+    .navigation-search input:focus-visible {
         outline: 2px solid Highlight !important;
     }
 

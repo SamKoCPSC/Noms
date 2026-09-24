@@ -104,7 +104,7 @@ fn shared_elevation_has_one_token_contract() {
     }
     assert!(rule(".explore-search .input").contains("box-shadow: var(--elevation-inset)"));
     assert!(rule(".input--shared").contains("background-color: var(--neumo-surface)"));
-    for selector in [".recipe-scaler", ".search-input-row", ".entity-result-card"] {
+    for selector in [".recipe-scaler", ".entity-result-card"] {
         assert!(
             rule(selector).contains("background: var(--neumo-surface)"),
             "{selector}"
@@ -114,6 +114,7 @@ fn shared_elevation_has_one_token_contract() {
             "{selector}"
         );
     }
+    assert!(rule(".search-input-row").contains("box-shadow: var(--elevation-inset)"));
 }
 
 #[test]
@@ -252,7 +253,7 @@ fn navbar_search_keeps_inset_depth_without_a_visible_border() {
 fn navbar_search_focus_is_visible_without_reintroducing_an_outline() {
     let focused_surface = navbar_rule(".navbar .navigation-search--header:focus-within");
     assert!(focused_surface
-        .contains("background: color-mix(in srgb, var(--surface) 88%, var(--accent) 12%)"));
+        .contains("background: color-mix(in srgb, var(--neumo-surface) 88%, var(--accent) 12%)"));
     let focused_input = navbar_rule(".navbar .navigation-search--header input:focus-visible");
     assert!(focused_input.contains("outline: none"));
     let focused_icon = navbar_rule(".navbar .navigation-search--header:focus-within button");
@@ -260,13 +261,23 @@ fn navbar_search_focus_is_visible_without_reintroducing_an_outline() {
 }
 
 #[test]
-fn shared_fields_and_focus_do_not_depend_on_shadows() {
+fn text_fields_share_borderless_inset_material_and_non_outline_focus() {
     assert!(!INPUT.contains("outline: \"none\""));
-    assert!(rule(".input").contains("border: 1px solid var(--field-border)"));
+    let fields = rule(".input:is(input, textarea),\n.landing-search input,\n.search-page input:not([type=\"date\"])");
+    assert!(fields.contains("border: 0"));
+    assert!(fields.contains("background: var(--neumo-surface)"));
+    assert!(fields.contains("box-shadow: var(--elevation-inset)"));
+    let focus = rule(".input:is(input, textarea):focus-visible,\n.landing-search input:focus-visible,\n.search-page input:not([type=\"date\"]):focus-visible");
+    assert!(focus.contains("outline: none"));
+    assert!(focus.contains("color-mix(in srgb, var(--neumo-surface) 88%, var(--accent) 12%)"));
     assert!(rule(".input::placeholder").contains("var(--field-placeholder)"));
-    assert!(CSS.contains(":focus-visible"));
-    assert!(CSS.contains("outline: 2px solid var(--focus-ring)"));
-    assert!(CSS.contains("outline-offset: 3px"));
+    assert!(navbar_rule(".navigation-search").contains("border: 0"));
+    assert!(rule(".explore-search .input").contains("border: 0"));
+    assert!(rule(".recipe-scaler__input").contains("border: 0"));
+    assert!(rule(".recipe-scaler__input:focus").contains("outline: none"));
+    assert!(!rule(".recipe-scaler__input:focus").contains("0 0 0 2px"));
+    assert!(rule("select.input").contains("border: 1px solid var(--field-border)"));
+    assert!(CSS.contains("outline: 2px solid Highlight !important"));
 }
 
 #[test]
