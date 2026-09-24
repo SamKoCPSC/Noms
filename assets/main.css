@@ -325,21 +325,24 @@ a:hover {
     cursor: not-allowed;
 }
 
-.btn-primary {
+.btn-primary,
+.navbar .navbar-contained-action {
     background: var(--accent);
     color: var(--on-accent);
     box-shadow: var(--elevation-raised),
                 inset 0 0 0 5px var(--btn-edge);
 }
 
-.btn-primary:hover:not(:disabled) {
+.btn-primary:hover:not(:disabled),
+.navbar .navbar-contained-action:hover:not(:disabled) {
     color: var(--on-accent);
     background: var(--accent-hover);
     box-shadow: var(--elevation-raised),
                 inset 0 0 0 5px var(--btn-edge);
 }
 
-.btn-primary:active:not(:disabled) {
+.btn-primary:active:not(:disabled),
+.navbar .navbar-contained-action:active:not(:disabled) {
     box-shadow: var(--elevation-inset);
 }
 
@@ -514,15 +517,12 @@ a:hover {
 .navigation-drawer-links { display: grid; gap: 4px; margin-top: 16px; }
 .navigation-drawer-account { display: grid; gap: 4px; border-top: 1px solid var(--field-border); margin-top: 16px; padding-top: 12px; }
 .navigation-drawer-account .navbar-link { width: 100%; }
-/* Utility actions use a solid coral face with the shared raised depth. */
+/* Navbar utilities keep their own dimensions while sharing the primary button material. */
 .navbar .navbar-contained-action {
     min-height: 48px;
     padding: 10px 18px;
     border: 1px solid transparent;
     border-radius: 18px;
-    background: var(--accent);
-    color: var(--on-accent);
-    box-shadow: var(--elevation-raised-compact);
 }
 .navbar .navbar-theme-toggle.navbar-contained-action {
     min-width: 48px;
@@ -530,12 +530,6 @@ a:hover {
     border-radius: 16px;
 }
 .navbar .navbar-menu-toggle.navbar-contained-action { border-radius: 16px; }
-.navbar .navbar-contained-action:hover:not(:disabled) {
-    background: var(--accent-hover);
-    color: var(--on-accent);
-    box-shadow: var(--elevation-raised);
-}
-.navbar .navbar-contained-action:active:not(:disabled) { box-shadow: var(--elevation-inset-compact); }
 @media (max-width: 1399px) { .navbar-username { display: none; } }
 @media (max-width: 1099px) {
     .navbar-links, .navigation-search--header { display: none; }

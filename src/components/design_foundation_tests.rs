@@ -13,6 +13,18 @@ fn rule(selector: &str) -> &str {
         .0
 }
 
+fn navbar_rule(selector: &str) -> &str {
+    CSS.split_once("/* N1/N4 shared navigation */")
+        .unwrap()
+        .1
+        .split_once(&format!("{selector} {{"))
+        .unwrap_or_else(|| panic!("missing navbar rule: {selector}"))
+        .1
+        .split_once('}')
+        .unwrap()
+        .0
+}
+
 fn token<'a>(block: &'a str, name: &str) -> &'a str {
     block
         .split_once(&format!("{name}:"))
@@ -125,8 +137,8 @@ fn shared_button_text_roles_meet_aa_in_both_themes() {
         assert!(contrast(token(block, "--focus-ring"), token(block, "--surface")) >= 3.0);
     }
     for selector in [
-        ".btn-primary",
-        ".btn-primary:hover:not(:disabled)",
+        ".btn-primary,\n.navbar .navbar-contained-action",
+        ".btn-primary:hover:not(:disabled),\n.navbar .navbar-contained-action:hover:not(:disabled)",
         ".btn-secondary:hover:not(:disabled)",
     ] {
         assert!(
@@ -169,40 +181,42 @@ fn outlined_buttons_use_shared_neumorphic_material_and_depth() {
 }
 
 #[test]
-fn navbar_actions_use_contained_coral_material() {
+fn navbar_actions_share_the_homepage_primary_button_material() {
     let navbar = include_str!("navbar.rs");
+    let home = include_str!("../pages/home.rs");
+    assert!(home.contains("button { class: \"btn btn-primary\", r#type: \"submit\", \"Search\" }"));
+    assert!(home.contains("class: \"btn btn-primary touch-target\""));
     for class in [
-        "navbar-link navbar-sign-in btn navbar-contained-action",
-        "navbar-theme-toggle btn navbar-contained-action",
-        "navbar-menu-toggle btn navbar-contained-action",
-        "navbar-user-dropdown btn navbar-contained-action",
+        "navbar-link navbar-sign-in btn btn-primary navbar-contained-action",
+        "navbar-theme-toggle btn btn-primary navbar-contained-action",
+        "navbar-menu-toggle btn btn-primary navbar-contained-action",
+        "navbar-user-dropdown btn btn-primary navbar-contained-action",
     ] {
         assert!(
             navbar.contains(class),
             "missing contained navbar action: {class}"
         );
     }
-    let nav_style = CSS
-        .split_once("/* N1/N4 shared navigation */")
-        .unwrap()
-        .1
-        .split_once("/* End shared navigation */")
-        .unwrap()
-        .0;
-    let resting = rule(".navbar .navbar-contained-action");
+    let resting = rule(".btn-primary,\n.navbar .navbar-contained-action");
     assert!(resting.contains("background: var(--accent)"));
     assert!(resting.contains("color: var(--on-accent)"));
-    assert!(resting.contains("border: 1px solid transparent"));
-    assert!(nav_style.contains("box-shadow: var(--elevation-raised-compact)"));
-    assert!(nav_style.contains(".navbar .navbar-contained-action:hover:not(:disabled)"));
-    assert!(nav_style.contains("background: var(--accent-hover)"));
-    assert!(nav_style.contains(".navbar .navbar-contained-action:active:not(:disabled)"));
-    assert!(nav_style.contains("box-shadow: var(--elevation-inset-compact)"));
+    assert!(resting.contains("inset 0 0 0 5px var(--btn-edge)"));
+    let hover = rule(
+        ".btn-primary:hover:not(:disabled),\n.navbar .navbar-contained-action:hover:not(:disabled)",
+    );
+    assert!(hover.contains("background: var(--accent-hover)"));
+    assert!(hover.contains("inset 0 0 0 5px var(--btn-edge)"));
+    let pressed = rule(".btn-primary:active:not(:disabled),\n.navbar .navbar-contained-action:active:not(:disabled)");
+    assert!(pressed.contains("box-shadow: var(--elevation-inset)"));
+
+    let navbar_sizing = navbar_rule(".navbar .navbar-contained-action");
+    assert!(!navbar_sizing.contains("background:"));
+    assert!(!navbar_sizing.contains("box-shadow:"));
 }
 
 #[test]
 fn navbar_contained_actions_keep_comfortable_padding() {
-    let action = rule(".navbar .navbar-contained-action");
+    let action = navbar_rule(".navbar .navbar-contained-action");
     assert!(action.contains("min-height: 48px"));
     assert!(action.contains("padding: 10px 18px"));
 
