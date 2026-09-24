@@ -181,7 +181,7 @@ fn outlined_buttons_use_shared_neumorphic_material_and_depth() {
 }
 
 #[test]
-fn navbar_actions_share_the_homepage_primary_button_material() {
+fn navbar_actions_share_the_homepage_primary_fill_without_its_decorative_rim() {
     let navbar = include_str!("navbar.rs");
     let home = include_str!("../pages/home.rs");
     assert!(home.contains("button { class: \"btn btn-primary\", r#type: \"submit\", \"Search\" }"));
@@ -209,9 +209,16 @@ fn navbar_actions_share_the_homepage_primary_button_material() {
     let pressed = rule(".btn-primary:active:not(:disabled),\n.navbar .navbar-contained-action:active:not(:disabled)");
     assert!(pressed.contains("box-shadow: var(--elevation-inset)"));
 
-    let navbar_sizing = navbar_rule(".navbar .navbar-contained-action");
-    assert!(!navbar_sizing.contains("background:"));
-    assert!(!navbar_sizing.contains("box-shadow:"));
+    let navbar_material = navbar_rule(".navbar .navbar-contained-action");
+    assert!(!navbar_material.contains("background:"));
+    assert!(navbar_material.contains("box-shadow: var(--elevation-raised)"));
+    assert!(!navbar_material.contains("var(--btn-edge)"));
+    let navbar_hover = navbar_rule(".navbar .navbar-contained-action:hover:not(:disabled)");
+    assert!(navbar_hover.contains("box-shadow: var(--elevation-raised)"));
+    assert!(!navbar_hover.contains("var(--btn-edge)"));
+    let navbar_pressed = navbar_rule(".navbar .navbar-contained-action:active:not(:disabled)");
+    assert!(navbar_pressed.contains("box-shadow: var(--elevation-inset)"));
+    assert!(CSS.contains(".navbar :is(a, button, input):focus-visible"));
 }
 
 #[test]
