@@ -199,6 +199,17 @@ fn navbar_actions_reuse_the_outlined_button_material() {
 }
 
 #[test]
+fn navbar_outlined_actions_leave_space_inside_the_inset_outline() {
+    let action = rule(".navbar .btn-secondary");
+    assert!(action.contains("min-height: 48px"));
+    assert!(action.contains("padding: 10px 18px"));
+
+    let icon = rule(".navbar .navbar-theme-toggle.btn-secondary");
+    assert!(icon.contains("min-width: 48px"));
+    assert!(icon.contains("padding: 10px"));
+}
+
+#[test]
 fn shared_fields_and_focus_do_not_depend_on_shadows() {
     assert!(!INPUT.contains("outline: \"none\""));
     assert!(rule(".input").contains("border: 1px solid var(--field-border)"));
