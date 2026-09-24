@@ -213,6 +213,7 @@ fn contained_primary_actions_share_the_homepage_button_material() {
     assert!(pressed.contains("box-shadow: var(--elevation-inset)"));
 
     let navbar_sizing = navbar_rule(".navbar .navbar-contained-action");
+    assert!(navbar_sizing.contains("border: 0"));
     assert!(!navbar_sizing.contains("background:"));
     assert!(!navbar_sizing.contains("box-shadow:"));
     assert!(!CSS.contains(".navbar .navbar-contained-action:hover:not(:disabled) { box-shadow:"));
@@ -221,6 +222,9 @@ fn contained_primary_actions_share_the_homepage_button_material() {
     assert!(!CSS.contains(".image-editor__primary-button:hover"));
     assert!(!CSS.contains(".image-editor__primary-button:active"));
     assert!(CSS.contains(".navbar :is(a, button, input):focus-visible"));
+    assert!(CSS.contains(
+        ".navbar .navbar-contained-action { border: 1px solid CanvasText; box-shadow: none; }"
+    ));
 }
 
 #[test]
