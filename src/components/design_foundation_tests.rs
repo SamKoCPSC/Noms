@@ -144,6 +144,7 @@ fn outlined_buttons_use_shared_neumorphic_material_and_depth() {
     assert!(resting.contains("background: var(--neumo-surface)"));
     assert!(resting.contains("box-shadow: var(--elevation-raised-compact)"));
     assert!(resting.contains("position: relative"));
+    assert!(resting.contains("--outline-radius: var(--radius-md)"));
     assert!(resting.contains("isolation: isolate"));
     assert!(resting.contains("border: 1px solid transparent"));
     assert!(!resting.contains("var(--btn-edge)"));
@@ -165,6 +166,36 @@ fn outlined_buttons_use_shared_neumorphic_material_and_depth() {
     assert!(rule(".btn-secondary:active:not(:disabled)")
         .contains("box-shadow: var(--elevation-inset-compact)"));
     assert!(CSS.contains(".btn-secondary::before, .btn-secondary::after { display: none; }"));
+}
+
+#[test]
+fn navbar_actions_reuse_the_outlined_button_material() {
+    let navbar = include_str!("navbar.rs");
+    for class in [
+        "navbar-link navbar-sign-in btn btn-secondary",
+        "navbar-theme-toggle btn btn-secondary",
+        "navbar-menu-toggle btn btn-secondary",
+        "navbar-user-dropdown btn btn-secondary",
+    ] {
+        assert!(
+            navbar.contains(class),
+            "missing outlined navbar action: {class}"
+        );
+    }
+    let nav_style = CSS
+        .split_once("/* N1/N4 shared navigation */")
+        .unwrap()
+        .1
+        .split_once("/* End shared navigation */")
+        .unwrap()
+        .0;
+    assert!(nav_style.contains(".navbar .btn-secondary"));
+    assert!(nav_style.contains("--outline-radius: 18px"));
+    assert!(nav_style.contains("--outline-radius: 16px"));
+    assert!(nav_style.contains("background: var(--neumo-surface)"));
+    assert!(nav_style.contains("box-shadow: var(--elevation-raised-compact)"));
+    assert!(nav_style.contains(".navbar .btn-secondary:active:not(:disabled)"));
+    assert!(nav_style.contains("box-shadow: var(--elevation-inset-compact)"));
 }
 
 #[test]

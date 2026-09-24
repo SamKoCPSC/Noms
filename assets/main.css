@@ -344,6 +344,7 @@ a:hover {
 }
 
 .btn-secondary {
+    --outline-radius: var(--radius-md);
     position: relative;
     isolation: isolate;
     background: var(--neumo-surface);
@@ -358,7 +359,7 @@ a:hover {
     position: absolute;
     inset: 5px;
     border: 1px solid var(--accent);
-    border-radius: calc(var(--radius-md) - 5px);
+    border-radius: calc(var(--outline-radius) - 5px);
     pointer-events: none;
 }
 
@@ -374,7 +375,7 @@ a:hover {
     inset: 6px;
     z-index: -1;
     background: var(--accent);
-    border-radius: calc(var(--radius-md) - 6px);
+    border-radius: calc(var(--outline-radius) - 6px);
     pointer-events: none;
 }
 
@@ -513,6 +514,21 @@ a:hover {
 .navigation-drawer-links { display: grid; gap: 4px; margin-top: 16px; }
 .navigation-drawer-account { display: grid; gap: 4px; border-top: 1px solid var(--field-border); margin-top: 16px; padding-top: 12px; }
 .navigation-drawer-account .navbar-link { width: 100%; }
+/* The utility actions share the raised, inset-outline button treatment. */
+.navbar .btn-secondary {
+    --outline-radius: 18px;
+    background: var(--neumo-surface);
+    border-color: transparent;
+    box-shadow: var(--elevation-raised-compact);
+}
+.navbar .navbar-theme-toggle.btn-secondary,
+.navbar .navbar-menu-toggle.btn-secondary { --outline-radius: 16px; }
+.navbar .btn-secondary:hover:not(:disabled) {
+    background: var(--neumo-surface);
+    color: var(--on-accent);
+    box-shadow: var(--elevation-raised);
+}
+.navbar .btn-secondary:active:not(:disabled) { box-shadow: var(--elevation-inset-compact); }
 @media (max-width: 1399px) { .navbar-username { display: none; } }
 @media (max-width: 1099px) {
     .navbar-links, .navigation-search--header { display: none; }
@@ -529,6 +545,7 @@ a:hover {
 }
 @media (forced-colors: active) {
     .navbar, .navigation-search, .navbar-link--current { border: 1px solid CanvasText; box-shadow: none; }
+    .navbar .btn-secondary { border-color: CanvasText; box-shadow: none; }
     .navbar-link--current { text-decoration: underline; }
 }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }

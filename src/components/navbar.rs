@@ -95,7 +95,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
                             // User dropdown trigger
                             button {
                                 r#type: "button",
-                                class: "navbar-user-dropdown",
+                                class: "navbar-user-dropdown btn btn-secondary",
                                 "data-account-trigger": "",
                                 id: "account-menu-trigger",
                                 aria_label: "Account menu",
@@ -162,16 +162,16 @@ pub fn Navbar(theme: UseTheme) -> Element {
                         }
 
                     } else {
-                        Link { to: Route::Login {}, class: "navbar-link navbar-sign-in", "Sign In" }
+                        Link { to: Route::Login {}, class: "navbar-link navbar-sign-in btn btn-secondary", "Sign In" }
                     }
                     button {
-                        r#type: "button", class: "navbar-theme-toggle touch-target",
+                        r#type: "button", class: "navbar-theme-toggle btn btn-secondary touch-target",
                         onclick: move |_| theme.toggle(), aria_label: "Toggle theme",
                         if theme.is_dark() { "☀️" } else { "🌙" }
                     }
                 }
                 button {
-                    id: "navigation-menu-trigger", r#type: "button", class: "navbar-menu-toggle",
+                    id: "navigation-menu-trigger", r#type: "button", class: "navbar-menu-toggle btn btn-secondary",
                     aria_label: "Open navigation menu", aria_haspopup: "dialog", aria_expanded: menu_open(),
                     onclick: move |_| menu_open.set(true),
                     span { "aria-hidden": "true", "☰" }
