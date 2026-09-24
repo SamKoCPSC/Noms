@@ -344,22 +344,20 @@ a:hover {
 }
 
 .btn-secondary {
-    background: var(--surface);
+    background: var(--neumo-surface);
     color: var(--accent-ink);
-    border: 2px solid var(--accent);
-    box-shadow: var(--elevation-raised),
-                inset 0 0 0 5px var(--btn-edge);
+    border: 1px solid var(--accent);
+    box-shadow: var(--elevation-raised-compact);
 }
 
 .btn-secondary:hover:not(:disabled) {
     background: var(--accent);
     color: var(--on-accent);
-    box-shadow: var(--elevation-raised),
-                inset 0 0 0 5px var(--btn-edge);
+    box-shadow: var(--elevation-raised);
 }
 
 .btn-secondary:active:not(:disabled) {
-    box-shadow: var(--elevation-inset);
+    box-shadow: var(--elevation-inset-compact);
 }
 
 .btn-ghost {

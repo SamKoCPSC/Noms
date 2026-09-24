@@ -139,6 +139,20 @@ fn shared_button_text_roles_meet_aa_in_both_themes() {
 }
 
 #[test]
+fn outlined_buttons_use_shared_neumorphic_material_and_depth() {
+    let resting = rule(".btn-secondary");
+    assert!(resting.contains("background: var(--neumo-surface)"));
+    assert!(resting.contains("box-shadow: var(--elevation-raised-compact)"));
+    assert!(resting.contains("border: 1px solid var(--accent)"));
+    assert!(!resting.contains("var(--btn-edge)"));
+
+    let hovered = rule(".btn-secondary:hover:not(:disabled)");
+    assert!(hovered.contains("box-shadow: var(--elevation-raised)"));
+    assert!(rule(".btn-secondary:active:not(:disabled)")
+        .contains("box-shadow: var(--elevation-inset-compact)"));
+}
+
+#[test]
 fn shared_fields_and_focus_do_not_depend_on_shadows() {
     assert!(!INPUT.contains("outline: \"none\""));
     assert!(rule(".input").contains("border: 1px solid var(--field-border)"));
