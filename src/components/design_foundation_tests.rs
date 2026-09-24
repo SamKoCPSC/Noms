@@ -249,6 +249,17 @@ fn navbar_search_keeps_inset_depth_without_a_visible_border() {
 }
 
 #[test]
+fn navbar_search_focus_is_visible_without_reintroducing_an_outline() {
+    let focused_surface = navbar_rule(".navbar .navigation-search--header:focus-within");
+    assert!(focused_surface
+        .contains("background: color-mix(in srgb, var(--surface) 88%, var(--accent) 12%)"));
+    let focused_input = navbar_rule(".navbar .navigation-search--header input:focus-visible");
+    assert!(focused_input.contains("outline: none"));
+    let focused_icon = navbar_rule(".navbar .navigation-search--header:focus-within button");
+    assert!(focused_icon.contains("color: var(--accent-ink)"));
+}
+
+#[test]
 fn shared_fields_and_focus_do_not_depend_on_shadows() {
     assert!(!INPUT.contains("outline: \"none\""));
     assert!(rule(".input").contains("border: 1px solid var(--field-border)"));
