@@ -344,16 +344,31 @@ a:hover {
 }
 
 .btn-secondary {
+    position: relative;
     background: var(--neumo-surface);
     color: var(--accent-ink);
-    border: 1px solid var(--accent);
+    border: 1px solid transparent;
     box-shadow: var(--elevation-raised-compact);
+}
+
+/* Keep a material rim outside the accent line so the raised edge stays visible. */
+.btn-secondary::after {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border: 1px solid var(--accent);
+    border-radius: calc(var(--radius-md) - 5px);
+    pointer-events: none;
 }
 
 .btn-secondary:hover:not(:disabled) {
     background: var(--accent);
     color: var(--on-accent);
     box-shadow: var(--elevation-raised);
+}
+
+.btn-secondary:hover:not(:disabled)::after {
+    border-color: var(--on-accent);
 }
 
 .btn-secondary:active:not(:disabled) {
@@ -5364,6 +5379,8 @@ dialog.shared-modal::backdrop { background: transparent; }
 }
 
 @media (forced-colors: active) {
+    .btn-secondary::after { display: none; }
+
     .modal-card:not(.modal-card--editor), .feedback-surface {
         --text-primary: CanvasText;
         --text-secondary: CanvasText;

@@ -143,13 +143,22 @@ fn outlined_buttons_use_shared_neumorphic_material_and_depth() {
     let resting = rule(".btn-secondary");
     assert!(resting.contains("background: var(--neumo-surface)"));
     assert!(resting.contains("box-shadow: var(--elevation-raised-compact)"));
-    assert!(resting.contains("border: 1px solid var(--accent)"));
+    assert!(resting.contains("position: relative"));
+    assert!(resting.contains("border: 1px solid transparent"));
     assert!(!resting.contains("var(--btn-edge)"));
+
+    let outline = rule(".btn-secondary::after");
+    assert!(outline.contains("inset: 5px"));
+    assert!(outline.contains("border: 1px solid var(--accent)"));
+    assert!(outline.contains("pointer-events: none"));
 
     let hovered = rule(".btn-secondary:hover:not(:disabled)");
     assert!(hovered.contains("box-shadow: var(--elevation-raised)"));
+    assert!(rule(".btn-secondary:hover:not(:disabled)::after")
+        .contains("border-color: var(--on-accent)"));
     assert!(rule(".btn-secondary:active:not(:disabled)")
         .contains("box-shadow: var(--elevation-inset-compact)"));
+    assert!(CSS.contains(".btn-secondary::after { display: none; }"));
 }
 
 #[test]
