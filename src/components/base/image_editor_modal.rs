@@ -1020,7 +1020,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                     }
                     button {
                         r#type: "button",
-                        class: "image-editor__primary-button",
+                        class: "btn btn-primary touch-target image-editor__primary-button",
                         title: "Confirm edits and close",
                         onclick: move |evt| {
                             evt.stop_propagation();

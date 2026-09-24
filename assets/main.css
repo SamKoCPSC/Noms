@@ -517,13 +517,12 @@ a:hover {
 .navigation-drawer-links { display: grid; gap: 4px; margin-top: 16px; }
 .navigation-drawer-account { display: grid; gap: 4px; border-top: 1px solid var(--field-border); margin-top: 16px; padding-top: 12px; }
 .navigation-drawer-account .navbar-link { width: 100%; }
-/* Navbar utilities keep the primary fill, without the homepage button's inset rim. */
+/* Navbar utilities keep their own dimensions while sharing the primary button material. */
 .navbar .navbar-contained-action {
     min-height: 48px;
     padding: 10px 18px;
     border: 1px solid transparent;
     border-radius: 18px;
-    box-shadow: var(--elevation-raised);
 }
 .navbar .navbar-theme-toggle.navbar-contained-action {
     min-width: 48px;
@@ -531,8 +530,6 @@ a:hover {
     border-radius: 16px;
 }
 .navbar .navbar-menu-toggle.navbar-contained-action { border-radius: 16px; }
-.navbar .navbar-contained-action:hover:not(:disabled) { box-shadow: var(--elevation-raised); }
-.navbar .navbar-contained-action:active:not(:disabled) { box-shadow: var(--elevation-inset); }
 @media (max-width: 1399px) { .navbar-username { display: none; } }
 @media (max-width: 1099px) {
     .navbar-links, .navigation-search--header { display: none; }
@@ -918,30 +915,6 @@ dialog.shared-modal::backdrop { background: transparent; }
     background: var(--glass-fill);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
-}
-
-.image-editor__primary-button {
-    min-height: 36px;
-    padding: var(--space-xs) var(--space-lg);
-    border: none;
-    border-radius: var(--radius-md);
-    color: white;
-    background: var(--accent);
-    font-family: var(--font-body);
-    font-size: 13px;
-    font-weight: 800;
-    cursor: pointer;
-    box-shadow: 3px 3px 4px var(--shadow-dark), -3px -3px 4px var(--shadow-light),
-                inset 0 0 0 4px var(--btn-edge);
-    transition: background 0.2s ease, box-shadow 0.2s ease;
-}
-
-.image-editor__primary-button:hover {
-    background: var(--accent-hover);
-}
-
-.image-editor__primary-button:active {
-    box-shadow: inset 3px 3px 4px rgba(92, 55, 43, 0.28), inset -3px -3px 4px rgba(255, 236, 226, 0.18);
 }
 
 .image-editor__preview-panel {

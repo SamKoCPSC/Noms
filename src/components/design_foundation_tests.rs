@@ -181,9 +181,10 @@ fn outlined_buttons_use_shared_neumorphic_material_and_depth() {
 }
 
 #[test]
-fn navbar_actions_share_the_homepage_primary_fill_without_its_decorative_rim() {
+fn contained_primary_actions_share_the_homepage_button_material() {
     let navbar = include_str!("navbar.rs");
     let home = include_str!("../pages/home.rs");
+    let image_editor = include_str!("base/image_editor_modal.rs");
     assert!(home.contains("button { class: \"btn btn-primary\", r#type: \"submit\", \"Search\" }"));
     assert!(home.contains("class: \"btn btn-primary touch-target\""));
     for class in [
@@ -197,6 +198,8 @@ fn navbar_actions_share_the_homepage_primary_fill_without_its_decorative_rim() {
             "missing contained navbar action: {class}"
         );
     }
+    assert!(image_editor
+        .contains("class: \"btn btn-primary touch-target image-editor__primary-button\""));
     let resting = rule(".btn-primary,\n.navbar .navbar-contained-action");
     assert!(resting.contains("background: var(--accent)"));
     assert!(resting.contains("color: var(--on-accent)"));
@@ -209,15 +212,14 @@ fn navbar_actions_share_the_homepage_primary_fill_without_its_decorative_rim() {
     let pressed = rule(".btn-primary:active:not(:disabled),\n.navbar .navbar-contained-action:active:not(:disabled)");
     assert!(pressed.contains("box-shadow: var(--elevation-inset)"));
 
-    let navbar_material = navbar_rule(".navbar .navbar-contained-action");
-    assert!(!navbar_material.contains("background:"));
-    assert!(navbar_material.contains("box-shadow: var(--elevation-raised)"));
-    assert!(!navbar_material.contains("var(--btn-edge)"));
-    let navbar_hover = navbar_rule(".navbar .navbar-contained-action:hover:not(:disabled)");
-    assert!(navbar_hover.contains("box-shadow: var(--elevation-raised)"));
-    assert!(!navbar_hover.contains("var(--btn-edge)"));
-    let navbar_pressed = navbar_rule(".navbar .navbar-contained-action:active:not(:disabled)");
-    assert!(navbar_pressed.contains("box-shadow: var(--elevation-inset)"));
+    let navbar_sizing = navbar_rule(".navbar .navbar-contained-action");
+    assert!(!navbar_sizing.contains("background:"));
+    assert!(!navbar_sizing.contains("box-shadow:"));
+    assert!(!CSS.contains(".navbar .navbar-contained-action:hover:not(:disabled) { box-shadow:"));
+    assert!(!CSS.contains(".navbar .navbar-contained-action:active:not(:disabled) { box-shadow:"));
+    assert!(!CSS.contains(".image-editor__primary-button {"));
+    assert!(!CSS.contains(".image-editor__primary-button:hover"));
+    assert!(!CSS.contains(".image-editor__primary-button:active"));
     assert!(CSS.contains(".navbar :is(a, button, input):focus-visible"));
 }
 
