@@ -169,17 +169,17 @@ fn outlined_buttons_use_shared_neumorphic_material_and_depth() {
 }
 
 #[test]
-fn navbar_actions_reuse_the_outlined_button_material() {
+fn navbar_actions_use_contained_coral_material() {
     let navbar = include_str!("navbar.rs");
     for class in [
-        "navbar-link navbar-sign-in btn btn-secondary",
-        "navbar-theme-toggle btn btn-secondary",
-        "navbar-menu-toggle btn btn-secondary",
-        "navbar-user-dropdown btn btn-secondary",
+        "navbar-link navbar-sign-in btn navbar-contained-action",
+        "navbar-theme-toggle btn navbar-contained-action",
+        "navbar-menu-toggle btn navbar-contained-action",
+        "navbar-user-dropdown btn navbar-contained-action",
     ] {
         assert!(
             navbar.contains(class),
-            "missing outlined navbar action: {class}"
+            "missing contained navbar action: {class}"
         );
     }
     let nav_style = CSS
@@ -189,22 +189,24 @@ fn navbar_actions_reuse_the_outlined_button_material() {
         .split_once("/* End shared navigation */")
         .unwrap()
         .0;
-    assert!(nav_style.contains(".navbar .btn-secondary"));
-    assert!(nav_style.contains("--outline-radius: 18px"));
-    assert!(nav_style.contains("--outline-radius: 16px"));
-    assert!(nav_style.contains("background: var(--neumo-surface)"));
+    let resting = rule(".navbar .navbar-contained-action");
+    assert!(resting.contains("background: var(--accent)"));
+    assert!(resting.contains("color: var(--on-accent)"));
+    assert!(resting.contains("border: 1px solid transparent"));
     assert!(nav_style.contains("box-shadow: var(--elevation-raised-compact)"));
-    assert!(nav_style.contains(".navbar .btn-secondary:active:not(:disabled)"));
+    assert!(nav_style.contains(".navbar .navbar-contained-action:hover:not(:disabled)"));
+    assert!(nav_style.contains("background: var(--accent-hover)"));
+    assert!(nav_style.contains(".navbar .navbar-contained-action:active:not(:disabled)"));
     assert!(nav_style.contains("box-shadow: var(--elevation-inset-compact)"));
 }
 
 #[test]
-fn navbar_outlined_actions_leave_space_inside_the_inset_outline() {
-    let action = rule(".navbar .btn-secondary");
+fn navbar_contained_actions_keep_comfortable_padding() {
+    let action = rule(".navbar .navbar-contained-action");
     assert!(action.contains("min-height: 48px"));
     assert!(action.contains("padding: 10px 18px"));
 
-    let icon = rule(".navbar .navbar-theme-toggle.btn-secondary");
+    let icon = rule(".navbar .navbar-theme-toggle.navbar-contained-action");
     assert!(icon.contains("min-width: 48px"));
     assert!(icon.contains("padding: 10px"));
 }
