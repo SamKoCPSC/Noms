@@ -171,8 +171,8 @@ fn CollectionTreeItem(mut props: CollectionTreeItemProps) -> Element {
 
 /// Owner-scoped collection navigation for the recipe dashboard.
 #[component]
-pub fn CollectionSidebar() -> Element {
-    let collections = use_resource(load_all_my_collections);
+pub fn CollectionSidebar(#[props(default)] embedded: bool) -> Element {
+    let mut collections = use_resource(load_all_my_collections);
     let expanded = use_signal(HashSet::<Uuid>::new);
     let tree = collections
         .read()
@@ -182,35 +182,49 @@ pub fn CollectionSidebar() -> Element {
         .unwrap_or_default();
 
     if tree.is_empty() {
+        if embedded {
+            return rsx! {
+                if collections.pending() {
+                    p { class: "dashboard-muted", role: "status", "Loading collections…" }
+                } else if collections.read().as_ref().is_some_and(|result| result.is_err()) {
+                    div {
+                        p { class: "dashboard-muted", role: "alert", "Collections couldn’t be loaded." }
+                        button { class: "btn btn-ghost touch-target", onclick: move |_| collections.restart(), "Retry collections" }
+                    }
+                } else {
+                    p { class: "dashboard-muted", "No collections yet." }
+                }
+            };
+        }
         return rsx! {};
     }
 
     rsx! {
         aside {
-            class: "neumo-card",
-            padding: "var(--space-md)",
+            class: if embedded { "dashboard-collection-tree" } else { "neumo-card" },
+            padding: if embedded { "0" } else { "var(--space-md)" },
             flex: "1 1 220px",
             min_width: "0",
-            max_width: "280px",
+            max_width: if embedded { "100%" } else { "280px" },
             align_self: "start",
             aria_label: "Recipe collections",
             nav {
                 display: "flex",
                 flex_direction: "column",
                 gap: "var(--space-sm)",
-                Link {
+                if !embedded { Link {
                     to: Route::Dashboard {},
                     color: "var(--text-primary)",
                     font_weight: "600",
                     text_decoration: "none",
                     "All Recipes"
-                }
-                div {
+                } }
+                if !embedded { div {
                     display: "flex",
                     align_items: "center",
                     gap: "var(--space-sm)",
                     h2 { margin: "0", font_size: "var(--font-size-md)", "Collections" }
-                }
+                } }
                 ul {
                     margin: "0",
                     padding: "0",
@@ -224,11 +238,11 @@ pub fn CollectionSidebar() -> Element {
                         }
                     }
                 }
-                Link {
+                if !embedded { Link {
                     to: Route::CollectionNew {},
                     class: "btn btn-secondary touch-target",
                     "New Collection"
-                }
+                } }
             }
         }
     }
