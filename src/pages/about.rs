@@ -60,44 +60,62 @@ pub(super) const ABOUT_SECTIONS: &[AboutSection] = &[
 #[component]
 pub fn About() -> Element {
     let auth = use_auth();
-    let (primary_label, primary_route, secondary_label, secondary_route) = if auth.is_authenticated
-    {
-        (
-            "Open your recipe library",
-            Route::Dashboard {},
-            "Create a recipe",
-            Route::RecipeNew {},
-        )
-    } else {
-        (
-            "Explore recipes",
-            Route::Explore {},
-            "Learn how Noms works",
-            Route::HowTo {},
-        )
-    };
+    let (primary_label, primary_route, primary_href, secondary_label, secondary_route) =
+        if auth.is_authenticated {
+            (
+                "Start a new recipe",
+                Route::RecipeNew {},
+                None,
+                "Open your recipe library",
+                Route::Dashboard {},
+            )
+        } else {
+            (
+                "Start your recipe book",
+                Route::Login {},
+                Some("/login?redirect_uri=/recipes/new"),
+                "Explore recipes",
+                Route::Explore {},
+            )
+        };
 
     rsx! {
         PageMeta {
-            title: "About Noms — A better home for working recipes",
+            title: "About Noms — Good recipes deserve a little home",
             description: "Learn why Noms treats recipes as living knowledge: detailed, organized, versioned, and shared with intention.",
             path: "/about",
         }
 
         div { class: "marketing-page about-page",
-            header { class: "about-hero container",
+            header { class: "about-hero container", aria_labelledby: "about-title",
                 div { class: "about-hero__copy",
                     p { class: "marketing-eyebrow", "Why Noms exists" }
-                    h1 { "A better home for the recipes you actually cook." }
-                    p { class: "marketing-lede", "A good recipe is more than a list copied once and left alone. It gathers notes, substitutions, better timings, clearer instructions, and the small decisions that turn a promising dish into a dependable one." }
-                    p { class: "about-hero__closing", "Noms is built around that process." }
+                    h1 { id: "about-title", "Good recipes deserve a little home." }
+                    p { class: "marketing-lede", "Noms keeps your recipes, notes, and kitchen discoveries together, with room for every version to grow." }
+                    div { class: "marketing-actions",
+                        if auth.is_authenticated {
+                            Link { to: Route::RecipeNew {}, class: "btn btn-primary touch-target", "Start a new recipe" }
+                        } else {
+                            a { href: "/login?redirect_uri=/recipes/new", class: "btn btn-primary touch-target", "Start your recipe book" }
+                        }
+                        Link { to: Route::Explore {}, class: "btn btn-secondary touch-target", "Explore recipes" }
+                    }
                 }
-                div { class: "about-hero__manifesto", aria_hidden: "true",
-                    span { "CAPTURE" }
-                    span { "ORGANIZE" }
-                    strong { "COOK" }
-                    span { "EVOLVE" }
-                    span { "SHARE" }
+                div { class: "about-hero__illustration", aria_hidden: "true",
+                    div { class: "about-hero__cloth" }
+                    div { class: "about-hero__book",
+                        div { class: "about-hero__book-spine" }
+                        div { class: "about-hero__book-label", "Recipe notes" }
+                        div { class: "about-hero__book-band" }
+                        div { class: "about-hero__book-pages" }
+                    }
+                    div { class: "about-hero__mug" }
+                    div { class: "about-hero__sprig",
+                        span {}
+                        span {}
+                        span {}
+                        span {}
+                    }
                 }
             }
 
@@ -108,10 +126,10 @@ pub fn About() -> Element {
             }
 
             div { class: "about-story container",
-                for (index, section) in ABOUT_SECTIONS.iter().enumerate() {
+                for section in ABOUT_SECTIONS {
                     section {
                         id: section.id,
-                        class: if index % 2 == 0 { "about-story__section" } else { "about-story__section about-story__section--reverse" },
+                        class: "about-story__section",
                         div { class: "about-story__copy",
                             p { class: "marketing-eyebrow", "{section.number} · {section.eyebrow}" }
                             h2 { "{section.title}" }
@@ -119,16 +137,17 @@ pub fn About() -> Element {
                                 p { "{paragraph}" }
                             }
                         }
-                        AboutVisual { kind: section.id, number: section.number }
+                        AboutVisual { kind: section.id }
                     }
                 }
             }
 
             CallToActionPanel {
-                title: "Keep a recipe. Improve it. Pass it on.",
+                title: "Something worth keeping?",
                 body: "Make a place for the recipes you return to and the knowledge that makes them work.",
                 primary_label,
                 primary_route,
+                primary_href,
                 secondary_label,
                 secondary_route,
             }
@@ -139,20 +158,32 @@ pub fn About() -> Element {
 #[derive(Props, Clone, PartialEq)]
 struct AboutVisualProps {
     kind: &'static str,
-    number: &'static str,
 }
 
 #[component]
 fn AboutVisual(props: AboutVisualProps) -> Element {
     rsx! {
         div { class: "about-story__visual about-story__visual--{props.kind}", aria_hidden: "true",
-            span { class: "about-story__visual-number", "{props.number}" }
-            div { class: "about-story__plate" }
-            div { class: "about-story__card",
-                span { "NOMS" }
-                strong { "{props.kind}" }
+            if props.kind == "evolve" {
+                div { class: "about-story__versions",
+                    span { "v1" }
+                    span { "v2" }
+                    span { "v3" }
+                }
+            } else if props.kind == "share" {
+                div { class: "about-story__visibility",
+                    span { "Private" }
+                    span { "Unlisted" }
+                    span { "Public" }
+                }
+            } else {
+                div { class: "about-story__plate" }
+                div { class: "about-story__card",
+                    span { "RECIPE NOTES" }
+                    strong { "{props.kind}" }
+                }
+                div { class: "about-story__accent" }
             }
-            div { class: "about-story__accent" }
         }
     }
 }

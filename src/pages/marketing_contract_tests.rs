@@ -39,6 +39,22 @@ fn about_story_covers_the_six_approved_beats() {
 }
 
 #[test]
+fn about_cozy_layout_preserves_navigation_and_recipe_creation_flow() {
+    let page = include_str!("about.rs");
+    let css = include_str!("../../assets/main.css");
+
+    assert!(page.contains("class: \"about-hero__illustration\""));
+    assert!(page.contains("class: \"about-story__section\""));
+    assert!(page.contains("href: \"/login?redirect_uri=/recipes/new\""));
+    assert!(page.contains("to: Route::RecipeNew {}"));
+    assert!(page.contains("for section in ABOUT_SECTIONS"));
+    assert!(page.contains("class: \"about-story__versions\""));
+    assert!(page.contains("class: \"about-story__visibility\""));
+    assert!(css.contains(".about-story {\n    display: grid;"));
+    assert!(css.contains(".about-story__section {\n    position: relative;"));
+}
+
+#[test]
 fn how_to_uses_stable_anchor_ids_for_every_documented_workflow() {
     let ids = HOW_TO_SECTIONS
         .iter()
