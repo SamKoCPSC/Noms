@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 const HOME_CSS: Asset = asset!("/assets/home.css");
+const HOME_HERO: Asset = asset!("/assets/home-kitchen-illustration.png");
 
 use crate::auth::context::use_auth;
 use crate::components::informational::{CallToActionPanel, PageMeta};
@@ -61,7 +62,7 @@ pub fn Home() -> Element {
         div { class: "marketing-page home-page",
             section { class: "marketing-hero home-hero container", aria_labelledby: "home-title",
                 div { class: "marketing-hero__copy",
-                    p { class: "marketing-eyebrow", "Your recipe library, made to evolve" }
+                    p { class: "marketing-eyebrow", "A recipe journal that grows with you" }
                     h1 { id: "home-title", "A cozy home for your recipes." }
                     p { class: "marketing-lede",
                         "Save the meals you love, keep your notes, and make each version your own."
@@ -97,33 +98,25 @@ pub fn Home() -> Element {
                         }
                         Link { to: Route::Explore {}, class: "btn btn-secondary touch-target", "Explore recipes" }
                     }
-                    p { class: "marketing-note", "Private drafts give you room to work before anything is published." }
+                    p { class: "marketing-note", "Your drafts stay private until you’re ready to publish." }
                 }
 
                 div { class: "home-hero-illustration", aria_hidden: "true",
                     div { class: "home-hero-illustration__glow" }
-                    div { class: "home-hero-illustration__sprig home-hero-illustration__sprig--left" }
-                    div { class: "home-hero-illustration__sprig home-hero-illustration__sprig--right" }
-                    div { class: "home-hero-illustration__book",
-                        span { class: "home-hero-illustration__pages" }
-                        span { class: "home-hero-illustration__spine" }
-                        span { class: "home-hero-illustration__cover" }
-                        span { class: "home-hero-illustration__title", "Noms recipes" }
-                        span { class: "home-hero-illustration__strap" }
-                        span { class: "home-hero-illustration__bookmark" }
+                    img {
+                        class: "home-hero-illustration__image",
+                        src: HOME_HERO,
+                        alt: "",
+                        width: "1536",
+                        height: "1024",
                     }
-                    div { class: "home-hero-illustration__bowl",
-                        span { class: "home-hero-illustration__soup" }
-                        span { class: "home-hero-illustration__bowl-rim" }
-                    }
-                    div { class: "home-hero-illustration__spoon" }
                 }
             }
 
             section { class: "home-benefits container", aria_label: "What Noms helps you do",
-                HomeBenefitCard { kind: "capture", title: "Capture", body: "Keep ingredients, instructions, photos, and the little notes that make a recipe yours." }
-                HomeBenefitCard { kind: "organize", title: "Organize", body: "Give every recipe a place with collections and subcollections that fit your kitchen." }
-                HomeBenefitCard { kind: "personalize", title: "Make it yours", body: "Refine a recipe over time without losing the versions and ideas that came before." }
+                HomeBenefitCard { kind: "capture", title: "Capture", body: "Ingredients, photos, and those little notes you don’t want to forget." }
+                HomeBenefitCard { kind: "organize", title: "Organize", body: "Collections that keep family favorites and new discoveries close at hand." }
+                HomeBenefitCard { kind: "personalize", title: "Make it yours", body: "Tweak, taste, and try again. Every published version stays in your story." }
             }
 
             section { class: "home-version-story container", aria_labelledby: "home-version-title",
@@ -135,19 +128,22 @@ pub fn Home() -> Element {
                 }
                 ol { class: "home-version-story__notes", aria_label: "Illustrative recipe version journey",
                     li { class: "home-version-note",
-                        span { class: "home-version-note__number", "1" }
+                        span { class: "home-version-note__number", "01" }
+                        span { class: "home-version-note__label", "Version 1" }
                         strong { "First keeper" }
-                        p { "The recipe that started it all." }
+                        p { "Roasted tomato soup. A good place to start." }
                     }
                     li { class: "home-version-note",
-                        span { class: "home-version-note__number", "2" }
+                        span { class: "home-version-note__number", "02" }
+                        span { class: "home-version-note__label", "Version 2" }
                         strong { "A small tweak" }
-                        p { "A little more garlic next time." }
+                        p { "More garlic. A handful of fresh basil." }
                     }
                     li { class: "home-version-note",
-                        span { class: "home-version-note__number", "3" }
+                        span { class: "home-version-note__number", "03" }
+                        span { class: "home-version-note__label", "Version 3" }
                         strong { "Just right" }
-                        p { "A favorite worth keeping." }
+                        p { "A gentler simmer. This one’s a keeper." }
                     }
                 }
             }
