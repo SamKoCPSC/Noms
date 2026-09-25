@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 
-use crate::components::base::Card;
 use crate::Route;
+
+const SIGN_IN_CSS: Asset = asset!("/assets/sign-in.css");
+const GOOGLE_MARK: Asset = asset!("/assets/sign-in/google-g.png");
+const GITHUB_MARK: Asset = asset!("/assets/sign-in/GitHub_Invertocat_Black.svg");
 
 /// Sign-in page with OAuth provider buttons.
 ///
@@ -12,74 +15,81 @@ use crate::Route;
 pub fn Login() -> Element {
     let redirect_uri = use_hook(extract_redirect_uri);
 
-    let oauth_url = |provider: &str| -> String {
-        let encoded = percent_encoding::utf8_percent_encode(
-            &redirect_uri,
-            percent_encoding::NON_ALPHANUMERIC,
-        )
-        .to_string();
-        format!(
-            "/auth/{}/start?redirect_uri={}&purpose=login",
-            provider, encoded
-        )
-    };
-
     rsx! {
-        div { class: "container",
-            div {
-                display: "flex",
-                flex_direction: "column",
-                align_items: "center",
-                justify_content: "center",
-                min_height: "60vh",
-                text_align: "center",
-                h1 {
-                    font_size: "32px",
-                    color: "var(--text-primary)",
-                    margin_bottom: "var(--space-md)",
-                    "Welcome back"
-                }
-                p {
-                    color: "var(--text-secondary)",
-                    margin_bottom: "var(--space-xl)",
-                    "Sign in to access your recipe library."
-                }
-                div {
-                    max_width: "400px",
-                    width: "100%",
-                    Card {
-                        div {
-                            display: "flex",
-                            flex_direction: "column",
-                            gap: "var(--space-md)",
-                            padding: "var(--space-xl)",
-                            a {
-                                href: oauth_url("google"),
-                                class: "btn btn-secondary touch-target",
-                                width: "100%",
-                                "Continue with Google"
-                            }
-                            a {
-                                href: oauth_url("github"),
-                                class: "btn btn-secondary touch-target",
-                                width: "100%",
-                                "Continue with GitHub"
-                            }
+        document::Link { rel: "stylesheet", href: SIGN_IN_CSS }
+        section { class: "sign-in-page", aria_labelledby: "sign-in-title",
+            header { class: "sign-in-heading",
+                h1 { id: "sign-in-title", "Welcome back" }
+                p { "Sign in to access your recipe library." }
+            }
+            div { class: "sign-in-providers neumo-raised", role: "group", aria_label: "Sign-in providers",
+                // Native links preserve full-page OAuth navigation, browser pending/error
+                // handling, and modifier-click behavior without a sticky client busy state.
+                for (provider, label, mark) in [("google", "Google", GOOGLE_MARK), ("github", "GitHub", GITHUB_MARK)] {
+                    a {
+                        key: "{provider}",
+                        href: oauth_start_url(provider, &redirect_uri),
+                        class: "btn btn-secondary touch-target sign-in-provider",
+                        span { class: "sign-in-provider__icon", aria_hidden: "true",
+                            img { src: mark, alt: "", width: "20", height: "20" }
                         }
-                    }
-                }
-                p {
-                    margin_top: "var(--space-lg)",
-                    font_size: "14px",
-                    color: "var(--text-secondary)",
-                    Link {
-                        to: Route::Home {},
-                        "← Back to home"
+                        span { "Continue with {label}" }
                     }
                 }
             }
+            Link { to: Route::Explore {}, class: "sign-in-guest-link", "Explore without an account →" }
+            div { class: "sign-in-features",
+                section { class: "sign-in-feature-panel neumo-raised", aria_labelledby: "sign-in-guest-features",
+                    h2 { id: "sign-in-guest-features", "Without an account" }
+                    p { "Access follows each recipe’s sharing settings." }
+                    ul {
+                        for feature in [
+                            "Browse and search public recipes",
+                            "View shared recipes and creator profiles",
+                            "Read published history on recipes you can access",
+                        ] {
+                            SignInFeature { key: "{feature}", text: feature }
+                        }
+                    }
+                }
+                section { class: "sign-in-feature-panel neumo-raised", aria_labelledby: "sign-in-account-features",
+                    h2 { id: "sign-in-account-features", "With an account" }
+                    p { "Everything you can browse, plus:" }
+                    ul {
+                        for feature in [
+                            "Create recipes with private autosaved drafts",
+                            "Organize recipes into collections",
+                            "Fork recipes to make them your own",
+                            "Keep recipes private or choose how to share",
+                        ] {
+                            SignInFeature { key: "{feature}", text: feature }
+                        }
+                    }
+                }
+            }
+            Link { to: Route::Home {}, class: "sign-in-home-link", "← Back to home" }
         }
     }
+}
+
+#[component]
+fn SignInFeature(text: &'static str) -> Element {
+    rsx! {
+        li {
+            svg { class: "sign-in-feature-check", view_box: "0 0 24 24", fill: "none", stroke: "currentColor",
+                stroke_width: "1.6", stroke_linecap: "round", stroke_linejoin: "round", "aria-hidden": "true",
+                circle { cx: "12", cy: "12", r: "9" }
+                path { d: "m8 12 3 3 5-6" }
+            }
+            span { "{text}" }
+        }
+    }
+}
+
+fn oauth_start_url(provider: &str, redirect_uri: &str) -> String {
+    let encoded =
+        percent_encoding::utf8_percent_encode(redirect_uri, percent_encoding::NON_ALPHANUMERIC);
+    format!("/auth/{provider}/start?redirect_uri={encoded}&purpose=login")
 }
 
 /// Extract the `redirect_uri` query parameter from the current URL.
@@ -141,6 +151,65 @@ fn is_safe_redirect_uri(uri: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dioxus::router::components::HistoryProvider;
+    use dioxus_core::NoOpMutations;
+
+    #[derive(Clone, PartialEq, Routable)]
+    enum LoginTestRoute {
+        #[route("/")]
+        Login {},
+    }
+
+    #[component]
+    fn LoginTestRoot() -> Element {
+        rsx! {
+            HistoryProvider {
+                history: |_| std::rc::Rc::new(dioxus::history::MemoryHistory::with_initial_path("/")) as std::rc::Rc<dyn History>,
+                Router::<LoginTestRoute> {}
+            }
+        }
+    }
+
+    #[test]
+    fn rendered_sign_in_has_provider_and_guest_destinations_with_qualified_access_copy() {
+        let mut dom = VirtualDom::new(LoginTestRoot);
+        dom.rebuild(&mut NoOpMutations);
+        let html = dioxus_ssr::render(&dom);
+        for provider in ["google", "github"] {
+            assert!(
+                html.contains(&format!(
+                    "/auth/{provider}/start?redirect_uri=%2Fdashboard&#38;purpose=login"
+                )),
+                "{html}"
+            );
+        }
+        assert!(html.contains("href=\"/explore\""), "{html}");
+        assert!(html.contains("Explore without an account"), "{html}");
+        assert!(html.contains("Without an account"), "{html}");
+        assert!(html.contains("With an account"), "{html}");
+        assert!(html.contains("recipes you can access"), "{html}");
+        assert!(html.contains("Everything you can browse, plus:"), "{html}");
+        assert_eq!(html.matches("<li>").count(), 7, "{html}");
+    }
+
+    #[test]
+    fn provider_links_preserve_nested_return_query_without_injecting_oauth_parameters() {
+        let target = parse_redirect_uri(
+            "redirect_uri=%2Fsearch%3Fq%3Dsoup%2520%2526%2520herbs%26scope%3Drecipes",
+        );
+        for provider in ["google", "github"] {
+            let url = url::Url::parse(&format!(
+                "https://noms.example{}",
+                oauth_start_url(provider, &target)
+            ))
+            .unwrap();
+            let pairs: Vec<_> = url.query_pairs().collect();
+            assert_eq!(pairs.len(), 2);
+            assert_eq!(pairs[0].0, "redirect_uri");
+            assert_eq!(pairs[0].1, "/search?q=soup%20%26%20herbs&scope=recipes");
+            assert_eq!(pairs[1], ("purpose".into(), "login".into()));
+        }
+    }
 
     #[test]
     fn safe_redirect_uris() {
