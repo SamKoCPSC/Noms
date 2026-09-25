@@ -1,0 +1,116 @@
+/* G2 Cozy How-to. Route-scoped for independent public-page upgrades.
+   Existing typography, color and elevation tokens supply the shared material. */
+.how-to-page { --guide-muted: var(--field-placeholder); overflow: visible; padding-bottom: var(--space-xl); }
+.how-to-page .container { max-width: 1480px; }
+.how-to-page .how-to-hero { display: flex; align-items: center; justify-content: space-between; gap: 32px; padding-block: 24px; }
+.how-to-page .how-to-hero h1 { margin-bottom: 12px; font-size: clamp(38px, 4.7vw, 68px); line-height: 1.08; letter-spacing: -.025em; }
+.how-to-page .marketing-eyebrow { color: var(--accent-ink); }
+.how-to-page .marketing-lede { color: var(--text-primary); font-size: clamp(18px, 2vw, 24px); }
+.how-to-illustration { flex: 0 0 auto; width: clamp(180px, 18vw, 240px); height: auto; }
+/* Illustration pigments are decorative, separate from the UI color roles. */
+.how-to-art-shadow { fill: var(--shadow-dark); opacity: .24; }
+.how-to-art-back, .how-to-art-leaves { fill: #788456; }
+.how-to-art-paper { fill: #fff9e9; stroke: #dad1b8; stroke-width: 1.5; }
+.how-to-art-coral { fill: var(--accent); }
+.how-to-art-lines { stroke: #c5bea6; }
+.how-to-art-wood { fill: #d2ab72; stroke: #b58b54; stroke-width: 1.5; }
+.how-to-art-spoon-well { fill: #bb935f; }
+.how-to-art-stem { stroke: #788456; }
+.how-to-art-spark { stroke: var(--accent); opacity: .7; }
+
+.how-to-page .how-to-layout { display: grid; grid-template-columns: 206px minmax(0, 1fr); gap: 24px; justify-content: normal; padding-bottom: 40px; }
+.how-to-page .how-to-contents { min-width: 0; }
+.how-to-page .how-to-contents nav {
+    position: sticky;
+    top: 104px;
+    max-height: calc(100dvh - 128px);
+    overflow-y: auto;
+    padding: 20px 12px;
+    border: 0;
+    border-radius: 22px;
+    background: var(--neumo-surface);
+    box-shadow: var(--elevation-raised);
+}
+.how-to-page .how-to-contents__title { padding-inline: 12px; margin-bottom: 12px; }
+.how-to-page .how-to-contents ol { list-style: none; padding: 0; gap: 4px; }
+.how-to-page .how-to-contents a { display: flex; align-items: center; min-height: 44px; padding: 9px 12px; border-radius: 12px; color: var(--guide-muted); font-size: 14px; font-weight: 700; line-height: 1.4; text-decoration: none; }
+.how-to-page .how-to-contents a:hover,
+.how-to-page .how-to-contents a:focus-visible { color: var(--accent-ink); background: var(--neumo-surface); box-shadow: var(--elevation-inset-compact); }
+.how-to-page .how-to-contents a.how-to-contents__faq { margin-top: 14px; color: var(--accent-ink); }
+.how-to-page .how-to-guide { display: grid; gap: 24px; }
+.how-to-page section[id] { scroll-margin-top: 110px; }
+.how-to-page section:target { outline: 2px solid var(--focus-ring); outline-offset: 5px; }
+.how-to-page .how-to-guide a { color: var(--accent-ink); text-decoration: underline; text-underline-offset: 3px; }
+.how-to-overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.how-to-page .how-to-section { min-width: 0; padding: 24px; border-radius: 22px; background: var(--neumo-surface); box-shadow: var(--elevation-raised); }
+.how-to-section__heading { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+.how-to-step-number { flex: 0 0 40px; display: grid; place-items: center; height: 40px; border-radius: 50%; color: var(--on-accent); background: var(--accent); font: 500 25px var(--font-display); box-shadow: var(--elevation-raised-compact); }
+.how-to-page .how-to-section h2 { margin: 0; font-size: 24px; line-height: 1.2; }
+.how-to-page .how-to-section > p,
+.how-to-page .how-to-section > ol { margin-bottom: 16px; color: var(--guide-muted); font-size: 15px; line-height: 1.65; }
+.how-to-page .how-to-section > :last-child { margin-bottom: 0; }
+.how-to-page .how-to-section ol, .how-to-page .how-to-section ul { gap: 8px; }
+.how-to-example { padding: 16px; margin-block: 20px; border-radius: 16px; background: var(--neumo-surface); box-shadow: var(--elevation-raised-compact); font-size: 14px; }
+.how-to-example figcaption { margin-bottom: 16px; color: var(--guide-muted); font-size: 12px; }
+.how-to-example__label { display: block; font-weight: 800; margin-bottom: 6px; }
+.how-to-example__well { padding: 10px 12px; border-radius: 10px; margin-bottom: 12px; background: var(--neumo-surface); box-shadow: var(--elevation-inset-compact); }
+.how-to-page ul.how-to-example__well { display: block; padding: 12px 12px 12px 28px; line-height: 1.8; }
+.how-to-draft-status { color: var(--guide-muted); font-size: 12px; font-weight: 700; padding-top: 4px; }
+.how-to-draft-status span { color: var(--accent-ink); }
+.how-to-visibility dl { display: grid; gap: 16px; margin-top: 16px; }
+.how-to-visibility dt { display: flex; gap: 8px; align-items: center; font-weight: 800; }
+.how-to-visibility dt span { color: var(--accent-ink); font-size: 19px; line-height: 1; }
+.how-to-visibility dd { padding-left: 26px; color: var(--guide-muted); line-height: 1.5; margin-top: 4px; }
+.how-to-page ol.how-to-version-list { list-style: none; padding: 0; gap: 10px; }
+.how-to-version-list li { display: flex; align-items: flex-start; gap: 14px; padding: 12px; border-radius: 12px; background: var(--neumo-surface); box-shadow: var(--elevation-inset-compact); }
+.how-to-version-list strong { font: 500 22px var(--font-display); }
+.how-to-version-list li.how-to-version-list__current { background: color-mix(in srgb, var(--success) 9%, var(--neumo-surface)); }
+.how-to-version-status { font-size: 12px; font-weight: 800; }
+.how-to-version-list p { color: var(--guide-muted); margin-top: 4px; line-height: 1.5; }
+.how-to-note { margin-top: 18px; padding: 14px 16px; border-radius: 14px; background: color-mix(in srgb, var(--success) 8%, var(--neumo-surface)); font-size: 14px; line-height: 1.6; }
+.how-to-note strong { font-weight: 800; }
+.how-to-note p { margin-top: 4px; color: var(--guide-muted); }
+.how-to-page .how-to-troubleshooting { padding: 24px; border: 0; border-radius: 22px; background: var(--neumo-surface); box-shadow: var(--elevation-raised); }
+.how-to-page .how-to-troubleshooting h2 { font-size: 25px; margin-bottom: 18px; }
+.how-to-page .how-to-troubleshooting details { border: 0; padding: 0; margin-top: 12px; border-radius: 12px; background: var(--neumo-surface); box-shadow: var(--elevation-inset-compact); }
+.how-to-page .how-to-troubleshooting summary { padding: 14px 16px; min-height: 48px; border-radius: inherit; font-size: 15px; }
+.how-to-page .how-to-troubleshooting details p { padding: 0 16px 16px; max-width: 85ch; color: var(--guide-muted); font-size: 15px; line-height: 1.7; }
+.how-to-more-heading { padding: 16px 8px 0; }
+.how-to-more-heading h2 { font-size: 30px; margin-bottom: 8px; }
+.how-to-more-heading > p:last-child { color: var(--guide-muted); }
+.how-to-details-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start; }
+.how-to-page .marketing-cta-panel { margin-block: 0; }
+.how-to-page .marketing-cta-panel__inner { background: var(--neumo-surface); box-shadow: var(--elevation-raised); border: 0; }
+.how-to-page .marketing-cta-panel p { color: var(--guide-muted); }
+
+/* Tablet keeps the contents rail and stacks the cards. Phone contents wraps
+   into a non-sticky list so it cannot consume the reading viewport. */
+@media (max-width: 1199px) {
+    .how-to-page .how-to-layout { grid-template-columns: 190px minmax(0, 1fr); }
+    .how-to-overview, .how-to-details-grid { grid-template-columns: minmax(0, 1fr); }
+    .how-to-page .how-to-section h2 { font-size: 26px; }
+    .how-to-page .how-to-section > p { max-width: 70ch; }
+}
+@media (max-width: 699px) {
+    .how-to-page .how-to-hero { gap: 12px; padding-block: 28px 24px; }
+    .how-to-illustration { display: none; }
+    .how-to-page .how-to-layout { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+    .how-to-page .how-to-contents nav { position: static; max-height: none; padding: 16px 12px; }
+    .how-to-page .how-to-contents ol { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 8px; }
+    .how-to-page .how-to-contents a { font-size: 13px; padding: 8px; }
+    .how-to-page .how-to-contents__faq { margin-top: 6px; }
+    .how-to-page .how-to-section, .how-to-page .how-to-troubleshooting { padding: 20px; }
+    .how-to-page .how-to-section h2 { font-size: 24px; }
+}
+@media (forced-colors: active) {
+    .how-to-page .how-to-section,
+    .how-to-page .how-to-contents nav,
+    .how-to-page .how-to-example,
+    .how-to-page .how-to-example__well,
+    .how-to-page .how-to-version-list li,
+    .how-to-page .how-to-note,
+    .how-to-page .how-to-troubleshooting,
+    .how-to-page .how-to-troubleshooting details { border: 1px solid CanvasText; box-shadow: none; }
+    .how-to-page .how-to-step-number { border: 1px solid CanvasText; }
+    .how-to-page section:target { outline-color: Highlight; }
+}

@@ -3,15 +3,18 @@ use dioxus::prelude::*;
 use crate::components::informational::{CallToActionPanel, PageMeta};
 use crate::Route;
 
+const HOW_TO_CSS: Asset = asset!("/assets/how-to.css");
+
 pub(super) struct HowToSection {
     pub id: &'static str,
     pub title: &'static str,
 }
 
+// Keep existing deep links while bringing the three core workflows together.
 pub(super) const HOW_TO_SECTIONS: &[HowToSection] = &[
     HowToSection {
         id: "sign-in",
-        title: "Sign in",
+        title: "Getting started",
     },
     HowToSection {
         id: "create",
@@ -31,7 +34,7 @@ pub(super) const HOW_TO_SECTIONS: &[HowToSection] = &[
     },
     HowToSection {
         id: "versions",
-        title: "Compare and restore versions",
+        title: "Version history",
     },
     HowToSection {
         id: "scale",
@@ -39,11 +42,11 @@ pub(super) const HOW_TO_SECTIONS: &[HowToSection] = &[
     },
     HowToSection {
         id: "collections",
-        title: "Organize with collections",
+        title: "Collections",
     },
     HowToSection {
         id: "explore",
-        title: "Explore public recipes",
+        title: "Explore and search",
     },
     HowToSection {
         id: "fork",
@@ -54,127 +57,17 @@ pub(super) const HOW_TO_SECTIONS: &[HowToSection] = &[
 #[component]
 pub fn HowTo() -> Element {
     rsx! {
+        document::Link { rel: "stylesheet", href: HOW_TO_CSS }
         PageMeta {
             title: "How to use Noms",
             description: "Learn how to create, organize, revise, scale, discover, and share recipes with Noms.",
             path: "/how-to",
         }
-
         div { class: "marketing-page how-to-page",
-            header { class: "how-to-hero container",
-                p { class: "marketing-eyebrow", "A practical guide" }
-                h1 { "From first draft to trusted recipe." }
-                p { class: "marketing-lede", "Create your first recipe, keep work private until it is ready, organize your library, and share only what you choose." }
-            }
-
-            div { class: "how-to-layout container",
-                aside { class: "how-to-contents",
-                    nav { aria_label: "How-to topics",
-                        p { class: "how-to-contents__title", "On this page" }
-                        ol {
-                            for section in HOW_TO_SECTIONS {
-                                li { a { href: "#{section.id}", "{section.title}" } }
-                            }
-                        }
-                    }
-                }
-
-                main { class: "how-to-guide",
-                    GuideSection { id: "sign-in", eyebrow: "Getting started", title: "Sign in to open your recipe library",
-                        ol {
-                            li { "Select " strong { "Sign In" } " from the navigation." }
-                            li { "Continue with Google or GitHub." }
-                            li { "After authorization, Noms returns you to the page you requested or opens your dashboard." }
-                        }
-                        ExpectedResult { "Your dashboard shows published recipes, private drafts, and collection navigation." }
-                    }
-
-                    GuideSection { id: "create", eyebrow: "Create", title: "Capture the recipe while the details are fresh",
-                        ol {
-                            li { "Open " strong { "New Recipe" } "." }
-                            li { "Add a title, description, commentary, timing, and servings." }
-                            li { "Add ingredients with amounts, units, names, and optional notes." }
-                            li { "Add instructions in cooking order, then equipment and tags where useful." }
-                            li { "Save a private draft or continue to publication." }
-                        }
-                        ExpectedResult { "Drafts appear in Dashboard under Drafts; published recipes appear in My Recipes." }
-                    }
-
-                    GuideSection { id: "images", eyebrow: "Images", title: "Add photos without leaving the editor",
-                        p { "Add recipe images from the editor. Images are processed and uploaded when you save. Individual steps can also carry photos, and image controls let you adjust their presentation before publication." }
-                        GuideCallout { tone: "note", title: "Before saving", "Wait for active image processing to finish. Retry or remove an image if its upload fails." }
-                    }
-
-                    GuideSection { id: "visibility", eyebrow: "Publish", title: "Choose who can see the recipe",
-                        div { class: "visibility-grid",
-                            VisibilityCard { label: "Private", body: "Only you can view it." }
-                            VisibilityCard { label: "Unlisted", body: "Anyone with the link can view it." }
-                            VisibilityCard { label: "Public", body: "It can appear in Explore and on your public profile." }
-                        }
-                        p { "Choose the intended visibility, then select " strong { "Publish Recipe" } ". Draft edits remain private until you select " strong { "Publish Changes" } "." }
-                    }
-
-                    GuideSection { id: "edit", eyebrow: "Revise", title: "Improve a published recipe safely",
-                        ol {
-                            li { "Open a recipe you own and select " strong { "Edit" } "." }
-                            li { "Make your changes. Work is autosaved privately." }
-                            li { "Select " strong { "Publish Changes" } " when the update is ready." }
-                            li { "Use " strong { "Discard Draft" } " to remove the unpublished revision." }
-                        }
-                        ExpectedResult { "Publishing creates a new entry in the recipe’s version history." }
-                    }
-
-                    GuideSection { id: "versions", eyebrow: "History", title: "Follow the recipe’s published history",
-                        p { "On a recipe you own, Version history lets you:" }
-                        ul {
-                            li { "view differences introduced by a published version;" }
-                            li { "open a read-only snapshot;" }
-                            li { "compare selected versions;" }
-                            li { "restore an earlier version as the new current version; or" }
-                            li { "open the version graph for a wider view of its lineage." }
-                        }
-                        GuideCallout { tone: "success", title: "History stays intact", "Restoring does not delete versions published after the selected snapshot." }
-                    }
-
-                    GuideSection { id: "scale", eyebrow: "At the stove", title: "Adjust quantities for this cooking session",
-                        p { "Open the recipe scaler from a recipe page. Choose a multiplier, target serving count, or target ingredient amount. Noms recalculates ingredient quantities and applicable timing for the current view without changing the saved recipe." }
-                    }
-
-                    GuideSection { id: "collections", eyebrow: "Organize", title: "Give related recipes a shared place",
-                        ol {
-                            li { "Open " strong { "Collections" } " and select " strong { "New Collection" } "." }
-                            li { "Add a name, optional description, visibility, and optional cover image." }
-                            li { "Create subcollections when another level helps." }
-                            li { "From a recipe page, choose " strong { "Add to Collection" } " and select one or more destinations." }
-                            li { "Reorder recipes or child collections from the collection page." }
-                        }
-                        GuideCallout { tone: "warning", title: "Deleting a collection", "Deleting removes its nested collections and memberships, but it does not delete the recipes themselves." }
-                    }
-
-                    GuideSection { id: "explore", eyebrow: "Discover", title: "Browse what other cooks have shared",
-                        p { "Open Explore to browse public recipes. Use its text field to filter recipes currently loaded by title or description." }
-                        p { "Creator links open public profiles containing the recipes and collections that person has chosen to share." }
-                    }
-
-                    GuideSection { id: "fork", eyebrow: "Build on an idea", title: "Start from a recipe without overwriting it",
-                        p { "Select " strong { "Fork" } " on a recipe page. If you are signed out, Noms asks you to sign in first. The fork opens as your private draft, ready to edit and publish independently." }
-                        ExpectedResult { "The new recipe keeps attribution and lineage back to its source." }
-                    }
-
-                    section { class: "how-to-troubleshooting", aria_labelledby: "troubleshooting-title",
-                        p { class: "marketing-eyebrow", "Troubleshooting" }
-                        h2 { id: "troubleshooting-title", "When something doesn’t look right" }
-                        details { summary { "My images are still processing" } p { "Wait for processing to finish. If an image fails, retry it or remove it before publishing." } }
-                        details { summary { "I cannot find an unpublished edit" } p { "Open Dashboard and look in Drafts. Edits remain private until you publish them." } }
-                        details { summary { "Someone cannot open my recipe or collection" } p { "Check its visibility. Private items are owner-only; use Unlisted for link access or Public for discovery." } }
-                        details { summary { "Explore did not inspect my whole library" } p { "Explore filters public recipes already loaded on the page. Full recipe, collection, and creator search is not part of the current experience." } }
-                    }
-                }
-            }
-
+            HowToGuide {}
             CallToActionPanel {
                 title: "Ready to keep your first recipe?",
-                body: "Start with the version you cook today. There will be room for what you learn next time.",
+                body: "Add a title and a few ingredients. You can fill in the details as you go.",
                 primary_label: "Create a recipe",
                 primary_route: Route::RecipeNew {},
                 secondary_label: "Explore recipes",
@@ -184,61 +77,238 @@ pub fn HowTo() -> Element {
     }
 }
 
+#[component]
+fn HowToGuide() -> Element {
+    rsx! {
+        header { class: "how-to-hero container",
+            div {
+                h1 { "Let’s get cooking." }
+                p { class: "marketing-lede", "A friendly guide to your recipe book." }
+            }
+            GuideIllustration {}
+        }
+        div { class: "how-to-layout container",
+            aside { class: "how-to-contents",
+                nav { aria_label: "How-to topics",
+                    p { class: "how-to-contents__title", "On this page" }
+                    ol {
+                        for section in HOW_TO_SECTIONS {
+                            li { a { href: "#{section.id}", "{section.title}" } }
+                        }
+                    }
+                    a { class: "how-to-contents__faq", href: "#questions", "Common questions", span { aria_hidden: "true", " ↗" } }
+                }
+            }
+            div { class: "how-to-guide",
+                div { class: "how-to-overview",
+                    GuideSection { id: "create", number: "1", title: "Create your first recipe",
+                        p { "Open New Recipe. Add a title, ingredients and instructions. You can fill in the details as you go." }
+                        figure { class: "how-to-example", aria_label: "Example recipe draft",
+                            figcaption { class: "sr-only", "Example recipe draft" }
+                            span { class: "how-to-example__label", "Title" }
+                            div { class: "how-to-example__well", "My favorite pasta" }
+                            span { class: "how-to-example__label", "Ingredients" }
+                            ul { class: "how-to-example__well",
+                                li { "200 g pasta" }
+                                li { "2 tbsp olive oil" }
+                                li { "1 clove garlic" }
+                            }
+                            div { class: "how-to-draft-status", span { aria_hidden: "true", "✓" } " Private draft · autosaved" }
+                        }
+                        p { class: "how-to-card-note", "Private drafts autosave after your first edit. Add timing, servings, photos, equipment and tags whenever you’re ready." }
+                    }
+                    GuideSection { id: "visibility", number: "2", title: "Choose who can see it",
+                        p { "When you publish, choose the audience for your recipe. Unpublished draft edits stay private." }
+                        div { class: "how-to-example how-to-visibility",
+                            p { class: "how-to-example__label", "Recipe visibility" }
+                            dl {
+                                div { dt { span { aria_hidden: "true", "◉" } " Private" } dd { "Only you can view it." } }
+                                div { dt { span { aria_hidden: "true", "○" } " Unlisted" } dd { "Anyone with the link can view it." } }
+                                div { dt { span { aria_hidden: "true", "○" } " Public" } dd { "It can appear in Explore and on your public profile." } }
+                            }
+                        }
+                        GuideCallout { title: "Before you share", "Choose the intended visibility, then select Publish Recipe. A private published recipe is separate from an unpublished draft." }
+                    }
+                    GuideSection { id: "versions", number: "3", title: "Keep track of changes",
+                        p { "Each published update becomes a new version. Open Version history on a recipe you own to revisit it." }
+                        figure { class: "how-to-example", aria_label: "Example published version history",
+                            figcaption { "Version history · example" }
+                            ol { class: "how-to-version-list",
+                                li { class: "how-to-version-list__current",
+                                    strong { "v2" }
+                                    div { span { class: "how-to-version-status", "Current" } p { "Added notes and timing." } }
+                                }
+                                li { strong { "v1" } div { span { class: "how-to-version-status", "Published" } p { "The first recipe." } } }
+                            }
+                        }
+                        GuideCallout { title: "History stays intact", "Restoring creates a new current version. Later versions remain in the history." }
+                    }
+                }
+                section { class: "how-to-troubleshooting", id: "questions", tabindex: "-1", aria_labelledby: "troubleshooting-title",
+                    h2 { id: "troubleshooting-title", "A few common questions" }
+                    details { summary { "Can I edit a recipe after publishing?" } p { "Yes. Open a recipe you own and select Edit. Changes autosave to a private draft; select Publish Changes when you’re ready. Use Discard Draft to remove the unpublished revision." } }
+                    details { summary { "Why can’t someone open my recipe or collection?" } p { "Check its visibility. Private items are owner-only. Use Unlisted for link access or Public for discovery. Sharing a collection does not make its private recipes public." } }
+                    details { summary { "Where is my unfinished recipe?" } p { "Open Dashboard and look in Drafts. Drafts and unpublished edits remain private until you publish them." } }
+                    details { summary { "How do Explore and Search differ?" } p { "Explore is public browsing, with title and description search and Load more. Sign in to Search for recipes, collections and cooks, with result scopes and filters. Results respect content visibility." } }
+                    details { summary { "What if an image is still processing?" } p { "Wait for processing to finish. If an image fails, retry it or remove it before publishing." } }
+                }
+                div { class: "how-to-more-heading",
+                    p { class: "marketing-eyebrow", "Make yourself at home" }
+                    h2 { "A little more know-how" }
+                    p { "Photos, collections and the details that make a recipe yours." }
+                }
+                div { class: "how-to-details-grid",
+                    GuideSection { id: "sign-in", title: "First, open your recipe book",
+                        p { a { href: "/login", "Sign in" } " with Google or GitHub to create recipes and organize your library. After authorization, you return to your requested page or your dashboard." }
+                        p { "Just browsing? " a { href: "/explore", "Explore public recipes" } " without an account." }
+                    }
+                    GuideSection { id: "images", title: "Add photos along the way",
+                        p { "Choose or drag recipe photos into the editor. Individual steps can also carry photos. Open the image editor to crop, rotate or adjust an image before saving." }
+                        GuideCallout { title: "Before saving", "Images are processed and uploaded when you save. Wait for processing to finish, and retry or remove an image if its upload fails." }
+                    }
+                    GuideSection { id: "edit", title: "Improve a published recipe",
+                        ol {
+                            li { "Open a recipe you own and select " strong { "Edit" } "." }
+                            li { "Make your changes. Work is autosaved privately." }
+                            li { "Select " strong { "Publish Changes" } " when the update is ready, or " strong { "Discard Draft" } " to remove the unpublished revision." }
+                        }
+                        p { "Publishing adds a new entry to the recipe’s version history. Open a read-only snapshot, compare versions, or follow forks in the version graph." }
+                    }
+                    GuideSection { id: "scale", title: "Cook a little more. Or less.",
+                        p { "Open the recipe scaler on a recipe page. Choose a multiplier, target serving count or target ingredient amount." }
+                        p { "Ingredient quantities and applicable timing change for the current view. The saved recipe stays the same." }
+                    }
+                    GuideSection { id: "collections", title: "Give your recipes a shared place",
+                        ol {
+                            li { "Open " strong { "Collections" } " and select " strong { "New Collection" } "." }
+                            li { "Add a name, description, visibility and optional cover image. Create subcollections if another level helps." }
+                            li { "On a recipe, choose " strong { "Add to Collection" } " and select one or more destinations." }
+                            li { "Reorder recipes or child collections from the collection page." }
+                        }
+                        GuideCallout { title: "Deleting a collection", "Deleting removes its nested collections and memberships, but does not delete the recipes themselves." }
+                    }
+                    GuideSection { id: "explore", title: "Find your next recipe",
+                        p { a { href: "/explore", "Explore" } " searches public recipe titles and descriptions, including recipes beyond those already loaded. Select Load more to see additional results. Community tags are labels, not filter controls." }
+                        p { a { href: "/search", "Search" } " requires sign-in and lets you find recipes, collections and cooks. Choose a result scope to see its filters and sorting options. Only content you can access appears." }
+                        p { "Creator links open public profiles with the recipes and collections that person has chosen to share." }
+                    }
+                    GuideSection { id: "fork", title: "Start with someone else’s idea",
+                        p { "Select " strong { "Fork" } " on a recipe page. Sign in if prompted. Your fork opens as a private draft, ready to edit and publish independently." }
+                        GuideCallout { title: "Keep the connection", "The original recipe stays unchanged. Your new recipe keeps attribution and lineage back to its source." }
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[derive(Props, Clone, PartialEq)]
 struct GuideSectionProps {
     id: &'static str,
-    eyebrow: &'static str,
     title: &'static str,
+    #[props(default)]
+    number: Option<&'static str>,
     children: Element,
 }
 
 #[component]
 fn GuideSection(props: GuideSectionProps) -> Element {
     rsx! {
-        section { id: props.id, class: "how-to-section",
-            p { class: "marketing-eyebrow", "{props.eyebrow}" }
-            h2 { "{props.title}" }
+        section { id: props.id, class: "how-to-section", tabindex: "-1", aria_labelledby: "how-to-{props.id}-title",
+            div { class: "how-to-section__heading",
+                if let Some(number) = props.number {
+                    span { class: "how-to-step-number", aria_hidden: "true", "{number}" }
+                }
+                h2 { id: "how-to-{props.id}-title", "{props.title}" }
+            }
             {props.children}
         }
     }
 }
 
-#[derive(Props, Clone, PartialEq)]
-struct VisibilityCardProps {
-    label: &'static str,
-    body: &'static str,
-}
-
 #[component]
-fn VisibilityCard(props: VisibilityCardProps) -> Element {
+fn GuideCallout(title: &'static str, children: Element) -> Element {
     rsx! {
-        div { class: "visibility-card",
-            strong { "{props.label}" }
-            p { "{props.body}" }
+        aside { class: "how-to-note",
+            strong { "{title}" }
+            p { {children} }
         }
     }
 }
 
-#[derive(Props, Clone, PartialEq)]
-struct GuideCalloutProps {
-    tone: &'static str,
-    title: &'static str,
-    children: Element,
-}
-
+/// A recipe-card vignette, distinct from the production Noms mark.
 #[component]
-fn GuideCallout(props: GuideCalloutProps) -> Element {
+fn GuideIllustration() -> Element {
     rsx! {
-        aside { class: "guide-callout guide-callout--{props.tone}",
-            strong { "{props.title}" }
-            p { {props.children} }
+        svg { class: "how-to-illustration", view_box: "0 0 300 200", fill: "none", "aria-hidden": "true", "focusable": "false",
+            ellipse { cx: "146", cy: "174", rx: "114", ry: "15", class: "how-to-art-shadow" }
+            g { transform: "rotate(-8 124 98)",
+                rect { x: "42", y: "24", width: "146", height: "147", rx: "16", class: "how-to-art-back" }
+                rect { x: "48", y: "32", width: "134", height: "139", rx: "12", class: "how-to-art-paper" }
+                path { d: "M154 24h14v48l-7-5-7 5z", class: "how-to-art-coral" }
+                path { d: "M70 106h83M70 122h68M70 138h76", class: "how-to-art-lines", stroke_width: "4", stroke_linecap: "round" }
+                path { d: "M78 66c0-13 11-16 17-7 6-9 17-6 17 7 0 8-17 20-17 20S78 74 78 66Z", class: "how-to-art-coral" }
+            }
+            g { transform: "rotate(24 226 102)",
+                rect { x: "219", y: "76", width: "14", height: "103", rx: "7", class: "how-to-art-wood" }
+                ellipse { cx: "226", cy: "58", rx: "23", ry: "35", class: "how-to-art-wood" }
+                ellipse { cx: "226", cy: "54", rx: "14", ry: "23", class: "how-to-art-spoon-well" }
+            }
+            path { d: "M242 176q4-27 27-46", class: "how-to-art-stem", stroke_width: "3", stroke_linecap: "round" }
+            path { d: "M248 162q-18-23-13-29 20 3 13 29ZM256 151q-1-28 11-30 8 19-11 30ZM248 164q29-17 34-5-9 14-34 5Z", class: "how-to-art-leaves" }
+            path { d: "m28 57-10-5m9 25-13 2m177-62 4-9", class: "how-to-art-spark", stroke_width: "4", stroke_linecap: "round" }
         }
     }
 }
 
-#[component]
-fn ExpectedResult(children: Element) -> Element {
-    rsx! {
-        GuideCallout { tone: "success", title: "Expected result", {children} }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rendered_guide() -> String {
+        let mut dom = VirtualDom::new(HowToGuide);
+        dom.rebuild_in_place();
+        dioxus_ssr::render(&dom)
+    }
+
+    #[test]
+    fn every_contents_link_has_one_focusable_destination() {
+        let html = rendered_guide();
+        for id in HOW_TO_SECTIONS
+            .iter()
+            .map(|section| section.id)
+            .chain(["questions"])
+        {
+            assert!(
+                html.contains(&format!("href=\"#{id}\"")),
+                "missing link: {id}"
+            );
+            assert_eq!(
+                html.matches(&format!("id=\"{id}\"")).count(),
+                1,
+                "duplicate/missing destination: {id}"
+            );
+        }
+        assert_eq!(
+            html.matches("tabindex=\"-1\"").count(),
+            HOW_TO_SECTIONS.len() + 1
+        );
+        assert_eq!(html.matches("<h1").count(), 1);
+        assert!(
+            !html.contains("<main"),
+            "AppLayout already supplies the main landmark"
+        );
+    }
+
+    #[test]
+    fn tutorial_examples_are_readable_without_fake_form_controls() {
+        let html = rendered_guide();
+        assert!(html.contains("Example recipe draft"));
+        assert!(html.contains("Example published version history"));
+        assert!(html.contains("<dl"));
+        assert!(!html.contains("<input"));
+        assert!(!html.contains("<button"));
+        assert_eq!(html.matches("<details").count(), 5);
+        assert_eq!(html.matches("<summary").count(), 5);
     }
 }
