@@ -121,6 +121,33 @@ pub fn About() -> Element {
                 }
             }
 
+            // Provisional brand copy: the owner will replace these three narratives.
+            div { class: "about-purpose container",
+                section { id: "mission", class: "about-purpose__mission", aria_labelledby: "mission-title",
+                    div {
+                        p { class: "marketing-eyebrow", "Our mission" }
+                        h2 { id: "mission-title", "Keep the recipe. Carry the knowledge forward." }
+                    }
+                    p { "We want to give everyday cooking a lasting home. A place where the small discoveries, personal touches, and recipes worth passing on stay together—and keep getting better every time someone cooks them." }
+                }
+                section { id: "origin", class: "about-purpose__story", aria_labelledby: "origin-title",
+                    p { class: "marketing-eyebrow", "How it started" }
+                    h2 { id: "origin-title", "Too many scraps. One missing recipe." }
+                    p { "The idea for Noms began with a familiar collection: a flour-dusted notebook, saved messages, and a few recipes that only existed in someone’s memory. The ingredients were there. The little adjustments that made them special were harder to find." }
+                    p { "We imagined a recipe book that could hold all of it, without treating a recipe as finished forever. Somewhere to keep the original, try something new, and remember what worked." }
+                }
+                section { id: "audience", class: "about-purpose__audience", aria_labelledby: "audience-title",
+                    p { class: "marketing-eyebrow", "Who it’s for" }
+                    h2 { id: "audience-title", "For the way you actually cook." }
+                    p { "You don’t need a perfect recipe collection to start. Just something you’d like to make again." }
+                    ul {
+                        li { strong { "The everyday cook" } span { "Keeping weeknight favorites close at hand." } }
+                        li { strong { "The curious tinkerer" } span { "Trying a swap, taking notes, and making it their own." } }
+                        li { strong { "The family archivist" } span { "Saving the recipes—and the details—worth passing down." } }
+                    }
+                }
+            }
+
             nav { class: "about-contents container", aria_label: "About page sections",
                 for section in ABOUT_SECTIONS {
                     a { href: "#{section.id}", "{section.number} {section.eyebrow}" }
