@@ -286,6 +286,50 @@ mod layout_tests {
         LINEAGE_DESCENDANT_EXPANSION_SIZE, LINEAGE_INITIAL_VISIBLE_DESCENDANTS,
     };
     use crate::types::{RecipeLineageBranch, RecipeLineageNode};
+    use dioxus::prelude::*;
+
+    #[test]
+    fn album_without_photos_renders_an_accessible_empty_state() {
+        let mut dom = VirtualDom::new(|| {
+            rsx! {
+                super::RecipeAlbumPhoto { images: Vec::new(), title: "Tomato pasta" }
+            }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("aria-label=\"No photo for Tomato pasta\""));
+        assert!(html.contains("No recipe photo yet"));
+        assert!(!html.contains("<button"));
+    }
+
+    #[test]
+    fn album_photo_navigation_has_names_and_selected_state() {
+        let mut dom = VirtualDom::new(|| {
+            let photo = crate::types::RecipeImage {
+                asset_id: None,
+                url: "/pasta.jpg".to_string(),
+                thumb_url: None,
+                file_name: None,
+                file_size: None,
+                edits: Vec::new(),
+            };
+            rsx! { super::RecipeAlbumPhoto { images: vec![photo.clone(), photo], title: "Pasta" } }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("aria-label=\"Photos of Pasta\""));
+        assert!(html.contains("aria-label=\"Next recipe photo\""));
+        assert!(!html.contains("aria-label=\"Previous recipe photo\""));
+        assert!(html.contains("aria-label=\"Show recipe photo 1\""));
+        assert!(html.contains("aria-label=\"Show recipe photo 2\""));
+        // SSR emits boolean values without quotes; both forms are valid HTML.
+        for state in ["true", "false"] {
+            assert!(
+                html.contains(&format!("aria-pressed={state}"))
+                    || html.contains(&format!("aria-pressed=\"{state}\""))
+            );
+        }
+    }
 
     fn lineage_branch(children: Vec<RecipeLineageBranch>, truncated: bool) -> RecipeLineageBranch {
         named_lineage_branch("Branch", children, truncated)
@@ -1192,16 +1236,24 @@ fn render_equipment(equipment: &[RecipeEquipment]) -> Element {
 
 // ── Image Slider ─────────────────────────────────────────────────────────────
 
-fn render_image_slider(images: Vec<crate::types::RecipeImage>) -> Element {
+#[component]
+fn RecipeAlbumPhoto(images: Vec<crate::types::RecipeImage>, title: String) -> Element {
+    let mut current_index = use_signal(|| 0);
+    let mut failed_image_url = use_signal(|| None::<String>);
     if images.is_empty() {
-        return rsx! {};
+        return rsx! {
+            div { class: "recipe-album__photo-placeholder", role: "img", aria_label: "No photo for {title}",
+                span { aria_hidden: "true", "🍽" }
+                span { "No recipe photo yet" }
+            }
+        };
     }
 
-    let mut current_index = use_signal(|| 0);
     let total = images.len();
 
     // Pre-compute reactive values for rsx! (no closures allowed in attributes)
-    let current_image = images[current_index()].clone();
+    let current_image = images[current_index().min(total - 1)].clone();
+    let current_image_url = current_image.url.clone();
     let show_left_arrow = current_index() > 0;
     let show_right_arrow = current_index() < total - 1;
     let dot_classes: Vec<String> = (0..total)
@@ -1215,15 +1267,22 @@ fn render_image_slider(images: Vec<crate::types::RecipeImage>) -> Element {
         .collect();
 
     rsx! {
-        div { class: "recipe-image-slider",
+        div { class: "recipe-image-slider", role: "region", aria_label: "Photos of {title}",
             div { class: "recipe-image-slider__viewport",
-                EditedRecipeImage {
+                if failed_image_url().as_ref() == Some(&current_image_url) {
+                    div { class: "recipe-album__photo-placeholder", role: "img", aria_label: "Photo unavailable for {title}",
+                        span { aria_hidden: "true", "🍽" }
+                        span { "Recipe photo unavailable" }
+                    }
+                } else {
+                  EditedRecipeImage {
                     image: current_image,
                     class: "recipe-image-slider__image",
-                    alt: "Recipe image".to_string(),
+                    alt: format!("{} — photo {} of {}", title, current_index().min(total - 1) + 1, total),
                     loading: "eager".to_string(),
-                    fallback_fit: "contain".to_string(),
-                    on_error: move |_| {},
+                    fallback_fit: "cover".to_string(),
+                    on_error: move |_| failed_image_url.set(Some(current_image_url.clone())),
+                  }
                 }
             }
 
@@ -1231,6 +1290,8 @@ fn render_image_slider(images: Vec<crate::types::RecipeImage>) -> Element {
                 if show_left_arrow {
                     button {
                         class: "recipe-image-slider__arrow recipe-image-slider__arrow--left",
+                        r#type: "button",
+                        aria_label: "Previous recipe photo",
                         onclick: move |_| {
                             current_index.set(current_index().saturating_sub(1));
                         },
@@ -1241,6 +1302,8 @@ fn render_image_slider(images: Vec<crate::types::RecipeImage>) -> Element {
                 if show_right_arrow {
                     button {
                         class: "recipe-image-slider__arrow recipe-image-slider__arrow--right",
+                        r#type: "button",
+                        aria_label: "Next recipe photo",
                         onclick: move |_| {
                             current_index.set((current_index() + 1).min(total - 1));
                         },
@@ -1252,6 +1315,9 @@ fn render_image_slider(images: Vec<crate::types::RecipeImage>) -> Element {
                     for (i, cls) in dot_classes.iter().enumerate() {
                         button {
                             class: "{cls}",
+                            r#type: "button",
+                            aria_label: "Show recipe photo {i + 1}",
+                            aria_pressed: current_index() == i,
                             onclick: move |_| { current_index.set(i); },
                         }
                     }
@@ -2066,8 +2132,9 @@ pub fn RecipeDetail(id: String) -> Element {
     let fork_sign_in_url = fork_sign_in_url(&recipe.id.to_string());
 
     rsx! {
+        document::Link { rel: "stylesheet", href: asset!("/assets/recipe-detail.css") }
         div { class: "recipe-detail container",
-
+            RecipeAlbumPhoto { images: recipe.images.clone(), title: recipe.title.clone() }
             // ── CARD: Header + Overview (all in one card) ────────────────
             Card {
                 PageHeader {
@@ -2077,6 +2144,16 @@ pub fn RecipeDetail(id: String) -> Element {
                                 display: "flex",
                                 flex_wrap: "wrap",
                                 gap: "var(--space-sm)",
+                                if is_owner {
+                                    Link {
+                                        to: crate::Route::RecipeEdit { id: recipe.id.to_string() },
+                                        class: "btn btn-primary touch-target",
+                                        "Edit recipe"
+                                    }
+                                    if !versions.is_empty() {
+                                        a { href: "#recipe-history", class: "btn btn-secondary touch-target", "History" }
+                                    }
+                                }
                                 if auth.is_authenticated {
                                     AddToCollectionDropdown {
                                         key: "{recipe.id}",
@@ -2105,11 +2182,6 @@ pub fn RecipeDetail(id: String) -> Element {
                                     }
                                 }
                                 if is_owner {
-                                    Link {
-                                        to: crate::Route::RecipeEdit { id: recipe.id.to_string() },
-                                        class: "account-menu-item", role: "menuitem", tabindex: "-1",
-                                        "Edit recipe"
-                                    }
                                     div { class: "account-menu-divider", role: "separator" }
                                     button {
                                         r#type: "button", class: "account-menu-item action-menu-item--danger", role: "menuitem", tabindex: "-1",
@@ -2157,6 +2229,10 @@ pub fn RecipeDetail(id: String) -> Element {
 
                 // Meta row
                 div { class: "recipe-detail__meta-row",
+                    span { class: "recipe-album__badge", "{recipe.visibility}" }
+                    if let Some(current) = versions.iter().find(|version| version.is_current) {
+                        span { class: "recipe-album__badge", "v{current.version_number} · Current" }
+                    }
                     if let Some(prepare) = recipe.prep_time_minutes {
                         span { class: "recipe-detail__meta-item", "⏱ Prep: {prepare} min" }
                     }
@@ -2239,9 +2315,6 @@ pub fn RecipeDetail(id: String) -> Element {
                 }
             }
 
-            // ── Image Slider (conditional) ────────────────────────────────
-            {render_image_slider(recipe.images.clone())}
-
             // ── Delete error (NOT in a card — transient UI element) ──────
             if let Some(del_err) = delete_error() {
                 div { class: "recipe-detail__delete-error", "{del_err}" }
@@ -2284,7 +2357,7 @@ pub fn RecipeDetail(id: String) -> Element {
             if !recipe.instructions.is_empty() {
                 Card {
                     div { class: "recipe-detail__steps-section",
-                        h2 { class: "recipe-detail__section-title", "Steps" }
+                        h2 { class: "recipe-detail__section-title", "Method" }
                         ol { class: "recipe-detail__steps-list",
                             for (idx, step) in recipe.instructions.iter().enumerate() {
                                 StepNode { step: step.clone(), path: vec![idx], level: 0 }
@@ -2298,6 +2371,7 @@ pub fn RecipeDetail(id: String) -> Element {
             if let Some(comm) = &recipe.commentary {
                 if !comm.is_empty() {
                     Card {
+                        h2 { class: "recipe-detail__section-title", "Recipe notes" }
                         p { class: "recipe-detail__commentary", "{comm}" }
                     }
                 }
@@ -2310,8 +2384,9 @@ pub fn RecipeDetail(id: String) -> Element {
             }
 
             if is_owner && !versions.is_empty() {
-                Card {
+                section { class: "recipe-album__history neumo-card", id: "recipe-history", aria_label: "Version history",
                     h2 { "Version history" }
+                    p { class: "recipe-album__history-intro", "Published snapshots from this recipe’s story. Restoring creates a new version; existing history stays." }
                     div {
                         display: "flex",
                         flex_direction: "column",
@@ -2326,8 +2401,7 @@ pub fn RecipeDetail(id: String) -> Element {
                                 rsx! {
                                     div {
                                         key: "{version_number}",
-                                        padding: "var(--space-sm) 0",
-                                        border_bottom: "1px solid var(--border-color)",
+                                        class: if difference_is_expanded { "recipe-album__version recipe-album__version--selected" } else { "recipe-album__version" },
                                         div {
                                             display: "flex",
                                             justify_content: "space-between",
@@ -2352,8 +2426,9 @@ pub fn RecipeDetail(id: String) -> Element {
                                                 div { class: "recipe-version-history__details",
                                                     strong {
                                                         "v{version_number} · {version.title}"
-                                                        if version.is_current { " · Current" }
                                                     }
+                                                    if version.is_current { span { class: "recipe-album__badge", "Current" } }
+                                                    if difference_is_expanded { span { class: "recipe-album__badge", "Selected for comparison" } }
                                                     p { "Published {version.created_at}" }
                                                     p { "{version.change_summary}" }
                                                     if let Some(notes) = &version.notes {
@@ -2610,7 +2685,9 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
     };
 
     rsx! {
+        document::Link { rel: "stylesheet", href: asset!("/assets/recipe-detail.css") }
         div { class: "recipe-detail container",
+            RecipeAlbumPhoto { images: editor.images.clone(), title: editor.title.clone() }
             Card {
                 PageHeader {
                     title: "{editor.title}",
@@ -2624,10 +2701,14 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
                 }
 
                 div {
-                    class: "neumo-inset",
+                    class: "recipe-album__snapshot neumo-inset",
                     padding: "var(--space-md)",
                     margin_bottom: "var(--space-md)",
                     strong { "Historical version v{detail.version_number}" }
+                    span { class: "recipe-album__badge", "Selected snapshot" }
+                    if detail.version_number == detail.current_version_number {
+                        span { class: "recipe-album__badge", "Current" }
+                    }
                     p { "Published {detail.created_at}" }
                     p { "This is a read-only snapshot. The current recipe has not been changed." }
                     if let Some(notes) = &detail.notes {
@@ -2663,8 +2744,6 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
                 }
             }
 
-            {render_image_slider(editor.images.clone())}
-
             if !editor.equipment.is_empty() {
                 Card { {render_equipment(&editor.equipment)} }
             }
@@ -2699,7 +2778,7 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
             if !editor.instructions.is_empty() {
                 Card {
                     div { class: "recipe-detail__steps-section",
-                        h2 { class: "recipe-detail__section-title", "Steps" }
+                        h2 { class: "recipe-detail__section-title", "Method" }
                         ol { class: "recipe-detail__steps-list",
                             for (index, step) in editor.instructions.iter().enumerate() {
                                 StepNode { step: step.clone(), path: vec![index], level: 0 }
@@ -2711,7 +2790,10 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
 
             if let Some(commentary) = &editor.commentary {
                 if !commentary.is_empty() {
-                    Card { p { class: "recipe-detail__commentary", "{commentary}" } }
+                    Card {
+                        h2 { class: "recipe-detail__section-title", "Recipe notes" }
+                        p { class: "recipe-detail__commentary", "{commentary}" }
+                    }
                 }
             }
 
