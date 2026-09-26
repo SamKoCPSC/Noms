@@ -162,27 +162,37 @@ pub fn UserProfile(username: String) -> Element {
         collections_are_loading() && loaded_collections.read().is_empty();
 
     rsx! {
-        div { class: "container profile-page",
+        document::Stylesheet { href: asset!("/assets/user-pages.css") }
+        div { class: "container profile-page user-profile",
             // ── Profile Header ────────────────────────────────────────────
-            div { class: "profile-header",
+            header { class: "user-profile__passport",
+                div { class: "user-portrait",
                 Avatar {
                     size: AvatarSize::Large,
                     src: profile_data.avatar_url.clone(),
                     username: profile_data.display_name.clone(),
                 }
+                }
+                div { class: "user-profile__identity",
+                p { class: "user-page-eyebrow", "Public profile" }
                 h1 { class: "profile-name", "{profile_data.display_name}" }
                 p { class: "profile-username", "@{profile_data.username}" }
                 if let Some(ref bio) = profile_data.bio {
                     p { class: "profile-bio", "{bio}" }
                 }
                 p { class: "profile-stats",
-                    "{recipe_count_text}"
+                    "{recipe_count_text} shared publicly"
+                }
                 }
             }
 
             // ── Public Collection Grid ───────────────────────────────────
-            section { class: "profile-recipes profile-collections",
-                h2 { class: "section-title", "Public collections" }
+            details { class: "user-disclosure user-profile__section", open: true,
+                summary {
+                    h2 { "Public collections" }
+                    span { class: "user-disclosure__chevron", aria_hidden: "true", "⌄" }
+                }
+                div { class: "user-disclosure__body",
 
                 if collections_loading_initial {
                     div {
@@ -205,15 +215,12 @@ pub fn UserProfile(username: String) -> Element {
                         description: format!("{0} hasn't shared any public collections.", profile_data.display_name),
                     }
                 } else {
-                    div {
-                        display: "grid",
-                        grid_template_columns: "repeat(auto-fill, minmax(240px, 1fr))",
-                        gap: "var(--space-lg)",
+                    div { class: "user-profile__collections",
                         for collection in loaded_collections.read().iter() {
                             Link {
                                 key: "{collection.id}",
                                 to: Route::CollectionDetail { id: collection.id.to_string() },
-                                class: "neumo-card",
+                                class: "neumo-card user-profile__collection",
                                 padding: "var(--space-lg)",
                                 text_decoration: "none",
                                 display: "flex",
@@ -248,11 +255,16 @@ pub fn UserProfile(username: String) -> Element {
                         }
                     }
                 }
+                }
             }
 
             // ── Recipe Grid ───────────────────────────────────────────────
-            div { class: "profile-recipes",
-                h2 { class: "section-title", "Recipes" }
+            details { class: "user-disclosure user-profile__section", open: true,
+                summary {
+                    h2 { "Public recipes" }
+                    span { class: "user-disclosure__chevron", aria_hidden: "true", "⌄" }
+                }
+                div { class: "user-disclosure__body",
 
                 // Loading state (initial)
                 if is_loading_initial {
@@ -282,9 +294,9 @@ pub fn UserProfile(username: String) -> Element {
                         }
                     } else {
                         // Recipe grid
-                        div { class: "recipe-grid",
+                        div { class: "user-profile__recipes",
                             for recipe in loaded_recipes.read().iter() {
-                                RecipeCard { recipe: recipe.clone() }
+                                RecipeCard { recipe: recipe.clone(), framed: true }
                             }
                         }
 
@@ -299,6 +311,7 @@ pub fn UserProfile(username: String) -> Element {
                             }
                         }
                     }
+                }
                 }
             }
         }

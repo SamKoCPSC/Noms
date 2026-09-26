@@ -5,8 +5,8 @@ use wasm_bindgen::JsCast;
 use super::account_delete_flow::{AccountDeleteStep as DeleteStep, AccountDeletionState};
 use crate::auth::context::{use_auth, AuthContext, UserProfile};
 use crate::components::base::{
-    Avatar, AvatarSize, Button, ButtonVariant, Card, ImageEditorCropMode, ImageEditorModal, Input,
-    PageHeader, SettingsTab, SettingsTabs, SharedModal,
+    Avatar, AvatarSize, Button, ButtonVariant, ImageEditorCropMode, ImageEditorModal, SettingsTab,
+    SettingsTabs, SharedModal,
 };
 use crate::components::AuthRequired;
 use crate::types::RecipeImageEdit;
@@ -1280,265 +1280,119 @@ pub fn SettingsProfile() -> Element {
     };
 
     rsx! {
+        document::Stylesheet { href: asset!("/assets/user-pages.css") }
         AuthRequired {
-            div { class: "container",
-            PageHeader {
-                title: "Profile Settings",
+            div { class: "container user-settings",
+            header { class: "user-page-heading",
+                p { class: "user-page-eyebrow", "Your account" }
+                h1 { "Profile settings" }
+                p { "Make your profile feel like you. Your name, photo and bio are public." }
             }
-            SettingsTabs {
-                active: SettingsTab::Profile,
-            }
-            div {
-                max_width: "500px",
-                Card {
+            SettingsTabs { active: SettingsTab::Profile }
+            details { class: "user-disclosure", open: true,
+                summary {
                     div {
-                        display: "flex",
-                        flex_direction: "column",
-                        gap: "var(--space-md)",
-                        // Avatar section
-                        div {
-                            display: "flex",
-                            flex_direction: "column",
-                            align_items: "center",
-                            gap: "var(--space-sm)",
-                            label {
-                                font_size: "14px",
-                                font_weight: "600",
-                                color: "var(--text-secondary)",
-                                align_self: "flex-start",
-                                "Avatar"
+                        h2 { "Your profile" }
+                        p { "The details people see alongside your recipes." }
+                    }
+                    span { class: "user-disclosure__chevron", aria_hidden: "true", "⌄" }
+                }
+                div { class: "user-settings__profile-grid",
+                    div { class: "user-settings__avatar",
+                        div { class: "user-portrait",
+                            Avatar { size: AvatarSize::Large, src: avatar_url.clone(), username: avatar_name.clone() }
+                        }
+                        if avatar_uploading() {
+                            span { role: "status", "Uploading…" }
+                        } else if avatar_url.is_some() {
+                            div { class: "user-settings__avatar-actions",
+                                Button { variant: ButtonVariant::Secondary, onclick: on_edit_existing_avatar, "{avatar_photo_actions(true)[0]}" }
+                                Button { variant: ButtonVariant::Secondary, onclick: move |_| trigger_file_input("#avatar-upload-input"), "Change Photo" }
+                                Button { variant: ButtonVariant::Ghost, onclick: on_remove_avatar, "Remove photo" }
                             }
-                            Avatar {
-                                size: AvatarSize::Large,
-                                src: avatar_url.clone(),
-                                username: avatar_name.clone(),
-                            }
-                            if avatar_uploading() {
-                                span {
-                                    font_size: "12px",
-                                    color: "var(--text-tertiary)",
-                                    "Uploading..."
-                                }
-                            } else if avatar_url.is_some() {
-                                div {
-                                    display: "flex",
-                                    gap: "var(--space-sm)",
-                                    Button {
-                                        variant: ButtonVariant::Secondary,
-                                        onclick: on_edit_existing_avatar,
-                                        "{avatar_photo_actions(true)[0]}"
-                                    }
-                                    Button {
-                                        variant: ButtonVariant::Secondary,
-                                        onclick: move |_| trigger_file_input("#avatar-upload-input"),
-                                        "Change Photo"
-                                    }
-                                    Button {
-                                        variant: ButtonVariant::Danger,
-                                        onclick: on_remove_avatar,
-                                        "Remove"
-                                    }
-                                }
-                            } else {
-                                Button {
-                                        variant: ButtonVariant::Secondary,
-                                        onclick: move |_| trigger_file_input("#avatar-upload-input"),
-                                        "Choose Photo"
-                                    }
-                            }
-                            // Hidden file input for avatar upload
+                        } else {
+                            Button { variant: ButtonVariant::Secondary, onclick: move |_| trigger_file_input("#avatar-upload-input"), "Choose Photo" }
+                        }
+                        p { class: "user-settings__hint", "Your photo appears on your public profile." }
+                        input {
+                            id: "avatar-upload-input", r#type: "file",
+                            accept: "image/png,image/jpeg,image/webp,image/gif", display: "none",
+                            onchange: move |evt| on_avatar_file_change(evt.files()),
+                        }
+                    }
+                    div { class: "user-settings__fields",
+                        div { class: "user-settings__field",
+                            label { r#for: "profile-display-name", "Display name" }
                             input {
-                                id: "avatar-upload-input",
-                                r#type: "file",
-                                accept: "image/png,image/jpeg,image/webp,image/gif",
-                                display: "none",
-                                onchange: move |evt| {
-                                    on_avatar_file_change(evt.files());
-                                },
+                                id: "profile-display-name", class: "input input--shared neumo-inset", r#type: "text",
+                                value: display_name(), placeholder: "Your name", maxlength: "30",
+                                aria_describedby: "profile-display-name-hint",
+                                oninput: move |evt| { display_name.set(evt.value()); error.set(None); },
                             }
+                            span { id: "profile-display-name-hint", class: "user-settings__hint", "{display_name().trim().len()}/30" }
                         }
-                        div {
-                            display: "flex",
-                            flex_direction: "column",
-                            gap: "var(--space-sm)",
-                            label {
-                                font_size: "14px",
-                                font_weight: "600",
-                                color: "var(--text-secondary)",
-                                "Display Name"
+                        div { class: "user-settings__field",
+                            label { r#for: "profile-username", "Username" }
+                            input {
+                                id: "profile-username", class: "input input--shared neumo-inset", r#type: "text",
+                                value: username(), placeholder: "username", maxlength: "30",
+                                aria_describedby: "profile-username-hint",
+                                oninput: move |evt| { username.set(evt.value()); error.set(None); },
                             }
-                            Input {
-                                value: display_name().clone(),
-                                placeholder: "Your name",
-                                oninput: move |v| {
-                                    display_name.set(v);
-                                    error.set(None);
-                                },
-                            }
-                            span {
-                                font_size: "12px",
-                                color: "var(--text-tertiary)",
-                                "{display_name().trim().len()}/30"
-                            }
+                            span { id: "profile-username-hint", class: "user-settings__hint", "Your public handle · {username().trim().len()}/30" }
                         }
-                        // Username field
-                        div {
-                            display: "flex",
-                            flex_direction: "column",
-                            gap: "var(--space-sm)",
-                            label {
-                                font_size: "14px",
-                                font_weight: "600",
-                                color: "var(--text-secondary)",
-                                "Username"
-                            }
-                            div {
-                                display: "flex",
-                                align_items: "center",
-                                span {
-                                    padding: "var(--space-sm) 0 var(--space-sm) var(--space-md)",
-                                    font_family: "var(--font-body)",
-                                    font_size: "14px",
-                                    color: "var(--text-tertiary)",
-                                    font_style: "italic",
-                                    "@ "
-                                }
-                                Input {
-                                    value: username().clone(),
-                                    placeholder: "username",
-                                    oninput: move |v| {
-                                        username.set(v);
-                                        error.set(None);
-                                    },
-                                }
-                            }
-                            span {
-                                font_size: "12px",
-                                color: "var(--text-tertiary)",
-                                "{username().trim().len()}/30"
-                            }
-                        }
-                        // Email field (read-only)
-                        div {
-                            display: "flex",
-                            flex_direction: "column",
-                            gap: "var(--space-sm)",
-                            label {
-                                font_size: "14px",
-                                font_weight: "600",
-                                color: "var(--text-secondary)",
-                                "Email"
-                            }
-                            div {
-                                padding: "var(--space-sm) var(--space-md)",
-                                background_color: "var(--surface)",
-                                border: "1px solid var(--border)",
-                                border_radius: "var(--radius-md)",
-                                font_family: "var(--font-body)",
-                                font_size: "14px",
-                                color: "var(--text-tertiary)",
-                                "{email}"
-                            }
-                        }
-                        div {
-                            display: "flex",
-                            flex_direction: "column",
-                            gap: "var(--space-sm)",
-                            label {
-                                font_size: "14px",
-                                font_weight: "600",
-                                color: "var(--text-secondary)",
-                                "Bio"
-                            }
+                        div { class: "user-settings__field",
+                            label { r#for: "profile-bio", "Bio" }
                             textarea {
-                                class: "neumo-inset input",
-                                placeholder: "Tell us about yourself...",
-                                rows: "3",
-                                maxlength: "160",
-                                value: "{bio()}",
-                                oninput: move |evt| {
-                                    bio.set(evt.value());
-                                    error.set(None);
-                                },
-                                padding: "var(--space-sm) var(--space-md)",
-                                font_family: "var(--font-body)",
-                                font_size: "14px",
-                                color: "var(--text-primary)",
-                                background_color: "var(--surface)",
-                                outline: "none",
-                                resize: "vertical",
-                                width: "100%",
+                                id: "profile-bio", class: "neumo-inset input", placeholder: "Tell us about yourself…",
+                                rows: "3", maxlength: "160", value: "{bio()}", aria_describedby: "profile-bio-hint",
+                                oninput: move |evt| { bio.set(evt.value()); error.set(None); },
                             }
-                            span {
-                                font_size: "12px",
-                                color: "var(--text-tertiary)",
-                                "{bio().trim().len()}/160"
-                            }
+                            span { id: "profile-bio-hint", class: "user-settings__hint", "{bio().trim().len()}/160" }
                         }
-                        // Error message
+                        div { class: "user-settings__field",
+                            span { "Email" }
+                            p { class: "user-settings__readonly", "{email}" }
+                            p { class: "user-settings__hint", "Private account information. Not shown on your public profile." }
+                        }
                         if let Some(err) = error() {
-                            div {
-                                padding: "var(--space-sm) var(--space-md)",
-                                background_color: "var(--error-bg)",
-                                border_radius: "var(--radius-md)",
-                                color: "var(--error)",
-                                font_size: "14px",
-                                "{err}"
-                            }
+                            div { class: "user-feedback user-feedback--error", role: "alert", "{err}" }
                         }
-                        // Saved message
                         if let Some(msg) = saved_message() {
-                            div {
-                                padding: "var(--space-sm) var(--space-md)",
-                                background_color: "var(--success-bg)",
-                                border_radius: "var(--radius-md)",
-                                color: "var(--success)",
-                                font_size: "14px",
-                                "{msg}"
-                            }
+                            div { class: "user-feedback user-feedback--success", role: "status", "{msg}" }
                         }
-                        // Save button
-                        Button {
-                            variant: ButtonVariant::Primary,
-                            disabled: is_saving() || !is_valid,
-                            onclick: on_save,
-                            if is_saving() {
-                                "Saving..."
-                            } else {
-                                "Save Changes"
+                        div { class: "user-settings__actions",
+                            Button {
+                                variant: ButtonVariant::Primary, disabled: is_saving() || !is_valid,
+                                onclick: on_save,
+                                if is_saving() { "Saving…" } else { "Save changes" }
                             }
+                            Link { to: crate::Route::UserProfile { username: delete_username.clone() }, "View public profile →" }
                         }
                     }
                 }
             }
-
-            // ── Danger Zone ──────────────────────────────────────────────
-            div {
-                class: "danger-zone",
-                margin_top: "var(--space-xl)",
-                max_width: "500px",
-                Card {
+            section { class: "user-settings__link-card",
+                div {
+                    h2 { "Linked accounts" }
+                    p { "Manage the accounts you use to sign in to Noms." }
+                }
+                Link { class: "btn btn-secondary", to: crate::Route::SettingsAccounts {}, "Manage accounts" }
+            }
+            details { class: "user-disclosure user-settings__danger",
+                summary {
                     div {
-                        display: "flex",
-                        flex_direction: "column",
-                        gap: "var(--space-sm)",
-                        h3 {
-                            color: "var(--error)",
-                            font_size: "16px",
-                            "Danger Zone"
-                        }
-                        p {
-                            font_size: "14px",
-                            color: "var(--text-secondary)",
-                            "Permanently delete your account and all associated data."
-                        }
-                        Button {
-                            variant: ButtonVariant::Danger,
-                            onclick: move |_| {
-                                deletion.write().open();
-                            },
-                            "Delete Account"
-                        }
+                        h2 { "Account deletion" }
+                        p { "Permanently delete your account and associated data." }
+                    }
+                    span { class: "user-disclosure__chevron", aria_hidden: "true", "⌄" }
+                }
+                div { class: "user-disclosure__body",
+                    p { "Review the impact and confirm before anything is deleted." }
+                    Button {
+                        variant: ButtonVariant::Danger,
+                        onclick: move |_| { deletion.write().open(); },
+                        "Delete Account"
                     }
                 }
             }
