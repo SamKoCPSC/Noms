@@ -282,14 +282,14 @@ pub fn Search(query: SearchRouteQuery) -> Element {
     let scope_query = query.clone();
 
     rsx! {
+        document::Link { rel: "stylesheet", href: asset!("/assets/search.css") }
         AuthRequired {
             div { class: "container search-page",
                 header { class: "search-hero",
                     div {
-                        p { class: "search-eyebrow", "Find your next favorite" }
                         h1 { "Search Noms" }
                         p { class: "search-subtitle",
-                            "Search your recipes and collections alongside public cooks."
+                            "Find recipes, collections and cooks in one place."
                         }
                     }
                 }
@@ -453,7 +453,10 @@ fn SearchInput(props: SearchInputProps) -> Element {
                 props.onsubmit.call(());
             },
             div { class: "search-input-row",
-                span { class: "search-icon", aria_hidden: "true", "⌕" }
+                svg { class: "search-icon", view_box: "0 0 24 24", width: "22", height: "22", fill: "none", stroke: "currentColor", stroke_width: "1.8", "aria-hidden": "true",
+                    circle { cx: "10.5", cy: "10.5", r: "6.5" }
+                    path { d: "m16 16 4 4", stroke_linecap: "round" }
+                }
                 input {
                     id: "search-query",
                     class: "search-query-input",
@@ -568,6 +571,7 @@ struct SearchControlsProps {
 #[component]
 fn SearchControls(props: SearchControlsProps) -> Element {
     let request = props.parsed.request.clone();
+    let mut filters_open = use_signal(|| false);
     let initial_required_tags = match &request {
         ActiveSearchRequest::Recipes(recipe) => recipe.tags_all.join(", "),
         _ => String::new(),
@@ -584,7 +588,53 @@ fn SearchControls(props: SearchControlsProps) -> Element {
     ));
     rsx! {
         section { class: "search-controls", aria_label: "Search filters",
+            if matches!(&request, ActiveSearchRequest::Recipes(_)) {
+                button { class: "btn btn-secondary search-filter-toggle", r#type: "button",
+                    aria_expanded: filters_open(), aria_controls: "search-filter-fields",
+                    onclick: move |_| filters_open.toggle(),
+                    "Filters"
+                }
+            }
+            label { class: "search-control search-sort-control",
+                span { "Sort by" }
+                select {
+                    value: sort_value(&request),
+                    onchange: {
+                        let request = request.clone();
+                        move |event| {
+                            let mut request = request.clone();
+                            apply_sort(&mut request, &event.value());
+                            update_page(&mut request, 1);
+                            props.onsort.call(request);
+                        }
+                    },
+                    {sort_options(&request)}
+                }
+            }
+            if has_filters(&request) {
+                div { class: "active-filter-row",
+                    for chip in filter_chips(&request) {
+                        button { class: "filter-chip", r#type: "button", aria_label: "Remove {chip}",
+                            onclick: {
+                                let request = request.clone();
+                                let chip = chip.clone();
+                                move |_| props.onchange.call(remove_filter(request.clone(), &chip))
+                            },
+                            "{chip}" span { aria_hidden: "true", " ×" }
+                        }
+                    }
+                    button {
+                        class: "clear-filters",
+                        onclick: {
+                            let request = request.clone();
+                            move |_| props.onchange.call(clear_filters(request.clone()))
+                        },
+                        "Clear filters"
+                    }
+                }
+            }
             if let ActiveSearchRequest::Recipes(recipe) = &request {
+              div { id: "search-filter-fields", class: "search-filter-fields", hidden: !filters_open(),
                 label { class: "search-control",
                     span { "Visibility" }
                     select {
@@ -658,37 +708,7 @@ fn SearchControls(props: SearchControlsProps) -> Element {
                         },
                     }
                 }
-            }
-            label { class: "search-control search-sort-control",
-                span { "Sort by" }
-                select {
-                    value: sort_value(&request),
-                    onchange: {
-                        let request = request.clone();
-                        move |event| {
-                            let mut request = request.clone();
-                            apply_sort(&mut request, &event.value());
-                            update_page(&mut request, 1);
-                            props.onsort.call(request);
-                        }
-                    },
-                    {sort_options(&request)}
-                }
-            }
-            if has_filters(&request) {
-                div { class: "active-filter-row",
-                    for chip in filter_chips(&request) {
-                        span { class: "filter-chip", "{chip}" }
-                    }
-                    button {
-                        class: "clear-filters",
-                        onclick: {
-                            let request = request.clone();
-                            move |_| props.onchange.call(clear_filters(request.clone()))
-                        },
-                        "Clear filters"
-                    }
-                }
+              }
             }
         }
     }
@@ -805,13 +825,13 @@ fn AdvancedTextInput(props: AdvancedTextInputProps) -> Element {
     rsx! {
         fieldset { class: "advanced-field",
             legend { "{props.label}" }
-            input { name: "{props.prefix}_include", value: include, placeholder: "Words or phrase" }
-            select { name: "{props.prefix}_mode", value: mode,
+            input { name: "{props.prefix}_include", aria_label: "{props.label} contains", value: include, placeholder: "Words or phrase" }
+            select { name: "{props.prefix}_mode", aria_label: "{props.label} match mode", value: mode,
                 option { value: "all", "All terms" }
                 option { value: "any", "Any term" }
                 option { value: "exact", "Exact phrase" }
             }
-            input { name: "{props.prefix}_exclude", value: excluded, placeholder: "Exclude (comma-separated)" }
+            input { name: "{props.prefix}_exclude", aria_label: "{props.label} excludes", value: excluded, placeholder: "Exclude (comma-separated)" }
         }
     }
 }
@@ -843,14 +863,27 @@ struct SearchResultsProps {
 
 #[component]
 fn SearchResults(props: SearchResultsProps) -> Element {
-    let result = props.resource.read().clone();
+    let pending = *props.resource.state().read() == UseResourceState::Pending;
+    // A previous scope's cards must not appear under the new scope while loading.
+    let result = if pending {
+        None
+    } else {
+        props.resource.read().clone()
+    };
     let mut resource = props.resource;
     rsx! {
-        section { class: "search-results", aria_live: "polite",
+        section { class: if matches!(props.request, ActiveSearchRequest::All(_)) { "search-results search-results--all" } else { "search-results" }, aria_live: "polite",
             match result {
-                None => rsx! { div { class: "search-loading", LoadingSpinner {} span { "Searching…" } } },
+                None => rsx! {
+                    div { class: "search-pending",
+                        div { class: "search-loading", role: "status", LoadingSpinner {} span { "Searching…" } }
+                        div { class: "search-card-grid", aria_hidden: "true",
+                            for _ in 0..3 { div { class: "search-skeleton-card", div { class: "search-skeleton-photo" } div { class: "search-skeleton-line" } div { class: "search-skeleton-line search-skeleton-line--short" } } }
+                        }
+                    }
+                },
                 Some(None) => rsx! {},
-                Some(Some(Err(message))) => rsx! { SearchErrorState { message, onretry: move |_| resource.restart() } },
+                Some(Some(Err(_))) => rsx! { SearchErrorState { onretry: move |_| resource.restart() } },
                 Some(Some(Ok(loaded))) => render_loaded_results(loaded, &props.request, props.onpage),
             }
         }
@@ -864,9 +897,9 @@ fn render_loaded_results(
 ) -> Element {
     match loaded {
         LoadedSearch::All(response) => rsx! {
-            GroupedSection { title: "Recipes", count: response.recipe_total_count, body: rsx! { div { class: "recipe-grid search-recipe-grid", for result in response.recipes { RecipeCard { recipe: result.recipe } } } } }
-            GroupedSection { title: "Collections", count: response.collection_total_count, body: rsx! { div { class: "search-card-grid", for result in response.collections { CollectionResultCard { result } } } } }
-            GroupedSection { title: "Cooks", count: response.user_total_count, body: rsx! { div { class: "search-card-grid", for result in response.users { UserResultCard { result } } } } }
+            GroupedSection { title: "Recipes", target: scoped_search_route(request, SearchScope::Recipes), count: response.recipe_total_count, body: rsx! { div { class: "recipe-grid search-recipe-grid", for result in response.recipes { RecipeCard { key: "{result.recipe.id}", recipe: result.recipe, framed: true } } } } }
+            GroupedSection { title: "Collections", target: scoped_search_route(request, SearchScope::Collections), count: response.collection_total_count, body: rsx! { div { class: "search-card-grid", for result in response.collections { CollectionResultCard { key: "{result.collection.id}", result } } } } }
+            GroupedSection { title: "Cooks", target: scoped_search_route(request, SearchScope::Users), count: response.user_total_count, body: rsx! { div { class: "search-card-grid", for result in response.users { UserResultCard { key: "{result.user.id}", result } } } } }
             if response.recipe_total_count + response.collection_total_count + response.user_total_count == 0 { NoResults { blank: request.text().is_empty() } }
         },
         LoadedSearch::Recipes(response) => {
@@ -879,7 +912,7 @@ fn render_loaded_results(
                 RecipeFacetSummary { facets: response.facets.clone() }
                 div { class: "results-heading", h2 { "Recipes" } span { "{response.total_count} found" } }
                 if response.results.is_empty() { NoResults { blank: request.text().is_empty() } }
-                else { div { class: "recipe-grid search-recipe-grid", for result in response.results { RecipeCard { recipe: result.recipe } } } }
+                else { div { class: "recipe-grid search-recipe-grid", for result in response.results { RecipeCard { key: "{result.recipe.id}", recipe: result.recipe, framed: true } } } }
                 Pagination { page, page_size, total: response.total_count, onchange: onpage }
             }
         }
@@ -892,7 +925,7 @@ fn render_loaded_results(
             rsx! {
                 div { class: "results-heading", h2 { "Collections" } span { "{response.total_count} found" } }
                 if response.results.is_empty() { NoResults { blank: request.text().is_empty() } }
-                else { div { class: "search-card-grid", for result in response.results { CollectionResultCard { result } } } }
+                else { div { class: "search-card-grid", for result in response.results { CollectionResultCard { key: "{result.collection.id}", result } } } }
                 Pagination { page, page_size, total: response.total_count, onchange: onpage }
             }
         }
@@ -905,7 +938,7 @@ fn render_loaded_results(
             rsx! {
                 div { class: "results-heading", h2 { "Cooks" } span { "{response.total_count} found" } }
                 if response.results.is_empty() { NoResults { blank: request.text().is_empty() } }
-                else { div { class: "search-card-grid", for result in response.results { UserResultCard { result } } } }
+                else { div { class: "search-card-grid", for result in response.results { UserResultCard { key: "{result.user.id}", result } } } }
                 Pagination { page, page_size, total: response.total_count, onchange: onpage }
             }
         }
@@ -915,6 +948,7 @@ fn render_loaded_results(
 #[derive(Props, Clone, PartialEq)]
 struct GroupedSectionProps {
     title: &'static str,
+    target: Option<Route>,
     count: i64,
     body: Element,
 }
@@ -924,26 +958,53 @@ fn GroupedSection(props: GroupedSectionProps) -> Element {
     if props.count == 0 {
         return rsx! {};
     }
-    rsx! { section { class: "grouped-section", div { class: "results-heading", h2 { "{props.title}" } span { "{props.count} found" } } {props.body} } }
+    rsx! { section { class: "grouped-section",
+        div { class: "results-heading",
+            div { class: "results-heading__title", h2 { "{props.title}" } span { "{props.count} found" } }
+            if let Some(target) = props.target { Link { to: target, class: "search-view-all", "View all {props.title.to_lowercase()}" span { aria_hidden: "true", " →" } } }
+        }
+        {props.body}
+    } }
 }
 
 #[component]
 fn CollectionResultCard(result: crate::types::CollectionSearchResult) -> Element {
     let parent_path = result.breadcrumb.join(" / ");
     rsx! {
-        Link { to: Route::CollectionDetail { id: result.collection.id.to_string() }, class: "entity-result-card",
-            span { class: "entity-icon", "📚" }
-            div { h3 { "{result.collection.name}" } if !parent_path.is_empty() { p { class: "entity-path", "{parent_path}" } } if let Some(description) = result.collection.description { p { "{description}" } } }
+        Link { to: Route::CollectionDetail { id: result.collection.id.to_string() }, class: "entity-result-card search-collection-card",
+            div { class: "search-collection-cover", aria_hidden: "true",
+                svg { view_box: "0 0 80 64", width: "80", height: "64", fill: "none", stroke: "currentColor", stroke_width: "2",
+                    path { d: "M10 17 Q10 12 15 12 H31 L39 20 H65 Q70 20 70 25 V51 Q70 56 65 56 H15 Q10 56 10 51 Z", fill: "var(--neumo-surface)" }
+                    path { d: "M20 34 H59 M20 42 H47", stroke_linecap: "round" }
+                }
+            }
+            div { class: "entity-result-copy", small { "Collection" } h3 { "{result.collection.name}" } if let Some(description) = result.collection.description { p { "{description}" } } if !parent_path.is_empty() { p { class: "entity-path", "{parent_path}" } } span { class: "entity-result-action", "Open collection →" } }
         }
     }
 }
 
 #[component]
 fn UserResultCard(result: crate::types::UserSearchResult) -> Element {
+    let mut avatar_failed = use_signal(|| false);
+    use_effect(use_reactive((&result.user.avatar_url,), move |_| {
+        avatar_failed.set(false)
+    }));
+    let initial = result
+        .user
+        .display_name
+        .chars()
+        .next()
+        .unwrap_or('?')
+        .to_uppercase()
+        .to_string();
     rsx! {
-        Link { to: Route::UserProfile { username: result.user.username.clone() }, class: "entity-result-card",
-            span { class: "entity-icon", "👤" }
-            div { h3 { "{result.user.display_name}" } p { class: "entity-path", "@{result.user.username}" } if let Some(bio) = result.user.bio { p { "{bio}" } } small { "{result.user.public_recipe_count} public recipes" } }
+        Link { to: Route::UserProfile { username: result.user.username.clone() }, class: "entity-result-card search-cook-card",
+            div { class: "search-cook-avatar", aria_hidden: "true",
+                if let Some(url) = result.user.avatar_url.filter(|_| !avatar_failed()) {
+                    img { src: url, alt: "", loading: "lazy", onerror: move |_| avatar_failed.set(true) }
+                } else { "{initial}" }
+            }
+            div { class: "entity-result-copy", h3 { "{result.user.display_name}" } p { class: "entity-path", "@{result.user.username}" } if let Some(bio) = result.user.bio { p { "{bio}" } } small { "{result.user.public_recipe_count} public recipes" } span { class: "entity-result-action", "View profile →" } }
         }
     }
 }
@@ -958,8 +1019,8 @@ fn RecipeFacetSummary(facets: crate::types::RecipeSearchFacets) -> Element {
         return rsx! {};
     }
     rsx! {
-        aside { class: "facet-summary", aria_label: "Result facets",
-            h2 { "Explore these results" }
+        details { class: "facet-summary",
+            summary { "About these results" }
             if !facets.tags.is_empty() { div { h3 { "Tags" } div { class: "facet-list", for bucket in facets.tags.iter().take(8) { span { "{bucket.tag} · {bucket.count}" } } } } }
             if !facets.visibility.is_empty() { div { h3 { "Visibility" } div { class: "facet-list", for bucket in facets.visibility { span { "{bucket.visibility:?} · {bucket.count}" } } } } }
             if !facets.total_time.is_empty() { div { h3 { "Total time" } div { class: "facet-list", for bucket in facets.total_time { span { "{time_facet_label(&bucket)} · {bucket.count}" } } } } }
@@ -1021,7 +1082,10 @@ fn Pagination(props: PaginationProps) -> Element {
 #[component]
 fn NoResults(blank: bool) -> Element {
     let (title, description) = if blank {
-        ("Nothing here yet", "Create recipes and collections, or follow public cooks to build your searchable library.")
+        (
+            "Nothing here yet",
+            "Create recipes and collections, or search for cooks sharing public recipes.",
+        )
     } else {
         (
             "No results found",
@@ -1037,8 +1101,8 @@ fn SearchValidationState(message: String) -> Element {
 }
 
 #[component]
-fn SearchErrorState(message: String, onretry: EventHandler<()>) -> Element {
-    rsx! { div { class: "search-state-card search-state-error", role: "alert", h2 { "Search is temporarily unavailable" } p { "{message}" } button { class: "btn btn-secondary", onclick: move |_| onretry.call(()), "Try again" } } }
+fn SearchErrorState(onretry: EventHandler<()>) -> Element {
+    rsx! { div { class: "search-state-card search-state-error", role: "alert", h2 { "Search is temporarily unavailable" } p { "Your search and filters are still here. Please try again." } button { class: "btn btn-secondary", onclick: move |_| onretry.call(()), "Try again" } } }
 }
 
 fn visibility_value(value: RecipeSearchVisibility) -> &'static str {
@@ -1238,6 +1302,33 @@ fn filter_chips(request: &ActiveSearchRequest) -> Vec<String> {
         }
         _ => Vec::new(),
     }
+}
+
+// Chips remove one criterion while keeping the query, sort and advanced fields.
+fn remove_filter(mut request: ActiveSearchRequest, chip: &str) -> ActiveSearchRequest {
+    if let ActiveSearchRequest::Recipes(value) = &mut request {
+        if let Some(tag) = chip.strip_prefix('#') {
+            value.tags_all.retain(|candidate| candidate != tag);
+        } else if matches!(chip, "Mine only" | "Public only") {
+            value.visibility = RecipeSearchVisibility::AllVisible;
+        } else if chip.starts_with("Time ") {
+            value.total_time = None;
+        } else if chip.starts_with("Serves ") {
+            value.servings = None;
+        }
+        value.page = 1;
+    }
+    request
+}
+
+fn scoped_search_route(request: &ActiveSearchRequest, scope: SearchScope) -> Option<Route> {
+    parsed_from_request(request.clone())
+        .ok()?
+        .switch_scope(scope)
+        .ok()
+        .map(|parsed| Route::Search {
+            query: SearchRouteQuery::new(parsed.canonical_query),
+        })
 }
 fn clear_filters(mut request: ActiveSearchRequest) -> ActiveSearchRequest {
     if let ActiveSearchRequest::Recipes(value) = &mut request {
@@ -1592,6 +1683,61 @@ mod tests {
             "/search?scope=recipes&sort=updated_newest&tags=Zesty%2Czesty"
         );
         assert!(canonical_route_if_needed(&parsed.canonical_query, &parsed).is_none());
+    }
+
+    #[test]
+    fn removing_one_filter_preserves_the_other_search_criteria() {
+        let request = ActiveSearchRequest::Recipes(Box::new(crate::types::RecipeSearchRequest {
+            text: Some("tomato & basil".into()),
+            tags_all: vec!["quick".into(), "vegetarian".into()],
+            total_time: range_from_time("0-30"),
+            servings: range_from_servings("3-4"),
+            visibility: RecipeSearchVisibility::MineOnly,
+            sort: RecipeSearchSort::TitleAscending,
+            page: 4,
+            ..Default::default()
+        }));
+        let ActiveSearchRequest::Recipes(removed) = remove_filter(request.clone(), "#quick") else {
+            panic!("recipe request")
+        };
+        assert_eq!(removed.tags_all, vec!["vegetarian"]);
+        assert_eq!(removed.page, 1);
+        assert_eq!(removed.text.as_deref(), Some("tomato & basil"));
+        assert_eq!(removed.sort, RecipeSearchSort::TitleAscending);
+        assert_eq!(removed.total_time, range_from_time("0-30"));
+        assert_eq!(removed.servings, range_from_servings("3-4"));
+        assert_eq!(removed.visibility, RecipeSearchVisibility::MineOnly);
+        for chip in ["Time 0-30", "Serves 3-4", "Mine only"] {
+            let ActiveSearchRequest::Recipes(removed) = remove_filter(request.clone(), chip) else {
+                panic!("recipe request")
+            };
+            assert_eq!(removed.tags_all.len(), 2);
+            assert_eq!(removed.total_time.is_none(), chip.starts_with("Time "));
+            assert_eq!(removed.servings.is_none(), chip.starts_with("Serves "));
+            assert_eq!(
+                removed.visibility == RecipeSearchVisibility::AllVisible,
+                chip == "Mine only"
+            );
+        }
+    }
+
+    #[test]
+    fn grouped_result_links_keep_the_query_and_select_the_requested_scope() {
+        let request = parse_search_query("q=tomato%20%26%20basil")
+            .unwrap()
+            .request;
+        for scope in [
+            SearchScope::Recipes,
+            SearchScope::Collections,
+            SearchScope::Users,
+        ] {
+            let Some(Route::Search { query }) = scoped_search_route(&request, scope) else {
+                panic!("search route")
+            };
+            let parsed = parse_search_query(query.as_str()).unwrap();
+            assert_eq!(parsed.request.text(), "tomato & basil");
+            assert_eq!(parsed.request.scope(), scope);
+        }
     }
 
     #[test]
