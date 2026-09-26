@@ -2,8 +2,8 @@ use dioxus::prelude::*;
 
 use crate::api::collection::create_collection;
 use crate::components::base::{
-    complete_deferred_upload, single_gallery_image, validate_collection_form, Card, CollectionForm,
-    CollectionVisibilityField, DeferredUploadCompletion, ImageUpload, PageHeader, UploadOutcome,
+    complete_deferred_upload, single_gallery_image, validate_collection_form, CollectionForm,
+    CollectionVisibilityField, DeferredUploadCompletion, ImageUpload, UploadOutcome,
 };
 use crate::components::AuthRequired;
 use crate::types::{CollectionVisibility, RecipeImage};
@@ -86,17 +86,28 @@ pub fn CollectionNew() -> Element {
         });
     };
 
-    rsx! { AuthRequired { div { class: "container",
-        PageHeader { title: if parent_id().is_some() { "New subcollection" } else { "New collection" } }
-        Card { CollectionForm { name, description, submit_label: "Create Collection", submitting: saving(), error: error(),
+    rsx! { AuthRequired { div { class: "container collection-editor-page",
+        nav { class: "collection-editor-breadcrumb", aria_label: "Breadcrumb", Link { to: Route::CollectionList {}, "Collections" } span { aria_hidden: "true", " / " } span { "New collection" } }
+        h1 { class: "collection-editor-heading", if parent_id().is_some() { "New subcollection" } else { "New collection" } }
+        p { class: "collection-editor-intro", "Start an album for recipes you want to keep together." }
+        CollectionForm { name, description, submit_label: "Create collection", submitting: saving(), error: error(),
+            oncancel: move |_| { navigator.push(parent_id().map(|id| Route::CollectionDetail { id }).unwrap_or(Route::CollectionList {})); },
             extra_fields: rsx! {
+                section { class: "collection-form-panel neumo-raised",
+                h2 { "Location & sharing" }
+                p { class: "collection-form-hint",
+                    if parent_id().is_some() { "This album will be added inside the collection you came from." }
+                    else { "This album will appear at the top level of your collections." }
+                }
                 CollectionVisibilityField {
                     visibility: visibility(),
                     disabled: saving(),
                     onchange: move |selected| visibility.set(selected),
                 }
-                div { display: "flex", flex_direction: "column", gap: "var(--space-sm)",
-                    span { font_weight: "600", "Collection cover image" }
+                }
+                section { class: "collection-form-panel neumo-raised",
+                    h2 { "Cover image" }
+                    p { class: "collection-form-hint", "Choose a photo to make this album easy to spot." }
                     ImageUpload {
                         images,
                         upload_now,
@@ -107,7 +118,7 @@ pub fn CollectionNew() -> Element {
                         on_remove_existing: move |url: String| images.write().retain(|image| image.url != url),
                         on_upload_complete,
                     }
-                    span { font_size: "12px", color: "var(--text-tertiary)", "Optional · uploaded when you create the collection" }
+                    p { class: "collection-form-hint", "Optional · uploaded when you create the collection" }
                 }
             },
             onsubmit: move |_| {
@@ -124,7 +135,7 @@ pub fn CollectionNew() -> Element {
                 }));
                 upload_now.set(true);
             }
-        } }
+        }
     } } }
 }
 

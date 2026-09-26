@@ -100,6 +100,14 @@ const TAILWIND_CSS: Asset = asset!(
     "/assets/tailwind.css",
     CssAssetOptions::new().with_minify(false)
 );
+const COLLECTIONS_CSS: Asset = asset!(
+    "/assets/collections.css",
+    CssAssetOptions::new().with_minify(false)
+);
+const COLLECTION_FORMS_CSS: Asset = asset!(
+    "/assets/collection-forms.css",
+    CssAssetOptions::new().with_minify(false)
+);
 
 const GOOGLE_FONTS: &str = "https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;500;600;700&display=swap";
 
@@ -498,6 +506,8 @@ fn App() -> Element {
         // Document head
         document::Link { rel: "icon", href: FAVICON }
         document::Link { rel: "stylesheet", href: MAIN_CSS }
+        document::Link { rel: "stylesheet", href: COLLECTIONS_CSS }
+        document::Link { rel: "stylesheet", href: COLLECTION_FORMS_CSS }
         document::Link { rel: "stylesheet", href: TAILWIND_CSS }
         document::Link { rel: "preconnect", href: "https://fonts.googleapis.com" }
         document::Link { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "anonymous" }

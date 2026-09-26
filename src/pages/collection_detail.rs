@@ -9,8 +9,8 @@ use crate::api::collection::{
     reorder_child_collections,
 };
 use crate::components::base::{
-    Button, ButtonVariant, CollectionCover, CollectionVisibilityBadge, EmptyState, FeedbackToast,
-    Input, LoadingSpinner, PageHeader, RecipeCard, ReorderHandle, SharedModal, TooltipAction,
+    Button, ButtonVariant, CollectionAlbum, CollectionCover, CollectionVisibilityBadge, EmptyState,
+    FeedbackToast, Input, LoadingSpinner, RecipeCard, ReorderHandle, SharedModal, TooltipAction,
 };
 use crate::types::{CollectionSummary, CollectionVisibility, RecipeCardSummary};
 use crate::Route;
@@ -194,7 +194,7 @@ pub fn CollectionDetail(id: String) -> Element {
     let refreshing_contents = contents.pending();
     let loaded = contents.read().clone();
 
-    rsx! { div { class: "container",
+    rsx! { div { class: "container collections-page collection-detail-page",
         match loaded {
             None => rsx! { LoadingSpinner {} },
             Some(Err(error)) => {
@@ -260,6 +260,7 @@ pub fn CollectionDetail(id: String) -> Element {
                             || !removing_recipes.read().is_empty()));
                 rsx! {
                     nav {
+                        class: "collections-breadcrumbs",
                         aria_label: "Breadcrumbs",
                         display: "flex",
                         flex_wrap: "wrap",
@@ -295,10 +296,20 @@ pub fn CollectionDetail(id: String) -> Element {
                             }
                         }
                     }
-                    PageHeader { title: collection_contents.collection.name.clone(), action: rsx! {
-                        div { display: "flex", flex_wrap: "wrap", gap: "var(--space-sm)",
+                    header { class: "collection-detail-heading",
+                        div { class: "collections-heading",
+                            h1 { "{collection_contents.collection.name}" }
+                            if let Some(description) = &collection_contents.collection.description {
+                                p { class: "collection-detail-description", "{description}" }
+                            }
+                            div { class: "collection-detail-meta",
+                                CollectionVisibilityBadge { visibility: collection_contents.collection.visibility }
+                                Link { to: Route::UserProfile { username: collection_contents.owner_username.clone() }, "By @{collection_contents.owner_username}" }
+                            }
+                        }
+                        div { class: "collection-detail-actions",
                             if can_edit {
-                                a { href: "{new_child_url}", class: "btn btn-secondary touch-target", "New subcollection" }
+                                Link { to: Route::Dashboard {}, class: "btn btn-primary touch-target", "＋ Add recipes" }
                                 Link { to: Route::CollectionEdit { id: collection_id.clone() }, class: "btn btn-secondary touch-target", "Edit" }
                                 span {
                                     id: "delete-collection-trigger",
@@ -351,23 +362,13 @@ pub fn CollectionDetail(id: String) -> Element {
                                 }
                             }
                         }
-                    } }
+                    }
                     CollectionCover {
                         image: collection_contents.collection.image.clone(),
                         preview_images: collection_contents.collection.preview_images.clone(),
                         alt: format!("{} collection cover", collection_contents.collection.name),
-                        class: "collection-cover--hero".to_string(),
+                        class: "collection-detail-cover".to_string(),
                     }
-                    div {
-                        display: "flex",
-                        flex_wrap: "wrap",
-                        align_items: "center",
-                        gap: "var(--space-sm)",
-                        margin_bottom: "var(--space-md)",
-                        CollectionVisibilityBadge { visibility: collection_contents.collection.visibility }
-                        span { color: "var(--text-secondary)", "By @{collection_contents.owner_username}" }
-                    }
-                    if let Some(description) = &collection_contents.collection.description { p { color: "var(--text-secondary)", margin_bottom: "var(--space-lg)", "{description}" } }
                     if can_edit {
                         if let Some(error) = delete_error() { p { role: "alert", color: "var(--error)", "{error}" } }
                     }
@@ -387,27 +388,21 @@ pub fn CollectionDetail(id: String) -> Element {
                             }
                         }
                     }
+                    if can_edit || !displayed_children.is_empty() {
+                        div { class: "collections-section-heading",
+                            div { h2 { "Subcollections" } p { "Smaller albums inside this collection." } }
+                            if can_edit {
+                                a { href: "{new_child_url}", class: "btn btn-secondary touch-target", "＋ New subcollection" }
+                            }
+                        }
+                    }
                     if !displayed_children.is_empty() {
-                        h2 { "Folders" }
-                        div { display: "grid", grid_template_columns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "var(--space-md)", margin_bottom: "var(--space-xl)",
+                        div { class: "collection-child-grid",
                             for (child_index, child) in displayed_children.iter().cloned().enumerate() {
                                 div {
                                     key: "{child.id}",
-                                    class: "neumo-card",
-                                    padding: "var(--space-md)",
-                                    display: "flex",
-                                    flex_direction: "column",
-                                    gap: "var(--space-sm)",
-                                    CollectionCover {
-                                        image: child.image.clone(),
-                                        preview_images: child.preview_images.clone(),
-                                        alt: format!("{} collection cover", child.name),
-                                    }
-                                    Link {
-                                        to: Route::CollectionDetail { id: child.id.to_string() },
-                                        text_decoration: "none",
-                                        "📁  {child.name}"
-                                    }
+                                    class: "collection-child",
+                                    CollectionAlbum { collection: child.clone(), compact: true }
                                     if can_edit {
                                         ReorderHandle {
                                             current_index: child_index,
@@ -459,8 +454,12 @@ pub fn CollectionDetail(id: String) -> Element {
                         if can_edit && folder_save_in_flight() {
                             p { role: "status", color: "var(--text-secondary)", "Saving folder order…" }
                         }
+                    } else if can_edit {
+                        p { class: "collections-empty-note", "No subcollections yet. Use them to organize recipes within this album." }
                     }
-                    h2 { "Recipes ({collection_contents.recipes.total_count})" }
+                    div { class: "collections-section-heading",
+                        div { h2 { "Recipes ({collection_contents.recipes.total_count})" } p { "Recipes directly in this collection." } }
+                    }
                     if collection_contents.recipes.recipes.is_empty() && collection_contents.child_collections.is_empty() {
                         if can_edit {
                             EmptyState { icon: rsx! { "📂" }, title: "This collection is empty", description: "Add recipes or create a subcollection to start organizing.",
@@ -470,7 +469,7 @@ pub fn CollectionDetail(id: String) -> Element {
                             EmptyState { icon: rsx! { "📂" }, title: "Nothing shared here yet", description: "This collection does not currently contain any recipes or subcollections you can view." }
                         }
                     } else if collection_contents.recipes.recipes.is_empty() { p { color: "var(--text-secondary)", "No recipes directly in this collection." } }
-                    else { div { class: "recipe-grid",
+                    else { div { class: "collection-recipe-grid",
                         for (recipe_index, recipe) in displayed_recipes.iter().cloned().enumerate() {
                             {
                                 let recipe_id = recipe.id;
@@ -481,10 +480,8 @@ pub fn CollectionDetail(id: String) -> Element {
                                 rsx! {
                                     div {
                                         key: "{recipe_id}",
-                                        display: "flex",
-                                        flex_direction: "column",
-                                        gap: "var(--space-sm)",
-                                        RecipeCard { recipe }
+                                        class: "collection-recipe",
+                                        RecipeCard { recipe, framed: true }
                                         if collection_contents.can_edit {
                                             ReorderHandle {
                                                 current_index: recipe_index,

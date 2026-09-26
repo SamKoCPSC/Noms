@@ -8,8 +8,8 @@ use crate::api::collection::{
     update_collection, update_collection_visibility,
 };
 use crate::components::base::{
-    complete_deferred_upload, single_gallery_image, validate_collection_form, Card, CollectionForm,
-    CollectionVisibilityField, DeferredUploadCompletion, ImageUpload, LoadingSpinner, PageHeader,
+    complete_deferred_upload, single_gallery_image, validate_collection_form, CollectionForm,
+    CollectionVisibilityField, DeferredUploadCompletion, ImageUpload, LoadingSpinner,
     UploadOutcome,
 };
 use crate::components::AuthRequired;
@@ -105,7 +105,7 @@ pub fn CollectionEdit(id: String) -> Element {
         }
     }
 
-    rsx! { AuthRequired { div { class: "container",
+    rsx! { AuthRequired { div { class: "container collection-editor-page",
         match loaded {
             None => rsx! { LoadingSpinner {} },
             Some((Err(problem), _)) | Some((_, Err(problem))) => rsx! { p { role: "alert", color: "var(--error)", "Could not load collection: {problem}" } },
@@ -157,13 +157,23 @@ pub fn CollectionEdit(id: String) -> Element {
                     });
                 };
                 rsx! {
-                    PageHeader { title: "Edit collection" }
-                    Card { CollectionForm { name, description, submit_label: "Save Changes", submitting: saving(), error: error(),
+                    nav { class: "collection-editor-breadcrumb", aria_label: "Breadcrumb",
+                        Link { to: Route::CollectionList {}, "Collections" }
+                        span { aria_hidden: "true", " / " }
+                        Link { to: Route::CollectionDetail { id: collection_id.to_string() }, "{contents.collection.name}" }
+                        span { aria_hidden: "true", " / " } span { "Edit" }
+                    }
+                    h1 { class: "collection-editor-heading", "Edit collection" }
+                    p { class: "collection-editor-intro", "Update your album’s details, cover and place in your library." }
+                    CollectionForm { name, description, submit_label: "Save changes", submitting: saving(), error: error(),
+                        oncancel: move |_| { navigator.push(Route::CollectionDetail { id: collection_id.to_string() }); },
                         extra_fields: rsx! {
-                            label { display: "flex", flex_direction: "column", gap: "var(--space-xs)",
-                                span { "Parent collection" }
+                            section { class: "collection-form-panel neumo-raised",
+                            h2 { "Location & sharing" }
+                            label { class: "collection-form-field",
+                                span { "Inside collection" }
                                 select { class: "neumo-inset input", value: "{selected_parent}", disabled: saving(), onchange: move |event| selected_parent.set(event.value()),
-                                    option { value: "", "Root (no parent)" }
+                                    option { value: "", "Your collections (top level)" }
                                     for destination in collections.iter().filter(|item| !excluded.contains(&item.id)) {
                                         option { value: "{destination.id}", "{destination.name}" }
                                     }
@@ -174,8 +184,23 @@ pub fn CollectionEdit(id: String) -> Element {
                                 disabled: saving(),
                                 onchange: move |visibility| selected_visibility.set(visibility),
                             }
-                            div { display: "flex", flex_direction: "column", gap: "var(--space-sm)",
-                                span { font_weight: "600", "Collection cover image" }
+                            if selected_visibility() != CollectionVisibility::Private {
+                                match share_preview.read().as_ref() {
+                                    Some(Ok(preview)) if preview.hidden_recipe_count > 0 => rsx! {
+                                        p { class: "collection-form-hint", role: "status",
+                                            "{preview.hidden_recipe_count} of {preview.total_recipe_count} recipes will be hidden from visitors at this visibility."
+                                        }
+                                    },
+                                    Some(Err(problem)) => rsx! {
+                                        p { class: "collection-form-error", role: "alert", "Could not preview sharing: {problem}" }
+                                    },
+                                    _ => rsx! {},
+                                }
+                            }
+                            }
+                            section { class: "collection-form-panel neumo-raised",
+                                h2 { "Cover image" }
+                                p { class: "collection-form-hint", "Choose a photo to make this album easy to spot." }
                                 ImageUpload {
                                     images,
                                     upload_now,
@@ -186,20 +211,7 @@ pub fn CollectionEdit(id: String) -> Element {
                                     on_remove_existing: move |url: String| images.write().retain(|image| image.url != url),
                                     on_upload_complete,
                                 }
-                                span { font_size: "12px", color: "var(--text-tertiary)", "Optional · uploaded when you save" }
-                            }
-                            if selected_visibility() != CollectionVisibility::Private {
-                                match share_preview.read().as_ref() {
-                                    Some(Ok(preview)) if preview.hidden_recipe_count > 0 => rsx! {
-                                        p { role: "status", color: "var(--text-secondary)",
-                                            "{preview.hidden_recipe_count} of {preview.total_recipe_count} recipes will be hidden from visitors at this visibility."
-                                        }
-                                    },
-                                    Some(Err(problem)) => rsx! {
-                                        p { role: "alert", color: "var(--error)", "Could not preview sharing: {problem}" }
-                                    },
-                                    _ => rsx! {},
-                                }
+                                p { class: "collection-form-hint", "Optional · uploaded when you save" }
                             }
                         },
                         onsubmit: move |_| {
@@ -222,7 +234,7 @@ pub fn CollectionEdit(id: String) -> Element {
                             }));
                             upload_now.set(true);
                         }
-                    } }
+                    }
                 }
             }
         }

@@ -47,6 +47,8 @@ pub struct CollectionFormProps {
     pub error: Option<String>,
     pub onsubmit: EventHandler<()>,
     #[props(default)]
+    pub oncancel: Option<EventHandler<()>>,
+    #[props(default)]
     pub extra_fields: Option<Element>,
 }
 
@@ -54,41 +56,58 @@ pub struct CollectionFormProps {
 pub fn CollectionForm(mut props: CollectionFormProps) -> Element {
     rsx! {
         form {
+            class: "collection-form",
+            aria_busy: props.submitting,
             onsubmit: move |event| {
                 event.prevent_default();
-                props.onsubmit.call(());
+                if !props.submitting { props.onsubmit.call(()); }
             },
-            display: "flex",
-            flex_direction: "column",
-            gap: "var(--space-lg)",
+            div { class: "collection-form-layout",
+            section { class: "collection-form-panel collection-form-details neumo-raised",
+            h2 { "Collection details" }
+            p { class: "collection-form-hint", "Give your recipes a place of their own." }
             label {
-                display: "flex", flex_direction: "column", gap: "var(--space-xs)",
-                span { "Name" }
+                class: "collection-form-field",
+                span { "Name (required)" }
                 input {
                     class: "neumo-inset input",
                     value: "{props.name}",
                     maxlength: 100,
                     required: true,
+                    disabled: props.submitting,
                     oninput: move |event| props.name.set(event.value()),
                 }
             }
             label {
-                display: "flex", flex_direction: "column", gap: "var(--space-xs)",
+                class: "collection-form-field",
                 span { "Description (optional)" }
                 textarea {
                     class: "neumo-inset input",
                     value: "{props.description}",
                     maxlength: 500,
                     rows: 5,
+                    disabled: props.submitting,
+                    placeholder: "What belongs in this collection?",
                     oninput: move |event| props.description.set(event.value()),
                 }
             }
+            p { class: "collection-form-hint", "Names can be up to 100 characters; descriptions up to 500." }
+            }
+            div { class: "collection-form-options",
             if let Some(extra_fields) = props.extra_fields { {extra_fields} }
+            }
+            }
             if let Some(error) = props.error {
-                p { color: "var(--error)", role: "alert", "{error}" }
+                p { class: "collection-form-error", role: "alert", "{error}" }
+            }
+            div { class: "collection-form-actions",
+            if let Some(oncancel) = props.oncancel {
+                button { class: "btn btn-secondary touch-target", r#type: "button", disabled: props.submitting,
+                    onclick: move |_| oncancel.call(()), "Cancel" }
             }
             button { class: "btn btn-primary touch-target", r#type: "submit", disabled: props.submitting,
                 if props.submitting { "Saving…" } else { "{props.submit_label}" }
+            }
             }
         }
     }

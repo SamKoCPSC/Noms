@@ -1,0 +1,52 @@
+.collection-editor-page {
+    max-width: 1120px;
+    padding-top: 36px;
+    padding-bottom: var(--space-2xl, 48px);
+}
+.collection-editor-heading { font-size: clamp(30px, 3.4vw, 44px); overflow-wrap: anywhere; }
+.collection-editor-breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+    font-size: 0.9rem;
+}
+.collection-editor-breadcrumb a { color: inherit; }
+.collection-editor-intro {
+    color: var(--text-secondary);
+    margin: 10px 0 28px;
+}
+.collection-form { display: flex; flex-direction: column; gap: 24px; }
+.collection-form-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 28px;
+    align-items: start;
+}
+.collection-form-options { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+.collection-form-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: clamp(20px, 3vw, 32px);
+    border-radius: 24px;
+    min-width: 0;
+}
+.collection-form-panel h2 { margin: 0; font-size: 1.4rem; }
+.collection-form-hint { margin: 0; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; }
+.collection-form-field { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.collection-form-field > span { font-weight: 700; }
+.collection-form-panel .input { width: 100%; box-sizing: border-box; min-width: 0; padding: 14px 16px; border-radius: 14px; font: inherit; color: var(--text-primary); }
+.collection-form-field textarea { resize: vertical; min-height: 180px; }
+.collection-form-error { color: var(--error); margin: 0; overflow-wrap: anywhere; }
+.collection-form-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 16px; }
+.collection-form-actions .btn { min-width: 132px; }
+@media (max-width: 760px) {
+    .collection-form-layout { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+    .collection-form-options { gap: 24px; }
+}
+@media (max-width: 420px) {
+    .collection-form-actions .btn { flex: 1; min-width: 0; }
+}
