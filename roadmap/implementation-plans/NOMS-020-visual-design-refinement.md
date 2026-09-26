@@ -10,6 +10,12 @@
 
 ## Design reference organization
 
+Recipe-page implementation (2026-09-25/26): editor/drafts, detail/history,
+historical snapshots and graph are implemented on `codex/NOMS-020-recipes`.
+See the [recipe-page validation and handoff](NOMS-020-recipe-pages.md) for scope,
+test results, browser evidence and remaining validation limits. Integration into
+the shared design branch remains a separate step.
+
 Start with the [design catalog](../assets/NOMS-020/README.md): [finalized proposals](../assets/NOMS-020/finalized/README.md) are the selected implementation baselines; [intermediate ideas](../assets/NOMS-020/intermediate/README.md) are historical alternatives, superseded iterations and deferred studies. Most proposal files retain their paths; logo and audit assets are grouped under `logo/` and `old-designs/`, with references updated. Finalized means selected visual direction, not production-ready artwork or approval of every generated control.
 
 Precedence: explicit recorded user decisions and behavior/accessibility requirements → finalized reference notes → selected images → historical explorations. Never infer new functionality from incidental mockup content.
