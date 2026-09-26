@@ -11,14 +11,14 @@ use crate::api::recipe::{
 #[allow(unused_imports)]
 use crate::api::upload::upload_image;
 use crate::components::base::{
-    Button, ButtonVariant, EditedRecipeImage, ImageEditorModal, ImageUpload, Input, PageHeader,
+    Button, ButtonVariant, EditedRecipeImage, ImageEditorModal, ImageUpload, PageHeader,
     UploadOutcome,
 };
 use crate::components::AuthRequired;
 use crate::pages::draft_save::draft_save_button_state;
 use crate::pages::recipe_editor_form::{
     build_step_tree, can_indent_step, format_step_photo_file_size, step_photo_display_name,
-    StepForm,
+    RecipeEditorContents, RecipeEditorInput as Input, StepForm,
 };
 use crate::types::{
     RecipeEditorState, RecipeEquipment, RecipeImage, RecipeImageEdit, RecipeIngredient, RecipeStep,
@@ -118,6 +118,7 @@ fn trigger_file_input(_selector: &str) {}
 pub fn RecipeNew() -> Element {
     // Basic fields
     let mut title = use_signal(String::new);
+    let mut active_editor_section = use_signal(|| "basics");
     let mut description = use_signal(String::new);
     let mut commentary = use_signal(String::new);
     let mut prep_time = use_signal(String::new);
@@ -745,7 +746,7 @@ pub fn RecipeNew() -> Element {
 
     rsx! {
         AuthRequired {
-            div { class: "container",
+            div { class: "container recipe-editor",
                 PageHeader {
                     title: "New Recipe",
                 }
@@ -759,12 +760,55 @@ pub fn RecipeNew() -> Element {
                         }
                     }
                 }
-                div {
-                    display: "flex",
-                    flex_direction: "column",
-                    gap: "var(--space-md)",
-                    max_width: "600px",
+                    // ── Action buttons ──────────────────────────────────
+                    div { class: "recipe-editor__actions",
+                        display: "flex",
+                        gap: "var(--space-md)",
+                        margin_top: "var(--space-md)",
+                        Button {
+                            variant: ButtonVariant::Secondary,
+                            disabled: !draft_save_state.is_actionable()
+                                || is_saving()
+                                || busy()
+                                || step_photo_upload_count() > 0,
+                            onclick: on_save_draft,
+                            "{draft_save_state.label()}"
+                        }
+                        Button {
+                            variant: ButtonVariant::Primary,
+                            disabled: is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0,
+                            onclick: on_submit,
+                            if step_photo_upload_count() > 0 {
+                                "Uploading images..."
+                            } else if is_saving() {
+                                "Publishing..."
+                            } else {
+                                "Publish Recipe"
+                            }
+                        }
+                        Button {
+                            variant: ButtonVariant::Ghost,
+                            disabled: is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0,
+                            onclick: on_cancel,
+                            "Cancel"
+                        }
+                    }
+                div { class: "recipe-editor__layout",
+                    RecipeEditorContents {
+                        active_section: active_editor_section,
+                        title_present: !title().trim().is_empty(),
+                        photo_count: images().len() + pending_image_count(),
+                        ingredient_count: ingredients().iter().filter(|ingredient| !ingredient.name.trim().is_empty()).count(),
+                        step_count: steps().iter().filter(|step| !step.text.trim().is_empty()).count(),
+                        equipment_count: equipment().iter().filter(|item| !item.name.trim().is_empty()).count(),
+                        notes_present: !commentary().trim().is_empty(),
+                    }
+                    div { class: "recipe-editor__panels",
 
+                    section { class: "recipe-editor__panel recipe-editor__basics neumo-raised", aria_labelledby: "recipe-basics",
+                        onfocusin: move |_| active_editor_section.set("basics"),
+                        onclick: move |_| active_editor_section.set("basics"),
+                        h2 { id: "recipe-basics", tabindex: "-1", "Basics" }
                     // ── Basic Info ──────────────────────────────────────
                     div {
                         display: "flex",
@@ -777,41 +821,13 @@ pub fn RecipeNew() -> Element {
                             "Recipe Name *"
                         }
                         Input {
+                            accessible_name: "Recipe name",
                             value: title().clone(),
                             placeholder: "e.g. Grandma's Chocolate Chip Cookies",
                             oninput: move |v| {
                                 title.set(v);
                                 error.set(None);
                             },
-                        }
-                    }
-
-                    // ── Recipe Images ───────────────────────────────────────
-                    div {
-                        display: "flex",
-                        flex_direction: "column",
-                        gap: "var(--space-sm)",
-                        label {
-                            font_size: "14px",
-                            font_weight: "600",
-                            color: "var(--text-secondary)",
-                            "Recipe Images"
-                        }
-                        ImageUpload {
-                            images,
-                            upload_now,
-                            busy,
-                            pending_count: pending_image_count,
-                            purpose: crate::api::upload::UploadPurpose::Recipe,
-                            on_remove_existing: move |url: String| {
-                                images.write().retain(|image| image.url != url);
-                            },
-                            on_upload_complete,
-                        }
-                        span {
-                            font_size: "12px",
-                            color: "var(--text-tertiary)",
-                            "Images are processed and uploaded when you save"
                         }
                     }
 
@@ -829,46 +845,17 @@ pub fn RecipeNew() -> Element {
                         textarea {
                             class: "neumo-inset input",
                             placeholder: "Brief description of the recipe...",
+                            value: description(),
+                            aria_label: "Description",
                             rows: "4",
                             padding: "var(--space-sm) var(--space-md)",
                             font_family: "var(--font-body)",
                             font_size: "14px",
                             color: "var(--text-primary)",
-                            background_color: "var(--surface)",
-                            outline: "none",
                             resize: "vertical",
                             width: "100%",
                             oninput: move |evt| {
                                 description.set(evt.value());
-                            },
-                        }
-                    }
-
-                    // Commentary
-                    div {
-                        display: "flex",
-                        flex_direction: "column",
-                        gap: "var(--space-sm)",
-                        label {
-                            font_size: "14px",
-                            font_weight: "600",
-                            color: "var(--text-secondary)",
-                            "Commentary"
-                        }
-                        textarea {
-                            class: "neumo-inset input",
-                            placeholder: "Notes, tips, or additional context about this recipe...",
-                            rows: "4",
-                            padding: "var(--space-sm) var(--space-md)",
-                            font_family: "var(--font-body)",
-                            font_size: "14px",
-                            color: "var(--text-primary)",
-                            background_color: "var(--surface)",
-                            outline: "none",
-                            resize: "vertical",
-                            width: "100%",
-                            oninput: move |evt| {
-                                commentary.set(evt.value());
                             },
                         }
                     }
@@ -889,6 +876,7 @@ pub fn RecipeNew() -> Element {
                                 "Prep Time (min)"
                             }
                             Input {
+                            accessible_name: "Prep time in minutes",
                                 value: prep_time().clone(),
                                 placeholder: "0",
                                 input_type: "number",
@@ -906,6 +894,7 @@ pub fn RecipeNew() -> Element {
                                 "Cook Time (min)"
                             }
                             Input {
+                            accessible_name: "Cook time in minutes",
                                 value: cook_time().clone(),
                                 placeholder: "0",
                                 input_type: "number",
@@ -923,6 +912,7 @@ pub fn RecipeNew() -> Element {
                                 "Servings"
                             }
                             Input {
+                            accessible_name: "Servings",
                                 value: servings().clone(),
                                 placeholder: "4",
                                 input_type: "number",
@@ -931,7 +921,7 @@ pub fn RecipeNew() -> Element {
                         }
                     }
 
-                    // ── Ingredients ─────────────────────────────────────
+                    // ── Tags ────────────────────────────────────────────
                     div {
                         display: "flex",
                         flex_direction: "column",
@@ -940,12 +930,96 @@ pub fn RecipeNew() -> Element {
                             font_size: "14px",
                             font_weight: "600",
                             color: "var(--text-secondary)",
-                            "Ingredients *"
+                            "Tags"
                         }
+                        Input {
+                            accessible_name: "Tags",
+                            value: tags_input().clone(),
+                            placeholder: "dinner, chicken, quick",
+                            oninput: move |v| tags_input.set(v),
+                        }
+                        span {
+                            font_size: "12px",
+                            color: "var(--text-tertiary)",
+                            "Comma-separated"
+                        }
+                    }
+
+                    // ── Visibility ──────────────────────────────────────
+                    div {
+                        display: "flex",
+                        flex_direction: "column",
+                        gap: "var(--space-sm)",
+                        label {
+                            font_size: "14px",
+                            font_weight: "600",
+                            color: "var(--text-secondary)",
+                            "Visibility when published"
+                        }
+                        select {
+                                aria_label: "Visibility when published",
+                            class: "neumo-inset input",
+                            padding: "var(--space-sm) var(--space-md)",
+                            font_family: "var(--font-body)",
+                            font_size: "14px",
+                            color: "var(--text-primary)",
+                            border_radius: "var(--radius-md)",
+                            width: "100%",
+                            value: visibility().clone(),
+                            onchange: move |evt| {
+                                visibility.set(evt.value());
+                            },
+                            option { value: "private", "Private — only you can see this recipe" }
+                            option { value: "unlisted", "Unlisted — anyone with the link can view" }
+                            option { value: "public", "Public — appears in Explore and search" }
+                        }
+                    }
+
+                    }
+
+                    section { class: "recipe-editor__panel recipe-editor__photos neumo-raised", aria_labelledby: "recipe-photos",
+                        onfocusin: move |_| active_editor_section.set("photos"),
+                        onclick: move |_| active_editor_section.set("photos"),
+                        h2 { id: "recipe-photos", tabindex: "-1", "Photos" span { " · Optional" } }
+                    // ── Recipe Images ───────────────────────────────────────
+                    div {
+                        display: "flex",
+                        flex_direction: "column",
+                        gap: "var(--space-sm)",
+                        ImageUpload {
+                            images,
+                            upload_now,
+                            busy,
+                            pending_count: pending_image_count,
+                            purpose: crate::api::upload::UploadPurpose::Recipe,
+                            on_remove_existing: move |url: String| {
+                                images.write().retain(|image| image.url != url);
+                            },
+                            on_upload_complete,
+                        }
+                        span {
+                            font_size: "12px",
+                            color: "var(--text-tertiary)",
+                            "Images are processed and uploaded when you save"
+                        }
+                    }
+
+                    }
+
+                    section { class: "recipe-editor__panel recipe-editor__ingredients neumo-raised", aria_labelledby: "recipe-ingredients",
+                        onfocusin: move |_| active_editor_section.set("ingredients"),
+                        onclick: move |_| active_editor_section.set("ingredients"),
+                        h2 { id: "recipe-ingredients", tabindex: "-1", "Ingredients" }
+                    // ── Ingredients ─────────────────────────────────────
+                    div {
+                        display: "flex",
+                        flex_direction: "column",
+                        gap: "var(--space-sm)",
 
                         for (idx, _ing) in ingredients().iter().enumerate() {
                             div {
                                 key: "{idx}",
+                                class: "recipe-editor__ingredient-row",
                                 display: "flex",
                                 gap: "var(--space-sm)",
                                 align_items: "center",
@@ -953,6 +1027,7 @@ pub fn RecipeNew() -> Element {
                                 div {
                                     style: "width: 70px; flex-shrink: 0;",
                                     Input {
+                            accessible_name: "Ingredient {idx + 1} amount",
                                         value: ingredients()[idx].amount.clone(),
                                         placeholder: "Amt",
                                         oninput: move |v| {
@@ -964,6 +1039,7 @@ pub fn RecipeNew() -> Element {
                                 div {
                                     style: "width: 80px; flex-shrink: 0;",
                                     Input {
+                            accessible_name: "Ingredient {idx + 1} unit",
                                         value: ingredients()[idx].unit.clone(),
                                         placeholder: "Unit",
                                         oninput: move |v| {
@@ -973,6 +1049,7 @@ pub fn RecipeNew() -> Element {
                                 }
                                 // Name
                                 Input {
+                            accessible_name: "Ingredient {idx + 1} name",
                                     value: ingredients()[idx].name.clone(),
                                     placeholder: "Ingredient name",
                                     oninput: move |v| {
@@ -985,7 +1062,8 @@ pub fn RecipeNew() -> Element {
                                     onclick: move |_| {
                                         ingredients.write().remove(idx);
                                     },
-                                    "✕"
+                                    span { aria_hidden: "true", "✕" }
+                                        span { class: "sr-only", "Remove item" }
                                 }
                             }
                         }
@@ -997,26 +1075,27 @@ pub fn RecipeNew() -> Element {
                         }
                     }
 
+                    }
+
+                    section { class: "recipe-editor__panel recipe-editor__method neumo-raised", aria_labelledby: "recipe-method",
+                        onfocusin: move |_| active_editor_section.set("method"),
+                        onclick: move |_| active_editor_section.set("method"),
+                        h2 { id: "recipe-method", tabindex: "-1", "Method" }
                     // ── Steps ───────────────────────────────────────────
                     div {
                         display: "flex",
                         flex_direction: "column",
                         gap: "var(--space-sm)",
-                        label {
-                            font_size: "14px",
-                            font_weight: "600",
-                            color: "var(--text-secondary)",
-                            "Steps *"
-                        }
 
                         for (idx, _step) in steps().iter().enumerate() {
                             div {
                                 key: "{idx}",
+                                class: "recipe-editor__step-row",
                                 display: "flex",
                                 gap: "var(--space-sm)",
                                 align_items: "flex-start",
                                 // Indentation padding
-                                style: format!("padding-left: {}px", steps()[idx].depth * 24),
+                                style: format!("--step-indent: {}px; padding-left: var(--step-indent)", steps()[idx].depth * 24),
 
                                 // Step number
                                 span {
@@ -1037,14 +1116,13 @@ pub fn RecipeNew() -> Element {
                                     textarea {
                                         class: "neumo-inset input",
                                         placeholder: "Describe this step...",
-                                        rows: "2",
+                            aria_label: "Method step {idx + 1}",
+                                        rows: "4",
                                         width: "100%",
                                         padding: "var(--space-sm) var(--space-md)",
                                         font_family: "var(--font-body)",
                                         font_size: "14px",
                                         color: "var(--text-primary)",
-                                        background_color: "var(--surface)",
-                                        outline: "none",
                                         resize: "vertical",
                                         value: steps()[idx].text.clone(),
                                         oninput: move |evt| {
@@ -1109,7 +1187,8 @@ pub fn RecipeNew() -> Element {
                                                             onclick: move |_| {
                                                                 steps.write()[idx].photos.swap(photo_idx, photo_idx - 1);
                                                             },
-                                                            "←"
+                                                            span { aria_hidden: "true", "←" }
+                                        span { class: "sr-only", "Outdent step" }
                                                         }
                                                         button {
                                                             r#type: "button",
@@ -1119,7 +1198,8 @@ pub fn RecipeNew() -> Element {
                                                             onclick: move |_| {
                                                                 steps.write()[idx].photos.swap(photo_idx, photo_idx + 1);
                                                             },
-                                                            "→"
+                                                            span { aria_hidden: "true", "→" }
+                                        span { class: "sr-only", "Indent step" }
                                                         }
                                                         button {
                                                             r#type: "button",
@@ -1135,7 +1215,8 @@ pub fn RecipeNew() -> Element {
                                                                     });
                                                                 }
                                                             },
-                                                            "✕"
+                                                            span { aria_hidden: "true", "✕" }
+                                        span { class: "sr-only", "Remove item" }
                                                         }
                                                     }
                                                 }
@@ -1156,7 +1237,8 @@ pub fn RecipeNew() -> Element {
                                         onclick: move |_| {
                                             trigger_file_input(&format!("#step-photo-{idx}"));
                                         },
-                                        "📷"
+                                        span { aria_hidden: "true", "📷" }
+                                        span { class: "sr-only", "Add step photo" }
                                     }
                                     input {
                                         id: format!("step-photo-{idx}"),
@@ -1169,27 +1251,27 @@ pub fn RecipeNew() -> Element {
                                         },
                                     }
                                     // Move up
-                                    if idx > 0 {
                                         Button {
+                                            disabled: idx == 0,
                                             variant: ButtonVariant::Ghost,
                                             onclick: move |_| {
                                                 let mut s = steps.write();
                                                 s.swap(idx, idx - 1);
                                             },
-                                            "↑"
+                                            span { aria_hidden: "true", "↑" }
+                                        span { class: "sr-only", "Move step up" }
                                         }
-                                    }
                                     // Move down
-                                    if idx < steps().len() - 1 {
                                         Button {
+                                            disabled: idx + 1 >= steps().len(),
                                             variant: ButtonVariant::Ghost,
                                             onclick: move |_| {
                                                 let mut s = steps.write();
                                                 s.swap(idx, idx + 1);
                                             },
-                                            "↓"
+                                            span { aria_hidden: "true", "↓" }
+                                        span { class: "sr-only", "Move step down" }
                                         }
-                                    }
                                     // Indent (increase depth)
                                     if can_indent_step(steps()[idx].depth) {
                                         Button {
@@ -1197,7 +1279,8 @@ pub fn RecipeNew() -> Element {
                                             onclick: move |_| {
                                                 steps.write()[idx].depth += 1;
                                             },
-                                            "→"
+                                            span { aria_hidden: "true", "→" }
+                                        span { class: "sr-only", "Indent step" }
                                         }
                                     }
                                     // Unindent (decrease depth)
@@ -1207,7 +1290,8 @@ pub fn RecipeNew() -> Element {
                                             onclick: move |_| {
                                                 steps.write()[idx].depth -= 1;
                                             },
-                                            "←"
+                                            span { aria_hidden: "true", "←" }
+                                        span { class: "sr-only", "Outdent step" }
                                         }
                                     }
                                     // Remove
@@ -1225,7 +1309,8 @@ pub fn RecipeNew() -> Element {
                                             }
                                             steps.write().remove(idx);
                                         },
-                                        "✕"
+                                        span { aria_hidden: "true", "✕" }
+                                        span { class: "sr-only", "Remove item" }
                                     }
                                 }
                             }
@@ -1238,48 +1323,27 @@ pub fn RecipeNew() -> Element {
                         }
                     }
 
-                    // ── Tags ────────────────────────────────────────────
-                    div {
-                        display: "flex",
-                        flex_direction: "column",
-                        gap: "var(--space-sm)",
-                        label {
-                            font_size: "14px",
-                            font_weight: "600",
-                            color: "var(--text-secondary)",
-                            "Tags"
-                        }
-                        Input {
-                            value: tags_input().clone(),
-                            placeholder: "dinner, chicken, quick",
-                            oninput: move |v| tags_input.set(v),
-                        }
-                        span {
-                            font_size: "12px",
-                            color: "var(--text-tertiary)",
-                            "Comma-separated"
-                        }
                     }
 
+                    section { class: "recipe-editor__panel recipe-editor__equipment neumo-raised", aria_labelledby: "recipe-equipment",
+                        onfocusin: move |_| active_editor_section.set("equipment"),
+                        onclick: move |_| active_editor_section.set("equipment"),
+                        h2 { id: "recipe-equipment", tabindex: "-1", "Equipment" span { " · Optional" } }
                     // ── Equipment ───────────────────────────────────────
                     div {
                         display: "flex",
                         flex_direction: "column",
                         gap: "var(--space-sm)",
-                        label {
-                            font_size: "14px",
-                            font_weight: "600",
-                            color: "var(--text-secondary)",
-                            "Equipment"
-                        }
 
                         for (idx, _eq) in equipment().iter().enumerate() {
                             div {
                                 key: "{idx}",
+                                class: "recipe-editor__equipment-row",
                                 display: "flex",
                                 gap: "var(--space-sm)",
                                 align_items: "center",
                                 Input {
+                            accessible_name: "Equipment {idx + 1} name",
                                     value: equipment()[idx].name.clone(),
                                     placeholder: "e.g. mixing bowl",
                                     oninput: move |v| {
@@ -1291,7 +1355,8 @@ pub fn RecipeNew() -> Element {
                                     onclick: move |_| {
                                         equipment.write().remove(idx);
                                     },
-                                    "✕"
+                                    span { aria_hidden: "true", "✕" }
+                                        span { class: "sr-only", "Remove item" }
                                 }
                             }
                         }
@@ -1303,35 +1368,35 @@ pub fn RecipeNew() -> Element {
                         }
                     }
 
-                    // ── Visibility ──────────────────────────────────────
+                    }
+
+                    section { class: "recipe-editor__panel recipe-editor__notes neumo-raised", aria_labelledby: "recipe-notes",
+                        onfocusin: move |_| active_editor_section.set("notes"),
+                        onclick: move |_| active_editor_section.set("notes"),
+                        h2 { id: "recipe-notes", tabindex: "-1", "Notes" span { " · Optional" } }
+                    // Commentary
                     div {
                         display: "flex",
                         flex_direction: "column",
                         gap: "var(--space-sm)",
-                        label {
-                            font_size: "14px",
-                            font_weight: "600",
-                            color: "var(--text-secondary)",
-                            "Visibility"
-                        }
-                        select {
+                        textarea {
                             class: "neumo-inset input",
+                            placeholder: "Notes, tips, or additional context about this recipe...",
+                            value: commentary(),
+                            aria_label: "Notes",
+                            rows: "4",
                             padding: "var(--space-sm) var(--space-md)",
                             font_family: "var(--font-body)",
                             font_size: "14px",
                             color: "var(--text-primary)",
-                            background_color: "var(--surface)",
-                            outline: "none",
-                            border_radius: "var(--radius-md)",
+                            resize: "vertical",
                             width: "100%",
-                            value: visibility().clone(),
-                            onchange: move |evt| {
-                                visibility.set(evt.value());
+                            oninput: move |evt| {
+                                commentary.set(evt.value());
                             },
-                            option { value: "private", "Private — only you can see this recipe" }
-                            option { value: "unlisted", "Unlisted — anyone with the link can view" }
-                            option { value: "public", "Public — appears in Explore and search" }
                         }
+                    }
+
                     }
 
                     // ── Error message ───────────────────────────────────
@@ -1346,38 +1411,7 @@ pub fn RecipeNew() -> Element {
                         }
                     }
 
-                    // ── Action buttons ──────────────────────────────────
-                    div {
-                        display: "flex",
-                        gap: "var(--space-md)",
-                        margin_top: "var(--space-md)",
-                        Button {
-                            variant: ButtonVariant::Secondary,
-                            disabled: !draft_save_state.is_actionable()
-                                || is_saving()
-                                || busy()
-                                || step_photo_upload_count() > 0,
-                            onclick: on_save_draft,
-                            "{draft_save_state.label()}"
-                        }
-                        Button {
-                            variant: ButtonVariant::Primary,
-                            disabled: is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0,
-                            onclick: on_submit,
-                            if step_photo_upload_count() > 0 {
-                                "Uploading images..."
-                            } else if is_saving() {
-                                "Publishing..."
-                            } else {
-                                "Publish Recipe"
-                            }
-                        }
-                        Button {
-                            variant: ButtonVariant::Ghost,
-                            disabled: is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0,
-                            onclick: on_cancel,
-                            "Cancel"
-                        }
+
                     }
                 }
             }

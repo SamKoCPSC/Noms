@@ -1,5 +1,133 @@
 use crate::types::{RecipeImage, RecipeStep};
-
+use dioxus::prelude::*;
+/// Editor fields need stable accessible names, including repeated ingredient
+/// rows whose visible labels would otherwise be only placeholders.
+#[component]
+pub(super) fn RecipeEditorInput(
+    accessible_name: String,
+    value: String,
+    placeholder: String,
+    oninput: EventHandler<String>,
+    #[props(default = "text".to_string())] input_type: String,
+) -> Element {
+    rsx! {
+        input {
+            class: "neumo-inset input input--shared",
+            aria_label: accessible_name,
+            r#type: input_type,
+            value,
+            placeholder,
+            oninput: move |event| oninput.call(event.value()),
+        }
+    }
+}
+/// A contents list, not a completion checklist: empty optional sections never
+/// prevent saving or publishing. Counts include only content the user entered.
+#[component]
+pub(super) fn RecipeEditorContents(
+    mut active_section: Signal<&'static str>,
+    title_present: bool,
+    photo_count: usize,
+    ingredient_count: usize,
+    step_count: usize,
+    equipment_count: usize,
+    notes_present: bool,
+) -> Element {
+    let counted = |count: usize, singular: &str, plural: &str| {
+        format!("{count} {}", if count == 1 { singular } else { plural })
+    };
+    let sections = [
+        (
+            "basics",
+            "Basics",
+            if title_present {
+                "Title added"
+            } else {
+                "Add a title"
+            }
+            .to_string(),
+        ),
+        (
+            "photos",
+            "Photos",
+            if photo_count == 0 {
+                "Optional".to_string()
+            } else {
+                format!("Optional · {}", counted(photo_count, "photo", "photos"))
+            },
+        ),
+        (
+            "ingredients",
+            "Ingredients",
+            if ingredient_count == 0 {
+                "No ingredients yet".to_string()
+            } else {
+                format!(
+                    "{} added",
+                    counted(ingredient_count, "ingredient", "ingredients"),
+                )
+            },
+        ),
+        (
+            "method",
+            "Method",
+            if step_count == 0 {
+                "No steps yet".to_string()
+            } else {
+                format!("{} added", counted(step_count, "step", "steps"))
+            },
+        ),
+        (
+            "equipment",
+            "Equipment",
+            if equipment_count == 0 {
+                "Optional".to_string()
+            } else {
+                format!("Optional · {}", counted(equipment_count, "item", "items"))
+            },
+        ),
+        (
+            "notes",
+            "Notes",
+            if notes_present {
+                "Optional · Added"
+            } else {
+                "Optional"
+            }
+            .to_string(),
+        ),
+    ];
+    rsx! {
+        document::Stylesheet { href: asset!("/assets/recipe-editor.css") }
+        nav {
+            class: "recipe-editor__contents neumo-raised",
+            aria_label: "Recipe editor sections",
+            h2 { "Recipe editor" }
+            ol {
+                for (id, label, status) in sections {
+                    li { key: "{id}",
+                        a {
+                            href: "#recipe-{id}",
+                            class: if active_section() == id { "recipe-editor__section-link--active" } else { "" },
+                            aria_current: if active_section() == id { Some("location") } else { None },
+                            onclick: move | _ |
+                                    active_section.set(id),
+                            span {
+                                class: "recipe-editor__timeline-node",
+                                aria_hidden: "true",
+                            }
+                            span {
+                                strong { "{label}" }
+                                small { "{status}" }
+                            }
+                        }
+                    }
+                }
+            }
+            p { "Jump to any section" }
+        }
+    }
+}
 /// A recipe step row in the editor's flat representation.
 ///
 /// `depth` controls nesting (zero is a root step), while photos retain the
@@ -118,6 +246,59 @@ pub(super) fn format_step_photo_file_size(file_size: Option<u64>) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn repeated_editor_field_has_an_accessible_name_and_keeps_its_value() {
+        use dioxus::prelude::*;
+        let mut dom = VirtualDom::new(|| {
+            rsx! {
+                super::RecipeEditorInput {
+                    accessible_name: "Ingredient 2 amount",
+                    value: "400",
+                    placeholder: "Amount",
+                    oninput: |_| {},
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("aria-label=\"Ingredient 2 amount\""));
+        assert!(html.contains("value=\"400\""));
+    }
+    #[test]
+    fn contents_links_expose_optional_content_without_completion_gates() {
+        use dioxus::prelude::*;
+        let mut dom = VirtualDom::new(|| {
+            let active_section = use_signal(|| "basics");
+            rsx! {
+                super::RecipeEditorContents {
+                    active_section,
+                    title_present: false,
+                    photo_count: 2,
+                    ingredient_count: 0,
+                    step_count: 1,
+                    equipment_count: 0,
+                    notes_present: false,
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        for section in [
+            "basics",
+            "photos",
+            "ingredients",
+            "method",
+            "equipment",
+            "notes",
+        ] {
+            assert!(html.contains(&format!("href=\"#recipe-{section}\"")));
+        }
+        assert!(html.contains("Optional · 2 photos"));
+        assert!(html.contains("1 step added"));
+        assert!(html.contains("No ingredients yet"));
+        assert!(!html.contains("disabled"));
+        assert!(!html.contains("Complete"));
+    }
     use super::{
         build_step_tree, can_indent_step, flatten_steps, format_step_photo_file_size,
         step_photo_display_name, StepForm,
