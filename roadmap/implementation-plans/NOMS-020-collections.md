@@ -5,7 +5,7 @@ Implemented on `codex/NOMS-020-collections`, based on integrated design commit `
 ## Delivered
 
 - Collection list: C3 Kitchen Albums cards with existing photo mosaics or uploaded covers, real counts, visibility badges, coral bookmarks and a top-level name/description filter. Explicit loading, retry, empty and no-match states.
-- Collection details: wrapping breadcrumbs, title/owner/visibility header, shallow cover strip, compact subcollection albums and framed recipe cards. Owner actions stay capability-gated; existing pagination, reordering, membership removal, sharing and typed recursive-delete safeguards remain unchanged.
+- Collection details: wrapping breadcrumbs, title/owner/visibility header, 16:9 cover, compact subcollection albums and framed recipe cards. Owner actions stay capability-gated; existing pagination, reordering, membership removal, sharing and typed recursive-delete safeguards remain unchanged.
 - New collection: separate raised details, location/sharing and cover panels, inset fields and explicit cancel/create actions. Private default, nested creation and upload-on-save retained.
 - Edit collection: the same panel system, existing parent selection with descendant exclusion, sharing preview and deferred cover upload. Existing partial-save failure explanations retained; cancel returns to the collection.
 

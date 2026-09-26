@@ -171,13 +171,20 @@ mod tests {
 
     #[test]
     fn collection_detail_hero_preserves_the_sixteen_by_nine_cover_ratio() {
-        let styles = include_str!("../../../assets/main.css");
+        let styles = include_str!("../../../assets/collections.css");
         let hero_rule = styles
-            .split(".collection-cover--hero {")
+            .split(".collection-detail-cover {")
             .nth(1)
             .and_then(|remaining| remaining.split('}').next())
             .expect("collection cover hero styles should exist");
 
         assert!(hero_rule.contains("aspect-ratio: 16 / 9;"));
+        assert!(!hero_rule.contains("min-height:"));
+        assert!(!hero_rule.contains("max-height:"));
+        assert!(hero_rule.contains("padding: 0;"));
+        assert!(
+            !styles.contains("    .collection-detail-cover {"),
+            "responsive overrides must not change the cover ratio"
+        );
     }
 }

@@ -50,7 +50,7 @@
 .collection-detail-meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 16px; font-size: 14px; }
 .collection-detail-meta a { color: var(--text-secondary); overflow-wrap: anywhere; }
 .collection-detail-meta a:hover { text-decoration: underline; }
-.collection-detail-cover { aspect-ratio: 5 / 1; min-height: 140px; max-height: 240px; border-radius: 22px; padding: 8px; background: var(--neumo-surface); box-shadow: var(--elevation-inset); margin-bottom: 32px; }
+.collection-detail-cover { aspect-ratio: 16 / 9; border-radius: 22px; padding: 0; background: var(--neumo-surface); box-shadow: var(--elevation-inset); margin-bottom: 32px; }
 .collection-detail-cover > .edited-recipe-image, .collection-detail-cover .collection-cover__mosaic-tile { border-radius: 14px; overflow: hidden; }
 .collection-detail-cover .collection-cover__mosaic { grid-template-rows: 1fr; gap: 8px; background: transparent; }
 .collection-detail-cover .collection-cover__mosaic--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -80,7 +80,6 @@
     .collections-toolbar { align-items: stretch; flex-direction: column; gap: 14px; }
     .collections-toolbar > .btn { align-self: flex-start; }
     .collection-detail-heading { gap: 18px; }
-    .collection-detail-cover { aspect-ratio: 2.5 / 1; min-height: 120px; }
     .collection-album--compact .collection-cover { width: 88px; }
     .collection-album-grid, .collection-recipe-grid { gap: 24px; }
 }
