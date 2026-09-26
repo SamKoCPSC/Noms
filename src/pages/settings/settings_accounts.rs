@@ -5,8 +5,7 @@ use uuid::Uuid;
 
 use crate::auth::context::use_auth;
 use crate::components::base::{
-    Button, ButtonVariant, Card, EmptyState, LoadingSpinner, PageHeader, SettingsTab, SettingsTabs,
-    SharedModal,
+    Button, ButtonVariant, Card, EmptyState, LoadingSpinner, SettingsTab, SettingsTabs, SharedModal,
 };
 use crate::components::AuthRequired;
 
@@ -119,7 +118,7 @@ pub fn SettingsAccounts() -> Element {
     let _auth = use_auth();
 
     // Resource returns Option<Vec<LinkedAccount>> (None if server function errored)
-    let accounts = use_resource(move || async move { get_linked_accounts().await.ok() });
+    let mut accounts = use_resource(move || async move { get_linked_accounts().await.ok() });
 
     let mut unlinking_id = use_signal(|| Option::<Uuid>::None);
     let mut error = use_signal(|| Option::<String>::None);
@@ -315,23 +314,14 @@ pub fn SettingsAccounts() -> Element {
             // Has accounts — show list + connect buttons for missing providers
             // Clone accounts for owned iteration in rsx!
             let owned_accounts = accs.clone();
+            let last_account = accs.len() == 1;
             rsx! {
-                div {
-                    display: "flex",
-                    flex_direction: "column",
-                    gap: "var(--space-md)",
+                div { class: "user-accounts__list",
                     // Linked account cards
                     for account in owned_accounts.into_iter() {
                         Card {
-                            div {
-                                display: "flex",
-                                align_items: "center",
-                                justify_content: "space-between",
-                                gap: "var(--space-md)",
-                                div {
-                                    display: "flex",
-                                    align_items: "center",
-                                    gap: "var(--space-md)",
+                            div { class: "user-accounts__row",
+                                div { class: "user-accounts__identity",
                                     // Provider icon
                                     div {
                                         width: "40px",
@@ -348,12 +338,10 @@ pub fn SettingsAccounts() -> Element {
                                         "{provider_icon(&account.provider)}"
                                     }
                                     // Account details
-                                    div {
-                                        div {
-                                            font_weight: "600",
-                                            font_size: "15px",
-                                            color: "var(--text-primary)",
-                                            "{provider_label(&account.provider)}"
+                                    div { class: "user-accounts__details",
+                                        div { class: "user-accounts__provider",
+                                            h2 { "{provider_label(&account.provider)}" }
+                                            span { class: "user-accounts__status", "Connected" }
                                         }
                                         if let Some(ref email) = account.email {
                                             p {
@@ -371,36 +359,29 @@ pub fn SettingsAccounts() -> Element {
                                 }
                                 // Unlink button
                                 Button {
-                                    variant: ButtonVariant::Danger,
-                                    disabled: unlinking_id().is_some(),
+                                    variant: ButtonVariant::Secondary,
+                                    disabled: unlinking_id().is_some() || last_account,
                                     onclick: move |_| {
                                         on_request_unlink(
                                             account.id,
                                             provider_label(&account.provider),
                                         );
                                     },
-                                    "Unlink"
+                                    if unlinking_id() == Some(account.id) { "Unlinking…" } else { "Unlink" }
                                 }
                             }
                         }
                     }
 
                     // Connect additional providers
-                    div {
-                        margin_top: "var(--space-md)",
-                        border_top: "1px solid var(--border)",
-                        padding_top: "var(--space-md)",
-                        h3 {
-                            font_size: "14px",
-                            font_weight: "600",
-                            color: "var(--text-secondary)",
-                            margin_bottom: "var(--space-sm)",
-                            "Connect additional accounts"
+                    section { class: "user-accounts__connect",
+                        h2 { "Sign-in options" }
+                        if last_account {
+                            p { "This is your only sign-in method. Connect another account before unlinking it." }
+                        } else {
+                            p { "Keep at least one sign-in method linked so you can always access your recipes." }
                         }
-                        div {
-                            display: "flex",
-                            gap: "var(--space-md)",
-                            flex_wrap: "wrap",
+                        div { class: "user-accounts__connect-links",
                             if !linked_providers.contains("google") {
                                 a {
                                     href: "{google_url}",
@@ -423,30 +404,31 @@ pub fn SettingsAccounts() -> Element {
     } else {
         // Fetch completed but returned None (error)
         rsx! {
-            div {
-                padding: "var(--space-sm) var(--space-md)",
-                background_color: "var(--error-bg)",
-                border_radius: "var(--radius-md)",
-                color: "var(--error)",
-                font_size: "14px",
-                "Failed to load linked accounts."
+            div { class: "user-feedback user-feedback--error", role: "alert",
+                p { "Failed to load linked accounts." }
+                Button { variant: ButtonVariant::Secondary, onclick: move |_| accounts.restart(), "Try again" }
             }
         }
     };
 
     rsx! {
+        document::Stylesheet { href: asset!("/assets/user-pages.css") }
         AuthRequired {
-            div { class: "container",
-            PageHeader {
-                title: "Linked Accounts",
+            div { class: "container user-settings user-accounts",
+            header { class: "user-page-heading",
+                p { class: "user-page-eyebrow", "Your account" }
+                h1 { "Linked accounts" }
+                p { "Choose how you sign in to Noms." }
             }
             SettingsTabs {
                 active: SettingsTab::Accounts,
             }
+            p { class: "user-accounts__guidance", "Connected accounts are private. Keep at least one sign-in method linked." }
 
             // Error message
             if let Some(err) = error() {
                 div {
+                    role: "alert",
                     padding: "var(--space-sm) var(--space-md)",
                     background_color: "var(--error-bg)",
                     border_radius: "var(--radius-md)",
@@ -458,6 +440,7 @@ pub fn SettingsAccounts() -> Element {
                     gap: "var(--space-sm)",
                     span { flex: "1", "{err}" }
                     button {
+                        aria_label: "Dismiss account error",
                         background: "transparent",
                         border: "none",
                         color: "var(--error)",
@@ -479,6 +462,7 @@ pub fn SettingsAccounts() -> Element {
             // Success message
             if let Some(msg) = success() {
                 div {
+                    role: "status",
                     padding: "var(--space-sm) var(--space-md)",
                     background_color: "var(--success-bg)",
                     border_radius: "var(--radius-md)",
