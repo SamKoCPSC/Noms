@@ -30,7 +30,7 @@
 }
 .collection-album:hover { color: var(--text-primary); box-shadow: var(--elevation-raised-hover); }
 .collection-album:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 5px; }
-.collection-album .collection-cover { aspect-ratio: 4 / 3; border-radius: 16px; background: var(--neumo-surface); box-shadow: var(--elevation-inset); }
+.collection-album .collection-cover { aspect-ratio: 16 / 9; border-radius: 16px; background: var(--neumo-surface); box-shadow: var(--elevation-inset); }
 .collection-album .collection-cover__mosaic { gap: 5px; padding: 3px; background: transparent; }
 .collection-album .collection-cover__mosaic-tile { border-radius: 9px; }
 .collection-album__body { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-width: 0; padding: 16px 10px 10px; flex: 1; }
@@ -63,7 +63,7 @@
 .collection-child { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .collection-child > div:last-child { align-self: flex-end; }
 .collection-album--compact { flex-direction: row; gap: 6px; flex: 1; border-radius: 20px; }
-.collection-album--compact .collection-cover { width: 112px; aspect-ratio: 1; flex-shrink: 0; align-self: flex-start; }
+.collection-album--compact .collection-cover { width: 112px; flex-shrink: 0; align-self: flex-start; }
 .collection-album--compact .collection-album__body { padding: 4px 8px; gap: 6px; }
 .collection-album--compact .collection-album__body h3 { font-size: 20px; }
 .collection-album--compact .collection-album__bookmark { top: 5px; right: 4px; }

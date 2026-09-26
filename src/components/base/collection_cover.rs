@@ -170,6 +170,29 @@ mod tests {
     }
 
     #[test]
+    fn collection_album_covers_keep_sixteen_by_nine_in_both_layouts() {
+        let styles = include_str!("../../../assets/collections.css");
+        let album_rule = styles
+            .split(".collection-album .collection-cover {")
+            .nth(1)
+            .unwrap()
+            .split('}')
+            .next()
+            .unwrap();
+        assert!(album_rule.contains("aspect-ratio: 16 / 9;"));
+        for remaining in styles
+            .split(".collection-album--compact .collection-cover {")
+            .skip(1)
+        {
+            let rule = remaining.split('}').next().unwrap();
+            assert!(
+                !rule.contains("aspect-ratio:"),
+                "compact covers inherit the album ratio"
+            );
+        }
+    }
+
+    #[test]
     fn collection_detail_hero_preserves_the_sixteen_by_nine_cover_ratio() {
         let styles = include_str!("../../../assets/collections.css");
         let hero_rule = styles
