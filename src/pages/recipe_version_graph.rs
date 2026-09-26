@@ -64,10 +64,11 @@ fn comparison_value(value: Option<&String>) -> &str {
 }
 
 #[component]
-fn VersionGraphComparisonPanel(comparison: VersionGraphComparison) -> Element {
+fn VersionGraphComparisonPanel(comparison: VersionGraphComparison, pair_label: String) -> Element {
     rsx! {
         section { class: "recipe-version-graph__comparison-result", aria_label: "Snapshot comparison result",
             h3 { "Comparison result" }
+            p { class: "recipe-version-graph__comparison-pair", "{pair_label}" }
             if comparison.changes.is_empty() {
                 p { class: "recipe-version-graph__comparison-empty", "No content differences between these snapshots." }
             } else {
@@ -92,7 +93,10 @@ fn VersionGraphComparisonChange(change: RecipeVersionChange) -> Element {
     rsx! {
         article { class: "recipe-version-graph__comparison-change",
             header {
-                strong { "{field}" }
+                div {
+                    strong { "{field}" }
+                    code { class: "recipe-version-graph__comparison-path", "{change.path}" }
+                }
                 span { "{operation}" }
             }
             div { class: "recipe-version-graph__comparison-values",
@@ -109,8 +113,8 @@ fn VersionGraphComparisonChange(change: RecipeVersionChange) -> Element {
     }
 }
 
-const GRAPH_NODE_WIDTH_PX: f64 = 240.0;
-const GRAPH_NODE_HEIGHT_PX: f64 = 300.0;
+const GRAPH_NODE_WIDTH_PX: f64 = 304.0;
+const GRAPH_NODE_HEIGHT_PX: f64 = 228.0;
 const GRAPH_COLUMN_GAP_PX: f64 = 216.0;
 const GRAPH_ROW_GAP_PX: f64 = 56.0;
 const GRAPH_LAYOUT_PADDING_PX: f64 = 32.0;
@@ -1724,6 +1728,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
     let layout_for_snapshot_center = layout.clone();
     let layout_for_snapshot_zoom = layout.clone();
     let full_graph_for_lineage_toggle = full_graph.clone();
+    let full_graph_for_toolbar_toggle = full_graph.clone();
     let active_context_menu = graph_context_menu();
     let snapshot_context_menu = active_context_menu
         .and_then(|context_menu| match context_menu.target {
@@ -1764,12 +1769,13 @@ pub fn RecipeVersionGraph(id: String) -> Element {
     let is_snapshot_context_menu = snapshot_context_menu.is_some();
 
     rsx! {
-        div { class: "container",
+        document::Link { rel: "stylesheet", href: asset!("/assets/recipe-version-graph.css") }
+        div { class: "container recipe-version-graph-page",
             PageHeader {
                 title: heading_title,
                 action: Some(back_to_recipe),
             }
-            Card {
+            div { class: "recipe-version-graph__shell",
                 div {
                     class: "recipe-version-graph",
                     onclick: move |_| {
@@ -1909,6 +1915,19 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                 },
                                 "Current"
                             }
+                                label { class: "recipe-version-graph__lineage-toggle",
+                                    input {
+                                        r#type: "checkbox",
+                                        checked: lineage_only(),
+                                        onchange: move |_| {
+                                            let next = !lineage_only();
+                                            let graph = if next { version_graph_lineage_only(&full_graph_for_toolbar_toggle) } else { full_graph_for_toolbar_toggle.clone() };
+                                            lineage_only.set(next);
+                                            graph_transform.set(build_version_graph_layout(&graph).fit_transform(graph_viewport()));
+                                        },
+                                    }
+                                    "Lineage only"
+                                }
                             }
                             ul {
                                 class: "recipe-version-graph__mouse-controls",
@@ -2184,6 +2203,8 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                 div {
                                                     key: "{node_id.recipe_id}-{node_id.version_number}",
                                                     class: "recipe-version-graph__canvas-node",
+                                                    "data-before": (comparison_before() == Some(node_id)).to_string(),
+                                                    "data-after": (comparison_after() == Some(node_id)).to_string(),
                                                     style: node_style,
                                                     onkeydown: move |event| {
                                                         let shift_is_pressed =
@@ -2389,6 +2410,33 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                             ));
                                                         });
                                                     },
+                                                    button {
+                                                        r#type: "button",
+                                                        class: "recipe-version-graph__snapshot-menu",
+                                                        aria_label: "Snapshot actions",
+                                                        aria_haspopup: "menu",
+                                                        aria_expanded: active_context_menu.is_some_and(|menu| menu.target == VersionGraphContextMenuTarget::Snapshot(node_id)),
+                                                        onclick: move |event| {
+                                                            event.stop_propagation();
+                                                            let Some(canvas) = graph_canvas() else { return; };
+                                                            let Some(anchor) = graph_node_elements.read().get(&node_id).cloned() else { return; };
+                                                            spawn(async move {
+                                                                if let Some(menu) = snapshot_context_menu_at_element(canvas, anchor, node_id).await {
+                                                                    graph_context_menu_focus_index.set(first_context_menu_focus_index(
+                                                                        snapshot_context_menu_actions_enabled(snapshot_navigation_available, current_snapshot_id, node_id, comparison_is_loading()),
+                                                                    ));
+                                                                    graph_context_menu.set(Some(menu));
+                                                                }
+                                                            });
+                                                        },
+                                                        "⋯"
+                                                    }
+                                                    if comparison_before() == Some(node_id) || comparison_after() == Some(node_id) {
+                                                        div { class: "recipe-version-graph__selection-roles",
+                                                            if comparison_before() == Some(node_id) { span { "Before" } }
+                                                            if comparison_after() == Some(node_id) { span { "After" } }
+                                                        }
+                                                    }
                                                     if node.is_redacted() || node.is_deleted() {
                                                         div {
                                                             class: "recipe-version-graph__static-card",
@@ -3178,6 +3226,11 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                 }
                             }
                         }
+                        if comparison_before().is_none() || comparison_after().is_none() {
+                            p { class: "recipe-version-graph__comparison-help", "Choose both Before and After snapshots to compare." }
+                        } else if comparison_before() == comparison_after() {
+                            p { class: "recipe-version-graph__comparison-help", "Choose two different snapshots to compare." }
+                        }
                         button {
                             r#type: "button",
                             class: "btn btn-primary recipe-version-graph__comparison-submit",
@@ -3202,6 +3255,8 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                             },
                             if comparison_is_loading() {
                                 "Comparing snapshots..."
+                            } else if comparison_error().is_some() {
+                                "Retry comparison"
                             } else {
                                 "Compare selected snapshots"
                             }
@@ -3217,8 +3272,11 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                 "Unable to compare these snapshots: {error}"
                             }
                         }
-                        if let Some(comparison) = comparison_result() {
-                            VersionGraphComparisonPanel { comparison }
+                    }
+                    if let Some(comparison) = comparison_result() {
+                        VersionGraphComparisonPanel {
+                            pair_label: format!("{} → {}", comparison_snapshot_label(comparison.from, &nodes_by_id), comparison_snapshot_label(comparison.to, &nodes_by_id)),
+                            comparison,
                         }
                     }
                     details { class: "recipe-version-graph__outline",
@@ -3382,6 +3440,43 @@ pub fn RecipeVersionGraph(id: String) -> Element {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn comparison_change_keeps_exact_path_and_multiline_read_only_values() {
+        use dioxus::prelude::*;
+        let mut dom = VirtualDom::new(|| {
+            rsx! {
+                super::VersionGraphComparisonChange {
+                    change: crate::types::RecipeVersionChange {
+                        op: "replace".to_string(),
+                        path: "/instructions/0/description".to_string(),
+                        old_value: Some("Simmer.\nStir.".to_string()),
+                        value: Some("Blend <gently>.".to_string()),
+                    }
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("/instructions/0/description"));
+        assert!(html.contains("Simmer.\nStir."));
+        // Dioxus SSR uses numeric HTML entities for dynamic text.
+        assert!(html.contains("Blend &#60;gently&#62;."));
+        assert!(!html.contains("<gently>"));
+        assert!(html.contains("Changed"));
+        assert!(!html.contains("<input"));
+        assert!(!html.contains("<textarea"));
+    }
+
+    #[test]
+    fn balanced_card_css_and_layout_dimensions_stay_in_sync() {
+        let stylesheet = include_str!("../../assets/recipe-version-graph.css");
+        assert!(stylesheet.contains(&format!(
+            "width: {}px; height: {}px;",
+            super::GRAPH_NODE_WIDTH_PX,
+            super::GRAPH_NODE_HEIGHT_PX
+        )));
+    }
+
     #[test]
     fn action_menu_typeahead_cycles_and_skips_unavailable_actions() {
         let mut enabled = [true; 8];
