@@ -17,28 +17,16 @@ struct PendingCollectionCreate {
     visibility: CollectionVisibility,
 }
 
-fn parent_from_location() -> Option<String> {
-    #[cfg(target_arch = "wasm32")]
-    {
-        let query = web_sys::window()?.location().search().ok()?;
-        query.trim_start_matches('?').split('&').find_map(|pair| {
-            let (key, value) = pair.split_once('=')?;
-            (key == "parent" && uuid::Uuid::parse_str(value).is_ok()).then(|| value.to_string())
-        })
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    None
-}
-
 #[component]
-pub fn CollectionNew() -> Element {
+pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
+    // Route props preserve the parent through SSR, hydration and query-only
+    // navigation; do not initialize it once from browser-only location state.
     let name = use_signal(|| "Untitled Collection".to_string());
     let description = use_signal(String::new);
     let mut saving = use_signal(|| false);
     let mut error = use_signal(|| None::<String>);
     let mut visibility = use_signal(|| CollectionVisibility::Private);
     let navigator = use_navigator();
-    let parent_id = use_signal(parent_from_location);
     let mut images = use_signal(Vec::<RecipeImage>::new);
     let mut upload_now = use_signal(|| false);
     let image_busy = use_signal(|| false);
@@ -87,16 +75,16 @@ pub fn CollectionNew() -> Element {
     };
 
     rsx! { AuthRequired { div { class: "container collection-editor-page",
-        nav { class: "collection-editor-breadcrumb", aria_label: "Breadcrumb", Link { to: Route::CollectionList {}, "Collections" } span { aria_hidden: "true", " / " } span { "New collection" } }
-        h1 { class: "collection-editor-heading", if parent_id().is_some() { "New subcollection" } else { "New collection" } }
+        nav { class: "collection-editor-breadcrumb", aria_label: "Breadcrumb", Link { to: Route::CollectionList {}, "Collections" } span { aria_hidden: "true", " / " } span { if parent.is_some() { "New subcollection" } else { "New collection" } } }
+        h1 { class: "collection-editor-heading", if parent.is_some() { "New subcollection" } else { "New collection" } }
         p { class: "collection-editor-intro", "Start an album for recipes you want to keep together." }
         CollectionForm { name, description, submit_label: "Create collection", submitting: saving(), error: error(),
-            oncancel: move |_| { navigator.push(parent_id().map(|id| Route::CollectionDetail { id }).unwrap_or(Route::CollectionList {})); },
+            oncancel: move |_| { navigator.push(parent.map(|id| Route::CollectionDetail { id: id.to_string() }).unwrap_or(Route::CollectionList {})); },
             extra_fields: rsx! {
                 section { class: "collection-form-panel neumo-raised",
                 h2 { "Location & sharing" }
                 p { class: "collection-form-hint",
-                    if parent_id().is_some() { "This album will be added inside the collection you came from." }
+                    if parent.is_some() { "This album will be added inside the collection you came from." }
                     else { "This album will appear at the top level of your collections." }
                 }
                 CollectionVisibilityField {
@@ -130,7 +118,7 @@ pub fn CollectionNew() -> Element {
                 pending_save.set(Some(PendingCollectionCreate {
                     name: clean_name,
                     description: clean_description,
-                    parent_id: parent_id(),
+                    parent_id: parent.map(|id| id.to_string()),
                     visibility: visibility(),
                 }));
                 upload_now.set(true);
@@ -141,6 +129,88 @@ pub fn CollectionNew() -> Element {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::auth::context::AuthContext;
+    use crate::Route;
+    use dioxus::router::components::HistoryProvider;
+    use dioxus_core::NoOpMutations;
+
+    const PARENT_ID: &str = "550e8400-e29b-41d4-a716-446655440000";
+
+    #[component]
+    fn CollectionCreationTestRoot(url: String) -> Element {
+        use_context_provider(|| {
+            Signal::new(AuthContext {
+                is_authenticated: true,
+                ..Default::default()
+            })
+        });
+        rsx! {
+            HistoryProvider {
+                history: move |_| std::rc::Rc::new(dioxus::history::MemoryHistory::with_initial_path(&url)) as std::rc::Rc<dyn History>,
+                Router::<Route> {}
+            }
+        }
+    }
+
+    fn render_creation_route(url: &str) -> String {
+        let mut dom = VirtualDom::new_with_props(
+            CollectionCreationTestRoot,
+            CollectionCreationTestRootProps {
+                url: url.to_string(),
+            },
+        );
+        dom.rebuild(&mut NoOpMutations);
+        dioxus_ssr::render(&dom)
+    }
+
+    #[test]
+    fn collection_creation_route_preserves_parent_without_a_browser() {
+        let url = "/collections/new?parent=550e8400-e29b-41d4-a716-446655440000";
+        let route: Route = url.parse().expect("collection creation route should parse");
+        assert_eq!(route.to_string(), url);
+        assert_eq!(
+            route,
+            Route::CollectionNew {
+                parent: Some(PARENT_ID.parse().unwrap())
+            }
+        );
+    }
+
+    #[test]
+    fn missing_empty_or_invalid_parent_remains_top_level() {
+        for url in [
+            "/collections/new",
+            "/collections/new?parent=",
+            "/collections/new?parent=not-a-uuid",
+        ] {
+            assert_eq!(
+                url.parse::<Route>().unwrap(),
+                Route::CollectionNew { parent: None }
+            );
+            let html = render_creation_route(url);
+            assert!(
+                html.contains("This album will appear at the top level"),
+                "{html}"
+            );
+            assert!(!html.contains("New subcollection"), "{html}");
+        }
+    }
+
+    #[test]
+    fn server_rendered_subcollection_form_retains_parent_context() {
+        let html = render_creation_route(&format!("/collections/new?parent={PARENT_ID}"));
+        assert!(html.contains("New subcollection</h1>"), "{html}");
+        assert!(
+            html.contains("This album will be added inside the collection you came from."),
+            "{html}"
+        );
+        assert!(
+            !html.contains("This album will appear at the top level"),
+            "{html}"
+        );
+    }
+
     #[test]
     fn new_collection_form_submits_typed_visibility() {
         let source = include_str!("collection_new.rs");

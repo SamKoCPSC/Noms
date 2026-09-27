@@ -39,7 +39,7 @@ pub fn CollectionList() -> Element {
                             aria_describedby: "collections-filter-help",
                         }
                     }
-                    Link { to: Route::CollectionNew {}, class: "btn btn-primary touch-target", "＋ New collection" }
+                    Link { to: Route::CollectionNew { parent: None }, class: "btn btn-primary touch-target", "＋ New collection" }
                 }
                 p { id: "collections-filter-help", class: "collections-help", "Showing top-level collections. Open an album to see its subcollections." }
                 match collections.read().as_ref() {
@@ -53,7 +53,7 @@ pub fn CollectionList() -> Element {
                     Some(Ok(items)) if items.is_empty() => rsx! {
                         div { class: "collections-state", EmptyState { icon: rsx! { "📁" }, title: "Your first album starts here",
                             description: "Create a collection, then add recipes from your dashboard or a recipe page.",
-                            action: rsx! { Link { to: Route::CollectionNew {}, class: "btn btn-primary touch-target", "Create a collection" } }
+                            action: rsx! { Link { to: Route::CollectionNew { parent: None }, class: "btn btn-primary touch-target", "Create a collection" } }
                         } }
                     },
                     Some(Ok(items)) => {

@@ -75,7 +75,7 @@ fn DashboardWorkspace() -> Element {
                     h2 { class: "dashboard-eyebrow", "Collections" }
                     CollectionSidebar { embedded: true }
                     Link { to: Route::CollectionList {}, class: "dashboard-sidebar-link", "Browse all collections →" }
-                    Link { to: Route::CollectionNew {}, class: "dashboard-sidebar-link", "+ New collection" }
+                    Link { to: Route::CollectionNew { parent: None }, class: "dashboard-sidebar-link", "+ New collection" }
                 }
                 nav { class: "dashboard-account-nav", aria_label: "Your account",
                     if let Some(user) = &auth.current_user {

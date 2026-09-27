@@ -68,8 +68,8 @@ pub enum Route {
         RecipeDraftEdit { id: String },
         #[route("/collections")]
         CollectionList {},
-        #[route("/collections/new")]
-        CollectionNew {},
+        #[route("/collections/new?:parent")]
+        CollectionNew { parent: Option<uuid::Uuid> },
         #[route("/collections/:id")]
         CollectionDetail { id: String },
         #[route("/collections/:id/edit")]

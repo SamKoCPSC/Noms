@@ -239,7 +239,7 @@ pub fn CollectionSidebar(#[props(default)] embedded: bool) -> Element {
                     }
                 }
                 if !embedded { Link {
-                    to: Route::CollectionNew {},
+                    to: Route::CollectionNew { parent: None },
                     class: "btn btn-secondary touch-target",
                     "New Collection"
                 } }

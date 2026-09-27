@@ -290,7 +290,7 @@ fn navigation_is_current(destination: &Route, current: &Route) -> bool {
         (
             Route::CollectionList {},
             Route::CollectionList {}
-            | Route::CollectionNew {}
+            | Route::CollectionNew { .. }
             | Route::CollectionDetail { .. }
             | Route::CollectionEdit { .. },
         ) => true,

@@ -25,7 +25,10 @@ fn primary_destinations_match_authentication_without_inventing_routes() {
 fn collection_descendants_keep_their_navigation_section_selected() {
     for route in [
         Route::CollectionList {},
-        Route::CollectionNew {},
+        Route::CollectionNew { parent: None },
+        Route::CollectionNew {
+            parent: Some(uuid::Uuid::nil()),
+        },
         Route::CollectionDetail {
             id: "sample".into(),
         },
