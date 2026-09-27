@@ -4,8 +4,9 @@
 
 Implemented on `codex/NOMS-020-dashboard`, in `.worktrees/NOMS-020-dashboard`,
 from design integration commit `9ed874922a2be66e4c8c8cc9538de91b4e516a89`.
-This branch is intended for integration into the NOMS-020 design worktree;
-it has not been merged there by this task.
+Integrated as of 2026-09-27: source tip `c822f03` is an ancestor of integration
+revision `74c4200`. See the [combined browser review](NOMS-020-checkpoint-8-integration.md)
+for empty/populated workspace and owner-scoped Search handoff evidence.
 
 Reference: [Central Workspace v1](../assets/NOMS-020/dashboard-central-workspace-v1.md).
 The user explicitly selected **visual redesign with existing behavior**, not

@@ -19,7 +19,7 @@ The new filter covers only already-loaded top-level collections; it does not cla
 - List filtering: tests cover names, descriptions, case, Unicode, whitespace and no match.
 - Existing behavior: collection regression suite covers hierarchy, permissions, membership, cover privacy, quotas, pagination, reordering, typed deletion, validation and save failures.
 - Independent source review: PASS; the informational long-description wrapping issue was fixed.
-- Visual and interactive browser acceptance: **pending**. The browser URL security policy blocked the fresh local preview. No bypass was attempted. Desktop/mobile/tablet appearance, live form submission, uploads and keyboard walkthroughs still need browser verification; passing tests and static responsive CSS are not visual approval.
+- Original source-worktree browser acceptance was blocked by the URL security policy; no bypass was attempted. The [2026-09-27 integrated pass](NOMS-020-checkpoint-8-integration.md) subsequently verified create/edit/save, populated membership and selected narrow/tablet geometry, and found a subcollection parent-context defect. Uploads, complete keyboard/visual acceptance and remaining states are still open; tests alone are not visual approval.
 
 ## Automated validation
 
@@ -39,4 +39,4 @@ Preview started with `just up noms020-collections-20260925`, at `http://127.0.0.
 
 ## Integration
 
-This branch is not merged into the NOMS-020 integration worktree. Keep the shared album component and four route compositions together as one cohesive implementation commit, followed by the planning/evidence checkpoint. Before accepting the slice, visually review populated and empty lists, nested detail pages, new/edit forms, narrow layouts and light/dark usability; exercise cover upload, cancel/save and owner-versus-visitor controls.
+Integrated: source tip `aa5280e` is an ancestor of integration revision `74c4200`, verified 2026-09-27. See the [combined review](NOMS-020-checkpoint-8-integration.md) for acceptance, fixtures and the nested-creation follow-up. Finish nested detail, cover upload, owner-versus-visitor controls, keyboard and light/dark/responsive review before final acceptance; merge status does not close those checks.

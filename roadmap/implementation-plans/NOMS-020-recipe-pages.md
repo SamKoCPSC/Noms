@@ -31,9 +31,12 @@ References: [editor](../assets/NOMS-020/recipe-editor-e3t1-panels-v5.md),
 
 ## Ownership and integration
 
-All implementation is in the recipe worktree. Editor, detail/history and graph
-have separate Rust and CSS ownership. The integration owner reviews the combined
-diff and shared behavior. Navigation, global tokens, collection pages, backend
+Originally implemented in the recipe worktree; source tip `31cac9b` is now
+integrated by merge `74c4200` (verified 2026-09-27). See the
+[combined browser review](NOMS-020-checkpoint-8-integration.md) for the private
+draft → v1 → v2 → collection → graph/snapshot walkthrough and remaining gates.
+Editor, detail/history and graph have separate Rust and CSS ownership.
+Navigation, global tokens, collection pages, backend
 schemas and production logo/icon artwork remain owned by their existing slices.
 The shared image editor remains available through the existing caller contract.
 

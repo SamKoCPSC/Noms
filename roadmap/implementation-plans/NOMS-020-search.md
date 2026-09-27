@@ -39,4 +39,4 @@ Remaining limits: no new end-to-end failure injection or live advanced-query sub
 
 ## Integration
 
-Merge this task branch into the NOMS-020 design integration branch after review. The implementation is kept as one cohesive visual/interaction commit, followed by this evidence checkpoint; no backend changes or deployment configuration changes are included.
+Integrated: source tip `ac9acb3` is an ancestor of integration revision `74c4200`, verified 2026-09-27. The [combined browser pass](NOMS-020-checkpoint-8-integration.md) verified Dashboard's Mine-only handoff, empty/populated results and query submission, and records the guest entry-path question and remaining checks. Source-worktree evidence above remains distinct from combined-revision acceptance; no backend or deployment configuration changes were included in this slice.

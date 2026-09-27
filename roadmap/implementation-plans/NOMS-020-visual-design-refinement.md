@@ -1,6 +1,6 @@
 # NOMS-020: Application Visual Design Refinement — Implementation Plan
 
-**Status:** Ready for staged implementation — desktop/light baseline selected; checkpoint-specific decisions remain
+**Status:** Page redesigns integrated — checkpoint 8 integration review active; release acceptance remains open
 **Created:** 2026-08-15
 **Depends on:** Current application routes, components, design tokens, and the visual direction established by NOMS-013
 **Coordination:** Feature tickets NOMS-016 through NOMS-019 should use shared primitives where stable; NOMS-020 must avoid redesigning feature behavior owned by those tickets.
@@ -10,11 +10,15 @@
 
 ## Design reference organization
 
-Recipe-page implementation (2026-09-25/26): editor/drafts, detail/history,
-historical snapshots and graph are implemented on `codex/NOMS-020-recipes`.
-See the [recipe-page validation and handoff](NOMS-020-recipe-pages.md) for scope,
-test results, browser evidence and remaining validation limits. Integration into
-the shared design branch remains a separate step.
+Integration checkpoint (2026-09-27): the public, Search, Dashboard, collection,
+recipe and user-page redesigns are now included in
+`codex/NOMS-020-visual-design-refinement` at `74c4200`.
+See the [combined browser validation and remaining gates](NOMS-020-checkpoint-8-integration.md).
+The page implementation phase is integrated, not release-approved: nested
+collection creation and empty-name profile presentation require follow-up,
+alongside remaining regression, accessibility and responsive acceptance.
+The [recipe-page handoff](NOMS-020-recipe-pages.md) and other route checkpoints
+retain their source-branch tests and validation limits.
 
 Start with the [design catalog](../assets/NOMS-020/README.md): [finalized proposals](../assets/NOMS-020/finalized/README.md) are the selected implementation baselines; [intermediate ideas](../assets/NOMS-020/intermediate/README.md) are historical alternatives, superseded iterations and deferred studies. Most proposal files retain their paths; logo and audit assets are grouped under `logo/` and `old-designs/`, with references updated. Finalized means selected visual direction, not production-ready artwork or approval of every generated control.
 
@@ -288,11 +292,13 @@ Update the table with linked evidence as each stage is completed; generated does
 
 Checkpoint 0 evidence: [2026-09-19 baseline inventory and runtime checks](NOMS-020-checkpoint-0-baseline.md). Application source matched local main at that baseline; representative fresh captures and mock-account flows are recorded there. Later slices still require their own detailed state baselines.
 
-Checkpoint 1 work: [shared-foundation slices and acceptance criteria](NOMS-020-checkpoint-1-foundations.md), completed 2026-09-22 after eleven reviewed slices and a green full CI gate. Checkpoint 2 navigation/Explore is now the active next gate; wider parallel route rollout still waits for its review.
+Checkpoint 1 work: [shared-foundation slices and acceptance criteria](NOMS-020-checkpoint-1-foundations.md), completed 2026-09-22 after eleven reviewed slices and a green full CI gate. Shared navigation/Explore and subsequent route workstreams have since been integrated; that earlier CI result is not a test run of the final combined revision.
 
-Checkpoint 2 navigation: [N1/N4 implementation contract and verification](NOMS-020-checkpoint-2-navigation.md), started 2026-09-22. [Explore X7C implementation and acceptance checklist](NOMS-020-checkpoint-2-explore.md) now records the framed-card slice, honest tag labels and retry behavior. Explore browser verification is blocked by the browser tool's URL policy; responsive/interaction acceptance and the combined checkpoint gate remain open. Existing encoded-character Search routing needs follow-up in its route slice.
+Checkpoint 2 navigation: [N1/N4 implementation contract and verification](NOMS-020-checkpoint-2-navigation.md), started 2026-09-22. [Explore X7C implementation and acceptance checklist](NOMS-020-checkpoint-2-explore.md) records the framed-card slice, honest tag labels and retry behavior. The earlier browser-access restriction no longer blocks the integration deployment: shared navigation and Explore's empty public state were exercised on 2026-09-27. This does not close every populated, pagination, keyboard or responsive acceptance item in the original checklist.
 
-Proceed in reviewable slices; do not wait for every route's specification before starting foundations. Each checkpoint records decisions, tests and screenshots before progressing. This documentation cleanup does not itself start implementation, authorize deployment or commit existing work.
+Checkpoint 8 is now active. [Integration evidence](NOMS-020-checkpoint-8-integration.md) records the merged route revisions, browser workflows, confirmed issues and exact limits. Checkpoints 3–6 are implemented/integrated; Dashboard's existing-behavior visual migration is integrated, while its unapproved functional expansion remains deferred. Per-route acceptance gaps carry forward rather than disappearing at merge time.
+
+Proceed in reviewable slices. Each checkpoint records decisions, tests and screenshots before acceptance. This documentation cleanup does not authorize a new deployment or unrelated application changes.
 
 | Checkpoint | Scope and decisions | Exit evidence |
 | --- | --- | --- |
@@ -368,8 +374,13 @@ Dependencies follow actual shared contracts, not just page names. For example, a
 - [x] Staged checkpoints and acceptance evidence defined.
 - [x] Parallel workstreams, shared ownership rules and integration gates defined.
 - [x] Current-main baseline refreshed at kickoff — [checkpoint 0 evidence](NOMS-020-checkpoint-0-baseline.md), 2026-09-19; representative runtime/source baseline, not exhaustive per-route acceptance.
-- [ ] Exact shared tokens/components implemented and reviewed in checkpoint 1.
-- [ ] Per-route unresolved behavior decisions closed before that route's change.
-- [ ] Production S1 artwork and release-wide validation completed before final overhaul sign-off.
+- [x] Exact shared tokens/components implemented and reviewed in checkpoint 1.
+- [x] Major page redesign workstreams integrated at `74c4200`, including Search, Dashboard, collections, recipes and user pages.
+- [x] Combined browser smoke pass recorded — [2026-09-27 evidence](NOMS-020-checkpoint-8-integration.md); partial acceptance, not a full regression pass.
+- [ ] Fix and revalidate subcollection parent-context loss and empty-name public-profile presentation.
+- [ ] Reconcile guest-search copy/destination with the authenticated Search route; do not infer authorization to change search access.
+- [ ] Complete final combined-revision CI, cross-route failure/permission checks, accessibility and per-page phone/tablet acceptance.
+- [ ] Resolve production S1 artwork before replacing the current mark; retain explicit status for SVG/favicon/3D and optional page icons.
+- [ ] Complete checkpoint 8 review, known-issue/deferred-work decisions and rollback notes before final overhaul sign-off.
 
-**Ready to begin checkpoints 0–2, not a claim that the entire overhaul is fully specified or shipped.** Dark-mode and new phone/tablet designs remain deferred; selected direction does not waive behavioral or accessibility validation.
+**Next: integration fixes and release acceptance, not another round of page implementation.** Dark-mode redesign remains deferred, but existing dark behavior still needs regression protection. Phone/tablet discovery and acceptance remain per page; desktop implementation and merge status alone do not mark those checks complete. Dashboard functional expansion and production artwork are separately tracked work, not implied by the merged visual layouts.

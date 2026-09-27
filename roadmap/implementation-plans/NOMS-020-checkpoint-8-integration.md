@@ -1,0 +1,148 @@
+# NOMS-020 — Integrated browser review
+
+**Date:** 2026-09-27
+
+**Status:** Page implementations integrated; release acceptance OPEN.
+
+**Tested source:** `74c420035ce29ccbb09817f4325252f56b4c5a80` on `codex/NOMS-020-visual-design-refinement`.
+
+## Environment and scope
+
+Used the already-running local deployment at `http://127.0.0.1:32768`, container
+`noms-ca6962a21bc5bc35-app-1`. Its Compose working-directory label points to
+`.worktrees/NOMS-020-visual-design-refinement`. No restart, new deployment,
+production-code edit or application fix was made for this review. Existing
+generated `assets/tailwind.css` changes were preserved; this was a live dev
+deployment, not an immutable release build.
+
+Used the Codex in-app browser and local mock Google subject `testuser`
+(`@user-c5a3`). Added private validation fixtures through the UI, not to
+production. They remain available for reproduction:
+
+- Collection: **NOMS020 integration review 2026-09-27**, ID
+  `75c55acb-5eed-47a6-a4dc-f7fef5092798`.
+- Recipe: **NOMS020 integration soup 2026-09-27**, ID
+  `233b1cf1-e024-47b9-ae56-15c1f55b8263`, private, two published versions.
+- Mock profile display name saved as **Integration Review** during the save test.
+
+No real-provider linking, unlinking, deletion, restoration or public publication
+was performed. Findings below are follow-up work, not silently implemented fixes.
+
+## Integrated inventory
+
+These source tips are ancestors of the tested revision. Ancestry proves inclusion,
+not complete runtime acceptance.
+
+| Workstream | Included tip | State |
+| --- | --- | --- |
+| Home | `6a570cd` | Integrated |
+| About | `0cb878e` | Integrated |
+| How-to | `df53ae9` | Integrated |
+| Sign-in | `eedc979` | Integrated |
+| Search | `ac9acb3` | Integrated; [source evidence](NOMS-020-search.md) |
+| Dashboard | `c822f03` | Visual migration integrated; [functional expansion deferred](NOMS-020-dashboard.md) |
+| Collections | `aa5280e` | Integrated; [source evidence](NOMS-020-collections.md) |
+| User pages | `6a8b9c6` | Integrated; source evidence in [master plan](NOMS-020-visual-design-refinement.md) |
+| Recipe editor/detail/history/graph | `31cac9b` | Integrated by `74c4200`; [source evidence](NOMS-020-recipe-pages.md) |
+
+Foundations, navigation and Explore precede these workstreams in the integrated
+history. Source-worktree checks are not a fresh full-suite run of this revision.
+
+## Browser observations
+
+| Flow | Observed result |
+| --- | --- |
+| Public entry | Home, About and How-to rendered redesigned compositions. Home query submission reached `/search?q=tomato`; signed-out Search displayed a sign-in gate. L6B displayed both providers and guest/account copy. |
+| Authentication/workspace | Mock Google sign-in reached Dashboard. Empty library/draft states, sidebar navigation and list/grid controls were present. After publishing, the library showed the private fixture and owner actions. |
+| Dashboard → Search | Search my recipes retained `scope=recipes&vis=mine`. Empty state worked before fixture creation. Afterwards the recipe appeared; submitting `NOMS020` retained Mine only and returned the fixture with title, description, servings and author link. |
+| Collection create/edit | Empty list → new private collection → detail succeeded. Editing and saving the description returned updated detail. |
+| Draft/publish | All six raised editor sections and tracker were present. Title, description, two servings, `2 cups water` and method saved privately, then published as private v1. |
+| Membership | Recipe detail's picker selected the new collection and confirmed addition. Collection detail showed one recipe and author link; singleton reorder actions were disabled. |
+| Edit/history/graph | Editing the method and publishing produced v2. History exposed both versions. Graph showed two nodes and comparison/outline controls. v1's Compare with current showed the exact method change at `/instructions/0/text`. Zoom in and Fit were exercised. |
+| Historical snapshot | v1 opened read-only historical context with the old method. Comparison against v2 showed the change; comparison against original v1 reported no differences. Back to current worked. |
+| Profile/settings | Empty-name defect observed before editing (below). Saving Integration Review produced success; reload followed by public-profile navigation retained the name. Navbar identity updated. Linked accounts showed Google connected and disabled Unlink for the only provider. |
+| Private-content boundary | Owner saw the fixture in Dashboard/Search/collection detail. Public profile showed zero public recipes/collections, and Explore remained empty. This is fixture-specific evidence, not a complete authorization audit. |
+
+The exact method comparison was **“Warm the water.” → “Warm the water, then let
+it cool briefly.”** No fabricated comparison data was used.
+
+Representative screenshots were inspected in-session. Viewport checks used
+measured CSS sizes (the browser applied a 1.25 scale factor): 1440×900 desktop,
+820×1025 tablet and 390×843 phone. Search, collection edit and recipe editor had
+no horizontal document overflow at 390px; populated collection detail had none
+at 390px or 820px. Document widths were 371px/801px with scrollbars. These are
+selected-route geometry checks, not a complete responsive acceptance matrix.
+
+Emulated screenshot capture showed scale/crop discontinuities; those artifacts
+were not treated as application clipping. No screenshot files were added to the
+repository. Final visual acceptance needs reliable full-page/device captures.
+Temporary viewport overrides were reset. The final browser warning/error query
+returned no entries, not proof that all error paths work. Development
+rebuild/hot-patch messages appeared in DOM snapshots during the session.
+
+## Findings and acceptance tasks
+
+### Blocking for release acceptance: subcollection parent context
+
+- [ ] Fix and regression-test nested creation, then recheck creation, breadcrumb,
+  parent listing and Cancel in the integrated browser.
+
+Open the fixture collection and choose **New subcollection**. The URL contains
+`?parent=75c55acb-5eed-47a6-a4dc-f7fef5092798`, but the settled form says
+**New collection** and **“This album will appear at the top level of your
+collections.”** Cancel returns to the top-level list instead of the parent.
+Reproduced without a second submission; no successful child creation is claimed.
+
+`src/pages/collection_new.rs` initializes the parent signal from browser location.
+Investigate route-query initialization/hydration rather than assuming an exact
+cause. Form/cancel context is wrong; storage behavior and whether this predates
+the visual work have not been established.
+
+### Should fix: empty display-name public profile
+
+- [ ] Define a nonempty identity fallback consistent with the shell, add a
+  rendered test and recheck an account with an empty display name.
+
+Before saving a name, `/u/user-c5a3` had an empty h1, `?` avatar fallback and copy
+beginning “hasn't shared…”, while the navbar used `user-c5a3`.
+`src/pages/user_profile.rs` renders `display_name` directly in those areas.
+Saving a name makes the page display correctly but does not fix the empty-name
+case. The issue's introduction revision is not established.
+
+### Clarify: guest-search promise and destination
+
+- [ ] Reconcile Home/sign-in copy and destination with existing access rules.
+  Do not remove authentication from Search without explicit scope.
+
+Sign-in says guests can browse and search public recipes; Home Search navigates
+to authenticated Search and prompts sign-in. Explore has public search, so the
+promise may be intentional but its entry path needs clarification. This is not
+established as a new regression or authorization bug.
+
+## Remaining gates and next order
+
+1. Address the two findings in focused fixes and rerun their browser reproductions;
+   resolve the guest-search copy/destination question.
+2. Run full repository-required CI on the resulting combined revision. No fresh
+   automated application suite ran during this docs/browser pass. Source
+   checkpoints retain their exact historical commands/results and caveats.
+3. Finish cross-route checks: image editor through recipe and avatar callers;
+   nested/multiple membership; populated Explore and search pagination/encoded
+   queries; save/retry failures; auth return destinations; permission/destructive
+   cancel boundaries; dense/forked/stale-request graphs. These are untested cases,
+   not additional observed failures.
+4. Complete keyboard/focus, screen-reader/status, contrast, reduced-motion and
+   per-page phone/tablet acceptance. Existing dark-mode smoke is still required
+   on the combined revision; dark redesign stays deferred. Earlier source-branch
+   dark checks are not a new integrated dark pass.
+5. Review the app as one system and obtain visual acceptance. Production S1,
+   SVG/favicon/3D and optional page icons remain separate pending deliverables;
+   keep the current mark until replacement assets are approved. Dashboard bulk
+   operations/expanded management are not part of this close-out.
+6. Record final known/deferred issues and a rollback target before a separately
+   authorized deployment. Keep slices reversible; revert a specific reviewed
+   change on a new branch if needed, not a destructive reset of this worktree
+   or its test database.
+
+**Verdict:** Integrated happy-path checks passed where listed; checkpoint 8 is
+**not accepted** while the confirmed findings and remaining gates are open.
