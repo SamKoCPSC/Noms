@@ -101,10 +101,14 @@ Investigate route-query initialization/hydration rather than assuming an exact
 cause. Form/cancel context is wrong; storage behavior and whether this predates
 the visual work have not been established.
 
-### Should fix: empty display-name public profile
+### Resolved: empty display-name public profile
 
-- [ ] Define a nonempty identity fallback consistent with the shell, add a
-  rendered test and recheck an account with an empty display name.
+- [x] Define a nonempty identity fallback consistent with the shell, add
+  regression tests and verify the rendered page with an empty-name account.
+
+Resolved by `9cbeef5` on 2026-09-27. Unit tests cover blank/whitespace and nonblank
+names; rendered-page checks were performed in the browser, as recorded below.
+The original observation follows for context.
 
 Before saving a name, `/u/user-c5a3` had an empty h1, `?` avatar fallback and copy
 beginning “hasn't shared…”, while the navbar used `user-c5a3`.
@@ -124,7 +128,7 @@ established as a new regression or authorization bug.
 
 ## Remaining gates and next order
 
-1. Address the remaining profile and collection-navigation findings in focused fixes;
+1. Address the remaining collection-navigation finding in a focused fix;
    resolve the guest-search copy/destination question.
 2. Run full repository-required CI on the resulting combined revision. No fresh
    automated application suite ran during this docs/browser pass. Source
@@ -209,5 +213,60 @@ During the child-detail → parent breadcrumb navigation, the address changed to
 the parent ID but the child heading/content remained until reload. Reload showed
 the correct parent with the newly created child. This is distinct from creation
 parent context; it was recorded, not modified, in this fix. Introduction revision
-is not established. Checkpoint 8 remains open for this, the profile issue and the
-other acceptance gates above.
+is not established. Checkpoint 8 remains open for this and the other acceptance
+gates above; the profile-name issue is resolved below.
+
+## Public-profile name fix validation — 2026-09-27
+
+Implementation commit: `9cbeef5`, developed in
+`.worktrees/NOMS-020-profile-name-fallback` on
+`codex/NOMS-020-profile-name-fallback`, then fast-forwarded into the NOMS-020
+integration branch. The code and regression tests form one cohesive fix commit;
+this separate documentation commit records its verification.
+
+The public page now computes one effective identity: use the username when the
+display name is empty or whitespace-only; otherwise preserve the display name
+exactly. The heading, avatar initials/image alt text, and both public-content
+empty-state messages consume that value. Saved profile data, handles/URLs,
+visibility, settings validation and shared avatar styling are unchanged.
+
+Automated commands used
+`CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target`
+from the fix worktree:
+
+- Before the fallback was implemented,
+  `SQLX_OFFLINE=true cargo test --features server pages::user_profile::identity_tests -- --nocapture`
+  produced 1 pass and 1 expected failure: empty display name instead of username.
+- `SQLX_OFFLINE=true cargo test --features server user_profile -- --test-threads=4`:
+  10 passed. The new tests cover empty strings, ASCII/Unicode whitespace, ordinary
+  and Unicode names, surrounding whitespace, punctuation and unchanged stored data.
+- `SQLX_OFFLINE=true cargo test --features server pages::settings -- --test-threads=4`:
+  13 passed.
+- `SQLX_OFFLINE=true cargo clippy --features server -- -D warnings`,
+  `cargo clippy --target wasm32-unknown-unknown -- -D warnings`,
+  `cargo fmt --check`, and `git diff --check`: passed.
+- Second-pass self-review: PASS for this scoped change. No independent-agent
+  review or fresh full repository suite is claimed.
+
+Browser evidence on the existing local `:32768` deployment:
+
+- A fresh mock Google subject `noms020-profile-fallback-20260927` created the
+  disposable local account `@user-00b4`. Before the fix, its page reproduced an
+  empty heading, `?` avatar and missing-name messages. The account was not given
+  a display name to conceal the defect; it remains available for reproduction.
+- Restarted only the app container after integration. Database/fixtures and the
+  existing generated Tailwind changes were preserved. Browser cache was disabled
+  temporarily for the rebuilt client, then restored.
+- After reload, `/u/user-00b4` showed heading `user-00b4`, initials `UU`, unchanged
+  handle `@user-00b4`, and both messages beginning `user-00b4 hasn't shared…`.
+  A screenshot and the rendered accessibility/DOM state were reviewed in-session.
+- Signed out the disposable account and reopened its public profile: the same
+  identity and empty-state content remained visible without authentication.
+- Opened `/u/user-c5a3` while signed out: existing name **Integration Review**,
+  initials **IR**, handle and name-bearing empty-state messages were unchanged.
+- No avatar upload was performed. Image alt text uses the same name passed to
+  the existing Avatar component; live uploaded-image rendering was not retested.
+
+The two original integration findings are now resolved. Collection-to-collection
+stale content, the guest-search entry question and broader checkpoint 8 gates
+remain open; this focused fix does not claim release acceptance.
