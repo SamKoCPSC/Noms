@@ -17,6 +17,16 @@ use crate::Route;
 
 const PAGE_SIZE: i64 = 12;
 
+fn public_profile_name(profile: &UserProfileType) -> &str {
+    // Provider-created accounts can have no display name. Keep the public
+    // heading, avatar and empty-state copy consistent without changing storage.
+    if profile.display_name.trim().is_empty() {
+        &profile.username
+    } else {
+        &profile.display_name
+    }
+}
+
 /// Public user profile page with paginated collection and recipe grids.
 #[component]
 pub fn UserProfile(username: String) -> Element {
@@ -147,6 +157,7 @@ pub fn UserProfile(username: String) -> Element {
     }
 
     let profile_data = profile().clone().unwrap();
+    let profile_name = public_profile_name(&profile_data).to_string();
 
     // Compute recipe count text (pluralization must be outside rsx!)
     let recipe_count_text = if profile_data.public_recipe_count == 1 {
@@ -170,12 +181,12 @@ pub fn UserProfile(username: String) -> Element {
                 Avatar {
                     size: AvatarSize::Large,
                     src: profile_data.avatar_url.clone(),
-                    username: profile_data.display_name.clone(),
+                    username: profile_name.clone(),
                 }
                 }
                 div { class: "user-profile__identity",
                 p { class: "user-page-eyebrow", "Public profile" }
-                h1 { class: "profile-name", "{profile_data.display_name}" }
+                h1 { class: "profile-name", "{profile_name}" }
                 p { class: "profile-username", "@{profile_data.username}" }
                 if let Some(ref bio) = profile_data.bio {
                     p { class: "profile-bio", "{bio}" }
@@ -212,7 +223,7 @@ pub fn UserProfile(username: String) -> Element {
                     EmptyState {
                         icon: rsx! { "📁" },
                         title: "No public collections yet",
-                        description: format!("{0} hasn't shared any public collections.", profile_data.display_name),
+                        description: format!("{profile_name} hasn't shared any public collections."),
                     }
                 } else {
                     div { class: "user-profile__collections",
@@ -290,7 +301,7 @@ pub fn UserProfile(username: String) -> Element {
                         EmptyState {
                             icon: rsx! { "🍳" },
                             title: "No public recipes yet",
-                            description: format!("{0} hasn't shared any public recipes.", profile_data.display_name),
+                            description: format!("{profile_name} hasn't shared any public recipes."),
                         }
                     } else {
                         // Recipe grid
@@ -314,6 +325,43 @@ pub fn UserProfile(username: String) -> Element {
                 }
                 }
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod identity_tests {
+    use super::*;
+
+    fn profile_with_name(display_name: &str) -> UserProfileType {
+        UserProfileType {
+            id: uuid::Uuid::nil(),
+            username: "recipe-keeper".to_string(),
+            display_name: display_name.to_string(),
+            avatar_url: None,
+            bio: None,
+            public_recipe_count: 0,
+        }
+    }
+
+    #[test]
+    fn public_profile_name_falls_back_for_empty_and_whitespace_names() {
+        for name in ["", "   ", "\t\n", "\u{2003}\u{3000}"] {
+            let profile = profile_with_name(name);
+            assert_eq!(public_profile_name(&profile), "recipe-keeper");
+            assert_eq!(
+                profile.display_name, name,
+                "fallback must not mutate stored identity"
+            );
+        }
+    }
+
+    #[test]
+    fn public_profile_name_preserves_nonblank_display_names() {
+        for name in ["Sam Ko", "小廚師", "  Sam Ko  ", "Chef <Sam> & friends"] {
+            let profile = profile_with_name(name);
+            assert_eq!(public_profile_name(&profile), name);
+            assert_eq!(profile.username, "recipe-keeper");
         }
     }
 }
