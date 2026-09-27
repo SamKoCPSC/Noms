@@ -7,7 +7,7 @@ Do not implement these as competing requirements. Except for exact images named 
 | Family | Exploration / iteration history | Current selection |
 | --- | --- | --- |
 | Broad Kitchen Console boards | selected-direction-light/dark.webp; public-and-sign-in.webp; collections.webp; profile-and-empty-states.webp | Principles retained; route-specific references supersede compositions |
-| Logo | [Logo exploration history, including superseded A3/F2, P/B studies, F1 and unselected S2/S3](../logo/README.md) | S1 in finalized index is canonical |
+| Logo | [Logo exploration history, including superseded A3/F2/S1, P/B studies, F1 and unselected S2](../logo/README.md) | S3 in finalized index is canonical as of 2026-09-27 |
 | Navigation | [N1–N10 notes](../navigation-directions-v1.md); N2/N3/N5–N10 not selected | N1 + N4 selected aspects only |
 | Search | [Initial proposals](../search-proposals-v1.md), [initial board](../search-directions-v1.png) | S2 scopes/states |
 | Public pages | [Initial combined board/notes](../public-home-about-how-to-v1.md) | Cozy v2 individual pages |

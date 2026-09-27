@@ -34,11 +34,11 @@ The application presents one deliberate, accessible, responsive visual system ac
 
 ## Planned application mark
 
-The current planned NOMS mark is **S1 — Rounded cream**, selected 2026-09-18 to replace F2. Preserve the gently clockwise-tilted closed olive book, continuous rounded cream spine with a subtle vertical hinge crease (no horizontal bands or segmentation), cream page block, coral elastic strap and bookmark, and warm-white rounded NOMS title label. Use smooth matte painted surfaces with restrained broad brush variation, sculpted bevels, crisp warm directional highlights and clearly separated shadow planes. Retain the cozy character without heavy impasto or glossy plastic shading.
+The current planned NOMS mark is **S3 — Continuous olive**, selected 2026-09-27 to replace S1. Preserve the gently clockwise-tilted closed olive book, continuous rounded olive spine matching the cover with a subtle vertical hinge crease (no horizontal bands or segmentation), cream page block, coral elastic strap and bookmark, and warm-white rounded NOMS title label. Use smooth matte painted surfaces with restrained broad brush variation, sculpted bevels, crisp warm directional highlights and clearly separated shadow planes. Retain the cozy character without heavy impasto or glossy plastic shading.
 
-Reference artwork: [S1 — leftmost book in the comparison sheet](../assets/NOMS-020/logo/spine-options-s1-s3-v1.png); [selection and production notes](../assets/NOMS-020/logo/spine-options-s1-s3-v1.md). A3 and F2 remain historical only; S1 supersedes logo depictions in earlier page mockups.
+Reference artwork: [S3 — rightmost book in the comparison sheet](../assets/NOMS-020/logo/spine-options-s1-s3-v1.png); [selection and production notes](../assets/NOMS-020/logo/spine-options-s1-s3-v1.md). A3, F2 and S1 remain historical only; S3 supersedes logo depictions in earlier page mockups. The eight selected page icons are unchanged; their S1-family references retain the provenance of their shared palette, finish and lighting.
 
-This is the approved visual direction for planning, not yet a production SVG/favicon. Production work must preserve legibility at favicon and app-icon sizes, provide light/dark and single-colour variants, and use the actual Fredoka font or converted outlines.
+A standalone [static web SVG](../../assets/brand/noms-logo.svg) was prepared 2026-09-27 with transparent background, Fredoka 600 outlines and simplified vector shading; see [usage and validation](../../assets/brand/README.md). Page integration, tiny favicon/app-icon refinements, single-colour variants and the 3D model remain pending. The full title is not readable at tiny navigation sizes; pair it with the app wordmark.
 
 ## Selected visual direction: Kitchen Console
 
@@ -86,7 +86,7 @@ Decision recorded 2026-09-12: combine **N1 — Cozy Counter's familiar horizonta
 References: [N1](../assets/NOMS-020/navigation-n01-v1.png), [N4](../assets/NOMS-020/navigation-n04-v1.png), and [all ten explorations and prompts](../assets/NOMS-020/navigation-directions-v1.md).
 
 - Use a warm cream bar slightly inset from the viewport edges, with rounded corners and gentle neumorphic depth.
-- Use the S1 book logo direction and coral Noms wordmark, with Fredoka display and Nunito navigation-label typography.
+- Use the S3 book logo direction and coral Noms wordmark, with Fredoka display and Nunito navigation-label typography.
 - Keep destinations compact and clearly labelled, with a sage selected state and explicit focus treatment; do not rely on shadows alone.
 - Include inset search access and a softly raised coral New recipe action in the appropriate authenticated context.
 - Keep surrounding content calm: N4's decorative kitchen props, heavy framing and incidental slogans are not part of the navigation direction.
@@ -124,7 +124,7 @@ References: [preferred full-page example](../assets/NOMS-020/recipe-editor-e3t1-
 - Place Basics and Photos side by side at the top; stack the remaining panels below. Keep the photo preview and change/remove controls. Recipe visibility belongs with Basics, not photo privacy.
 - Retain a separate raised local contents sidebar with a thin connected timeline, sage inset active row and restrained coral active marker. Order links to match the document: Basics, Photos, Ingredients, Method, Equipment, Notes.
 - Sidebar links jump within one continuous form, not a mandatory wizard. Keep active-section indication independent of content/completion status. Define status semantics against actual validation; optional sections must not introduce publishing gates.
-- Use inset fields inside raised panels, roomy growing method textareas, actual Fredoka/Nunito fonts, the approved S1 logo direction and selected N1/N4 shared navigation. Preserve readable borders and keyboard focus without depending on shadows alone.
+- Use inset fields inside raised panels, roomy growing method textareas, actual Fredoka/Nunito fonts, the approved S3 logo direction and selected N1/N4 shared navigation. Preserve readable borders and keyboard focus without depending on shadows alone.
 - Preserve ingredient and nested-step editing, equipment, photo upload/edit/reorder, visibility, validation, save failures, publishing and discard safeguards. Generated controls, counts and save-status copy are illustrative, not behavior specifications.
 
 Resolve desktop sidebar scrolling/focus, nested steps and save/error feedback within the editing checkpoint. Dark-mode design remains deferred; discover phone/tablet adaptations within this page's workflow. This records planning only; application implementation has not started as part of this decision.
@@ -226,7 +226,7 @@ As of 2026-09-12, this document on `codex/NOMS-020-visual-design-refinement` is 
 - Kitchen Console principles, responsive guidance, and 21 reference/proposal boards: merged from `codex/noms-020-visual-examples` (`396d24b`).
 - Historical A3 logo and original application screenshots: inherited from `main` (visual documentation commit `257402f`).
 - [Refreshed desktop audit (2026-09-17)](../assets/NOMS-020/old-designs/audit-2026-09-17/README.md) records the running checkout and fixture caveats; use it as the desktop baseline, not as a claim about later main revisions.
-- [Earlier logo proposals](../assets/NOMS-020/logo/) are retained for history; S1 now supersedes A3 and F2 as the planned application mark.
+- [Earlier logo proposals](../assets/NOMS-020/logo/) are retained for history; S3 now supersedes A3, F2 and S1 as the planned application mark.
 - [NOMS-013 content inventory](../../docs/design/NOMS-013/content-inventory.md) and [page copy](../../docs/design/NOMS-013/page-copy.md) remain supporting references. Their search-related claims need reconciliation with the current Search page.
 
 The source branch is retained as history. Its missing temporary worktree is not an active planning location. Feature-specific behavior remains owned by the corresponding feature ticket; this plan owns its visual integration.
@@ -237,7 +237,7 @@ Historical audits include representative populated graph and comparison flows as
 
 | Area | Existing direction | Remaining planning |
 | --- | --- | --- |
-| Shared shell | Selected N1 + N4 navigation-bar direction | Public versus authenticated variants, exact destinations, search/account access, responsive overflow, secondary navigation if needed, footer density, S1 sizing, focus and active states |
+| Shared shell | Selected N1 + N4 navigation-bar direction | Public versus authenticated variants, exact destinations, search/account access, responsive overflow, secondary navigation if needed, footer density, S3 sizing, focus and active states |
 | Search | Preferred S2 Recipe Finder; scopes and state boards exist | Validate scopes, suggestions, filters/facets, sorting and pagination against current behavior; refine empty/error states and dark parity; phone/tablet discovery per page |
 | Home, About, How-to | Accepted cozy v2 boards | Reconcile actual copy, illustration restraint, reading widths, anchor navigation and guide claims with Search; deferred dark parity and per-page responsive discovery |
 | Sign-in | Preferred L6B: raised provider controls, guest-access link and guest/account feature sections | Preserve Google/GitHub flow and return destination; refine visibility-qualified copy, pending/cancelled/error feedback, short-viewport sizing, dark parity and signed-out shell |
@@ -260,10 +260,11 @@ Added 2026-09-18. Explore this family one page at a time, starting with Dashboar
 
 ### Existing identity decisions
 
-- [x] Select the canonical app logo: [S1 — Rounded cream](../assets/NOMS-020/logo/spine-options-s1-s3-v1.md), replacing F2; continuous cream spine, olive cover, coral strap/bookmark, tilted painted form.
+- [x] Select the canonical app logo: [S3 — Continuous olive](../assets/NOMS-020/logo/spine-options-s1-s3-v1.md), selected 2026-09-27 replacing S1; continuous olive spine matching the cover, coral strap/bookmark, tilted painted form.
 - [x] Generate [initial mascot concepts](../assets/NOMS-020/mascots/README.md); exploration only.
 - [ ] Select a mascot and approve specific uses, if pursued; no mascot is currently approved.
-- [ ] Prepare standalone production S1 artwork, verified Fredoka lettering, SVG/favicon variants and the separately discussed 3D model.
+- [x] Prepare standalone static S3 web SVG with verified Fredoka outlines and transparent background; browser review at 32–320px on light/dark surfaces (2026-09-27).
+- [ ] Integrate the SVG into web pages; prepare favicon/single-colour variants and the separately discussed 3D model.
 
 ### Page-by-page exploration queue
 
@@ -286,7 +287,7 @@ Dashboard icon **P1 — Classic pinboard**, Explore icon **EC1 — Pocket compas
 - [ ] Generate and save labeled alternatives in the design assets; link the exploration from this tracker.
 - [ ] Record the user's selected direction and date, preserving rejected/superseded concepts as intermediate ideas.
 - [ ] Decide whether a detailed header/empty-state illustration, a simplified navigation icon, or both are appropriate. These are supporting page identities, not competing app logos.
-- [ ] Prepare approved assets and verify legibility at actual display sizes. Explore S1's olive/cream/coral palette, rounded shapes, gentle tilt, restrained painted surfaces and directional lighting without changing existing accent semantics.
+- [ ] Prepare approved assets and verify legibility at actual display sizes. Retain the selected icon family's olive/cream/coral palette, rounded shapes, gentle tilt, restrained painted surfaces and directional lighting without changing existing accent semantics. The S3 logo selection does not replace the approved page-icon artwork.
 - [ ] Review the asset in its actual page composition before integration: avoid clutter, random decorative props or inspirational quotes; retain clear conventional icons for small controls.
 - [ ] Integrate only within the corresponding implementation slice; verify accessible names or decorative treatment, contrast where meaningful, loading behavior and responsive sizing. Mobile/tablet discovery remains per page; dark redesign remains deferred.
 
@@ -314,7 +315,7 @@ Proceed in reviewable slices. Each checkpoint records decisions, tests and scree
 | 5 — Editing | E3T1 v5 recipe editor and I1B coral image editor; settle progress semantics and focus/scroll behavior; preserve continuous form and all visible image controls | Draft/autosave/save failure, publish/discard, nested steps, image crop/undo/reset/cancel/apply tested; short-desktop layout and keyboard checks |
 | 6 — Version graph | Integrated G4A with selected comparison and dense/expansion states; preserve menus, solid/dashed topology, labels and accessible outline; define same-snapshot feedback, async request identity, focus after expansion and viewport stability | Populated fork fixture, comparison/no-difference/error/retry, concurrent/stale request checks, dense routing, pan/zoom and outline keyboard evidence |
 | 7 — Dashboard scoped expansion | Central Workspace visual direction; first agree Overview content, exact filters/sort, selection scope/persistence, draft membership, multiple collections, pagination and count semantics | Written behavior decisions and tests before adding features; separate visual migration from backend/data changes; no assumed bulk delete/publish/visibility actions |
-| 8 — Release review | Review migrated routes as one system, remove obsolete styles only when safe, finalize production S1 artwork if replacing current mark | Screenshot review, regression/accessibility checks, known-issue/deferred-work list and rollback notes; deployment remains a separate action |
+| 8 — Release review | Review migrated routes as one system, remove obsolete styles only when safe, finalize production S3 artwork if replacing current mark | Screenshot review, regression/accessibility checks, known-issue/deferred-work list and rollback notes; deployment remains a separate action |
 
 Suggested order is foundations → navigation/Explore → other route slices. Dashboard functional expansion is gated independently and must not block safe visual work elsewhere. Checkpoints may be split further; do not bundle unrelated feature changes to finish a design board.
 
@@ -357,7 +358,7 @@ Dependencies follow actual shared contracts, not just page names. For example, a
 - Preserve existing server/API, auth, visibility, draft and destructive-action contracts unless a change is explicitly scoped.
 - The recorded Explore tag-filter wiring defect is not silently fixed or represented as working merely by restyling chips. Re-verify against current main, track separately and obtain explicit scope for functional changes.
 - Generated controls, copy, counts and image assets are not feature authority. Preserve existing navigation destinations, menus and safeguards omitted by an image.
-- Use the approved S1 reference; do not ship superseded A3/F2 or generated open-book approximations. Standalone production artwork, SVG/favicon and 3D-model work remain separate pending asset deliverables; remove the proposal caption/background and use verified Fredoka lettering.
+- Use the approved S3 reference; do not ship superseded A3/F2/S1 or generated open-book approximations. The standalone static SVG is available in `assets/brand/noms-logo.svg`; page integration, favicon/single-colour variants and 3D-model work remain separate pending deliverables.
 - Do not add upcoming feature-ticket routes from old mockups.
 
 ### Acceptance and evidence for every slice
@@ -386,7 +387,7 @@ Dependencies follow actual shared contracts, not just page names. For example, a
 - [ ] Fix the separately observed stale collection content after breadcrumb navigation between IDs.
 - [ ] Reconcile guest-search copy/destination with the authenticated Search route; do not infer authorization to change search access.
 - [ ] Complete final combined-revision CI, cross-route failure/permission checks, accessibility and per-page phone/tablet acceptance.
-- [ ] Resolve production S1 artwork before replacing the current mark; retain explicit status for SVG/favicon/3D and optional page icons.
+- [ ] Resolve production S3 artwork before replacing the current mark; retain explicit status for SVG/favicon/3D and optional page icons.
 - [ ] Complete checkpoint 8 review, known-issue/deferred-work decisions and rollback notes before final overhaul sign-off.
 
 **Next: integration fixes and release acceptance, not another round of page implementation.** Dark-mode redesign remains deferred, but existing dark behavior still needs regression protection. Phone/tablet discovery and acceptance remain per page; desktop implementation and merge status alone do not mark those checks complete. Dashboard functional expansion and production artwork are separately tracked work, not implied by the merged visual layouts.

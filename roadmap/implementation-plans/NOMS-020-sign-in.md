@@ -11,7 +11,7 @@ Implemented the finalized [L6B direction](../assets/NOMS-020/signin-l6b-guest-ac
 - [x] Existing Fredoka/Nunito typography, coral accents, shared material and elevation tokens.
 - [x] Phone stacking, tablet/desktop paired panels, and existing dark-theme regression check.
 - [x] Preserve OAuth redirect handling, authenticated-user routing, and native navigation/retry behavior.
-- [ ] Integrate the canonical S1 logo when a production-ready asset is available. Do not substitute a superseded proposal or crop an exploration sheet; existing shared navbar branding remains.
+- [ ] Integrate the canonical S3 logo (selected 2026-09-27, superseding S1) when a production-ready asset is available. Do not substitute a superseded proposal or crop an exploration sheet; existing shared navbar branding remains.
 
 Owned implementation: `src/pages/login.rs`, `assets/sign-in.css`, and `assets/sign-in/`. No shared CSS, navigation, authentication backend, or other page changes.
 

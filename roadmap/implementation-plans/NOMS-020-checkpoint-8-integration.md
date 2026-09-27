@@ -142,7 +142,8 @@ established as a new regression or authorization bug.
    per-page phone/tablet acceptance. Existing dark-mode smoke is still required
    on the combined revision; dark redesign stays deferred. Earlier source-branch
    dark checks are not a new integrated dark pass.
-5. Review the app as one system and obtain visual acceptance. Production S1,
+5. Review the app as one system and obtain visual acceptance. Production S3
+   (selected 2026-09-27, superseding S1),
    SVG/favicon/3D and optional page icons remain separate pending deliverables;
    keep the current mark until replacement assets are approved. Dashboard bulk
    operations/expanded management are not part of this close-out.

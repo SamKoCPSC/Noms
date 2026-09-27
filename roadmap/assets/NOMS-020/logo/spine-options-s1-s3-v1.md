@@ -1,10 +1,10 @@
 # Smooth spine explorations — S1–S3
 
-Generated 2026-09-18 with built-in image generation, using painted-f2-smooth-sharp-v1.png as the edit target. **S1 — Rounded cream is the canonical logo direction, selected 2026-09-18, replacing F2.** S2 and S3 remain unselected explorations.
+Generated 2026-09-18 with built-in image generation, using painted-f2-smooth-sharp-v1.png as the edit target. **S3 — Continuous olive is the canonical logo direction, selected 2026-09-27, replacing S1.** S1 was selected 2026-09-18 to replace F2 and is now superseded; S2 remains unselected. The original generation prompt below is preserved unchanged.
 
-The canonical reference is the leftmost book in the comparison sheet. Preserve its uninterrupted gently rounded cream spine with a subtle vertical hinge crease, olive cover, cream NOMS plaque, coral strap/bookmark, tilt and painted directional lighting. No horizontal spine bands or segmented blocks. Page lines belong only on the exposed page block.
+The canonical reference is the rightmost book in the comparison sheet. Preserve its uninterrupted gently rounded olive spine matching the olive cover, subtle vertical hinge crease, cream NOMS plaque and exposed pages, coral strap/bookmark, tilt and painted directional lighting. No horizontal spine bands or segmented blocks. Page lines belong only on the exposed page block. This change does not alter the eight selected page-icon directions.
 
-This selection does not change the live app logo. A standalone production asset, actual Fredoka lettering, transparent/caption-free exports, SVG, favicon variants and 3D model remain pending.
+This selection does not change the live app logo. A standalone [static web SVG](../../../../assets/brand/noms-logo.svg) with actual Fredoka 600 outlines and a transparent background was prepared 2026-09-27; it simplifies the painted texture into vector shading. See [usage and validation](../../../../assets/brand/README.md). Page integration, favicon/single-colour variants and the 3D model remain pending.
 
 [Comparison sheet](spine-options-s1-s3-v1.png)
 

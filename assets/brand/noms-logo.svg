@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="640" viewBox="0 0 512 640" role="img" aria-labelledby="noms-s3-title noms-s3-description">
+  <title id="noms-s3-title">NOMS</title>
+  <desc id="noms-s3-description">A tilted olive recipe book with a smooth matching spine, cream NOMS label and pages, and a coral strap and bookmark.</desc>
+  <!-- S3 vector interpretation. Fredoka SemiBold lettering is outlined; no external fonts or images. -->
+  <defs>
+    <linearGradient id="noms-s3-cover" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#858345"/><stop offset=".28" stop-color="#575f32"/><stop offset=".7" stop-color="#414c2b"/><stop offset="1" stop-color="#303d26"/>
+    </linearGradient>
+    <linearGradient id="noms-s3-spine">
+      <stop stop-color="#555b2e"/><stop offset=".2" stop-color="#969149"/><stop offset=".4" stop-color="#7c7c3c"/><stop offset=".78" stop-color="#46512d"/><stop offset="1" stop-color="#253a28"/>
+    </linearGradient>
+    <linearGradient id="noms-s3-pages" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#fff2d2"/><stop offset=".6" stop-color="#e8d6b2"/><stop offset="1" stop-color="#aa916b"/>
+    </linearGradient>
+    <linearGradient id="noms-s3-plaque" x1="0" y1="0" x2=".8" y2="1">
+      <stop stop-color="#fff9e5"/><stop offset=".6" stop-color="#f3e6c7"/><stop offset="1" stop-color="#dfc69e"/>
+    </linearGradient>
+    <linearGradient id="noms-s3-coral">
+      <stop stop-color="#ef7952"/><stop offset=".17" stop-color="#ff895f"/><stop offset=".5" stop-color="#ed6042"/><stop offset="1" stop-color="#c4432e"/>
+    </linearGradient>
+    <linearGradient id="noms-s3-ribbon" x1="0" y1="0" x2=".7" y2="1">
+      <stop stop-color="#a63c2b"/><stop offset=".35" stop-color="#f17450"/><stop offset="1" stop-color="#cf4b34"/>
+    </linearGradient>
+    <clipPath id="noms-s3-cover-clip"><rect x="131" y="77" width="254" height="446" rx="17"/></clipPath>
+  </defs>
+  <g transform="rotate(7 256 320)" stroke-linejoin="round" stroke-linecap="round">
+    <!-- Vector contact shadow stays transparent on light and dark surfaces. -->
+    <path d="M101 533 142 568 403 574 425 554 402 525Z" fill="#263328" opacity=".12"/>
+    <path d="M110 540 145 558 391 566 409 548 390 529Z" fill="#263328" opacity=".1"/>
+    <!-- Back cover and exposed pages provide three-quarter depth. -->
+    <path d="M112 98 382 91Q410 93 413 118L413 527Q413 552 390 555L117 546Q92 542 90 523L92 121Q92 105 112 98Z" fill="#253a30" stroke="#24352a" stroke-width="3"/>
+    <path d="M119 103 381 100Q402 102 403 123L403 522Q403 541 384 543L117 534Q99 531 99 516L101 122Q101 109 119 103Z" fill="#646941"/>
+    <path d="M120 103 375 102Q395 105 397 126L397 513Q397 534 380 535L115 526Q102 525 100 513L104 120Z" fill="url(#noms-s3-pages)" stroke="#b69e76" stroke-width="2"/>
+    <path d="M383 119 387 508Q387 525 374 525L116 516M389 126 392 509Q392 530 377 530L118 521M378 113 382 503Q382 519 369 519L113 510" fill="none" stroke="#b19a74" stroke-width="1.7" opacity=".8"/>
+    <path d="M395 128 395 508M125 529 366 537" fill="none" stroke="#fff1ce" stroke-width="2" opacity=".65"/>
+    <!-- Bookmark lies between cover and page block. -->
+    <path d="M126 498 166 501 166 563Q166 568 162 565L145 553 124 569Q120 572 120 567Z" fill="#27372a" opacity=".35" transform="translate(3 4)"/>
+    <path d="M124 493 165 498 163 562 144 549 120 566Z" fill="url(#noms-s3-ribbon)" stroke="#8d402b" stroke-width="2.5"/>
+    <path d="M128 509 126 555 144 543 158 553" fill="none" stroke="#ffad79" stroke-width="2"/>
+    <path d="m129 505 29 8-1 30Z" fill="#ff9b6b" opacity=".3"/>
+    <!-- Continuous olive spine: no horizontal bands. -->
+    <path d="M99 77Q107 66 126 69L144 77 144 514Q130 507 112 514 95 522 92 508L92 97Q92 83 99 77Z" fill="url(#noms-s3-spine)" stroke="#4b542f" stroke-width="2.5"/>
+    <path d="M97 97Q98 78 118 75L130 77" fill="none" stroke="#ead18a" stroke-width="3"/>
+    <path d="M99 103 98 489" fill="none" stroke="#c2ac5d" stroke-width="2.5" opacity=".8"/>
+    <path d="M121 83 115 214 119 307 113 485 129 494 133 87Z" fill="#b5a35a" opacity=".12"/>
+    <path d="M95 508Q109 494 132 502L141 514Q123 507 113 516 106 525 125 528L134 530 133 539Q109 539 97 528 89 520 95 508Z" fill="#39472b" stroke="#293a28" stroke-width="2"/>
+    <path d="M102 509Q112 502 126 506" fill="none" stroke="#b3a463" stroke-width="3"/>
+    <!-- Broad restrained facets suggest painted lighting without raster texture. -->
+    <rect x="131" y="77" width="254" height="446" rx="17" fill="url(#noms-s3-cover)" stroke="#293b29" stroke-width="4"/>
+    <g clip-path="url(#noms-s3-cover-clip)">
+      <path d="m132 80 161 0-72 50-86 170Z" fill="#b3a056" opacity=".12"/>
+      <path d="m148 80 49 0-63 80Z" fill="#e1c66b" opacity=".1"/>
+      <path d="m142 384 156-112-102 165-64 58Z" fill="#a69a51" opacity=".1"/>
+      <path d="m155 495 150-161-69 162Z" fill="#849048" opacity=".1"/>
+      <path d="m253 81 125 0-10 183-19-122Z" fill="#182f24" opacity=".16"/>
+      <path d="m229 516 149-145 5 151Z" fill="#172e25" opacity=".15"/>
+    </g>
+    <path d="M139 506 139 95Q139 82 151 82L365 82" fill="none" stroke="#d5bc6c" stroke-width="2.5" opacity=".9"/>
+    <path d="M144 514 364 516Q378 516 378 501L378 101" fill="none" stroke="#8c8e4c" stroke-width="2" opacity=".7"/>
+    <path d="M134 94 133 496" fill="none" stroke="#233725" stroke-width="3" opacity=".7"/>
+    <!-- Cream plaque with actual Fredoka 600 glyph outlines. -->
+    <rect x="154" y="202" width="170" height="93" rx="17" fill="#172b1e" opacity=".35" transform="translate(3 5)"/>
+    <rect x="154" y="202" width="170" height="93" rx="17" fill="#b49b73"/>
+    <rect x="154" y="199" width="168" height="90" rx="16" fill="url(#noms-s3-plaque)"/>
+    <path d="M159 270 159 216Q159 203 173 203L303 203Q313 203 317 212" fill="none" stroke="#fffbee" stroke-width="3"/>
+    <path d="M161 279Q166 286 178 286L304 286Q314 286 318 275" fill="none" stroke="#d2b68c" stroke-width="2"/>
+    <path fill="#263a27" transform="translate(165 263) scale(.0515 -.0515)" d="M114.75 -9.25Q79.5 -9.25 63.75 1.75Q48 12.75 44.12 30.25Q40.25 47.75 40.25 67.5V616.75Q40.25 635.5 44.25 651.88Q48.25 668.25 64.75 678.75Q81.25 689.25 117.5 689.25Q154.25 689.25 168 680.62Q181.75 672 193.25 657.25L485.25 256V616.75Q485.25 635.5 489.5 651.88Q493.75 668.25 509.75 678.75Q525.75 689.25 562 689.25Q598.75 689.25 614.25 678.25Q629.75 667.25 633.5 649.75Q637.25 632.25 637.25 612.5V66.5Q637.25 47.5 633.12 30.12Q629 12.75 612.75 1.75Q596.5 -9.25 559.5 -9.25Q531.5 -9.25 516.38 -4.38Q501.25 0.5 490.25 15L191.5 419V66.5Q191.5 47.5 187.62 30.12Q183.75 12.75 167.75 1.75Q151.75 -9.25 114.75 -9.25ZM1050 -19Q977.63 -19 914.44 8.38Q851.25 35.75 803.38 84.5Q755.5 133.25 728.25 197.29Q701 261.33 701 334.53Q701 409.75 727.41 475.61Q753.81 541.46 800.53 591.11Q847.25 640.75 909.14 668.75Q971.03 696.75 1041.62 696.75Q1114.25 696.75 1177.46 669.46Q1240.66 642.17 1288.07 593.15Q1335.47 544.13 1362.48 478.94Q1389.5 413.75 1389.5 338.33Q1389.5 264.94 1363.12 200.22Q1336.75 135.5 1289.77 86.02Q1242.8 36.54 1181.52 8.77Q1120.25 -19 1050 -19ZM1044.76 133.25Q1084.75 133.25 1119.88 149Q1155 164.75 1181.38 192.5Q1207.75 220.25 1222.5 257.84Q1237.25 295.43 1237.25 338.69Q1237.25 381.25 1222.12 418.5Q1207 455.75 1180.5 484.25Q1154 512.75 1119.42 528.62Q1084.84 544.5 1045.42 544.5Q1006 544.5 971.25 528.62Q936.5 512.75 910 484.38Q883.5 456 868.38 418.51Q853.25 381.03 853.25 338.29Q853.25 296.25 868.51 258.85Q883.77 221.45 910.14 193.23Q936.5 165 970.98 149.12Q1005.45 133.25 1044.76 133.25ZM1524.5 -8.75Q1489.25 -8.75 1473.38 1.88Q1457.5 12.5 1453.62 30Q1449.75 47.5 1449.75 68V614.5Q1449.75 633.5 1453.62 650.38Q1457.5 667.25 1473.5 678.25Q1489.5 689.25 1526.5 689.25Q1552.25 689.25 1564.88 686Q1577.5 682.75 1583.75 677.5Q1590 672.25 1596.5 664.75L1821.75 361.25H1807.25L2032.75 665Q2041.25 674.5 2049 679.5Q2056.75 684.5 2069.5 686.88Q2082.25 689.25 2104.75 689.25Q2141 689.25 2156.88 678.25Q2172.75 667.25 2176.62 649.75Q2180.5 632.25 2180.5 612.5V66Q2180.5 47.25 2176.62 29.88Q2172.75 12.5 2156.75 1.88Q2140.75 -8.75 2103.75 -8.75Q2067.75 -8.75 2051.88 2.25Q2036 13.25 2032.12 31.12Q2028.25 49 2028.25 68V424.5L1879 213.5Q1875.25 208.75 1868.25 200.5Q1861.25 192.25 1848.75 185.88Q1836.25 179.5 1814.5 179.5Q1792.75 179.5 1780.12 185.88Q1767.5 192.25 1760.62 200.12Q1753.75 208 1749.25 214L1601 423.75V66Q1601 47.25 1597.12 29.88Q1593.25 12.5 1577.38 1.88Q1561.5 -8.75 1524.5 -8.75ZM2493 -19.25Q2439.75 -19.25 2400.25 -6.25Q2360.75 6.75 2333.5 25.5Q2306.25 44.25 2289.88 61.88Q2273.5 79.5 2267.5 88.75Q2250.75 110.5 2246.62 127.38Q2242.5 144.25 2251 161Q2259.5 177.75 2281 197.5Q2301.5 216.25 2320.25 217.75Q2339 219.25 2356.88 208.25Q2374.75 197.25 2391.75 177Q2416 147.5 2439.38 136Q2462.75 124.5 2489 124.5Q2522 124.5 2545 132.88Q2568 141.25 2580.12 158.5Q2592.25 175.75 2592.25 202.75Q2592.25 224.75 2575.62 238.38Q2559 252 2531.62 261.75Q2504.25 271.5 2470.62 281Q2437 290.5 2403.5 303.75Q2381.25 312 2359.88 323.75Q2338.5 335.5 2319.88 350.75Q2301.25 366 2287.5 387Q2273.75 408 2266.12 435Q2258.5 462 2258.5 496.75Q2258.5 555.75 2287.75 601.62Q2317 647.5 2368.62 674.12Q2420.25 700.75 2486.5 700.75Q2531.5 700.75 2565.25 693Q2599 685.25 2622 674.12Q2645 663 2658.62 652.5Q2672.25 642 2677.25 636.25Q2705.25 610 2708 591.38Q2710.75 572.75 2687 539.75Q2661.5 505 2637.25 501Q2613 497 2581.75 518Q2570 529.25 2557.88 538.25Q2545.75 547.25 2529.25 552.5Q2512.75 557.75 2485.5 557.75Q2470.25 557.75 2456.12 553.25Q2442 548.75 2431.88 540.75Q2421.75 532.75 2415.75 521.25Q2409.75 509.75 2409.75 495.75Q2409.75 472.5 2425.12 458.5Q2440.5 444.5 2466.25 436.12Q2492 427.75 2523.38 420.25Q2554.75 412.75 2587.5 402.75Q2617.5 393 2645.88 378.5Q2674.25 364 2696.25 341.75Q2718.25 319.5 2731.62 286.5Q2745 253.5 2745 205.75Q2745 145.75 2721.88 102.62Q2698.75 59.5 2661 32.75Q2623.25 6 2579.12 -6.62Q2535 -19.25 2493 -19.25Z"/>
+    <!-- Coral elastic wraps over the front and around the bottom edge. -->
+    <path d="M337 78Q340 68 348 69L369 70Q377 70 377 79L376 518 391 552Q378 557 357 551L341 517Z" fill="#713524" opacity=".3" transform="translate(4 3)"/>
+    <path d="M335 80Q334 70 343 69L367 69Q376 70 376 79L371 85Z" fill="#ff9a70" stroke="#bf4d34" stroke-width="1.5"/>
+    <path d="M335 79 371 81 371 516Q359 524 335 516Z" fill="url(#noms-s3-coral)" stroke="#be4a31" stroke-width="2"/>
+    <path d="M338 87 338 505Q338 512 344 513L367 516" fill="none" stroke="#ffac79" stroke-width="2.5"/>
+    <path d="m340 104 23-16-5 213-16 85Z" fill="#ff9a6c" opacity=".19"/>
+    <path d="m365 243 0 255-22 13Z" fill="#db5037" opacity=".3"/>
+    <path d="M335 516Q351 522 371 516L389 551Q376 555 356 549Z" fill="url(#noms-s3-ribbon)" stroke="#a5402d" stroke-width="2"/>
+    <path d="m340 522 19 24 24 3" fill="none" stroke="#f28153" stroke-width="2" opacity=".6"/>
+  </g>
+</svg>

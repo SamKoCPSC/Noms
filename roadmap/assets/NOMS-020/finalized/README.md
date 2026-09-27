@@ -8,7 +8,7 @@ These are user-selected directions, not pixel-perfect specifications. Notes and 
 
 | Area | Selected artwork | Decision / review notes |
 | --- | --- | --- |
-| Planned logo | [S1 Rounded cream](../logo/spine-options-s1-s3-v1.md) | Canonical 2026-09-18; replaces F2; leftmost book in sheet; standalone production asset/SVG/favicon/3D model pending; use actual Fredoka |
+| Planned logo | [S3 Continuous olive](../logo/spine-options-s1-s3-v1.md) | Canonical 2026-09-27; replaces S1; rightmost book in sheet; olive spine matches cover; standalone production asset/SVG/favicon/3D model pending; use actual Fredoka |
 | Shared navigation | [N1](../navigation-n01-v1.png) + [N4](../navigation-n04-v1.png) | [Mixed exploration notes](../navigation-directions-v1.md); combine N1 layout and N4 silhouette, exclude props/incidental destinations |
 | Search | [S2 scopes](../search-s2-scopes-v1.png), [S2 states](../search-s2-states-v1.png) | [Notes](../search-s2-scopes-and-states-v1.md); reconcile current search contracts |
 | Public pages | [Home](../public-home-cozy-v2.png), [About](../public-about-cozy-v2.png), [How-to](../public-how-to-cozy-v2.png) | [Cozy v2 notes](../public-cozy-v2-prompts.md) |
@@ -60,4 +60,4 @@ The integrated page is the primary composition reference. Component studies expl
 
 The current app's typography, colors and cozy neumorphic personality take precedence over generated styling. Preserve actual Fredoka/Nunito and existing palette/accent roles; use these proposals primarily for layout, hierarchy and component composition. Consolidate existing tokens rather than replacing the identity. Material visual-identity changes require user review.
 
-Use actual data, fonts and the selected S1 logo reference. Earlier mockups' A3/F2 marks are superseded. Preserve omitted actions, permission boundaries and accessibility. Exact tokens, async race protection, routing, keyboard behavior and viewport constraints must be validated in implementation. No new designs need to be generated merely to begin the shared-foundation slice.
+Use actual data, fonts and the selected S3 logo reference. Earlier mockups' A3/F2/S1 marks are superseded. Page-icon selections and their original S1-family styling references remain unchanged. Preserve omitted actions, permission boundaries and accessibility. Exact tokens, async race protection, routing, keyboard behavior and viewport constraints must be validated in implementation. No new designs need to be generated merely to begin the shared-foundation slice.
