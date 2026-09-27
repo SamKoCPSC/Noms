@@ -82,10 +82,13 @@ rebuild/hot-patch messages appeared in DOM snapshots during the session.
 
 ## Findings and acceptance tasks
 
-### Blocking for release acceptance: subcollection parent context
+### Resolved: subcollection parent context
 
-- [ ] Fix and regression-test nested creation, then recheck creation, breadcrumb,
+- [x] Fix and regression-test nested creation, then recheck creation, breadcrumb,
   parent listing and Cancel in the integrated browser.
+
+Resolved by `9b6d667` on 2026-09-27; see the fix validation below. The original
+reproduction is retained for context.
 
 Open the fixture collection and choose **New subcollection**. The URL contains
 `?parent=75c55acb-5eed-47a6-a4dc-f7fef5092798`, but the settled form says
@@ -121,7 +124,7 @@ established as a new regression or authorization bug.
 
 ## Remaining gates and next order
 
-1. Address the two findings in focused fixes and rerun their browser reproductions;
+1. Address the remaining profile and collection-navigation findings in focused fixes;
    resolve the guest-search copy/destination question.
 2. Run full repository-required CI on the resulting combined revision. No fresh
    automated application suite ran during this docs/browser pass. Source
@@ -146,3 +149,65 @@ established as a new regression or authorization bug.
 
 **Verdict:** Integrated happy-path checks passed where listed; checkpoint 8 is
 **not accepted** while the confirmed findings and remaining gates are open.
+
+## Parent-context fix validation — 2026-09-27
+
+Implementation commit: `9b6d667`, developed on `codex/NOMS-020-subcollection-parent`
+in `.worktrees/NOMS-020-subcollection-parent`, then fast-forwarded into the
+NOMS-020 integration branch. Tests and the route fix form one cohesive commit;
+this follow-up records runtime evidence separately. Existing Tailwind changes
+were not committed or overwritten.
+
+Cause: the router did not declare `parent`, so route parsing/serialization dropped
+it. The page separately initialized a signal from browser-only `window.location`,
+returning `None` on the server. The fix declares `parent: Option<uuid::Uuid>` in
+the route and consumes the prop directly for form/breadcrumb text, Cancel and
+the pending create request. No backend or permissions behavior changed; missing,
+empty and invalid parent values retain the existing top-level fallback.
+
+Automated evidence (commands run from the fix worktree with
+`CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target`):
+
+- Before the fix, `SQLX_OFFLINE=true cargo test --features server collection_creation_route_preserves_parent_without_a_browser -- --nocapture`
+  failed as intended: serialized URL was `/collections/new`, losing `?parent=…`.
+- `SQLX_OFFLINE=true cargo test --features server pages::collection_new::tests -- --nocapture`:
+  4 passed, including actual route parsing and server-rendered nested/top-level forms.
+- `SQLX_OFFLINE=true cargo test --features server collection -- --test-threads=4`:
+  93 passed, 0 failed, 2 existing ParadeDB integration tests ignored. Includes
+  hierarchy/ownership tests and selected-navbar coverage for both route variants.
+- `SQLX_OFFLINE=true cargo clippy --features server -- -D warnings`,
+  `cargo clippy --target wasm32-unknown-unknown -- -D warnings`,
+  `cargo fmt --check`, and `git diff --check`: passed.
+- Second-pass self-review of the complete change: PASS for this scoped fix.
+  No independent agent review or fresh full repository suite is claimed.
+
+Runtime evidence on the existing `:32768` deployment:
+
+- Restarted only the app container to pick up the route change; the database and
+  fixtures were retained. A stale cached client initially disagreed with the new
+  server markup. Reloading with cache temporarily disabled restored consistent
+  behavior; caching was restored after verification.
+- The original New subcollection link and a direct reload retained `?parent=…`;
+  heading/breadcrumb showed New subcollection and location copy described nesting.
+- Cancel returned to the correct parent URL **and rendered parent content**.
+- Created private child `df67b11e-f634-4e77-962d-830da8f60bd8` under the original
+  fixture. Its detail breadcrumb and edit parent selector confirmed the parent.
+  The first immediate input fill was not retained during page initialization,
+  so the child initially used the default name; it was then renamed through Edit
+  to **NOMS020 child verification 2026-09-27**. The fixture remains for reproduction.
+- Reloading the parent showed the child under Subcollections; the top-level list
+  still contained only the parent and reported one subcollection.
+- Top-level New collection after the nested flow showed top-level copy, with
+  Cancel returning to the collection list rather than retaining the old parent.
+
+### Separate follow-up: collection-to-collection navigation retains stale content
+
+- [ ] Reproduce and fix data refresh when navigating between collection IDs
+  without a full reload; add a reactive-route regression test.
+
+During the child-detail → parent breadcrumb navigation, the address changed to
+the parent ID but the child heading/content remained until reload. Reload showed
+the correct parent with the newly created child. This is distinct from creation
+parent context; it was recorded, not modified, in this fix. Introduction revision
+is not established. Checkpoint 8 remains open for this, the profile issue and the
+other acceptance gates above.

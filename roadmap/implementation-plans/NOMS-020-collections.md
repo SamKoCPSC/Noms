@@ -40,3 +40,10 @@ Preview started with `just up noms020-collections-20260925`, at `http://127.0.0.
 ## Integration
 
 Integrated: source tip `aa5280e` is an ancestor of integration revision `74c4200`, verified 2026-09-27. See the [combined review](NOMS-020-checkpoint-8-integration.md) for acceptance, fixtures and the nested-creation follow-up. Finish nested detail, cover upload, owner-versus-visitor controls, keyboard and light/dark/responsive review before final acceptance; merge status does not close those checks.
+
+Follow-up `9b6d667` (2026-09-27): parent is now a typed creation-route parameter,
+shared by SSR/client form state, Cancel and submission. Regression tests and the
+browser confirmed nested creation, parent breadcrumb/membership, and top-level
+fallback. The [integration report](NOMS-020-checkpoint-8-integration.md#parent-context-fix-validation--2026-09-27)
+records exact commands, runtime evidence and a separate stale-content issue when
+navigating between collection IDs; that issue is not fixed by this change.

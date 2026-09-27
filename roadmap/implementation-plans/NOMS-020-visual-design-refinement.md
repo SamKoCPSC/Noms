@@ -14,9 +14,11 @@ Integration checkpoint (2026-09-27): the public, Search, Dashboard, collection,
 recipe and user-page redesigns are now included in
 `codex/NOMS-020-visual-design-refinement` at `74c4200`.
 See the [combined browser validation and remaining gates](NOMS-020-checkpoint-8-integration.md).
-The page implementation phase is integrated, not release-approved: nested
-collection creation and empty-name profile presentation require follow-up,
+The page implementation phase is integrated, not release-approved: collection
+navigation data refresh and empty-name profile presentation require follow-up,
 alongside remaining regression, accessibility and responsive acceptance.
+Nested collection creation's parent-context defect was fixed and browser-verified
+in `9b6d667` on 2026-09-27; see the integration report's follow-up evidence.
 The [recipe-page handoff](NOMS-020-recipe-pages.md) and other route checkpoints
 retain their source-branch tests and validation limits.
 
@@ -377,7 +379,8 @@ Dependencies follow actual shared contracts, not just page names. For example, a
 - [x] Exact shared tokens/components implemented and reviewed in checkpoint 1.
 - [x] Major page redesign workstreams integrated at `74c4200`, including Search, Dashboard, collections, recipes and user pages.
 - [x] Combined browser smoke pass recorded — [2026-09-27 evidence](NOMS-020-checkpoint-8-integration.md); partial acceptance, not a full regression pass.
-- [ ] Fix and revalidate subcollection parent-context loss and empty-name public-profile presentation.
+- [x] Fix and revalidate subcollection parent-context loss — `9b6d667`, including saved nesting and Cancel destinations.
+- [ ] Fix empty-name public-profile presentation and the separately observed stale collection content after breadcrumb navigation between IDs.
 - [ ] Reconcile guest-search copy/destination with the authenticated Search route; do not infer authorization to change search access.
 - [ ] Complete final combined-revision CI, cross-route failure/permission checks, accessibility and per-page phone/tablet acceptance.
 - [ ] Resolve production S1 artwork before replacing the current mark; retain explicit status for SVG/favicon/3D and optional page icons.
