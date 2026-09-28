@@ -2,7 +2,7 @@
 
 ## About and How-to — selected 2026-09-28
 
-Approved directions: **A3 Information index card** for About and **H3 Recipe checklist and pencil** for How-to. [Concept sheet](../../../roadmap/assets/NOMS-020/page-icons/about-how-to-a1-h3-v1.png). Standalone assets: [about-v1.png](about-v1.png) and [how-to-v1.png](how-to-v1.png), each 1254 × 1254 RGBA PNG. Generated using the built-in image tool; visually checked against the selected concepts. UI integration remains pending.
+Approved directions: **A3 Information index card** for About and **H3 Recipe checklist and pencil** for How-to. [Concept sheet](../../../roadmap/assets/NOMS-020/page-icons/about-how-to-a1-h3-v1.png). Standalone assets: [about-v1.png](about-v1.png) and [how-to-v1.png](how-to-v1.png), each 1254 × 1254 RGBA PNG. Generated using the built-in image tool; visually checked against the selected concepts. Integrated 2026-09-28 into page headings and navigation drawer destinations through the shared Rust components: transparent 192 × 192 WebP derivatives, 72px desktop/56px compact headings and 32px drawer artwork. Existing hero illustrations and copy remain unchanged.
 
 About generation prompt: reproduce only the top-right A3 information card as a standalone transparent PNG. Preserve the landscape cream card, olive backing and circled lowercase i, coral top tab, ruled strokes, tilt, painted texture and warm highlights. Center on a square transparent canvas with margins; remove all sheet labels, other icons and backdrop. Do not redesign or add elements.
 
@@ -12,7 +12,7 @@ Generated 2026-09-27 with the built-in image-generation tool from the eight sele
 
 [Gallery](../page-icons.html)
 
-Navigation integration (2026-09-27): `NavigationArtwork` reuses these assets at 32 × 32 beside matching drawer destinations and dashboard sidebar labels. The book remains 32 × 40. Home/About/How to retain aligned empty artwork slots rather than inventing new identities. Profile artwork remains separate from the user's avatar, and small action controls retain conventional icons. See the drawer/sidebar validation in the integration checkpoint.
+Navigation integration (2026-09-27, extended 2026-09-28): `NavigationArtwork` reuses these assets at 32 × 32 beside matching drawer destinations and dashboard sidebar labels. The book remains 32 × 40. Home retains an aligned empty artwork slot; About/How to now use their approved identities. Profile artwork remains separate from the user's avatar, and small action controls retain conventional icons. See the drawer/sidebar validation in the integration checkpoint.
 
 ## Dashboard
 

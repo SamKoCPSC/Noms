@@ -408,3 +408,39 @@ Validation:
 
 This navigation-artwork extension does not close broader checkpoint 8 gates or
 the remaining collection stale-content/guest-search questions.
+
+## About and How to artwork — 2026-09-28
+
+Supplied selections/assets were preserved in `ec1aec6`; implementation `adb18e7`
+adds About A3 and How-to H3 to `PageIconKind`, their existing page titles, and
+navigation drawer destinations. Developed in `codex/NOMS-020-information-icons`
+at `.worktrees/NOMS-020-information-icons`, then fast-forwarded into NOMS-020.
+No changes to typography, palette, hero illustrations, title copy, routes or
+navigation behavior. Existing generated Tailwind changes were preserved.
+
+Validation used the integration worktree's shared Cargo target directory:
+
+- Tests-first shared identity expectations failed because the new enum variants
+  were not yet implemented. The How-to heading regression now verifies its
+  approved asset, decorative alt treatment, existing text and single h1.
+- `SQLX_OFFLINE=true cargo test --features server --bin noms -- --test-threads=8`:
+  784 passed, 0 failed, 12 ignored.
+- `SQLX_OFFLINE=true cargo clippy --features server -- -D warnings` and
+  `SQLX_OFFLINE=true cargo clippy --target wasm32-unknown-unknown -- -D warnings`:
+  passed. `cargo fmt --all --check` and `git diff --check`: passed.
+- Second-pass self-review: PASS; no independent-agent review claimed.
+- Existing deployment `:32768` was reused, restarting only the app container.
+  A stale-client hydration error during the rebuild resolved after a cache-disabled
+  reload; the rebuilt drawer then opened and navigated normally.
+- Desktop browser screenshots and DOM review confirmed both transparent WebPs
+  loaded at 72px beside unchanged titles. About retained its labelled heading id;
+  both pages retained one h1 and no horizontal overflow. Images have empty alt
+  and aria-hidden, with labels supplied by surrounding text.
+- Drawer About and How-to assets loaded at 32px, with the active About destination
+  selected correctly. Selecting How to closed the drawer and loaded that page.
+- At measured 390px width, both heading icons loaded at 56px and drawer icons
+  remained 32px, with no horizontal page/drawer overflow. Selecting About from
+  the compact drawer navigated and closed it, returning focus to the trigger.
+  Viewport and cache overrides were restored; the temporary test tab was closed.
+
+Broader checkpoint acceptance and existing unrelated findings remain open.
