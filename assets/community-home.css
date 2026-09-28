@@ -17,7 +17,7 @@
 .community-home-spotlight .recipe-card__title { font-size: clamp(24px, 2.4vw, 34px); }
 .community-home-spotlight .recipe-card__description { -webkit-line-clamp: 4; }
 .community-home-spotlight .recipe-card__author { margin-top: 18px; }
-.community-home-side { display: grid; gap: 28px; min-width: 0; }
+.community-home-side { display: grid; grid-column: 2; grid-row: 1 / span 2; gap: 28px; min-width: 0; }
 .community-home-notice { margin-top: 24px; }
 .community-home-notice-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin-bottom: 10px; }
 .community-home-notice-meta time { color: var(--text-secondary); font-size: 13px; }
@@ -27,7 +27,7 @@
 .community-home-action span { font-size: 14px; color: var(--text-secondary); }
 .community-home-state { display: grid; justify-items: start; gap: 16px; padding-block: 32px; color: var(--text-secondary); }
 .community-home-state h3 { color: var(--text-primary); font-size: 20px; }
-.community-home-recipes { grid-column: 1 / -1; }
+.community-home-recipes { grid-column: 1; }
 .community-home-recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 24px; margin-top: 24px; }
 @media (max-width: 1199px) {
     .community-home-layout { grid-template-columns: minmax(0, 1fr) 320px; }
@@ -37,6 +37,7 @@
 @media (max-width: 800px) {
     .community-home-heading { align-items: start; flex-direction: column; gap: 16px; }
     .community-home-layout { grid-template-columns: minmax(0, 1fr); }
+    .community-home-side { grid-column: auto; grid-row: auto; }
     .community-home-panel { padding: 20px; }
 }
 @media (prefers-reduced-motion: reduce) {
