@@ -1,6 +1,6 @@
 # NOMS painted page icons
 
-Generated 2026-09-27 with the built-in image-generation tool from the eight selected design references. These standalone transparent PNGs preserve the olive/cream/coral painted family. App integration and small-size optimization remain separate; the detailed illustrations are intended primarily for page headings and larger placements. Preserve alpha and aspect ratio; provide accessible labels through surrounding UI, or empty alt text when decorative.
+Generated 2026-09-27 with the built-in image-generation tool from the eight selected design references. These standalone transparent PNGs preserve the olive/cream/coral painted family. Integrated 2026-09-27 through the shared Rust PageIcon component: the asset pipeline creates transparent 192 × 192 WebP derivatives, displayed at 72px (56px on compact screens), with 48px compact variants (40px on compact screens). All eight identities are placed beside page/section text; small controls retain conventional icons. The profile identity card does not replace the user's avatar. See [integration evidence](../../../roadmap/implementation-plans/NOMS-020-checkpoint-8-integration.md#brand-artwork-integration--2026-09-27). Preserve alpha and aspect ratio; provide accessible labels through surrounding UI, or empty alt text when decorative.
 
 [Gallery](../page-icons.html)
 

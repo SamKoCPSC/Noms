@@ -217,6 +217,69 @@ parent context; it was recorded, not modified, in this fix. Introduction revisio
 is not established. Checkpoint 8 remains open for this and the other acceptance
 gates above; the profile-name issue is resolved below.
 
+## Brand artwork integration — 2026-09-27
+
+Implementation: `6f24dfb`, developed on `codex/NOMS-020-brand-ui` in
+`.worktrees/NOMS-020-brand-ui`, then fast-forwarded into the integration worktree.
+The existing deployment at `http://127.0.0.1:32768` was reused; only its app
+container was restarted to rebuild. Database, OAuth and storage fixtures were
+preserved. The pre-existing generated `assets/tailwind.css` change was not staged.
+
+Placements:
+
+- S3 SVG beside the existing navbar/footer wordmark, replacing the cutlery emoji.
+- S3 painted book above the sign-in heading.
+- Dashboard pinboard, Explore compass, Search magnifier/book, Collections bookshelf,
+  editor clipboard, History ledger/clock, Profile identity card, Settings controls.
+- Collections list/detail/create/edit share the bookshelf; new/edit recipe headers
+  share the clipboard. History appears in the recipe history section and graph
+  loading/error/empty/populated headers. Both settings routes share the controls.
+- Profile artwork accompanies the identity eyebrow, not the user's avatar.
+  Small menu/action icons, existing fonts, colour tokens and controls are unchanged.
+
+The shared Rust components reserve dimensions, retain aspect ratio, use empty
+alt text and aria-hidden for decorative artwork, and preserve text headings and
+named home links. Dioxus/Manganis produces hashed transparent WebP derivatives:
+192 × 192 for page art and 192 × 240 for the painted book. Header display is 72px,
+compact placements 48px, reducing to 56/40px on narrow screens; the book is
+96 × 120 (80 × 100 on narrow screens). Source PNGs remain unchanged.
+
+Automated checks from the task worktree, reusing the integration target cache:
+
+- The new sign-in regression failed before wiring, then passed after integration.
+- `SQLX_OFFLINE=true cargo test --features server --bin noms`: **781 passed,
+  0 failed, 12 ignored**. Includes all eight rendered icon identities, logo sizes,
+  painted sign-in artwork, header text/action preservation and parent-route tests.
+- `cargo fmt --all --check`, `git diff --check`,
+  `SQLX_OFFLINE=true cargo clippy --features server -- -D warnings` and
+  `SQLX_OFFLINE=true cargo clippy --target wasm32-unknown-unknown -- -D warnings`
+  passed. These are not a substitute for the full release CI gate.
+
+Browser evidence on the rebuilt existing deployment:
+
+- Inspected navbar/footer, sign-in, Explore, populated Dashboard, Search,
+  Collections, new recipe editor, public profile, both Settings routes, recipe
+  history and populated version graph. All eight icon sources loaded; observed
+  natural sizes confirmed optimized WebP output. Both SVG home links loaded with
+  32 × 40 artwork; footer retained its inline wordmark alignment.
+- Screenshots assessed desktop Explore, sign-in, Dashboard and graph compositions.
+  Desktop pages measured without horizontal document overflow.
+- At a measured 312px CSS viewport, long graph and collection titles wrapped
+  within the container with 56px icons and no horizontal overflow. Subcollection
+  creation retained its parent query and contextual heading after navigation.
+  This is representative compact-width smoke coverage, not all-page mobile or
+  tablet acceptance. The compact screenshot renderer produced a scaled/cropped
+  capture, so DOM measurements were used for that geometry check.
+- Local Google mock sign-in, Settings-tab navigation and recipe-actions → graph
+  navigation worked. Explore search reached the expected no-results state.
+  No error-level console messages were captured in the test tab.
+- Temporary viewport/cache overrides were restored. No recipes, collections or
+  profile data were modified during this artwork verification.
+
+Second-pass self-review: **PASS** for this scoped integration; no independent
+agent review was performed. Favicon/single-colour exports, the 3D model, dark
+regression coverage and the broader per-page/release gates remain open.
+
 ## Public-profile name fix validation — 2026-09-27
 
 Implementation commit: `9cbeef5`, developed in

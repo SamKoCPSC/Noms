@@ -1,6 +1,6 @@
 # NOMS web logo
 
-A painted PNG alternative is available in `noms-logo-painted-s3-v1.png` (1122 × 1402 RGBA, 1.36 MB). Open `compare.html` for a side-by-side comparison with the SVG on light/dark surfaces. See [generation notes and prompt](noms-logo-painted-s3-v1.md). It retains genuine transparency and richer brushwork, but uses generated lettering rather than exact Fredoka outlines. Neither alternative is wired into the app yet.
+A painted PNG alternative is available in `noms-logo-painted-s3-v1.png` (1122 × 1402 RGBA, 1.36 MB). Open `compare.html` for a side-by-side comparison with the SVG on light/dark surfaces. See [generation notes and prompt](noms-logo-painted-s3-v1.md). It retains genuine transparency and richer brushwork, but uses generated lettering rather than exact Fredoka outlines. Integrated 2026-09-27: the SVG accompanies the navbar/footer wordmark and the painted book appears above the sign-in heading. Shared Rust components preserve decorative accessibility treatment and aspect ratio; the asset pipeline emits a 192 × 240 transparent WebP for the painted placement.
 
 `noms-logo.svg` is the static vector interpretation of **S3 — Continuous olive**, created 2026-09-27. The selected source is the rightmost book in [the spine comparison](../../roadmap/assets/NOMS-020/logo/spine-options-s1-s3-v1.png).
 
@@ -14,7 +14,7 @@ Import `asset!("/assets/brand/noms-logo.svg")` through the existing Dioxus asset
 
 Prefer an external `img` rather than repeating inline SVG markup, which would duplicate gradient and accessibility IDs. Keep the transparent margin and aspect ratio; do not crop or stretch. At navigation sizes the silhouette remains recognizable but the cover lettering is too small to serve as readable text. Pair it with the app wordmark. A simplified tiny favicon remains a separate task.
 
-Open `preview.html` to review 32, 48, 64, 96 and 320px heights on light and dark surfaces. The SVG is ready for page integration; this asset change does not replace existing UI logos automatically. Favicon exports and the 3D model remain pending.
+Open `preview.html` to review 32, 48, 64, 96 and 320px heights on light and dark surfaces. The SVG is now integrated through the shared BrandMark component. Favicon exports and the 3D model remain pending.
 
 ## Validation
 
