@@ -674,3 +674,34 @@ sign-off is claimed. Editorial curation, announcements authoring and new communi
 engagement features need separate product contracts. Broader checkpoint 8 issues
 remain open. Rollback is the three code commits in reverse order; no schema or
 fixture rollback is required.
+
+## Brand logo landing destination — 2026-09-28
+
+User requested that the NOMS logo return to the landing page instead of Community
+Home. `5daf9e4`, developed in `codex/NOMS-020-logo-landing` /
+`.worktrees/NOMS-020-logo-landing` from `a638966`, makes the navbar book/wordmark
+unconditionally link to `/`, with accessible name Noms introduction. The footer
+brand already has that destination. Signed-in Home navigation remains `/home`;
+guest navigation, artwork/styling and sign-in/return behavior are unchanged.
+This supersedes the brand-destination statement in the preceding Home evidence.
+
+The new SSR regression renders the actual shared navbar in both auth states and
+checks its logo href/accessibility label. It failed before implementation due to
+the old accessible label; live signed-in baseline also showed the old `/home`
+logo href. `SQLX_OFFLINE=true cargo test --features server --bin noms components::navbar -- --nocapture`:
+6 passed, including auth-specific Home destinations, responsive navigation and
+logout-form contracts. Server and WASM Clippy with `-D warnings`,
+`cargo fmt --all --check` and `git diff --check` passed, using the shared integration
+target cache. No fresh full-suite or independent-agent review is claimed;
+second-pass self-review **PASS**, with no blocking/should-fix findings.
+
+Fast-forwarded into NOMS-020, preserving existing generated Tailwind edits;
+only the existing app container was restarted. No backend/data changes or new
+deployment. The code commit can be reverted independently.
+
+Live browser verification on the rebuilt `:32768` deployment reused the existing
+signed-in mock account. From Community Home, clicking the navbar logo opened `/`
+and its landing heading/marketing sections; clicking Home then reopened `/home`
+with Community Home and the public recipe feed. Guest logo behavior has SSR
+coverage, not a separate logout round trip. Temporary cache bypass was restored
+and the test tab closed.

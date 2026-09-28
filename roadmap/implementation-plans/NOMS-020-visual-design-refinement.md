@@ -64,8 +64,10 @@ raised panels, inset participation links and shared framed cards. Desktop uses
 the shared 1760px cap; additional recipes sit directly below the spotlight beside
 the news sidebar. Narrow layouts stack without changing content or destinations.
 Loading, empty and retry states affect only recipes; notices and participation
-remain available. Signed-in navbar/book/drawer Home still leads to `/home`, the
-drawer retains Noms introduction `/`, and the footer now groups Community Home
+remain available. Signed-in navbar/drawer Home still leads to `/home`. Per the
+user's follow-up, the navbar book/wordmark always leads to landing `/`, regardless
+of authentication; its accessible label is Noms introduction. The drawer also
+retains Noms introduction `/`, and the footer groups Community Home
 under Discover rather than Your kitchen. Existing sign-in/access rules and safe
 return destinations are unchanged by this composition rework.
 
