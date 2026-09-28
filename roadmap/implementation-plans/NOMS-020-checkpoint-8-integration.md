@@ -444,3 +444,44 @@ Validation used the integration worktree's shared Cargo target directory:
   Viewport and cache overrides were restored; the temporary test tab was closed.
 
 Broader checkpoint acceptance and existing unrelated findings remain open.
+
+## Wider desktop composition — 2026-09-28
+
+User requested more use of typical 16:9 desktop space. `171c7a6` introduces
+`--content-max-width: 1760px` and makes the shared container/navbar and existing
+page-specific outer caps consume it. This replaces the inconsistent 1060–1600px
+caps across About, Home, How to, dashboard, search, settings, collection forms,
+recipe editor and recipe detail. Inner text measures, component sizes, breakpoints,
+mobile gutters, modal widths and sign-in panel sizing remain unchanged. New
+outer page compositions should use the shared token rather than a fixed cap.
+
+Developed in `codex/NOMS-020-wide-layout` / `.worktrees/NOMS-020-wide-layout` and
+fast-forwarded into NOMS-020, preserving the existing generated Tailwind changes.
+The existing local deployment was reused; only the app container restarted.
+
+Validation:
+
+- Before implementation, the new foundation contract failed with missing
+  `--content-max-width`. Afterward,
+  `rustc --edition=2021 --test src/components/design_foundation_tests.rs -o /tmp/noms-wide-layout-tests`
+  followed by `/tmp/noms-wide-layout-tests`: 15 passed. The contract covers the
+  shared cap, all route-owned outer overrides and preserved text/mobile measures.
+- `SQLX_OFFLINE=true cargo test --features server --bin noms -- --test-threads=8`
+  with the integration target directory: 785 passed, 0 failed, 12 ignored.
+- `cargo fmt --all --check` and `git diff --check`: passed. No fresh Clippy run
+  claimed for this CSS-only production change.
+- Second-pass scoped self-review: PASS; no independent-agent review claimed.
+- At measured 1920 × 1080, browser DOM review showed About widening from 1320
+  to 1760px and Explore/navbar from 1600 to 1760px. Home, dashboard, search,
+  settings and recipe detail also measured 1760px without page overflow.
+  Dashboard sidebar remained 230px; Home lede retained its 470px text measure.
+- At 1440 × 810, Home and recipe detail filled the 1425px available body width
+  (15px vertical scrollbar), with no horizontal overflow. At 390px, Home, About,
+  search and recipe detail filled 375px without horizontal overflow; About retained
+  its 16px inner gutter. Desktop screenshots were reviewed in-session.
+- The rebuilt client initially served cached route-specific recipe CSS; a
+  temporary cache-disabled reload confirmed the current 1760px rule. Cache and
+  viewport overrides were restored and the temporary tab closed. Existing local
+  mock account/data were reused without editing recipes or account settings.
+
+Broader checkpoint gates and unrelated existing findings remain open.
