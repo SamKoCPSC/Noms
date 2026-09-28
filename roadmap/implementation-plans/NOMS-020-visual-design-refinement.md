@@ -32,32 +32,45 @@ Precedence: explicit recorded user decisions and behavior/accessibility requirem
 
 The application presents one deliberate, accessible, responsive visual system across public pages, authenticated workflows, dense data views, forms, and transient states.
 
-### Landing, everyday Home and Dashboard — confirmed 2026-09-28
+### Landing, community Home and personal Dashboard — clarified 2026-09-28
 
-The user approved separating the existing marketing page from an authenticated
-everyday entry point. `/` remains the public landing page with its existing cozy
-v2 composition and copy; `/home` is the new **Your kitchen** Home; `/dashboard`
-remains the management workspace. Historical references called the landing page
-“Home”; they do not describe the new personal route.
+The user's clarification supersedes the initial personal-Home composition.
+`/` remains the public cozy v2 landing page; `/home` is **Community Home**, for
+public recipe discovery, product/community notices and participation; `/dashboard`
+is the existing personal management workspace. Historical boards called `/`
+“Home”; neither those boards nor the superseded Your kitchen implementation
+describe the current community route.
 
-Home presents an owner-scoped recipe search and New recipe/New collection actions,
-up to six recently updated saved recipes, up to three private draft continuation
-links, up to three top-level collections in their saved order, and restrained
-Explore access. It uses existing shared recipe/collection cards, the book mark,
-approved section artwork, Fredoka/Nunito, current palette and raised/inset tokens.
-It is not another marketing page or a duplicate management table. No inspirational
-quotes, invented counts, bulk actions or new backend capabilities are introduced.
+Home presents a large **Community spotlight**, additional community recipe cards,
+an **Announcements** panel and **Get involved** links. Reuse Explore's bounded
+public-only recipe source: the newest recipe is the spotlight, followed by up to
+five more without duplication. Label this honestly as a newest-public-recipe
+preview, not curated, trending or popular. Preserve real recipe/creator links,
+metadata and image fallbacks; exclude private and unlisted recipes, including
+those owned by the viewer. Home no longer reads personal drafts, collections or
+owner-scoped search results.
 
-Signed-in primary navigation and its book mark lead to `/home`; the drawer retains
-a separate Noms introduction destination for `/`. Default sign-in returns to Home,
-while explicitly requested safe return destinations remain intact. `/home` is
-protected by the server middleware and client auth boundary; its private resources
-are mounted only within the authenticated workspace.
+The initial announcement is an authored, dated notice about the community Home
+and Dashboard distinction, not a simulated activity stream. Participation links
+lead to the existing public-profile directory, recipe creation and forking guide.
+Creation still starts a private draft; the user chooses public visibility before
+sharing. There are no invented comments, likes, rankings, events, challenges or
+community metrics. Curated featured flags, an announcements service/authoring
+workflow and additional engagement capabilities would require separately scoped
+product work, not controls inferred from this design.
 
-Implemented in `c5384b5` and reviewed in `821e158`, then integrated into NOMS-020.
-Desktop uses the shared 1760px cap; narrow layouts stack the search/actions and
-content panels. Initial loading, empty and independent retry states are included.
-See [Home implementation and browser evidence](NOMS-020-checkpoint-8-integration.md#dedicated-personal-home--2026-09-28).
+Retain the book mark, approved section artwork, Fredoka/Nunito, current palette,
+raised panels, inset participation links and shared framed cards. Desktop uses
+the shared 1760px cap; additional recipes sit directly below the spotlight beside
+the news sidebar. Narrow layouts stack without changing content or destinations.
+Loading, empty and retry states affect only recipes; notices and participation
+remain available. Signed-in navbar/book/drawer Home still leads to `/home`, the
+drawer retains Noms introduction `/`, and the footer now groups Community Home
+under Discover rather than Your kitchen. Existing sign-in/access rules and safe
+return destinations are unchanged by this composition rework.
+
+Implemented in `786a7bd` with review corrections `e09dda2` / `5440fd0`, then integrated
+into NOMS-020. See [community Home evidence](NOMS-020-checkpoint-8-integration.md#community-home-rework--2026-09-28).
 Broader dark, accessibility and per-page responsive acceptance remain separate
 gates; this addition does not close checkpoint 8.
 
@@ -180,7 +193,7 @@ These selections were established during exploration and are now reflected in th
 | --- | --- | --- |
 | Search | [S2 scopes](../assets/NOMS-020/search-s2-scopes-v1.png), [states](../assets/NOMS-020/search-s2-states-v1.png), [notes](../assets/NOMS-020/search-s2-scopes-and-states-v1.md) | Recipe Finder: inset search, clear result scopes, chips and expandable filters; reconcile labels and behavior with current search contracts |
 | Landing `/`, About, How-to | [Landing (historically Home)](../assets/NOMS-020/public-home-cozy-v2.png), [About](../assets/NOMS-020/public-about-cozy-v2.png), [How-to](../assets/NOMS-020/public-how-to-cozy-v2.png), [notes](../assets/NOMS-020/public-cozy-v2-prompts.md) | Accepted cozy v2 references: rounded typography, restrained kitchen illustrations, warm raised surfaces; generated slogans/copy are not requirements |
-| Personal Home `/home` | User-approved route/composition contract above; [implementation evidence](NOMS-020-checkpoint-8-integration.md#dedicated-personal-home--2026-09-28) | Everyday kitchen entry: own-library search, recent recipes, private drafts, collections and quick actions; shared NOMS materials, distinct from landing and Dashboard |
+| Community Home `/home` | Clarified community composition above; [implementation evidence](NOMS-020-checkpoint-8-integration.md#community-home-rework--2026-09-28) | Public recipe spotlight/discovery, authored announcements and participation links; shared NOMS materials, no personal content or duplicate Dashboard |
 | Collections | [C3 Kitchen Albums](../assets/NOMS-020/collections-c3-v1.png), [notes](../assets/NOMS-020/collections-directions-v1.md) | Photo-collage album cards, cream surfaces and coral bookmark accents; preserve nested collection structure. [Four-page implementation checkpoint](NOMS-020-collections.md): implemented on task branch; browser acceptance pending |
 | Recipe detail and history | [R3A Soft Album](../assets/NOMS-020/recipe-album-r3a-v2.png), [notes](../assets/NOMS-020/recipe-album-neumorphic-v2.md) | Photo-led detail, soft raised panels, thumbnail history and sage selected-version treatment; neutral draft labels rather than error-red headings |
 
@@ -270,7 +283,7 @@ Historical audits include representative populated graph and comparison flows as
 | Shared shell | Selected N1 + N4 navigation-bar direction | Public versus authenticated variants, exact destinations, search/account access, responsive overflow, secondary navigation if needed, footer density, S3 sizing, focus and active states |
 | Search | Preferred S2 Recipe Finder; scopes and state boards exist | Validate scopes, suggestions, filters/facets, sorting and pagination against current behavior; refine empty/error states and dark parity; phone/tablet discovery per page |
 | Landing `/`, About, How-to | Accepted cozy v2 boards (historically called Home) | Reconcile actual copy, illustration restraint, reading widths, anchor navigation and guide claims with Search; deferred dark parity and per-page responsive discovery |
-| Personal Home `/home` | Dedicated everyday kitchen composition implemented 2026-09-28 | Complete dark/contrast and full per-page responsive acceptance; live populated drafts and forced resource-failure/retry flows remain unexercised in this initial browser pass |
+| Community Home `/home` | Community spotlight, announcements and participation composition implemented 2026-09-28; supersedes personal Home | Complete dark/contrast and full per-page responsive acceptance; future editorial curation, announcements authoring and engagement features require separate behavior planning |
 | Sign-in | Preferred L6B: raised provider controls, guest-access link and guest/account feature sections | Preserve Google/GitHub flow and return destination; refine visibility-qualified copy, pending/cancelled/error feedback, short-viewport sizing, dark parity and signed-out shell |
 | Dashboard | Preferred Central Workspace v1: persistent sidebar and central content management | Scope library search/filters/sort, list/grid and bulk collection organization; define Overview, selection, multiple memberships, draft eligibility, pagination, empty/loading/error states and dark parity |
 | Explore | Preferred X7C Framed Recipe Cards: vertical neumo cards, inset 16:9 images, author details, adaptive columns | Define readable minimum width, long text and image/avatar fallbacks, focus/link semantics, tag behavior, loading/no-results/error states and dark parity; track existing tag-filter wiring separately |
@@ -426,7 +439,7 @@ Dependencies follow actual shared contracts, not just page names. For example, a
 - [x] Combined browser smoke pass recorded — [2026-09-27 evidence](NOMS-020-checkpoint-8-integration.md); partial acceptance, not a full regression pass.
 - [x] Fix and revalidate subcollection parent-context loss — `9b6d667`, including saved nesting and Cancel destinations.
 - [x] Fix empty-name public-profile presentation — `9cbeef5`, with username fallback across heading, avatar and empty states; verified signed in and signed out.
-- [x] Add a dedicated authenticated Home at `/home`, preserving landing `/` and management `/dashboard`; default sign-in/nav updated, initial responsive and workflow evidence recorded 2026-09-28.
+- [x] Add a dedicated Home at `/home`, preserving landing `/` and management `/dashboard`; reworked as a community hub per the user's clarification, removing personal data reads. Default sign-in/nav retained; validation recorded 2026-09-28.
 - [ ] Fix the separately observed stale collection content after breadcrumb navigation between IDs.
 - [ ] Reconcile guest-search copy/destination with the authenticated Search route; do not infer authorization to change search access.
 - [ ] Complete final combined-revision CI, cross-route failure/permission checks, accessibility and per-page phone/tablet acceptance.

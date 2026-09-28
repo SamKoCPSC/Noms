@@ -488,6 +488,10 @@ Broader checkpoint gates and unrelated existing findings remain open.
 
 ## Dedicated personal Home — 2026-09-28
 
+Historical implementation evidence: the personal composition below was superseded
+by the user's community-oriented clarification later the same day. See the
+[current community Home contract and evidence](#community-home-rework--2026-09-28).
+
 User approved an everyday Home distinct from the landing page and management
 Dashboard. Implementation `c5384b5` and review corrections `821e158` were developed
 in `codex/NOMS-020-personal-home` / `.worktrees/NOMS-020-personal-home`, based on
@@ -568,3 +572,105 @@ The new Home is implemented and available for user review, not a checkpoint 8
 release sign-off. Existing collection-navigation, guest-search and broader gates
 remain open. The two scoped implementation commits can be reverted in reverse
 order; no database migration or fixture rollback is required.
+
+## Community Home rework — 2026-09-28
+
+The user clarified that Home is for community information, not personal recipes,
+drafts or collections; Dashboard already owns those responsibilities. This
+supersedes the preceding personal-Home contract. `/` remains the public landing
+page, `/home` becomes Community Home, and `/dashboard` stays personal management.
+Existing auth/default sign-in and explicit safe return rules are preserved.
+
+Developed in `codex/NOMS-020-community-home` /
+`.worktrees/NOMS-020-community-home`, based on `8a65f68`. Ordered code commits:
+
+1. `786a7bd` — replace personal Home with the community composition and tests;
+   rename the route component/stylesheet and put its footer link under Discover.
+2. `e09dda2` — keep additional recipes directly beneath the spotlight instead
+   of below the entire news sidebar, fixing a browser-observed blank gap.
+3. `5440fd0` — use a native anchor for the forking-guide destination, preserving
+   fragment focus/scroll rather than client navigation resetting to the top.
+
+All were fast-forwarded into NOMS-020. The existing generated `assets/tailwind.css`
+changes were preserved. Only the existing `:32768` app container was restarted;
+no new deployment, backend/schema change, recipe edit or account edit occurred.
+
+Acceptance contract and implementation:
+
+- Shared Fredoka/Nunito, current palette, book/approved section artwork, raised
+  panels, inset participation links and framed 16:9 recipe cards preserve NOMS's
+  character. Desktop has a large spotlight and additional recipe grid beside
+  announcements/participation. Narrow layouts stack.
+- Reuse `get_public_recipes(0, 6, "")`, the existing Explore endpoint, which
+  enforces public visibility and orders by creation time newest first. Feature
+  the first card as the newest-public-recipe spotlight and show the remaining
+  five at most, without duplicates. This is not curated or popularity-ranked.
+  A defensive presentation filter also excludes private/unlisted cards.
+- No private draft, owned-collection, owner-search or current-user reads remain
+  in the Home component. Real recipe details and creator profiles are linked.
+- Announcements initially contain one accurate, dated authored product notice
+  about Home and Dashboard. This is static editorial content, not a live news
+  service, admin/CMS feature or simulated activity feed. Get involved links to
+  the existing Cooks search, recipe creation and forking guide; copy explicitly
+  says creation starts privately and the user chooses public publication.
+- Recipe loading/empty/error/retry does not remove news/participation. No
+  invented reactions, comments, challenges, events, rankings or community counts.
+
+Automated evidence at `5440fd0` (shared integration Cargo target cache):
+
+- Before implementation, `home_is_a_community_hub_not_a_personal_workspace`
+  failed with the old Your kitchen markup and missing Community Home heading.
+  Replacement tests cover composition/destinations, public-only bounded order,
+  real recipe/creator links, no duplicates, escaped metadata, loading/empty/error
+  availability, retries hiding stale results and generic failure messages.
+- `SQLX_OFFLINE=true cargo test --features server --bin noms community_home -- --nocapture`:
+  7 passed, including sign-in default and middleware contracts (initial feature
+  revision). Navigation tests retain the root versus `/home` distinction.
+- Final `SQLX_OFFLINE=true timeout --kill-after=5s 90s cargo test --features server --bin noms -- --test-threads=8`:
+  **792 passed, 0 failed, 12 ignored, 0 filtered**, finishing in 15.07s. The DB-grants
+  test that stalled during the prior personal-Home run completed this time; no
+  test was skipped or disabled for this run. Ignored integration gates remain
+  unclaimed; this is not a full CI/security/deployment acceptance run.
+- Server and WASM Clippy with `-D warnings`, `cargo fmt --all --check` and
+  `git diff --check`: passed. Second-pass self-review: **PASS** after fixing the
+  two should-fix findings (layout gap and guide anchor); no blocking findings
+  remain in this slice. No independent-agent review claimed.
+
+Live browser evidence:
+
+- Reused existing mock Google `testuser` / `@user-c5a3` (Integration Review),
+  whose Dashboard has four saved recipes, one private, and zero drafts. Community
+  Home displayed only its three public recipes, with the newest in the spotlight
+  and two others below, all linked once with author attribution. The existing
+  private soup fixture did not appear. No fixture content was changed.
+- Temporarily blocked only `get_public_recipes` requests in the test tab.
+  Reload showed the generic recipe error/Retry while Announcements and Get
+  involved remained usable. Unblocking and Retry restored the real cards.
+- Meet the cooks opened `/search?scope=users`, with Cooks selected and two real
+  public profiles; opening Integration Review showed its three public recipes.
+  The native variation-guide link focused the `#fork` section and scrolled it
+  into view (section top ~110px after smooth scrolling settled).
+- Open Dashboard retained the four saved recipes, private soup, draft section,
+  collections sidebar and management table. The footer brand still opened `/`
+  with unchanged marketing sections. Creation destinations were checked in
+  markup/tests; no live recipe was created or published in this pass.
+- At measured 1920 × 1080, Home used the 1760px shared cap; at 1440 × 810 it
+  used 1425px available width. Both had one h1, no horizontal overflow, and a
+  28px gap between spotlight and additional recipes. Before the layout fix the
+  1440px gap was ~377px, caused by the taller sidebar.
+- At 900 × 1100, the main/sidebar remained two columns with a stacked spotlight
+  image/text card; at 390 × 844 the page stacked in one column. Neither overflowed
+  horizontally. Desktop/phone screenshots were reviewed in-session; wide in-app
+  captures can clip the right edge, so DOM geometry supports the width evidence.
+  Tab from Meet the cooks focused Share a recipe with a visible 2px outline.
+- Request blocking, cache and viewport overrides were restored; the temporary
+  tab was closed. Existing auth rules are exercised by the automated production
+  owner-route tests and the observed guest redirect before local sign-in.
+
+Remaining limits: empty/single-recipe feed states have deterministic rendering
+coverage, not a separately emptied live database. No dark redesign, measured
+contrast, exhaustive assistive-technology pass or final per-page responsive
+sign-off is claimed. Editorial curation, announcements authoring and new community
+engagement features need separate product contracts. Broader checkpoint 8 issues
+remain open. Rollback is the three code commits in reverse order; no schema or
+fixture rollback is required.
