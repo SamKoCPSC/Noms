@@ -2,7 +2,6 @@ use dioxus::prelude::*;
 use manganis::{ImageAssetOptions, ImageSize};
 
 const BRAND_STYLES: Asset = asset!("/assets/brand/ui.css");
-const BOOK_LOGO: Asset = asset!("/assets/brand/noms-logo.svg");
 const PAINTED_BOOK: Asset = asset!(
     "/assets/brand/noms-logo-painted-s3-v1.png",
     ImageAssetOptions::new()
@@ -107,18 +106,18 @@ impl PageIconKind {
     }
 }
 
-/// Decorative book beside an existing wordmark or labelled sign-in heading.
+/// All placements share the painted book; only the display size varies.
 #[component]
-pub fn BrandMark(#[props(default)] painted: bool) -> Element {
+pub fn BrandMark(#[props(default)] large: bool) -> Element {
     rsx! {
         document::Stylesheet { href: BRAND_STYLES }
         img {
-            class: if painted { "brand-mark brand-mark--painted" } else { "brand-mark" },
-            src: if painted { PAINTED_BOOK } else { BOOK_LOGO },
+            class: if large { "brand-mark brand-mark--large" } else { "brand-mark" },
+            src: PAINTED_BOOK,
             alt: "",
             aria_hidden: "true",
-            width: if painted { "96" } else { "32" },
-            height: if painted { "120" } else { "40" },
+            width: if large { "96" } else { "32" },
+            height: if large { "120" } else { "40" },
             decoding: "async",
         }
     }
@@ -172,17 +171,41 @@ mod tests {
 
     #[test]
     fn brand_marks_and_compact_artwork_reserve_correct_aspect_ratios() {
-        let vector = dioxus_ssr::render_element(rsx! { BrandMark {} });
+        let small = dioxus_ssr::render_element(rsx! { BrandMark {} });
         assert!(
-            vector.contains("noms-logo") && vector.contains(".svg"),
-            "{vector}"
+            small.contains("noms-logo-painted-s3-v1") && !small.contains(".svg"),
+            "{small}"
         );
         assert!(
-            vector.contains("width=\"32\"") && vector.contains("height=\"40\""),
-            "{vector}"
+            small.contains("width=\"32\"") && small.contains("height=\"40\""),
+            "{small}"
         );
-        let painted = dioxus_ssr::render_element(rsx! { BrandMark { painted: true } });
+        let painted = dioxus_ssr::render_element(rsx! { BrandMark { large: true } });
         assert!(painted.contains("noms-logo-painted-s3-v1"), "{painted}");
+        let small_source = small
+            .split("src=\"")
+            .nth(1)
+            .unwrap()
+            .split('"')
+            .next()
+            .unwrap();
+        let large_source = painted
+            .split("src=\"")
+            .nth(1)
+            .unwrap()
+            .split('"')
+            .next()
+            .unwrap();
+        assert_eq!(
+            small_source, large_source,
+            "All placements must share the same painted book asset"
+        );
+        for html in [&small, &painted] {
+            assert!(
+                html.contains("alt=\"\"") && html.contains("aria-hidden=\"true\""),
+                "{html}"
+            );
+        }
         assert!(
             painted.contains("width=\"96\"") && painted.contains("height=\"120\""),
             "{painted}"

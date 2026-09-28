@@ -19,7 +19,7 @@ pub fn Login() -> Element {
         document::Link { rel: "stylesheet", href: SIGN_IN_CSS }
         section { class: "sign-in-page", aria_labelledby: "sign-in-title",
             header { class: "sign-in-heading",
-                crate::components::base::BrandMark { painted: true }
+                crate::components::base::BrandMark { large: true }
                 h1 { id: "sign-in-title", "Welcome back" }
                 p { "Sign in to access your recipe library." }
             }

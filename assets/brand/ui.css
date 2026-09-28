@@ -6,7 +6,7 @@
     object-fit: contain;
     flex: none;
 }
-.brand-mark--painted {
+.brand-mark--large {
     width: 96px;
     height: 120px;
     margin: 0 auto 12px;
@@ -31,5 +31,5 @@
     .brand-title { gap: 10px; }
     .page-identity-icon { width: 56px; height: 56px; }
     .page-identity-icon--compact { width: 40px; height: 40px; }
-    .brand-mark--painted { width: 80px; height: 100px; }
+    .brand-mark--large { width: 80px; height: 100px; }
 }
