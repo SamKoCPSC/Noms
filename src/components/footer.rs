@@ -11,7 +11,7 @@ pub fn Footer() -> Element {
             class: "footer",
             div { class: "footer-inner container",
                 div { class: "footer-brand",
-                    Link { to: Route::Home {}, class: "footer-logo", aria_label: "Noms home", BrandMark {} span { "Noms" } }
+                    Link { to: Route::Home {}, class: "footer-logo", aria_label: "Noms introduction", BrandMark {} span { "Noms" } }
                     p { "Recipes worth keeping, built to keep changing." }
                 }
                 nav { class: "footer-links", aria_label: "Footer navigation",

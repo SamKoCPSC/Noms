@@ -49,7 +49,6 @@ impl<T> HomeLoadState<T> {
 pub fn PersonalHome() -> Element {
     rsx! {
         document::Stylesheet { href: PERSONAL_HOME_CSS }
-        document::Title { "Home — Noms" }
         AuthRequired { PersonalHomeWorkspace {} }
     }
 }

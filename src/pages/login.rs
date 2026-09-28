@@ -189,7 +189,7 @@ mod tests {
         for provider in ["google", "github"] {
             assert!(
                 html.contains(&format!(
-                    "/auth/{provider}/start?redirect_uri=%2Fdashboard&#38;purpose=login"
+                    "/auth/{provider}/start?redirect_uri=%2Fhome&#38;purpose=login"
                 )),
                 "{html}"
             );
