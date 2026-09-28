@@ -135,7 +135,9 @@ fn CommunityHomeContent(
                                 strong { "Share a recipe →" }
                                 span { "Start a private draft, then publish it as public when you’re ready." }
                             }
-                            Link { to: "/how-to#fork", class: "community-home-action neumo-inset",
+                            // A native anchor preserves the document fragment;
+                            // client route navigation resets scroll to the top.
+                            a { href: "/how-to#fork", class: "community-home-action neumo-inset",
                                 strong { "Try your own variation →" }
                                 span { "Learn how to fork a recipe while keeping its source attached." }
                             }
