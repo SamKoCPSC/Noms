@@ -163,7 +163,7 @@ fn HowToGuide() -> Element {
                 }
                 div { class: "how-to-details-grid",
                     GuideSection { id: "sign-in", title: "First, open your recipe book",
-                        p { a { href: "/login", "Sign in" } " with Google or GitHub to create recipes and organize your library. After authorization, you return to your requested page or your dashboard." }
+                        p { a { href: "/login", "Sign in" } " with Google or GitHub to create recipes and organize your library. After authorization, you return to your requested page or your Home page." }
                         p { "Just browsing? " a { href: "/explore", "Explore public recipes" } " without an account." }
                     }
                     GuideSection { id: "images", title: "Add photos along the way",

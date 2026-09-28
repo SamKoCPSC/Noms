@@ -27,7 +27,8 @@ use crate::db;
 fn is_protected_path(path: &str) -> bool {
     matches!(
         path,
-        "/dashboard"
+        "/home"
+            | "/dashboard"
             | "/search"
             | "/recipes/new"
             | "/collections"
@@ -94,7 +95,7 @@ static REDIRECT_IF_AUTHED_PATHS: LazyLock<HashSet<&'static str>> =
 /// Reads the session cookie, verifies the JWT, and either:
 /// - Injects `AuthUser` and `AuthUserProfile` into request extensions for downstream handlers
 /// - Returns a 302 redirect to `/login` for unauthenticated users on protected paths
-/// - Returns a 302 redirect to `/dashboard` for authenticated users on `/login`
+/// - Returns a 302 redirect to `/home` for authenticated users on `/login`
 pub async fn handle_auth(
     State(pool): State<PgPool>,
     mut req: Request<Body>,
@@ -126,7 +127,7 @@ pub async fn handle_auth(
 
     // Redirect authenticated users away from login
     if is_authenticated && is_redirect_if_authed {
-        return redirect_to("/dashboard");
+        return redirect_to("/home");
     }
 
     // Redirect unauthenticated users from protected paths to login
@@ -197,6 +198,13 @@ fn redirect_to(location: &str) -> Response<Body> {
 #[cfg(test)]
 mod tests {
     use super::is_protected_path;
+
+    #[test]
+    fn personal_home_requires_sign_in_but_the_landing_page_remains_public() {
+        assert!(is_protected_path("/home"));
+        assert!(!is_protected_path("/"));
+        assert!(is_protected_path("/dashboard"));
+    }
 
     const COLLECTION_ID: &str = "550e8400-e29b-41d4-a716-446655440000";
 

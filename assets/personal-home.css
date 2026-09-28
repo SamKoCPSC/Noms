@@ -1,0 +1,42 @@
+/* Everyday entry point: shared NOMS materials, not the management dashboard. */
+.personal-home { padding-block: 24px 56px; }
+.personal-home-heading { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 28px; }
+.personal-home-welcome { font-size: 15px; font-weight: 700; color: var(--accent-ink); margin-bottom: 8px; overflow-wrap: anywhere; }
+.personal-home-heading h1 { font-size: clamp(32px, 4vw, 48px); margin-bottom: 12px; }
+.personal-home-heading .brand-mark { width: 48px; height: 60px; }
+.personal-home-muted { color: var(--text-secondary); max-width: 65ch; }
+.personal-home-start { display: flex; align-items: end; justify-content: space-between; gap: 32px; padding: 28px; margin-bottom: 32px; border-radius: 24px; }
+.personal-home-search { flex: 1; max-width: 800px; min-width: 0; }
+.personal-home-search label { display: block; font-weight: 700; margin-bottom: 12px; }
+.personal-home-search-controls { display: flex; align-items: center; gap: 14px; }
+.personal-home-search input[type="search"] { width: 100%; min-width: 0; min-height: 48px; padding: 12px 18px; border-radius: 18px; }
+.personal-home-quick-actions { display: flex; flex-wrap: wrap; gap: 14px; }
+.personal-home-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
+.personal-home-section { padding: 28px; border-radius: 24px; min-width: 0; }
+.personal-home-section h2, .personal-home-discover h2 { font-size: 24px; }
+.personal-home-section-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 12px; }
+.personal-home-text-link { display: inline-block; font-weight: 700; padding-block: 10px; min-height: 44px; }
+.personal-home-recipe-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 24px; margin-top: 24px; }
+.personal-home-side { display: grid; gap: 28px; min-width: 0; }
+.personal-home-state { display: grid; justify-items: start; gap: 12px; padding-block: 24px; color: var(--text-secondary); }
+.personal-home-state h3 { color: var(--text-primary); font-size: 18px; }
+.personal-home-drafts { display: grid; gap: 16px; margin-block: 20px 8px; }
+.personal-home-draft { display: flex; flex-direction: column; gap: 6px; padding: 18px; border-radius: 18px; color: var(--text-primary); overflow-wrap: anywhere; }
+.personal-home-draft span, .personal-home-draft time { color: var(--text-secondary); font-size: 13px; }
+.personal-home-discover { display: grid; justify-items: start; gap: 14px; padding: 28px; border-radius: 24px; }
+.personal-home-collections { grid-column: 1 / -1; }
+.personal-home-collection-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: 24px; }
+@media (max-width: 1100px) {
+    .personal-home-start { align-items: stretch; flex-direction: column; gap: 24px; }
+    .personal-home-search { max-width: none; }
+    .personal-home-layout { grid-template-columns: minmax(0, 1fr) 300px; }
+}
+@media (max-width: 760px) {
+    .personal-home-heading { align-items: start; flex-direction: column; gap: 16px; }
+    .personal-home-layout, .personal-home-collection-grid { grid-template-columns: minmax(0, 1fr); }
+    .personal-home-start, .personal-home-section, .personal-home-discover { padding: 20px; }
+    .personal-home-quick-actions .btn { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .personal-home .recipe-card { transition: none; }
+}

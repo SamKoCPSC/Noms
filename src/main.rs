@@ -34,8 +34,8 @@ use auth::context::AuthContext;
 use components::{AppLayout, ErrorFallback};
 use pages::{
     About, CollectionDetail, CollectionEdit, CollectionList, CollectionNew, Dashboard, Explore,
-    Home, HowTo, Login, NotFound, RecipeDetail, RecipeDraftEdit, RecipeEdit, RecipeNew,
-    RecipeVersionDetail, RecipeVersionGraph, Search, SettingsAccounts, SettingsProfile,
+    Home, HowTo, Login, NotFound, PersonalHome, RecipeDetail, RecipeDraftEdit, RecipeEdit,
+    RecipeNew, RecipeVersionDetail, RecipeVersionGraph, Search, SettingsAccounts, SettingsProfile,
     UserProfile,
 };
 
@@ -46,6 +46,8 @@ pub enum Route {
     #[layout(AppLayout)]
         #[route("/")]
         Home {},
+        #[route("/home")]
+        PersonalHome {},
         #[route("/about")]
         About {},
         #[route("/how-to")]
@@ -305,6 +307,7 @@ mod server_tests {
         let (_database, pool) = crate::test_utils::setup_test_db().await;
         let app = production_dioxus_router(pool).await;
         let owner_routes = [
+            "/home".to_string(),
             "/dashboard".to_string(),
             "/recipes/new".to_string(),
             format!("/recipes/{RESOURCE_ID}/edit"),

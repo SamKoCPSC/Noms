@@ -68,7 +68,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
     rsx! {
         nav { class: "navbar", aria_label: "Primary navigation",
             div { class: "navbar-inner",
-                Link { to: Route::Home {}, class: "navbar-logo", aria_label: "Noms home",
+                Link { to: if is_signed_in { Route::PersonalHome {} } else { Route::Home {} }, class: "navbar-logo", aria_label: "Noms home",
                     BrandMark {}
                     span { "Noms" }
                 }
@@ -201,7 +201,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
                     NavigationSearch { compact: false, on_navigate: move |_| menu_open.set(false) }
                     nav { class: "navigation-drawer-links", aria_label: "All destinations",
                         for (route, label, icon) in [
-                            (Route::Home {}, "Home", None),
+                            (if is_signed_in { Route::PersonalHome {} } else { Route::Home {} }, "Home", None),
                             (Route::Dashboard {}, "Dashboard", Some(PageIconKind::Dashboard)),
                             (Route::CollectionList {}, "Collections", Some(PageIconKind::Collections)),
                             (Route::Explore {}, "Explore", Some(PageIconKind::Explore)),
@@ -220,6 +220,9 @@ pub fn Navbar(theme: UseTheme) -> Element {
                                 span { "{label}" }
                             }
                         }
+                    }
+                    if is_signed_in {
+                        Link { to: Route::Home {}, class: "navbar-link", onclick: move |_| menu_open.set(false), "Noms introduction" }
                     }
                     div { class: "navigation-drawer-account",
                         if is_signed_in {
@@ -277,6 +280,7 @@ fn NavigationSearch(compact: bool, #[props(default)] on_navigate: EventHandler<(
 fn primary_navigation(signed_in: bool) -> Vec<(Route, &'static str)> {
     if signed_in {
         vec![
+            (Route::PersonalHome {}, "Home"),
             (Route::Dashboard {}, "Dashboard"),
             (Route::CollectionList {}, "Collections"),
             (Route::Explore {}, "Explore"),

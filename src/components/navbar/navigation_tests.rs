@@ -14,6 +14,7 @@ fn primary_destinations_match_authentication_without_inventing_routes() {
     assert_eq!(
         primary_navigation(true),
         vec![
+            (Route::PersonalHome {}, "Home"),
             (Route::Dashboard {}, "Dashboard"),
             (Route::CollectionList {}, "Collections"),
             (Route::Explore {}, "Explore")
@@ -51,6 +52,12 @@ fn collection_descendants_keep_their_navigation_section_selected() {
         &Route::Home {},
         &Route::Dashboard {}
     ));
+    assert!(!navigation_is_current(
+        &Route::Home {},
+        &Route::PersonalHome {}
+    ));
+    assert_eq!(Route::Home {}.to_string(), "/");
+    assert_eq!(Route::PersonalHome {}.to_string(), "/home");
 }
 
 #[test]

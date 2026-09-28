@@ -96,7 +96,7 @@ fn oauth_start_url(provider: &str, redirect_uri: &str) -> String {
 /// Extract the `redirect_uri` query parameter from the current URL.
 ///
 /// On WASM, reads from `window.location.search`. On the server, reads
-/// from the `FullstackContext` request URI. Falls back to `"/dashboard"`.
+/// from the `FullstackContext` request URI. Falls back to `"/home"`.
 fn extract_redirect_uri() -> String {
     #[cfg(target_arch = "wasm32")]
     {
@@ -106,7 +106,7 @@ fn extract_redirect_uri() -> String {
                 return parse_redirect_uri(&search);
             }
         }
-        "/dashboard".to_string()
+        "/home".to_string()
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -117,14 +117,14 @@ fn extract_redirect_uri() -> String {
                 return parse_redirect_uri(query);
             }
         }
-        "/dashboard".to_string()
+        "/home".to_string()
     }
 }
 
 /// Parse the `redirect_uri` query parameter from a query string.
 ///
 /// Validates the value to prevent open redirects: only relative paths
-/// starting with `/` are accepted. Invalid values fall back to `"/dashboard"`.
+/// starting with `/` are accepted. Invalid values fall back to `"/home"`.
 fn parse_redirect_uri(query: &str) -> String {
     for param in query.split('&') {
         if let Some(value) = param.strip_prefix("redirect_uri=") {
@@ -137,7 +137,7 @@ fn parse_redirect_uri(query: &str) -> String {
             }
         }
     }
-    "/dashboard".to_string()
+    "/home".to_string()
 }
 
 /// Validate that a redirect URI is safe (relative path only).
@@ -223,6 +223,20 @@ mod tests {
     }
 
     #[test]
+    fn default_sign_in_destination_is_personal_home() {
+        assert_eq!(parse_redirect_uri(""), "/home");
+        assert_eq!(parse_redirect_uri("redirect_uri=//evil.example"), "/home");
+        assert_eq!(
+            parse_redirect_uri("redirect_uri=%2Fdashboard"),
+            "/dashboard"
+        );
+        assert_eq!(
+            parse_redirect_uri("redirect_uri=%2Frecipes%2Fnew"),
+            "/recipes/new"
+        );
+    }
+
+    #[test]
     fn safe_redirect_uris() {
         assert!(is_safe_redirect_uri("/dashboard"));
         assert!(is_safe_redirect_uri("/recipes/new"));
@@ -302,28 +316,25 @@ mod tests {
 
     #[test]
     fn parse_redirect_uri_invalid_falls_back() {
-        assert_eq!(
-            parse_redirect_uri("redirect_uri=https://evil.com"),
-            "/dashboard"
-        );
-        assert_eq!(parse_redirect_uri("redirect_uri=//evil.com"), "/dashboard");
+        assert_eq!(parse_redirect_uri("redirect_uri=https://evil.com"), "/home");
+        assert_eq!(parse_redirect_uri("redirect_uri=//evil.com"), "/home");
         assert_eq!(
             parse_redirect_uri("redirect_uri=/%255cevil.example"),
-            "/dashboard"
+            "/home"
         );
         assert_eq!(
             parse_redirect_uri("redirect_uri=%2F.%2F%2Fevil.example"),
-            "/dashboard"
+            "/home"
         );
         assert_eq!(
             parse_redirect_uri("redirect_uri=%2F%252e%252e%2F%2Fevil.example"),
-            "/dashboard"
+            "/home"
         );
         assert_eq!(
             parse_redirect_uri("redirect_uri=javascript:alert(1)"),
-            "/dashboard"
+            "/home"
         );
-        assert_eq!(parse_redirect_uri("redirect_uri="), "/dashboard");
-        assert_eq!(parse_redirect_uri("foo=bar"), "/dashboard");
+        assert_eq!(parse_redirect_uri("redirect_uri="), "/home");
+        assert_eq!(parse_redirect_uri("foo=bar"), "/home");
     }
 }

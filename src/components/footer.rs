@@ -23,6 +23,7 @@ pub fn Footer() -> Element {
                     }
                     div {
                         strong { "Your kitchen" }
+                        Link { to: Route::PersonalHome {}, "Home" }
                         Link { to: Route::Dashboard {}, "Dashboard" }
                         Link { to: Route::RecipeNew {}, "New recipe" }
                         Link { to: Route::CollectionList {}, "Collections" }

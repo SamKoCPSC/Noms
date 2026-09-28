@@ -12,6 +12,7 @@ mod login;
 #[cfg(test)]
 mod marketing_contract_tests;
 mod not_found;
+mod personal_home;
 mod recipe_detail;
 mod recipe_edit;
 mod recipe_editor_form;
@@ -32,6 +33,7 @@ pub use home::Home;
 pub use how_to::HowTo;
 pub use login::Login;
 pub use not_found::NotFound;
+pub use personal_home::PersonalHome;
 pub use recipe_detail::{RecipeDetail, RecipeVersionDetail};
 pub use recipe_edit::{RecipeDraftEdit, RecipeEdit};
 pub use recipe_new::RecipeNew;
