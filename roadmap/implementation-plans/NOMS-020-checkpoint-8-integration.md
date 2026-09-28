@@ -485,3 +485,86 @@ Validation:
   mock account/data were reused without editing recipes or account settings.
 
 Broader checkpoint gates and unrelated existing findings remain open.
+
+## Dedicated personal Home — 2026-09-28
+
+User approved an everyday Home distinct from the landing page and management
+Dashboard. Implementation `c5384b5` and review corrections `821e158` were developed
+in `codex/NOMS-020-personal-home` / `.worktrees/NOMS-020-personal-home`, based on
+`42c0751`, then fast-forwarded into NOMS-020. The existing generated Tailwind
+changes were preserved. Existing deployment `:32768` was reused, restarting only
+the app container; no new deployment, schema changes or content edits were made.
+
+Route/composition contract:
+
+- `/` remains the public cozy v2 landing page. `/home` is authenticated **Your
+  kitchen**; `/dashboard` retains its workspace sidebar and management library.
+- Search submits to existing Search with `scope=recipes&vis=mine`; creation
+  actions use existing editor/collection routes. Recent saved recipes use the
+  owner-only search API with `UpdatedNewest`, page 1 and limit 6, sorting the
+  full library before limiting rather than sorting a created-date page locally.
+- Continue editing shows at most three private drafts with real revision/update
+  metadata and editor links; empty titles use Untitled recipe. Collections show
+  at most three top-level albums in their saved order, not falsely labelled recent.
+- Resources have independent loading/error/retry states, clear empty guidance
+  and existing shared cards/icons/materials. No quotes, made-up metrics, management
+  tables or new bulk actions. AuthRequired contains private resource mounting;
+  server middleware also protects `/home`.
+- Signed-in navbar/book/drawer Home leads to `/home`; drawer Noms introduction
+  and footer brand retain `/`. Guest navigation remains unchanged. Default
+  sign-in returns to `/home`; explicit safe recipe/dashboard return destinations
+  and redirect validation are preserved.
+
+Validation at `821e158`, using the integration worktree's shared target cache:
+
+- Tests-first default destination expectation failed (`/dashboard` vs `/home`)
+  before implementation. Added owner-scope/sort/bound, empty composition, escaped
+  identity, draft loading/error/untitled/limit, middleware and navigation contracts.
+  Existing provider-render test was updated to the new default after a full run
+  caught its old expectation.
+- `SQLX_OFFLINE=true cargo test --features server --bin noms -- --test-threads=8 --skip runtime_grants_enforce_a_non_owning_data_plane_role`:
+  **789 passed, 0 failed, 12 ignored, 1 filtered**. Two unfiltered attempts stalled
+  in that pre-existing DB-grants test's external `psql` child; only those test
+  children were terminated. Neither unfiltered run is a full-suite pass. This
+  environment-dependent permissions gate remains open, not silently disabled.
+- Server and WASM `cargo clippy ... -- -D warnings`, `cargo fmt --all --check`
+  and `git diff --check`: passed. No independent-agent review was performed;
+  second-pass self-review covered owner access, real sort/order semantics,
+  resource states, escaped metadata, routes, shared styles and screenshots.
+- Browser review found that a new route-local document title would persist into
+  private routes lacking their own title. The addition was removed to preserve
+  the existing private-page title convention. Footer brand's accessible name
+  now identifies its actual landing destination as Noms introduction.
+
+Browser evidence on the existing deployment:
+
+- Reused existing mock Google `testuser` / `@user-c5a3` (Integration Review),
+  containing four saved recipes and two collections. Sign-in provider links
+  defaulted to `/home`, and mock sign-in landed there. No account/content data
+  was edited. Initial resource loading settled into the real saved content;
+  the account has no private drafts, so their empty guidance was verified.
+- Home search for `soup` opened recipe results with Mine only selected and the
+  existing private soup fixture visible. Navbar Home returned to `/home`.
+  Open dashboard retained the management table, four saved recipes and zero
+  drafts. Footer brand opened `/` with the unchanged marketing sections.
+  Drawer Home and Noms introduction had distinct destinations; selecting the
+  introduction closed the drawer, opened `/` and returned focus to its trigger.
+- Anonymous client navigation showed the existing sign-in prompt rather than
+  private Home content; the production anonymous-owner-route regression also
+  includes `/home`. Explicit return preservation is covered by sign-in tests;
+  a separate live explicit-return OAuth round trip was not repeated.
+- At measured 1920 × 1080, Home used the shared 1760px cap with one h1 and no
+  horizontal overflow. At 1440 × 810, it used 1425px available body width without
+  overflow. At 390 × 844, search/actions and sections stacked in one column,
+  with no horizontal overflow. Desktop and compact screenshots were reviewed
+  in-session. Tab from the library search focused Search with a visible 2px
+  outline. No bespoke tablet composition or new dark-mode design is claimed.
+- Temporary viewport/cache overrides were restored and the test tab closed.
+  Loading/error/untitled draft states are automated rendering coverage; live
+  populated drafts, forced request failures/retry, exhaustive keyboard and
+  measured contrast/dark acceptance remain unverified in this browser slice.
+
+The new Home is implemented and available for user review, not a checkpoint 8
+release sign-off. Existing collection-navigation, guest-search and broader gates
+remain open. The two scoped implementation commits can be reverted in reverse
+order; no database migration or fixture rollback is required.
