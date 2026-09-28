@@ -1,6 +1,6 @@
 /* NOMS-020 P1 Kitchen Passport / P8 Cozy Accordion. Route-owned styles. */
 .user-profile, .user-settings { padding-block: 28px 64px; }
-.user-settings { max-width: 1060px; }
+.user-settings { max-width: var(--content-max-width); }
 .user-page-heading { margin-bottom: 24px; }
 .user-page-heading h1 { font-size: clamp(30px, 4vw, 42px); margin-bottom: 8px; }
 .user-page-heading p, .user-settings p { color: var(--text-secondary); }

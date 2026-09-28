@@ -1,5 +1,5 @@
 /* S2 Recipe Finder: route-owned composition, shared NOMS materials. */
-.search-page { max-width: 1440px; padding-block: 32px 64px; }
+.search-page { max-width: var(--content-max-width); padding-block: 32px 64px; }
 .search-page .search-hero { margin-bottom: 26px; }
 .search-page .search-hero h1 { font-size: clamp(32px, 4vw, 46px); }
 .search-page .search-subtitle { margin-top: 8px; color: var(--text-secondary); }

@@ -45,6 +45,8 @@ a:hover {
    CSS Custom Properties — Light Mode (default)
    ============================================================ */
 :root {
+    /* Shared desktop composition width; inner text measures remain independent. */
+    --content-max-width: 1760px;
     /* Backgrounds */
     --bg-base: #FAF7F2;
     --surface: #F5F0E8;
@@ -282,7 +284,7 @@ a:hover {
    ============================================================ */
 .container {
     width: 100%;
-    max-width: 1600px;
+    max-width: var(--content-max-width);
     margin: 0 auto;
     padding: 0 var(--space-md);
 }
@@ -491,7 +493,7 @@ select.input:focus-visible {
     top: 16px;
     left: 24px;
     right: 24px;
-    max-width: 1600px;
+    max-width: var(--content-max-width);
     margin-inline: auto;
     z-index: 100;
     background: var(--surface);
@@ -4801,7 +4803,7 @@ dialog.shared-modal::backdrop { background: transparent; }
     padding-bottom: clamp(32px, 4vw, 56px);
 }
 
-.about-page > .container { max-width: 1320px; }
+.about-page > .container { max-width: var(--content-max-width); }
 .about-hero__copy > * { margin: 0; }
 .about-hero__copy .marketing-lede { max-width: 520px; font-size: 19px; line-height: 1.65; }
 
@@ -5453,7 +5455,7 @@ dialog.shared-modal::backdrop { background: transparent; }
 }
 
 .search-page {
-    max-width: 1180px;
+    max-width: var(--content-max-width);
     padding-block: var(--space-xl) var(--space-2xl);
 }
 

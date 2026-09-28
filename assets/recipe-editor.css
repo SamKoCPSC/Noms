@@ -1,5 +1,5 @@
 /* E3T1: detached sections share the app's material in both themes. */
-.recipe-editor { max-width: 1440px; }
+.recipe-editor { max-width: var(--content-max-width); }
 .recipe-editor__layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 28px; align-items: start; margin-top: 24px; }
 .recipe-editor__contents { position: sticky; top: 100px; padding: 24px 16px; border-radius: var(--radius-lg); }
 .recipe-editor__contents h2 { margin: 0 8px 18px; font-size: 21px; }

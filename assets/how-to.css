@@ -1,7 +1,7 @@
 /* G2 Cozy How-to. Route-scoped for independent public-page upgrades.
    Existing typography, color and elevation tokens supply the shared material. */
 .how-to-page { --guide-muted: var(--field-placeholder); overflow: visible; padding-bottom: var(--space-xl); }
-.how-to-page .container { max-width: 1480px; }
+.how-to-page .container { max-width: var(--content-max-width); }
 .how-to-page .how-to-hero { display: flex; align-items: center; justify-content: space-between; gap: 32px; padding-block: 24px; }
 .how-to-page .how-to-hero h1 { margin-bottom: 12px; font-size: clamp(38px, 4.7vw, 68px); line-height: 1.08; letter-spacing: -.025em; }
 .how-to-page .marketing-eyebrow { color: var(--accent-ink); }

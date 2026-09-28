@@ -1,5 +1,5 @@
 .collection-editor-page {
-    max-width: 1120px;
+    max-width: var(--content-max-width);
     padding-top: 36px;
     padding-bottom: var(--space-2xl, 48px);
 }

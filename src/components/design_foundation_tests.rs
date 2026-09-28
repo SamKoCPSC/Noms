@@ -4,6 +4,68 @@
 const CSS: &str = include_str!("../../assets/main.css");
 const INPUT: &str = include_str!("base/input.rs");
 
+#[test]
+fn desktop_shell_and_page_compositions_share_a_wide_container_token() {
+    assert_eq!(token(rule(":root"), "--content-max-width"), "1760px");
+    assert_eq!(
+        token(rule(".container"), "max-width"),
+        "var(--content-max-width)"
+    );
+    assert_eq!(
+        token(navbar_rule(".navbar"), "max-width"),
+        "var(--content-max-width)"
+    );
+    for (css, selector) in [
+        (CSS, ".about-page > .container"),
+        (CSS, ".search-page"),
+        (
+            include_str!("../../assets/home.css"),
+            ".home-page .container",
+        ),
+        (
+            include_str!("../../assets/how-to.css"),
+            ".how-to-page .container",
+        ),
+        (
+            include_str!("../../assets/dashboard.css"),
+            ".dashboard-workspace",
+        ),
+        (include_str!("../../assets/search.css"), ".search-page"),
+        (
+            include_str!("../../assets/recipe-editor.css"),
+            ".recipe-editor",
+        ),
+        (
+            include_str!("../../assets/recipe-detail.css"),
+            ".recipe-detail.container",
+        ),
+        (
+            include_str!("../../assets/user-pages.css"),
+            ".user-settings",
+        ),
+        (
+            include_str!("../../assets/collection-forms.css"),
+            ".collection-editor-page",
+        ),
+    ] {
+        let block = css
+            .split(&format!("{selector} {{"))
+            .skip(1)
+            .map(|rest| rest.split_once('}').unwrap().0)
+            .find(|block| block.contains("max-width:"))
+            .unwrap_or_else(|| panic!("missing width rule: {selector}"));
+        assert_eq!(
+            token(block, "max-width"),
+            "var(--content-max-width)",
+            "{selector}"
+        );
+    }
+    // Wider composition must not widen text measures or remove the mobile gutter.
+    assert_eq!(token(rule(".container"), "padding"), "0 var(--space-md)");
+    assert!(CSS.contains("max-width: 650px;"));
+    assert!(include_str!("../../assets/home.css").contains("max-width: 470px;"));
+}
+
 fn rule(selector: &str) -> &str {
     CSS.split_once(&format!("{selector} {{"))
         .unwrap_or_else(|| panic!("missing rule: {selector}"))

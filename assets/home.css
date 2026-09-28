@@ -1,5 +1,5 @@
 /* Home uses the shared palette and elevations; composition stays route-local. */
-.home-page .container { max-width: 1320px; }
+.home-page .container { max-width: var(--content-max-width); }
 .home-page .home-hero {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
     min-height: 0;

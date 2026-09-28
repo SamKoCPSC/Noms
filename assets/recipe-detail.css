@@ -4,7 +4,7 @@
     display: grid;
     grid-template-columns: minmax(0, .85fr) minmax(0, 1.35fr);
     gap: 24px;
-    max-width: 1120px;
+    max-width: var(--content-max-width);
     padding-top: 24px;
 }
 .recipe-detail > * { grid-column: 1 / -1; min-width: 0; }
