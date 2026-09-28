@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use crate::components::base::{PageIcon, PageIconKind};
 use dioxus::prelude::*;
 use uuid::Uuid;
 
@@ -163,7 +164,7 @@ pub fn CollectionEdit(id: String) -> Element {
                         Link { to: Route::CollectionDetail { id: collection_id.to_string() }, "{contents.collection.name}" }
                         span { aria_hidden: "true", " / " } span { "Edit" }
                     }
-                    h1 { class: "collection-editor-heading", "Edit collection" }
+                    h1 { class: "collection-editor-heading brand-title", PageIcon { kind: PageIconKind::Collections } span { "Edit collection" } }
                     p { class: "collection-editor-intro", "Update your album’s details, cover and place in your library." }
                     CollectionForm { name, description, submit_label: "Save changes", submitting: saving(), error: error(),
                         oncancel: move |_| { navigator.push(Route::CollectionDetail { id: collection_id.to_string() }); },

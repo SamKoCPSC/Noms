@@ -4,6 +4,7 @@
 //! recipe count), public collections, and public recipes.
 //! No authentication required.
 
+use crate::components::base::{PageIcon, PageIconKind};
 use dioxus::prelude::*;
 
 use crate::api::collection::get_user_public_collections;
@@ -185,7 +186,7 @@ pub fn UserProfile(username: String) -> Element {
                 }
                 }
                 div { class: "user-profile__identity",
-                p { class: "user-page-eyebrow", "Public profile" }
+                p { class: "user-page-eyebrow brand-title", PageIcon { kind: PageIconKind::Profile, compact: true } span { "Public profile" } }
                 h1 { class: "profile-name", "{profile_name}" }
                 p { class: "profile-username", "@{profile_data.username}" }
                 if let Some(ref bio) = profile_data.bio {

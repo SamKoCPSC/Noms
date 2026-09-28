@@ -1,3 +1,4 @@
+use crate::components::base::{PageIcon, PageIconKind};
 use dioxus::prelude::*;
 
 use std::collections::HashSet;
@@ -298,7 +299,7 @@ pub fn CollectionDetail(id: String) -> Element {
                     }
                     header { class: "collection-detail-heading",
                         div { class: "collections-heading",
-                            h1 { "{collection_contents.collection.name}" }
+                            h1 { class: "brand-title", PageIcon { kind: PageIconKind::Collections } span { "{collection_contents.collection.name}" } }
                             if let Some(description) = &collection_contents.collection.description {
                                 p { class: "collection-detail-description", "{description}" }
                             }

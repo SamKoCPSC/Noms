@@ -3,6 +3,7 @@
 //! Displays a paginated grid of public recipes with server-side substring search
 //! filtering and community tag labels. No authentication required.
 
+use crate::components::base::{PageIcon, PageIconKind};
 use dioxus::prelude::*;
 
 use crate::api::recipe::{get_public_recipe_tags, get_public_recipes};
@@ -151,7 +152,7 @@ pub fn Explore() -> Element {
         div { class: "container explore-page",
             header { class: "explore-heading",
                 div { class: "explore-heading__copy",
-                    h1 { "Explore" }
+                    h1 { class: "brand-title", PageIcon { kind: PageIconKind::Explore } span { "Explore" } }
                     p { class: "explore-intro", "Public recipes from the community." }
                 }
                 div { class: "explore-tools",

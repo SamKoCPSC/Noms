@@ -29,7 +29,7 @@ mod logout_tests {
 }
 
 use crate::auth::context::use_auth;
-use crate::components::base::{Avatar, AvatarSize, SharedModal};
+use crate::components::base::{Avatar, AvatarSize, BrandMark, SharedModal};
 use crate::utils::theme::UseTheme;
 use crate::Route;
 
@@ -67,7 +67,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
         nav { class: "navbar", aria_label: "Primary navigation",
             div { class: "navbar-inner",
                 Link { to: Route::Home {}, class: "navbar-logo", aria_label: "Noms home",
-                    span { "aria-hidden": "true", "🍴" }
+                    BrandMark {}
                     span { "Noms" }
                 }
                 div { class: "navbar-links",

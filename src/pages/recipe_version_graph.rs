@@ -3,6 +3,7 @@
 //! The page renders a bounded connected lineage family. Graph discovery and
 //! presentation layout remain separate so each can evolve independently.
 
+use crate::components::base::PageIconKind;
 use dioxus::html::{geometry::WheelDelta, input_data::MouseButton};
 use dioxus::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -1549,7 +1550,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
     if graph_resource.pending() {
         return rsx! {
             div { class: "container",
-                PageHeader { title: "Recipe version graph" }
+                PageHeader { title: "Recipe version graph", icon: Some(PageIconKind::History) }
                 Card {
                     div {
                         display: "flex",
@@ -1602,7 +1603,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
             };
             return rsx! {
                 div { class: "container",
-                    PageHeader { title: "Recipe version graph" }
+                    PageHeader { title: "Recipe version graph", icon: Some(PageIconKind::History) }
                     Card {
                         EmptyState {
                             icon: rsx! { span { aria_hidden: "true", "{state_icon}" } },
@@ -1621,6 +1622,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
             div { class: "container",
                 PageHeader {
                     title: "Recipe version graph",
+                    icon: Some(PageIconKind::History),
                     action: Some(back_to_recipe),
                 }
                 Card {
@@ -1773,6 +1775,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
         div { class: "container recipe-version-graph-page",
             PageHeader {
                 title: heading_title,
+                icon: Some(PageIconKind::History),
                 action: Some(back_to_recipe),
             }
             div { class: "recipe-version-graph__shell",

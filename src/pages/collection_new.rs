@@ -1,3 +1,4 @@
+use crate::components::base::{PageIcon, PageIconKind};
 use dioxus::prelude::*;
 
 use crate::api::collection::create_collection;
@@ -76,7 +77,7 @@ pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
 
     rsx! { AuthRequired { div { class: "container collection-editor-page",
         nav { class: "collection-editor-breadcrumb", aria_label: "Breadcrumb", Link { to: Route::CollectionList {}, "Collections" } span { aria_hidden: "true", " / " } span { if parent.is_some() { "New subcollection" } else { "New collection" } } }
-        h1 { class: "collection-editor-heading", if parent.is_some() { "New subcollection" } else { "New collection" } }
+        h1 { class: "collection-editor-heading brand-title", PageIcon { kind: PageIconKind::Collections } span { if parent.is_some() { "New subcollection" } else { "New collection" } } }
         p { class: "collection-editor-intro", "Start an album for recipes you want to keep together." }
         CollectionForm { name, description, submit_label: "Create collection", submitting: saving(), error: error(),
             oncancel: move |_| { navigator.push(parent.map(|id| Route::CollectionDetail { id: id.to_string() }).unwrap_or(Route::CollectionList {})); },
@@ -200,7 +201,10 @@ mod tests {
     #[test]
     fn server_rendered_subcollection_form_retains_parent_context() {
         let html = render_creation_route(&format!("/collections/new?parent={PARENT_ID}"));
-        assert!(html.contains("New subcollection</h1>"), "{html}");
+        assert!(
+            html.contains("<span>New subcollection</span></h1>"),
+            "{html}"
+        );
         assert!(
             html.contains("This album will be added inside the collection you came from."),
             "{html}"

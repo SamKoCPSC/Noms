@@ -1,3 +1,4 @@
+use crate::components::base::{PageIcon, PageIconKind};
 use chrono::{NaiveDate, TimeZone, Utc};
 use dioxus::prelude::*;
 
@@ -287,7 +288,7 @@ pub fn Search(query: SearchRouteQuery) -> Element {
             div { class: "container search-page",
                 header { class: "search-hero",
                     div {
-                        h1 { "Search Noms" }
+                        h1 { class: "brand-title", PageIcon { kind: PageIconKind::Search } span { "Search Noms" } }
                         p { class: "search-subtitle",
                             "Find recipes, collections and cooks in one place."
                         }

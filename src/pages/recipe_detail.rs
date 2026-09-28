@@ -6,6 +6,7 @@
 //! Publicly accessible: tries `get_public_recipe` first (no auth needed),
 //! falls back to authenticated `get_recipe` for private/unlisted recipes.
 
+use crate::components::base::{PageIcon, PageIconKind};
 use chrono::{DateTime, Utc};
 use dioxus::prelude::*;
 use std::collections::VecDeque;
@@ -2385,7 +2386,7 @@ pub fn RecipeDetail(id: String) -> Element {
 
             if is_owner && !versions.is_empty() {
                 section { class: "recipe-album__history neumo-card", id: "recipe-history", aria_label: "Version history",
-                    h2 { "Version history" }
+                    div { class: "brand-title", PageIcon { kind: PageIconKind::History, compact: true } h2 { "Version history" } }
                     p { class: "recipe-album__history-intro", "Published snapshots from this recipe’s story. Restoring creates a new version; existing history stays." }
                     div {
                         display: "flex",

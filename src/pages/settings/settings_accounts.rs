@@ -1,3 +1,4 @@
+use crate::components::base::{PageIcon, PageIconKind};
 use chrono::DateTime;
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -417,7 +418,7 @@ pub fn SettingsAccounts() -> Element {
             div { class: "container user-settings user-accounts",
             header { class: "user-page-heading",
                 p { class: "user-page-eyebrow", "Your account" }
-                h1 { "Linked accounts" }
+                h1 { class: "brand-title", PageIcon { kind: PageIconKind::Settings } span { "Linked accounts" } }
                 p { "Choose how you sign in to Noms." }
             }
             SettingsTabs {

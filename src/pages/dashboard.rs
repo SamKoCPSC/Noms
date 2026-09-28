@@ -1,3 +1,4 @@
+use crate::components::base::{PageIcon, PageIconKind};
 use dioxus::prelude::*;
 
 use crate::api::recipe::{list_my_recipes, list_recipe_drafts};
@@ -88,7 +89,7 @@ fn DashboardWorkspace() -> Element {
                 header { class: "dashboard-heading",
                     div {
                         p { class: "dashboard-breadcrumb", "Dashboard / All recipes" }
-                        h1 { "My recipes" }
+                        h1 { class: "brand-title", PageIcon { kind: PageIconKind::Dashboard } span { "My recipes" } }
                         p { class: "dashboard-summary",
                             if let Some(resp) = response { "{resp.total_count} saved recipes" } else { "Your recipe library" }
                             if let Some(items) = draft_list { " · {items.len()} private drafts" }

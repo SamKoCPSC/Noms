@@ -1,3 +1,4 @@
+use crate::components::base::{PageIcon, PageIconKind};
 use dioxus::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
@@ -1285,7 +1286,7 @@ pub fn SettingsProfile() -> Element {
             div { class: "container user-settings",
             header { class: "user-page-heading",
                 p { class: "user-page-eyebrow", "Your account" }
-                h1 { "Profile settings" }
+                h1 { class: "brand-title", PageIcon { kind: PageIconKind::Settings } span { "Profile settings" } }
                 p { "Make your profile feel like you. Your name, photo and bio are public." }
             }
             SettingsTabs { active: SettingsTab::Profile }

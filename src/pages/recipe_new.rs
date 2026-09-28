@@ -3,6 +3,7 @@
 //! Collects typed ingredients, steps (with depth for nesting), and equipment
 //! in the UI, then passes them directly to `create_recipe()`.
 
+use crate::components::base::PageIconKind;
 use dioxus::prelude::*;
 
 use crate::api::recipe::{
@@ -749,6 +750,7 @@ pub fn RecipeNew() -> Element {
             div { class: "container recipe-editor",
                 PageHeader {
                     title: "New Recipe",
+                    icon: Some(PageIconKind::Editor),
                 }
                 div { class: "recipe-detail__tags",
                     span { class: "recipe-detail__tag", "DRAFT" }

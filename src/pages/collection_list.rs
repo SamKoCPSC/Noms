@@ -1,3 +1,4 @@
+use crate::components::base::{PageIcon, PageIconKind};
 use dioxus::prelude::*;
 
 use crate::api::collection::list_root_collections;
@@ -22,7 +23,7 @@ pub fn CollectionList() -> Element {
         AuthRequired {
             div { class: "container collections-page",
                 header { class: "collections-heading",
-                    h1 { "Your collections" }
+                    h1 { class: "brand-title", PageIcon { kind: PageIconKind::Collections } span { "Your collections" } }
                     p { "Group your recipes into albums, with subcollections to keep things organized." }
                 }
                 div { class: "collections-toolbar",

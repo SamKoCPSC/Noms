@@ -19,6 +19,7 @@ pub fn Login() -> Element {
         document::Link { rel: "stylesheet", href: SIGN_IN_CSS }
         section { class: "sign-in-page", aria_labelledby: "sign-in-title",
             header { class: "sign-in-heading",
+                crate::components::base::BrandMark { painted: true }
                 h1 { id: "sign-in-title", "Welcome back" }
                 p { "Sign in to access your recipe library." }
             }
@@ -153,6 +154,16 @@ mod tests {
     use super::*;
     use dioxus::router::components::HistoryProvider;
     use dioxus_core::NoOpMutations;
+
+    #[test]
+    fn sign_in_renders_the_painted_brand_mark_as_decorative_artwork() {
+        let mut dom = VirtualDom::new(LoginTestRoot);
+        dom.rebuild(&mut NoOpMutations);
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("noms-logo-painted-s3-v1"), "{html}");
+        assert!(html.contains("alt=\"\""), "{html}");
+        assert!(html.contains("Welcome back"), "{html}");
+    }
 
     #[derive(Clone, PartialEq, Routable)]
     enum LoginTestRoute {

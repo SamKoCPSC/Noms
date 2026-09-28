@@ -1,0 +1,35 @@
+/* Supporting artwork shares the existing page typography, palette and layout. */
+.brand-mark {
+    display: block;
+    width: 32px;
+    height: 40px;
+    object-fit: contain;
+    flex: none;
+}
+.brand-mark--painted {
+    width: 96px;
+    height: 120px;
+    margin: 0 auto 12px;
+}
+.footer-logo { display: inline-flex; align-items: center; gap: 8px; }
+.brand-title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+.brand-title > span { min-width: 0; overflow-wrap: anywhere; }
+.page-identity-icon {
+    display: block;
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    flex: none;
+}
+.page-identity-icon--compact { width: 48px; height: 48px; }
+@media (max-width: 520px) {
+    .brand-title { gap: 10px; }
+    .page-identity-icon { width: 56px; height: 56px; }
+    .page-identity-icon--compact { width: 40px; height: 40px; }
+    .brand-mark--painted { width: 80px; height: 100px; }
+}

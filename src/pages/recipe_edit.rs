@@ -3,6 +3,7 @@
 //! Loads an owner-only draft, autosaves it with revision guards, and publishes
 //! the draft explicitly while leaving the current recipe visible.
 
+use crate::components::base::PageIconKind;
 use dioxus::prelude::*;
 
 use crate::api::recipe::{
@@ -766,6 +767,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
         AuthRequired {
             div { class: "container recipe-editor",
                 PageHeader {
+                    icon: Some(PageIconKind::Editor),
                     title: if id_is_draft { "Edit Draft" } else { "Edit Recipe Draft" },
                 }
                 if let Some(source_title) = forked_from_title() {
