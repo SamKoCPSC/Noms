@@ -17,13 +17,13 @@ pub fn Footer() -> Element {
                 nav { class: "footer-links", aria_label: "Footer navigation",
                     div {
                         strong { "Discover" }
+                        Link { to: Route::CommunityHome {}, "Community Home" }
                         Link { to: Route::Explore {}, "Explore recipes" }
                         Link { to: Route::About {}, "About Noms" }
                         Link { to: Route::HowTo {}, "How to use Noms" }
                     }
                     div {
                         strong { "Your kitchen" }
-                        Link { to: Route::PersonalHome {}, "Home" }
                         Link { to: Route::Dashboard {}, "Dashboard" }
                         Link { to: Route::RecipeNew {}, "New recipe" }
                         Link { to: Route::CollectionList {}, "Collections" }

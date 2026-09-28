@@ -223,7 +223,7 @@ mod tests {
     }
 
     #[test]
-    fn default_sign_in_destination_is_personal_home() {
+    fn default_sign_in_destination_is_community_home() {
         assert_eq!(parse_redirect_uri(""), "/home");
         assert_eq!(parse_redirect_uri("redirect_uri=//evil.example"), "/home");
         assert_eq!(

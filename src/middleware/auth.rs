@@ -200,7 +200,7 @@ mod tests {
     use super::is_protected_path;
 
     #[test]
-    fn personal_home_requires_sign_in_but_the_landing_page_remains_public() {
+    fn community_home_requires_sign_in_but_the_landing_page_remains_public() {
         assert!(is_protected_path("/home"));
         assert!(!is_protected_path("/"));
         assert!(is_protected_path("/dashboard"));

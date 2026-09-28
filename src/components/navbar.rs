@@ -68,7 +68,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
     rsx! {
         nav { class: "navbar", aria_label: "Primary navigation",
             div { class: "navbar-inner",
-                Link { to: if is_signed_in { Route::PersonalHome {} } else { Route::Home {} }, class: "navbar-logo", aria_label: "Noms home",
+                Link { to: if is_signed_in { Route::CommunityHome {} } else { Route::Home {} }, class: "navbar-logo", aria_label: "Noms home",
                     BrandMark {}
                     span { "Noms" }
                 }
@@ -201,7 +201,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
                     NavigationSearch { compact: false, on_navigate: move |_| menu_open.set(false) }
                     nav { class: "navigation-drawer-links", aria_label: "All destinations",
                         for (route, label, icon) in [
-                            (if is_signed_in { Route::PersonalHome {} } else { Route::Home {} }, "Home", None),
+                            (if is_signed_in { Route::CommunityHome {} } else { Route::Home {} }, "Home", None),
                             (Route::Dashboard {}, "Dashboard", Some(PageIconKind::Dashboard)),
                             (Route::CollectionList {}, "Collections", Some(PageIconKind::Collections)),
                             (Route::Explore {}, "Explore", Some(PageIconKind::Explore)),
@@ -280,7 +280,7 @@ fn NavigationSearch(compact: bool, #[props(default)] on_navigate: EventHandler<(
 fn primary_navigation(signed_in: bool) -> Vec<(Route, &'static str)> {
     if signed_in {
         vec![
-            (Route::PersonalHome {}, "Home"),
+            (Route::CommunityHome {}, "Home"),
             (Route::Dashboard {}, "Dashboard"),
             (Route::CollectionList {}, "Collections"),
             (Route::Explore {}, "Explore"),

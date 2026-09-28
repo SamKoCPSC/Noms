@@ -33,8 +33,8 @@ use auth::context::build_context_from_fullstack;
 use auth::context::AuthContext;
 use components::{AppLayout, ErrorFallback};
 use pages::{
-    About, CollectionDetail, CollectionEdit, CollectionList, CollectionNew, Dashboard, Explore,
-    Home, HowTo, Login, NotFound, PersonalHome, RecipeDetail, RecipeDraftEdit, RecipeEdit,
+    About, CollectionDetail, CollectionEdit, CollectionList, CollectionNew, CommunityHome,
+    Dashboard, Explore, Home, HowTo, Login, NotFound, RecipeDetail, RecipeDraftEdit, RecipeEdit,
     RecipeNew, RecipeVersionDetail, RecipeVersionGraph, Search, SettingsAccounts, SettingsProfile,
     UserProfile,
 };
@@ -47,7 +47,7 @@ pub enum Route {
         #[route("/")]
         Home {},
         #[route("/home")]
-        PersonalHome {},
+        CommunityHome {},
         #[route("/about")]
         About {},
         #[route("/how-to")]
