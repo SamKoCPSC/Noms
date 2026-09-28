@@ -1,6 +1,6 @@
 # NOMS web logo
 
-A painted PNG alternative is available in `noms-logo-painted-s3-v1.png` (1122 × 1402 RGBA, 1.36 MB). Open `compare.html` for a side-by-side comparison with the SVG on light/dark surfaces. See [generation notes and prompt](noms-logo-painted-s3-v1.md). It retains genuine transparency and richer brushwork, but uses generated lettering rather than exact Fredoka outlines. Integrated 2026-09-27: the SVG accompanies the navbar/footer wordmark and the painted book appears above the sign-in heading. Shared Rust components preserve decorative accessibility treatment and aspect ratio; the asset pipeline emits a 192 × 240 transparent WebP for the painted placement.
+The production painted PNG logo is available in `noms-logo-painted-s3-v1.png` (1122 × 1402 RGBA, 1.36 MB). Open `compare.html` for a side-by-side comparison with the SVG on light/dark surfaces. See [generation notes and prompt](noms-logo-painted-s3-v1.md). It retains genuine transparency and richer brushwork, but uses generated lettering rather than exact Fredoka outlines. Standardized 2026-09-27: navbar, footer and sign-in all use this same painted book through BrandMark; only the display size varies. The SVG is retained as an unused vector alternative. Shared Rust components preserve decorative accessibility treatment and aspect ratio; the asset pipeline emits a 192 × 240 transparent WebP shared by all book-logo placements.
 
 `noms-logo.svg` is the static vector interpretation of **S3 — Continuous olive**, created 2026-09-27. The selected source is the rightmost book in [the spine comparison](../../roadmap/assets/NOMS-020/logo/spine-options-s1-s3-v1.png).
 
@@ -10,11 +10,11 @@ The transparent SVG has a `512 × 640` viewBox and contains only vector geometry
 
 ## Web use
 
-Import `asset!("/assets/brand/noms-logo.svg")` through the existing Dioxus asset pipeline. Set an explicit width and height in the 4:5 canvas ratio (for example 80 × 100) to reserve layout space. Use `alt="NOMS"` for a standalone brand image or `alt=""` when adjacent text already names NOMS. Give a logo-only home link its own accessible name.
+Use the shared `BrandMark {}` component for navbar/footer and `BrandMark { large: true }` for sign-in. It imports `noms-logo-painted-s3-v1.png` through the Dioxus image pipeline and emits a single shared 192 × 240 WebP asset. The default display is 32 × 40; large is 96 × 120 (80 × 100 on narrow screens). Set an explicit width and height in the 4:5 canvas ratio (for example 80 × 100) to reserve layout space. Use `alt="NOMS"` for a standalone brand image or `alt=""` when adjacent text already names NOMS. Give a logo-only home link its own accessible name.
 
 Prefer an external `img` rather than repeating inline SVG markup, which would duplicate gradient and accessibility IDs. Keep the transparent margin and aspect ratio; do not crop or stretch. At navigation sizes the silhouette remains recognizable but the cover lettering is too small to serve as readable text. Pair it with the app wordmark. A simplified tiny favicon remains a separate task.
 
-Open `preview.html` to review 32, 48, 64, 96 and 320px heights on light and dark surfaces. The SVG is now integrated through the shared BrandMark component. Favicon exports and the 3D model remain pending.
+Open `preview.html` to review 32, 48, 64, 96 and 320px heights on light and dark surfaces. The SVG is not used by production BrandMark; all placements use the painted PNG source. Favicon exports and the 3D model remain pending.
 
 ## Validation
 

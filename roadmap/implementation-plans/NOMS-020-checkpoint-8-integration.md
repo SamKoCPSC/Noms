@@ -217,6 +217,42 @@ parent context; it was recorded, not modified, in this fix. Introduction revisio
 is not established. Checkpoint 8 remains open for this and the other acceptance
 gates above; the profile-name issue is resolved below.
 
+## Painted book standardization — 2026-09-27
+
+Follow-up implementation `46263cf` on `codex/NOMS-020-painted-brand`, developed
+in `.worktrees/NOMS-020-painted-brand` and fast-forwarded into NOMS-020.
+At the user's request, all production book-logo placements now use the same
+`noms-logo-painted-s3-v1.png` source and the same optimized 192 × 240 WebP URL.
+This supersedes the SVG navbar/footer choice recorded in the original integration
+below. The SVG remains an unused alternative; no source assets were removed.
+
+`BrandMark` now has a size-only `large` option instead of the asset-selecting
+`painted` option. Navbar/footer remain 32 × 40 and sign-in remains 96 × 120,
+with the existing 80 × 100 narrow-screen rule unchanged. Decorative accessibility
+treatment, wordmarks, named home links and page icons are unchanged.
+
+Validation reused the integration target cache and existing port-32768 deployment:
+
+- The updated source-equality regression failed against the old SVG default, then
+  passed with the unified painted source. Both brand-artwork tests passed.
+- `SQLX_OFFLINE=true cargo test --features server --bin noms`: 781 passed,
+  0 failed, 12 ignored.
+- `cargo fmt --all --check`, `git diff --check`,
+  `SQLX_OFFLINE=true cargo clippy --features server -- -D warnings` and
+  `SQLX_OFFLINE=true cargo clippy --target wasm32-unknown-unknown -- -D warnings`
+  passed from the task worktree.
+- The existing app container alone was restarted to rebuild. A fresh sign-in
+  browser inspection confirmed that navbar, sign-in and footer images all loaded
+  the exact same hashed WebP URL, with respective 32 × 40, 96 × 120 and 32 × 40
+  measured dimensions, empty alt text and aria-hidden. A desktop screenshot
+  confirmed the navbar painting and larger sign-in painting match.
+- Temporary cache disabling was restored and the test tab was closed. Existing
+  deployment data and the pre-existing generated Tailwind change were preserved.
+
+Second-pass self-review: PASS for this source-standardization change; no
+independent-agent review. Phone/tablet and dark acceptance were not rerun;
+their existing sizing rules and theme tokens were not changed.
+
 ## Brand artwork integration — 2026-09-27
 
 Implementation: `6f24dfb`, developed on `codex/NOMS-020-brand-ui` in

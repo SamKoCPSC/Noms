@@ -38,7 +38,7 @@ The current planned NOMS mark is **S3 — Continuous olive**, selected 2026-09-2
 
 Reference artwork: [S3 — rightmost book in the comparison sheet](../assets/NOMS-020/logo/spine-options-s1-s3-v1.png); [selection and production notes](../assets/NOMS-020/logo/spine-options-s1-s3-v1.md). A3, F2 and S1 remain historical only; S3 supersedes logo depictions in earlier page mockups. The eight selected page icons are unchanged; their S1-family references retain the provenance of their shared palette, finish and lighting.
 
-A standalone [static web SVG](../../assets/brand/noms-logo.svg) was prepared 2026-09-27 with transparent background, Fredoka 600 outlines and simplified vector shading; see [usage and validation](../../assets/brand/README.md). SVG navbar/footer and painted sign-in integration are complete (2026-09-27); tiny favicon/app-icon refinements, single-colour variants and the 3D model remain pending. The full title is not readable at tiny navigation sizes; pair it with the app wordmark.
+A standalone [static web SVG](../../assets/brand/noms-logo.svg) was prepared 2026-09-27 with transparent background, Fredoka 600 outlines and simplified vector shading; see [usage and validation](../../assets/brand/README.md). All navbar/footer/sign-in placements now share the painted PNG logo via one optimized WebP asset (2026-09-27); the SVG is retained as an alternative, not an active UI asset; tiny favicon/app-icon refinements, single-colour variants and the 3D model remain pending. The full title is not readable at tiny navigation sizes; pair it with the app wordmark.
 
 ## Selected visual direction: Kitchen Console
 
@@ -264,7 +264,7 @@ Added 2026-09-18. Exploration proceeded one page at a time, starting with Dashbo
 - [x] Generate [initial mascot concepts](../assets/NOMS-020/mascots/README.md); exploration only.
 - [ ] Select a mascot and approve specific uses, if pursued; no mascot is currently approved.
 - [x] Prepare standalone static S3 web SVG with verified Fredoka outlines and transparent background; browser review at 32–320px on light/dark surfaces (2026-09-27).
-- [x] Integrate the SVG into navigation/footer and the painted book into sign-in (2026-09-27).
+- [x] Integrate and standardize the painted PNG book across navigation, footer and sign-in; retain the SVG as an unused alternative (2026-09-27).
 - [ ] Prepare favicon/single-colour variants and the separately discussed 3D model.
 
 ### Page-by-page exploration queue
@@ -388,7 +388,7 @@ Dependencies follow actual shared contracts, not just page names. For example, a
 - [ ] Fix the separately observed stale collection content after breadcrumb navigation between IDs.
 - [ ] Reconcile guest-search copy/destination with the authenticated Search route; do not infer authorization to change search access.
 - [ ] Complete final combined-revision CI, cross-route failure/permission checks, accessibility and per-page phone/tablet acceptance.
-- [x] Integrate production S3 SVG/painted artwork and all eight page identities; browser and automated evidence recorded 2026-09-27. Favicon/single-colour/3D deliverables remain open.
+- [x] Integrate production S3 painted artwork and all eight page identities; browser and automated evidence recorded 2026-09-27. Favicon/single-colour/3D deliverables remain open.
 - [ ] Complete checkpoint 8 review, known-issue/deferred-work decisions and rollback notes before final overhaul sign-off.
 
 **Next: integration fixes and release acceptance, not another round of page implementation.** Dark-mode redesign remains deferred, but existing dark behavior still needs regression protection. Phone/tablet discovery and acceptance remain per page; desktop implementation and merge status alone do not mark those checks complete. Dashboard functional expansion and remaining favicon/single-colour/3D deliverables are separately tracked work, not implied by the merged visual layouts.
