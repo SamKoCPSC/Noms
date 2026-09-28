@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::auth::context::use_auth;
+use crate::components::base::{PageIcon, PageIconKind};
 use crate::components::informational::{CallToActionPanel, PageMeta};
 use crate::Route;
 
@@ -90,7 +91,10 @@ pub fn About() -> Element {
             header { class: "about-hero container", aria_labelledby: "about-title",
                 div { class: "about-hero__copy",
                     p { class: "marketing-eyebrow", "Why Noms exists" }
-                    h1 { id: "about-title", "Good recipes deserve a little home." }
+                    h1 { id: "about-title", class: "brand-title",
+                        PageIcon { kind: PageIconKind::About }
+                        span { "Good recipes deserve a little home." }
+                    }
                     p { class: "marketing-lede", "Noms keeps your recipes, notes, and kitchen discoveries together, with room for every version to grow." }
                     div { class: "marketing-actions",
                         if auth.is_authenticated {

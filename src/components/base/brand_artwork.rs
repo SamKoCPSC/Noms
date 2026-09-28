@@ -23,6 +23,8 @@ pub enum PageIconKind {
     History,
     Profile,
     Settings,
+    About,
+    HowTo,
 }
 
 impl PageIconKind {
@@ -30,6 +32,24 @@ impl PageIconKind {
         // Preserve the source paintings; ship appropriately sized transparent
         // derivatives through the normal hashed Dioxus asset pipeline.
         match self {
+            Self::About => asset!(
+                "/assets/brand/page-icons/about-v1.png",
+                ImageAssetOptions::new()
+                    .with_webp()
+                    .with_size(ImageSize::Manual {
+                        width: 192,
+                        height: 192
+                    })
+            ),
+            Self::HowTo => asset!(
+                "/assets/brand/page-icons/how-to-v1.png",
+                ImageAssetOptions::new()
+                    .with_webp()
+                    .with_size(ImageSize::Manual {
+                        width: 192,
+                        height: 192
+                    })
+            ),
             Self::Dashboard => asset!(
                 "/assets/brand/page-icons/dashboard-v1.png",
                 ImageAssetOptions::new()
@@ -197,6 +217,8 @@ mod tests {
             (PageIconKind::History, "history-v1"),
             (PageIconKind::Profile, "profile-v1"),
             (PageIconKind::Settings, "settings-v1"),
+            (PageIconKind::About, "about-v1"),
+            (PageIconKind::HowTo, "how-to-v1"),
         ];
         for (kind, name) in icons {
             let html = dioxus_ssr::render_element(rsx! { PageIcon { kind } });

@@ -207,8 +207,8 @@ pub fn Navbar(theme: UseTheme) -> Element {
                             (Route::Explore {}, "Explore", Some(PageIconKind::Explore)),
                             (Route::Search { query: Default::default() }, "Search", Some(PageIconKind::Search)),
                             (Route::RecipeNew {}, "New recipe", Some(PageIconKind::Editor)),
-                            (Route::About {}, "About", None),
-                            (Route::HowTo {}, "How to", None),
+                            (Route::About {}, "About", Some(PageIconKind::About)),
+                            (Route::HowTo {}, "How to", Some(PageIconKind::HowTo)),
                         ] {
                             Link {
                                 class: if navigation_is_current(&route, &current_route) { "navbar-link navbar-link--current" } else { "navbar-link" },

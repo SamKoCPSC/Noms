@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
 
+use crate::components::base::{PageIcon, PageIconKind};
 use crate::components::informational::{CallToActionPanel, PageMeta};
 use crate::Route;
 
@@ -82,7 +83,10 @@ fn HowToGuide() -> Element {
     rsx! {
         header { class: "how-to-hero container",
             div {
-                h1 { "Let’s get cooking." }
+                h1 { class: "brand-title",
+                    PageIcon { kind: PageIconKind::HowTo }
+                    span { "Let’s get cooking." }
+                }
                 p { class: "marketing-lede", "A friendly guide to your recipe book." }
             }
             GuideIllustration {}
@@ -269,6 +273,16 @@ mod tests {
         let mut dom = VirtualDom::new(HowToGuide);
         dom.rebuild_in_place();
         dioxus_ssr::render(&dom)
+    }
+
+    #[test]
+    fn guide_heading_uses_the_approved_decorative_identity() {
+        let html = rendered_guide();
+        assert!(html.contains("how-to-v1"), "{html}");
+        assert!(html.contains("brand-title"), "{html}");
+        assert!(html.contains("alt=\"\""), "{html}");
+        assert_eq!(html.matches("<h1").count(), 1);
+        assert!(html.contains("Let’s get cooking."), "{html}");
     }
 
     #[test]
