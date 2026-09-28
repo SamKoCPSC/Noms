@@ -1,5 +1,38 @@
 use super::*;
 
+#[component]
+fn NavbarDestinationTestRoot(signed_in: bool) -> Element {
+    let auth = use_signal(move || crate::auth::context::AuthContext {
+        is_authenticated: signed_in,
+        ..Default::default()
+    });
+    use_context_provider(|| auth);
+    rsx! {
+        dioxus::router::components::HistoryProvider {
+            history: |_| std::rc::Rc::new(dioxus::history::MemoryHistory::with_initial_path("/")) as std::rc::Rc<dyn History>,
+            Router::<Route> {}
+        }
+    }
+}
+
+#[test]
+fn brand_logo_always_links_to_landing_regardless_of_authentication() {
+    for signed_in in [true, false] {
+        let mut dom = VirtualDom::new_with_props(
+            NavbarDestinationTestRoot,
+            NavbarDestinationTestRootProps { signed_in },
+        );
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        let class_position = html.find("class=\"navbar-logo\"").unwrap();
+        let link_start = html[..class_position].rfind("<a ").unwrap();
+        let link_end = html[class_position..].find('>').unwrap() + class_position;
+        let logo = &html[link_start..link_end];
+        assert!(logo.contains("href=\"/\""), "signed_in={signed_in}: {logo}");
+        assert!(logo.contains("aria-label=\"Noms introduction\""), "{logo}");
+    }
+}
+
 #[test]
 fn primary_destinations_match_authentication_without_inventing_routes() {
     assert_eq!(

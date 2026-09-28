@@ -68,7 +68,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
     rsx! {
         nav { class: "navbar", aria_label: "Primary navigation",
             div { class: "navbar-inner",
-                Link { to: if is_signed_in { Route::CommunityHome {} } else { Route::Home {} }, class: "navbar-logo", aria_label: "Noms home",
+                Link { to: Route::Home {}, class: "navbar-logo", aria_label: "Noms introduction",
                     BrandMark {}
                     span { "Noms" }
                 }
