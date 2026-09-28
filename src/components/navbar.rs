@@ -29,7 +29,9 @@ mod logout_tests {
 }
 
 use crate::auth::context::use_auth;
-use crate::components::base::{Avatar, AvatarSize, BrandMark, SharedModal};
+use crate::components::base::{
+    Avatar, AvatarSize, BrandMark, NavigationArtwork, PageIconKind, SharedModal,
+};
 use crate::utils::theme::UseTheme;
 use crate::Route;
 
@@ -186,7 +188,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
                 on_dismiss: move |_| menu_open.set(false),
                 div { class: "feedback-surface navigation-drawer", onclick: move |event| event.stop_propagation(),
                     div { class: "navigation-drawer-header",
-                        h2 { id: "navigation-menu-title", "Navigation" }
+                        h2 { id: "navigation-menu-title", class: "navigation-artwork-label", NavigationArtwork {} span { "Navigation" } }
                         button { id: "navigation-menu-close", r#type: "button", class: "navigation-close",
                             aria_label: "Close navigation menu", onclick: move |_| menu_open.set(false), "✕" }
                     }
@@ -198,28 +200,32 @@ pub fn Navbar(theme: UseTheme) -> Element {
                     }
                     NavigationSearch { compact: false, on_navigate: move |_| menu_open.set(false) }
                     nav { class: "navigation-drawer-links", aria_label: "All destinations",
-                        for (route, label) in [
-                            (Route::Home {}, "Home"),
-                            (Route::Dashboard {}, "Dashboard"),
-                            (Route::CollectionList {}, "Collections"),
-                            (Route::Explore {}, "Explore"),
-                            (Route::Search { query: Default::default() }, "Search"),
-                            (Route::RecipeNew {}, "New recipe"),
-                            (Route::About {}, "About"),
-                            (Route::HowTo {}, "How to"),
+                        for (route, label, icon) in [
+                            (Route::Home {}, "Home", None),
+                            (Route::Dashboard {}, "Dashboard", Some(PageIconKind::Dashboard)),
+                            (Route::CollectionList {}, "Collections", Some(PageIconKind::Collections)),
+                            (Route::Explore {}, "Explore", Some(PageIconKind::Explore)),
+                            (Route::Search { query: Default::default() }, "Search", Some(PageIconKind::Search)),
+                            (Route::RecipeNew {}, "New recipe", Some(PageIconKind::Editor)),
+                            (Route::About {}, "About", None),
+                            (Route::HowTo {}, "How to", None),
                         ] {
                             Link {
                                 class: if navigation_is_current(&route, &current_route) { "navbar-link navbar-link--current" } else { "navbar-link" },
                                 aria_current: if navigation_is_current(&route, &current_route) { "page" } else { "false" },
-                                to: route, onclick: move |_| menu_open.set(false), "{label}"
+                                to: route, onclick: move |_| menu_open.set(false),
+                                span { class: "navigation-artwork-slot", aria_hidden: "true",
+                                    if let Some(kind) = icon { NavigationArtwork { kind: Some(kind) } }
+                                }
+                                span { "{label}" }
                             }
                         }
                     }
                     div { class: "navigation-drawer-account",
                         if is_signed_in {
                             a { href: format!("/u/{}", auth.current_user.as_ref().map(|u| u.username.clone()).unwrap_or_default()),
-                                class: "navbar-link", "My profile" }
-                            Link { to: Route::SettingsProfile {}, class: "navbar-link", onclick: move |_| menu_open.set(false), "Settings" }
+                                class: "navbar-link", NavigationArtwork { kind: Some(PageIconKind::Profile) } span { "My profile" } }
+                            Link { to: Route::SettingsProfile {}, class: "navbar-link", onclick: move |_| menu_open.set(false), NavigationArtwork { kind: Some(PageIconKind::Settings) } span { "Settings" } }
                             form { class: "navbar-logout-form", method: "post", action: "/auth/logout?redirect_uri=/",
                                 button { r#type: "submit", class: "navbar-link",
                                     // Keep the form mounted until native POST completes.

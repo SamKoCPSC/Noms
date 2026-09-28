@@ -1,7 +1,7 @@
 pub use action_menu::{ActionMenu, ActionMenuBoundary};
 pub use add_to_collection_dropdown::*;
 pub use avatar::*;
-pub use brand_artwork::{BrandMark, PageIcon, PageIconKind};
+pub use brand_artwork::{BrandMark, NavigationArtwork, PageIcon, PageIconKind};
 pub use button::*;
 pub use card::*;
 pub use collection_album::*;

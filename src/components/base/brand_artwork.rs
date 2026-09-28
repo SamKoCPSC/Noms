@@ -123,6 +123,20 @@ pub fn BrandMark(#[props(default)] large: bool) -> Element {
     }
 }
 
+/// Smaller painted artwork for drawer/sidebar labels. No kind means the app book.
+#[component]
+pub fn NavigationArtwork(#[props(default)] kind: Option<PageIconKind>) -> Element {
+    rsx! {
+        span { class: "navigation-artwork", aria_hidden: "true",
+            if let Some(kind) = kind {
+                PageIcon { kind, compact: true }
+            } else {
+                BrandMark {}
+            }
+        }
+    }
+}
+
 /// Adjacent text supplies the accessible name; this art adds no focus target.
 #[component]
 pub fn PageIcon(kind: PageIconKind, #[props(default)] compact: bool) -> Element {
@@ -143,6 +157,34 @@ pub fn PageIcon(kind: PageIconKind, #[props(default)] compact: bool) -> Element 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn navigation_artwork_reuses_decorative_book_and_page_assets() {
+        let book = dioxus_ssr::render_element(rsx! { NavigationArtwork {} });
+        let page = dioxus_ssr::render_element(rsx! {
+            NavigationArtwork { kind: Some(PageIconKind::Dashboard) }
+        });
+        assert!(book.contains("noms-logo-painted-s3-v2"), "{book}");
+        assert!(page.contains("dashboard-v1"), "{page}");
+        for html in [&book, &page] {
+            assert!(html.contains("navigation-artwork"), "{html}");
+            assert!(html.contains("alt=\"\""), "{html}");
+            assert!(html.contains("aria-hidden=\"true\""), "{html}");
+            assert!(!html.contains("tabindex"), "{html}");
+        }
+    }
+
+    #[test]
+    fn navigation_artwork_is_bounded_without_resizing_page_headers() {
+        let css = include_str!("../../../assets/brand/ui.css");
+        assert!(css.contains(".navigation-artwork"), "{css}");
+        assert!(
+            css.contains(".navigation-artwork .page-identity-icon"),
+            "{css}"
+        );
+        assert!(css.contains("width: 32px;"), "{css}");
+        assert!(css.contains("width: 72px;"), "{css}");
+    }
 
     #[test]
     fn all_page_identities_render_distinct_decorative_sized_assets() {

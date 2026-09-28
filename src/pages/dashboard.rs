@@ -1,4 +1,4 @@
-use crate::components::base::{PageIcon, PageIconKind};
+use crate::components::base::{NavigationArtwork, PageIcon, PageIconKind};
 use dioxus::prelude::*;
 
 use crate::api::recipe::{list_my_recipes, list_recipe_drafts};
@@ -61,28 +61,28 @@ fn DashboardWorkspace() -> Element {
     rsx! {
         div { class: "container dashboard-workspace", id: "workspace-overview",
             aside { class: "dashboard-sidebar neumo-card", aria_label: "Workspace",
-                p { class: "dashboard-eyebrow", "Workspace" }
+                p { class: "dashboard-eyebrow navigation-artwork-label", NavigationArtwork {} span { "Workspace" } }
                 nav { class: "dashboard-workspace-nav", aria_label: "Dashboard sections",
-                    a { href: "#workspace-overview", span { aria_hidden: true, "⌂" } "Overview" }
+                    a { href: "#workspace-overview", NavigationArtwork { kind: Some(PageIconKind::Dashboard) } span { "Overview" } }
                     a { href: "#dashboard-library", class: "dashboard-nav-current",
-                        span { aria_hidden: true, "▤" } "All recipes"
+                        NavigationArtwork {} span { "All recipes" }
                     }
                     a { href: "#dashboard-drafts", onclick: move |_| show_all_drafts.set(true),
-                        span { aria_hidden: true, "▱" } "Drafts"
+                        NavigationArtwork { kind: Some(PageIconKind::Editor) } span { "Drafts" }
                         if let Some(items) = draft_list { span { class: "dashboard-nav-count", "{items.len()}" } }
                     }
                 }
                 div { class: "dashboard-collections",
-                    h2 { class: "dashboard-eyebrow", "Collections" }
+                    h2 { class: "dashboard-eyebrow navigation-artwork-label", NavigationArtwork { kind: Some(PageIconKind::Collections) } span { "Collections" } }
                     CollectionSidebar { embedded: true }
                     Link { to: Route::CollectionList {}, class: "dashboard-sidebar-link", "Browse all collections →" }
                     Link { to: Route::CollectionNew { parent: None }, class: "dashboard-sidebar-link", "+ New collection" }
                 }
                 nav { class: "dashboard-account-nav", aria_label: "Your account",
                     if let Some(user) = &auth.current_user {
-                        Link { to: Route::UserProfile { username: user.username.clone() }, "My profile" }
+                        Link { to: Route::UserProfile { username: user.username.clone() }, NavigationArtwork { kind: Some(PageIconKind::Profile) } span { "My profile" } }
                     }
-                    Link { to: Route::SettingsProfile {}, "Settings" }
+                    Link { to: Route::SettingsProfile {}, NavigationArtwork { kind: Some(PageIconKind::Settings) } span { "Settings" } }
                 }
             }
             section { class: "dashboard-content", aria_label: "Recipe workspace",
