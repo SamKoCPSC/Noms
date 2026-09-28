@@ -1,6 +1,14 @@
 # NOMS web logo
 
-The production painted PNG logo is available in `noms-logo-painted-s3-v1.png` (1122 × 1402 RGBA, 1.36 MB). Open `compare.html` for a side-by-side comparison with the SVG on light/dark surfaces. See [generation notes and prompt](noms-logo-painted-s3-v1.md). It retains genuine transparency and richer brushwork, but uses generated lettering rather than exact Fredoka outlines. Standardized 2026-09-27: navbar, footer and sign-in all use this same painted book through BrandMark; only the display size varies. The SVG is retained as an unused vector alternative. Shared Rust components preserve decorative accessibility treatment and aspect ratio; the asset pipeline emits a 192 × 240 transparent WebP shared by all book-logo placements.
+## Second painted version
+
+[`noms-logo-painted-s3-v2.png`](noms-logo-painted-s3-v2.png) is the perspective-refinement variant generated with the built-in image tool on 2026-09-27 from v1. It retains the olive cover, cream NOMS plaque, coral closure/bookmark, slight tilt and painted finish, with more consistent alignment of the cover, plaque and page block. Selected as the production book logo on 2026-09-27; it replaces v1 in all shared BrandMark placements (navbar, footer and sign-in). V1 remains available as a historical source.
+
+Generation brief: refine the existing logo into one coherent rigid book volume in a subtle three-quarter view; align the cover, plaque, lettering, page edges and elastic to a consistent perspective, reduce exaggerated corner depth, and preserve the original styling and transparent background.
+
+## Current production version
+
+The production painted PNG logo is `noms-logo-painted-s3-v2.png` (1122 × 1402 RGBA). The brief above records v2's perspective refinement. Open `compare.html` for a historical v1/SVG comparison on light/dark surfaces; [v1 generation notes](noms-logo-painted-s3-v1.md) remain provenance, not the current production asset. It retains genuine transparency and richer brushwork, but uses generated lettering rather than exact Fredoka outlines. Standardized 2026-09-27: navbar, footer and sign-in all use this same painted book through BrandMark; only the display size varies. The SVG is retained as an unused vector alternative. Shared Rust components preserve decorative accessibility treatment and aspect ratio; the asset pipeline emits a 192 × 240 transparent WebP shared by all book-logo placements.
 
 `noms-logo.svg` is the static vector interpretation of **S3 — Continuous olive**, created 2026-09-27. The selected source is the rightmost book in [the spine comparison](../../roadmap/assets/NOMS-020/logo/spine-options-s1-s3-v1.png).
 
@@ -10,13 +18,19 @@ The transparent SVG has a `512 × 640` viewBox and contains only vector geometry
 
 ## Web use
 
-Use the shared `BrandMark {}` component for navbar/footer and `BrandMark { large: true }` for sign-in. It imports `noms-logo-painted-s3-v1.png` through the Dioxus image pipeline and emits a single shared 192 × 240 WebP asset. The default display is 32 × 40; large is 96 × 120 (80 × 100 on narrow screens). Set an explicit width and height in the 4:5 canvas ratio (for example 80 × 100) to reserve layout space. Use `alt="NOMS"` for a standalone brand image or `alt=""` when adjacent text already names NOMS. Give a logo-only home link its own accessible name.
+Use the shared `BrandMark {}` component for navbar/footer and `BrandMark { large: true }` for sign-in. It imports `noms-logo-painted-s3-v2.png` through the Dioxus image pipeline and emits a single shared 192 × 240 WebP asset. The default display is 32 × 40; large is 96 × 120 (80 × 100 on narrow screens). Set an explicit width and height in the 4:5 canvas ratio (for example 80 × 100) to reserve layout space. Use `alt="NOMS"` for a standalone brand image or `alt=""` when adjacent text already names NOMS. Give a logo-only home link its own accessible name.
 
 Prefer an external `img` rather than repeating inline SVG markup, which would duplicate gradient and accessibility IDs. Keep the transparent margin and aspect ratio; do not crop or stretch. At navigation sizes the silhouette remains recognizable but the cover lettering is too small to serve as readable text. Pair it with the app wordmark. A simplified tiny favicon remains a separate task.
 
 Open `preview.html` to review 32, 48, 64, 96 and 320px heights on light and dark surfaces. The SVG is not used by production BrandMark; all placements use the painted PNG source. Favicon exports and the 3D model remain pending.
 
 ## Validation
+
+V2 replacement (2026-09-27): developed in `codex/NOMS-020-logo-v2` / `.worktrees/NOMS-020-logo-v2`. The rendered shared-logo regression failed against v1 before the swap and passed afterward. `SQLX_OFFLINE=true cargo test --features server brand_ -- --nocapture` passed all 6 matching tests, including shared source/size/decorative accessibility and sign-in rendering. `cargo fmt --all --check` and `git diff --check` passed. Second-pass self-review found no outstanding issue in this scoped asset replacement; no independent-agent review was performed. The supplied PNG was copied byte-for-byte and v1 was retained. Live verification could not run: the existing app at port 32768 refused the browser connection and the configured Rancher Desktop Docker socket was absent. No substitute deployment or backend data changes were made.
+
+The v2 swap also passed `SQLX_OFFLINE=true cargo check --target wasm32-unknown-unknown`. One cohesive commit carries the supplied asset, shared source change, regression expectations and production notes because these form a single asset-version replacement.
+
+Historical SVG validation:
 
 - Parsed as XML; all internal references resolve and IDs are unique.
 - Checked absence of embedded raster images, live text, scripts, animation and external references.

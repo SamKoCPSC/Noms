@@ -3,7 +3,7 @@ use manganis::{ImageAssetOptions, ImageSize};
 
 const BRAND_STYLES: Asset = asset!("/assets/brand/ui.css");
 const PAINTED_BOOK: Asset = asset!(
-    "/assets/brand/noms-logo-painted-s3-v1.png",
+    "/assets/brand/noms-logo-painted-s3-v2.png",
     ImageAssetOptions::new()
         .with_webp()
         .with_size(ImageSize::Manual {
@@ -173,7 +173,7 @@ mod tests {
     fn brand_marks_and_compact_artwork_reserve_correct_aspect_ratios() {
         let small = dioxus_ssr::render_element(rsx! { BrandMark {} });
         assert!(
-            small.contains("noms-logo-painted-s3-v1") && !small.contains(".svg"),
+            small.contains("noms-logo-painted-s3-v2") && !small.contains(".svg"),
             "{small}"
         );
         assert!(
@@ -181,7 +181,7 @@ mod tests {
             "{small}"
         );
         let painted = dioxus_ssr::render_element(rsx! { BrandMark { large: true } });
-        assert!(painted.contains("noms-logo-painted-s3-v1"), "{painted}");
+        assert!(painted.contains("noms-logo-painted-s3-v2"), "{painted}");
         let small_source = small
             .split("src=\"")
             .nth(1)
