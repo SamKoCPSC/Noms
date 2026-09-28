@@ -256,6 +256,15 @@ For each migrated area, cover desktop light-mode happy/loading/empty/error/disab
 
 ## Page illustration and icon design tracker
 
+### About and How-to additions — 2026-09-28
+
+- [x] Select **About A3 — Information index card**: landscape cream card, olive backing and circled lowercase information symbol, coral top index tab, restrained ruled lines, gentle tilt and painted finish.
+- [x] Select **How-to H3 — Recipe checklist and pencil**: portrait cream card with olive backing, coral top index tab, three olive checkmarks in cream wells and a diagonal coral pencil at the lower right. Retain the rounded, painted dimensional style.
+- [x] Export separate transparent PNGs: [About A3](../../assets/brand/page-icons/about-v1.png) and [How-to H3](../../assets/brand/page-icons/how-to-v1.png), generated 2026-09-28 with the built-in image tool. Both retain the selected palette, painted finish and individual object composition.
+- [ ] Integrate both icons into their page headings and verify desktop/responsive rendering. Asset selection alone does not mark UI integration complete.
+
+These selections extend the original eight page identities. The **About A3** label refers to this information-card study, not the historical app-logo A3. See [selected concept sheet](../assets/NOMS-020/page-icons/about-how-to-a1-h3-v1.png). Other variants remain intermediate ideas.
+
 Added 2026-09-18. Exploration proceeded one page at a time, starting with Dashboard, then Explore, Collections and Recipe editor. The eight selected identities below were subsequently produced and integrated at the user's request on 2026-09-27; existing page-layout selections remain unchanged. Additional concepts still require approval.
 
 ### Existing identity decisions
