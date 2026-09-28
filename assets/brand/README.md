@@ -1,5 +1,7 @@
 # NOMS web logo
 
+A painted PNG alternative is available in `noms-logo-painted-s3-v1.png` (1122 × 1402 RGBA, 1.36 MB). Open `compare.html` for a side-by-side comparison with the SVG on light/dark surfaces. See [generation notes and prompt](noms-logo-painted-s3-v1.md). It retains genuine transparency and richer brushwork, but uses generated lettering rather than exact Fredoka outlines. Neither alternative is wired into the app yet.
+
 `noms-logo.svg` is the static vector interpretation of **S3 — Continuous olive**, created 2026-09-27. The selected source is the rightmost book in [the spine comparison](../../roadmap/assets/NOMS-020/logo/spine-options-s1-s3-v1.png).
 
 It preserves the clockwise tilt, continuous olive spine and cover, cream plaque/pages, coral elastic closure/bookmark, and warm directional lighting. Gradients and restrained facets simplify the raster concept's painted texture. It is a vector interpretation, not an exact trace of the painting.
