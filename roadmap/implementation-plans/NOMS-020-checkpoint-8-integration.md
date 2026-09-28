@@ -370,3 +370,41 @@ Browser evidence on the existing local `:32768` deployment:
 The two original integration findings are now resolved. Collection-to-collection
 stale content, the guest-search entry question and broader checkpoint 8 gates
 remain open; this focused fix does not claim release acceptance.
+
+## Drawer and sidebar artwork — 2026-09-27
+
+Implementation commit `7117482` extends the existing shared brand artwork to the
+navigation drawer and dashboard workspace sidebar. Developed in
+`codex/NOMS-020-drawer-artwork`, then fast-forwarded into NOMS-020. The existing
+generated Tailwind changes were preserved; only the existing app container was
+restarted, keeping database fixtures and deployment port 32768 intact.
+
+The v2 book marks the drawer heading, Workspace heading and All recipes link.
+Matching approved identities mark Dashboard, Collections, Explore, Search,
+New recipe, My profile and Settings in the drawer, and Overview, Drafts,
+Collections, My profile and Settings in the workspace sidebar. Artwork uses a
+32px well (book 32 × 40, page icons 32 × 32). Existing page-heading sizes,
+labels, routes, collection disclosures, avatars and action controls are unchanged.
+
+Validation:
+
+- Tests-first CSS sizing regression failed before implementation and passed after.
+- `SQLX_OFFLINE=true cargo test --features server --bin noms -- --test-threads=8`:
+  783 passed, 0 failed, 12 ignored.
+- Server and WASM `cargo clippy ... -- -D warnings`, `cargo fmt --all --check`,
+  and `git diff --check`: passed.
+- Second-pass self-review: PASS for the scoped change. No independent-agent
+  review is claimed.
+- Existing deployment browser review confirmed signed-out and signed-in drawer
+  artwork, including the profile/settings images, loaded at the expected sizes.
+  Escape dismissed the drawer and returned focus to its trigger.
+- Signed-in dashboard retained its saved recipe and collection fixture, draft
+  count and table actions; all seven sidebar artwork placements loaded correctly
+  without horizontal sidebar overflow. Screenshots were reviewed in-session.
+- At a measured 390px viewport, drawer page icons remained 32 × 32 and the book
+  32 × 40, with no drawer/page horizontal overflow. Selecting Explore closed the
+  drawer and navigated to `/explore`. Temporary viewport/cache overrides were
+  restored and the test tab closed.
+
+This navigation-artwork extension does not close broader checkpoint 8 gates or
+the remaining collection stale-content/guest-search questions.

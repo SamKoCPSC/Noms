@@ -288,6 +288,7 @@ Dashboard icon **P1 — Classic pinboard**, Explore icon **EC1 — Pocket compas
 - [x] Generate and save labeled alternatives in the design assets; link the exploration from this tracker.
 - [x] Record the user's selected direction and date, preserving rejected/superseded concepts as intermediate ideas.
 - [x] Use detailed supporting page identities, not competing app logos or replacements for conventional small control icons.
+- [x] Extend the shared book/page artwork to navigation drawer and dashboard sidebar labels at 32px; user-requested 2026-09-27. Existing routes, labels, avatars and small action controls remain unchanged. Evidence is recorded in checkpoint 8.
 - [x] Prepare the approved assets and verify actual display sizes, preserving the selected olive/cream/coral palette, tilt, painted finish and lighting. S3 does not replace the selected page-icon artwork.
 - [x] Review artwork in live page compositions; retain small conventional controls and avoid extra decorative clutter.
 - [x] Integrate the eight identities with decorative accessibility treatment, successful asset loading and representative compact-width sizing. Broader per-page phone/tablet and dark regression acceptance remain separate open gates.

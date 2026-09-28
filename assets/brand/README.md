@@ -18,6 +18,8 @@ The transparent SVG has a `512 × 640` viewBox and contains only vector geometry
 
 ## Web use
 
+The shared `NavigationArtwork` component also places the v2 book in the navigation drawer heading and dashboard workspace heading/All recipes link. Its optional page-icon kind supplies matching painted destination artwork in a 32px navigation well, without changing page-heading sizes. These images are decorative beside existing labels.
+
 Use the shared `BrandMark {}` component for navbar/footer and `BrandMark { large: true }` for sign-in. It imports `noms-logo-painted-s3-v2.png` through the Dioxus image pipeline and emits a single shared 192 × 240 WebP asset. The default display is 32 × 40; large is 96 × 120 (80 × 100 on narrow screens). Set an explicit width and height in the 4:5 canvas ratio (for example 80 × 100) to reserve layout space. Use `alt="NOMS"` for a standalone brand image or `alt=""` when adjacent text already names NOMS. Give a logo-only home link its own accessible name.
 
 Prefer an external `img` rather than repeating inline SVG markup, which would duplicate gradient and accessibility IDs. Keep the transparent margin and aspect ratio; do not crop or stretch. At navigation sizes the silhouette remains recognizable but the cover lettering is too small to serve as readable text. Pair it with the app wordmark. A simplified tiny favicon remains a separate task.

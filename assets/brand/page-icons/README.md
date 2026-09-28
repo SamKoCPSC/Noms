@@ -4,6 +4,8 @@ Generated 2026-09-27 with the built-in image-generation tool from the eight sele
 
 [Gallery](../page-icons.html)
 
+Navigation integration (2026-09-27): `NavigationArtwork` reuses these assets at 32 × 32 beside matching drawer destinations and dashboard sidebar labels. The book remains 32 × 40. Home/About/How to retain aligned empty artwork slots rather than inventing new identities. Profile artwork remains separate from the user's avatar, and small action controls retain conventional icons. See the drawer/sidebar validation in the integration checkpoint.
+
 ## Dashboard
 
 Asset: [dashboard-v1.png](dashboard-v1.png). Reference: [selected design](../../../../roadmap/assets/NOMS-020/page-icons/dashboard-pinboards-p1-p6-v3.png).
