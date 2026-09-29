@@ -1162,3 +1162,135 @@ deliverables remain separate.
 Rollback of this follow-up is the three code commits in reverse order on a
 review branch. No migrations, content or uploads require rollback. Do not reset
 the integration worktree, generated CSS or retained fixtures.
+
+## Error presentation and collection submission — 2026-09-29
+
+Continuation base `d2efbea`; implementation in the existing isolated
+`codex/NOMS-020-checkpoint-8` worktree, then fast-forwarded into
+`codex/NOMS-020-visual-design-refinement`. The existing development deployment
+at `http://127.0.0.1:32768` was reused and only its app container restarted.
+Database, object storage and mock providers were not recreated. User-generated
+`assets/tailwind.css` remained uncommitted and byte-identical across integration
+and restart. Main was not modified.
+
+### Contract and ordered changes
+
+1. **`6187e21` — clarify historical snapshot and image upload failures.**
+   Historical snapshot load failures render Recipe version unavailable and a
+   generic no-access/not-found/load explanation, retaining Back to current recipe.
+   No server-function wrapper or backend detail is rendered, regardless of the
+   failure. Authentication, visibility, API and snapshot/comparison behavior are
+   unchanged. This is a scoped load-error change, not global error normalization.
+   The shared ImageUpload batch and retry paths map structured server errors to
+   allowlisted sign-in, quota, rate, size, processing and storage copy; unknown
+   errors get a generic retry message. Authentication copy asks for sign-in in
+   another tab while keeping the editor open, since pending bytes are in memory.
+   Failure still marks the image Failed, retains bytes/edits and leaves per-image
+   Retry available; deferred-save success/failure behavior is unchanged.
+2. **`3ba9b9a` — snapshot visible collection fields on submit.**
+   Name/description now have native form names. The shared CollectionForm copies
+   the submitted text into its signals before calling the existing parent save
+   handler. Missing fields become empty, not stale defaults; existing required,
+   length and whitespace validation remains authoritative. An already-submitting
+   form does not dispatch again. Create/edit parents, visibility/parent selection,
+   image upload orchestration and API contracts are unchanged. A test-only
+   `dioxus-html/serialize` feature enables actual VirtualDom form-event dispatch;
+   no dependency version or production dependency changed.
+
+### Automated evidence
+
+The initial error tests failed to compile before their new helpers existed;
+the historical render harness then needed a parent router, as expected by Link.
+With that test harness corrected, the historical unavailable-state SSR test and
+all 30 ImageUpload tests passed, including error-copy and retained-byte checks.
+
+The collection regression dispatched a real component submit event **without
+preceding input events**, with `Typed collection` and `Typed description` in
+the submitted fields. Before the fix, its callback read `Untitled Collection`
+and an empty description. The empty/missing-field regression also dispatched
+the default name. Both assertions failed on the original implementation; after
+the fix all five form tests passed, including the already-submitting guard and
+existing field validation. This proves the missed-input-event submission defect,
+not the original browser observation's hydration timing.
+
+Commands ran from the checkpoint worktree with `SQLX_OFFLINE=true` and
+`CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target`:
+
+```sh
+cargo test --features server historical_version_error_tests -- --test-threads=8
+cargo test --features server components::base::image_upload::tests -- --test-threads=8
+cargo test --features server collection_form::tests -- --test-threads=8
+just ci
+```
+
+Final `just ci` at `3ba9b9a`: **exit 0; 814 passed, 0 failed, 12 ignored**;
+test execution 13.61s. Native/WASM checks and Clippy, formatting, six schema-plan
+policy tests, pinned schema workflow, security policies, tracked-secret and
+deployment-artifact checks and dependency audit passed. Eight existing audit
+warnings remain policy-allowed; no new exceptions. The ignored ParadeDB and
+real-storage integration tests were not rerun in this follow-up. Raw CI evidence
+is a temporary local artifact: `/tmp/noms020-errors-forms-J5vWWj/ci.log`.
+
+### Existing-deployment browser evidence
+
+- Baseline signed-out private v1 reproduced the raw server-function wrapper.
+  A normal collection creation with filled fields passed **before** the fix;
+  the original rapid-input failure was not independently reproduced live.
+- After restart, the first navigation raced startup and failed. Once healthy,
+  a fresh tab still showed old nameless fields until a cache-disabled reload.
+  Those stale samples were discarded; the rebuilt client's actual name field
+  was verified as `collection_name` before accepting results. Dev rebuild banners
+  appeared in DOM snapshots; they are not treated as a production defect.
+- Fixed collection Edit rejected a whitespace-only name with Collection name is
+  required. Filling name/description and pressing Enter from the name field saved
+  successfully; reload retained the edited description, parent and Private state.
+- Fixed New subcollection immediately filled/Enter-submitted a Unicode title and
+  description. Its detail page and reload retained both, the expected parent and
+  Private state. These are normal hydrated browser interactions, not a forced
+  pre-hydration/autofill test.
+- The owner still loaded private historical v1, its original method, photo and
+  comparisons. After sign-out, the same route showed the new generic unavailable
+  state and no private content; its desktop screenshot was inspected. Back to
+  current recipe reached the existing generic Recipe not found denial. A missing
+  nil-ID history route showed the same unavailable copy. No API/access relaxation.
+- No new browser image upload/expired-session/retry run was performed: this
+  revision's copy, byte retention and existing upload-state helpers have automated
+  coverage, while the earlier real upload/retry remains historical evidence. The
+  previously slow file-chooser operation was not repeated. Broader comparison,
+  collection-save and other route errors are not certified by this scoped fix.
+
+Two additional private UI-created fixtures remain for reproduction under the
+existing approved local-test workflow; neither was deleted or made public:
+
+| Fixture | ID | Current state |
+| --- | --- | --- |
+| NOMS020 CP8 form timing 2026-09-29 | `e59735c4-cddb-4121-aa66-4453f499d485` | Private child of the existing CP8 parent; description Private fixture: submitted details retained after reload. |
+| NOMS020 CP8 submitted fields 湯麵 | `969ce48e-71a1-4f7d-94fb-2c6257813e22` | Private child of the same parent; description Private fixture: new collection values captured at submission. |
+
+A scoped read-only database query confirmed both titles, descriptions, parent
+`7f535c8e-d0a1-4052-87a5-65b203479917` and private visibility. Existing recipe,
+version and membership fixtures were not edited. No profile/provider/access
+changes were made. Temporary tabs closed, cache bypass restored and session
+left signed out; user tabs and viewport/theme settings were not changed.
+The app remained healthy at the existing port.
+
+### Review, limitations and next gate
+
+Second-pass self-review checked the complete two-commit diff, unchanged API and
+deferred-upload boundaries, allowlisted messages, signal snapshot ordering,
+test-only feature/lock change, full CI and accepted browser observations.
+No blocking/should-fix finding remained in this scoped change. **Scoped result
+PASS; overall checkpoint 8 OPEN.** No independent-agent review claimed.
+
+The original early-input browser trigger/introduction revision remains
+unconfirmed. Native submitted values now address the reproduced missed-event
+case, but do not prove no pre-submit hydration overwrite or timing issue remains.
+Follow that gate if reproduced, and finish dense/paginated data, graph
+expansion/concurrent/stale requests, remaining editor/image interactions,
+cross-route failures and authenticated non-owner cases. Full per-page responsive,
+accessibility and whole-app acceptance remain open. Deferred dark redesign,
+Dashboard functional expansion and artwork deliverables remain separate.
+
+Rollback: revert `3ba9b9a` then `6187e21` on a review branch and revalidate; no
+migrations or content cleanup are required. Preserve the integration CSS and
+retained fixtures. Do not reset or clean the integration worktree.
