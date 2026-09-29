@@ -6,6 +6,10 @@
 
 **Tested source:** `74c420035ce29ccbb09817f4325252f56b4c5a80` on `codex/NOMS-020-visual-design-refinement`.
 
+This header and the original review below describe the 2026-09-27 baseline.
+See **Checkpoint 8 close-out pass — 2026-09-29** at the end for current fixes,
+CI results, newly observed issues and remaining acceptance gates.
+
 ## Environment and scope
 
 Used the already-running local deployment at `http://127.0.0.1:32768`, container
@@ -116,10 +120,15 @@ beginning “hasn't shared…”, while the navbar used `user-c5a3`.
 Saving a name makes the page display correctly but does not fix the empty-name
 case. The issue's introduction revision is not established.
 
-### Clarify: guest-search promise and destination
+### Resolved: guest-search promise and destination
 
-- [ ] Reconcile Home/sign-in copy and destination with existing access rules.
+- [x] Reconcile Home/sign-in copy and destination with existing access rules.
   Do not remove authentication from Search without explicit scope.
+
+Resolved by `453eb0e`, verified 2026-09-29. The landing page now explains full
+Search requires sign-in and links to public Explore search; sign-in copy names
+Explore explicitly. Encoded-query and client sign-in-return findings from that
+later pass remain separate open issues. Original observation follows.
 
 Sign-in says guests can browse and search public recipes; Home Search navigates
 to authenticated Search and prompts sign-in. Explore has public search, so the
@@ -127,6 +136,9 @@ promise may be intentional but its entry path needs clarification. This is not
 established as a new regression or authorization bug.
 
 ## Remaining gates and next order
+
+Historical queue from the original review; the 2026-09-29 section below and the
+master plan supersede it. Production SVG/page artwork has since been integrated.
 
 1. Address the remaining collection-navigation finding in a focused fix;
    resolve the guest-search copy/destination question.
@@ -705,3 +717,185 @@ and its landing heading/marketing sections; clicking Home then reopened `/home`
 with Community Home and the public recipe feed. Guest logo behavior has SSR
 coverage, not a separate logout round trip. Temporary cache bypass was restored
 and the test tab closed.
+
+## Checkpoint 8 close-out pass — 2026-09-29
+
+**Status: scoped fixes integrated; overall release acceptance OPEN.**
+
+Worked in `codex/NOMS-020-checkpoint-8` / `.worktrees/NOMS-020-checkpoint-8`,
+based on `2a940e2`. Final tested code is `cf0696c`, fast-forwarded into
+`codex/NOMS-020-visual-design-refinement`. The integration worktree's existing
+uncommitted generated `assets/tailwind.css` was preserved, not included in these
+commits. This is a local development review, not a production/release build or
+authorization to deploy.
+
+### Contract and ordered implementation
+
+1. `3a6ab7a` — separate the collection route boundary from stateful contents so
+   different IDs can own independent loaders, pagination, local overrides,
+   pending tasks and confirmations. The initial lone-root key was insufficient;
+   this commit alone is **not** the accepted navigation fix.
+2. `453eb0e` — explicitly distinguish public Explore search from authenticated
+   full Search in landing/sign-in copy. Guest landing input describes its access
+   note; signed-in markup has no dangling description reference. Auth/search
+   permissions, providers, explicit safe-return handling and query helpers are
+   unchanged.
+3. `2e7f5d0` — darken only light-theme neutral secondary/tertiary/placeholder
+   text and brighten dark tertiary text. Keep Fredoka/Nunito, base/surface/gradient
+   colours, coral/olive accents and shared neumorphic elevation unchanged.
+4. `1ccc064` — give image-editor range and paired numeric inputs individual
+   accessible names, expose display units, label Undo/Redo/Flip actions, and
+   announce flip pressed state. No image transforms, callbacks or save semantics
+   changed.
+5. `cf0696c` — correct the collection boundary to a singleton keyed fragment.
+   Dioxus 0.7.9 reconciles keys in fragments, not a lone root VNode. Strengthened
+   tests exercise the real wrapper composition with a local stateful probe,
+   without a network resource or shared application database.
+
+### Automated evidence
+
+Commands ran from the checkpoint worktree, using
+`CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target`
+and `SQLX_OFFLINE=true` for server builds/tests.
+
+- Guest landing and sign-in rendering regressions failed before the copy
+  changes, then passed; they verify guest/account text and actual destinations.
+- Neutral contrast test initially failed at 4.28:1 for light secondary copy on
+  the surface. After the token adjustment, all 16 standalone foundation tests
+  passed via `rustc --edition=2021 --test src/components/design_foundation_tests.rs`
+  and the resulting test binary. Primary/secondary/tertiary/placeholder roles
+  now test at least 4.5:1 against each theme's opaque base, surface and four
+  gradient stops. This does not certify every composited/translucent consumer
+  or every accent/control state as AA.
+- Image-slider SSR and icon-state regressions failed before the naming changes;
+  all six focused image-editor tests subsequently passed.
+- Both the fragment-composition check and lifecycle regression failed against
+  the initial lone-root key. The lifecycle failure rendered `<p>edited child
+  state</p>` after switching to the parent. With the fragment correction,
+  `cargo test --features server --bin noms pages::collection_detail::tests -- --nocapture`
+  passed **16 tests**: same-ID rerenders preserve edited local state, whereas
+  child → parent → child replaces it. This is real Dioxus reconciliation with
+  the network contents substituted, not a populated browser API test.
+- Final `just ci` at `cf0696c`: **exit 0; 799 passed, 0 failed, 12 ignored,
+  0 filtered**, in 15.71s. Includes native/WASM checks and Clippy with
+  `-D warnings`, formatting, six schema-plan policy tests, pinned declarative
+  schema workflow checks, security policy tests, tracked-secret/deployment checks
+  and the pinned dependency audit. Audit retained **eight policy-allowed
+  warnings**; no new exceptions or dependency changes were made.
+- Separately ran
+  `cargo test --features server search_integration_ -- --ignored --test-threads=4`
+  with `SEARCH_TEST_DATABASE_URL` pointing to the isolated CI database:
+  **11 passed, 0 failed**, in 4.91s on final code. No search integration test was
+  skipped in that run. The remaining ignored real-storage test was not run.
+- `git diff --check` passed. No remote CI run or independent-agent review claimed.
+
+Search integration used disposable `noms020-checkpoint8-search-ci` at local
+port 32773, based on the existing pinned ParadeDB image, with its own database
+and anonymous volume—not the application database. Host pgschema v1.9.0 failed
+on the repository's BM25 schema and rolled its transaction back; the deployment's
+pinned v1.12.1 binary applied the unchanged schema successfully. No schema files
+or application database were modified for this check. The disposable test
+container/volume was removed after validation; the app deployment remains running.
+
+### Browser environment and observations
+
+Restarted the local development deployment at `http://127.0.0.1:32768`, app
+`noms-5063d4a16468023f-app-1`, mounting the integration worktree. The old
+2026-09-27 fixture database was no longer available: this deployment has zero
+recipes and zero collections. Local mock Google `testuser` resolves to
+`@user-332d`. Routine sign-in/sign-out was used; no account/profile/avatar save,
+link/unlink, recipe/collection creation, publication or deletion was performed.
+Final read-only counts confirmed zero recipes, zero collections and zero saved
+avatars. The app was restarted again after `cf0696c` and became healthy.
+
+- Desktop 1440×810, phone 390×844 and tablet 820×1180 geometry smoke checks
+  covered landing, Community Home, About, How-to, Dashboard, Explore, Search,
+  collections/new, and settings. No horizontal document overflow was observed
+  in those empty/basic compositions. These initial-render checks do not prove
+  fully hydrated populated workflows. The public-profile matrix capture occurred
+  before its resource settled and is not accepted identity-heading evidence.
+- Existing dark mode was verified **after hydration** on eight desktop routes:
+  landing, Community Home, Explore, Search, Dashboard, Collections and both
+  settings pages. Correct dark class/tokens and no horizontal overflow observed;
+  light mode restored. Earlier pre-hydration samples were discarded. This is
+  dark regression smoke, not a dark redesign or comprehensive visual acceptance.
+- Reduced-motion emulation matched and disabled background animation (0s);
+  emulation restored. Navigation drawer opened as a named dialog, focused Close,
+  moved Tab to Search, and Escape returned focus to its trigger.
+- Account deletion confirmation was opened but never confirmed. Initial Cancel
+  focus, Shift+Tab wrapping to Confirm, Escape dismissal and focus return worked.
+  The sole linked Google provider could not be unlinked; Connect GitHub retained
+  `purpose=link`. No provider action was executed.
+- Avatar file selection opened the image editor without saving. All ten range
+  and ten numeric controls were named in the accessibility snapshot. Keyboard
+  ArrowRight changed Rotate 0→1 and its paired value, enabling Undo; Undo, Reset
+  and horizontal flip pressed state were verified. Cancel removed the dialog and
+  returned focus to Choose Photo. No OK/apply/avatar upload callback was invoked.
+- Image-editor Cancel/OK stayed within the viewport at 1280×640, 820×1180 and
+  390×844; controls used their internal scroll region and document width did not
+  overflow. This is reachability, not a claim that every control fits on-screen
+  simultaneously on a short/phone viewport. Desktop and phone captures were
+  inspected; I1B landscape composition and coral controls were retained.
+- Guest landing exposes the access note with `aria-describedby` and links to
+  public Explore. The link opened Explore; a public search reached its real
+  empty-results state. Full Search remained protected. Updated sign-in feature
+  groups and the existing default provider return `/home` were visible.
+- Temporary viewport/cache overrides were restored; the temporary browser tab
+  was closed. Dev rebuild messages appeared in snapshots and are not evidence
+  of a production defect. Screenshots/geometry JSON remain temporary review
+  artifacts outside the repository, not permanent baseline assets.
+
+### New open integration issues
+
+1. **Encoded-query round trip (should fix before acceptance).** Guest landing
+   input visibly contained `tomato & basil`, but client navigation settled at
+   `/search?q=tomato`; reproduced with ordinary typing and again after the final
+   restart. `silky noodles` correctly retained `%20`. Dioxus 0.7.9's generated
+   `Routable::from_str` decodes the entire query before constructing
+   `SearchRouteQuery`; search then splits parameters at `&` and canonicalizes,
+   treating the formerly encoded ampersand as a delimiter. Existing URL-helper
+   tests bypass this router boundary. Fix requires actual route round-trip
+   regressions, including reserved characters/advanced criteria; do not claim
+   the green search suite establishes this UI contract.
+2. **Client auth-gate return context (should fix before acceptance).** Search's
+   client-side gate renders a plain `/login` Sign In link, defaulting providers
+   to `/home` instead of preserving the intended search destination. The direct
+   server request path separately redirects to `/login?redirect_uri=…`; explicit
+   safe-return handling remains intact. Update the client gate within existing
+   validation/authorization rules, not by weakening Search access.
+
+Neither issue's introduction revision was established. Neither was changed in
+this pass. They are cross-route integration follow-ups, not new visual concepts.
+
+### Review, remaining gates and rollback
+
+Second-pass self-review examined the ordered diff, token consumers, auth
+boundaries, image-control semantics and Dioxus reconciliation. It caught the
+ineffective lone-root key and replaced it with the tested keyed fragment.
+**Implemented scoped fixes: PASS. Overall checkpoint 8 acceptance: OPEN** due
+to the two new should-fix issues and incomplete runtime acceptance. No
+independent review or full screen-reader walkthrough is claimed.
+
+Current queue:
+
+1. Resolve and regression-test encoded search routing and client auth-gate return.
+2. Obtain approval to create private disposable recipes/collections in this local
+   mock account. A collection submission was blocked by the tool's approval
+   policy before creation; it was cancelled, not bypassed with SQL/API writes.
+   The user was asked for fixture permission; no response received in this pass.
+3. With approved fixtures, recheck real collection breadcrumbs/nesting and
+   multiple memberships; recipe image caller/apply, draft/autosave/publish,
+   historical snapshots and forked/dense graph/comparison flows; relevant
+   request-failure/retry and owner/non-owner boundaries. Historical fixture
+   evidence does not substitute for combined-revision validation.
+4. Finish populated per-page phone/tablet acceptance, composited contrast,
+   keyboard/status/screen-reader checks and whole-app user visual acceptance.
+   Dark redesign, Dashboard functional expansion, favicon/single-colour/3D
+   exports and mascots remain separate deferred deliverables.
+
+Rollback baseline is **`2a940e2`**, preserving the integrated pages, Community
+Home and logo-to-landing work. On a new review branch, revert these five code
+commits in reverse order for a full scoped rollback, or revert a coherent concern
+selectively; the collection pair must be handled together. Do not reset the
+integration worktree or its generated CSS. No migrations, persisted content or
+image uploads need rollback from this pass. Deployment remains separately scoped.
