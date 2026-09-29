@@ -214,6 +214,34 @@ fn shared_button_text_roles_meet_aa_in_both_themes() {
 }
 
 #[test]
+fn shared_muted_copy_meets_aa_across_surfaces_and_gradient_stops() {
+    for theme in [":root", ".dark"] {
+        let block = rule(theme);
+        for foreground in [
+            "--text-primary",
+            "--text-secondary",
+            "--text-tertiary",
+            "--field-placeholder",
+        ] {
+            for background in [
+                "--bg-base",
+                "--surface",
+                "--bg-gradient-1",
+                "--bg-gradient-2",
+                "--bg-gradient-3",
+                "--bg-gradient-4",
+            ] {
+                let ratio = contrast(token(block, foreground), token(block, background));
+                assert!(
+                    ratio >= 4.5,
+                    "{theme} {foreground} on {background}: {ratio:.2}:1"
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn outlined_buttons_use_shared_neumorphic_material_and_depth() {
     let resting = rule(".btn-secondary");
     assert!(resting.contains("background: var(--neumo-surface)"));

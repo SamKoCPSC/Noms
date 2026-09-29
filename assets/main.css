@@ -60,7 +60,7 @@ a:hover {
     --on-accent: #12100D;
     --on-danger: #FFFFFF;
     --accent-ink: #95432F;
-    --field-placeholder: #706A61;
+    --field-placeholder: #696159;
     --focus-ring: #95432F;
     --field-border: #847C70;
 
@@ -91,8 +91,9 @@ a:hover {
 
     /* Text */
     --text-primary: #2D2A26;
-    --text-secondary: #7A756D;
-    --text-tertiary: #A8A29A;
+    /* Small copy must stay readable even over the warmest gradient stop. */
+    --text-secondary: #625B53;
+    --text-tertiary: #696159;
 
     /* Typography */
     --font-body: 'Nunito', 'Segoe UI', system-ui, sans-serif;
@@ -152,7 +153,7 @@ a:hover {
     --error-bg: rgba(217, 107, 99, 0.15);
     --text-primary: #EDE8DF;
     --text-secondary: #9E978C;
-    --text-tertiary: #6B655D;
+    --text-tertiary: #968D80;
 
     --bg-gradient-1: #1A1814;
     --bg-gradient-2: #221E18;
