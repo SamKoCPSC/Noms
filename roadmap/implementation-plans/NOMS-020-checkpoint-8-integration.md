@@ -1294,3 +1294,87 @@ Dashboard functional expansion and artwork deliverables remain separate.
 Rollback: revert `3ba9b9a` then `6187e21` on a review branch and revalidate; no
 migrations or content cleanup are required. Preserve the integration CSS and
 retained fixtures. Do not reset or clean the integration worktree.
+
+## Version-graph request lifecycle — 2026-09-29
+
+Continuation base `d515da9`; implementation in the existing isolated
+`codex/NOMS-020-checkpoint-8` worktree and fast-forwarded to the NOMS-020
+integration branch as `6eb11e0`. The existing development app at
+`http://127.0.0.1:32768` was restarted after integration. No schema/API,
+permission or fixture changes. The integration worktree's user-generated
+`assets/tailwind.css` remained byte-identical and uncommitted.
+
+### Acceptance contract and change
+
+On graph route changes, an expansion or snapshot comparison requested for an
+earlier visit must not update the current graph. Matching the recipe ID alone
+is insufficient when navigation returns A → B → A before an old A response
+arrives. A route-scoped monotonically advancing generation now identifies each
+visit; expansion and both comparison completion paths discard mismatched
+responses. A route change resets comparison loading with selection/result/error
+state, so an old request cannot leave the new route's comparison controls
+disabled. Expansion's existing cached-page merge, independent frontiers,
+retry/continuation and collapse semantics remain unchanged. This is frontend
+request-lifecycle hardening, not a change to the server's bounded graph/query
+or ownership logic.
+
+### Automated evidence
+
+Tests were added first; the initial focused run failed to compile because the
+request-scope and expansion-completion helpers did not yet exist. After
+implementation, all **51 version-graph tests** passed. New tests cover the
+A → B → A generation mismatch, a stale expansion response leaving the new
+record untouched, a fresh response completing it, two independent frontiers
+finishing in reverse order, continuation merging with a consumed boundary,
+and a retryable error preserving the cached first page. A source-level guard
+assertion supplements those state tests by checking comparison loading is reset
+in the route effect.
+
+From the checkpoint worktree with `SQLX_OFFLINE=true` and
+`CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target`:
+
+```sh
+cargo test --features server pages::recipe_version_graph::tests -- --test-threads=8
+just ci
+```
+
+Final `just ci` at `6eb11e0`: **exit 0; 818 passed, 0 failed, 12 ignored**,
+14.05s test execution. Native/WASM checks, Clippy, formatting, schema-plan and
+pinned schema-workflow tests, security policies, dependency audit, secret and
+deployment-artifact checks passed. Eight existing audit warnings remained
+policy-allowed; no exceptions added. The 12 ignored integration tests were not
+rerun. Temporary raw log: `/tmp/noms020-graph-race-CCF8wR/ci.log`.
+
+### Browser scope and remaining work
+
+Before integration, signed-out private graph access showed the generic
+unavailable state. After local mock sign-in, the owner graph loaded its two
+published soup snapshots and one private fork; comparison v1 → v2 returned the
+expected method change. Setting the fork as main recipe cleared comparison
+selection/result on route change. The populated graph had three nodes and no
+expansion frontier, so it cannot establish live expansion-page behavior. This
+small-fixture limitation remains despite passing in-memory state/merge tests.
+
+After integration and app restart, the owner graph again loaded the same
+three-node topology. `Compare with current` on soup v1 produced the expected
+v1 → v2 instructions change. In client-side navigation soup → fork → soup,
+each destination displayed its correct heading and lineage counts, while the
+comparison selection/result returned to the empty state and no pending
+comparison spinner remained. The submit action was correctly disabled until
+two snapshots were selected. Cache was disabled for the verification tab so the rebuilt
+client bundle was used. No browser-level delayed-response interception was
+completed; the A → B → A stale-response guarantee is established by the new
+state tests, not by that normal-speed route smoke test. No expansion button
+appeared because this graph has no frontier. Full dense/paginated graph,
+all graph interactions and whole-app acceptance remain OPEN.
+
+### Review and rollback
+
+Self-review checked that both comparison request entry points use the same
+route-generation guard, expansion completion checks the captured scope before
+mutating records, and the route effect resets pending comparison state. No
+independent-agent review was performed in this slice. To roll back this
+frontend-only change, revert `6eb11e0` on a review branch, rerun the focused
+graph tests and `just ci`, and smoke-test soup/fork route switching. No data
+rollback or fixture deletion is required; preserve the integration worktree's
+uncommitted CSS.
