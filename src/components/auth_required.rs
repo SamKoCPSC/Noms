@@ -21,6 +21,20 @@ pub fn AuthRequired(props: AuthRequiredProps) -> Element {
 
     // Not authenticated — show login prompt
     if !auth.is_authenticated {
+        let sign_in_href = try_router()
+            .and_then(|router| {
+                // This read subscribes to navigation and retains the raw query
+                // rather than serializing a route that might drop parameters.
+                crate::auth::redirect::normalize_same_origin_redirect(&router.full_route_string())
+            })
+            .map(|target| {
+                let encoded = percent_encoding::utf8_percent_encode(
+                    &target,
+                    percent_encoding::NON_ALPHANUMERIC,
+                );
+                format!("/login?redirect_uri={encoded}")
+            })
+            .unwrap_or_else(|| "/login".to_string());
         return rsx! {
             div {
                 class: "flex flex-col items-center justify-center min-h-[50vh] text-center px-4",
@@ -43,7 +57,7 @@ pub fn AuthRequired(props: AuthRequiredProps) -> Element {
                 div {
                     class: "flex flex-col sm:flex-row gap-3",
                     a {
-                        href: "/login",
+                        href: sign_in_href,
                         class: "btn btn-primary touch-target",
                         "Sign In"
                     }
@@ -143,6 +157,129 @@ mod tests {
         let html = render_with_auth(false, rsx! { AuthRequired { div { "Dashboard" } } });
         assert!(html.contains(r#"href="/login""#), "HTML: {html}");
         assert!(html.contains("Sign In"), "HTML: {html}");
+    }
+
+    // Preserve arbitrary URLs in this test router, including intentionally
+    // unsafe paths that the real application would send to NotFound instead.
+    #[derive(Clone)]
+    struct GateTestRoute(String);
+
+    impl std::str::FromStr for GateTestRoute {
+        type Err = std::convert::Infallible;
+
+        fn from_str(path: &str) -> Result<Self, Self::Err> {
+            Ok(Self(path.to_string()))
+        }
+    }
+
+    impl std::fmt::Display for GateTestRoute {
+        fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            formatter.write_str(&self.0)
+        }
+    }
+
+    impl Routable for GateTestRoute {
+        const SITE_MAP: &'static [dioxus::router::routable::SiteMapSegment] = &[];
+
+        fn render(&self, _level: usize) -> Element {
+            rsx! { GateProbe {} }
+        }
+    }
+
+    #[component]
+    fn GateProbe() -> Element {
+        rsx! { AuthRequired { p { "Protected content" } } }
+    }
+
+    #[component]
+    fn RoutedGateTestRoot(initial_path: String) -> Element {
+        use_context_provider(|| Signal::new(AuthContext::default()));
+        rsx! {
+            dioxus::router::components::HistoryProvider {
+                history: move |_| std::rc::Rc::new(dioxus::history::MemoryHistory::with_initial_path(&initial_path)) as std::rc::Rc<dyn History>,
+                Router::<GateTestRoute> {}
+            }
+        }
+    }
+
+    fn render_routed_gate(path: &str) -> String {
+        let mut dom = VirtualDom::new_with_props(
+            RoutedGateTestRoot,
+            RoutedGateTestRootProps {
+                initial_path: path.to_string(),
+            },
+        );
+        dom.rebuild(&mut NoOpMutations);
+        dioxus_ssr::render(&dom)
+    }
+
+    #[test]
+    fn routed_sign_in_gate_preserves_the_path_and_encoded_query() {
+        for target in [
+            "/search?q=tomato%20%26%20basil&scope=recipes&vis=mine",
+            "/collections/new?parent=7f535c8e-d0a1-4052-87a5-65b203479917",
+            "/recipes/recipe-id/edit",
+            "/dashboard",
+        ] {
+            let html = render_routed_gate(target);
+            let encoded =
+                percent_encoding::utf8_percent_encode(target, percent_encoding::NON_ALPHANUMERIC);
+            assert!(
+                html.contains(&format!(r#"href="/login?redirect_uri={encoded}""#)),
+                "{html}"
+            );
+            assert!(!html.contains("Protected content"), "{html}");
+        }
+    }
+
+    #[test]
+    fn routed_sign_in_gate_rejects_unsafe_return_paths() {
+        for target in ["/%5cevil.example", "/.//evil.example", "/%255cevil.example"] {
+            let html = render_routed_gate(target);
+            assert!(html.contains(r#"href="/login""#), "{html}");
+            assert!(!html.contains("redirect_uri="), "{html}");
+        }
+        let too_long = format!(
+            "/search?q={}",
+            "a".repeat(crate::auth::redirect::REDIRECT_URI_MAX_LEN)
+        );
+        let html = render_routed_gate(&too_long);
+        assert!(html.contains(r#"href="/login""#), "{html}");
+        assert!(!html.contains("redirect_uri="), "{html}");
+    }
+
+    #[component]
+    fn ApplicationRouteTestRoot(initial_path: String) -> Element {
+        use_context_provider(|| Signal::new(AuthContext::default()));
+        rsx! {
+            dioxus::router::components::HistoryProvider {
+                history: move |_| std::rc::Rc::new(dioxus::history::MemoryHistory::with_initial_path(&initial_path)) as std::rc::Rc<dyn History>,
+                Router::<crate::Route> {}
+            }
+        }
+    }
+
+    #[test]
+    fn application_router_renders_the_layout_and_preserves_search_gate_context() {
+        let target = "/search?q=tomato%20%26%20basil&scope=recipes&vis=mine";
+        let mut dom = VirtualDom::new_with_props(
+            ApplicationRouteTestRoot,
+            ApplicationRouteTestRootProps {
+                initial_path: target.to_string(),
+            },
+        );
+        dom.rebuild(&mut NoOpMutations);
+        let html = dioxus_ssr::render(&dom);
+        let encoded =
+            percent_encoding::utf8_percent_encode(target, percent_encoding::NON_ALPHANUMERIC);
+        assert!(html.contains("Primary navigation"), "{html}");
+        assert!(html.contains("<main"), "{html}");
+        assert!(html.contains("Footer navigation"), "{html}");
+        assert!(html.contains("Sign in to continue"), "{html}");
+        assert!(
+            html.contains(&format!(r#"href="/login?redirect_uri={encoded}""#)),
+            "{html}"
+        );
     }
 
     // ── Test: Go Home link points to / ───────────────────────────────────
