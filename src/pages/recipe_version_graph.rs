@@ -181,6 +181,32 @@ impl From<VersionGraphFrontier> for VersionGraphFrontierId {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct VersionGraphRequestScope {
+    recipe_id: String,
+    generation: u64,
+}
+
+impl VersionGraphRequestScope {
+    fn initial(recipe_id: String) -> Self {
+        Self {
+            recipe_id,
+            generation: 0,
+        }
+    }
+
+    fn advance(&self, recipe_id: String) -> Self {
+        Self {
+            recipe_id,
+            generation: self.generation.wrapping_add(1),
+        }
+    }
+
+    fn is_current(&self, current: &Self) -> bool {
+        self == current
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct VersionGraphExpansionRecord {
     frontier: VersionGraphFrontier,
@@ -546,15 +572,61 @@ fn clamp_version_graph_frontier_control_position(
     )
 }
 
+fn finish_version_graph_expansion(
+    records: &mut [VersionGraphExpansionRecord],
+    requested_scope: &VersionGraphRequestScope,
+    current_scope: &VersionGraphRequestScope,
+    frontier_id: VersionGraphFrontierId,
+    result: Result<VersionGraph, ServerFnError>,
+    continue_expansion: bool,
+) {
+    // A route can return to the same recipe before an earlier request finishes.
+    // Its generation must match as well as its recipe ID before touching state.
+    if !requested_scope.is_current(current_scope) {
+        return;
+    }
+    let Some(record) = records
+        .iter_mut()
+        .find(|record| VersionGraphFrontierId::from(record.frontier) == frontier_id)
+    else {
+        return;
+    };
+    record.is_loading = false;
+    match result {
+        Ok(batch) => {
+            let mut merged_batch = record.batch.as_ref().map_or_else(
+                || batch.clone(),
+                |cached| merge_version_graph_batches(cached, [&batch]),
+            );
+            // The response describes every boundary after this page.
+            // Replacing this list removes a fully consumed frontier.
+            merged_batch.frontiers = batch.frontiers;
+            record.batch = Some(merged_batch);
+            record.is_expanded = true;
+            record.error = None;
+        }
+        Err(error) => {
+            if !continue_expansion {
+                record.is_expanded = false;
+            }
+            record.error = Some(server_error_message(&error));
+        }
+    }
+}
+
 fn begin_version_graph_expansion(
     recipe_id: String,
     frontier: VersionGraphFrontier,
     parent: Option<VersionGraphFrontierId>,
     loaded_node_ids: Vec<VersionGraphNodeId>,
     mut records: Signal<Vec<VersionGraphExpansionRecord>>,
-    active_recipe_id: Signal<String>,
+    request_scope: Signal<VersionGraphRequestScope>,
     continue_expansion: bool,
 ) {
+    let requested_scope = request_scope.peek().clone();
+    if requested_scope.recipe_id != recipe_id {
+        return;
+    }
     let frontier_id = VersionGraphFrontierId::from(frontier);
     let mut should_fetch = false;
     records.with_mut(|records| {
@@ -593,39 +665,20 @@ fn begin_version_graph_expansion(
     }
 
     spawn(async move {
-        let requested_recipe_id = recipe_id.clone();
         let result = expand_recipe_version_graph(recipe_id, frontier, loaded_node_ids).await;
-        if active_recipe_id() != requested_recipe_id {
+        let current_scope = request_scope.peek().clone();
+        if !requested_scope.is_current(&current_scope) {
             return;
         }
         records.with_mut(|records| {
-            let Some(record) = records
-                .iter_mut()
-                .find(|record| VersionGraphFrontierId::from(record.frontier) == frontier_id)
-            else {
-                return;
-            };
-            record.is_loading = false;
-            match result {
-                Ok(batch) => {
-                    let mut merged_batch = record.batch.as_ref().map_or_else(
-                        || batch.clone(),
-                        |cached| merge_version_graph_batches(cached, [&batch]),
-                    );
-                    // The response describes every boundary after this page.
-                    // Replacing this list removes a fully consumed frontier.
-                    merged_batch.frontiers = batch.frontiers;
-                    record.batch = Some(merged_batch);
-                    record.is_expanded = true;
-                    record.error = None;
-                }
-                Err(error) => {
-                    if !continue_expansion {
-                        record.is_expanded = false;
-                    }
-                    record.error = Some(server_error_message(&error));
-                }
-            }
+            finish_version_graph_expansion(
+                records,
+                &requested_scope,
+                &current_scope,
+                frontier_id,
+                result,
+                continue_expansion,
+            );
         });
     });
 }
@@ -1509,16 +1562,18 @@ pub fn RecipeVersionGraph(id: String) -> Element {
     let mut context_select_after = use_signal(|| None::<MountedEvent>);
     let mut context_compare_current = use_signal(|| None::<MountedEvent>);
     let mut expansion_records = use_signal(Vec::<VersionGraphExpansionRecord>::new);
-    let mut expansion_recipe_id = use_signal(|| id.clone());
+    let mut request_scope = use_signal(|| VersionGraphRequestScope::initial(id.clone()));
 
     use_effect(use_reactive((&id,), move |(recipe_id,)| {
+        let next_scope = request_scope.peek().advance(recipe_id);
+        request_scope.set(next_scope);
         expansion_records.set(Vec::new());
-        expansion_recipe_id.set(recipe_id);
         initial_graph_fit_complete.set(false);
         comparison_before.set(None);
         comparison_after.set(None);
         comparison_result.set(None);
         comparison_error.set(None);
+        comparison_is_loading.set(false);
     }));
 
     let back_to_recipe = rsx! {
@@ -1636,7 +1691,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
         };
     }
 
-    let expansion_records_snapshot = if expansion_recipe_id() == id {
+    let expansion_records_snapshot = if request_scope.read().recipe_id == id {
         expansion_records.read().clone()
     } else {
         Vec::new()
@@ -2595,7 +2650,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                                     parent,
                                                                     expand_loaded_node_ids.clone(),
                                                                     expansion_records,
-                                                                    expansion_recipe_id,
+                                                                    request_scope,
                                                                     false,
                                                                 );
                                                             }
@@ -2626,7 +2681,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                                     parent,
                                                                     continuation_loaded_node_ids.clone(),
                                                                     expansion_records,
-                                                                    expansion_recipe_id,
+                                                                    request_scope,
                                                                     true,
                                                                 );
                                                             },
@@ -2909,13 +2964,17 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                 comparison_result.set(None);
                                                 comparison_error.set(None);
                                                 comparison_is_loading.set(true);
+                                                let requested_scope = request_scope.peek().clone();
                                                 spawn(async move {
-                                                    match compare_version_graph_snapshots_api(
+                                                    let response = compare_version_graph_snapshots_api(
                                                         snapshot_id,
                                                         current_snapshot_id,
                                                     )
-                                                    .await
-                                                    {
+                                                    .await;
+                                                    if !requested_scope.is_current(&request_scope.peek()) {
+                                                        return;
+                                                    }
+                                                    match response {
                                                         Ok(comparison) => {
                                                             comparison_result.set(Some(comparison))
                                                         }
@@ -3248,8 +3307,13 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                 comparison_is_loading.set(true);
                                 comparison_error.set(None);
                                 comparison_result.set(None);
+                                let requested_scope = request_scope.peek().clone();
                                 spawn(async move {
-                                    match compare_version_graph_snapshots_api(from, to).await {
+                                    let response = compare_version_graph_snapshots_api(from, to).await;
+                                    if !requested_scope.is_current(&request_scope.peek()) {
+                                        return;
+                                    }
+                                    match response {
                                         Ok(comparison) => comparison_result.set(Some(comparison)),
                                         Err(error) => comparison_error.set(Some(server_error_message(&error))),
                                     }
@@ -3377,7 +3441,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                                             parent,
                                                                             expand_loaded_node_ids.clone(),
                                                                             expansion_records,
-                                                                            expansion_recipe_id,
+                                                                            request_scope,
                                                                             false,
                                                                         );
                                                                     }
@@ -3407,7 +3471,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                                             parent,
                                                                             continuation_loaded_node_ids.clone(),
                                                                             expansion_records,
-                                                                            expansion_recipe_id,
+                                                                            request_scope,
                                                                             true,
                                                                         );
                                                                     },
@@ -4856,5 +4920,200 @@ mod tests {
         assert!(!super::version_graph_expansion_loaded_node_ids(&visible)
             .iter()
             .any(|node_id| node_id.recipe_id == cached_dependency_id));
+    }
+
+    #[test]
+    fn route_generation_rejects_an_older_response_after_recipe_a_b_a_navigation() {
+        let first_a = super::VersionGraphRequestScope::initial("recipe-a".to_string());
+        let b = first_a.advance("recipe-b".to_string());
+        let second_a = b.advance("recipe-a".to_string());
+
+        assert!(!first_a.is_current(&b));
+        assert!(!first_a.is_current(&second_a));
+        assert!(second_a.is_current(&second_a));
+
+        let frontier = VersionGraphFrontier {
+            anchor: VersionGraphNodeId {
+                recipe_id: Uuid::from_u128(750),
+                version_number: 1,
+            },
+            kind: VersionGraphFrontierKind::ChildForks,
+            hidden_count: 1,
+            fork_cursor: None,
+        };
+        let frontier_id = super::VersionGraphFrontierId::from(frontier);
+        let mut records = vec![super::VersionGraphExpansionRecord {
+            frontier,
+            parent: None,
+            batch: None,
+            is_expanded: false,
+            is_loading: true,
+            error: None,
+        }];
+        let old_batch = VersionGraph {
+            nodes: vec![visible_node(Uuid::from_u128(751), 1, "old response")],
+            ..Default::default()
+        };
+        super::finish_version_graph_expansion(
+            &mut records,
+            &first_a,
+            &second_a,
+            frontier_id,
+            Ok(old_batch),
+            false,
+        );
+        assert!(records[0].is_loading);
+        assert!(records[0].batch.is_none());
+
+        let fresh_batch = VersionGraph {
+            nodes: vec![visible_node(Uuid::from_u128(752), 1, "fresh response")],
+            ..Default::default()
+        };
+        super::finish_version_graph_expansion(
+            &mut records,
+            &second_a,
+            &second_a,
+            frontier_id,
+            Ok(fresh_batch),
+            false,
+        );
+        assert!(!records[0].is_loading);
+        assert!(records[0].is_expanded);
+        assert_eq!(
+            records[0].batch.as_ref().unwrap().nodes[0].title(),
+            Some("fresh response")
+        );
+    }
+
+    #[test]
+    fn independent_expansions_can_finish_out_of_order_without_losing_either_batch() {
+        let scope = super::VersionGraphRequestScope::initial("recipe-a".to_string());
+        let anchor = VersionGraphNodeId {
+            recipe_id: Uuid::from_u128(760),
+            version_number: 1,
+        };
+        let left = VersionGraphFrontier {
+            anchor,
+            kind: VersionGraphFrontierKind::OlderVersions,
+            hidden_count: 1,
+            fork_cursor: None,
+        };
+        let right = VersionGraphFrontier {
+            anchor,
+            kind: VersionGraphFrontierKind::ChildForks,
+            hidden_count: 1,
+            fork_cursor: None,
+        };
+        let mut records = [left, right]
+            .into_iter()
+            .map(|frontier| super::VersionGraphExpansionRecord {
+                frontier,
+                parent: None,
+                batch: None,
+                is_expanded: false,
+                is_loading: true,
+                error: None,
+            })
+            .collect::<Vec<_>>();
+        for (frontier, node_id) in [(right, 762), (left, 761)] {
+            super::finish_version_graph_expansion(
+                &mut records,
+                &scope,
+                &scope,
+                frontier.into(),
+                Ok(VersionGraph {
+                    nodes: vec![visible_node(Uuid::from_u128(node_id), 1, "batch")],
+                    ..Default::default()
+                }),
+                false,
+            );
+        }
+        assert!(records
+            .iter()
+            .all(|record| record.is_expanded && !record.is_loading));
+        let graph = super::merge_version_graph_batches(
+            &VersionGraph::default(),
+            records.iter().filter_map(|record| record.batch.as_ref()),
+        );
+        assert_eq!(graph.nodes.len(), 2);
+    }
+
+    #[test]
+    fn continuation_merges_pages_replaces_exhausted_boundary_and_preserves_a_retryable_error() {
+        let scope = super::VersionGraphRequestScope::initial("recipe-a".to_string());
+        let anchor = VersionGraphNodeId {
+            recipe_id: Uuid::from_u128(770),
+            version_number: 1,
+        };
+        let frontier = VersionGraphFrontier {
+            anchor,
+            kind: VersionGraphFrontierKind::ChildForks,
+            hidden_count: 2,
+            fork_cursor: None,
+        };
+        let frontier_id = frontier.into();
+        let first_node = visible_node(Uuid::from_u128(771), 1, "first page");
+        let second_node = visible_node(Uuid::from_u128(772), 1, "second page");
+        let mut records = vec![super::VersionGraphExpansionRecord {
+            frontier,
+            parent: None,
+            batch: Some(VersionGraph {
+                nodes: vec![first_node.clone()],
+                frontiers: vec![frontier],
+                ..Default::default()
+            }),
+            is_expanded: true,
+            is_loading: true,
+            error: None,
+        }];
+
+        super::finish_version_graph_expansion(
+            &mut records,
+            &scope,
+            &scope,
+            frontier_id,
+            Err(dioxus::prelude::ServerFnError::new("frontier is stale")),
+            true,
+        );
+        assert!(records[0].is_expanded);
+        assert!(!records[0].is_loading);
+        assert_eq!(records[0].error.as_deref(), Some("frontier is stale"));
+        assert_eq!(
+            records[0].batch.as_ref().unwrap().nodes,
+            vec![first_node.clone()]
+        );
+
+        records[0].is_loading = true;
+        super::finish_version_graph_expansion(
+            &mut records,
+            &scope,
+            &scope,
+            frontier_id,
+            Ok(VersionGraph {
+                nodes: vec![second_node.clone()],
+                frontiers: Vec::new(),
+                ..Default::default()
+            }),
+            true,
+        );
+        let batch = records[0].batch.as_ref().unwrap();
+        assert_eq!(batch.nodes, vec![first_node, second_node]);
+        assert!(batch.frontiers.is_empty());
+        assert!(records[0].error.is_none());
+        assert!(!records[0].is_loading);
+        assert!(records[0].is_expanded);
+    }
+
+    #[test]
+    fn graph_comparison_loading_is_reset_when_the_route_changes() {
+        let source = include_str!("recipe_version_graph.rs");
+        let route_reset = source
+            .split_once("use_effect(use_reactive((&id,), move |(recipe_id,)| {")
+            .unwrap()
+            .1
+            .split_once("}));")
+            .unwrap()
+            .0;
+        assert!(route_reset.contains("comparison_is_loading.set(false)"));
     }
 }
