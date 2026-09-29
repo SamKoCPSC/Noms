@@ -167,6 +167,14 @@ async fn copy_collection_link(url: String) -> Result<String, String> {
 
 #[component]
 pub fn CollectionDetail(id: String) -> Element {
+    // Breadcrumb navigation reuses this route component. Give each collection
+    // its own scope so loaders, pagination, confirmations and pending tasks
+    // cannot carry the previous collection's state into a different URL.
+    rsx! { CollectionDetailContents { key: "{id}", id } }
+}
+
+#[component]
+fn CollectionDetailContents(id: String) -> Element {
     let requested_id = id.clone();
     let mut contents = use_resource(move || {
         let id = requested_id.clone();
@@ -807,7 +815,61 @@ mod tests {
         next_recipe_page_request, should_persist_reorder_generation, RECIPE_REORDER_DEBOUNCE_MS,
         RECURSIVE_DELETE_WARNING,
     };
-    use dioxus::prelude::ServerFnError;
+    use dioxus::prelude::*;
+
+    #[derive(Clone, PartialEq, dioxus::prelude::Routable)]
+    enum CollectionNavigationTestRoute {
+        #[route("/collections/:id")]
+        CollectionDetail { id: String },
+    }
+
+    use super::CollectionDetail;
+
+    #[dioxus::prelude::component]
+    fn CollectionNavigationTestRoot(id: String) -> dioxus::prelude::Element {
+        use dioxus::prelude::*;
+        rsx! {
+            dioxus::router::components::HistoryProvider {
+                history: move |_| std::rc::Rc::new(dioxus::history::MemoryHistory::with_initial_path(format!("/collections/{id}"))) as std::rc::Rc<dyn History>,
+                Router::<CollectionNavigationTestRoute> {}
+            }
+        }
+    }
+
+    #[test]
+    fn collection_navigation_keys_the_entire_state_to_the_requested_id() {
+        use dioxus::prelude::*;
+        use dioxus_core::DynamicNode;
+        for requested_id in ["child-collection", "parent-collection", "child-collection"] {
+            let mut dom = VirtualDom::new_with_props(
+                CollectionNavigationTestRoot,
+                CollectionNavigationTestRootProps {
+                    id: requested_id.to_string(),
+                },
+            );
+            // Inspect route composition before polling the network resource. The
+            // keyed boundary must own every hook, not only the loader or cards.
+            dom.rebuild_in_place();
+            let detail = (0..100)
+                .filter_map(|index| dom.get_scope(ScopeId(index)))
+                .find_map(|scope| {
+                    let root = scope.try_root_node()?;
+                    let DynamicNode::Component(page) = root.dynamic_nodes.first()? else {
+                        return None;
+                    };
+                    page.name
+                        .ends_with("::CollectionDetail")
+                        .then(|| page.mounted_scope(0, root, &dom))
+                        .flatten()
+                })
+                .expect("expected the real collection detail component");
+            assert_eq!(detail.root_node().key.as_deref(), Some(requested_id));
+            assert!(matches!(
+                detail.root_node().dynamic_nodes[0],
+                DynamicNode::Component(_)
+            ));
+        }
+    }
 
     #[test]
     fn collection_access_failures_do_not_reveal_authentication_or_existence() {
