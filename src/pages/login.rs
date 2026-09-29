@@ -45,7 +45,7 @@ pub fn Login() -> Element {
                     p { "Access follows each recipe’s sharing settings." }
                     ul {
                         for feature in [
-                            "Browse and search public recipes",
+                            "Browse and search public recipes in Explore",
                             "View shared recipes and creator profiles",
                             "Read published history on recipes you can access",
                         ] {
@@ -62,6 +62,7 @@ pub fn Login() -> Element {
                             "Organize recipes into collections",
                             "Fork recipes to make them your own",
                             "Keep recipes private or choose how to share",
+                            "Search across recipes, collections, and cooks",
                         ] {
                             SignInFeature { key: "{feature}", text: feature }
                         }
@@ -200,7 +201,15 @@ mod tests {
         assert!(html.contains("With an account"), "{html}");
         assert!(html.contains("recipes you can access"), "{html}");
         assert!(html.contains("Everything you can browse, plus:"), "{html}");
-        assert_eq!(html.matches("<li>").count(), 7, "{html}");
+        assert!(
+            html.contains("Browse and search public recipes in Explore"),
+            "{html}"
+        );
+        assert!(
+            html.contains("Search across recipes, collections, and cooks"),
+            "{html}"
+        );
+        assert_eq!(html.matches("<li>").count(), 8, "{html}");
     }
 
     #[test]

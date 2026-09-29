@@ -1,6 +1,22 @@
 use super::about::ABOUT_SECTIONS;
 use super::home::{home_cta, HomeCtaDestination};
 use super::how_to::HOW_TO_SECTIONS;
+use dioxus::prelude::*;
+
+#[component]
+fn LandingSearchTestRoot(signed_in: bool) -> Element {
+    let auth = use_signal(move || crate::auth::context::AuthContext {
+        is_authenticated: signed_in,
+        ..Default::default()
+    });
+    use_context_provider(|| auth);
+    rsx! {
+        dioxus::router::components::HistoryProvider {
+            history: |_| std::rc::Rc::new(dioxus::history::MemoryHistory::with_initial_path("/")) as std::rc::Rc<dyn History>,
+            Router::<crate::Route> {}
+        }
+    }
+}
 
 #[test]
 fn signed_out_home_cta_starts_recipe_creation_through_login() {
@@ -91,4 +107,36 @@ fn public_page_copy_does_not_claim_unshipped_full_search() {
     assert!(marketing_copy.contains("Full recipe, collection, and creator search is not part"));
     assert!(!production_copy.contains("Search your entire library"));
     assert!(!production_copy.contains("Search recipes, collections, and people"));
+}
+
+#[test]
+fn landing_search_explains_the_account_gate_and_public_explore_alternative() {
+    for signed_in in [false, true] {
+        let mut dom = VirtualDom::new_with_props(
+            LandingSearchTestRoot,
+            LandingSearchTestRootProps { signed_in },
+        );
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert_eq!(
+            html.contains("aria-describedby=\"landing-search-access\""),
+            !signed_in
+        );
+        assert_eq!(html.contains("id=\"landing-search-access\""), !signed_in);
+        assert_eq!(html.contains("Full search requires sign-in."), !signed_in);
+        assert_eq!(
+            html.contains("Search public recipes in Explore"),
+            !signed_in
+        );
+        if !signed_in {
+            let help = html
+                .split("id=\"landing-search-access\"")
+                .nth(1)
+                .unwrap()
+                .split("</p>")
+                .next()
+                .unwrap();
+            assert!(help.contains("href=\"/explore\""));
+        }
+    }
 }

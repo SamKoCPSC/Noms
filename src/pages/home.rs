@@ -80,12 +80,20 @@ pub fn Home() -> Element {
                         input {
                             id: "landing-search-query",
                             r#type: "search",
+                            aria_describedby: (!auth.is_authenticated).then_some("landing-search-access"),
                             value: search_text(),
                             placeholder: "Search recipes, collections, and cooks",
                             autocomplete: "off",
                             oninput: move |event| search_text.set(event.value()),
                         }
                         button { class: "btn btn-primary", r#type: "submit", "Search" }
+                    }
+                    if !auth.is_authenticated {
+                        p { id: "landing-search-access", class: "marketing-note",
+                            "Full search requires sign-in. "
+                            Link { to: Route::Explore {}, "Search public recipes in Explore" }
+                            "."
+                        }
                     }
                     div { class: "marketing-actions",
                         match primary_cta.destination {
