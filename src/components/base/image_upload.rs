@@ -43,6 +43,42 @@ const ALLOWED_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp"];
 
 // ── Pure helpers (cross-platform, unit-tested) ──────────────────────────────
 
+fn upload_error_message(error: &ServerFnError) -> &'static str {
+    // Only known upload conditions receive specific copy. Do not expose framework
+    // wrappers, response bodies or unrecognized backend details in the gallery.
+    match error {
+        ServerFnError::ServerError { message, .. } => match message.as_str() {
+            "Not authenticated" => {
+                "Sign in again in another tab, then retry this image. Keep this page open."
+            }
+            "Upload rate limit exceeded" => {
+                "Too many uploads at once. Wait a moment, then retry this image."
+            }
+            "Media storage quota exceeded" => {
+                "Your media storage is full. Free up some space, then retry this image."
+            }
+            "Image variant exceeds the size limit" => {
+                "This image is too large. Choose an image smaller than 10 MB."
+            }
+            "Image variants must not be empty"
+            | "Invalid full-size image. Expected WebP format."
+            | "Invalid thumbnail. Expected WebP format." => {
+                "This image could not be processed. Remove it and choose it again."
+            }
+            "Image storage is unavailable" | "Unable to verify media quota" => {
+                "Image storage is temporarily unavailable. Try again later."
+            }
+            _ => "This image could not be uploaded. Check your connection and retry.",
+        },
+        _ => "This image could not be uploaded. Check your connection and retry.",
+    }
+}
+
+fn mark_upload_failed(image: &mut PendingImage, error: &ServerFnError) {
+    image.status = UploadStatus::Failed;
+    image.error = Some(upload_error_message(error).to_string());
+}
+
 /// Check if a filename has an allowed image extension (case-insensitive).
 /// Only referenced inside wasm-gated code — `allow(dead_code)` covers the
 /// server build where the wasm blocks are stripped.
@@ -542,10 +578,8 @@ async fn retry_upload(
             sync_uploaded_images(pending, images);
         }
         Err(e) => {
-            let msg = e.to_string();
             if let Some(p) = pending.write().iter_mut().find(|p| p.id == img_id) {
-                p.status = UploadStatus::Failed;
-                p.error = Some(msg);
+                mark_upload_failed(p, &e);
             }
         }
     }
@@ -607,10 +641,8 @@ async fn upload_all(
                 succeeded += 1;
             }
             Err(e) => {
-                let msg = e.to_string();
                 if let Some(p) = pending.write().iter_mut().find(|p| p.id == id) {
-                    p.status = UploadStatus::Failed;
-                    p.error = Some(msg);
+                    mark_upload_failed(p, &e);
                 }
                 failed += 1;
             }
@@ -1027,6 +1059,73 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn upload_errors_explain_sign_in_limits_and_invalid_images_without_internal_details() {
+        for (error, expected) in [
+            (
+                "Not authenticated",
+                "Sign in again in another tab, then retry this image. Keep this page open.",
+            ),
+            (
+                "Upload rate limit exceeded",
+                "Too many uploads at once. Wait a moment, then retry this image.",
+            ),
+            (
+                "Media storage quota exceeded",
+                "Your media storage is full. Free up some space, then retry this image.",
+            ),
+            (
+                "Image variant exceeds the size limit",
+                "This image is too large. Choose an image smaller than 10 MB.",
+            ),
+            (
+                "Invalid thumbnail. Expected WebP format.",
+                "This image could not be processed. Remove it and choose it again.",
+            ),
+        ] {
+            assert_eq!(upload_error_message(&ServerFnError::new(error)), expected);
+        }
+        let detailed_error = ServerFnError::ServerError {
+            message: "Not authenticated".to_string(),
+            code: 500,
+            details: Some(serde_json::json!({"internal": "must not appear"})),
+        };
+        assert_eq!(
+            upload_error_message(&detailed_error),
+            upload_error_message(&ServerFnError::new("Not authenticated"))
+        );
+        for error in [
+            ServerFnError::new("database connection failed: private detail"),
+            ServerFnError::Deserialization("private response".to_string()),
+        ] {
+            assert_eq!(
+                upload_error_message(&error),
+                "This image could not be uploaded. Check your connection and retry."
+            );
+        }
+    }
+
+    #[test]
+    fn failed_upload_keeps_the_image_and_bytes_for_retry() {
+        let mut image = pending_image_with_uploaded_url(1, None);
+        image.status = UploadStatus::Uploading;
+        image.full_bytes = Arc::new(vec![1, 2, 3]);
+        image.thumb_bytes = Arc::new(vec![4, 5]);
+        let full_bytes = image.full_bytes.clone();
+        let thumb_bytes = image.thumb_bytes.clone();
+        let edit = image.edit.clone();
+        mark_upload_failed(&mut image, &ServerFnError::new("Not authenticated"));
+        assert!(matches!(image.status, UploadStatus::Failed));
+        assert_eq!(
+            image.error.as_deref(),
+            Some("Sign in again in another tab, then retry this image. Keep this page open.")
+        );
+        assert!(Arc::ptr_eq(&full_bytes, &image.full_bytes));
+        assert!(Arc::ptr_eq(&thumb_bytes, &image.thumb_bytes));
+        assert_eq!(image.edit, edit);
+        assert_eq!(pending_upload_count(&[image]), 1);
+    }
 
     #[test]
     fn gallery_limit_reports_only_remaining_slots() {

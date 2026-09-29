@@ -68,6 +68,42 @@ fn recipe_access_error_message(_error: &ServerFnError) -> &'static str {
 }
 
 #[cfg(test)]
+mod historical_version_error_tests {
+    use super::*;
+    use dioxus::router::components::HistoryProvider;
+
+    #[derive(Clone, PartialEq, Routable)]
+    enum ErrorTestRoute {
+        #[route("/")]
+        ErrorTestPage {},
+    }
+
+    #[component]
+    fn ErrorTestPage() -> Element {
+        render_historical_version_unavailable("fixture-recipe".to_string())
+    }
+
+    #[test]
+    fn historical_version_unavailable_renders_generic_copy_and_safe_navigation() {
+        let mut dom = VirtualDom::new(|| {
+            rsx! { HistoryProvider {
+                history: |_| std::rc::Rc::new(dioxus::history::MemoryHistory::with_initial_path("/")) as std::rc::Rc<dyn History>,
+                Router::<ErrorTestRoute> {}
+            } }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("Recipe version unavailable"));
+        assert!(html.contains("may not exist or you may not have access"));
+        assert!(html.contains("/recipes/fixture-recipe"));
+        assert!(html.contains("Back to current recipe"));
+        assert!(!html.contains("server function"));
+        assert!(!html.contains("details:"));
+        assert!(!html.contains("Not authenticated"));
+    }
+}
+
+#[cfg(test)]
 mod collection_membership_integration_tests {
     use super::recipe_access_error_message;
     use dioxus::prelude::ServerFnError;
@@ -2604,6 +2640,30 @@ pub fn RecipeDetail(id: String) -> Element {
     }
 }
 
+fn render_historical_version_unavailable(id: String) -> Element {
+    // Use one public state for every load failure. Neither the transport wrapper
+    // nor details about a private recipe belong in this page's error UI.
+    rsx! {
+        div { class: "container",
+            Card {
+                div {
+                    display: "flex",
+                    flex_direction: "column",
+                    align_items: "center",
+                    gap: "var(--space-md)",
+                    h1 { "Recipe version unavailable" }
+                    p { role: "status", "This version may not exist or you may not have access to it. You can try loading it again or return to the current recipe." }
+                    Link {
+                        to: crate::Route::RecipeDetail { id },
+                        class: "btn btn-secondary touch-target",
+                        "Back to current recipe"
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// Full-page, read-only rendering of one immutable published recipe snapshot.
 #[component]
 pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
@@ -2640,28 +2700,7 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
     }
 
     let Some(Ok(detail)) = version_result else {
-        let error_message = version_result
-            .and_then(Result::err)
-            .map(|error| error.to_string())
-            .unwrap_or_else(|| "Unable to load this recipe version.".to_string());
-        return rsx! {
-            div { class: "container",
-                Card {
-                    div {
-                        display: "flex",
-                        flex_direction: "column",
-                        align_items: "center",
-                        gap: "var(--space-md)",
-                        p { color: "var(--error)", font_weight: "600", "{error_message}" }
-                        Link {
-                            to: crate::Route::RecipeDetail { id: id.clone() },
-                            class: "btn btn-secondary touch-target",
-                            "Back to current recipe"
-                        }
-                    }
-                }
-            }
-        };
+        return render_historical_version_unavailable(id);
     };
     let editor = &detail.editor;
     let version_numbers = (1..=detail.current_version_number)
