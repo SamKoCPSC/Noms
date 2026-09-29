@@ -170,7 +170,12 @@ pub fn CollectionDetail(id: String) -> Element {
     // Breadcrumb navigation reuses this route component. Give each collection
     // its own scope so loaders, pagination, confirmations and pending tasks
     // cannot carry the previous collection's state into a different URL.
-    rsx! { CollectionDetailContents { key: "{id}", id } }
+    // Keys trigger scope replacement inside fragments, not on a lone root.
+    rsx! {
+        for collection_id in [id] {
+            CollectionDetailContents { key: "{collection_id}", id: collection_id }
+        }
+    }
 }
 
 #[component]
@@ -825,6 +830,89 @@ mod tests {
 
     use super::CollectionDetail;
 
+    #[derive(Clone, Default)]
+    struct CollectionScopeTestControl {
+        requested_id: std::rc::Rc<std::cell::RefCell<Option<Signal<String>>>>,
+        local_state: std::rc::Rc<std::cell::RefCell<Option<Signal<String>>>>,
+    }
+
+    #[component]
+    fn CollectionStateProbe(id: String) -> Element {
+        let local_state = use_signal(move || id);
+        *use_context::<CollectionScopeTestControl>()
+            .local_state
+            .borrow_mut() = Some(local_state);
+        rsx! { p { "{local_state}" } }
+    }
+
+    // Keep the real route composition/key, substituting only its network-backed
+    // contents with a stateful probe. This exercises reconciliation without a
+    // shared application pool or browser fixtures.
+    fn substitute_collection_loader(node: VNode, probe: dioxus_core::DynamicNode) -> VNode {
+        use dioxus_core::DynamicNode;
+        let dynamic_nodes = node
+            .dynamic_nodes
+            .iter()
+            .map(|dynamic| match dynamic {
+                DynamicNode::Component(component)
+                    if component.name.ends_with("CollectionDetailContents") =>
+                {
+                    probe.clone()
+                }
+                DynamicNode::Fragment(children) => DynamicNode::Fragment(
+                    children
+                        .iter()
+                        .cloned()
+                        .map(|child| substitute_collection_loader(child, probe.clone()))
+                        .collect(),
+                ),
+                _ => dynamic.clone(),
+            })
+            .collect::<Vec<_>>();
+        VNode::new(
+            node.key.clone(),
+            node.template,
+            dynamic_nodes.into_boxed_slice(),
+            node.dynamic_attrs.clone(),
+        )
+    }
+
+    #[component]
+    fn CollectionScopeLifecycleTestRoot() -> Element {
+        let id = use_signal(|| "child-collection".to_string());
+        *use_context::<CollectionScopeTestControl>()
+            .requested_id
+            .borrow_mut() = Some(id);
+        let route = super::CollectionDetail(super::CollectionDetailProps { id: id() })?;
+        let probe = rsx! { CollectionStateProbe { id: id() } }?;
+        Ok(substitute_collection_loader(
+            route,
+            probe.dynamic_nodes[0].clone(),
+        ))
+    }
+
+    #[test]
+    fn changing_collection_id_remounts_local_state_but_same_id_preserves_it() {
+        let control = CollectionScopeTestControl::default();
+        let mut dom =
+            VirtualDom::new(CollectionScopeLifecycleTestRoot).with_root_context(control.clone());
+        dom.rebuild_in_place();
+        let mut requested_id = control.requested_id.borrow().unwrap();
+        let mut local_state = control.local_state.borrow().unwrap();
+        dom.in_runtime(|| local_state.set("edited child state".to_string()));
+        dom.render_immediate(&mut dioxus_core::NoOpMutations);
+        dom.in_runtime(|| requested_id.set("child-collection".to_string()));
+        dom.render_immediate(&mut dioxus_core::NoOpMutations);
+        assert!(dioxus_ssr::render(&dom).contains("edited child state"));
+        for next_id in ["parent-collection", "child-collection"] {
+            dom.in_runtime(|| requested_id.set(next_id.to_string()));
+            dom.render_immediate(&mut dioxus_core::NoOpMutations);
+            let html = dioxus_ssr::render(&dom);
+            assert!(html.contains(next_id), "{html}");
+            assert!(!html.contains("edited child state"), "{html}");
+        }
+    }
+
     #[dioxus::prelude::component]
     fn CollectionNavigationTestRoot(id: String) -> dioxus::prelude::Element {
         use dioxus::prelude::*;
@@ -863,9 +951,15 @@ mod tests {
                         .flatten()
                 })
                 .expect("expected the real collection detail component");
-            assert_eq!(detail.root_node().key.as_deref(), Some(requested_id));
+            // Dioxus only reconciles keys inside fragments. A key on the route's
+            // lone root VNode looks correct but does not remount its child scope.
+            let DynamicNode::Fragment(children) = &detail.root_node().dynamic_nodes[0] else {
+                panic!("collection state must be inside a keyed fragment");
+            };
+            assert_eq!(children.len(), 1);
+            assert_eq!(children[0].key.as_deref(), Some(requested_id));
             assert!(matches!(
-                detail.root_node().dynamic_nodes[0],
+                children[0].dynamic_nodes[0],
                 DynamicNode::Component(_)
             ));
         }
