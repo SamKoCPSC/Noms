@@ -655,9 +655,9 @@ fn SearchControls(props: SearchControlsProps) -> Element {
                                 props.onchange.call(request);
                             }
                         },
-                        option { value: "all", "All visible" }
-                        option { value: "mine", "Mine only" }
-                        option { value: "public", "Public only" }
+                        option { value: "all", selected: recipe.visibility == RecipeSearchVisibility::AllVisible, "All visible" }
+                        option { value: "mine", selected: recipe.visibility == RecipeSearchVisibility::MineOnly, "Mine only" }
+                        option { value: "public", selected: recipe.visibility == RecipeSearchVisibility::PublicOnly, "Public only" }
                     }
                 }
                 SelectRange {
@@ -728,8 +728,8 @@ fn SelectRange(props: SelectRangeProps) -> Element {
     rsx! {
         label { class: "search-control",
             span { "{props.label}" }
-            select { value: props.value, onchange: move |event| props.onchange.call(event.value()),
-                for (value, label) in props.options { option { value, "{label}" } }
+            select { value: props.value.clone(), onchange: move |event| props.onchange.call(event.value()),
+                for (value, label) in props.options { option { value, selected: value == props.value, "{label}" } }
             }
         }
     }
@@ -828,9 +828,11 @@ fn AdvancedTextInput(props: AdvancedTextInputProps) -> Element {
             legend { "{props.label}" }
             input { name: "{props.prefix}_include", aria_label: "{props.label} contains", value: include, placeholder: "Words or phrase" }
             select { name: "{props.prefix}_mode", aria_label: "{props.label} match mode", value: mode,
-                option { value: "all", "All terms" }
-                option { value: "any", "Any term" }
-                option { value: "exact", "Exact phrase" }
+                // A select's value attribute alone does not select an option
+                // in server-rendered HTML or establish its hydration state.
+                option { value: "all", selected: mode == "all", "All terms" }
+                option { value: "any", selected: mode == "any", "Any term" }
+                option { value: "exact", selected: mode == "exact", "Exact phrase" }
             }
             input { name: "{props.prefix}_exclude", aria_label: "{props.label} excludes", value: excluded, placeholder: "Exclude (comma-separated)" }
         }
@@ -1217,18 +1219,32 @@ fn sort_value(request: &ActiveSearchRequest) -> &'static str {
 }
 
 fn sort_options(request: &ActiveSearchRequest) -> Element {
-    match request {
-        ActiveSearchRequest::Recipes(_) => {
-            rsx! { option { value: "relevance", "Relevance" } option { value: "updated_newest", "Newest" } option { value: "updated_oldest", "Oldest" } option { value: "title_ascending", "Title A–Z" } option { value: "title_descending", "Title Z–A" } option { value: "quickest", "Quickest" } option { value: "longest", "Longest" } }
-        }
-        ActiveSearchRequest::Collections(_) => {
-            rsx! { option { value: "relevance", "Relevance" } option { value: "updated_newest", "Newest" } option { value: "updated_oldest", "Oldest" } option { value: "name_ascending", "Name A–Z" } option { value: "name_descending", "Name Z–A" } }
-        }
-        ActiveSearchRequest::Users(_) => {
-            rsx! { option { value: "relevance", "Relevance" } option { value: "username_ascending", "Username" } option { value: "display_name_ascending", "Display name" } }
-        }
-        ActiveSearchRequest::All(_) => rsx! {},
-    }
+    let options: &[(&str, &str)] = match request {
+        ActiveSearchRequest::Recipes(_) => &[
+            ("relevance", "Relevance"),
+            ("updated_newest", "Newest"),
+            ("updated_oldest", "Oldest"),
+            ("title_ascending", "Title A–Z"),
+            ("title_descending", "Title Z–A"),
+            ("quickest", "Quickest"),
+            ("longest", "Longest"),
+        ],
+        ActiveSearchRequest::Collections(_) => &[
+            ("relevance", "Relevance"),
+            ("updated_newest", "Newest"),
+            ("updated_oldest", "Oldest"),
+            ("name_ascending", "Name A–Z"),
+            ("name_descending", "Name Z–A"),
+        ],
+        ActiveSearchRequest::Users(_) => &[
+            ("relevance", "Relevance"),
+            ("username_ascending", "Username"),
+            ("display_name_ascending", "Display name"),
+        ],
+        ActiveSearchRequest::All(_) => &[],
+    };
+    let selected_sort = sort_value(request);
+    rsx! { for (value, label) in options { option { value: *value, selected: *value == selected_sort, "{label}" } } }
 }
 
 fn apply_sort(request: &mut ActiveSearchRequest, value: &str) {
@@ -1577,6 +1593,91 @@ mod tests {
                 segments: vec!["searching".to_string()]
             }
         );
+    }
+
+    fn assert_selected_option(html: &str, value: &str) {
+        let option = html
+            .split("<option")
+            .skip(1)
+            .filter_map(|option| option.split_once('>').map(|(attributes, _)| attributes))
+            .find(|attributes| attributes.contains(&format!(r#"value="{value}""#)))
+            .unwrap_or_else(|| panic!("missing option {value}: {html}"));
+        assert!(
+            option.contains(" selected"),
+            "option {value} is not selected: {html}"
+        );
+    }
+
+    #[test]
+    fn advanced_match_modes_are_selected_in_initial_html() {
+        for mode in [
+            TextMatchMode::AllTerms,
+            TextMatchMode::AnyTerm,
+            TextMatchMode::ExactPhrase,
+        ] {
+            let mut dom = VirtualDom::new_with_props(
+                AdvancedTextInput,
+                AdvancedTextInputProps {
+                    prefix: "title",
+                    label: "Title",
+                    field: Some(AdvancedTextField {
+                        include: Some(TextCriterion {
+                            text: "100% & C++ #1".to_string(),
+                            mode,
+                        }),
+                        exclude: Vec::new(),
+                    }),
+                },
+            );
+            dom.rebuild(&mut dioxus_core::NoOpMutations);
+            let html = dioxus_ssr::render(&dom);
+            assert_selected_option(&html, mode_value(mode));
+            assert_eq!(html.matches(" selected").count(), 1, "{html}");
+        }
+    }
+
+    #[component]
+    fn SearchControlsTestRoot(query: String) -> Element {
+        rsx! { SearchControls {
+            parsed: parse_search_query(&query).unwrap(),
+            onchange: move |_| {},
+            ontagsinput: move |_| {},
+            onsort: move |_| {},
+        } }
+    }
+
+    #[test]
+    fn search_filters_and_sort_are_selected_in_initial_html() {
+        for (query, selected) in [
+            (
+                "scope=recipes&sort=quickest&vis=mine&time=30-60&servings=3-4",
+                vec!["quickest", "mine", "30-60", "3-4"],
+            ),
+            (
+                "scope=recipes&vis=public",
+                vec!["updated_newest", "public", ""],
+            ),
+            (
+                "scope=collections&sort=name_descending",
+                vec!["name_descending"],
+            ),
+            (
+                "scope=users&sort=display_name_ascending",
+                vec!["display_name_ascending"],
+            ),
+        ] {
+            let mut dom = VirtualDom::new_with_props(
+                SearchControlsTestRoot,
+                SearchControlsTestRootProps {
+                    query: query.to_string(),
+                },
+            );
+            dom.rebuild(&mut dioxus_core::NoOpMutations);
+            let html = dioxus_ssr::render(&dom);
+            for value in selected {
+                assert_selected_option(&html, value);
+            }
+        }
     }
 
     #[test]
