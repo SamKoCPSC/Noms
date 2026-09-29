@@ -60,7 +60,18 @@ pub fn CollectionForm(mut props: CollectionFormProps) -> Element {
             aria_busy: props.submitting,
             onsubmit: move |event| {
                 event.prevent_default();
-                if !props.submitting { props.onsubmit.call(()); }
+                if !props.submitting {
+                    // Inputs can change before hydration or via autofill without
+                    // an observed input event. Snapshot the visible named fields
+                    // before the parent validates and starts a deferred upload.
+                    let field_text = |field| match event.get_first(field) {
+                        Some(FormValue::Text(value)) => value,
+                        _ => String::new(),
+                    };
+                    props.name.set(field_text("collection_name"));
+                    props.description.set(field_text("collection_description"));
+                    props.onsubmit.call(());
+                }
             },
             div { class: "collection-form-layout",
             section { class: "collection-form-panel collection-form-details neumo-raised",
@@ -71,6 +82,7 @@ pub fn CollectionForm(mut props: CollectionFormProps) -> Element {
                 span { "Name (required)" }
                 input {
                     class: "neumo-inset input",
+                    name: "collection_name",
                     value: "{props.name}",
                     maxlength: 100,
                     required: true,
@@ -83,6 +95,7 @@ pub fn CollectionForm(mut props: CollectionFormProps) -> Element {
                 span { "Description (optional)" }
                 textarea {
                     class: "neumo-inset input",
+                    name: "collection_description",
                     value: "{props.description}",
                     maxlength: 500,
                     rows: 5,
@@ -115,7 +128,120 @@ pub fn CollectionForm(mut props: CollectionFormProps) -> Element {
 
 #[cfg(test)]
 mod tests {
+    use super::CollectionForm;
     use super::{validate_collection_form, CollectionFormError};
+    use dioxus::html::{SerializedFormData, SerializedFormObject, SerializedHtmlEventConverter};
+    use dioxus::prelude::*;
+    use std::{cell::RefCell, rc::Rc};
+
+    type SubmittedFields = Rc<RefCell<Option<(String, String)>>>;
+
+    #[derive(Props, Clone, PartialEq)]
+    struct FormHarnessProps {
+        submitted: SubmittedFields,
+        submitting: bool,
+    }
+
+    #[allow(non_snake_case)]
+    fn FormHarness(props: FormHarnessProps) -> Element {
+        let name = use_signal(|| "Untitled Collection".to_string());
+        let description = use_signal(String::new);
+        rsx! { CollectionForm {
+            name, description, submit_label: "Save", submitting: props.submitting, error: None,
+            onsubmit: move |_| *props.submitted.borrow_mut() = Some((name(), description())),
+        } }
+    }
+
+    fn submit_without_input_events(
+        submitting: bool,
+        fields: &[(&str, &str)],
+    ) -> (String, Option<(String, String)>) {
+        set_event_converter(Box::new(SerializedHtmlEventConverter));
+        let submitted = Rc::new(RefCell::new(None));
+        let mut dom = VirtualDom::new_with_props(
+            FormHarness,
+            FormHarnessProps {
+                submitted: submitted.clone(),
+                submitting,
+            },
+        );
+        let mutations = dom.rebuild_to_vec();
+        let form_id = mutations
+            .edits
+            .iter()
+            .find_map(|edit| match edit {
+                dioxus_core::Mutation::NewEventListener { name, id } if *name == "submit" => {
+                    Some(*id)
+                }
+                _ => None,
+            })
+            .expect("form submit listener");
+        let html = dioxus_ssr::render(&dom);
+        let data = SerializedFormData::new(
+            String::new(),
+            fields
+                .iter()
+                .map(|(key, text)| SerializedFormObject {
+                    key: (*key).to_string(),
+                    text: Some((*text).to_string()),
+                    file: None,
+                })
+                .collect(),
+        );
+        dom.runtime().handle_event(
+            "submit",
+            Event::new(
+                Rc::new(PlatformEventData::new(Box::new(data))) as Rc<dyn std::any::Any>,
+                true,
+            ),
+            form_id,
+        );
+        let result = submitted.borrow().clone();
+        (html, result)
+    }
+
+    #[test]
+    fn collection_submit_uses_visible_values_even_without_prior_input_events() {
+        let (html, submitted) = submit_without_input_events(
+            false,
+            &[
+                ("collection_name", "Typed collection"),
+                ("collection_description", "Typed description"),
+            ],
+        );
+        assert_eq!(
+            submitted,
+            Some((
+                "Typed collection".to_string(),
+                "Typed description".to_string()
+            ))
+        );
+        assert!(html.contains("name=\"collection_name\""));
+        assert!(html.contains("name=\"collection_description\""));
+    }
+
+    #[test]
+    fn collection_submit_cannot_reuse_defaults_when_fields_are_empty_or_missing() {
+        let (_, submitted) = submit_without_input_events(
+            false,
+            &[("collection_name", ""), ("collection_description", "")],
+        );
+        assert_eq!(submitted, Some((String::new(), String::new())));
+        let (_, submitted) = submit_without_input_events(false, &[]);
+        assert_eq!(submitted, Some((String::new(), String::new())));
+        let (name, description) = submitted.unwrap();
+        assert_eq!(
+            validate_collection_form(&name, &description),
+            Err(CollectionFormError::NameRequired)
+        );
+    }
+
+    #[test]
+    fn collection_submit_does_not_dispatch_a_second_save_while_submitting() {
+        let (_, submitted) =
+            submit_without_input_events(true, &[("collection_name", "Not a second save")]);
+        assert_eq!(submitted, None);
+    }
 
     #[test]
     fn collection_form_trims_and_normalizes_valid_fields() {
