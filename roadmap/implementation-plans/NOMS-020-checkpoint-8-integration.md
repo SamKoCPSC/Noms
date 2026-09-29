@@ -7,8 +7,8 @@
 **Tested source:** `74c420035ce29ccbb09817f4325252f56b4c5a80` on `codex/NOMS-020-visual-design-refinement`.
 
 This header and the original review below describe the 2026-09-27 baseline.
-See **Checkpoint 8 close-out pass — 2026-09-29** at the end for current fixes,
-CI results, newly observed issues and remaining acceptance gates.
+See the appended **2026-09-29 follow-ups**, ending with **Search routing and
+sign-in return fixes**, for current fixes, CI results and remaining gates.
 
 ## Environment and scope
 
@@ -1043,3 +1043,122 @@ checked evidence against the recorded limits: **validation record PASS; overall
 checkpoint 8 acceptance OPEN**. No independent-agent review claimed. Code
 rollback remains as documented above; reverting this documentation commit does
 not remove the private fixtures or uploads.
+
+## Search routing and sign-in return fixes — 2026-09-29
+
+**Scoped fixes validated; overall checkpoint 8 acceptance OPEN.** Continued in
+the existing checkpoint worktree from `5a2190b`. The ordered code commits are:
+
+1. **`0ef66ba` — encoded Search query boundary.** A small application routing
+   adapter keeps the single route inventory and delegates display, site map,
+   path matching and layout rendering to Dioxus's derive. After matching Search,
+   it replaces the decoded spread query with the original encoded substring,
+   excluding the fragment. Search's existing parameter parser remains responsible
+   for splitting parameters and decoding each value exactly once. Other routes,
+   query canonicalization, validation and backend search behavior are unchanged.
+   No dependency upgrade or vendored framework patch was introduced.
+2. **`514fced` — client sign-in return context.** AuthRequired reads the router's
+   subscribed raw current URL, uses existing same-origin/length normalization,
+   and encodes the entire target into the native login link. Invalid/overlong
+   targets and standalone rendering fall back to plain `/login`. Default login
+   return `/home`, OAuth providers, server redirects and authorization remain
+   unchanged. This applies to shared protected-page gates, not just Search.
+3. **`a54b5dc` — native Search dropdown restoration.** Browser reload exposed a
+   separate presentation mismatch: the advanced URL contained Exact phrase,
+   and the select had `value="exact"`, but its actual native value was `all`.
+   A select value attribute alone does not select an option in initial HTML.
+   Explicit option selection now covers advanced match modes, each scope's sort,
+   recipe visibility, total time and servings. Existing labels, values, event
+   handling and styling are retained; no new search behavior was added.
+
+### Regression and full-gate evidence
+
+All commands used `SQLX_OFFLINE=true` and
+`CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target`
+from the checkpoint worktree.
+
+- Three new actual-router regressions failed before the boundary fix: encoded
+  text became decoded separators; advanced text containing a percent sign
+  became malformed encoding; encoded duplicate parameter names were rewritten
+  before validation. They now cover ampersand/plus/percent/equal/question/hash
+  characters, literal encoding-like text, Unicode, advanced criteria with other
+  parameters, invalid UTF-8/encoding and duplicate state. Additional tests retain
+  nested collection query IDs, settings redirect, encoded path segments,
+  trailing slash handling and NotFound routing.
+- The routed AuthRequired regression failed with a plain `/login` href, then
+  passed with the encoded complete target. Tests include query-bearing Search
+  and collection creation, edit/dashboard paths, unsafe encoded path forms,
+  overlong targets, unauthenticated child suppression and standalone fallback.
+  A separate SSR test renders the **real application Router**, shared navbar,
+  main/outlet and footer, and verifies the actual Search gate return href.
+- Two dropdown SSR regressions failed before explicit option selection, then
+  passed. They cover all three advanced match modes and non-default recipe,
+  collection and user sorts, plus recipe visibility/range selections.
+- `cargo test --features server --bin noms pages::search::tests -- --nocapture`
+  on final code: **21 passed**. All eight AuthRequired tests also passed in the
+  final full suite.
+- Final **`just ci` at `a54b5dc`: exit 0; 808 passed, 0 failed, 12 ignored**,
+  test execution 13.63s. Native/WASM checks, both Clippy gates with `-D warnings`,
+  formatting, six schema-plan tests, pinned schema workflow, security policy,
+  tracked-secret/deployment checks and pinned dependency audit passed. Audit
+  retained **eight policy-allowed warnings**; no exceptions were added.
+  An earlier sandboxed run passed build/lint/tests but could not write Cargo's
+  advisory-cache lock; the complete gate was rerun with that cache access.
+- `git diff --check` passed. No fresh ignored ParadeDB/real-storage integration
+  run or remote CI is claimed; the earlier separate 11-test search integration
+  evidence remains historical, not a run of this revision.
+
+### Integrated browser evidence and limits
+
+Fast-forwarded the three code commits into NOMS-020, preserving the existing
+generated `assets/tailwind.css` edits. Restarted only the already-running app
+container `noms-5063d4a16468023f-app-1` after the first pair and the dropdown
+follow-up; no new deployment, backend restart, schema or fixture changes.
+
+- Baseline browser submission reproduced `tomato & basil` → `q=tomato` and the
+  plain client login link. After rebuilding, guest landing submission retained
+  `/search?q=tomato%20%26%20basil`; the gate and both provider links retained that
+  target. Mock Google `testuser` sign-in returned to the same URL, with the
+  input displaying the complete text and the settled No results found state.
+  GitHub's link was inspected, not used for another login/link action.
+- Signed-in input `C++ & 100%` retained
+  `/search?q=C%2B%2B%20%26%20100%25` through submission and direct reload.
+  Recipes scope switching retained that text. Applied title criteria
+  `100% & C++ #1` / Exact phrase; encoded JSON survived navigation/reload and
+  Back/Forward restored the prior scope and advanced state.
+- Final `a54b5dc` fresh-tab load showed Exact phrase selected and actual native
+  value `exact`. Set Quickest, Mine only, 30–60 min and 3–4 servings; after reload
+  the controls, filter chips and advanced mode all displayed the saved state.
+  These searches had no matching fixture; populated result/pagination acceptance
+  is not implied by a successful empty result.
+- After sign-out on final code, navbar submission of `湯麵 🥣` retained its
+  percent-encoded URL and complete client-gate return target. Full Search still
+  required sign-in; the fix did not change guest access.
+- A stale development tab initially retained the old client behavior after
+  restarting. Those samples were discarded; a fresh tab exercised the rebuilt
+  code. Temporary cache bypass was restored. Dev rebuild messages appeared in
+  snapshots and are not treated as a production defect. An immediate scope
+  click before hydration had no effect; after the page settled it worked. This
+  does not resolve the separately recorded early collection-input observation.
+
+Raw CI logs are temporary local artifacts in
+`/tmp/noms020-search-return-cAz5MW/ci-final.log`; the earlier green pair-only
+run is `ci.log`. The browser evidence is the inspected in-session state, not
+new permanent design screenshots. Routine sign-in/sign-out did not change
+profiles, provider linkage or private fixtures. No responsive/dark redesign,
+full screen-reader audit or whole-app release acceptance is claimed.
+All agent-created tabs were closed; the browser was left signed out with no
+temporary cache/viewport overrides, and the existing app remained healthy.
+
+Second-pass self-review checked the complete ordered diff, macro-generated
+route mappings, URL/validation boundaries, SSR selection and browser evidence.
+It identified the dropdown issue and required the third regression-backed fix.
+**Scoped result PASS; overall checkpoint 8 OPEN.** No independent-agent review
+claimed. Current queue is user-facing error presentation, early collection-input
+investigation, then the remaining dense-data, failure/permission, responsive and
+accessibility acceptance. Dashboard functional expansion and deferred artwork
+deliverables remain separate.
+
+Rollback of this follow-up is the three code commits in reverse order on a
+review branch. No migrations, content or uploads require rollback. Do not reset
+the integration worktree, generated CSS or retained fixtures.
