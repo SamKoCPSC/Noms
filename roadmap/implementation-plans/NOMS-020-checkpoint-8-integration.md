@@ -1378,3 +1378,62 @@ frontend-only change, revert `6eb11e0` on a review branch, rerun the focused
 graph tests and `just ci`, and smoke-test soup/fork route switching. No data
 rollback or fixture deletion is required; preserve the integration worktree's
 uncommitted CSS.
+
+## Dense private graph fixture — 2026-09-29
+
+The [insert-only local fixture script](../../scripts/dev-fixtures/noms-020-dense-version-graph.sql)
+was run against the existing `noms-5063d4a16468023f` Docker development
+instance after checking its `com.noms.dev-environment=true` label and the
+private mock-account template. It requires that exact mock owner and template;
+it fails rather than seeding a different environment. It was rerun once and
+reported that the fixture already existed, with no rows inserted. The data is
+retained for follow-up inspection; no existing recipes or test fixtures were
+modified or deleted.
+
+The new root is private recipe `aef72aa2-2c1c-4576-b253-14e0d531e634`,
+owned by the local mock `testuser` / `@user-332d`. It has 32 immutable
+versions, plus 30 private one-version forks attached to root version 32. The
+script copies the prior private fixture's non-media recipe content but removes
+images and varies only synthetic titles/descriptions/notes. Direct local SQL
+seeding is test setup, **not** proof that the application publication workflow
+can create this volume. Readback confirmed 32 root versions (1–32), 30 fork
+relationships attached to v32, and 30 private child recipes. The root graph
+is `/recipes/aef72aa2-2c1c-4576-b253-14e0d531e634/version-graph` on the
+running local app.
+
+### Browser observations
+
+- Signed out, the private graph returned the generic unavailable state. After
+  local mock sign-in, its initial page showed 25 snapshots (v8–v32), lineage
+  counts of 30 forks/descendants, and two independent controls: older
+  versions at v8 and child forks at v32. The displayed `+ 6` counts are the
+  API's capped frontier-count hint, not the total hidden node count.
+- The older branch returned five nodes (v7–v3), then its continuation returned
+  v2 and v1. The child branch returned six successive five-node pages. The
+  graph then contained all 62 distinct snapshots and no further expansion
+  controls; the accessible outline could operate an offscreen older frontier.
+- With both requests paused at the browser network boundary, the child-fork
+  response was released first. The older request remained pending and its
+  control disabled while 30 cards (25 initial + five forks) were present.
+  Releasing older next produced 35 cards (v3–v32 plus five forks), preserving
+  both independent batches and their continuation controls.
+- A simulated network failure on older expansion showed an inline alert and
+  left its control retryable. Clicking it again returned five nodes, cleared
+  the error, and exposed the v3 continuation.
+- With an A expansion paused, client-side navigation A → private fork B → A
+  loaded each graph. After the old A response completed, the new A visit
+  still had only its initial 25 cards and an unexpanded older frontier.
+  A fresh click then returned 30 cards. This is direct browser evidence for
+  discarding a response from an earlier visit to the same recipe.
+
+Browser controls were restored after each interception; no request remains
+paused. No production data, public recipes, schema or application code changed
+in this fixture slice. The pre-existing `just ci` result at `6eb11e0` remains
+the code validation baseline; no code was changed here and CI was not rerun.
+The automatic fit makes a long chain's cards very small at desktop width;
+pan/zoom and the outline remain functional, but dense-layout readability,
+keyboard/focus and responsive acceptance still require a separate visual and
+accessibility pass. The fixture script was reviewed for exact mock-only scope,
+transactional insertion, idempotence and privacy; no independent agent review
+was performed. To remove the fixture later, identify the exact root and child
+IDs and use an approved cleanup plan; this task intentionally retains them.
