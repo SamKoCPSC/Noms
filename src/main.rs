@@ -13,6 +13,7 @@ mod db;
 #[cfg(feature = "server")]
 mod middleware;
 mod pages;
+mod routing;
 mod search;
 mod search_url;
 #[cfg(feature = "server")]
@@ -39,10 +40,11 @@ use pages::{
     UserProfile,
 };
 
-/// Application routes.
-#[derive(Debug, Clone, Routable, PartialEq)]
+// The route inventory is shared by the generated renderer and the raw-query boundary.
 #[rustfmt::skip]
-pub enum Route {
+routing::define_app_routes! {
+#[derive(Debug, Clone, Routable, PartialEq)]
+enum GeneratedRoute {
     #[layout(AppLayout)]
         #[route("/")]
         Home {},
@@ -82,7 +84,7 @@ pub enum Route {
         Search { query: crate::search_url::SearchRouteQuery },
         #[route("/u/:username")]
         UserProfile { username: String },
-        #[redirect("/settings", || Route::SettingsProfile {})]
+        #[redirect("/settings", || Self::SettingsProfile {})]
         #[route("/settings/profile")]
         #[route("/settings/profile")]
         SettingsProfile {},
@@ -91,6 +93,7 @@ pub enum Route {
         // Catch-all: matches any route not defined above
         #[route("/:..segments")]
         NotFound { segments: Vec<String> },
+}
 }
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");

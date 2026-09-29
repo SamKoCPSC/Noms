@@ -1468,6 +1468,118 @@ mod tests {
     }
 
     #[test]
+    fn search_router_round_trips_encoded_values_without_decoding_delimiters() {
+        for text in [
+            "tomato & basil",
+            "C++ & 100%",
+            "literal %26 and %zz",
+            "egg=two? #recipe",
+            "湯麵 🥣",
+        ] {
+            let expected =
+                parse_search_query(&format!("q={}", crate::search_url::percent_encode(text)))
+                    .expect("text should form a valid search");
+            let target = Route::Search {
+                query: SearchRouteQuery::new(expected.canonical_query.clone()),
+            };
+
+            // Exercise the actual application router, not just URL helpers.
+            for url in [target.to_string(), format!("{}#results", target)] {
+                let Route::Search { query } = url.parse::<Route>().expect("search should route")
+                else {
+                    panic!("expected search route for {url}");
+                };
+                assert_eq!(query.as_str(), expected.canonical_query, "URL: {url}");
+                assert_eq!(parse_search_query(query.as_str()).unwrap(), expected);
+                assert_eq!(restored_search_state(&query).unwrap().0, text);
+                assert!(canonical_route_if_needed(query.as_str(), &expected).is_none());
+            }
+        }
+    }
+
+    #[test]
+    fn search_router_preserves_advanced_criteria_and_other_parameters() {
+        let expected = ActiveSearchRequest::Recipes(Box::new(crate::types::RecipeSearchRequest {
+            text: Some("tomato & basil".to_string()),
+            advanced: Some(crate::types::AdvancedRecipeSearchCriteria {
+                title: crate::types::AdvancedTextField {
+                    include: Some(crate::types::TextCriterion {
+                        text: "100% & C++ #1".to_string(),
+                        mode: crate::types::TextMatchMode::ExactPhrase,
+                    }),
+                    exclude: Vec::new(),
+                },
+                ..Default::default()
+            }),
+            tags_all: vec!["family".to_string(), "vegan".to_string()],
+            visibility: crate::types::RecipeSearchVisibility::MineOnly,
+            sort: crate::types::RecipeSearchSort::Quickest,
+            page: 2,
+            ..Default::default()
+        }));
+        let (target, _) = search_transition(expected.clone(), SearchInteraction::Submit).unwrap();
+        let url = target.to_string();
+        let Route::Search { query } = url.parse::<Route>().unwrap() else {
+            panic!("expected search route");
+        };
+        let parsed = parse_search_query(query.as_str()).expect("criteria should survive routing");
+        assert_eq!(parsed.request, expected);
+        assert_eq!(Route::Search { query }.to_string(), url);
+    }
+
+    #[test]
+    fn search_router_keeps_invalid_and_duplicate_queries_for_validation() {
+        for raw in ["q=%", "q=%zz", "q=%FF", "q=one&q=two", "q=one&%71=two"] {
+            let Route::Search { query } = format!("/search?{raw}").parse::<Route>().unwrap() else {
+                panic!("expected search route");
+            };
+            assert_eq!(query.as_str(), raw);
+            assert!(parse_search_query(query.as_str()).is_err(), "query: {raw}");
+        }
+    }
+
+    #[test]
+    fn raw_search_query_handling_preserves_other_route_contracts() {
+        let parent = uuid::Uuid::parse_str("7f535c8e-d0a1-4052-87a5-65b203479917").unwrap();
+        for route in [
+            Route::Home {},
+            Route::CommunityHome {},
+            Route::Login {},
+            Route::CollectionNew {
+                parent: Some(parent),
+            },
+            Route::RecipeVersionDetail {
+                id: "recipe-id".to_string(),
+                version_number: 2,
+            },
+            Route::UserProfile {
+                username: "cook name".to_string(),
+            },
+            Route::NotFound {
+                segments: vec!["unknown".to_string(), "path".to_string()],
+            },
+        ] {
+            assert_eq!(route.to_string().parse::<Route>().unwrap(), route);
+        }
+        assert_eq!(
+            "/settings".parse::<Route>().unwrap(),
+            Route::SettingsProfile {}
+        );
+        assert_eq!(
+            "/search/?q=one%26two".parse::<Route>().unwrap(),
+            Route::Search {
+                query: SearchRouteQuery::new("q=one%26two")
+            }
+        );
+        assert_eq!(
+            "/searching?q=one%26two".parse::<Route>().unwrap(),
+            Route::NotFound {
+                segments: vec!["searching".to_string()]
+            }
+        );
+    }
+
+    #[test]
     fn typing_replaces_history_while_committed_actions_push() {
         assert_eq!(
             history_action(SearchInteraction::Typing),
