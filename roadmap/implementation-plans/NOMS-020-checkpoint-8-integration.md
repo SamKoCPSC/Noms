@@ -876,7 +876,8 @@ ineffective lone-root key and replaced it with the tested keyed fragment.
 to the two new should-fix issues and incomplete runtime acceptance. No
 independent review or full screen-reader walkthrough is claimed.
 
-Current queue:
+Queue at the end of this initial pass (fixture approval and representative
+populated checks are superseded by the follow-up below):
 
 1. Resolve and regression-test encoded search routing and client auth-gate return.
 2. Obtain approval to create private disposable recipes/collections in this local
@@ -899,3 +900,146 @@ commits in reverse order for a full scoped rollback, or revert a coherent concer
 selectively; the collection pair must be handled together. Do not reset the
 integration worktree or its generated CSS. No migrations, persisted content or
 image uploads need rollback from this pass. Deployment remains separately scoped.
+
+## Approved private-fixture validation follow-up — 2026-09-29
+
+**Status: representative populated checks recorded; checkpoint 8 acceptance
+remains OPEN.** The user approved creating private test recipes and collections
+in the existing local deployment. Reused `http://127.0.0.1:32768` and mock Google
+`testuser` / `@user-332d` at documentation revision `c129eaf`, whose application
+code is `cf0696c`. No application code, schema, provider linkage or account
+profile was changed, and the deployment was not restarted during this follow-up.
+Creation, editing, collection membership and publication were performed through
+the UI; read-only database checks confirmed the resulting fixture state.
+
+### Retained private fixtures
+
+| Fixture | ID | Persisted state |
+| --- | --- | --- |
+| NOMS020 CP8 parent 2026-09-29 | `7f535c8e-d0a1-4052-87a5-65b203479917` | Private root collection; one child and one direct recipe |
+| NOMS020 CP8 child 2026-09-29 | `804d4edb-ae22-4949-ae1b-e57792c0b6d9` | Private collection under the parent; one direct recipe |
+| NOMS020 CP8 validation soup 2026-09-29 | `490fa456-22d9-4f99-83f2-a7721184bcca` | Private recipe; published v1/v2; member of both collections |
+| NOMS020 CP8 private fork 2026-09-29 | `017e8dfb-3bcb-4894-b3d6-81bf58fe546d` | Private published v1; forked from soup v2 |
+
+Final read-only counts: **two recipes, both private; two collections, both
+private; three versions; zero drafts; two memberships**. The child's parent ID
+matched the parent fixture above. No public/unlisted visibility, destructive
+confirmation, snapshot restore or fixture cleanup was performed. Fixtures remain
+available for reproduction; removing them requires a separately scoped action.
+
+### Workflow evidence
+
+- **Collections:** nested New collection retained parent context; Cancel returned
+  to the correct parent route and content. Child → parent breadcrumb → child
+  card rendered the correct headings, descriptions and recipe data without stale
+  child state. The child Edit form selected the correct parent. Add to Collection
+  expanded the hierarchy, exposed the child's full parent/child accessible name,
+  and saved both memberships with `Added to 2 collection(s)`. Both collection
+  detail pages showed their direct recipe and image. Singleton reorder controls
+  were disabled. This closes the representative populated revalidation of the
+  keyed-fragment fix, not pagination/concurrent-loader acceptance.
+- **Destructive safeguards, without deletion:** the parent confirmation named
+  the target and explained recursive collection/membership deletion while keeping
+  recipes. Blank and incorrect confirmation phrases kept Delete collection
+  disabled. Cancel dismissed the dialog and returned focus to Delete. No valid
+  confirmation phrase or final delete was submitted.
+- **Recipe/image editor:** populated the six raised form sections with title,
+  description, timings, servings, `2 cups water`, method and notes. Selected
+  `assets/brand/page-icons/editor-v1.png` strictly as a test photo. After image
+  loading, the existing Frame/Transform/Color controls appeared; keyboard crop
+  adjustment and OK applied the image, returned focus to Choose recipe images
+  and produced a Ready converted image. Client conversion reported about
+  1.1 MB → 98 KB (91% smaller). This tests the real recipe caller, not just the
+  standalone editor.
+- **Genuine failure/retry:** the browser file chooser took about 40 minutes,
+  exceeding the application's 15-minute session lifetime. Publication then
+  failed with an unauthenticated image-upload error, retained the form/image and
+  offered Retry. Reauthenticated the same mock account in a temporary tab;
+  Retry reached Uploaded, then private publication succeeded. The initial
+  general upload-error summary remained until the next publish attempt. This
+  is session-expiry retry evidence, not an injected storage/network-failure test.
+- **Autosave/publication/history:** v1 contained `Warm the water.`; editing it to
+  `Warm the water, then let it cool briefly.` reached Saved and survived reload
+  before publication. Publish Changes created private v2 with the persisted
+  image and updated method. Read-only v1 retained its original instruction;
+  comparison with current showed the exact change, while comparison with the
+  original showed No content differences. No restore/discard action was taken.
+- **Private fork/graph:** forked soup v2, preserved its source/image and added
+  `Check the temperature before serving.` as an indented `1-a.` method step.
+  Private publication produced a three-node family: soup v1 → soup v2 → fork v1.
+  The SVG used solid version-history edges and a `10px, 7px` dashed fork edge.
+  The accessible outline named all three snapshot links and both relationships;
+  Tab from its summary focused the first snapshot link. Comparing soup v1/v2
+  exposed `/instructions/0/text` with the exact before/after strings. Selecting
+  the same fork snapshot twice showed Choose two different snapshots and disabled
+  Compare; Clear reset selection. Zoom in, Pan right and Fit were exercised, but
+  transform stability was not numerically asserted. Lineage-only checked state
+  worked; all three nodes were ancestral, so removal of off-lineage nodes was
+  not demonstrated. No dense graph or expansion frontier existed in this fixture.
+- **Other consumers:** Dashboard listed both saved private recipes and no drafts;
+  Search my recipes used recipes/mine and returned both cards. Settled public
+  profile rendering used `user-332d` and its initials/fallback copy, with zero
+  public recipes/collections. Explore did not expose the private fixtures.
+
+### Geometry, privacy and review artifacts
+
+The accepted populated matrix covered parent collection, child collection,
+recipe detail, v1 snapshot and fork graph at **1440×810, 820×1180 and 390×844**:
+15 route/viewport combinations, all with expected headings, no horizontal
+document overflow and zero broken images among loaded images. Desktop/phone
+captures were inspected; long titles wrapped on phone and graph cards/edges
+retained their composition. The recipe editor was not included in this new
+responsive matrix. An initial override targeted the temporary reauthentication
+tab instead of the tested tab; those 1280×720 measurements were discarded and
+the matrix rerun at the verified sizes. The earlier `fork-graph-desktop.png` is
+also 1280-wide, not evidence for the 1440-wide matrix.
+
+A populated dark fork graph retained all three nodes without horizontal overflow;
+its screenshot was inspected and light mode restored. These checks do not close
+all responsive interactions, dark states, screen-reader or composited-contrast
+acceptance.
+
+After sign-out, private recipe detail showed Recipe not found; both collections
+showed Collection not found; private graph showed Version graph unavailable
+with a generic no-access/not-found explanation. Private v1 denied content but
+displayed an internal server-function error wrapper (see follow-up below).
+No private fixture content appeared in these denials. An authenticated non-owner
+account was not exercised; this is not a comprehensive authorization audit.
+
+Temporary screenshots and raw matrices are outside the repository at
+`/tmp/noms020-checkpoint8-fixtures-UDNCXD`: `populated-matrix.json`,
+`privacy-matrix.json`, `graph-{1440,820,390}.png`,
+`recipe-{1440,820,390}.png`, `graph-comparison-desktop.png` and
+`fork-graph-dark.png`. These local artifacts may expire and are not permanent
+baseline assets. Temporary tabs were closed, viewport overrides reset and the
+session left signed out; user tabs were not changed. The app remained healthy.
+
+### Findings and current queue
+
+1. **Existing should-fix issues remain:** encoded-query round trips and the
+   client-side sign-in gate's return destination, described in the initial pass.
+2. **Error presentation should improve before acceptance:** signed-out private
+   snapshots display `error running server function: Recipe not found (details:
+   None)`. Expired-session image uploads similarly display internal Not
+   authenticated wording. Denial/retry behavior worked; use appropriate user
+   messages without exposing internal wrappers or weakening access checks.
+3. **Early collection inputs need investigation:** the child creation form
+   visibly held the filled name/description in the DOM after rapid navigation,
+   but submission persisted Untitled Collection and an empty description. A
+   settled Edit form saved the intended values correctly. The earlier audit had
+   a similar observation, but cause and introduction revision are unestablished;
+   source inspection found no obvious reset effect. Reproduce with actual form
+   events and initialization before declaring a hydration regression or fix.
+4. Complete dense/paginated data, graph expansion/concurrent/stale requests,
+   remaining editor/image controls and authenticated non-owner/failure cases.
+   Finish per-page responsive/accessibility acceptance and whole-app user review.
+   Existing deferred product/artwork work remains separately tracked.
+
+No fresh CI run is claimed: application source is unchanged from the initial
+pass's `cf0696c` green local CI and separate 11-test search integration run.
+This follow-up changes only the two planning records in one cohesive evidence
+commit; `git diff --check` is the documentation gate. Second-pass self-review
+checked evidence against the recorded limits: **validation record PASS; overall
+checkpoint 8 acceptance OPEN**. No independent-agent review claimed. Code
+rollback remains as documented above; reverting this documentation commit does
+not remove the private fixtures or uploads.
