@@ -174,12 +174,14 @@ fn EditorSlider(props: EditorSliderProps) -> Element {
         div {
             class: "image-editor__slider-row",
             title: "{props.tooltip}",
-            label {
+            span {
                 class: "image-editor__slider-label",
                 "{props.label}"
             }
             input {
                 r#type: "range",
+                aria_label: format!("{}: {}", props.label, props.tooltip),
+                aria_valuetext: format!("{} {}", number_value, props.suffix).trim().to_string(),
                 class: "image-editor__scale-slider",
                 style: format!("--slider-fill: {:.2}%;", fill_pct),
                 min,
@@ -218,6 +220,7 @@ fn EditorSlider(props: EditorSliderProps) -> Element {
                 class: "image-editor__number-shell",
                 input {
                     r#type: "number",
+                    aria_label: format!("{} value: {}", props.label, props.tooltip),
                     class: "image-editor__number-input",
                     min: "{number_min}",
                     max: "{number_max}",
@@ -632,6 +635,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                 r#type: "button",
                                 class: "image-editor__icon-button",
                                 title: "Undo (Ctrl+Z / Cmd+Z)",
+                                aria_label: "Undo",
                                 disabled: undo_disabled,
                                 onclick: move |evt| {
                                     evt.stop_propagation();
@@ -658,6 +662,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                 r#type: "button",
                                 class: "image-editor__icon-button",
                                 title: "Redo (Ctrl+Y / Cmd+Shift+Z)",
+                                aria_label: "Redo",
                                 disabled: redo_disabled,
                                 onclick: move |evt| {
                                     evt.stop_propagation();
@@ -862,6 +867,8 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                             r#type: "button",
                                             class: format!("image-editor__flip-toggle {}", if flip_x() { "image-editor__flip-toggle--active" } else { "" }),
                                             title: "Flip horizontally",
+                                            aria_label: "Flip horizontally",
+                                            aria_pressed: flip_x(),
                                             onclick: move |evt| {
                                                 evt.stop_propagation();
                                                 let mut next = current_editor_state(
@@ -902,6 +909,8 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                                             r#type: "button",
                                             class: format!("image-editor__flip-toggle {}", if flip_y() { "image-editor__flip-toggle--active" } else { "" }),
                                             title: "Flip vertically",
+                                            aria_label: "Flip vertically",
+                                            aria_pressed: flip_y(),
                                             onclick: move |evt| {
                                                 evt.stop_propagation();
                                                 let mut next = current_editor_state(
@@ -1049,8 +1058,46 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
 
 #[cfg(test)]
 mod crop_mode_tests {
-    use super::{editor_state_from_edit, ImageEditorCropMode};
+    use super::{editor_state_from_edit, EditorSlider, ImageEditorCropMode};
     use crate::types::{ImageCropRect, RecipeImageEdit};
+
+    #[test]
+    fn paired_image_adjustment_inputs_have_individual_names_and_display_units() {
+        use dioxus::prelude::*;
+        let mut dom = VirtualDom::new(|| {
+            rsx! {
+                EditorSlider {
+                    label: "Rotate", tooltip: "Rotation in degrees",
+                    min: -180.0, max: 180.0, step: 1.0, value: 30.0, suffix: "°",
+                    on_edit_start: |_| {}, on_edit_commit: |_| {}, on_change: |_| {},
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(
+            html.contains("aria-label=\"Rotate: Rotation in degrees\""),
+            "{html}"
+        );
+        assert!(
+            html.contains("aria-label=\"Rotate value: Rotation in degrees\""),
+            "{html}"
+        );
+        assert!(html.contains("aria-valuetext=\"30 °\""), "{html}");
+    }
+
+    #[test]
+    fn image_editor_icon_actions_are_named_and_flip_state_is_announced() {
+        let source = include_str!("image_editor_modal.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        for name in ["Undo", "Redo", "Flip horizontally", "Flip vertically"] {
+            assert!(source.contains(&format!("aria_label: \"{name}\"")));
+        }
+        assert!(source.contains("aria_pressed: flip_x()"));
+        assert!(source.contains("aria_pressed: flip_y()"));
+    }
 
     #[test]
     fn editor_uses_named_shared_modal_with_independent_escape_and_drag_dismissal() {
