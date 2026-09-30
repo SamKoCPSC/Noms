@@ -3726,6 +3726,16 @@ pub fn RecipeVersionGraph(id: String) -> Element {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn graph_expansion_spinner_respects_reduced_motion() {
+        let css = include_str!("../../assets/recipe-version-graph.css");
+        let reduced = css
+            .split_once("@media (prefers-reduced-motion: reduce)")
+            .expect("graph reduced-motion override")
+            .1;
+        assert!(reduced.contains(".recipe-version-graph__frontier-spinner { animation: none; }"));
+    }
+
+    #[test]
     fn comparison_change_keeps_exact_path_and_multiline_read_only_values() {
         use dioxus::prelude::*;
         let mut dom = VirtualDom::new(|| {

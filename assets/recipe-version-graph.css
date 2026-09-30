@@ -109,3 +109,6 @@
     .recipe-version-graph-page .recipe-version-graph__node { border-color: CanvasText; }
     .recipe-version-graph-page .recipe-version-graph__selection-roles span { border: 1px solid CanvasText; }
 }
+@media (prefers-reduced-motion: reduce) {
+    .recipe-version-graph-page .recipe-version-graph__frontier-spinner { animation: none; }
+}
