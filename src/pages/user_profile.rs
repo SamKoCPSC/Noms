@@ -10,13 +10,153 @@ use dioxus::prelude::*;
 use crate::api::collection::get_user_public_collections;
 use crate::api::recipe::{get_user_profile, get_user_public_recipes};
 use crate::components::base::{
-    Avatar, AvatarSize, Button, ButtonVariant, CollectionCover, CollectionVisibilityBadge,
-    EmptyState, LoadingSpinner, RecipeCard,
+    Avatar, AvatarSize, CollectionCover, CollectionVisibilityBadge, EmptyState, LoadRecovery,
+    LoadingSpinner, RecipeCard,
 };
 use crate::types::{CollectionSummary, RecipeCardSummary, UserProfile as UserProfileType};
 use crate::Route;
 
 const PAGE_SIZE: i64 = 12;
+
+#[cfg(test)]
+#[path = "user_profile_tests.rs"]
+mod recovery_tests;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ProfilePageRequest {
+    offset: i64,
+    generation: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ProfilePageAction {
+    LoadMore,
+    Retry,
+}
+
+/// Both public sections share offset/retry rules but have independent state.
+/// Keep the failed offset and accumulated cards until that exact request succeeds.
+#[derive(Clone)]
+struct ProfilePageState<T> {
+    items: Vec<T>,
+    request: ProfilePageRequest,
+    pending: bool,
+    failed: bool,
+    has_more: bool,
+}
+
+impl<T> Default for ProfilePageState<T> {
+    fn default() -> Self {
+        Self {
+            items: Vec::new(),
+            request: ProfilePageRequest {
+                offset: 0,
+                generation: 0,
+            },
+            pending: true,
+            failed: false,
+            has_more: true,
+        }
+    }
+}
+
+impl<T> ProfilePageState<T> {
+    fn begin(&mut self, action: ProfilePageAction) -> bool {
+        if self.pending {
+            return false;
+        }
+        let offset = match action {
+            ProfilePageAction::LoadMore if self.has_more && !self.failed => {
+                let Some(offset) = self.request.offset.checked_add(PAGE_SIZE) else {
+                    return false;
+                };
+                offset
+            }
+            ProfilePageAction::Retry if self.failed => self.request.offset,
+            _ => return false,
+        };
+        let Some(generation) = self.request.generation.checked_add(1) else {
+            return false;
+        };
+        self.request = ProfilePageRequest { offset, generation };
+        self.pending = true;
+        true
+    }
+
+    fn finish(&mut self, request: ProfilePageRequest, result: Result<(Vec<T>, bool), ()>) -> bool {
+        if request != self.request || !self.pending {
+            return false;
+        }
+        match result {
+            Ok((items, more)) => {
+                self.has_more = more && !items.is_empty();
+                if request.offset == 0 {
+                    self.items = items;
+                } else {
+                    self.items.extend(items);
+                }
+                self.failed = false;
+            }
+            Err(()) => self.failed = true,
+        }
+        self.pending = false;
+        true
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ProfilePageKind {
+    Recipes,
+    Collections,
+}
+
+impl ProfilePageKind {
+    fn noun(self) -> &'static str {
+        match self {
+            Self::Recipes => "recipes",
+            Self::Collections => "collections",
+        }
+    }
+}
+
+#[component]
+fn ProfilePagination(
+    kind: ProfilePageKind,
+    pending: bool,
+    failed: bool,
+    has_more: bool,
+    count: usize,
+    onaction: EventHandler<ProfilePageAction>,
+) -> Element {
+    let noun = kind.noun();
+    let blocked = pending || (!failed && !has_more);
+    let label = if pending {
+        format!("Loading {noun}…")
+    } else if failed {
+        format!("Retry {noun}")
+    } else if has_more {
+        format!("Load more {noun}")
+    } else {
+        format!("All {noun} loaded")
+    };
+    rsx! {
+        div { class: "load-more",
+            p { role: if failed && !pending { "alert" } else { "status" },
+                if pending { "Loading public {noun}…" }
+                else if failed { "Public {noun} couldn’t be loaded. Please try again." }
+                else { "{count} public {noun} loaded" }
+            }
+            // Keep this node mounted across request/failure/completion, and
+            // claim requests synchronously in the owning section's state.
+            button { r#type: "button", class: "btn btn-secondary touch-target", aria_disabled: blocked,
+                onclick: move |_| {
+                    if !blocked { onaction.call(if failed { ProfilePageAction::Retry } else { ProfilePageAction::LoadMore }); }
+                },
+                "{label}"
+            }
+        }
+    }
+}
 
 fn public_profile_name(profile: &UserProfileType) -> &str {
     // Provider-created accounts can have no display name. Keep the public
@@ -31,133 +171,81 @@ fn public_profile_name(profile: &UserProfileType) -> &str {
 /// Public user profile page with paginated collection and recipe grids.
 #[component]
 pub fn UserProfile(username: String) -> Element {
-    // ── Signal state ─────────────────────────────────────────────────────
-    let profile = use_signal(|| Option::<UserProfileType>::None);
-    let profile_error = use_signal(|| Option::<String>::None);
-    let mut offset = use_signal(|| 0i64);
-    let has_more = use_signal(|| true);
-    let loaded_recipes = use_signal(Vec::<RecipeCardSummary>::new);
-    let is_loading = use_signal(|| true);
-    let recipes_error = use_signal(|| Option::<String>::None);
-    let mut collection_offset = use_signal(|| 0i64);
-    let collection_has_more = use_signal(|| true);
-    let loaded_collections = use_signal(Vec::<CollectionSummary>::new);
-    let collections_are_loading = use_signal(|| true);
-    let collections_error = use_signal(|| Option::<String>::None);
+    // Dioxus reconciles keys inside fragments, not on a lone root. Replace
+    // every hook and cancel scope-owned tasks when the requested user changes.
+    rsx! {
+        document::Stylesheet { href: asset!("/assets/user-pages.css") }
+        for requested_username in [username] {
+            UserProfileContents { key: "{requested_username}", username: requested_username }
+        }
+    }
+}
 
-    // ── Fetch profile (one-time) ─────────────────────────────────────────
+#[component]
+fn UserProfileContents(username: String) -> Element {
     let uname_profile = username.clone();
-    use_effect(move || {
-        let uname = uname_profile.clone();
-        let mut prof = profile;
-        let mut err = profile_error;
-        spawn(async move {
-            match get_user_profile(uname).await {
-                Ok(p) => {
-                    prof.set(Some(p));
-                }
-                Err(e) => {
-                    err.set(Some(e.to_string()));
-                }
-            }
-        });
-    });
-
-    // ── Fetch paginated public collections independently of recipes ─────
+    let mut profile = use_resource(move || get_user_profile(uname_profile.clone()));
+    let profile_pending = *profile.state().read() == UseResourceState::Pending;
+    let mut collection_pages = use_signal(ProfilePageState::<CollectionSummary>::default);
+    let mut recipe_pages = use_signal(ProfilePageState::<RecipeCardSummary>::default);
+    // Subscribe only to the request ticket. Appending cards or setting a failure
+    // must not re-run the loader for the same offset.
+    let collection_request = use_memo(move || collection_pages.read().request);
+    let recipe_request = use_memo(move || recipe_pages.read().request);
     let uname_collections = username.clone();
     use_effect(move || {
+        let request = collection_request();
         let uname = uname_collections.clone();
-        let off = collection_offset();
-        let mut collections = loaded_collections;
-        let mut more = collection_has_more;
-        let mut loading = collections_are_loading;
-        let mut error = collections_error;
-        loading.set(true);
-        error.set(None);
-
         spawn(async move {
-            match get_user_public_collections(uname, off, PAGE_SIZE).await {
-                Ok(response) => {
-                    let mut current = collections.read().clone();
-                    current.extend(response.collections);
-                    collections.set(current);
-                    more.set(response.has_more);
-                }
-                Err(problem) => error.set(Some(problem.to_string())),
-            }
-            loading.set(false);
+            let result = get_user_public_collections(uname, request.offset, PAGE_SIZE)
+                .await
+                .map(|response| (response.collections, response.has_more))
+                .map_err(|_| ());
+            collection_pages.write().finish(request, result);
         });
     });
-
-    // ── Fetch paginated recipes on mount and when offset changes ──────────
-    let uname_recipes = username.clone();
+    let uname_recipes = username;
     use_effect(move || {
+        let request = recipe_request();
         let uname = uname_recipes.clone();
-        let off = offset();
-        let mut recipes = loaded_recipes;
-        let mut more = has_more;
-        let mut loading = is_loading;
-        let mut err = recipes_error;
-
         spawn(async move {
-            match get_user_public_recipes(uname, off, PAGE_SIZE).await {
-                Ok(resp) => {
-                    let new_count = resp.recipes.len();
-                    let mut current = recipes.read().clone();
-                    current.extend(resp.recipes);
-                    recipes.set(current);
-                    more.set(resp.has_more);
-                    if new_count == 0 && off > 0 {
-                        more.set(false);
-                    }
-                }
-                Err(e) => {
-                    err.set(Some(e.to_string()));
-                }
-            }
-            loading.set(false);
+            let result = get_user_public_recipes(uname, request.offset, PAGE_SIZE)
+                .await
+                .map(|response| (response.recipes, response.has_more))
+                .map_err(|_| ());
+            recipe_pages.write().finish(request, result);
         });
     });
-
-    // ── Load more handler ────────────────────────────────────────────────
-    let on_load_more = move |_| {
-        offset.set(offset() + PAGE_SIZE);
-    };
-    let on_load_more_collections = move |_| {
-        if !collections_are_loading() {
-            collection_offset.set(collection_offset() + PAGE_SIZE);
-        }
-    };
-
-    // ── Render: profile error ────────────────────────────────────────────
-    if let Some(err_msg) = profile_error() {
+    let profile_result = profile.read().clone();
+    if matches!(profile_result, Some(Err(_))) {
         return rsx! {
-            div { class: "container",
-                EmptyState {
-                    icon: rsx! { "⚠️" },
-                    title: "Profile not found",
-                    description: format!("Could not load profile: {err_msg}"),
+            div { class: "container user-profile",
+                h1 { "Profile unavailable" }
+                LoadRecovery {
+                    pending: profile_pending,
+                    message: "This profile couldn’t be loaded. It may be unavailable, or there may be a connection problem.",
+                    retry_label: "Retry profile",
+                    onretry: move |_| { if !profile.pending() { profile.restart(); } },
                 }
+                Link { to: Route::Explore {}, class: "btn btn-ghost touch-target", "Browse public recipes" }
             }
         };
     }
-
-    // ── Render: loading (profile not yet fetched) ────────────────────────
-    if profile().is_none() {
+    let Some(Ok(profile_data)) = profile_result else {
         return rsx! {
             div { class: "container",
                 div {
+                    role: "status",
                     display: "flex",
                     align_items: "center",
                     justify_content: "center",
                     min_height: "60vh",
                     LoadingSpinner {}
+                    span { "Loading profile…" }
                 }
             }
         };
-    }
-
-    let profile_data = profile().clone().unwrap();
+    };
     let profile_name = public_profile_name(&profile_data).to_string();
 
     // Compute recipe count text (pluralization must be outside rsx!)
@@ -168,13 +256,10 @@ pub fn UserProfile(username: String) -> Element {
     };
 
     // ── Render: full profile ─────────────────────────────────────────────
-    let is_loading_initial = is_loading() && loaded_recipes.read().is_empty();
-    let has_error = recipes_error().is_some();
-    let collections_loading_initial =
-        collections_are_loading() && loaded_collections.read().is_empty();
+    let recipes = recipe_pages.read().clone();
+    let collections = collection_pages.read().clone();
 
     rsx! {
-        document::Stylesheet { href: asset!("/assets/user-pages.css") }
         div { class: "container profile-page user-profile",
             // ── Profile Header ────────────────────────────────────────────
             header { class: "user-profile__passport",
@@ -206,29 +291,26 @@ pub fn UserProfile(username: String) -> Element {
                 }
                 div { class: "user-disclosure__body",
 
-                if collections_loading_initial {
+                if collections.pending && collections.items.is_empty() && !collections.failed {
                     div {
+                        role: "status",
                         display: "flex",
                         align_items: "center",
                         justify_content: "center",
                         min_height: "160px",
                         LoadingSpinner {}
+                        span { "Loading public collections…" }
                     }
-                } else if let Some(problem) = collections_error() {
-                    EmptyState {
-                        icon: rsx! { "⚠️" },
-                        title: "Error loading collections",
-                        description: problem,
-                    }
-                } else if loaded_collections.read().is_empty() {
+                } else if collections.items.is_empty() && !collections.failed {
                     EmptyState {
                         icon: rsx! { "📁" },
                         title: "No public collections yet",
                         description: format!("{profile_name} hasn't shared any public collections."),
                     }
-                } else {
+                }
+                if !collections.items.is_empty() {
                     div { class: "user-profile__collections",
-                        for collection in loaded_collections.read().iter() {
+                        for collection in collections.items.iter() {
                             Link {
                                 key: "{collection.id}",
                                 to: Route::CollectionDetail { id: collection.id.to_string() },
@@ -256,15 +338,12 @@ pub fn UserProfile(username: String) -> Element {
                         }
                     }
 
-                    if collection_has_more() {
-                        div { class: "load-more",
-                            Button {
-                                variant: ButtonVariant::Secondary,
-                                disabled: collections_are_loading(),
-                                onclick: on_load_more_collections,
-                                if collections_are_loading() { "Loading…" } else { "Load more collections" }
-                            }
-                        }
+                }
+                if !collections.items.is_empty() || collections.failed {
+                    ProfilePagination {
+                        kind: ProfilePageKind::Collections, pending: collections.pending,
+                        failed: collections.failed, has_more: collections.has_more, count: collections.items.len(),
+                        onaction: move |action| { collection_pages.write().begin(action); },
                     }
                 }
                 }
@@ -279,49 +358,38 @@ pub fn UserProfile(username: String) -> Element {
                 div { class: "user-disclosure__body",
 
                 // Loading state (initial)
-                if is_loading_initial {
+                if recipes.pending && recipes.items.is_empty() && !recipes.failed {
                     div {
+                        role: "status",
                         display: "flex",
                         align_items: "center",
                         justify_content: "center",
                         min_height: "200px",
                         LoadingSpinner {}
+                        span { "Loading public recipes…" }
                     }
-                }
-
-                // Error state
-                if let Some(ref err) = recipes_error() {
-                    EmptyState {
-                        icon: rsx! { "⚠️" },
-                        title: "Error loading recipes",
-                        description: err.clone(),
-                    }
-                } else if !is_loading_initial && !has_error {
-                    if loaded_recipes.read().is_empty() {
+                } else if recipes.items.is_empty() && !recipes.failed {
                         // Empty state: no public recipes
                         EmptyState {
                             icon: rsx! { "🍳" },
                             title: "No public recipes yet",
                             description: format!("{profile_name} hasn't shared any public recipes."),
                         }
-                    } else {
+                }
+                if !recipes.items.is_empty() {
                         // Recipe grid
                         div { class: "user-profile__recipes",
-                            for recipe in loaded_recipes.read().iter() {
+                            for recipe in recipes.items.iter() {
                                 RecipeCard { recipe: recipe.clone(), framed: true }
                             }
                         }
 
-                        // Load more button
-                        if has_more() {
-                            div { class: "load-more",
-                                Button {
-                                    variant: ButtonVariant::Secondary,
-                                    onclick: on_load_more,
-                                    "Load more"
-                                }
-                            }
-                        }
+                }
+                if !recipes.items.is_empty() || recipes.failed {
+                    ProfilePagination {
+                        kind: ProfilePageKind::Recipes, pending: recipes.pending,
+                        failed: recipes.failed, has_more: recipes.has_more, count: recipes.items.len(),
+                        onaction: move |action| { recipe_pages.write().begin(action); },
                     }
                 }
                 }
