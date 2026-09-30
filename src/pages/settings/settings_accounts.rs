@@ -121,7 +121,7 @@ pub fn SettingsAccounts() -> Element {
 
     // Preserve failure while retrying so the focused recovery control remains
     // mounted. Subscribe to state explicitly for immediate pending feedback.
-    let mut accounts = use_resource(move || get_linked_accounts());
+    let mut accounts = use_resource(get_linked_accounts);
 
     let mut unlinking_id = use_signal(|| Option::<Uuid>::None);
     let mut error = use_signal(|| Option::<String>::None);

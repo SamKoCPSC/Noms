@@ -59,3 +59,52 @@ fn profile_save_control_retains_focusable_button_and_announces_pending() {
         assert_eq!(html.contains("role=\"status\""), pending, "{html}");
     }
 }
+
+#[component]
+fn SaveGuardTestRoot(
+    pending: bool,
+    valid: bool,
+    calls: std::rc::Rc<std::cell::Cell<usize>>,
+) -> Element {
+    rsx! { ProfileSaveControl { pending, valid, on_save: move |_| calls.set(calls.get() + 1) } }
+}
+
+#[test]
+fn profile_save_control_blocks_pending_and_invalid_activation() {
+    use dioxus::html::{SerializedHtmlEventConverter, SerializedMouseData};
+    use std::rc::Rc;
+    set_event_converter(Box::new(SerializedHtmlEventConverter));
+    for (pending, valid, expected) in [(true, true, 0), (false, false, 0), (false, true, 1)] {
+        let calls = Rc::new(std::cell::Cell::new(0));
+        let mut dom = VirtualDom::new_with_props(
+            SaveGuardTestRoot,
+            SaveGuardTestRootProps {
+                pending,
+                valid,
+                calls: calls.clone(),
+            },
+        );
+        let mutations = dom.rebuild_to_vec();
+        let button_id = mutations
+            .edits
+            .iter()
+            .find_map(|edit| match edit {
+                dioxus_core::Mutation::NewEventListener { name, id } if *name == "click" => {
+                    Some(*id)
+                }
+                _ => None,
+            })
+            .expect("save control click handler");
+        dom.runtime().handle_event(
+            "click",
+            Event::new(
+                Rc::new(PlatformEventData::new(Box::new(
+                    SerializedMouseData::default(),
+                ))) as Rc<dyn std::any::Any>,
+                true,
+            ),
+            button_id,
+        );
+        assert_eq!(calls.get(), expected);
+    }
+}

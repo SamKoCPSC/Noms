@@ -905,9 +905,27 @@ fn reset_file_input(_id: &str) {}
 pub fn SettingsProfile() -> Element {
     let auth = use_auth();
 
-    let mut username = use_signal(String::new);
-    let mut display_name = use_signal(String::new);
-    let mut bio = use_signal(String::new);
+    // Populate before the first editable render when auth data is available.
+    // An effect-only initialization can overwrite text entered immediately.
+    let initial_username = auth
+        .current_user
+        .as_ref()
+        .map(|user| user.username.clone())
+        .unwrap_or_default();
+    let initial_name = auth
+        .current_user
+        .as_ref()
+        .map(|user| user.display_name.clone())
+        .unwrap_or_default();
+    let initial_bio = auth
+        .current_user
+        .as_ref()
+        .and_then(|user| user.bio.clone())
+        .unwrap_or_default();
+    let profile_available = auth.current_user.is_some();
+    let mut username = use_signal(move || initial_username);
+    let mut display_name = use_signal(move || initial_name);
+    let mut bio = use_signal(move || initial_bio);
     let mut is_saving = use_signal(|| false);
     let mut error = use_signal(|| Option::<String>::None);
     let mut saved_message = use_signal(|| Option::<String>::None);
@@ -976,7 +994,7 @@ pub fn SettingsProfile() -> Element {
     let mut auth_context = use_context::<Signal<AuthContext>>();
 
     // Track whether form fields have been initialized from auth context
-    let mut initialized = use_signal(|| false);
+    let mut initialized = use_signal(move || profile_available);
 
     // Load profile from auth context when it becomes available.
     // Reading `auth_context.read()` inside the effect closure subscribes the
@@ -996,7 +1014,7 @@ pub fn SettingsProfile() -> Element {
     let on_save = move |_| {
         // Check the live signal before validation/spawning, not only the last
         // rendered button prop, so rapid activations cannot overlap saves.
-        if is_saving() {
+        if is_saving() || !initialized() {
             return;
         }
         saved_message.set(None);
@@ -1120,7 +1138,7 @@ pub fn SettingsProfile() -> Element {
             }
         };
 
-        n.len() >= 2 && n.len() <= 30 && b.len() <= 160 && username_valid
+        initialized() && n.len() >= 2 && n.len() <= 30 && b.len() <= 160 && username_valid
     };
 
     // Current username for typed confirmation
@@ -1482,9 +1500,9 @@ pub fn SettingsProfile() -> Element {
                             input {
                                 id: "profile-display-name", class: "input input--shared neumo-inset", r#type: "text",
                                 value: display_name(), placeholder: "Your name", maxlength: "30",
-                                readonly: is_saving(),
+                                readonly: is_saving() || !initialized(),
                                 aria_describedby: "profile-display-name-hint",
-                                oninput: move |evt| { if !is_saving() { display_name.set(evt.value()); error.set(None); saved_message.set(None); } },
+                                oninput: move |evt| { if initialized() && !is_saving() { display_name.set(evt.value()); error.set(None); saved_message.set(None); } },
                             }
                             span { id: "profile-display-name-hint", class: "user-settings__hint", "{display_name().trim().len()}/30" }
                         }
@@ -1493,9 +1511,9 @@ pub fn SettingsProfile() -> Element {
                             input {
                                 id: "profile-username", class: "input input--shared neumo-inset", r#type: "text",
                                 value: username(), placeholder: "username", maxlength: "30",
-                                readonly: is_saving(),
+                                readonly: is_saving() || !initialized(),
                                 aria_describedby: "profile-username-hint",
-                                oninput: move |evt| { if !is_saving() { username.set(evt.value()); error.set(None); saved_message.set(None); } },
+                                oninput: move |evt| { if initialized() && !is_saving() { username.set(evt.value()); error.set(None); saved_message.set(None); } },
                             }
                             span { id: "profile-username-hint", class: "user-settings__hint", "Your public handle · {username().trim().len()}/30" }
                         }
@@ -1504,8 +1522,8 @@ pub fn SettingsProfile() -> Element {
                             textarea {
                                 id: "profile-bio", class: "neumo-inset input", placeholder: "Tell us about yourself…",
                                 rows: "3", maxlength: "160", value: "{bio()}", aria_describedby: "profile-bio-hint",
-                                readonly: is_saving(),
-                                oninput: move |evt| { if !is_saving() { bio.set(evt.value()); error.set(None); saved_message.set(None); } },
+                                readonly: is_saving() || !initialized(),
+                                oninput: move |evt| { if initialized() && !is_saving() { bio.set(evt.value()); error.set(None); saved_message.set(None); } },
                             }
                             span { id: "profile-bio-hint", class: "user-settings__hint", "{bio().trim().len()}/160" }
                         }

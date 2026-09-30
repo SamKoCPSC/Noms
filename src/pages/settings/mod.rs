@@ -69,6 +69,8 @@ mod presentation_tests {
         let deletion = html.split("user-settings__danger").nth(1).unwrap();
         assert!(!deletion.split('>').next().unwrap().contains("open"));
         assert!(html.contains("Not shown on your public profile."));
+        assert!(html.contains("value=\"Test Cook\""), "{html}");
+        assert!(html.contains("value=\"test-cook\""), "{html}");
     }
 
     #[test]
