@@ -30,6 +30,7 @@
 .recipe-version-graph-page .recipe-version-graph__snapshot-menu:hover { background: var(--bg-base); }
 .recipe-version-graph-page :is(button, a, summary):focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 4px; }
 .recipe-version-graph-page button:disabled { cursor: not-allowed; }
+.recipe-version-graph-page :is(.recipe-version-graph__frontier-button, .recipe-version-graph__outline-frontier-button)[aria-disabled="true"] { cursor: not-allowed; opacity: .65; }
 .recipe-version-graph-page .recipe-version-graph__mouse-controls { gap: 12px; }
 .recipe-version-graph-page .recipe-version-graph__mouse-control { font-size: 12px; }
 .recipe-version-graph-page .recipe-version-graph__mouse-control kbd { background: transparent; box-shadow: none; padding: 0; border: 0; }

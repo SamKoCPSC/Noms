@@ -321,13 +321,24 @@ impl VersionGraphLayout {
         let Some(node) = self.node(id) else {
             return self.fit_transform(viewport);
         };
-        let scale = scale.clamp(GRAPH_MIN_ZOOM, GRAPH_MAX_ZOOM);
+        let scale = version_graph_snapshot_scale(viewport, scale);
         VersionGraphTransform {
             scale,
             offset_x: viewport.0 / 2.0 - (node.x + GRAPH_NODE_WIDTH_PX / 2.0) * scale,
             offset_y: viewport.1 / 2.0 - (node.y + GRAPH_NODE_HEIGHT_PX / 2.0) * scale,
         }
     }
+}
+
+fn version_graph_snapshot_scale(viewport: (f64, f64), requested: f64) -> f64 {
+    // Keep the whole card and its focus ring inside small canvases, including
+    // when Current is invoked after the user zoomed past the card's width.
+    let available_width = (viewport.0 - 2.0 * GRAPH_FOCUS_MARGIN_PX).max(1.0);
+    let available_height = (viewport.1 - 2.0 * GRAPH_FOCUS_MARGIN_PX).max(1.0);
+    requested
+        .min(available_width / GRAPH_NODE_WIDTH_PX)
+        .min(available_height / GRAPH_NODE_HEIGHT_PX)
+        .clamp(GRAPH_MIN_ZOOM, GRAPH_MAX_ZOOM)
 }
 
 fn initial_version_graph_transform(
@@ -352,10 +363,13 @@ fn resize_version_graph_transform(
     if previous.0 <= 0.0 || previous.1 <= 0.0 {
         return transform;
     }
+    let scale = version_graph_snapshot_scale(next, transform.scale);
+    let center_x = (previous.0 / 2.0 - transform.offset_x) / transform.scale;
+    let center_y = (previous.1 / 2.0 - transform.offset_y) / transform.scale;
     VersionGraphTransform {
-        scale: transform.scale,
-        offset_x: transform.offset_x + (next.0 - previous.0) / 2.0,
-        offset_y: transform.offset_y + (next.1 - previous.1) / 2.0,
+        scale,
+        offset_x: next.0 / 2.0 - center_x * scale,
+        offset_y: next.1 / 2.0 - center_y * scale,
     }
 }
 
@@ -370,10 +384,14 @@ fn version_graph_node_is_visible(
     };
     let left = transform.offset_x + node.x * transform.scale;
     let top = transform.offset_y + node.y * transform.scale;
-    left >= GRAPH_FOCUS_MARGIN_PX
-        && top >= GRAPH_FOCUS_MARGIN_PX
-        && left + GRAPH_NODE_WIDTH_PX * transform.scale <= viewport.0 - GRAPH_FOCUS_MARGIN_PX
-        && top + GRAPH_NODE_HEIGHT_PX * transform.scale <= viewport.1 - GRAPH_FOCUS_MARGIN_PX
+    // Offsets are serialized to hundredths of a pixel in the stage style.
+    let tolerance = 0.01;
+    left + tolerance >= GRAPH_FOCUS_MARGIN_PX
+        && top + tolerance >= GRAPH_FOCUS_MARGIN_PX
+        && left + GRAPH_NODE_WIDTH_PX * transform.scale
+            <= viewport.0 - GRAPH_FOCUS_MARGIN_PX + tolerance
+        && top + GRAPH_NODE_HEIGHT_PX * transform.scale
+            <= viewport.1 - GRAPH_FOCUS_MARGIN_PX + tolerance
 }
 
 fn visible_version_graph_node_transform(
@@ -2645,8 +2663,11 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                         )
                                     });
                                     let is_loading = record.is_some_and(|record| record.is_loading);
-                                    let can_continue = is_expanded
-                                        && !is_loading
+                                    // Keep the focused control mounted through loading and the
+                                    // final page; removing it sends keyboard focus to the body.
+                                    let show_continuation = is_expanded
+                                        && record.is_some_and(|record| record.batch.is_some());
+                                    let can_continue = show_continuation
                                         && record.is_some_and(|record| {
                                             record.batch.as_ref().is_some_and(|batch| {
                                                 batch.frontiers.iter().any(|candidate| {
@@ -2724,9 +2745,11 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                         aria_label: label,
                                                         aria_controls: "recipe-version-graph-canvas-stage",
                                                         aria_expanded: is_expanded,
-                                                        disabled: is_loading,
+                                                        aria_disabled: is_loading,
+                                                        aria_busy: is_loading,
                                                         onclick: move |event| {
                                                             event.stop_propagation();
+                                                            if is_loading { return; }
                                                             if is_expanded {
                                                                 collapse_version_graph_expansion(
                                                                     frontier,
@@ -2752,18 +2775,21 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                         }
                                                         span { "{button_text}" }
                                                     }
-                                                    if can_continue {
+                                                    if show_continuation {
                                                         button {
                                                             r#type: "button",
                                                             class: "recipe-version-graph__frontier-button recipe-version-graph__frontier-button--continue",
-                                                            aria_label: format!(
-                                                                "Show next 5 {direction} from {anchor_title}, version {}; {} remain",
-                                                                frontier.anchor.version_number,
-                                                                frontier.hidden_count,
-                                                            ),
+                                                            aria_label: if can_continue {
+                                                                format!("Show next 5 {direction} from {anchor_title}, version {}; {} remain", frontier.anchor.version_number, frontier.hidden_count)
+                                                            } else {
+                                                                format!("All {direction} loaded from {anchor_title}, version {}", frontier.anchor.version_number)
+                                                            },
                                                             aria_controls: "recipe-version-graph-canvas-stage",
+                                                            aria_disabled: is_loading || !can_continue,
+                                                            aria_busy: is_loading,
                                                             onclick: move |event| {
                                                                 event.stop_propagation();
+                                                                if is_loading || !can_continue { return; }
                                                                 begin_version_graph_expansion(
                                                                     continuation_recipe_id.clone(),
                                                                     frontier,
@@ -2774,7 +2800,9 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                                     true,
                                                                 );
                                                             },
-                                                            "Show next 5"
+                                                            if is_loading { "Loading…" }
+                                                            else if can_continue { "Show next 5" }
+                                                            else { "All loaded" }
                                                         }
                                                     }
                                                     if error.is_some() {
@@ -3485,8 +3513,9 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                             )
                                                         });
                                                         let is_loading = record.is_some_and(|record| record.is_loading);
-                                                        let can_continue = is_expanded
-                                                            && !is_loading
+                                                        let show_continuation = is_expanded
+                                                            && record.is_some_and(|record| record.batch.is_some());
+                                                        let can_continue = show_continuation
                                                             && record.is_some_and(|record| {
                                                                 record.batch.as_ref().is_some_and(|batch| {
                                                                     batch.frontiers.iter().any(|candidate| {
@@ -3516,8 +3545,10 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                                 aria_label: label,
                                                                 aria_controls: "recipe-version-graph-canvas-stage",
                                                                 aria_expanded: is_expanded,
-                                                                disabled: is_loading,
+                                                                aria_disabled: is_loading,
+                                                                aria_busy: is_loading,
                                                                 onclick: move |_| {
+                                                                    if is_loading { return; }
                                                                     if is_expanded {
                                                                         collapse_version_graph_expansion(
                                                                             frontier,
@@ -3543,17 +3574,20 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                                     "Expand {frontier.hidden_count} {direction}"
                                                                 }
                                                             }
-                                                            if can_continue {
+                                                            if show_continuation {
                                                                 button {
                                                                     r#type: "button",
                                                                     class: "recipe-version-graph__outline-frontier-button recipe-version-graph__outline-frontier-button--continue",
-                                                                    aria_label: format!(
-                                                                        "Show next 5 {direction} from {title}, version {}; {} remain",
-                                                                        node_id.version_number,
-                                                                        frontier.hidden_count,
-                                                                    ),
+                                                                    aria_label: if can_continue {
+                                                                        format!("Show next 5 {direction} from {title}, version {}; {} remain", node_id.version_number, frontier.hidden_count)
+                                                                    } else {
+                                                                        format!("All {direction} loaded from {title}, version {}", node_id.version_number)
+                                                                    },
                                                                     aria_controls: "recipe-version-graph-canvas-stage",
+                                                                    aria_disabled: is_loading || !can_continue,
+                                                                    aria_busy: is_loading,
                                                                     onclick: move |_| {
+                                                                        if is_loading || !can_continue { return; }
                                                                         begin_version_graph_expansion(
                                                                             continuation_recipe_id.clone(),
                                                                             frontier,
@@ -3564,7 +3598,9 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                                             true,
                                                                         );
                                                                     },
-                                                                    "Show next 5 {direction}"
+                                                                    if is_loading { "Loading…" }
+                                                                    else if can_continue { "Show next 5 {direction}" }
+                                                                    else { "All {direction} loaded" }
                                                                 }
                                                             }
                                                         }
@@ -4285,6 +4321,48 @@ mod tests {
             super::initial_version_graph_transform(&layout, Some(current), viewport),
             layout.fit_transform(viewport),
         );
+    }
+
+    #[test]
+    fn readable_snapshot_fits_a_320px_phone_canvas_with_focus_margin() {
+        let layout = super::build_version_graph_layout(&branched_graph());
+        let current = VersionGraphNodeId {
+            recipe_id: Uuid::from_u128(1),
+            version_number: 2,
+        };
+        let viewport = (273.0, 474.0);
+        let initial = super::initial_version_graph_transform(&layout, Some(current), viewport);
+        let focused = super::visible_version_graph_node_transform(
+            &layout,
+            current,
+            viewport,
+            super::VersionGraphTransform::default(),
+        );
+        for transform in [initial, focused] {
+            assert!(transform.scale >= super::GRAPH_READABLE_FIT_THRESHOLD);
+            assert!(super::version_graph_node_is_visible(
+                &layout, current, viewport, transform
+            ));
+        }
+    }
+
+    #[test]
+    fn resizing_to_a_narrow_canvas_keeps_the_centered_snapshot_fully_visible() {
+        let layout = super::build_version_graph_layout(&branched_graph());
+        let current = VersionGraphNodeId {
+            recipe_id: Uuid::from_u128(1),
+            version_number: 2,
+        };
+        let old_viewport = (1361.0, 518.0);
+        let next_viewport = (273.0, 474.0);
+        let centered = layout.center_transform(current, old_viewport, 1.0);
+        let resized = super::resize_version_graph_transform(centered, old_viewport, next_viewport);
+        assert!(super::version_graph_node_is_visible(
+            &layout,
+            current,
+            next_viewport,
+            resized
+        ));
     }
 
     #[test]
