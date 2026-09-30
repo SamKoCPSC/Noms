@@ -1474,3 +1474,110 @@ of expansion plus focus, narrow viewports below 390px, reduced-motion/contrast
 and the other paginated routes. No independent-agent review was performed.
 Rollback is the three graph commits above; the local fixture is not removed
 by rollback. Preserve the integration worktree's unrelated CSS edit.
+
+## Graph interaction acceptance follow-up — 2026-09-29
+
+**Scoped desktop/keyboard/narrow/motion checks: PASS. Touch-device and overall
+checkpoint 8 acceptance: OPEN.** Work continued in
+`codex/NOMS-020-checkpoint-8`, using the retained private 62-snapshot fixture
+and the existing integration deployment at `http://127.0.0.1:32768`.
+
+### Findings and fixes
+
+- A native disabled loading button sent keyboard focus to the page body.
+  Expansion controls now retain focus with guarded `aria-disabled` and
+  `aria-busy` states. The continuation stays mounted at completion.
+- Prepending older nodes still replaced the focused outline control. Keys now
+  belong to the loop's outer fragment, preserving snapshot DOM identity.
+  Nearby surviving snapshots anchor layout changes so newly discovered older
+  columns do not shift the user's view. The layout effect subscribes to the
+  completed resource before checking the non-subscribing `pending()` value.
+- Older-history batches can expose a new frontier at another snapshot rather
+  than continue from the same anchor. Their disabled completion label says
+  “Batch loaded; more snapshots available”, not “All older versions loaded”.
+- At 320px the old 304px card exceeded the canvas. Center/focus and resize now
+  cap scale to the available canvas, including focus-ring margins. Requested
+  readable zoom remains 1× where space permits; narrow screens use a smaller
+  complete card instead of clipping it.
+- The light-mode solid connector measured only 2.31:1. Both connector types,
+  arrows and legend lines now use existing `--accent-ink`; solid/dashed styles
+  continue to convey the different relationships.
+- The expansion spinner inherited continuous rotation despite reduced motion.
+  Its scoped override removes that animation while retaining loading text and
+  busy status.
+- Second-pass review identified that automatic layout anchoring must not
+  counteract the explicit Fit performed by a lineage-mode toggle. A mode-aware
+  guard and regression test preserve that existing navigation contract.
+
+Ordered code commits: `3c42c0a`, `05e670f`, `44a9dae`, `c1c43b9`, `bdd38fc`,
+`6cb6a6d`. These were fast-forwarded into
+`codex/NOMS-020-visual-design-refinement`. No schema, public content, fixture
+data, shared theme tokens or unrelated page changes were made. The existing
+uncommitted integration `assets/tailwind.css` edit was preserved byte-for-byte.
+
+### Browser evidence
+
+- Fresh child-fork requests retain focus while pending and after completion.
+  All six fork pages were loaded by keyboard; terminal completion retained
+  focus and repeated activation made no additional change.
+- The outline expanded v8's older history, then the new v3 frontier. Focus
+  remained on each initiating control after prepending. Combined with all
+  30 forks, the graph reached **62 cards**. Older-history collapse reduced
+  this to **55** without removing the independent forks; cached reopen restored
+  **62** and retained focus. At 1×, stage X moved by −2,600px then −1,040px
+  to compensate for the added columns, preserving existing screen positions.
+- A keyboard menu on the last expanded fork supports End and Escape; the menu
+  closes and focus returns to the snapshot link. At **320×740**, the complete
+  focused card measured **247×185.25px** inside a **273px** canvas; there was
+  no document horizontal overflow. The menu stayed within the narrow viewport,
+  with 44px menu items; toolbar controls wrapped and remained reachable.
+- Rendered connectors now measure **6.29:1 light / 6.67:1 dark** against the
+  opaque canvas. The light keyboard ring is a visible 3px darker-coral outline.
+  Representative text/badge/Before/After samples passed 4.5:1 in both themes
+  (lowest sampled text 4.83:1 light / 5.48:1 dark). This is sampled graph
+  contrast, not a whole-app composited-contrast audit.
+- Reduced-motion emulation showed no graph-card animation and a 0s stage
+  transition. A paused fixture expansion verified the rendered 13px spinner's
+  animation was `none`, focus remained on the busy control, and releasing the
+  request produced 30 cards with the same focused control. Interception, cache,
+  theme, motion and viewport overrides were restored; temporary tabs closed.
+- The in-app browser does not support direct touch-event injection. A
+  touch-to-mouse emulation attempt opened the action menu but its input command
+  timed out; that is **not reliable touch acceptance evidence**. Long press,
+  movement cancellation and physical-device scrolling remain open, alongside
+  actual screen-reader testing. Static geometry and keyboard tests do not
+  substitute for those checks.
+
+Temporary screenshots (not tracked release assets):
+`/tmp/noms-020-graph-acceptance-desktop.jpg` and
+`/tmp/noms-020-graph-acceptance-phone.jpg`. These paths are local evidence only
+and can disappear when temporary storage is cleared.
+
+### Automated validation and review
+
+Using `SQLX_OFFLINE=true` and the existing integration target directory:
+
+```sh
+cargo test --features server pages::recipe_version_graph::tests -- --test-threads=8
+just check
+just ci
+```
+
+Focused graph tests: **61 passed**. The added geometry regressions cover 320px
+fit, narrow resize, prepend anchoring, unrelated layouts and explicit lineage
+Fit. The reduced-motion regression failed before its CSS override, then
+passed; loading/focus and terminal behavior also have the browser evidence
+above. Final **`just ci` at `6cb6a6d`: exit 0; 828 passed, 0 failed, 12
+ignored**, with formatting, native/WASM checks, Clippy, schema/security policy
+scripts and the dependency audit. Eight pre-existing audit warnings remain
+allowed. The local log is `/tmp/noms-020-graph-acceptance-ci.log`.
+No fresh ignored real-storage/search integration run is claimed. A second-pass
+self-review covered the ordered diff, route-scope guards, expansion visibility,
+keys, focus, view-mode navigation and these evidence limits; no independent
+agent review was performed. Rollback is the six scoped code commits above;
+rollback does not remove the fixture.
+
+Next: real-device touch and screen-reader follow-up, other routes' populated
+pagination/dense states, remaining editor/image controls, cross-route failure
+and permission checks, then whole-app acceptance. This pass does not authorize
+a release or mark all of checkpoint 8 complete.
