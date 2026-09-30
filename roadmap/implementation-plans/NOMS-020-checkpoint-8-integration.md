@@ -1437,3 +1437,40 @@ accessibility pass. The fixture script was reviewed for exact mock-only scope,
 transactional insertion, idempotence and privacy; no independent agent review
 was performed. To remove the fixture later, identify the exact root and child
 IDs and use an approved cleanup plan; this task intentionally retains them.
+
+## Dense graph readability and focus pass — 2026-09-29
+
+The 25-card initial page previously fit its 12,848px-wide chain into a 1,361px
+canvas, leaving cards about 28px wide. The `Current` control preserved that
+unreadable zoom. On desktop, Tab could focus a card hundreds of pixels outside
+the canvas. Resizing to tablet or phone retained the stale desktop transform.
+
+The graph now opens on the current snapshot at 1× when fitting would fall
+below 0.7×; smaller graphs still fit. `Fit` remains an intentional overview,
+while toolbar/context-menu `Current` returns to at least 1×. Canvas resize
+preserves the graph point at the viewport center and the user's zoom. When
+keyboard focus reaches a snapshot's action button, link or static card, the
+canvas brings that snapshot into view. The canvas uses `overflow: clip` so
+browser focus navigation cannot silently scroll its transformed stage and
+counteract that pan. These changes are limited to the graph; the private
+fixture remains in place. Commits: `2289c07`, `e7e3f28`, `310aa02`.
+
+Focused graph tests passed (55), including new dense/default, resize and
+offscreen-focus geometry cases. The final `just ci` gate passed web/server
+checks, Clippy, 822 tests (12 ignored), schema/security-policy scripts and
+the dependency audit with the repository's existing allowed warnings. An
+earlier audit attempt could not write its Cargo-cache lock under the sandbox;
+the final full run used the necessary access. The updated client was checked with
+browser cache disabled after rebuilding the running local app. Initial dense
+cards rendered at 304px/1×; keyboard Tab through the action button and link
+for versions 8, 9 and 10 kept each complete card in the canvas. At 820×1180
+and 390×844, the focused version 10 remained 304px wide, centered inside the
+canvas, with no document-level horizontal overflow. The 390px toolbar wrapped
+into two rows without hiding Fit, Current or lineage controls.
+
+This is a focused dense-graph pass, not whole-graph or whole-app acceptance.
+Further interaction checks should still cover touch gestures, long sequences
+of expansion plus focus, narrow viewports below 390px, reduced-motion/contrast
+and the other paginated routes. No independent-agent review was performed.
+Rollback is the three graph commits above; the local fixture is not removed
+by rollback. Preserve the integration worktree's unrelated CSS edit.
