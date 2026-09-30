@@ -26,9 +26,80 @@ fn avatar_photo_actions(has_avatar: bool) -> &'static [&'static str] {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
+type AvatarImageSource = web_sys::Blob;
+#[cfg(not(target_arch = "wasm32"))]
+type AvatarImageSource = Vec<u8>;
+
+// Keep the original image and exact confirmed edit independently of the modal's
+// preview URL. Closing the modal must not destroy a failed upload's retry data.
+#[derive(Clone)]
+struct AvatarUploadState<Source> {
+    pending: Option<(Source, RecipeImageEdit)>,
+    uploading: bool,
+}
+
+impl<Source> Default for AvatarUploadState<Source> {
+    fn default() -> Self {
+        Self {
+            pending: None,
+            uploading: false,
+        }
+    }
+}
+
+impl<Source: Clone> AvatarUploadState<Source> {
+    #[cfg(any(target_arch = "wasm32", test))]
+    fn select(&mut self, source: Source, edit: RecipeImageEdit) -> bool {
+        if self.uploading {
+            return false;
+        }
+        self.pending = Some((source, edit));
+        true
+    }
+
+    #[cfg(any(target_arch = "wasm32", test))]
+    fn begin_upload(&mut self) -> Option<(Source, RecipeImageEdit)> {
+        if self.uploading {
+            return None;
+        }
+        let attempt = self.pending.clone()?;
+        self.uploading = true;
+        Some(attempt)
+    }
+
+    fn begin_removal(&mut self) -> bool {
+        if self.uploading {
+            return false;
+        }
+        self.uploading = true;
+        true
+    }
+
+    fn finish(&mut self, succeeded: bool) {
+        self.uploading = false;
+        if succeeded {
+            self.pending = None;
+        }
+    }
+}
+
+#[cfg(any(target_arch = "wasm32", test))]
+fn avatar_upload_feedback(error: &ServerFnError) -> &'static str {
+    match error {
+        ServerFnError::ServerError { message, .. } => match message.as_str() {
+            "Not authenticated" => "Sign in again in another tab, then retry your photo. Keep this page open to retain your image and edits.",
+            "Upload rate limit exceeded" => "Too many uploads. Wait a moment, then retry your photo.",
+            "Media storage quota exceeded" => "Your media storage is full. Free some space before retrying your photo.",
+            _ => "Could not save your photo. Your selected image and edits are kept here; try again.",
+        },
+        _ => "Could not save your photo. Your selected image and edits are kept here; try again.",
+    }
+}
+
 #[cfg(test)]
 mod avatar_action_tests {
-    use super::avatar_photo_actions;
+    use super::*;
 
     #[test]
     fn existing_avatar_offers_edit_without_requiring_replacement() {
@@ -37,6 +108,46 @@ mod avatar_action_tests {
             &["Edit Photo", "Change Photo", "Remove"]
         );
         assert_eq!(avatar_photo_actions(false), &["Choose Photo"]);
+    }
+
+    #[test]
+    fn avatar_retry_retains_source_and_edits_without_overlapping_requests() {
+        let mut state = AvatarUploadState::<Vec<u8>>::default();
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.transform.rotation = 25.0;
+        assert!(state.select(vec![1, 2, 3], edit.clone()));
+        assert_eq!(state.begin_upload(), Some((vec![1, 2, 3], edit.clone())));
+        assert!(state.begin_upload().is_none());
+        assert!(!state.select(vec![4], RecipeImageEdit::default_ellipse_1x1()));
+        state.finish(false);
+        assert_eq!(state.begin_upload(), Some((vec![1, 2, 3], edit)));
+        state.finish(true);
+        assert!(state.begin_upload().is_none());
+        assert!(state.pending.is_none());
+        assert!(!state.uploading);
+    }
+
+    #[test]
+    fn new_avatar_attempt_replaces_failed_attempt_only_when_idle() {
+        let mut state = AvatarUploadState::<Vec<u8>>::default();
+        let edit = RecipeImageEdit::default_ellipse_1x1();
+        state.select(vec![1], edit.clone());
+        state.begin_upload();
+        state.finish(false);
+        state.select(vec![2], edit.clone());
+        assert_eq!(state.begin_upload(), Some((vec![2], edit)));
+    }
+
+    #[test]
+    fn avatar_upload_feedback_does_not_expose_transport_errors() {
+        let raw = ServerFnError::new("internal database details");
+        assert_eq!(
+            avatar_upload_feedback(&raw),
+            "Could not save your photo. Your selected image and edits are kept here; try again."
+        );
+        assert!(
+            avatar_upload_feedback(&ServerFnError::new("Not authenticated")).contains("Sign in")
+        );
     }
 }
 
@@ -770,7 +881,8 @@ pub fn SettingsProfile() -> Element {
     let mut deletion = use_signal(AccountDeletionState::default);
 
     // Avatar upload state
-    let avatar_uploading = use_signal(|| false);
+    #[allow(unused_mut)]
+    let mut avatar_upload_state = use_signal(AvatarUploadState::<AvatarImageSource>::default);
     let mut avatar_url_signal = use_signal(|| Option::<String>::None);
     let mut avatar_editor_url = use_signal(|| Option::<String>::None);
     let mut avatar_editor_initial_edit = use_signal(|| Option::<RecipeImageEdit>::None);
@@ -1179,40 +1291,45 @@ pub fn SettingsProfile() -> Element {
         reset_file_input("#avatar-upload-input");
     };
 
-    let on_avatar_edit_save = move |edit: RecipeImageEdit| {
+    let on_upload_avatar = use_callback(move |_: ()| {
         #[cfg(target_arch = "wasm32")]
         {
-            let Some(image_blob) = avatar_editor_blob() else {
-                error.set(Some(
-                    "The selected image is no longer available".to_string(),
-                ));
+            // Claim synchronously before spawning so queued clicks cannot
+            // submit the same media twice.
+            let Some((image_blob, edit)) = avatar_upload_state.write().begin_upload() else {
                 return;
             };
             let mut auth_context = auth_context;
             let mut avatar_url = avatar_url_signal;
-            let mut avatar_uploading = avatar_uploading;
+            let mut avatar_upload_state = avatar_upload_state;
             let mut error = error;
             let mut saved_message = saved_message;
 
             spawn(async move {
-                avatar_uploading.set(true);
                 error.set(None);
+                saved_message.set(None);
 
                 let original_bytes =
                     match crate::utils::image_processing_client::blob_to_bytes(&image_blob).await {
                         Ok(bytes) => bytes,
-                        Err(e) => {
-                            error.set(Some(format!("Failed to read original image: {e}")));
-                            avatar_uploading.set(false);
+                        Err(_) => {
+                            error.set(Some(
+                                "Could not read your photo. Try again or choose another image."
+                                    .to_string(),
+                            ));
+                            avatar_upload_state.write().finish(false);
                             return;
                         }
                     };
 
                 let processed = match process_avatar_image(image_blob, &edit).await {
                     Ok(data) => data,
-                    Err(e) => {
-                        error.set(Some(format!("Failed to process image: {e}")));
-                        avatar_uploading.set(false);
+                    Err(_) => {
+                        error.set(Some(
+                            "Could not process your photo. Try again or choose another image."
+                                .to_string(),
+                        ));
+                        avatar_upload_state.write().finish(false);
                         return;
                     }
                 };
@@ -1229,18 +1346,30 @@ pub fn SettingsProfile() -> Element {
                         avatar_url.set(profile.avatar_url.clone());
                         auth_context.write().current_user = Some(profile);
                         saved_message.set(Some("Avatar updated successfully!".to_string()));
+                        avatar_upload_state.write().finish(true);
                     }
                     Err(e) => {
-                        let msg = match &e {
-                            ServerFnError::ServerError { message, .. } => message.clone(),
-                            _ => e.to_string(),
-                        };
-                        error.set(Some(msg));
+                        error.set(Some(avatar_upload_feedback(&e).to_string()));
+                        avatar_upload_state.write().finish(false);
                     }
                 }
-
-                avatar_uploading.set(false);
             });
+        }
+    });
+
+    let on_avatar_edit_save = move |edit: RecipeImageEdit| {
+        #[cfg(target_arch = "wasm32")]
+        {
+            let Some(image_blob) = avatar_editor_blob() else {
+                error.set(Some(
+                    "The selected image is no longer available. Choose it again.".to_string(),
+                ));
+                return;
+            };
+            let selected = avatar_upload_state.write().select(image_blob, edit);
+            if selected {
+                on_upload_avatar.call(());
+            }
         }
 
         #[cfg(not(target_arch = "wasm32"))]
@@ -1253,19 +1382,23 @@ pub fn SettingsProfile() -> Element {
     let on_remove_avatar = move |_| {
         let mut auth_context = auth_context;
         let mut avatar_url = avatar_url_signal;
-        let mut avatar_uploading = avatar_uploading;
+        let mut avatar_upload_state = avatar_upload_state;
         let mut error = error;
         let mut saved_message = saved_message;
 
+        if !avatar_upload_state.write().begin_removal() {
+            return;
+        }
         spawn(async move {
-            avatar_uploading.set(true);
             error.set(None);
+            saved_message.set(None);
 
             match remove_avatar().await {
                 Ok(profile) => {
                     avatar_url.set(profile.avatar_url.clone());
                     auth_context.write().current_user = Some(profile);
                     saved_message.set(Some("Avatar removed successfully!".to_string()));
+                    avatar_upload_state.write().finish(true);
                 }
                 Err(e) => {
                     let msg = match &e {
@@ -1273,10 +1406,9 @@ pub fn SettingsProfile() -> Element {
                         _ => e.to_string(),
                     };
                     error.set(Some(msg));
+                    avatar_upload_state.write().finish(false);
                 }
             }
-
-            avatar_uploading.set(false);
         });
     };
 
@@ -1303,7 +1435,7 @@ pub fn SettingsProfile() -> Element {
                         div { class: "user-portrait",
                             Avatar { size: AvatarSize::Large, src: avatar_url.clone(), username: avatar_name.clone() }
                         }
-                        if avatar_uploading() {
+                        if avatar_upload_state.read().uploading {
                             span { role: "status", "Uploading…" }
                         } else if avatar_url.is_some() {
                             div { class: "user-settings__avatar-actions",
@@ -1313,6 +1445,14 @@ pub fn SettingsProfile() -> Element {
                             }
                         } else {
                             Button { variant: ButtonVariant::Secondary, onclick: move |_| trigger_file_input("#avatar-upload-input"), "Choose Photo" }
+                        }
+                        if avatar_upload_state.read().pending.is_some() {
+                            button { r#type: "button", class: "btn btn-secondary touch-target",
+                                aria_disabled: avatar_upload_state.read().uploading,
+                                onclick: move |_| on_upload_avatar.call(()),
+                                if avatar_upload_state.read().uploading { "Uploading photo…" } else { "Retry photo upload" }
+                            }
+                            p { class: "user-settings__hint", "Your selected image and edits are kept until this page closes." }
                         }
                         p { class: "user-settings__hint", "Your photo appears on your public profile." }
                         input {
