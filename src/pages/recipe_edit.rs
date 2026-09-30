@@ -13,7 +13,7 @@ use crate::api::recipe::{
 #[allow(unused_imports)]
 use crate::api::upload::upload_image;
 use crate::components::base::{
-    Button, ButtonVariant, EditedRecipeImage, ImageEditorModal, ImageUpload, LoadingSpinner,
+    Button, ButtonVariant, Card, EditedRecipeImage, ImageEditorModal, ImageUpload, LoadingSpinner,
     PageHeader, UploadOutcome,
 };
 use crate::components::AuthRequired;
@@ -95,6 +95,32 @@ fn editor_state(
 
 fn draft_allows_initial_visibility(recipe_id: Option<uuid::Uuid>) -> bool {
     recipe_id.is_none()
+}
+
+fn render_recipe_editor_unavailable() -> Element {
+    // Missing, inaccessible and failed loads share one useful public state,
+    // without exposing database identifiers or transport exception wrappers.
+    rsx! {
+        div { class: "container recipe-editor",
+            Card {
+                div {
+                    role: "alert",
+                    display: "flex",
+                    flex_direction: "column",
+                    align_items: "center",
+                    text_align: "center",
+                    gap: "var(--space-md)",
+                    h1 { "Recipe editor unavailable" }
+                    p { "This recipe or draft may not exist or you may not have access to edit it. Try opening it again from your dashboard." }
+                    Link {
+                        to: crate::Route::Dashboard {},
+                        class: "btn btn-secondary touch-target",
+                        "Back to Dashboard"
+                    }
+                }
+            }
+        }
+    }
 }
 
 /// Edit an existing published recipe through its mutable draft.
@@ -715,30 +741,10 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
     }
 
     // ── Render: error ───────────────────────────────────────────────────
-    if let Some(err_msg) = load_error() {
+    if load_error().is_some() {
         return rsx! {
             AuthRequired {
-                div { class: "container",
-                    div {
-                        display: "flex",
-                        flex_direction: "column",
-                        align_items: "center",
-                        text_align: "center",
-                        gap: "var(--space-md)",
-                        padding: "var(--space-xl)",
-                        p {
-                            color: "var(--error)",
-                            font_weight: "600",
-                            font_size: "18px",
-                            "{err_msg}"
-                        }
-                        Link {
-                            to: crate::Route::Dashboard {},
-                            class: "btn btn-secondary touch-target",
-                            "Back to Recipes"
-                        }
-                    }
-                }
+                {render_recipe_editor_unavailable()}
             }
         };
     }
@@ -1490,6 +1496,51 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                 step_editor_idx.set(None);
                 step_editor_photo_idx.set(None);
             },
+        }
+    }
+}
+
+#[cfg(test)]
+mod load_error_tests {
+    use super::*;
+    use dioxus::router::components::HistoryProvider;
+
+    #[derive(Clone, PartialEq, Routable)]
+    enum ErrorTestRoute {
+        #[route("/")]
+        ErrorTestPage {},
+    }
+
+    #[component]
+    fn ErrorTestPage() -> Element {
+        render_recipe_editor_unavailable()
+    }
+
+    #[test]
+    fn unavailable_editor_has_generic_feedback_and_a_clear_safe_exit() {
+        let mut dom = VirtualDom::new(|| {
+            rsx! { HistoryProvider {
+                history: |_| std::rc::Rc::new(dioxus::history::MemoryHistory::with_initial_path("/")) as std::rc::Rc<dyn History>,
+                Router::<ErrorTestRoute> {}
+            } }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("Recipe editor unavailable"), "{html}");
+        assert!(
+            html.contains("may not exist or you may not have access"),
+            "{html}"
+        );
+        assert!(html.contains("role=\"alert\""), "{html}");
+        assert!(html.contains("href=\"/dashboard\""), "{html}");
+        assert!(html.contains("Back to Dashboard"), "{html}");
+        for technical_copy in [
+            "server function",
+            "recipe not found:",
+            "Not authenticated",
+            "details:",
+        ] {
+            assert!(!html.contains(technical_copy), "{html}");
         }
     }
 }
