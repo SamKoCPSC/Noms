@@ -97,6 +97,30 @@ fn draft_allows_initial_visibility(recipe_id: Option<uuid::Uuid>) -> bool {
     recipe_id.is_none()
 }
 
+#[derive(Clone, Copy)]
+enum RecipeWriteAction {
+    #[cfg(any(target_arch = "wasm32", test))]
+    Autosave,
+    SaveDraft,
+    Publish,
+    Discard,
+}
+
+fn recipe_write_feedback(action: RecipeWriteAction, error: &ServerFnError) -> &'static str {
+    if matches!(error, ServerFnError::ServerError { message, .. } if message == "Not authenticated")
+    {
+        return "Sign in again in another tab, then try again. Keep this page open to retain your entries.";
+    }
+    match action {
+        #[cfg(any(target_arch = "wasm32", test))]
+        RecipeWriteAction::Autosave => "Autosave could not complete. Your entries are still here; try Save draft or edit again to retry.",
+        RecipeWriteAction::SaveDraft => "Could not save the draft. Your entries are still here; try Save draft again.",
+        // A lost response is ambiguous: publication may already have committed.
+        RecipeWriteAction::Publish => "Could not confirm publication. Your draft may have been published; check your dashboard before trying again.",
+        RecipeWriteAction::Discard => "Could not confirm draft removal. Check your dashboard before trying again; your entries remain on this page.",
+    }
+}
+
 fn render_recipe_editor_unavailable() -> Element {
     // Missing, inaccessible and failed loads share one useful public state,
     // without exposing database identifiers or transport exception wrappers.
@@ -176,6 +200,8 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
     let mut draft_save_destination = use_signal(|| Option::<String>::None);
     let mut load_error = use_signal(|| Option::<String>::None);
     let mut form_error = use_signal(|| Option::<String>::None);
+    #[allow(unused_mut)]
+    let mut autosave_error = use_signal(|| Option::<String>::None);
     let mut is_discarding = use_signal(|| false);
     let mut draft_id = use_signal(|| Option::<String>::None);
     let mut draft_recipe_id = use_signal(|| Option::<uuid::Uuid>::None);
@@ -307,10 +333,13 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                 Ok(saved) if autosave_generation() == generation => {
                     draft_revision.set(saved.revision);
                     last_saved_editor.set(Some(editor));
+                    autosave_error.set(None);
                 }
                 Ok(_) => {}
                 Err(error) if autosave_generation() == generation => {
-                    form_error.set(Some(format!("Autosave failed: {error}")));
+                    autosave_error.set(Some(
+                        recipe_write_feedback(RecipeWriteAction::Autosave, &error).to_string(),
+                    ));
                 }
                 Err(_) => {}
             }
@@ -332,6 +361,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
             }
 
             form_error.set(None);
+            autosave_error.set(None);
             is_manually_saving.set(true);
             draft_save_after_upload.set(true);
             draft_save_destination.set(None);
@@ -567,6 +597,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     Ok(saved) => {
                         draft_revision.set(saved.revision);
                         last_saved_editor.set(Some(editor));
+                        autosave_error.set(None);
                         #[cfg(target_arch = "wasm32")]
                         if let Some(destination) = draft_save_destination() {
                             if let Some(window) = web_sys::window() {
@@ -575,7 +606,10 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                         }
                     }
                     Err(save_error) => {
-                        form_error.set(Some(format!("Save draft failed: {save_error}")));
+                        form_error.set(Some(
+                            recipe_write_feedback(RecipeWriteAction::SaveDraft, &save_error)
+                                .to_string(),
+                        ));
                     }
                 }
                 draft_save_after_upload.set(false);
@@ -624,11 +658,9 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
                 }
                 Err(e) => {
-                    let msg = match &e {
-                        ServerFnError::ServerError { message, .. } => message.clone(),
-                        _ => e.to_string(),
-                    };
-                    form_error.set(Some(msg));
+                    form_error.set(Some(
+                        recipe_write_feedback(RecipeWriteAction::Publish, &e).to_string(),
+                    ));
                     is_saving.set(false);
                 }
             }
@@ -677,7 +709,9 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
                 }
                 Err(error) => {
-                    form_error.set(Some(error.to_string()));
+                    form_error.set(Some(
+                        recipe_write_feedback(RecipeWriteAction::Discard, &error).to_string(),
+                    ));
                     is_discarding.set(false);
                 }
             }
@@ -1451,8 +1485,16 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
 
                     // ── Error message ───────────────────────────────────
+                    if let Some(err) = autosave_error() {
+                        div {
+                            role: "alert", padding: "var(--space-sm) var(--space-md)",
+                            background_color: "var(--error-bg)", border_radius: "var(--radius-md)",
+                            color: "var(--error)", font_size: "14px", "{err}"
+                        }
+                    }
                     if let Some(err) = form_error() {
                         div {
+                            role: "alert",
                             padding: "var(--space-sm) var(--space-md)",
                             background_color: "var(--error-bg)",
                             border_radius: "var(--radius-md)",
@@ -1542,6 +1584,42 @@ mod load_error_tests {
         ] {
             assert!(!html.contains(technical_copy), "{html}");
         }
+    }
+
+    #[test]
+    fn recipe_write_failures_keep_recovery_copy_without_backend_details() {
+        let raw = ServerFnError::new("database error with internal details");
+        for action in [
+            RecipeWriteAction::Autosave,
+            RecipeWriteAction::SaveDraft,
+            RecipeWriteAction::Publish,
+            RecipeWriteAction::Discard,
+        ] {
+            let message = recipe_write_feedback(action, &raw);
+            assert!(!message.contains("database"));
+            assert!(!message.contains("internal"));
+            assert!(message.contains("try") || message.contains("Try"));
+            assert!(
+                recipe_write_feedback(action, &ServerFnError::new("Not authenticated"))
+                    .contains("Sign in")
+            );
+        }
+        assert!(recipe_write_feedback(RecipeWriteAction::Publish, &raw).contains("may have"));
+    }
+
+    #[test]
+    fn autosave_feedback_is_separate_from_form_validation_and_cleared_on_success() {
+        let source = include_str!("recipe_edit.rs");
+        let autosave = source
+            .split("// Two-second debounced autosave.")
+            .nth(1)
+            .unwrap()
+            .split("let on_save_draft =")
+            .next()
+            .unwrap();
+        assert!(autosave.contains("autosave_error.set(None)"));
+        assert!(autosave.contains("autosave_error.set(Some"));
+        assert!(!autosave.contains("form_error.set"));
     }
 }
 
