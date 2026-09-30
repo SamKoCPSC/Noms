@@ -20,6 +20,62 @@ fn next_page_offset(offset: i64, loading: bool, has_more: bool, has_error: bool)
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ExplorePaginationAction {
+    LoadMore,
+    Retry,
+}
+
+fn pagination_action(
+    loading: bool,
+    has_more: bool,
+    has_error: bool,
+) -> Option<ExplorePaginationAction> {
+    if loading {
+        None
+    } else if has_error {
+        Some(ExplorePaginationAction::Retry)
+    } else if has_more {
+        Some(ExplorePaginationAction::LoadMore)
+    } else {
+        None
+    }
+}
+
+#[component]
+fn ExplorePagination(
+    loading: bool,
+    has_more: bool,
+    has_error: bool,
+    onloadmore: EventHandler<()>,
+    onretry: EventHandler<()>,
+) -> Element {
+    let action = pagination_action(loading, has_more, has_error);
+    let label = if loading {
+        "Loading recipes…"
+    } else if has_error {
+        "Retry"
+    } else if has_more {
+        "Load more"
+    } else {
+        "All recipes loaded"
+    };
+    // Keep one focusable node across pending, failed and completed pages.
+    // aria-disabled preserves keyboard focus; both this action and the parent
+    // handler guard requests rather than relying on visual disabled styling.
+    rsx! { div { class: "load-more",
+        button { r#type: "button", class: "btn btn-secondary touch-target",
+            aria_disabled: action.is_none(),
+            onclick: move |_| match action {
+                Some(ExplorePaginationAction::LoadMore) => onloadmore.call(()),
+                Some(ExplorePaginationAction::Retry) => onretry.call(()),
+                None => {},
+            },
+            "{label}"
+        }
+    } }
+}
+
 /// Public recipe discovery page with server-side search.
 #[component]
 pub fn Explore() -> Element {
@@ -114,7 +170,7 @@ pub fn Explore() -> Element {
         search_query.set(value);
     };
 
-    let on_load_more = move |_| {
+    let on_load_more = move |_: ()| {
         if let Some(next) = next_page_offset(offset(), is_loading(), has_more(), error().is_some())
         {
             // Claim the request synchronously so rapid clicks cannot skip a page.
@@ -122,7 +178,7 @@ pub fn Explore() -> Element {
             offset.set(next);
         }
     };
-    let on_retry = move |_| {
+    let mut on_retry = move |_: ()| {
         if !is_loading() {
             is_loading.set(true);
             // Retry the failed offset, rather than moving past its results.
@@ -198,7 +254,9 @@ pub fn Explore() -> Element {
                     class: "explore-status explore-status--error",
                     role: "alert",
                     p { "We couldn’t load recipes. Please try again." }
-                    Button { variant: ButtonVariant::Secondary, onclick: on_retry, "Retry" }
+                    if filtered_recipes.is_empty() {
+                        Button { variant: ButtonVariant::Secondary, onclick: move |_| on_retry(()), "Retry" }
+                    }
                 }
             }
 
@@ -219,19 +277,12 @@ pub fn Explore() -> Element {
                             RecipeCard { key: "{recipe.id}", recipe: recipe.clone(), framed: true }
                         }
                     }
-
-                    // Load more button if there are additional pages
-                    if has_more() && !has_error {
-                        div {
-                            class: "load-more",
-                            Button {
-                                variant: ButtonVariant::Secondary,
-                                disabled: is_loading(),
-                                onclick: on_load_more,
-                                if is_loading() { "Loading recipes…" } else { "Load more" }
-                            }
-                        }
-                    }
+                }
+            }
+            if !filtered_recipes.is_empty() {
+                ExplorePagination {
+                    loading: is_loading(), has_more: has_more(), has_error,
+                    onloadmore: on_load_more, onretry: on_retry,
                 }
             }
         }
@@ -241,6 +292,59 @@ pub fn Explore() -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn explore_pagination_actions_respect_pending_error_and_completion() {
+        for has_more in [false, true] {
+            for has_error in [false, true] {
+                assert_eq!(pagination_action(true, has_more, has_error), None);
+            }
+        }
+        assert_eq!(
+            pagination_action(false, true, false),
+            Some(ExplorePaginationAction::LoadMore)
+        );
+        assert_eq!(
+            pagination_action(false, true, true),
+            Some(ExplorePaginationAction::Retry)
+        );
+        assert_eq!(
+            pagination_action(false, false, true),
+            Some(ExplorePaginationAction::Retry)
+        );
+        assert_eq!(pagination_action(false, false, false), None);
+    }
+
+    #[component]
+    fn PaginationTestRoot(loading: bool, has_more: bool, has_error: bool) -> Element {
+        rsx! { ExplorePagination { loading, has_more, has_error, onloadmore: |_| {}, onretry: |_| {} } }
+    }
+
+    #[test]
+    fn explore_pagination_retains_a_focusable_control_in_every_state() {
+        for (loading, has_more, has_error, label, blocked) in [
+            (false, true, false, "Load more", false),
+            (true, true, false, "Loading recipes…", true),
+            (false, true, true, "Retry", false),
+            (false, false, false, "All recipes loaded", true),
+        ] {
+            let mut dom = VirtualDom::new_with_props(
+                PaginationTestRoot,
+                PaginationTestRootProps {
+                    loading,
+                    has_more,
+                    has_error,
+                },
+            );
+            dom.rebuild_in_place();
+            let html = dioxus_ssr::render(&dom);
+            assert_eq!(html.matches("<button").count(), 1, "{html}");
+            assert!(html.contains(label), "{html}");
+            assert!(html.contains("touch-target"), "{html}");
+            assert!(!html.contains(" disabled"), "{html}");
+            assert!(html.contains(&format!("aria-disabled={blocked}")), "{html}");
+        }
+    }
 
     #[test]
     fn pagination_advances_only_when_ready_and_never_skips_a_failed_page() {
