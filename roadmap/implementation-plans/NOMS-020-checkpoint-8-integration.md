@@ -1581,3 +1581,131 @@ Next: real-device touch and screen-reader follow-up, other routes' populated
 pagination/dense states, remaining editor/image controls, cross-route failure
 and permission checks, then whole-app acceptance. This pass does not authorize
 a release or mark all of checkpoint 8 complete.
+
+## 2026-09-29 — populated Search, collection and Dashboard pagination
+
+Continued the approved acceptance work from `3e14b4d` in
+`codex/NOMS-020-checkpoint-8`, reusing the existing isolated development
+deployment at `http://127.0.0.1:32768`. No production data or public visibility
+was changed. The integration worktree's user-owned `assets/tailwind.css` edit
+was preserved byte-for-byte (SHA256
+`63fb925365998338ce8dec1e725c097e5648f820c9674767880e910db80d7e46`).
+
+### Confirmed issues and fixes
+
+- Search removed its pager while loading. Keyboard Next therefore lost focus
+  to the body; native disabling at the last page also prevented stable focus.
+  `94c4f59` moves the pager outside the loading/error/result branches and keeps
+  its controls mounted, with `aria-disabled` and guarded handlers. Single-page
+  results still hide the pager, with an explicit CSS rule that overrides its
+  flex display. Previous cards remain hidden during loading.
+- Collection Load more used native disabling during loading and disappeared
+  after completion, also losing focus. `ad174a4` retains the control through
+  loading, failure and completion, guards additional requests and shows
+  “All recipes loaded” at the end. A failed request now presents readable retry
+  copy instead of a server-function/network exception. Owner/reordering guards
+  and page-size limits are unchanged.
+- Search pagination measured about 40px high at 320px. `8b8afa2` applies the
+  existing shared `touch-target` class to both buttons: the final browser
+  measurement is **44px**, without a new visual token or palette.
+
+### Private fixture and browser evidence
+
+The existing mock owner `user-332d` has 33 private recipes, including 30 graph
+forks. Those rows were sufficient for Search and Dashboard; no new recipes
+were needed. After confirming `com.noms.dev-environment=true` on the existing
+development Postgres container, the insert-only script
+`scripts/dev-fixtures/noms-020-pagination-collection.sql` created one private
+collection with the graph root and its 30 private forks:
+
+`305e078e-e1ae-dd69-a6b1-a4b5baa943e6` —
+`NOMS020 CP8 pagination collection 2026-09-29`.
+
+The script checks the known owner/private recipe shape, detects conflicting
+fixture IDs and verifies all memberships. `b8a1f46` corrects its repeat-run
+name check for this database's two BM25 name aliases. A repeat run passed
+with “already exists; no rows inserted”; 31 memberships were retained.
+This is fixture setup, not evidence of a bulk collection-creation UI workflow.
+No recipes, collections or memberships were deleted.
+
+Live browser checks on the combined code:
+
+- **Search / Recipes:** the query `NOMS020 CP8 graph fork`, sorted Title A–Z,
+  returned 20 recipes on page 1 and 10 on page 2: 30 distinct titles, zero
+  overlap. Query/sort/page URLs and Back to page 1 were checked.
+- **Search delayed/failure states:** pausing the page-2 request retained focus
+  on Next while showing skeletons, not old cards. A repeated actual click
+  while paused produced only one request. At the terminal page Next remained
+  focusable/inactive and activation did not change the page. A failed request
+  retained the query/page and Next focus; Try again recovered the 10 results.
+- **Search scope replacement:** switching to Collections while a recipe-page
+  request was paused showed the new scope immediately. Releasing the old
+  request did not restore recipe cards; the empty collection search's pager
+  was hidden. This does not prove dense collection/cook Search pagination.
+- **Collection pagination:** 12 → 24 → 31 distinct cards. Requests use a
+  maximum batch of 12, with a seven-item final batch. While paused, focus
+  stayed on Loading… and an additional actual click produced no second
+  request. A forced failure retained the first 12 cards, readable feedback
+  and Load more focus; retry cleared the error and continued correctly.
+- **Collection completion:** focus stayed on All recipes loaded; further
+  activation left 31 cards and no loading state. Recipe reordering stayed
+  disabled until the complete list loaded, then the non-boundary movement
+  controls enabled. No reorder/remove/delete action was performed.
+- **Collection route isolation:** navigating to the collection index while
+  Load more was paused and then releasing it did not insert cards into that
+  route or produce console warnings/errors. Fresh entry/reload reset the
+  detail view to the first 12 cards.
+- **Dashboard:** its existing list view returned 12 + 12 + 9 distinct recipes
+  with ranges 1–12, 13–24 and 25–33 of 33. Next retained focus on the final
+  page; Previous returned to 13–24. Dashboard required no code changes.
+- **320×740 geometry:** populated Search page 2 and the complete collection
+  had no horizontal document overflow; both measured document width 305px
+  inside the 320px viewport with its scrollbar. Search and collection paging
+  controls measured 44px high and stayed within the container. This is
+  geometry/keyboard evidence, not real-device touch acceptance.
+
+Browser request interception and cache disabling were cleared; the temporary
+viewport override was reset. The existing app remains healthy. Temporary
+screenshots (not tracked release assets):
+
+- `/tmp/noms-020-search-pagination-desktop.jpg`
+- `/tmp/noms-020-search-pagination-phone.jpg`
+- `/tmp/noms-020-collection-pagination-acceptance.jpg`
+- `/tmp/noms-020-collection-pagination-phone.jpg`
+
+### Automated validation, review and remaining gates
+
+Using `SQLX_OFFLINE=true` and
+`CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target`:
+
+```sh
+cargo test --features server pages:: -- --test-threads=8
+just ci
+```
+
+The focused page run passed **202 tests**. Added Search SSR/source-boundary
+regressions cover focusable controls and persistent pager placement; the
+collection source regression and paging helper cover retained controls,
+readable failures and the seven-item final batch. The added regressions failed
+before the corresponding fixes. Runtime focus/guard behavior is supported by
+the delayed-request browser checks above, not by source assertions alone.
+
+Final **`just ci` on `8b8afa2`: exit 0; 831 passed, 0 failed, 12 ignored**,
+including formatting, native/WASM checks, Clippy, schema/security policy gates
+and dependency audit. Eight existing audit warnings remain allowed. Log:
+`/tmp/noms-020-pagination-acceptance-ci.log`. No fresh ignored search or
+real-storage integration run is claimed.
+
+A second-pass self-review covered the ordered four commits, guarded
+aria-disabled actions, stable pager placement, hidden-state CSS, private
+fixture repeatability, route scope and validation limits. No independent-agent
+review was performed. No blocking or should-fix finding remains in this slice.
+Rollback is the four scoped commits above; it does not remove the private
+fixture data.
+
+Next: remaining editor/image controls and cross-route failure/permission
+checks, then broader accessibility and whole-app review. Public Explore
+pagination, dense collection/cook Search and other dense route states remain
+open; this private fixture does not populate public pages. Physical graph
+touch/long-press and screen-reader testing also remain open. This pass does
+not close all of checkpoint 8 or authorize release.
