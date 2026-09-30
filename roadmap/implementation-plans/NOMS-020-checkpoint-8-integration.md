@@ -2211,3 +2211,142 @@ interactions, per-page populated phone/tablet and accessibility acceptance,
 real-device touch, screen-reader and pixel-level export checks, and final
 whole-app review. Dark-mode redesign remains deferred. Rollback of the behavior
 slice is `0931dca`; reverting code does not delete the retained local fixtures.
+
+## Collections and Dashboard load recovery — 2026-09-30
+
+### Scope and acceptance criteria
+
+Continued the existing isolated `codex/NOMS-020-checkpoint-8` worktree from
+`cb50837`; reused the established local deployment on port 32768, with fresh
+browser navigation, injected pre-server read failures and the retained test
+fixtures. Acceptance for this slice: readable failure copy without transport
+details; visible pending retry announcements; retained retry focus through
+pending/repeated failure; no competing retry requests; independent Dashboard
+sections; preserved collection filter; usable guest/non-owner boundaries and
+320px retry geometry. No production effects, content writes or new fixtures.
+
+### Reproductions and implementation
+
+- Collections failed-load alert exposed
+  `error reaching server to call server function: error sending request:
+  TypeError: Failed to fetch`. This was reproduced by blocking
+  `list_root_collections` during SPA navigation.
+- Dashboard drafts and collection tree could fail while all 12 current recipe
+  rows remained usable. Repeated Retry drafts clicks while its request was
+  paused produced **one original plus one extra request** before the fix.
+  Its button did retain focus in that baseline test; lost focus is not claimed
+  as the observed bug in this flow.
+- Source review found `Resource::pending()` peeks without subscribing. Retry
+  controls lacked live pending guards; a non-embedded CollectionSidebar returned
+  nothing on load failure. Only the embedded sidebar currently has a production
+  caller, so standalone disappearance is source evidence, not a live route test.
+
+Behavior commit **`fb884ad`** adds a shared `LoadRecovery` component and integrates
+it into Collections, Dashboard drafts/library and CollectionSidebar. It renders
+one focusable 44px retry button with `aria-disabled`, safe literal messages,
+an alert when failed and a status/Retrying… label when pending. Callers subscribe
+to `resource.state().read()` and check the live `pending()` value before restart,
+so a second click before rendering cannot start a competing request. Recovery
+remains mounted while the resource retains its previous error. Successful data
+replaces the recovery panel; no post-success focus-transfer implementation is
+claimed. Previous page in a failed Dashboard library is also guarded during
+retry. Standalone sidebar loading/empty/error states now remain visible.
+
+Tests preceded the relevant changes. The component tests first failed to
+compile because `LoadRecovery` was missing. After implementing it, page contract
+tests failed on the old raw collection copy and unsubscribed Dashboard state.
+Two SSR tests check the stable focusable target and mutually exclusive
+alert/status semantics; three source-contract regressions check integration
+and pending guards. These source checks are not asynchronous event simulations;
+the browser checks below provide request/focus behavior evidence.
+
+### Rebuilt browser checks
+
+Fast-forwarded the fix into the design branch and restarted its existing app.
+All injected failures were read requests intercepted before server handling.
+
+- **Collections:** failed load displayed only “Your collections couldn’t be
+  loaded. Please try again.” Enter on Try again paused one request, showed
+  Trying again… with no simultaneous alert, and retained button focus. A forced
+  additional click made **0 extra requests**. Failing that retry restored
+  Try again with focus still on it. A successful Enter retry restored
+  **25 of 27 top-level collections** matching the retained CP8Catalog filter;
+  alerts cleared. The two other top-level collections and three nested records
+  remained untouched. An initial filter fill during rebuild/navigation did not
+  stick; after the page settled, refill and failure/retry retention passed.
+  The original early-input timing issue remains unconfirmed, not closed here.
+- **Dashboard drafts:** failed drafts and collection-tree reads left **12 recipe
+  rows** intact. Enter Retry drafts issued one request; extra clicks during
+  Retrying… issued **0**, retained focus and did not disturb the library. A
+  repeated failure restored Retry drafts with focus retained. Success restored
+  the one existing draft while the collection tree still displayed its own error.
+- **Dashboard collections:** the same pending/extra-click/repeated-failure focus
+  checks passed. Successful retry restored **27 root navigation links**, with
+  drafts and recipe rows intact. One over-specific link-name wait was corrected
+  using the fresh DOM (“0 recipes”, not “0”); recovered tree had zero alerts.
+- **Dashboard library:** failed Next retained independent draft/tree sections.
+  Enter Retry recipes issued one request; extra retry and Previous page clicks
+  while pending made **0 extra requests**, and Previous page was aria-disabled.
+  A later successful retry retained pending button focus and restored
+  **Showing 13–24 of 33 saved recipes**, 12 rows and zero alerts. Previous returned
+  to **Showing 1–12 of 33**. An all-three-sections failure pass recovered all three
+  through their own retry buttons without route reload.
+- **Guest gates:** signed-out Dashboard and Collections redirected to
+  `/login?redirect_uri=%2Fdashboard` and `/login?redirect_uri=%2Fcollections`,
+  respectively, with zero private content links. Mock sign-in preserved each
+  destination.
+- **Authenticated non-owner:** reviewer `user-62c8` saw an empty Dashboard,
+  no draft links, no collection-tree links, and Your first album starts here
+  on Collections with zero album links. Owner content was not rendered.
+  Restored the owner session and normal Dashboard data afterward.
+- **Narrow recovery geometry:** per-tab metrics confirmed `innerWidth=320`,
+  document width **305px**, and no horizontal document overflow for Collections
+  failure and Dashboard's all-three failure state. All four tested retry controls
+  were **44px high**, with both edges inside the viewport. This is recovery-state
+  geometry, not complete populated mobile/tablet or real-touch acceptance.
+
+Interception and device emulation were cleared; the temporary browser tab was
+closed. Normal-desktop screenshots were saved and visually inspected:
+
+- `/tmp/noms-020-collections-safe-recovery.jpg`
+- `/tmp/noms-020-dashboard-independent-recovery.jpg`
+
+Read-only database checks confirmed totals still **25 public / 33 private
+recipes and 30 private collections**. Original draft revision **17**, exact
+commentary, one image, published recipe v2 and **31 collection memberships**
+were unchanged. No account linking/deletion, visibility changes or uploads.
+
+### Validation, review and next order
+
+With `SQLX_OFFLINE=true` and the existing integration target cache:
+
+```sh
+cargo test --features server load_re -- --test-threads=8
+just ci
+```
+
+Focused filter: **10 passed, 0 failed** (includes the component tests, two page
+contracts and unrelated substring matches). Full CI on `fb884ad`: **exit 0;
+849 passed, 0 failed, 12 ignored**, including all five new tests, native/WASM
+checks, Clippy, formatting and repository policy gates. Eight existing allowed
+audit warnings remain; ignored search/storage integration checks were not
+freshly run. Logs: `/tmp/noms-020-load-recovery-tests.log` and
+`/tmp/noms-020-workspace-recovery-ci.log`.
+
+Explicit second-pass self-review: **PASS for this scoped fix**, including complete
+diff, stable pending recovery branches, live resource guards, API/authorization
+boundaries, truthful source-vs-runtime evidence and browser recovery. No blocking
+or should-fix finding remains in changed code. No independent-agent review was
+performed. One cohesive shared-retry/integration behavior commit and a separate
+acceptance-documentation commit; both fast-forward into the existing design
+branch. User-owned generated CSS retains SHA-256
+`63fb925365998338ce8dec1e725c097e5648f820c9674767880e910db80d7e46`.
+
+**Next:** public-profile load recovery and populated recipe/collection pagination.
+Source review still finds raw profile/recipe/collection load errors, no retry
+actions and incomplete pending/failed-offset guards. Username/route replacement
+also needs runtime verification; no new privacy failure is inferred from source
+alone. Settings/account and recipe-detail action failures remain later checks.
+Post-success focus placement, full screen-reader/device acceptance, pixel-level
+exports and final whole-app review remain open. Dark-mode redesign remains
+deferred. This slice's rollback is `fb884ad`; no fixture cleanup is needed.
