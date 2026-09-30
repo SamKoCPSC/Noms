@@ -874,6 +874,18 @@ fn SearchResults(props: SearchResultsProps) -> Element {
         props.resource.read().clone()
     };
     let mut resource = props.resource;
+    let pagination = match &props.request {
+        ActiveSearchRequest::All(_) => None,
+        ActiveSearchRequest::Recipes(value) => Some((value.page, value.page_size)),
+        ActiveSearchRequest::Collections(value) => Some((value.page, value.page_size)),
+        ActiveSearchRequest::Users(value) => Some((value.page, value.page_size)),
+    };
+    let total = match &result {
+        Some(Some(Ok(LoadedSearch::Recipes(response)))) => response.total_count,
+        Some(Some(Ok(LoadedSearch::Collections(response)))) => response.total_count,
+        Some(Some(Ok(LoadedSearch::Users(response)))) => response.total_count,
+        _ => 0,
+    };
     rsx! {
         section { class: if matches!(props.request, ActiveSearchRequest::All(_)) { "search-results search-results--all" } else { "search-results" }, aria_live: "polite",
             match result {
@@ -887,17 +899,18 @@ fn SearchResults(props: SearchResultsProps) -> Element {
                 },
                 Some(None) => rsx! {},
                 Some(Some(Err(_))) => rsx! { SearchErrorState { onretry: move |_| resource.restart() } },
-                Some(Some(Ok(loaded))) => render_loaded_results(loaded, &props.request, props.onpage),
+                Some(Some(Ok(loaded))) => render_loaded_results(loaded, &props.request),
+            }
+            // Keep the same controls mounted while replacing cards with loading
+            // or error feedback, so keyboard pagination does not lose focus.
+            if let Some((page, page_size)) = pagination {
+                Pagination { page, page_size, total, pending, onchange: props.onpage }
             }
         }
     }
 }
 
-fn render_loaded_results(
-    loaded: LoadedSearch,
-    request: &ActiveSearchRequest,
-    onpage: EventHandler<u32>,
-) -> Element {
+fn render_loaded_results(loaded: LoadedSearch, request: &ActiveSearchRequest) -> Element {
     match loaded {
         LoadedSearch::All(response) => rsx! {
             GroupedSection { title: "Recipes", target: scoped_search_route(request, SearchScope::Recipes), count: response.recipe_total_count, body: rsx! { div { class: "recipe-grid search-recipe-grid", for result in response.recipes { RecipeCard { key: "{result.recipe.id}", recipe: result.recipe, framed: true } } } } }
@@ -906,43 +919,25 @@ fn render_loaded_results(
             if response.recipe_total_count + response.collection_total_count + response.user_total_count == 0 { NoResults { blank: request.text().is_empty() } }
         },
         LoadedSearch::Recipes(response) => {
-            let page = request.page();
-            let page_size = match request {
-                ActiveSearchRequest::Recipes(value) => value.page_size,
-                _ => 20,
-            };
             rsx! {
                 RecipeFacetSummary { facets: response.facets.clone() }
                 div { class: "results-heading", h2 { "Recipes" } span { "{response.total_count} found" } }
                 if response.results.is_empty() { NoResults { blank: request.text().is_empty() } }
                 else { div { class: "recipe-grid search-recipe-grid", for result in response.results { RecipeCard { key: "{result.recipe.id}", recipe: result.recipe, framed: true } } } }
-                Pagination { page, page_size, total: response.total_count, onchange: onpage }
             }
         }
         LoadedSearch::Collections(response) => {
-            let page = request.page();
-            let page_size = match request {
-                ActiveSearchRequest::Collections(value) => value.page_size,
-                _ => 20,
-            };
             rsx! {
                 div { class: "results-heading", h2 { "Collections" } span { "{response.total_count} found" } }
                 if response.results.is_empty() { NoResults { blank: request.text().is_empty() } }
                 else { div { class: "search-card-grid", for result in response.results { CollectionResultCard { key: "{result.collection.id}", result } } } }
-                Pagination { page, page_size, total: response.total_count, onchange: onpage }
             }
         }
         LoadedSearch::Users(response) => {
-            let page = request.page();
-            let page_size = match request {
-                ActiveSearchRequest::Users(value) => value.page_size,
-                _ => 20,
-            };
             rsx! {
                 div { class: "results-heading", h2 { "Cooks" } span { "{response.total_count} found" } }
                 if response.results.is_empty() { NoResults { blank: request.text().is_empty() } }
                 else { div { class: "search-card-grid", for result in response.results { UserResultCard { key: "{result.user.id}", result } } } }
-                Pagination { page, page_size, total: response.total_count, onchange: onpage }
             }
         }
     }
@@ -1066,19 +1061,25 @@ struct PaginationProps {
     page: u32,
     page_size: u32,
     total: i64,
+    pending: bool,
     onchange: EventHandler<u32>,
 }
 
 #[component]
 fn Pagination(props: PaginationProps) -> Element {
     let has_next = i64::from(props.page) * i64::from(props.page_size) < props.total;
-    if props.page == 1 && !has_next {
-        return rsx! {};
-    }
+    let previous_disabled = props.pending || props.page <= 1;
+    let next_disabled = props.pending || !has_next;
     rsx! { nav { class: "search-pagination", aria_label: "Search result pages",
-        button { class: "btn btn-secondary", disabled: props.page <= 1, onclick: move |_| props.onchange.call(props.page.saturating_sub(1).max(1)), "Previous" }
+        hidden: !props.pending && props.page == 1 && !has_next,
+        aria_busy: props.pending,
+        button { class: "btn btn-secondary", aria_disabled: previous_disabled, onclick: move |_| {
+            if !previous_disabled { props.onchange.call(props.page.saturating_sub(1).max(1)); }
+        }, "Previous" }
         span { "Page {props.page}" }
-        button { class: "btn btn-secondary", disabled: !has_next, onclick: move |_| props.onchange.call(props.page + 1), "Next" }
+        button { class: "btn btn-secondary", aria_disabled: next_disabled, onclick: move |_| {
+            if !next_disabled { props.onchange.call(props.page + 1); }
+        }, "Next" }
     } }
 }
 
@@ -1465,6 +1466,55 @@ mod tests {
     use super::*;
     use crate::search_url::SearchRouteQuery;
     use crate::Route;
+
+    #[component]
+    fn PaginationTestRoot(page: u32, total: i64, pending: bool) -> Element {
+        rsx! { Pagination { page, page_size: 20, total, pending, onchange: move |_| {} } }
+    }
+
+    #[test]
+    fn pagination_keeps_focusable_controls_during_loading_and_at_the_end() {
+        for (page, total, pending) in [(1, 30, true), (2, 30, false), (1, 0, false)] {
+            let mut dom = VirtualDom::new_with_props(
+                PaginationTestRoot,
+                PaginationTestRootProps {
+                    page,
+                    total,
+                    pending,
+                },
+            );
+            dom.rebuild(&mut dioxus_core::NoOpMutations);
+            let html = dioxus_ssr::render(&dom);
+            assert_eq!(html.matches("<button").count(), 2, "{html}");
+            assert!(!html.contains(" disabled"), "{html}");
+            assert!(html.contains("aria-disabled=true"), "{html}");
+            assert!(html.contains(&format!("Page {page}")), "{html}");
+        }
+    }
+
+    #[test]
+    fn pagination_is_outside_search_loading_and_error_branches() {
+        let source = include_str!("search.rs")
+            .split("mod tests {")
+            .next()
+            .unwrap();
+        let results = source
+            .split("fn SearchResults(")
+            .nth(1)
+            .unwrap()
+            .split("fn render_loaded_results(")
+            .next()
+            .unwrap();
+        assert!(results.contains("Pagination {"));
+        let render = source
+            .split("fn render_loaded_results(")
+            .nth(1)
+            .unwrap()
+            .split("struct GroupedSectionProps")
+            .next()
+            .unwrap();
+        assert!(!render.contains("Pagination {"));
+    }
 
     #[test]
     fn search_route_preserves_the_complete_query_for_canonical_parsing() {

@@ -82,6 +82,8 @@
 .search-page .search-state-card { background: var(--neumo-surface); box-shadow: var(--elevation-raised); padding: 36px 24px; }
 .search-page .search-state-card .btn { margin-top: 18px; }
 .search-page .search-pagination { flex-wrap: wrap; }
+.search-page .search-pagination[hidden] { display: none; }
+.search-page .search-pagination button[aria-disabled="true"] { opacity: .5; cursor: not-allowed; transform: none; }
 .search-page .search-pending { grid-column: 1 / -1; }
 .search-page .search-loading { justify-content: flex-start; padding: 10px 0 24px; }
 .search-page .search-skeleton-card { padding: 16px; border-radius: 24px; background: var(--neumo-surface); box-shadow: var(--elevation-raised); }
