@@ -2350,3 +2350,135 @@ alone. Settings/account and recipe-detail action failures remain later checks.
 Post-success focus placement, full screen-reader/device acceptance, pixel-level
 exports and final whole-app review remain open. Dark-mode redesign remains
 deferred. This slice's rollback is `fb884ad`; no fixture cleanup is needed.
+
+## Public-profile recovery and dense pagination — 2026-09-30
+
+Continued checkpoint 8 in `codex/NOMS-020-checkpoint-8`, fast-forwarding into
+the existing design worktree and rebuilding only its existing loopback deployment
+at `http://127.0.0.1:32768` (Compose project `noms-5063d4a16468023f`).
+Implementation-loop tests-first workflow and explicit second-pass self-review;
+no new deployment, push or independent-agent review.
+
+### Fixtures, reproduced defect and implementation
+
+User explicitly approved additional local test data. Commit `4bf0637` adds
+`scripts/dev-fixtures/noms-020-public-profile.sql`: transactional, insert-only,
+idempotent data under namespace `NOMS020 CP8 public profile 2026-09-30`.
+Verified the exact Postgres container's development label before insertion.
+New `cp8profile` has no OAuth identity and is clearly labelled synthetic. Its
+27 recipes and 27 collections each contain **25 public, one private and one
+unlisted** entry, with deterministic IDs. Initial seed and rerun both succeeded;
+no existing content or visibility was changed.
+
+Browser reproduced a failed second recipe page hiding all 12 loaded cards,
+exposing technical error text and providing no Retry. Commit `147b27f` replaces
+raw errors with safe header/section feedback and independently guarded section
+state. Requests claim their offset/generation synchronously; failures retain
+cards and retry the same offset. Stale/duplicate completions and pending/terminal
+extra actions are ignored. Controls remain mounted and focusable across loaded,
+pending, failure and completion states. A keyed fragment replaces all profile
+hooks/tasks when the requested username changes. No API/auth/backend changes.
+
+Five new tests cover offset/retry transitions, pending/terminal/overflow guards,
+stale responses, SSR feedback/control semantics and actual Dioxus keyed-scope
+reconciliation. The lifecycle test substitutes a state probe for the loader;
+it proves same-username preservation and A → B → A remounting, not network API
+behavior. Tests were added before implementation and initially failed because
+the new helpers were absent.
+
+Narrow-screen browser checking found status text and the button competing in
+the shared horizontal `.load-more` row. A new SSR class assertion failed first;
+`5c22c33` then adds profile-scoped stacked feedback/button layout. Shared Explore
+styles are unchanged.
+
+### Rebuilt browser acceptance
+
+All failure injections intercepted read requests before server handling.
+
+- **Both public sections:** independently loaded **12 → 24 → 25 unique links**.
+  Second-page failure retained 12 cards and the other section's content.
+  Retry resumed the failed offset without gaps or duplicates. Actual Enter
+  activation retained focus through pending, repeated failure, recovery and
+  terminal completion. Forced extra pending/terminal clicks made **0 extra
+  requests**. Recipe failure did not disturb 12 collections; collection failure
+  did not disturb 25 recipes.
+- **Initial section failures:** failed both initial section reads, producing two
+  safe alerts and independent Retry controls. Recipe Retry restored 12 cards
+  while Collections remained failed; its own Retry then restored 12 collections.
+  Recipe focus became Load more recipes on successful recovery.
+- **Header failure:** Profile unavailable used generic copy, Retry profile and
+  Browse public recipes. Enter Retry showed Trying again…/Retrying… without
+  simultaneously announcing an alert. One pending request, **0 extra requests**;
+  repeated failure retained Retry profile focus. Success restored header and
+  both 12-card sections. Header retry is replaced after success; intentional
+  post-success focus transfer remains unimplemented and not accepted here.
+- **Delayed route replacement:** paused profile A's second recipe page, navigated
+  through Explore to `cp8catalog-01`, then released A's old request. B retained
+  its own heading, one recipe, zero collections and zero alerts, with no A cards.
+  Returning via Explore to A started at 12 recipes/12 collections, not its old
+  offset. One over-specific heading wait was corrected using fresh DOM evidence
+  (`CP8Catalog Cook 01 – Synthetic`). Browser evidence is route-away/re-entry;
+  direct same-component username replacement is covered by the keyed-scope test.
+- **Public-only visibility:** signed-out dense profile reported **25 recipes
+  shared publicly**, rendered 25 recipes/25 collections, and excluded fixture
+  names 26/27 (private/unlisted). Private-only `user-332d` showed zero public
+  recipes/collections and both empty states. No fresh signed-in non-owner profile
+  flow was performed in this slice; earlier non-owner checks remain historical.
+- **Missing profile:** unique nonexistent username used the same safe unavailable
+  presentation; retry remained unavailable and Browse public recipes reached
+  Explore. No raw server error or private content rendered.
+- **320px geometry:** `innerWidth=320`, document width 305px and no horizontal
+  overflow. Loaded, terminal and retained-card failure controls were **44px
+  high**, inside both viewport edges, with feedback above the button. This is
+  sampled recovery/paging geometry, not complete mobile/tablet or real-touch
+  acceptance.
+
+Normal desktop screenshot saved and visually inspected:
+`/tmp/noms-020-public-profile-retained-cards.jpg` (12 existing recipe cards and
+safe retry feedback). Temporary interception and device emulation were cleared.
+
+Read-only database verification: **50 public / 34 private / one unlisted recipes;
+25 public / 31 private / one unlisted collections; 28 users**. Original private
+recipe still has v1/v2; original draft revision **17**, exact commentary
+`Validation fixture only; keep private.`, one image and **31 collection
+memberships** remained unchanged. Synthetic fixtures remain local for later
+acceptance; no cleanup, account linking/deletion or upload performed.
+
+### Validation and review
+
+With `SQLX_OFFLINE=true` and the existing integration target cache:
+
+```sh
+cargo test --features server user_profile -- --test-threads=8
+just ci
+```
+
+Focused profile filter: **15 passed, 0 failed**, including eight page-local tests
+and seven matching auth/DB tests. Narrow-layout SSR red/green evidence is in
+`/tmp/noms-020-profile-layout-red.log` and
+`/tmp/noms-020-profile-layout-tests.log`. Earlier recovery evidence:
+`/tmp/noms-020-profile-recovery-red.log` and
+`/tmp/noms-020-profile-recovery-tests.log`.
+
+Final full CI on `5c22c33`: **exit 0; 854 passed, 0 failed, 12 ignored**, plus
+native/WASM checks, Clippy, formatting and policy gates. Initial final run hit
+a read-only Cargo advisory lock; rerunning with filesystem access passed.
+Eight existing allowed audit warnings remain; ignored search/storage integration
+checks were not freshly run. Final log:
+`/tmp/noms-020-public-profile-final-ci.log`.
+
+Explicit second-pass self-review **PASS for this scope**: checked complete ordered
+diff, fixtures, request/offset ownership, key reconciliation, stable controls,
+route-owned CSS, tests and raw runtime outcomes. No blocking or should-fix issue
+remains in changed code. No independent-agent review performed. Ordered commits:
+`4bf0637` (fixture), `147b27f` (state/recovery), `5c22c33` (narrow layout), followed
+by this acceptance documentation. User-owned generated CSS retains SHA-256
+`63fb925365998338ce8dec1e725c097e5648f820c9674767880e910db80d7e46`.
+
+**Next:** Settings/account load/save failure presentation, then recipe-detail
+action failures and remaining cross-route/accessibility acceptance before
+whole-app review. Full screen-reader/device checks, post-success header/empty
+focus placement, post-commit lost-response handling and exported-image pixel
+checks remain open. Dark-mode redesign remains deferred. Reverting the three
+code/fixture commits restores this slice; inserted fixture data is not removed
+by a Git revert and must not be mistaken for production content.
