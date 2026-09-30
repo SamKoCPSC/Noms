@@ -6,7 +6,8 @@ use uuid::Uuid;
 
 use crate::auth::context::use_auth;
 use crate::components::base::{
-    Button, ButtonVariant, Card, EmptyState, LoadingSpinner, SettingsTab, SettingsTabs, SharedModal,
+    Button, ButtonVariant, Card, EmptyState, LoadRecovery, LoadingSpinner, SettingsTab,
+    SettingsTabs, SharedModal,
 };
 use crate::components::AuthRequired;
 
@@ -118,8 +119,9 @@ pub async fn unlink_account(account_id: Uuid) -> Result<(), ServerFnError> {
 pub fn SettingsAccounts() -> Element {
     let _auth = use_auth();
 
-    // Resource returns Option<Vec<LinkedAccount>> (None if server function errored)
-    let mut accounts = use_resource(move || async move { get_linked_accounts().await.ok() });
+    // Preserve failure while retrying so the focused recovery control remains
+    // mounted. Subscribe to state explicitly for immediate pending feedback.
+    let mut accounts = use_resource(move || get_linked_accounts());
 
     let mut unlinking_id = use_signal(|| Option::<Uuid>::None);
     let mut error = use_signal(|| Option::<String>::None);
@@ -264,8 +266,12 @@ pub fn SettingsAccounts() -> Element {
     };
 
     // Extract data from resource before rendering to avoid borrow issues in rsx!
-    let is_pending = accounts.pending();
-    let accounts_data: Option<Vec<LinkedAccount>> = accounts.read().clone().flatten();
+    let is_pending = *accounts.state().read() == UseResourceState::Pending;
+    let accounts_result = accounts.read().clone();
+    let accounts_data = accounts_result
+        .as_ref()
+        .and_then(|result| result.as_ref().ok())
+        .cloned();
 
     // Determine which providers are already linked
     let linked_providers: std::collections::HashSet<String> = accounts_data
@@ -274,13 +280,15 @@ pub fn SettingsAccounts() -> Element {
         .unwrap_or_default();
 
     // Build the main content
-    let content = if is_pending {
+    let content = if is_pending && !matches!(accounts_result, Some(Err(_))) {
         rsx! {
             div {
+                role: "status",
                 display: "flex",
                 justify_content: "center",
                 padding: "var(--space-2xl)",
                 LoadingSpinner {}
+                span { "Loading linked accounts…" }
             }
         }
     } else if let Some(accs) = accounts_data {
@@ -403,11 +411,12 @@ pub fn SettingsAccounts() -> Element {
             }
         }
     } else {
-        // Fetch completed but returned None (error)
         rsx! {
-            div { class: "user-feedback user-feedback--error", role: "alert",
-                p { "Failed to load linked accounts." }
-                Button { variant: ButtonVariant::Secondary, onclick: move |_| accounts.restart(), "Try again" }
+            LoadRecovery {
+                pending: is_pending,
+                message: "Your linked accounts couldn’t be loaded. Please try again.",
+                retry_label: "Retry linked accounts",
+                onretry: move |_| { if !accounts.pending() { accounts.restart(); } },
             }
         }
     };
