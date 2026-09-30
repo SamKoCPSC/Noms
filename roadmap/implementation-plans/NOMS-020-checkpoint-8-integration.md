@@ -2641,3 +2641,141 @@ runtime/privacy failures. Global auth-bootstrap load failure, successful usernam
 replacement, post-commit lost-response/partial-save handling, screen-reader,
 real-device and complete per-page accessibility checks remain open. No complete
 Settings-page or whole-checkpoint sign-off; dark-mode redesign remains deferred.
+
+## Recipe mutation recovery — 2026-09-30
+
+### Scope and environment
+
+Acceptance for recipe-detail **visibility save, Fork and Restore**: retained
+selection/content on failure, safe actionable feedback, guarded pending/retry
+controls, focus continuity, successful local mutations and private-page guest
+gating. History read/comparison recovery and Delete are not accepted here.
+
+Used existing task branch `codex/NOMS-020-checkpoint-8` at
+`/home/samko/GitRepos/Noms/.worktrees/NOMS-020-checkpoint-8`, and fast-forwarded
+the existing design branch for browser testing. No new branch/worktree was
+created: the user’s established integration workflow is retained.
+
+The app at `http://127.0.0.1:32768` was a **new** local Compose instance,
+`noms-c799915fcf93e034`, mounted from the design worktree. Its database was empty
+before the normal mock-owner login. Previous evidence belongs to the stopped
+`noms-5063d4a16468023f` instance, not this database; prior fixtures were not
+recreated, deleted or modified. Verified the current Postgres container’s
+`com.noms.dev-environment=true` label before test writes.
+
+Added approved, labelled synthetic private recipe
+`1b2dcf65-f1a0-4971-7d17-8de25203500b` under this instance’s mock owner
+`6b1c56b4-945d-44d5-9f1b-eeb9525b8519` (`user-e13c`). Insert-only transactional
+seed `scripts/dev-fixtures/noms-020-recipe-actions.sql` requires an explicit
+existing owner ID. Applied twice: one recipe, two immutable snapshots, no
+duplicate rows. No account creation is performed by the script.
+
+### Reproduced issues and changes
+
+Baseline pre-server interception reproduced raw transport errors in all three
+actions, lost Save visibility focus, visibility selection resetting from
+Unlisted to Private on failure, and Restore with no pending feedback/guard.
+
+`bde5b52` fixes this scoped mutation behavior:
+
+- Visibility synchronization observes recipe-result changes, not save-pending
+  completion. Failed selections remain editable and retryable. Success uses
+  the API’s authoritative recipe without a loading-page remount/refetch.
+- Save/Restore share a local stable, focusable 44px control with `aria-disabled`,
+  `aria-busy` and pending status. UI and live handler guards block repeated
+  requests. One pending Restore also blocks other versions’ Restore actions.
+- Fork retains the existing action menu and its normal trigger-focus return;
+  pending status and an alert with a Dashboard-drafts link remain visible after
+  the menu closes. Restore alerts are scoped to the attempted history row.
+- Unknown server/transport failures never render internal error text. Copy
+  says **could not confirm**, with check-drafts/reload guidance before retry,
+  because a missing response cannot prove that a write did not commit.
+  Known unauthenticated errors advise signing in in another tab.
+
+### Browser evidence on the final build
+
+Fresh reload after the existing app-container restart; real requests observed
+with per-tab CDP interception, no injected application calls or DOM mutations.
+
+- **Visibility:** one held request; Enter/Space while pending produced zero
+  additional requests. Failed request retained Unlisted, title/history and
+  focused Save visibility; keyboard retry issued one request and failed safely
+  again. 320px viewport: document/scroll width 305px, button 44px high and fully
+  inside the viewport. Temporarily set only this synthetic recipe to Unlisted
+  in the DB to test a real UI save **back to Private**: one request, authoritative
+  private badge/select, success status and focused Save visibility remained;
+  completed/unchanged activation issued zero requests. No recipe made public.
+- **Fork:** one held request, named pending status and unavailable menu action.
+  Reopening the menu and pointer-activating the pending item produced zero
+  extra requests. Failure gave safe alert/check-drafts link and returned focus
+  to Recipe actions. Retry issued one request. A later successful real fork
+  opened draft `ef64122d-ec6b-4494-92a8-f997178584bd` in the editor with source
+  attribution and Private publishing selection; no source recipe mutation.
+- **Restore:** one held request, stable focused button/status, zero duplicate
+  requests from Enter/Space, then safe alert beside v1 and retryable Restore.
+  320px geometry: document/scroll width 305px and 44px-high control. Successful
+  retry appended v3 from v1, preserving old history. A separately loaded stale
+  v2 tab then received real conflict feedback without appending a version.
+  With v3 loaded, holding a v2 Restore blocked another version’s Restore too;
+  zero additional requests, failure alert on v2 only. A subsequent successful
+  v2 restore appended v4, returning the fixture’s content to its original v2
+  snapshot. Success retains the existing full-page reload behavior; no
+  post-success Restore-focus continuity is claimed.
+- **Guest:** normal sign-out and fresh private-recipe reload rendered Recipe
+  not found, no fixture title, history rows, visibility control or recipe menu.
+  Expired-session mutation copy has unit coverage, not a browser session-expiry
+  walkthrough. Public/non-owner mutation presentation was not re-audited here.
+
+Captured and visually inspected desktop Restore failure:
+`/tmp/noms-020-recipe-restore-recovery.jpg`. Additional evidence:
+`/tmp/noms-020-recipe-visibility-recovery-mobile.jpg`,
+`/tmp/noms-020-recipe-visibility-success.jpg`,
+`/tmp/noms-020-recipe-fork-success.jpg`. Temporary interception and device
+overrides cleared; agent-created tabs closed and mock owner signed out.
+
+Final current-instance DB: **one user, one private recipe, four versions, one
+owner-only fork draft at revision 0, zero collections**. The draft references
+source v4 and has no published recipe ID. Snapshot equality checks confirmed
+v3=v1 and v4=v2. No deletion, real content modification or old-instance writes.
+User-owned generated CSS SHA-256 remains
+`63fb925365998338ce8dec1e725c097e5648f820c9674767880e910db80d7e46`.
+
+### Validation and review
+
+Tests first: focused red log records missing planned helper/control definitions
+before implementation. Six new tests cover safe/uncertain-outcome and session
+copy, rendered focusable states, actual event-handler pending/unavailable
+guards, visibility-effect subscription and live handler/row-local contracts.
+
+With `SQLX_OFFLINE=true` and `CARGO_TARGET_DIR` set to the existing integration
+worktree’s target cache:
+
+```sh
+cargo test --features server pages::recipe_detail -- --test-threads=8
+just ci
+```
+
+Focused recipe-detail tests: **38 passed, 0 failed**. Final `just ci` on
+`bde5b52`: **exit 0; 866 passed, 0 failed, 12 ignored**, including native/WASM
+checks, Clippy, formatting and policy gates. Eight existing allowed audit
+warnings remain; ignored integration checks were not freshly exercised.
+Logs: `/tmp/noms-020-recipe-mutations-red.log`,
+`/tmp/noms-020-recipe-mutations-tests.log`,
+`/tmp/noms-020-recipe-mutations-ci.log`.
+
+Explicit second-pass self-review **PASS for this slice**: complete ordered diff,
+test/event evidence, safe error copy, pending guards, unchanged API authorization,
+stable focus, isolated restore feedback and synthetic-only data changes. No
+independent-agent review claimed. No blocking/should-fix finding remains in the
+changed scope. Commit sequence: `823a4f2` fixture → `bde5b52` behavior/tests →
+this acceptance documentation. Prior scoped baseline: `c7d597e`; integration
+fast-forward only, no push or new deployment.
+
+**Next:** recipe-detail initial history/lineage and older-page/difference load
+recovery, then remaining Settings mutations/global-auth recovery and broader
+cross-route failure/permission/accessibility acceptance. Unchanged Delete still
+has raw error presentation and no live pending guard; no delete confirmation or
+request was attempted. Post-commit lost-response/idempotency, navigation-failure
+fallbacks, recipe route replacement, screen-reader and real-device checks remain
+open. This is not full recipe-page or whole-checkpoint acceptance; dark-mode
+redesign remains deferred.
