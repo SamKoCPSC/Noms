@@ -1949,3 +1949,127 @@ accessibility acceptance, public/dense pagination, rectangular crop resizing,
 device/touch interaction, actual screen-reader testing and whole-app sign-off.
 Pending avatar retry data is deliberately page-local, not persisted across
 reload/navigation. Dark-mode redesign remains deferred.
+
+## Sharing, draft action failures and rectangular crop acceptance — 2026-09-30
+
+### Scope and implementation
+
+Continued in the existing isolated `codex/NOMS-020-checkpoint-8` worktree from
+`75b9967`. Used the existing mock/local deployment at
+`http://127.0.0.1:32768`, not a new deployment. The owner session had expired;
+normal mock Google sign-in restored the existing `testuser` account. No new
+account or fixture was created.
+
+Acceptance criteria: readable sharing-preview/update and publish/discard
+failure feedback; retained local entries; usable recovery controls; no new
+competing draft action while a write is pending; rectangular crop mouse
+resizing with bounds and history; private fixture restoration.
+
+Browser testing found **Publish Changes remained enabled during a pending
+discard**. Fix **`6a434ee` — prevent competing recipe draft actions during
+discard** introduces one shared write-in-progress predicate for publication,
+manual draft saving and discard. Action handlers recheck it synchronously,
+controls disable consistently, and both initial and delayed autosave guards
+observe discard. Manual save/cancel/discard also respect pending step-image
+uploads. This does not change server authorization, publication semantics,
+discard semantics or revision checks, and does not add cancellation of requests
+already in flight before a user action.
+
+Two regressions were added first: all eight pending-write flag combinations
+and source-boundary checks for the action/autosave guards and publication
+control. The first test run failed to compile because the new helper did not
+exist. Tests passed after implementation. Source assertions supplement, not
+replace, the browser checks below.
+
+### Browser acceptance and fixture safety
+
+Sharing-update, publication and discard failures were intercepted **before
+the target request reached the server**. Normal private detail/draft saves
+were allowed. No visibility change, publication or deletion committed.
+
+- **Sharing preview:** selecting Unlisted locally and failing its preview
+  request displayed “Could not preview sharing…” with retry guidance. Selecting
+  Private and Unlisted again recovered the preview, cleared the alert and
+  correctly reported that all 31 private recipes would be hidden from visitors.
+  This selection alone did not save sharing settings.
+- **Sharing update:** unchanged collection details saved, then the intercepted
+  sharing update failed. The alert accurately distinguished saved details and
+  location from sharing that could not be updated. Save changes became usable
+  again. Returning the selection to Private and saving returned to detail.
+  This checks pre-server failure, not an ambiguous response lost after a
+  sharing change committed.
+- **Publish failure/retry:** pre-publication draft refresh/save completed,
+  but each publication request was blocked. The editor retained original
+  notes and displayed the cautious “Could not confirm publication…” copy.
+  Another publication attempt was possible after failure and was also blocked.
+  On the rebuilt code, pending publication disabled discard/cancel and another
+  actual click on Publishing… produced zero additional publication requests.
+- **Discard failure/retry:** blocked discard retained the draft and entries,
+  displayed “Could not confirm draft removal…” and restored its control. A
+  second blocked attempt was possible. Before the fix, publication was still
+  enabled while this request was paused; after rebuild it was disabled along
+  with Cancel and manual saving. Additional actual clicks on publish, discard
+  and cancel plus a temporary notes edit produced **zero additional write
+  requests during the 3-second pending interval**, beyond the 2-second autosave
+  debounce. Failing the paused request released the guard; restoring original
+  notes and manual saving reached Saved with zero alerts.
+- **Rectangular crop:** staged repository `assets/brand/page-icons/editor-v1.png`
+  in the recipe image picker, without uploading it. On the 16:9 rectangle,
+  each edge separately changed the crop from 80% to approximately 72%. The
+  rectangle retained its aspect ratio. Undo restored 80% after each gesture.
+  Right-edge drags beyond the wrapper clamped to 100% and 10%; Undo/Redo
+  restored those states in one history step. A 72% crop screenshot was visually
+  inspected. Cancel restored focus to Choose recipe images; the staged image
+  remained Ready with its original/default edit, so it was removed from the
+  local queue without uploading. The pre-existing saved image was untouched.
+  This proves mouse preview/history behavior, not real touch resizing or
+  pixel-level exported-image correctness.
+
+After reopening the final rebuilt recipe editor, original notes and its one
+saved image remained. Read-only database inspection confirmed:
+
+- Recipe `490fa456-22d9-4f99-83f2-a7721184bcca`: private, latest published
+  version still **2**.
+- Draft `db986e55-2df0-43c4-ba7e-5d272b4d4fee`: retained, revision **17**,
+  exactly `Validation fixture only; keep private.`, one image.
+- Collection `305e078e-e1ae-dd69-a6b1-a4b5baa943e6`: private, original name and
+  description, no parent, all **31 memberships**.
+
+Interception/cache overrides were cleared and the two created tabs closed.
+Normal viewport dimensions were used, without a sizing override. Screenshots
+are local temporary evidence, not tracked release assets:
+
+- `/tmp/noms-020-pending-discard-guard.jpg` — disabled publication during discard.
+- `/tmp/noms-020-rectangular-crop-resize.jpg` — 72% rectangular crop preview.
+
+### Validation and review
+
+With `SQLX_OFFLINE=true` and the integration worktree target directory:
+
+```sh
+cargo test --features server pages::recipe_edit -- --test-threads=8
+just ci
+```
+
+Focused editor tests: **13 passed, 0 failed**. Final full CI on the code committed
+as `6a434ee`: **exit 0; 842 passed, 0 failed, 12 ignored**, with native/WASM
+checks, Clippy, formatting, schema/security policy and dependency audit gates.
+Eight existing audit warnings remain allowed. Raw log:
+`/tmp/noms-020-sharing-discard-ci.log`. Ignored search/storage integration
+checks were not freshly run.
+
+Explicit second-pass self-review: **PASS for this scoped fix and acceptance**.
+Reviewed synchronous claims, disabled controls, delayed autosave checks,
+unchanged revision/authorization boundaries, tests and raw browser/database
+evidence. No independent-agent review was performed. No blocking or should-fix
+finding remains in the changed code. One behavior commit is appropriate for
+the single shared action-exclusion concern; acceptance documentation is a
+separate commit. The fix was fast-forwarded into the design integration branch;
+unrelated generated CSS retained SHA-256
+`63fb925365998338ce8dec1e725c097e5648f820c9674767880e910db80d7e46`.
+
+Checkpoint 8 remains open for public/dense pagination, remaining cross-route
+permission/failure states, per-page phone/tablet and accessibility acceptance,
+real-device touch and screen-reader checks, and final whole-app review.
+Dark-mode redesign remains deferred. Rollback of this behavior slice is
+`6a434ee`; it does not remove the retained fixtures.
