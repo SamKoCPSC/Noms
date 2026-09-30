@@ -7,8 +7,8 @@
 **Tested source:** `74c420035ce29ccbb09817f4325252f56b4c5a80` on `codex/NOMS-020-visual-design-refinement`.
 
 This header and the original review below describe the 2026-09-27 baseline.
-See the appended **2026-09-29 follow-ups**, including **Editor history, avatar
-save and non-owner access**, for current fixes, CI results and remaining gates.
+See the appended **2026-09-29 and 2026-09-30 follow-ups**, including **Editor
+failure recovery fixes**, for current fixes, CI results and remaining gates.
 
 ## Environment and scope
 
@@ -1813,3 +1813,139 @@ pagination and broader per-page accessibility still need acceptance. Native
 text history was browser-tested with Ctrl keys; Cmd mappings have unit-test
 coverage, not a macOS runtime check. Graph real-device touch/long-press and
 actual screen-reader checks remain open. Dark-mode redesign remains deferred.
+
+## Editor failure recovery fixes — 2026-09-30
+
+### Scoped implementation
+
+Continued in the existing `codex/NOMS-020-checkpoint-8` acceptance worktree,
+based on `6d2b946`, and fast-forwarded the following four tested fixes into
+`codex/NOMS-020-visual-design-refinement`. The existing mock/local deployment
+at `http://127.0.0.1:32768` was rebuilt rather than replaced. Unrelated
+generated `assets/tailwind.css` remained byte-identical (SHA-256
+`63fb925365998338ce8dec1e725c097e5648f820c9674767880e910db80d7e46`).
+
+- **`2267b40` — recoverable collection editor errors.** A denied editor was
+  browser-confirmed to show a server-function wrapper. Load failures now use
+  a generic raised alert, Try again and Back to Collections. Detail-update,
+  move, sharing-update and sharing-preview errors use readable copy rather
+  than backend details. Partial save messages still distinguish details
+  saved/move failed from details-and-location saved/sharing failed.
+- **`e472420` — retained avatar retry.** A blocked upload was browser-confirmed
+  to lose its selected image/edit and offer no retry. Confirmed source blobs
+  and edits now survive modal close and failures in page-local state, with
+  Retry photo upload. A synchronous claim blocks overlapping upload/removal
+  requests. Pending retry stays focusable with `aria-disabled`; success clears
+  retry data, and a newly confirmed image can replace a failed idle attempt.
+  Error copy is allowlisted; no upload API or ownership rules changed.
+- **`aa76056` — recipe autosave recovery feedback.** Autosave errors are
+  separate from validation/publish errors and clear after a successful
+  current-generation save. Draft-save failures retain entries with actionable
+  feedback. Publish/discard feedback avoids backend details and accounts for
+  an ambiguous lost response instead of claiming the operation could not
+  have committed. Error regions now expose `role="alert"`. Existing revision
+  guards, publication, visibility and discard behavior remain unchanged.
+- **`496a5b5` — shared draft-save recovery.** Second-pass review found that a
+  manual-save failure still used form validation state and could survive a
+  successful background save. Manual and automatic draft saves now share their
+  own error state; successful saving clears that state without clearing
+  validation or publish/discard errors.
+
+New regressions were added before their production helpers and failed to
+compile while those helpers were absent, then passed after implementation.
+Coverage includes collection alert/navigation, partial-save copy, exact avatar
+source/edit retention, request guarding/replacement, safe feedback, and an
+autosave source-boundary regression. Source assertions are not runtime proof;
+the browser failure checks below establish recovery behavior. The manual-save
+source-boundary assertion was strengthened before the fourth fix and failed
+for the expected missing shared state, then passed in the final CI run.
+
+### Browser acceptance
+
+Used only the approved private local fixtures and existing mock accounts.
+Request failures were injected before the target request reached the server.
+No recipe was published, discarded, deleted or made public/unlisted.
+
+- **Avatar:** as `noms020-editor-reviewer` (`@user-62c8`), Edit Photo reopened
+  the existing test avatar without another file picker. A failed upload showed
+  readable feedback and Retry photo upload while retaining its blob and full
+  edit. Retrying did not require reselection or re-editing. While the retry
+  request was paused, focus remained on Uploading photo… with `aria-disabled`;
+  another actual click produced zero additional requests. Releasing the
+  request produced Avatar updated successfully! and removed the retry state.
+  Database inspection retained rotation 25°, scales .9/.85 and both flips.
+  This tests the already-confirmed edit path; a fresh file selection and
+  deliberately invalid image processing were not repeated.
+- **Pointer crop:** dragging the avatar crop changed displayed X/Y from
+  16/−12px to 76/33px (source-image coordinates). Undo restored 16/−12px;
+  Cancel closed the modal and returned focus to Edit Photo. No pointer edits
+  were saved. Rectangular resize handles, touch and pixel-level output
+  correctness are separate checks.
+- **Collection permission:** non-owner editor access showed the generic alert
+  and no private form/data. Try again remained denied; Back to Collections
+  reached that account's empty index. The original `testuser` owner was then
+  restored for the remaining checks and retained as the final session.
+- **Collection load retry:** a forced owner load failure reached the same
+  generic alert. Try again restored the correctly populated form. Initial
+  document-reload interception produced stale IDs; fresh-tab/client-side
+  Edit navigation provided the verified failure/retry evidence.
+- **Collection save:** a temporary description survived a failed update with
+  readable feedback. Restoring the original description and retrying saved
+  successfully and returned to detail. A separately blocked move reported
+  that details had saved while the move failed, and reset Location to top
+  level. Read-only database inspection confirmed the original description,
+  private visibility, no parent and all 31 memberships. Sharing-update and
+  preview failure copy changed in code but was not freshly exercised live;
+  no sharing mutation was performed.
+- **Recipe autosave:** both save attempts failed after temporary notes were
+  entered. The notes remained on the page with the new autosave alert. A
+  subsequent edit autosaved successfully and cleared that alert, rather than
+  leaving an error beside Saved.
+- **Manual draft save:** a forced failure retained local notes and showed
+  “Could not save the draft…” feedback. Retrying after restoring the original
+  notes reached Saved with zero alerts. A final check failed one manual save,
+  then allowed background saving: the temporary notes survived, Saved appeared
+  and the prior error cleared without another manual click. After restoring
+  original notes, read-only database inspection of draft revision 10 contained
+  exactly `Validation fixture only; keep private.` No publication/discard
+  request was performed; their new copy has automated, not fresh live, evidence.
+
+Temporary interception and cache overrides were cleared and all created tabs
+closed. Screenshots (local, not tracked release assets):
+
+- `/tmp/noms-020-avatar-upload-retry.jpg` — retained retry control and image.
+- `/tmp/noms-020-collection-editor-unavailable.jpg` — generic non-owner state.
+
+### Validation, review and remaining gates
+
+With `SQLX_OFFLINE=true` and the integration worktree's target directory:
+
+```sh
+cargo test --features server pages:: -- --test-threads=8
+just ci
+```
+
+The focused page tests passed **209 tests** before the final recovery follow-up.
+Final `just ci` on the code committed as `496a5b5`:
+**exit 0; 840 passed, 0 failed, 12 ignored**. Native/WASM compilation, Clippy,
+formatting, schema/security policy gates and dependency audit passed. The
+first CI attempt caught a collapsible condition, which was corrected. An
+interrupted attempt and a later read-only advisory-cache lock failure were
+not counted as passes; the final run had cache access and completed. Eight
+existing audit warnings remain allowed. Log:
+`/tmp/noms-020-recovery-ci-final.log`. No fresh ignored search or real-storage
+integration run is claimed.
+
+Explicit second-pass self-review: **PASS for this scoped series**. Checked the
+ordered diffs, blob ownership and modal cleanup, synchronous retry guard,
+partial-write copy, separate draft-save/validation feedback, revision guards,
+tests and observed limits. The stale manual-save error finding was fixed and
+browser-rechecked before this verdict. No independent-agent review was
+performed; no blocking or should-fix finding remains in these four changes.
+Rollback is the four commits above; retained fixtures are not removed by rollback.
+
+Checkpoint 8 remains open for wider cross-route failure/permission and
+accessibility acceptance, public/dense pagination, rectangular crop resizing,
+device/touch interaction, actual screen-reader testing and whole-app sign-off.
+Pending avatar retry data is deliberately page-local, not persisted across
+reload/navigation. Dark-mode redesign remains deferred.
