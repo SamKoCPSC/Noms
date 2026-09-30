@@ -132,6 +132,8 @@ const GRAPH_CONTEXT_MENU_HEIGHT_PX: f64 = 360.0;
 const GRAPH_SNAPSHOT_CONTEXT_MENU_HEIGHT_PX: f64 = 460.0;
 const GRAPH_CONTEXT_MENU_MARGIN_PX: f64 = 8.0;
 const GRAPH_SNAPSHOT_FOCUS_ZOOM: f64 = 1.0;
+const GRAPH_READABLE_FIT_THRESHOLD: f64 = 0.7;
+const GRAPH_FOCUS_MARGIN_PX: f64 = 12.0;
 const GRAPH_FRONTIER_CONTROL_GAP_PX: f64 = 12.0;
 const GRAPH_FRONTIER_CONTROL_HALF_WIDTH_PX: f64 = 132.0;
 const GRAPH_FRONTIER_CONTROL_HALF_HEIGHT_PX: f64 = 22.0;
@@ -325,6 +327,67 @@ impl VersionGraphLayout {
             offset_x: viewport.0 / 2.0 - (node.x + GRAPH_NODE_WIDTH_PX / 2.0) * scale,
             offset_y: viewport.1 / 2.0 - (node.y + GRAPH_NODE_HEIGHT_PX / 2.0) * scale,
         }
+    }
+}
+
+fn initial_version_graph_transform(
+    layout: &VersionGraphLayout,
+    current: Option<VersionGraphNodeId>,
+    viewport: (f64, f64),
+) -> VersionGraphTransform {
+    let fit = layout.fit_transform(viewport);
+    if fit.scale >= GRAPH_READABLE_FIT_THRESHOLD {
+        return fit;
+    }
+    current
+        .map(|id| layout.center_transform(id, viewport, GRAPH_SNAPSHOT_FOCUS_ZOOM))
+        .unwrap_or(fit)
+}
+
+fn resize_version_graph_transform(
+    transform: VersionGraphTransform,
+    previous: (f64, f64),
+    next: (f64, f64),
+) -> VersionGraphTransform {
+    if previous.0 <= 0.0 || previous.1 <= 0.0 {
+        return transform;
+    }
+    VersionGraphTransform {
+        scale: transform.scale,
+        offset_x: transform.offset_x + (next.0 - previous.0) / 2.0,
+        offset_y: transform.offset_y + (next.1 - previous.1) / 2.0,
+    }
+}
+
+fn version_graph_node_is_visible(
+    layout: &VersionGraphLayout,
+    id: VersionGraphNodeId,
+    viewport: (f64, f64),
+    transform: VersionGraphTransform,
+) -> bool {
+    let Some(node) = layout.node(id) else {
+        return false;
+    };
+    let left = transform.offset_x + node.x * transform.scale;
+    let top = transform.offset_y + node.y * transform.scale;
+    left >= GRAPH_FOCUS_MARGIN_PX
+        && top >= GRAPH_FOCUS_MARGIN_PX
+        && left + GRAPH_NODE_WIDTH_PX * transform.scale <= viewport.0 - GRAPH_FOCUS_MARGIN_PX
+        && top + GRAPH_NODE_HEIGHT_PX * transform.scale <= viewport.1 - GRAPH_FOCUS_MARGIN_PX
+}
+
+fn visible_version_graph_node_transform(
+    layout: &VersionGraphLayout,
+    id: VersionGraphNodeId,
+    viewport: (f64, f64),
+    transform: VersionGraphTransform,
+) -> VersionGraphTransform {
+    if transform.scale >= GRAPH_READABLE_FIT_THRESHOLD
+        && version_graph_node_is_visible(layout, id, viewport, transform)
+    {
+        transform
+    } else {
+        layout.center_transform(id, viewport, transform.scale.max(GRAPH_SNAPSHOT_FOCUS_ZOOM))
     }
 }
 
@@ -1967,7 +2030,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                         graph_transform.set(layout_for_center.center_transform(
                                             current_snapshot_id,
                                             graph_viewport(),
-                                            graph_transform().scale,
+                                            graph_transform().scale.max(GRAPH_SNAPSHOT_FOCUS_ZOOM),
                                         ));
                                     }
                                 },
@@ -2058,7 +2121,11 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                     let viewport = (rect.size.width, rect.size.height);
                                     if viewport.0 > 0.0 && viewport.1 > 0.0 {
                                         graph_viewport.set(viewport);
-                                        graph_transform.set(layout.fit_transform(viewport));
+                                        graph_transform.set(initial_version_graph_transform(
+                                            &layout,
+                                            current_snapshot_id,
+                                            viewport,
+                                        ));
                                         initial_graph_fit_complete.set(true);
                                     }
                                 }
@@ -2072,12 +2139,21 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                             if let Ok(size) = event.data().get_content_box_size() {
                                 let viewport = (size.width, size.height);
                                 if viewport.0 > 0.0 && viewport.1 > 0.0 {
+                                    let previous_viewport = graph_viewport();
                                     graph_viewport.set(viewport);
                                     if !initial_graph_fit_complete() {
-                                        graph_transform.set(
-                                            layout_for_resize.fit_transform(viewport)
-                                        );
+                                        graph_transform.set(initial_version_graph_transform(
+                                            &layout_for_resize,
+                                            current_snapshot_id,
+                                            viewport,
+                                        ));
                                         initial_graph_fit_complete.set(true);
+                                    } else if previous_viewport != viewport {
+                                        graph_transform.set(resize_version_graph_transform(
+                                            graph_transform(),
+                                            previous_viewport,
+                                            viewport,
+                                        ));
                                     }
                                 }
                             }
@@ -2257,6 +2333,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                 layout_node.x,
                                                 layout_node.y,
                                             );
+                                            let layout_for_keyboard_focus = layout.clone();
                                             rsx! {
                                                 div {
                                                     key: "{node_id.recipe_id}-{node_id.version_number}",
@@ -2264,6 +2341,18 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                     "data-before": (comparison_before() == Some(node_id)).to_string(),
                                                     "data-after": (comparison_after() == Some(node_id)).to_string(),
                                                     style: node_style,
+                                                    onfocus: move |_| {
+                                                        let current = graph_transform();
+                                                        let next = visible_version_graph_node_transform(
+                                                            &layout_for_keyboard_focus,
+                                                            node_id,
+                                                            graph_viewport(),
+                                                            current,
+                                                        );
+                                                        if next != current {
+                                                            graph_transform.set(next);
+                                                        }
+                                                    },
                                                     onkeydown: move |event| {
                                                         let shift_is_pressed =
                                                             event.data().modifiers().shift();
@@ -3141,7 +3230,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                     layout_for_context_center_current.center_transform(
                                                         current_snapshot_id,
                                                         graph_viewport(),
-                                                        graph_transform().scale,
+                                                        graph_transform().scale.max(GRAPH_SNAPSHOT_FOCUS_ZOOM),
                                                     )
                                                 );
                                             }
@@ -4163,6 +4252,79 @@ mod tests {
                 - viewport.1 / 2.0)
                 .abs()
                 < f64::EPSILON
+        );
+    }
+
+    #[test]
+    fn dense_graph_opens_at_a_readable_current_snapshot() {
+        let mut layout = super::build_version_graph_layout(&branched_graph());
+        let current = VersionGraphNodeId {
+            recipe_id: Uuid::from_u128(1),
+            version_number: 2,
+        };
+        let viewport = (1361.0, 518.0);
+        layout.width = 12_848.0;
+
+        let initial = super::initial_version_graph_transform(&layout, Some(current), viewport);
+        assert!(initial.scale >= super::GRAPH_SNAPSHOT_FOCUS_ZOOM);
+        assert!(super::version_graph_node_is_visible(
+            &layout, current, viewport, initial,
+        ));
+        assert!(layout.fit_transform(viewport).scale < 0.2);
+    }
+
+    #[test]
+    fn small_graph_still_opens_fitted() {
+        let layout = super::build_version_graph_layout(&branched_graph());
+        let current = VersionGraphNodeId {
+            recipe_id: Uuid::from_u128(1),
+            version_number: 2,
+        };
+        let viewport = (2000.0, 700.0);
+        assert_eq!(
+            super::initial_version_graph_transform(&layout, Some(current), viewport),
+            layout.fit_transform(viewport),
+        );
+    }
+
+    #[test]
+    fn resizing_preserves_the_graph_point_at_viewport_center() {
+        let old_viewport = (1361.0, 518.0);
+        let new_viewport = (760.0, 620.0);
+        let old = super::VersionGraphTransform {
+            scale: 0.85,
+            offset_x: -320.0,
+            offset_y: 35.0,
+        };
+        let resized = super::resize_version_graph_transform(old, old_viewport, new_viewport);
+        assert_eq!(resized.scale, old.scale);
+        assert_eq!(
+            (old_viewport.0 / 2.0 - old.offset_x) / old.scale,
+            (new_viewport.0 / 2.0 - resized.offset_x) / resized.scale,
+        );
+        assert_eq!(
+            (old_viewport.1 / 2.0 - old.offset_y) / old.scale,
+            (new_viewport.1 / 2.0 - resized.offset_y) / resized.scale,
+        );
+    }
+
+    #[test]
+    fn keyboard_focus_brings_an_offscreen_snapshot_into_view() {
+        let layout = super::build_version_graph_layout(&branched_graph());
+        let target = VersionGraphNodeId {
+            recipe_id: Uuid::from_u128(2),
+            version_number: 2,
+        };
+        let viewport = (900.0, 560.0);
+        let fit = layout.fit_transform(viewport);
+        let focused = super::visible_version_graph_node_transform(&layout, target, viewport, fit);
+        assert!(focused.scale >= super::GRAPH_SNAPSHOT_FOCUS_ZOOM);
+        assert!(super::version_graph_node_is_visible(
+            &layout, target, viewport, focused
+        ));
+        assert_eq!(
+            super::visible_version_graph_node_transform(&layout, target, viewport, focused),
+            focused,
         );
     }
 
