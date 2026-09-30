@@ -245,7 +245,9 @@ fn recipe_action_menu_preserves_existing_workflows() {
     let source = include_str!("../../pages/recipe_detail.rs");
     assert!(source.contains("ActionMenu {"));
     assert!(source.contains("if is_owner"));
-    assert!(source.contains("window.confirm()"));
+    assert!(source.contains("window.confirm_with_message(warning)"));
+    assert!(source.contains("recipe_delete_confirmation(&recipe.title)"));
+    assert!(source.contains("This cannot be undone."));
     assert!(source.contains("AddToCollectionDropdown {"));
     assert!(source.contains("onclick: on_delete"));
     assert!(source.contains("onclick: on_fork"));

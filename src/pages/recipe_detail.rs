@@ -11,13 +11,11 @@ use chrono::{DateTime, Utc};
 use dioxus::prelude::*;
 use std::collections::VecDeque;
 
-#[cfg(target_arch = "wasm32")]
-use crate::api::recipe::delete_recipe;
 use crate::api::recipe::{
-    compare_recipe_versions_api, fork_recipe, get_fork_attribution, get_public_recipe,
-    get_public_recipe_tags_by_id, get_recipe, get_recipe_lineage, get_recipe_owner_username,
-    get_recipe_tags, get_recipe_version_api, get_recipe_versions_api, restore_version,
-    update_recipe_visibility,
+    compare_recipe_versions_api, delete_recipe, fork_recipe, get_fork_attribution,
+    get_public_recipe, get_public_recipe_tags_by_id, get_recipe, get_recipe_lineage,
+    get_recipe_owner_username, get_recipe_tags, get_recipe_version_api, get_recipe_versions_api,
+    restore_version, update_recipe_visibility,
 };
 use crate::auth::context::use_auth;
 use crate::components::base::{
@@ -98,6 +96,7 @@ enum RecipeMutation {
     Fork,
     Visibility,
     Restore,
+    Delete,
 }
 
 fn recipe_mutation_feedback(action: RecipeMutation, error: &ServerFnError) -> &'static str {
@@ -111,6 +110,34 @@ fn recipe_mutation_feedback(action: RecipeMutation, error: &ServerFnError) -> &'
         RecipeMutation::Fork => "Could not confirm the fork. Check your Dashboard drafts before trying again.",
         RecipeMutation::Visibility => "Could not confirm the visibility change. Your selection is kept here; reload this recipe to check its current visibility before trying again.",
         RecipeMutation::Restore => "Could not confirm the restore. Reload this recipe to check its current version before trying again.",
+        RecipeMutation::Delete => "Could not confirm deletion. The recipe may already have been deleted; check your Dashboard in another tab before trying again.",
+    }
+}
+
+fn recipe_delete_confirmation(title: &str) -> String {
+    format!("Permanently delete \"{title}\"? This cannot be undone.")
+}
+
+fn claim_recipe_deletion(mut pending: Signal<bool>, confirmed: bool) -> bool {
+    if !confirmed || *pending.peek() {
+        return false;
+    }
+    // Claim synchronously before spawning, independently of rendered state.
+    pending.set(true);
+    true
+}
+
+#[component]
+fn RecipeDeletionFeedback(pending: bool, error: Option<String>) -> Element {
+    rsx! {
+        if pending {
+            p { role: "status", "Deleting recipe…" }
+        } else if let Some(error) = error {
+            div { class: "recipe-detail__delete-error",
+                p { role: "alert", "{error}" }
+                a { href: "/dashboard", target: "_blank", rel: "noopener", "Check your Dashboard" }
+            }
+        }
     }
 }
 
@@ -2115,9 +2142,7 @@ fn RecipeDetailContents(id: String) -> Element {
     });
 
     // ── Delete state ─────────────────────────────────────────────────────
-    #[allow(unused_mut)]
     let mut is_deleting = use_signal(|| false);
-    #[allow(unused_mut)]
     let mut delete_error = use_signal(|| Option::<String>::None);
 
     // ── Extract resource states ──────────────────────────────────────────
@@ -2256,42 +2281,42 @@ fn RecipeDetailContents(id: String) -> Element {
     };
 
     // ── Delete handler ───────────────────────────────────────────────────
-    // Clone id before the move closure (id was already moved into use_resource closures)
-    #[allow(unused_variables)]
     let id_for_delete = id.clone();
+    #[allow(unused_variables)]
+    let delete_confirmation = recipe.map(|recipe| recipe_delete_confirmation(&recipe.title));
     let on_delete = move |_| {
-        // Clone inside the FnMut closure so it doesn't move out
-        #[allow(unused_variables)]
-        let id_clone = id_for_delete.clone();
+        // Guard before asking: pending activation must not open another prompt.
+        if !is_owner || *is_deleting.peek() {
+            return;
+        }
         #[cfg(target_arch = "wasm32")]
-        {
-            if let Some(window) = web_sys::window() {
-                // Note: web_sys `confirm(msg)` requires the "confirm" feature.
-                // Using no-arg version which shows a generic confirmation dialog.
-                let confirmed = window.confirm().unwrap_or(false);
-                if confirmed {
-                    is_deleting.set(true);
-                    delete_error.set(None);
-                    spawn(async move {
-                        match delete_recipe(id_clone).await {
-                            Ok(()) => {
-                                if let Some(w) = web_sys::window() {
-                                    let _ = w.location().set_href("/dashboard");
-                                }
-                            }
-                            Err(e) => {
-                                let msg = match &e {
-                                    ServerFnError::ServerError { message, .. } => message.clone(),
-                                    _ => e.to_string(),
-                                };
-                                delete_error.set(Some(msg));
-                                is_deleting.set(false);
-                            }
-                        }
-                    });
+        let confirmed = web_sys::window()
+            .zip(delete_confirmation.as_deref())
+            .is_some_and(|(window, warning)| window.confirm_with_message(warning).unwrap_or(false));
+        #[cfg(not(target_arch = "wasm32"))]
+        let confirmed = false;
+        if !claim_recipe_deletion(is_deleting, confirmed) {
+            return;
+        }
+        delete_error.set(None);
+        let recipe_id = id_for_delete.clone();
+        spawn(async move {
+            match delete_recipe(recipe_id).await {
+                Ok(()) =>
+                {
+                    #[cfg(target_arch = "wasm32")]
+                    if let Some(window) = web_sys::window() {
+                        let _ = window.location().set_href("/dashboard");
+                    }
+                }
+                Err(error) => {
+                    delete_error.set(Some(
+                        recipe_mutation_feedback(RecipeMutation::Delete, &error).to_string(),
+                    ));
+                    is_deleting.set(false);
                 }
             }
-        }
+        });
     };
 
     // ── Render: loading ──────────────────────────────────────────────────
@@ -2415,7 +2440,7 @@ fn RecipeDetailContents(id: String) -> Element {
                                     div { class: "account-menu-divider", role: "separator" }
                                     button {
                                         r#type: "button", class: "account-menu-item action-menu-item--danger", role: "menuitem", tabindex: "-1",
-                                        disabled: is_deleting(),
+                                        aria_disabled: is_deleting(), aria_busy: is_deleting(),
                                         onclick: on_delete,
                                         if is_deleting() { "Deleting..." } else { "Delete recipe" }
                                     }
@@ -2546,9 +2571,7 @@ fn RecipeDetailContents(id: String) -> Element {
             }
 
             // ── Delete error (NOT in a card — transient UI element) ──────
-            if let Some(del_err) = delete_error() {
-                div { class: "recipe-detail__delete-error", "{del_err}" }
-            }
+            RecipeDeletionFeedback { pending: is_deleting(), error: delete_error() }
             if is_forking() {
                 p { role: "status", "Creating your fork draft…" }
             }
