@@ -1,6 +1,33 @@
 use super::*;
 
 #[component]
+fn NarrowComparisonTestRoot() -> Element {
+    rsx! {
+        VersionComparisonPanel {
+            title: "Changes in v30",
+            description: "Published differences from v29 to v30.",
+            changes: vec![RecipeVersionChange {
+                path: "/description".into(),
+                op: "replace".into(),
+                old_value: Some("Synthetic history version 29".into()),
+                value: Some("Synthetic history version 30".into()),
+            }],
+        }
+    }
+}
+
+#[test]
+fn comparison_columns_shrink_to_available_width_and_field_headers_wrap() {
+    let mut dom = VirtualDom::new(NarrowComparisonTestRoot);
+    dom.rebuild_in_place();
+    let html = dioxus_ssr::render(&dom);
+    assert!(html.contains("minmax(min(100%, 220px), 1fr)"), "{html}");
+    assert!(html.contains("flex-wrap:wrap"), "{html}");
+    assert!(html.contains("Synthetic history version 29"));
+    assert!(html.contains("Synthetic history version 30"));
+}
+
+#[component]
 fn ReadFeedbackTestRoot(kind: RecipeReadKind, pending: bool, failed: bool) -> Element {
     rsx! { RecipeReadFeedback { kind, pending, failed, onretry: |_| {} } }
 }

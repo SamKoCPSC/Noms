@@ -407,11 +407,12 @@ fn VersionComparisonPanel(
                                     border_radius: "var(--radius-md)",
                                     div {
                                         display: "flex",
+                                        flex_wrap: "wrap",
                                         justify_content: "space-between",
                                         align_items: "baseline",
                                         gap: "var(--space-sm)",
                                         margin_bottom: "var(--space-sm)",
-                                        strong { "{field}" }
+                                        strong { overflow_wrap: "anywhere", "{field}" }
                                         span {
                                             color: operation_color,
                                             background: operation_background,
@@ -424,7 +425,7 @@ fn VersionComparisonPanel(
                                     }
                                     div {
                                         display: "grid",
-                                        grid_template_columns: "repeat(auto-fit, minmax(220px, 1fr))",
+                                        grid_template_columns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
                                         gap: "var(--space-md)",
                                         if !is_added {
                                             div {
