@@ -7,8 +7,8 @@
 **Tested source:** `74c420035ce29ccbb09817f4325252f56b4c5a80` on `codex/NOMS-020-visual-design-refinement`.
 
 This header and the original review below describe the 2026-09-27 baseline.
-See the appended **2026-09-29 follow-ups**, ending with **Search routing and
-sign-in return fixes**, for current fixes, CI results and remaining gates.
+See the appended **2026-09-29 follow-ups**, including **Editor history, avatar
+save and non-owner access**, for current fixes, CI results and remaining gates.
 
 ## Environment and scope
 
@@ -1709,3 +1709,107 @@ pagination, dense collection/cook Search and other dense route states remain
 open; this private fixture does not populate public pages. Physical graph
 touch/long-press and screen-reader testing also remain open. This pass does
 not close all of checkpoint 8 or authorize release.
+
+## Editor history, avatar save and non-owner access — 2026-09-29
+
+### Scope and fixes
+
+Continued the remaining editing acceptance in the existing private local
+deployment, `http://127.0.0.1:32768`, with mock OAuth and local storage services.
+Implementation and tests used `codex/NOMS-020-checkpoint-8`; both scoped fixes
+were fast-forwarded into `codex/NOMS-020-visual-design-refinement` and the
+existing app was restarted. The integration worktree's unrelated generated
+`assets/tailwind.css` was preserved byte-for-byte.
+
+- **`4598435` — scope image history shortcuts to an open editor.** Closed
+  image-editor components remain mounted and were intercepting document
+  Ctrl/Cmd+Z/Y, preventing native recipe-text undo. The listener now leaves
+  those keys alone unless that image editor is open; active image-history
+  shortcuts retain their existing mapping. Two new unit tests cover closed
+  and active shortcut mappings. Before the fix Ctrl+Z did not undo recipe
+  notes with no image dialog open; afterwards text undo and redo worked.
+- **`db9e0a0` — clarify unavailable recipe editor states.** Non-owner editing
+  was correctly denied, but displayed a raw error and recipe identifier.
+  Recipe and draft load errors now share a raised, generic alert with
+  “Recipe editor unavailable” and a correctly labelled Back to Dashboard
+  exit. A new SSR regression covers the copy, alert and destination. No
+  authorization, API or visibility behavior was changed.
+
+Tests were added before each production change, failed with the corresponding
+helper absent, and passed after implementation. These regressions complement,
+not replace, the browser checks below.
+
+### Browser and persisted-state evidence
+
+- **Recipe text history:** the owner opened the private soup recipe editor,
+  appended temporary notes, then used Ctrl+Z and Ctrl+Y to undo/redo. Original
+  notes were restored and the editor reported Saved. No recipe was published
+  or draft discarded in this pass.
+- **Avatar controls:** a dedicated local mock Google subject,
+  `noms020-editor-reviewer` (`@user-62c8`), uploaded a repository test PNG.
+  The ellipse/1:1 avatar editor exposed all ten paired adjustment controls.
+  Crop, X/Y, rotation, width/height, saturation, three channel contrasts and
+  both flips were exercised. Reset restored defaults; active Ctrl+Z/Ctrl+Y
+  and the Undo button restored/reset the complete adjustment state.
+- **Avatar apply/save/reopen:** OK completed processing/upload and showed
+  “Avatar updated successfully!” with Edit Photo/Change Photo controls.
+  Reopening, then reloading the page and reopening, restored crop 80%,
+  displayed X 16px/Y −12px, rotation 25°, width 90%, height 85%, saturation
+  70%, red/green/blue 120/80/110% and both flips pressed. Read-only database
+  inspection confirmed persisted ellipse/1:1 edit metadata and transforms.
+  Cancel returned focus to Edit Photo. Native Bio text undo also worked
+  after closing the modal; the temporary unsaved text was cleared.
+- **Authenticated non-owner access:** the dedicated account could not open
+  the owner's private recipe editor or draft editor; both showed the new
+  generic alert with no recipe content or editable form. Back to Dashboard
+  worked and the new account had no private drafts/library entries.
+  Recipe detail showed Recipe not found; v1 showed Recipe version unavailable;
+  the graph showed Version graph unavailable; the private pagination
+  collection showed Collection not found. No private recipe fields, graph
+  nodes or collection cards were displayed.
+- **Session cleanup:** the original local `testuser` owner was restored;
+  owner editor access was rechecked. The mock reviewer and saved avatar are
+  retained for reproducibility. No deletion, provider change, public sharing
+  or modification to the owner's avatar/profile was performed.
+
+The file-chooser automation took unusually long despite its requested timeout;
+the expired mock session was refreshed before saving. Subsequent checks used
+Edit Photo rather than another picker. The final rebuilt editor UI was verified
+after reload and in a fresh tab; build success alone was not treated as proof.
+Temporary browser cache overrides were cleared and created tabs closed.
+Screenshots are local evidence, not tracked brand/release assets:
+
+- `/tmp/noms-020-avatar-adjustments.jpg` — saved edit reopened after reload.
+- `/tmp/noms-020-editor-unavailable.jpg` — final non-owner editor state.
+
+### Validation and second-pass review
+
+Using `SQLX_OFFLINE=true` and the integration worktree's `CARGO_TARGET_DIR`:
+
+```sh
+cargo test --features server components::base::image_editor_modal::crop_mode_tests
+cargo test --features server pages::recipe_edit::
+just check
+just ci
+```
+
+Focused image-editor tests: **8 passed**. Focused recipe-editor tests:
+**2 passed**. Native/WASM checks passed. Final **`just ci` on `db9e0a0`:
+exit 0; 834 passed, 0 failed, 12 ignored**, including formatting, Clippy,
+schema/security policy checks and dependency audit. Eight existing allowed
+audit warnings remain. Raw log: `/tmp/noms-020-editor-acceptance-ci.log`.
+No fresh ignored search or real-storage integration run is claimed.
+
+An explicit second-pass self-review checked the ordered code diffs, shortcut
+listener lifecycle, preserved active key mapping, generic error privacy,
+unchanged authorization, tests and browser evidence. No independent-agent
+review was performed. No blocking or should-fix issue remains in these two
+scoped fixes; rollback is the two commits above and does not remove fixtures.
+
+This does **not** close checkpoint 8: image-upload failure/retry in the avatar
+caller, pointer crop/transform behavior, remaining editor failure states,
+collection-edit and wider permission/failure presentation, public/dense
+pagination and broader per-page accessibility still need acceptance. Native
+text history was browser-tested with Ctrl keys; Cmd mappings have unit-test
+coverage, not a macOS runtime check. Graph real-device touch/long-press and
+actual screen-reader checks remain open. Dark-mode redesign remains deferred.
