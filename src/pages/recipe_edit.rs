@@ -201,7 +201,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
     let mut load_error = use_signal(|| Option::<String>::None);
     let mut form_error = use_signal(|| Option::<String>::None);
     #[allow(unused_mut)]
-    let mut autosave_error = use_signal(|| Option::<String>::None);
+    let mut draft_save_error = use_signal(|| Option::<String>::None);
     let mut is_discarding = use_signal(|| false);
     let mut draft_id = use_signal(|| Option::<String>::None);
     let mut draft_recipe_id = use_signal(|| Option::<uuid::Uuid>::None);
@@ -333,11 +333,11 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                 Ok(saved) if autosave_generation() == generation => {
                     draft_revision.set(saved.revision);
                     last_saved_editor.set(Some(editor));
-                    autosave_error.set(None);
+                    draft_save_error.set(None);
                 }
                 Ok(_) => {}
                 Err(error) if autosave_generation() == generation => {
-                    autosave_error.set(Some(
+                    draft_save_error.set(Some(
                         recipe_write_feedback(RecipeWriteAction::Autosave, &error).to_string(),
                     ));
                 }
@@ -361,7 +361,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
             }
 
             form_error.set(None);
-            autosave_error.set(None);
+            draft_save_error.set(None);
             is_manually_saving.set(true);
             draft_save_after_upload.set(true);
             draft_save_destination.set(None);
@@ -597,7 +597,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     Ok(saved) => {
                         draft_revision.set(saved.revision);
                         last_saved_editor.set(Some(editor));
-                        autosave_error.set(None);
+                        draft_save_error.set(None);
                         #[cfg(target_arch = "wasm32")]
                         if let Some(destination) = draft_save_destination() {
                             if let Some(window) = web_sys::window() {
@@ -606,7 +606,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                         }
                     }
                     Err(save_error) => {
-                        form_error.set(Some(
+                        draft_save_error.set(Some(
                             recipe_write_feedback(RecipeWriteAction::SaveDraft, &save_error)
                                 .to_string(),
                         ));
@@ -633,6 +633,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
                 };
                 draft_revision.set(saved.revision);
+                draft_save_error.set(None);
                 publish_recipe_draft(current_draft_id, None).await
             }
             .await;
@@ -1485,7 +1486,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
 
                     // ── Error message ───────────────────────────────────
-                    if let Some(err) = autosave_error() {
+                    if let Some(err) = draft_save_error() {
                         div {
                             role: "alert", padding: "var(--space-sm) var(--space-md)",
                             background_color: "var(--error-bg)", border_radius: "var(--radius-md)",
@@ -1617,9 +1618,17 @@ mod load_error_tests {
             .split("let on_save_draft =")
             .next()
             .unwrap();
-        assert!(autosave.contains("autosave_error.set(None)"));
-        assert!(autosave.contains("autosave_error.set(Some"));
+        assert!(autosave.contains("draft_save_error.set(None)"));
+        assert!(autosave.contains("draft_save_error.set(Some"));
         assert!(!autosave.contains("form_error.set"));
+        let manual_save = source
+            .split("if draft_save_after_upload() {")
+            .nth(1)
+            .unwrap()
+            .split("let publish_result =")
+            .next()
+            .unwrap();
+        assert!(manual_save.contains("draft_save_error.set(Some"));
     }
 }
 
