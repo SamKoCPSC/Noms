@@ -16,6 +16,34 @@ use crate::types::{ImageColorEdit, ImageCropRect, ImageTransformEdit, RecipeImag
 /// Global counter for unique image element IDs.
 static IMG_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
 
+#[cfg(any(target_arch = "wasm32", test))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ImageHistoryAction {
+    Undo,
+    Redo,
+}
+
+// Image editors stay mounted when closed. Their document listeners must leave
+// native text history (and another editor's history) untouched until opened.
+#[cfg(any(target_arch = "wasm32", test))]
+fn image_history_shortcut(
+    key: &str,
+    ctrl: bool,
+    meta: bool,
+    shift: bool,
+    editor_open: bool,
+) -> Option<ImageHistoryAction> {
+    if !editor_open {
+        return None;
+    }
+    match key.to_ascii_lowercase().as_str() {
+        "z" if (ctrl || meta) && !shift => Some(ImageHistoryAction::Undo),
+        "y" if ctrl => Some(ImageHistoryAction::Redo),
+        "z" if (ctrl || meta) && shift => Some(ImageHistoryAction::Redo),
+        _ => None,
+    }
+}
+
 /// Fixed crop templates supported by the image editor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ImageEditorCropMode {
@@ -422,13 +450,15 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                 };
 
                 let closure = Closure::wrap(Box::new(move |evt: web_sys::KeyboardEvent| {
-                    let key = evt.key().to_ascii_lowercase();
-                    let uses_command_key = evt.ctrl_key() || evt.meta_key();
-                    let undo_requested = key == "z" && uses_command_key && !evt.shift_key();
-                    let redo_requested = (key == "y" && evt.ctrl_key())
-                        || (key == "z" && uses_command_key && evt.shift_key());
+                    let action = image_history_shortcut(
+                        &evt.key(),
+                        evt.ctrl_key(),
+                        evt.meta_key(),
+                        evt.shift_key(),
+                        image_url.peek().is_some(),
+                    );
 
-                    if undo_requested {
+                    if action == Some(ImageHistoryAction::Undo) {
                         evt.prevent_default();
                         undo_editor_state(
                             undo_stack,
@@ -446,7 +476,7 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
                             contrast_b,
                             saturation,
                         );
-                    } else if redo_requested {
+                    } else if action == Some(ImageHistoryAction::Redo) {
                         evt.prevent_default();
                         redo_editor_state(
                             undo_stack,
@@ -1060,6 +1090,51 @@ pub fn ImageEditorModal(props: ImageEditorModalProps) -> Element {
 mod crop_mode_tests {
     use super::{editor_state_from_edit, EditorSlider, ImageEditorCropMode};
     use crate::types::{ImageCropRect, RecipeImageEdit};
+
+    #[test]
+    fn closed_image_editors_leave_native_text_history_shortcuts_alone() {
+        for key in ["z", "Z", "y", "Y"] {
+            for (ctrl, meta, shift) in [
+                (true, false, false),
+                (true, false, true),
+                (false, true, false),
+                (false, true, true),
+            ] {
+                assert_eq!(
+                    super::image_history_shortcut(key, ctrl, meta, shift, false),
+                    None
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn active_image_editor_retains_its_existing_undo_redo_shortcuts() {
+        use super::{image_history_shortcut, ImageHistoryAction};
+        assert_eq!(
+            image_history_shortcut("z", true, false, false, true),
+            Some(ImageHistoryAction::Undo)
+        );
+        assert_eq!(
+            image_history_shortcut("Z", false, true, false, true),
+            Some(ImageHistoryAction::Undo)
+        );
+        assert_eq!(
+            image_history_shortcut("y", true, false, false, true),
+            Some(ImageHistoryAction::Redo)
+        );
+        assert_eq!(
+            image_history_shortcut("z", true, false, true, true),
+            Some(ImageHistoryAction::Redo)
+        );
+        assert_eq!(
+            image_history_shortcut("z", false, true, true, true),
+            Some(ImageHistoryAction::Redo)
+        );
+        assert_eq!(image_history_shortcut("z", false, false, false, true), None);
+        assert_eq!(image_history_shortcut("y", false, true, false, true), None);
+        assert_eq!(image_history_shortcut("a", true, false, false, true), None);
+    }
 
     #[test]
     fn paired_image_adjustment_inputs_have_individual_names_and_display_units() {
