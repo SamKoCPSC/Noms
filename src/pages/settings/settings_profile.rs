@@ -12,6 +12,41 @@ use crate::components::base::{
 use crate::components::AuthRequired;
 use crate::types::RecipeImageEdit;
 
+#[cfg(test)]
+#[path = "settings_recovery_tests.rs"]
+mod recovery_tests;
+
+/// Only known validation messages are safe to show verbatim. Transport and
+/// unknown server errors must not expose internal details or discard entries.
+fn profile_save_feedback(error: &ServerFnError) -> &str {
+    if let ServerFnError::ServerError { message, .. } = error {
+        match message.as_str() {
+            "Username must be 3-30 characters"
+            | "Username can only contain letters, numbers, hyphens, and underscores"
+            | "Username cannot start or end with a hyphen or underscore"
+            | "Display name must be 2-30 characters"
+            | "Bio must be 160 characters or less"
+            | "That username is already taken. Please choose another." => return message,
+            "Not authenticated" => return "Sign in again in another tab, then retry saving. Keep this page open to retain your entries.",
+            _ => {}
+        }
+    }
+    "Could not save your profile. Your entries are kept here; try Save changes again."
+}
+
+#[component]
+fn ProfileSaveControl(pending: bool, valid: bool, on_save: EventHandler<()>) -> Element {
+    rsx! {
+        if pending { span { role: "status", "Saving profile…" } }
+        // Keep the same focusable node across pending/failure/success states.
+        button { r#type: "button", class: "btn btn-primary touch-target",
+            aria_disabled: pending || !valid,
+            onclick: move |_| { if !pending && valid { on_save.call(()); } },
+            if pending { "Saving…" } else { "Save changes" }
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct AvatarEditSource {
     pub original_url: String,
@@ -865,7 +900,7 @@ fn reset_file_input(_id: &str) {}
 /// User profile settings page.
 ///
 /// Displays editable display name and bio fields with validation,
-/// optimistic UI updates, and rollback on failure.
+/// retained entries on save failure and server-authoritative updates on success.
 #[component]
 pub fn SettingsProfile() -> Element {
     let auth = use_auth();
@@ -959,6 +994,12 @@ pub fn SettingsProfile() -> Element {
     });
 
     let on_save = move |_| {
+        // Check the live signal before validation/spawning, not only the last
+        // rendered button prop, so rapid activations cannot overlap saves.
+        if is_saving() {
+            return;
+        }
+        saved_message.set(None);
         let new_username = username().clone();
         let new_name = display_name().clone();
         let new_bio = bio().clone();
@@ -1020,22 +1061,8 @@ pub fn SettingsProfile() -> Element {
             }
         }
 
-        // Capture committed values from auth context for reliable rollback.
-        // These are the last server-authoritative values, not the current
-        // form signals which may contain uncommitted invalid input.
-        let committed = auth_context.read().current_user.as_ref().map(|u| {
-            (
-                u.username.clone(),
-                u.display_name.clone(),
-                u.bio.clone().unwrap_or_default(),
-            )
-        });
-
-        // Optimistic update: apply trimmed values immediately
-        username.set(trimmed_username.clone());
-        display_name.set(trimmed_name.clone());
-        bio.set(trimmed_bio.clone().unwrap_or_default());
-
+        // Keep the entered text until success. A failed request must never
+        // replace it with the last committed profile or trimmed submission.
         is_saving.set(true);
         error.set(None);
 
@@ -1058,22 +1085,10 @@ pub fn SettingsProfile() -> Element {
                     is_saving.set(false);
                 }
                 Err(e) => {
-                    // Extract clean error message without Dioxus wrapper text
-                    let msg = match &e {
-                        ServerFnError::ServerError { message, .. } => message.clone(),
-                        _ => e.to_string(),
-                    };
-
                     // Clear any previous success message so it doesn't show alongside error
                     saved_message.set(None);
 
-                    // Rollback to last committed values from auth context
-                    if let Some((cu, cn, cb)) = committed {
-                        username.set(cu);
-                        display_name.set(cn);
-                        bio.set(cb);
-                    }
-                    error.set(Some(msg));
+                    error.set(Some(profile_save_feedback(&e).to_string()));
                     is_saving.set(false);
                 }
             }
@@ -1467,8 +1482,9 @@ pub fn SettingsProfile() -> Element {
                             input {
                                 id: "profile-display-name", class: "input input--shared neumo-inset", r#type: "text",
                                 value: display_name(), placeholder: "Your name", maxlength: "30",
+                                readonly: is_saving(),
                                 aria_describedby: "profile-display-name-hint",
-                                oninput: move |evt| { display_name.set(evt.value()); error.set(None); },
+                                oninput: move |evt| { if !is_saving() { display_name.set(evt.value()); error.set(None); saved_message.set(None); } },
                             }
                             span { id: "profile-display-name-hint", class: "user-settings__hint", "{display_name().trim().len()}/30" }
                         }
@@ -1477,8 +1493,9 @@ pub fn SettingsProfile() -> Element {
                             input {
                                 id: "profile-username", class: "input input--shared neumo-inset", r#type: "text",
                                 value: username(), placeholder: "username", maxlength: "30",
+                                readonly: is_saving(),
                                 aria_describedby: "profile-username-hint",
-                                oninput: move |evt| { username.set(evt.value()); error.set(None); },
+                                oninput: move |evt| { if !is_saving() { username.set(evt.value()); error.set(None); saved_message.set(None); } },
                             }
                             span { id: "profile-username-hint", class: "user-settings__hint", "Your public handle · {username().trim().len()}/30" }
                         }
@@ -1487,7 +1504,8 @@ pub fn SettingsProfile() -> Element {
                             textarea {
                                 id: "profile-bio", class: "neumo-inset input", placeholder: "Tell us about yourself…",
                                 rows: "3", maxlength: "160", value: "{bio()}", aria_describedby: "profile-bio-hint",
-                                oninput: move |evt| { bio.set(evt.value()); error.set(None); },
+                                readonly: is_saving(),
+                                oninput: move |evt| { if !is_saving() { bio.set(evt.value()); error.set(None); saved_message.set(None); } },
                             }
                             span { id: "profile-bio-hint", class: "user-settings__hint", "{bio().trim().len()}/160" }
                         }
@@ -1503,11 +1521,7 @@ pub fn SettingsProfile() -> Element {
                             div { class: "user-feedback user-feedback--success", role: "status", "{msg}" }
                         }
                         div { class: "user-settings__actions",
-                            Button {
-                                variant: ButtonVariant::Primary, disabled: is_saving() || !is_valid,
-                                onclick: on_save,
-                                if is_saving() { "Saving…" } else { "Save changes" }
-                            }
+                            ProfileSaveControl { pending: is_saving(), valid: is_valid, on_save }
                             Link { to: crate::Route::UserProfile { username: delete_username.clone() }, "View public profile →" }
                         }
                     }
