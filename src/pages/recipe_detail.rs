@@ -27,7 +27,7 @@ use crate::components::base::{
 use crate::types::{
     ForkAttribution, Recipe, RecipeEquipment, RecipeIngredient, RecipeLineageBranch,
     RecipeLineageNode, RecipeLineageView, RecipeStep, RecipeVersionChange, RecipeVersionComparison,
-    RecipeVersionSummary, RecipeVersionView,
+    RecipeVersionSummary, RecipeVersionSummaryPage, RecipeVersionView,
 };
 #[cfg(target_arch = "wasm32")]
 use crate::utils::recipe_scaler::{
@@ -114,24 +114,96 @@ fn recipe_mutation_feedback(action: RecipeMutation, error: &ServerFnError) -> &'
     }
 }
 
-/// A stable, focusable mutation control. Live guards in the action handlers
+/// A stable, focusable page action. Live guards in the action handlers
 /// also protect against two activations before the pending render catches up.
 #[component]
-fn RecipeMutationControl(
+fn RecipeActionControl(
     pending: bool,
     #[props(default)] unavailable: bool,
     label: String,
     pending_label: String,
+    #[props(default)] controls: Option<String>,
+    #[props(default)] expanded: Option<bool>,
     on_action: EventHandler<()>,
 ) -> Element {
     rsx! {
         button {
             r#type: "button", class: "btn btn-secondary touch-target",
             aria_disabled: pending || unavailable, aria_busy: pending,
+            aria_controls: controls, aria_expanded: expanded,
             onclick: move |_| { if !pending && !unavailable { on_action.call(()); } },
             if pending { "{pending_label}" } else { "{label}" }
         }
         if pending { span { role: "status", "{pending_label}" } }
+    }
+}
+
+#[derive(Default)]
+struct HistoryContinuation {
+    items: Vec<RecipeVersionSummary>,
+    next_before_version_number: Option<i32>,
+    requested: bool,
+    pending: bool,
+    failed: bool,
+}
+
+impl HistoryContinuation {
+    fn begin(&mut self, initial_cursor: Option<i32>) -> Option<i32> {
+        if self.pending {
+            return None;
+        }
+        let cursor = if self.requested {
+            self.next_before_version_number
+        } else {
+            initial_cursor
+        }?;
+        // Claim the cursor before spawning so fast activations cannot request
+        // the same page twice. Failure retains both this cursor and old rows.
+        self.next_before_version_number = Some(cursor);
+        self.requested = true;
+        self.pending = true;
+        self.failed = false;
+        Some(cursor)
+    }
+
+    fn finish(&mut self, result: Result<RecipeVersionSummaryPage, ()>) {
+        if !self.pending {
+            return;
+        }
+        match result {
+            Ok(page) => {
+                self.next_before_version_number = if page.items.is_empty() {
+                    None
+                } else {
+                    page.next_before_version_number
+                };
+                self.items.extend(page.items);
+            }
+            Err(()) => self.failed = true,
+        }
+        self.pending = false;
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum DifferenceActivation {
+    Ignore,
+    Collapse,
+    Load,
+}
+
+fn difference_activation(
+    pending: bool,
+    expanded: Option<i32>,
+    failed: bool,
+    selected: i32,
+) -> DifferenceActivation {
+    if pending {
+        DifferenceActivation::Ignore
+    } else if expanded == Some(selected) && !failed {
+        DifferenceActivation::Collapse
+    } else {
+        DifferenceActivation::Load
     }
 }
 
@@ -1989,11 +2061,7 @@ fn RecipeDetailContents(id: String) -> Element {
     let mut version_difference = use_signal(|| Option::<RecipeVersionComparison>::None);
     let mut version_difference_error = use_signal(|| Option::<String>::None);
     let mut is_loading_version_difference = use_signal(|| false);
-    let mut older_versions = use_signal(Vec::<RecipeVersionSummary>::new);
-    let mut older_versions_requested = use_signal(|| false);
-    let mut older_versions_cursor = use_signal(|| Option::<i32>::None);
-    let mut older_versions_loading = use_signal(|| false);
-    let mut older_versions_error = use_signal(|| Option::<String>::None);
+    let mut history_continuation = use_signal(HistoryContinuation::default);
     let mut is_forking = use_signal(|| false);
     let mut selected_visibility = use_signal(|| "private".to_string());
     let mut is_saving_visibility = use_signal(|| false);
@@ -2098,36 +2166,32 @@ fn RecipeDetailContents(id: String) -> Element {
     let lineage_failed = matches!(lineage_result, Some(Err(_)));
     let initial_version_page = versions_result.and_then(Result::ok).unwrap_or_default();
     let mut versions = initial_version_page.items.clone();
-    versions.extend(older_versions.read().iter().cloned());
-    let next_version_cursor = if older_versions_requested() {
-        older_versions_cursor()
+    versions.extend(history_continuation.read().items.iter().cloned());
+    let next_version_cursor = if history_continuation.read().requested {
+        history_continuation.read().next_before_version_number
     } else {
         initial_version_page.next_before_version_number
     };
     let recipe_id_for_older_versions = id.clone();
     let load_older_versions = move |_| {
-        let Some(before_version_number) = next_version_cursor else {
+        let initial_cursor = versions_resource
+            .peek()
+            .as_ref()
+            .and_then(|result| result.as_ref().ok())
+            .and_then(|page| page.next_before_version_number);
+        let Some(before_version_number) = history_continuation.write().begin(initial_cursor) else {
             return;
         };
         let recipe_id = recipe_id_for_older_versions.clone();
-        older_versions_loading.set(true);
-        older_versions_error.set(None);
         spawn(async move {
-            match get_recipe_versions_api(
+            let result = get_recipe_versions_api(
                 recipe_id,
                 Some(before_version_number),
                 crate::types::VERSION_HISTORY_PAGE_SIZE,
             )
             .await
-            {
-                Ok(page) => {
-                    older_versions.write().extend(page.items);
-                    older_versions_requested.set(true);
-                    older_versions_cursor.set(page.next_before_version_number);
-                }
-                Err(error) => older_versions_error.set(Some(error.to_string())),
-            }
-            older_versions_loading.set(false);
+            .map_err(|_| ());
+            history_continuation.write().finish(result);
         });
     };
     let lineage = lineage_result.and_then(Result::ok);
@@ -2429,7 +2493,7 @@ fn RecipeDetailContents(id: String) -> Element {
                             option { value: "unlisted", "Unlisted" }
                             option { value: "public", "Public" }
                         }
-                        RecipeMutationControl {
+                        RecipeActionControl {
                             pending: is_saving_visibility(),
                             unavailable: selected_visibility() == recipe.visibility,
                             on_action: save_visibility,
@@ -2632,19 +2696,29 @@ fn RecipeDetailContents(id: String) -> Element {
                                                 justify_content: "flex-start",
                                                 gap: "var(--space-xs)",
                                                 if version_number > 1 {
-                                                    Button {
-                                                        variant: ButtonVariant::Secondary,
-                                                        disabled: is_loading_version_difference(),
-                                                        onclick: {
+                                                    RecipeActionControl {
+                                                        pending: difference_is_expanded && is_loading_version_difference(),
+                                                        unavailable: is_loading_version_difference(),
+                                                        controls: format!("recipe-difference-{version_number}"),
+                                                        expanded: difference_is_expanded,
+                                                        pending_label: "Loading differences…",
+                                                        label: if difference_is_expanded {
+                                                            if version_difference_error().is_some() { "Retry differences" } else { "Hide differences" }
+                                                        } else { "View differences" },
+                                                        on_action: {
                                                             let recipe_id = id.clone();
                                                             move |_| {
-                                                                if expanded_version_difference()
-                                                                    == Some(version_number)
-                                                                {
-                                                                    expanded_version_difference.set(None);
-                                                                    version_difference.set(None);
-                                                                    version_difference_error.set(None);
-                                                                    return;
+                                                                let activation = difference_activation(*is_loading_version_difference.peek(),
+                                                                    *expanded_version_difference.peek(), version_difference_error.peek().is_some(), version_number);
+                                                                match activation {
+                                                                    DifferenceActivation::Ignore => return,
+                                                                    DifferenceActivation::Collapse => {
+                                                                        expanded_version_difference.set(None);
+                                                                        version_difference.set(None);
+                                                                        version_difference_error.set(None);
+                                                                        return;
+                                                                    }
+                                                                    DifferenceActivation::Load => {}
                                                                 }
 
                                                                 expanded_version_difference
@@ -2667,12 +2741,12 @@ fn RecipeDetailContents(id: String) -> Element {
                                                                         {
                                                                             version_difference.set(Some(detail));
                                                                         }
-                                                                        Err(error)
+                                                                        Err(_)
                                                                             if expanded_version_difference()
                                                                                 == Some(version_number) =>
                                                                         {
                                                                             version_difference_error
-                                                                                .set(Some(error.to_string()));
+                                                                                .set(Some("Differences couldn’t be loaded. Try Retry differences.".to_string()));
                                                                         }
                                                                         _ => {}
                                                                     }
@@ -2684,15 +2758,6 @@ fn RecipeDetailContents(id: String) -> Element {
                                                                 });
                                                             }
                                                         },
-                                                        if difference_is_expanded {
-                                                            if is_loading_version_difference() {
-                                                                "Loading differences..."
-                                                            } else {
-                                                                "Hide differences"
-                                                            }
-                                                        } else {
-                                                            "View differences"
-                                                        }
                                                     }
                                                 }
                                                 Link {
@@ -2704,7 +2769,7 @@ fn RecipeDetailContents(id: String) -> Element {
                                                     "View snapshot"
                                                 }
                                                 if !version.is_current {
-                                                    RecipeMutationControl {
+                                                    RecipeActionControl {
                                                         pending: restoring_version() == Some(version_number),
                                                         unavailable: restoring_version().is_some(),
                                                         label: "Restore",
@@ -2750,10 +2815,13 @@ fn RecipeDetailContents(id: String) -> Element {
                                                 p { class: "recipe-detail__delete-error", role: "alert", "{error}" }
                                             }
                                         }
-                                        if difference_is_expanded {
-                                            div { margin_top: "var(--space-md)",
+                                        div {
+                                            id: "recipe-difference-{version_number}",
+                                            hidden: !difference_is_expanded,
+                                            margin_top: "var(--space-md)",
+                                            if difference_is_expanded {
                                                 if is_loading_version_difference() {
-                                                    div {
+                                                    div { aria_hidden: "true",
                                                         display: "flex",
                                                         align_items: "center",
                                                         gap: "var(--space-sm)",
@@ -2767,7 +2835,8 @@ fn RecipeDetailContents(id: String) -> Element {
                                                         color: "var(--error)",
                                                         background: "var(--error-bg)",
                                                         border_radius: "var(--radius-md)",
-                                                        "Unable to load differences: {error}"
+                                                        role: "alert",
+                                                        "{error}"
                                                     }
                                                 } else if let Some(detail) = version_difference() {
                                                     VersionComparisonPanel {
@@ -2784,20 +2853,22 @@ fn RecipeDetailContents(id: String) -> Element {
                                 }
                             }
                         }
-                        if let Some(error) = older_versions_error() {
-                            p { color: "var(--error)", role: "alert", "Unable to load older versions: {error}" }
+                        if history_continuation.read().failed {
+                            p { color: "var(--error)", role: "alert", "Older versions couldn’t be loaded. Your loaded versions are kept here; try again." }
                         }
-                        if next_version_cursor.is_some() {
-                            Button {
-                                variant: ButtonVariant::Secondary,
-                                disabled: older_versions_loading(),
-                                onclick: load_older_versions,
-                                if older_versions_loading() {
-                                    "Loading older versions..."
-                                } else {
-                                    "Load older versions"
-                                }
+                        if next_version_cursor.is_some() || history_continuation.read().requested {
+                            RecipeActionControl {
+                                pending: history_continuation.read().pending,
+                                unavailable: next_version_cursor.is_none(),
+                                on_action: load_older_versions,
+                                pending_label: "Loading older versions…",
+                                label: if history_continuation.read().failed { "Retry older versions" }
+                                    else if next_version_cursor.is_none() { "All versions loaded" }
+                                    else { "Load older versions" },
                             }
+                        }
+                        if !versions_pending && !versions_failed {
+                            p { role: "status", "{versions.len()} versions loaded." }
                         }
                     }
                 }

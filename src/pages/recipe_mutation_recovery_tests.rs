@@ -36,7 +36,7 @@ fn mutation_session_failures_offer_sign_in_without_discarding_the_page() {
 
 #[component]
 fn MutationControlTestRoot(pending: bool, unavailable: bool) -> Element {
-    rsx! { RecipeMutationControl {
+    rsx! { RecipeActionControl {
         pending, unavailable, label: "Save visibility", pending_label: "Saving visibility…",
         on_action: |_| {}
     } }
@@ -72,7 +72,7 @@ fn MutationGuardTestRoot(
     unavailable: bool,
     calls: std::rc::Rc<std::cell::Cell<usize>>,
 ) -> Element {
-    rsx! { RecipeMutationControl {
+    rsx! { RecipeActionControl {
         pending, unavailable, label: "Restore", pending_label: "Restoring…",
         on_action: move |_| calls.set(calls.get() + 1)
     } }
@@ -166,7 +166,7 @@ fn recipe_mutation_handlers_guard_live_pending_state_and_scope_restore_feedback(
         .next()
         .unwrap();
     assert!(history.contains("restoring_version.peek()"));
-    assert!(history.contains("RecipeMutationControl"));
+    assert!(history.contains("RecipeActionControl"));
     assert!(history.contains("RecipeMutation::Restore"));
     assert!(history.contains("failed_version == version_number"));
     assert!(history.contains("role: \"alert\""));

@@ -141,3 +141,127 @@ fn recipe_route_replacement_remounts_reads_and_state_including_return_to_same_id
         assert!(!html.contains("loaded older versions and errors"), "{html}");
     }
 }
+
+#[test]
+fn history_continuations_keep_failed_cursor_items_and_guard_pending_and_terminal_actions() {
+    let mut page = HistoryContinuation::default();
+    assert_eq!(page.begin(Some(6)), Some(6));
+    assert_eq!(page.begin(Some(6)), None);
+    page.finish(Err(()));
+    assert!(page.failed);
+    assert!(!page.pending);
+    assert_eq!(page.next_before_version_number, Some(6));
+    assert_eq!(
+        page.begin(Some(99)),
+        Some(6),
+        "retry must not skip its failed cursor"
+    );
+    page.finish(Ok(RecipeVersionSummaryPage {
+        items: vec![summary(5), summary(4)],
+        next_before_version_number: Some(4),
+    }));
+    assert_eq!(
+        page.items
+            .iter()
+            .map(|v| v.version_number)
+            .collect::<Vec<_>>(),
+        vec![5, 4]
+    );
+    assert!(!page.failed);
+    assert_eq!(page.begin(Some(99)), Some(4));
+    page.finish(Err(()));
+    assert_eq!(
+        page.items.len(),
+        2,
+        "loaded versions survive a later failure"
+    );
+    assert_eq!(page.begin(None), Some(4));
+    page.finish(Ok(RecipeVersionSummaryPage {
+        items: vec![summary(3), summary(2), summary(1)],
+        next_before_version_number: None,
+    }));
+    assert_eq!(page.items.len(), 5);
+    assert_eq!(
+        page.begin(Some(99)),
+        None,
+        "terminal state must ignore a stale initial cursor"
+    );
+    assert!(page.requested);
+}
+
+#[test]
+fn history_continuations_do_not_append_without_an_active_request_or_loop_on_empty_pages() {
+    let mut page = HistoryContinuation::default();
+    assert_eq!(page.begin(None), None);
+    page.finish(Ok(RecipeVersionSummaryPage {
+        items: vec![summary(99)],
+        next_before_version_number: Some(99),
+    }));
+    assert!(page.items.is_empty());
+    assert_eq!(page.begin(Some(6)), Some(6));
+    page.finish(Ok(RecipeVersionSummaryPage {
+        items: vec![],
+        next_before_version_number: Some(6),
+    }));
+    assert_eq!(page.next_before_version_number, None);
+    assert_eq!(page.begin(Some(6)), None);
+}
+
+fn summary(version_number: i32) -> RecipeVersionSummary {
+    RecipeVersionSummary {
+        version_number,
+        title: "Synthetic".into(),
+        image_url: None,
+        notes: None,
+        created_at: chrono::DateTime::from_timestamp(0, 0).unwrap(),
+        is_current: false,
+        change_summary: "Synthetic".into(),
+    }
+}
+
+#[test]
+fn difference_activation_retries_in_place_collapses_completed_panels_and_blocks_pending() {
+    assert_eq!(
+        difference_activation(true, Some(3), false, 3),
+        DifferenceActivation::Ignore
+    );
+    assert_eq!(
+        difference_activation(true, Some(3), false, 2),
+        DifferenceActivation::Ignore
+    );
+    assert_eq!(
+        difference_activation(false, Some(3), false, 3),
+        DifferenceActivation::Collapse
+    );
+    assert_eq!(
+        difference_activation(false, Some(3), true, 3),
+        DifferenceActivation::Load
+    );
+    assert_eq!(
+        difference_activation(false, Some(3), true, 2),
+        DifferenceActivation::Load
+    );
+    assert_eq!(
+        difference_activation(false, None, false, 3),
+        DifferenceActivation::Load
+    );
+}
+
+#[test]
+fn current_history_paging_and_difference_controls_use_safe_feedback_and_live_guards() {
+    let source = include_str!("recipe_detail.rs")
+        .split("fn RecipeDetailContents")
+        .nth(1)
+        .unwrap()
+        .split("/// Full-page, read-only")
+        .next()
+        .unwrap();
+    assert!(source.contains("history_continuation.write().begin("));
+    assert!(source.contains("difference_activation("));
+    assert!(source.contains("is_loading_version_difference.peek()"));
+    assert!(source.contains("version_difference_error.peek()"));
+    assert!(source.contains("Retry differences"));
+    assert!(source.contains("All versions loaded"));
+    assert!(source.contains("RecipeActionControl"));
+    assert!(!source.contains("Some(error.to_string())"));
+}
