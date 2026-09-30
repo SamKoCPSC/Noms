@@ -10,6 +10,7 @@ DECLARE
     fixture_owner CONSTANT uuid := 'da1ff4ae-c7b8-4ab5-96cb-ea982ddcad1f';
     graph_id CONSTANT uuid := 'aef72aa2-2c1c-4576-b253-14e0d531e634';
     fixture_name CONSTANT text := 'NOMS020 CP8 pagination collection 2026-09-29';
+    existing_name text;
 BEGIN
     IF (SELECT count(*) FROM recipes WHERE user_id = fixture_owner
         AND visibility = 'private' AND (id = graph_id OR id IN (
@@ -18,8 +19,11 @@ BEGIN
         RAISE EXCEPTION 'Expected 31 private mock-account graph recipes are missing';
     END IF;
     IF EXISTS (SELECT 1 FROM collections WHERE id = fixture_id) THEN
+        -- Compare the selected value outside the indexed query: this database
+        -- indexes collection names under two distinct BM25 field aliases.
+        SELECT name INTO existing_name FROM collections WHERE id = fixture_id;
         IF NOT EXISTS (SELECT 1 FROM collections WHERE id = fixture_id
-            AND owner_id = fixture_owner AND visibility = 'private' AND name = fixture_name)
+            AND owner_id = fixture_owner AND visibility = 'private') OR existing_name <> fixture_name
         THEN RAISE EXCEPTION 'Pagination fixture ID belongs to a different collection'; END IF;
         RAISE NOTICE 'Pagination collection already exists; no rows inserted';
     ELSE
