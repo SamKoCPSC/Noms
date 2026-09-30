@@ -81,22 +81,13 @@ fn deletion_warning_names_the_recipe_and_failure_does_not_assume_it_still_exists
 fn deletion_guards_before_confirmation_and_uses_safe_accessible_feedback() {
     let source = include_str!("recipe_detail.rs");
     let handler = source
-        .split("let on_delete =")
+        .split("let confirm_delete =")
         .nth(1)
         .unwrap()
         .split("// ── Render: loading")
         .next()
         .unwrap();
-    let guard = handler
-        .find("is_deleting.peek()")
-        .expect("live deletion guard");
-    let confirm = handler
-        .find("confirm_with_message")
-        .expect("named confirmation");
-    assert!(
-        guard < confirm,
-        "pending activations must not open another prompt"
-    );
+    assert!(handler.contains("delete_confirmation_open.peek()"));
     assert!(handler.contains("claim_recipe_deletion("));
     assert!(handler.contains("!is_owner"));
     assert!(
@@ -127,6 +118,109 @@ fn deletion_guards_before_confirmation_and_uses_safe_accessible_feedback() {
     assert!(feedback.contains("Check your Dashboard"));
     assert!(feedback.contains("role: \"status\""));
     assert!(source.contains("pending: is_deleting(), error: delete_error()"));
+    assert!(!source.contains("confirm_with_message"));
+    assert!(!source.contains("window.confirm()"));
+    let dialog = source
+        .split("fn RecipeDeletionDialog")
+        .nth(1)
+        .unwrap()
+        .split("/// A stable")
+        .next()
+        .unwrap();
+    assert!(dialog.contains("SharedModal"));
+    assert!(dialog.contains("focus_selector: \"#cancel-recipe-deletion\""));
+}
+
+#[component]
+fn DeletionDialogTestRoot(pending: bool) -> Element {
+    rsx! { RecipeDeletionDialog {
+        title: "CP8 Test recipe", pending, error: None,
+        on_cancel: |_| {}, on_confirm: |_| {},
+    } }
+}
+
+#[test]
+fn recipe_deletion_dialog_has_explicit_safe_cancel_and_confirmation_controls() {
+    for pending in [false, true] {
+        let mut dom = VirtualDom::new_with_props(
+            DeletionDialogTestRoot,
+            DeletionDialogTestRootProps { pending },
+        );
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("<dialog"), "{html}");
+        assert!(html.contains("aria-labelledby=\"delete-recipe-title\""));
+        assert!(html.contains("CP8 Test recipe"));
+        assert!(html.contains("cannot be undone"));
+        assert!(html.contains("id=\"cancel-recipe-deletion\""));
+        assert_eq!(html.matches("<button").count(), 2);
+        assert_eq!(html.contains("role=\"status\""), pending, "{html}");
+        assert!(!html.contains(" disabled"));
+        assert_eq!(html.matches(&format!("aria-disabled={pending}")).count(), 2);
+    }
+}
+
+#[component]
+fn DeletionDialogEventsTestRoot(
+    pending: bool,
+    canceled: std::rc::Rc<std::cell::Cell<usize>>,
+    confirmed: std::rc::Rc<std::cell::Cell<usize>>,
+) -> Element {
+    rsx! { RecipeDeletionDialog {
+        title: "Synthetic", pending, error: None,
+        on_cancel: move |_| canceled.set(canceled.get() + 1),
+        on_confirm: move |_| confirmed.set(confirmed.get() + 1),
+    } }
+}
+
+#[test]
+fn deletion_dialog_cancel_never_confirms_and_pending_controls_do_not_dispatch_actions() {
+    use dioxus::html::{SerializedHtmlEventConverter, SerializedMouseData};
+    use std::rc::Rc;
+    set_event_converter(Box::new(SerializedHtmlEventConverter));
+    for pending in [false, true] {
+        let canceled = Rc::new(std::cell::Cell::new(0));
+        let confirmed = Rc::new(std::cell::Cell::new(0));
+        let mut dom = VirtualDom::new_with_props(
+            DeletionDialogEventsTestRoot,
+            DeletionDialogEventsTestRootProps {
+                pending,
+                canceled: canceled.clone(),
+                confirmed: confirmed.clone(),
+            },
+        );
+        let mutations = dom.rebuild_to_vec();
+        let click_handlers = mutations
+            .edits
+            .iter()
+            .filter_map(|edit| match edit {
+                dioxus_core::Mutation::NewEventListener { name, id } if *name == "click" => {
+                    Some(*id)
+                }
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        // The dialog/backdrop handlers precede its two actual button handlers.
+        let buttons = &click_handlers[click_handlers.len() - 2..];
+        for (index, button) in buttons.iter().enumerate() {
+            dom.runtime().handle_event(
+                "click",
+                Event::new(
+                    Rc::new(PlatformEventData::new(Box::new(
+                        SerializedMouseData::default(),
+                    ))) as Rc<dyn std::any::Any>,
+                    true,
+                ),
+                *button,
+            );
+            assert_eq!(canceled.get(), usize::from(!pending));
+            assert_eq!(
+                confirmed.get(),
+                usize::from(!pending && index == 1),
+                "Cancel must never dispatch the separately confirmed action"
+            );
+        }
+    }
 }
 
 #[component]

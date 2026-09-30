@@ -20,7 +20,7 @@ use crate::api::recipe::{
 use crate::auth::context::use_auth;
 use crate::components::base::{
     ActionMenu, AddToCollectionDropdown, Button, ButtonVariant, Card, EditedRecipeImage,
-    LoadRecovery, LoadingSpinner, PageHeader,
+    LoadRecovery, LoadingSpinner, PageHeader, SharedModal,
 };
 use crate::types::{
     ForkAttribution, Recipe, RecipeEquipment, RecipeIngredient, RecipeLineageBranch,
@@ -136,6 +136,49 @@ fn RecipeDeletionFeedback(pending: bool, error: Option<String>) -> Element {
             div { class: "recipe-detail__delete-error",
                 p { role: "alert", "{error}" }
                 a { href: "/dashboard", target: "_blank", rel: "noopener", "Check your Dashboard" }
+            }
+        }
+    }
+}
+
+#[component]
+fn RecipeDeletionDialog(
+    title: String,
+    pending: bool,
+    error: Option<String>,
+    on_cancel: EventHandler<()>,
+    on_confirm: EventHandler<()>,
+) -> Element {
+    let warning = recipe_delete_confirmation(&title);
+    rsx! {
+        SharedModal {
+            aria_labelledby: "delete-recipe-title",
+            focus_selector: "#cancel-recipe-deletion",
+            pending,
+            on_dismiss: move |_| { if !pending { on_cancel.call(()); } },
+            div {
+                class: "modal-card",
+                display: "flex", flex_direction: "column", gap: "var(--space-md)",
+                onclick: move |event| event.stop_propagation(),
+                h2 { id: "delete-recipe-title", "Delete recipe?" }
+                p { overflow_wrap: "anywhere", "{warning}" }
+                RecipeDeletionFeedback { pending, error }
+                div {
+                    display: "flex", flex_wrap: "wrap", justify_content: "flex-end",
+                    gap: "var(--space-sm)",
+                    button {
+                        id: "cancel-recipe-deletion", r#type: "button",
+                        class: "btn btn-secondary touch-target", aria_disabled: pending,
+                        onclick: move |_| { if !pending { on_cancel.call(()); } },
+                        "Cancel"
+                    }
+                    button {
+                        r#type: "button", class: "btn btn-danger touch-target",
+                        aria_disabled: pending, aria_busy: pending,
+                        onclick: move |_| { if !pending { on_confirm.call(()); } },
+                        if pending { "Deleting…" } else { "Delete recipe" }
+                    }
+                }
             }
         }
     }
@@ -2142,6 +2185,7 @@ fn RecipeDetailContents(id: String) -> Element {
     });
 
     // ── Delete state ─────────────────────────────────────────────────────
+    let mut delete_confirmation_open = use_signal(|| false);
     let mut is_deleting = use_signal(|| false);
     let mut delete_error = use_signal(|| Option::<String>::None);
 
@@ -2282,20 +2326,24 @@ fn RecipeDetailContents(id: String) -> Element {
 
     // ── Delete handler ───────────────────────────────────────────────────
     let id_for_delete = id.clone();
-    #[allow(unused_variables)]
-    let delete_confirmation = recipe.map(|recipe| recipe_delete_confirmation(&recipe.title));
     let on_delete = move |_| {
-        // Guard before asking: pending activation must not open another prompt.
         if !is_owner || *is_deleting.peek() {
             return;
         }
-        #[cfg(target_arch = "wasm32")]
-        let confirmed = web_sys::window()
-            .zip(delete_confirmation.as_deref())
-            .is_some_and(|(window, warning)| window.confirm_with_message(warning).unwrap_or(false));
-        #[cfg(not(target_arch = "wasm32"))]
-        let confirmed = false;
-        if !claim_recipe_deletion(is_deleting, confirmed) {
+        delete_confirmation_open.set(true);
+    };
+    let cancel_delete = move |_| {
+        if !*is_deleting.peek() {
+            delete_confirmation_open.set(false);
+        }
+    };
+    let confirm_delete = move |_| {
+        // Opening/dismissing the dialog never deletes. Only this separately
+        // confirmed action can claim a request, while this visit still owns it.
+        if !is_owner || !*delete_confirmation_open.peek() {
+            return;
+        }
+        if !claim_recipe_deletion(is_deleting, true) {
             return;
         }
         delete_error.set(None);
@@ -2571,7 +2619,14 @@ fn RecipeDetailContents(id: String) -> Element {
             }
 
             // ── Delete error (NOT in a card — transient UI element) ──────
-            RecipeDeletionFeedback { pending: is_deleting(), error: delete_error() }
+            if is_owner && delete_confirmation_open() {
+                RecipeDeletionDialog {
+                    title: recipe.title.clone(), pending: is_deleting(), error: delete_error(),
+                    on_cancel: cancel_delete, on_confirm: confirm_delete,
+                }
+            } else {
+                RecipeDeletionFeedback { pending: is_deleting(), error: delete_error() }
+            }
             if is_forking() {
                 p { role: "status", "Creating your fork draft…" }
             }
