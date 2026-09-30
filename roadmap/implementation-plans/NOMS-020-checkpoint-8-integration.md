@@ -2073,3 +2073,141 @@ permission/failure states, per-page phone/tablet and accessibility acceptance,
 real-device touch and screen-reader checks, and final whole-app review.
 Dark-mode redesign remains deferred. Rollback of this behavior slice is
 `6a434ee`; it does not remove the retained fixtures.
+
+## Public discovery and dense Search acceptance — 2026-09-30
+
+### Scope and reproducible data
+
+Continued the established isolated acceptance worktree
+`codex/NOMS-020-checkpoint-8`, starting from `83b2859`, against the existing
+local deployment `noms-5063d4a16468023f` at `http://127.0.0.1:32768`.
+The user explicitly approved additional test data after the lack of public
+recipes and dense collection/cook results blocked these checks. No production
+environment or external account was involved.
+
+Fixture commit **`391c65a`** adds
+`scripts/dev-fixtures/noms-020-discovery-catalog.sql`. Before seeding, verified
+`com.noms.dev-environment=true` on the exact Postgres container. The transactional
+script inserts 25 synthetic public recipes with published v1 snapshots, 25
+synthetic cook profiles (no OAuth identities), and 25 private collections owned
+by the existing mock owner `da1ff4ae-c7b8-4ab5-96cb-ea982ddcad1f`. Names/descriptions
+clearly mark the data as local/synthetic; addresses use `example.invalid`.
+IDs are deterministic UUIDs from `md5('NOMS020 CP8 discovery catalog 2026-09-30'
+|| ' cook/recipe/collection/version ' || ordinal)` with the respective entity
+word substituted and ordinals 1–25. Collision and count checks abort unsafe
+runs. Nothing is updated or deleted; fixtures remain for reproduction.
+The current `CP8Catalog` recipe tag is added after the immutable v1 snapshot.
+
+Reproduce only against the verified local test container:
+
+```sh
+docker inspect --format '{{ index .Config.Labels "com.noms.dev-environment" }}' noms-5063d4a16468023f-postgres-1
+docker exec -i noms-5063d4a16468023f-postgres-1 psql -U noms -d noms < scripts/dev-fixtures/noms-020-discovery-catalog.sql
+```
+
+The first attempted seed rolled back on a PL/pgSQL ambiguous variable in an
+`ON CONFLICT` target. Renamed it to `fixture_recipe_id` and corrected the
+instruction JSON key to `sub_steps` before the successful seed. A successful
+rerun confirmed idempotence: totals remained **25 public / 33 private recipes,
+30 private collections, 27 profiles**. The prior 33 recipes and five collections
+were not made public or otherwise changed.
+
+### Browser evidence and fix
+
+- **Explore:** initial 12 cards, retry to 24, final 25 unique recipe links.
+  The original pagination button dropped focus when disabled, when replaced
+  after failure, and when removed at completion. Added tests first (expected
+  compilation failure for missing new helpers), then implemented **`0931dca`**:
+  one stable, focusable control with guarded `aria-disabled` states. A generic
+  error alert remains; initial empty-load errors retain their separate Retry.
+  After fast-forwarding/rebuilding the existing deployment, actual Enter
+  activation retained button focus through Loading recipes…, Retry, Load more
+  and All recipes loaded. A failed second-page request retained all 12 cards;
+  retry requested the failed offset once and reached 24. A forced extra click
+  while pending and at completion each produced zero additional requests.
+  No skipped or duplicate recipe IDs across the final 25 cards.
+- **Explore query replacement:** from the completed catalog, paused `Recipe 01`,
+  changed to `Recipe 02`, released the newer response before the older one.
+  Pending cards cleared; the settled page contained only Recipe 02, with the
+  input still Recipe 02. Prior page offsets/results did not leak into the query.
+- **Collection Search:** `scope=collections&q=CP8Catalog&sort=name_ascending`
+  returned **20 + 5 = 25 unique collection links**, names 01–25. Failed Next
+  showed readable generic feedback, retained filters and Next focus, and Retry
+  recovered the same page. Rapid additional clicks issued no duplicate request;
+  Previous restored 20 cards. Pending stale cards were not shown.
+- **Cook Search:** `scope=users&q=CP8Catalog&sort=username_ascending`
+  returned **20 + 5 = 25 unique profile links**. Failed Next and successful
+  retry retained paging focus; pending duplicate and completed-page clicks
+  made no extra requests. Actual Enter activation on ready Previous/Next
+  passed. An attempted locator keypress on `aria-disabled` Next was blocked by
+  browser actionability; forced clicks tested its handler guard separately.
+- **Scope/query/history:** switching from page 2 Cooks to Collections reset
+  page and incompatible sort, showing 20 collections and no cook cards.
+  A paused collection Next released after a newer Cooks response could not
+  overwrite the cook scope. From cook page 2, changing/submitting `cp8catalog-01`
+  reset pagination and returned one profile. Browser Back restored the broad
+  query's first page (20 cards); Forward restored the one-profile query.
+- **Visibility:** signed-out Explore loaded all 25 public synthetic recipes;
+  the original private recipe was absent. The existing non-owner reviewer
+  `user-62c8` searched Collections for CP8Catalog and received **0 found**,
+  with no private collection links. Restored the mock owner session afterward.
+- **Narrow geometry:** explicitly confirmed `innerWidth=320` for completed
+  Explore and collection/cook page 2. Document width was 305px, with no
+  horizontal overflow; all paging buttons were 44px high and within the page.
+  The browser-level viewport override did not change observed width, so these
+  checks used per-tab device-metrics emulation, cleared afterward. This is
+  paging geometry only, not full page/mobile or real-touch acceptance.
+
+All injected failures occurred before server handling, via local browser
+request interception; all interception/emulation overrides were cleared.
+Screenshots were visually inspected; temporary evidence, not release assets:
+
+- `/tmp/noms-020-explore-pagination-complete.jpg`
+- `/tmp/noms-020-explore-pagination-320.jpg`
+- `/tmp/noms-020-collection-search-pagination-320.jpg`
+- `/tmp/noms-020-cook-search-pagination-320.jpg`
+
+The in-app browser exported the emulated narrow views as scaled 305×172
+previews rather than a full-height device capture. Their geometry claims rely
+on the measured live DOM, not screenshot pixel dimensions; the normal desktop
+completion capture is 1265×712. Initial empty-load Retry focus and exhaustive
+screen-reader announcements were not newly checked in this slice.
+
+Read-only post-check inspection confirmed the original recipe remains private
+at published v2; its draft remains revision 17 with exactly
+`Validation fixture only; keep private.` and one image. The original pagination
+collection remains private, top-level, with its original name/description and
+all 31 memberships. No existing profile was edited.
+
+### Validation, review and remaining work
+
+With `SQLX_OFFLINE=true` and the integration worktree's existing target cache:
+
+```sh
+cargo test --features server pages::explore -- --test-threads=8
+just ci
+```
+
+Focused Explore tests: **6 passed, 0 failed**. Full CI for code committed as
+`0931dca`: **exit 0; 844 passed, 0 failed, 12 ignored**, including native/WASM,
+Clippy, formatting, schema/security policy and audit gates. Eight existing
+allowed audit warnings remain. Logs: `/tmp/noms-020-discovery-focus-tests.log`
+and `/tmp/noms-020-discovery-ci.log`. No fresh ignored search/real-storage
+integration run is claimed; the live tests used the running ParadeDB database.
+
+Explicit second-pass self-review: **PASS for this scope**, covering stable
+render identity, synchronous request claims, action guards, retry offsets,
+query-generation protection, fixture visibility/idempotence and unchanged
+private records. No blocking/should-fix finding remains. No independent-agent
+review was performed. Fixture and behavior commits are separate concerns;
+acceptance documentation is a third commit. Both code commits were fast-forwarded
+into `codex/NOMS-020-visual-design-refinement`. Unrelated generated CSS retained
+SHA-256 `63fb925365998338ce8dec1e725c097e5648f820c9674767880e910db80d7e46`.
+
+Public Explore and dense collection/cook pagination are no longer blocked or
+open checklist items. Checkpoint 8 remains open for broader cross-route
+failure/permission checks, other dense states, remaining editor/image
+interactions, per-page populated phone/tablet and accessibility acceptance,
+real-device touch, screen-reader and pixel-level export checks, and final
+whole-app review. Dark-mode redesign remains deferred. Rollback of the behavior
+slice is `0931dca`; reverting code does not delete the retained local fixtures.
