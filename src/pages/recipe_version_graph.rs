@@ -394,6 +394,39 @@ fn version_graph_node_is_visible(
             <= viewport.1 - GRAPH_FOCUS_MARGIN_PX + tolerance
 }
 
+fn preserve_version_graph_layout_transform(
+    previous: &VersionGraphLayout,
+    next: &VersionGraphLayout,
+    viewport: (f64, f64),
+    transform: VersionGraphTransform,
+) -> VersionGraphTransform {
+    // Older batches can renumber every column. Anchor the nearest surviving
+    // snapshot instead of moving the user's view with those layout coordinates.
+    let anchor = previous
+        .nodes
+        .iter()
+        .filter_map(|node| next.node(node.id).map(|next_node| (node, next_node)))
+        .min_by(|(left, _), (right, _)| {
+            let distance = |node: &VersionGraphLayoutNode| {
+                let x = transform.offset_x + (node.x + GRAPH_NODE_WIDTH_PX / 2.0) * transform.scale
+                    - viewport.0 / 2.0;
+                let y = transform.offset_y
+                    + (node.y + GRAPH_NODE_HEIGHT_PX / 2.0) * transform.scale
+                    - viewport.1 / 2.0;
+                x * x + y * y
+            };
+            distance(left).total_cmp(&distance(right))
+        });
+    let Some((previous_node, next_node)) = anchor else {
+        return transform;
+    };
+    VersionGraphTransform {
+        offset_x: transform.offset_x + (previous_node.x - next_node.x) * transform.scale,
+        offset_y: transform.offset_y + (previous_node.y - next_node.y) * transform.scale,
+        ..transform
+    }
+}
+
 fn visible_version_graph_node_transform(
     layout: &VersionGraphLayout,
     id: VersionGraphNodeId,
@@ -505,6 +538,27 @@ fn retain_cached_version_graph_dependencies(
 
 fn version_graph_expansion_loaded_node_ids(graph: &VersionGraph) -> Vec<VersionGraphNodeId> {
     graph.nodes.iter().map(VersionGraphNode::id).collect()
+}
+
+fn version_graph_with_visible_expansions(
+    initial: &VersionGraph,
+    records: &[VersionGraphExpansionRecord],
+) -> (VersionGraph, VersionGraph) {
+    let cached = merge_version_graph_batches(
+        initial,
+        records.iter().filter_map(|record| record.batch.as_ref()),
+    );
+    let visible = merge_version_graph_batches(
+        initial,
+        records
+            .iter()
+            .filter(|record| expansion_record_is_visible(record.frontier.into(), records))
+            .filter_map(|record| record.batch.as_ref()),
+    );
+    (
+        retain_cached_version_graph_dependencies(visible.clone(), &cached),
+        visible,
+    )
 }
 
 fn expansion_record_is_visible(
@@ -1644,17 +1698,60 @@ pub fn RecipeVersionGraph(id: String) -> Element {
     let mut context_compare_current = use_signal(|| None::<MountedEvent>);
     let mut expansion_records = use_signal(Vec::<VersionGraphExpansionRecord>::new);
     let mut request_scope = use_signal(|| VersionGraphRequestScope::initial(id.clone()));
+    let mut previous_graph_layout = use_signal(|| None::<VersionGraphLayout>);
+    // Subscribe to the completed value before any pending check or early return.
+    // Reading only pending() can leave a client-side route in its loading state.
+    let graph_result: Option<Result<VersionGraph, ServerFnError>> = graph_resource.read().clone();
 
     use_effect(use_reactive((&id,), move |(recipe_id,)| {
         let next_scope = request_scope.peek().advance(recipe_id);
         request_scope.set(next_scope);
         expansion_records.set(Vec::new());
         initial_graph_fit_complete.set(false);
+        previous_graph_layout.set(None);
         comparison_before.set(None);
         comparison_after.set(None);
         comparison_result.set(None);
         comparison_error.set(None);
         comparison_is_loading.set(false);
+    }));
+
+    use_effect(use_reactive((&id,), move |(recipe_id,)| {
+        if graph_resource.pending() || request_scope.read().recipe_id != recipe_id {
+            return;
+        }
+        let Some(Ok(initial)) = graph_resource.read().clone() else {
+            return;
+        };
+        if !initial
+            .nodes
+            .iter()
+            .any(|node| node.is_selected_recipe() && node.id().recipe_id.to_string() == recipe_id)
+        {
+            return;
+        }
+        let (full, _) = version_graph_with_visible_expansions(&initial, &expansion_records.read());
+        let graph = if lineage_only() {
+            version_graph_lineage_only(&full)
+        } else {
+            full
+        };
+        let next = build_version_graph_layout(&graph);
+        if let Some(previous) = previous_graph_layout.peek().as_ref() {
+            if previous == &next {
+                return;
+            }
+            if *initial_graph_fit_complete.peek() {
+                let adjusted = preserve_version_graph_layout_transform(
+                    previous,
+                    &next,
+                    *graph_viewport.peek(),
+                    *graph_transform.peek(),
+                );
+                graph_transform.set(adjusted);
+            }
+        }
+        previous_graph_layout.set(Some(next));
     }));
 
     let back_to_recipe = rsx! {
@@ -1664,10 +1761,6 @@ pub fn RecipeVersionGraph(id: String) -> Element {
             "Back to recipe"
         }
     };
-    // Subscribe to the completed value before an early loading return. Reading
-    // only `pending()` can leave a client-side route in its initial state.
-    let graph_result: Option<Result<VersionGraph, ServerFnError>> = graph_resource.read().clone();
-
     if !recipe_id_is_valid {
         return rsx! {
             div { class: "container",
@@ -1777,23 +1870,8 @@ pub fn RecipeVersionGraph(id: String) -> Element {
     } else {
         Vec::new()
     };
-    let cached_graph = merge_version_graph_batches(
-        &initial_graph,
-        expansion_records_snapshot
-            .iter()
-            .filter_map(|record| record.batch.as_ref()),
-    );
-    let visible_expansion_graph = merge_version_graph_batches(
-        &initial_graph,
-        expansion_records_snapshot
-            .iter()
-            .filter(|record| {
-                expansion_record_is_visible(record.frontier.into(), &expansion_records_snapshot)
-            })
-            .filter_map(|record| record.batch.as_ref()),
-    );
-    let full_graph =
-        retain_cached_version_graph_dependencies(visible_expansion_graph.clone(), &cached_graph);
+    let (full_graph, visible_expansion_graph) =
+        version_graph_with_visible_expansions(&initial_graph, &expansion_records_snapshot);
     let expansion_frontiers =
         visible_expansion_frontiers(&initial_graph, &expansion_records_snapshot);
 
@@ -2330,8 +2408,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                             div {
                                 class: "recipe-version-graph__card-layer",
                                 style: card_layer_style,
-                                for layout_node in &layout.nodes {
-                                    if let Some(node) = nodes_by_id.get(&layout_node.id).cloned() {
+                                for (layout_node, node) in layout.nodes.iter().filter_map(|layout_node| nodes_by_id.get(&layout_node.id).cloned().map(|node| (layout_node, node))) {
                                         {
                                             let node_id = node.id();
                                             let is_fork_source = fork_edges
@@ -2641,7 +2718,6 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                 }
                                             }
                                         }
-                                    }
                                 }
                             }
                         }
@@ -2676,6 +2752,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                 })
                                             })
                                         });
+                                    let batch_has_more = record.is_some_and(|record| record.batch.as_ref().is_some_and(|batch| !batch.frontiers.is_empty()));
                                     let error = record.and_then(|record| record.error.as_deref());
                                     let direction = frontier_direction_label(frontier.kind);
                                     let anchor_title = nodes_by_id
@@ -2781,6 +2858,8 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                             class: "recipe-version-graph__frontier-button recipe-version-graph__frontier-button--continue",
                                                             aria_label: if can_continue {
                                                                 format!("Show next 5 {direction} from {anchor_title}, version {}; {} remain", frontier.anchor.version_number, frontier.hidden_count)
+                                                            } else if batch_has_more {
+                                                                format!("Batch loaded from {anchor_title}, version {}; more snapshots available at another frontier", frontier.anchor.version_number)
                                                             } else {
                                                                 format!("All {direction} loaded from {anchor_title}, version {}", frontier.anchor.version_number)
                                                             },
@@ -2802,6 +2881,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                             },
                                                             if is_loading { "Loading…" }
                                                             else if can_continue { "Show next 5" }
+                                                            else if batch_has_more { "Batch loaded" }
                                                             else { "All loaded" }
                                                         }
                                                     }
@@ -3466,8 +3546,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                     details { class: "recipe-version-graph__outline",
                         summary { "Accessible graph outline" }
                         ol { class: "recipe-version-graph__outline-nodes",
-                            for layout_node in &layout.nodes {
-                                if let Some(node) = nodes_by_id.get(&layout_node.id) {
+                            for node in layout.nodes.iter().filter_map(|layout_node| nodes_by_id.get(&layout_node.id)) {
                                     {
                                         let node_id = node.id();
                                         let title = node.title().unwrap_or(if node.is_deleted() {
@@ -3524,6 +3603,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                                     })
                                                                 })
                                                             });
+                                                        let batch_has_more = record.is_some_and(|record| record.batch.as_ref().is_some_and(|batch| !batch.frontiers.is_empty()));
                                                         let direction = frontier_direction_label(frontier.kind);
                                                         let label = if is_expanded {
                                                             format!("Collapse {direction} from {title}, version {}", node_id.version_number)
@@ -3580,6 +3660,8 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                                     class: "recipe-version-graph__outline-frontier-button recipe-version-graph__outline-frontier-button--continue",
                                                                     aria_label: if can_continue {
                                                                         format!("Show next 5 {direction} from {title}, version {}; {} remain", node_id.version_number, frontier.hidden_count)
+                                                                    } else if batch_has_more {
+                                                                        format!("Batch loaded from {title}, version {}; more snapshots available at another frontier", node_id.version_number)
                                                                     } else {
                                                                         format!("All {direction} loaded from {title}, version {}", node_id.version_number)
                                                                     },
@@ -3600,6 +3682,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                                     },
                                                                     if is_loading { "Loading…" }
                                                                     else if can_continue { "Show next 5 {direction}" }
+                                                                    else if batch_has_more { "Batch loaded; more snapshots available" }
                                                                     else { "All {direction} loaded" }
                                                                 }
                                                             }
@@ -3609,7 +3692,6 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                             }
                                         }
                                     }
-                                }
                             }
                         }
                         if !layout.edges.is_empty() {
@@ -4383,6 +4465,56 @@ mod tests {
         assert_eq!(
             (old_viewport.1 / 2.0 - old.offset_y) / old.scale,
             (new_viewport.1 / 2.0 - resized.offset_y) / resized.scale,
+        );
+    }
+
+    #[test]
+    fn prepending_history_preserves_the_visible_snapshot_position() {
+        let previous = super::build_version_graph_layout(&branched_graph());
+        let mut next = previous.clone();
+        for node in &mut next.nodes {
+            node.x += 2600.0;
+        }
+        next.width += 2600.0;
+        let current = VersionGraphNodeId {
+            recipe_id: Uuid::from_u128(1),
+            version_number: 2,
+        };
+        let viewport = (1361.0, 518.0);
+        let transform = previous.center_transform(current, viewport, 0.85);
+        let adjusted =
+            super::preserve_version_graph_layout_transform(&previous, &next, viewport, transform);
+        let old_node = previous.node(current).unwrap();
+        let new_node = next.node(current).unwrap();
+        assert_eq!(adjusted.scale, transform.scale);
+        assert!(
+            (transform.offset_x + old_node.x * transform.scale
+                - adjusted.offset_x
+                - new_node.x * adjusted.scale)
+                .abs()
+                < 0.001
+        );
+        assert!(
+            (transform.offset_y + old_node.y * transform.scale
+                - adjusted.offset_y
+                - new_node.y * adjusted.scale)
+                .abs()
+                < 0.001
+        );
+    }
+
+    #[test]
+    fn unrelated_layout_does_not_reposition_the_viewport() {
+        let previous = super::build_version_graph_layout(&branched_graph());
+        let transform = super::VersionGraphTransform::default();
+        assert_eq!(
+            super::preserve_version_graph_layout_transform(
+                &previous,
+                &super::VersionGraphLayout::default(),
+                (900.0, 560.0),
+                transform,
+            ),
+            transform
         );
     }
 
