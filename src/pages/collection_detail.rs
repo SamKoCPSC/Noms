@@ -631,8 +631,13 @@ fn CollectionDetailContents(id: String) -> Element {
                         }
                     }
                     if let Some(error) = recipe_page_error() { p { role: "alert", color: "var(--error)", "Could not load more recipes: {error}" } }
-                    if let Some((offset, limit)) = next_recipe_page_request(collection_contents.recipes.recipes.len() + additional_recipes().len(), collection_contents.recipes.total_count) {
-                        Button { variant: ButtonVariant::Secondary, disabled: pagination_disabled, onclick: move |_| {
+                    if collection_contents.recipes.total_count > MAX_RECIPE_PAGE_SIZE {
+                        // Native disabling or removing this button drops keyboard
+                        // focus. Keep it mounted through loading and completion.
+                        button { class: "btn btn-secondary touch-target collection-pagination", type: "button",
+                            aria_disabled: pagination_disabled || complete_recipe_list,
+                            aria_busy: loading_more(),
+                            onclick: move |_| {
                             if loading_more()
                                 || contents.pending()
                                 || (can_edit
@@ -642,6 +647,10 @@ fn CollectionDetailContents(id: String) -> Element {
                                         || !removing_recipes.read().is_empty())) {
                                 return;
                             }
+                            let Some((offset, limit)) = next_recipe_page_request(
+                                collection_contents.recipes.recipes.len() + additional_recipes().len(),
+                                collection_contents.recipes.total_count,
+                            ) else { return; };
                             loading_more.set(true); recipe_page_error.set(None); let id = collection_id.clone();
                             let initial_recipe_ids = collection_contents.recipes.recipes.iter().map(|recipe| recipe.id).collect::<std::collections::HashSet<_>>();
                             let expected_total_count = collection_contents.recipes.total_count;
@@ -683,11 +692,13 @@ fn CollectionDetailContents(id: String) -> Element {
                                             additional_recipes.write().extend(unique_new_recipes);
                                         }
                                     }
-                                    Err(error) => recipe_page_error.set(Some(error.to_string())),
+                                    Err(_) => recipe_page_error.set(Some(
+                                        "Please try again. Your loaded recipes are still here.".to_string(),
+                                    )),
                                 }
                                 loading_more.set(false);
                             });
-                        }, if loading_more() { "Loading…" } else { "Load more" } }
+                        }, if loading_more() { "Loading…" } else if complete_recipe_list { "All recipes loaded" } else { "Load more" } }
                     }
                     if collection_contents.can_edit && delete_modal_open() {
                         SharedModal {
@@ -987,8 +998,28 @@ mod tests {
     #[test]
     fn recipe_pagination_requests_every_remaining_page() {
         assert_eq!(next_recipe_page_request(12, 30), Some((12, 12)));
+        assert_eq!(next_recipe_page_request(24, 31), Some((24, 7)));
         assert_eq!(next_recipe_page_request(30, 30), None);
         assert_eq!(next_recipe_page_request(0, 0), None);
+    }
+
+    #[test]
+    fn collection_pagination_retains_its_control_and_readable_failure_feedback() {
+        let source = include_str!("collection_detail.rs")
+            .split("mod tests {")
+            .next()
+            .unwrap();
+        let pagination = source
+            .split("Could not load more recipes:")
+            .nth(1)
+            .unwrap()
+            .split("if collection_contents.can_edit && delete_modal_open()")
+            .next()
+            .unwrap();
+        assert!(pagination.contains("aria_disabled: pagination_disabled || complete_recipe_list"));
+        assert!(pagination.contains("All recipes loaded"));
+        assert!(!pagination.contains("disabled: pagination_disabled,"));
+        assert!(!pagination.contains("Some(error.to_string())"));
     }
 
     #[test]

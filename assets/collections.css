@@ -74,6 +74,7 @@
 .collection-recipe > .recipe-card { grid-column: 1 / -1; }
 .collection-recipe > .btn { align-self: center; }
 .collection-detail-page > p[role="alert"] { color: var(--error); margin-block: 16px; }
+.collection-pagination[aria-disabled="true"] { opacity: .5; cursor: not-allowed; transform: none; }
 
 @media (max-width: 640px) {
     .collections-page { padding-block: 24px 40px; }
