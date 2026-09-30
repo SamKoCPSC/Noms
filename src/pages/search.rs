@@ -1073,11 +1073,11 @@ fn Pagination(props: PaginationProps) -> Element {
     rsx! { nav { class: "search-pagination", aria_label: "Search result pages",
         hidden: !props.pending && props.page == 1 && !has_next,
         aria_busy: props.pending,
-        button { class: "btn btn-secondary", aria_disabled: previous_disabled, onclick: move |_| {
+        button { class: "btn btn-secondary touch-target", aria_disabled: previous_disabled, onclick: move |_| {
             if !previous_disabled { props.onchange.call(props.page.saturating_sub(1).max(1)); }
         }, "Previous" }
         span { "Page {props.page}" }
-        button { class: "btn btn-secondary", aria_disabled: next_disabled, onclick: move |_| {
+        button { class: "btn btn-secondary touch-target", aria_disabled: next_disabled, onclick: move |_| {
             if !next_disabled { props.onchange.call(props.page + 1); }
         }, "Next" }
     } }
@@ -1486,6 +1486,7 @@ mod tests {
             dom.rebuild(&mut dioxus_core::NoOpMutations);
             let html = dioxus_ssr::render(&dom);
             assert_eq!(html.matches("<button").count(), 2, "{html}");
+            assert_eq!(html.matches("touch-target").count(), 2, "{html}");
             assert!(!html.contains(" disabled"), "{html}");
             assert!(html.contains("aria-disabled=true"), "{html}");
             assert!(html.contains(&format!("Page {page}")), "{html}");
