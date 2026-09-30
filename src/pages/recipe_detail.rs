@@ -38,6 +38,52 @@ const LINEAGE_DESCENDANT_DISPLAY_DEPTH: usize = 8;
 const LINEAGE_INITIAL_VISIBLE_DESCENDANTS: usize = 10;
 const LINEAGE_DESCENDANT_EXPANSION_SIZE: usize = 5;
 
+#[cfg(test)]
+#[path = "recipe_mutation_recovery_tests.rs"]
+mod mutation_recovery_tests;
+
+#[derive(Clone, Copy)]
+enum RecipeMutation {
+    Fork,
+    Visibility,
+    Restore,
+}
+
+fn recipe_mutation_feedback(action: RecipeMutation, error: &ServerFnError) -> &'static str {
+    if matches!(error, ServerFnError::ServerError { message, .. } if message == "Not authenticated")
+    {
+        return "Sign in again in another tab, then check the recipe before retrying. Keep this recipe open.";
+    }
+    // An interrupted response does not tell us whether a write committed. Do
+    // not expose transport details or promise that retry cannot duplicate it.
+    match action {
+        RecipeMutation::Fork => "Could not confirm the fork. Check your Dashboard drafts before trying again.",
+        RecipeMutation::Visibility => "Could not confirm the visibility change. Your selection is kept here; reload this recipe to check its current visibility before trying again.",
+        RecipeMutation::Restore => "Could not confirm the restore. Reload this recipe to check its current version before trying again.",
+    }
+}
+
+/// A stable, focusable mutation control. Live guards in the action handlers
+/// also protect against two activations before the pending render catches up.
+#[component]
+fn RecipeMutationControl(
+    pending: bool,
+    #[props(default)] unavailable: bool,
+    label: String,
+    pending_label: String,
+    on_action: EventHandler<()>,
+) -> Element {
+    rsx! {
+        button {
+            r#type: "button", class: "btn btn-secondary touch-target",
+            aria_disabled: pending || unavailable, aria_busy: pending,
+            onclick: move |_| { if !pending && !unavailable { on_action.call(()); } },
+            if pending { "{pending_label}" } else { "{label}" }
+        }
+        if pending { span { role: "status", "{pending_label}" } }
+    }
+}
+
 fn fork_sign_in_url(recipe_id: &str) -> String {
     format!("/login?redirect_uri=/recipes/{recipe_id}")
 }
@@ -1875,7 +1921,9 @@ pub fn RecipeDetail(id: String) -> Element {
         let descendant_depth = LINEAGE_DESCENDANT_DISPLAY_DEPTH as i32;
         async move { get_recipe_lineage(recipe_id, Some(descendant_depth)).await }
     });
-    let mut version_action_error = use_signal(|| Option::<String>::None);
+    let mut fork_error = use_signal(|| Option::<String>::None);
+    let mut restoring_version = use_signal(|| Option::<i32>::None);
+    let mut restore_error = use_signal(|| Option::<(i32, String)>::None);
     let mut expanded_version_difference = use_signal(|| Option::<i32>::None);
     let mut version_difference = use_signal(|| Option::<RecipeVersionComparison>::None);
     let mut version_difference_error = use_signal(|| Option::<String>::None);
@@ -1897,7 +1945,9 @@ pub fn RecipeDetail(id: String) -> Element {
     use_effect(move || {
         let recipe_result = recipe_resource.read().clone();
         if let Some(Ok(recipe)) = recipe_result {
-            if !is_saving_visibility()
+            // Only a new recipe result should resynchronize the selection.
+            // Subscribing to pending completion would erase a failed edit.
+            if !*is_saving_visibility.peek()
                 && visibility_selection_differs_from_recipe(selected_visibility, &recipe.visibility)
             {
                 selected_visibility.set(recipe.visibility);
@@ -2018,18 +2068,27 @@ pub fn RecipeDetail(id: String) -> Element {
     let lineage = lineage_resource.read().clone().and_then(Result::ok);
     let recipe_id_for_visibility = id.clone();
     let save_visibility = move |_| {
+        if *is_saving_visibility.peek() {
+            return;
+        }
         let recipe_id = recipe_id_for_visibility.clone();
         let visibility = selected_visibility();
         is_saving_visibility.set(true);
         visibility_feedback.set(None);
         spawn(async move {
             match update_recipe_visibility(recipe_id, visibility).await {
-                Ok(_) => {
+                Ok(updated_recipe) => {
                     visibility_feedback.set(Some(Ok(())));
-                    recipe_resource.restart();
+                    // The API already returned the authoritative value. Keep
+                    // the page and focused control mounted instead of refetching.
+                    *recipe_resource.write() = Some(Ok(updated_recipe));
                 }
                 Err(error) => {
-                    visibility_feedback.set(Some(Err(error.to_string())));
+                    visibility_feedback.set(Some(Err(recipe_mutation_feedback(
+                        RecipeMutation::Visibility,
+                        &error,
+                    )
+                    .to_string())));
                 }
             }
             is_saving_visibility.set(false);
@@ -2038,8 +2097,11 @@ pub fn RecipeDetail(id: String) -> Element {
 
     let id_for_fork = id.clone();
     let on_fork = move |_| {
+        if *is_forking.peek() {
+            return;
+        }
         is_forking.set(true);
-        version_action_error.set(None);
+        fork_error.set(None);
         let recipe_id = id_for_fork.clone();
         spawn(async move {
             match fork_recipe(recipe_id, None).await {
@@ -2054,7 +2116,9 @@ pub fn RecipeDetail(id: String) -> Element {
                     }
                 }
                 Err(error) => {
-                    version_action_error.set(Some(error.to_string()));
+                    fork_error.set(Some(
+                        recipe_mutation_feedback(RecipeMutation::Fork, &error).to_string(),
+                    ));
                     is_forking.set(false);
                 }
             }
@@ -2207,7 +2271,8 @@ pub fn RecipeDetail(id: String) -> Element {
                                   if auth.is_authenticated {
                                     button {
                                         r#type: "button", class: "account-menu-item", role: "menuitem", tabindex: "-1",
-                                        disabled: is_forking(),
+                                        aria_disabled: is_forking(),
+                                        aria_busy: is_forking(),
                                         onclick: on_fork,
                                         if is_forking() { "Forking..." } else { "Fork" }
                                     }
@@ -2301,12 +2366,12 @@ pub fn RecipeDetail(id: String) -> Element {
                             option { value: "unlisted", "Unlisted" }
                             option { value: "public", "Public" }
                         }
-                        Button {
-                            variant: ButtonVariant::Secondary,
-                            disabled: is_saving_visibility()
-                                || selected_visibility() == recipe.visibility,
-                            onclick: save_visibility,
-                            if is_saving_visibility() { "Saving..." } else { "Save visibility" }
+                        RecipeMutationControl {
+                            pending: is_saving_visibility(),
+                            unavailable: selected_visibility() == recipe.visibility,
+                            on_action: save_visibility,
+                            label: "Save visibility",
+                            pending_label: "Saving visibility…",
                         }
                         if let Some(feedback) = visibility_feedback() {
                             match feedback {
@@ -2356,8 +2421,14 @@ pub fn RecipeDetail(id: String) -> Element {
             if let Some(del_err) = delete_error() {
                 div { class: "recipe-detail__delete-error", "{del_err}" }
             }
-            if let Some(action_error) = version_action_error() {
-                div { class: "recipe-detail__delete-error", "{action_error}" }
+            if is_forking() {
+                p { role: "status", "Creating your fork draft…" }
+            }
+            if let Some(action_error) = fork_error() {
+                div { class: "recipe-detail__delete-error",
+                    p { role: "alert", "{action_error}" }
+                    Link { to: crate::Route::Dashboard {}, "Check your drafts" }
+                }
             }
 
             // ── CARD 4: Equipment (conditional) ──────────────────────────
@@ -2553,11 +2624,19 @@ pub fn RecipeDetail(id: String) -> Element {
                                                     "View snapshot"
                                                 }
                                                 if !version.is_current {
-                                                    Button {
-                                                        variant: ButtonVariant::Secondary,
-                                                        onclick: {
+                                                    RecipeMutationControl {
+                                                        pending: restoring_version() == Some(version_number),
+                                                        unavailable: restoring_version().is_some(),
+                                                        label: "Restore",
+                                                        pending_label: "Restoring version…",
+                                                        on_action: {
                                                             let recipe_id = id.clone();
                                                             move |_| {
+                                                                if restoring_version.peek().is_some() {
+                                                                    return;
+                                                                }
+                                                                restoring_version.set(Some(version_number));
+                                                                restore_error.set(None);
                                                                 let recipe_id = recipe_id.clone();
                                                                 spawn(async move {
                                                                     match restore_version(
@@ -2573,15 +2652,22 @@ pub fn RecipeDetail(id: String) -> Element {
                                                                                 let _ = window.location().reload();
                                                                             }
                                                                         }
-                                                                        Err(error) => version_action_error
-                                                                            .set(Some(error.to_string())),
+                                                                        Err(error) => {
+                                                                            restore_error.set(Some((version_number,
+                                                                                recipe_mutation_feedback(RecipeMutation::Restore, &error).to_string())));
+                                                                            restoring_version.set(None);
+                                                                        }
                                                                     }
                                                                 });
                                                             }
                                                         },
-                                                        "Restore"
                                                     }
                                                 }
+                                            }
+                                        }
+                                        if let Some((failed_version, error)) = restore_error() {
+                                            if failed_version == version_number {
+                                                p { class: "recipe-detail__delete-error", role: "alert", "{error}" }
                                             }
                                         }
                                         if difference_is_expanded {
