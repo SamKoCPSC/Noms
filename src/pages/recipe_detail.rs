@@ -22,7 +22,7 @@ use crate::api::recipe::{
 use crate::auth::context::use_auth;
 use crate::components::base::{
     ActionMenu, AddToCollectionDropdown, Button, ButtonVariant, Card, EditedRecipeImage,
-    LoadingSpinner, PageHeader,
+    LoadRecovery, LoadingSpinner, PageHeader,
 };
 use crate::types::{
     ForkAttribution, Recipe, RecipeEquipment, RecipeIngredient, RecipeLineageBranch,
@@ -41,6 +41,57 @@ const LINEAGE_DESCENDANT_EXPANSION_SIZE: usize = 5;
 #[cfg(test)]
 #[path = "recipe_mutation_recovery_tests.rs"]
 mod mutation_recovery_tests;
+
+#[cfg(test)]
+#[path = "recipe_read_recovery_tests.rs"]
+mod read_recovery_tests;
+
+#[derive(Clone, Copy, PartialEq)]
+enum RecipeReadKind {
+    History,
+    Lineage,
+}
+
+impl RecipeReadKind {
+    fn loading_message(self) -> &'static str {
+        match self {
+            Self::History => "Loading version history…",
+            Self::Lineage => "Loading fork lineage…",
+        }
+    }
+
+    fn failure_message(self) -> &'static str {
+        match self {
+            Self::History => "Version history couldn’t be loaded. Please try again.",
+            Self::Lineage => "Fork lineage couldn’t be loaded. Please try again.",
+        }
+    }
+
+    fn retry_label(self) -> &'static str {
+        match self {
+            Self::History => "Retry history",
+            Self::Lineage => "Retry lineage",
+        }
+    }
+}
+
+#[component]
+fn RecipeReadFeedback(
+    kind: RecipeReadKind,
+    pending: bool,
+    failed: bool,
+    onretry: EventHandler<()>,
+) -> Element {
+    rsx! {
+        if failed {
+            LoadRecovery {
+                pending, message: kind.failure_message(), retry_label: kind.retry_label(), onretry,
+            }
+        } else if pending {
+            p { role: "status", "{kind.loading_message()}" }
+        }
+    }
+}
 
 #[derive(Clone, Copy)]
 enum RecipeMutation {
@@ -516,9 +567,8 @@ mod layout_tests {
     #[test]
     fn version_history_actions_wrap_within_the_card() {
         let source = include_str!("recipe_detail.rs");
-        let owner_history = ["if is_owner && !versions", ".is_empty()"].concat();
         let version_history = source
-            .split(&owner_history)
+            .split("id: \"recipe-history\"")
             .nth(1)
             .expect("version history")
             .split("/// Full-page, read-only")
@@ -1871,6 +1921,17 @@ fn ForkLineage(lineage: RecipeLineageView) -> Element {
 /// Publicly accessible: tries public endpoint first, falls back to authenticated.
 #[component]
 pub fn RecipeDetail(id: String) -> Element {
+    // Replace resource captures and cancel scope-owned requests when the recipe
+    // changes, including A → B → A. A keyed fragment reconciles actual visits.
+    rsx! {
+        for requested_id in [id] {
+            RecipeDetailContents { key: "{requested_id}", id: requested_id }
+        }
+    }
+}
+
+#[component]
+fn RecipeDetailContents(id: String) -> Element {
     // ── Resources ────────────────────────────────────────────────────────
     let auth = use_auth();
 
@@ -1909,14 +1970,14 @@ pub fn RecipeDetail(id: String) -> Element {
         async move { get_fork_attribution(recipe_id).await }
     });
     let id_for_versions = id.clone();
-    let versions_resource = use_resource(move || {
+    let mut versions_resource = use_resource(move || {
         let recipe_id = id_for_versions.clone();
         async move {
             get_recipe_versions_api(recipe_id, None, crate::types::VERSION_HISTORY_PAGE_SIZE).await
         }
     });
     let id_for_lineage = id.clone();
-    let lineage_resource = use_resource(move || {
+    let mut lineage_resource = use_resource(move || {
         let recipe_id = id_for_lineage.clone();
         let descendant_depth = LINEAGE_DESCENDANT_DISPLAY_DEPTH as i32;
         async move { get_recipe_lineage(recipe_id, Some(descendant_depth)).await }
@@ -2027,11 +2088,15 @@ pub fn RecipeDetail(id: String) -> Element {
         .clone()
         .and_then(Result::ok)
         .flatten();
-    let initial_version_page = versions_resource
-        .read()
-        .clone()
-        .and_then(Result::ok)
-        .unwrap_or_default();
+    // State subscriptions announce retries even while Resource retains its
+    // last error. Optional read failures must not masquerade as empty content.
+    let versions_pending = *versions_resource.state().read() == UseResourceState::Pending;
+    let lineage_pending = *lineage_resource.state().read() == UseResourceState::Pending;
+    let versions_result = versions_resource.read().clone();
+    let lineage_result = lineage_resource.read().clone();
+    let versions_failed = matches!(versions_result, Some(Err(_)));
+    let lineage_failed = matches!(lineage_result, Some(Err(_)));
+    let initial_version_page = versions_result.and_then(Result::ok).unwrap_or_default();
     let mut versions = initial_version_page.items.clone();
     versions.extend(older_versions.read().iter().cloned());
     let next_version_cursor = if older_versions_requested() {
@@ -2065,7 +2130,7 @@ pub fn RecipeDetail(id: String) -> Element {
             older_versions_loading.set(false);
         });
     };
-    let lineage = lineage_resource.read().clone().and_then(Result::ok);
+    let lineage = lineage_result.and_then(Result::ok);
     let recipe_id_for_visibility = id.clone();
     let save_visibility = move |_| {
         if *is_saving_visibility.peek() {
@@ -2251,9 +2316,7 @@ pub fn RecipeDetail(id: String) -> Element {
                                         class: "btn btn-primary touch-target",
                                         "Edit recipe"
                                     }
-                                    if !versions.is_empty() {
-                                        a { href: "#recipe-history", class: "btn btn-secondary touch-target", "History" }
-                                    }
+                                    a { href: "#recipe-history", class: "btn btn-secondary touch-target", "History" }
                                 }
                                 if auth.is_authenticated {
                                     AddToCollectionDropdown {
@@ -2485,16 +2548,33 @@ pub fn RecipeDetail(id: String) -> Element {
                 }
             }
 
-            if let Some(lineage) = &lineage {
+            if lineage_failed || lineage_pending {
+                Card {
+                    section { aria_label: "Fork lineage",
+                        h2 { class: "recipe-detail__section-title", "Fork lineage" }
+                        RecipeReadFeedback {
+                            kind: RecipeReadKind::Lineage, pending: lineage_pending, failed: lineage_failed,
+                            onretry: move |_| { if !lineage_resource.pending() { lineage_resource.restart(); } },
+                        }
+                    }
+                }
+            } else if let Some(lineage) = &lineage {
                 if !lineage.ancestors.is_empty() || !lineage.descendants.is_empty() {
                     ForkLineage { key: "{id}", lineage: lineage.clone() }
                 }
             }
 
-            if is_owner && !versions.is_empty() {
+            if is_owner {
                 section { class: "recipe-album__history neumo-card", id: "recipe-history", aria_label: "Version history",
                     div { class: "brand-title", PageIcon { kind: PageIconKind::History, compact: true } h2 { "Version history" } }
                     p { class: "recipe-album__history-intro", "Published snapshots from this recipe’s story. Restoring creates a new version; existing history stays." }
+                    RecipeReadFeedback {
+                        kind: RecipeReadKind::History, pending: versions_pending, failed: versions_failed,
+                        onretry: move |_| { if !versions_resource.pending() { versions_resource.restart(); } },
+                    }
+                    if !versions_pending && !versions_failed && versions.is_empty() {
+                        p { "No published versions are available." }
+                    }
                     div {
                         display: "flex",
                         flex_direction: "column",
