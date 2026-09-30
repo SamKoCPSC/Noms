@@ -4,8 +4,8 @@ use dioxus::prelude::*;
 use crate::api::recipe::{list_my_recipes, list_recipe_drafts};
 use crate::auth::context::use_auth;
 use crate::components::base::{
-    AddToCollectionDropdown, CollectionSidebar, EditedRecipeImage, EmptyState, LoadingSpinner,
-    RecipeCard,
+    AddToCollectionDropdown, CollectionSidebar, EditedRecipeImage, EmptyState, LoadRecovery,
+    LoadingSpinner, RecipeCard,
 };
 use crate::components::AuthRequired;
 use crate::types::{RecipeDraftView, RecipeImage, RecipeListResponse};
@@ -43,8 +43,10 @@ fn DashboardWorkspace() -> Element {
         async move { list_my_recipes(off, PAGE_SIZE).await }
     });
     let mut drafts = use_resource(list_recipe_drafts);
-    let pending = recipes.pending();
-    let drafts_pending = drafts.pending();
+    // Subscribe to pending transitions, rather than only peeking, so retries
+    // visibly claim their controls before the response is available.
+    let pending = *recipes.state().read() == UseResourceState::Pending;
+    let drafts_pending = *drafts.state().read() == UseResourceState::Pending;
     let recipes_result: Option<Result<RecipeListResponse, ServerFnError>> = recipes.read().clone();
     let drafts_result: Option<Result<Vec<RecipeDraftView>, ServerFnError>> = drafts.read().clone();
     let draft_list = drafts_result
@@ -110,13 +112,17 @@ fn DashboardWorkspace() -> Element {
                             }
                         }
                     }
-                    if drafts_pending {
-                        p { role: "status", "Loading drafts…" }
-                    } else if let Some(Err(_)) = &drafts_result {
-                        div { class: "dashboard-error", role: "alert",
-                            p { "Your drafts couldn’t be loaded. Try again to continue editing." }
-                            button { class: "btn btn-secondary touch-target", onclick: move |_| drafts.restart(), "Retry drafts" }
+                    if let Some(Err(_)) = &drafts_result {
+                        div { class: "dashboard-error",
+                            LoadRecovery {
+                                pending: drafts_pending,
+                                message: "Your drafts couldn’t be loaded. Try again to continue editing.",
+                                retry_label: "Retry drafts",
+                                onretry: move |_| { if !drafts.pending() { drafts.restart(); } },
+                            }
                         }
+                    } else if drafts_pending {
+                        p { role: "status", "Loading drafts…" }
                     } else if let Some(items) = draft_list {
                         if items.is_empty() {
                             p { class: "dashboard-muted", "No drafts in progress. New recipes will appear here as you work." }
@@ -148,17 +154,22 @@ fn DashboardWorkspace() -> Element {
                             }
                         }
                     }
-                    if pending {
-                        div { class: "dashboard-loading neumo-card", role: "status", LoadingSpinner {} span { "Loading your recipes…" } }
-                    } else if error.is_some() {
-                        div { class: "dashboard-error neumo-card", role: "alert",
+                    if error.is_some() {
+                        div { class: "dashboard-error neumo-card",
                             h2 { "We couldn’t load your recipes" }
-                            p { "Try again to return to your library." }
-                            button { class: "btn btn-secondary touch-target", onclick: move |_| recipes.restart(), "Retry recipes" }
+                            LoadRecovery {
+                                pending,
+                                message: "Try again to return to your library.",
+                                retry_label: "Retry recipes",
+                                onretry: move |_| { if !recipes.pending() { recipes.restart(); } },
+                            }
                             if current_offset > 0 {
-                                button { class: "btn btn-ghost touch-target", onclick: move |_| offset.set((current_offset - PAGE_SIZE).max(0)), "Previous page" }
+                                button { r#type: "button", class: "btn btn-ghost touch-target", aria_disabled: pending,
+                                    onclick: move |_| { if !recipes.pending() { offset.set((current_offset - PAGE_SIZE).max(0)); } }, "Previous page" }
                             }
                         }
+                    } else if pending {
+                        div { class: "dashboard-loading neumo-card", role: "status", LoadingSpinner {} span { "Loading your recipes…" } }
                     } else if let Some(resp) = response {
                         if resp.recipes.is_empty() {
                             div { class: "dashboard-empty neumo-card",
@@ -278,6 +289,18 @@ mod tests {
 
 #[cfg(test)]
 mod collection_sidebar_integration_tests {
+    #[test]
+    fn dashboard_load_retries_subscribe_to_pending_and_guard_each_resource() {
+        let source = include_str!("dashboard.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        assert!(source.contains("recipes.state().read()"));
+        assert!(source.contains("drafts.state().read()"));
+        assert!(source.contains("if !recipes.pending()"));
+        assert!(source.contains("if !drafts.pending()"));
+    }
+
     #[test]
     fn dashboard_composes_collections_without_replacing_drafts_or_recipe_pagination() {
         let source = include_str!("dashboard.rs");

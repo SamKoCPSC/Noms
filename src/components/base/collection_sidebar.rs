@@ -5,6 +5,7 @@ use dioxus::prelude::*;
 use uuid::Uuid;
 
 use crate::api::collection::load_all_my_collections;
+use crate::components::base::LoadRecovery;
 use crate::types::CollectionSummary;
 use crate::Route;
 
@@ -174,6 +175,11 @@ fn CollectionTreeItem(mut props: CollectionTreeItemProps) -> Element {
 pub fn CollectionSidebar(#[props(default)] embedded: bool) -> Element {
     let mut collections = use_resource(load_all_my_collections);
     let expanded = use_signal(HashSet::<Uuid>::new);
+    let pending = *collections.state().read() == UseResourceState::Pending;
+    let failed = collections
+        .read()
+        .as_ref()
+        .is_some_and(|result| result.is_err());
     let tree = collections
         .read()
         .as_ref()
@@ -182,21 +188,31 @@ pub fn CollectionSidebar(#[props(default)] embedded: bool) -> Element {
         .unwrap_or_default();
 
     if tree.is_empty() {
-        if embedded {
-            return rsx! {
-                if collections.pending() {
-                    p { class: "dashboard-muted", role: "status", "Loading collections…" }
-                } else if collections.read().as_ref().is_some_and(|result| result.is_err()) {
-                    div {
-                        p { class: "dashboard-muted", role: "alert", "Collections couldn’t be loaded." }
-                        button { class: "btn btn-ghost touch-target", onclick: move |_| collections.restart(), "Retry collections" }
+        return rsx! {
+            aside {
+                class: if embedded { "dashboard-collection-tree" } else { "neumo-card" },
+                padding: if embedded { "0" } else { "var(--space-md)" },
+                min_width: "0",
+                aria_label: "Recipe collections",
+                // Retain the same recovery node while retrying so focus isn't
+                // lost to a different loading branch. Never hide load failures.
+                if failed {
+                    LoadRecovery {
+                        pending,
+                        message: "Collections couldn’t be loaded. Please try again.",
+                        retry_label: "Retry collections",
+                        onretry: move |_| { if !collections.pending() { collections.restart(); } },
                     }
+                } else if pending {
+                    p { class: "dashboard-muted", role: "status", "Loading collections…" }
                 } else {
                     p { class: "dashboard-muted", "No collections yet." }
                 }
-            };
-        }
-        return rsx! {};
+                if !embedded {
+                    Link { to: Route::CollectionNew { parent: None }, class: "btn btn-secondary touch-target", "New Collection" }
+                }
+            }
+        };
     }
 
     rsx! {
@@ -250,6 +266,18 @@ pub fn CollectionSidebar(#[props(default)] embedded: bool) -> Element {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn collection_sidebar_failure_remains_visible_and_retry_is_guarded() {
+        let source = include_str!("collection_sidebar.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        assert!(source.contains("LoadRecovery"));
+        assert!(source.contains("collections.state().read()"));
+        assert!(source.contains("if !collections.pending()"));
+        assert!(!source.contains("return rsx! {};"));
+    }
+
     use chrono::{Duration, Utc};
     use uuid::Uuid;
 

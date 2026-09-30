@@ -2,7 +2,7 @@ use crate::components::base::{PageIcon, PageIconKind};
 use dioxus::prelude::*;
 
 use crate::api::collection::list_root_collections;
-use crate::components::base::{CollectionAlbum, EmptyState, LoadingSpinner};
+use crate::components::base::{CollectionAlbum, EmptyState, LoadRecovery, LoadingSpinner};
 use crate::components::AuthRequired;
 use crate::Route;
 
@@ -19,6 +19,9 @@ fn matches_collection_query(name: &str, description: Option<&str>, query: &str) 
 pub fn CollectionList() -> Element {
     let mut collections = use_resource(list_root_collections);
     let mut query = use_signal(String::new);
+    // Resource::pending() peeks without subscribing; read state so a retry
+    // immediately changes its announcement and button state.
+    let pending = *collections.state().read() == UseResourceState::Pending;
     rsx! {
         AuthRequired {
             div { class: "container collections-page",
@@ -45,10 +48,14 @@ pub fn CollectionList() -> Element {
                 p { id: "collections-filter-help", class: "collections-help", "Showing top-level collections. Open an album to see its subcollections." }
                 match collections.read().as_ref() {
                     None => rsx! { div { class: "collections-state", role: "status", LoadingSpinner {} span { "Loading collections…" } } },
-                    Some(Err(error)) => rsx! {
+                    Some(Err(_)) => rsx! {
                         div { class: "collections-state",
-                            p { role: "alert", "Could not load collections: {error}" }
-                            button { class: "btn btn-secondary", onclick: move |_| collections.restart(), "Try again" }
+                            LoadRecovery {
+                                pending,
+                                message: "Your collections couldn’t be loaded. Please try again.",
+                                retry_label: "Try again",
+                                onretry: move |_| { if !collections.pending() { collections.restart(); } },
+                            }
                         }
                     },
                     Some(Ok(items)) if items.is_empty() => rsx! {
@@ -85,6 +92,18 @@ pub fn CollectionList() -> Element {
 #[cfg(test)]
 mod tests {
     use super::matches_collection_query;
+
+    #[test]
+    fn collection_load_recovery_uses_safe_copy_and_live_pending_guard() {
+        let source = include_str!("collection_list.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        assert!(!source.contains("Could not load collections: {error}"));
+        assert!(source.contains("LoadRecovery"));
+        assert!(source.contains("collections.state().read()"));
+        assert!(source.contains("if !collections.pending()"));
+    }
 
     #[test]
     fn collection_filter_matches_names_and_descriptions() {
