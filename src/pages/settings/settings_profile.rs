@@ -922,7 +922,6 @@ pub fn SettingsProfile() -> Element {
         .as_ref()
         .and_then(|user| user.bio.clone())
         .unwrap_or_default();
-    let profile_available = auth.current_user.is_some();
     let mut username = use_signal(move || initial_username);
     let mut display_name = use_signal(move || initial_name);
     let mut bio = use_signal(move || initial_bio);
@@ -993,8 +992,9 @@ pub fn SettingsProfile() -> Element {
     // Hold a reference to the auth context signal for updating after save (Issue #5)
     let mut auth_context = use_context::<Signal<AuthContext>>();
 
-    // Track whether form fields have been initialized from auth context
-    let mut initialized = use_signal(move || profile_available);
+    // SSR values are visible but read-only until this scope's client effect
+    // runs. Otherwise native edits before hydration can be lost on attachment.
+    let mut initialized = use_signal(|| false);
 
     // Load profile from auth context when it becomes available.
     // Reading `auth_context.read()` inside the effect closure subscribes the

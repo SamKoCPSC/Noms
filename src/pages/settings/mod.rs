@@ -71,6 +71,7 @@ mod presentation_tests {
         assert!(html.contains("Not shown on your public profile."));
         assert!(html.contains("value=\"Test Cook\""), "{html}");
         assert!(html.contains("value=\"test-cook\""), "{html}");
+        assert_eq!(html.matches("readonly=true").count(), 3, "{html}");
     }
 
     #[test]
