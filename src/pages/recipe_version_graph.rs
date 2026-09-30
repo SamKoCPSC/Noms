@@ -397,9 +397,16 @@ fn version_graph_node_is_visible(
 fn preserve_version_graph_layout_transform(
     previous: &VersionGraphLayout,
     next: &VersionGraphLayout,
+    previous_lineage_only: bool,
+    next_lineage_only: bool,
     viewport: (f64, f64),
     transform: VersionGraphTransform,
 ) -> VersionGraphTransform {
+    // A view-mode toggle explicitly fits the new layout. Do not adjust that
+    // fresh transform using coordinates from the previous view mode.
+    if previous_lineage_only != next_lineage_only {
+        return transform;
+    }
     // Older batches can renumber every column. Anchor the nearest surviving
     // snapshot instead of moving the user's view with those layout coordinates.
     let anchor = previous
@@ -1698,7 +1705,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
     let mut context_compare_current = use_signal(|| None::<MountedEvent>);
     let mut expansion_records = use_signal(Vec::<VersionGraphExpansionRecord>::new);
     let mut request_scope = use_signal(|| VersionGraphRequestScope::initial(id.clone()));
-    let mut previous_graph_layout = use_signal(|| None::<VersionGraphLayout>);
+    let mut previous_graph_layout = use_signal(|| None::<(bool, VersionGraphLayout)>);
     // Subscribe to the completed value before any pending check or early return.
     // Reading only pending() can leave a client-side route in its loading state.
     let graph_result: Option<Result<VersionGraph, ServerFnError>> = graph_resource.read().clone();
@@ -1734,27 +1741,30 @@ pub fn RecipeVersionGraph(id: String) -> Element {
             return;
         }
         let (full, _) = version_graph_with_visible_expansions(&initial, &expansion_records.read());
-        let graph = if lineage_only() {
+        let next_lineage_only = lineage_only();
+        let graph = if next_lineage_only {
             version_graph_lineage_only(&full)
         } else {
             full
         };
         let next = build_version_graph_layout(&graph);
-        if let Some(previous) = previous_graph_layout.peek().as_ref() {
-            if previous == &next {
+        if let Some((previous_lineage_only, previous)) = previous_graph_layout.peek().as_ref() {
+            if previous == &next && *previous_lineage_only == next_lineage_only {
                 return;
             }
             if *initial_graph_fit_complete.peek() {
                 let adjusted = preserve_version_graph_layout_transform(
                     previous,
                     &next,
+                    *previous_lineage_only,
+                    next_lineage_only,
                     *graph_viewport.peek(),
                     *graph_transform.peek(),
                 );
                 graph_transform.set(adjusted);
             }
         }
-        previous_graph_layout.set(Some(next));
+        previous_graph_layout.set(Some((next_lineage_only, next)));
     }));
 
     let back_to_recipe = rsx! {
@@ -4503,8 +4513,9 @@ mod tests {
         };
         let viewport = (1361.0, 518.0);
         let transform = previous.center_transform(current, viewport, 0.85);
-        let adjusted =
-            super::preserve_version_graph_layout_transform(&previous, &next, viewport, transform);
+        let adjusted = super::preserve_version_graph_layout_transform(
+            &previous, &next, false, false, viewport, transform,
+        );
         let old_node = previous.node(current).unwrap();
         let new_node = next.node(current).unwrap();
         assert_eq!(adjusted.scale, transform.scale);
@@ -4532,10 +4543,30 @@ mod tests {
             super::preserve_version_graph_layout_transform(
                 &previous,
                 &super::VersionGraphLayout::default(),
+                false,
+                false,
                 (900.0, 560.0),
                 transform,
             ),
             transform
+        );
+    }
+
+    #[test]
+    fn lineage_mode_switch_preserves_the_explicit_fit_transform() {
+        let previous = super::build_version_graph_layout(&branched_graph());
+        let mut next = previous.clone();
+        for node in &mut next.nodes {
+            node.x += 520.0;
+        }
+        next.width += 520.0;
+        let viewport = (900.0, 560.0);
+        let fitted = next.fit_transform(viewport);
+        assert_eq!(
+            super::preserve_version_graph_layout_transform(
+                &previous, &next, false, true, viewport, fitted,
+            ),
+            fitted
         );
     }
 
