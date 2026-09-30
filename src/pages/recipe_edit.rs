@@ -106,6 +106,13 @@ enum RecipeWriteAction {
     Discard,
 }
 
+// Publication, draft saving and discard all mutate the same draft. Recheck
+// this at action time as well as disabling controls, so queued clicks cannot
+// start a competing write before the next render.
+fn editor_write_in_progress(publishing: bool, saving_draft: bool, discarding: bool) -> bool {
+    publishing || saving_draft || discarding
+}
+
 fn recipe_write_feedback(action: RecipeWriteAction, error: &ServerFnError) -> &'static str {
     if matches!(error, ServerFnError::ServerError { message, .. } if message == "Not authenticated")
     {
@@ -287,8 +294,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
             tags_input(),
         );
         if is_loading()
-            || is_saving()
-            || is_manually_saving()
+            || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
             || last_saved_editor().as_ref() == Some(&editor)
         {
             return;
@@ -307,7 +313,9 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
         #[cfg(target_arch = "wasm32")]
         spawn(async move {
             gloo_timers::future::TimeoutFuture::new(2_000).await;
-            if autosave_generation() != generation || is_saving() || is_manually_saving() {
+            if autosave_generation() != generation
+                || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
+            {
                 return;
             }
             let first_save =
@@ -350,16 +358,19 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
     let on_save_draft = move |_| {
         #[cfg(target_arch = "wasm32")]
         {
+            if is_loading()
+                || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
+                || busy()
+                || step_photo_upload_count() > 0
+            {
+                return;
+            }
             if draft_id().is_none() {
                 form_error.set(Some(
                     "Draft is still loading. Try again in a moment.".to_string(),
                 ));
                 return;
             }
-            if is_loading() || is_saving() || is_manually_saving() || busy() {
-                return;
-            }
-
             form_error.set(None);
             draft_save_error.set(None);
             is_manually_saving.set(true);
@@ -487,6 +498,12 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
 
     // ── Submit handler (two-phase: upload images → save recipe) ────────
     let on_submit = move |_| {
+        if is_loading()
+            || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
+            || step_photo_upload_count() > 0
+        {
+            return;
+        }
         // Clear previous errors
         form_error.set(None);
 
@@ -670,7 +687,11 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
 
     // ── Cancel handler ──────────────────────────────────────────────────
     let on_cancel = move |_| {
-        if busy() || is_saving() || is_manually_saving() {
+        if is_loading()
+            || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
+            || busy()
+            || step_photo_upload_count() > 0
+        {
             return;
         }
         let destination = if id_is_draft {
@@ -688,6 +709,13 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
 
     let id_for_discard = id.clone();
     let on_discard = move |_| {
+        if is_loading()
+            || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
+            || busy()
+            || step_photo_upload_count() > 0
+        {
+            return;
+        }
         let Some(current_draft_id) = draft_id() else {
             return;
         };
@@ -841,8 +869,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                         Button {
                             variant: ButtonVariant::Secondary,
                             disabled: !draft_save_state.is_actionable()
-                                || is_saving()
-                                || is_discarding()
+                                || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
                                 || busy()
                                 || step_photo_upload_count() > 0,
                             onclick: on_save_draft,
@@ -850,7 +877,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                         }
                         Button {
                             variant: ButtonVariant::Primary,
-                            disabled: is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0,
+                            disabled: editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding()) || busy() || step_photo_upload_count() > 0,
                             onclick: on_submit,
                             if step_photo_upload_count() > 0 || (is_saving() && busy()) {
                                 "Uploading images..."
@@ -862,13 +889,13 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                         }
                         Button {
                             variant: ButtonVariant::Ghost,
-                            disabled: is_saving() || is_manually_saving() || is_discarding() || busy() || step_photo_upload_count() > 0,
+                            disabled: editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding()) || busy() || step_photo_upload_count() > 0,
                             onclick: on_cancel,
                             "Cancel"
                         }
                         Button {
                             variant: ButtonVariant::Danger,
-                            disabled: is_saving() || is_manually_saving() || is_discarding() || busy(),
+                            disabled: editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding()) || busy() || step_photo_upload_count() > 0,
                             onclick: on_discard,
                             if is_discarding() { "Discarding..." } else { "Discard Draft" }
                         }
@@ -1629,6 +1656,50 @@ mod load_error_tests {
             .next()
             .unwrap();
         assert!(manual_save.contains("draft_save_error.set(Some"));
+    }
+
+    #[test]
+    fn editor_write_guard_blocks_every_pending_write_kind() {
+        for publishing in [false, true] {
+            for saving_draft in [false, true] {
+                for discarding in [false, true] {
+                    assert_eq!(
+                        editor_write_in_progress(publishing, saving_draft, discarding),
+                        publishing || saving_draft || discarding
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn editor_actions_and_autosave_use_the_shared_write_guard() {
+        let source = include_str!("recipe_edit.rs");
+        for marker in [
+            "// Two-second debounced autosave.",
+            "let on_save_draft = move",
+            "let on_submit = move",
+            "let on_cancel = move",
+            "let on_discard = move",
+        ] {
+            let section = source.split(marker).nth(1).unwrap();
+            let before_first_return = section.split("return;").next().unwrap();
+            assert!(
+                before_first_return.contains("editor_write_in_progress("),
+                "Missing synchronous guard after {marker}"
+            );
+        }
+        let publication_button = source
+            .split("// ── Action buttons")
+            .nth(1)
+            .unwrap()
+            .split("variant: ButtonVariant::Primary,")
+            .nth(1)
+            .unwrap()
+            .split("onclick: on_submit")
+            .next()
+            .unwrap();
+        assert!(publication_button.contains("editor_write_in_progress("));
     }
 }
 
