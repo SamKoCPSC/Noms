@@ -2482,3 +2482,162 @@ focus placement, post-commit lost-response handling and exported-image pixel
 checks remain open. Dark-mode redesign remains deferred. Reverting the three
 code/fixture commits restores this slice; inserted fixture data is not removed
 by a Git revert and must not be mistaken for production content.
+
+## Settings save and linked-account load recovery — 2026-09-30
+
+Continued the established isolated `codex/NOMS-020-checkpoint-8` worktree at
+`/home/samko/GitRepos/Noms/.worktrees/NOMS-020-checkpoint-8`, integrating by
+fast-forward into the design worktree and rebuilding only existing deployment
+`noms-5063d4a16468023f` at `http://127.0.0.1:32768`.
+Implementation-loop skill: tests first, coherent local commits, browser acceptance
+and explicit second-pass self-review. No independent-agent review, push, new
+deployment or new fixture seed.
+
+### Reproduced findings and changes
+
+- A failed profile save restored old committed fields, discarding entered name
+  and Bio, and displayed the raw TypeError/transport wrapper. Button focus became
+  BODY when the old native-disabled save state was rendered.
+- Linked-account retry did not subscribe to resource state. A paused retry still
+  showed the previous alert and enabled Try again rather than pending feedback.
+  No baseline focus-loss claim: that captured retry still had button focus.
+- Reload/early-fill checking exposed initialization/hydration timing: entered
+  text before handlers were ready could be replaced by committed profile data.
+  One attempted save during startup generated **zero requests**, so it was not
+  counted as a successful failure-injection check. A later hydrated navigation
+  generated one request and proved recovery; final hydration gating was checked
+  separately below.
+
+`fb5f1bb` retains entered text—including surrounding whitespace—until a successful
+save, instead of optimistic trimming and rollback. Unknown server/transport
+errors map to safe retry copy; a strict allowlist keeps known username/name/Bio
+validation, with sign-in-again guidance for an expired session. Parent handler
+checks the live pending signal before spawning. ProfileSaveControl stays mounted
+and focusable with aria-disabled pending/invalid guards and a named status.
+Fields are read-only during a save so its completion cannot overwrite newer
+edits. Editing/retrying clears stale success feedback; auth/navbar data updates
+only after success. No save API, schema or authorization changes.
+
+`eac415b` preserves linked-account read Results instead of swallowing errors,
+subscribes to resource state, names the initial loading state, and uses the
+shared LoadRecovery with a live pending guard. Failure/retry does not infer an
+empty account list or offer Connect links.
+
+`91bfe6f` initializes form signal values from available auth before first render,
+guards uninitialized edits/saves and adds actual click-handler coverage.
+It also removes a redundant loader closure caught by WASM Clippy.
+`cd1065a` keeps populated SSR fields read-only and Save aria-disabled until the
+client initialization effect has run. Available auth data remains readable,
+but native pre-hydration edits cannot be accepted and then overwritten.
+
+### Tests and rebuilt browser evidence
+
+Six new tests: two profile feedback contracts, SSR stable save-control states,
+actual ready/pending/invalid click dispatch, named account loading/guest
+presentation, and real account-resource failure without a Fullstack session
+(fails before DB access). Extended the existing profile SSR test to require
+populated initial values and all three read-only fields before hydration.
+
+Initial feedback/control and account tests were written before implementation:
+missing new helpers failed compilation; account loading and safe-recovery tests failed; initial-field
+and read-only assertions failed before their fixes. Initial test-draft syntax
+and lifetime issues were corrected, not counted as behavior evidence. Actual
+click-dispatch guard coverage was added during the follow-up review.
+
+Used existing mock subject `noms020-editor-reviewer` / `user-62c8`, not the owner.
+All injected failures intercepted requests **before server handling**.
+
+- **Profile pending/repeat failure:** Enter Save issued one request and showed
+  Saving profile…/Saving… with all three fields read-only. A forced extra click
+  made **0 extra requests**. Failure and repeated failure retained name/Bio text
+  exactly, restored editability, used safe copy and kept Save changes focus.
+- **Real validation:** attempted already-existing `cp8profile` username. Server
+  returned That username is already taken. Please choose another.; attempted
+  username, name and Bio were retained. No successful username change performed.
+  A later locator interaction was blocked because an inspected handle had been
+  masked; explicitly refilling the known reviewer handle restored validity.
+  That blocked interaction is not counted as a transport-failure test.
+- **Success:** retry with the reviewer's unchanged handle successfully saved
+  synthetic `CP8 Settings Review` and Bio, applied trimmed authoritative values,
+  cleared the error, retained Save changes focus and updated the account label.
+  Subsequent hydrated Profile navigation showed the stored name/Bio. Early
+  post-reload observation was not counted as persistence proof until hydration
+  settled.
+- **Final-build initialization:** on reload, all three fields were read-only and
+  Save had aria-disabled=true. Normal field fill waited until handlers were ready.
+  Enter generated exactly one intercepted save; pending kept focus/read-only
+  state. Failure retained `CP8 Final Settings Test` and the exact spaced Bio
+  `  Final retained local input.  `, restored editability and Save focus.
+  This is direct final-build startup/failed-save evidence; success/conflict and
+  account retries were exercised earlier in the same integrated code series.
+- **Account load/retry:** initial pause showed Loading linked accounts…. Failure
+  produced safe copy and Retry linked accounts. Enter retry issued one request,
+  retained focus as Retrying…, showed Trying again… with zero simultaneous
+  alerts/Connect links. Forced extra activation made **0 extra requests**.
+  Repeat failure retained retry focus; success restored the single Google card,
+  zero alerts, disabled last-account Unlink and the missing-provider Connect
+  GitHub link. No connect/unlink action was performed. Post-success account retry
+  focus placement remains unimplemented; the retry panel is replaced by data.
+- **320px geometry:** profile failure and linked-account failure each had
+  innerWidth=320, document width 305px, no horizontal overflow and **44px-high**
+  action controls inside the viewport. Not complete populated phone/tablet or
+  real-touch acceptance.
+- **Guest gates:** after normal reviewer sign-out, Settings Profile/Accounts
+  redirected to `/login?redirect_uri=%2Fsettings%2Fprofile` and
+  `/login?redirect_uri=%2Fsettings%2Faccounts`; zero profile fields, account rows
+  or Unlink controls rendered. Existing mock sign-in at the start of this slice
+  returned to Accounts. No owner settings were modified.
+
+Final-build desktop screenshot saved and visually inspected:
+`/tmp/noms-020-settings-retained-save.jpg`, showing retained Bio, safe alert and
+focused Save changes. Temporary interception/emulation cleared and tab closed.
+
+### Data preservation, validation and review
+
+After successful-save acceptance, restored only the reviewer's temporary
+name/Bio to its blank-name/no-Bio baseline using a conditional update guarded
+by exact user ID, unchanged handle and the exact values this check had saved
+(UPDATE 1). Existing saved avatar edit remained present. Final injected edits
+never reached the server. Both original Google links remain one each for owner
+and reviewer; no linking, unlinking, account deletion or avatar removal/upload.
+
+Read-only DB checks: **28 users; 50 public / 34 private / one unlisted recipes;
+25 public / 31 private / one unlisted collections**. Original draft revision
+**17**, exact commentary `Validation fixture only; keep private.`, one image
+and **31 collection memberships** unchanged. No recipe/collection data writes.
+User-owned generated CSS retains SHA-256
+`63fb925365998338ce8dec1e725c097e5648f820c9674767880e910db80d7e46`.
+
+With `SQLX_OFFLINE=true` and the existing integration target cache:
+
+```sh
+cargo test --features server pages::settings -- --test-threads=8
+just ci
+```
+
+Focused Settings filter **22 passed, 0 failed**. Final full CI on `cd1065a`:
+**exit 0; 860 passed, 0 failed, 12 ignored**, plus native/WASM compilation,
+Clippy, formatting and policy gates. Eight existing allowed audit warnings
+remain; ignored search/storage integration checks not freshly run.
+Logs: `/tmp/noms-020-settings-recovery-red.log`,
+`/tmp/noms-020-settings-accounts-red.log`,
+`/tmp/noms-020-settings-initialization-red.log`,
+`/tmp/noms-020-settings-hydration-red.log`,
+`/tmp/noms-020-settings-recovery-tests.log`,
+`/tmp/noms-020-settings-recovery-ci.log`.
+
+Explicit second-pass self-review **PASS for this scoped change**: complete diff
+and ordered commits, safe feedback allowlist, retained inputs, live pending
+guards, hydration gate, stable controls, real resource failure tests, no API/auth
+changes and browser/data evidence. No blocking/should-fix issue remains in changed
+code; no independent-agent review claimed. Local commit sequence `fb5f1bb` →
+`eac415b` → `91bfe6f` → `cd1065a`, followed by this documentation, fast-forwarded
+into the existing design branch. Prior scoped baseline: `811f74b`.
+
+**Next:** recipe-detail action failure acceptance, then remaining Settings mutation
+and cross-route recovery. Source still exposes raw errors in unchanged unlink
+and avatar-removal handlers; those are queued source findings, not newly proven
+runtime/privacy failures. Global auth-bootstrap load failure, successful username
+replacement, post-commit lost-response/partial-save handling, screen-reader,
+real-device and complete per-page accessibility checks remain open. No complete
+Settings-page or whole-checkpoint sign-off; dark-mode redesign remains deferred.
