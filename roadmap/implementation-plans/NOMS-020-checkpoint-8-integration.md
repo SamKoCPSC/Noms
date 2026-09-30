@@ -2779,3 +2779,144 @@ request was attempted. Post-commit lost-response/idempotency, navigation-failure
 fallbacks, recipe route replacement, screen-reader and real-device checks remain
 open. This is not full recipe-page or whole-checkpoint acceptance; dark-mode
 redesign remains deferred.
+
+## Recipe history, lineage and inline difference recovery — 2026-09-30
+
+### Accepted scope and implementation
+
+Current recipe detail now distinguishes initial history/lineage loading,
+failure and successful empty results. Each read has independent safe feedback
+and a guarded retry; failed optional reads no longer silently disappear. The
+owner's History link and section remain available during loading/failure.
+Successful empty lineage retains its existing presentation (no lineage panel).
+
+Older-history failures retain the loaded snapshots and failed cursor. Pending,
+retry and terminal controls remain focusable; live guards prevent duplicate
+requests. Successful exhaustion leaves an inert **All versions loaded** control
+in place. Inline differences provide direct **Retry differences** feedback,
+named pending status and disclosure relationships, rather than raw transport
+errors or requiring collapse/reopen to retry.
+
+Recipe contents use a keyed visit scope to reset captures, history cursors,
+comparison state and errors across recipe replacement, including A → B → A.
+The existing mutation control was renamed to `RecipeActionControl` and reused;
+its mutation behavior and regression assertions remain intact. A populated
+320px comparison exposed clipped fixed-minimum columns; columns now shrink to
+the available width, and field headers wrap. This shared comparison-panel
+layout correction also applies to historical snapshots, but their custom
+comparison recovery is **not** accepted by this slice.
+
+No API, authorization, sharing, deletion or global design-token changes.
+The established checkpoint worktree was reused, not a new branch/deployment:
+`codex/NOMS-020-checkpoint-8` in `.worktrees/NOMS-020-checkpoint-8`, fast-forwarded
+into `codex/NOMS-020-visual-design-refinement` in
+`.worktrees/NOMS-020-visual-design-refinement`.
+
+### Approved fixture and browser evidence
+
+Reused the existing local instance **noms-c799915fcf93e034**, app
+`http://127.0.0.1:32768`, after verifying its development label. The older
+stopped instance was not used. Insert-only transactional fixture
+`scripts/dev-fixtures/noms-020-recipe-history.sql` requires an explicitly supplied
+existing mock owner; no new account or real content was introduced. It adds a
+private 30-version root, a private one-version fork and one published lineage
+edge. Collision checks and a repeat application passed without duplicates.
+The first ambiguous-variable attempt rolled back before the corrected script
+was applied; the prior recipe/draft remained unchanged.
+
+Browser checks used normal mock-owner sign-in and UI navigation. Failures were
+injected before server execution using tab-scoped request interception; no
+fabricated successful API payloads or DOM mutations were used.
+
+- **Initial reads:** reproduced the old silent history/lineage failures, then
+  verified named loading states and two independent safe retry panels. Retrying
+  history recovered 25 snapshots while lineage retained its own failure;
+  retrying lineage recovered the root/fork edge without restarting history.
+  Enter/Space during either pending retry produced one request only and retained
+  the native retry button's focus. At 320px, both retry targets were 44px high,
+  inside a 305px content viewport with no document overflow.
+- **Older history:** failure retained v30 through v6 and focused **Retry older
+  versions**. Retry recovered v5 through v1: 30 unique, descending snapshots.
+  Pending Enter/Space produced one request; terminal activation produced zero.
+  Focus remained on **All versions loaded**. The failed retry target at 320px
+  was 233×44px and retained all 25 initial rows without overflow.
+- **Inline differences:** held requests blocked repeated keyboard activation
+  and another version's forced pointer activation. Failure retained focus on
+  **Retry differences**, `aria-expanded=true` and
+  `aria-controls=recipe-difference-30`; no native disabled attribute or raw error.
+  Direct retry recovered the real v29 → v30 description changes and retained
+  **Hide differences** focus. Collapse/reopen requested a new comparison.
+  At 320px the retry target was 142×44px; the populated panel's client and scroll
+  widths both measured 201px after the correction (previously 201/245px).
+- **Route isolation:** direct lineage links exercised root/fork navigation,
+  with the fork showing only v1 and no inherited comparison/error/cursor.
+  These lineage links are normal document links, not SPA-only proof. The
+  router-aware fork attribution link followed by browser Back/Forward then
+  exercised same-document replacement. After releasing a delayed root
+  comparison following Back, Forward restored a fresh root with 25 snapshots
+  and no expanded comparison. An old root paging request released
+  after Back → Forward did not append to the new root visit: it retained its
+  fresh 25 snapshots, idle **Load older versions**, and no stale errors/panel.
+- **Guest:** normal sign-out and fresh private-root navigation rendered Recipe
+  not found, without fixture title, history, lineage or owner controls. This is
+  private guest-gate evidence, not fresh public/non-owner or session-expiry
+  acceptance.
+
+Screenshots captured and visually inspected:
+`/tmp/noms-020-history-lineage-recovery.jpg` (history retry panel),
+`/tmp/noms-020-history-pagination-recovery.jpg`,
+`/tmp/noms-020-history-differences-recovery.jpg`,
+`/tmp/noms-020-history-differences-success.jpg`, and
+`/tmp/noms-020-history-differences-mobile.jpg` (actual 320×900 viewport).
+Browser handles were reconnected after the browser service changed; no new
+deployment or test identity was needed. Interception/device overrides cleared,
+normal viewport restored, mock owner signed out and agent-created tab closed.
+
+Final current-instance DB: **one user, three private recipes, 35 versions,
+one unchanged owner-only draft, zero collections and one published lineage
+edge**. No mutation/deletion was exercised in this slice. User-owned generated
+CSS SHA-256 remains
+`63fb925365998338ce8dec1e725c097e5648f820c9674767880e910db80d7e46`.
+
+### Validation, review and remaining work
+
+Tests-first failures are retained in
+`/tmp/noms-020-recipe-reads-red.log`,
+`/tmp/noms-020-recipe-history-controls-red.log` and
+`/tmp/noms-020-recipe-comparison-width-red.log`. Eight new tests cover rendered
+read feedback, independent resource subscriptions/guards, actual keyed visit
+remounting, actual continuation cursor/state invariants, empty/terminal guards,
+difference retry/collapse/pending decisions, handler contracts and the narrow
+comparison layout. Source-contract/SSR tests do not replace the runtime evidence
+above; no full live server-component harness is claimed.
+
+With `SQLX_OFFLINE=true` and `CARGO_TARGET_DIR` set to the existing integration
+worktree's target cache:
+
+```sh
+cargo test --features server pages::recipe_detail -- --test-threads=8
+just ci
+```
+
+Final focused suite: **46 passed, 0 failed**. Final `just ci` on `60f4eb3`:
+**exit 0; 874 passed, 0 failed, 12 ignored**, including native/WASM checks,
+Clippy, formatting and policy gates. Eight existing allowed audit warnings
+remain; ignored integration checks were not freshly exercised. Logs:
+`/tmp/noms-020-recipe-reads-tests.log`, `/tmp/noms-020-recipe-reads-ci.log`.
+
+Explicit second-pass self-review **PASS for this slice**: reviewed the complete
+ordered diff, tests, actual cursor/route/focus evidence, unchanged authorization
+and mutation contracts, fixture boundaries and final narrow layout. The clipped
+comparison finding was fixed and revalidated; no blocking/should-fix finding
+remains in the changed scope. No independent-agent review claimed. Ordered
+commits: `6d14bcd` fixture → `fa547af` independent reads/keyed visits → `51c5f8e`
+paging/difference recovery → `60f4eb3` narrow comparison → this documentation.
+Baseline `35942cd`; integration fast-forward only, no push.
+
+**Next:** remaining Delete and Settings mutation/global-auth recovery, plus
+historical-snapshot custom-comparison failure states and broader cross-route
+failure/permission/accessibility acceptance. Post-success focus placement for
+initial read retries, full screen-reader/real-touch checks, post-commit
+lost-response/idempotency and navigation-failure fallbacks remain open. This
+does not close the full recipe page or checkpoint 8; dark-mode redesign remains
+deferred.
