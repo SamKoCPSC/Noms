@@ -1717,10 +1717,13 @@ pub fn RecipeVersionGraph(id: String) -> Element {
     }));
 
     use_effect(use_reactive((&id,), move |(recipe_id,)| {
+        // pending() is a non-subscribing peek; read the result first so this
+        // effect also runs when the initial asynchronous request completes.
+        let result = graph_resource.read().clone();
         if graph_resource.pending() || request_scope.read().recipe_id != recipe_id {
             return;
         }
-        let Some(Ok(initial)) = graph_resource.read().clone() else {
+        let Some(Ok(initial)) = result else {
             return;
         };
         if !initial
@@ -2408,7 +2411,11 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                             div {
                                 class: "recipe-version-graph__card-layer",
                                 style: card_layer_style,
+                                // Key the loop's outer fragment, not only the nested Rust
+                                // expression's card, so prepending preserves DOM focus.
                                 for (layout_node, node) in layout.nodes.iter().filter_map(|layout_node| nodes_by_id.get(&layout_node.id).cloned().map(|node| (layout_node, node))) {
+                                    Fragment {
+                                        key: "snapshot-{layout_node.id.recipe_id}-{layout_node.id.version_number}",
                                         {
                                             let node_id = node.id();
                                             let is_fork_source = fork_edges
@@ -2718,6 +2725,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                 }
                                             }
                                         }
+                                    }
                                 }
                             }
                         }
@@ -3547,6 +3555,8 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                         summary { "Accessible graph outline" }
                         ol { class: "recipe-version-graph__outline-nodes",
                             for node in layout.nodes.iter().filter_map(|layout_node| nodes_by_id.get(&layout_node.id)) {
+                                Fragment {
+                                    key: "outline-{node.id().recipe_id}-{node.id().version_number}",
                                     {
                                         let node_id = node.id();
                                         let title = node.title().unwrap_or(if node.is_deleted() {
@@ -3692,6 +3702,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                             }
                                         }
                                     }
+                                }
                             }
                         }
                         if !layout.edges.is_empty() {
