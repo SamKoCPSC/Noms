@@ -140,7 +140,7 @@ fn ProfilePagination(
         format!("All {noun} loaded")
     };
     rsx! {
-        div { class: "load-more",
+        div { class: "load-more profile-pagination",
             p { role: if failed && !pending { "alert" } else { "status" },
                 if pending { "Loading public {noun}…" }
                 else if failed { "Public {noun} couldn’t be loaded. Please try again." }

@@ -89,6 +89,7 @@ fn profile_pagination_has_safe_feedback_and_a_stable_focusable_control() {
             let html = dioxus_ssr::render(&dom);
             assert_eq!(html.matches("<button").count(), 1, "{html}");
             assert!(html.contains("touch-target"), "{html}");
+            assert!(html.contains("profile-pagination"), "{html}");
             assert!(!html.contains(" disabled"), "{html}");
             assert!(
                 html.contains(&format!(

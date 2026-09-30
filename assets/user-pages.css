@@ -23,6 +23,8 @@
 .user-disclosure[open] > summary .user-disclosure__chevron { transform: rotate(180deg); }
 .user-disclosure__body { padding: 0 24px 24px; }
 .user-profile__collections, .user-profile__recipes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 24px; }
+.user-profile .profile-pagination { flex-direction: column; align-items: center; gap: var(--space-sm); }
+.user-profile .profile-pagination p { margin: 0; max-width: 100%; text-align: center; overflow-wrap: anywhere; }
 .user-profile__collection { min-width: 0; overflow-wrap: anywhere; border-radius: 20px; }
 .user-profile__collection > p { font-size: 14px; }
 .user-settings__profile-grid { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; padding: 0 28px 28px; }
