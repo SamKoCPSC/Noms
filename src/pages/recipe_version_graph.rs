@@ -2341,7 +2341,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                     "data-before": (comparison_before() == Some(node_id)).to_string(),
                                                     "data-after": (comparison_after() == Some(node_id)).to_string(),
                                                     style: node_style,
-                                                    onfocus: move |_| {
+                                                    onfocusin: move |_| {
                                                         let current = graph_transform();
                                                         let next = visible_version_graph_node_transform(
                                                             &layout_for_keyboard_focus,
