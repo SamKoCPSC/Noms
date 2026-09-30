@@ -37,6 +37,7 @@
 .recipe-version-graph-page .recipe-version-graph__legend-swatch { animation: none; box-shadow: none; outline: none; border-radius: 50%; }
 .recipe-version-graph-page .recipe-version-graph__canvas-viewport {
     height: clamp(430px, 64vh, 680px); border-radius: 22px; background: var(--bg-base);
+    overflow: clip;
     border: 1px solid var(--border-color); box-shadow: var(--elevation-inset);
 }
 .recipe-version-graph-page .recipe-version-graph__node,
