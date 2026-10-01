@@ -3670,3 +3670,105 @@ actual screen-reader/real-device touch and final whole-app visual/behavior
 acceptance. The safe failure text and pre-server tests do not prove a committed
 write whose response is lost. This scoped Delete pass is not checkpoint-8
 sign-off or authorization to delete another fixture/account.
+
+## Disposable Settings fixture preparation — 2026-10-01
+
+The user approved preparation of a separate expendable Settings identity and
+avatar. This is setup evidence, not approval or acceptance of the subsequent
+final unlink/removal/account-deletion actions. Only the existing local project
+`noms-c799915fcf93e034` was used: app **32768**, Postgres **32769**, MinIO public
+base `http://127.0.0.1:32770/noms-media`. The exact database container's
+`com.noms.dev-environment=true` label was reverified; no production deployment
+or unrelated local instance was changed.
+
+Tracked sources:
+[insert-only Settings fixture](../../scripts/dev-fixtures/noms-020-settings-disposable.sql)
+and [synthetic avatar](../../scripts/dev-fixtures/noms-020-settings-avatar.svg).
+Namespace: `NOMS020 CP8 Settings disposable 2026-10-01`.
+
+- User `5c4c58f4-bc23-6fbf-e2e0-3c4302d93e56`: username `cp8settings`, display
+  name `CP8 Settings – Disposable`, email `cp8settings@example.invalid`.
+  It owns **zero recipes, drafts and collections**; it is not a real person.
+- Google identity `c66405cf-fd75-e244-44be-364ac563693a`, mock subject
+  `cp8settingsdisposable`; GitHub identity
+  `bff65377-fec8-e9ad-2b92-cd3589fba3d7`, subject `424242` from the repository's
+  fixed mock GitHub user-info response. No credentials/provider tokens seeded.
+- Avatar asset `aaa5ec53-62dd-fb06-a4b0-47503257f862`: retained managed avatar
+  owned by this user, one `avatar_media_refs` row, no attachment capability or
+  expiry. Legacy avatar fields remain NULL. Canonical objects under
+  `avatars/5c4c58f4-bc23-6fbf-e2e0-3c4302d93e56/` are
+  `aaa5ec53-62dd-fb06-a4b0-47503257f862-original` (512×512 PNG, 24,704 bytes),
+  `aaa5ec53-62dd-fb06-a4b0-47503257f862.webp` (256×256 WebP, 2,620 bytes) and
+  `aaa5ec53-62dd-fb06-a4b0-47503257f862-thumb.webp` (96×96 WebP, 1,114 bytes).
+  The exact namespace was empty before uploading these three objects; original
+  MIME is `image/png`, derivative MIME is `image/webp`. No objects overwritten.
+
+Reproduce rendering from the task worktree with the existing ImageMagick:
+
+```sh
+magick scripts/dev-fixtures/noms-020-settings-avatar.svg /tmp/noms-020-settings-avatar-original.png
+magick /tmp/noms-020-settings-avatar-original.png -resize 256x256 /tmp/noms-020-settings-avatar-full.webp
+magick /tmp/noms-020-settings-avatar-original.png -resize 96x96 /tmp/noms-020-settings-avatar-thumb.webp
+magick identify /tmp/noms-020-settings-avatar-original.png /tmp/noms-020-settings-avatar-full.webp /tmp/noms-020-settings-avatar-thumb.webp
+```
+
+For a newly approved local instance, verify its label and empty fixture/object
+namespace first. Copy those generated files into its MinIO container and use
+the existing `mc cp --attr Content-Type=...` with the three exact keys above,
+using only that container's local credentials (never print them). Then run:
+
+```sh
+docker exec -i noms-c799915fcf93e034-postgres-1 \
+  psql -U noms -d noms -X \
+  -v fixture_media_base=http://127.0.0.1:32770/noms-media \
+  -v fixture_allow_create=true \
+  < scripts/dev-fixtures/noms-020-settings-disposable.sql
+```
+
+Initial creation and intact replay succeeded transactionally. The subsequent
+guard refinement makes ordinary replay default to `fixture_allow_create=false`:
+omit the create flag when validating this existing fixture. That replay passed
+without changing counts; a non-local media base and an absent namespace each
+failed with expected errors/exit 3 before insertion. The absent test substituted
+only the namespace with `NOMS020 CP8 Settings absent-guard 2026-10-01` in the
+input stream; no new fixture was created. Partially consumed fixtures fail
+validation instead of resetting removed providers/avatar state. After complete
+deletion, ordinary replay refuses recreation. Do not deliberately opt into
+recreation/re-upload after consumption without fresh approval.
+
+Totals after setup: **3 users, 3 OAuth identities, 1 managed media asset,
+1 avatar reference, 30 recipes, 62 versions, 1 draft, 29 collections and
+28 memberships**. Only one user, two identities, one asset/reference and the
+three synthetic image objects were added. Ordered `row_to_json` hashes using
+`string_agg(..., '|' ORDER BY id)` (membership order: collection/recipe ID)
+matched before/after for all recipes, versions, collections, memberships and
+drafts, plus all non-fixture user/OAuth rows. This comparison was repeated after
+mock login and confirmation staging. Routine fixture OAuth/session updates are
+excluded; original account rows are not.
+
+Browser: normal Google mock login returned the existing fixture identity,
+without account creation/terms acceptance. Profile fields/public-profile link
+identify `@cp8settings`; the synthetic avatar loaded at natural width 256.
+Linked accounts showed both Google and GitHub. GitHub login itself was not
+tested. The GitHub unlink modal is staged with default Cancel focus, avatar
+Remove photo is available in a separate profile tab, and account deletion's
+non-final steps reached the final modal with Go Back focus. No final Unlink,
+Remove photo, Save changes or Delete My Account action was submitted.
+Temporary browser overrides are clear. Screenshots inspected:
+`/tmp/noms-020-settings-avatar-ready.jpg`,
+`/tmp/noms-020-settings-unlink-ready.jpg`,
+`/tmp/noms-020-settings-delete-ready.jpg`.
+
+No runtime code changed. Validation consisted of SQL creation/replay and
+negative guards, exact row-hash isolation, image dimensions and browser setup
+checks; full CI was not rerun (prior complete gate: 911 passed/12 ignored).
+Explicit second-pass self-review **PASS for fixture preparation**; it corrected
+the initial script's full-deletion replay ambiguity with the opt-in create guard.
+No independent-agent review claimed. The established checkpoint task and design
+integration worktrees are reused. One local semantic commit is appropriate for
+this indivisible fixture/preparation-evidence slice; no push or deployment.
+
+**Next:** obtain action-time confirmation for the three scoped mutation tests
+on this fixture, including disposal of its synthetic avatar objects. Settings
+mutation outcomes, post-commit lost-response/identity/navigation recovery and
+the other whole-app/accessibility/image-export gates remain open.
