@@ -1267,6 +1267,46 @@ mod crop_mode_tests {
         assert!(state.flip_x);
         assert_eq!(state.saturation, 0.4);
     }
+
+    #[test]
+    fn saved_rectangle_edit_rescales_pixel_offsets_without_changing_normalized_crop() {
+        let mut edit = RecipeImageEdit::default_rect_16x9();
+        edit.crop = ImageCropRect {
+            x: 0.196875,
+            y: 0.11875,
+            width: 0.7,
+            height: 0.7,
+        };
+        edit.transform.rotation = 25.0;
+        edit.transform.stretch_x = 0.9;
+        edit.transform.stretch_y = 0.85;
+        edit.transform.flip_x = true;
+        edit.color.saturation = 0.7;
+        edit.color.contrast_r = 1.2;
+        edit.color.contrast_g = 0.8;
+        edit.color.contrast_b = 1.1;
+        let original = editor_state_from_edit(&edit, (2560.0, 1440.0), 16.0 / 9.0);
+        let saved = editor_state_from_edit(&edit, (1920.0, 1080.0), 16.0 / 9.0);
+        for (actual, expected) in [
+            (original.scale, 0.7),
+            (original.offset.0, 120.0),
+            (original.offset.1, -45.0),
+            (saved.scale, 0.7),
+            (saved.offset.0, 90.0),
+            (saved.offset.1, -33.75),
+        ] {
+            assert!((actual - expected).abs() < 1e-9, "{actual} != {expected}");
+        }
+        assert_eq!(saved.rotation, original.rotation);
+        assert_eq!(saved.stretch_x, original.stretch_x);
+        assert_eq!(saved.stretch_y, original.stretch_y);
+        assert_eq!(saved.flip_x, original.flip_x);
+        assert_eq!(saved.flip_y, original.flip_y);
+        assert_eq!(saved.saturation, original.saturation);
+        assert_eq!(saved.contrast_r, original.contrast_r);
+        assert_eq!(saved.contrast_g, original.contrast_g);
+        assert_eq!(saved.contrast_b, original.contrast_b);
+    }
 }
 
 fn editor_state_from_edit(

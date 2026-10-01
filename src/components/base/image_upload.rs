@@ -291,6 +291,36 @@ struct PendingImage {
     uploaded_image: Option<RecipeImage>,
 }
 
+/// Edit the original local preview, or the saved full variant, never a thumbnail.
+/// Normalized crop metadata remains valid when a large original was resized.
+fn gallery_editor_url(image: &PendingImage) -> Option<String> {
+    image
+        .preview_url
+        .clone()
+        .or_else(|| image.uploaded_image.as_ref().map(|saved| saved.url.clone()))
+}
+
+/// Update only this edit template; keep asset identity and other named views.
+/// Saved-image edits are metadata changes and must not enqueue another upload.
+fn apply_gallery_edit(gallery: &mut [PendingImage], id: usize, edit: RecipeImageEdit) -> bool {
+    let Some(image) = gallery.iter_mut().find(|image| image.id == id) else {
+        return false;
+    };
+    image.edit = edit.clone();
+    if let Some(saved) = &mut image.uploaded_image {
+        if let Some(previous) = saved
+            .edits
+            .iter_mut()
+            .find(|previous| previous.name == edit.name)
+        {
+            *previous = edit;
+        } else {
+            saved.edits.push(edit);
+        }
+    }
+    true
+}
+
 fn gallery_images_from_persisted(images: &[RecipeImage]) -> Vec<PendingImage> {
     images
         .iter()
@@ -309,7 +339,8 @@ fn gallery_images_from_persisted(images: &[RecipeImage]) -> Vec<PendingImage> {
             thumb_bytes: Arc::new(Vec::new()),
             edit: image
                 .edits
-                .first()
+                .iter()
+                .find(|edit| edit.name == "rectangle:16:9")
                 .cloned()
                 .unwrap_or_else(RecipeImageEdit::default_rect_16x9),
             status: UploadStatus::Uploaded,
@@ -791,6 +822,12 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     } else {
         "image-upload__dropzone"
     };
+    let current_editor_edit = editor_modal_img_id().and_then(|id| {
+        pending()
+            .iter()
+            .find(|image| image.id == id)
+            .map(|image| image.edit.clone())
+    });
 
     rsx! {
         div { class: "image-upload",
@@ -835,6 +872,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                     let img_name = img.name.clone();
                     let img_preview = img.preview_url.clone();
                     let img_uploaded = img.uploaded_image.clone();
+                    let img_editor_url = gallery_editor_url(img);
                     let img_original = img.original_size;
                     let img_full_len = img.full_bytes.len();
                     let img_status = img.status.clone();
@@ -893,7 +931,15 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                             },
                             if img_persisted {
                                 if let Some(image) = img_uploaded.clone() {
-                                    div { class: "image-upload__preview-button",
+                                    button {
+                                        r#type: "button",
+                                        class: "image-upload__preview-button",
+                                        aria_label: "Edit {img_name}",
+                                        disabled: reorder_disabled || img_editor_url.is_none(),
+                                        onclick: move |_| {
+                                            editor_modal_img_id.set(Some(img_id));
+                                            editor_modal_url.set(img_editor_url.clone());
+                                        },
                                         EditedRecipeImage {
                                             image,
                                             class: "recipe-image-preview",
@@ -905,9 +951,11 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                 }
                             // Preview thumbnail (object URL) — only on client.
                             } else if let Some(url) = img_preview.clone() {
-                                div {
+                                button {
+                                    r#type: "button",
                                     class: "image-upload__preview-button",
-                                    style: "cursor: pointer;",
+                                    aria_label: "Edit {img_name}",
+                                    disabled: reorder_disabled,
                                     onclick: move |_| {
                                         editor_modal_img_id.set(Some(img_id));
                                         editor_modal_url.set(Some(url.clone()));
@@ -1047,15 +1095,12 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
             // Image editor modal
             ImageEditorModal {
                 image_url: editor_modal_url,
+                initial_edit: current_editor_edit,
                 on_save: move |edit: RecipeImageEdit| {
                     if let Some(img_id) = editor_modal_img_id() {
-                        if let Some(p) = pending.write().iter_mut().find(|p| p.id == img_id) {
-                            p.edit = edit.clone();
-                            if let Some(uploaded_image) = &mut p.uploaded_image {
-                                uploaded_image.edits = vec![edit];
-                            }
+                        if apply_gallery_edit(&mut pending.write(), img_id, edit) {
+                            sync_uploaded_images(pending, images);
                         }
-                        sync_uploaded_images(pending, images);
                     }
                 },
                 on_close: move |_| {
@@ -1072,6 +1117,97 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn gallery_editor_uses_saved_full_variant_or_local_original() {
+        let image = RecipeImage::new(
+            "full.webp".into(),
+            Some("thumb.webp".into()),
+            RecipeImageEdit::default_rect_16x9(),
+        );
+        let saved = gallery_images_from_persisted(&[image]);
+        assert_eq!(gallery_editor_url(&saved[0]).as_deref(), Some("full.webp"));
+        let mut local = pending_image_with_uploaded_url(5, None);
+        local.preview_url = Some("blob:original".into());
+        assert_eq!(gallery_editor_url(&local).as_deref(), Some("blob:original"));
+        local.preview_url = None;
+        assert_eq!(gallery_editor_url(&local), None);
+    }
+
+    #[test]
+    fn gallery_edit_preserves_asset_and_unselected_templates_without_reupload() {
+        let mut rectangle = RecipeImageEdit::default_rect_16x9();
+        rectangle.crop.width = 0.7;
+        rectangle.crop.height = 0.7;
+        rectangle.transform.rotation = 25.0;
+        let ellipse = RecipeImageEdit::default_ellipse_1x1();
+        let mut image = RecipeImage::managed(
+            uuid::Uuid::from_u128(42),
+            "full.webp".into(),
+            Some("thumb.webp".into()),
+            rectangle.clone(),
+        )
+        .with_file_metadata("fixture.png".into(), 1234);
+        image.edits.insert(0, ellipse.clone());
+        let original = image.clone();
+        let mut gallery = gallery_images_from_persisted(&[image]);
+        assert_eq!(gallery[0].edit, rectangle);
+        rectangle.color.saturation = 0.5;
+        rectangle.transform.flip_x = true;
+        assert!(apply_gallery_edit(&mut gallery, 0, rectangle.clone()));
+        assert_eq!(gallery[0].edit, rectangle);
+        let updated = gallery[0].uploaded_image.as_ref().unwrap();
+        assert_eq!(updated.asset_id, original.asset_id);
+        assert_eq!(updated.url, original.url);
+        assert_eq!(updated.thumb_url, original.thumb_url);
+        assert_eq!(updated.file_name, original.file_name);
+        assert_eq!(updated.file_size, original.file_size);
+        assert_eq!(updated.edits, vec![ellipse, rectangle]);
+        assert!(gallery[0].status == UploadStatus::Uploaded);
+        let (uploads, failures) = upload_batch_plan(&gallery);
+        assert!(uploads.is_empty());
+        assert_eq!(failures, 0);
+        let unchanged = gallery.clone();
+        assert!(!apply_gallery_edit(
+            &mut gallery,
+            99,
+            RecipeImageEdit::default_rect_16x9()
+        ));
+        assert!(gallery == unchanged);
+    }
+
+    #[test]
+    fn gallery_edit_wiring_restores_metadata_and_exposes_a_saved_preview_button() {
+        let mut dom = VirtualDom::new(|| {
+            let images = use_signal(|| {
+                vec![RecipeImage::new(
+                    "full.webp".into(),
+                    Some("thumb.webp".into()),
+                    RecipeImageEdit::default_rect_16x9(),
+                )]
+            });
+            let upload_now = use_signal(|| false);
+            let busy = use_signal(|| false);
+            let pending_count = use_signal(|| 0);
+            rsx! { ImageUpload {
+                images, upload_now, busy, pending_count,
+                purpose: crate::api::upload::UploadPurpose::Recipe,
+                on_remove_existing: |_| {}, on_upload_complete: |_| {},
+            } }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(
+            html.contains("aria-label=\"Edit Saved recipe image\""),
+            "{html}"
+        );
+        assert!(html.contains("type=\"button\""), "{html}");
+        let source = include_str!("image_upload.rs")
+            .split("// ── Unit tests")
+            .next()
+            .unwrap();
+        assert!(source.contains("initial_edit: current_editor_edit"));
+    }
 
     #[test]
     fn image_input_validation_accepts_formats_and_exact_size_boundary() {

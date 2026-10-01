@@ -4027,6 +4027,16 @@ dialog.shared-modal::backdrop { background: transparent; }
 .image-upload__preview-button {
     display: block;
     flex-shrink: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    cursor: pointer;
+}
+
+.image-upload__preview-button:focus-visible {
+    outline: 2px solid var(--accent-ink);
+    outline-offset: 4px;
 }
 
 .recipe-image-preview {
