@@ -1123,6 +1123,30 @@ mod tests {
     }
 
     #[test]
+    fn image_failure_status_can_shrink_and_wrap_on_narrow_screens() {
+        let css = include_str!("../../../assets/main.css");
+        let status = css
+            .split(".image-upload__status {")
+            .nth(1)
+            .unwrap()
+            .split('}')
+            .next()
+            .unwrap();
+        assert!(status.contains("min-width: 0;"));
+        assert!(status.contains("max-width: 100%;"));
+        assert!(status.contains("flex: 0 1 90px;"));
+        assert!(css.contains(".image-upload__status > span {\n    white-space: normal;"));
+        let error = css
+            .split(".image-upload__error {")
+            .nth(1)
+            .unwrap()
+            .split('}')
+            .next()
+            .unwrap();
+        assert!(error.contains("overflow-wrap: anywhere;"));
+    }
+
+    #[test]
     fn upload_errors_explain_sign_in_limits_and_invalid_images_without_internal_details() {
         for (error, expected) in [
             (

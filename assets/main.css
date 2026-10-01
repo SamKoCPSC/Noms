@@ -3916,6 +3916,7 @@ dialog.shared-modal::backdrop { background: transparent; }
 /* Pending item row */
 .image-upload__item {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-sm);
     padding: var(--space-sm) var(--space-md);
@@ -4097,12 +4098,19 @@ dialog.shared-modal::backdrop { background: transparent; }
     align-items: center;
     gap: var(--space-xs);
     font-size: 12px;
-    min-width: 90px;
-    flex-shrink: 0;
+    /* Failure copy must fit the panel rather than enlarge the flex row. */
+    min-width: 0;
+    max-width: 100%;
+    flex: 0 1 90px;
 }
 
 .image-upload__status > span {
-    white-space: nowrap;
+    white-space: normal;
+}
+
+.image-upload__status:has(.image-upload__error) {
+    flex-basis: 100%;
+    align-items: flex-start;
 }
 
 /* Progress bar (indeterminate animation) */
@@ -4143,6 +4151,7 @@ dialog.shared-modal::backdrop { background: transparent; }
 .image-upload__error {
     color: var(--error-ink);
     font-size: 12px;
+    overflow-wrap: anywhere;
 }
 
 /* Error banner */
