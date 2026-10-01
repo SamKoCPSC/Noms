@@ -4262,3 +4262,170 @@ flows, real-device touch and actual screen-reader checks are not accepted by
 these samples. Post-commit lost responses/navigation/identity replacement and
 whole-app acceptance remain open; fresh destructive/account-linking checks
 still need a new isolated fixture and exact action-time approval.
+
+## Image input failure recovery — 2026-10-01
+
+### Contract and observed failures
+
+Continued the explicitly requested checkpoint-8 checks in the established task
+worktree, against the same isolated local deployment `noms-c799915fcf93e034`
+at `http://127.0.0.1:32768`. No original recipe/profile save, image upload,
+account mutation or new database fixture was needed in this slice.
+
+Acceptance: rejected files must leave the picker usable; a malformed image
+must exit Processing/Uploading with safe feedback; bad recipe images must not
+block subsequent valid selections or expose an upload retry for empty bytes;
+desktop and narrow error messages must fit their panels.
+
+Before the fix, a 44-byte text file named `.png` left a recipe photo indefinitely
+in **Processing…**, with Publish/Cancel disabled. The broken DOM image already
+reported `complete=true`, `naturalWidth=0`; the shared decoder observed only
+`onload`, which never fired for this input. Confirming the same malformed avatar
+left **Uploading…**/Choose Photo disabled without reaching the upload API.
+A valid PNG padded to 10,485,761 bytes also opened the avatar crop editor instead
+of being rejected before preview. Recipe extension/size guards already rejected
+the GIF/oversized inputs, but avatars had no equivalent early guard.
+
+Red evidence: `/tmp/noms-020-malformed-before.jpg` and
+`/tmp/noms-020-malformed-avatar-before.jpg`. Synthetic files were generated under
+`/tmp`: malformed PNG, empty PNG, valid unsupported GIF and oversized PNG;
+the existing deterministic 512×512 test grid supplied valid recovery input.
+No personal images were used.
+
+### Changes and test-first evidence
+
+`9325dc6` adds shared case-insensitive JPEG/PNG/WebP original-input validation:
+nonempty, at most `10 * 1024 * 1024` bytes. Both recipe and avatar selection use
+it before preview allocation; avatars reset the file input after rejection so
+the same file can be selected again. Extensions are an early user-input check,
+not proof of the content's format; actual decoding and existing server
+validation remain necessary.
+
+The shared browser decoder now checks both completed and broken-image states,
+returns actionable decode errors, removes its leaked onload callback and
+revokes its object URL on all result paths. Polling is bounded to 3,000 ten-ms
+waits (roughly 30 foreground seconds, not a strict background wall-clock bound).
+Recipe failure revokes its preview URL and closes only that image's crop modal,
+not a newer selection's modal. Decode-failed items show a live alert and require
+Remove/reselection; upload Retry still requires both processed byte variants.
+
+Four new native tests cover supported formats/exact size boundary, rejected
+input, avatar guard ordering and decoder source contracts. The first focused
+run failed to compile because the helper did not yet exist. After implementation,
+an initial native run identified an unused re-export; gating the re-export to
+WASM fixed it. The final native and WASM checks passed. Source-contract tests do
+not substitute for the browser decode observations below.
+
+A later 320px browser check found the error's existing `white-space: nowrap`
+expanded the document to **514px**. A new regression test failed on the shared
+status's nonshrinking minimum width. `fb06df6` allows the upload row/status to
+wrap and shrink, gives failed status a full row, and wraps long error tokens.
+The test then passed; this changes shared `assets/main.css`, not user-owned
+`assets/tailwind.css`.
+
+### Browser acceptance and cleanup
+
+Fresh client reloads bypassed cache after integrating/restarting the app.
+Checks used the existing authenticated original owner, but only selected local
+files; no recipe text was entered and autosave was not triggered.
+
+- Avatar oversized, GIF and empty originals: clear size/format/empty errors,
+  no crop modal, Choose Photo enabled. Reselecting the same oversized file
+  remained usable and was rejected again.
+- Malformed avatar: the invalid preview still opens a crop dialog; OK now exits
+  promptly with **Could not process your photo. Try again or choose another
+  image.** Choose Photo/Retry photo upload are enabled; a second retry fails
+  promptly with the same safe feedback. This does not claim malformed content
+  is decoded before opening the avatar editor.
+- Recipe oversized, GIF and empty originals: skipped with explicit alerts,
+  without queuing/processing them. Malformed PNG: crop modal closes, failed
+  placeholder/alert replaces the broken preview, no empty-byte Retry appears,
+  and Publish/Cancel are enabled again.
+- Mixed recipe selection `[malformed PNG, valid 512×512 PNG]`: the newer valid
+  editor stays open with decoded 512×512 preview and full controls. OK leaves
+  the valid item **Ready** alongside the failed item. Removing the failed item
+  retains the valid Ready item. This is processing evidence, not an upload or
+  persisted-edit round trip.
+- Final recipe decode error wraps at desktop and 320px. At 320px, document
+  width was 305px (available width after scrollbar), and alert bounds were
+  x=46–259; no horizontal overflow. Malformed-avatar recovery also fits 320px
+  with document width 305px. Valid avatar reselection opens its decoded 512×512
+  preview; Cancel returns focus to Choose Photo without upload.
+
+Final inspected captures:
+`/tmp/noms-020-malformed-recipe-final.jpg`,
+`/tmp/noms-020-malformed-recipe-final-320.jpg`,
+`/tmp/noms-020-malformed-avatar-after.jpg`,
+`/tmp/noms-020-malformed-avatar-final-320.jpg` and
+`/tmp/noms-020-valid-after-malformed.jpg`.
+
+Write-only API Fetch/XHR interception guarded uploads and recipe/draft writes;
+observed matching API request count was **zero**. Internal already-handled
+Document navigation events were excluded. One attempted failure of such a
+Document event returned an invalid interception ID; it was not an API failure
+or content write. All patterns were cleared, cache override disabled, viewport
+reset, staged local state discarded by reload and the temporary tab closed.
+
+Docker disk filled during rebuilding. Under the standing test-deployment cleanup
+authorization, verified the stopped `noms-5063d4a16468023f-app-1` container and its
+sole-use `noms-5063d4a16468023f_cargo-target` volume, then removed exactly those.
+The cache was about 6.734GB; free Docker space rose to 8.6GB (8.4GB after rebuild).
+Rebuildable outputs/container cannot be undeleted, but can be recreated from
+source. All current/old database and uploaded-media volumes, cargo-home caches
+and unrelated applications were preserved. Only the current app container was
+restarted; database/media services stayed in place.
+
+### Validation, isolation and second-pass review
+
+Focused command with `SQLX_OFFLINE=true` and the established integration target
+cache:
+
+```sh
+cargo test --features server components::base::image_upload -- --test-threads=4
+```
+
+**35 passed, 0 failed**, 897 filtered out. WASM check and formatting passed.
+Full `just ci`, using `PGOPTIONS='-c log_min_error_statement=panic'`,
+`SQLX_OFFLINE=true` and
+`CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target`,
+passed first with **919 passed/12 ignored**, then after the wrapping follow-up
+with **920 passed, 0 failed, 12 ignored**. The repository's explicit test command
+uses eight threads. Raw logs: `/tmp/noms-020-image-failure-ci.log` and
+`/tmp/noms-020-image-failure-final-ci.log`; formatting, native/WASM check/clippy,
+audit (eight existing allowed warnings), secret scan and deployment checks
+completed successfully. `git diff --check` passed.
+
+Post-check hashes match pre-check and previous acceptance exactly:
+
+| Rows | Count | Hash |
+| --- | ---: | --- |
+| Recipes | 30 | `d7298c2c29ade897d2e39535462d7db3` |
+| Versions | 62 | `0f91d540a069a9ae0ab0495253a3f4ae` |
+| Collections | 29 | `917c84e8447402c9b3bfcb6e3d7b8075` |
+| Memberships | 28 | `fd3bc9401f1389c7fa08cff816e7b44b` |
+| Drafts | 1 | `eeb6a9cba9018a65ee8e13b4bf625d52` |
+| Users | 2 | `3af5cd3524ea80707ea54f1961ef1864` |
+
+Media remained one previously deleted record, zero avatar references; no new
+upload was created. Normal session reads/refresh are not unchanged-session
+claims. The original account and consumed disposable `@cp8settings` fixture
+were not modified/recreated.
+
+Explicit second-pass self-review: **PASS for this scoped failure-recovery slice**.
+Reviewed the complete code/test diff, ordered commits, no-write boundary,
+zero-byte retry guard, URL/error cleanup, newer-dialog isolation, responsive
+regression and raw CI/browser outcomes. The narrow overflow finding was fixed
+and rechecked; no independent-agent review is claimed. Code and evidence are
+separate semantic local commits on `codex/NOMS-020-checkpoint-8`, fast-forwarded
+into `codex/NOMS-020-visual-design-refinement`. User-owned CSS remains SHA-256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+No push or production deployment. Runtime rollback baseline for this slice:
+`92284c7`.
+
+**Next:** persisted image-edit round trips and remaining image-editor,
+collection-cover and step-photo flows. Browser-stalled decode timeout,
+FileReader/canvas encoding failures, EXIF/ICC/animation, every alpha edge,
+real-device touch and actual screen-reader checks are not accepted here.
+Post-commit lost-response/navigation/identity-replacement recovery and whole-app
+acceptance remain open. Further destructive/account-linking checks still need
+a new isolated fixture and exact action-time approval.
