@@ -4064,8 +4064,12 @@ warnings), tracked-secret and deployment-artifact gates passed.
 `/tmp/noms-020-avatar-export-bounded-ci.log` is the final raw log. The initial
 framing-only full run passed 914 tests; a later run failed the new test selector
 described above. After that correction, the unbounded run hit the existing
-temporary database upload-test `PoolTimedOut`; bounding test concurrency to four
-passed without disabling or weakening tests. Earlier logs remain under the
+temporary database upload-test `PoolTimedOut`; the repeat passed without
+disabling or weakening tests. **Concurrency correction recorded in the next
+slice:** although the command set `RUST_TEST_THREADS=4`, `just ci` explicitly
+passes `--test-threads=8`, overriding that environment variable. The raw log
+confirms eight threads; the previous four-thread explanation was incorrect.
+Earlier logs remain under the
 `/tmp/noms-020-avatar-export-*ci.log` prefixes. The final Python checker was
 rerun on all five captures and still rejects the old framing result.
 
@@ -4086,3 +4090,175 @@ whole-app visual/behaviour acceptance. Any further destructive/account-linking
 tests require a new isolated fixture and exact fresh action-time approval;
 the consumed `@cp8settings` account must not be recreated. Checkpoint 8 and
 full WCAG sign-off remain open.
+
+## Recipe image variants and input-format acceptance — 2026-10-01
+
+Scope: actual client-generated recipe WebP variants and additional JPEG/WebP
+avatar inputs. No runtime code changed. Reused the established checkpoint task
+branch/worktree and existing port-32768 development app; fresh browser state
+and synthetic sources prevent old uploads from concealing processing defects.
+The original account's saved content/profile remained read-only.
+
+### Environment recovery before testing
+
+The app health endpoint returned 200, but its database reported recovery mode.
+Read-only Docker logs showed a repeated checkpoint panic, **No space left on
+device**, on Docker's separate 98 GB filesystem (host workspace had free space).
+This is environment failure, not an image-processing regression.
+
+Within the user's earlier authorization to remove oldest disposable test
+deployments, resolved labels, creation time, stopped status and volume users
+for the oldest NOMS deployment `noms-ca6962a21bc5bc35` (created September 27).
+Removed only its stopped `noms-ca6962a21bc5bc35-app-1` container and the
+4.625 GB `noms-ca6962a21bc5bc35_cargo-target` rebuildable compile-cache volume.
+The cache had no other container users. This freed **5.2 GB**; the current
+PostgreSQL returned to accepting connections without restarting/recreating it.
+All database/media volumes, other app instances and unrelated Docker projects
+were preserved. Deleted cache/container files cannot be undeleted, but the app
+and compiled outputs can be recreated from source. Old deployment registration
+may still list the removed app; no whole-deployment teardown is claimed.
+Current database/content hashes exactly matched the previous baseline after
+recovery, before any browser edits.
+
+### Browser processing and no-write harness
+
+Normal Google mock login used the original existing `testuser` identity, with
+no account creation/linking or Terms acceptance. In a fresh `/recipes/new`
+editor, intercepted Fetch/XHR requests for `upload_image*`, `create_recipe*`,
+`save_recipe_draft*` and `publish_recipe_draft*` at **Request**, before server
+execution. Staged synthetic title/ingredient/instruction text solely to enable
+the normal Publish action and capture generated image variants. Two autosave
+draft-create attempts were failed before execution. Every captured upload was
+also failed before execution; no recipe, draft, media object or profile save
+was submitted successfully. Publication stopped on the guarded image failures.
+
+Source-derived synthetic inputs were selected through the actual file chooser
+(multiple selection supported). All six reached Ready. First PNG edits were
+crop 60%, X=40 px, rotation 45°, horizontal flip and red contrast 80%. After OK,
+the gallery rendered `rotate(45.0000deg) scaleX(-1.000000)` and the edited crop.
+Its captured upload retained the full unadjusted image, as expected: recipe
+edits are separate metadata, unlike baked circular avatar outputs. This checks
+local preview/non-destructive variants, **not a persisted edit-metadata save or
+reload round trip**. Generated crop edges were not compared pixel-for-pixel.
+
+First batch captured four pairs; second batch captured only the two newly Ready
+small/transparent inputs. Former failed items were not reuploaded by the next
+Publish, and still contributed to the visible six-image failure summary.
+Each upload purpose was `Recipe`. Per-item Retry and safe failure copy retained
+selected images; global Publish/Save/Cancel recovered after the failed batch.
+No successful storage-upload or publication acceptance is claimed here.
+
+### Recipe file/pixel results
+
+Read-only checker `scripts/tests/check-recipe-image-export.py` (`1d80544`) uses
+stdlib Python plus the existing ImageMagick CLI. It verifies RIFF/WebP headers,
+integer-rounded aspect-preserving bounds (**1920** full/**800** thumbnail), no
+upscaling and flat interior colours/alpha against the exact decoded source.
+Lossy RGB tolerance is 15, alpha tolerance 1, minimum eight samples; a
+four-output-pixel footprint excludes boundary/resampling halos. All rows had
+**176 valid samples per variant**, **zero alpha error** and the following max
+RGB errors:
+
+| Input | Source size | Full size / error | Thumbnail size / error |
+| --- | --- | --- | --- |
+| Landscape PNG (16-bit sRGB) | 2560×1440 | 1920×1080 / 1 | 800×450 / 2 |
+| Landscape JPEG | 2560×1440 | 1920×1080 / 1 | 800×450 / 1 |
+| Landscape WebP | 2560×1440 | 1920×1080 / 0 | 800×450 / 1 |
+| Portrait PNG (16-bit sRGB) | 1200×2400 | 960×1920 / 1 | 400×800 / 3 |
+| Small opaque PNG | 512×512 | 512×512 / 2 | 512×512 / 2 |
+| Small translucent PNG (alpha 128) | 512×512 | 512×512 / 2 | 512×512 / 2 |
+
+Small full/thumbnail pairs were identical bytes (no upscaling). The checker
+rejects negative controls: rotated wrong framing at pixel `76,76` produced RGB
+error **39**; using an 800×450 thumbnail as a full-size variant rejected the
+size mismatch against 1920×1080. These are checker controls, not product bugs.
+The final checker rerun passes all six pairs. Sampled interiors do not establish
+whole-image perceptual equality, every edge pixel or complete format coverage.
+
+Generate deterministic sources from the tracked grid and check one captured
+case (all output files remain under `/tmp`):
+
+```sh
+magick scripts/dev-fixtures/image-export-grid.svg -resize '2560x1440!' /tmp/noms-020-recipe-landscape.png
+magick /tmp/noms-020-recipe-landscape.png -quality 90 /tmp/noms-020-recipe-landscape.jpg
+magick /tmp/noms-020-recipe-landscape.png -quality 90 /tmp/noms-020-recipe-landscape.webp
+magick scripts/dev-fixtures/image-export-grid.svg -resize '1200x2400!' /tmp/noms-020-recipe-portrait.png
+magick scripts/dev-fixtures/image-export-grid.svg -depth 8 /tmp/noms-020-recipe-small.png
+magick /tmp/noms-020-recipe-small.png -alpha set -channel A -evaluate multiply 0.5 +channel /tmp/noms-020-recipe-transparent.png
+# In the visible editor, stage input; capture/fail the API before execution.
+python3 scripts/tests/check-recipe-image-export.py \
+  /tmp/noms-020-recipe-landscape.png \
+  /tmp/noms-020-recipe-export-noms-020-recipe-landscape.png-full.webp \
+  /tmp/noms-020-recipe-export-noms-020-recipe-landscape.png-thumb.webp
+```
+
+Each capture uses `/tmp/noms-020-recipe-export-<source-filename>-full.webp`
+and `-thumb.webp`. Inspected whole-page screenshots:
+`/tmp/noms-020-recipe-format-ready.jpg` (four Ready cards, first edited),
+`/tmp/noms-020-recipe-format-failed.jpg` (four pre-server failures).
+These are desktop state evidence, not new phone/tablet acceptance.
+
+### Additional avatar formats
+
+On Profile, staged the same 512×512 source encoded as JPEG and WebP. Replaced
+the interception patterns with only `upload_avatar*` Fetch/XHR and failed each
+capture before execution. JPEG used crop 60%, X=30 px, rotation 90°, flip X;
+WebP used saturation 50%, red contrast 80%, full crop. Both passed the existing
+independent avatar checker, circular corner transparency and interior alpha:
+
+| Input | Full samples / RGB error | Thumbnail samples / RGB error |
+| --- | --- | --- |
+| JPEG | 300 / 1 | 321 / 4 |
+| WebP | 325 / 1 | 240 / 6 |
+
+Original bytes match exact source SHA-256 pairs: JPEG
+`cc553aa229e611b8c6a74fb8ae7ac30ebf8fc9b7256e743c9a6227aa384eaec9`,
+WebP `89ee3219991e1c9178797ae254f000269be296495edcaa70b2dd3e514043354f`.
+Captures: `/tmp/noms-020-avatar-format-jpeg-*` and
+`/tmp/noms-020-avatar-format-webp-*`; inspected preview:
+`/tmp/noms-020-avatar-format-webp-preview.jpg`.
+Interception was cleared; reload removed staged Retry photo upload and restored
+unchanged initials/Choose Photo. The temporary browser tab was closed. No cache
+or viewport overrides were added during this slice.
+
+### Isolation, validation and review
+
+Post-check hashes exactly match both the pre-check and previous slice for all
+30 recipes, 62 versions, 29 collections, 28 memberships, 1 draft and 2 users.
+The exact hashes are in the previous section; no saved row was altered.
+Media remained one `deleted` record and zero avatar references, with no new
+uploads. Normal OAuth login usage/session refresh is excluded from unchanged
+account-row claims.
+
+Focused regression command from the established task worktree, using
+`SQLX_OFFLINE=true`, `PGOPTIONS='-c log_min_error_statement=panic'` and the
+integration target cache:
+
+```sh
+cargo test --features server components::base::image_upload -- --test-threads=4
+```
+
+**30 passed, 0 failed**, 897 filtered out. Both Python checkers passed the actual
+captures; the recipe checker's two negative controls failed as expected.
+`git diff --check` passed. No new full CI was run for this checker/evidence-only
+change: the last complete runtime gate is still **915 passed/12 ignored**.
+Corrected its concurrency explanation above after inspecting the exact raw log
+and `justfile`: explicit `--test-threads=8` overrides `RUST_TEST_THREADS=4`.
+The prior pass remains valid, but it was not a four-thread mitigation.
+
+Explicit second-pass self-review **PASS for this scoped format/variant slice**:
+reviewed the no-write guard, source/variant pixel contract, original-data hashes,
+negative controls, cleanup targets and limitations. No independent-agent review.
+Checker and evidence are separate semantic local commits on
+`codex/NOMS-020-checkpoint-8`, fast-forwarded into the design integration branch;
+its user-owned CSS remains SHA-256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+No push or production deployment.
+
+**Next:** malformed/unsupported/oversized image failure recovery, remaining
+image-editor interactions and persisted edit round trips. EXIF orientation,
+wide-gamut/ICC, animation, every alpha edge, collection/step-photo-specific
+flows, real-device touch and actual screen-reader checks are not accepted by
+these samples. Post-commit lost responses/navigation/identity replacement and
+whole-app acceptance remain open; fresh destructive/account-linking checks
+still need a new isolated fixture and exact action-time approval.
