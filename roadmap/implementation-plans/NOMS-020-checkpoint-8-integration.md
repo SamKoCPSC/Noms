@@ -3345,3 +3345,55 @@ hash unchanged. Existing checkpoint task/integration worktrees are reused.
 phone/tablet checks. Real-device touch, actual screen-reader operation,
 destructive end-to-end outcomes and post-commit/navigation recovery remain
 unaccepted; this slice does not close checkpoint 8.
+
+## Version graph recovery follow-up — 2026-10-01
+
+Implementation `4879025` follows `35c5cf3` in the existing checkpoint task and
+design integration worktrees. Initial graph load now offers a live-guarded
+in-page retry with stable pending focus and successful focus on the graph
+content. Comparison submission uses a synchronous exclusive claim on both
+menu and panel paths, rejecting missing/equal pairs. Selection, swap and clear
+handlers guard live pending state too. The panel action is focusable and busy
+while pending. Unknown expansion/comparison errors no longer expose transport
+or database details; privacy-safe unavailable classification remains intact.
+Server contracts, topology, transforms and route-generation guards unchanged.
+
+Three new tests cover safe copy, actual synchronous claims and handler/resource
+wiring. Existing pending/subscription and expansion-cache assertions are kept;
+the stale-expansion failure test now requires safe copy rather than raw error.
+Tests-first failures: `/tmp/noms-020-graph-recovery-red.log`. Focused graph
+suite **64 passed, 0 failed**. Final full CI with `SQLX_OFFLINE=true` and the
+integration target cache: **905 passed, 0 failed, 12 ignored**, exit 0; eight
+existing allowed audit warnings. Commands: `cargo test --features server
+pages::recipe_version_graph -- --test-threads=8`, then `just ci`. Logs:
+`/tmp/noms-020-graph-recovery-tests.log` and
+`/tmp/noms-020-graph-recovery-ci.log`. Ignored integrations not freshly run.
+Second-pass self-review **PASS for this scope**, no independent-agent review.
+
+Browser acceptance on the existing port-32768 test deployment:
+
+- Initial graph read and first retry failed before reaching the server. Pending
+  retry retained focus and ignored Enter/Space duplicates (one request). Real
+  successful retry restored the populated graph and focused
+  `version-graph-content`.
+- v29's keyboard-opened menu started Compare with current (v30). A forced
+  panel activation and Enter while held did not duplicate the request. Safe
+  failure retained v29 → v30; panel retry returned real description differences
+  and kept focus on Compare selected snapshots, with no remaining alert.
+- At 320px, document client/scroll widths were both 305px. Before/After cards,
+  result and focused action fit; screenshot
+  `/tmp/noms-020-graph-comparison-mobile.jpg`. The initial screenshot
+  `/tmp/noms-020-graph-recovery-mobile.jpg` shows only the upper portion of the
+  comparison section and is not evidence of the error message itself.
+- One child-fork expansion failed with safe copy; retry loaded the existing
+  synthetic child without a content write. Normal sign-out and guest graph
+  retry showed generic unavailable feedback and zero private title/nodes.
+
+No destructive action or content write. Subsequent responsive fixture additions
+are separate acceptance work, not graph mutations. Interception/viewport were
+cleared; temporary cache override remains for later checks this turn. Local
+commit/fast-forward only, user-owned CSS unchanged. Real-device touch, actual
+screen-reader operation and whole-app contrast remain open.
+
+**Next:** populated responsive routes, cross-route/permission presentation and
+remaining editor interactions; keep destructive checks separately gated.
