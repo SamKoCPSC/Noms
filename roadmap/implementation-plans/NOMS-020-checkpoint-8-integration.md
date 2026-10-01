@@ -3772,3 +3772,147 @@ this indivisible fixture/preparation-evidence slice; no push or deployment.
 on this fixture, including disposal of its synthetic avatar objects. Settings
 mutation outcomes, post-commit lost-response/identity/navigation recovery and
 the other whole-app/accessibility/image-export gates remain open.
+
+## Approved disposable Settings mutation acceptance — 2026-10-01
+
+The user's action-time **“yes proceed”** approved unlinking GitHub, removing
+the avatar and permanently deleting only `@cp8settings`
+(`5c4c58f4-bc23-6fbf-e2e0-3c4302d93e56`) and its three synthetic avatar files.
+Target: existing local project `noms-c799915fcf93e034`, app **32768**, PostgreSQL
+**32769**, MinIO **32770**. This is not approval to change the original mock
+account, create/relink another identity or mutate production/other deployments.
+
+Following the computer restart, the exact stopped project's services were
+restarted. A transient PostgreSQL port collision was resolved by starting the
+app before PostgreSQL; the app's original Compose network/alias was restored
+after a failed start left it disconnected. No volume/data was recreated or
+deleted and no network recipient or permission scope was expanded. The app was
+rebuilt after the focus fix; all UI testing used this deployment.
+
+### Browser outcomes and focus correction
+
+- **GitHub unlink:** held the exact fixture identity's XHR before server
+  execution. Pending status remained visible; forced duplicate submit, Cancel
+  and Escape produced no extra API request or dismissal. Two failed attempts
+  retained the confirmation and safe uncertain-outcome/check-account guidance.
+  A fresh account page and database confirmed both providers before the real
+  retry. Real success removed GitHub, refreshed Google as the sole provider and
+  displayed success. Forced pointer/Return on the remaining disabled Unlink
+  produced zero requests. Only identity
+  `bff65377-fec8-e9ad-2b92-cd3589fba3d7` was unlinked.
+- **Found/fixed success focus:** real unlink success left focus on `BODY`
+  because its initiating provider button disappeared. Commit `e916455` focuses
+  the mounted `#unlink-account-success` result and similarly focuses
+  `#profile-save-success` only after avatar removal, not ordinary profile saves.
+  A source-contract regression test failed before implementation (missing
+  unlink-result ID) and passed after it. Since GitHub was already consumed,
+  after-fix unlink focus was verified using an explicitly **UI-only replay**:
+  fulfill one intercepted provider-list read with the fixture's former GitHub
+  card, then fulfill its intercepted unlink with unit JSON `null`. No unlink
+  request reached the server and no identity was recreated/relinked. The
+  subsequent real provider refresh returned Google only and focus was on
+  `#unlink-account-success`. This is not a second real unlink success.
+- **Avatar removal:** two pre-server failures retained the actual avatar and
+  safe uncertain-outcome guidance. During pending removal, Edit/Change were
+  unavailable, Remove remained focusable and forced duplicate click/Return
+  emitted no extra request. A fresh profile confirmed the avatar was intact
+  before the actual retry. After the fix, real removal displayed **“Avatar
+  removed successfully!”**, replaced the image with initials/Choose Photo and
+  focused `#profile-save-success`. The durable avatar reference became zero.
+- **Account deletion:** default Cancel, identity-specific phrase
+  `delete cp8settings` and final Go Back focus were verified. Before the final
+  real action, database reads reconfirmed zero owned recipes/drafts/collections.
+  Held pending submission showed Deleting feedback; forced final/Back clicks
+  and Escape produced no second request or dismissal. Two pre-server failures
+  kept the final confirmation open, restored Go Back focus and advised checking
+  sign-in in another tab without promising rollback. A fresh profile still
+  identified the disposable account. The real retry deleted it, revoked its
+  sessions and navigated to `/` with Sign In visible and no account menu.
+
+All injected failures above happened **before server execution**, not after a
+committed operation with a lost response. Interception was limited to Fetch/XHR
+API patterns and cleared before each real retry; temporary viewport overrides
+were also cleared. No new GitHub login, profile save, Terms acceptance or
+original-account mutation was performed.
+
+Inspected temporary evidence: `/tmp/noms-020-settings-unlink-pending.jpg`,
+`/tmp/noms-020-settings-unlink-failure.jpg`,
+`/tmp/noms-020-settings-unlink-failure-phone.jpg` (usable 320×875 capture),
+`/tmp/noms-020-settings-unlink-success.jpg` (real, before focus fix),
+`/tmp/noms-020-settings-unlink-focus-fixed.jpg` (controlled replay),
+`/tmp/noms-020-settings-avatar-pending.jpg`,
+`/tmp/noms-020-settings-avatar-failure.jpg`,
+`/tmp/noms-020-settings-avatar-success.jpg`,
+`/tmp/noms-020-settings-delete-pending.jpg`,
+`/tmp/noms-020-settings-delete-failure.jpg` and
+`/tmp/noms-020-settings-delete-success.jpg`. Delete feedback geometry measured
+`innerWidth = clientWidth = scrollWidth = 320`. Its raw narrow capture was
+blank and the avatar narrow capture was incorrectly scaled; neither is counted
+as visual phone acceptance. No actual touch/screen-reader acceptance claimed.
+
+### Exact disposal and original-data isolation
+
+The original user/account and all original content remain unchanged. Ordered
+row-JSON MD5 hashes (delimiter `|`; membership order collection/recipe ID)
+matched the pre-action baseline exactly after deletion:
+
+| Rows | Before = after |
+| --- | --- |
+| Recipes | `d7298c2c29ade897d2e39535462d7db3` |
+| Versions | `0f91d540a069a9ae0ab0495253a3f4ae` |
+| Collections | `917c84e8447402c9b3bfcb6e3d7b8075` |
+| Memberships | `fd3bc9401f1389c7fa08cff816e7b44b` |
+| Drafts | `eeb6a9cba9018a65ee8e13b4bf625d52` |
+| Non-fixture users | `3af5cd3524ea80707ea54f1961ef1864` |
+| Non-fixture OAuth | `522c33b63155f208e47f4146c8bcd0bf` |
+
+Final totals: **2 users, 1 OAuth identity, 1 media asset, 0 avatar references,
+30 recipes, 62 versions, 1 draft, 29 collections, 28 memberships**. The target
+user, its OAuth rows and sessions are absent. Ordinary replay without
+`fixture_allow_create=true` fails with exit 3 and **“Settings fixture absent;
+replay must not recreate a deleted account”**; no account was recreated.
+
+The hourly orphan worker had not run following avatar removal/deletion.
+Within the explicitly approved disposal scope, `mc rm` deleted the three exact
+fixture keys listed in the preparation section, with no recursive/glob delete;
+`mc ls` of that exact prefix returned empty. No other objects were removed.
+This **direct test cleanup is not background-worker runtime evidence**. The
+service-owned media record remains `retained`, with NULL uploader and no avatar
+reference, awaiting normal worker reconciliation. Its retention is intentional
+durable cleanup authority, not a retained avatar shown to users. Product-normal
+recovery cannot restore the deleted account/provider or the disposed objects.
+
+### Validation, review and remaining gates
+
+Established task branch/worktree `codex/NOMS-020-checkpoint-8` was reused; code
+commit `e916455` was fast-forwarded into `codex/NOMS-020-visual-design-refinement`.
+User-owned `assets/tailwind.css` stayed unchanged at SHA-256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+Separate code and acceptance-evidence commits keep concerns reviewable; no push.
+
+Validation from the task worktree used `SQLX_OFFLINE=true` and shared
+`CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target`:
+
+```sh
+cargo test --features server successful_removals_focus_a_mounted_result -- --test-threads=1
+cargo test --features server pages::settings -- --test-threads=4
+PGOPTIONS='-c log_min_error_statement=panic' just ci
+```
+
+Red regression run: 1 expected failure before implementation. Focused Settings:
+**33 passed**. Final full CI: **912 passed, 0 failed, 12 ignored**, formatting,
+checks/Clippy, schema/security policy, dependency audit (8 existing allowed
+warnings), tracked-secret and deployment-artifact gates passed. The first CI
+attempt passed tests but failed advisory-cache lock access in the sandbox;
+rerunning with approved cache access passed. Logs:
+`/tmp/noms-020-settings-success-focus-ci.log` and
+`/tmp/noms-020-settings-success-focus-final-ci.log`.
+
+Explicit second-pass self-review **PASS for this scoped mutation/focus slice**:
+reviewed code/test diff, exact approval/targets, real versus simulated outcomes,
+original-data hashes and capture limitations. No independent-agent review.
+Post-commit lost responses, identity replacement, account-deletion navigation
+failure, observed automatic media cleanup, usable remaining narrow captures,
+actual screen-reader/real-device touch, image-export outcomes and final
+whole-app visual/behavior acceptance remain open. This is not checkpoint-8 or
+WCAG sign-off.
