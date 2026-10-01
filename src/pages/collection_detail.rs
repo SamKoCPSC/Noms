@@ -415,7 +415,7 @@ fn CollectionDetailContents(id: String) -> Element {
                         class: "collection-detail-cover".to_string(),
                     }
                     if can_edit {
-                        if let Some(error) = delete_error() { p { role: "alert", color: "var(--error)", "{error}" } }
+                        if let Some(error) = delete_error() { p { role: "alert", color: "var(--error-ink)", "{error}" } }
                     }
                     if can_edit {
                         FeedbackToast {
@@ -428,7 +428,7 @@ fn CollectionDetailContents(id: String) -> Element {
                         if let Some(error) = reorder_error() {
                             p {
                                 role: "alert",
-                                color: "var(--error)",
+                                color: "var(--error-ink)",
                                 "Could not save the new order. The collection was reloaded: {error}"
                             }
                         }
@@ -656,12 +656,12 @@ fn CollectionDetailContents(id: String) -> Element {
                         if let Some(error) = removal_error() {
                             p {
                                 role: "alert",
-                                color: "var(--error)",
+                                color: "var(--error-ink)",
                                 "Could not remove recipe from this collection: {error}"
                             }
                         }
                     }
-                    if let Some(error) = recipe_page_error() { p { role: "alert", color: "var(--error)", "Could not load more recipes: {error}" } }
+                    if let Some(error) = recipe_page_error() { p { role: "alert", color: "var(--error-ink)", "Could not load more recipes: {error}" } }
                     if collection_contents.recipes.total_count > MAX_RECIPE_PAGE_SIZE {
                         // Native disabling or removing this button drops keyboard
                         // focus. Keep it mounted through loading and completion.
@@ -790,7 +790,7 @@ fn CollectionDetailContents(id: String) -> Element {
                                     }
                                 }
                                 if let Some(error) = delete_error() {
-                                    p { role: "alert", color: "var(--error)", "{error}" }
+                                    p { role: "alert", color: "var(--error-ink)", "{error}" }
                                 }
                                 div {
                                     display: "flex",

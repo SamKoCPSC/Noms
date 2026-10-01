@@ -242,6 +242,59 @@ fn shared_muted_copy_meets_aa_across_surfaces_and_gradient_stops() {
 }
 
 #[test]
+fn semantic_text_inks_meet_aa_without_changing_brand_fills() {
+    for theme in [":root", ".dark"] {
+        let block = rule(theme);
+        for foreground in [
+            "--accent-ink",
+            "--error-ink",
+            "--success-ink",
+            "--warning-ink",
+        ] {
+            for background in [
+                "--bg-base",
+                "--surface",
+                "--bg-gradient-1",
+                "--bg-gradient-2",
+                "--bg-gradient-3",
+                "--bg-gradient-4",
+            ] {
+                let ratio = contrast(token(block, foreground), token(block, background));
+                assert!(
+                    ratio >= 4.5,
+                    "{theme} {foreground} on {background}: {ratio:.2}:1"
+                );
+            }
+        }
+    }
+    assert!(rule("a").contains("color: var(--accent-ink)"));
+    assert!(rule("a:hover").contains("color: var(--accent-ink)"));
+    assert!(
+        rule(".recipe-version-graph__relationship-badge--descendant")
+            .contains("color: var(--warning-ink)")
+    );
+    assert!(rule(".btn-primary,\n.navbar .navbar-contained-action")
+        .contains("background: var(--accent)"));
+    assert!(rule(".btn-danger").contains("background: var(--error)"));
+}
+
+#[test]
+fn shared_text_rules_do_not_reuse_decorative_fill_tokens() {
+    // Inspect declarations, not substring matches of border/background-color.
+    for declaration in CSS.split(';') {
+        let property = declaration.rsplit('{').next().unwrap().trim();
+        for fill in ["accent", "accent-hover", "error", "success", "warning"] {
+            assert!(
+                !property.starts_with(&format!("color: var(--{fill})")),
+                "{property}"
+            );
+        }
+    }
+    let accounts = include_str!("../pages/settings/settings_accounts.rs");
+    assert!(!accounts.contains("color: \"var(--accent)\""));
+}
+
+#[test]
 fn outlined_buttons_use_shared_neumorphic_material_and_depth() {
     let resting = rule(".btn-secondary");
     assert!(resting.contains("background: var(--neumo-surface)"));

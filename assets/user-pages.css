@@ -40,11 +40,11 @@
 .user-settings__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding-top: 4px; }
 .user-settings__link-card { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px; margin-bottom: 28px; background: var(--neumo-surface); box-shadow: var(--elevation-raised); border-radius: 24px; }
 .user-settings__link-card h2 { font-size: 22px; margin-bottom: 6px; }
-.user-settings__danger > summary h2 { color: var(--error); }
+.user-settings__danger > summary h2 { color: var(--error-ink); }
 .user-settings__danger .user-disclosure__body { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; }
 .user-feedback { padding: 14px 16px; border-radius: 14px; font-size: 14px; overflow-wrap: anywhere; }
-.user-feedback--error { background: var(--error-bg); color: var(--error); }
-.user-feedback--success { background: var(--success-bg); color: var(--success); }
+.user-feedback--error { background: var(--error-bg); color: var(--error-ink); }
+.user-feedback--success { background: var(--success-bg); color: var(--success-ink); }
 .user-settings .settings-tabs { margin-bottom: 28px; flex-wrap: wrap; max-width: 100%; }
 .user-settings .settings-tab-active { color: var(--accent-ink); background: var(--neumo-surface); box-shadow: var(--elevation-inset); }
 .user-accounts__list { display: flex; flex-direction: column; gap: 20px; }

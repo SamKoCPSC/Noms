@@ -1407,7 +1407,7 @@ pub fn RecipeNew() -> Element {
                             padding: "var(--space-sm) var(--space-md)",
                             background_color: "var(--error-bg)",
                             border_radius: "var(--radius-md)",
-                            color: "var(--error)",
+                            color: "var(--error-ink)",
                             font_size: "14px",
                             "{err}"
                         }

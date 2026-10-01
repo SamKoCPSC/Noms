@@ -40,7 +40,7 @@
 .collection-form-field > span { font-weight: 700; }
 .collection-form-panel .input { width: 100%; box-sizing: border-box; min-width: 0; padding: 14px 16px; border-radius: 14px; font: inherit; color: var(--text-primary); }
 .collection-form-field textarea { resize: vertical; min-height: 180px; }
-.collection-form-error { color: var(--error); margin: 0; overflow-wrap: anywhere; }
+.collection-form-error { color: var(--error-ink); margin: 0; overflow-wrap: anywhere; }
 .collection-form-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 16px; }
 .collection-form-actions .btn { min-width: 132px; }
 @media (max-width: 760px) {

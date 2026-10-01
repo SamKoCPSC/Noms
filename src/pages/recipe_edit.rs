@@ -1517,7 +1517,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                         div {
                             role: "alert", padding: "var(--space-sm) var(--space-md)",
                             background_color: "var(--error-bg)", border_radius: "var(--radius-md)",
-                            color: "var(--error)", font_size: "14px", "{err}"
+                            color: "var(--error-ink)", font_size: "14px", "{err}"
                         }
                     }
                     if let Some(err) = form_error() {
@@ -1526,7 +1526,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                             padding: "var(--space-sm) var(--space-md)",
                             background_color: "var(--error-bg)",
                             border_radius: "var(--radius-md)",
-                            color: "var(--error)",
+                            color: "var(--error-ink)",
                             font_size: "14px",
                             "{err}"
                         }

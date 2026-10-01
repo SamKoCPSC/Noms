@@ -14,7 +14,7 @@
 .collections-help, .collections-result-count { font-size: 13px; color: var(--text-secondary); }
 .collections-result-count { margin: 24px 0 16px; }
 .collections-state { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 40px 24px; margin: 28px 0; border-radius: 24px; background: var(--neumo-surface); box-shadow: var(--elevation-inset); text-align: center; overflow-wrap: anywhere; }
-.collections-state > p[role="alert"] { color: var(--error); }
+.collections-state > p[role="alert"] { color: var(--error-ink); }
 .collection-album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); gap: 28px; }
 .collection-album {
     display: flex;
@@ -73,7 +73,7 @@
 .collection-recipe { display: grid; grid-template-columns: 1fr auto; align-content: start; gap: 12px; min-width: 0; }
 .collection-recipe > .recipe-card { grid-column: 1 / -1; }
 .collection-recipe > .btn { align-self: center; }
-.collection-detail-page > p[role="alert"] { color: var(--error); margin-block: 16px; }
+.collection-detail-page > p[role="alert"] { color: var(--error-ink); margin-block: 16px; }
 .collection-pagination[aria-disabled="true"] { opacity: .5; cursor: not-allowed; transform: none; }
 
 @media (max-width: 640px) {

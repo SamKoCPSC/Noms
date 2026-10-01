@@ -536,7 +536,7 @@ fn VersionComparisonPanel(
                                                 padding: "var(--space-sm)",
                                                 span {
                                                     display: "block",
-                                                    color: "var(--error)",
+                                                    color: "var(--error-ink)",
                                                     font_size: "var(--font-size-sm)",
                                                     font_weight: "700",
                                                     margin_bottom: "var(--space-xs)",
@@ -559,7 +559,7 @@ fn VersionComparisonPanel(
                                                 padding: "var(--space-sm)",
                                                 span {
                                                     display: "block",
-                                                    color: "var(--success)",
+                                                    color: "var(--success-ink)",
                                                     font_size: "var(--font-size-sm)",
                                                     font_weight: "700",
                                                     margin_bottom: "var(--space-xs)",
@@ -2443,7 +2443,7 @@ fn RecipeDetailContents(id: String) -> Element {
                 Card {
                     div {
                         text_align: "center",
-                        color: "var(--error)",
+                        color: "var(--error-ink)",
                         "Unable to load recipe."
                     }
                 }
@@ -2936,7 +2936,7 @@ fn RecipeDetailContents(id: String) -> Element {
                                                 } else if let Some(error) = version_difference_error() {
                                                     p {
                                                         padding: "var(--space-md)",
-                                                        color: "var(--error)",
+                                                        color: "var(--error-ink)",
                                                         background: "var(--error-bg)",
                                                         border_radius: "var(--radius-md)",
                                                         role: "alert",
@@ -2958,7 +2958,7 @@ fn RecipeDetailContents(id: String) -> Element {
                             }
                         }
                         if history_continuation.read().failed {
-                            p { color: "var(--error)", role: "alert", "Older versions couldn’t be loaded. Your loaded versions are kept here; try again." }
+                            p { color: "var(--error-ink)", role: "alert", "Older versions couldn’t be loaded. Your loaded versions are kept here; try again." }
                         }
                         if next_version_cursor.is_some() || history_continuation.read().requested {
                             RecipeActionControl {
@@ -3082,7 +3082,7 @@ fn HistoricalComparisonFeedback(pending: bool, failed: bool) -> Element {
         if pending {
             p { role: "status", "Comparing selected versions…" }
         } else if failed {
-            p { role: "alert", color: "var(--error)",
+            p { role: "alert", color: "var(--error-ink)",
                 "Comparison couldn’t be loaded. Your Before and After selections are kept; try Retry comparison."
             }
         }
