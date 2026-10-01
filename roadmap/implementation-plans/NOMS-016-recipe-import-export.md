@@ -323,7 +323,9 @@ Each adapter requires synthetic exact-host, lookalike-host, complete-field, ambi
 
 RecipeTinEats, Tasty and BudgetBytes are completed, corpus-verified adapters with current semantic reviews. BudgetBytes improves from 65/100 to 100/100 structurally accepted captures, retaining 1,297 ingredients across 159 sections and 764 steps. It preserves explicit parenthesized conversions, cleans narrow price annotations from parsed names while retaining original text, and recovers card metadata, notes and image references. Its three reviewed candidates improve from 6/12 to 12/12 correct core fields. The overall semantic benchmark is now 91/108 (84.3%), with 12 usable without correction, 15 after correction and none unusable. The full corpus accepts 835/1,500 candidates, and all 1,400 non-BudgetBytes outputs are unchanged.
 
-Food52 is the next diagnostic candidate, followed by Food.com. The larger provider corpus must confirm a stable pattern before an adapter is approved; the three-sample semantic results are not a provider ranking.
+AllRecipes was selected next following a successful user check of the Tasty UI. Its adapter is implemented and verified on 100/100 saved captures, retaining 808 ingredients in 103 sections and 564 clean steps. It recovers structured quantities, metadata, recipe tips/cook's notes and unfetched image references while conservatively rejecting incomplete, hidden or ambiguous adapter structures. All 1,400 other-provider outputs are unchanged. The three AllRecipes benchmark recipes improve to 12/12 correct core fields; the overall benchmark is now 93/108 (86.1%), with 14 usable without correction, 13 after correction and none unusable. Structural acceptance remains 835/1,500. The refreshed review is stored separately at `/home/samko/Documents/Recipe Data/semantic-review-allrecipes-v1.json`; the original external review is preserved.
+
+Food52 remains the next diagnostic candidate, followed by Food.com. The larger provider corpus must confirm a stable pattern before an adapter is approved; the three-sample semantic results are not a provider ranking.
 
 ## First end-to-end clipboard integration
 

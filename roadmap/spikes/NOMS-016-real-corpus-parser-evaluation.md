@@ -147,6 +147,22 @@ BudgetBytes structural acceptance rises from 65 to 100 of 100, all through its a
 
 Re-reviewing the three existing BudgetBytes benchmark candidates raises their core score from 6 of 12 to 12 of 12. The refreshed 27-sample benchmark reaches 91 of 108 correct core fields (84.3%), with 12 candidates usable without correction, 15 after correction and none unusable. Only the three BudgetBytes candidate digests changed; the other 24 assessments remain current. These deliberately selected reviews diagnose gaps and do not estimate accuracy across all 100 recipes.
 
+## AllRecipes adapter rerun — 2026-10-01
+
+The fourth adapter requires an explicitly supplied `allrecipes.com` or `www.allrecipes.com` HTTP(S) URL and one coherent visible recipe: title, structured ingredient containers and ordered procedure in the same article/main region. Missing, competing, explicitly hidden or changed core markup refuses the adapter and retains generic fallback. Parsing remains inert and does not fetch the source page or any images.
+
+All 100 verified AllRecipes captures select the adapter and validate. It retains 808 ingredients across 103 sections and 564 steps, including mixed Unicode fractions, package-size units and a narrowly recovered unmarked numeric prefix. A single-item nested procedure is retained with a review warning. Direct recipe paragraphs remain ordered; photo credits, ads and explicitly marked related-article promotions are excluded. Unknown direct procedure text triggers fallback rather than silently disappearing.
+
+All 100 candidates recover descriptions, authors, prep time, total time and servings; 96 expose cook time. The adapter preserves 18 cook's-note/recipe-tip bodies and 488 deduplicated image references, including lazy `data-src` figures. References remain unfetched and are not saved by the current UI. Scaled selections retain literal ingredient amounts but clear inferred servings and require review.
+
+Full-corpus structural acceptance remains 835/1,500, with zero invalid candidates or unexpected errors. Every one of the 1,400 non-AllRecipes parser outputs was compared directly with the pre-adapter parser and remained identical. The three existing AllRecipes benchmark captures were re-reviewed against their saved source content: core fields improve from 10/12 to 12/12 correct and all three are usable without correction. The complete purposive benchmark reaches 93/108 correct core fields (86.1%), with 14 usable without correction and 13 after correction. These results are not a 100-recipe semantic-accuracy claim.
+
+Validation: `node --test scripts/tests/test-recipe-import-allrecipes.mjs` passes 14 acceptance/defensive tests; the provider, cumulative parser, corpus/semantic evaluator, fixture and clipboard bridge targets pass. WASM/server checks, both Clippy targets and the server suite pass (883 tests, 12 ignored). `just ci` initially stopped because the advisory cache was read-only; rerunning `just security-check` with cache access passed, including existing allowed dependency warnings. Independent review of `1edf407..edc0ce1` passes after fixing hidden-content and silent-procedure-loss findings.
+
+The browser smoke test uses the saved Banana Banana Bread HTML/plain-text pair on the isolated NOMS-016 instance at port 32773. Preview preserves seven structured ingredients (including `2 ⅓` cups), six clean steps, 15 prep minutes, 60 cook minutes, twelve servings and author context. Explicit confirmation opens a private draft in the existing editor; image references are disclosed but not imported. Editing the test draft's title autosaves and survives direct reload with its private visibility and imported fields intact. It remains unpublished in the local mock test account. An incremental-build dependency now tracks JavaScript parser changes in Rust so an old asset fingerprint cannot survive an adapter-only source update. An uncached reload was necessary to replace the browser's old running bundle.
+
+Raw reports remain `/tmp/noms016-post-allrecipes.json` and `/tmp/noms016-post-allrecipes.md`. Digest-bound review reproduction is described in the semantic report; raw provider captures remain outside the repository.
+
 ## Conclusions
 
 1. The generic HTML parser recognizes useful candidates from several providers, but structural acceptance remains only an upper bound on compatibility.
