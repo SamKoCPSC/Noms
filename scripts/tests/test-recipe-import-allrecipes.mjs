@@ -72,6 +72,13 @@ test("AllRecipes keeps procedure recipe tips separate from instructions", () => 
   assert.equal(c.fields.instructionSections[0].steps.length, 2);
 });
 
+test("AllRecipes excludes explicitly marked related-article promotions inside a step", () => {
+  const html = recipe.replace('Bake and serve.</p>', 'Bake and serve.</p><div class="allrecipes-sc-block-featuredlink mntl-sc-block-universal-featured-link--related"><a href="https://example.invalid/tools">Our favorite kitchen tools</a></div>');
+  const c = parse(html);
+  assert.equal(c.parser.sourceAdapter, "allrecipes");
+  assert.equal(c.fields.instructionSections[0].steps[1].text, "Bake and serve.");
+});
+
 test("AllRecipes adapter requires an exact supported HTTP hostname", () => {
   assert.equal(parse(recipe, "http://allrecipes.com/recipe/1/").parser.sourceAdapter, "allrecipes");
   for (const source of [null, "https://allrecipes.com.example.invalid/", "https://notallrecipes.com/", "https://example.invalid/?site=allrecipes.com", "ftp://allrecipes.com/"]) {
@@ -86,11 +93,26 @@ test("AllRecipes incomplete, duplicated or competing structures retain generic f
     recipe.replace('<span data-ingredient-name="true">cooked lentils</span>', ''),
     recipe.replace('<span data-ingredient-quantity="true">2 ⅓</span>', '<span data-ingredient-quantity="true">2 ⅓</span><span data-ingredient-quantity="true">7</span>'),
     recipe.replace('<p class="mntl-sc-block-html">Bake and serve.</p>', 'Changed procedure markup.'),
+    recipe.replace('<p class="mntl-sc-block-html">Bake and serve.</p>', '<p class="mntl-sc-block-html">Bake and serve.</p><p>Cook for another hour.</p>'),
+    recipe.replace('<p class="mntl-sc-block-html">Bake and serve.</p>', '<p class="mntl-sc-block-html">Bake and serve.</p>Rest for an hour.'),
     recipe.replace('salt, to taste</span>', 'salt, to taste</span> plus chopped herbs'),
     recipe.replace('<ul class="mm-recipes-structured-ingredients__list">', '<ul class="mm-recipes-structured-ingredients__list"><li>Unmarked extra ingredient</li>'),
     recipe.replace('<ol class="mntl-sc-block-group--OL">', '<ol class="mntl-sc-block-group--OL"><li>Unmarked extra step</li>'),
     recipe + recipe,
     recipe.replace('<h2>Reviews</h2>', '<h1 class="article-heading">Other recipe</h1><h2>Reviews</h2>'),
+  ]) assert.notEqual(parse(html).parser.sourceAdapter, "allrecipes");
+});
+
+test("AllRecipes hidden recipe nodes or ancestors never activate the visible adapter", () => {
+  for (const html of [
+    `<div hidden>${recipe}</div>`,
+    `<div aria-hidden="true">${recipe}</div>`,
+    `<div style="display: none">${recipe}</div>`,
+    recipe.replace('<h1 class="article-heading">', '<h1 hidden class="article-heading">'),
+    recipe.replace('<div class="mm-recipes-steps__content">', '<div hidden class="mm-recipes-steps__content">'),
+    recipe.replace('<span data-ingredient-name="true">cooked lentils', '<span hidden data-ingredient-name="true">cooked lentils'),
+    recipe.replace('cooked lentils</span>', '<em hidden>cooked lentils</em></span>'),
+    recipe.replace('Bake and serve.</p>', '<span hidden>Bake and serve.</span></p>'),
   ]) assert.notEqual(parse(html).parser.sourceAdapter, "allrecipes");
 });
 

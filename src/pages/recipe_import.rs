@@ -6,6 +6,9 @@ use serde_json::Value;
 
 const BRIDGE: Asset = asset!("/assets/recipe-import-bridge.mjs");
 const PARSER: Asset = asset!("/scripts/recipe-import-parser.mjs");
+// Track the external parser as a Rust build input so incremental asset builds
+// cannot keep an old fingerprint after a JavaScript-only adapter change.
+const _: &[u8] = include_bytes!("../../scripts/recipe-import-parser.mjs");
 
 #[component]
 pub fn RecipeImport() -> Element {

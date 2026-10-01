@@ -1802,6 +1802,14 @@ function parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   const title = titles[0];
   const ingredientContainer = ingredientContainers[0];
   const instructionContainer = instructionContainers[0];
+  // Clipboard fragments can retain explicitly hidden nodes. Check the node and
+  // every enclosing hidden range rather than treating a class as visibility.
+  const hiddenRanges = elementsMatchingAttributes(inertHtml, attributes => listIsHidden({ attributes }));
+  const isHidden = (index, end = index + 1) => hiddenRanges.some(range =>
+    (range.index <= index && index < range.end) ||
+    (index <= range.index && range.index < end && htmlText(range.innerHtml)));
+  if (isHidden(title.index, title.end) ||
+    [ingredientContainer, instructionContainer].some(({ index }) => isHidden(index))) return null;
   const roots = rootRanges(inertHtml);
   const root = closestRoot(roots, title.index);
   // A whole-page copy must describe one coherent recipe, not disconnected cards.
@@ -1816,7 +1824,8 @@ function parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   if (!lists.length) return null;
   const ingredientSections = [];
   for (const [sectionIndex, list] of lists.entries()) {
-    if (list.tag !== "ul" || listIsHidden(list)) return null;
+    const listOffset = ingredientContainer.openingEnd + list.openingEnd;
+    if (list.tag !== "ul" || isHidden(ingredientContainer.openingEnd + list.index)) return null;
     const previousEnd = lists[sectionIndex - 1]?.end ?? 0;
     const headings = groupHeadings.filter(({ index, end }) => index >= previousEnd && end <= list.index);
     if (headings.length > 1) return null;
@@ -1825,11 +1834,14 @@ function parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
       elementsMatchingAttributes(list.innerHtml, (_, tag) => tag === "li").length) return null;
     const items = [];
     for (const [itemIndex, row] of rows.entries()) {
+      const rowOffset = listOffset + row.openingEnd;
+      if (isHidden(listOffset + row.index)) return null;
       const structured = {};
       let firstNamedFieldIndex = null;
       for (const [field, attribute] of [["amount", "quantity"], ["unit", "unit"], ["name", "name"]]) {
         const fields = elementsMatchingAttributes(row.innerHtml, (attributes) => attributes.get(`data-ingredient-${attribute}`) === "true");
         if (fields.length > 1) return null;
+        if (fields.some(({ index, end }) => isHidden(rowOffset + index, rowOffset + end))) return null;
         if (field !== "amount" && fields.length) firstNamedFieldIndex = Math.min(firstNamedFieldIndex ?? fields[0].index, fields[0].index);
         structured[field] = fields.length ? htmlText(fields[0].innerHtml) || null : null;
       }
@@ -1860,6 +1872,8 @@ function parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   const instructionHtml = instructionContainer.innerHtml;
   const orderedLists = elementsWithClass(instructionHtml, "mntl-sc-block-group--OL");
   if (orderedLists.length !== 1 || orderedLists[0].tag !== "ol") return null;
+  const instructionListOffset = instructionContainer.openingEnd + orderedLists[0].openingEnd;
+  if (isHidden(instructionContainer.openingEnd + orderedLists[0].index)) return null;
   const stepRows = elementsWithClass(orderedLists[0].innerHtml, "mntl-sc-block-group--LI");
   if (!stepRows.length || stepRows.some(({ tag }) => tag !== "li") || stepRows.length !==
     elementsMatchingAttributes(orderedLists[0].innerHtml, (_, tag) => tag === "li")
@@ -1867,12 +1881,27 @@ function parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   const steps = [];
   let flattenedSingleSteps = 0;
   for (const [stepIndex, row] of stepRows.entries()) {
+    const rowOffset = instructionListOffset + row.openingEnd;
+    if (isHidden(instructionListOffset + row.index)) return null;
     // Photos, captions and ads may sit inside a step. Retain only direct recipe
     // paragraphs, joining multiple paragraphs without changing step numbering.
-    const blocks = elementsWithClass(row.innerHtml, "mntl-sc-block-html")
+    const blocks = elementsMatchingAttributes(row.innerHtml, () => true)
       .filter(({ index }) => tagStackContext(row.innerHtml, index).length === 0);
     const texts = [];
+    let previousEnd = 0;
     for (const block of blocks) {
+      // Unknown paragraphs or loose text could be essential procedure. Refuse
+      // this adapter instead of silently returning a shortened instruction.
+      if (htmlText(row.innerHtml.slice(previousEnd, block.index))) return null;
+      previousEnd = block.end;
+      if (block.tag === "figure" || hasClass(block.attributes, "mntl-sc-block-adslot")) continue;
+      if (block.tag === "div" && hasClass(block.attributes, "allrecipes-sc-block-featuredlink") &&
+        hasClass(block.attributes, "mntl-sc-block-universal-featured-link--related")) continue;
+      if (!hasClass(block.attributes, "mntl-sc-block-html")) {
+        if (htmlText(block.innerHtml)) return null;
+        continue;
+      }
+      if (isHidden(rowOffset + block.index, rowOffset + block.end)) return null;
       if (block.tag === "p") {
         const text = htmlText(block.innerHtml);
         if (text) texts.push(text);
@@ -1886,9 +1915,9 @@ function parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
       texts.push(htmlText(nestedItems[0].innerHtml));
       flattenedSingleSteps += 1;
     }
-    if (!texts.length) return null;
+    if (!texts.length || htmlText(row.innerHtml.slice(previousEnd))) return null;
     const text = texts.map(text => text.replace(/\s+([,.;:!?])/gu, "$1")).join(" ");
-    steps.push(instruction(text, "text/html", `.mm-recipes-steps__content ol > li:nth-child(${stepIndex + 1}) > p.mntl-sc-block-html`));
+    steps.push(instruction(text, "text/html", `.mm-recipes-steps__content ol > li:nth-child(${stepIndex + 1}) > .mntl-sc-block-html`));
   }
   if (stepRows.length !== elementsWithClass(instructionHtml, "mntl-sc-block-group--LI").length) return null;
 
@@ -1906,7 +1935,7 @@ function parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   const authors = [...new Set(authorGroups.flatMap(({ innerHtml }) => elementsWithClass(innerHtml, "mntl-attribution__item-name").map(({ innerHtml }) => htmlText(innerHtml))).filter(Boolean))];
   if (authors.length === 1) {
     result.source.author = authors[0];
-    result.source.provenance.author = provenance("text/html", ".mntl-bylines__group--ugc_recipe, .mntl-bylines__group--author .mntl-attribution__item-name");
+    result.source.provenance.author = provenance("text/html", ".mntl-bylines__group--ugc_recipe .mntl-attribution__item-name, .mntl-bylines__group--author .mntl-attribution__item-name");
   }
   const details = elementsWithClass(headerHtml, "mm-recipes-details");
   if (details.length > 1) return null;
@@ -1945,7 +1974,7 @@ function parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
     (hasClass(attributes, "allrecipes-sc-block-callout") && hasClass(attributes, "theme-recipetip")))
     .flatMap(({ innerHtml }) => elementsWithClass(innerHtml, "mntl-sc-block-universal-callout__body"))
     .map(({ innerHtml }) => htmlText(innerHtml)).filter(Boolean)
-    .map((text) => scalar(text, "text/html", ".allrecipes-sc-block-callout--cooksnote, .allrecipes-sc-block-callout.theme-recipetip > .mntl-sc-block-universal-callout__body"));
+    .map((text) => scalar(text, "text/html", ".allrecipes-sc-block-callout--cooksnote .mntl-sc-block-universal-callout__body, .allrecipes-sc-block-callout.theme-recipetip .mntl-sc-block-universal-callout__body"));
   // Only figures preceding the end of the recipe procedure are eligible. Never
   // retain review galleries or recommended-recipe images from the page footer.
   const recipeImageHtml = inertHtml.slice(title.end, instructionContainer.end);
