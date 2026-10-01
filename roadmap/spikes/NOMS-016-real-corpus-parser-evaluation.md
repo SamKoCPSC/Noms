@@ -229,6 +229,27 @@ A constructed two-root regression payload combines the live markup of the report
 
 Independent code review passes after the nested-secondary-root finding was fixed. The canonical branch/worktree is unchanged; unrelated generated CSS was not included in the fix.
 
+## NYT Cooking adapter — 2026-10-01
+
+Following the user's Food.com verification, the exact-host `cooking.nytimes.com` adapter now uses stable visible component-name prefixes rather than build-specific CSS hashes. It requires one complete main/recipe root, accounts for every marked core component, preserves explicit ingredient groups and sequential steps, and excludes known grocery controls, step media and reader notes. Unmatched roots and required markers hidden inside otherwise ignored regions are refused rather than silently omitted. Missing or changed structure retains generic fallback, not a partial authoritative provider result. All committed recipe copy in its fixtures is invented; saved source bodies remain external.
+
+The full integrity-verified corpus still accepts 862/1,500 candidates, including 100/100 NYT captures, with no invalid candidates or unexpected errors. Structural reach was already 100/100 under the generic parser; this slice repairs field extraction rather than increasing that count. Deep comparison against `05df7ac` leaves all 1,400 non-NYT candidates/rejections identical. Source-to-candidate checks account for all 1,098 ingredient rows, 435 complete step texts and 17 recipe-tip rows. The captures contain 103 ingredient groups, including two multi-group recipes. Structural accounting is not a semantic-accuracy claim for every field of every capture.
+
+The adapter recovers recipe descriptions instead of update timestamps, authors plus adaptation/source credits, literal yield and safe unfetched hero URL references. It preserves mixed fractions, package-size units and compound plus/minus or conversion measurements without conversion guesses. Exact total times are numeric in 79 captures; 21 qualified/ranged total times remain literal with null numeric values. Fifteen prep times and 17 cook times are exact; one additional ranged cook time remains literal. Numeric servings require an exact positive integer serving count. Image bytes are neither fetched nor imported.
+
+Validation and evidence:
+
+- `node --test scripts/tests/test-recipe-import-nyt.mjs`: 18 pass. Initial adapter cases failed before implementation; three hardening regressions failed before their fixes. Independent review passes after unmatched-root and consumed-marker accounting repairs.
+- `just recipe-import-provider-adapter-test recipe-import-bridge-test recipe-import-parser-active-content-test recipe-import-fixture-test recipe-import-parser-corpus-test recipe-import-parser-semantic-test`: pass, including 86 provider tests.
+- `just fmt check lint`: WASM/server checks and strict lint pass. `SQLX_OFFLINE=true cargo test --features server recipe_import_mapping -- --nocapture`: 8 pass. Full CI/server tests were not rerun; the previously documented database-test hang remains a limitation.
+- Corpus reports: `/tmp/noms016-nyt-corpus.{json,md}`. Full deep-comparison and source-accounting evidence: `/tmp/noms016-nyt-validation.txt` (external source-derived content, not committed).
+- Re-review of the three NYT semantic candidates fixes compound quantity splits, descriptions, yield and the fractional-hour duration. Qualified times intentionally remain literal and are available in optional commentary. NYT scores 12/12 correct core fields; the full 27-sample benchmark is 100/108 (92.6%), with 20 usable without correction, 7 after correction and no stale labels or unusable candidates. Image review concerns references only. The refreshed review and reports are `/tmp/noms016-nyt-review.json` and `/tmp/noms016-nyt-semantic.{json,md}`; all 24 other-provider records remain unchanged. These temporary artifacts should be retained externally if needed across cleanup/restarts.
+- Browser runtime proof uses an invented recipe with provider-shaped HTML plus plain text through the browser session clipboard. On port 32783 it previews the correct description, author, compound and package quantities, three ingredients, two clean steps, numeric prep/cook/servings and literal qualified total time. Creating a private draft and reloading preserves these values and commentary. Nothing was published. The existing canonical instance was restarted, then reloaded without cached assets after the first preview exposed an older asset. A fresh concurrent instance was refused by the one-instance-per-worktree guard. Native OS Ctrl+A/C and live NYT access were not tested; no NYT page/headline screenshots were taken.
+
+An additional UI paste containing only an access-shell message is rejected as unrecognizable and offers no draft-creation action. A clean import form is left open for manual testing. The synthetic private draft remains in the isolated development instance; it was not published.
+
+Changes remain in the canonical NOMS-016 branch/worktree. Unrelated generated CSS is excluded. The next step is the user's manual copy/paste review against an accessible NYT recipe, without fetching or bypassing access controls in the parser.
+
 ## Conclusions
 
 1. The generic HTML parser recognizes useful candidates from several providers, but structural acceptance remains only an upper bound on compatibility.

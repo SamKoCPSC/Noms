@@ -2,17 +2,17 @@
 
 ## Outcome
 
-The clipboard parser stack was reviewed against 27 accepted candidates from the verified external NOMS-016 corpus. The sample contains three recipes from each of nine providers: AllRecipes, BudgetBytes, Food.com, Food52, NYT Cooking, RecipeTinEats, Sally's Baking Addiction, Serious Eats, and Tasty. RecipeTinEats, Tasty, BudgetBytes, AllRecipes, Food52 and Food.com were reviewed again after their source adapters were added. The AllRecipes, Food52 and Food.com re-reviews on 2026-10-01 were performed by the implementation agent against the saved captures, not new human usability studies.
+The clipboard parser stack was reviewed against 27 accepted candidates from the verified external NOMS-016 corpus. The sample contains three recipes from each of nine providers: AllRecipes, BudgetBytes, Food.com, Food52, NYT Cooking, RecipeTinEats, Sally's Baking Addiction, Serious Eats, and Tasty. RecipeTinEats, Tasty, BudgetBytes, AllRecipes, Food52, Food.com and NYT Cooking were reviewed again after their source adapters were added. The AllRecipes, Food52, Food.com and NYT re-reviews on 2026-10-01 were performed by the implementation agent against the saved captures, not new human usability studies.
 
 The purposive sample includes candidates marked both ready and needs-review, title mismatches, competing regions, grouped components, and recipes with relatively complex page structures. It is intended to expose failure modes, not estimate provider-wide accuracy.
 
 | Result | Samples |
 | --- | ---: |
-| Usable without correction | 18 |
-| Usable after correction | 9 |
+| Usable without correction | 20 |
+| Usable after correction | 7 |
 | Unusable | 0 |
 
-Across the four core fields, 98 of 108 reviews were correct (90.7%), 10 were partial, and none were incorrect. Nineteen candidates had all four core fields correct. No reviewed candidate was stale: every review label was checked against the SHA-256 digest of the exact parser candidate that was reviewed.
+Across the four core fields, 100 of 108 reviews were correct (92.6%), 8 were partial, and none were incorrect. Twenty-one candidates had all four core fields correct. No reviewed candidate was stale: every review label was checked against the SHA-256 digest of the exact parser candidate that was reviewed.
 
 | Benchmark | Core correct | Without correction | After correction | Unusable |
 | --- | ---: | ---: | ---: | ---: |
@@ -24,6 +24,7 @@ Across the four core fields, 98 of 108 reviews were correct (90.7%), 10 were par
 | With AllRecipes adapter | 93 of 108 (86.1%) | 14 | 13 | 0 |
 | With Food52 adapter | 94 of 108 (87.0%) | 15 | 12 | 0 |
 | With Food.com adapter | 98 of 108 (90.7%) | 18 | 9 | 0 |
+| With NYT Cooking adapter | 100 of 108 (92.6%) | 20 | 7 | 0 |
 
 ## Review rubric
 
@@ -34,7 +35,7 @@ Core fields use `correct`, `partial`, or `incorrect`:
 - **Ingredient parsing:** the amount, unit, and name split is usable.
 - **Instructions:** the selected steps are correct and complete and exclude unrelated page content.
 
-Optional fields additionally permit `not_applicable` and `not_reviewed`. The first review covered description, times, and yield. The Tasty, BudgetBytes, AllRecipes, Food52 and Food.com re-reviews also covered notes/equipment and image references for their fifteen candidates; those fields remain unreviewed for the other 12. Each candidate also received an overall usability label based on the reviewed fields.
+Optional fields additionally permit `not_applicable` and `not_reviewed`. The first review covered description, times, and yield. The Tasty, BudgetBytes, AllRecipes, Food52, Food.com and NYT re-reviews also covered notes/equipment and image references for their eighteen candidates; those fields remain unreviewed for the other nine. Each candidate also received an overall usability label based on the reviewed fields. Qualified durations and ranged/output yields count as correct when retained literally without misleading numeric inference and preserved in optional commentary; this does not claim exact numeric recovery of those values.
 
 ## Field results
 
@@ -42,13 +43,13 @@ Optional fields additionally permit `not_applicable` and `not_reviewed`. The fir
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Title | 26 | 1 | 0 | 0 | 0 |
 | Ingredients | 26 | 1 | 0 | 0 | 0 |
-| Ingredient parsing | 21 | 6 | 0 | 0 | 0 |
+| Ingredient parsing | 23 | 4 | 0 | 0 | 0 |
 | Instructions | 25 | 2 | 0 | 0 | 0 |
-| Description | 23 | 0 | 4 | 0 | 0 |
-| Times | 18 | 1 | 7 | 1 | 0 |
-| Yield | 18 | 0 | 9 | 0 | 0 |
-| Notes/equipment | 5 | 0 | 0 | 10 | 12 |
-| Images | 14 | 0 | 0 | 1 | 12 |
+| Description | 26 | 0 | 1 | 0 | 0 |
+| Times | 19 | 1 | 6 | 1 | 0 |
+| Yield | 21 | 0 | 6 | 0 | 0 |
+| Notes/equipment | 7 | 0 | 0 | 11 | 9 |
+| Images | 17 | 0 | 0 | 1 | 9 |
 
 ## Provider results
 
@@ -58,7 +59,7 @@ Optional fields additionally permit `not_applicable` and `not_reviewed`. The fir
 | BudgetBytes | 3 | 12 of 12 (100.0%) | 3 | 0 | 0 |
 | Food.com | 3 | 12 of 12 (100.0%) | 3 | 0 | 0 |
 | Food52 | 3 | 10 of 12 (83.3%) | 2 | 1 | 0 |
-| NYT Cooking | 3 | 10 of 12 (83.3%) | 1 | 2 | 0 |
+| NYT Cooking | 3 | 12 of 12 (100.0%) | 3 | 0 | 0 |
 | RecipeTinEats | 3 | 10 of 12 (83.3%) | 1 | 2 | 0 |
 | Sally's Baking Addiction | 3 | 10 of 12 (83.3%) | 1 | 2 | 0 |
 | Serious Eats | 3 | 10 of 12 (83.3%) | 1 | 2 | 0 |
@@ -72,13 +73,15 @@ Three samples per provider are too few for provider compatibility or ranking cla
 - The RecipeTinEats and Tasty adapters recovered complete named and unnamed ingredient groups in the reviewed recipes; other providers can still lose a subgroup or treat a heading as an ingredient.
 - Structured ingredient splitting was the weakest core field. Checkbox and cost annotations and mixed-fraction typography commonly prevented usable amount/unit/name parsing.
 - Instruction selection was generally usable. The Tasty adapter removed the provider's app promotion from each reviewed instruction list, while some other candidates still append photo credits, marketing text, or other page content.
-- The RecipeTinEats, Tasty, BudgetBytes, AllRecipes, Food52 and Food.com adapters recovered yield for their eighteen reviewed candidates; yield remains absent or unusable in the other nine.
+- The RecipeTinEats, Tasty, BudgetBytes, AllRecipes, Food52, Food.com and NYT adapters recovered yield for their twenty-one reviewed candidates; yield remains absent or unusable in the other six.
 - Description and time extraction were inconsistent; selected descriptions sometimes contained author or page text rather than recipe descriptions.
 - No reviewed candidate remains unusable. The Tasty-specific compound-quantity rule preserves two-unit expressions in the amount field while leaving the singular unit field empty; all three reviewed Tasty candidates are usable without correction.
 - BudgetBytes now preserves complete ingredient rows, structured quantities, preparation notes and footnotes while removing price annotations from parsed names. The three reviewed candidates also retain their descriptions, card servings, recipe notes and image references, and are usable without correction. Notes remain flattened into text and require mapping before saving.
 - AllRecipes preserves its explicit quantity/unit/name fields and removes instructional photo credits from procedure text. Its three re-reviewed captures retain complete ingredients and steps, correct durations and servings, and applicable recipe tips/cook's notes. Their twelve core fields are correct; images were reviewed as unfetched references only.
 - Food52 preserves complete explicit ingredient/direction groups, marked quantity ranges, descriptions, author and labeled metadata. Chile-Cheese Toast now retains `10 to 15` as one amount rather than placing the range suffix in the ingredient name. Toast and Gochujang Wings are usable without correction. The salmon noodle bowl still contains four unmarked section labels as low-confidence ingredient rows; those need user correction. Inferring headings from arbitrary plain list-item text is deliberately out of scope. All three preserve the correct unfetched hero reference and have no explicitly separate notes/equipment section.
 - Food.com preserves the complete ingredients and ordered directions for the baked ziti, shake and Italian Bread candidates, including mixed fractions, bounded ranges and package-size units. All twelve core fields are correct. Descriptions, author, total time and literal yield are retained; ranged servings remain null and output counts do not replace `Serves`. The Italian Bread inline note remains in source-ordered directions, not an invented standalone notes section. None of the three sources has a separate notes/equipment section. Ziti and bread retain unfetched responsive hero references; the shake has no source hero image and is marked not applicable. All three are usable without correction.
+
+- NYT Cooking now retains recipe descriptions rather than update timestamps, author/adaptation credit, complete ingredient/step text, literal yield, explicit recipe tips and unfetched hero references for all three re-reviewed candidates. Cookie plus/minus measures and the ziti's dual-unit ricotta measure remain literal amount expressions; package-size cans and mixed fractions split correctly. The ziti's total is 90 minutes; the two qualified total times remain literal with null numeric values, not guessed complete durations. Ranged servings and cookie output counts remain nonnumeric. All twelve core fields are correct, with no correction needed for the reviewed fields. This is an agent source-to-output review, not a claim of native clipboard or live subscription-page compatibility.
 
 The next parser work should therefore prioritize yield recovery, ingredient normalization and section completeness, and tighter instruction/description boundaries. Provider adapters or Schema.org extraction should be considered where a stable provider-specific gap can be reproduced synthetically.
 
@@ -109,12 +112,12 @@ node scripts/evaluate-recipe-parser-semantic.mjs \
 
 Run `just recipe-import-parser-semantic-test` for the evaluator contract. A changed parser candidate has a different digest and invalidates its old labels instead of silently reusing them.
 
-The previous external review files are preserved. The current 27-sample review is `/home/samko/Documents/Recipe Data/semantic-review-foodcom-v1.json`; its evaluated artifacts are `/tmp/noms016-foodcom-semantic.json` and `/tmp/noms016-foodcom-semantic.md`. Only the three Food.com candidate digests and labels changed from the Food52 review; the other 24 records remain identical and current. Use the current file with `--review` to reproduce the benchmark.
+The previous external review files are preserved. The current 27-sample review is temporarily `/tmp/noms016-nyt-review.json`; its evaluated artifacts are `/tmp/noms016-nyt-semantic.json` and `/tmp/noms016-nyt-semantic.md`. Only the three NYT candidate digests and labels changed from `/home/samko/Documents/Recipe Data/semantic-review-foodcom-v1.json`; the other 24 records remain identical and current. Use the current file with `--review` to reproduce the benchmark. Retain this temporary review externally if it is needed across cleanup/restarts.
 
 ## Limitations
 
 - Only structurally accepted candidates were reviewed; this does not measure recall across all 1,500 corpus samples.
 - The 27 samples were selected purposively rather than randomly, so percentages are not population estimates.
 - One reviewer supplied the labels; inter-reviewer agreement has not been measured.
-- Notes/equipment and image references remain unreviewed for 12 candidates; the Tasty, BudgetBytes, AllRecipes, Food52 and Food.com candidates were reviewed for these fields. Image bytes were not fetched or inspected.
+- Notes/equipment and image references remain unreviewed for nine candidates; the Tasty, BudgetBytes, AllRecipes, Food52, Food.com and NYT candidates were reviewed for these fields. Image bytes were not fetched or inspected.
 - Overall usability reflects the reviewed fields and assumes a user can correct a candidate before saving.
