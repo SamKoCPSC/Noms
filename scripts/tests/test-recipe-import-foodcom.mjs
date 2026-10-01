@@ -87,4 +87,5 @@ test('Food.com compact duration tokens retain all components and unsupported val
 test('Food.com refuses unclosed hidden ancestors and competing main roots with changed classes',()=>{
  for(const prefix of ['<div hidden>','<div aria-hidden="true">','<div style="display:none">','<div class="hidden">'])refuses(prefix+recipe);
  refuses(recipe+'<main id="recipe" class="changed"><h1>Other recipe</h1></main>');
+ refuses(recipe+'<main id="recipe"><h1>Other recipe</h1>');
 });

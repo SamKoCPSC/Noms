@@ -2201,13 +2201,16 @@ function parseFoodComVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   const hiddenRanges = elementsMatchingAttributes(inertHtml, attributes => listIsHidden({ attributes }) || hasClass(attributes, "hidden"));
   // A malformed hidden wrapper still hides its descendants in the browser.
   // The complete-element scanner skips it, so retain its conservative range.
+  let mainOpeningCount = 0;
   for (const match of inertHtml.matchAll(/<([a-z][a-z0-9:-]*)\b((?:"[^"]*"|'[^']*'|[^>"'])*)>/giu)) {
+    if (match[1].toLowerCase() === "main") mainOpeningCount += 1;
     const attributes = htmlAttributes(match[2]);
     if ((listIsHidden({ attributes }) || hasClass(attributes, "hidden")) && !hiddenRanges.some(e => e.index === match.index)) {
       const openingEnd = match.index + match[0].length;
       hiddenRanges.push({ index: match.index, end: inertHtml.length, innerHtml: inertHtml.slice(openingEnd) });
     }
   }
+  if (mainOpeningCount !== 1) return null;
   const isHidden = (element, offset = main.openingEnd, includeText = false) => hiddenRanges.some(range =>
     (range.index <= offset + element.index && offset + element.index < range.end) ||
     (includeText && offset + element.index <= range.index && range.index < offset + element.end && htmlText(range.innerHtml)));
