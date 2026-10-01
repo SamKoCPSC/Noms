@@ -3916,3 +3916,173 @@ failure, observed automatic media cleanup, usable remaining narrow captures,
 actual screen-reader/real-device touch, image-export outcomes and final
 whole-app visual/behavior acceptance remain open. This is not checkpoint-8 or
 WCAG sign-off.
+
+## Avatar export pixel acceptance — 2026-10-01
+
+Scope: verify the actual browser-generated avatar bytes, framing, colour and
+alpha without changing a saved account. Reused local project
+`noms-c799915fcf93e034` (app **32768**, PostgreSQL **32769**, MinIO **32770**) and
+the established checkpoint task/design integration worktrees. No new fixture
+identity, account link, destructive action or persisted image was needed.
+
+The original mock owner signed in through the normal mock flow. A synthetic
+colour-grid PNG was staged using Choose Photo, with only the exact
+`/api/upload_avatar*` Fetch/XHR request paused at **Request**, before server
+execution. Each capture saved `edit`, `original_bytes`, `full_bytes` and
+`thumb_bytes` under `/tmp`, then failed the held request. Nothing was uploaded
+successfully. Retry feedback is expected in this harness, not a server failure.
+Afterwards, interception and the temporary cache override were cleared and
+reload discarded the staged photo; Choose Photo/initials remained, with no
+Retry action or saved avatar. Original account fields were never submitted.
+
+### Findings and implementation
+
+- **Transform/crop order:** the exporter cropped the source first and rotated
+  that fragment around the output centre, while the preview transforms the
+  full image around its original centre inside a fixed crop. A 50% offset crop
+  with 90° rotation and horizontal flip exported a different quadrant.
+  `496cc16` maps that fixed crop to the output canvas, preserves the original
+  image centre/dimensions and draws the transformed full image. The circular
+  clip, colour processing, WebP sizes/quality and server contract are unchanged.
+  Two geometry tests were written first; their initial run failed because the
+  helper was not yet implemented. Focused Settings tests then passed **35/35**.
+- **Preview colour space:** SVG defaults to linearRGB, whereas avatar pixel
+  processing uses sRGB channels. At saturation 50%, red contrast 50%, green
+  120%, blue 150%, an interior preview sample `(122,79,72)` versus output
+  `(89,74,68)` showed an RGB error of 33. `8c706e5` explicitly uses sRGB for
+  elliptical avatar previews, preserving linearRGB for rectangular recipe
+  previews/non-destructive edits. A new source-contract test initially selected
+  its own assertion string, failing even with correct production code;
+  `5f667ad` confines it to the rendered ImageWithCrop filter. This test-selector
+  correction is not a successful test-first red/green claim. Its focused run
+  passed **1/1**; runtime colour evidence is recorded below.
+
+The first after-fix byte capture was identical to the old result: the dev app's
+stable WASM URL remained cached after restart. It is **not counted as a pass**.
+A tab-local cache override plus reload loaded the corrected client; both actual
+pixel checks and framing then passed. That override has been restored. Only
+the existing app container was restarted for rebuilds; data volumes and other
+deployments were untouched.
+
+### Independent pixel oracle and results
+
+Tracked source: `scripts/dev-fixtures/image-export-grid.svg`, final 512×512
+four-colour grid with corner markers. Black grid lines in the initial fixture
+were removed to avoid lossy thumbnail boundary halos. A read-only stdlib Python
+checker, `scripts/tests/check-avatar-export.py`, uses the existing ImageMagick
+CLI to decode local files, independently invert the full-image CSS transform
+and crop, and calculate contrast/saturation channels. It checks **400×400** and
+**100×100**, all four transparent corners, opaque unambiguous interior points
+and maximum channel error **15** for lossy WebP. It requires at least eight
+valid samples. Boundary exclusion uses an inverse-transformed four-output-pixel
+footprint, including rotation/stretch; the tolerance was not relaxed. This is
+sampled interior evidence, not exhaustive alpha/antialiasing edge equality.
+
+The final checker still rejects the before-fix combined capture: pixel
+`116,104`, actual `(140,126,56)` versus expected `(220,200,40)`, error **80**.
+Observed successful captures:
+
+| Case | Edits/input | Full samples / max RGB error | Thumbnail samples / max RGB error |
+| --- | --- | --- | --- |
+| `combined-fixed` | Initial grid; crop x=.1328125, y=.318359375, w=h=.5; 90°, flip X | 148 / 2 | 134 / 7 |
+| `color-final` | Final grid; full crop; saturation .5, contrast R=.5/G=1.2/B=1.5 | 364 / 1 | 275 / 4 |
+| `stretch-final` | Final grid; crop x=.1640625, y=.095703125, w=h=.75; 45°, width .8/height .6, flip Y | 343 / 3 | 178 / 14 |
+| `portrait-final` | 512×1024; default square crop x=0, y=.25, w=1, h=.5 | 356 / 1 | 303 / 4 |
+| `landscape-final` | 1024×512; crop x=.4140625, y=.25, w=.25, h=.5; 90°, both flips | 337 / 2 | 291 / 5 |
+
+Every row passed dimensions, transparent-corner and interior-alpha checks.
+Captured original bytes are untouched: source/capture SHA-256 pairs matched
+for the original grid, final grid, portrait and landscape inputs. The final
+grid pair is `90a59f1922d5839dab719ca84ae945c81225b5f186077f8f578e5f44f4d0b9f2`.
+
+After the colour-space fix, the actual DOM filter reads
+`color-interpolation-filters="sRGB"`. Four stable screenshot/output samples:
+
+| Quadrant | Preview RGB | Export RGB |
+| --- | --- | --- |
+| Upper left | 89,76,70 | 89,74,68 |
+| Upper right | 94,192,145 | 93,192,145 |
+| Lower left | 57,94,174 | 57,94,173 |
+| Lower right | 155,220,130 | 156,221,130 |
+
+Maximum difference is **2** channel levels, including screenshot/WebP loss.
+The inspected preview captures are
+`/tmp/noms-020-avatar-export-color-final-preview.jpg` and
+`/tmp/noms-020-avatar-export-landscape-final-preview.jpg`.
+Other captures use the same case prefixes above. Files are temporary, not
+tracked artwork. The initial lined fixture is retained only in its `/tmp`
+snapshot for the red/control capture; use each capture's exact source file.
+
+Reproduce the final synthetic sources and validate a captured case:
+
+```sh
+magick scripts/dev-fixtures/image-export-grid.svg /tmp/noms-020-export-solid-grid.png
+magick /tmp/noms-020-export-solid-grid.png -resize '512x1024!' /tmp/noms-020-export-portrait-grid.png
+magick /tmp/noms-020-export-solid-grid.png -resize '1024x512!' /tmp/noms-020-export-landscape-grid.png
+# Through the visible editor, stage edits; pause the avatar API before execution,
+# save its JSON byte arrays/metadata locally, and fail the held request.
+python3 scripts/tests/check-avatar-export.py \
+  /tmp/noms-020-export-solid-grid.png \
+  /tmp/noms-020-avatar-export-color-final-edit.json \
+  /tmp/noms-020-avatar-export-color-final-full_bytes.webp \
+  /tmp/noms-020-avatar-export-color-final-thumb_bytes.webp
+```
+
+### Data isolation, validation and review
+
+Read-only post-check row hashes exactly match the prior approved-disposal
+baseline: recipes `d7298c2c29ade897d2e39535462d7db3`, versions
+`0f91d540a069a9ae0ab0495253a3f4ae`, collections
+`917c84e8447402c9b3bfcb6e3d7b8075`, memberships
+`fd3bc9401f1389c7fa08cff816e7b44b`, drafts
+`eeb6a9cba9018a65ee8e13b4bf625d52`, users
+`3af5cd3524ea80707ea54f1961ef1864`. Counts remain 30 recipes, 62 versions,
+29 collections, 28 memberships, 1 draft, 2 users, 1 OAuth identity, 1 media
+asset and **0 avatar references**. Routine original mock sign-in refreshes OAuth
+usage/session state; an unchanged full OAuth-row hash is not claimed.
+
+A later read now observes the former disposable avatar media record as
+`deleted`, with NULL uploader and no reference. It had been `retained` in the
+previous section. Its three objects were already manually disposed within that
+earlier approval; this metadata reconciliation is **not evidence that a worker
+physically deleted existing objects**. No media was created in this slice.
+
+Validation from the task worktree used `SQLX_OFFLINE=true` and the established
+shared `CARGO_TARGET_DIR`:
+
+```sh
+cargo test --features server avatar_canvas -- --test-threads=1
+cargo test --features server pages::settings -- --test-threads=4
+cargo test --features server avatar_preview_uses_export_srgb -- --test-threads=1
+cargo check --target wasm32-unknown-unknown --no-default-features --features web
+PGOPTIONS='-c log_min_error_statement=panic' RUST_TEST_THREADS=4 just ci
+```
+
+Final CI: **915 passed, 0 failed, 12 ignored**, 6 security-policy script checks,
+format/native/WASM/Clippy/schema checks, dependency audit (8 existing allowed
+warnings), tracked-secret and deployment-artifact gates passed.
+`/tmp/noms-020-avatar-export-bounded-ci.log` is the final raw log. The initial
+framing-only full run passed 914 tests; a later run failed the new test selector
+described above. After that correction, the unbounded run hit the existing
+temporary database upload-test `PoolTimedOut`; bounding test concurrency to four
+passed without disabling or weakening tests. Earlier logs remain under the
+`/tmp/noms-020-avatar-export-*ci.log` prefixes. The final Python checker was
+rerun on all five captures and still rejects the old framing result.
+
+Explicit second-pass self-review **PASS for this sampled avatar slice**:
+reviewed transform order/centre, circular mask, colour-space scope, regression
+tests, checker independence/threshold, before-fix rejection, actual captured
+pixels, original-data hashes and cleanup. No independent-agent review claimed.
+Code commits `496cc16`, `8c706e5`, `5f667ad` were fast-forwarded into the design
+integration branch. Its user-owned `assets/tailwind.css` remains SHA-256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+The final checker/evidence update is a separate local acceptance commit; no push.
+
+**Next:** recipe-image variants/additional input formats and remaining dense
+image/editor interactions. This does not accept persisted avatar upload/reopen
+again, all image formats, pixel-perfect edges, post-commit lost responses,
+navigation/identity replacement, real-device touch, actual screen readers or
+whole-app visual/behaviour acceptance. Any further destructive/account-linking
+tests require a new isolated fixture and exact fresh action-time approval;
+the consumed `@cp8settings` account must not be recreated. Checkpoint 8 and
+full WCAG sign-off remain open.

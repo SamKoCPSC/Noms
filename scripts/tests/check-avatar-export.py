@@ -71,10 +71,15 @@ def check_variant(source, output_path, edit, expected_size):
     for x, y in [(0, 0), (width - 1, 0), (0, height - 1), (width - 1, height - 1)]:
         assert pixel(output, x, y)[3] == 0, "Circular variant corners must be transparent"
     checked, maximum_error = 0, 0
-    # Four output pixels of separation avoid thumbnail chroma/resampling halos.
-    margin = max(12, math.ceil(4 * max(
-        source[0] * edit["crop"]["width"], source[1] * edit["crop"]["height"]
-    ) / width))
+    # Invert a four-output-pixel footprint, including rotation/stretch, to
+    # exclude thumbnail chroma/resampling halos without relaxing RGB tolerance.
+    centre = source_position(edit, source[:2], (0.5, 0.5))
+    step_x = source_position(edit, source[:2], (0.5 + 4 / width, 0.5))
+    step_y = source_position(edit, source[:2], (0.5, 0.5 + 4 / height))
+    margin = max(12, math.ceil(max(
+        abs(step_x[axis] - centre[axis]) + abs(step_y[axis] - centre[axis])
+        for axis in [0, 1]
+    )))
     fractions = [0.20 + index * 0.03 for index in range(21)]
     for x_fraction in fractions:
         for y_fraction in fractions:
