@@ -1,4 +1,71 @@
 use super::*;
+use dioxus::router::components::HistoryProvider;
+
+#[component]
+fn RecipeLoadRecoveryTestRoot(pending: bool) -> Element {
+    use_context_provider(|| pending);
+    rsx! { HistoryProvider {
+        history: |_| std::rc::Rc::new(dioxus::history::MemoryHistory::with_initial_path("/")) as std::rc::Rc<dyn History>,
+        Router::<RecipeLoadRecoveryTestRoute> {}
+    } }
+}
+
+#[derive(Clone, PartialEq, Routable)]
+enum RecipeLoadRecoveryTestRoute {
+    #[route("/")]
+    RecipeLoadRecoveryTestPage {},
+}
+
+#[component]
+fn RecipeLoadRecoveryTestPage() -> Element {
+    render_recipe_unavailable(use_context::<bool>(), EventHandler::new(|_| {}))
+}
+
+#[test]
+fn recipe_load_failure_has_a_heading_safe_copy_and_focusable_retry() {
+    for pending in [false, true] {
+        let mut dom = VirtualDom::new_with_props(
+            RecipeLoadRecoveryTestRoot,
+            RecipeLoadRecoveryTestRootProps { pending },
+        );
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("<h1>Recipe unavailable</h1>"), "{html}");
+        assert!(
+            html.contains(if pending {
+                "role=\"status\""
+            } else {
+                "role=\"alert\""
+            }),
+            "{html}"
+        );
+        assert!(
+            html.contains(if pending {
+                "Retrying…"
+            } else {
+                "Retry recipe"
+            }),
+            "{html}"
+        );
+        assert!(html.contains(&format!("aria-disabled={pending}")), "{html}");
+        assert!(!html.contains(" disabled"), "{html}");
+        assert!(html.contains("Back to Recipes"), "{html}");
+    }
+}
+
+#[test]
+fn current_recipe_retry_retains_error_guards_live_pending_and_focuses_success() {
+    let source = include_str!("recipe_detail.rs")
+        .split("fn RecipeDetailContents")
+        .nth(1)
+        .unwrap();
+    assert!(source.contains("recipe_resource.state().read()"));
+    assert!(source.contains("if any_pending && error_message.is_none()"));
+    assert!(source.contains("if !recipe_resource.pending()"));
+    assert!(source.contains("render_recipe_unavailable"));
+    assert!(source.contains("id: \"recipe-detail-content\""));
+    assert!(source.contains("recipe_retry_requested.replace(false)"));
+}
 
 #[component]
 fn NarrowComparisonTestRoot() -> Element {

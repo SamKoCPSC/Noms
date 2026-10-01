@@ -312,6 +312,25 @@ fn recipe_access_error_message(_error: &ServerFnError) -> &'static str {
     "Recipe not found"
 }
 
+fn render_recipe_unavailable(pending: bool, onretry: EventHandler<()>) -> Element {
+    // One state for absent, private and failed reads avoids leaking existence.
+    rsx! {
+        div { class: "container",
+            Card {
+                div { display: "flex", flex_direction: "column", align_items: "center",
+                    text_align: "center", gap: "var(--space-md)",
+                    h1 { "Recipe unavailable" }
+                    p { "This recipe may not exist or you may not have access to it." }
+                    LoadRecovery { pending, message: "The recipe couldn’t be loaded. Please try again.",
+                        retry_label: "Retry recipe", onretry,
+                    }
+                    Link { to: crate::Route::Dashboard {}, class: "btn btn-secondary touch-target", "Back to Recipes" }
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod historical_version_error_tests {
     use super::*;
@@ -2151,6 +2170,7 @@ fn RecipeDetailContents(id: String) -> Element {
     let mut selected_visibility = use_signal(|| "private".to_string());
     let mut is_saving_visibility = use_signal(|| false);
     let mut visibility_feedback = use_signal(|| Option::<Result<(), String>>::None);
+    let mut recipe_retry_requested = use_signal(|| false);
 
     // Tags (signal-based, loaded conditionally based on ownership)
     let tags = use_signal(|| Option::<Vec<String>>::None);
@@ -2204,7 +2224,7 @@ fn RecipeDetailContents(id: String) -> Element {
     let mut delete_error = use_signal(|| Option::<String>::None);
 
     // ── Extract resource states ──────────────────────────────────────────
-    let recipe_pending = recipe_resource.pending();
+    let recipe_pending = *recipe_resource.state().read() == UseResourceState::Pending;
     let any_pending = recipe_pending;
 
     // Read resource results to avoid borrow issues in rsx!
@@ -2382,7 +2402,7 @@ fn RecipeDetailContents(id: String) -> Element {
     };
 
     // ── Render: loading ──────────────────────────────────────────────────
-    if any_pending {
+    if any_pending && error_message.is_none() {
         return rsx! {
             div { class: "container",
                 div {
@@ -2403,31 +2423,16 @@ fn RecipeDetailContents(id: String) -> Element {
     }
 
     // ── Render: error ────────────────────────────────────────────────────
-    if let Some(err_msg) = &error_message {
-        return rsx! {
-            div { class: "container",
-                Card {
-                    div {
-                        display: "flex",
-                        flex_direction: "column",
-                        align_items: "center",
-                        text_align: "center",
-                        gap: "var(--space-md)",
-                        p {
-                            color: "var(--error)",
-                            font_weight: "600",
-                            font_size: "18px",
-                            "{err_msg}"
-                        }
-                        Link {
-                            to: crate::Route::Dashboard {},
-                            class: "btn btn-secondary touch-target",
-                            "Back to Recipes"
-                        }
-                    }
+    if error_message.is_some() {
+        return render_recipe_unavailable(
+            recipe_pending,
+            EventHandler::new(move |_| {
+                if !recipe_resource.pending() {
+                    recipe_retry_requested.set(true);
+                    recipe_resource.restart();
                 }
-            }
-        };
+            }),
+        );
     }
 
     // ── Render: content ──────────────────────────────────────────────────
@@ -2452,6 +2457,12 @@ fn RecipeDetailContents(id: String) -> Element {
     rsx! {
         document::Link { rel: "stylesheet", href: asset!("/assets/recipe-detail.css") }
         div { class: "recipe-detail container",
+            id: "recipe-detail-content", tabindex: "-1",
+            onmounted: move |event| async move {
+                if recipe_retry_requested.replace(false) {
+                    let _ = event.data.set_focus(true).await;
+                }
+            },
             RecipeAlbumPhoto { images: recipe.images.clone(), title: recipe.title.clone() }
             // ── CARD: Header + Overview (all in one card) ────────────────
             Card {

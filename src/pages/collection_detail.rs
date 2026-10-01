@@ -10,8 +10,9 @@ use crate::api::collection::{
     reorder_child_collections,
 };
 use crate::components::base::{
-    Button, ButtonVariant, CollectionAlbum, CollectionCover, CollectionVisibilityBadge, EmptyState,
-    FeedbackToast, Input, LoadingSpinner, RecipeCard, ReorderHandle, SharedModal, TooltipAction,
+    Button, ButtonVariant, Card, CollectionAlbum, CollectionCover, CollectionVisibilityBadge,
+    EmptyState, FeedbackToast, Input, LoadRecovery, LoadingSpinner, RecipeCard, ReorderHandle,
+    SharedModal, TooltipAction,
 };
 use crate::types::{CollectionSummary, CollectionVisibility, RecipeCardSummary};
 use crate::Route;
@@ -34,6 +35,25 @@ fn collection_load_error_copy(_error: &ServerFnError) -> (&'static str, &'static
         "Collection not found",
         "This collection could not be found.",
     )
+}
+
+fn render_collection_unavailable(
+    error: &ServerFnError,
+    pending: bool,
+    onretry: EventHandler<()>,
+) -> Element {
+    let (_, description) = collection_load_error_copy(error);
+    rsx! {
+        Card { section { display: "flex", flex_direction: "column",
+            align_items: "center", text_align: "center", gap: "var(--space-md)",
+            h1 { "Collection unavailable" }
+            p { "{description}" }
+            LoadRecovery { pending, message: "The collection couldn’t be loaded. Please try again.",
+                retry_label: "Retry collection", onretry,
+            }
+            Link { to: Route::CollectionList {}, class: "btn btn-secondary touch-target", "Back to collections" }
+        } }
+    }
 }
 
 fn next_recipe_page_request(loaded_count: usize, total_count: i64) -> Option<(i64, i64)> {
@@ -205,15 +225,20 @@ fn CollectionDetailContents(id: String) -> Element {
     let mut link_status = use_signal(|| None::<Result<String, String>>);
     let mut link_pending = use_signal(|| false);
     let mut link_generation = use_signal(|| 0_u64);
-    let refreshing_contents = contents.pending();
+    let mut collection_retry_requested = use_signal(|| false);
+    let refreshing_contents = *contents.state().read() == UseResourceState::Pending;
     let loaded = contents.read().clone();
 
     rsx! { div { class: "container collections-page collection-detail-page",
         match loaded {
             None => rsx! { LoadingSpinner {} },
             Some(Err(error)) => {
-                let (title, description) = collection_load_error_copy(&error);
-                rsx! { EmptyState { icon: rsx! { "🔒" }, title: title, description: description } }
+                render_collection_unavailable(&error, refreshing_contents, EventHandler::new(move |_| {
+                    if !contents.pending() {
+                        collection_retry_requested.set(true);
+                        contents.restart();
+                    }
+                }))
             },
             Some(Ok(collection_contents)) => {
                 let collection_id = collection_contents.collection.id.to_string();
@@ -311,6 +336,12 @@ fn CollectionDetailContents(id: String) -> Element {
                         }
                     }
                     header { class: "collection-detail-heading",
+                        id: "collection-detail-content", tabindex: "-1",
+                        onmounted: move |event| async move {
+                            if collection_retry_requested.replace(false) {
+                                let _ = event.data.set_focus(true).await;
+                            }
+                        },
                         div { class: "collections-heading",
                             h1 { class: "brand-title", PageIcon { kind: PageIconKind::Collections } span { "{collection_contents.collection.name}" } }
                             if let Some(description) = &collection_contents.collection.description {
@@ -824,6 +855,7 @@ fn CollectionDetailContents(id: String) -> Element {
 
 #[cfg(test)]
 mod tests {
+    use super::render_collection_unavailable;
     use super::{
         can_reorder_complete_recipe_list, collection_delete_confirmation_matches,
         collection_delete_confirmation_phrase, collection_load_error_copy,
@@ -832,6 +864,7 @@ mod tests {
         RECURSIVE_DELETE_WARNING,
     };
     use dioxus::prelude::*;
+    use dioxus::router::components::HistoryProvider;
 
     #[derive(Clone, PartialEq, dioxus::prelude::Routable)]
     enum CollectionNavigationTestRoute {
@@ -993,6 +1026,75 @@ mod tests {
             "This collection could not be found."
         );
         assert!(!unauthenticated_copy.1.contains("server function"));
+    }
+
+    #[component]
+    fn CollectionLoadRecoveryTestRoot(pending: bool) -> Element {
+        use_context_provider(|| pending);
+        rsx! { HistoryProvider {
+            history: |_| std::rc::Rc::new(dioxus::history::MemoryHistory::with_initial_path("/")) as std::rc::Rc<dyn History>,
+            Router::<CollectionLoadRecoveryTestRoute> {}
+        } }
+    }
+
+    #[derive(Clone, PartialEq, Routable)]
+    enum CollectionLoadRecoveryTestRoute {
+        #[route("/")]
+        CollectionLoadRecoveryTestPage {},
+    }
+
+    #[component]
+    fn CollectionLoadRecoveryTestPage() -> Element {
+        render_collection_unavailable(
+            &ServerFnError::new("Not authenticated"),
+            use_context::<bool>(),
+            EventHandler::new(|_| {}),
+        )
+    }
+
+    #[test]
+    fn collection_load_failure_has_safe_heading_and_focusable_retry() {
+        for pending in [false, true] {
+            let mut dom = VirtualDom::new_with_props(
+                CollectionLoadRecoveryTestRoot,
+                CollectionLoadRecoveryTestRootProps { pending },
+            );
+            dom.rebuild_in_place();
+            let html = dioxus_ssr::render(&dom);
+            assert!(html.contains("<h1>Collection unavailable</h1>"), "{html}");
+            assert!(
+                html.contains(if pending {
+                    "role=\"status\""
+                } else {
+                    "role=\"alert\""
+                }),
+                "{html}"
+            );
+            assert!(
+                html.contains(if pending {
+                    "Retrying…"
+                } else {
+                    "Retry collection"
+                }),
+                "{html}"
+            );
+            assert!(html.contains(&format!("aria-disabled={pending}")), "{html}");
+            assert!(!html.contains(" disabled"), "{html}");
+            assert!(html.contains("Back to collections"), "{html}");
+        }
+    }
+
+    #[test]
+    fn collection_retry_subscribes_guards_live_pending_and_focuses_success() {
+        let source = include_str!("collection_detail.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        assert!(source.contains("contents.state().read()"));
+        assert!(source.contains("render_collection_unavailable"));
+        assert!(source.contains("if !contents.pending()"));
+        assert!(source.contains("id: \"collection-detail-content\""));
+        assert!(source.contains("collection_retry_requested.replace(false)"));
     }
 
     #[test]
