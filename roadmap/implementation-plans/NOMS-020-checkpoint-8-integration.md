@@ -2920,3 +2920,129 @@ initial read retries, full screen-reader/real-touch checks, post-commit
 lost-response/idempotency and navigation-failure fallbacks remain open. This
 does not close the full recipe page or checkpoint 8; dark-mode redesign remains
 deferred.
+
+## Recipe Delete safeguards and shared confirmation — 2026-09-30
+
+### Implemented scope
+
+Recipe deletion now requires a separate, recipe-named confirmation in the
+existing M4 `SharedModal`. Opening the owner action menu's Delete item does not
+call the API. **Cancel** receives initial focus; Cancel, Escape and backdrop
+dismissal never confirm deletion. A live owner/open-dialog guard and synchronous
+pending claim prevent duplicate requests. Pending controls remain mounted and
+focusable, with guarded handlers and `aria-disabled`/`aria-busy`, and dismissal
+is blocked while a request is pending.
+
+Pending status and safe error alerts replace raw server/transport errors.
+Uncertain-outcome copy does not promise that the recipe survived a failed
+response; **Check your Dashboard** opens another tab without discarding the
+current page. Authentication-error copy preserves the recipe and asks the user
+to sign in in another tab. Failure releases pending and preserves the dialog
+for an explicit retry. The existing Delete API, server authorization and
+successful Dashboard navigation contract are unchanged. No shared modal,
+theme or API implementation was modified.
+
+### Native-dialog test incident and bounded fixture recovery
+
+The preliminary implementation (`76f7369`) retained a native confirmation.
+During an intended open-and-cancel browser check, the native prompt blocked
+automation: click/dialog/focus operations timed out, and the agent-created tab
+was closed to recover browser access. No explicit confirmation acceptance was
+issued by the agent. Nevertheless, the local API deletion ran; its exact
+browser/tool cause was not conclusively established. This attempt is **not**
+successful cancellation evidence.
+
+The deleted data was the agent-created private **CP8 Recipe actions – Local
+test only** fixture (`1b2dcf65-f1a0-4971-7d17-8de25203500b`) and its four versions.
+Its preserved owner-only fork draft remained, but its source foreign key was
+nulled by the deletion. No real recipe was affected; the two synthetic history
+recipes and their lineage remained intact. The user was informed of the
+incident and recovery limits during the work.
+
+A guarded transaction on this exact local test deployment reconstructed the
+same recipe UUID and private content using the retained revision-0 draft and
+checked-in seed. Versions 1/3 reproduce the first method, versions 2/4 the
+second; the known draft's source link to version 4 was restored without
+changing its snapshot or revision. Original recipe/version timestamps and
+API-generated v3/v4 UUIDs were unavailable and were regenerated. Recovery is
+therefore **content-equivalent, not exact metadata restoration**. The one-off
+recovery script is `/tmp/noms-020-recover-test-fixture.sql`, not a production
+migration. Native confirmation was then replaced by the shared modal in
+`41c933b`; no destructive action was confirmed during its final browser checks.
+
+### Final shared-modal browser evidence
+
+Used only the existing development instance **noms-c799915fcf93e034**, app
+`http://127.0.0.1:32768`, with the established mock owner and synthetic fixture.
+Defensive interception of non-document Fetch/XHR/Other requests recorded
+**zero requests** throughout the final cancellation paths; no fabricated
+successful API responses or DOM mutations were used.
+
+- Opening Delete showed the correct recipe title and irreversible warning,
+  with initial focus on **Cancel**. Shift+Tab/Tab wrapped between the two
+  controls. Clicking Cancel restored focus to the recipe-action trigger.
+- At an actual **320×900** viewport, page client/scroll widths were both 320px;
+  the modal card was 304×242px at x=8. Cancel measured 77×44px and Delete
+  116×44px. The warning wrapped and both controls remained within the viewport.
+- Enter on Cancel and Escape after reopening dismissed without a request.
+  Closing left no open dialog or body scroll lock. Recipe versions v4 through
+  v1 remained available.
+- Normal sign-out and fresh private-recipe navigation showed Recipe not found,
+  without fixture title/history or owner/Delete controls. This is private
+  guest-gate evidence, not public non-owner or session-expiry acceptance.
+
+Screenshots captured and visually inspected:
+`/tmp/noms-020-recipe-delete-confirmation.jpg` and
+`/tmp/noms-020-recipe-delete-confirmation-mobile.jpg`.
+Interception and viewport overrides cleared, mock owner signed out and
+agent-created tab closed. No other deployment or user browser tab was changed.
+
+Final read-only recovery check: **one user, three private recipes, 35 versions,
+one owner-only draft at revision 0, zero collections and one lineage edge**.
+The recovered draft points to the original recipe UUID/version 4; snapshot
+equality checks confirm v1=v3 and v2=v4. App health returns HTTP 200.
+
+### Validation, review and remaining work
+
+Tests-first failures are retained in `/tmp/noms-020-recipe-delete-red.log` and
+`/tmp/noms-020-recipe-delete-dialog-red.log`. Six new tests cover actual signal
+claim/cancellation/exclusivity, named warnings and safe uncertain outcomes,
+owner/dialog/handler contracts, rendered status/error feedback, rendered modal
+controls, and actual Cancel/Confirm event dispatch including pending guards.
+Existing mutation authentication tests now include Delete. The menu workflow
+contract was updated for explicit shared confirmation, not removed or skipped.
+Unit/SSR evidence does not constitute a live Delete API acceptance harness.
+
+With `SQLX_OFFLINE=true` and `CARGO_TARGET_DIR` pointing to the existing
+integration worktree's target cache:
+
+```sh
+cargo test --features server pages::recipe_detail -- --test-threads=8
+just ci
+```
+
+Final focused suite: **52 passed, 0 failed**. Final `just ci` on `41c933b`:
+**exit 0; 880 passed, 0 failed, 12 ignored**, including native/WASM checks,
+Clippy, formatting and policy gates. Eight existing allowed audit warnings
+remain; ignored integration checks were not freshly exercised. Logs:
+`/tmp/noms-020-recipe-delete-tests.log`, `/tmp/noms-020-recipe-delete-ci.log`.
+
+Explicit second-pass self-review **PASS for the final implementation and
+scoped cancellation evidence**: reviewed the complete ordered diff, actual
+event/signal tests, default-safe focus, pending guards, safe feedback,
+unchanged server authorization and API contracts, and fixture recovery limits.
+No blocking/should-fix finding remains in the changed scope. No independent
+agent review claimed. Ordered commits: `76f7369` guards/feedback → `41c933b`
+shared confirmation → this documentation; baseline `52da873`. Existing task
+worktree reused and integration fast-forward only, no push. The integration's
+user-owned generated CSS was preserved; SHA-256 remains
+`63fb925365998338ce8dec1e725c097e5648f820c9674767880e910db80d7e46`.
+
+**Next:** Settings mutation/global-auth recovery and historical-snapshot custom
+comparison failures, followed by broader cross-route permission/failure and
+per-page accessibility acceptance. Final shared-modal Delete pending/error,
+retry and success/navigation were **not browser accepted**; a separately
+approved expendable-fixture destructive check remains open. Post-commit lost
+responses/idempotency, navigation-failure fallback, initial-read retry success
+focus, full screen-reader and real-touch checks also remain open. This does
+not close the whole recipe page or checkpoint 8; dark-mode redesign is deferred.
