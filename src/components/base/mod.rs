@@ -43,6 +43,8 @@ mod empty_state;
 mod feedback;
 mod image_editor_modal;
 mod image_upload;
+#[cfg(target_arch = "wasm32")]
+pub(crate) use image_upload::validate_image_input;
 mod input;
 mod load_recovery;
 mod loading_spinner;

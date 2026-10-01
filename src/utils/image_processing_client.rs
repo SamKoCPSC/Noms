@@ -70,41 +70,27 @@ pub async fn load_image_from_blob(blob: &web_sys::Blob) -> Result<HtmlImageEleme
     let url = web_sys::Url::create_object_url_with_blob(blob)
         .map_err(|e| format!("Failed to create object URL: {:?}", e))?;
 
-    let img = web_sys::HtmlImageElement::new()
-        .map_err(|e| format!("Failed to create image element: {:?}", e))?;
-
-    // Wait for image to load using polling pattern
-    let loaded = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let loaded_clone = loaded.clone();
-
-    let on_load = Closure::wrap(Box::new(move || {
-        loaded_clone.store(true, std::sync::atomic::Ordering::Release);
-    }) as Box<dyn FnMut()>);
-
-    img.set_onload(Some(on_load.as_ref().unchecked_ref()));
-    on_load.forget(); // Prevent closure from being dropped
-
-    img.set_src(&url);
-
-    // Poll for load completion
-    loop {
-        gloo_timers::future::sleep(std::time::Duration::from_millis(10)).await;
-        if loaded.load(std::sync::atomic::Ordering::Acquire) {
-            break;
+    // `complete` is also true for a broken image. Watching only `onload`
+    // waits forever on malformed input and leaks its callback/object URL.
+    // Keep cleanup outside the result block so every error path revokes the URL.
+    // Bound polling to roughly 30 foreground seconds if loading never completes.
+    let result = async {
+        let img = web_sys::HtmlImageElement::new()
+            .map_err(|_| "Could not prepare this image. Choose it again.".to_string())?;
+        img.set_src(&url);
+        for _ in 0..3_000 {
+            if img.complete() {
+                if img.natural_width() == 0 || img.natural_height() == 0 {
+                    return Err("Could not decode this image. Remove it and choose a valid JPEG, PNG, or WebP image.".to_string());
+                }
+                return Ok(img);
+            }
+            gloo_timers::future::sleep(std::time::Duration::from_millis(10)).await;
         }
-    }
-
-    // Check for errors
-    let complete = img.complete();
-    let natural_width = img.natural_width();
-    if !complete || natural_width == 0 {
-        return Err("Failed to load image or image has zero dimensions".to_string());
-    }
-
-    // Revoke ObjectURL to free memory
+        Err("This image took too long to decode. Remove it and choose another image.".to_string())
+    }.await;
     let _ = web_sys::Url::revoke_object_url(&url);
-
-    Ok(img)
+    result
 }
 
 /// Calculate target dimensions maintaining aspect ratio.

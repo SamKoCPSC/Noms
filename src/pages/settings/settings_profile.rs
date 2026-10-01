@@ -1318,6 +1318,14 @@ pub fn SettingsProfile() -> Element {
             error.set(None);
             saved_message.set(None);
 
+            if let Err(reason) =
+                crate::components::base::validate_image_input(&files[0].name(), files[0].size())
+            {
+                error.set(Some(reason.to_string()));
+                reset_file_input("#avatar-upload-input");
+                return;
+            }
+
             let Some(web_file) = files[0].get_web_file() else {
                 error.set(Some("Could not read file".to_string()));
                 return;

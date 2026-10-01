@@ -91,6 +91,22 @@ fn is_allowed_image_type(filename: &str) -> bool {
     ALLOWED_EXTENSIONS.iter().any(|&a| a == ext)
 }
 
+/// Reject unsuitable originals before allocating a preview or starting a decode.
+/// Both recipe photos and avatars use the same supported formats/10 MB limit.
+#[cfg(any(target_arch = "wasm32", test))]
+pub(crate) fn validate_image_input(filename: &str, size: u64) -> Result<(), &'static str> {
+    if !is_allowed_image_type(filename) {
+        return Err("Choose a JPEG, PNG, or WebP image.");
+    }
+    if size == 0 {
+        return Err("This file is empty. Choose another image.");
+    }
+    if size > MAX_FILE_SIZE {
+        return Err("Choose an image of 10 MB or less.");
+    }
+    Ok(())
+}
+
 /// Format a byte count as a human-readable string: `"500 B"`, `"800 KB"`,
 /// `"5.0 MB"`.
 fn format_file_size(bytes: u64) -> String {
@@ -444,22 +460,9 @@ async fn process_one_file(
             return;
         };
 
-        // Validate type by extension (the `accept` attribute is a hint, not
-        // enforcement — browsers may still let users pick disallowed types).
-        if !is_allowed_image_type(&name) {
-            error.set(Some(format!(
-                "Skipped \"{name}\": only JPEG, PNG, or WebP are allowed."
-            )));
-            return;
-        }
-
-        // Validate size — match the server's per-field limit.
-        if original_size > MAX_FILE_SIZE {
-            error.set(Some(format!(
-                "Skipped \"{name}\": files must be ≤ {}. Got {}.",
-                format_file_size(MAX_FILE_SIZE),
-                format_file_size(original_size)
-            )));
+        // `accept` is only a picker hint; enforce the original input contract.
+        if let Err(reason) = validate_image_input(&name, original_size) {
+            error.set(Some(format!("Skipped \"{name}\": {reason}")));
             return;
         }
 
@@ -514,6 +517,15 @@ async fn process_one_file(
                 if let Some(p) = guard.iter_mut().find(|p| p.id == id) {
                     p.status = UploadStatus::Failed;
                     p.error = Some(msg);
+                    if let Some(url) = p.preview_url.take() {
+                        let _ = web_sys::Url::revoke_object_url(&url);
+                    }
+                }
+                // Do not leave an unusable crop dialog open, or close a newer
+                // selection's dialog after an older decode has failed.
+                if editor_modal_img_id() == Some(id) {
+                    editor_modal_url.set(None);
+                    editor_modal_img_id.set(None);
                 }
             }
         }
@@ -946,6 +958,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                     },
                                     UploadStatus::Failed => rsx! {
                                         span { class: "image-upload__error",
+                                            role: "alert",
                                             "{img_error_display}"
                                         }
                                     },
@@ -980,7 +993,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                 }
                             }
                             // Per-item Retry (AC5) — only on Failed items
-                            if img_status == UploadStatus::Failed {
+                            if img_status == UploadStatus::Failed && !img.full_bytes.is_empty() && !img.thumb_bytes.is_empty() {
                                 button {
                                     r#type: "button",
                                     class: "btn btn-ghost touch-target",
@@ -1059,6 +1072,55 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn image_input_validation_accepts_formats_and_exact_size_boundary() {
+        for name in ["photo.jpg", "photo.JPEG", "photo.PNG", "photo.WeBp"] {
+            assert_eq!(validate_image_input(name, MAX_FILE_SIZE), Ok(()));
+        }
+    }
+
+    #[test]
+    fn image_input_validation_rejects_unsupported_empty_and_oversized_files() {
+        assert!(validate_image_input("photo.gif", 1).is_err());
+        assert!(validate_image_input("photo.png", 0).is_err());
+        assert!(validate_image_input("photo.png", MAX_FILE_SIZE + 1).is_err());
+    }
+
+    #[test]
+    fn image_decoder_observes_broken_completion_and_always_revokes_object_url() {
+        let source = include_str!("../../utils/image_processing_client.rs")
+            .split("pub async fn load_image_from_blob(")
+            .nth(1)
+            .unwrap()
+            .split("/// Calculate target dimensions")
+            .next()
+            .unwrap();
+        assert!(source.contains("if img.complete()"));
+        assert!(source.contains("img.natural_width() == 0"));
+        assert!(source.contains("for _ in 0..3_000"));
+        assert!(!source.contains(".forget()"));
+        assert!(source.contains("let result = async"));
+        assert!(source.contains("revoke_object_url(&url)"));
+        assert!(source.trim_end().ends_with("result\n}"));
+    }
+
+    #[test]
+    fn avatar_selection_validates_before_creating_its_preview() {
+        let source = include_str!("../../pages/settings/settings_profile.rs")
+            .split("let mut on_avatar_file_change =")
+            .nth(1)
+            .unwrap()
+            .split("let on_edit_existing_avatar =")
+            .next()
+            .unwrap();
+        let validation = source
+            .find("validate_image_input")
+            .expect("missing avatar validation");
+        let preview = source.find("create_object_url_with_blob").unwrap();
+        assert!(validation < preview);
+        assert!(source.contains("reset_file_input(\"#avatar-upload-input\")"));
+    }
 
     #[test]
     fn upload_errors_explain_sign_in_limits_and_invalid_images_without_internal_details() {
