@@ -4611,3 +4611,156 @@ navigation/identity-replacement recovery, full image edge/EXIF/ICC/animation
 checks, physical-device touch, screen readers and whole-app acceptance remain
 open. Further destructive/account-linking actions still require a new isolated
 fixture and exact action-time approval.
+
+## Persisted avatar edit round trips — 2026-10-01
+
+**Contract:** save an adjusted circular avatar, reopen the saved original with
+the same metadata, cancel changes without persistence, recover from a failed
+upload without losing the selected image/edit, then replace successfully and
+reopen after reload. This is a non-destructive avatar-edit slice, not removal,
+unlink, account deletion or post-commit lost-response acceptance.
+
+Reused the isolated `codex/NOMS-020-checkpoint-8` worktree and existing local
+deployment `noms-c799915fcf93e034`, app port 32768. Verified the exact Postgres
+container's `com.noms.dev-environment=true` label. No app restart, Docker cleanup,
+volume removal, direct database mutation or object deletion occurred. Normal
+mock Google sign-in created one separate synthetic identity through the UI:
+
+- Subject `cp8avatarroundtrip20261001`, email
+  `cp8avatarroundtrip20261001@example.invalid`.
+- User `89f18aba-5a00-47d1-9d86-ea7330fe9a2c`, public handle
+  `@cp8-avatar-round-trip-lo-6894`.
+- Initial avatar asset `c0c31528-db1f-4790-8b39-d9943034a1f8`; successful edited
+  replacement `d620ae2f-cb7d-4a5f-b238-26ce55fec355`, now the sole avatar
+  reference. Both records were observed as retained after this test; the first
+  is unreferenced and eligible for the normal lifecycle worker. No permanent
+  retention or worker object-cleanup claim is made for that superseded asset.
+
+The test account and its current avatar remain for reproducible checks. The
+consumed disposable Settings account was not recreated. Original profiles and
+content were not edited. Sign-in had no Terms acceptance/provider linking;
+the original `testuser` session was restored through normal mock sign-in at
+the end, verified as `@user-e13c`, and both temporary browser tabs were closed.
+
+### Browser and storage outcomes
+
+1. Selected `/tmp/noms-020-recipe-landscape.png` (2560 × 1440) through the
+   actual Choose Photo/file-chooser flow. Applied crop 70%, X 120/Y −45,
+   rotation 25°, width 90%, height 85%, horizontal flip, saturation 70% and
+   RGB contrast 120/80/110%. Real upload succeeded and the new avatar appeared.
+2. Reloaded and reopened Edit Photo. The editor used the **2560 × 1440 saved
+   original**, not the baked 400px avatar; all numeric controls and horizontal
+   flip were restored, with initial Undo disabled. An Enter attempt immediately
+   after reload hit the pre-hydration page and timed out; inspecting state and
+   activating the now-hydrated control worked. Subsequent hydrated Enter/Space
+   checks passed. The development rebuild banner remained visible in AX
+   snapshots; a banner-free or pre-hydration interaction contract is not claimed.
+3. Changed crop to 30%, rotation to −90° and toggled horizontal flip, then
+   Cancel. Focus returned to Edit Photo. Keyboard reopening restored every
+   saved value; the temporary changes did not leak.
+4. Changed saturation to 50% and enabled vertical flip. Held the actual
+   `upload_avatar*` XHR before server execution: uploading status appeared,
+   Edit/Change/Remove and upload actions were disabled. Failed that request;
+   safe retry feedback appeared and the selected source/edit stayed available.
+   Read-only SQL still showed the initial asset, saturation 0.7 and no vertical
+   flip. Duplicate submission/identity replacement is not newly accepted here.
+5. Keyboard Retry photo upload produced exactly the same edit JSON and
+   original/full/thumbnail bytes as the failed attempt. Continued the actual
+   held retry to the server: successful replacement appeared. Reload and
+   keyboard reopening retained saturation 50%, both flips and all remaining
+   settings. Unlike recipe-gallery metadata updates, avatar editing correctly
+   regenerates and uploads baked circular variants from the saved original.
+6. At 320 × 800, the native dialog bounds were X 0/width 320/height 800 and
+   document scroll width 320. Restored settings, preview, internally scrolling
+   controls and footer actions fit in the visually inspected settled capture.
+   Escape closed the dialog and returned focus to Edit Photo. Viewport was
+   reset and normal 1280px sizing confirmed before cleanup.
+7. Failed `get_avatar_edit_source*` before execution: safe “Could not load the
+   saved avatar edit” feedback, no modal. Then failed only the observed original
+   image GET: “Could not load the current avatar for editing,” no modal.
+   Clearing interception and retrying reopened the correct second edit at
+   320px. These are read-failure recoveries, not stalled/overlapping read tests.
+
+Stored normalized ellipse crop: X `0.35`, Y `0.11875000000000004`, width
+approximately `0.39375`, height `0.7`, with aspect ratio 1:1. SQL confirmed only
+the intended saturation/vertical-flip replacement. Tiny normalized floating
+differences do not alter the displayed crop.
+
+Captured actual stored original/full bytes from their observed browser network
+responses and the actual stored thumbnail from its exact registry URL in a
+temporary browser tab. All three are byte-identical to the submitted retry;
+the original also equals the initially selected PNG. SHA-256:
+
+- Original: `27d2e37f687b25f107645fff6b5b41720f0db3dcf06d125aeee12fa5f9ea22d2`.
+- Full: `d99ecb71dfd296aad5d25d6977450d018747f25ccee32b4b2b208e54ab06b398`.
+- Thumbnail: `c19e5baf464d293c70d18d6543701a9f1b3297d0754604b5bb6686a5ad19a864`.
+
+Independent pixel verification:
+
+```sh
+python3 scripts/tests/check-avatar-export.py \
+  /tmp/noms-020-avatar-persisted-stored-original.png \
+  /tmp/noms-020-avatar-persisted-second-edit.json \
+  /tmp/noms-020-avatar-persisted-stored-full.webp \
+  /tmp/noms-020-avatar-persisted-stored-thumb.webp
+```
+
+**PASS:** full 400 × 400, 357 unambiguous interior samples, max RGB error 4;
+thumbnail 100 × 100, 235 samples, max RGB error 11. Both have transparent
+corners. The same check passed against captured pre-server retry files. This
+accepts sampled transformed/coloured pixels and corners, not every antialias
+edge, EXIF/ICC/animation input or rendered preview/export pixel.
+
+No runtime change or new test was needed. Existing focused regression command
+`SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration-worktree>/target cargo test
+--features server settings_profile -- --test-threads=4` passed **22 tests,
+0 failures**, 914 filtered out. Raw log:
+`/tmp/noms-020-avatar-persisted-tests.log`. Latest unchanged-runtime full CI
+remains **924 passed, 0 failed, 12 ignored** from the preceding recipe-image
+slice; no new full-CI run is claimed. Documentation diff checks passed.
+
+Original content hashes match the start of this slice exactly:
+
+| Rows | Count | Hash |
+| --- | ---: | --- |
+| Recipes | 31 | `ca156ae94adb947875212ab97b627946` |
+| Versions | 64 | `f216416ebd2518de1dac32d51f466f11` |
+| Collections | 29 | `917c84e8447402c9b3bfcb6e3d7b8075` |
+| Memberships | 28 | `fd3bc9401f1389c7fa08cff816e7b44b` |
+| Drafts | 2 | `d860a7535dfc63331592ca6512a1c27e` |
+| Original users, excluding only new avatar fixture | 2 | `3af5cd3524ea80707ea54f1961ef1864` |
+
+Totals are now three users, four media records, one avatar reference and two
+OAuth accounts. Session/provider last-use writes from routine sign-in/sign-out
+are not unchanged-session/provider-row claims. Temporary interception was
+cleared, cache restored, network observation disabled and viewport reset.
+
+Browser captures in `/tmp`, with the prefix `noms-020-avatar-persisted-`:
+`initial-edit.jpg`, `first-reopened.jpg`, `upload-pending.jpg`,
+`upload-failure.jpg`, `second-saved.jpg`, `second-reopened.jpg`, `320.jpg`,
+`source-read-failure.jpg` and `original-read-failure.jpg`. The settled 320px
+and second-reopened captures were visually inspected. The thumbnail's native
+image-document reload was unexpectedly slow in browser tooling; successful
+response, decoded 100px image and byte verification followed. That is not
+evidence of app upload slowness or a passed performance budget.
+
+Explicit second-pass self-review: **PASS for this scoped avatar round trip**.
+Reviewed source hydration/original selection, cancellation/upload-state
+boundaries, byte comparisons, database ownership/reference outcomes, pixel
+checker scope, focused tests and cleanup. No independent reviewer is claimed.
+No code fix or additional implementation commits were warranted: one local
+evidence/plan commit is sufficient for this documentation-only slice, followed
+by fast-forward integration. User-owned integration CSS is unchanged, SHA-256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+No push or production deployment; runtime baseline remains `70ad0d4`.
+
+**Informational follow-up:** OAuth accepted the synthetic provider's 36-character
+display name, while Profile settings displays 36/30 and a 30-character editing
+limit. This existing cross-flow inconsistency did not affect avatar edits; it
+is recorded for separate profile-name normalization acceptance, not silently
+fixed or considered closed here.
+
+**Next:** remaining collection-cover and step-photo edit flows. Post-commit
+lost responses, navigation/identity replacement, physical-device touch, screen
+readers and whole-app acceptance remain open. Destructive/account-linking
+actions still require a new isolated fixture and action-time approval.
