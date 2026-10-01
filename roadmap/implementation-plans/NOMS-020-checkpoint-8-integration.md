@@ -4429,3 +4429,185 @@ real-device touch and actual screen-reader checks are not accepted here.
 Post-commit lost-response/navigation/identity-replacement recovery and whole-app
 acceptance remain open. Further destructive/account-linking checks still need
 a new isolated fixture and exact action-time approval.
+
+## Persisted recipe image-edit round trips — 2026-10-01
+
+**Contract:** a saved recipe gallery image can be reopened with its existing
+crop, transform and colour settings, edited without re-uploading its bytes,
+cancelled without leaking changes, and retained through autosave, publication,
+reload and historical snapshots. This slice covers recipe gallery images only;
+avatar persistence, collection covers and method-step photos remain open.
+
+Reused the isolated checkpoint task worktree and the existing local test
+deployment `noms-c799915fcf93e034` (app `http://127.0.0.1:32768`). Only its app
+was restarted to serve the fix; database/media volumes were retained. No Docker
+cleanup or production deployment occurred in this slice. Normal mock Google
+sign-in reused the existing synthetic test identity; no profile/avatar or
+provider-link mutation was submitted, and consumed `@cp8settings` was not
+recreated. New private synthetic content is within the previously approved
+test-data scope, not an authorization for destructive account checks.
+
+### Finding and fix
+
+After publishing and reopening the initial image, the saved gallery preview
+was a static `div`: clicking could not reopen the editor. Source inspection
+also showed no `initial_edit` binding, so local preview reopening could reset
+settings; this second issue was source-confirmed, not a separate red browser
+observation. New regression tests were added before production changes; the
+first focused run failed to compile because the new helpers were missing.
+
+`70ad0d4` makes both preview types named native buttons, passes the selected
+image's edit into the modal, uses the saved full variant rather than thumbnail,
+selects the `rectangle:16:9` template by name, and updates only the chosen edit
+template. Asset identity, file metadata, other templates and upload status are
+preserved. Multiple-template preservation is unit-test evidence; the actual
+browser fixture has one rectangle template. Focus-visible styling preserves
+the existing image layout and exposes a keyboard focus indicator.
+
+### Fixture and browser results
+
+Created through the UI and retained:
+
+- Private recipe `6e906248-532b-40a3-960b-e99af9ae3f59`,
+  **CP8 Image round trip — Local test only**, owner
+  `6b1c56b4-945d-44d5-9f1b-eeb9525b8519` (`@user-e13c`).
+- Source `/tmp/noms-020-recipe-landscape.png`, 2560 × 1440, derived from
+  `scripts/dev-fixtures/image-export-grid.svg`.
+- Retained managed asset `d424b194-b0a1-4951-a8ff-d1f435b53fe2`, shared by
+  published v1, v2 and the unchanged follow-up edit draft
+  `629489c5-0100-499b-90d3-1d2678868d42`. Drafts consumed by normal publication
+  were not manually discarded. No fixture was deleted.
+
+Initial v1 used crop 70%, original offsets X 120/Y −45, rotation 25°, width
+90%, height 85%, horizontal flip, saturation 70% and RGB contrast 120/80/110%.
+Its stored normalized crop is X `0.196875`, Y `0.11875000000000004`, width and
+height `0.7`. The saved full image is 1920 × 1080, so reopening correctly scales
+pixel offsets to X 90/Y −33.75 (the numeric control displays rounded −34).
+The new resizing regression test checks normalized crop invariance and all
+transform/colour settings, with offset tolerance `1e-9`.
+
+Browser acceptance:
+
+1. Real initial upload/publication, detail reload and keyboard Enter on the
+   saved preview opened the full 1920 × 1080 image with all v1 settings restored;
+   Undo was initially disabled.
+2. Temporary crop 30%, rotation −90°, grayscale and horizontal-flip changes
+   were cancelled. Focus returned to the edit-preview button; reopening
+   restored v1 settings with no cancelled changes leaking.
+3. Saturation 50% and vertical flip were applied, autosaved, reloaded and
+   reopened from the private edit draft. Other settings remained intact.
+4. A single publication request was failed **before server execution** using
+   local XHR/Fetch interception. Pending publication controls were disabled,
+   then re-enabled with safe uncertain-outcome feedback. The image edit remained
+   available and intact. Clearing interception and retrying produced real v2.
+   Observed retry requests contained draft save/publication/read operations,
+   not another `upload_image` request. Asset URLs and identity stayed unchanged.
+   This is not post-commit lost-response acceptance.
+5. Reloaded v2 and reopened its saved image: saturation 50%, both flips and the
+   retained crop/rotation/stretch/contrast were present. Cancelling retained
+   those values and returned focus to the image button.
+6. At 320 × 800, keyboard Space opened the saved image with restored v2 values.
+   The page measured 320px wide while open; visual inspection showed the image,
+   internally scrollable controls and footer actions fit. Escape closed the
+   native dialog and restored focus to `Edit Saved recipe image`; after close
+   the document measured 305px within the 320px viewport. This is browser
+   responsive/keyboard evidence, not physical-device or screen-reader sign-off.
+7. Read-only historical v1 still rendered saturation `0.700000`, positive
+   vertical scale `0.850000`, horizontal scale `-0.900000`, rotation 25° and RGB
+   slopes 1.2/0.8/1.1. Its comparison with v2 showed the intended saturation
+   and flip changes. It also displays the negligible Y difference
+   `0.11875000000000004` → `0.11875`; that floating-point comparison noise is an
+   informational display-polish limitation, not a visible crop shift.
+
+The development hot-reload banner appeared in accessibility snapshots after
+CI, but fresh page reloads still served the verified edit button and current
+controls; no claim of a banner-free development session is made. Cache was
+temporarily disabled for the fresh build check, then restored. Interception
+was cleared, network observation disabled, viewport override reset and the
+agent-created tab closed. The deployment remains running for manual testing.
+
+### Stored bytes, regression and review evidence
+
+Read the actual saved full/thumbnail variants through their observed media
+elements and checked them independently:
+
+```sh
+python3 scripts/tests/check-recipe-image-export.py \
+  /tmp/noms-020-recipe-landscape.png \
+  /tmp/noms-020-persisted-image-full.webp \
+  /tmp/noms-020-persisted-image-thumb.webp
+```
+
+Full **1920 × 1080**, 176 uniform interior samples, maximum RGB error **1**;
+thumbnail **800 × 450**, 176 samples, maximum RGB error **2**; maximum alpha
+error **0** for both. This confirms non-destructive metadata rather than baked
+or double-applied crop/colour edits in the stored variants. It does not prove
+every rendered CSS transform/crop edge pixel. SHA-256:
+
+- Full: `81011877c9a16c52e5539b16fe96e806e96e0aff4fba4ba0100a8d70f62474a0`.
+- Thumbnail: `f5eb709b6878c9af0cd10c87a476c76f8be2169d443a3fe79edfbb0062c666e0`.
+
+The two synthetic downloads were moved out of Downloads into exact named
+`/tmp/noms-020-persisted-image-download-{full,thumb}.webp` evidence files;
+both remain recoverable and their hashes match. No other Downloads files were
+touched. An initial sandboxed cross-filesystem move copied but could not remove
+the source; the approved exact-path move subsequently completed cleanup.
+
+Focused image-upload tests: **38 passed, 0 failed**; WASM `cargo check --target
+wasm32-unknown-unknown --no-default-features --features web` passed. Final
+`just ci`, using `PGOPTIONS='-c log_min_error_statement=panic'`,
+`SQLX_OFFLINE=true` and the integration worktree's `CARGO_TARGET_DIR`, passed
+with **924 passed, 0 failed, 12 ignored**. The repository's test cap is eight
+threads. Native/WASM check/clippy, formatting, audit (eight existing allowed
+warnings), tracked-secret scan and deployment checks passed. Raw log:
+`/tmp/noms-020-persisted-image-ci.log`. `git diff --check` passed.
+
+Original row hashes match exactly, excluding only the new recipe and its linked
+versions/draft from the comparison:
+
+| Original rows | Count | Hash |
+| --- | ---: | --- |
+| Recipes | 30 | `d7298c2c29ade897d2e39535462d7db3` |
+| Versions | 62 | `0f91d540a069a9ae0ab0495253a3f4ae` |
+| Collections | 29 | `917c84e8447402c9b3bfcb6e3d7b8075` |
+| Memberships | 28 | `fd3bc9401f1389c7fa08cff816e7b44b` |
+| Drafts | 1 | `eeb6a9cba9018a65ee8e13b4bf625d52` |
+| Users | 2 | `3af5cd3524ea80707ea54f1961ef1864` |
+
+Total rows now include the intended fixture: 31 recipes, 64 versions, two
+drafts and two media records (the old deleted record and this retained asset).
+Recipe/version/draft media-reference counts are 1/2/1. Normal session/OAuth
+reads are not unchanged-session claims.
+
+Temporary browser evidence:
+
+- `/tmp/noms-020-persisted-image-before.jpg` — initial original-image settings.
+- `/tmp/noms-020-persisted-image-v1-detail.jpg` — first saved result.
+- `/tmp/noms-020-persisted-image-v1-reopened.jpg` — post-fix restored v1 modal;
+  not the pre-fix static-preview screenshot.
+- `/tmp/noms-020-persisted-image-draft-reopened.jpg` — restored autosaved edit.
+- `/tmp/noms-020-persisted-image-publish-failure.jpg` — retained failure state.
+- `/tmp/noms-020-persisted-image-v2-detail.jpg` and
+  `/tmp/noms-020-persisted-image-v2-reopened.jpg` — real second publication.
+- `/tmp/noms-020-persisted-image-320.jpg` — narrow saved-edit reopening.
+- `/tmp/noms-020-persisted-image-v1-history.jpg` — retained historical photo.
+
+Explicit second-pass self-review: **PASS for this scoped recipe-image slice**.
+Reviewed the complete production/test diff, saved/local URL choice, named-edit
+selection/preservation, missing-image handling, metadata-only upload plan,
+keyboard semantics, cancellation boundaries, actual browser/SQL/pixel outcomes
+and ordered commits. No independent-agent review is claimed. The tiny numeric
+history comparison difference is informational and remains recorded above;
+no blocking or should-fix finding remains within this contract. Code and this
+evidence are separate local semantic commits on `codex/NOMS-020-checkpoint-8`,
+fast-forwarded into `codex/NOMS-020-visual-design-refinement`. User-owned CSS
+remains SHA-256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+No push. Runtime rollback baseline for this slice: `3fac4d8`.
+
+**Next:** persisted avatar edits using an isolated non-destructive fixture,
+then remaining collection-cover and step-photo flows. Post-commit lost-response,
+navigation/identity-replacement recovery, full image edge/EXIF/ICC/animation
+checks, physical-device touch, screen readers and whole-app acceptance remain
+open. Further destructive/account-linking actions still require a new isolated
+fixture and exact action-time approval.
