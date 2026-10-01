@@ -163,6 +163,26 @@ The browser smoke test uses the saved Banana Banana Bread HTML/plain-text pair o
 
 Raw reports remain `/tmp/noms016-post-allrecipes.json` and `/tmp/noms016-post-allrecipes.md`. Digest-bound review reproduction is described in the semantic report; raw provider captures remain outside the repository.
 
+## Food52 adapter rerun — 2026-10-01
+
+The fifth adapter requires an explicitly supplied `food52.com` or `www.food52.com` HTTP(S) URL, one visible main/article with its recipe header, and coherent Ingredients/Directions containers. It accounts for every marked recipe list and step label across the article: additional unconsumed groups, navigation-contained core sections, hidden required content, incomplete steps and conflicting mapped duration labels refuse the adapter. Generic fallback remains available; parsing never fetches or executes source content.
+
+All 100 verified Food52 captures select the adapter and validate, improving structural acceptance from 83/100 to 100/100. It retains 1,423 ingredient rows across 136 groups and 619 steps across 117 direction groups. Marked mixed fractions, quantity ranges and unfamiliar units are preserved literally. Plain unmarked rows are retained with low confidence, not guessed into headings or equipment. Seventy samples carry that warning; two contain unfamiliar marked measurement expressions. One capture has empty ingredient-group headings: the complete groups remain unnamed and carry a review warning.
+
+All 100 candidates preserve authors, literal yield and one unfetched hero reference; 96 contain a recipe description, 87 prep time and 82 cook time. Numeric servings are inferred only from a positive integer yield. Total time is not invented. Hidden hero/credit content is not imported. Sponsorship and video copy are excluded from author and recipe core extraction.
+
+Full-corpus structural acceptance rises from 835/1,500 to 852/1,500, with zero invalid candidates or unexpected parser errors. Every one of the 1,400 non-Food52 parser results remains identical to the pre-adapter output. This is structural coverage, not a claim that all 100 recipes are semantically correct.
+
+The three existing Food52 benchmark captures were re-reviewed against their saved sources. The adapter fixes the Chile-Cheese Toast quantity range and recovers complete groups and optional metadata. Toast and Gochujang Wings are usable without correction. The salmon noodle bowl retains four unmarked section labels as low-confidence ingredient rows and still needs correction. Food52 improves from 9/12 to 10/12 correct core fields; the overall purposive benchmark reaches 94/108 (87.0%), with 15 usable without correction, 12 after correction and none unusable. Only the three Food52 candidate digests changed; all 24 other reviews remain current. See the semantic report for the refreshed external review path.
+
+The browser smoke test uses the saved Gochujang Wings HTML/plain-text pair and a new local mock account on the isolated NOMS-016 instance at port 32773. Full clipboard paste produces the complete Wings/Sauce preview, 12 structured ingredients, five clean steps, 15 prep minutes, 25 cook minutes, four servings and author context. Explicit confirmation opens a private draft; group labels survive in optional commentary and images remain references only. Renaming the test draft autosaves and survives reload with all imported fields and private visibility intact. The draft remains unpublished. Screenshot: `/tmp/noms016-food52-ui.png`.
+
+Validation: `node --test scripts/tests/test-recipe-import-food52.mjs` passes 15 acceptance/defensive tests. The provider, bridge, cumulative active-content parser, fixture, corpus evaluator and semantic evaluator targets pass. The schema-plan and security-policy targets and `just security-check` pass, with the repository's existing allowed dependency warnings. Independent review passes after four reproduced findings were fixed: unconsumed recipe-group loss, navigation containment, hidden optional images/credits and duplicate mapped duration aliases.
+
+`just fmt check lint` passes for both WASM and server targets. Full `just ci` did not finish: the unchanged `db::tests::runtime_grants_enforce_a_non_owning_data_plane_role` test hung. A bounded full server rerun with `PGCONNECT_TIMEOUT=5 SQLX_OFFLINE=true timeout 180 cargo test --features server -- --test-threads=8` also timed out in that test. Running `SQLX_OFFLINE=true timeout 180 cargo test --features server -- --test-threads=8 --skip db::tests::runtime_grants_enforce_a_non_owning_data_plane_role` passes 882 tests, with 12 ignored and that one test explicitly filtered. No test was edited or disabled in the repository; the full CI gate remains unverified until the database-test hang is resolved. The other CI targets were run separately and passed.
+
+Raw aggregate reports remain `/tmp/noms016-food52-final.json` and `/tmp/noms016-food52-final.md`. The external corpus and recipe bodies are not committed. Implementation commits: `12ab415` (adapter and acceptance tests), `e656eb9` (review fixes and regression tests).
+
 ## Conclusions
 
 1. The generic HTML parser recognizes useful candidates from several providers, but structural acceptance remains only an upper bound on compatibility.
