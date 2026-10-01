@@ -183,6 +183,33 @@ Validation: `node --test scripts/tests/test-recipe-import-food52.mjs` passes 15 
 
 Raw aggregate reports remain `/tmp/noms016-food52-final.json` and `/tmp/noms016-food52-final.md`. The external corpus and recipe bodies are not committed. Implementation commits: `12ab415` (adapter and acceptance tests), `e656eb9` (review fixes and regression tests).
 
+## Food.com adapter rerun — 2026-10-01
+
+The sixth adapter requires a supplied `food.com` or `www.food.com` HTTP(S) URL and one complete visible `main#recipe.recipe`, with structured Ingredients/Directions lists. It accounts for every marked recipe row and explicit group heading inside that main. Missing, hidden, competing, unclosed or unaccounted core structures refuse the adapter and preserve generic fallback. Explicitly hidden ancestors are excluded even when their closing tags are missing. Active content remains opaque; no source page or image is fetched or executed.
+
+All 100 verified Food.com captures select the adapter and validate, improving structural acceptance from 90/100 to 100/100. The adapter retains 869 ingredient rows across 110 groups and 656 steps across 104 groups. It preserves marked mixed fractions, bounded ranges, package-size units, alternatives and explicit group headings. Directions remain source-ordered, including inline recipe notes. Unknown marked amounts are retained literally with low confidence and a review warning; the current corpus contains none of that warning.
+
+The candidates contain 98 descriptions, 100 authors, 99 total-time values and 100 literal yields. Compact `Ready In` values are parsed as total time, not guessed into prep/cook time; unsupported duration expressions remain unclassified evidence with a warning. Only 60 positive integer `Serves` values become numeric servings. Ranges and output counts such as loaves or cups remain literal yield text. Thirty-nine captures expose 78 unfetched hero URL references; distinct responsive URLs are retained, while avatars and other-image thumbnails are excluded. This is reference recovery, not image-byte validation or import.
+
+Full-corpus structural acceptance rises from 852/1,500 to 862/1,500 (57.5%), with zero invalid candidates or unexpected errors. Direct deep comparison against the pre-Food.com parser confirms all 1,400 other-provider outputs are unchanged. Forty-five Food.com candidates require review; the remaining 55 have no parser review warning. Neither status establishes semantic correctness.
+
+The three existing Food.com benchmark candidates were re-reviewed against their saved captures by the implementation agent. All core ingredients/directions are complete and the quantity splits are usable. Food.com improves from 8/12 to 12/12 correct core fields, with all three usable without correction. The overall purposive benchmark reaches 98/108 (90.7%), with 18 usable without correction, 9 after correction and none unusable. Only the three Food.com review records changed; all 24 others remain identical and digest-current. This is not a 100-recipe semantic-accuracy claim or a new human usability study.
+
+The browser smoke test uses the saved Italian Bread HTML/plain-text pair on the isolated NOMS-016 app at port 32773 and a local mock test account. Full clipboard paste produces 10 structured ingredients, 31 steps, six servings, description and author context. The first amount remains the literal `5 1/2 - 6` range. Prep/cook time remain missing; the original total-time and two-loaf yield text survive in optional commentary. Explicit confirmation creates a private draft. Renaming the test draft autosaves and survives direct reload with all imported fields and private visibility intact. It remains unpublished; images are disclosed as references and not imported. Screenshot: `/tmp/noms016-foodcom-ui.png`.
+
+Validation commands and outcomes:
+
+- `node --test scripts/tests/test-recipe-import-foodcom.mjs`: 14 acceptance/defensive tests pass. The initial tests failed for the expected unsupported provider behavior before implementation; new review regressions also failed before their fixes.
+- `just recipe-import-provider-adapter-test recipe-import-bridge-test recipe-import-parser-active-content-test recipe-import-fixture-test recipe-import-parser-corpus-test recipe-import-parser-semantic-test`: pass, including all 64 provider tests.
+- `just fmt check lint`: pass for WASM and server targets.
+- `just schema-check-test security-policy-test` and `just security-check`: pass; the security check retains existing allowed dependency warnings and required access to its advisory cache.
+- `SQLX_OFFLINE=true timeout 180 cargo test --features server -- --test-threads=8 --skip db::tests::runtime_grants_enforce_a_non_owning_data_plane_role`: 882 pass, 12 ignored, one explicitly filtered. The known full-CI database-test hang described in the Food52 section remains unresolved; this turn did not rerun or claim a successful full CI gate. No repository test was disabled or weakened.
+- Corpus evaluator with the external manifest/data-root: 862 accepted, zero invalid/error candidates and integrity verified; semantic evaluator with `semantic-review-foodcom-v1.json`: 98/108 correct core fields, no stale labels.
+
+Independent review passes after fixing compact-duration partial parsing/evidence loss, unclosed hidden ancestors and competing main openings, with synthetic regressions for each. Implementation commits: `954b0fb` (adapter and acceptance tests), `d7a5b12` (duration/hidden-root review fixes), `bbc61a1` (malformed competing main count).
+
+Raw aggregate reports remain `/tmp/noms016-foodcom-verified.json` and `/tmp/noms016-foodcom-verified.md`. The semantic report documents the current external review and its reproduction. Raw provider captures remain outside the repository. Work remains on branch `codex/NOMS-016-recipe-import-export` in the canonical `/home/samko/GitRepos/Noms/.worktrees/NOMS-016-recipe-import-export`; no additional worktree was created because the user requested consolidation.
+
 ## Conclusions
 
 1. The generic HTML parser recognizes useful candidates from several providers, but structural acceptance remains only an upper bound on compatibility.
