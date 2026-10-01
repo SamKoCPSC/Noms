@@ -138,6 +138,7 @@ recipe-import-parser-semantic-test:
 recipe-import-provider-adapter-test:
 	@node --test scripts/tests/test-recipe-import-provider-adapters.mjs
 	@node --test scripts/tests/test-recipe-import-allrecipes.mjs
+	@node --test scripts/tests/test-recipe-import-food52.mjs
 
 # Verify browser clipboard capture, bounds, cancellation, and parser handoff.
 recipe-import-bridge-test:

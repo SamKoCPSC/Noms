@@ -1989,10 +1989,199 @@ function parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   return result;
 }
 
+function parseFood52VisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
+  try {
+    const url = new URL(sourceUrl);
+    if (!["http:", "https:"].includes(url.protocol) ||
+      !["food52.com", "www.food52.com"].includes(url.hostname)) return null;
+  } catch { return null; }
+
+  const mains = elementsMatchingAttributes(inertHtml, (_, tag) => tag === "main");
+  if (mains.length !== 1 || hasAncestorTag(inertHtml, mains[0].index, "nav")) return null;
+  const articles = elementsMatchingAttributes(mains[0].innerHtml, (_, tag) => tag === "article");
+  if (articles.length !== 1) return null;
+  const article = articles[0];
+  const articleOffset = mains[0].openingEnd + article.openingEnd;
+  const articleHtml = article.innerHtml;
+  const hiddenRanges = elementsMatchingAttributes(inertHtml, attributes =>
+    listIsHidden({ attributes }) || hasClass(attributes, "hidden"));
+  const isHidden = (element, offset = articleOffset, includeText = false) => hiddenRanges.some(range =>
+    (range.index <= offset + element.index && offset + element.index < range.end) ||
+    (includeText && offset + element.index <= range.index && range.index < offset + element.end && htmlText(range.innerHtml)));
+  if (isHidden(mains[0], 0) || isHidden(article, mains[0].openingEnd)) return null;
+  const headers = elementsMatchingAttributes(inertHtml, attributes => attributes.get("id") === "contentHeader");
+  if (headers.length !== 1 || headers[0].tag !== "header" || headers[0].index < articleOffset ||
+    headers[0].end > articleOffset + articleHtml.length || isHidden(headers[0], 0)) return null;
+  const header = headers[0];
+  const titles = elementsMatchingAttributes(articleHtml, (_, tag) => tag === "h1");
+  if (titles.length !== 1 || !htmlText(titles[0].innerHtml) || isHidden(titles[0], articleOffset, true) ||
+    articleOffset + titles[0].index < header.openingEnd || articleOffset + titles[0].end > header.contentEnd) return null;
+
+  const directElements = html => elementsMatchingAttributes(html, () => true)
+    .filter(({ index }) => tagStackContext(html, index).length === 0);
+  // Account for all direct text between recognized nodes: a new paragraph or
+  // loose procedure must not vanish just because existing selectors still match.
+  const hasLooseText = (html, elements) => {
+    let end = 0;
+    for (const element of elements) {
+      if (htmlText(html.slice(end, element.index))) return true;
+      end = element.end;
+    }
+    return Boolean(htmlText(html.slice(end)));
+  };
+  const headings = elementsMatchingAttributes(articleHtml, (_, tag) => tag === "h2");
+  const ingredientHeadings = headings.filter(h => htmlText(h.innerHtml) === "Ingredients");
+  const directionHeadings = headings.filter(h => htmlText(h.innerHtml) === "Directions");
+  if (ingredientHeadings.length !== 1 || directionHeadings.length !== 1) return null;
+  const allArticleElements = elementsMatchingAttributes(articleHtml, () => true);
+  const sections = [];
+  let emptySectionNames = 0;
+  for (const heading of [ingredientHeadings[0], directionHeadings[0]]) {
+    const parentStart = tagStackContext(articleHtml, heading.index).at(-1)?.start;
+    const container = allArticleElements.find(element => element.index === parentStart);
+    if (!container || isHidden(container) || isHidden(heading, articleOffset, true)) return null;
+    const children = directElements(container.innerHtml);
+    if (hasLooseText(container.innerHtml, children) || children.length !== 2 || children[0].tag !== "h2" ||
+      children[1].tag !== "div" || !hasClass(children[1].attributes, "space-y-8")) return null;
+    const wrapper = children[1];
+    const wrapperOffset = articleOffset + container.openingEnd + wrapper.openingEnd;
+    if (isHidden(wrapper, articleOffset + container.openingEnd)) return null;
+    const groups = directElements(wrapper.innerHtml);
+    if (!groups.length || hasLooseText(wrapper.innerHtml, groups)) return null;
+    const extractedGroups = [];
+    for (const [groupIndex, group] of groups.entries()) {
+      const groupOffset = wrapperOffset + group.openingEnd;
+      if (group.tag !== "div" || isHidden(group, wrapperOffset)) return null;
+      const children = directElements(group.innerHtml);
+      if (hasLooseText(group.innerHtml, children) || ![1, 2].includes(children.length) ||
+        (children.length === 2 && children[0].tag !== "h3")) return null;
+      const list = children.at(-1);
+      const name = children.length === 2 ? htmlText(children[0].innerHtml) || null : null;
+      if (children.length === 2 && !name) emptySectionNames += 1;
+      if ((children.length === 2 && isHidden(children[0], groupOffset, true)) || list.tag !== "ul" ||
+        !hasClass(list.attributes, "space-y-4") || isHidden(list, groupOffset)) return null;
+      const listOffset = groupOffset + list.openingEnd;
+      const rows = directElements(list.innerHtml);
+      if (!rows.length || hasLooseText(list.innerHtml, rows) || rows.some(row => row.tag !== "li" || isHidden(row, listOffset, true))) return null;
+      extractedGroups.push({ name, rows, listOffset, groupIndex });
+    }
+    sections.push({ container, groups: extractedGroups });
+  }
+  if (!(header.end <= articleOffset + sections[0].container.index &&
+    sections[0].container.end <= sections[1].container.index)) return null;
+
+  const result = candidate({ id: "food52-visible", version: "1", tier: "source_adapter", sourceAdapter: "food52" }, sourceUrl);
+  result.source.provider = "Food52";
+  result.source.provenance.provider = provenance("source_url", "hostname food52.com");
+  result.fields.title = scalar(htmlText(titles[0].innerHtml), "text/html", "main article #contentHeader h1");
+  const rangePattern = `${TASTY_AMOUNT_PATTERN}(?:\\s*(?:to|[-–—])\\s*${TASTY_AMOUNT_PATTERN})?`;
+  const measurementPattern = new RegExp(`^((?:[Aa]bout\\s+)?${rangePattern})(?:\\s+(.+))?$`, "u");
+  let unstructuredRows = 0;
+  let uncertainMeasurements = 0;
+  result.fields.ingredientSections = sections[0].groups.map(({ name, rows, groupIndex }) => ({
+    name,
+    items: rows.map((row, itemIndex) => {
+      const locator = `main article Ingredients group ${groupIndex + 1} li:nth-child(${itemIndex + 1})`;
+      const raw = htmlText(row.innerHtml);
+      const children = directElements(row.innerHtml);
+      const measurements = children.filter(e => e.tag === "span" && hasClass(e.attributes, "font-bold"));
+      if (measurements.length !== 1 || children.length !== 1 || htmlText(row.innerHtml.slice(0, measurements[0].index))) {
+        unstructuredRows += 1;
+        return { ...tastyIngredient(raw, "text/html", locator), confidence: "low" };
+      }
+      const marked = htmlText(measurements[0].innerHtml);
+      const parsed = marked.match(measurementPattern);
+      const ingredientName = htmlText(row.innerHtml.slice(measurements[0].end));
+      if (!ingredientName || !marked) return null;
+      if (!parsed) uncertainMeasurements += 1;
+      return { raw, amount: parsed?.[1] ?? marked, unit: parsed?.[2] ?? null, name: ingredientName,
+        confidence: parsed ? "high" : "low", provenance: provenance("text/html", locator) };
+    }),
+  }));
+  if (result.fields.ingredientSections.some(({ items }) => items.some(item => !item || !item.raw))) return null;
+  for (const { name, rows, groupIndex } of sections[1].groups) {
+    const steps = [];
+    for (const [index, row] of rows.entries()) {
+      const children = directElements(row.innerHtml);
+      if (hasLooseText(row.innerHtml, children) || children.length !== 2 || children[0].tag !== "span" ||
+        htmlText(children[0].innerHtml) !== `Step ${index + 1}` || children[1].tag !== "div" ||
+        !hasClass(children[1].attributes, "RichText") || children[1].attributes.get("role") !== "document") return null;
+      const body = children[1];
+      const paragraphs = directElements(body.innerHtml);
+      if (!paragraphs.length || hasLooseText(body.innerHtml, paragraphs) || paragraphs.some(p => p.tag !== "p") ||
+        !htmlText(body.innerHtml)) return null;
+      steps.push(instruction(htmlText(body.innerHtml), "text/html", `main article Directions group ${groupIndex + 1} li:nth-child(${index + 1}) .RichText`));
+    }
+    result.fields.instructionSections.push({ name, steps });
+  }
+
+  const headerHtml = articleHtml.slice(header.end - articleOffset, sections[0].container.index);
+  const headerHtmlOffset = header.end;
+  const descriptions = elementsWithClass(headerHtml, "RichText").filter(e => e.attributes.get("role") === "document");
+  if (descriptions.length > 1) return null;
+  if (descriptions.some(e => isHidden(e, headerHtmlOffset, true))) return null;
+  if (descriptions.length && htmlText(descriptions[0].innerHtml)) {
+    result.fields.description = scalar(htmlText(descriptions[0].innerHtml).replace(/\s+([,.;:!?])/gu, "$1"), "text/html", "main article .RichText before Ingredients");
+  }
+  const bylines = elementsMatchingAttributes(header.innerHtml, (_, tag) => tag === "p")
+    .filter(e => /^By\s+/u.test(htmlText(e.innerHtml)));
+  if (bylines.length > 1) return null;
+  if (bylines.some(e => isHidden(e, header.openingEnd, true))) return null;
+  if (bylines.length) {
+    result.source.author = htmlText(bylines[0].innerHtml).replace(/^By\s+/u, "");
+    result.source.provenance.author = provenance("text/html", "#contentHeader p (By)");
+  }
+  const labels = new Set();
+  for (const item of elementsMatchingAttributes(headerHtml, (_, tag) => tag === "dl")) {
+    if (isHidden(item, headerHtmlOffset, true)) return null;
+    const parts = directElements(item.innerHtml);
+    if (hasLooseText(item.innerHtml, parts) || parts.length !== 2 || parts[0].tag !== "dt" || parts[1].tag !== "dd") return null;
+    const label = htmlText(parts[0].innerHtml);
+    const value = htmlText(parts[1].innerHtml);
+    if (!label || !value || labels.has(label)) return null;
+    labels.add(label);
+    const raw = `${label}: ${value}`;
+    const locator = `main article dl (${label})`;
+    if (label === "Serves") {
+      const numeric = /^\d+$/u.test(value) ? Number(value) : null;
+      result.fields.yield = { ...scalar(raw, "text/html", locator), value: { display: raw, servings: Number.isSafeInteger(numeric) && numeric > 0 ? numeric : null } };
+    } else {
+      const duration = labeledDuration(raw);
+      if (duration) result.fields[duration.field] = { ...scalar(raw, "text/html", locator), value: duration.value };
+      else result.unclassifiedLines.push({ raw, provenance: provenance("text/html", locator) });
+    }
+  }
+  // Food52's hero is an IMG with a sibling photo-credit paragraph, not a FIGURE.
+  // Keep only the pre-ingredient hero reference; never fetch image bytes.
+  const images = elementsMatchingAttributes(headerHtml, (_, tag) => tag === "img");
+  if (images.length === 1) {
+    const url = normalizeWhitespace(images[0].attributes.get("src") ?? "");
+    try {
+      if (["http:", "https:"].includes(new URL(url).protocol)) {
+        const credits = elementsMatchingAttributes(headerHtml, (_, tag) => tag === "p")
+          .map(e => htmlText(e.innerHtml)).filter(text => /^Photo by\s+/u.test(text));
+        result.fields.images.push({ sourceUrl: url, alt: normalizeWhitespace(images[0].attributes.get("alt") ?? "") || null,
+          credit: credits.length === 1 ? credits[0].replace(/^Photo by\s+/u, "") : null,
+          provenance: provenance("text/html", "main article img before Ingredients") });
+      }
+    } catch { /* Invalid image references are not eligible for import. */ }
+  }
+  if (unstructuredRows) result.warnings.push({ code: "UNSTRUCTURED_PROVIDER_INGREDIENT", severity: "warning", path: "fields.ingredientSections", message: "Unmarked ingredient rows are retained with low confidence. Some may be section labels or equipment; review them before saving." });
+  if (uncertainMeasurements) result.warnings.push({ code: "UNRECOGNIZED_PROVIDER_MEASUREMENT", severity: "warning", path: "fields.ingredientSections", message: "An unfamiliar marked measurement is preserved literally without guessing its amount/unit split." });
+  if (emptySectionNames) result.warnings.push({ code: "EMPTY_PROVIDER_SECTION_NAME", severity: "warning", path: "fields.ingredientSections", message: "A complete recipe group has an empty source heading. Its content is retained without inventing a label; review the grouping." });
+  if (result.fields.ingredientSections.some(s => s.name) || result.fields.instructionSections.some(s => s.name)) result.warnings.push({ code: "SECTION_NAMES_NOT_PERSISTED", severity: "warning", path: "fields.ingredientSections", message: "Section names remain in preview but the current editor stores flat recipe content." });
+  if (result.unclassifiedLines.length) result.warnings.push({ code: "UNCLASSIFIED_PROVIDER_METADATA", severity: "warning", path: "unclassifiedLines", message: "Unrecognized recipe metadata is retained for review rather than silently mapped." });
+  result.warnings.push(...result.fields.images.map((_, index) => ({ code: "IMAGE_REFERENCE_REQUIRES_CONFIRMATION", severity: "info", path: `fields.images[${index}]`, message: "The image reference is not fetched and requires confirmation before mapping." })));
+  if (result.warnings.length) result.status = "needs_review";
+  appendHtmlAuditEvidence(result, htmlAudit, discardedRemoteResourceCount(htmlAudit, result.fields.images));
+  return result;
+}
+
 function parseHtml(html, sourceUrl, htmlAudit) {
   // Remove active/raw-text regions before scanning. No markup is inserted into a DOM.
   const inertHtml = discardRawContent(html);
-  const sourceAdapterCandidate = parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
+  const sourceAdapterCandidate = parseFood52VisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
+    parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseBudgetBytesWprm(inertHtml, sourceUrl, htmlAudit) ??
     parseTastyVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit);
