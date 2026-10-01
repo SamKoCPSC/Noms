@@ -3046,3 +3046,135 @@ approved expendable-fixture destructive check remains open. Post-commit lost
 responses/idempotency, navigation-failure fallback, initial-read retry success
 focus, full screen-reader and real-touch checks also remain open. This does
 not close the whole recipe page or checkpoint 8; dark-mode redesign is deferred.
+
+## Global session-refresh recovery — 2026-10-01
+
+### Scope and implementation
+
+The hydrated `/api/user_profile` check previously ignored transport, HTTP and
+JSON failures. `6ddb93d` moves that single check into an `AuthRefresh` component
+in the persistent shared layout, retaining the root SSR-provided auth context.
+A failed check no longer silently strands the user: a raised, shared-token
+recovery panel offers **Retry sign-in check** without reloading the page or
+discarding its route/form state. Initial successful checks remain invisible.
+
+A synchronous live pending claim prevents overlapping requests. A retry keeps
+the same focusable, 44px-minimum action through failure, pending and completion,
+with safe alert/status copy and guarded `aria-disabled`/`aria-busy` handlers.
+Success changes that control to **Dismiss**, rather than immediately unmounting
+the focused button. Explicit dismissal returns focus to the shared navigation
+menu trigger. No error body, transport detail or raw endpoint response is shown.
+
+Only structurally consistent authenticated/guest responses replace the context.
+Failures preserve it; a valid guest result still updates the existing protected
+page gate. A delayed result is rejected if the context changed in flight, so a
+recent profile save or identity replacement cannot be overwritten by an older
+read. That rejection remains explicitly retryable. This does not add periodic
+session polling, cross-tab synchronization or new authorization authority:
+server/session/API contracts and the serialized context fields are unchanged.
+`AuthContext` only gains `PartialEq` for response/context comparison.
+
+### Existing-instance browser acceptance
+
+Reused only development instance **noms-c799915fcf93e034**, app
+`http://127.0.0.1:32768`, via the normal Google mock flow for the established
+`testuser` owner. Task worktree reused; implementation fast-forwarded into the
+design worktree and only that app container restarted. No new deployment,
+identity, account link, avatar, deletion or publication was needed.
+
+Interception was scoped to non-document Fetch/XHR requests for this exact
+instance's `/api/user_profile`. Failed requests were blocked before reaching
+the server; successful retries continued to the real endpoint. No fabricated
+successful payloads, page-state injection or DOM mutations were used.
+
+- **Failure/retention:** the failed initial check kept owner navigation and
+  Profile settings available. Unsaved synthetic Display name
+  `CP8 Unsaved session check` and Bio `Local unsaved recovery check; do not
+  submit.` remained intact across a failed retry and real successful retry.
+  These entries were never saved.
+- **Pending/exclusivity:** a held retry rendered Checking sign-in status and
+  retained focus on `auth-refresh-action`. Return/Space sent to the focused
+  button produced **zero additional session requests**. Failure returned to
+  Retry sign-in check with focus retained. The high-level locator's pending
+  key press was refused; actual focused-key input supplied this runtime proof.
+- **Success/focus:** continuing a real retry showed Sign-in status checked,
+  kept the unsaved entries and focused the same recovery action. Dismiss
+  removed the panel and focused `navigation-menu-trigger`.
+- **Shared route lifetime:** after another injected initial failure, the normal
+  Profile → Linked accounts link retained one recovery panel and generated
+  **zero automatic session checks** during same-document navigation. The linked
+  account resource loaded independently.
+- **Narrow layout:** at a real **320×900 viewport**, document client and scroll
+  widths both measured **305px** (15px scrollbar), without horizontal overflow.
+  The retry target was **156×44px**, x=32, right=188px; the panel/copy fit and
+  wrapped within the container.
+- **Verified guest transition:** a second agent-created tab used normal Sign
+  Out. The first tab retained its old owner context until an explicit real
+  session retry returned guest. It then showed Sign in to continue, without
+  linked-account details or owner navigation, and retained the return link
+  `/login?redirect_uri=%2Fsettings%2Faccounts`. Dismiss again returned navigation
+  focus. This is normal sign-out/verified-guest proof, not forced session-expiry
+  or every cross-route permission state.
+
+The first post-restart browser attempt encountered a dev-client rendering
+exception. A cache-disabled reload then rendered and exercised the checks
+above successfully; the exact cause of that first transient was not proven.
+It is not counted as acceptance evidence. Temporary interception, cache and
+viewport overrides were cleared; mock owner signed out and both agent-created
+tabs closed. Other deployments and user tabs were untouched.
+
+Screenshots captured and visually inspected:
+`/tmp/noms-020-auth-refresh-failure.jpg` (desktop with retained unsaved name) and
+`/tmp/noms-020-auth-refresh-mobile.jpg` (actual narrow viewport).
+
+Read-only final DB check: **one user, three private recipes, 35 versions, one
+draft, zero collections, one lineage edge and one OAuth account**. Owner Display
+name remains empty, Bio/avatar URL remain NULL. The draft remains revision 0
+with the restored recipe-action source UUID/version 4. No domain-content writes
+were performed; normal sign-in/sign-out changed session bookkeeping only.
+User-owned generated CSS SHA-256 remains
+`63fb925365998338ce8dec1e725c097e5648f820c9674767880e910db80d7e46`.
+
+### Automated validation, review and remaining work
+
+Seven new tests cover exclusive pending/failure/retry state, successful verified
+guest completion, rejection of delayed identity/profile replacements, malformed
+or inconsistent response validation, SSR feedback/control semantics, actual
+pending click dispatch guards and shared-shell wiring. The delayed profile-edit
+case has automated state evidence, not a browser profile-save race. Tests-first
+missing-behavior failures are recorded in `/tmp/noms-020-auth-refresh-red.log`;
+initial module/harness compile errors were corrected during the implementation
+cycle, not hidden by skipping coverage.
+
+With `SQLX_OFFLINE=true` and the integration worktree's existing target cache:
+
+```sh
+cargo test --features server auth::refresh -- --test-threads=8
+just ci
+```
+
+Focused suite: **7 passed, 0 failed**. The first full CI run had **886 passed,
+1 failed, 12 ignored**: the existing small-upload test timed out connecting to
+its temporary PostgreSQL pool (`PoolTimedOut`). Tests were unchanged. Full
+rerun on the final implementation: **exit 0; 887 passed, 0 failed, 12 ignored**,
+with native/WASM checks, Clippy, formatting and policy gates. Eight existing
+allowed audit warnings remain; ignored integration checks not freshly run.
+Final logs: `/tmp/noms-020-auth-refresh-tests.log`,
+`/tmp/noms-020-auth-refresh-ci.log`.
+
+Explicit second-pass self-review **PASS for this scope**: complete ordered diff,
+state/event tests, identity consistency/staleness guards, stable success focus,
+real retry and guest gate, narrow geometry, unchanged server contracts and
+preserved test data reviewed. No blocking/should-fix issue remains in changed
+scope; no independent-agent review claimed. Baseline `7942aa6`; implementation
+`6ddb93d` followed by this documentation, local fast-forward integration only,
+no push.
+
+**Next:** remaining Settings unlink/avatar-removal/account-deletion recovery,
+historical-snapshot custom-comparison failures and broader per-page acceptance.
+Destructive browser flows still require a separately approved expendable
+fixture. A profile-save race and malformed HTTP body were not browser tested;
+their scoped state/parser guards have automated coverage. Indefinitely stalled
+requests, periodic/cross-tab session refresh, screen-reader/real-touch checks and
+whole-app accessibility remain outside this acceptance. Checkpoint 8 and
+dark-mode redesign are not closed by this slice.
