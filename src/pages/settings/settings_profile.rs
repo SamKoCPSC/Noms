@@ -623,6 +623,38 @@ struct AvatarTransform {
 }
 
 #[cfg(any(target_arch = "wasm32", test))]
+struct AvatarCanvasGeometry {
+    output_scale_x: f64,
+    output_scale_y: f64,
+    image_center_x: f64,
+    image_center_y: f64,
+    image_width: f64,
+    image_height: f64,
+}
+
+/// Map the fixed crop viewport to output pixels without recentering the image.
+/// The editor transforms the whole image first, around its own centre, while
+/// its crop stays fixed. Cropping before that transform changes offset framing.
+#[cfg(any(target_arch = "wasm32", test))]
+fn avatar_canvas_geometry(
+    source: AvatarSourceRect,
+    image_width: f64,
+    image_height: f64,
+    size: u32,
+) -> AvatarCanvasGeometry {
+    let output_scale_x = size as f64 / source.width;
+    let output_scale_y = size as f64 / source.height;
+    AvatarCanvasGeometry {
+        output_scale_x,
+        output_scale_y,
+        image_center_x: (image_width / 2.0 - source.x) * output_scale_x,
+        image_center_y: (image_height / 2.0 - source.y) * output_scale_y,
+        image_width,
+        image_height,
+    }
+}
+
+#[cfg(any(target_arch = "wasm32", test))]
 fn avatar_transform(
     edit: &RecipeImageEdit,
     image_width: f64,
@@ -685,7 +717,7 @@ fn apply_avatar_color(red: u8, green: u8, blue: u8, edit: &RecipeImageEdit) -> (
 
 #[cfg(test)]
 mod avatar_crop_tests {
-    use super::{apply_avatar_color, avatar_source_rect, avatar_transform};
+    use super::{apply_avatar_color, avatar_canvas_geometry, avatar_source_rect, avatar_transform};
     use crate::types::{ImageCropRect, RecipeImageEdit};
 
     #[test]
@@ -752,6 +784,48 @@ mod avatar_crop_tests {
     }
 
     #[test]
+    fn avatar_canvas_preserves_the_full_image_center_for_an_offset_crop() {
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.crop = ImageCropRect {
+            x: 68.0 / 512.0,
+            y: 163.0 / 512.0,
+            width: 0.5,
+            height: 0.5,
+        };
+        edit.transform.rotation = 90.0;
+        edit.transform.flip_x = true;
+        let source = avatar_source_rect(&edit, 512.0, 512.0);
+        let geometry = avatar_canvas_geometry(source, 512.0, 512.0, 400);
+
+        assert_eq!(geometry.output_scale_x, 400.0 / 256.0);
+        assert_eq!(geometry.output_scale_y, 400.0 / 256.0);
+        assert_eq!(geometry.image_center_x, 293.75);
+        assert_eq!(geometry.image_center_y, 145.3125);
+        assert_eq!(geometry.image_width, 512.0);
+        assert_eq!(geometry.image_height, 512.0);
+    }
+
+    #[test]
+    fn avatar_canvas_preserves_portrait_image_geometry_inside_square_crop() {
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.crop = ImageCropRect {
+            x: 0.0,
+            y: 0.25,
+            width: 1.0,
+            height: 0.5,
+        };
+        let source = avatar_source_rect(&edit, 400.0, 800.0);
+        let geometry = avatar_canvas_geometry(source, 400.0, 800.0, 100);
+
+        assert_eq!(geometry.output_scale_x, 0.25);
+        assert_eq!(geometry.output_scale_y, 0.25);
+        assert_eq!(geometry.image_center_x, 50.0);
+        assert_eq!(geometry.image_center_y, 50.0);
+        assert_eq!(geometry.image_width, 400.0);
+        assert_eq!(geometry.image_height, 800.0);
+    }
+
+    #[test]
     fn avatar_color_applies_saturation_and_channel_contrast() {
         let mut edit = RecipeImageEdit::default_ellipse_1x1();
         edit.color.saturation = 0.0;
@@ -808,25 +882,28 @@ async fn render_avatar_variant(
         img.natural_width() as f64,
         img.natural_height() as f64,
     );
+    let geometry = avatar_canvas_geometry(
+        source,
+        img.natural_width() as f64,
+        img.natural_height() as f64,
+        size,
+    );
     ctx.save();
-    ctx.translate(half_size, half_size)
+    ctx.translate(geometry.image_center_x, geometry.image_center_y)
         .map_err(|e| format!("Failed to position avatar: {:?}", e))?;
+    ctx.scale(geometry.output_scale_x, geometry.output_scale_y)
+        .map_err(|e| format!("Failed to size avatar crop: {:?}", e))?;
     ctx.rotate(transform.rotation_radians)
         .map_err(|e| format!("Failed to rotate avatar: {:?}", e))?;
     ctx.scale(transform.scale_x, transform.scale_y)
         .map_err(|e| format!("Failed to scale avatar: {:?}", e))?;
-    let draw_result = ctx
-        .draw_image_with_html_image_element_and_sw_and_sh_and_dx_and_dy_and_dw_and_dh(
-            img,
-            source.x,
-            source.y,
-            source.width,
-            source.height,
-            -half_size,
-            -half_size,
-            size as f64,
-            size as f64,
-        );
+    let draw_result = ctx.draw_image_with_html_image_element_and_dw_and_dh(
+        img,
+        -geometry.image_width / 2.0,
+        -geometry.image_height / 2.0,
+        geometry.image_width,
+        geometry.image_height,
+    );
     ctx.restore();
     draw_result.map_err(|e| format!("draw_image error: {:?}", e))?;
 
