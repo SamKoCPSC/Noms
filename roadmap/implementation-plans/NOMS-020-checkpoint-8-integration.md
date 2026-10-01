@@ -3292,3 +3292,56 @@ expendable fixture and action-time confirmation where required. Post-success
 focus, post-commit lost responses, account-deletion navigation failure,
 identity replacement during mutations, real-touch and full screen-reader
 acceptance remain open. This does not close checkpoint 8 or dark-mode redesign.
+
+## Historical snapshot and custom-comparison recovery — 2026-10-01
+
+Implementation `13b112d`, following baseline `6718c5b`, adds a real in-page
+historical snapshot retry, safe comparison feedback, synchronous exclusive
+comparison authority and keyed recipe/version visits. Failure keeps the chosen
+Before/After pair; selectors cannot change it while pending. Successful snapshot
+retry focuses its read-only summary; the comparison action retains focus through
+pending/failure/success. Inconsistent response pairs are rejected. Narrow
+selector columns shrink to their container. Server/history contracts unchanged.
+
+The browser reproduced the baseline's raw transport error. Rebuilt acceptance
+used only existing private owner/history fixtures in the named local deployment
+on port 32768, normal mock-owner login and non-document API interception:
+
+- Initial snapshot failure and repeated failed retry showed safe feedback.
+  Rapid Enter attempts during a held retry produced one request. The real
+  successful retry focused `historical-snapshot` and restored version v5.
+- Comparison v4 → v2 retained both selections through two failures and then
+  real successful retry. Pending action remained focused and aria-disabled;
+  Enter/Space duplicates produced one request. Pending selectors were disabled.
+  Success cleared the alert and retained Generate comparison focus.
+- v2 → v2 produced an explicit no-content-differences panel. At 320px,
+  document client/scroll widths were both 305px and the action was 44px high.
+- A held v3 → v2 response was released after current-recipe navigation and
+  same-document Back to v5. The returned visit retained fresh defaults v1/v5
+  and no custom panel; the old response did not populate it. Direct recipe and
+  snapshot-number replacement, including return visits, also has keyed-scope
+  automated evidence (not a separately exercised direct browser replacement).
+- Normal sign-out and guest retry showed only the generic unavailable state,
+  no private title/content and no comparison selectors.
+
+Five new state/SSR/keyed-scope tests pass. Two existing source assertions were
+updated for renamed live pending state and keyed contents without removing
+their subscription/selector-lock contracts. Tests-first expected failures:
+`/tmp/noms-020-historical-red.log`; initial implementation compile/test issues
+were repaired, including WASM-only scaler imports. Final
+`SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target just ci`
+passed: **902 passed, 0 failed, 12 ignored**, eight existing allowed audit
+warnings. Log: `/tmp/noms-020-historical-ci.log`. Ignored integrations not run.
+Explicit second-pass self-review **PASS for this scope**, no independent agent.
+
+Temporary screenshots: `/tmp/noms-020-historical-comparison-failure.jpg` and
+`/tmp/noms-020-historical-comparison-mobile.jpg`. Interception and viewport
+overrides cleared; cache override remains temporary for subsequent acceptance
+in this same turn. Counts unchanged: 1 user, 3 recipes, 35 versions, 1 draft,
+0 collections, 1 OAuth account. Local commit/fast-forward only; user-owned CSS
+hash unchanged. Existing checkpoint task/integration worktrees are reused.
+
+**Next:** graph recovery, broader route/permission presentation and populated
+phone/tablet checks. Real-device touch, actual screen-reader operation,
+destructive end-to-end outcomes and post-commit/navigation recovery remain
+unaccepted; this slice does not close checkpoint 8.
