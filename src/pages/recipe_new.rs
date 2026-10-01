@@ -12,14 +12,14 @@ use crate::api::recipe::{
 #[allow(unused_imports)]
 use crate::api::upload::upload_image;
 use crate::components::base::{
-    Button, ButtonVariant, EditedRecipeImage, ImageEditorModal, ImageUpload, PageHeader,
-    UploadOutcome,
+    Button, ButtonVariant, ImageEditorModal, ImageUpload, PageHeader, UploadOutcome,
 };
 use crate::components::AuthRequired;
 use crate::pages::draft_save::draft_save_button_state;
 use crate::pages::recipe_editor_form::{
-    build_step_tree, can_indent_step, format_step_photo_file_size, step_photo_display_name,
-    RecipeEditorContents, RecipeEditorInput as Input, StepForm,
+    apply_step_photo_edit, build_step_tree, can_indent_step, format_step_photo_file_size,
+    step_photo_display_name, step_photo_editor_edit, RecipeEditorContents,
+    RecipeEditorInput as Input, StepForm, StepPhotoEditButton,
 };
 use crate::types::{
     RecipeEditorState, RecipeEquipment, RecipeImage, RecipeImageEdit, RecipeIngredient, RecipeStep,
@@ -166,6 +166,7 @@ pub fn RecipeNew() -> Element {
     let mut step_editor_modal_url = use_signal(|| Option::<String>::None);
     let mut step_editor_idx = use_signal(|| Option::<usize>::None);
     let mut step_editor_photo_idx = use_signal(|| Option::<usize>::None);
+    let mut step_editor_initial_edit = use_signal(|| Option::<RecipeImageEdit>::None);
     let mut pending_step_photo_edits = use_signal(Vec::<PendingStepPhotoEdit>::new);
     let mut step_photo_discard_capabilities =
         use_signal(std::collections::HashMap::<String, String>::new);
@@ -385,6 +386,7 @@ pub fn RecipeNew() -> Element {
                 let mut step_editor_modal_url = step_editor_modal_url;
                 let mut step_editor_idx = step_editor_idx;
                 let mut step_editor_photo_idx = step_editor_photo_idx;
+                let mut step_editor_initial_edit = step_editor_initial_edit;
                 let mut pending_step_photo_edits = pending_step_photo_edits;
                 let mut step_photo_upload_count = step_photo_upload_count;
                 let mut step_photo_discard_capabilities = step_photo_discard_capabilities;
@@ -403,6 +405,8 @@ pub fn RecipeNew() -> Element {
                         if let Some(url) = &preview_url {
                             step_editor_idx.set(Some(idx));
                             step_editor_photo_idx.set(None);
+                            step_editor_initial_edit
+                                .set(Some(RecipeImageEdit::default_rect_16x9()));
                             step_editor_modal_url.set(Some(url.clone()));
                         }
 
@@ -1163,13 +1167,16 @@ pub fn RecipeNew() -> Element {
                                                     dragged_step_photo.set(None);
                                                 },
                                                     div { class: "step-photo-item__preview neumo-inset",
-                                                        EditedRecipeImage {
+                                                        StepPhotoEditButton {
                                                             image: steps()[idx].photos[photo_idx].clone(),
-                                                        class: "image-upload__thumb step-photo-preview",
-                                                        alt: "Step photo".to_string(),
-                                                        prefer_thumbnail: true,
-                                                        on_error: move |_| {},
-                                                    }
+                                                            disabled: is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0,
+                                                            onedit: move |photo: RecipeImage| {
+                                                                step_editor_idx.set(Some(idx));
+                                                                step_editor_photo_idx.set(Some(photo_idx));
+                                                                step_editor_initial_edit.set(Some(step_photo_editor_edit(&photo)));
+                                                                step_editor_modal_url.set(Some(photo.url));
+                                                            },
+                                                        }
                                                     div { class: "step-photo-item__meta",
                                                             span {
                                                                 class: "step-photo-item__name",
@@ -1419,23 +1426,27 @@ pub fn RecipeNew() -> Element {
             }
             ImageEditorModal {
                 image_url: step_editor_modal_url,
+                initial_edit: step_editor_initial_edit(),
                 on_save: move |edit: RecipeImageEdit| {
                     let current_url = step_editor_modal_url();
                     let current_idx = step_editor_idx();
                     let current_photo_idx = step_editor_photo_idx();
                     if let (Some(url), Some(idx)) = (current_url, current_idx) {
-                        pending_step_photo_edits.write().retain(|pending| {
-                            !(pending.idx == idx && pending.preview_url == url)
-                        });
-                        pending_step_photo_edits.write().push(PendingStepPhotoEdit {
-                            idx,
-                            preview_url: url.clone(),
-                            edit: edit.clone(),
-                        });
+                        // Only a local upload still in flight needs an edit hand-off.
+                        if url.starts_with("blob:") && current_photo_idx.is_none() {
+                            pending_step_photo_edits.write().retain(|pending| {
+                                !(pending.idx == idx && pending.preview_url == url)
+                            });
+                            pending_step_photo_edits.write().push(PendingStepPhotoEdit {
+                                idx,
+                                preview_url: url.clone(),
+                                edit: edit.clone(),
+                            });
+                        }
                         if let Some(step) = steps.write().get_mut(idx) {
                             if let Some(photo_idx) = current_photo_idx {
                                 if let Some(photo) = step.photos.get_mut(photo_idx) {
-                                    photo.edits = vec![edit];
+                                    apply_step_photo_edit(photo, edit);
                                 }
                             }
                         }
@@ -1445,6 +1456,7 @@ pub fn RecipeNew() -> Element {
                     step_editor_modal_url.set(None);
                     step_editor_idx.set(None);
                     step_editor_photo_idx.set(None);
+                    step_editor_initial_edit.set(None);
                 },
             }
         }

@@ -1,4 +1,5 @@
-use crate::types::{RecipeImage, RecipeStep};
+use crate::components::base::EditedRecipeImage;
+use crate::types::{RecipeImage, RecipeImageEdit, RecipeStep};
 use dioxus::prelude::*;
 /// Editor fields need stable accessible names, including repeated ingredient
 /// rows whose visible labels would otherwise be only placeholders.
@@ -232,6 +233,56 @@ pub(super) fn step_photo_display_name(photo: &RecipeImage) -> String {
     })
 }
 
+/// Method photos use the same named rectangular view as the recipe gallery.
+pub(super) fn step_photo_editor_edit(photo: &RecipeImage) -> RecipeImageEdit {
+    photo
+        .edits
+        .iter()
+        .find(|edit| edit.name == "rectangle:16:9")
+        .cloned()
+        .unwrap_or_else(RecipeImageEdit::default_rect_16x9)
+}
+
+/// An existing step photo changes metadata only, not its asset or other views.
+pub(super) fn apply_step_photo_edit(photo: &mut RecipeImage, edit: RecipeImageEdit) {
+    if let Some(previous) = photo
+        .edits
+        .iter_mut()
+        .find(|previous| previous.name == edit.name)
+    {
+        *previous = edit;
+    } else {
+        photo.edits.push(edit);
+    }
+}
+
+#[component]
+pub(super) fn StepPhotoEditButton(
+    image: RecipeImage,
+    disabled: bool,
+    onedit: EventHandler<RecipeImage>,
+) -> Element {
+    let name = step_photo_display_name(&image);
+    let selected_image = image.clone();
+    let unavailable = disabled || image.url.is_empty();
+    rsx! {
+        button {
+            r#type: "button",
+            class: "image-upload__preview-button touch-target",
+            aria_label: "Edit step photo: {name}",
+            disabled: unavailable,
+            onclick: move |_| onedit.call(selected_image.clone()),
+            EditedRecipeImage {
+                image,
+                class: "image-upload__thumb step-photo-preview",
+                alt: "Step photo".to_string(),
+                prefer_thumbnail: true,
+                on_error: move |_| {},
+            }
+        }
+    }
+}
+
 pub(super) fn format_step_photo_file_size(file_size: Option<u64>) -> String {
     const KIB: u64 = 1024;
     const MIB: u64 = KIB * 1024;
@@ -391,6 +442,80 @@ mod tests {
     fn step_photo_size_formatting_handles_saved_and_legacy_metadata() {
         assert_eq!(format_step_photo_file_size(Some(8_192)), "8 KB");
         assert_eq!(format_step_photo_file_size(None), "Size unavailable");
+    }
+
+    #[test]
+    fn step_photo_edits_preserve_asset_identity_and_other_named_views() {
+        let mut image = photo("full.webp", "fixture.png", 4096);
+        image.asset_id = Some(uuid::Uuid::from_u128(42));
+        let mut rectangle = RecipeImageEdit::default_rect_16x9();
+        rectangle.transform.rotation = 25.0;
+        let ellipse = RecipeImageEdit::default_ellipse_1x1();
+        image.edits = vec![ellipse.clone(), rectangle.clone()];
+        let before = image.clone();
+        assert_eq!(super::step_photo_editor_edit(&image), rectangle);
+        rectangle.color.saturation = 0.5;
+        super::apply_step_photo_edit(&mut image, rectangle.clone());
+        assert_eq!(image.edits, vec![ellipse, rectangle]);
+        assert_eq!(image.asset_id, before.asset_id);
+        assert_eq!(image.url, before.url);
+        assert_eq!(image.thumb_url, before.thumb_url);
+        assert_eq!(image.file_name, before.file_name);
+        assert_eq!(image.file_size, before.file_size);
+        image.edits.clear();
+        assert_eq!(
+            super::step_photo_editor_edit(&image),
+            RecipeImageEdit::default_rect_16x9()
+        );
+        super::apply_step_photo_edit(&mut image, RecipeImageEdit::default_rect_16x9());
+        assert_eq!(image.edits.len(), 1);
+    }
+
+    #[test]
+    fn step_photo_preview_has_a_named_native_keyboard_edit_action() {
+        use dioxus::prelude::*;
+        let mut dom = dioxus::prelude::VirtualDom::new(|| {
+            rsx! {
+                super::StepPhotoEditButton {
+                    image: photo("full.webp", "fixture.png", 4096),
+                    disabled: false,
+                    onedit: |_| {},
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(
+            html.contains("aria-label=\"Edit step photo: fixture.png\""),
+            "{html}"
+        );
+        assert!(html.contains("type=\"button\""), "{html}");
+        assert!(html.contains("step-photo-preview"), "{html}");
+        let mut disabled_dom = VirtualDom::new(|| {
+            rsx! {
+                super::StepPhotoEditButton {
+                    image: photo("full.webp", "fixture.png", 4096),
+                    disabled: true,
+                    onedit: |_| {},
+                }
+            }
+        });
+        disabled_dom.rebuild_in_place();
+        assert!(dioxus_ssr::render(&disabled_dom).contains("disabled"));
+    }
+
+    #[test]
+    fn both_editors_restore_saved_step_photo_metadata_and_use_the_shared_edit_action() {
+        for source in [
+            include_str!("recipe_new.rs"),
+            include_str!("recipe_edit.rs"),
+        ] {
+            assert!(source.contains("StepPhotoEditButton {"));
+            assert!(source.contains("initial_edit: step_editor_initial_edit()"));
+            assert!(source.contains("step_editor_modal_url.set(Some(photo.url))"));
+            assert!(source.contains("apply_step_photo_edit(photo, edit)"));
+            assert!(!source.contains("photo.edits = vec![edit]"));
+        }
     }
 
     #[test]
