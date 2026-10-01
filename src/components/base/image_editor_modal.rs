@@ -1092,6 +1092,21 @@ mod crop_mode_tests {
     use crate::types::{ImageCropRect, RecipeImageEdit};
 
     #[test]
+    fn avatar_preview_uses_export_srgb_but_recipe_preview_keeps_linear_rgb() {
+        let source = include_str!("image_editor_modal.rs")
+            .rsplit("// Match the avatar pixel exporter")
+            .nth(1)
+            .unwrap()
+            .split("feComponentTransfer")
+            .next()
+            .unwrap();
+        assert!(source.contains("color_interpolation_filters:"));
+        assert!(source.contains("crop_mode.is_ellipse()"));
+        assert!(source.contains("\"sRGB\""));
+        assert!(source.contains("\"linearRGB\""));
+    }
+
+    #[test]
     fn closed_image_editors_leave_native_text_history_shortcuts_alone() {
         for key in ["z", "Z", "y", "Y"] {
             for (ctrl, meta, shift) in [
@@ -1976,6 +1991,9 @@ fn ImageWithCrop(
                         defs {
                             filter {
                                 id: filter_id,
+                                // Match the avatar pixel exporter, while keeping the
+                                // established non-destructive recipe colour behaviour.
+                                color_interpolation_filters: if crop_mode.is_ellipse() { "sRGB" } else { "linearRGB" },
                                 x: "0",
                                 y: "0",
                                 width: "100%",
