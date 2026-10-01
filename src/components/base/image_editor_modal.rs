@@ -1094,7 +1094,10 @@ mod crop_mode_tests {
     #[test]
     fn avatar_preview_uses_export_srgb_but_recipe_preview_keeps_linear_rgb() {
         let source = include_str!("image_editor_modal.rs")
-            .rsplit("// Match the avatar pixel exporter")
+            .rsplit("fn ImageWithCrop(")
+            .next()
+            .unwrap()
+            .split("filter {")
             .nth(1)
             .unwrap()
             .split("feComponentTransfer")
