@@ -3575,7 +3575,7 @@ push, PR or production deployment. The integration worktree's user-owned
 `assets/tailwind.css` SHA-256 remains
 `63fb925365998338ce8dec1e725c097e5648f820c9674767880e910db80d7e46`.
 
-**Remaining gates:** final recipe Delete browser outcomes need action-time
+**Gates remaining at the end of this preceding slice:** final recipe Delete browser outcomes need action-time
 confirmation for the separate disposable target. Settings unlink/avatar removal/
 account deletion need a separately approved expendable identity and media, not
 the sole-provider/no-avatar original mock owner. Post-commit lost-response and
@@ -3584,3 +3584,89 @@ reader, real-device touch and pixel-level image export checks remain open.
 Whole-app sign-off must not be inferred from geometry, token contrast or passing
 unit tests. Dark-mode redesign and favicon/single-colour/3D deliverables remain
 explicitly separate/deferred work.
+
+## Approved disposable recipe Delete acceptance — 2026-10-01
+
+The user explicitly approved testing the final confirmation previously shown
+for “CP8 Disposable recipe – Local acceptance only”,
+`b3b3cf67-6c74-2764-9148-d4d690b9d16f`. That approval was used only for this
+isolated local recipe and its one snapshot, on app port 32768. Before acting,
+the exact Postgres container's dev-environment label, recipe owner/title/private
+visibility, one snapshot and absence of collection/draft/fork dependencies were
+verified. No original acceptance recipe or account was used as a deletion target.
+
+Browser results:
+
+- The first final confirmation was held before reaching the server. Its request
+  body contained only the approved recipe ID. The modal announced “Deleting
+  recipe…”, exposed busy/aria-disabled controls and retained focus inside the
+  native modal. Repeated keyboard activation and Escape neither submitted a
+  second request nor dismissed the modal.
+- Failing that held request produced safe uncertain-outcome feedback, a separate
+  Dashboard link and default-safe Cancel focus. A second retry was held and
+  failed in the same way. Native keyboard input and forced pointer clicks on
+  the pending Cancel/Deleting controls produced no extra request or dismissal.
+  The initial locator-level attempt to press an aria-disabled control was
+  refused by the browser driver; actual native input and forced-click guard
+  checks, not that refusal alone, provide the runtime evidence.
+- At 320×900, document client and scroll width were both 320px; the failure
+  panel fit from x=8 to x=312 and all feedback/actions remained readable.
+- The first un-intercepted retry encountered a naturally expired mock session
+  after the pause between turns. It did not delete the recipe and displayed
+  “Sign in again in another tab…”. The same existing `testuser` mock account
+  was signed in through normal Google mock OAuth in a separate tab, without
+  accepting terms or creating/linking an account. Database readback confirmed
+  the recipe and snapshot still existed before retrying.
+- Retrying the existing confirmation after reauthentication succeeded and
+  navigated to `/dashboard`. The populated Dashboard showed the original three
+  saved recipes and revision-0 draft, no disposable-recipe link, no alert and
+  no open modal. Focus was BODY after full-document navigation; this is not a
+  claim of focused-heading or screen-reader success announcement acceptance.
+
+Database read-only verification: the approved recipe and its versions each
+went from one row to zero. Totals went from **31 recipes/63 versions** to
+**30 recipes/62 versions**. Collections (29), memberships (28), drafts (1) and
+users (2) were unchanged. Ordered row-JSON hashes for every non-target recipe
+and version, plus all collections, memberships, drafts and users matched
+exactly before/after the successful retry. Routine OAuth/session refresh state
+is excluded from this content comparison. The deletion is permanent through
+the app; the clearly synthetic fixture can be recreated with its tracked
+insert-only setup script, which does not authorize another Delete action.
+
+Focused regression command:
+
+```sh
+SQLX_OFFLINE=true \
+CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target \
+cargo test --features server deletion
+```
+
+Result: **14 passed, 0 failed, 0 ignored**, 909 filtered out. This includes
+recipe confirmation/live-claim guards, shared account-deletion state tests and
+database lineage/privacy regression tests; it does not prove destructive
+Settings browser outcomes. An initial `--lib` invocation was rejected because
+this package has no library target; a source-filename filter matched zero tests.
+Neither is counted as a passing test run. No runtime code changed in this
+acceptance slice, so full CI was not rerun; the previously recorded complete
+gate remains 911 passed/12 ignored.
+
+Temporary screenshots:
+`/tmp/noms-020-delete-pending.jpg`,
+`/tmp/noms-020-delete-failure.jpg`,
+`/tmp/noms-020-delete-failure-phone.jpg`,
+`/tmp/noms-020-delete-session-expired.jpg`,
+`/tmp/noms-020-delete-success-dashboard.jpg`.
+Temporary viewport and request interception overrides were cleared; the
+separate mock sign-in tab was closed. The existing task/design worktrees were
+reused under the established workflow. Explicit second-pass self-review
+**PASS for this scope**; no independent agent, push or production deployment.
+A single documentation commit is appropriate because this slice adds only
+one acceptance record and its matching master-plan checkbox.
+
+**Next gates remain open:** separately approved expendable Settings identity/
+media for unlink, avatar removal and account deletion; post-commit lost-response,
+navigation-failure and identity-replacement recovery; pixel-level image export,
+actual screen-reader/real-device touch and final whole-app visual/behavior
+acceptance. The safe failure text and pre-server tests do not prove a committed
+write whose response is lost. This scoped Delete pass is not checkpoint-8
+sign-off or authorization to delete another fixture/account.
