@@ -45,7 +45,7 @@ pub struct UserProfile {
 }
 
 /// Authentication context consumed by Dioxus components via [`use_auth`].
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct AuthContext {
     pub current_user_id: Option<Uuid>,
     /// Full user profile when available (populated via async fetch in future).

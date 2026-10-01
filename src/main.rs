@@ -30,8 +30,6 @@ mod utils;
 mod worker;
 
 use auth::context::build_context_from_fullstack;
-#[cfg(target_arch = "wasm32")]
-use auth::context::AuthContext;
 use components::{AppLayout, ErrorFallback};
 use pages::{
     About, CollectionDetail, CollectionEdit, CollectionList, CollectionNew, CommunityHome,
@@ -486,27 +484,6 @@ fn App() -> Element {
     let initial_auth_context = use_server_cached(build_context_from_fullstack);
     let auth_context = use_signal(move || initial_auth_context);
     provide_context(auth_context);
-
-    // On client, fetch user profile after hydration to update AuthContext
-    #[cfg(target_arch = "wasm32")]
-    {
-        use_hook(move || {
-            let mut ctx = auth_context;
-            spawn(async move {
-                let res = gloo_net::http::Request::get("/api/user_profile")
-                    .send()
-                    .await;
-                if let Ok(response) = res {
-                    if response.ok() {
-                        let body = response.text().await.unwrap_or_default();
-                        if let Ok(user_ctx) = serde_json::from_str::<AuthContext>(&body) {
-                            ctx.set(user_ctx);
-                        }
-                    }
-                }
-            });
-        });
-    }
 
     rsx! {
         // Document head

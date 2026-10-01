@@ -2,6 +2,7 @@
 
 pub mod context;
 pub mod redirect;
+pub mod refresh;
 
 #[cfg(feature = "server")]
 pub mod linking;
