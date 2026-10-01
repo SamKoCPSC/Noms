@@ -210,6 +210,25 @@ Independent review passes after fixing compact-duration partial parsing/evidence
 
 Raw aggregate reports remain `/tmp/noms016-foodcom-verified.json` and `/tmp/noms016-foodcom-verified.md`. The semantic report documents the current external review and its reproduction. Raw provider captures remain outside the repository. Work remains on branch `codex/NOMS-016-recipe-import-export` in the canonical `/home/samko/GitRepos/Noms/.worktrees/NOMS-016-recipe-import-export`; no additional worktree was created because the user requested consolidation.
 
+## Food.com primary-recipe and description follow-up — 2026-10-01
+
+The user's Shredded Chicken Sandwiches check exposed a copied page containing two complete recipe mains. The adapter previously refused multiple mains, allowing generic region scoring to select the appended barbecue-sandwich recipe and omit its div-based description. Food.com navigation was observed temporarily retaining both roots, with only the original marked `main#recipe`.
+
+The adapter now selects that unique primary marker when additional roots are unmarked, disjoint `main.recipe` siblings. Fields are read only from the primary, and ignored siblings produce a review warning. Duplicate primary IDs, unknown/id-bearing roots, nested roots (including nesting between secondary roots), unclosed mains and malformed or hidden primary content still refuse the adapter. Its description extraction removes only recognized checkbox-backed `See More`/`Less` toggle labels, retaining similarly worded prose and unknown controls.
+
+Validation:
+
+- `node --test scripts/tests/test-recipe-import-foodcom.mjs`: 18 pass. Primary selection and description-control regressions failed before the fix; the independent-review nesting regression also failed before its repair. Existing tests remain intact.
+- `just recipe-import-provider-adapter-test recipe-import-bridge-test recipe-import-parser-active-content-test recipe-import-fixture-test recipe-import-parser-corpus-test recipe-import-parser-semantic-test`: pass, including 68 provider tests.
+- `just fmt check lint`: pass for WASM and server. Full CI/server tests were not rerun for this JavaScript-only follow-up; the previously documented database-test hang remains a limitation.
+- Full external-corpus evaluation: still 862/1,500 accepted, all 100 Food.com samples accepted, integrity verified, zero invalid candidates or unexpected errors. Deep comparison to `faa49a1` leaves 1,466 outputs identical; the other 34 change only Food.com descriptions to remove toggle labels. All other fields and all 1,400 non-Food.com outputs remain identical.
+- The existing 27 semantic-review records remain digest-current without relabeling: 98/108 correct core fields and all three Food.com samples usable without correction. Aggregate artifacts: `/tmp/noms016-foodcom-primary-corpus.{json,md}` and `/tmp/noms016-foodcom-primary-semantic.{json,md}`.
+- A fresh isolated instance built from the canonical NOMS-016 worktree at port 32783 previews the complete live Shredded Chicken Sandwiches page with its description, six ingredients and four steps. The browser test supplied DOM-derived HTML and visible text through the session clipboard; it does **not** establish native OS Ctrl+A/C fidelity. The native clipboard bridge was unavailable in this browser session. The preview retains source/author, total time and literal `10-12` servings without inferring a numeric serving count. No draft was created or published. Screenshot: `/tmp/noms016-foodcom-description-fix-ui.png`.
+
+A constructed two-root regression payload combines the live markup of the reported recipe and its appended barbecue-sandwich recipe, leaving only the first marked `#recipe`. The baseline selects the barbecue recipe with no description; the fixed parser and fresh UI select Shredded Chicken Sandwiches with its description and an appended-recipes warning. This is a live-markup-derived test payload, not a claim to have captured the user's original OS clipboard.
+
+Independent code review passes after the nested-secondary-root finding was fixed. The canonical branch/worktree is unchanged; unrelated generated CSS was not included in the fix.
+
 ## Conclusions
 
 1. The generic HTML parser recognizes useful candidates from several providers, but structural acceptance remains only an upper bound on compatibility.
