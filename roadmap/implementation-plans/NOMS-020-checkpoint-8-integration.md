@@ -3178,3 +3178,117 @@ their scoped state/parser guards have automated coverage. Indefinitely stalled
 requests, periodic/cross-tab session refresh, screen-reader/real-touch checks and
 whole-app accessibility remain outside this acceptance. Checkpoint 8 and
 dark-mode redesign are not closed by this slice.
+
+## Settings mutation UI recovery — 2026-10-01
+
+### Scope and implementation
+
+Implementation `38d8dc8` adds recovery for unlinking a sign-in method, removing
+an avatar and deleting an account. It reuses the existing checkpoint task
+worktree and is locally fast-forwarded into the design integration worktree;
+no push or new deployment. Server mutation/authentication contracts, global
+button styling and the user-owned `assets/tailwind.css` are unchanged.
+
+Task branch: `codex/NOMS-020-checkpoint-8`, worktree
+`/home/samko/GitRepos/Noms/.worktrees/NOMS-020-checkpoint-8`.
+Integration: `codex/NOMS-020-visual-design-refinement` at
+`/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement`.
+
+- Unlink confirmation now stays open while pending and after failure. A live
+  exclusive claim blocks duplicate requests, cancellation and provider changes
+  while pending. Both opening and submitting recheck the current loaded list;
+  the sole remaining method cannot be unlinked. Successful completion closes
+  the dialog and refreshes the list.
+- Scoped focusable controls retain their nodes while pending, announce busy
+  state and guard actual event dispatch. Avatar removal shares the existing
+  exclusive upload authority and keeps selected image edits on failure.
+- Account deletion retains its three-stage confirmation and phrase on failure.
+  Submission checks the live authenticated username rather than a captured
+  value; Back/final-action controls stay mounted and guarded while pending.
+- Unknown failures use safe uncertain-outcome wording, not raw errors or a
+  promise that the mutation rolled back. Guidance advises checking the account
+  in another tab before retrying. Known expired-session/last-account errors
+  receive specific recovery advice. Existing irreversible success/navigation
+  behavior is not redesigned in this slice.
+- OAuth linking-conflict feedback is provider-allowlisted, persistent until
+  dismissed and no longer recommends deleting another account. Dismissal
+  removes the query with History replacement, not a page reload, and focuses
+  the Linked accounts heading. The old timed dismissal/reload is removed.
+
+### Automated evidence and review
+
+Ten new tests cover safe feedback, retained/exclusive unlink state, current
+candidate/last-method guards, avatar-removal failure retaining image edits,
+pending/error SSR semantics and actual control/dialog click dispatch. Existing
+account-deletion state tests cover phrase, pending and retry authority. The
+tests-first missing-behavior failures are in
+`/tmp/noms-020-settings-mutations-red.log`; implementation/harness issues were
+fixed without skipping coverage. The dialog event harness resolves real named
+button IDs instead of assuming child-component mounting order.
+
+With `SQLX_OFFLINE=true` and
+`CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target`:
+
+```sh
+cargo test --features server pages::settings -- --test-threads=8
+just ci
+```
+
+Focused Settings suite: **32 passed, 0 failed**. Full CI: **exit 0;
+897 passed, 0 failed, 12 ignored**, including formatting, native/WASM checks,
+Clippy and repository policy gates. Eight existing allowed dependency audit
+warnings remain; ignored integration tests were not freshly executed. Logs:
+`/tmp/noms-020-settings-mutations-tests.log` and
+`/tmp/noms-020-settings-mutations-ci.log`.
+
+Explicit second-pass self-review **PASS for the implemented UI scope**:
+complete diff, state/event tests, live submission guards, safe uncertain-outcome
+copy, stable pending nodes, unchanged server contracts and preservation of
+unrelated work reviewed. No independent-agent review claimed. Ordered series:
+baseline `cb659a4`, implementation `38d8dc8`, then this evidence/plan update.
+
+### Non-destructive browser acceptance
+
+Reused the named local test deployment `noms-c799915fcf93e034` at
+`http://127.0.0.1:32768`, with only its app container restarted after local
+integration. Normal mock Google sign-in used the existing owner `user-e13c`;
+the unrelated deployment on port 32773 was untouched.
+
+- Sole Google method: the new control has `aria-disabled=true`, no native
+  disabled attribute and remains focusable. Forced pointer, Enter and Space
+  attempts opened no dialog and sent **zero API requests**.
+- A synthetic `account_already_linked&provider=github` query exercised the
+  conflict presentation, not an actual linking attempt. Safe feedback remained
+  beyond the former ten-second timeout. At 320px viewport width,
+  document client/scroll widths were both 305px. Manual dismissal removed the
+  query and alert and focused `linked-accounts-title` without reloading.
+- Account-deletion initial focus was Cancel; Enter cancelled and restored the
+  Delete Account trigger. An incorrect phrase disabled Continue. The correct
+  synthetic-owner phrase advanced to the final screen, initially focused on
+  Go Back; Back retained the exact phrase and focused its input. At 320px,
+  document client/scroll widths were both 320px and final controls were 44px
+  high. Escape closed the final dialog and restored trigger focus. These
+  confirmation/cancellation checks sent **zero API requests**.
+- No final Delete My Account, permitted unlink, avatar-removal or new-provider
+  action was submitted. Non-document API request interception was used as a
+  defensive cancellation check, not as authority to click destructive actions.
+
+Screenshots (temporary, not committed):
+`/tmp/noms-020-settings-account-recovery-mobile.jpg`,
+`/tmp/noms-020-settings-account-confirmation.jpg`,
+`/tmp/noms-020-settings-account-confirmation-mobile.jpg`.
+Viewport/cache/interception overrides were cleared, the mock owner normally
+signed out and the agent-created tab closed. Read-only post-check: **1 user,
+3 recipes, 35 versions, 1 draft, 0 collections, 1 OAuth account**; owner name
+remains empty, bio/avatar remain NULL, and the original fork draft remains
+revision 0 linked to version 4 of its source. User-owned CSS hash is still
+`63fb925365998338ce8dec1e725c097e5648f820c9674767880e910db80d7e46`.
+
+**Next:** historical-snapshot custom-comparison failure states, then broader
+per-page acceptance. Unlink/removal/deletion pending/failure/retry/success have
+automated evidence only, not full browser acceptance: this owner has one
+provider and no avatar. Destructive end-to-end checks need a separately approved
+expendable fixture and action-time confirmation where required. Post-success
+focus, post-commit lost responses, account-deletion navigation failure,
+identity replacement during mutations, real-touch and full screen-reader
+acceptance remain open. This does not close checkpoint 8 or dark-mode redesign.
