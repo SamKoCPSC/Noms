@@ -2011,7 +2011,8 @@ function parseFood52VisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   if (isHidden(mains[0], 0) || isHidden(article, mains[0].openingEnd)) return null;
   const headers = elementsMatchingAttributes(inertHtml, attributes => attributes.get("id") === "contentHeader");
   if (headers.length !== 1 || headers[0].tag !== "header" || headers[0].index < articleOffset ||
-    headers[0].end > articleOffset + articleHtml.length || isHidden(headers[0], 0)) return null;
+    headers[0].end > articleOffset + articleHtml.length || isHidden(headers[0], 0) ||
+    hasAncestorTag(inertHtml, headers[0].index, "nav")) return null;
   const header = headers[0];
   const titles = elementsMatchingAttributes(articleHtml, (_, tag) => tag === "h1");
   if (titles.length !== 1 || !htmlText(titles[0].innerHtml) || isHidden(titles[0], articleOffset, true) ||
@@ -2039,7 +2040,8 @@ function parseFood52VisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   for (const heading of [ingredientHeadings[0], directionHeadings[0]]) {
     const parentStart = tagStackContext(articleHtml, heading.index).at(-1)?.start;
     const container = allArticleElements.find(element => element.index === parentStart);
-    if (!container || isHidden(container) || isHidden(heading, articleOffset, true)) return null;
+    if (!container || isHidden(container) || isHidden(heading, articleOffset, true) ||
+      hasAncestorTag(articleHtml, container.index, "nav")) return null;
     const children = directElements(container.innerHtml);
     if (hasLooseText(container.innerHtml, children) || children.length !== 2 || children[0].tag !== "h2" ||
       children[1].tag !== "div" || !hasClass(children[1].attributes, "space-y-8")) return null;
@@ -2069,6 +2071,13 @@ function parseFood52VisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   }
   if (!(header.end <= articleOffset + sections[0].container.index &&
     sections[0].container.end <= sections[1].container.index)) return null;
+  // Recognizing the usual containers must not hide an additional recipe group
+  // elsewhere in a changed article layout. All marked recipe lists and step
+  // labels must belong to the completely accounted-for core sections.
+  if (allArticleElements.some(element =>
+    ((element.tag === "ul" && hasClass(element.attributes, "space-y-4")) ||
+      (element.tag === "span" && /^Step \d+$/u.test(htmlText(element.innerHtml)))) &&
+    !sections.some(({ container }) => container.index <= element.index && element.end <= container.end))) return null;
 
   const result = candidate({ id: "food52-visible", version: "1", tier: "source_adapter", sourceAdapter: "food52" }, sourceUrl);
   result.source.provider = "Food52";
@@ -2147,18 +2156,22 @@ function parseFood52VisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
       result.fields.yield = { ...scalar(raw, "text/html", locator), value: { display: raw, servings: Number.isSafeInteger(numeric) && numeric > 0 ? numeric : null } };
     } else {
       const duration = labeledDuration(raw);
-      if (duration) result.fields[duration.field] = { ...scalar(raw, "text/html", locator), value: duration.value };
+      if (duration) {
+        if (result.fields[duration.field]) return null;
+        result.fields[duration.field] = { ...scalar(raw, "text/html", locator), value: duration.value };
+      }
       else result.unclassifiedLines.push({ raw, provenance: provenance("text/html", locator) });
     }
   }
   // Food52's hero is an IMG with a sibling photo-credit paragraph, not a FIGURE.
   // Keep only the pre-ingredient hero reference; never fetch image bytes.
   const images = elementsMatchingAttributes(headerHtml, (_, tag) => tag === "img");
-  if (images.length === 1) {
+  if (images.length === 1 && !isHidden(images[0], headerHtmlOffset)) {
     const url = normalizeWhitespace(images[0].attributes.get("src") ?? "");
     try {
       if (["http:", "https:"].includes(new URL(url).protocol)) {
         const credits = elementsMatchingAttributes(headerHtml, (_, tag) => tag === "p")
+          .filter(e => !isHidden(e, headerHtmlOffset, true))
           .map(e => htmlText(e.innerHtml)).filter(text => /^Photo by\s+/u.test(text));
         result.fields.images.push({ sourceUrl: url, alt: normalizeWhitespace(images[0].attributes.get("alt") ?? "") || null,
           credit: credits.length === 1 ? credits[0].replace(/^Photo by\s+/u, "") : null,

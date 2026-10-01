@@ -157,3 +157,31 @@ test("Food52 active/raw markup is opaque and unsafe hero URLs are not retained",
   assert.deepEqual(c.fields.images, []);
   assert.ok(c.warnings.some(w => w.code === "ACTIVE_CONTENT_DISCARDED"));
 });
+
+test("Food52 refuses unconsumed recipe-shaped lists and procedure markers elsewhere in the article", () => {
+  for (const extra of [
+    group("Serving", step(1, "Chill overnight before serving.")),
+    `<ul class="space-y-4">${ingredient("2 cup", "moon flour")}</ul>`,
+    `<div>${step(1, "Rest another hour.")}</div>`,
+  ]) refusesAdapter(recipe.replace('</article>', `${extra}</article>`));
+});
+
+test("Food52 core sections and header cannot be inside navigation", () => {
+  for (const html of [
+    recipe.replace('<header id="contentHeader">', '<nav><header id="contentHeader">').replace('</header>', '</header></nav>'),
+    recipe.replace(section("Directions", group("Noodles", step(1, "Mix gently.") + step(2, "Cook and cool.")) + group("Finish", step(1, "Top with seeds and serve."))), `<nav>${section("Directions", group("Noodles", step(1, "Mix gently.") + step(2, "Cook and cool.")) + group("Finish", step(1, "Top with seeds and serve.")))}</nav>`),
+  ]) refusesAdapter(html);
+});
+
+test("Food52 duration aliases must not silently overwrite the same mapped field", () => {
+  refusesAdapter(recipe.replace(details, `${details}<dl><dt>Preparation Time</dt><dd>2 Hours</dd></dl>`));
+});
+
+test("Food52 hidden optional hero and credit are not imported", () => {
+  const noImage = parse(recipe.replace('<img src=', '<img hidden src='));
+  assert.equal(noImage.parser.sourceAdapter, "food52");
+  assert.deepEqual(noImage.fields.images, []);
+  const noCredit = parse(recipe.replace('<p>Photo by Orin Sky</p>', '<p hidden>Photo by Orin Sky</p>'));
+  assert.equal(noCredit.parser.sourceAdapter, "food52");
+  assert.equal(noCredit.fields.images[0].credit, null);
+});
