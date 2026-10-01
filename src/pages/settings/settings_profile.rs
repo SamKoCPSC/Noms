@@ -951,6 +951,7 @@ pub fn SettingsProfile() -> Element {
     let mut is_saving = use_signal(|| false);
     let mut error = use_signal(|| Option::<String>::None);
     let mut saved_message = use_signal(|| Option::<String>::None);
+    let mut avatar_removal_focus_pending = use_signal(|| false);
 
     // Delete account state
     let mut deletion = use_signal(AccountDeletionState::default);
@@ -1461,6 +1462,7 @@ pub fn SettingsProfile() -> Element {
                 Ok(profile) => {
                     avatar_url.set(profile.avatar_url.clone());
                     auth_context.write().current_user = Some(profile);
+                    avatar_removal_focus_pending.set(true);
                     saved_message.set(Some("Avatar removed successfully!".to_string()));
                     avatar_upload_state.write().finish(true);
                 }
@@ -1574,7 +1576,19 @@ pub fn SettingsProfile() -> Element {
                             div { class: "user-feedback user-feedback--error", role: "alert", "{err}" }
                         }
                         if let Some(msg) = saved_message() {
-                            div { class: "user-feedback user-feedback--success", role: "status", "{msg}" }
+                            div {
+                                id: "profile-save-success", tabindex: "-1",
+                                class: "user-feedback user-feedback--success", role: "status",
+                                onmounted: move |event| async move {
+                                    // Removal unmounts its focused button. Ordinary saves
+                                    // retain their control; only this removal claims result focus.
+                                    if avatar_removal_focus_pending() {
+                                        avatar_removal_focus_pending.set(false);
+                                        let _ = event.data().set_focus(true).await;
+                                    }
+                                },
+                                "{msg}"
+                            }
                         }
                         div { class: "user-settings__actions",
                             ProfileSaveControl { pending: is_saving(), valid: is_valid, on_save }

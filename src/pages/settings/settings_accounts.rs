@@ -595,7 +595,13 @@ pub fn SettingsAccounts() -> Element {
             // Success message
             if let Some(msg) = unlink_state.read().success.clone() {
                 div {
+                    id: "unlink-account-success", tabindex: "-1",
                     role: "status",
+                    // The unlinked provider's trigger disappears during refresh.
+                    // Focus this mounted result after modal cleanup, not that stale trigger.
+                    onmounted: move |event| async move {
+                        let _ = event.data().set_focus(true).await;
+                    },
                     padding: "var(--space-sm) var(--space-md)",
                     background_color: "var(--success-bg)",
                     border_radius: "var(--radius-md)",

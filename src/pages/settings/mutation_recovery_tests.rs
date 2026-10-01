@@ -1,6 +1,51 @@
 use super::*;
 
 #[test]
+fn successful_removals_focus_a_mounted_result_instead_of_a_disappearing_trigger() {
+    let accounts = include_str!("settings_accounts.rs");
+    let success = accounts
+        .split("// Success message")
+        .nth(1)
+        .unwrap()
+        .split("{content}")
+        .next()
+        .unwrap();
+    assert!(success.contains("id: \"unlink-account-success\""));
+    assert!(success.contains("tabindex: \"-1\""));
+    assert!(success.contains("onmounted:"));
+    assert!(success.contains("set_focus(true)"));
+
+    let profile = include_str!("settings_profile.rs");
+    let handler = profile
+        .split("let on_remove_avatar =")
+        .nth(1)
+        .unwrap()
+        .split("document::Stylesheet")
+        .next()
+        .unwrap();
+    let successful_removal = handler
+        .split("Ok(profile) =>")
+        .nth(1)
+        .unwrap()
+        .split("Err(e) =>")
+        .next()
+        .unwrap();
+    assert!(successful_removal.contains("avatar_removal_focus_pending.set(true)"));
+    let feedback = profile
+        .split("if let Some(msg) = saved_message()")
+        .nth(1)
+        .unwrap()
+        .split("user-settings__actions")
+        .next()
+        .unwrap();
+    assert!(feedback.contains("id: \"profile-save-success\""));
+    assert!(feedback.contains("tabindex: \"-1\""));
+    assert!(feedback.contains("if avatar_removal_focus_pending()"));
+    assert!(feedback.contains("avatar_removal_focus_pending.set(false)"));
+    assert!(feedback.contains("set_focus(true)"));
+}
+
+#[test]
 fn mutation_feedback_never_exposes_unknown_errors_or_promises_rollback() {
     for action in [
         SettingsMutation::Unlink,
