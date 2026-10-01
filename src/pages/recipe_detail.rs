@@ -19,9 +19,11 @@ use crate::api::recipe::{
 };
 use crate::auth::context::use_auth;
 use crate::components::base::{
-    ActionMenu, AddToCollectionDropdown, Button, ButtonVariant, Card, EditedRecipeImage,
-    LoadRecovery, LoadingSpinner, PageHeader, SharedModal,
+    ActionMenu, AddToCollectionDropdown, Card, EditedRecipeImage, LoadRecovery, LoadingSpinner,
+    PageHeader, SharedModal,
 };
+#[cfg(target_arch = "wasm32")]
+use crate::components::base::{Button, ButtonVariant};
 use crate::types::{
     ForkAttribution, Recipe, RecipeEquipment, RecipeIngredient, RecipeLineageBranch,
     RecipeLineageNode, RecipeLineageView, RecipeStep, RecipeVersionChange, RecipeVersionComparison,
@@ -43,6 +45,10 @@ mod mutation_recovery_tests;
 #[cfg(test)]
 #[path = "recipe_read_recovery_tests.rs"]
 mod read_recovery_tests;
+
+#[cfg(test)]
+#[path = "historical_comparison_recovery_tests.rs"]
+mod historical_comparison_recovery_tests;
 
 #[derive(Clone, Copy, PartialEq)]
 enum RecipeReadKind {
@@ -319,7 +325,11 @@ mod historical_version_error_tests {
 
     #[component]
     fn ErrorTestPage() -> Element {
-        render_historical_version_unavailable("fixture-recipe".to_string())
+        render_historical_version_unavailable(
+            "fixture-recipe".to_string(),
+            false,
+            EventHandler::new(|_| {}),
+        )
     }
 
     #[test]
@@ -336,6 +346,8 @@ mod historical_version_error_tests {
         assert!(html.contains("may not exist or you may not have access"));
         assert!(html.contains("/recipes/fixture-recipe"));
         assert!(html.contains("Back to current recipe"));
+        assert!(html.contains("Retry historical version"));
+        assert!(html.contains("role=\"alert\""));
         assert!(!html.contains("server function"));
         assert!(!html.contains("details:"));
         assert!(!html.contains("Not authenticated"));
@@ -792,7 +804,7 @@ mod layout_tests {
             .find("version_resource.read()")
             .expect("version result read");
         let loading_return = historical_page
-            .find("if version_resource.pending()")
+            .find("if version_pending &&")
             .expect("loading return");
 
         assert!(result_read < loading_return);
@@ -888,7 +900,9 @@ mod layout_tests {
             .expect("historical recipe page");
 
         assert_eq!(
-            historical_page.matches("disabled: is_comparing()").count(),
+            historical_page
+                .matches("disabled: historical_comparison.read().pending,")
+                .count(),
             2
         );
     }
@@ -2956,7 +2970,11 @@ fn RecipeDetailContents(id: String) -> Element {
     }
 }
 
-fn render_historical_version_unavailable(id: String) -> Element {
+fn render_historical_version_unavailable(
+    id: String,
+    pending: bool,
+    onretry: EventHandler<()>,
+) -> Element {
     // Use one public state for every load failure. Neither the transport wrapper
     // nor details about a private recipe belong in this page's error UI.
     rsx! {
@@ -2969,6 +2987,10 @@ fn render_historical_version_unavailable(id: String) -> Element {
                     gap: "var(--space-md)",
                     h1 { "Recipe version unavailable" }
                     p { role: "status", "This version may not exist or you may not have access to it. You can try loading it again or return to the current recipe." }
+                    LoadRecovery {
+                        pending, message: "The historical snapshot couldn’t be loaded. Please try again.",
+                        retry_label: "Retry historical version", onretry,
+                    }
                     Link {
                         to: crate::Route::RecipeDetail { id },
                         class: "btn btn-secondary touch-target",
@@ -2980,26 +3002,112 @@ fn render_historical_version_unavailable(id: String) -> Element {
     }
 }
 
+/// A comparison belongs to one keyed snapshot visit. Selection and request
+/// authority are claimed synchronously; failures retain the chosen pair.
+struct HistoricalComparisonState {
+    from: i32,
+    to: i32,
+    pending: bool,
+    failed: bool,
+    comparison: Option<RecipeVersionComparison>,
+}
+
+impl HistoricalComparisonState {
+    fn new(version: i32) -> Self {
+        Self {
+            from: 1,
+            to: version,
+            pending: false,
+            failed: false,
+            comparison: None,
+        }
+    }
+
+    fn valid_pair(from: i32, to: i32, max: i32) -> bool {
+        (1..=max).contains(&from) && (1..=max).contains(&to)
+    }
+
+    fn select(&mut self, from: i32, to: i32, max: i32) -> bool {
+        if self.pending || !Self::valid_pair(from, to, max) {
+            return false;
+        }
+        self.from = from;
+        self.to = to;
+        self.failed = false;
+        self.comparison = None;
+        true
+    }
+
+    fn begin(&mut self, max: i32) -> Option<(i32, i32)> {
+        if self.pending || !Self::valid_pair(self.from, self.to, max) {
+            return None;
+        }
+        self.pending = true;
+        self.failed = false;
+        self.comparison = None;
+        Some((self.from, self.to))
+    }
+
+    fn finish(&mut self, result: Result<RecipeVersionComparison, ()>) {
+        if !self.pending {
+            return;
+        }
+        self.pending = false;
+        match result {
+            Ok(comparison)
+                if (comparison.from_version_number, comparison.to_version_number)
+                    == (self.from, self.to) =>
+            {
+                self.comparison = Some(comparison);
+            }
+            _ => self.failed = true,
+        }
+    }
+}
+
+#[component]
+fn HistoricalComparisonFeedback(pending: bool, failed: bool) -> Element {
+    rsx! {
+        if pending {
+            p { role: "status", "Comparing selected versions…" }
+        } else if failed {
+            p { role: "alert", color: "var(--error)",
+                "Comparison couldn’t be loaded. Your Before and After selections are kept; try Retry comparison."
+            }
+        }
+    }
+}
+
 /// Full-page, read-only rendering of one immutable published recipe snapshot.
 #[component]
 pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
+    // Version changes are route changes too. Scope-owned tasks are cancelled
+    // on replacement, including returning to a previously visited snapshot.
+    rsx! {
+        for snapshot in [(id, version_number)] {
+            RecipeVersionDetailContents { key: "{snapshot.0}/{snapshot.1}", id: snapshot.0, version_number: snapshot.1 }
+        }
+    }
+}
+
+#[component]
+fn RecipeVersionDetailContents(id: String, version_number: i32) -> Element {
     let recipe_id = id.clone();
-    let version_resource = use_resource(move || {
+    let mut version_resource = use_resource(move || {
         let recipe_id = recipe_id.clone();
         async move { get_recipe_version_api(recipe_id, version_number).await }
     });
-    let mut comparison_from = use_signal(|| 1i32);
-    let mut comparison_to = use_signal(|| version_number);
-    let mut custom_comparison = use_signal(|| Option::<RecipeVersionComparison>::None);
-    let mut comparison_error = use_signal(|| Option::<String>::None);
-    let mut is_comparing = use_signal(|| false);
+    let mut historical_comparison =
+        use_signal(move || HistoricalComparisonState::new(version_number));
+    let mut retry_requested = use_signal(|| false);
     // Subscribe to the completed value before an early loading return. Reading
     // only `pending()` here can leave this route rendered in its initial state
     // even after the server function has completed.
     let version_result: Option<Result<RecipeVersionView, ServerFnError>> =
         version_resource.read().clone();
+    let version_pending = *version_resource.state().read() == UseResourceState::Pending;
 
-    if version_resource.pending() {
+    if version_pending && !matches!(version_result, Some(Err(_))) {
         return rsx! {
             div { class: "container",
                 div {
@@ -3009,34 +3117,43 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
                     justify_content: "center",
                     min_height: "300px",
                     LoadingSpinner {}
-                    p { margin_top: "var(--space-md)", "Loading historical version..." }
+                    p { role: "status", margin_top: "var(--space-md)", "Loading historical version…" }
                 }
             }
         };
     }
 
     let Some(Ok(detail)) = version_result else {
-        return render_historical_version_unavailable(id);
+        return render_historical_version_unavailable(
+            id,
+            version_pending,
+            EventHandler::new(move |_| {
+                if !version_resource.pending() {
+                    retry_requested.set(true);
+                    version_resource.restart();
+                }
+            }),
+        );
     };
     let editor = &detail.editor;
     let version_numbers = (1..=detail.current_version_number)
         .rev()
         .collect::<Vec<_>>();
     let recipe_id_for_comparison = id.clone();
+    let current_version = detail.current_version_number;
     let compare_selected_versions = move |_| {
+        let Some((from_version_number, to_version_number)) =
+            historical_comparison.write().begin(current_version)
+        else {
+            return;
+        };
         let recipe_id = recipe_id_for_comparison.clone();
-        let from_version_number = comparison_from();
-        let to_version_number = comparison_to();
-        is_comparing.set(true);
-        comparison_error.set(None);
         spawn(async move {
-            match compare_recipe_versions_api(recipe_id, from_version_number, to_version_number)
-                .await
-            {
-                Ok(comparison) => custom_comparison.set(Some(comparison)),
-                Err(error) => comparison_error.set(Some(error.to_string())),
-            }
-            is_comparing.set(false);
+            let result =
+                compare_recipe_versions_api(recipe_id, from_version_number, to_version_number)
+                    .await
+                    .map_err(|_| ());
+            historical_comparison.write().finish(result);
         });
     };
 
@@ -3058,6 +3175,13 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
 
                 div {
                     class: "recipe-album__snapshot neumo-inset",
+                    id: "historical-snapshot", tabindex: "-1",
+                    onmounted: move |event| async move {
+                        if *retry_requested.peek() {
+                            retry_requested.set(false);
+                            let _ = event.data.set_focus(true).await;
+                        }
+                    },
                     padding: "var(--space-md)",
                     margin_bottom: "var(--space-md)",
                     strong { "Historical version v{detail.version_number}" }
@@ -3200,24 +3324,24 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
                         }
                         div {
                             display: "grid",
-                            grid_template_columns: "repeat(auto-fit, minmax(180px, 1fr))",
+                            grid_template_columns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))",
                             gap: "var(--space-md)",
                             align_items: "end",
                             label {
                                 "Before version"
                                 select {
                                     class: "neumo-inset input",
-                                    disabled: is_comparing(),
+                                    disabled: historical_comparison.read().pending,
                                     onchange: move |event| {
                                         if let Ok(version) = event.value().parse::<i32>() {
-                                            comparison_from.set(version);
-                                            custom_comparison.set(None);
+                                            let to = historical_comparison.peek().to;
+                                            historical_comparison.write().select(version, to, current_version);
                                         }
                                     },
                                     for candidate_version in &version_numbers {
                                         option {
                                             value: "{candidate_version}",
-                                            selected: comparison_from() == *candidate_version,
+                                            selected: historical_comparison.read().from == *candidate_version,
                                             "v{candidate_version}"
                                         }
                                     }
@@ -3227,35 +3351,39 @@ pub fn RecipeVersionDetail(id: String, version_number: i32) -> Element {
                                 "After version"
                                 select {
                                     class: "neumo-inset input",
-                                    disabled: is_comparing(),
+                                    disabled: historical_comparison.read().pending,
                                     onchange: move |event| {
                                         if let Ok(version) = event.value().parse::<i32>() {
-                                            comparison_to.set(version);
-                                            custom_comparison.set(None);
+                                            let from = historical_comparison.peek().from;
+                                            historical_comparison.write().select(from, version, current_version);
                                         }
                                     },
                                     for candidate_version in &version_numbers {
                                         option {
                                             value: "{candidate_version}",
-                                            selected: comparison_to() == *candidate_version,
+                                            selected: historical_comparison.read().to == *candidate_version,
                                             "v{candidate_version}"
                                         }
                                     }
                                 }
                             }
-                            Button {
-                                variant: ButtonVariant::Primary,
-                                disabled: version_numbers.is_empty() || is_comparing(),
+                            button {
+                                r#type: "button", class: "btn btn-primary touch-target",
+                                aria_disabled: version_numbers.is_empty() || historical_comparison.read().pending,
+                                aria_busy: historical_comparison.read().pending,
                                 onclick: compare_selected_versions,
-                                if is_comparing() { "Comparing..." } else { "Generate comparison" }
+                                if historical_comparison.read().pending { "Comparing…" }
+                                else if historical_comparison.read().failed { "Retry comparison" }
+                                else { "Generate comparison" }
                             }
                         }
-                        if let Some(error) = comparison_error() {
-                            p { color: "var(--error)", margin_top: "var(--space-md)", "{error}" }
+                        HistoricalComparisonFeedback {
+                            pending: historical_comparison.read().pending,
+                            failed: historical_comparison.read().failed,
                         }
                     }
 
-                    if let Some(comparison) = custom_comparison() {
+                    if let Some(comparison) = historical_comparison.read().comparison.clone() {
                         VersionComparisonPanel {
                             title: format!(
                                 "Custom comparison: v{} → v{}",

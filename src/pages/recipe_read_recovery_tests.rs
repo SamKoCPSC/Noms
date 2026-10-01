@@ -92,13 +92,13 @@ fn recipe_reads_subscribe_to_independent_pending_states_and_guard_retries() {
 }
 
 #[derive(Clone, Default)]
-struct RecipeScopeControl {
-    id: std::rc::Rc<std::cell::RefCell<Option<Signal<String>>>>,
-    state: std::rc::Rc<std::cell::RefCell<Option<Signal<String>>>>,
+pub(super) struct RecipeScopeControl {
+    pub(super) id: std::rc::Rc<std::cell::RefCell<Option<Signal<String>>>>,
+    pub(super) state: std::rc::Rc<std::cell::RefCell<Option<Signal<String>>>>,
 }
 
 #[component]
-fn RecipeStateProbe(id: String) -> Element {
+pub(super) fn RecipeStateProbe(id: String) -> Element {
     let state = use_signal(move || id);
     *use_context::<RecipeScopeControl>().state.borrow_mut() = Some(state);
     rsx! { p { "{state}" } }
