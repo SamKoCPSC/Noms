@@ -89,3 +89,32 @@ test('Food.com refuses unclosed hidden ancestors and competing main roots with c
  refuses(recipe+'<main id="recipe" class="changed"><h1>Other recipe</h1></main>');
  refuses(recipe+'<main id="recipe"><h1>Other recipe</h1>');
 });
+
+test('Food.com selects the uniquely marked primary recipe instead of an appended recipe',()=>{
+ const secondary=recipe.replace('id="recipe"','').replaceAll('Star Meadow Loaves','Moon Orchard Stew').replaceAll('A warm loaf with <em>crunch</em>.','A different recipe description.');
+ const expected=parse();
+ for(const html of [recipe+secondary,secondary+recipe,recipe+secondary+secondary]) {
+  const c=parse(html);assert.equal(c.parser.sourceAdapter,'foodcom');
+  assert.deepEqual(c.fields,expected.fields);assert.deepEqual(c.source,expected.source);
+  assert.ok(c.warnings.some(w=>w.code==='APPENDED_PROVIDER_RECIPES_IGNORED'));
+  assert.equal(c.status,'needs_review');assert.deepEqual(validateJsonSchema(c,schema),[]);assert.deepEqual(validateImportCandidate(c),[]);
+ }
+});
+test('Food.com primary selection refuses duplicate IDs, nested roots and malformed competing mains',()=>{
+ const secondary=recipe.replace('id="recipe"','');
+ for(const html of [recipe+recipe,secondary+secondary,recipe+secondary.replace('<main ','<main id="other" '),recipe.replace('</main>',secondary+'</main>'),recipe+'<main class="recipe">Unclosed appended recipe',recipe.replace('class="ingredient-text"','class="changed-text"')+secondary,`<div hidden>${recipe}</div>${secondary}`])refuses(html);
+});
+test('Food.com description excludes only its recognized expand/collapse controls',()=>{
+ const description='A warm loaf with <em>crunch</em>.';
+ for(const label of ['See More','Less']) {
+  const c=parse(recipe.replace(description,description+`<label class="toggle">${label} <input type="checkbox"></label>`));
+  assert.equal(c.fields.description.value,'A warm loaf with crunch.');
+ }
+ const c=parse(recipe.replace(description,'See More flavor.'+'<label class="toggle">Recipe information <input type="checkbox"></label>'));
+ assert.equal(c.fields.description.value,'See More flavor. Recipe information');
+ assert.equal(parse(recipe.replace(description,'<label class="toggle">See More <input type="checkbox"></label>')).fields.description,null);
+});
+test('Food.com refuses nesting among appended recipe mains as well as primary overlap',()=>{
+ const secondary=recipe.replace('id="recipe"','');
+ refuses(recipe+secondary.replace('</main>',secondary+'</main>'));
+});

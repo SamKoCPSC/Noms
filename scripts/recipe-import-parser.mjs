@@ -2196,8 +2196,15 @@ function parseFoodComVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
     if (!["http:", "https:"].includes(url.protocol) || !["food.com", "www.food.com"].includes(url.hostname)) return null;
   } catch { return null; }
   const mains = elementsMatchingAttributes(inertHtml, (_, tag) => tag === "main");
-  if (mains.length !== 1 || mains[0].attributes.get("id") !== "recipe" || !hasClass(mains[0].attributes, "recipe")) return null;
-  const main = mains[0];
+  const primaryMains = mains.filter(element => element.attributes.get("id") === "recipe");
+  // Food.com can append another recipe while the URL still names the first.
+  // Its unique #recipe marker identifies the primary; never choose by length
+  // or borrow fields from unmarked sibling recipes. Unknown roots stay ambiguous.
+  if (primaryMains.length !== 1 || mains.some(element => !hasClass(element.attributes, "recipe") ||
+    (element !== primaryMains[0] && element.attributes.has("id")))) return null;
+  const main = primaryMains[0];
+  if (mains.some((element, index) => mains.slice(index + 1).some(other =>
+    element.index < other.end && other.index < element.end))) return null;
   const hiddenRanges = elementsMatchingAttributes(inertHtml, attributes => listIsHidden({ attributes }) || hasClass(attributes, "hidden"));
   // A malformed hidden wrapper still hides its descendants in the browser.
   // The complete-element scanner skips it, so retain its conservative range.
@@ -2210,7 +2217,7 @@ function parseFoodComVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
       hiddenRanges.push({ index: match.index, end: inertHtml.length, innerHtml: inertHtml.slice(openingEnd) });
     }
   }
-  if (mainOpeningCount !== 1) return null;
+  if (mainOpeningCount !== mains.length) return null;
   const isHidden = (element, offset = main.openingEnd, includeText = false) => hiddenRanges.some(range =>
     (range.index <= offset + element.index && offset + element.index < range.end) ||
     (includeText && offset + element.index <= range.index && range.index < offset + element.end && htmlText(range.innerHtml)));
@@ -2311,7 +2318,18 @@ function parseFoodComVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
       if (!byline) return null;
       result.source.author = byline[1]; result.source.provenance.author = provenance("text/html", "main#recipe .byline");
     }
-    if (descriptions.length && text(descriptions[0].innerHtml)) result.fields.description = scalar(text(descriptions[0].innerHtml), "text/html", "main#recipe .recipe-description");
+    if (descriptions.length) {
+      let descriptionHtml = descriptions[0].innerHtml;
+      // Keep the visible recipe copy, not the provider's checkbox label for
+      // expanding it. Do not strip similarly worded prose or unknown controls.
+      for (const control of elementsWithClass(descriptionHtml, "toggle").reverse()) {
+        if (control.tag === "label" && /^(?:See More|Less)$/u.test(text(control.innerHtml)) &&
+          elementsMatchingAttributes(control.innerHtml, (attributes, tag) => tag === "input" && attributes.get("type") === "checkbox").length === 1) {
+          descriptionHtml = descriptionHtml.slice(0, control.index) + descriptionHtml.slice(control.end);
+        }
+      }
+      if (text(descriptionHtml)) result.fields.description = scalar(text(descriptionHtml), "text/html", "main#recipe .recipe-description");
+    }
   }
   const details = containers("details");
   if (details.length > 1) return null;
@@ -2356,6 +2374,7 @@ function parseFoodComVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
       if (!result.fields.images.some(image => image.sourceUrl === url)) result.fields.images.push({ sourceUrl: url, alt: normalizeWhitespace(img.attributes.get("alt") ?? "") || null, credit, provenance: provenance("text/html", "main#recipe .primary-image > img") });
     }
   }
+  if (mains.length > 1) result.warnings.push({ code: "APPENDED_PROVIDER_RECIPES_IGNORED", severity: "warning", path: "fields.title", message: "Copied content contains appended recipes. The uniquely marked primary recipe was selected; verify it matches the source URL before saving." });
   if (uncertainMeasurements) result.warnings.push({ code: "UNRECOGNIZED_PROVIDER_MEASUREMENT", severity: "warning", path: "fields.ingredientSections", message: "An unfamiliar marked quantity is retained literally with low confidence; review before saving." });
   if (result.fields.ingredientSections.some(s => s.name) || result.fields.instructionSections.some(s => s.name)) result.warnings.push({ code: "SECTION_NAMES_NOT_PERSISTED", severity: "warning", path: "fields.ingredientSections", message: "Explicit group names remain in preview and optional commentary; the current editor stores flat content." });
   if (result.unclassifiedLines.length) result.warnings.push({ code: "UNCLASSIFIED_PROVIDER_METADATA", severity: "warning", path: "unclassifiedLines", message: "Unrecognized metadata is retained for review rather than guessed." });
