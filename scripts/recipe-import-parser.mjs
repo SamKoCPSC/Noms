@@ -996,7 +996,7 @@ function supplementarySections(html, headings, roots, root) {
   return { equipment, notes };
 }
 
-function imageReferences(html, roots, root) {
+function imageReferences(html, roots, root, fallbackSourceAttribute = null) {
   const start = root?.contentStart ?? 0;
   const end = root?.contentEnd ?? html.length;
   const images = [];
@@ -1007,7 +1007,10 @@ function imageReferences(html, roots, root) {
     const imageMatch = match[1].match(/<img\b([^>]*)>/iu);
     if (!imageMatch) continue;
     const attributes = htmlAttributes(imageMatch[1]);
-    const sourceUrl = normalizeWhitespace(attributes.get("src") ?? "");
+    // Lazy-source attributes are opt-in for a verified provider shape. They are
+    // references only; no image is ever fetched by this extractor.
+    const sourceUrl = normalizeWhitespace(attributes.get("src") ??
+      (fallbackSourceAttribute ? attributes.get(fallbackSourceAttribute) : null) ?? "");
     try {
       const parsed = new URL(sourceUrl);
       if (parsed.protocol !== "http:" && parsed.protocol !== "https:") continue;
@@ -1119,11 +1122,16 @@ function matchingElementEnd(html, tag, openingEnd) {
 }
 
 function elementsWithClass(html, className) {
+  return elementsMatchingAttributes(html, (attributes) => hasClass(attributes, className));
+}
+
+// Class and provider data-field extraction share the same non-executing scanner.
+function elementsMatchingAttributes(html, matchesAttributes) {
   const elements = [];
   const pattern = /<([a-z][a-z0-9:-]*)\b((?:"[^"]*"|'[^']*'|[^>"'])*)>/giu;
   for (const match of html.matchAll(pattern)) {
     const attributes = htmlAttributes(match[2]);
-    if (!hasClass(attributes, className)) continue;
+    if (!matchesAttributes(attributes, match[1].toLowerCase())) continue;
     const openingEnd = (match.index ?? 0) + match[0].length;
     const range = VOID_TAGS.has(match[1].toLowerCase())
       ? { contentEnd: openingEnd, end: openingEnd }
@@ -1779,10 +1787,184 @@ function parseBudgetBytesWprm(inertHtml, sourceUrl, htmlAudit) {
   return result;
 }
 
+function parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
+  try {
+    const url = new URL(sourceUrl);
+    if (!["http:", "https:"].includes(url.protocol) ||
+      !["allrecipes.com", "www.allrecipes.com"].includes(url.hostname)) return null;
+  } catch { return null; }
+
+  const titles = elementsWithClass(inertHtml, "article-heading");
+  const ingredientContainers = elementsWithClass(inertHtml, "mm-recipes-structured-ingredients");
+  const instructionContainers = elementsWithClass(inertHtml, "mm-recipes-steps__content");
+  if (titles.length !== 1 || titles[0].tag !== "h1" || !htmlText(titles[0].innerHtml) ||
+    ingredientContainers.length !== 1 || instructionContainers.length !== 1) return null;
+  const title = titles[0];
+  const ingredientContainer = ingredientContainers[0];
+  const instructionContainer = instructionContainers[0];
+  const roots = rootRanges(inertHtml);
+  const root = closestRoot(roots, title.index);
+  // A whole-page copy must describe one coherent recipe, not disconnected cards.
+  if (!(title.end <= ingredientContainer.index && ingredientContainer.end <= instructionContainer.index) ||
+    !sameRoot(root, closestRoot(roots, ingredientContainer.index)) ||
+    !sameRoot(root, closestRoot(roots, instructionContainer.index)) ||
+    [title, ingredientContainer, instructionContainer].some(({ index }) => hasAncestorTag(inertHtml, index, "nav"))) return null;
+
+  const ingredientHtml = ingredientContainer.innerHtml;
+  const lists = elementsWithClass(ingredientHtml, "mm-recipes-structured-ingredients__list");
+  const groupHeadings = elementsWithClass(ingredientHtml, "mm-recipes-structured-ingredients__list-heading");
+  if (!lists.length) return null;
+  const ingredientSections = [];
+  for (const [sectionIndex, list] of lists.entries()) {
+    if (list.tag !== "ul" || listIsHidden(list)) return null;
+    const previousEnd = lists[sectionIndex - 1]?.end ?? 0;
+    const headings = groupHeadings.filter(({ index, end }) => index >= previousEnd && end <= list.index);
+    if (headings.length > 1) return null;
+    const rows = elementsWithClass(list.innerHtml, "mm-recipes-structured-ingredients__list-item");
+    if (!rows.length || rows.some(({ tag }) => tag !== "li") || rows.length !==
+      elementsMatchingAttributes(list.innerHtml, (_, tag) => tag === "li").length) return null;
+    const items = [];
+    for (const [itemIndex, row] of rows.entries()) {
+      const structured = {};
+      let firstNamedFieldIndex = null;
+      for (const [field, attribute] of [["amount", "quantity"], ["unit", "unit"], ["name", "name"]]) {
+        const fields = elementsMatchingAttributes(row.innerHtml, (attributes) => attributes.get(`data-ingredient-${attribute}`) === "true");
+        if (fields.length > 1) return null;
+        if (field !== "amount" && fields.length) firstNamedFieldIndex = Math.min(firstNamedFieldIndex ?? fields[0].index, fields[0].index);
+        structured[field] = fields.length ? htmlText(fields[0].innerHtml) || null : null;
+      }
+      if (!structured.name) return null;
+      // Some clipboard rows lose only the quantity span, leaving its literal
+      // fraction before the still-marked unit/name. Recover only that bounded
+      // numeric prefix, never infer an amount from descriptive text.
+      if (!structured.amount && firstNamedFieldIndex !== null) {
+        const prefix = htmlText(row.innerHtml.slice(0, firstNamedFieldIndex));
+        if (prefix) {
+          if (!new RegExp(`^${TASTY_AMOUNT_PATTERN}$`, "u").test(prefix)) return null;
+          structured.amount = prefix;
+        }
+      }
+      // A changed row with unmarked preparation text must not silently lose it.
+      if (normalizeWhitespace([structured.amount, structured.unit, structured.name].filter(Boolean).join(" ")) !== htmlText(row.innerHtml)) return null;
+      items.push({
+        raw: htmlText(row.innerHtml), ...structured, confidence: "high",
+        provenance: provenance("text/html", `.mm-recipes-structured-ingredients__list:nth-of-type(${sectionIndex + 1}) .mm-recipes-structured-ingredients__list-item:nth-child(${itemIndex + 1})`),
+      });
+    }
+    ingredientSections.push({ name: headings.length ? htmlText(headings[0].innerHtml).replace(/:\s*$/u, "") || null : null, items });
+  }
+  if (ingredientSections.flatMap(({ items }) => items).length !==
+    elementsWithClass(ingredientHtml, "mm-recipes-structured-ingredients__list-item").length ||
+    groupHeadings.some(({ index }) => !lists.some((list, i) => index >= (lists[i - 1]?.end ?? 0) && index < list.index))) return null;
+
+  const instructionHtml = instructionContainer.innerHtml;
+  const orderedLists = elementsWithClass(instructionHtml, "mntl-sc-block-group--OL");
+  if (orderedLists.length !== 1 || orderedLists[0].tag !== "ol") return null;
+  const stepRows = elementsWithClass(orderedLists[0].innerHtml, "mntl-sc-block-group--LI");
+  if (!stepRows.length || stepRows.some(({ tag }) => tag !== "li") || stepRows.length !==
+    elementsMatchingAttributes(orderedLists[0].innerHtml, (_, tag) => tag === "li")
+      .filter(({ index }) => tagStackContext(orderedLists[0].innerHtml, index).length === 0).length) return null;
+  const steps = [];
+  let flattenedSingleSteps = 0;
+  for (const [stepIndex, row] of stepRows.entries()) {
+    // Photos, captions and ads may sit inside a step. Retain only direct recipe
+    // paragraphs, joining multiple paragraphs without changing step numbering.
+    const blocks = elementsWithClass(row.innerHtml, "mntl-sc-block-html")
+      .filter(({ index }) => tagStackContext(row.innerHtml, index).length === 0);
+    const texts = [];
+    for (const block of blocks) {
+      if (block.tag === "p") {
+        const text = htmlText(block.innerHtml);
+        if (text) texts.push(text);
+        continue;
+      }
+      // One captured layout nests a single instruction in an OL followed by an
+      // empty spacer. Retain that text without inventing a parent instruction.
+      const nestedItems = elementsMatchingAttributes(block.innerHtml, (_, tag) => tag === "li");
+      if (block.tag !== "ol" || nestedItems.length !== 1 ||
+        tagStackContext(block.innerHtml, nestedItems[0].index).length !== 0 || !htmlText(nestedItems[0].innerHtml)) return null;
+      texts.push(htmlText(nestedItems[0].innerHtml));
+      flattenedSingleSteps += 1;
+    }
+    if (!texts.length) return null;
+    const text = texts.map(text => text.replace(/\s+([,.;:!?])/gu, "$1")).join(" ");
+    steps.push(instruction(text, "text/html", `.mm-recipes-steps__content ol > li:nth-child(${stepIndex + 1}) > p.mntl-sc-block-html`));
+  }
+  if (stepRows.length !== elementsWithClass(instructionHtml, "mntl-sc-block-group--LI").length) return null;
+
+  const result = candidate({ id: "allrecipes-visible", version: "1", tier: "source_adapter", sourceAdapter: "allrecipes" }, sourceUrl);
+  result.source.provider = "AllRecipes";
+  result.source.provenance.provider = provenance("source_url", "hostname allrecipes.com");
+  result.fields.title = scalar(htmlText(title.innerHtml), "text/html", "h1.article-heading");
+  const headerHtml = inertHtml.slice(title.end, ingredientContainer.index);
+  const descriptions = elementsWithClass(headerHtml, "article-subheading");
+  if (descriptions.length === 1 && htmlText(descriptions[0].innerHtml)) {
+    result.fields.description = scalar(htmlText(descriptions[0].innerHtml), "text/html", ".article-subheading");
+  }
+  // Submitted/author bylines are distinct from testers and image owners.
+  const authorGroups = [...elementsWithClass(headerHtml, "mntl-bylines__group--ugc_recipe"), ...elementsWithClass(headerHtml, "mntl-bylines__group--author")];
+  const authors = [...new Set(authorGroups.flatMap(({ innerHtml }) => elementsWithClass(innerHtml, "mntl-attribution__item-name").map(({ innerHtml }) => htmlText(innerHtml))).filter(Boolean))];
+  if (authors.length === 1) {
+    result.source.author = authors[0];
+    result.source.provenance.author = provenance("text/html", ".mntl-bylines__group--ugc_recipe, .mntl-bylines__group--author .mntl-attribution__item-name");
+  }
+  const details = elementsWithClass(headerHtml, "mm-recipes-details");
+  if (details.length > 1) return null;
+  const metadata = new Map();
+  for (const item of elementsWithClass(details[0]?.innerHtml ?? "", "mm-recipes-details__item")) {
+    const labels = elementsWithClass(item.innerHtml, "mm-recipes-details__label");
+    const values = elementsWithClass(item.innerHtml, "mm-recipes-details__value");
+    if (labels.length !== 1 || values.length !== 1) return null;
+    const label = htmlText(labels[0].innerHtml).replace(/:\s*$/u, "");
+    const value = htmlText(values[0].innerHtml);
+    if (metadata.has(label)) return null;
+    metadata.set(label, value);
+    const raw = `${label}: ${value}`;
+    const locator = `.mm-recipes-details__item (${label})`;
+    const duration = labeledDuration(raw);
+    if (duration) result.fields[duration.field] = { ...scalar(raw, "text/html", locator), value: duration.value };
+    else if (!["Servings", "Yield"].includes(label)) result.unclassifiedLines.push({ raw, provenance: provenance("text/html", locator) });
+  }
+  const servingText = metadata.get("Servings");
+  const yieldText = metadata.get("Yield");
+  if (servingText || yieldText) {
+    const display = [servingText ? `${servingText} servings` : null, yieldText].filter(Boolean).join("; ");
+    const numeric = servingText && /^\d+$/u.test(servingText) ? Number(servingText) : null;
+    result.fields.yield = { ...scalar(display, "text/html", ".mm-recipes-details__item (Servings, Yield)"), value: { display, servings: Number.isSafeInteger(numeric) && numeric > 0 ? numeric : null } };
+  }
+  const selectedScales = elementsWithClass(ingredientHtml, "mm-recipes-serving-size-adjuster__input").filter(({ attributes }) => attributes.has("checked"));
+  if (selectedScales.length > 1 || selectedScales.some(({ attributes }) => attributes.get("value") !== "1")) {
+    if (result.fields.yield) result.fields.yield.value.servings = null;
+    result.warnings.push({ code: "SCALED_INGREDIENTS_YIELD_UNCERTAIN", severity: "warning", path: "fields.yield", message: "Visible ingredient amounts are retained, but scaled servings cannot be inferred from the original recipe metadata. Review the yield." });
+  }
+  result.fields.ingredientSections = ingredientSections;
+  result.fields.instructionSections = [{ name: null, steps }];
+  if (flattenedSingleSteps) result.warnings.push({ code: "NESTED_SINGLE_STEP_FLATTENED", severity: "warning", path: "fields.instructionSections", message: "A single-item nested procedure was retained at its enclosing step position. Review its presentation." });
+  result.fields.notes = elementsMatchingAttributes(instructionHtml, (attributes) =>
+    hasClass(attributes, "allrecipes-sc-block-callout--cooksnote") ||
+    (hasClass(attributes, "allrecipes-sc-block-callout") && hasClass(attributes, "theme-recipetip")))
+    .flatMap(({ innerHtml }) => elementsWithClass(innerHtml, "mntl-sc-block-universal-callout__body"))
+    .map(({ innerHtml }) => htmlText(innerHtml)).filter(Boolean)
+    .map((text) => scalar(text, "text/html", ".allrecipes-sc-block-callout--cooksnote, .allrecipes-sc-block-callout.theme-recipetip > .mntl-sc-block-universal-callout__body"));
+  // Only figures preceding the end of the recipe procedure are eligible. Never
+  // retain review galleries or recommended-recipe images from the page footer.
+  const recipeImageHtml = inertHtml.slice(title.end, instructionContainer.end);
+  const imageExtraction = imageReferences(recipeImageHtml, rootRanges(recipeImageHtml), null, "data-src");
+  result.fields.images = imageExtraction.images.filter((image, index, images) => images.findIndex(({ sourceUrl: url }) => url === image.sourceUrl) === index);
+  if (ingredientSections.some(({ name }) => name)) result.warnings.push({ code: "SECTION_NAMES_NOT_PERSISTED", severity: "warning", path: "fields.ingredientSections", message: "Section names remain in preview but the current editor stores flat recipe content." });
+  if (result.fields.notes.length) result.warnings.push({ code: "NOTES_REQUIRE_MAPPING", severity: "info", path: "fields.notes", message: "Notes remain separate until the user chooses where to place them." });
+  result.warnings.push(...result.fields.images.map((_, index) => ({ code: "IMAGE_REFERENCE_REQUIRES_CONFIRMATION", severity: "info", path: `fields.images[${index}]`, message: "The image reference is not fetched and requires confirmation before mapping." })));
+  if (result.unclassifiedLines.length) result.warnings.push({ code: "UNCLASSIFIED_PROVIDER_METADATA", severity: "warning", path: "unclassifiedLines", message: "Additional or unrecognized recipe metadata is retained for review, not silently mapped." });
+  if (result.warnings.length) result.status = "needs_review";
+  appendHtmlAuditEvidence(result, htmlAudit, discardedRemoteResourceCount(htmlAudit, result.fields.images));
+  return result;
+}
+
 function parseHtml(html, sourceUrl, htmlAudit) {
   // Remove active/raw-text regions before scanning. No markup is inserted into a DOM.
   const inertHtml = discardRawContent(html);
-  const sourceAdapterCandidate = parseBudgetBytesWprm(inertHtml, sourceUrl, htmlAudit) ??
+  const sourceAdapterCandidate = parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
+    parseBudgetBytesWprm(inertHtml, sourceUrl, htmlAudit) ??
     parseTastyVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit);
   if (sourceAdapterCandidate) return sourceAdapterCandidate;
