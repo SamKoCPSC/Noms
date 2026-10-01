@@ -2384,10 +2384,245 @@ function parseFoodComVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   return result;
 }
 
+function parseNYTCookingVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
+  try {
+    const url = new URL(sourceUrl);
+    if (!["http:", "https:"].includes(url.protocol) || url.hostname !== "cooking.nytimes.com") return null;
+  } catch { return null; }
+  // CSS-module hashes change between builds; match the component name, not a
+  // particular hash or a loose substring that could select a related card.
+  const hasModuleClass = (attributes, name) => (attributes.get("class") ?? "").split(/\s+/u).some(value => value.startsWith(`${name}__`));
+  const modules = (html, name) => elementsMatchingAttributes(html, attributes => hasModuleClass(attributes, name));
+  const mains = elementsMatchingAttributes(inertHtml, (_, tag) => tag === "main");
+  const roots = elementsMatchingAttributes(inertHtml, attributes => hasClass(attributes, "recipe") && hasModuleClass(attributes, "pagecontent_recipe-wrap"));
+  if (mains.length !== 1 || roots.length !== 1 || roots[0].tag !== "div" || roots[0].index < mains[0].openingEnd || roots[0].end > mains[0].contentEnd) return null;
+  const root = roots[0];
+  const coreMarkers = ["ingredient_ingredient", "ingredientgroup_name", "preparation_stepList", "preparation_step", "preparation_stepNumber", "preparation_stepContent"];
+  const markedCore = elementsMatchingAttributes(inertHtml, attributes => coreMarkers.some(name => hasModuleClass(attributes, name)));
+  const hiddenRanges = elementsMatchingAttributes(inertHtml, attributes => listIsHidden({ attributes }) || hasClass(attributes, "hidden") ||
+    hasModuleClass(attributes, "headermediacarousel_hidden") || hasModuleClass(attributes, "notes_isHidden"));
+  let mainOpenings = 0, coreOpenings = 0, rootOpenings = 0;
+  for (const match of inertHtml.matchAll(/<([a-z][a-z0-9:-]*)\b((?:"[^"]*"|'[^']*'|[^>"'])*)>/giu)) {
+    const attributes = htmlAttributes(match[2]);
+    if (match[1].toLowerCase() === "main") mainOpenings += 1;
+    if (hasClass(attributes, "recipe") && hasModuleClass(attributes, "pagecontent_recipe-wrap")) rootOpenings += 1;
+    if (coreMarkers.some(name => hasModuleClass(attributes, name))) coreOpenings += 1;
+    // An unclosed hidden ancestor still hides required content in the browser.
+    if ((listIsHidden({ attributes }) || hasClass(attributes, "hidden")) && !hiddenRanges.some(element => element.index === match.index)) {
+      hiddenRanges.push({ index: match.index, end: inertHtml.length, innerHtml: inertHtml.slice(match.index + match[0].length) });
+    }
+  }
+  if (mainOpenings !== 1 || rootOpenings !== 1 || coreOpenings !== markedCore.length) return null;
+  const consumedCore = new Set();
+  const isHidden = (element, offset = root.openingEnd, includeText = false) => hiddenRanges.some(range =>
+    (range.index <= offset + element.index && offset + element.index < range.end) ||
+    (includeText && offset + element.index <= range.index && range.index < offset + element.end && htmlText(range.innerHtml)));
+  if (isHidden(root, 0) || hasAncestorTag(inertHtml, root.index, "nav")) return null;
+  const rootHtml = root.innerHtml;
+  const text = html => htmlText(html).replace(/\s+([,.;:!?])/gu, "$1").replace(/\s+\)/gu, ")");
+  const directElements = html => elementsMatchingAttributes(html, () => true).filter(element => tagStackContext(html, element.index).length === 0);
+  const hasLooseText = (html, elements) => {
+    let end = 0;
+    for (const element of elements) { if (htmlText(html.slice(end, element.index))) return true; end = element.end; }
+    return Boolean(htmlText(html.slice(end)));
+  };
+  const titles = elementsMatchingAttributes(mains[0].innerHtml, (_, tag) => tag === "h1");
+  const headers = modules(rootHtml, "recipeintro_header-block");
+  const ingredientContainers = modules(inertHtml, "ingredients_ingredients");
+  const preparationContainers = elementsMatchingAttributes(inertHtml, attributes => attributes.get("id") === "preparation_section");
+  if (titles.length !== 1 || headers.length !== 1 || ingredientContainers.length !== 1 || preparationContainers.length !== 1) return null;
+  const title = titles[0], header = headers[0], ingredients = ingredientContainers[0], preparation = preparationContainers[0];
+  const titleIndex = mains[0].openingEnd + title.index;
+  if (!htmlText(title.innerHtml) || titleIndex < root.openingEnd + header.openingEnd || titleIndex + title.end - title.index > root.openingEnd + header.contentEnd ||
+    isHidden(title, mains[0].openingEnd, true) || isHidden(header) || ingredients.index < root.openingEnd + header.end ||
+    ingredients.end > preparation.index || preparation.end > root.contentEnd || isHidden(ingredients, 0) || isHidden(preparation, 0) ||
+    hasAncestorTag(inertHtml, ingredients.index, "nav") || hasAncestorTag(inertHtml, preparation.index, "nav")) return null;
+  if (markedCore.some(element => ![ingredients, preparation].some(container => container.openingEnd <= element.index && element.end <= container.contentEnd))) return null;
+  const result = candidate({ id: "nyt-cooking-visible", version: "1", tier: "source_adapter", sourceAdapter: "nyt-cooking" }, sourceUrl);
+  result.source.provider = "NYT Cooking";
+  result.source.provenance.provider = provenance("source_url", "hostname cooking.nytimes.com");
+  result.fields.title = scalar(htmlText(title.innerHtml), "text/html", ".recipe .recipeintro_header-block h1");
+  const ingredientChildren = directElements(ingredients.innerHtml);
+  if (hasLooseText(ingredients.innerHtml, ingredientChildren) || ingredientChildren[0]?.tag !== "h2" ||
+    !hasModuleClass(ingredientChildren[0].attributes, "ingredients_heading") || htmlText(ingredientChildren[0].innerHtml) !== "Ingredients" ||
+    isHidden(ingredientChildren[0], ingredients.openingEnd, true)) return null;
+  let groupName = null, waitingForList = false, sawList = false, sawButtons = false, sawYield = false;
+  const nytAmount = `(?:\\d+[\\u00bc-\\u00be\\u2150-\\u215e]|${TASTY_AMOUNT_PATTERN})`;
+  const amountPattern = `${nytAmount}(?:\\s*(?:to|[-–—])\\s*${nytAmount})?`;
+  const units = `${UNIT_PATTERN}|quarts?|pints?|gallons?|sticks?|bunch(?:es)?|heads?`;
+  const measured = new RegExp(`^(${amountPattern})\\s+(${units})\\s+(.+)$`, "iu");
+  const compound = new RegExp(`^(${amountPattern}\\s*(?:${units})\\s*(?:/|plus|minus)\\s*${amountPattern}\\s*(?:${units}))\\s+(.+)$`, "iu");
+  const packaged = new RegExp(`^(${amountPattern})\\s+(\\(${TASTY_AMOUNT_PATTERN}[- ](?:ounces?|oz|pounds?|grams?)\\)\\s+(?:cans?|packages?|boxes?))\\s+(.+)$`, "iu");
+  for (const child of ingredientChildren.slice(1)) {
+    if (isHidden(child, ingredients.openingEnd)) return null;
+    if (hasModuleClass(child.attributes, "ingredients_recipeYield")) {
+      const parts = directElements(child.innerHtml);
+      if (sawYield || sawList || waitingForList || sawButtons || child.tag !== "div" || parts.length !== 2 || parts.some(part => part.tag !== "span" || isHidden(part, ingredients.openingEnd + child.openingEnd, true)) ||
+        hasLooseText(child.innerHtml, parts) || htmlText(parts[0].innerHtml) !== "Yield:" || !htmlText(parts[1].innerHtml)) return null;
+      sawYield = true;
+      const value = htmlText(parts[1].innerHtml), raw = `Yield: ${value}`;
+      const count = value.match(/^(\d+)\s+servings?$/iu);
+      const servings = count && Number.isSafeInteger(Number(count[1])) && Number(count[1]) > 0 ? Number(count[1]) : null;
+      result.fields.yield = { ...scalar(raw, "text/html", ".recipe .ingredients_recipeYield"), value: { display: raw, servings } };
+      continue;
+    }
+    if (child.tag === "h3" && hasModuleClass(child.attributes, "ingredientgroup_name")) {
+      if (waitingForList || sawButtons || !htmlText(child.innerHtml) || isHidden(child, ingredients.openingEnd, true)) return null;
+      consumedCore.add(ingredients.openingEnd + child.index);
+      groupName = htmlText(child.innerHtml); waitingForList = true; continue;
+    }
+    if (hasModuleClass(child.attributes, "ingredients_buttons")) {
+      if (!sawList || waitingForList || sawButtons || child !== ingredientChildren.at(-1) || child.tag !== "div") return null;
+      sawButtons = true; continue;
+    }
+    if (child.tag !== "ul" || sawButtons || (sawList && !waitingForList)) return null;
+    const rows = directElements(child.innerHtml);
+    if (!rows.length || hasLooseText(child.innerHtml, rows)) return null;
+    const items = [];
+    for (const [index, row] of rows.entries()) {
+      const children = directElements(row.innerHtml), rowOffset = ingredients.openingEnd + child.openingEnd;
+      if (row.tag !== "li" || isHidden(row, rowOffset) || children.length !== 1 || children[0].tag !== "p" || !hasModuleClass(children[0].attributes, "ingredient_ingredient") ||
+        hasLooseText(row.innerHtml, children) || isHidden(children[0], rowOffset + row.openingEnd, true) || !htmlText(children[0].innerHtml) || /<(?:ul|ol|h[1-6]|div|p)\b/iu.test(children[0].innerHtml)) return null;
+      const raw = text(children[0].innerHtml), locator = `.recipe .ingredients_ingredients group ${result.fields.ingredientSections.length + 1} li:nth-child(${index + 1})`;
+      // Keep conversion and plus/minus measurements as one literal expression;
+      // the editor has only one unit slot and cannot safely perform conversions.
+      consumedCore.add(rowOffset + row.openingEnd + children[0].index);
+      const compoundAmount = raw.match(compound), packageAmount = raw.match(packaged), measuredAmount = raw.match(measured);
+      const parsed = compoundAmount
+        ? { raw, amount: compoundAmount[1], unit: null, name: compoundAmount[2], confidence: "high", provenance: provenance("text/html", locator) }
+        : packageAmount
+          ? { raw, amount: packageAmount[1], unit: packageAmount[2], name: packageAmount[3], confidence: "high", provenance: provenance("text/html", locator) }
+          : measuredAmount
+            ? { raw, amount: measuredAmount[1], unit: measuredAmount[2], name: measuredAmount[3], confidence: "high", provenance: provenance("text/html", locator) }
+            : ingredient(raw, "text/html", locator, amountPattern);
+      items.push(parsed);
+    }
+    result.fields.ingredientSections.push({ name: groupName, items });
+    sawList = true; waitingForList = false; groupName = null;
+  }
+  if (!sawList || waitingForList) return null;
+  const preparationChildren = directElements(preparation.innerHtml);
+  if (preparationChildren.length !== 2 || preparationChildren[0].tag !== "h2" || !hasModuleClass(preparationChildren[0].attributes, "preparation_title") ||
+    htmlText(preparationChildren[0].innerHtml) !== "Preparation" || isHidden(preparationChildren[0], preparation.openingEnd, true) ||
+    preparationChildren[1].tag !== "ol" || !hasModuleClass(preparationChildren[1].attributes, "preparation_stepList") || hasLooseText(preparation.innerHtml, preparationChildren)) return null;
+  const list = preparationChildren[1], rows = directElements(list.innerHtml), steps = [];
+  const listOffset = preparation.openingEnd + list.openingEnd;
+  if (!rows.length || hasLooseText(list.innerHtml, rows) || isHidden(list, preparation.openingEnd)) return null;
+  consumedCore.add(preparation.openingEnd + list.index);
+  for (const [index, row] of rows.entries()) {
+    const children = directElements(row.innerHtml), offset = listOffset + row.openingEnd;
+    if (row.tag !== "li" || !hasModuleClass(row.attributes, "preparation_step") || isHidden(row, listOffset) || children.length !== 2 || children.some(child => child.tag !== "div") ||
+      !hasModuleClass(children[0].attributes, "preparation_stepNumber") || !hasModuleClass(children[1].attributes, "preparation_stepContent") ||
+      htmlText(children[0].innerHtml) !== `Step ${index + 1}` || isHidden(children[0], offset, true) || isHidden(children[1], offset) || hasLooseText(row.innerHtml, children)) return null;
+    const paragraphs = directElements(children[1].innerHtml);
+    if (!paragraphs.length || paragraphs[0].tag !== "p" || hasLooseText(children[1].innerHtml, paragraphs) ||
+      paragraphs.some(paragraph => paragraph.tag !== "p" && !(paragraph.tag === "div" && hasModuleClass(paragraph.attributes, "stepmedia_stepMedia")))) return null;
+    const textParagraphs = paragraphs.filter(paragraph => paragraph.tag === "p");
+    if (textParagraphs.some(paragraph => !htmlText(paragraph.innerHtml) || isHidden(paragraph, offset + children[1].openingEnd, true) || /<(?:ul|ol|h[1-6]|div|p)\b/iu.test(paragraph.innerHtml))) return null;
+    consumedCore.add(listOffset + row.index);
+    children.forEach(child => consumedCore.add(offset + child.index));
+    steps.push(instruction(textParagraphs.map(paragraph => text(paragraph.innerHtml)).join(" "), "text/html", `.recipe #preparation_section li:nth-child(${index + 1}) .preparation_stepContent`));
+  }
+  result.fields.instructionSections = [{ name: null, steps }];
+  // Every marked required component must be consumed, even inside otherwise
+  // ignorable grocery controls or step-media blocks.
+  if (consumedCore.size !== markedCore.length || markedCore.some(element => !consumedCore.has(element.index))) return null;
+  const bylines = modules(header.innerHtml, "byline_byline");
+  if (bylines.length > 1) return null;
+  if (bylines.length) {
+    const parts = directElements(bylines[0].innerHtml), roles = new Map(), offset = root.openingEnd + header.openingEnd + bylines[0].openingEnd;
+    if (!parts.length || isHidden(bylines[0], root.openingEnd + header.openingEnd) || hasLooseText(bylines[0].innerHtml, parts)) return null;
+    for (const part of parts) {
+      const match = text(part.innerHtml).match(/^(By|Recipe from|Adapted by)\s+(.+)$/u);
+      if (part.tag !== "h2" || !hasModuleClass(part.attributes, "byline_bylinePart") || !match || roles.has(match[1]) || isHidden(part, offset, true)) return null;
+      roles.set(match[1], match[2]);
+    }
+    if (roles.has("By") && roles.size !== 1) return null;
+    result.source.author = roles.get("By") ?? roles.get("Adapted by") ?? roles.get("Recipe from") ?? null;
+    result.source.provenance.author = provenance("text/html", ".recipe .byline_byline");
+    if (!roles.has("By")) {
+      result.source.attribution = parts.map(part => text(part.innerHtml)).join("; ");
+      result.source.provenance.attribution = provenance("text/html", ".recipe .byline_bylinePart");
+    }
+  }
+  const descriptions = modules(rootHtml, "topnote_topnoteParagraphs");
+  if (descriptions.length > 1) return null;
+  if (descriptions.length) {
+    const paragraphs = directElements(descriptions[0].innerHtml);
+    if (isHidden(descriptions[0], root.openingEnd, true) || paragraphs.some(paragraph => paragraph.tag !== "p") || hasLooseText(descriptions[0].innerHtml, paragraphs)) return null;
+    const descriptionText = text(descriptions[0].innerHtml);
+    if (descriptionText) result.fields.description = scalar(descriptionText, "text/html", ".recipe .topnote_topnoteParagraphs");
+  }
+  const timeTables = modules(rootHtml, "stats_cookingTimeTable");
+  if (timeTables.length > 1) return null;
+  if (timeTables.length) {
+    const table = timeTables[0], parts = directElements(table.innerHtml), labels = new Set();
+    if (parts.length % 2 || hasLooseText(table.innerHtml, parts) || isHidden(table)) return null;
+    const fractionValues = { "¼": 1 / 4, "½": 1 / 2, "¾": 3 / 4, "⅐": 1 / 7, "⅑": 1 / 9, "⅒": 1 / 10, "⅓": 1 / 3, "⅔": 2 / 3, "⅕": 1 / 5, "⅖": 2 / 5, "⅗": 3 / 5, "⅘": 4 / 5, "⅙": 1 / 6, "⅚": 5 / 6, "⅛": 1 / 8, "⅜": 3 / 8, "⅝": 5 / 8, "⅞": 7 / 8 };
+    for (let index = 0; index < parts.length; index += 2) {
+      const label = htmlText(parts[index].innerHtml), value = htmlText(parts[index + 1].innerHtml), offset = root.openingEnd + table.openingEnd;
+      const field = { "Total Time": "totalTime", "Ready In": "totalTime", "Prep Time": "prepTime", "Cook Time": "cookTime" }[label];
+      if (parts[index].tag !== "dt" || parts[index + 1].tag !== "dd" || !value || !field || labels.has(field) || parts.slice(index, index + 2).some(part => isHidden(part, offset, true))) return null;
+      labels.add(field);
+      const normalized = value.replace(/(\d)([\u00bc-\u00be\u2150-\u215e])/gu, "$1 $2");
+      const tokens = [...normalized.matchAll(new RegExp(`(${TASTY_AMOUNT_PATTERN})\\s*(days?|hours?|hrs?|hr|minutes?|mins?|min)`, "giu"))];
+      const durationToken = `${TASTY_AMOUNT_PATTERN}\\s*(?:days?|hours?|hrs?|hr|minutes?|mins?|min)`;
+      const exactGrammar = new RegExp(`^${durationToken}(?:(?:\\s+|\\s+and\\s+|,\\s*(?:and\\s+)?)${durationToken})*$`, "iu").test(normalized);
+      let minutes = 0;
+      for (const token of tokens) {
+        let number = 0;
+        for (const part of token[1].split(/\s+/u)) {
+          const fraction = part.match(/^(\d+)\/(\d+)$/u);
+          number += fraction ? Number(fraction[1]) / Number(fraction[2]) : fractionValues[part] ?? Number(part.replace(",", "."));
+        }
+        minutes += number * (token[2].toLowerCase().startsWith("d") ? 1440 : token[2].toLowerCase().startsWith("h") ? 60 : 1);
+      }
+      const exact = tokens.length > 0 && exactGrammar && Number.isSafeInteger(minutes) && minutes >= 0;
+      result.fields[field] = { ...scalar(`${label}: ${value}`, "text/html", `.recipe .stats_cookingTimeTable (${label})`), value: exact ? minutes : null, confidence: exact ? "high" : "low" };
+      if (!exact) result.warnings.push({ code: "UNRESOLVED_PROVIDER_DURATION", severity: "warning", path: `fields.${field}`, message: "Qualified or unsupported duration text is retained literally; exact minutes are not inferred." });
+    }
+  }
+  const tips = modules(rootHtml, "tips_tips");
+  if (tips.length > 1) return null;
+  if (tips.length) {
+    const tip = tips[0], parts = directElements(tip.innerHtml);
+    if (isHidden(tip, root.openingEnd, true) || parts.length !== 2 || parts[0].tag !== "span" || !/^(?:Tip|Tips)$/u.test(htmlText(parts[0].innerHtml)) ||
+      parts[1].tag !== "ul" || !hasModuleClass(parts[1].attributes, "tips_tipsList") || hasLooseText(tip.innerHtml, parts)) return null;
+    const rows = directElements(parts[1].innerHtml);
+    if (!rows.length || hasLooseText(parts[1].innerHtml, rows)) return null;
+    for (const [index, row] of rows.entries()) {
+      if (row.tag !== "li" || !hasModuleClass(row.attributes, "tips_tipsItem") || !htmlText(row.innerHtml)) return null;
+      result.fields.notes.push(scalar(text(row.innerHtml), "text/html", `.recipe .tips_tipsItem:nth-child(${index + 1})`));
+    }
+  }
+  const imageBlocks = modules(rootHtml, "recipeintro_image-block");
+  if (imageBlocks.length === 1 && !isHidden(imageBlocks[0])) {
+    const block = imageBlocks[0], offset = root.openingEnd + block.openingEnd;
+    const figures = elementsMatchingAttributes(block.innerHtml, (_, tag) => tag === "figure");
+    for (const image of modules(block.innerHtml, "headermediacarousel_hero")) {
+      if (image.tag !== "img" || isHidden(image, offset)) continue;
+      const figure = figures.find(figure => figure.openingEnd <= image.index && image.end <= figure.contentEnd);
+      const credits = figure ? modules(figure.innerHtml, "headermediacarousel_credit") : [];
+      const credit = credits.length === 1 && !isHidden(credits[0], offset + figure.openingEnd, true) ? htmlText(credits[0].innerHtml) || null : null;
+      const urls = [image.attributes.get("src"), ...(image.attributes.get("srcset") ?? "").split(",").map(value => value.trim().split(/\s+/u)[0])];
+      for (const url of urls) {
+        try { if (!url || !["http:", "https:"].includes(new URL(url).protocol)) continue; } catch { continue; }
+        if (!result.fields.images.some(retained => retained.sourceUrl === url)) result.fields.images.push({ sourceUrl: url, alt: image.attributes.get("alt") || null, credit, provenance: provenance("text/html", ".recipe .recipeintro_image-block img.headermediacarousel_hero") });
+      }
+    }
+  }
+  if (result.fields.ingredientSections.some(section => section.name)) result.warnings.push({ code: "SECTION_NAMES_NOT_PERSISTED", severity: "warning", path: "fields.ingredientSections", message: "Explicit group names remain in preview and optional commentary; the current editor stores flat content." });
+  result.warnings.push(...result.fields.images.map((_, index) => ({ code: "IMAGE_REFERENCE_REQUIRES_CONFIRMATION", severity: "info", path: `fields.images[${index}]`, message: "Image references are unfetched and require confirmation before mapping." })));
+  if (result.warnings.length) result.status = "needs_review";
+  appendHtmlAuditEvidence(result, htmlAudit, discardedRemoteResourceCount(htmlAudit, result.fields.images));
+  return result;
+}
+
 function parseHtml(html, sourceUrl, htmlAudit) {
   // Remove active/raw-text regions before scanning. No markup is inserted into a DOM.
   const inertHtml = discardRawContent(html);
-  const sourceAdapterCandidate = parseFoodComVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
+  const sourceAdapterCandidate = parseNYTCookingVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
+    parseFoodComVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseFood52VisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseBudgetBytesWprm(inertHtml, sourceUrl, htmlAudit) ??
