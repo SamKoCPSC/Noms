@@ -3397,3 +3397,190 @@ screen-reader operation and whole-app contrast remain open.
 
 **Next:** populated responsive routes, cross-route/permission presentation and
 remaining editor interactions; keep destructive checks separately gated.
+
+## Initial recipe and collection detail recovery — 2026-10-01
+
+Implementation `1f885b1` repairs a gap discovered during the permission sweep:
+current-recipe and collection-detail failures previously had no in-page retry.
+Both now show a safe level-one unavailable heading, shared load-recovery
+feedback and a live pending guard. The last failure remains mounted during a
+retry, preserving keyboard focus. A successful retry focuses the recipe content
+or collection heading. Missing, private and transport failures remain
+indistinguishable; server authorization and route-keyed lifetimes are unchanged.
+
+Four new tests cover actual SSR failure/pending output with router context and
+resource/handler/focus wiring. Tests-first missing-helper failures are recorded
+in `/tmp/noms-020-detail-load-red.log`; test scaffolding was corrected to provide
+the router required by real Links. Final full CI: **909 passed, 0 failed,
+12 ignored**, exit 0, eight existing allowed audit warnings. Command used the
+integration target cache, `SQLX_OFFLINE=true`, and
+`PGOPTIONS='-c log_min_error_statement=panic' just ci`. Log:
+`/tmp/noms-020-detail-load-final-ci.log`.
+
+The grants test initially stalled because expected rejection statements filled
+its temporary PostgreSQL logging pipe (backend wait channel
+`anon_pipe_write.cold`). Only this turn's identified stalled jobs were stopped.
+The session-only psql logging override prevents logging those long statements;
+it does not skip the grants test, change app database settings or weaken its
+assertions. The final complete gate passed, including that regression test.
+
+Browser on port 32768:
+
+- Collection root initial read and first retry failed before the server.
+  Rapid Enter/Space during a held retry produced one collection API request;
+  focus remained on the busy Retrying action. A real retry restored the populated
+  collection and focused `collection-detail-content`.
+- Guest public-recipe initial read and first retry failed before the server.
+  The same duplicate-key check produced one public-recipe API request. Real
+  retry restored the recipe and focused `recipe-detail-content`, with no alert.
+  This isolates the public read, not the signed-in fallback sequence.
+- Both retry flows fit at 320px (client and document scroll widths 305px).
+  Private guest routes retained generic unavailable states with no title or
+  editable controls. Screenshots:
+  `/tmp/noms-020-collection-initial-recovery-phone.jpg` and
+  `/tmp/noms-020-recipe-initial-recovery-phone.jpg`.
+
+Explicit second-pass self-review **PASS for this scope**, no independent agent.
+Local commit/fast-forward only; existing design-worktree CSS preserved. These
+are read-recovery checks, not destructive or post-commit acceptance.
+
+## Populated light responsive and permission sweep — 2026-10-01
+
+The existing approved local deployment remains `noms-c799915fcf93e034`, app port
+32768; its Postgres dev-environment label was verified before each fixture
+setup. The unrelated port-32773 deployment was not changed.
+
+Data setup was insert-only and transactional:
+
+- Reused `scripts/dev-fixtures/noms-020-public-profile.sql`: a clearly synthetic
+  profile with 25 public recipes/collections plus one private and one unlisted
+  of each. No OAuth identity was added.
+- Added `scripts/dev-fixtures/noms-020-responsive-collections.sql`: private
+  parent/child collections, the original recipe-action fixture in both, and
+  the history root in the child. One newly seeded public collection contains
+  all 25 public fixture recipes. The script takes an existing `fixture_owner`,
+  validates prerequisite ownership/visibility/names and refuses ID collisions.
+  Initial ParadeDB ambiguous text predicates rolled back; selected text is now
+  compared outside SQL predicates. Successful replay left counts unchanged.
+- Prepared `scripts/dev-fixtures/noms-020-disposable-recipe.sql`: one separate
+  private recipe and one snapshot for future final Delete acceptance. It refuses
+  collection, draft or fork dependencies. Replay is idempotent. Creation is
+  **not deletion approval**; no final Delete action has been performed.
+  Target: `b3b3cf67-6c74-2764-9148-d4d690b9d16f`,
+  “CP8 Disposable recipe – Local acceptance only”.
+
+Before the disposable recipe, counts were 2 users, 30 recipes, 62 versions,
+1 draft, 29 collections and 28 memberships. After preparation: **2 users,
+31 recipes, 63 versions, 1 draft, 29 collections, 28 memberships, 1 OAuth
+account**. The original mock owner's display name remains empty, bio/avatar
+NULL, and the original draft remains revision 0. Normal mock sign-in/sign-out
+was used; no existing recipe, draft or profile content was edited.
+
+Geometry/basic semantics: **75 route/viewport combinations** at 390×900,
+820×1180 and 1280×800. Each completed with document client width equal to scroll
+width, no missing image alt attributes and no unnamed visible main form inputs.
+The owner sweep additionally checked unnamed visible main buttons (none).
+Owner captures were retaken after the asynchronous content markers loaded;
+early loading captures were replaced, not claimed as populated acceptance.
+
+- Guest: landing, `/home` sign-in gate, About, How to, sign-in, Explore,
+  populated public profile/collection/current recipe/snapshot/graph and 404.
+  The guest `/home` capture is explicitly not the community layout.
+- Owner: actual Community Home, Dashboard with recipes/draft/collection tree,
+  Collections, private parent and child, collection editor/new form, existing
+  draft editor/new recipe form, own profile, profile/account settings and
+  populated own-recipe Search. Opening forms did not save or publish anything.
+- Main-agent visual inspection of phone/tablet public sheets and owner
+  phone/tablet/desktop sheets found no overlaps in the captured views. Geometry
+  covers the document width, but viewport screenshots are not a visual review
+  of every below-fold section or every overlay state.
+
+Permission/read checks:
+
+- Eleven guest-gated workspace/edit/settings/search routes showed sign-in and
+  preserved their exact return path, including the Search query string.
+- Guest private current recipe, historical snapshot, private parent/child and
+  synthetic profile's private recipe/collection revealed no private titles or
+  editable controls. Signed-in non-owner private reads also remained denied;
+  direct public recipe/collection editor URLs showed safe unavailable forms.
+- Direct unlisted recipe/collection links worked for guest and signed-in
+  non-owner without owner edit controls. The complete public-profile catalog
+  paged to 25 recipes and 25 collections and excluded private/unlisted items
+  26/27. These are presentation/permission observations, not a security audit.
+
+Keyboard scope:
+
+- Dashboard collection tree expanded to its nested child. The picker displayed
+  both existing memberships as checked/disabled, with breadcrumb-qualified
+  names and zero new selections. Escape restored Add to Collection focus;
+  no membership write was submitted.
+- Navigation used a native modal dialog (`dialog:modal`, `aria-modal=true`).
+  Shift-Tab wrapped Close to the final theme control; Tab wrapped back to Close.
+  Escape restored the menu trigger. Native dialog semantics, not only explicit
+  `[role=dialog]` selectors, were checked.
+- Recipe Notes navigation changed the hash and focused its heading. The parent
+  selector for the collection root excluded itself and its child (no cycles).
+  These observations do not substitute for actual screen-reader operation.
+
+Temporary evidence:
+`/tmp/noms-020-responsive-acceptance.json`,
+`/tmp/noms-020-permission-acceptance.json`,
+`/tmp/noms-020-public-phone-review.png`,
+`/tmp/noms-020-public-tablet-review.png`,
+`/tmp/noms-020-owner-phone-review.png`,
+`/tmp/noms-020-owner-tablet-review.png`,
+`/tmp/noms-020-owner-desktop-review.png`,
+`/tmp/noms-020-nested-picker-phone.jpg`. Individual route screenshots use
+`/tmp/noms-020-acceptance-<route>-<width>.jpg`.
+
+## Semantic text contrast follow-up — 2026-10-01
+
+Implementation `f854042` separates text ink from decorative fills. Inspection
+found the editor attribution link still using light coral as 16px text.
+Global links, hovered text links, selected Search tabs/chips, small status copy,
+graph descendant badges and inline error/success messages now use semantic ink
+roles. Existing coral/green fills, strokes, gradients, shadows, fonts and artwork
+are unchanged. Text-link hover retains ink and provides underline feedback;
+contained buttons/navbar links are excluded from that new underline rule.
+
+Two tests were added before implementation. Foundation suite **18 passed,
+0 failed**; final `just ci` **911 passed, 0 failed, 12 ignored**, exit 0, eight
+existing allowed audit warnings. Same target/SQLX/temporary psql logging setup
+as above. Logs: `/tmp/noms-020-text-ink-red.log`,
+`/tmp/noms-020-text-ink-hover-red.log`,
+`/tmp/noms-020-text-ink-focused.log`,
+`/tmp/noms-020-text-ink-final-ci.log`.
+
+Token tests require at least 4.5:1 for accent/error/success/warning inks against
+both themes' base surfaces and each gradient stop. They reject decorative fill
+tokens in shared text declarations. Existing brand/button contracts still pass.
+This is a bounded contrast contract, not a complete composited-pixel WCAG audit.
+Browser confirmed attribution ink `rgb(149,67,47)` while Publish retained coral
+fill `rgb(217,115,90)` and dark on-accent text. About rendered the same palette
+without overflow. Screenshots:
+`/tmp/noms-020-editor-final-contrast-desktop.jpg`,
+`/tmp/noms-020-contrast-about-desktop.jpg`.
+
+Browser developer-media checks on About: reduced motion stopped background
+animation and smooth scrolling; forced colours removed shadows and provided
+high-contrast control borders/text. Both emulations were cleared immediately.
+Evidence: `/tmp/noms-020-media-acceptance.json`,
+`/tmp/noms-020-forced-colors-about.jpg`. This is an About/foundation smoke check,
+not a claim of system-wide assistive-technology acceptance.
+
+Second-pass self-review **PASS for these scoped changes**, no independent-agent
+review. Existing checkpoint task worktree and design integration worktree reused
+under the established workflow. Local semantic commits/fast-forwards only; no
+push, PR or production deployment. The integration worktree's user-owned
+`assets/tailwind.css` SHA-256 remains
+`63fb925365998338ce8dec1e725c097e5648f820c9674767880e910db80d7e46`.
+
+**Remaining gates:** final recipe Delete browser outcomes need action-time
+confirmation for the separate disposable target. Settings unlink/avatar removal/
+account deletion need a separately approved expendable identity and media, not
+the sole-provider/no-avatar original mock owner. Post-commit lost-response and
+navigation/identity replacement outcomes are still unaccepted. Actual screen
+reader, real-device touch and pixel-level image export checks remain open.
+Whole-app sign-off must not be inferred from geometry, token contrast or passing
+unit tests. Dark-mode redesign and favicon/single-colour/3D deliverables remain
+explicitly separate/deferred work.
