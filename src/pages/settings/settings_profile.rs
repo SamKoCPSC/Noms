@@ -4,6 +4,9 @@ use dioxus::prelude::*;
 use wasm_bindgen::JsCast;
 
 use super::account_delete_flow::{AccountDeleteStep as DeleteStep, AccountDeletionState};
+use super::mutation_recovery::{
+    settings_mutation_feedback, SettingsMutation, SettingsMutationControl,
+};
 use crate::auth::context::{use_auth, AuthContext, UserProfile};
 use crate::components::base::{
     Avatar, AvatarSize, Button, ButtonVariant, ImageEditorCropMode, ImageEditorModal, SettingsTab,
@@ -47,6 +50,22 @@ fn ProfileSaveControl(pending: bool, valid: bool, on_save: EventHandler<()>) -> 
     }
 }
 
+#[component]
+fn AccountDeletionFeedback(pending: bool, error: Option<String>) -> Element {
+    rsx! {
+        if pending {
+            p { role: "status", "Deleting account…" }
+        } else if let Some(error) = error {
+            div {
+                class: "user-feedback user-feedback--error", role: "alert",
+                overflow_wrap: "anywhere",
+                p { "{error}" }
+                a { href: "/login", target: "_blank", rel: "noopener", "Check sign-in in another tab" }
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct AvatarEditSource {
     pub original_url: String,
@@ -72,6 +91,7 @@ type AvatarImageSource = Vec<u8>;
 struct AvatarUploadState<Source> {
     pending: Option<(Source, RecipeImageEdit)>,
     uploading: bool,
+    removing: bool,
 }
 
 impl<Source> Default for AvatarUploadState<Source> {
@@ -79,6 +99,7 @@ impl<Source> Default for AvatarUploadState<Source> {
         Self {
             pending: None,
             uploading: false,
+            removing: false,
         }
     }
 }
@@ -108,11 +129,13 @@ impl<Source: Clone> AvatarUploadState<Source> {
             return false;
         }
         self.uploading = true;
+        self.removing = true;
         true
     }
 
     fn finish(&mut self, succeeded: bool) {
         self.uploading = false;
+        self.removing = false;
         if succeeded {
             self.pending = None;
         }
@@ -1164,10 +1187,17 @@ pub fn SettingsProfile() -> Element {
         deletion.write().go_back();
     };
 
-    let final_username = delete_username.clone();
     let on_delete_final = move |_| {
         // Synchronous claim prevents queued/double clicks from spawning two requests.
-        if !deletion.write().begin_delete(&final_username) {
+        let current_username = auth_context
+            .peek()
+            .current_user
+            .as_ref()
+            .map(|profile| profile.username.clone())
+            .unwrap_or_default();
+        if !auth_context.peek().is_authenticated
+            || !deletion.write().begin_delete(&current_username)
+        {
             return;
         }
 
@@ -1187,11 +1217,9 @@ pub fn SettingsProfile() -> Element {
                     }
                 }
                 Err(e) => {
-                    let msg = match &e {
-                        ServerFnError::ServerError { message, .. } => message.clone(),
-                        _ => e.to_string(),
-                    };
-                    deletion.write().fail_delete(msg);
+                    deletion.write().fail_delete(
+                        settings_mutation_feedback(SettingsMutation::DeleteAccount, &e).into(),
+                    );
                 }
             }
         });
@@ -1419,7 +1447,10 @@ pub fn SettingsProfile() -> Element {
         let mut error = error;
         let mut saved_message = saved_message;
 
-        if !avatar_upload_state.write().begin_removal() {
+        if !auth_context.peek().is_authenticated
+            || avatar_url.peek().is_none()
+            || !avatar_upload_state.write().begin_removal()
+        {
             return;
         }
         spawn(async move {
@@ -1434,11 +1465,9 @@ pub fn SettingsProfile() -> Element {
                     avatar_upload_state.write().finish(true);
                 }
                 Err(e) => {
-                    let msg = match &e {
-                        ServerFnError::ServerError { message, .. } => message.clone(),
-                        _ => e.to_string(),
-                    };
-                    error.set(Some(msg));
+                    error.set(Some(
+                        settings_mutation_feedback(SettingsMutation::RemoveAvatar, &e).into(),
+                    ));
                     avatar_upload_state.write().finish(false);
                 }
             }
@@ -1469,21 +1498,30 @@ pub fn SettingsProfile() -> Element {
                             Avatar { size: AvatarSize::Large, src: avatar_url.clone(), username: avatar_name.clone() }
                         }
                         if avatar_upload_state.read().uploading {
-                            span { role: "status", "Uploading…" }
-                        } else if avatar_url.is_some() {
+                            span { role: "status",
+                                if avatar_upload_state.read().removing { "Removing photo…" } else { "Uploading…" }
+                            }
+                        }
+                        if avatar_url.is_some() {
                             div { class: "user-settings__avatar-actions",
-                                Button { variant: ButtonVariant::Secondary, onclick: on_edit_existing_avatar, "{avatar_photo_actions(true)[0]}" }
-                                Button { variant: ButtonVariant::Secondary, onclick: move |_| trigger_file_input("#avatar-upload-input"), "Change Photo" }
-                                Button { variant: ButtonVariant::Ghost, onclick: on_remove_avatar, "Remove photo" }
+                                Button { variant: ButtonVariant::Secondary, disabled: avatar_upload_state.read().uploading, onclick: on_edit_existing_avatar, "{avatar_photo_actions(true)[0]}" }
+                                Button { variant: ButtonVariant::Secondary, disabled: avatar_upload_state.read().uploading, onclick: move |_| trigger_file_input("#avatar-upload-input"), "Change Photo" }
+                                SettingsMutationControl {
+                                    id: "avatar-remove-photo", variant: ButtonVariant::Ghost,
+                                    pending: avatar_upload_state.read().removing,
+                                    unavailable: avatar_upload_state.read().uploading && !avatar_upload_state.read().removing,
+                                    label: "Remove photo", pending_label: "Removing…", on_action: on_remove_avatar,
+                                }
                             }
                         } else {
-                            Button { variant: ButtonVariant::Secondary, onclick: move |_| trigger_file_input("#avatar-upload-input"), "Choose Photo" }
+                            Button { variant: ButtonVariant::Secondary, disabled: avatar_upload_state.read().uploading, onclick: move |_| trigger_file_input("#avatar-upload-input"), "Choose Photo" }
                         }
                         if avatar_upload_state.read().pending.is_some() {
                             button { r#type: "button", class: "btn btn-secondary touch-target",
                                 aria_disabled: avatar_upload_state.read().uploading,
                                 onclick: move |_| on_upload_avatar.call(()),
-                                if avatar_upload_state.read().uploading { "Uploading photo…" } else { "Retry photo upload" }
+                                if avatar_upload_state.read().removing { "Removing photo…" }
+                                else if avatar_upload_state.read().uploading { "Uploading photo…" } else { "Retry photo upload" }
                             }
                             p { class: "user-settings__hint", "Your selected image and edits are kept until this page closes." }
                         }
@@ -1695,38 +1733,27 @@ pub fn SettingsProfile() -> Element {
                                 color: "var(--text-secondary)",
                                 "All your data will be permanently deleted."
                             }
-                            if let Some(err) = deletion.read().error.clone() {
-                                div {
-                                    role: "alert",
-                                    padding: "var(--space-sm) var(--space-md)",
-                                    background_color: "var(--error-bg)",
-                                    border_radius: "var(--radius-md)",
-                                    color: "var(--error)",
-                                    font_size: "14px",
-                                    "{err}"
-                                }
+                            AccountDeletionFeedback {
+                                pending: deleting, error: deletion.read().error.clone(),
                             }
                             div {
                                 display: "flex",
+                                flex_wrap: "wrap",
                                 justify_content: "flex-end",
                                 gap: "var(--space-sm)",
                                 span { id: "account-delete-back",
-                                    Button {
+                                    SettingsMutationControl {
+                                        id: "account-delete-back-button",
                                         variant: ButtonVariant::Ghost,
-                                        disabled: deleting,
-                                        onclick: on_delete_go_back,
-                                        "Go Back"
+                                        pending: deleting, label: "Go Back", pending_label: "Go Back",
+                                        on_action: on_delete_go_back,
                                     }
                                 }
-                                Button {
+                                SettingsMutationControl {
+                                    id: "account-delete-final",
                                     variant: ButtonVariant::Danger,
-                                    disabled: deleting,
-                                    onclick: on_delete_final,
-                                    if deleting {
-                                        "Deleting..."
-                                    } else {
-                                        "Delete My Account"
-                                    }
+                                    pending: deleting, label: "Delete My Account", pending_label: "Deleting…",
+                                    on_action: on_delete_final,
                                 }
                             }
                         }

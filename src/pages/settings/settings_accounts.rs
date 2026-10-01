@@ -4,12 +4,19 @@ use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::auth::context::use_auth;
+use super::mutation_recovery::{
+    settings_mutation_feedback, SettingsMutation, SettingsMutationControl,
+};
+use crate::auth::context::{use_auth, AuthContext};
 use crate::components::base::{
-    Button, ButtonVariant, Card, EmptyState, LoadRecovery, LoadingSpinner, SettingsTab,
-    SettingsTabs, SharedModal,
+    ButtonVariant, Card, EmptyState, LoadRecovery, LoadingSpinner, SettingsTab, SettingsTabs,
+    SharedModal,
 };
 use crate::components::AuthRequired;
+
+#[cfg(test)]
+#[path = "unlink_recovery_tests.rs"]
+mod unlink_recovery_tests;
 
 /// Extract a query parameter from the current URL.
 ///
@@ -53,6 +60,117 @@ pub struct LinkedAccount {
     pub provider: String,
     pub email: Option<String>,
     pub last_used_at: DateTime<chrono::Utc>,
+}
+
+/// Client confirmation/pending authority is separate from server ownership and
+/// last-account checks. Keep the named dialog open until the outcome is known.
+#[derive(Default)]
+struct AccountUnlinkState {
+    confirmation: Option<(Uuid, String)>,
+    pending: bool,
+    error: Option<String>,
+    success: Option<String>,
+}
+
+impl AccountUnlinkState {
+    fn open(&mut self, id: Uuid, provider: String) -> bool {
+        if self.pending {
+            return false;
+        }
+        self.confirmation = Some((id, provider));
+        self.error = None;
+        self.success = None;
+        true
+    }
+
+    fn begin(&mut self) -> Option<(Uuid, String)> {
+        if self.pending {
+            return None;
+        }
+        let candidate = self.confirmation.clone()?;
+        self.pending = true;
+        self.error = None;
+        Some(candidate)
+    }
+
+    fn cancel(&mut self) {
+        if !self.pending {
+            self.confirmation = None;
+        }
+    }
+
+    fn finish(&mut self, result: Result<(), String>) {
+        if !self.pending {
+            return;
+        }
+        self.pending = false;
+        match result {
+            Ok(()) => {
+                if let Some((_, provider)) = self.confirmation.take() {
+                    self.success = Some(format!("{provider} account unlinked successfully"));
+                }
+            }
+            Err(error) => self.error = Some(error),
+        }
+    }
+}
+
+fn can_unlink_account(accounts: &[LinkedAccount], id: Uuid) -> bool {
+    accounts.len() > 1 && accounts.iter().any(|account| account.id == id)
+}
+
+fn oauth_link_feedback(error: Option<&str>, provider: Option<&str>) -> Option<String> {
+    if error != Some("account_already_linked") {
+        return None;
+    }
+    let provider = match provider {
+        Some("google") => "Google",
+        Some("github") => "GitHub",
+        _ => "Sign-in provider",
+    };
+    Some(format!("This {provider} account is already linked to another user. Use a different provider account or keep your current sign-in methods."))
+}
+
+#[component]
+fn AccountUnlinkDialog(
+    provider: String,
+    pending: bool,
+    error: Option<String>,
+    on_cancel: EventHandler<()>,
+    on_confirm: EventHandler<()>,
+) -> Element {
+    rsx! {
+        SharedModal {
+            aria_labelledby: "unlink-account-title",
+            focus_selector: "#unlink-account-cancel button", pending,
+            on_dismiss: move |_| { if !pending { on_cancel.call(()); } },
+            div {
+                class: "modal-card", onclick: move |event| event.stop_propagation(),
+                display: "flex", flex_direction: "column", gap: "var(--space-md)",
+                h2 { id: "unlink-account-title", "Unlink {provider}?" }
+                p { "You will need to sign in again with your remaining accounts." }
+                if pending {
+                    p { role: "status", "Unlinking {provider}…" }
+                } else if let Some(error) = error {
+                    p { role: "alert", overflow_wrap: "anywhere", "{error}" }
+                    a { href: "/settings/accounts", target: "_blank", rel: "noopener", "Check linked accounts in another tab" }
+                }
+                div {
+                    display: "flex", flex_wrap: "wrap", justify_content: "flex-end", gap: "var(--space-sm)",
+                    span { id: "unlink-account-cancel",
+                        SettingsMutationControl {
+                            id: "unlink-account-cancel-button", variant: ButtonVariant::Secondary,
+                            pending, label: "Cancel", pending_label: "Cancel", on_action: on_cancel,
+                        }
+                    }
+                    SettingsMutationControl {
+                        id: "unlink-account-confirm", variant: ButtonVariant::Danger,
+                        pending, label: "Unlink", pending_label: "Unlinking…", on_action: on_confirm,
+                    }
+                }
+            }
+        }
+    }
 }
 
 // ── Server functions ─────────────────────────────────────────────────────────
@@ -118,74 +236,35 @@ pub async fn unlink_account(account_id: Uuid) -> Result<(), ServerFnError> {
 #[component]
 pub fn SettingsAccounts() -> Element {
     let _auth = use_auth();
+    let auth_context = use_context::<Signal<AuthContext>>();
 
     // Preserve failure while retrying so the focused recovery control remains
     // mounted. Subscribe to state explicitly for immediate pending feedback.
     let mut accounts = use_resource(get_linked_accounts);
 
-    let mut unlinking_id = use_signal(|| Option::<Uuid>::None);
-    let mut error = use_signal(|| Option::<String>::None);
-    let mut success = use_signal(|| Option::<String>::None);
-    let mut show_confirm = use_signal(|| Option::<(Uuid, String)>::None);
+    let mut unlink_state = use_signal(AccountUnlinkState::default);
 
     // Extract error params from URL for OAuth conflict notification
     let error_type = use_hook(|| extract_query_param("error"));
     let error_provider = use_hook(|| extract_query_param("provider"));
+    let mut error =
+        use_signal(move || oauth_link_feedback(error_type.as_deref(), error_provider.as_deref()));
 
     // Closure to clear error params from the URL (WASM only)
     let clear_error_params = move || {
         #[cfg(target_arch = "wasm32")]
         {
             if let Some(window) = web_sys::window() {
-                let _ = window.location().set_href("/settings/accounts");
+                if let Ok(history) = window.history() {
+                    let _ = history.replace_state_with_url(
+                        &wasm_bindgen::JsValue::NULL,
+                        "",
+                        Some("/settings/accounts"),
+                    );
+                }
             }
         }
     };
-
-    // Clone signals for use in async spawn (avoids borrow conflicts with use_effect)
-    let error_for_spawn = error;
-    let clear_for_spawn = clear_error_params;
-
-    // Show error notification for OAuth account conflict
-    use_effect(move || {
-        if let (Some(ref error_type_val), Some(ref provider)) = (&error_type, &error_provider) {
-            if error_type_val == "account_already_linked" {
-                // Capitalize first letter of provider name
-                let provider_display: String = provider
-                    .chars()
-                    .enumerate()
-                    .map(|(i, c)| {
-                        if i == 0 {
-                            c.to_uppercase().collect()
-                        } else {
-                            format!("{c}")
-                        }
-                    })
-                    .collect();
-
-                error.set(Some(format!(
-                    "This {provider_display} account is already linked to another user. That account will need to be deleted before you can link this provider.",
-                )));
-
-                // Auto-dismiss after 10 seconds and clear URL params
-                let err_signal = error_for_spawn;
-                let clear = clear_for_spawn;
-                spawn(async move {
-                    let mut err_signal = err_signal;
-                    #[cfg(target_arch = "wasm32")]
-                    {
-                        gloo_timers::future::sleep(std::time::Duration::from_secs(10)).await;
-                    }
-                    #[cfg(not(target_arch = "wasm32"))]
-                    {
-                        // Server-side: skip auto-dismiss (no persistent state)
-                    }
-                    clear();
-                    err_signal.set(None);
-                });
-            }
-        }
-    });
 
     // Build OAuth connect URLs
     let google_url = "/auth/google/start?redirect_uri=/settings/accounts&purpose=link";
@@ -228,42 +307,64 @@ pub fn SettingsAccounts() -> Element {
     };
 
     let mut on_request_unlink = move |account_id: Uuid, provider: String| {
-        error.set(None);
-        success.set(None);
-        show_confirm.set(Some((account_id, provider)));
+        if !auth_context.peek().is_authenticated
+            || accounts.pending()
+            || unlink_state.peek().pending
+        {
+            return;
+        }
+        let eligible = accounts
+            .peek()
+            .as_ref()
+            .and_then(|result| result.as_ref().ok())
+            .is_some_and(|rows| can_unlink_account(rows, account_id));
+        if eligible && unlink_state.write().open(account_id, provider) {
+            error.set(None);
+        }
     };
 
-    let mut on_confirm_unlink = move |_| {
-        let Some((account_id, provider)) = show_confirm().clone() else {
+    let on_confirm_unlink = move |_| {
+        if !auth_context.peek().is_authenticated
+            || accounts.pending()
+            || unlink_state.peek().pending
+        {
+            return;
+        }
+        let Some((account_id, _)) = unlink_state.peek().confirmation.clone() else {
             return;
         };
-        show_confirm.set(None);
-        unlinking_id.set(Some(account_id));
+        // Revalidate the current loaded list, not a captured last-account flag.
+        let eligible = accounts
+            .peek()
+            .as_ref()
+            .and_then(|result| result.as_ref().ok())
+            .is_some_and(|rows| can_unlink_account(rows, account_id));
+        if !eligible {
+            unlink_state.write().error = Some("Your linked accounts changed. Cancel and reload the account list before trying again.".into());
+            return;
+        }
+        if unlink_state.write().begin().is_none() {
+            return;
+        }
         error.set(None);
-
-        let mut accounts_clone = accounts;
         spawn(async move {
             match unlink_account(account_id).await {
                 Ok(()) => {
-                    success.set(Some(format!("{} account unlinked successfully", provider)));
-                    // Restart the resource to refetch
-                    accounts_clone.restart();
+                    unlink_state.write().finish(Ok(()));
+                    accounts.restart();
                 }
                 Err(e) => {
-                    let msg = match &e {
-                        ServerFnError::ServerError { message, .. } => message.clone(),
-                        _ => e.to_string(),
-                    };
-                    error.set(Some(msg));
+                    unlink_state.write().finish(Err(settings_mutation_feedback(
+                        SettingsMutation::Unlink,
+                        &e,
+                    )
+                    .into()));
                 }
             }
-            unlinking_id.set(None);
         });
     };
 
-    let mut on_cancel_unlink = move |_| {
-        show_confirm.set(None);
-    };
+    let on_cancel_unlink = move |_| unlink_state.write().cancel();
 
     // Extract data from resource before rendering to avoid borrow issues in rsx!
     let is_pending = *accounts.state().read() == UseResourceState::Pending;
@@ -367,16 +468,18 @@ pub fn SettingsAccounts() -> Element {
                                     }
                                 }
                                 // Unlink button
-                                Button {
+                                SettingsMutationControl {
+                                    id: format!("unlink-account-{}", account.id),
                                     variant: ButtonVariant::Secondary,
-                                    disabled: unlinking_id().is_some() || last_account,
-                                    onclick: move |_| {
+                                    pending: unlink_state.read().pending,
+                                    unavailable: last_account,
+                                    label: "Unlink", pending_label: "Unlinking…",
+                                    on_action: move |_| {
                                         on_request_unlink(
                                             account.id,
                                             provider_label(&account.provider),
                                         );
                                     },
-                                    if unlinking_id() == Some(account.id) { "Unlinking…" } else { "Unlink" }
                                 }
                             }
                         }
@@ -395,6 +498,8 @@ pub fn SettingsAccounts() -> Element {
                                 a {
                                     href: "{google_url}",
                                     class: "btn btn-secondary touch-target",
+                                    aria_disabled: unlink_state.read().pending,
+                                    onclick: move |event| { if unlink_state.peek().pending { event.prevent_default(); } },
                                     "Connect Google"
                                 }
                             }
@@ -402,6 +507,8 @@ pub fn SettingsAccounts() -> Element {
                                 a {
                                     href: "{github_url}",
                                     class: "btn btn-secondary touch-target",
+                                    aria_disabled: unlink_state.read().pending,
+                                    onclick: move |event| { if unlink_state.peek().pending { event.prevent_default(); } },
                                     "Connect GitHub"
                                 }
                             }
@@ -427,7 +534,7 @@ pub fn SettingsAccounts() -> Element {
             div { class: "container user-settings user-accounts",
             header { class: "user-page-heading",
                 p { class: "user-page-eyebrow", "Your account" }
-                h1 { class: "brand-title", PageIcon { kind: PageIconKind::Settings } span { "Linked accounts" } }
+                h1 { id: "linked-accounts-title", tabindex: "-1", class: "brand-title", PageIcon { kind: PageIconKind::Settings } span { "Linked accounts" } }
                 p { "Choose how you sign in to Noms." }
             }
             SettingsTabs {
@@ -436,7 +543,10 @@ pub fn SettingsAccounts() -> Element {
             p { class: "user-accounts__guidance", "Connected accounts are private. Keep at least one sign-in method linked." }
 
             // Error message
-            if let Some(err) = error() {
+            if let Some(err) = error().or_else(|| {
+                let state = unlink_state.read();
+                state.confirmation.is_none().then(|| state.error.clone()).flatten()
+            }) {
                 div {
                     role: "alert",
                     padding: "var(--space-sm) var(--space-md)",
@@ -451,6 +561,7 @@ pub fn SettingsAccounts() -> Element {
                     span { flex: "1", "{err}" }
                     button {
                         aria_label: "Dismiss account error",
+                        r#type: "button", class: "touch-target",
                         background: "transparent",
                         border: "none",
                         color: "var(--error)",
@@ -463,6 +574,18 @@ pub fn SettingsAccounts() -> Element {
                         onclick: move |_| {
                             clear_error_params();
                             error.set(None);
+                            unlink_state.write().error = None;
+                            #[cfg(target_arch = "wasm32")]
+                            {
+                                use wasm_bindgen::JsCast;
+                                if let Some(heading) = web_sys::window()
+                                    .and_then(|window| window.document())
+                                    .and_then(|document| document.get_element_by_id("linked-accounts-title"))
+                                    .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
+                                {
+                                    let _ = heading.focus();
+                                }
+                            }
                         },
                         "×"
                     }
@@ -470,7 +593,7 @@ pub fn SettingsAccounts() -> Element {
             }
 
             // Success message
-            if let Some(msg) = success() {
+            if let Some(msg) = unlink_state.read().success.clone() {
                 div {
                     role: "status",
                     padding: "var(--space-sm) var(--space-md)",
@@ -486,54 +609,11 @@ pub fn SettingsAccounts() -> Element {
             {content}
 
             // Confirmation modal
-            if let Some((confirm_id, confirm_provider)) = show_confirm() {
-                SharedModal {
-                    aria_labelledby: "unlink-account-title",
-                    focus_selector: "#unlink-account-cancel button",
-                    on_dismiss: move |_| on_cancel_unlink(()),
-                    div {
-                        class: "modal-card",
-                        onclick: move |evt| {
-                            evt.stop_propagation();
-                        },
-                        h2 {
-                            id: "unlink-account-title",
-                            margin_bottom: "var(--space-sm)",
-                            "Unlink {confirm_provider}?"
-                        }
-                        p {
-                            font_size: "14px",
-                            color: "var(--text-secondary)",
-                            margin_bottom: "var(--space-lg)",
-                            "You will need to sign in again with your remaining accounts."
-                        }
-                        div {
-                            display: "flex",
-                            gap: "var(--space-sm)",
-                            justify_content: "flex-end",
-                            span { id: "unlink-account-cancel",
-                                Button {
-                                    variant: ButtonVariant::Secondary,
-                                    onclick: move |_| {
-                                        on_cancel_unlink(());
-                                    },
-                                    "Cancel"
-                                }
-                            }
-                            Button {
-                                variant: ButtonVariant::Danger,
-                                disabled: unlinking_id().is_some(),
-                                onclick: move |_| {
-                                    on_confirm_unlink(());
-                                },
-                                if unlinking_id() == Some(confirm_id) {
-                                    "Unlinking..."
-                                } else {
-                                    "Unlink"
-                                }
-                            }
-                        }
-                    }
+            if let Some((_, provider)) = unlink_state.read().confirmation.clone() {
+                AccountUnlinkDialog {
+                    provider, pending: unlink_state.read().pending,
+                    error: unlink_state.read().error.clone(),
+                    on_cancel: on_cancel_unlink, on_confirm: on_confirm_unlink,
                 }
             }
         }

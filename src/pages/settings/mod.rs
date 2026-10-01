@@ -1,4 +1,5 @@
 mod account_delete_flow;
+mod mutation_recovery;
 mod settings_accounts;
 mod settings_profile;
 

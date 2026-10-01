@@ -1,6 +1,50 @@
 use super::*;
 
 #[test]
+fn avatar_removal_claims_shared_busy_state_and_failed_removal_retains_selected_edits() {
+    let mut state = AvatarUploadState::<Vec<u8>>::default();
+    let edit = RecipeImageEdit::default_ellipse_1x1();
+    state.select(vec![1, 2, 3], edit.clone());
+    assert!(state.begin_removal());
+    assert!(state.uploading && state.removing);
+    assert!(!state.begin_removal());
+    assert!(state.begin_upload().is_none());
+    assert!(!state.select(vec![4], edit.clone()));
+    state.finish(false);
+    assert!(!state.uploading && !state.removing);
+    assert_eq!(state.pending, Some((vec![1, 2, 3], edit)));
+    assert!(state.begin_removal());
+    state.finish(true);
+    assert!(state.pending.is_none() && !state.removing && !state.uploading);
+}
+
+#[component]
+fn DeletionFeedbackRoot(pending: bool, failed: bool) -> Element {
+    rsx! { AccountDeletionFeedback { pending,
+        error: failed.then(||settings_mutation_feedback(SettingsMutation::DeleteAccount,&ServerFnError::new("internal details")).to_string()),
+    } }
+}
+
+#[test]
+fn account_deletion_feedback_announces_pending_or_safe_failure_and_keeps_check_in_another_tab() {
+    for (pending, failed) in [(false, false), (true, true), (false, true)] {
+        let mut dom = VirtualDom::new_with_props(
+            DeletionFeedbackRoot,
+            DeletionFeedbackRootProps { pending, failed },
+        );
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert_eq!(html.contains("role=\"status\""), pending);
+        assert_eq!(html.contains("role=\"alert\""), failed && !pending);
+        assert!(!html.contains("internal details"));
+        if failed && !pending {
+            assert!(html.contains("may already have been deleted"));
+            assert!(html.contains("target=\"_blank\""));
+        }
+    }
+}
+
+#[test]
 fn profile_save_feedback_keeps_known_validation_and_session_guidance() {
     for message in [
         "Username must be 3-30 characters",
