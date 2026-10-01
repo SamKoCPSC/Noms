@@ -11,7 +11,9 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use crate::api::recipe::{
     compare_version_graph_snapshots_api, expand_recipe_version_graph, get_recipe_version_graph,
 };
-use crate::components::base::{Card, EditedRecipeImage, EmptyState, LoadingSpinner, PageHeader};
+use crate::components::base::{
+    Card, EditedRecipeImage, EmptyState, LoadRecovery, LoadingSpinner, PageHeader,
+};
 use crate::types::{
     RecipeVersionChange, VersionGraph, VersionGraphComparison, VersionGraphEdge,
     VersionGraphEdgeKind, VersionGraphFrontier, VersionGraphFrontierKind, VersionGraphLineageCount,
@@ -21,9 +23,28 @@ use crate::Route;
 
 fn server_error_message(error: &ServerFnError) -> String {
     match error {
-        ServerFnError::ServerError { message, .. } => message.clone(),
-        _ => error.to_string(),
+        ServerFnError::ServerError { message, .. } if is_recipe_unavailable_error(message) => {
+            message.clone()
+        }
+        _ => "The graph request couldn’t be completed. Please try again.".into(),
     }
+}
+
+/// Claim before spawning so queued clicks cannot duplicate or reverse a request.
+fn claim_version_graph_comparison(
+    mut pending: Signal<bool>,
+    from: Option<VersionGraphNodeId>,
+    to: Option<VersionGraphNodeId>,
+) -> Option<(VersionGraphNodeId, VersionGraphNodeId)> {
+    if *pending.peek() {
+        return None;
+    }
+    let (from, to) = (from?, to?);
+    if from == to {
+        return None;
+    }
+    pending.set(true);
+    Some((from, to))
 }
 
 fn is_recipe_unavailable_error(message: &str) -> bool {
@@ -1670,7 +1691,7 @@ fn VersionGraphSnapshotCard(
 pub fn RecipeVersionGraph(id: String) -> Element {
     let navigator = navigator();
     let recipe_id_is_valid = uuid::Uuid::parse_str(&id).is_ok();
-    let graph_resource = use_resource(use_reactive((&id,), move |(recipe_id,)| async move {
+    let mut graph_resource = use_resource(use_reactive((&id,), move |(recipe_id,)| async move {
         if uuid::Uuid::parse_str(&recipe_id).is_err() {
             return Err(ServerFnError::new("Invalid recipe ID"));
         }
@@ -1706,9 +1727,11 @@ pub fn RecipeVersionGraph(id: String) -> Element {
     let mut expansion_records = use_signal(Vec::<VersionGraphExpansionRecord>::new);
     let mut request_scope = use_signal(|| VersionGraphRequestScope::initial(id.clone()));
     let mut previous_graph_layout = use_signal(|| None::<(bool, VersionGraphLayout)>);
+    let mut graph_retry_requested = use_signal(|| false);
     // Subscribe to the completed value before any pending check or early return.
     // Reading only pending() can leave a client-side route in its loading state.
     let graph_result: Option<Result<VersionGraph, ServerFnError>> = graph_resource.read().clone();
+    let graph_pending = *graph_resource.state().read() == UseResourceState::Pending;
 
     use_effect(use_reactive((&id,), move |(recipe_id,)| {
         let next_scope = request_scope.peek().advance(recipe_id);
@@ -1721,6 +1744,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
         comparison_result.set(None);
         comparison_error.set(None);
         comparison_is_loading.set(false);
+        graph_retry_requested.set(false);
     }));
 
     use_effect(use_reactive((&id,), move |(recipe_id,)| {
@@ -1789,7 +1813,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
         };
     }
 
-    if graph_resource.pending() {
+    if graph_pending && !matches!(graph_result, Some(Err(_))) {
         return rsx! {
             div { class: "container",
                 PageHeader { title: "Recipe version graph", icon: Some(PageIconKind::History) }
@@ -1804,7 +1828,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                         p {
                             margin_top: "var(--space-md)",
                             color: "var(--text-secondary)",
-                            "Loading version graph..."
+                            role: "status", "Loading version graph..."
                         }
                     }
                 }
@@ -1852,6 +1876,17 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                             title: state_title,
                             description: state_description,
                             action: back_to_recipe,
+                        }
+                        LoadRecovery {
+                            pending: graph_pending,
+                            message: "The version graph couldn’t be loaded. Please try again.",
+                            retry_label: "Retry version graph",
+                            onretry: move |_| {
+                                if !graph_resource.pending() {
+                                    graph_retry_requested.set(true);
+                                    graph_resource.restart();
+                                }
+                            },
                         }
                     }
                 }
@@ -2000,6 +2035,13 @@ pub fn RecipeVersionGraph(id: String) -> Element {
     rsx! {
         document::Link { rel: "stylesheet", href: asset!("/assets/recipe-version-graph.css") }
         div { class: "container recipe-version-graph-page",
+            id: "version-graph-content", tabindex: "-1",
+            onmounted: move |event| async move {
+                if *graph_retry_requested.peek() {
+                    graph_retry_requested.set(false);
+                    let _ = event.data.set_focus(true).await;
+                }
+            },
             PageHeader {
                 title: heading_title,
                 icon: Some(PageIconKind::History),
@@ -3131,6 +3173,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                             }
                                         },
                                         onclick: move |_| {
+                                            if *comparison_is_loading.peek() || !snapshot_navigation_available { return; }
                                             comparison_before.set(Some(snapshot_id));
                                             comparison_result.set(None);
                                             comparison_error.set(None);
@@ -3152,6 +3195,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                             }
                                         },
                                         onclick: move |_| {
+                                            if *comparison_is_loading.peek() || !snapshot_navigation_available { return; }
                                             comparison_after.set(Some(snapshot_id));
                                             comparison_result.set(None);
                                             comparison_error.set(None);
@@ -3174,11 +3218,11 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                         },
                                         onclick: move |_| {
                                             if let Some(current_snapshot_id) = current_snapshot_id {
+                                                if !snapshot_navigation_available || claim_version_graph_comparison(comparison_is_loading, Some(snapshot_id), Some(current_snapshot_id)).is_none() { return; }
                                                 comparison_before.set(Some(snapshot_id));
                                                 comparison_after.set(Some(current_snapshot_id));
                                                 comparison_result.set(None);
                                                 comparison_error.set(None);
-                                                comparison_is_loading.set(true);
                                                 let requested_scope = request_scope.peek().clone();
                                                 spawn(async move {
                                                     let response = compare_version_graph_snapshots_api(
@@ -3459,6 +3503,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                     class: "btn btn-secondary",
                                     disabled: comparison_before().is_none() || comparison_after().is_none() || comparison_is_loading(),
                                     onclick: move |_| {
+                                        if *comparison_is_loading.peek() || comparison_before.peek().is_none() || comparison_after.peek().is_none() { return; }
                                         let before = comparison_before();
                                         comparison_before.set(comparison_after());
                                         comparison_after.set(before);
@@ -3475,6 +3520,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                             && comparison_after().is_none()
                                             && comparison_result().is_none()),
                                     onclick: move |_| {
+                                        if *comparison_is_loading.peek() { return; }
                                         comparison_before.set(None);
                                         comparison_after.set(None);
                                         comparison_result.set(None);
@@ -3510,16 +3556,16 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                         }
                         button {
                             r#type: "button",
-                            class: "btn btn-primary recipe-version-graph__comparison-submit",
-                            disabled: comparison_before().is_none()
+                            class: "btn btn-primary touch-target recipe-version-graph__comparison-submit",
+                            aria_disabled: comparison_before().is_none()
                                 || comparison_after().is_none()
                                 || comparison_before() == comparison_after()
                                 || comparison_is_loading(),
+                            aria_busy: comparison_is_loading(),
                             onclick: move |_| {
-                                let (Some(from), Some(to)) = (comparison_before(), comparison_after()) else {
+                                let Some((from, to)) = claim_version_graph_comparison(comparison_is_loading, *comparison_before.peek(), *comparison_after.peek()) else {
                                     return;
                                 };
-                                comparison_is_loading.set(true);
                                 comparison_error.set(None);
                                 comparison_result.set(None);
                                 let requested_scope = request_scope.peek().clone();
@@ -3917,7 +3963,7 @@ mod tests {
     fn graph_shell_subscribes_to_the_recipe_result_before_returning_loading_ui() {
         let source = include_str!("recipe_version_graph.rs");
         let result_read = source.find("graph_resource.read().clone()").unwrap();
-        let loading_return = source.find("if graph_resource.pending()").unwrap();
+        let loading_return = source.find("if graph_pending &&").unwrap();
 
         assert!(result_read < loading_return);
     }
@@ -5501,7 +5547,15 @@ mod tests {
         );
         assert!(records[0].is_expanded);
         assert!(!records[0].is_loading);
-        assert_eq!(records[0].error.as_deref(), Some("frontier is stale"));
+        assert_eq!(
+            records[0].error.as_deref(),
+            Some("The graph request couldn’t be completed. Please try again.")
+        );
+        assert!(!records[0]
+            .error
+            .as_deref()
+            .unwrap()
+            .contains("frontier is stale"));
         assert_eq!(
             records[0].batch.as_ref().unwrap().nodes,
             vec![first_node.clone()]
@@ -5541,3 +5595,7 @@ mod tests {
         assert!(route_reset.contains("comparison_is_loading.set(false)"));
     }
 }
+
+#[cfg(test)]
+#[path = "graph_recovery_tests.rs"]
+mod graph_recovery_tests;
