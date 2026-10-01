@@ -2195,10 +2195,19 @@ function parseFoodComVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
     const url = new URL(sourceUrl);
     if (!["http:", "https:"].includes(url.protocol) || !["food.com", "www.food.com"].includes(url.hostname)) return null;
   } catch { return null; }
-  const mains = elementsMatchingAttributes(inertHtml, (attributes, tag) => tag === "main" && attributes.get("id") === "recipe" && hasClass(attributes, "recipe"));
-  if (mains.length !== 1) return null;
+  const mains = elementsMatchingAttributes(inertHtml, (_, tag) => tag === "main");
+  if (mains.length !== 1 || mains[0].attributes.get("id") !== "recipe" || !hasClass(mains[0].attributes, "recipe")) return null;
   const main = mains[0];
   const hiddenRanges = elementsMatchingAttributes(inertHtml, attributes => listIsHidden({ attributes }) || hasClass(attributes, "hidden"));
+  // A malformed hidden wrapper still hides its descendants in the browser.
+  // The complete-element scanner skips it, so retain its conservative range.
+  for (const match of inertHtml.matchAll(/<([a-z][a-z0-9:-]*)\b((?:"[^"]*"|'[^']*'|[^>"'])*)>/giu)) {
+    const attributes = htmlAttributes(match[2]);
+    if ((listIsHidden({ attributes }) || hasClass(attributes, "hidden")) && !hiddenRanges.some(e => e.index === match.index)) {
+      const openingEnd = match.index + match[0].length;
+      hiddenRanges.push({ index: match.index, end: inertHtml.length, innerHtml: inertHtml.slice(openingEnd) });
+    }
+  }
   const isHidden = (element, offset = main.openingEnd, includeText = false) => hiddenRanges.some(range =>
     (range.index <= offset + element.index && offset + element.index < range.end) ||
     (includeText && offset + element.index <= range.index && range.index < offset + element.end && htmlText(range.innerHtml)));
@@ -2317,8 +2326,15 @@ function parseFoodComVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
     facts.set(label, value);
     const raw = `${label}: ${value}`;
     if (label === "Ready In" && /^(?:\d+(?:[.,]\d+)?\s*(?:days?|d|hours?|hrs?|hr|h|minutes?|mins?|min|m)\s*)+$/iu.test(value)) {
-      const parsed = labeledDuration(`Total: ${value}`);
-      if (parsed) result.fields.totalTime = { ...scalar(raw, "text/html", "main#recipe .facts (Ready In)"), value: parsed.value };
+      // Unlike the shared word-boundary parser, this anchored provider grammar
+      // also supports compact adjacent tokens such as 1hr15mins.
+      let minutes = 0;
+      for (const part of value.matchAll(/(\d+(?:[.,]\d+)?)\s*(days?|d|hours?|hrs?|hr|h|minutes?|mins?|min|m)/giu)) {
+        const multiplier = part[2].toLowerCase().startsWith("d") ? 1440 : part[2].toLowerCase().startsWith("h") ? 60 : 1;
+        minutes += Number(part[1].replace(",", ".")) * multiplier;
+      }
+      if (Number.isSafeInteger(minutes) && minutes >= 0) result.fields.totalTime = { ...scalar(raw, "text/html", "main#recipe .facts (Ready In)"), value: minutes };
+      else result.unclassifiedLines.push({ raw, provenance: provenance("text/html", "main#recipe .facts (Ready In)") });
     } else if (!["Yields", "Serves", "Ingredients"].includes(label)) result.unclassifiedLines.push({ raw, provenance: provenance("text/html", "main#recipe .facts") });
   }
   if (facts.has("Yields") || facts.has("Serves")) {

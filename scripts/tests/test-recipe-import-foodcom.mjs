@@ -75,3 +75,16 @@ test('Food.com active/raw bodies stay opaque and unsafe images are never retaine
  assert.equal(parse(`<script>${recipe}</script><iframe>${recipe}</iframe><template>${recipe}</template>${recipe}`).parser.sourceAdapter,'foodcom');
  assert.deepEqual(parse(recipe.replace('https://images.example.invalid/loaf.jpg','javascript:alert(1)')).fields.images,[]);
 });
+test('Food.com compact duration tokens retain all components and unsupported values retain literal evidence',()=>{
+ assert.equal(parse(recipe.replace('1hr 15mins','1hr15mins')).fields.totalTime.value,75);
+ assert.equal(parse(recipe.replace('1hr 15mins','1.5hrs')).fields.totalTime.value,90);
+ for(const value of ['1.5mins','9007199254740993days']) {
+  const c=parse(recipe.replace('1hr 15mins',value));assert.equal(c.fields.totalTime,null);
+  assert.ok(c.unclassifiedLines.some(l=>l.raw===`Ready In: ${value}`));
+  assert.ok(c.warnings.some(w=>w.code==='UNCLASSIFIED_PROVIDER_METADATA'));
+ }
+});
+test('Food.com refuses unclosed hidden ancestors and competing main roots with changed classes',()=>{
+ for(const prefix of ['<div hidden>','<div aria-hidden="true">','<div style="display:none">','<div class="hidden">'])refuses(prefix+recipe);
+ refuses(recipe+'<main id="recipe" class="changed"><h1>Other recipe</h1></main>');
+});
