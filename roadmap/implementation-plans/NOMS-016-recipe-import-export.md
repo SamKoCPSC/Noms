@@ -379,6 +379,19 @@ The user's Food Network manual check passed, but two live Condé pages rejected.
 
 Fresh browser preview/native clipboard verification is still pending because browser automation hit focus timeouts/client blocking; no browser protection was bypassed. Refresh the import page, supply the recipe source URL, then re-copy/paste the page. The live DOM success is not a claim about the exact clipboard bytes the user originally pasted. No drafts were created or published. See the real-corpus report for commands, deployment hashes and limitations; full database CI was not rerun.
 
+### Final provider rollout: BBC Good Food and King Arthur Baking — 2026-10-02
+
+The remaining two exact-host adapters are implemented sequentially in the canonical NOMS-016 worktree. BBC Good Food retains explicit quantity/name/continuation spans, ingredient groups, equipment, numbered multi-paragraph methods and literal duration/yield metadata. King Arthur Baking retains one literal ingredient row including both volume/weight representations, grouped ingredients, footnotes, all written action paragraphs and baker's tips; measured tutorials, lesson promotions and UI controls are excluded without allowing arbitrary extra cooking text to disappear. Ranges, qualified times and repeated duration units remain unresolved literal values; output yields are not guessed servings. Images remain unfetched references. Neither adapter fetches a source URL or executes pasted HTML.
+
+| Provider | Activated captures | Retained ingredient rows | Retained steps | Focused tests |
+| --- | ---: | ---: | ---: | ---: |
+| BBC Good Food | 100/100 | 946 | 343 | 17/17 |
+| King Arthur Baking | 100/100 | 1,197 | 1,085 | 19/19 |
+
+All 15 corpus providers now have adapter coverage: integrity-verified structural acceptance is 1,520/1,520, with zero invalid candidates or unexpected errors. Every one of the other 1,320 outcomes deeply matches baseline `9fe67d7`. Exact row/action accounting is not a semantic-accuracy claim for all normalized fields. A new digest-bound semantic benchmark was not created in this checkpoint.
+
+Independent review passes after tests-first fixes for unaccounted procedure text, overlapping BBC row fields, hidden/navigation-contained King Arthur titles, promotional shells swallowing actions and repeated duration-unit undercounting. All 256 cumulative provider tests, five bridge tests, active-content/fixture/corpus/semantic evaluator gates, eight Rust mapping tests and `just fmt check lint` pass. The deployed module on port 32783 is byte-identical to the validated source and parses both invented fixtures through the clipboard bridge. Fresh UI paste/private-draft testing could not run because browser control encountered a paused response and fresh-tab connection timeout. No browser protection was bypassed, and no draft was created or published. The two providers are ready for the user's manual live/native-copy review; refresh the import page and supply the source URL. See the real-corpus report for reproducible commands, deployment hash and ordered commits. User-owned generated CSS is excluded.
+
 ## First end-to-end clipboard integration
 
 Provider expansion is paused while the existing parser is connected to the application. The first slice adds an authenticated Import Recipe page: supply an optional source URL, paste the full page, preview the extracted fields and warnings, then explicitly create a private draft and open the existing recipe editor. Editing, autosaving and publishing use the existing draft workflow; preview alone must not persist a recipe or raw clipboard data.
