@@ -248,6 +248,8 @@ fn shared_session_checks_follow_activation_and_routes_with_owned_listener_cleanu
     assert!(source.contains("full_route_string()"));
     assert!(source.contains("remove_event_listener_with_callback"));
     assert!(source.contains("use_drop("));
+    assert!(source.contains("Interval::new(30_000"));
+    assert!(source.contains("subscriptions.borrow_mut().take()"));
     assert!(
         !source.contains("local_storage"),
         "Never publish identities or tokens through storage"

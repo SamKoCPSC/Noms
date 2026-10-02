@@ -208,7 +208,7 @@ pub fn AuthRefresh() -> Element {
     });
     #[cfg(target_arch = "wasm32")]
     {
-        let listeners = use_hook(move || {
+        let subscriptions = use_hook(move || {
             let mut listeners = Vec::new();
             if let Some(window) = web_sys::window() {
                 for name in ["focus", "pageshow"] {
@@ -226,9 +226,22 @@ pub fn AuthRefresh() -> Element {
                     ));
                 }
             }
-            std::rc::Rc::new(std::cell::RefCell::new(listeners))
+            // Some embedded browsers and simultaneously visible windows do
+            // not emit a new activation event after a cookie changes elsewhere.
+            // Bound detection latency without polling hidden tabs or storing IDs.
+            let interval = gloo_timers::callback::Interval::new(30_000, move || {
+                if web_sys::window()
+                    .and_then(|window| window.document())
+                    .is_some_and(|document| !document.hidden())
+                {
+                    refresh.call(());
+                }
+            });
+            std::rc::Rc::new(std::cell::RefCell::new(Some((listeners, interval))))
         });
-        use_drop(move || listeners.borrow_mut().clear());
+        use_drop(move || {
+            subscriptions.borrow_mut().take();
+        });
         // This reactive route read also checks after client-side navigation.
         // The first client effect supplies the hydration check; SSR never fetches.
         let route = router().full_route_string();

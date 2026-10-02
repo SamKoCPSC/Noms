@@ -26,12 +26,32 @@ pub fn SessionPage() -> Element {
         .then_some(auth.current_user_id)
         .flatten();
     if retains_local_work(&route) {
-        rsx! { RetainedFormPage { key: "form-{path}", path, Outlet::<Route> {} } }
+        rsx! {
+            for visit in [path] {
+                RetainedFormPage { key: "form-{visit}", path: visit, Outlet::<Route> {} }
+            }
+        }
     } else {
         // Cancel old resources and remount every nested private/read-only view
         // together with its profile links. Profile-only updates do not reset it.
-        rsx! { Outlet::<Route> { key: "account-{identity:?}" } }
+        rsx! { ReadOnlySessionScope { identity, Outlet::<Route> {} } }
     }
+}
+
+#[component]
+fn ReadOnlySessionScope(identity: Option<uuid::Uuid>, children: Element) -> Element {
+    // Dioxus keys reset scopes in a keyed fragment, not on a single static
+    // component slot. The one-item list is intentional lifecycle ownership.
+    rsx! {
+        for account in [identity] {
+            AccountReadContents { key: "account-{account:?}", children: children.clone() }
+        }
+    }
+}
+
+#[component]
+fn AccountReadContents(children: Element) -> Element {
+    rsx! { {children} }
 }
 
 #[component]
@@ -136,6 +156,55 @@ mod tests {
         use_hook(move || *control.borrow_mut() = Some(auth));
         use_context_provider(|| auth);
         rsx! { RetainedFormPage { path: "/settings/profile", AuthRequired { LocalEntry { mounts } } } }
+    }
+
+    #[component]
+    fn ReadOwnerProbe(mounts: Rc<Cell<usize>>) -> Element {
+        let auth = use_auth();
+        use_hook(move || mounts.set(mounts.get() + 1));
+        let data_owner = use_signal(move || auth.current_user_id);
+        rsx! { p { "data-owner-{data_owner():?}" } }
+    }
+
+    #[component]
+    fn ReadTransitionRoot(
+        control: Rc<RefCell<Option<Signal<AuthContext>>>>,
+        mounts: Rc<Cell<usize>>,
+    ) -> Element {
+        let auth = use_signal(|| identity(1));
+        use_hook(move || *control.borrow_mut() = Some(auth));
+        use_context_provider(|| auth);
+        rsx! { ReadOnlySessionScope { identity: auth().current_user_id, ReadOwnerProbe { mounts } } }
+    }
+
+    #[test]
+    fn session_read_scope_really_remounts_cached_data_on_identity_change() {
+        let control = Rc::new(RefCell::new(None));
+        let mounts = Rc::new(Cell::new(0));
+        let mut dom = VirtualDom::new_with_props(
+            ReadTransitionRoot,
+            ReadTransitionRootProps {
+                control: control.clone(),
+                mounts: mounts.clone(),
+            },
+        );
+        dom.rebuild_in_place();
+        let mut auth = control.borrow().unwrap();
+        for (expected_mounts, current) in [
+            (2, identity(2)),
+            (3, AuthContext::default()),
+            (4, identity(1)),
+        ] {
+            let expected_owner = current.current_user_id;
+            dom.in_scope(ScopeId::ROOT, || auth.set(current));
+            dom.render_immediate(&mut dioxus_core::NoOpMutations);
+            assert_eq!(
+                mounts.get(),
+                expected_mounts,
+                "Changing a single component key is not enough to reset cached read resources"
+            );
+            assert!(dioxus_ssr::render(&dom).contains(&format!("data-owner-{expected_owner:?}")));
+        }
     }
 
     #[test]
