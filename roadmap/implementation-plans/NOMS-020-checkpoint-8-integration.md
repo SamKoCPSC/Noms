@@ -5778,3 +5778,118 @@ full accessibility/real-device/final whole-app acceptance. Checkpoint 8 is
 still open; destructive tests require fresh isolated fixtures and action-time
 approval. Preserving local test tabs pending cleanup approval is not whole-app
 acceptance or authority to discard any user-owned work.
+
+## Early collection input investigation
+
+On 2026-10-01, investigated the remaining collection-input question at
+`4bb28b5` on the existing `http://127.0.0.1:32768` deployment. This was diagnosis
+and documentation only: no application source change, rebuild, content save,
+upload, sign-in change or direct database write. The investigation identified
+two current editor lifecycle defects requiring remediation. It does not prove
+the exact cause of the earlier rapid-navigation observations.
+
+### Historical evidence and source boundary
+
+The first recorded observation, during the 2026-09-27 subcollection check,
+said an immediate fill was not retained during initialization. The later
+populated-fixture check described filled DOM fields followed by a saved default
+name and empty description. Neither record includes a timestamped event trace
+or exact client initialization boundary. A normal browser creation passed before
+the submit fix, so neither observation supports an unconditional save failure.
+
+The original shared CollectionForm in `c1d5e1f` already used controlled signals,
+input-event updates and a submit callback that did not read submitted fields.
+CollectionNew initialized the name to Untitled Collection and the description
+to empty. `2981abf` changed layout and pending guards, not that signal-only
+contract. Therefore the missed-event vulnerability exists in the original
+collection implementation, rather than being introduced by the visual overhaul.
+This is a source-level introduction boundary, not runtime proof of the historical
+browser trigger. `3ba9b9a` added named-field submission capture, with previously
+recorded behavioral red/green regressions; those tests do not cover node removal
+or loss of text before submission.
+
+### Controlled browser comparison
+
+Paused only the observed `/wasm/noms.js` Script request in a fresh temporary tab,
+with tab-scoped cache bypass. The server-rendered name and description were
+editable while the client hydration callback was absent. Filled synthetic text
+through the normal field controls, then released the script. Never pressed
+Create collection or submitted a mutation.
+
+| Case | Server route in hydration payload | Browser route | Result after client initialization |
+| --- | --- | --- | --- |
+| Top-level form, first run | Not decoded in this run | `/collections/new` | Filled name/description replaced by defaults; enabled-looking form had inert ancestors. |
+| Nested form | `/collections/new?parent=7f535c8e-d0a1-4052-87a5-65b203479917` | Same route | Original input nodes stayed connected and retained both synthetic entries. Native account-menu interaction confirmed the client was interactive. |
+| Top-level form, repeat | `/collections/new?` | `/collections/new` | Original filled nodes disconnected; replacement nodes held Untitled Collection and an empty description. |
+
+The repeat retained references to the original nodes and temporarily traced
+their native value setters without changing setter behavior. No value assignment
+to those nodes was recorded; the nodes were removed and replaced. It is therefore
+inaccurate to describe this particular failure as a hydration setter overwriting
+the original inputs. The current failure is a form remount.
+
+The raw route key in SessionPage was introduced by `d7b3013`:
+`form-{router().full_route_string()}`. Installed Dioxus 0.7.9 FullstackHistory
+uses its serialized initial route during hydration, then reads browser history
+and schedules a rerender. The top-level route's empty trailing query is present
+in the serialized server route but absent from browser `location.search`.
+Together with the key and observed node replacement, this establishes the
+current top-level startup trigger. The valid nested parent route has no such
+difference and did not remount in this comparison. This newer regression cannot
+explain observations recorded before `d7b3013` existed.
+
+### Active editor inert defect
+
+After the top-level remount, both RetainedFormPage and AuthRequired wrappers
+had `inert="false"` while the original account was still authenticated, no
+account-change notice existed, and neither wrapper was hidden. Native browser
+inspection reported `element.inert === true` for both wrappers; the form
+disappeared from the accessibility tree despite remaining visually present.
+
+The installed Dioxus interpreter's boolean-attribute removal list does not
+include inert; a false value is written as an attribute instead of removed.
+Both wrappers were added in `d7b3013`. Enabled editors must omit the attribute,
+not serialize false. The nested form did not acquire these attributes in this
+run, which further shows why an initial SSR snapshot or unit renderer alone
+is not adequate acceptance. This finding reopens the earlier scoped lifecycle
+acceptance; it is not a fix or a claim that every editor route was checked.
+
+### Verification and bounded next action
+
+Reran from the checkpoint worktree:
+
+```sh
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server collection_form::tests -- --test-threads=1
+```
+
+Result: **5 passed, 0 failed, 0 ignored**. No fresh full CI run or new historical
+red run is claimed. The unchanged submit-capture tests remain valid but do not
+certify startup or native inert behavior.
+
+Next, fix stable startup form identity and native inert omission, then verify
+top-level/nested early input, original-account keyboard editing, and account
+mismatch/recovery without losing text or image state. Before closing this gate,
+also exercise missed-event submission on the stable form. The historical exact
+event sequence remains a recorded limitation, not a reason to claim this newer
+root cause or indefinitely repeat unguided historical tests.
+
+Temporary local evidence:
+`/tmp/noms-020-collection-early-before.jpg`,
+`/tmp/noms-020-collection-nested-early-retained.jpg`,
+`/tmp/noms-020-collection-top-level-early-lost.jpg` and
+`/tmp/noms-020-collection-top-level-early-trace.json`. Screenshots were inspected;
+the trace distinguishes disconnected original fields from current defaults.
+These temporary artifacts are not permanent baseline assets.
+
+Removed temporary setter instrumentation and cleared script interception and
+cache/network overrides. Closed the repeat top-level tab after confirming its
+synthetic entries had already been lost and only default values remained. The
+nested synthetic unsaved entries are retained pending cleanup approval; the
+two earlier profile/cover test tabs remain preserved and were not reloaded.
+Other deployments and user tabs were not changed. Integration user CSS retains
+SHA-256 `74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+
+Second-pass self-review: **diagnostic evidence PASS; editor lifecycle acceptance
+FAIL pending the two fixes; overall checkpoint 8 OPEN**. No independent-agent
+review claimed. Reused the existing checkpoint task branch for this single
+cohesive documentation update; no runtime changes to roll back.
