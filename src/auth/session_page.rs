@@ -16,6 +16,23 @@ fn retains_local_work(route: &Route) -> bool {
     )
 }
 
+/// Browser location omits empty query/fragment delimiters that SSR history
+/// can retain. They must not turn hydration into a new editor visit; preserve
+/// all nonempty query/fragment text so real navigation still resets the scope.
+fn retained_form_visit_key(path: &str) -> String {
+    let (before_fragment, fragment) = path
+        .split_once('#')
+        .map_or((path, None), |(path, fragment)| (path, Some(fragment)));
+    let normalized = match before_fragment.split_once('?') {
+        Some((path, "")) => path,
+        _ => before_fragment,
+    };
+    match fragment.filter(|fragment| !fragment.is_empty()) {
+        Some(fragment) => format!("{normalized}#{fragment}"),
+        None => normalized.to_string(),
+    }
+}
+
 #[component]
 pub fn SessionPage() -> Element {
     let auth = use_auth();
@@ -26,9 +43,10 @@ pub fn SessionPage() -> Element {
         .then_some(auth.current_user_id)
         .flatten();
     if retains_local_work(&route) {
+        let visit_key = retained_form_visit_key(&path);
         rsx! {
             for visit in [path] {
-                RetainedFormPage { key: "form-{visit}", path: visit, Outlet::<Route> {} }
+                RetainedFormPage { key: "form-{visit_key}", path: visit, Outlet::<Route> {} }
             }
         }
     } else {
@@ -110,7 +128,9 @@ fn RetainedFormPage(path: String, children: Element) -> Element {
         }
         // Keep the component and owned blobs alive. Hidden/inert also prevents
         // keyboard access; CSS explicitly hides top-layer dialogs/popovers.
-        div { id: "session-retained-page", hidden: blocked, inert: blocked, tabindex: "-1", {children} }
+        // Dioxus's client interpreter does not remove inert=false. Omit the
+        // attribute completely when enabled, including after account recovery.
+        div { id: "session-retained-page", hidden: blocked, inert: blocked.then_some(true), tabindex: "-1", {children} }
     }
 }
 
@@ -119,6 +139,8 @@ mod tests {
     use super::*;
     use crate::auth::context::{AuthContext, UserProfile};
     use crate::components::AuthRequired;
+    use dioxus::router::RouterContext;
+    use dioxus_core::{current_scope_id, AttributeValue, ElementId};
     use std::{
         cell::{Cell, RefCell},
         rc::Rc,
@@ -175,6 +197,180 @@ mod tests {
         use_hook(move || *control.borrow_mut() = Some(auth));
         use_context_provider(|| auth);
         rsx! { ReadOnlySessionScope { identity: auth().current_user_id, ReadOwnerProbe { mounts } } }
+    }
+
+    type RouteControl = Rc<RefCell<Option<(RouterContext, ScopeId)>>>;
+
+    #[derive(Clone)]
+    struct ObservedRoute(Route);
+
+    impl std::str::FromStr for ObservedRoute {
+        type Err = <Route as std::str::FromStr>::Err;
+
+        fn from_str(path: &str) -> Result<Self, Self::Err> {
+            path.parse().map(Self)
+        }
+    }
+
+    impl std::fmt::Display for ObservedRoute {
+        fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            self.0.fmt(formatter)
+        }
+    }
+
+    impl Routable for ObservedRoute {
+        const SITE_MAP: &'static [dioxus::router::routable::SiteMapSegment] = Route::SITE_MAP;
+
+        fn render(&self, level: usize) -> Element {
+            let contents = self.0.render(level);
+            rsx! { RouteObserver {} {contents} }
+        }
+    }
+
+    #[component]
+    fn RouteObserver() -> Element {
+        let control = use_context::<RouteControl>();
+        let current = router();
+        let scope = current_scope_id();
+        use_hook(move || *control.borrow_mut() = Some((current, scope)));
+        rsx! {}
+    }
+
+    #[derive(Props, Clone)]
+    struct RoutedSessionRootProps {
+        initial_path: String,
+        control: RouteControl,
+    }
+
+    impl PartialEq for RoutedSessionRootProps {
+        fn eq(&self, other: &Self) -> bool {
+            self.initial_path == other.initial_path && Rc::ptr_eq(&self.control, &other.control)
+        }
+    }
+
+    #[allow(non_snake_case)]
+    fn RoutedSessionRoot(props: RoutedSessionRootProps) -> Element {
+        let RoutedSessionRootProps {
+            initial_path,
+            control,
+        } = props;
+        use_context_provider(|| Signal::new(identity(1)));
+        use_context_provider(|| control);
+        rsx! { dioxus::router::components::HistoryProvider {
+            history: move |_| Rc::new(dioxus::history::MemoryHistory::with_initial_path(&initial_path)) as Rc<dyn History>,
+            Router::<ObservedRoute> {}
+        } }
+    }
+
+    fn collection_name_input_assignment(edits: &[dioxus_core::Mutation]) -> Option<ElementId> {
+        // The name attribute is static template data; the dynamic default
+        // value identifies this input in actual renderer mutations.
+        edits.iter().find_map(|edit| match edit {
+            dioxus_core::Mutation::SetAttribute {
+                name: "value",
+                value: AttributeValue::Text(value),
+                id,
+                ..
+            } if value == "Untitled Collection" => Some(*id),
+            _ => None,
+        })
+    }
+
+    #[test]
+    fn session_startup_empty_query_keeps_the_actual_collection_input_node() {
+        let control = Rc::new(RefCell::new(None));
+        let mut dom = VirtualDom::new_with_props(
+            RoutedSessionRoot,
+            RoutedSessionRootProps {
+                initial_path: "/collections/new?".into(),
+                control: control.clone(),
+            },
+        );
+        let initial = dom.rebuild_to_vec();
+        let original_input =
+            collection_name_input_assignment(&initial.edits).expect("collection input");
+        let (current, scope) = control.borrow().unwrap();
+        dom.in_scope(scope, || current.replace("/collections/new"));
+        let mut edits = dioxus_core::Mutations::default();
+        dom.render_immediate(&mut edits);
+        assert_eq!(
+            collection_name_input_assignment(&edits.edits),
+            None,
+            "Startup replaced the original input {original_input:?}"
+        );
+        assert!(dioxus_ssr::render(&dom).contains("name=\"collection_name\""));
+
+        // A real parent change is a new editor, not an empty-query spelling change.
+        dom.in_scope(scope, || {
+            current.replace("/collections/new?parent=550e8400-e29b-41d4-a716-446655440000")
+        });
+        let mut edits = dioxus_core::Mutations::default();
+        dom.render_immediate(&mut edits);
+        let replacement_input =
+            collection_name_input_assignment(&edits.edits).expect("new parent form");
+        assert_ne!(original_input, replacement_input);
+    }
+
+    #[test]
+    fn active_editor_inert_mutations_are_absent_not_false() {
+        let control = Rc::new(RefCell::new(None));
+        let mounts = Rc::new(Cell::new(0));
+        let mut dom = VirtualDom::new_with_props(
+            TransitionRoot,
+            TransitionRootProps {
+                control: control.clone(),
+                mounts: mounts.clone(),
+            },
+        );
+        let initial = dom.rebuild_to_vec();
+        let assert_presence_only = |edits: &[dioxus_core::Mutation]| {
+            for edit in edits {
+                if let dioxus_core::Mutation::SetAttribute {
+                    name: "inert",
+                    value,
+                    ..
+                } = edit
+                {
+                    assert!(
+                        matches!(value, AttributeValue::None | AttributeValue::Bool(true)),
+                        "The browser treats inert=false as inert: {edit:?}"
+                    );
+                }
+            }
+        };
+        assert_presence_only(&initial.edits);
+        let mut auth = control.borrow().unwrap();
+        for current in [AuthContext::default(), identity(2), identity(1)] {
+            dom.in_scope(ScopeId::ROOT, || auth.set(current));
+            let mut edits = dioxus_core::Mutations::default();
+            dom.render_immediate(&mut edits);
+            assert_presence_only(&edits.edits);
+        }
+        assert_eq!(mounts.get(), 1);
+    }
+
+    #[test]
+    fn retained_form_keys_normalize_only_empty_url_delimiters() {
+        for path in [
+            "/collections/new",
+            "/collections/new?",
+            "/collections/new#",
+            "/collections/new?#",
+        ] {
+            assert_eq!(retained_form_visit_key(path), "/collections/new");
+        }
+        assert_eq!(
+            retained_form_visit_key("/collections/new?#cover"),
+            "/collections/new#cover"
+        );
+        for path in [
+            "/collections/new?parent=550e8400-e29b-41d4-a716-446655440000",
+            "/collections/new?note=what?",
+            "/collections/new?note=%3F%23&tag=湯麵#cover",
+            "/settings/accounts?link_error=denied",
+        ] {
+            assert_eq!(retained_form_visit_key(path), path);
+        }
     }
 
     #[test]
@@ -277,7 +473,7 @@ mod tests {
             .next()
             .unwrap();
         assert!(source.contains("hidden: blocked"));
-        assert!(source.contains("inert: blocked"));
+        assert!(source.contains("inert: blocked.then_some(true)"));
         assert!(source.contains("target: \"_blank\""));
         assert!(!source.contains("location().reload"));
         let css = include_str!("../../assets/main.css");

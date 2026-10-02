@@ -30,7 +30,8 @@ pub fn AuthRequired(props: AuthRequiredProps) -> Element {
 
     rsx! {
         if !auth.is_authenticated { SignInPrompt {} }
-        div { hidden: !auth.is_authenticated, inert: !auth.is_authenticated,
+        // Presence, not the value, makes a native inert attribute active.
+        div { hidden: !auth.is_authenticated, inert: (!auth.is_authenticated).then_some(true),
             if auth.is_authenticated || previously_authenticated() { {&props.children} }
         }
     }
