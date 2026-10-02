@@ -5440,3 +5440,159 @@ utility; SHA-256 `74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e59
 mutations' post-commit outcomes and final-navigation paths, image edge cases,
 full accessibility/real-device checks and final whole-app acceptance.
 Checkpoint 8 remains open.
+
+## Account-bound form mutation acceptance — 2026-10-01
+
+The user approved expanding the preceding identity audit into form/API write
+guards. `38c233e` supersedes the earlier **unimplemented/unaccepted form-binding**
+finding, but not the separate mixed navigation/session-display finding.
+
+### Contract and implementation
+
+- Capture the initiating authenticated account once per mounted form; never
+  rebind its retained entries to a replacement account. A form mounted before
+  authentication can latch the first authenticated identity once.
+- Require that captured ID to match the **verified request session** before
+  budgets, storage access or mutation queries. The supplied ID is a consistency
+  check, never authorization. Signed-out requests fail as unauthenticated;
+  mismatches fail with controlled `Account changed` feedback. Older callers
+  omitting the expected ID fail closed, so this is an API contract change.
+- Cover all 27 UI server-function mutations: 11 recipe, nine collection, two
+  upload, four Settings profile/avatar/deletion and one account unlink. Bind
+  `get_recipe_draft_api` and `get_avatar_edit_source` editing reads too.
+  Existing ownership, revision, quota and media-lifecycle checks remain.
+- Preserve entered text, selected files and image edits on rejection. Known
+  pre-write account rejection is not an uncertain draft-creation/publication
+  outcome. Collection picker mismatch handling must not reconcile against the
+  replacement account's memberships and report false success.
+- Profile/avatar callbacks check initiating, current client and returned
+  account IDs before replacing local/auth data. Successful account deletion
+  no longer posts a follow-up logout that could clear a replacement session;
+  deletion already invalidates the original account's server sessions.
+
+The legacy direct multipart `POST /api/upload` handler and normal OAuth
+login/link/logout flows are **not** covered by this server-function guard.
+Cross-tab synchronization of cached profile links, auth gates and navigation
+is not implemented by this change. Bound requests protect writes, not every
+client display or post-commit interaction.
+
+### Automated acceptance and review
+
+Eight new tests cover verified identity matching/missing sessions, one-time
+form identity capture, stale profile completions, all guarded server-function
+entry points, direct unauthenticated draft/upload/profile rejection, safe
+profile mismatch feedback and absence of deletion's follow-up logout.
+Source-wiring assertions establish guard placement; they are not runtime
+exercise of all 27 mutations.
+
+An explicit old-behavior replay temporarily removed only the profile mismatch
+feedback branch. Its focused test failed because the old message advised a
+blind retry instead of explaining a definitive rejection. The branch was
+restored before commit and validation. Early test setup/compiler failures
+are not claimed as this intentional red result.
+
+```sh
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true \
+  CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target \
+  just ci
+```
+
+Final full CI on `38c233e`: **943 passed, 0 failed, 12 ignored**, exit 0;
+native/WASM checks, Clippy with warnings denied, formatting, schema/workflow
+and repository policy/advisory gates passed. Eight existing allowed advisory
+warnings remain; ignored storage/search integration tests were not freshly
+run. Logs: `/tmp/noms-020-account-binding-red.log` and
+`/tmp/noms-020-account-binding-ci-final.log`.
+
+Explicit second-pass self-review: **PASS for the scoped bound UI mutation
+contract**. Fixed findings included generational read borrows held across
+awaits, definitive rejection incorrectly entering uncertain-outcome handling,
+replacement-account picker reconciliation, stale profile completion and the
+deletion follow-up logout race. The deletion API comment was corrected in the
+documentation follow-up. No independent review agent was used; whole-app
+acceptance and destructive runtime acceptance are not implied.
+
+### Existing-deployment browser acceptance
+
+Reused only `noms-c799915fcf93e034` at `http://127.0.0.1:32768`, mounted from the
+integration worktree, to preserve the established fixture state. Invalidated
+only this deployment's NOMS client/server package artifacts, then built and
+restarted its app; no database/media/dependency cleanup. Client/server builds
+succeeded in 20.02s/41.61s; `/tmp/noms-020-account-binding-build.log`.
+
+Prepared hydrated forms under original mock `testuser`
+(`6b1c56b4-945d-44d5-9f1b-eeb9525b8519`), then switched the shared session using
+normal mock sign-out/sign-in to existing synthetic account
+`cp8avatarroundtrip20261001` (`89f18aba-5a00-47d1-9d86-ea7330fe9a2c`). No new
+identity/provider link was created.
+
+| Acceptance criterion | Direct observation |
+| --- | --- |
+| Guest and replacement identity rejection | Original Settings Save first failed unauthenticated, then returned actual server `Account changed` under the replacement cookie. Sanitized network observation confirmed the submitted expected ID stayed the original account ID. |
+| Retained profile entries and usable feedback | Synthetic unsaved name/bio remained unchanged after rejection; Save retained focus. At actual 320×720 viewport, document width 305px stayed within the viewport; Enter, Tab and Shift+Tab remained usable. |
+| No replacement-account collection write | Original New Collection retained its name/description after rejected Create. |
+| Retained upload and edits | Original collection-cover upload and Retry rejected; reopening its editor still showed the selected image and 15° rotation. Closing returned focus to Edit. No upload succeeded. |
+| Definitive draft rejection | Original New Recipe's autosave and manual Save Draft rejected under the replacement account; title/notes remained and no initial draft was created there. |
+| Original-account recovery | Restored `testuser` normally; the still-mounted recipe and collection forms saved successfully. Reloaded the draft and autosaved a notes edit to revision 1 under its initiating owner. |
+
+Desktop evidence: `/tmp/noms-020-account-binding-profile.jpg`; narrow evidence:
+`/tmp/noms-020-account-binding-profile-320.jpg`. Temporary local screenshots
+are not tracked assets. The narrow capture is at the tested scroll position,
+not a full-page screenshot. No unlink, avatar removal, recipe deletion or
+account deletion browser replay was performed; those paths have source/unit
+coverage only in this pass. The consumed `@cp8settings` fixture was not recreated.
+
+### Integrity and retained fixtures
+
+Read-only SQL hashes used ordered complete row JSON. Rejected requests left
+original users, recipes, versions, drafts and collections byte-for-byte
+unchanged. Initial media hash changed during app restart because the normal
+lifecycle worker updated cleanup metadata and retired a pre-existing,
+unreferenced synthetic avatar asset `c0c31528-db1f-4790-8b39-d9943034a1f8`.
+All ten media records predated this test; this is not a rejected upload or
+new asset, and no direct S3 byte/deletion verification is claimed here.
+
+After establishing the post-restart baseline, replayed the wrong-account
+profile/collection/upload/draft requests. **All six table hashes matched that
+baseline**, including media. After legitimate same-account recovery, original
+rows still matched, excluding only the two deliberately added private fixtures:
+
+| Original rows | Count | Final MD5 of ordered row JSON |
+| --- | ---: | --- |
+| Recipes | 36 | `5e44d4edd748ba5eb5ed6c240ce50f57` |
+| Versions | 71 | `7de62836d36d6aa66878fa55b8e50e90` |
+| Drafts, excluding new fixture | 9 | `2e4e0e0034eee5b24668415da1cdca78` |
+| Collections, excluding new fixture | 30 | `8878d8e670a274587bc83821644a7d46` |
+| Users | 3 | `f414496eebb3dc762dc189b668b7f52b` |
+| Media, post-restart baseline | 10 | `36b9c4ea3d2675f00c15741744d25855` |
+
+New fixtures, both owned by original `testuser`, are retained:
+unpublished draft `c082c066-26cc-47f9-943e-c48b862184e5`, revision 1,
+and private collection `8ac29d43-3c4c-4969-8cd9-213023f73954`, each titled
+`CP8 Account binding — Local test only`. Totals are ten drafts and 31
+collections; recipes/versions did not increase. No successful profile save,
+accepted cover upload or publication occurred. Unsaved synthetic Settings
+entries and the rejected cover selection were abandoned only when their
+temporary test tabs were closed.
+
+Original `testuser` session restored. All five created tabs closed, network
+observation disabled, viewport/device overrides cleared. Other deployments
+and native browser tabs were untouched.
+
+### Integration and remaining gates
+
+Reused task branch `codex/NOMS-020-checkpoint-8` in
+`.worktrees/NOMS-020-checkpoint-8` and fast-forwarded the established integration
+branch `codex/NOMS-020-visual-design-refinement`. Runtime code/tests are one
+indivisible contract commit (`38c233e`): server signatures and every caller
+must change together. Evidence/plan/comment cleanup is a separate follow-up.
+No push. Root roadmap dirt and integration user CSS are outside this task;
+remove only the build-generated grayscale utility to preserve starting CSS
+SHA-256 `74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+
+**Remaining:** mixed cross-tab navigation/session display, direct multipart
+and OAuth flow scope/audit, other mutations' post-commit outcomes and
+final-navigation paths, remaining image edge cases, full accessibility and
+real-device checks, and final whole-app acceptance. Any further destructive
+test needs a new isolated fixture and action-time approval. Checkpoint 8
+remains open.

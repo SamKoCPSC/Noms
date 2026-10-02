@@ -222,8 +222,8 @@ mod avatar_action_tests {
 /// Delete the authenticated user's account.
 ///
 /// Atomically stages durable storage cleanup authority before deleting the user
-/// row (oauth_accounts cascade automatically). On the client side, the caller
-/// is responsible for logging out and redirecting.
+/// row (oauth_accounts cascade automatically). The caller redirects without
+/// logging out: a replacement session must not be cleared by this completion.
 #[server]
 pub async fn delete_account(expected_account_id: Option<uuid::Uuid>) -> Result<(), ServerFnError> {
     let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
