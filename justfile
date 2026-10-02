@@ -145,6 +145,7 @@ recipe-import-provider-adapter-test:
 	@node --test scripts/tests/test-recipe-import-sallys.mjs
 	@node --test scripts/tests/test-recipe-import-simply-recipes.mjs
 	@node --test scripts/tests/test-recipe-import-foodnetwork.mjs
+	@node --test scripts/tests/test-recipe-import-bonappetit.mjs
 
 # Verify browser clipboard capture, bounds, cancellation, and parser handoff.
 recipe-import-bridge-test:

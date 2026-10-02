@@ -2959,24 +2959,26 @@ function parseDotdashVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
 // rules. A marked node must be complete, visible, inside the unique root and
 // explicitly consumed by the provider's measured structure.
 function visibleProviderContext(html, rootClass, markerClasses) {
-  const openings = openingHtmlElements(html);
-  const selected = elementsMatchingAttributes(html, attributes => markerClasses.some(name => hasClass(attributes, name)));
-  const roots = elementsWithClass(html, rootClass);
-  if (roots.length !== 1 || openings.filter(e => hasClass(e.attributes, rootClass)).length !== 1 || openings.filter(e => markerClasses.some(name => hasClass(e.attributes, name))).length !== selected.length) return null;
+  const openings = [...html.matchAll(/<([a-z][a-z0-9:-]*)\b((?:"[^"]*"|'[^']*'|[^>"'])*)>/giu)].map(match=>({tag:match[1].toLowerCase(),attributes:htmlAttributes(match[2]),index:match.index,openingEnd:match.index+match[0].length}));
+  const matchesRoot = typeof rootClass === "function" ? rootClass : attributes => hasClass(attributes, rootClass);
+  const matchesMarker = typeof markerClasses === "function" ? markerClasses : attributes => markerClasses.some(name => hasClass(attributes, name));
+  const selected = elementsMatchingAttributes(html, matchesMarker);
+  const roots = elementsMatchingAttributes(html, matchesRoot);
+  if (roots.length !== 1 || openings.filter(e => matchesRoot(e.attributes,e.tag)).length !== 1 || openings.filter(e => matchesMarker(e.attributes,e.tag)).length !== selected.length) return null;
   const root = roots[0], inside = (e, parent = root) => parent.openingEnd <= e.index && e.end <= parent.contentEnd;
   const hidden = elementsMatchingAttributes(html, a => listIsHidden({attributes:a}) || hasClass(a, "hidden") || hasClass(a, "is-hidden"));
   for (const e of openings.filter(e => listIsHidden(e) || hasClass(e.attributes, "hidden") || hasClass(e.attributes, "is-hidden"))) {
-    if (!hidden.some(range => range.index === e.index)) hidden.push({...e, end:html.length, innerHtml:html.slice(e.openingEnd)});
+    if (!hidden.some(range => range.index === e.index)) {const isVoid=["area","base","br","col","embed","hr","img","input","link","meta","param","source","track","wbr"].includes(e.tag);hidden.push({...e,end:isVoid?e.openingEnd:html.length,innerHtml:isVoid?"":html.slice(e.openingEnd)});}
   }
   const isHidden = (e, includeText = true) => hidden.some(range => (range.index <= e.index && e.index < range.end) || (includeText && e.index <= range.index && range.index < e.end && htmlText(range.innerHtml)));
   if (hasAncestorTag(html, root.index, "nav") || isHidden(root, false) || selected.some(e => e.index !== root.index && (!inside(e) || isHidden(e) || hasAncestorTag(html,e.index,"nav")))) return null;
   const consumed = new Set([root.index]);
-  const all = name => selected.filter(e => hasClass(e.attributes, name));
+  const all = name => selected.filter(e => typeof name === "function" ? name(e.attributes,e.tag) : hasClass(e.attributes, name));
   const children = e => elementsMatchingAttributes(e.innerHtml, () => true).filter(child => tagStackContext(e.innerHtml, child.index).length === 0).map(child => ({...child,index:e.openingEnd+child.index,openingEnd:e.openingEnd+child.openingEnd,contentEnd:e.openingEnd+child.contentEnd,end:e.openingEnd+child.end}));
   const loose = (e, parts = children(e)) => {let end=e.openingEnd;for(const part of parts){if(htmlText(html.slice(end,part.index)))return true;end=part.end;}return Boolean(htmlText(html.slice(end,e.contentEnd)));};
   const text = fragment => htmlText(fragment.replace(/<\/?(?:span|strong|em|b|i|a|sup|sub)\b(?:"[^"]*"|'[^']*'|[^>"'])*>/giu,""));
-  const inline = e => !/<(?:p|div|section|ul|ol|li|h[1-6]|figure|table)\b/iu.test(e.innerHtml) && Boolean(text(e.innerHtml));
-  return {root,all,inside,children,loose,text,inline,isHidden,consume:e=>consumed.add(e.index),complete:()=>selected.every(e=>consumed.has(e.index))};
+  const inline = (e,allowEmpty=false) => openingHtmlElements(e.innerHtml).every(part=>["span","strong","em","b","i","a","sup","sub","br","small","abbr","u","s","del","ins","mark","wbr","time"].includes(part.tag)) && (allowEmpty||Boolean(text(e.innerHtml)));
+  return {root,all,inside,children,loose,text,inline,isHidden,openings,consume:e=>consumed.add(e.index),complete:()=>selected.every(e=>consumed.has(e.index))};
 }
 
 function visibleProviderIngredient(raw, locator) {
@@ -3008,6 +3010,111 @@ function finishVisibleProvider(result, htmlAudit) {
   if(result.warnings.length)result.status="needs_review";
   appendHtmlAuditEvidence(result,htmlAudit,discardedRemoteResourceCount(htmlAudit,result.fields.images));
   return result;
+}
+
+// Condé Nast's measured visible layout pairs sibling quantity/description
+// nodes and nests multiple numbered actions inside each preparation group.
+// Stable component names and test IDs identify ownership, never build hashes.
+function parseCondeVisibleRecipe(html, sourceUrl, htmlAudit) {
+  try {const url=new URL(sourceUrl);if(!["http:","https:"].includes(url.protocol)||!["bonappetit.com","www.bonappetit.com"].includes(url.hostname))return null;}catch{return null;}
+  const component=(attributes,name)=>(attributes.get("class")??"").split(/\s+/u).some(token=>token.startsWith(`${name}-`));
+  const testId=name=>attributes=>attributes.get("data-testid")===name;
+  const markers=["SplitScreenContentHeaderWrapper","ContentHeaderHed","recipe__main-content","BodyWrapper","InfoSliceList","IngredientList","InstructionsWrapper"];
+  const components=["Amount","Description","SubHed","InstructionGroupHed","InstructionHed","InstructionHedSmall","InstructionListHed","InstructionGroupWrapper","InstructionListWrapper","InfoSliceKey","InfoSliceValue","InfoSliceItem"];
+  const c=visibleProviderContext(html,a=>component(a,"RecipePageWrapper"),a=>component(a,"RecipePageWrapper")||markers.includes(a.get("data-testid"))||components.some(name=>component(a,name)));
+  if(!c)return null;
+  const {all,inside,children,loose,text,inline,consume}=c;
+  const groups=["SplitScreenContentHeaderWrapper","ContentHeaderHed","recipe__main-content","InstructionsWrapper"].map(name=>all(testId(name)));
+  if(groups.some(es=>es.length!==1))return null;
+  const [[header],[title],[body],[preparation]]=groups;
+  if(header.tag!=="header"||title.tag!=="h1"||!inside(title,header)||!inline(title)||header.end>body.index||!inside(preparation,body))return null;
+  for(const e of [header,title,body,preparation])consume(e);
+  const lists=all(testId("IngredientList")),primary=lists.filter(e=>text(children(e)[0]?.innerHtml??"")==="Ingredients");
+  if(primary.length!==1||lists.some(e=>!inside(e,body))||primary[0].end>preparation.index)return null;
+  const result=candidate({id:"bon-appetit-visible",version:"1",tier:"source_adapter",sourceAdapter:"bon-appetit"},sourceUrl);
+  result.source.provider="Bon Appétit";result.source.provenance.provider=provenance("source_url","hostname bonappetit.com");
+  result.fields.title=scalar(text(title.innerHtml),"text/html","[data-testid=ContentHeaderHed]");
+  const authors=elementsMatchingAttributes(header.innerHtml,testId("BylineName"));
+  if(authors.some(e=>hasAncestorTag(html,header.openingEnd+e.index,"nav")))return null;
+  const names=[];
+  const bylineGroups=elementsMatchingAttributes(header.innerHtml,a=>component(a,"BylineNamesWrapper"));
+  const ownedBylines=bylineGroups.length?bylineGroups:[header];
+  for(const owner of ownedBylines){const entries=bylineGroups.length?authors.filter(e=>inside(e,owner)):authors;let authorGroup=false;const groupNames=[];for(const author of entries){const pieces=elementsMatchingAttributes(author.innerHtml,a=>component(a,"BylinePreamble"));if(pieces.length>1||!inline(author))return null;if(pieces.length)authorGroup=text(pieces[0].innerHtml)==="By";if(authorGroup){const name=text(author.innerHtml).replace(/^By\s+/u,"");if(!name||pieces.length&&name===text(author.innerHtml))return null;groupNames.push(name);}}if(groupNames.length)names.push(groupNames.join(", "));}
+  if(new Set(names).size>1)return null;
+  if(names.length){result.source.author=names[0];result.source.provenance.author=provenance("text/html","header [data-testid=BylineName]");}
+  const introductions=all(testId("BodyWrapper"));
+  if(introductions.length>1)return null;
+  for(const intro of introductions){if(!inside(intro,body)||intro.end>primary[0].index)return null;consume(intro);const inners=elementsWithClass(intro.innerHtml,"container--body-inner");if(inners.length!==1||hasAncestorTag(html,intro.openingEnd+inners[0].index,"nav"))return null;const paragraphs=[];for(const part of children(inners[0])){if(part.tag!=="p")break;if(!inline(part))return null;paragraphs.push(text(part.innerHtml));}if(paragraphs.length)result.fields.description=scalar(paragraphs.join(" "),"text/html","[data-testid=BodyWrapper] .container--body-inner > p (leading)");}
+  // Pairing is explicit; a missing/extra node or nested marked row cannot be
+  // accepted by flattening text and losing a required ingredient.
+  for(const list of lists){consume(list);const parts=children(list);if(parts.length!==2||parts[0].tag!=="h2"||!inline(parts[0])||!component(parts[0].attributes,"Hed")||!component(parts[1].attributes,"List")||loose(list,parts))return null;
+    const rows=children(parts[1]);if(loose(parts[1],rows))return null;
+    if(list!==primary[0]){if(text(parts[0].innerHtml)!=="Nutrition Per Serving"||!rows.length||rows.some(e=>!component(e.attributes,"Description")||!inline(e)))return null;for(const e of rows)consume(e);result.unclassifiedLines.push({raw:`Nutrition Per Serving: ${rows.map(e=>text(e.innerHtml)).join(" ")}`,provenance:provenance("text/html","[data-testid=IngredientList] Nutrition Per Serving")});continue;}
+    let name=null,awaiting=false;
+    for(let index=0;index<rows.length;index++){
+      const amount=rows[index];
+      if(amount.tag==="h3"&&component(amount.attributes,"SubHed")){if(awaiting||!inline(amount))return null;consume(amount);name=text(amount.innerHtml);awaiting=true;continue;}
+      const description=rows[++index];
+      if(amount.tag!=="p"||!component(amount.attributes,"Amount")||!description||description.tag!=="div"||!component(description.attributes,"Description")||!inline(amount,true)||!inline(description))return null;
+      consume(amount);consume(description);
+      if(!result.fields.ingredientSections.length||awaiting)result.fields.ingredientSections.push({name,items:[]});
+      const quantity=text(amount.innerHtml)||null,detail=text(description.innerHtml),raw=[quantity,detail].filter(Boolean).join(" ");
+      const unit=quantity?detail.match(new RegExp(`^(${UNIT_PATTERN}|quarts?|pints?|sticks?|bunch(?:es)?|heads?|jars?|blocks?)(\\.)?\\s+(.+)$`,"iu")):null;
+      result.fields.ingredientSections.at(-1).items.push({...ingredient(raw,"text/html","[data-testid=IngredientList] Amount + Description"),amount:quantity,unit:unit?unit[1]+(unit[2]??""):null,name:unit?.[3]??detail});awaiting=false;
+    }
+    if(awaiting||!result.fields.ingredientSections.length)return null;
+  }
+  if(all(testId("InfoSliceList")).length>1)return null;
+  for(const info of all(testId("InfoSliceList"))){if(!inside(info,body)||info.end>primary[0].index)return null;consume(info);const parts=children(info);if(parts.length!==2||parts[0].tag!=="h2"||text(parts[0].innerHtml)!=="Recipe information"||parts[1].tag!=="ul"||!component(parts[1].attributes,"InfoSliceList")||loose(info,parts))return null;const seen=new Set();
+    for(const row of children(parts[1])){const owners=children(row);if(row.tag!=="li"||owners.length!==1||!component(owners[0].attributes,"InfoSliceItem")||loose(row,owners))return null;const values=children(owners[0]);if(values.length!==2||values.some(e=>e.tag!=="p"||!inline(e))||!component(values[0].attributes,"InfoSliceKey")||!component(values[1].attributes,"InfoSliceValue")||loose(owners[0],values))return null;for(const e of [owners[0],...values])consume(e);const label=text(values[0].innerHtml),value=text(values[1].innerHtml);if(seen.has(label))return null;seen.add(label);if(label==="Yield"){const match=value.match(/^(\d+)\s+servings?$/iu),servings=match&&Number.isSafeInteger(Number(match[1]))&&Number(match[1])>0?Number(match[1]):null;result.fields.yield={...scalar(value,"text/html","InfoSliceItem Yield"),value:{display:value,servings}};}else visibleProviderDuration(result,label,value,`InfoSliceItem ${label}`);
+    }if(loose(parts[1]))return null;
+  }
+  const prepParts=children(preparation);if(prepParts.length!==2||prepParts[0].tag!=="h2"||!component(prepParts[0].attributes,"InstructionListHed")||text(prepParts[0].innerHtml)!=="Preparation"||prepParts[1].tag!=="ol"||!component(prepParts[1].attributes,"InstructionGroupWrapper")||loose(preparation,prepParts))return null;
+  for(const e of prepParts)consume(e);
+  const rows=children(prepParts[1]);if(!rows.length||loose(prepParts[1],rows))return null;
+  const numbered=all(a=>component(a,"InstructionHed")||component(a,"InstructionHedSmall")).length>0;
+  let number=0,step=null,group=null,awaiting=false,tail=false;
+  const flush=()=>{if(step&&!step.paragraphs.length&&!step.hasImage)return false;if(step){const imageOnly=!step.paragraphs.length;const value=instruction(imageOnly?`Step ${step.number}`:step.paragraphs.join(" "),"text/html",numbered?`InstructionHed Step ${step.number}`:"InstructionListWrapper > p");if(imageOnly){value.confidence="low";result.warnings.push({code:"IMAGE_ONLY_PROVIDER_STEP",severity:"warning",path:"fields.instructionSections",message:`Step ${step.number} contains an image but no written instruction. Review the source; no action was inferred.`});}result.fields.instructionSections.at(-1).steps.push(value);step=null;}return true;};
+  const note=raw=>result.fields.notes.push(scalar(raw,"text/html","InstructionsWrapper supplementary paragraph"));
+  // Only measured media/control wrappers are skipped, and they cannot hide
+  // arbitrary cooking paragraphs or additional marked recipe content.
+  const media=part=>{
+    if(!(part.tag==="figure"||part.tag==="section"&&component(part.attributes,"CarouselContainer")))return false;
+    const captions=elementsMatchingAttributes(part.innerHtml,a=>hasClass(a,"caption"));
+    const counters=elementsMatchingAttributes(part.innerHtml,a=>component(a,"NavPaginationWrapper"));
+    if(counters.some(e=>!/^\d+\s*\/\s*\d+$/u.test(text(e.innerHtml))))return false;
+    const ignored=[...captions,...counters,...elementsMatchingAttributes(part.innerHtml,(_,tag)=>["button","svg","video"].includes(tag))];
+    const paragraphs=elementsMatchingAttributes(part.innerHtml,(_,tag)=>tag==="p");
+    if(paragraphs.some(e=>!ignored.some(owner=>inside(e,owner)))||elementsMatchingAttributes(part.innerHtml,(_,tag)=>/^h[1-6]$/u.test(tag)).length)return false;
+    // Remove outermost ranges only: overlapping caption/button/SVG ranges
+    // would shift indices and can otherwise erase unrelated following text.
+    let remainder=part.innerHtml;
+    for(const e of ignored.filter(e=>!ignored.some(owner=>inside(e,owner))).sort((a,b)=>b.index-a.index))remainder=remainder.slice(0,e.index)+" "+remainder.slice(e.end);
+    return !text(remainder);
+  };
+  const recordMedia=part=>{if(!step)return;for(const image of c.openings.filter(e=>e.tag==="img"&&part.openingEnd<=e.index&&e.openingEnd<=part.contentEnd)){const raw=image.attributes.get("src");if(!raw?.trim()||c.isHidden(image,false)||hasAncestorTag(html,image.index,"nav"))continue;try{if(["http:","https:"].includes(new URL(raw,sourceUrl).protocol))step.hasImage=true;}catch{/* No safe visible image means no image-only evidence. */}}};
+  for(const row of rows){if(row.tag!=="li"||!component(row.attributes,"InstructionListWrapper"))return null;consume(row);const pieces=children(row);if(loose(row,pieces))return null;
+    for(const part of pieces){
+      if(part.tag==="h3"&&component(part.attributes,"InstructionGroupHed")){if(awaiting||!inline(part)||!flush())return null;consume(part);group=text(part.innerHtml);awaiting=true;tail=false;continue;}
+      if(part.tag==="h4"&&(component(part.attributes,"InstructionHed")||component(part.attributes,"InstructionHedSmall"))){if(!inline(part)||!flush()||text(part.innerHtml)!==`Step ${number+1}`)return null;consume(part);number++;if(!result.fields.instructionSections.length||awaiting)result.fields.instructionSections.push({name:group,steps:[]});step={number,paragraphs:[]};awaiting=false;tail=false;continue;}
+      let paragraphs;
+      if(part.tag==="p")paragraphs=[part];
+      else if(part.tag==="inline-embed"&&part.attributes.get("name")==="anchor"){paragraphs=children(part);if(!paragraphs.length||paragraphs.some(e=>e.tag!=="p")||loose(part,paragraphs))return null;}
+      else if(part.tag==="inline-embed"&&part.attributes.get("name")==="feature-small"){const pieces=children(part);if(pieces.length!==1||!media(pieces[0])||loose(part,pieces))return null;recordMedia(pieces[0]);continue;}
+      else if(part.tag==="inline-embed"&&part.attributes.get("name")==="button-group"){const pieces=children(part);if(!pieces.length||loose(part,pieces)||pieces.some(e=>e.tag!=="p"||!inline(e)||children(e).length!==1||children(e)[0].tag!=="a"||text(e.innerHtml)!==text(children(e)[0].innerHtml)))return null;continue;}
+      else if(media(part)){recordMedia(part);continue;}
+      else return null;
+      for(const paragraph of paragraphs){if(!inline(paragraph))return null;const raw=text(paragraph.innerHtml);const supplementary=/^(?:Do Ahead\s*:|Editor[’']s note\s*:|VARIATIONS$|Looking for .+Try this one:)/iu.test(raw);
+        if(tail||supplementary){if(!flush())return null;note(raw);if(/^VARIATIONS$|^Editor[’']s note\s*:|^Looking for /iu.test(raw))tail=true;continue;}
+        if(!numbered){if(!result.fields.instructionSections.length||awaiting)result.fields.instructionSections.push({name:group,steps:[]});result.fields.instructionSections.at(-1).steps.push(instruction(raw,"text/html","InstructionListWrapper > p"));awaiting=false;}
+        else {if(!step)return null;step.paragraphs.push(raw);}
+      }
+    }if(!flush()||awaiting)return null;
+  }
+  if(!result.fields.instructionSections.length||!c.complete())return null;
+  const leads=elementsMatchingAttributes(header.innerHtml,testId("ContentHeaderLeadAsset"));if(leads.length>1)return null;
+  if(leads.length){const lead=leads[0],images=c.openings.filter(e=>e.tag==="img"&&header.openingEnd+lead.openingEnd<=e.index&&e.openingEnd<=header.openingEnd+lead.contentEnd);const image=images.find(e=>!c.isHidden(e,false)&&!hasAncestorTag(html,e.index,"nav")),raw=image?.attributes.get("src");if(raw?.trim()){try{const resolved=new URL(raw,sourceUrl);if(["http:","https:"].includes(resolved.protocol)){const credits=elementsWithClass(header.innerHtml,"caption__credit").filter(e=>inline(e)&&!hasAncestorTag(html,header.openingEnd+e.index,"nav"));result.fields.images.push({sourceUrl:resolved.href,alt:image.attributes.get("alt")?.trim()||null,credit:credits.length===1?text(credits[0].innerHtml):null,provenance:provenance("text/html","header [data-testid=ContentHeaderLeadAsset] img")});}}catch{/* Only safe, explicit references are retained. */}}}
+  return finishVisibleProvider(result,htmlAudit);
 }
 
 function parseFoodNetworkVisibleRecipe(html, sourceUrl, htmlAudit) {
@@ -3345,7 +3452,8 @@ function parseNYTCookingVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
 function parseHtml(html, sourceUrl, htmlAudit) {
   // Remove active/raw-text regions before scanning. No markup is inserted into a DOM.
   const inertHtml = discardRawContent(html);
-  const sourceAdapterCandidate = parseFoodNetworkVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
+  const sourceAdapterCandidate = parseCondeVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
+    parseFoodNetworkVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseSallysVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseDotdashVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseNYTCookingVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
