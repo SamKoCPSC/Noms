@@ -266,11 +266,12 @@ fn upload_batch_plan(pending: &[PendingImage]) -> (Vec<UploadItem>, usize) {
     (ready, failed)
 }
 
-/// Render snapshots share this lease; only the final owner revokes its local
-/// URL. Signal teardown therefore releases previews even without Remove/error.
+/// Render snapshots share this lease. Component teardown revokes the URL even
+/// if a renderer still holds a snapshot; final-drop cleanup is a fallback.
 struct GalleryPreviewUrl {
     url: String,
     revoke: fn(&str),
+    revoked: std::sync::atomic::AtomicBool,
 }
 
 impl GalleryPreviewUrl {
@@ -284,6 +285,16 @@ impl GalleryPreviewUrl {
                 #[cfg(not(target_arch = "wasm32"))]
                 let _ = url;
             },
+            revoked: std::sync::atomic::AtomicBool::new(false),
+        }
+    }
+
+    fn release(&self) {
+        if !self
+            .revoked
+            .swap(true, std::sync::atomic::Ordering::Relaxed)
+        {
+            (self.revoke)(&self.url);
         }
     }
 }
@@ -296,7 +307,7 @@ impl PartialEq for GalleryPreviewUrl {
 
 impl Drop for GalleryPreviewUrl {
     fn drop(&mut self) {
-        (self.revoke)(&self.url);
+        self.release();
     }
 }
 
@@ -328,6 +339,19 @@ struct PendingImage {
     /// Uploaded record retained here so the public image list can always be
     /// rebuilt in the same order as the pending list (including after retry).
     uploaded_image: Option<RecipeImage>,
+}
+
+fn use_gallery_preview_cleanup(pending: Signal<Vec<PendingImage>>) {
+    use_drop(move || {
+        if let Ok(gallery) = pending.try_read() {
+            for preview in gallery
+                .iter()
+                .filter_map(|image| image.preview_url.as_ref())
+            {
+                preview.release();
+            }
+        }
+    });
 }
 
 /// Edit the original local preview, or the saved full variant, never a thumbnail.
@@ -787,6 +811,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     let initial_next_id = initial_gallery.len();
     let mut drag_over = use_signal(|| false);
     let mut pending = use_signal(move || initial_gallery);
+    use_gallery_preview_cleanup(pending);
     let mut uploading = use_signal(|| false);
     let mut error = use_signal(|| Option::<String>::None);
     let next_id = use_signal(move || initial_next_id);
@@ -1183,6 +1208,7 @@ mod tests {
         original.preview_url = Some(Arc::new(GalleryPreviewUrl {
             url: "blob:gallery-original".into(),
             revoke: record_preview_revocation,
+            revoked: std::sync::atomic::AtomicBool::new(false),
         }));
         let render_snapshot = original.clone();
         original.preview_url = None;
@@ -1206,6 +1232,7 @@ mod tests {
                 image.preview_url = Some(Arc::new(GalleryPreviewUrl {
                     url: "blob:gallery-component".into(),
                     revoke: record_preview_revocation,
+                    revoked: std::sync::atomic::AtomicBool::new(false),
                 }));
                 vec![image]
             });
@@ -1216,6 +1243,61 @@ mod tests {
         drop(dom);
         PREVIEW_REVOCATIONS.with(|events| {
             assert_eq!(*events.borrow(), vec!["blob:gallery-component"]);
+        });
+    }
+
+    #[test]
+    fn gallery_preview_is_released_on_child_route_unmount() {
+        #[component]
+        fn GalleryRouteFixture(
+            snapshot: std::rc::Rc<std::cell::RefCell<Vec<PendingImage>>>,
+        ) -> Element {
+            let pending = use_signal(|| {
+                let mut image = pending_image_with_uploaded_url(1, None);
+                image.preview_url = Some(Arc::new(GalleryPreviewUrl {
+                    url: "blob:gallery-route".into(),
+                    revoke: record_preview_revocation,
+                    revoked: std::sync::atomic::AtomicBool::new(false),
+                }));
+                vec![image]
+            });
+            *snapshot.borrow_mut() = pending();
+            use_gallery_preview_cleanup(pending);
+            let _busy = use_memo(move || pending().len());
+            rsx! {
+                for image in pending().iter() {
+                    img { src: gallery_editor_url(image).unwrap_or_default() }
+                }
+            }
+        }
+        #[derive(Clone, Props, PartialEq)]
+        struct RouteProps {
+            show: std::rc::Rc<std::cell::Cell<bool>>,
+            snapshot: std::rc::Rc<std::cell::RefCell<Vec<PendingImage>>>,
+        }
+        fn route(props: RouteProps) -> Element {
+            rsx! { if props.show.get() { GalleryRouteFixture { snapshot: props.snapshot } } }
+        }
+        PREVIEW_REVOCATIONS.with(|events| events.borrow_mut().clear());
+        let show = std::rc::Rc::new(std::cell::Cell::new(true));
+        let snapshot = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+        let mut dom = VirtualDom::new_with_props(
+            route,
+            RouteProps {
+                show: show.clone(),
+                snapshot: snapshot.clone(),
+            },
+        );
+        dom.rebuild_in_place();
+        show.set(false);
+        dom.mark_dirty(ScopeId::APP);
+        dom.render_immediate(&mut dioxus::dioxus_core::NoOpMutations);
+        PREVIEW_REVOCATIONS.with(|events| {
+            assert_eq!(*events.borrow(), vec!["blob:gallery-route"]);
+        });
+        snapshot.borrow_mut().clear();
+        PREVIEW_REVOCATIONS.with(|events| {
+            assert_eq!(*events.borrow(), vec!["blob:gallery-route"]);
         });
     }
 
