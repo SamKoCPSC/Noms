@@ -6219,3 +6219,114 @@ as part of this visual acceptance slice. Five broad acceptance groups remain.
 Next: dense editor/image-state checks, including callback lifetimes and
 cross-step interactions. Physical touch and screen-reader graph checks remain
 a manual handoff, and final whole-app acceptance is still open.
+
+## Gallery preview lifecycle and delayed-result acceptance 2026-10-02
+
+The shared gallery now releases its local preview URLs on component teardown,
+including ordinary SPA navigation. This closes one scoped image-lifecycle gap,
+not the entire dense editor/image acceptance group.
+
+### Change and regression evidence
+
+The baseline browser created two object URLs for a picked image: its gallery
+preview and the decoder's temporary URL. After processing and navigating to
+Explore, only the decoder URL had been revoked. The gallery preview remained
+allocated despite its DOM being removed.
+
+`5d4cada` replaces raw preview strings with a shared ownership lease whose final
+Drop revokes the URL. Render snapshots can clone the lease without revoking an
+image still in use. Existing failure/removal paths drop their ownership; saved
+remote image URLs are not leases and are never revoked. Upload/save behavior and
+the visual design are unchanged.
+
+Three regression tests cover last-copy ownership, component signal teardown and
+removing a child gallery while its parent VirtualDom stays alive. The initial
+tests failed to compile before the lease existed; the realistic child-removal
+test passes on the lease implementation and asserts no duplicate revocation
+when the remaining parent is subsequently dropped.
+
+Post-build probes initially appeared to fail. Browser resource timing exposed
+the cause: normal reloads still executed a 14,393,681-byte older WASM module,
+even while an uncached diagnostic fetch retrieved the rebuilt asset. A forced
+CDP `Page.reload` with `ignoreCache: true` loaded the final 14,393,597-byte module;
+its asset SHA-256 is
+`d86fc7fc0ee0de46141fa36f1f5a3c2a896b66f1c96a7688178c02ee0dd0a286`.
+Temporary lifecycle markers were removed. Experimental explicit-cleanup and
+weak-registry changes in `1d85e98` and `40f1afc` were removed by `c58ba7c`; they
+are not part of the final implementation or evidence for a signal-order defect.
+
+### Existing deployment browser checks
+
+Rebuilt and restarted only the existing app container on
+`http://127.0.0.1:32768`. Used blank new-recipe forms and synthetic local files;
+no title/content edits, upload, draft save, publication or deletion was submitted.
+URL wrappers counted calls without changing normal creation/revocation behavior.
+
+- Valid landscape image: modal opened, Cancel retained a usable Ready preview.
+  While mounted: 2 URLs created, 1 revoked, 1 outstanding. Ordinary navbar
+  navigation to Explore: 2 created, 2 revoked, **0 outstanding**.
+- Delayed encoder: a diagnostic wrapper held the first real canvas `toBlob`
+  result. The gallery showed Processing and disabled Publish, Cancel and Add
+  Step. Removing the item cleared the row and re-enabled those controls. After
+  restoring the encoder and delivering the held result, no photo or modal
+  returned and no client error was observed. This tests stale-result handling,
+  not closure-memory reclamation or a permanently stalled encoder.
+- Malformed PNG: the visible decode error appeared, the modal closed, and both
+  URLs were revoked (2 created, 2 revoked, 0 outstanding). Removing that row and
+  choosing a valid portrait PNG reopened the editor and reached Ready.
+- A bounded synthetic DragEvent probe in the existing two-step private draft
+  dropped the first photo onto the second step's text region. All four source
+  photo labels/order stayed unchanged, the destination stayed empty, and
+  drag-end cleared the dragging state. The source contract only supports
+  within-step reordering. This is not native drag/touch acceptance or evidence
+  of cross-step transfer support; no such feature was added.
+
+Inspected screenshots: `/tmp/noms-020-gallery-preview-ready.jpg`,
+`/tmp/noms-020-gallery-recovery-modal.jpg`, and
+`/tmp/noms-020-gallery-recovery-ready.jpg`. The last shows the valid gallery's
+Ready status after failure recovery. Numeric lifetime evidence is recorded in
+`/tmp/noms-020-gallery-preview-acceptance.json`.
+
+### Validation, integrity and review
+
+Final focused command and result:
+
+```sh
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server components::base::image_upload::tests
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target just ci
+```
+
+**41 focused tests passed; final full CI: 964 passed, 0 failed, 12 ignored.**
+Native/WASM checks, Clippy, formatting, schema/policy, secret/deployment and
+dependency-audit gates passed; eight existing allowed audit warnings remain.
+An earlier CI run had one OAuth database setup PoolTimedOut failure. Its focused
+rerun and subsequent full runs passed; no OAuth behavior regression is claimed.
+Final logs: `/tmp/noms-020-gallery-final-green.log`,
+`/tmp/noms-020-gallery-final-ci.log`, `/tmp/noms-020-gallery-final-build.log`.
+No fresh ignored real-storage/search run is claimed.
+
+Before/after ordered full-row JSONB hashes match for 36 recipes, 71 versions,
+10 drafts, 31 collections and 3 users. Media count stays 10, but its full-row
+hash changed during this turn; unchanged media rows are not claimed. No live
+upload was submitted. Temporary diagnostic wrappers and cache override were
+removed, and the clean test tab was closed. Six earlier unsaved test tabs were
+marked for retention and were not intentionally reloaded or closed. A temporary
+startup-error tab could not be explicitly closed because the browser policy
+blocked its error-page URL; it was not marked for retention.
+
+The integration CSS is byte-identical to its pre-turn checksum after removing
+only the build-generated grayscale utility. Root main, unrelated working-tree
+edits and other deployments remain untouched. Second-pass self-review: **PASS
+for this scoped lease change and these stated limits**, with no independent
+agent review. Rollback is the image-upload file's pre-slice version at `8706ef6`;
+no schema/data migration was introduced.
+
+### Remaining checks and next slice
+
+Five broad checkpoint-8 groups remain open. Next, inspect and test the image
+pipeline's encoder/FileReader callback ownership, rejection, timeout and
+cancellation paths. Current `blob_from_canvas` and `blob_to_bytes` explicitly
+forget their closures and poll without a bound; the decoder revokes after its
+await rather than using cancellation-safe ownership. This slice does not accept
+those lifetimes, EXIF/wide-gamut/animation behavior, all cross-step interactions,
+physical-device gestures or screen-reader/whole-app sign-off.
