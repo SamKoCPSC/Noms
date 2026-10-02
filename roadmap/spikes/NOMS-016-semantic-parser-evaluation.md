@@ -99,6 +99,29 @@ All twelve Simply Recipes core fields are correct, and all three candidates are 
 
 The current digest-bound subset is `/tmp/noms016-simply-review.json`; evaluated artifacts are `/tmp/noms016-simply-semantic.{json,md}`. Reproduce with `node scripts/evaluate-recipe-parser-semantic.mjs --manifest "/home/samko/Documents/Recipe Data/corpus-manifest.json" --review /tmp/noms016-simply-review.json --json-out /tmp/noms016-simply-semantic.json --markdown-out /tmp/noms016-simply-semantic.md`. Retain the temporary external review if needed across cleanup/restarts. Three recipes cannot establish provider-wide semantic accuracy or native clipboard compatibility.
 
+## Food Network, Bon Appétit and Epicurious — separate nine-candidate review
+
+On 2026-10-01, the user confirmed Sally's Baking Addiction and Simply Recipes working in the UI, superseding the earlier pending manual-review checkpoint above. Food Network, Bon Appétit and Epicurious were then implemented sequentially. An independent review agent compared three purposively selected saved captures per new provider with current outputs. These are agent source-to-output assessments, not human usability tests, random samples or provider-wide accuracy estimates. Labels are bound to each exact candidate digest in the external review manifest.
+
+| Provider | Reviewed | Correct core fields | Without correction | After correction | Unusable |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Food Network | 3 | 8/12 | 1 | 2 | 0 |
+| Bon Appétit | 3 | 11/12 | 2 | 1 | 0 |
+| Epicurious | 3 | 9/12 | 0 | 3 | 0 |
+| Separate subset total | 9 | 28/36 | 3 | 6 | 0 |
+
+All nine titles are correct. Eight ingredient lists are correct and one partial; structured ingredient splitting is correct for four and partial for five. Seven instruction fields are correct and two partial. There are no incorrect core labels in this subset, but literal retention does not imply clean structured fields or readiness to save without review.
+
+- Food Network: the salmon candidate needs no reviewed-field correction. Lasagna retains an unmarked section-like checkbox row as an ingredient, a literal container size, and source-marked cookbook attribution as an extra method step; its ingredients, splitting, instructions and notes are partial. Pizza dough retains yeast packet sizing in its name rather than a structured package unit, and misses a footer photography credit. Neither card exposes the supported description field, so missing descriptions are appropriate; broader article prose is not promoted into the recipe description.
+- Bon Appétit: Caesar salad and risotto need no reviewed-field correction. Focaccia retains all nine written actions but its image-only tenth step becomes a low-confidence heading placeholder with an explicit warning. The user should remove it or supply a description after inspecting the source. All applicable optional fields are correct for the three reviewed candidates; FAQ/editorial prose stays outside the owned introduction.
+- Epicurious: all three retain correct title, complete raw ingredient rows and instructions. The garlic-knot candidate leaves envelope sizing in the name and includes an unnecessary connective in a garlic name; the lentil salad keeps an alternative amount in the name rather than a complete structured expression; the spritz keeps a dash measurement in the name with a null unit. These splits need cleanup, not recovery of lost ingredient text. All applicable optional fields are correct. Qualified time remains literal with null minutes, and explicitly numbered make-ahead content correctly stays an action.
+
+Across the subset, description is correct for seven and not applicable for two; times are correct for eight and not applicable for one; yield is correct for all nine; notes/equipment are correct for five, partial for one and not applicable for three; lead-image references/attribution are correct for eight and partial for one. Image labels do not claim retention of every instructional photo or downloaded image bytes. Active time, supplementary yields and nutrition retained as unclassified preview metadata are not currently persisted by the UI mapper.
+
+Reproduce with `node scripts/evaluate-recipe-parser-semantic.mjs --manifest "/home/samko/Documents/Recipe Data/corpus-manifest.json" --review /tmp/noms016-wave3-review.json --json-out /tmp/noms016-wave3-semantic.json --markdown-out /tmp/noms016-wave3-semantic.md`. All nine digests are current for `b6981cc`; evaluator summaries use the generic term human labels, but this subset was assessed by an independent agent. Keep the temporary external review manifest if reproducing across cleanup/restarts. Recipe bodies remain outside the repository.
+
+The historical 27-candidate benchmark was rerun with `/tmp/noms016-sally-review.json` and remains 104/108 with 24 usable without correction and three after correction; the separate Simply Recipes subset remains 12/12 with three usable without correction. Outputs are `/tmp/noms016-wave3-existing-semantic.{json,md}` and `/tmp/noms016-wave3-simply-semantic.{json,md}`. These denominators are intentionally not combined with this new nine-candidate subset. New-provider manual live/native-copy checks remain pending.
+
 ## Privacy and repeatability
 
 The 1,500 raw provider captures and the completed review manifest remain outside the repository. The committed evaluator and this report contain aggregate results, corpus identifiers, human labels, and candidate digests only; they do not contain source URLs or extracted recipe bodies.
