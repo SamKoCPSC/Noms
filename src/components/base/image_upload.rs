@@ -266,6 +266,40 @@ fn upload_batch_plan(pending: &[PendingImage]) -> (Vec<UploadItem>, usize) {
     (ready, failed)
 }
 
+/// Render snapshots share this lease; only the final owner revokes its local
+/// URL. Signal teardown therefore releases previews even without Remove/error.
+struct GalleryPreviewUrl {
+    url: String,
+    revoke: fn(&str),
+}
+
+impl GalleryPreviewUrl {
+    #[cfg(any(target_arch = "wasm32", test))]
+    fn new(url: String) -> Self {
+        Self {
+            url,
+            revoke: |url| {
+                #[cfg(target_arch = "wasm32")]
+                let _ = web_sys::Url::revoke_object_url(url);
+                #[cfg(not(target_arch = "wasm32"))]
+                let _ = url;
+            },
+        }
+    }
+}
+
+impl PartialEq for GalleryPreviewUrl {
+    fn eq(&self, other: &Self) -> bool {
+        self.url == other.url
+    }
+}
+
+impl Drop for GalleryPreviewUrl {
+    fn drop(&mut self) {
+        (self.revoke)(&self.url);
+    }
+}
+
 /// One selected image, its processed bytes, and its upload status.
 ///
 /// `full_bytes` and `thumb_bytes` are `Arc<Vec<u8>>` so signal-read clones
@@ -278,7 +312,7 @@ struct PendingImage {
     persisted: bool,
     name: String,
     /// Object URL for the preview thumbnail (wasm only); `None` on SSR.
-    preview_url: Option<String>,
+    preview_url: Option<Arc<GalleryPreviewUrl>>,
     /// Original File size in bytes.
     original_size: u64,
     /// Processed full-size WebP bytes.
@@ -301,7 +335,8 @@ struct PendingImage {
 fn gallery_editor_url(image: &PendingImage) -> Option<String> {
     image
         .preview_url
-        .clone()
+        .as_ref()
+        .map(|preview| preview.url.clone())
         .or_else(|| image.uploaded_image.as_ref().map(|saved| saved.url.clone()))
 }
 
@@ -513,7 +548,9 @@ async fn process_one_file(
             id,
             persisted: false,
             name: name.clone(),
-            preview_url: preview_url.clone(),
+            preview_url: preview_url
+                .as_ref()
+                .map(|url| Arc::new(GalleryPreviewUrl::new(url.clone()))),
             original_size,
             full_bytes: Arc::new(Vec::new()),
             thumb_bytes: Arc::new(Vec::new()),
@@ -553,9 +590,7 @@ async fn process_one_file(
                 if let Some(p) = guard.iter_mut().find(|p| p.id == id) {
                     p.status = UploadStatus::Failed;
                     p.error = Some(msg);
-                    if let Some(url) = p.preview_url.take() {
-                        let _ = web_sys::Url::revoke_object_url(&url);
-                    }
+                    p.preview_url = None;
                 }
                 // Do not leave an unusable crop dialog open, or close a newer
                 // selection's dialog after an older decode has failed.
@@ -734,14 +769,6 @@ fn remove_pending(
                 .as_ref()
                 .map(|image| image.url.clone())
         });
-    #[cfg(target_arch = "wasm32")]
-    {
-        if let Some(p) = pending().iter().find(|p| p.id == img_id) {
-            if let Some(url) = &p.preview_url {
-                let _ = web_sys::Url::revoke_object_url(url);
-            }
-        }
-    }
     pending.write().retain(|p| p.id != img_id);
     if let Some(uploaded_url) = uploaded_url.as_deref() {
         images.write().retain(|image| image.url != uploaded_url);
@@ -890,7 +917,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                     let img_id = img.id;
                     let img_persisted = img.persisted;
                     let img_name = img.name.clone();
-                    let img_preview = img.preview_url.clone();
+                    let img_preview = img.preview_url.as_ref().map(|preview| preview.url.clone());
                     let img_uploaded = img.uploaded_image.clone();
                     let img_editor_url = gallery_editor_url(img);
                     let img_original = img.original_size;
@@ -1139,6 +1166,59 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
 mod tests {
     use super::*;
 
+    thread_local! {
+        static PREVIEW_REVOCATIONS: std::cell::RefCell<Vec<String>> = const {
+            std::cell::RefCell::new(Vec::new())
+        };
+    }
+
+    fn record_preview_revocation(url: &str) {
+        PREVIEW_REVOCATIONS.with(|events| events.borrow_mut().push(url.to_string()));
+    }
+
+    #[test]
+    fn gallery_preview_releases_only_after_the_last_pending_copy_drops() {
+        PREVIEW_REVOCATIONS.with(|events| events.borrow_mut().clear());
+        let mut original = pending_image_with_uploaded_url(1, None);
+        original.preview_url = Some(Arc::new(GalleryPreviewUrl {
+            url: "blob:gallery-original".into(),
+            revoke: record_preview_revocation,
+        }));
+        let render_snapshot = original.clone();
+        original.preview_url = None;
+        PREVIEW_REVOCATIONS.with(|events| assert!(events.borrow().is_empty()));
+        assert_eq!(
+            gallery_editor_url(&render_snapshot).as_deref(),
+            Some("blob:gallery-original")
+        );
+        drop(render_snapshot);
+        PREVIEW_REVOCATIONS.with(|events| {
+            assert_eq!(*events.borrow(), vec!["blob:gallery-original"]);
+        });
+    }
+
+    #[test]
+    fn gallery_preview_is_released_when_its_component_signal_unmounts() {
+        PREVIEW_REVOCATIONS.with(|events| events.borrow_mut().clear());
+        let mut dom = VirtualDom::new(|| {
+            let _gallery = use_signal(|| {
+                let mut image = pending_image_with_uploaded_url(1, None);
+                image.preview_url = Some(Arc::new(GalleryPreviewUrl {
+                    url: "blob:gallery-component".into(),
+                    revoke: record_preview_revocation,
+                }));
+                vec![image]
+            });
+            rsx! { div { "Gallery preview owner" } }
+        });
+        dom.rebuild_in_place();
+        PREVIEW_REVOCATIONS.with(|events| assert!(events.borrow().is_empty()));
+        drop(dom);
+        PREVIEW_REVOCATIONS.with(|events| {
+            assert_eq!(*events.borrow(), vec!["blob:gallery-component"]);
+        });
+    }
+
     #[test]
     fn gallery_editor_uses_saved_full_variant_or_local_original() {
         let image = RecipeImage::new(
@@ -1149,7 +1229,7 @@ mod tests {
         let saved = gallery_images_from_persisted(&[image]);
         assert_eq!(gallery_editor_url(&saved[0]).as_deref(), Some("full.webp"));
         let mut local = pending_image_with_uploaded_url(5, None);
-        local.preview_url = Some("blob:original".into());
+        local.preview_url = Some(Arc::new(GalleryPreviewUrl::new("blob:original".into())));
         assert_eq!(gallery_editor_url(&local).as_deref(), Some("blob:original"));
         local.preview_url = None;
         assert_eq!(gallery_editor_url(&local), None);
