@@ -432,6 +432,22 @@ fn adjacent_gallery_id(
     gallery.get(adjacent_index).map(|image| image.id)
 }
 
+fn gallery_reorder_focus_direction(
+    gallery: &[PendingImage],
+    image_id: usize,
+    requested_direction: i8,
+) -> Option<i8> {
+    if !matches!(requested_direction, -1 | 1) {
+        return None;
+    }
+    // The clicked control becomes disabled when its image reaches a boundary.
+    // Keep the same action elsewhere, or use the opposite enabled action on
+    // that same image rather than moving focus to a different gallery row.
+    [requested_direction, -requested_direction]
+        .into_iter()
+        .find(|direction| adjacent_gallery_id(gallery, image_id, *direction).is_some())
+}
+
 #[cfg(test)]
 fn persisted_images_not_in_pending(
     images: &[RecipeImage],
@@ -793,6 +809,38 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     let mut editor_modal_url = use_signal(|| Option::<String>::None);
     let mut editor_modal_img_id = use_signal(|| Option::<usize>::None);
     let mut dragged_image_id = use_signal(|| Option::<usize>::None);
+    let gallery_id = use_hook(|| format!("image-gallery-{}", uuid::Uuid::new_v4()));
+    let mut reorder_focus = use_signal(|| None::<(usize, i8)>);
+    let focus_gallery_id = gallery_id.clone();
+    // Effects run after the reordered DOM is committed. Immediate focus in the
+    // click handler would be lost when the renderer moves the focused row.
+    use_effect(move || {
+        let Some((image_id, direction)) = reorder_focus() else {
+            return;
+        };
+        reorder_focus.set(None);
+        #[cfg(target_arch = "wasm32")]
+        {
+            use super::overlay_dom as dom;
+            let button_prefix = format!("{focus_gallery_id}-{image_id}-move");
+            let focus_still_owned = dom::document().active_element().is_some_and(|active| {
+                active.tag_name() == "BODY"
+                    || active.id() == format!("{button_prefix}--1")
+                    || active.id() == format!("{button_prefix}-1")
+            });
+            if focus_still_owned {
+                if let Some(button) = dom::element(&format!("{button_prefix}-{direction}")) {
+                    if !button.matches(":disabled").unwrap_or(true)
+                        && button.closest("[inert], [hidden]").ok().flatten().is_none()
+                    {
+                        dom::focus(&button, false);
+                    }
+                }
+            }
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        let _ = (&focus_gallery_id, image_id, direction);
+    });
     // Raw capabilities never enter RecipeImage or any persisted form payload.
     let mut discard_capabilities = use_signal(std::collections::HashMap::<usize, String>::new);
 
@@ -1063,6 +1111,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                 class: "image-upload__order-controls",
                                 aria_label: "Reorder image",
                                 button {
+                                    id: "{gallery_id}-{img_id}-move--1",
                                     r#type: "button",
                                     class: "btn btn-ghost touch-target",
                                     disabled: reorder_disabled || previous_id.is_none(),
@@ -1070,11 +1119,15 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                     onclick: move |_| {
                                         if let Some(previous_id) = previous_id {
                                             reorder_pending_images(img_id, previous_id, pending, images);
+                                            if let Some(direction) = gallery_reorder_focus_direction(&pending(), img_id, -1) {
+                                                reorder_focus.set(Some((img_id, direction)));
+                                            }
                                         }
                                     },
                                     "↑"
                                 }
                                 button {
+                                    id: "{gallery_id}-{img_id}-move-1",
                                     r#type: "button",
                                     class: "btn btn-ghost touch-target",
                                     disabled: reorder_disabled || next_id.is_none(),
@@ -1082,6 +1135,9 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                     onclick: move |_| {
                                         if let Some(next_id) = next_id {
                                             reorder_pending_images(img_id, next_id, pending, images);
+                                            if let Some(direction) = gallery_reorder_focus_direction(&pending(), img_id, 1) {
+                                                reorder_focus.set(Some((img_id, direction)));
+                                            }
                                         }
                                     },
                                     "↓"
@@ -1813,6 +1869,144 @@ mod tests {
         assert!(reorder_gallery_images(&mut gallery, 30, 10));
         assert_eq!(adjacent_gallery_id(&gallery, 10, -1), Some(30));
         assert_eq!(adjacent_gallery_id(&gallery, 10, 1), Some(20));
+    }
+
+    #[test]
+    fn gallery_reorder_focus_switches_direction_at_each_boundary() {
+        let mut gallery = vec![
+            pending_image_with_uploaded_url(10, Some("first")),
+            pending_image_with_uploaded_url(20, None),
+            pending_image_with_uploaded_url(30, Some("third")),
+        ];
+        assert!(reorder_gallery_images(&mut gallery, 20, 10));
+        assert_eq!(gallery_reorder_focus_direction(&gallery, 20, -1), Some(1));
+        assert_eq!(
+            gallery[0].id, 20,
+            "Focus follows the image, not its old index"
+        );
+        assert!(reorder_gallery_images(&mut gallery, 10, 30));
+        assert_eq!(gallery_reorder_focus_direction(&gallery, 10, 1), Some(-1));
+        assert_eq!(gallery[2].id, 10);
+    }
+
+    #[test]
+    fn gallery_reorder_focus_keeps_direction_for_middle_moves() {
+        let mut gallery = vec![
+            pending_image_with_uploaded_url(10, Some("first")),
+            pending_image_with_uploaded_url(20, None),
+            pending_image_with_uploaded_url(30, Some("third")),
+            pending_image_with_uploaded_url(40, None),
+        ];
+        assert!(reorder_gallery_images(&mut gallery, 30, 20));
+        assert_eq!(gallery_reorder_focus_direction(&gallery, 30, -1), Some(-1));
+        assert!(reorder_gallery_images(&mut gallery, 20, 40));
+        assert_eq!(gallery_reorder_focus_direction(&gallery, 20, 1), Some(-1));
+        assert!(reorder_gallery_images(&mut gallery, 30, 10));
+        assert!(reorder_gallery_images(&mut gallery, 30, 10));
+        assert_eq!(gallery_reorder_focus_direction(&gallery, 30, 1), Some(1));
+    }
+
+    #[test]
+    fn gallery_reorder_focus_rejects_missing_single_and_invalid_direction() {
+        let gallery = vec![pending_image_with_uploaded_url(10, None)];
+        assert_eq!(gallery_reorder_focus_direction(&gallery, 10, -1), None);
+        assert_eq!(gallery_reorder_focus_direction(&gallery, 10, 1), None);
+        assert_eq!(gallery_reorder_focus_direction(&gallery, 999, 1), None);
+        assert_eq!(gallery_reorder_focus_direction(&gallery, 10, 0), None);
+        assert_eq!(gallery_reorder_focus_direction(&gallery, 10, i8::MIN), None);
+    }
+
+    #[test]
+    fn gallery_reorder_buttons_have_unique_image_ids_and_move_the_actual_gallery() {
+        use dioxus::html::{SerializedHtmlEventConverter, SerializedMouseData};
+        use std::rc::Rc;
+        fn gallery_fixture() -> Element {
+            let images = use_signal(|| {
+                ["first", "second", "third"]
+                    .map(|name| {
+                        RecipeImage::new(
+                            format!("{name}.webp"),
+                            None,
+                            RecipeImageEdit::default_rect_16x9(),
+                        )
+                        .with_file_metadata(format!("{name}.png"), 1234)
+                    })
+                    .to_vec()
+            });
+            let upload_now = use_signal(|| false);
+            let busy = use_signal(|| false);
+            let pending_count = use_signal(|| 0);
+            let form_account = use_signal(|| None);
+            rsx! { ImageUpload {
+                images, upload_now, busy, pending_count, form_account,
+                purpose: crate::api::upload::UploadPurpose::Recipe,
+                on_remove_existing: |_| {}, on_upload_complete: |_| {},
+            } }
+        }
+        set_event_converter(Box::new(SerializedHtmlEventConverter));
+        let mut dom = VirtualDom::new(|| rsx! { gallery_fixture {} gallery_fixture {} });
+        let initial = dom.rebuild_to_vec();
+        let buttons = initial
+            .edits
+            .iter()
+            .filter_map(|edit| match edit {
+                dioxus_core::Mutation::SetAttribute {
+                    name: "id",
+                    value: dioxus_core::AttributeValue::Text(value),
+                    id,
+                    ..
+                } if value.starts_with("image-gallery-") => Some((*id, value.clone())),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(buttons.len(), 12);
+        assert_eq!(
+            buttons
+                .iter()
+                .map(|(_, id)| id)
+                .collect::<std::collections::HashSet<_>>()
+                .len(),
+            12
+        );
+        let (button, button_id) = buttons
+            .iter()
+            .find(|(_, id)| id.ends_with("-1-move--1"))
+            .unwrap();
+        let before = dioxus_ssr::render(&dom);
+        assert!(
+            before.contains(&format!("id=\"{button_id}\" type=\"button\"")),
+            "{before}"
+        );
+        dom.runtime().handle_event(
+            "click",
+            Event::new(
+                Rc::new(PlatformEventData::new(Box::new(
+                    SerializedMouseData::default(),
+                ))) as Rc<dyn std::any::Any>,
+                true,
+            ),
+            *button,
+        );
+        dom.render_immediate(&mut dioxus_core::NoOpMutations);
+        let after = dioxus_ssr::render(&dom);
+        assert!(
+            after.find("second.png").unwrap() < after.find("first.png").unwrap(),
+            "{after}"
+        );
+        let moved_button = after
+            .split(&format!("id=\"{button_id}\""))
+            .nth(1)
+            .unwrap()
+            .split('>')
+            .next()
+            .unwrap();
+        assert!(moved_button.contains("aria-label=\"Move image up\""));
+        assert!(
+            moved_button.contains("disabled"),
+            "The boundary action disables after moving"
+        );
+        assert_eq!(after.matches("aria-label=\"Edit first.png\"").count(), 2);
+        assert_eq!(after.matches("aria-label=\"Edit second.png\"").count(), 2);
     }
 
     // ── is_allowed_image_type ────────────────────────────────────────────
