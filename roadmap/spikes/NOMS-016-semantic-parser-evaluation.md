@@ -91,6 +91,14 @@ Three samples per provider are too few for provider compatibility or ranking cla
 
 The next parser work should therefore prioritize yield recovery, ingredient normalization and section completeness, and tighter instruction/description boundaries. Provider adapters or Schema.org extraction should be considered where a stable provider-specific gap can be reproduced synthetically.
 
+## Simply Recipes follow-up — separate three-candidate sample
+
+The user postponed manual Sally's verification and requested another provider. After the Simply Recipes adapter was added, the implementation agent compared three saved captures with their exact outputs: the banana pancakes, apple/cheddar oat cookies and banana bread. This is a separate purposive subset, not an expansion of the historical 27-candidate benchmark. That benchmark remains 104/108 (96.3%) with all its candidate digests current; evaluating `/tmp/noms016-sally-review.json` against the new parser confirms unchanged output. Neither Sally's nor Simply Recipes has received the pending user manual review.
+
+All twelve Simply Recipes core fields are correct, and all three candidates are usable without correction of reviewed fields. Descriptions, labeled times and literal servings/yield are correct for all three; ranged servings stay null. Explicit notes are correct for banana bread and not applicable to the other two selected recipe cards. Inline procedure tips stay in the enclosing step, not an invented equipment section; editorial advice outside the card is not claimed as fully imported. Image references and credits match the saved lead figures; no image bytes were fetched or reviewed. Card titles replace marketing headlines in the two newer captures, preserving the different article headings as competing evidence. Complete ingredient conversion/preparation suffixes and adjacent split spans survive. Named actions, heading-only actions and procedure paragraphs retain order; exact review prompts and photo credits are excluded.
+
+The current digest-bound subset is `/tmp/noms016-simply-review.json`; evaluated artifacts are `/tmp/noms016-simply-semantic.{json,md}`. Reproduce with `node scripts/evaluate-recipe-parser-semantic.mjs --manifest "/home/samko/Documents/Recipe Data/corpus-manifest.json" --review /tmp/noms016-simply-review.json --json-out /tmp/noms016-simply-semantic.json --markdown-out /tmp/noms016-simply-semantic.md`. Retain the temporary external review if needed across cleanup/restarts. Three recipes cannot establish provider-wide semantic accuracy or native clipboard compatibility.
+
 ## Privacy and repeatability
 
 The 1,500 raw provider captures and the completed review manifest remain outside the repository. The committed evaluator and this report contain aggregate results, corpus identifiers, human labels, and candidate digests only; they do not contain source URLs or extracted recipe bodies.
