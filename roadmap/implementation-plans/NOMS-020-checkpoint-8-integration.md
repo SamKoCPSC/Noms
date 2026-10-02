@@ -6115,3 +6115,107 @@ The next executable acceptance slice is the direct multipart upload/OAuth
 identity-edge audit. Keep the graph manual gate open until the physical-device
 and assistive-technology checks are recorded; do not repeat synthetic checks as
 if they could certify those environments.
+
+## Multipart and OAuth identity boundary acceptance 2026-10-02
+
+The scoped admission checks pass. Commit `88b7a5c` adds two regression tests;
+no production behavior change or deployment rebuild was required. The broader
+identity acceptance group stays open for later races and real-browser activation.
+
+### Contract and automated evidence
+
+The direct `/api/upload` handler verifies its incoming cookie once before reading
+the multipart body and keeps that account as the upload owner. It is a direct API,
+not a retained form: repository search found no current UI call to this route.
+The shared image UI uses the typed `upload_image` server function with its latched
+form account instead. No new form-account parameter was added to the direct API.
+
+- The new multipart test waits for a mocked S3 PUT, then revokes account A's
+  session and creates account B's session while storage is delayed. A database
+  assertion proves the upload has not completed at that point. The completed
+  asset and key belong to A, B owns zero assets, and the response sets no cookie.
+  A subsequent request with A's revoked token returns 401; B's valid token
+  reaches multipart validation and returns 400 for the missing full image.
+  This accepts original ownership, not cancellation of an already admitted write.
+- The new OAuth route-wrapper test supplies an original session revoked before
+  callback admission, plus the correct browser transaction binding. It returns
+  401, makes zero token/user-info requests, adds no provider links to either
+  account and consumes the state. Its sole Set-Cookie expires that transaction's
+  cookie, not the session cookie; the replacement account's session remains valid.
+- Existing OAuth tests cover a callback with a different account, missing
+  sessions, active-session login rejection, transferred/malformed/mismatched
+  browser bindings, expiry, replay, concurrent state consumption and successful
+  matching linking/login in isolated temporary databases with mock providers.
+
+Tests were written against the existing behavior and passed without a production
+fix; no failing-before/fixed-after result is claimed. Temporary databases and
+mock storage isolate the success/linking mutations from the running deployment.
+
+### Existing deployment browser evidence
+
+Used the existing deployment at `http://127.0.0.1:32768`, without restarting it.
+Same-origin diagnostic fetches exercised the real endpoints; these were API
+probes from the browser, not UI upload/link completion tests:
+
+- Guest multipart request: 401, Authentication required.
+- Guest OAuth link start: 401, Account linking requires a valid session.
+- Normal Google mock sign-in to the existing `testuser` identity returned to
+  Linked accounts. The page showed its existing Google connection and disabled
+  Unlink because it is the only sign-in method.
+- Authenticated multipart request missing `full_image`: 400, Missing full_image.
+- OAuth login start with that active session: 409, OAuth login cannot complete
+  with an active session.
+
+The multipart probes contained only synthetic invalid thumbnail bytes and never
+reached storage. No Connect/Unlink action, new account creation, valid live upload
+or content save/delete was submitted. The new clean test tab was closed; six
+earlier tabs with unsaved synthetic entries were preserved without reload.
+No interception, viewport, cache or emulation override was introduced.
+Inspected screenshot: `/tmp/noms-020-identity-linked-accounts.jpg`.
+
+### Validation and integrity
+
+From `codex/NOMS-020-checkpoint-8`, with the existing integration target:
+
+```sh
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server api::upload::tests
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server multipart_upload_keeps_request_owner
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server auth::oauth::tests
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target just ci
+```
+
+Baseline upload tests: 25 passed. The initial new ownership test passed; the final
+version adds explicit proof that session replacement precedes upload completion
+and passes in full CI. OAuth tests: 57 passed. Final full CI: **961 passed,
+0 failed, 12 ignored**; native/WASM checks, Clippy, formatting, schema/policy,
+secret/deployment and dependency-audit gates passed. Eight existing allowed
+audit warnings remain. No fresh ignored real-storage/search run is claimed.
+Logs: `/tmp/noms-020-multipart-baseline.log`, `/tmp/noms-020-multipart-owner.log`,
+`/tmp/noms-020-oauth-acceptance.log`, and
+`/tmp/noms-020-multipart-oauth-ci-final.log`.
+
+Before/after ordered JSONB hashes match for 36 recipes, 71 versions, 10 drafts,
+31 collections, 3 users and 10 media assets. Media's within-turn hash is
+`ebacf2f0a9b4072e4142de9d2efa1f8e`; it differs from the previous turn, so no
+unchanged-media claim across turns is made. OAuth account count stayed at two;
+its full-row hash changed after normal existing-account sign-in, so unchanged
+OAuth rows are not claimed. No credentials or raw cookies were logged.
+The user integration CSS remains byte-identical to its pre-turn checksum.
+
+Second-pass self-review: **PASS for these scoped checks and stated limits**;
+no independent-agent review. Test coverage and evidence are fast-forwarded into
+the existing NOMS-020 integration worktree; main and other deployments remain
+untouched. Removing the regression tests requires only reverting `88b7a5c`.
+
+### Remaining checks and next slice
+
+OAuth authority is checked at callback admission. These tests do not accept
+revocation during later provider exchange, competing delayed login/refresh
+response cookies, real-browser/OS activation, or every in-flight read race.
+They also do not prove that an admitted multipart write is aborted after logout.
+Those limitations stay explicit rather than changing authentication contracts
+as part of this visual acceptance slice. Five broad acceptance groups remain.
+
+Next: dense editor/image-state checks, including callback lifetimes and
+cross-step interactions. Physical touch and screen-reader graph checks remain
+a manual handoff, and final whole-app acceptance is still open.
