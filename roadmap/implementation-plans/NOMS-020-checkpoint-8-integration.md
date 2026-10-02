@@ -5272,3 +5272,171 @@ whole-app acceptance. UI-only guards do not supply server-side idempotency,
 cross-tab concurrency guarantees or automatic recovery of unsaved changes
 after reload. Destructive/account-linking replay still requires its separate
 authorization and fresh isolated fixtures. Checkpoint 8 remains open.
+
+## Confirmed recipe-write navigation and identity-switch audit — 2026-10-01
+
+### Contract and implementation
+
+After a confirmed recipe publication or save-and-return, preserve the app
+shell when the destination cannot be read. Recover by retrying the read, not
+by repeating the completed mutation. Keep the existing destinations,
+authorization, draft revision rules and publication/history contracts.
+Discard and the new editor's ordinary Cancel remain unchanged.
+
+Before the fix, the new editor published the private synthetic fixture below
+and received a real HTTP 200 response, held at response stage. SQL confirmed
+v1 existed before connectivity was disabled and the response continued.
+Its subsequent `location.set_href` discarded the app document and reached
+the browser's `ERR_INTERNET_DISCONNECTED` page instead of app recovery.
+The browser's URL policy prevented inspection of that generated error page;
+no safety-policy bypass or document-request interception was attempted.
+
+`c004795` replaces the two editors' confirmed-publication redirects with
+typed Dioxus router transitions. Save-and-return now retains an
+`Option<Route>` destination and pushes it only in the successful save branch.
+Published recipes still return to their detail page; unpublished drafts
+return to Dashboard. The destination's existing load recovery remains usable
+without a new document request. This is one indivisible runtime concern, with
+tests in the same commit; evidence is recorded separately.
+
+### Existing-deployment browser evidence
+
+Reused only `noms-c799915fcf93e034`, app `http://127.0.0.1:32768`, owner
+`testuser` / `@user-e13c`. Only the app container was rebuilt/restarted;
+database, media and other deployments were retained. Existing isolated task
+worktree was reused and integration remained fast-forward-only.
+
+For each failure check, a real successful mutation response was held using
+response-stage Fetch/XHR interception, its committed state checked with
+read-only SQL, and the browser made offline before continuing the response.
+No synthetic success body or document interception was used.
+
+| Confirmed operation | Failed destination | Recovery observed |
+| --- | --- | --- |
+| Existing editor publication to v2 | Recipe detail | App shell and `Recipe unavailable` retained; offline keyboard retry remained focused; online retry loaded v2 and focused `recipe-detail-content`. |
+| Existing editor save-and-return | Recipe detail | Saved draft remained durable; `Retry recipe` recovered the published v2 view, without publishing the unpublished notes. |
+| New editor publication | Recipe detail | New editor (still mounted after its initial draft URL replacement) reached app recovery and online keyboard retry loaded its one private recipe/v1. |
+| Unpublished editor save-and-return | Dashboard | Shell retained independent draft, library and collection retry controls; online retries recovered the library and the saved draft reopened with its latest notes. |
+
+Network event observations contained exactly one mutation for each observed
+save/publication and no new `Document` request after its response. Read retries
+did not repeat publication or saving. For the existing-publication check,
+`performance.timeOrigin` stayed `1790905778898.5` across publication, failed
+read and successful retry, corroborating the retained document.
+Offline ancillary history/lineage reads exposed their existing independent
+retry controls; retrying them restored the actual two-version history.
+
+At 320×720, measured `innerWidth=320`, document `scrollWidth=305`, keyboard
+focus remained on `Retry recipe`, and screenshot review showed bounded copy,
+reachable controls and no horizontal overflow. Evidence:
+`/tmp/noms-020-navigation-offline-320.jpg`.
+
+Retained synthetic fixtures, all owned by the existing owner:
+
+- Recipe `5a6ceeff-cbc0-48fc-8ced-2a0f8e431fc2`, **CP8 Navigation recovery —
+  Local test only**: private, exactly two published versions. v2 notes are
+  `Synthetic confirmed publication before destination failure.` Its follow-up
+  draft `6bab2d64-693c-4545-a6fc-c6294b54ea6e` is revision 1, notes
+  `Synthetic save-and-return survives failed destination load.`
+- Recipe `fdc3842b-a7b3-40fe-9106-81dd3da128bd`, **CP8 New navigation recovery —
+  Local test only**: private, exactly one published version; its initial draft
+  `91f57f8d-3e63-4eae-8c05-7408f5393517` was consumed by publication. The first
+  rapid entry hit incomplete hydration; the retained initial draft was
+  completed rather than creating another one. No before-autosave claim is
+  made for this final new-editor navigation check.
+- Unpublished draft `c4021f56-c3ef-4785-9528-898fc5068ecf`, **CP8 Dashboard return
+  navigation — Local test only**: revision 1, no linked/published recipe, notes
+  `Synthetic unpublished return with a failed dashboard read.`
+
+Before/after row hashes match after excluding only those two new recipes,
+their versions and two retained drafts:
+
+```text
+recipes     34  1f871abe478874372b39ff13d0049cc6
+versions    68  5c4aae0621f38f2818f2a68c05b09b03
+drafts       7  3fa0afdc23298fa289888dc6fb9269b9
+collections 30  9f2f90802adafb72eca3ea15fc0bbacb
+users        3  7bc139f2aea02af7488ad90b2d8f0cca
+```
+
+No media upload, collection write, profile save, account link, discard or
+deletion was performed. The synthetic fixtures remain for replay.
+
+### Identity-switch audit: failed acceptance, not implemented
+
+Kept the owner's hydrated Settings tab open. In a second tab, used native
+Sign Out and normal mock Google sign-in to the **existing** retained avatar
+identity, `cp8avatarroundtrip20261001` / `@cp8-avatar-round-trip-lo-6894`.
+No new account or provider link was created.
+
+The original Settings tab still linked to `/u/user-e13c`, displayed the
+original profile, showed no sign-in-status notice, and allowed the valid local
+display-name entry `CP8 stale form` with **Save changes enabled**. It was not
+submitted. Fresh Settings in the second tab showed the avatar identity.
+Navigating the original tab to Dashboard fetched the replacement identity's
+empty library while its **My profile** link still pointed to the old identity.
+Screenshot evidence: `/tmp/noms-020-identity-stale-settings.jpg`.
+
+A fresh private-recipe read under the replacement identity correctly showed
+`Recipe unavailable`, with zero original-title or Edit links. This confirms
+the tested server read denial, **not** safe identity binding for mutations.
+Source inspection corroborates the write risk: `save_profile` accepts name,
+bio and optional username, then selects its target from the current request's
+session; it does not receive the identity that initialized the form.
+An unintended cross-account write is an inference from that contract,
+not a tested overwrite. No profile data changed; the user-row hash matches.
+
+This gate is **not accepted**. A safe follow-up needs explicitly scoped
+identity binding for form/creation/account writes, rejection when the current
+session differs from the form's initiating identity, and useful retained-entry
+feedback. Client focus refresh alone leaves an action-time race; silently
+reinitializing a form could lose entries. Audit the related avatar/new-recipe/
+new-collection paths and delayed callbacks, with server-side tests before
+changing their contracts. Request scope approval rather than treating an
+authorization/API change as a styling adjustment.
+
+Original `testuser` session restored through normal mock sign-in. The
+unsubmitted local Settings text was abandoned by navigation; no profile save
+occurred. Saved synthetic draft notes reopened under the restored owner.
+
+### Validation and review
+
+Tests-first: the two new wiring regressions failed against the old redirects,
+then all seven draft-save tests passed after implementation. These are source
+wiring checks, not an automated browser navigation harness; the browser,
+network and SQL observations above provide the live behavioral proof.
+
+```sh
+SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration-worktree>/target \
+  cargo test --features server draft_save -- --test-threads=4
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true \
+  CARGO_TARGET_DIR=<integration-worktree>/target just ci
+```
+
+Full CI on `c004795`: **935 passed, 0 failed, 12 ignored**, exit 0, including
+native/WASM checks, Clippy, formatting and repository policy gates. Eight
+existing allowed advisory warnings remain; no fresh ignored storage/search
+integration run claimed. Logs: `/tmp/noms-020-navigation-red.log`,
+`/tmp/noms-020-navigation-green.log`, `/tmp/noms-020-navigation-ci.log`.
+Existing deployment package artifacts were invalidated before the build;
+client/server builds succeeded in 22.01s/43.04s. Build log:
+`/tmp/noms-020-navigation-build.log`.
+
+Explicit second-pass self-review: **PASS for confirmed recipe-write navigation**;
+destinations, successful-save ordering, no-repeat-write evidence, durable
+snapshots, narrow keyboard layout and unchanged server contracts reviewed.
+No independent review agent was used. **FAIL/open for the separate identity
+gate**, as documented; whole-app acceptance is not implied.
+
+Successful-test tab interception/network overrides were cleared and viewport
+override reset. The preliminary generated offline-error tab was blocked by
+browser URL policy even for explicit reset/close; it remained unmarked for
+the product's automatic temporary-tab cleanup. No policy bypass was used.
+Other temporary tabs were closed explicitly. Existing integration CSS edits
+were preserved byte-for-byte by removing only the build-generated grayscale
+utility; SHA-256 `74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+
+**Remaining:** scope/resolve the confirmed identity-binding gap, other
+mutations' post-commit outcomes and final-navigation paths, image edge cases,
+full accessibility/real-device checks and final whole-app acceptance.
+Checkpoint 8 remains open.
