@@ -387,11 +387,11 @@ pub fn RecipeNew() -> Element {
     let on_step_photo_change = move |idx: usize| {
         move |files: Vec<dioxus::html::FileData>| {
             reset_step_photo_input(idx);
-            if files.is_empty() || step_photo_controls_locked() {
-                return;
-            }
             #[cfg(target_arch = "wasm32")]
             {
+                if files.is_empty() || step_photo_controls_locked() {
+                    return;
+                }
                 let mut steps = steps;
                 let mut step_editor_modal_url = step_editor_modal_url;
                 let mut step_editor_idx = step_editor_idx;
@@ -758,11 +758,11 @@ pub fn RecipeNew() -> Element {
 
     // ── Cancel handler ──────────────────────────────────────────────────
     let on_cancel = move |_| {
-        if is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0 {
-            return;
-        }
         #[cfg(target_arch = "wasm32")]
         {
+            if is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0 {
+                return;
+            }
             if let Some(window) = web_sys::window() {
                 let _ = window.location().set_href("/dashboard");
             }
