@@ -3028,6 +3028,8 @@ function parseBBCGoodFoodVisibleRecipe(html, sourceUrl, htmlAudit) {
   const groups=["post-header__body","post-header__title","recipe__instructions","method-steps","method-steps__heading","method-steps__list"].map(all);
   if(groups.some(es=>es.length!==1))return null;
   const [[header],[titleContainer],[content],[method],[methodHeading],[methodList]]=groups;
+  const contentParts=children(content);
+  if(loose(content)||contentParts.some(e=>!hasClass(e.attributes,"recipe__ingredients-nutrition")&&!hasClass(e.attributes,"unit-toggle")&&!(e.tag==="section"&&hasClass(e.attributes,"ingredients-list"))&&e.index!==method.index&&!(e.tag==="div"&&(hasClass(e.attributes,"dai-placeholder")&&!text(e.innerHtml)||hasClass(e.attributes,"ad-slot__below-ingredients")&&["","Ad","Ad Report Ad"].includes(text(e.innerHtml))))))return null;
   const titles=children(titleContainer);
   if(titles.length!==1||titles[0].tag!=="h1"||!inline(titles[0])||loose(titleContainer)||!inside(titleContainer,header)||!inside(method,content)||!inside(methodHeading,method)||!inside(methodList,method)||header.end>content.index||text(methodHeading.innerHtml)!=="Method"||!inline(methodHeading))return null;
   for(const e of [header,titleContainer,content,method,methodHeading,methodList])consume(e);
@@ -3047,7 +3049,7 @@ function parseBBCGoodFoodVisibleRecipe(html, sourceUrl, htmlAudit) {
         if(hasClass(item.attributes,"recipe-cook-and-prep-details__note")){result.fields.notes.push(scalar(raw,"text/html",".recipe-cook-and-prep-details__note"));consume(item);continue;}
         if(!hasClass(item.attributes,"recipe-cook-and-prep-details__item"))return null;consume(item);const key=item.attributes.get("data-testid");if(!key||seen.has(key))return null;seen.add(key);
         if(key==="recipe-cook-and-prep-details-servings"){const number=Number(raw.match(/^Serves\s+(\d+)$/iu)?.[1]);result.fields.yield={...scalar(raw,"text/html",key),value:{display:raw,servings:Number.isSafeInteger(number)&&number>0?number:null}};}
-        else if(["recipe-cook-and-prep-details-prep-time","recipe-cook-and-prep-details-cook-time"].includes(key)){const label=key.includes("prep-time")?"Prep":"Cook",match=raw.match(new RegExp(`^${label}:\\s*(.+)$`,"iu"));if(!match)return null;visibleProviderDuration(result,label,match[1],key);}
+        else if(["recipe-cook-and-prep-details-prep-time","recipe-cook-and-prep-details-cook-time"].includes(key)){const label=key.includes("prep-time")?"Prep":"Cook",match=raw.match(new RegExp(`^${label}:\\s*(.+)$`,"iu"));if(!match)return null;visibleProviderDuration(result,label,match[1],key);const units=[...match[1].matchAll(/\d+(?:\.\d+)?\s*(days?|hours?|hrs?|hr|minutes?|mins?|min)/giu)].map(m=>/^d/iu.test(m[1])?"day":/^h/iu.test(m[1])?"hour":"minute");if(new Set(units).size<units.length){const field=label==="Prep"?"prepTime":"cookTime";result.fields[field].value=null;result.fields[field].confidence="low";result.warnings.push({code:"UNRESOLVED_PROVIDER_DURATION",severity:"warning",path:`fields.${field}`,message:"Repeated duration units remain literal; no duplicate accessibility text or additive time is assumed."});}}
         else result.unclassifiedLines.push({raw,provenance:provenance("text/html",key)});
       }
     }
@@ -3069,7 +3071,7 @@ function parseBBCGoodFoodVisibleRecipe(html, sourceUrl, htmlAudit) {
       const names=all("ingredients-list__item-ingredient").filter(e=>inside(e,row)),quantities=all("ingredients-list__item-quantity").filter(e=>inside(e,row)),notes=all("ingredients-list__item-note").filter(e=>inside(e,row));
       if(names.length!==1||quantities.length>1||notes.length>1||[...names,...quantities,...notes].some(e=>!inline(e)))return null;
       const owned=[...names,...quantities,...notes].sort((a,b)=>a.index-b.index);let cursor=row.openingEnd;
-      for(const part of owned){if(text(html.slice(cursor,part.index)))return null;cursor=part.end;consume(part);}if(text(html.slice(cursor,row.contentEnd)))return null;
+      for(const part of owned){if(part.index<cursor||text(html.slice(cursor,part.index)))return null;cursor=part.end;consume(part);}if(text(html.slice(cursor,row.contentEnd)))return null;
       const quantity=quantities[0]?text(quantities[0].innerHtml):null,ingredientName=[text(names[0].innerHtml),...notes.map(n=>text(n.innerHtml))].join(" "),raw=[quantity,ingredientName].filter(Boolean).join(" "),locator=`.ingredients-list section li:nth-child(${index+1})`;
       if(equipment){result.fields.equipment.push(scalar(raw,"text/html",locator));continue;}
       const normalizedQuantity=quantity?.replace(/(\d)(kg|mg|g|ml|l)\b/giu,"$1 $2"),item=visibleProviderIngredient([normalizedQuantity,ingredientName].filter(Boolean).join(" "),locator);
