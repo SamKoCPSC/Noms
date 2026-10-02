@@ -295,6 +295,60 @@ pub(super) fn format_step_photo_file_size(file_size: Option<u64>) -> String {
     }
 }
 
+/// A signal owns each local preview until modal close/failure or component
+/// teardown. Upload tasks keep only the URL string, never another owning copy.
+pub(super) struct StepPhotoPreview(pub String);
+
+impl Drop for StepPhotoPreview {
+    fn drop(&mut self) {
+        // Keep the native SSR build free of browser side effects.
+        let _ = &self.0;
+        #[cfg(target_arch = "wasm32")]
+        let _ = web_sys::Url::revoke_object_url(&self.0);
+    }
+}
+
+#[cfg(any(target_arch = "wasm32", test))]
+pub(super) fn step_photo_upload_failure(filename: &str, processing: bool) -> String {
+    let filename: String = filename.chars().take(120).collect();
+    if processing {
+        format!("Could not process \"{filename}\". Choose a valid JPEG, PNG, or WebP image.")
+    } else {
+        format!("Could not upload \"{filename}\". Choose the photo again to retry; other photos are unchanged.")
+    }
+}
+
+#[component]
+pub(super) fn StepPhotoUploadFeedback(uploading: bool, errors: Vec<String>) -> Element {
+    rsx! {
+        p { role: "status", aria_live: "polite",
+            if uploading { "Uploading step photos… Keep this editor open until uploading finishes." }
+            else { "Photos are added in selection order. Open a photo to adjust it." }
+        }
+        if !errors.is_empty() {
+            div { role: "alert", overflow_wrap: "anywhere", color: "var(--text-primary)",
+                for message in errors { p { "{message}" } }
+            }
+        }
+    }
+}
+
+/// Clear the native picker even after invalid selections so the same file can
+/// be selected again. `accept` remains only a hint; uploads validate originals.
+pub(super) fn reset_step_photo_input(_step_index: usize) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        use wasm_bindgen::JsCast;
+        if let Some(document) = web_sys::window().and_then(|window| window.document()) {
+            if let Some(input) = document.get_element_by_id(&format!("step-photo-{_step_index}")) {
+                if let Some(input) = input.dyn_ref::<web_sys::HtmlInputElement>() {
+                    input.set_value("");
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
@@ -442,6 +496,59 @@ mod tests {
     fn step_photo_size_formatting_handles_saved_and_legacy_metadata() {
         assert_eq!(format_step_photo_file_size(Some(8_192)), "8 KB");
         assert_eq!(format_step_photo_file_size(None), "Size unavailable");
+    }
+
+    #[test]
+    fn step_photo_upload_errors_are_actionable_and_bound_filename_length() {
+        let message = super::step_photo_upload_failure("sample.png", false);
+        assert!(message.contains("sample.png"));
+        assert!(message.contains("Choose the photo again"));
+        let message = super::step_photo_upload_failure(&"x".repeat(400), true);
+        assert!(message.len() < 240);
+        assert!(message.contains("valid JPEG, PNG, or WebP"));
+    }
+
+    #[test]
+    fn step_photo_upload_feedback_announces_pending_and_failed_files() {
+        use dioxus::prelude::*;
+        let mut dom = VirtualDom::new(|| {
+            rsx! {
+                super::StepPhotoUploadFeedback {
+                    uploading: true,
+                    errors: vec!["Could not upload test.png. Choose the photo again.".into()],
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("role=\"status\""), "{html}");
+        assert!(html.contains("role=\"alert\""), "{html}");
+        assert!(html.contains("Choose the photo again"), "{html}");
+        assert!(html.contains("overflow-wrap:anywhere"), "{html}");
+    }
+
+    #[test]
+    fn both_step_photo_upload_paths_validate_claim_the_batch_and_release_local_previews() {
+        for source in [
+            include_str!("recipe_new.rs"),
+            include_str!("recipe_edit.rs"),
+        ] {
+            let upload = source
+                .split("let on_step_photo_change =")
+                .nth(1)
+                .unwrap()
+                .split("// ── Submit handler")
+                .next()
+                .unwrap();
+            assert!(upload.contains("validate_image_input"));
+            assert!(upload.contains("step_photo_upload_count.set(1)"));
+            assert!(upload.contains("let open_preview = files.len() == 1"));
+            assert!(upload.contains("step_photo_upload_failure"));
+            assert!(upload.contains("step_photo_upload_errors.write().push"));
+            assert!(source.contains("StepPhotoUploadFeedback {"));
+            assert!(source.contains("step_photo_previews.write().clear()"));
+            assert!(source.contains("if step_photo_controls_locked() { return; }"));
+        }
     }
 
     #[test]

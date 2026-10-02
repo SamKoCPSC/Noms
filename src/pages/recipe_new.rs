@@ -18,8 +18,9 @@ use crate::components::AuthRequired;
 use crate::pages::draft_save::draft_save_button_state;
 use crate::pages::recipe_editor_form::{
     apply_step_photo_edit, build_step_tree, can_indent_step, format_step_photo_file_size,
-    step_photo_display_name, step_photo_editor_edit, RecipeEditorContents,
-    RecipeEditorInput as Input, StepForm, StepPhotoEditButton,
+    reset_step_photo_input, step_photo_display_name, step_photo_editor_edit, RecipeEditorContents,
+    RecipeEditorInput as Input, StepForm, StepPhotoEditButton, StepPhotoPreview,
+    StepPhotoUploadFeedback,
 };
 use crate::types::{
     RecipeEditorState, RecipeEquipment, RecipeImage, RecipeImageEdit, RecipeIngredient, RecipeStep,
@@ -171,6 +172,8 @@ pub fn RecipeNew() -> Element {
     let mut step_photo_discard_capabilities =
         use_signal(std::collections::HashMap::<String, String>::new);
     let step_photo_upload_count = use_signal(|| 0usize);
+    let mut step_photo_previews = use_signal(Vec::<StepPhotoPreview>::new);
+    let step_photo_upload_errors = use_signal(Vec::<String>::new);
     let mut dragged_step_photo = use_signal(|| Option::<(usize, usize)>::None);
 
     // Start a new mutable draft on the first meaningful edit, then autosave
@@ -302,7 +305,12 @@ pub fn RecipeNew() -> Element {
                 || !editor.equipment.is_empty()
                 || !editor.images.is_empty()
                 || !editor.tags.is_empty();
-            if !meaningful || is_saving() || is_manually_saving() {
+            if !meaningful
+                || is_saving()
+                || is_manually_saving()
+                || busy()
+                || step_photo_upload_count() > 0
+            {
                 return;
             }
 
@@ -374,10 +382,12 @@ pub fn RecipeNew() -> Element {
     // ── Step photo upload handler ────────────────────────────────────────
     // Created per-step via closure capturing the step index
     #[allow(unused_variables)]
+    let step_photo_controls_locked =
+        move || is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0;
     let on_step_photo_change = move |idx: usize| {
         move |files: Vec<dioxus::html::FileData>| {
-            #[cfg(target_arch = "wasm32")]
-            if files.is_empty() {
+            reset_step_photo_input(idx);
+            if files.is_empty() || step_photo_controls_locked() {
                 return;
             }
             #[cfg(target_arch = "wasm32")]
@@ -390,40 +400,92 @@ pub fn RecipeNew() -> Element {
                 let mut pending_step_photo_edits = pending_step_photo_edits;
                 let mut step_photo_upload_count = step_photo_upload_count;
                 let mut step_photo_discard_capabilities = step_photo_discard_capabilities;
+                let mut step_photo_upload_errors = step_photo_upload_errors;
+                let mut step_photo_previews = step_photo_previews;
+                // Claim the entire batch synchronously. Reordering/removal must
+                // not change its destination index between asynchronous files.
+                step_photo_upload_count.set(1);
+                step_photo_upload_errors.write().clear();
+                dragged_step_photo.set(None);
+                // A batch must not replace a still-unconfirmed editor with the
+                // next file. Batch previews can be edited after they are added.
+                let open_preview = files.len() == 1;
                 spawn(async move {
                     use dioxus_web::WebFileExt;
-
+                    let mut release_failed_preview = move |preview_url: &Option<String>| {
+                        if let Some(url) = preview_url {
+                            if step_editor_modal_url().as_ref() == Some(url) {
+                                step_editor_modal_url.set(None);
+                                step_editor_idx.set(None);
+                                step_editor_photo_idx.set(None);
+                                step_editor_initial_edit.set(None);
+                            }
+                            pending_step_photo_edits
+                                .write()
+                                .retain(|pending| pending.preview_url != *url);
+                            step_photo_previews
+                                .write()
+                                .retain(|preview| preview.0 != *url);
+                        }
+                    };
                     for (file_idx, file_data) in files.iter().enumerate() {
+                        let photo_file_name = file_data.name();
+                        if let Err(reason) = crate::components::base::validate_image_input(
+                            &photo_file_name,
+                            file_data.size(),
+                        ) {
+                            step_photo_upload_errors.write().push(format!(
+                                "Skipped \"{}\": {reason}",
+                                photo_file_name.chars().take(120).collect::<String>()
+                            ));
+                            continue;
+                        }
                         let web_file = match file_data.get_web_file() {
-                            Some(f) => f,
-                            None => continue,
+                            Some(file) => file,
+                            None => {
+                                step_photo_upload_errors.write().push(
+                                    crate::pages::recipe_editor_form::step_photo_upload_failure(
+                                        &photo_file_name,
+                                        true,
+                                    ),
+                                );
+                                continue;
+                            }
                         };
-                        let photo_file_name = web_file.name();
                         let photo_file_size = web_file.size() as u64;
-                        step_photo_upload_count.set(step_photo_upload_count().saturating_add(1));
-                        let preview_url = web_sys::Url::create_object_url_with_blob(&web_file).ok();
+                        let preview_url = if open_preview {
+                            web_sys::Url::create_object_url_with_blob(&web_file).ok()
+                        } else {
+                            None
+                        };
                         if let Some(url) = &preview_url {
+                            step_photo_previews
+                                .write()
+                                .push(StepPhotoPreview(url.clone()));
                             step_editor_idx.set(Some(idx));
                             step_editor_photo_idx.set(None);
                             step_editor_initial_edit
                                 .set(Some(RecipeImageEdit::default_rect_16x9()));
                             step_editor_modal_url.set(Some(url.clone()));
                         }
-
                         let processed =
                             match crate::utils::image_processing_client::process_image(web_file)
                                 .await
                             {
-                                Ok(p) => p,
-                                Err(e) => {
-                                    tracing::error!("Step photo processing failed: {e}");
-                                    step_photo_upload_count
-                                        .set(step_photo_upload_count().saturating_sub(1));
+                                Ok(processed) => processed,
+                                Err(problem) => {
+                                    tracing::warn!("Step photo processing failed: {problem}");
+                                    step_photo_upload_errors.write().push(
+                                        crate::pages::recipe_editor_form::step_photo_upload_failure(
+                                            &photo_file_name,
+                                            true,
+                                        ),
+                                    );
+                                    release_failed_preview(&preview_url);
                                     continue;
                                 }
                             };
-
-                        let resp = match upload_image(
+                        let response = match upload_image(
                             processed.full_bytes,
                             processed.thumb_bytes,
                             format!("step_{idx}_{file_idx}.webp"),
@@ -431,15 +493,19 @@ pub fn RecipeNew() -> Element {
                         )
                         .await
                         {
-                            Ok(r) => r,
-                            Err(e) => {
-                                tracing::error!("Step photo upload failed: {e}");
-                                step_photo_upload_count
-                                    .set(step_photo_upload_count().saturating_sub(1));
+                            Ok(response) => response,
+                            Err(problem) => {
+                                tracing::warn!("Step photo upload failed: {problem}");
+                                step_photo_upload_errors.write().push(
+                                    crate::pages::recipe_editor_form::step_photo_upload_failure(
+                                        &photo_file_name,
+                                        false,
+                                    ),
+                                );
+                                release_failed_preview(&preview_url);
                                 continue;
                             }
                         };
-
                         let edit = preview_url
                             .as_ref()
                             .and_then(|url| {
@@ -457,29 +523,29 @@ pub fn RecipeNew() -> Element {
                                 !(pending.idx == idx && pending.preview_url == *url)
                             });
                         }
-
-                        let full_url = resp.full_url;
+                        let full_url = response.full_url;
                         step_photo_discard_capabilities
                             .write()
-                            .insert(full_url.clone(), resp.discard_capability);
+                            .insert(full_url.clone(), response.discard_capability);
                         let photo = RecipeImage::managed(
-                            resp.asset_id,
+                            response.asset_id,
                             full_url,
-                            Some(resp.thumb_url),
+                            Some(response.thumb_url),
                             edit,
                         )
                         .with_file_metadata(photo_file_name, photo_file_size);
                         if let Some(step) = steps.write().get_mut(idx) {
                             let photo_idx = step.photos.len();
                             step.photos.push(photo);
-                            if preview_url.as_ref() == step_editor_modal_url().as_ref()
+                            if preview_url.is_some()
+                                && preview_url.as_ref() == step_editor_modal_url().as_ref()
                                 && step_editor_idx() == Some(idx)
                             {
                                 step_editor_photo_idx.set(Some(photo_idx));
                             }
                         }
-                        step_photo_upload_count.set(step_photo_upload_count().saturating_sub(1));
                     }
+                    step_photo_upload_count.set(0);
                 });
             }
         }
@@ -487,6 +553,9 @@ pub fn RecipeNew() -> Element {
 
     // ── Submit handler ───────────────────────────────────────────────────
     let on_submit = move |_| {
+        if is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0 {
+            return;
+        }
         // Clear previous errors
         error.set(None);
 
@@ -689,6 +758,9 @@ pub fn RecipeNew() -> Element {
 
     // ── Cancel handler ──────────────────────────────────────────────────
     let on_cancel = move |_| {
+        if is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0 {
+            return;
+        }
         #[cfg(target_arch = "wasm32")]
         {
             if let Some(window) = web_sys::window() {
@@ -735,6 +807,9 @@ pub fn RecipeNew() -> Element {
 
     // ── Step helpers ────────────────────────────────────────────────────
     let on_add_step = move |_| {
+        if step_photo_controls_locked() {
+            return;
+        }
         steps.write().push(StepForm {
             text: String::new(),
             depth: 0,
@@ -1087,6 +1162,7 @@ pub fn RecipeNew() -> Element {
                         onfocusin: move |_| active_editor_section.set("method"),
                         onclick: move |_| active_editor_section.set("method"),
                         h2 { id: "recipe-method", tabindex: "-1", "Method" }
+                        StepPhotoUploadFeedback { uploading: step_photo_upload_count() > 0, errors: step_photo_upload_errors() }
                     // ── Steps ───────────────────────────────────────────
                     div {
                         display: "flex",
@@ -1145,8 +1221,8 @@ pub fn RecipeNew() -> Element {
                                             div {
                                                 key: "{idx}-{photo_idx}",
                                                 class: if dragged_step_photo() == Some((idx, photo_idx)) { "step-photo-item step-photo-item--dragging" } else { "step-photo-item" },
-                                                draggable: true,
-                                                ondragstart: move |_| dragged_step_photo.set(Some((idx, photo_idx))),
+                                                draggable: !step_photo_controls_locked(),
+                                                ondragstart: move |_| { if step_photo_controls_locked() { return; } dragged_step_photo.set(Some((idx, photo_idx))); },
                                                 ondragend: move |_| dragged_step_photo.set(None),
                                                 ondragover: move |event| {
                                                     if dragged_step_photo().is_some() {
@@ -1155,6 +1231,7 @@ pub fn RecipeNew() -> Element {
                                                 },
                                                 ondrop: move |event| {
                                                     event.prevent_default();
+                                                    if step_photo_controls_locked() { return; }
                                                     if let Some((source_step_idx, source_photo_idx)) = dragged_step_photo() {
                                                         if source_step_idx == idx {
                                                             move_item(
@@ -1169,8 +1246,9 @@ pub fn RecipeNew() -> Element {
                                                     div { class: "step-photo-item__preview neumo-inset",
                                                         StepPhotoEditButton {
                                                             image: steps()[idx].photos[photo_idx].clone(),
-                                                            disabled: is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0,
+                                                            disabled: step_photo_controls_locked(),
                                                             onedit: move |photo: RecipeImage| {
+                                                                if step_photo_controls_locked() { return; }
                                                                 step_editor_idx.set(Some(idx));
                                                                 step_editor_photo_idx.set(Some(photo_idx));
                                                                 step_editor_initial_edit.set(Some(step_photo_editor_edit(&photo)));
@@ -1191,9 +1269,10 @@ pub fn RecipeNew() -> Element {
                                                         button {
                                                             r#type: "button",
                                                             class: "btn btn-ghost touch-target",
-                                                            disabled: photo_idx == 0,
+                                                            disabled: (photo_idx == 0) || step_photo_controls_locked(),
                                                             aria_label: "Move step photo left",
                                                             onclick: move |_| {
+                                                                if step_photo_controls_locked() { return; }
                                                                 steps.write()[idx].photos.swap(photo_idx, photo_idx - 1);
                                                             },
                                                             span { aria_hidden: "true", "←" }
@@ -1202,19 +1281,22 @@ pub fn RecipeNew() -> Element {
                                                         button {
                                                             r#type: "button",
                                                             class: "btn btn-ghost touch-target",
-                                                            disabled: photo_idx + 1 >= steps()[idx].photos.len(),
+                                                            disabled: (photo_idx + 1 >= steps()[idx].photos.len()) || step_photo_controls_locked(),
                                                             aria_label: "Move step photo right",
                                                             onclick: move |_| {
+                                                                if step_photo_controls_locked() { return; }
                                                                 steps.write()[idx].photos.swap(photo_idx, photo_idx + 1);
                                                             },
                                                             span { aria_hidden: "true", "→" }
                                         span { class: "sr-only", "Indent step" }
                                                         }
                                                         button {
+                                                            disabled: step_photo_controls_locked(),
                                                             r#type: "button",
                                                             class: "btn btn-ghost touch-target step-photo-item__remove",
                                                             aria_label: "Remove step photo",
                                                             onclick: move |_| {
+                                                                if step_photo_controls_locked() { return; }
                                                                 let removed = steps.write()[idx].photos.remove(photo_idx);
                                                                 if let Some(capability) = step_photo_discard_capabilities.write().remove(&removed.url) {
                                                                     spawn(async move {
@@ -1242,17 +1324,20 @@ pub fn RecipeNew() -> Element {
                                     align_items: "center",
                                     // Step photo upload
                                     Button {
+                                        disabled: step_photo_controls_locked(),
                                         variant: ButtonVariant::Ghost,
                                         onclick: move |_| {
+                                            if step_photo_controls_locked() { return; }
                                             trigger_file_input(&format!("#step-photo-{idx}"));
                                         },
                                         span { aria_hidden: "true", "📷" }
                                         span { class: "sr-only", "Add step photo" }
                                     }
                                     input {
+                                        disabled: step_photo_controls_locked(),
                                         id: format!("step-photo-{idx}"),
                                         r#type: "file",
-                                        accept: "image/*",
+                                        accept: "image/jpeg,image/png,image/webp",
                                         multiple: true,
                                         display: "none",
                                         onchange: move |evt| {
@@ -1261,9 +1346,10 @@ pub fn RecipeNew() -> Element {
                                     }
                                     // Move up
                                         Button {
-                                            disabled: idx == 0,
+                                            disabled: (idx == 0) || step_photo_controls_locked(),
                                             variant: ButtonVariant::Ghost,
                                             onclick: move |_| {
+                                                if step_photo_controls_locked() { return; }
                                                 let mut s = steps.write();
                                                 s.swap(idx, idx - 1);
                                             },
@@ -1272,9 +1358,10 @@ pub fn RecipeNew() -> Element {
                                         }
                                     // Move down
                                         Button {
-                                            disabled: idx + 1 >= steps().len(),
+                                            disabled: (idx + 1 >= steps().len()) || step_photo_controls_locked(),
                                             variant: ButtonVariant::Ghost,
                                             onclick: move |_| {
+                                                if step_photo_controls_locked() { return; }
                                                 let mut s = steps.write();
                                                 s.swap(idx, idx + 1);
                                             },
@@ -1284,8 +1371,10 @@ pub fn RecipeNew() -> Element {
                                     // Indent (increase depth)
                                     if can_indent_step(steps()[idx].depth) {
                                         Button {
+                                            disabled: step_photo_controls_locked(),
                                             variant: ButtonVariant::Ghost,
                                             onclick: move |_| {
+                                                if step_photo_controls_locked() { return; }
                                                 steps.write()[idx].depth += 1;
                                             },
                                             span { aria_hidden: "true", "→" }
@@ -1295,8 +1384,10 @@ pub fn RecipeNew() -> Element {
                                     // Unindent (decrease depth)
                                     if steps()[idx].depth > 0 {
                                         Button {
+                                            disabled: step_photo_controls_locked(),
                                             variant: ButtonVariant::Ghost,
                                             onclick: move |_| {
+                                                if step_photo_controls_locked() { return; }
                                                 steps.write()[idx].depth -= 1;
                                             },
                                             span { aria_hidden: "true", "←" }
@@ -1305,8 +1396,10 @@ pub fn RecipeNew() -> Element {
                                     }
                                     // Remove
                                     Button {
+                                        disabled: step_photo_controls_locked(),
                                         variant: ButtonVariant::Ghost,
                                         onclick: move |_| {
+                                            if step_photo_controls_locked() { return; }
                                             for photo in steps()[idx].photos.clone() {
                                                 if let Some(capability) = step_photo_discard_capabilities.write().remove(&photo.url) {
                                                     spawn(async move {
@@ -1326,6 +1419,7 @@ pub fn RecipeNew() -> Element {
                         }
 
                         Button {
+                            disabled: step_photo_controls_locked(),
                             variant: ButtonVariant::Secondary,
                             onclick: on_add_step,
                             "+ Add Step"
@@ -1453,6 +1547,7 @@ pub fn RecipeNew() -> Element {
                     }
                 },
                 on_close: move |_| {
+                    step_photo_previews.write().clear();
                     step_editor_modal_url.set(None);
                     step_editor_idx.set(None);
                     step_editor_photo_idx.set(None);
