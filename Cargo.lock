@@ -4407,6 +4407,7 @@ dependencies = [
  "dioxus-html",
  "dioxus-ssr",
  "dioxus-web",
+ "futures-channel",
  "gloo-net",
  "gloo-timers",
  "ipnet",

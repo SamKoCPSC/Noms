@@ -5,9 +5,14 @@
 #![cfg(target_arch = "wasm32")]
 #![allow(dead_code)]
 
+use super::image_processing_lifecycle::{
+    wait_for_image_operation, ImageCompletionOwner, ImageDecodeUrl,
+};
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement};
+
+const IMAGE_OPERATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
 
 /// Maximum dimensions for full-size images.
 pub const MAX_DIMENSION: u32 = 1920;
@@ -29,13 +34,13 @@ pub struct ProcessedImage {
 /// Process a File object: resize, convert to WebP, generate thumbnail.
 ///
 /// Pipeline:
-/// 1. Load file into HtmlImageElement via FileReader + ObjectURL
+/// 1. Load file into HtmlImageElement via a temporary ObjectURL
 /// 2. Calculate target dimensions (maintain aspect ratio, fit within MAX_DIMENSION)
 /// 3. Draw to offscreen canvas at full-size dimensions
 /// 4. Export canvas as WebP blob via canvas.toBlob()
 /// 5. Read blob as ArrayBuffer → Vec<u8>
 /// 6. Repeat steps 3-5 for thumbnail (fit within THUMB_SIZE x THUMB_SIZE, aspect ratio preserved)
-/// 7. Revoke ObjectURL to free memory
+/// The decoder revokes its ObjectURL on completion, error, or cancellation.
 ///
 pub async fn process_image(file: web_sys::File) -> Result<ProcessedImage, String> {
     // Step 1: Load image into HtmlImageElement
@@ -70,15 +75,16 @@ pub async fn load_image_from_blob(blob: &web_sys::Blob) -> Result<HtmlImageEleme
     let url = web_sys::Url::create_object_url_with_blob(blob)
         .map_err(|e| format!("Failed to create object URL: {:?}", e))?;
 
-    // `complete` is also true for a broken image. Watching only `onload`
-    // waits forever on malformed input and leaks its callback/object URL.
-    // Keep cleanup outside the result block so every error path revokes the URL.
-    // Bound polling to roughly 30 foreground seconds if loading never completes.
-    let result = async {
+    let url = ImageDecodeUrl::new(url, |url| {
+        let _ = web_sys::Url::revoke_object_url(url);
+    });
+    // `complete` is also true for a broken image. The URL lease stays alive
+    // across polling and is released even when the caller drops this future.
+    let decode = async {
         let img = web_sys::HtmlImageElement::new()
             .map_err(|_| "Could not prepare this image. Choose it again.".to_string())?;
-        img.set_src(&url);
-        for _ in 0..3_000 {
+        img.set_src(url.as_str());
+        loop {
             if img.complete() {
                 if img.natural_width() == 0 || img.natural_height() == 0 {
                     return Err("Could not decode this image. Remove it and choose a valid JPEG, PNG, or WebP image.".to_string());
@@ -87,10 +93,13 @@ pub async fn load_image_from_blob(blob: &web_sys::Blob) -> Result<HtmlImageEleme
             }
             gloo_timers::future::sleep(std::time::Duration::from_millis(10)).await;
         }
-        Err("This image took too long to decode. Remove it and choose another image.".to_string())
-    }.await;
-    let _ = web_sys::Url::revoke_object_url(&url);
-    result
+    };
+    wait_for_image_operation(
+        decode,
+        gloo_timers::future::sleep(IMAGE_OPERATION_TIMEOUT),
+        "This image took too long to decode. Remove it and choose another image.",
+    )
+    .await?
 }
 
 /// Calculate target dimensions maintaining aspect ratio.
@@ -171,18 +180,12 @@ async fn render_to_webp_with_quality(
 
 /// Convert canvas content to a WebP blob at the given `quality`, then read as `Vec<u8>`.
 ///
-/// Uses polling approach: canvas.toBlob() callback sets AtomicBool,
-/// we poll with gloo_timers::future::sleep() until ready.
+/// The browser owns a one-shot callback; the Rust wait owns its result channel.
+/// Native encoding cannot be cancelled, so late callbacks safely discard results.
 pub async fn blob_from_canvas(canvas: &HtmlCanvasElement, quality: f64) -> Result<Vec<u8>, String> {
-    let blob = std::sync::Arc::new(std::sync::Mutex::new(None));
-    let blob_clone = blob.clone();
-    let ready = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let ready_clone = ready.clone();
-
-    let callback = Closure::wrap(Box::new(move |b: Option<Blob>| {
-        *blob_clone.lock().unwrap() = b;
-        ready_clone.store(true, std::sync::atomic::Ordering::Release);
-    }) as Box<dyn FnMut(Option<Blob>)>);
+    let (owner, receiver) = ImageCompletionOwner::channel();
+    let completion = owner.callback();
+    let callback = Closure::once(move |blob: Option<Blob>| completion.complete(blob));
 
     // canvas.toBlob(callback, mimeType, encoderOptions)
     canvas
@@ -192,21 +195,18 @@ pub async fn blob_from_canvas(canvas: &HtmlCanvasElement, quality: f64) -> Resul
             &wasm_bindgen::JsValue::from_f64(quality),
         )
         .map_err(|e| format!("Failed to call toBlob: {:?}", e))?;
-    callback.forget(); // Prevent closure from being dropped
-
-    // Poll for blob
-    loop {
-        gloo_timers::future::sleep(std::time::Duration::from_millis(10)).await;
-        if ready.load(std::sync::atomic::Ordering::Acquire) {
-            break;
-        }
-    }
-
-    let blob = blob
-        .lock()
-        .unwrap()
-        .clone()
-        .ok_or("toBlob returned null (WebP not supported?)")?;
+    // Transfer callback ownership only after toBlob succeeds. It stays callable
+    // after cancellation and is reclaimed on invocation or browser JS GC.
+    let _callback = callback.into_js_value();
+    let blob = wait_for_image_operation(
+        receiver,
+        gloo_timers::future::sleep(IMAGE_OPERATION_TIMEOUT),
+        "This image took too long to encode. Remove it and choose another image.",
+    )
+    .await?
+    .map_err(|_| "Could not finish encoding this image. Choose it again.".to_string())?
+    .ok_or("Could not encode this image as WebP. Remove it and choose another image.")?;
+    drop(owner);
 
     // Read blob as ArrayBuffer
     blob_to_bytes(&blob).await
@@ -214,41 +214,29 @@ pub async fn blob_from_canvas(canvas: &HtmlCanvasElement, quality: f64) -> Resul
 
 /// Read a Blob as ArrayBuffer, then convert to Vec<u8>.
 ///
-/// Uses polling approach: FileReader.onload sets AtomicBool,
-/// we poll with gloo_timers::future::sleep() until ready.
+/// Use the native Blob promise rather than retaining FileReader event handlers.
+/// Both handlers hold weak completion references, not the waiting task or bytes.
 pub async fn blob_to_bytes(blob: &Blob) -> Result<Vec<u8>, String> {
-    let file_reader =
-        web_sys::FileReader::new().map_err(|e| format!("Failed to create FileReader: {:?}", e))?;
-
-    let loaded = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let loaded_clone = loaded.clone();
-
-    let on_load = Closure::wrap(Box::new(move || {
-        loaded_clone.store(true, std::sync::atomic::Ordering::Release);
-    }) as Box<dyn FnMut()>);
-
-    file_reader.set_onload(Some(on_load.as_ref().unchecked_ref()));
-    on_load.forget();
-
-    file_reader
-        .read_as_array_buffer(blob)
-        .map_err(|e| format!("Failed to read blob: {:?}", e))?;
-
-    // Poll for completion
-    loop {
-        gloo_timers::future::sleep(std::time::Duration::from_millis(10)).await;
-        if loaded.load(std::sync::atomic::Ordering::Acquire) {
-            break;
-        }
-    }
-
-    // Get result
-    let result = file_reader
-        .result()
-        .map_err(|e| format!("Failed to get FileReader result: {:?}", e))?;
+    let (owner, receiver) = ImageCompletionOwner::channel();
+    let resolve = owner.callback();
+    let reject = owner.callback();
+    let on_resolve = Closure::once(move |value| resolve.complete(Ok(value)));
+    let on_reject = Closure::once(move |reason| reject.complete(Err(reason)));
+    let _settled = blob.array_buffer().then2(&on_resolve, &on_reject);
+    let _on_resolve = on_resolve.into_js_value();
+    let _on_reject = on_reject.into_js_value();
+    let result = wait_for_image_operation(
+        receiver,
+        gloo_timers::future::sleep(IMAGE_OPERATION_TIMEOUT),
+        "This image took too long to read. Remove it and choose another image.",
+    )
+    .await?
+    .map_err(|_| "Could not finish reading this image. Choose it again.".to_string())?
+    .map_err(|_| "Could not read this image. Remove it and choose another image.".to_string())?;
+    drop(owner);
     let array_buf = result
         .dyn_into::<js_sys::ArrayBuffer>()
-        .map_err(|_| "FileReader result is not an ArrayBuffer")?;
+        .map_err(|_| "Could not read this image's bytes. Choose another image.")?;
 
     // Convert ArrayBuffer to Vec<u8>
     let uint8 = js_sys::Uint8Array::new(&array_buf);

@@ -1379,11 +1379,37 @@ mod tests {
             .unwrap();
         assert!(source.contains("if img.complete()"));
         assert!(source.contains("img.natural_width() == 0"));
-        assert!(source.contains("for _ in 0..3_000"));
+        assert!(source.contains("wait_for_image_operation"));
+        assert!(source.contains("ImageDecodeUrl::new"));
         assert!(!source.contains(".forget()"));
-        assert!(source.contains("let result = async"));
-        assert!(source.contains("revoke_object_url(&url)"));
-        assert!(source.trim_end().ends_with("result\n}"));
+        assert!(source.contains("revoke_object_url(url)"));
+    }
+
+    #[test]
+    fn image_encoder_and_blob_reader_use_bounded_owned_operations() {
+        let source = include_str!("../../utils/image_processing_client.rs");
+        let encoder = source
+            .split("pub async fn blob_from_canvas(")
+            .nth(1)
+            .unwrap()
+            .split("pub async fn blob_to_bytes(")
+            .next()
+            .unwrap();
+        let reader = source
+            .split("pub async fn blob_to_bytes(")
+            .nth(1)
+            .unwrap()
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        assert!(!source.contains(".forget()"));
+        assert!(!reader.contains("FileReader"));
+        assert!(encoder.contains("Closure::once"));
+        assert!(encoder.contains("callback.into_js_value()"));
+        assert!(encoder.contains("wait_for_image_operation"));
+        assert!(reader.contains("wait_for_image_operation"));
+        assert!(reader.contains("blob.array_buffer()"));
+        assert!(source.contains("Duration::from_secs(30)"));
     }
 
     #[test]
