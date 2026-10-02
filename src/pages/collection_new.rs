@@ -20,6 +20,7 @@ struct PendingCollectionCreate {
 
 #[component]
 pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
+    let form_account = crate::auth::account_binding::use_form_account();
     // Route props preserve the parent through SSR, hydration and query-only
     // navigation; do not initialize it once from browser-only location state.
     let name = use_signal(|| "Untitled Collection".to_string());
@@ -54,6 +55,7 @@ pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
                 }
             };
             match create_collection(
+                form_account(),
                 pending.name,
                 pending.description,
                 pending.parent_id,
@@ -68,7 +70,11 @@ pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
                     });
                 }
                 Err(problem) => {
-                    error.set(Some(problem.to_string()));
+                    error.set(Some(
+                        crate::auth::account_binding::account_error_feedback(&problem)
+                            .map(str::to_string)
+                            .unwrap_or_else(|| problem.to_string()),
+                    ));
                     saving.set(false);
                 }
             }
@@ -98,6 +104,7 @@ pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
                     h2 { "Cover image" }
                     p { class: "collection-form-hint", "Choose a photo to make this album easy to spot." }
                     ImageUpload {
+                        form_account,
                         images,
                         upload_now,
                         busy: image_busy,

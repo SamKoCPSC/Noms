@@ -65,6 +65,7 @@ pub struct AddToCollectionDropdownProps {
 /// Staged, additive picker. Collection pages retain membership removal.
 #[component]
 pub fn AddToCollectionDropdown(props: AddToCollectionDropdownProps) -> Element {
+    let form_account = crate::auth::account_binding::use_form_account();
     let mut open = use_signal(|| false);
     let pending = use_signal(|| false);
     let mut feedback = use_signal(|| None::<Result<String, String>>);
@@ -104,7 +105,7 @@ pub fn AddToCollectionDropdown(props: AddToCollectionDropdownProps) -> Element {
             }
             if open() {
                 CollectionPickerPopover { trigger_id: trigger_id.clone(), pending, on_dismiss: close,
-                    PickerContent { recipe_id: props.recipe_id, recipe_title: props.recipe_title,
+                    PickerContent { form_account, recipe_id: props.recipe_id, recipe_title: props.recipe_title,
                         pending, on_close: close,
                         on_result: move |result| { feedback.set(Some(result)); generation += 1; }
                     }
@@ -117,6 +118,7 @@ pub fn AddToCollectionDropdown(props: AddToCollectionDropdownProps) -> Element {
 
 #[component]
 fn PickerContent(
+    form_account: Signal<Option<uuid::Uuid>>,
     recipe_id: String,
     recipe_title: String,
     pending: Signal<bool>,
@@ -147,7 +149,7 @@ fn PickerContent(
                 button { r#type: "button", class: "btn btn-secondary", onclick: move |_| on_close.call(true), "Cancel" }
             },
             Some(Ok((collections, memberships))) => rsx! {
-                PickerSelectionForm { recipe_id, collections, memberships, pending, on_close, on_result }
+                PickerSelectionForm { form_account, recipe_id, collections, memberships, pending, on_close, on_result }
             },
         }
     }
@@ -201,6 +203,7 @@ fn visible_collection_rows(
 
 #[component]
 fn PickerSelectionForm(
+    form_account: Signal<Option<uuid::Uuid>>,
     recipe_id: String,
     collections: Vec<CollectionSummary>,
     memberships: Vec<Uuid>,
@@ -224,18 +227,31 @@ fn PickerSelectionForm(
             let total = ids.len();
             let mut confirmed = HashSet::new();
             let mut errors = Vec::new();
+            let mut account_changed = false;
             // Bounded sequential requests preserve server budgets; never resend known successes.
             for id in ids {
-                match add_recipe_to_collection(id.to_string(), recipe_id.clone()).await {
+                match add_recipe_to_collection(form_account(), id.to_string(), recipe_id.clone())
+                    .await
+                {
                     Ok(()) => {
                         confirmed.insert(id);
                     }
-                    Err(error) => errors.push((id, error.to_string())),
+                    Err(error) => {
+                        let account_feedback =
+                            crate::auth::account_binding::account_error_feedback(&error);
+                        account_changed |= account_feedback.is_some();
+                        errors.push((
+                            id,
+                            account_feedback
+                                .map(str::to_string)
+                                .unwrap_or_else(|| error.to_string()),
+                        ));
+                    }
                 }
             }
             // A failed response may follow a committed write (or another tab's add).
             // Reconcile through the owner-scoped read instead of parsing error strings.
-            if !errors.is_empty() {
+            if !errors.is_empty() && !account_changed {
                 if let Ok(current) = get_recipe_collections(recipe_id).await {
                     confirmed.extend(current);
                 }

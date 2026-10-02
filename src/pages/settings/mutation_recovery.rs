@@ -14,6 +14,9 @@ pub(super) fn settings_mutation_feedback(
     action: SettingsMutation,
     error: &ServerFnError,
 ) -> &'static str {
+    if let Some(feedback) = crate::auth::account_binding::account_error_feedback(error) {
+        return feedback;
+    }
     if let ServerFnError::ServerError { message, .. } = error {
         if message == "Not authenticated" {
             return "Sign in again in another tab, then check your account before retrying. Keep this page open to retain your entries and confirmation.";

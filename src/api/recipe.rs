@@ -148,6 +148,7 @@ struct RecipeUpdateInput {
 #[allow(clippy::too_many_arguments)]
 #[server]
 pub async fn create_recipe(
+    expected_account_id: Option<uuid::Uuid>,
     title: String,
     description: Option<String>,
     commentary: Option<String>,
@@ -161,9 +162,7 @@ pub async fn create_recipe(
     tags: Vec<String>,
     visibility: String,
 ) -> Result<crate::types::Recipe, ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
         .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
     enforce_publication_budget(user_id)?;
@@ -219,6 +218,7 @@ pub async fn get_recipe(recipe_id: String) -> Result<crate::types::Recipe, Serve
 #[allow(clippy::too_many_arguments)]
 #[server]
 pub async fn update_recipe(
+    expected_account_id: Option<uuid::Uuid>,
     recipe_id: String,
     title: Option<String>,
     description: Option<String>,
@@ -232,9 +232,7 @@ pub async fn update_recipe(
     images: Option<Vec<crate::types::RecipeImage>>,
     tags: Option<Vec<String>>,
 ) -> Result<crate::types::Recipe, ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
         .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
     enforce_publication_budget(user_id)?;
@@ -268,12 +266,11 @@ pub async fn update_recipe(
 /// Change recipe-level visibility without creating or publishing a content version.
 #[server]
 pub async fn update_recipe_visibility(
+    expected_account_id: Option<uuid::Uuid>,
     recipe_id: String,
     visibility: String,
 ) -> Result<crate::types::Recipe, ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     enforce_mutation_budget(user_id)?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
@@ -289,11 +286,10 @@ pub async fn update_recipe_visibility(
 /// Start an incomplete, owner-only draft for a new recipe.
 #[server]
 pub async fn create_recipe_draft(
+    expected_account_id: Option<uuid::Uuid>,
     editor: crate::types::RecipeEditorState,
 ) -> Result<crate::types::RecipeDraftView, ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
         .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
     crate::security::validate_recipe_editor(&editor, crate::security::RecipeValidationMode::Draft)
@@ -312,11 +308,10 @@ pub async fn create_recipe_draft(
 /// Load the owner's existing edit draft, or copy the latest published snapshot.
 #[server]
 pub async fn create_edit_draft(
+    expected_account_id: Option<uuid::Uuid>,
     recipe_id: String,
 ) -> Result<crate::types::RecipeDraftView, ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     enforce_mutation_budget(user_id)?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|error| ServerFnError::new(format!("Invalid recipe ID: {error}")))?;
@@ -331,11 +326,10 @@ pub async fn create_edit_draft(
 
 #[server]
 pub async fn get_recipe_draft_api(
+    expected_account_id: Option<uuid::Uuid>,
     draft_id: String,
 ) -> Result<crate::types::RecipeDraftView, ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     let draft_id = uuid::Uuid::parse_str(&draft_id)
         .map_err(|error| ServerFnError::new(format!("Invalid draft ID: {error}")))?;
     let draft = crate::db::get_recipe_draft(&crate::db::get_pool(), draft_id, user_id)
@@ -347,13 +341,12 @@ pub async fn get_recipe_draft_api(
 /// Revision-guarded autosave. This only updates `recipe_drafts`.
 #[server]
 pub async fn save_recipe_draft(
+    expected_account_id: Option<uuid::Uuid>,
     draft_id: String,
     expected_revision: i64,
     editor: crate::types::RecipeEditorState,
 ) -> Result<crate::types::RecipeDraftView, ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
         .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
     crate::security::validate_recipe_editor(&editor, crate::security::RecipeValidationMode::Draft)
@@ -381,10 +374,11 @@ pub async fn save_recipe_draft(
 }
 
 #[server]
-pub async fn discard_recipe_draft(draft_id: String) -> Result<(), ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+pub async fn discard_recipe_draft(
+    expected_account_id: Option<uuid::Uuid>,
+    draft_id: String,
+) -> Result<(), ServerFnError> {
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     enforce_mutation_budget(user_id)?;
     let draft_id = uuid::Uuid::parse_str(&draft_id)
         .map_err(|error| ServerFnError::new(format!("Invalid draft ID: {error}")))?;
@@ -398,12 +392,11 @@ pub async fn discard_recipe_draft(draft_id: String) -> Result<(), ServerFnError>
 
 #[server]
 pub async fn publish_recipe_draft(
+    expected_account_id: Option<uuid::Uuid>,
     draft_id: String,
     notes: Option<String>,
 ) -> Result<crate::types::Recipe, ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
         .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
     enforce_publication_budget(user_id)?;
@@ -1128,13 +1121,12 @@ mod version_change_tests {
 
 #[server]
 pub async fn restore_version(
+    expected_account_id: Option<uuid::Uuid>,
     recipe_id: String,
     version_number: i32,
     expected_latest_version: i32,
 ) -> Result<crate::types::Recipe, ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
         .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
     enforce_publication_budget(user_id)?;
@@ -1152,12 +1144,11 @@ pub async fn restore_version(
 
 #[server]
 pub async fn fork_recipe(
+    expected_account_id: Option<uuid::Uuid>,
     source_recipe_id: String,
     message: Option<String>,
 ) -> Result<crate::types::RecipeDraftView, ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
         .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
     if message
@@ -1233,10 +1224,11 @@ pub async fn get_recipe_lineage(
 /// Fetches the recipe first to get its images, deletes from DB, then cleans up
 /// associated images from storage (best-effort).
 #[server]
-pub async fn delete_recipe(recipe_id: String) -> Result<(), ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+pub async fn delete_recipe(
+    expected_account_id: Option<uuid::Uuid>,
+    recipe_id: String,
+) -> Result<(), ServerFnError> {
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     enforce_mutation_budget(user_id)?;
     let recipe_id = uuid::Uuid::parse_str(&recipe_id)
         .map_err(|e| ServerFnError::new(format!("Invalid recipe ID: {e}")))?;

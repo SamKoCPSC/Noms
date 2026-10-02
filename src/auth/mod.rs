@@ -1,5 +1,6 @@
 //! Authentication module.
 
+pub mod account_binding;
 pub mod context;
 pub mod redirect;
 pub mod refresh;

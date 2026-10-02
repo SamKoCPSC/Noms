@@ -576,13 +576,14 @@ impl<'pool> CollectionService<'pool> {
 /// Create a root or nested collection for the authenticated user.
 #[server]
 pub async fn create_collection(
+    expected_account_id: Option<Uuid>,
     name: String,
     description: Option<String>,
     parent_collection_id: Option<String>,
     visibility: crate::types::CollectionVisibility,
     image: Option<crate::types::RecipeImage>,
 ) -> Result<crate::types::Collection, ServerFnError> {
-    let user_id = authenticated_user_id().await.map_err(server_error)?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     enforce_mutation_budget(user_id).map_err(server_error)?;
     let pool = crate::db::get_pool();
     with_database_budget(CollectionService::new(&pool, user_id).create(
@@ -700,10 +701,11 @@ pub async fn load_all_my_collections() -> Result<Vec<crate::types::CollectionSum
 /// Move an owned collection to another owned parent or to the root.
 #[server]
 pub async fn move_collection(
+    expected_account_id: Option<uuid::Uuid>,
     collection_id: String,
     new_parent_collection_id: Option<String>,
 ) -> Result<crate::types::Collection, ServerFnError> {
-    let user_id = authenticated_user_id().await.map_err(server_error)?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     enforce_mutation_budget(user_id).map_err(server_error)?;
     let pool = crate::db::get_pool();
     with_database_budget(
@@ -716,10 +718,11 @@ pub async fn move_collection(
 /// Normalize the complete direct-child order for a parent or the root.
 #[server]
 pub async fn reorder_child_collections(
+    expected_account_id: Option<uuid::Uuid>,
     parent_collection_id: Option<String>,
     ordered_collection_ids: Vec<String>,
 ) -> Result<(), ServerFnError> {
-    let user_id = authenticated_user_id().await.map_err(server_error)?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     enforce_mutation_budget(user_id).map_err(server_error)?;
     crate::security::validate_collection_reorder_len(ordered_collection_ids.len())
         .map_err(|_| server_error(CollectionApiError::QuotaExceeded))?;
@@ -735,12 +738,13 @@ pub async fn reorder_child_collections(
 /// Rename or change the description of an owned collection.
 #[server]
 pub async fn update_collection(
+    expected_account_id: Option<uuid::Uuid>,
     collection_id: String,
     name: String,
     description: Option<String>,
     image: Option<crate::types::RecipeImage>,
 ) -> Result<crate::types::Collection, ServerFnError> {
-    let user_id = authenticated_user_id().await.map_err(server_error)?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     enforce_mutation_budget(user_id).map_err(server_error)?;
     let pool = crate::db::get_pool();
     with_database_budget(CollectionService::new(&pool, user_id).update(
@@ -756,10 +760,11 @@ pub async fn update_collection(
 /// Change an owned collection's visibility.
 #[server]
 pub async fn update_collection_visibility(
+    expected_account_id: Option<uuid::Uuid>,
     collection_id: String,
     visibility: crate::types::CollectionVisibility,
 ) -> Result<crate::types::Collection, ServerFnError> {
-    let user_id = authenticated_user_id().await.map_err(server_error)?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     enforce_mutation_budget(user_id).map_err(server_error)?;
     let pool = crate::db::get_pool();
     with_database_budget(
@@ -786,8 +791,11 @@ pub async fn get_collection_share_preview(
 
 /// Delete an owned collection and its descendants without deleting recipes.
 #[server]
-pub async fn delete_collection(collection_id: String) -> Result<(), ServerFnError> {
-    let user_id = authenticated_user_id().await.map_err(server_error)?;
+pub async fn delete_collection(
+    expected_account_id: Option<uuid::Uuid>,
+    collection_id: String,
+) -> Result<(), ServerFnError> {
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     enforce_mutation_budget(user_id).map_err(server_error)?;
     let pool = crate::db::get_pool();
     with_database_budget(CollectionService::new(&pool, user_id).delete(collection_id))
@@ -798,10 +806,11 @@ pub async fn delete_collection(collection_id: String) -> Result<(), ServerFnErro
 /// Add an accessible published recipe to an owned collection.
 #[server]
 pub async fn add_recipe_to_collection(
+    expected_account_id: Option<uuid::Uuid>,
     collection_id: String,
     recipe_id: String,
 ) -> Result<(), ServerFnError> {
-    let user_id = authenticated_user_id().await.map_err(server_error)?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     enforce_mutation_budget(user_id).map_err(server_error)?;
     let pool = crate::db::get_pool();
     with_database_budget(
@@ -814,10 +823,11 @@ pub async fn add_recipe_to_collection(
 /// Remove a recipe membership from an owned collection.
 #[server]
 pub async fn remove_recipe_from_collection(
+    expected_account_id: Option<uuid::Uuid>,
     collection_id: String,
     recipe_id: String,
 ) -> Result<(), ServerFnError> {
-    let user_id = authenticated_user_id().await.map_err(server_error)?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     enforce_mutation_budget(user_id).map_err(server_error)?;
     let pool = crate::db::get_pool();
     with_database_budget(
@@ -849,10 +859,11 @@ pub async fn get_collection_recipes(
 /// Normalize the complete direct recipe order for an owned collection.
 #[server]
 pub async fn reorder_collection_recipes(
+    expected_account_id: Option<uuid::Uuid>,
     collection_id: String,
     ordered_recipe_ids: Vec<String>,
 ) -> Result<(), ServerFnError> {
-    let user_id = authenticated_user_id().await.map_err(server_error)?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     enforce_mutation_budget(user_id).map_err(server_error)?;
     crate::security::validate_membership_reorder_len(ordered_recipe_ids.len())
         .map_err(|_| server_error(CollectionApiError::QuotaExceeded))?;
@@ -1012,6 +1023,7 @@ mod tests {
             Err(CollectionApiError::NotAuthenticated)
         );
         let unauthenticated = create_collection(
+            None,
             "Meals".to_string(),
             None,
             None,

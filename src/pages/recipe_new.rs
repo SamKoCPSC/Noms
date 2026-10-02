@@ -121,6 +121,7 @@ fn trigger_file_input(_selector: &str) {}
 /// Create recipe page — full form with ingredients, steps, and tags.
 #[component]
 pub fn RecipeNew() -> Element {
+    let form_account = crate::auth::account_binding::use_form_account();
     let navigator = use_navigator();
     // Basic fields
     let mut title = use_signal(String::new);
@@ -239,15 +240,20 @@ pub fn RecipeNew() -> Element {
                 return;
             }
             let result = if let Some(current_draft_id) = current_draft_id {
-                let first_save =
-                    save_recipe_draft(current_draft_id.clone(), expected_revision, editor.clone())
-                        .await;
+                let first_save = save_recipe_draft(
+                    form_account(),
+                    current_draft_id.clone(),
+                    expected_revision,
+                    editor.clone(),
+                )
+                .await;
                 match first_save {
                     Ok(saved) => Ok(saved),
                     Err(_) if autosave_generation() == generation => {
-                        match get_recipe_draft_api(current_draft_id.clone()).await {
+                        match get_recipe_draft_api(form_account(), current_draft_id.clone()).await {
                             Ok(current) => {
                                 save_recipe_draft(
+                                    form_account(),
                                     current_draft_id,
                                     current.revision,
                                     editor.clone(),
@@ -263,8 +269,10 @@ pub fn RecipeNew() -> Element {
                 return;
             } else {
                 draft_creation_in_flight.set(true);
-                let created = create_recipe_draft(editor.clone()).await;
-                if created.is_err() {
+                let created = create_recipe_draft(form_account(), editor.clone()).await;
+                if created.as_ref().err().is_some_and(|problem| {
+                    crate::auth::account_binding::account_error_feedback(problem).is_none()
+                }) {
                     draft_creation_unconfirmed.set(true);
                 }
                 draft_creation_in_flight.set(false);
@@ -348,6 +356,7 @@ pub fn RecipeNew() -> Element {
             spawn(async move {
                 let save_result = if let Some(current_draft_id) = current_draft_id {
                     let first_save = save_recipe_draft(
+                        form_account(),
                         current_draft_id.clone(),
                         expected_revision,
                         editor.clone(),
@@ -355,17 +364,22 @@ pub fn RecipeNew() -> Element {
                     .await;
                     match first_save {
                         Ok(saved) => Ok(saved),
-                        Err(_) => match get_recipe_draft_api(current_draft_id.clone()).await {
-                            Ok(current) => {
-                                save_recipe_draft(
-                                    current_draft_id,
-                                    current.revision,
-                                    editor.clone(),
-                                )
+                        Err(_) => {
+                            match get_recipe_draft_api(form_account(), current_draft_id.clone())
                                 .await
+                            {
+                                Ok(current) => {
+                                    save_recipe_draft(
+                                        form_account(),
+                                        current_draft_id,
+                                        current.revision,
+                                        editor.clone(),
+                                    )
+                                    .await
+                                }
+                                Err(error) => Err(error),
                             }
-                            Err(error) => Err(error),
-                        },
+                        }
                     }
                 } else if *draft_creation_in_flight.peek() {
                     Err(ServerFnError::new(
@@ -373,8 +387,10 @@ pub fn RecipeNew() -> Element {
                     ))
                 } else {
                     draft_creation_in_flight.set(true);
-                    let created = create_recipe_draft(editor.clone()).await;
-                    if created.is_err() {
+                    let created = create_recipe_draft(form_account(), editor.clone()).await;
+                    if created.as_ref().err().is_some_and(|problem| {
+                        crate::auth::account_binding::account_error_feedback(problem).is_none()
+                    }) {
                         draft_creation_unconfirmed.set(true);
                     }
                     draft_creation_in_flight.set(false);
@@ -528,6 +544,7 @@ pub fn RecipeNew() -> Element {
                                 }
                             };
                         let response = match upload_image(
+                            form_account(),
                             processed.full_bytes,
                             processed.thumb_bytes,
                             format!("step_{idx}_{file_idx}.webp"),
@@ -763,8 +780,10 @@ pub fn RecipeNew() -> Element {
             let mut publication_attempted = false;
             let publish_result = async {
                 let saved = if let Some(current_draft_id) = draft_id() {
-                    let current = get_recipe_draft_api(current_draft_id.clone()).await?;
+                    let current =
+                        get_recipe_draft_api(form_account(), current_draft_id.clone()).await?;
                     let first_save = save_recipe_draft(
+                        form_account(),
                         current_draft_id.clone(),
                         current.revision,
                         editor.clone(),
@@ -773,13 +792,23 @@ pub fn RecipeNew() -> Element {
                     match first_save {
                         Ok(saved) => saved,
                         Err(_) => {
-                            let refreshed = get_recipe_draft_api(current_draft_id.clone()).await?;
-                            save_recipe_draft(current_draft_id, refreshed.revision, editor).await?
+                            let refreshed =
+                                get_recipe_draft_api(form_account(), current_draft_id.clone())
+                                    .await?;
+                            save_recipe_draft(
+                                form_account(),
+                                current_draft_id,
+                                refreshed.revision,
+                                editor,
+                            )
+                            .await?
                         }
                     }
                 } else {
-                    let created = create_recipe_draft(editor).await;
-                    if created.is_err() {
+                    let created = create_recipe_draft(form_account(), editor).await;
+                    if created.as_ref().err().is_some_and(|problem| {
+                        crate::auth::account_binding::account_error_feedback(problem).is_none()
+                    }) {
                         draft_creation_unconfirmed.set(true);
                     }
                     created?
@@ -789,7 +818,7 @@ pub fn RecipeNew() -> Element {
                 draft_id.set(Some(saved.id.to_string()));
                 draft_revision.set(saved.revision);
                 publication_attempted = true;
-                publish_recipe_draft(saved.id.to_string(), None).await
+                publish_recipe_draft(form_account(), saved.id.to_string(), None).await
             }
             .await;
             match publish_result {
@@ -801,7 +830,9 @@ pub fn RecipeNew() -> Element {
                     });
                 }
                 Err(e) => {
-                    if publication_attempted {
+                    if publication_attempted
+                        && crate::auth::account_binding::account_error_feedback(&e).is_none()
+                    {
                         // Do not let an autosave failure overwrite an unknown
                         // publication outcome or suggest another blind write.
                         publication_unconfirmed.set(true);
@@ -1132,6 +1163,7 @@ pub fn RecipeNew() -> Element {
                         flex_direction: "column",
                         gap: "var(--space-sm)",
                         ImageUpload {
+                            form_account,
                             images,
                             upload_now,
                             busy,
@@ -1364,7 +1396,7 @@ pub fn RecipeNew() -> Element {
                                                                 let removed = steps.write()[idx].photos.remove(photo_idx);
                                                                 if let Some(capability) = step_photo_discard_capabilities.write().remove(&removed.url) {
                                                                     spawn(async move {
-                                                                        if let Err(problem) = crate::api::upload::discard_upload(capability).await {
+                                                                        if let Err(problem) = crate::api::upload::discard_upload(form_account(), capability).await {
                                                                             tracing::warn!("Failed to discard unsaved step photo: {problem}");
                                                                         }
                                                                     });
@@ -1467,7 +1499,7 @@ pub fn RecipeNew() -> Element {
                                             for photo in steps()[idx].photos.clone() {
                                                 if let Some(capability) = step_photo_discard_capabilities.write().remove(&photo.url) {
                                                     spawn(async move {
-                                                        if let Err(problem) = crate::api::upload::discard_upload(capability).await {
+                                                        if let Err(problem) = crate::api::upload::discard_upload(form_account(), capability).await {
                                                             tracing::warn!("Failed to discard unsaved step photo: {problem}");
                                                         }
                                                     });

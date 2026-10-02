@@ -44,6 +44,9 @@ const ALLOWED_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp"];
 // ── Pure helpers (cross-platform, unit-tested) ──────────────────────────────
 
 fn upload_error_message(error: &ServerFnError) -> &'static str {
+    if let Some(feedback) = crate::auth::account_binding::account_error_feedback(error) {
+        return feedback;
+    }
     // Only known upload conditions receive specific copy. Do not expose framework
     // wrappers, response bodies or unrecognized backend details in the gallery.
     match error {
@@ -188,6 +191,8 @@ pub(crate) fn single_gallery_image(images: &[RecipeImage]) -> Option<RecipeImage
 /// Props for [`ImageUpload`].
 #[derive(Props, Clone, PartialEq)]
 pub struct ImageUploadProps {
+    /// The parent form's initiating account, retained across session changes.
+    pub form_account: Signal<Option<uuid::Uuid>>,
     /// Shared sink: the component appends each successfully uploaded image
     /// record here as uploads complete. The parent reads `images()` when
     /// calling `create_recipe`.
@@ -580,6 +585,7 @@ async fn process_one_file(
 /// Reuses the stashed `full_bytes`/`thumb_bytes` from the last successful
 /// processing — does NOT re-process.
 async fn retry_upload(
+    form_account: Signal<Option<uuid::Uuid>>,
     img_id: usize,
     mut pending: Signal<Vec<PendingImage>>,
     images: Signal<Vec<RecipeImage>>,
@@ -605,8 +611,14 @@ async fn retry_upload(
 
     // The one unavoidable `Vec<u8>` clone — to pass bytes by value to the
     // server fn. Happens once per retry, not per render.
-    let result =
-        crate::api::upload::upload_image((*full).clone(), (*thumb).clone(), name, purpose).await;
+    let result = crate::api::upload::upload_image(
+        form_account(),
+        (*full).clone(),
+        (*thumb).clone(),
+        name,
+        purpose,
+    )
+    .await;
     match result {
         Ok(resp) => {
             discard_capabilities
@@ -633,6 +645,7 @@ async fn retry_upload(
 /// (succeeded/failed counts, or an abort reason if any item is still
 /// `Processing`).
 async fn upload_all(
+    form_account: Signal<Option<uuid::Uuid>>,
     mut pending: Signal<Vec<PendingImage>>,
     images: Signal<Vec<RecipeImage>>,
     purpose: crate::api::upload::UploadPurpose,
@@ -665,9 +678,14 @@ async fn upload_all(
             p.error = None;
         }
 
-        let result =
-            crate::api::upload::upload_image((*full).clone(), (*thumb).clone(), name, purpose)
-                .await;
+        let result = crate::api::upload::upload_image(
+            form_account(),
+            (*full).clone(),
+            (*thumb).clone(),
+            name,
+            purpose,
+        )
+        .await;
 
         match result {
             Ok(resp) => {
@@ -759,6 +777,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     let on_upload_complete = props.on_upload_complete;
     let max_images = props.max_images;
     let purpose = props.purpose;
+    let form_account = props.form_account;
 
     // ── busy sync ────────────────────────────────────────────────────────
     // Memo over `pending` + `uploading`; an effect writes the result into
@@ -808,7 +827,8 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
         if upload_now() && !uploading() {
             uploading.set(true);
             spawn(async move {
-                let outcome = upload_all(pending, images, purpose, discard_capabilities).await;
+                let outcome =
+                    upload_all(form_account, pending, images, purpose, discard_capabilities).await;
                 upload_now.set(false);
                 uploading.set(false);
                 on_upload_complete.call(outcome);
@@ -1049,6 +1069,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                     onclick: move |_| {
                                         spawn(async move {
                                             retry_upload(
+                                                form_account,
                                                 img_id,
                                                 pending,
                                                 images,
@@ -1078,7 +1099,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                     if !img_persisted {
                                         if let Some(discard_capability) = discard_capability {
                                             spawn(async move {
-                                                if let Err(problem) = crate::api::upload::discard_upload(discard_capability).await {
+                                                if let Err(problem) = crate::api::upload::discard_upload(form_account(), discard_capability).await {
                                                     tracing::warn!("Failed to discard unsaved upload: {problem}");
                                                 }
                                             });
@@ -1189,8 +1210,9 @@ mod tests {
             let upload_now = use_signal(|| false);
             let busy = use_signal(|| false);
             let pending_count = use_signal(|| 0);
+            let form_account = use_signal(|| None);
             rsx! { ImageUpload {
-                images, upload_now, busy, pending_count,
+                images, upload_now, busy, pending_count, form_account,
                 purpose: crate::api::upload::UploadPurpose::Recipe,
                 on_remove_existing: |_| {}, on_upload_complete: |_| {},
             } }

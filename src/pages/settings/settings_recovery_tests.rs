@@ -1,5 +1,38 @@
 use super::*;
 
+#[tokio::test]
+async fn unauthenticated_profile_write_stops_before_database_access() {
+    let error = save_profile(Some(uuid::Uuid::new_v4()), "Valid name".into(), None, None)
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("Not authenticated"));
+}
+
+#[test]
+fn profile_account_mismatch_explains_no_write_and_retains_entries() {
+    let error = ServerFnError::new("Account changed");
+    let message = profile_save_feedback(&error);
+    assert!(message.contains("Nothing was saved"), "{message}");
+    assert!(message.contains("original account"), "{message}");
+    assert!(message.contains("entries"), "{message}");
+    assert!(!message.contains("try Save changes again"), "{message}");
+}
+
+#[test]
+fn confirmed_account_deletion_never_logs_out_a_replacement_session() {
+    let source = include_str!("settings_profile.rs");
+    let completion = source
+        .split("match delete_account(form_account()).await {")
+        .nth(1)
+        .unwrap()
+        .split("Err(e) =>")
+        .next()
+        .unwrap();
+    assert!(!completion.contains("Request::post"));
+    assert!(completion.contains("current_user_id != form_account()"));
+    assert!(completion.contains("set_href(\"/\")"));
+}
+
 #[test]
 fn avatar_removal_claims_shared_busy_state_and_failed_removal_retains_selected_edits() {
     let mut state = AvatarUploadState::<Vec<u8>>::default();

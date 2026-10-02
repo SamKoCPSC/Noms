@@ -19,6 +19,9 @@ pub(super) fn recipe_write_feedback(
     action: RecipeWriteAction,
     error: &ServerFnError,
 ) -> &'static str {
+    if let Some(feedback) = crate::auth::account_binding::account_error_feedback(error) {
+        return feedback;
+    }
     if matches!(action, RecipeWriteAction::CreateDraft) {
         return UNCONFIRMED_DRAFT_CREATION_MESSAGE;
     }
@@ -137,7 +140,7 @@ mod tests {
             .find("draft_id.set(Some(saved.id.to_string()))")
             .unwrap();
         let submit = publish
-            .find("publish_recipe_draft(saved.id.to_string(), None)")
+            .find("publish_recipe_draft(form_account(), saved.id.to_string(), None)")
             .unwrap();
         assert!(retained_id < submit);
     }

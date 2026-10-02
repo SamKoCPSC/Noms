@@ -200,6 +200,7 @@ pub fn CollectionDetail(id: String) -> Element {
 
 #[component]
 fn CollectionDetailContents(id: String) -> Element {
+    let form_account = crate::auth::account_binding::use_form_account();
     let requested_id = id.clone();
     let mut contents = use_resource(move || {
         let id = requested_id.clone();
@@ -472,7 +473,7 @@ fn CollectionDetailContents(id: String) -> Element {
                                                     reorder_error.set(None);
                                                     let parent_collection_id = Some(collection_id.clone());
                                                     spawn(async move {
-                                                        match reorder_child_collections(
+                                                        match reorder_child_collections(form_account(),
                                                             parent_collection_id,
                                                             ordered_collection_ids,
                                                         )
@@ -484,7 +485,7 @@ fn CollectionDetailContents(id: String) -> Element {
                                                                 child_order_override.set(None);
                                                                 recipe_order_override.set(None);
                                                                 additional_recipes.set(Vec::new());
-                                                                reorder_error.set(Some(error.to_string()));
+                                                                reorder_error.set(Some(crate::auth::account_binding::account_error_feedback(&error).map(str::to_string).unwrap_or_else(|| error.to_string())));
                                                                 contents.restart();
                                                             }
                                                         }
@@ -568,7 +569,7 @@ fn CollectionDetailContents(id: String) -> Element {
                                                             return;
                                                         }
                                                         recipe_save_in_flight.set(true);
-                                                        match reorder_collection_recipes(
+                                                        match reorder_collection_recipes(form_account(),
                                                             collection_id,
                                                             ordered_recipe_ids,
                                                         )
@@ -593,7 +594,7 @@ fn CollectionDetailContents(id: String) -> Element {
                                                                     recipe_order_override.set(None);
                                                                     child_order_override.set(None);
                                                                     additional_recipes.set(Vec::new());
-                                                                    reorder_error.set(Some(error.to_string()));
+                                                                reorder_error.set(Some(crate::auth::account_binding::account_error_feedback(&error).map(str::to_string).unwrap_or_else(|| error.to_string())));
                                                                     contents.restart();
                                                                 }
                                                             }
@@ -617,7 +618,7 @@ fn CollectionDetailContents(id: String) -> Element {
                                                     let collection_id = removal_collection_id.clone();
                                                     let recipe_id_string = recipe_id_string.clone();
                                                     spawn(async move {
-                                                        match remove_recipe_from_collection(collection_id, recipe_id_string).await {
+                                                        match remove_recipe_from_collection(form_account(), collection_id, recipe_id_string).await {
                                                             Ok(()) => {
                                                                 recipe_reorder_generation += 1;
                                                                 recipe_reorder_pending.set(false);
@@ -627,7 +628,7 @@ fn CollectionDetailContents(id: String) -> Element {
                                                                 additional_recipes.set(Vec::new());
                                                                 contents.restart();
                                                             }
-                                                            Err(error) => removal_error.set(Some(error.to_string())),
+                                                            Err(error) => removal_error.set(Some(crate::auth::account_binding::account_error_feedback(&error).map(str::to_string).unwrap_or_else(|| error.to_string()))),
                                                         }
                                                         removing_recipes.write().remove(&recipe_id);
                                                     });
@@ -827,7 +828,7 @@ fn CollectionDetailContents(id: String) -> Element {
                                             delete_error.set(None);
                                             let id = delete_collection_id.clone();
                                             spawn(async move {
-                                                match delete_collection(id).await {
+                                                match delete_collection(form_account(), id).await {
                                                     Ok(()) => {
                                                         // Unmount before navigating so shared focus/scroll
                                                         // cleanup runs even if the router retains this page.
@@ -835,7 +836,7 @@ fn CollectionDetailContents(id: String) -> Element {
                                                         navigator.push(Route::Dashboard {});
                                                     }
                                                     Err(error) => {
-                                                        delete_error.set(Some(error.to_string()));
+                                                        delete_error.set(Some(crate::auth::account_binding::account_error_feedback(&error).map(str::to_string).unwrap_or_else(|| error.to_string())));
                                                         deleting.set(false);
                                                     }
                                                 }

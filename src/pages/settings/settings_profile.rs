@@ -7,6 +7,10 @@ use super::account_delete_flow::{AccountDeleteStep as DeleteStep, AccountDeletio
 use super::mutation_recovery::{
     settings_mutation_feedback, SettingsMutation, SettingsMutationControl,
 };
+use crate::auth::account_binding::{
+    account_completion_matches, account_error_feedback, check_account_binding, use_form_account,
+    ACCOUNT_COMPLETION_CHANGED_FEEDBACK,
+};
 use crate::auth::context::{use_auth, AuthContext, UserProfile};
 use crate::components::base::{
     Avatar, AvatarSize, Button, ButtonVariant, ImageEditorCropMode, ImageEditorModal, SettingsTab,
@@ -22,6 +26,9 @@ mod recovery_tests;
 /// Only known validation messages are safe to show verbatim. Transport and
 /// unknown server errors must not expose internal details or discard entries.
 fn profile_save_feedback(error: &ServerFnError) -> &str {
+    if let Some(feedback) = account_error_feedback(error) {
+        return feedback;
+    }
     if let ServerFnError::ServerError { message, .. } = error {
         match message.as_str() {
             "Username must be 3-30 characters"
@@ -144,6 +151,9 @@ impl<Source: Clone> AvatarUploadState<Source> {
 
 #[cfg(any(target_arch = "wasm32", test))]
 fn avatar_upload_feedback(error: &ServerFnError) -> &'static str {
+    if let Some(feedback) = account_error_feedback(error) {
+        return feedback;
+    }
     match error {
         ServerFnError::ServerError { message, .. } => match message.as_str() {
             "Not authenticated" => "Sign in again in another tab, then retry your photo. Keep this page open to retain your image and edits.",
@@ -215,10 +225,8 @@ mod avatar_action_tests {
 /// row (oauth_accounts cascade automatically). On the client side, the caller
 /// is responsible for logging out and redirecting.
 #[server]
-pub async fn delete_account() -> Result<(), ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+pub async fn delete_account(expected_account_id: Option<uuid::Uuid>) -> Result<(), ServerFnError> {
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     let pool = crate::db::get_pool();
     let _media_lifecycle_guard = crate::api::upload::acquire_media_lifecycle_guard(user_id).await;
 
@@ -232,13 +240,12 @@ pub async fn delete_account() -> Result<(), ServerFnError> {
 /// Save user profile via server function.
 #[server]
 pub async fn save_profile(
+    expected_account_id: Option<uuid::Uuid>,
     display_name: String,
     bio: Option<String>,
     new_username: Option<String>,
 ) -> Result<UserProfile, ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     let pool = crate::db::get_pool();
 
     // --- Username validation ---
@@ -443,14 +450,13 @@ async fn persist_uploaded_avatar(
 
 #[server]
 pub async fn upload_avatar(
+    expected_account_id: Option<uuid::Uuid>,
     original_bytes: Vec<u8>,
     full_bytes: Vec<u8>,
     thumb_bytes: Vec<u8>,
     edit: RecipeImageEdit,
 ) -> Result<UserProfile, ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     let pool = crate::db::get_pool();
     let storage = crate::storage::get_storage_client();
 
@@ -483,12 +489,12 @@ pub async fn upload_avatar(
 }
 
 #[server]
-pub async fn get_avatar_edit_source() -> Result<Option<AvatarEditSource>, ServerFnError> {
+pub async fn get_avatar_edit_source(
+    expected_account_id: Option<uuid::Uuid>,
+) -> Result<Option<AvatarEditSource>, ServerFnError> {
     use sqlx::Row;
 
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     let pool = crate::db::get_pool();
     let row = sqlx::query(
         "SELECT CASE WHEN media_ref.asset_id IS NOT NULL \
@@ -531,10 +537,10 @@ pub async fn get_avatar_edit_source() -> Result<Option<AvatarEditSource>, Server
 /// Clears the user fields and durable avatar reference atomically. The shared
 /// media worker reclaims the asset only after its final reference disappears.
 #[server]
-pub async fn remove_avatar() -> Result<UserProfile, ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+pub async fn remove_avatar(
+    expected_account_id: Option<uuid::Uuid>,
+) -> Result<UserProfile, ServerFnError> {
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
         .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
     let pool = crate::db::get_pool();
@@ -1004,6 +1010,7 @@ fn reset_file_input(_id: &str) {}
 #[component]
 pub fn SettingsProfile() -> Element {
     let auth = use_auth();
+    let form_account = use_form_account();
 
     // Populate before the first editable render when auth data is available.
     // An effect-only initialization can overwrite text entered immediately.
@@ -1119,6 +1126,12 @@ pub fn SettingsProfile() -> Element {
             return;
         }
         saved_message.set(None);
+        if let Err(problem) =
+            check_account_binding(form_account(), auth_context.peek().current_user_id)
+        {
+            error.set(Some(profile_save_feedback(&problem).into()));
+            return;
+        }
         let new_username = username().clone();
         let new_name = display_name().clone();
         let new_bio = bio().clone();
@@ -1130,7 +1143,7 @@ pub fn SettingsProfile() -> Element {
             Some(new_bio.trim().to_string())
         };
 
-        // Read current username from auth context FRESH at handler time,
+        // Read current username from the same bound account at handler time,
         // not captured at render time. This avoids the issue where
         // `current_username` is `None` on initial client render. (Issue #4)
         let current_user = auth_context.read().current_user.clone();
@@ -1190,8 +1203,24 @@ pub fn SettingsProfile() -> Element {
         let name_for_server = trimmed_name.clone();
         let bio_for_server = trimmed_bio.clone();
         spawn(async move {
-            match save_profile(name_for_server, bio_for_server, username_for_server).await {
+            match save_profile(
+                form_account(),
+                name_for_server,
+                bio_for_server,
+                username_for_server,
+            )
+            .await
+            {
                 Ok(profile) => {
+                    if !account_completion_matches(
+                        form_account(),
+                        auth_context.peek().current_user_id,
+                        profile.id,
+                    ) {
+                        error.set(Some(ACCOUNT_COMPLETION_CHANGED_FEEDBACK.into()));
+                        is_saving.set(false);
+                        return;
+                    }
                     // Apply server-authoritative values
                     username.set(profile.username.clone());
                     display_name.set(profile.display_name.clone());
@@ -1266,6 +1295,13 @@ pub fn SettingsProfile() -> Element {
     };
 
     let on_delete_final = move |_| {
+        if let Err(problem) =
+            check_account_binding(form_account(), auth_context.peek().current_user_id)
+        {
+            deletion.write().error =
+                Some(settings_mutation_feedback(SettingsMutation::DeleteAccount, &problem).into());
+            return;
+        }
         // Synchronous claim prevents queued/double clicks from spawning two requests.
         let current_username = auth_context
             .peek()
@@ -1280,15 +1316,19 @@ pub fn SettingsProfile() -> Element {
         }
 
         spawn(async move {
-            match delete_account().await {
+            match delete_account(form_account()).await {
                 Ok(()) => {
-                    // Account deletion invalidates the database session. POST logout as
-                    // a final browser-side cleanup so the host-only cookie is removed too.
+                    // Deletion invalidates the original database session. Do
+                    // not POST logout here: another tab may have replaced the
+                    // cookie while deletion was running, logging out that user.
                     #[cfg(target_arch = "wasm32")]
                     {
-                        let _ = gloo_net::http::Request::post("/auth/logout?redirect_uri=/")
-                            .send()
-                            .await;
+                        if auth_context.peek().current_user_id != form_account() {
+                            deletion
+                                .write()
+                                .fail_delete(ACCOUNT_COMPLETION_CHANGED_FEEDBACK.into());
+                            return;
+                        }
                         if let Some(window) = web_sys::window() {
                             let _ = window.location().set_href("/");
                         }
@@ -1358,7 +1398,7 @@ pub fn SettingsProfile() -> Element {
         {
             spawn(async move {
                 error.set(None);
-                let source = match get_avatar_edit_source().await {
+                let source = match get_avatar_edit_source(form_account()).await {
                     Ok(Some(source)) => source,
                     Ok(None) => {
                         error.set(Some("No avatar is available to edit".to_string()));
@@ -1441,6 +1481,12 @@ pub fn SettingsProfile() -> Element {
     let on_upload_avatar = use_callback(move |_: ()| {
         #[cfg(target_arch = "wasm32")]
         {
+            if let Err(problem) =
+                check_account_binding(form_account(), auth_context.peek().current_user_id)
+            {
+                error.set(Some(avatar_upload_feedback(&problem).into()));
+                return;
+            }
             // Claim synchronously before spawning so queued clicks cannot
             // submit the same media twice.
             let Some((image_blob, edit)) = avatar_upload_state.write().begin_upload() else {
@@ -1482,6 +1528,7 @@ pub fn SettingsProfile() -> Element {
                 };
 
                 match upload_avatar(
+                    form_account(),
                     original_bytes,
                     processed.full_bytes,
                     processed.thumb_bytes,
@@ -1490,6 +1537,15 @@ pub fn SettingsProfile() -> Element {
                 .await
                 {
                     Ok(profile) => {
+                        if !account_completion_matches(
+                            form_account(),
+                            auth_context.peek().current_user_id,
+                            profile.id,
+                        ) {
+                            error.set(Some(ACCOUNT_COMPLETION_CHANGED_FEEDBACK.into()));
+                            avatar_upload_state.write().finish(false);
+                            return;
+                        }
                         avatar_url.set(profile.avatar_url.clone());
                         auth_context.write().current_user = Some(profile);
                         saved_message.set(Some("Avatar updated successfully!".to_string()));
@@ -1527,6 +1583,14 @@ pub fn SettingsProfile() -> Element {
 
     // Avatar remove handler
     let on_remove_avatar = move |_| {
+        if let Err(problem) =
+            check_account_binding(form_account(), auth_context.peek().current_user_id)
+        {
+            error.set(Some(
+                settings_mutation_feedback(SettingsMutation::RemoveAvatar, &problem).into(),
+            ));
+            return;
+        }
         let mut auth_context = auth_context;
         let mut avatar_url = avatar_url_signal;
         let mut avatar_upload_state = avatar_upload_state;
@@ -1543,8 +1607,17 @@ pub fn SettingsProfile() -> Element {
             error.set(None);
             saved_message.set(None);
 
-            match remove_avatar().await {
+            match remove_avatar(form_account()).await {
                 Ok(profile) => {
+                    if !account_completion_matches(
+                        form_account(),
+                        auth_context.peek().current_user_id,
+                        profile.id,
+                    ) {
+                        error.set(Some(ACCOUNT_COMPLETION_CHANGED_FEEDBACK.into()));
+                        avatar_upload_state.write().finish(false);
+                        return;
+                    }
                     avatar_url.set(profile.avatar_url.clone());
                     auth_context.write().current_user = Some(profile);
                     avatar_removal_focus_pending.set(true);

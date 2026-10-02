@@ -106,6 +106,9 @@ enum RecipeMutation {
 }
 
 fn recipe_mutation_feedback(action: RecipeMutation, error: &ServerFnError) -> &'static str {
+    if let Some(feedback) = crate::auth::account_binding::account_error_feedback(error) {
+        return feedback;
+    }
     if matches!(error, ServerFnError::ServerError { message, .. } if message == "Not authenticated")
     {
         return "Sign in again in another tab, then check the recipe before retrying. Keep this recipe open.";
@@ -2108,6 +2111,7 @@ pub fn RecipeDetail(id: String) -> Element {
 
 #[component]
 fn RecipeDetailContents(id: String) -> Element {
+    let form_account = crate::auth::account_binding::use_form_account();
     // ── Resources ────────────────────────────────────────────────────────
     let auth = use_auth();
 
@@ -2309,7 +2313,7 @@ fn RecipeDetailContents(id: String) -> Element {
         is_saving_visibility.set(true);
         visibility_feedback.set(None);
         spawn(async move {
-            match update_recipe_visibility(recipe_id, visibility).await {
+            match update_recipe_visibility(form_account(), recipe_id, visibility).await {
                 Ok(updated_recipe) => {
                     visibility_feedback.set(Some(Ok(())));
                     // The API already returned the authoritative value. Keep
@@ -2337,7 +2341,7 @@ fn RecipeDetailContents(id: String) -> Element {
         fork_error.set(None);
         let recipe_id = id_for_fork.clone();
         spawn(async move {
-            match fork_recipe(recipe_id, None).await {
+            match fork_recipe(form_account(), recipe_id, None).await {
                 #[allow(unused_variables)]
                 Ok(draft) =>
                 {
@@ -2383,7 +2387,7 @@ fn RecipeDetailContents(id: String) -> Element {
         delete_error.set(None);
         let recipe_id = id_for_delete.clone();
         spawn(async move {
-            match delete_recipe(recipe_id).await {
+            match delete_recipe(form_account(), recipe_id).await {
                 Ok(()) =>
                 {
                     #[cfg(target_arch = "wasm32")]
@@ -2888,7 +2892,7 @@ fn RecipeDetailContents(id: String) -> Element {
                                                                 restore_error.set(None);
                                                                 let recipe_id = recipe_id.clone();
                                                                 spawn(async move {
-                                                                    match restore_version(
+                                                                    match restore_version(form_account(),
                                                                         recipe_id,
                                                                         version_number,
                                                                         latest_version_number,

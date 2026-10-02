@@ -602,15 +602,14 @@ pub(crate) async fn upload_owned_media(
 /// both variants, and returns the public URLs.
 #[server]
 pub async fn upload_image(
+    expected_account_id: Option<uuid::Uuid>,
     full_bytes: Vec<u8>,
     thumb_bytes: Vec<u8>,
     filename: String,
     purpose: UploadPurpose,
 ) -> Result<UploadResponse, ServerFnError> {
     let _ = filename; // kept for future extension extraction
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     let request = MediaUploadRequest::paired(purpose, &full_bytes, &thumb_bytes)
         .map_err(ServerFnError::new)?;
 
@@ -643,10 +642,11 @@ pub async fn upload_image(
 }
 
 #[server]
-pub async fn discard_upload(discard_capability: String) -> Result<(), ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+pub async fn discard_upload(
+    expected_account_id: Option<uuid::Uuid>,
+    discard_capability: String,
+) -> Result<(), ServerFnError> {
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
         .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
 

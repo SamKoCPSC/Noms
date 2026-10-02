@@ -203,10 +203,11 @@ pub async fn get_linked_accounts() -> Result<Vec<LinkedAccount>, ServerFnError> 
 /// Returns an error if the account doesn't belong to the user, or if it
 /// would be the last remaining linked account.
 #[server]
-pub async fn unlink_account(account_id: Uuid) -> Result<(), ServerFnError> {
-    let user_id = crate::auth::session::extract_user_id_from_fullstack()
-        .await
-        .ok_or_else(|| ServerFnError::new("Not authenticated"))?;
+pub async fn unlink_account(
+    expected_account_id: Option<Uuid>,
+    account_id: Uuid,
+) -> Result<(), ServerFnError> {
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     let pool = crate::db::get_pool();
 
     // Guard: must have at least one account remaining after deletion
@@ -235,6 +236,7 @@ pub async fn unlink_account(account_id: Uuid) -> Result<(), ServerFnError> {
 /// to unlink them (with confirmation) and connect new providers.
 #[component]
 pub fn SettingsAccounts() -> Element {
+    let form_account = crate::auth::account_binding::use_form_account();
     let _auth = use_auth();
     let auth_context = use_context::<Signal<AuthContext>>();
 
@@ -348,8 +350,15 @@ pub fn SettingsAccounts() -> Element {
         }
         error.set(None);
         spawn(async move {
-            match unlink_account(account_id).await {
+            match unlink_account(form_account(), account_id).await {
                 Ok(()) => {
+                    if auth_context.peek().current_user_id != form_account() {
+                        unlink_state.write().finish(Err(
+                            crate::auth::account_binding::ACCOUNT_COMPLETION_CHANGED_FEEDBACK
+                                .into(),
+                        ));
+                        return;
+                    }
                     unlink_state.write().finish(Ok(()));
                     accounts.restart();
                 }

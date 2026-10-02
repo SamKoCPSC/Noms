@@ -145,6 +145,7 @@ pub fn RecipeDraftEdit(id: String) -> Element {
 }
 
 fn recipe_editor(id: String, id_is_draft: bool) -> Element {
+    let form_account = crate::auth::account_binding::use_form_account();
     let navigator = use_navigator();
     // ── Form signals ─────────────────────────────────────────────────────
     let mut title = use_signal(String::new);
@@ -207,9 +208,9 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
         let id = id_for_fetch.clone();
         spawn(async move {
             let loaded = if id_is_draft {
-                get_recipe_draft_api(id.clone()).await
+                get_recipe_draft_api(form_account(), id.clone()).await
             } else {
-                create_edit_draft(id.clone()).await
+                create_edit_draft(form_account(), id.clone()).await
             };
             match loaded {
                 Ok(draft) => {
@@ -300,19 +301,28 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
             {
                 return;
             }
-            let first_save =
-                save_recipe_draft(current_draft_id.clone(), expected_revision, editor.clone())
-                    .await;
+            let first_save = save_recipe_draft(
+                form_account(),
+                current_draft_id.clone(),
+                expected_revision,
+                editor.clone(),
+            )
+            .await;
             let save_result = match first_save {
                 Ok(saved) => Ok(saved),
                 Err(_) if autosave_generation() == generation => {
                     // A previous in-flight autosave may have advanced the
                     // revision. Refresh and retry only for the newest editor
                     // generation so stale content can never win.
-                    match get_recipe_draft_api(current_draft_id.clone()).await {
+                    match get_recipe_draft_api(form_account(), current_draft_id.clone()).await {
                         Ok(current) => {
-                            save_recipe_draft(current_draft_id, current.revision, editor.clone())
-                                .await
+                            save_recipe_draft(
+                                form_account(),
+                                current_draft_id,
+                                current.revision,
+                                editor.clone(),
+                            )
+                            .await
                         }
                         Err(error) => Err(error),
                     }
@@ -479,6 +489,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                                 }
                             };
                         let response = match upload_image(
+                            form_account(),
                             processed.full_bytes,
                             processed.thumb_bytes,
                             format!("step_{idx}_{file_idx}.webp"),
@@ -651,10 +662,16 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
             };
             autosave_generation.set(autosave_generation() + 1);
             if draft_save_after_upload() {
-                let current = get_recipe_draft_api(current_draft_id.clone()).await;
+                let current = get_recipe_draft_api(form_account(), current_draft_id.clone()).await;
                 let save_result = match current {
                     Ok(current) => {
-                        save_recipe_draft(current_draft_id, current.revision, editor.clone()).await
+                        save_recipe_draft(
+                            form_account(),
+                            current_draft_id,
+                            current.revision,
+                            editor.clone(),
+                        )
+                        .await
                     }
                     Err(error) => Err(error),
                 };
@@ -684,21 +701,32 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
             let publish_result = async {
                 // Refresh the revision in case an autosave completed immediately
                 // before the publish click, then save the exact submitted state.
-                let current = get_recipe_draft_api(current_draft_id.clone()).await?;
-                let first_save =
-                    save_recipe_draft(current_draft_id.clone(), current.revision, editor.clone())
-                        .await;
+                let current =
+                    get_recipe_draft_api(form_account(), current_draft_id.clone()).await?;
+                let first_save = save_recipe_draft(
+                    form_account(),
+                    current_draft_id.clone(),
+                    current.revision,
+                    editor.clone(),
+                )
+                .await;
                 let saved = match first_save {
                     Ok(saved) => saved,
                     Err(_) => {
-                        let refreshed = get_recipe_draft_api(current_draft_id.clone()).await?;
-                        save_recipe_draft(current_draft_id.clone(), refreshed.revision, editor)
-                            .await?
+                        let refreshed =
+                            get_recipe_draft_api(form_account(), current_draft_id.clone()).await?;
+                        save_recipe_draft(
+                            form_account(),
+                            current_draft_id.clone(),
+                            refreshed.revision,
+                            editor,
+                        )
+                        .await?
                     }
                 };
                 draft_revision.set(saved.revision);
                 draft_save_error.set(None);
-                publish_recipe_draft(current_draft_id, None).await
+                publish_recipe_draft(form_account(), current_draft_id, None).await
             }
             .await;
 
@@ -766,7 +794,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
         #[allow(unused_variables)]
         let published_recipe_id = id_for_discard.clone();
         spawn(async move {
-            match discard_recipe_draft(current_draft_id).await {
+            match discard_recipe_draft(form_account(), current_draft_id).await {
                 Ok(()) =>
                 {
                     #[cfg(target_arch = "wasm32")]
@@ -1146,6 +1174,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
 
                         // Persisted and newly selected images render together.
                         ImageUpload {
+                            form_account,
                             images,
                             upload_now,
                             busy,
@@ -1373,7 +1402,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                                                                     let removed = steps.write()[idx].photos.remove(photo_idx);
                                                                     if let Some(capability) = step_photo_discard_capabilities.write().remove(&removed.url) {
                                                                         spawn(async move {
-                                                                            if let Err(problem) = crate::api::upload::discard_upload(capability).await {
+                                                                            if let Err(problem) = crate::api::upload::discard_upload(form_account(), capability).await {
                                                                                 tracing::warn!("Failed to discard unsaved step photo: {problem}");
                                                                             }
                                                                         });
@@ -1478,7 +1507,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                                             for photo in steps()[idx].photos.clone() {
                                                 if let Some(capability) = step_photo_discard_capabilities.write().remove(&photo.url) {
                                                     spawn(async move {
-                                                        if let Err(problem) = crate::api::upload::discard_upload(capability).await {
+                                                        if let Err(problem) = crate::api::upload::discard_upload(form_account(), capability).await {
                                                             tracing::warn!("Failed to discard unsaved step photo: {problem}");
                                                         }
                                                     });

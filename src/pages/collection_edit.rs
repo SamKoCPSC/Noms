@@ -74,6 +74,7 @@ struct PendingCollectionEdit {
 
 #[component]
 pub fn CollectionEdit(id: String) -> Element {
+    let form_account = crate::auth::account_binding::use_form_account();
     let resource_id = id.clone();
     let mut data = use_resource(move || {
         let id = resource_id.clone();
@@ -142,7 +143,7 @@ pub fn CollectionEdit(id: String) -> Element {
                                 saving.set(false); return;
                             }
                         };
-                        let update = update_collection(
+                        let update = update_collection(form_account(),
                             collection_id.to_string(),
                             pending.name,
                             pending.description,
@@ -150,18 +151,18 @@ pub fn CollectionEdit(id: String) -> Element {
                         ).await;
                         let updated = match update {
                             Ok(updated) => updated,
-                            Err(_) => { error.set(Some(save_failure_message(false))); saving.set(false); return; }
+                            Err(problem) => { error.set(Some(crate::auth::account_binding::account_error_feedback(&problem).map(str::to_string).unwrap_or_else(|| save_failure_message(false)))); saving.set(false); return; }
                         };
                         name.set(updated.name);
                         description.set(updated.description.unwrap_or_default());
                         if pending.desired_parent != pending.current_parent
-                            && move_collection(collection_id.to_string(), pending.desired_parent).await.is_err() {
+                            && move_collection(form_account(), collection_id.to_string(), pending.desired_parent).await.is_err() {
                                 selected_parent.set(pending.current_parent.unwrap_or_default());
                                 error.set(Some(save_failure_message(true)));
                                 saving.set(false); return;
                         }
                         if pending.desired_visibility != pending.current_visibility {
-                            match update_collection_visibility(collection_id.to_string(), pending.desired_visibility).await {
+                            match update_collection_visibility(form_account(), collection_id.to_string(), pending.desired_visibility).await {
                                 Ok(updated) => selected_visibility.set(updated.visibility),
                                 Err(_) => {
                                     error.set(Some("Collection details and location were saved, but sharing could not be updated. Check the sharing setting and try saving again.".to_string()));
@@ -218,6 +219,7 @@ pub fn CollectionEdit(id: String) -> Element {
                                 h2 { "Cover image" }
                                 p { class: "collection-form-hint", "Choose a photo to make this album easy to spot." }
                                 ImageUpload {
+                                    form_account,
                                     images,
                                     upload_now,
                                     busy: image_busy,
