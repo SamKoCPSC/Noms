@@ -266,12 +266,11 @@ fn upload_batch_plan(pending: &[PendingImage]) -> (Vec<UploadItem>, usize) {
     (ready, failed)
 }
 
-/// Render snapshots share this lease. Component teardown revokes the URL even
-/// if a renderer still holds a snapshot; final-drop cleanup is a fallback.
+/// Render snapshots share this lease; only the final owner revokes its local
+/// URL. Signal teardown therefore releases previews even without Remove/error.
 struct GalleryPreviewUrl {
     url: String,
     revoke: fn(&str),
-    revoked: std::sync::atomic::AtomicBool,
 }
 
 impl GalleryPreviewUrl {
@@ -285,16 +284,6 @@ impl GalleryPreviewUrl {
                 #[cfg(not(target_arch = "wasm32"))]
                 let _ = url;
             },
-            revoked: std::sync::atomic::AtomicBool::new(false),
-        }
-    }
-
-    fn release(&self) {
-        if !self
-            .revoked
-            .swap(true, std::sync::atomic::Ordering::Relaxed)
-        {
-            (self.revoke)(&self.url);
         }
     }
 }
@@ -307,7 +296,7 @@ impl PartialEq for GalleryPreviewUrl {
 
 impl Drop for GalleryPreviewUrl {
     fn drop(&mut self) {
-        self.release();
+        (self.revoke)(&self.url);
     }
 }
 
@@ -339,42 +328,6 @@ struct PendingImage {
     /// Uploaded record retained here so the public image list can always be
     /// rebuilt in the same order as the pending list (including after retry).
     uploaded_image: Option<RecipeImage>,
-}
-
-#[derive(Default)]
-struct GalleryPreviewRegistry {
-    previews: std::sync::Mutex<Vec<std::sync::Weak<GalleryPreviewUrl>>>,
-}
-
-impl GalleryPreviewRegistry {
-    #[cfg(any(target_arch = "wasm32", test))]
-    fn track(&self, preview: &Arc<GalleryPreviewUrl>) {
-        let mut previews = self.previews.lock().unwrap();
-        previews.retain(|preview| preview.strong_count() > 0);
-        let preview = Arc::downgrade(preview);
-        if !previews.iter().any(|existing| existing.ptr_eq(&preview)) {
-            previews.push(preview);
-        }
-    }
-
-    fn release_all(&self) {
-        for preview in self.previews.lock().unwrap().drain(..) {
-            if let Some(preview) = preview.upgrade() {
-                preview.release();
-            }
-        }
-    }
-}
-
-/// Keep teardown independent of signal storage: the signal may already have
-/// been disposed while renderer snapshots still retain its preview leases.
-fn use_gallery_preview_cleanup() -> Arc<GalleryPreviewRegistry> {
-    let registry = use_hook(|| Arc::new(GalleryPreviewRegistry::default()));
-    let cleanup = registry.clone();
-    use_drop(move || {
-        cleanup.release_all();
-    });
-    registry
 }
 
 /// Edit the original local preview, or the saved full variant, never a thumbnail.
@@ -563,7 +516,6 @@ fn reorder_pending_images(
 #[allow(unused_mut)]
 async fn process_one_file(
     file: dioxus::html::FileData,
-    previews: Arc<GalleryPreviewRegistry>,
     mut pending: Signal<Vec<PendingImage>>,
     mut next_id: Signal<usize>,
     mut error: Signal<Option<String>>,
@@ -587,11 +539,6 @@ async fn process_one_file(
 
         // Build a preview object URL (wasm only).
         let preview_url = web_sys::Url::create_object_url_with_blob(&web_file).ok();
-        let preview = preview_url.as_ref().map(|url| {
-            let preview = Arc::new(GalleryPreviewUrl::new(url.clone()));
-            previews.track(&preview);
-            preview
-        });
 
         // Allocate an id + push a placeholder so the UI shows "Processing…"
         // immediately (before the await on the canvas pipeline).
@@ -601,7 +548,9 @@ async fn process_one_file(
             id,
             persisted: false,
             name: name.clone(),
-            preview_url: preview,
+            preview_url: preview_url
+                .as_ref()
+                .map(|url| Arc::new(GalleryPreviewUrl::new(url.clone()))),
             original_size,
             full_bytes: Arc::new(Vec::new()),
             thumb_bytes: Arc::new(Vec::new()),
@@ -658,7 +607,6 @@ async fn process_one_file(
     {
         let _ = (
             file,
-            previews,
             pending,
             next_id,
             error,
@@ -839,7 +787,6 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     let initial_next_id = initial_gallery.len();
     let mut drag_over = use_signal(|| false);
     let mut pending = use_signal(move || initial_gallery);
-    let previews = use_gallery_preview_cleanup();
     let mut uploading = use_signal(|| false);
     let mut error = use_signal(|| Option::<String>::None);
     let next_id = use_signal(move || initial_next_id);
@@ -875,33 +822,28 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
 
     // ── handle_files ─────────────────────────────────────────────────────
     // Shared by the `<input onchange>` and `<div ondrop>` handlers.
-    let handle_files = move |files: Vec<dioxus::html::FileData>| {
-        let previews = previews.clone();
-        async move {
-            let current_count = pending().len();
-            let available = available_image_slots(current_count, files.len(), max_images);
-            if available < files.len() {
-                error.set(Some(match max_images {
-                    Some(1) => "A collection can have only one cover image.".to_string(),
-                    Some(limit) => format!("This gallery can contain up to {limit} images."),
-                    None => unreachable!("an unlimited gallery accepts every selected file"),
-                }));
-            }
-            for file in files.into_iter().take(available) {
-                process_one_file(
-                    file,
-                    previews.clone(),
-                    pending,
-                    next_id,
-                    error,
-                    editor_modal_url,
-                    editor_modal_img_id,
-                )
-                .await;
-            }
+    let handle_files = move |files: Vec<dioxus::html::FileData>| async move {
+        let current_count = pending().len();
+        let available = available_image_slots(current_count, files.len(), max_images);
+        if available < files.len() {
+            error.set(Some(match max_images {
+                Some(1) => "A collection can have only one cover image.".to_string(),
+                Some(limit) => format!("This gallery can contain up to {limit} images."),
+                None => unreachable!("an unlimited gallery accepts every selected file"),
+            }));
+        }
+        for file in files.into_iter().take(available) {
+            process_one_file(
+                file,
+                pending,
+                next_id,
+                error,
+                editor_modal_url,
+                editor_modal_img_id,
+            )
+            .await;
         }
     };
-    let handle_dropped_files = handle_files.clone();
 
     // ── use_effect for the upload trigger ────────────────────────────────
     // Race fix (WARNING #2): reset `upload_now` BEFORE clearing `uploading`,
@@ -944,13 +886,10 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                     drag_over.set(true);
                 },
                 ondragleave: move |_| drag_over.set(false),
-                ondrop: move |evt| {
-                    let handle_files = handle_dropped_files.clone();
-                    async move {
-                        evt.prevent_default();
-                        drag_over.set(false);
-                        handle_files(evt.files()).await;
-                    }
+                ondrop: move |evt| async move {
+                    evt.prevent_default();
+                    drag_over.set(false);
+                    handle_files(evt.files()).await;
                 },
                 // Hidden file input triggered by the label click
                 input {
@@ -959,9 +898,8 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                     multiple: max_images != Some(1),
                     class: "image-upload__file-input",
                     aria_label: if max_images == Some(1) { "Choose collection cover image" } else { "Choose recipe images" },
-                    onchange: move |evt| {
-                        let handle_files = handle_files.clone();
-                        async move { handle_files(evt.files()).await }
+                    onchange: move |evt| async move {
+                        handle_files(evt.files()).await;
                     },
                 }
                 span { "📷  Choose or drag images here" }
@@ -1245,7 +1183,6 @@ mod tests {
         original.preview_url = Some(Arc::new(GalleryPreviewUrl {
             url: "blob:gallery-original".into(),
             revoke: record_preview_revocation,
-            revoked: std::sync::atomic::AtomicBool::new(false),
         }));
         let render_snapshot = original.clone();
         original.preview_url = None;
@@ -1261,26 +1198,6 @@ mod tests {
     }
 
     #[test]
-    fn gallery_preview_registry_does_not_retain_removed_images_or_double_revoke() {
-        PREVIEW_REVOCATIONS.with(|events| events.borrow_mut().clear());
-        let registry = GalleryPreviewRegistry::default();
-        let preview = Arc::new(GalleryPreviewUrl {
-            url: "blob:removed-preview".into(),
-            revoke: record_preview_revocation,
-            revoked: std::sync::atomic::AtomicBool::new(false),
-        });
-        registry.track(&preview);
-        registry.track(&preview);
-        assert_eq!(Arc::strong_count(&preview), 1);
-        assert_eq!(registry.previews.lock().unwrap().len(), 1);
-        drop(preview);
-        registry.release_all();
-        PREVIEW_REVOCATIONS.with(|events| {
-            assert_eq!(*events.borrow(), vec!["blob:removed-preview"]);
-        });
-    }
-
-    #[test]
     fn gallery_preview_is_released_when_its_component_signal_unmounts() {
         PREVIEW_REVOCATIONS.with(|events| events.borrow_mut().clear());
         let mut dom = VirtualDom::new(|| {
@@ -1289,7 +1206,6 @@ mod tests {
                 image.preview_url = Some(Arc::new(GalleryPreviewUrl {
                     url: "blob:gallery-component".into(),
                     revoke: record_preview_revocation,
-                    revoked: std::sync::atomic::AtomicBool::new(false),
                 }));
                 vec![image]
             });
@@ -1300,67 +1216,6 @@ mod tests {
         drop(dom);
         PREVIEW_REVOCATIONS.with(|events| {
             assert_eq!(*events.borrow(), vec!["blob:gallery-component"]);
-        });
-    }
-
-    #[test]
-    fn gallery_preview_is_released_on_child_route_unmount() {
-        #[component]
-        fn GalleryRouteFixture(
-            snapshot: std::rc::Rc<std::cell::RefCell<Vec<PendingImage>>>,
-        ) -> Element {
-            let pending = use_signal(|| {
-                let mut image = pending_image_with_uploaded_url(1, None);
-                image.preview_url = Some(Arc::new(GalleryPreviewUrl {
-                    url: "blob:gallery-route".into(),
-                    revoke: record_preview_revocation,
-                    revoked: std::sync::atomic::AtomicBool::new(false),
-                }));
-                vec![image]
-            });
-            *snapshot.borrow_mut() = pending();
-            let previews = use_gallery_preview_cleanup();
-            for preview in pending()
-                .iter()
-                .filter_map(|image| image.preview_url.as_ref())
-            {
-                previews.track(preview);
-            }
-            let _busy = use_memo(move || pending().len());
-            rsx! {
-                for image in pending().iter() {
-                    img { src: gallery_editor_url(image).unwrap_or_default() }
-                }
-            }
-        }
-        #[derive(Clone, Props, PartialEq)]
-        struct RouteProps {
-            show: std::rc::Rc<std::cell::Cell<bool>>,
-            snapshot: std::rc::Rc<std::cell::RefCell<Vec<PendingImage>>>,
-        }
-        fn route(props: RouteProps) -> Element {
-            rsx! { if props.show.get() { GalleryRouteFixture { snapshot: props.snapshot } } }
-        }
-        PREVIEW_REVOCATIONS.with(|events| events.borrow_mut().clear());
-        let show = std::rc::Rc::new(std::cell::Cell::new(true));
-        let snapshot = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
-        let mut dom = VirtualDom::new_with_props(
-            route,
-            RouteProps {
-                show: show.clone(),
-                snapshot: snapshot.clone(),
-            },
-        );
-        dom.rebuild_in_place();
-        show.set(false);
-        dom.mark_dirty(ScopeId::APP);
-        dom.render_immediate(&mut dioxus::dioxus_core::NoOpMutations);
-        PREVIEW_REVOCATIONS.with(|events| {
-            assert_eq!(*events.borrow(), vec!["blob:gallery-route"]);
-        });
-        snapshot.borrow_mut().clear();
-        PREVIEW_REVOCATIONS.with(|events| {
-            assert_eq!(*events.borrow(), vec!["blob:gallery-route"]);
         });
     }
 
@@ -1378,6 +1233,49 @@ mod tests {
         assert_eq!(gallery_editor_url(&local).as_deref(), Some("blob:original"));
         local.preview_url = None;
         assert_eq!(gallery_editor_url(&local), None);
+    }
+
+    #[test]
+    fn gallery_preview_is_released_on_child_route_unmount() {
+        #[component]
+        fn GalleryRouteFixture() -> Element {
+            let pending = use_signal(|| {
+                let mut image = pending_image_with_uploaded_url(1, None);
+                image.preview_url = Some(Arc::new(GalleryPreviewUrl {
+                    url: "blob:gallery-route".into(),
+                    revoke: record_preview_revocation,
+                }));
+                vec![image]
+            });
+            let _busy = use_memo(move || pending().len());
+            rsx! {
+                for image in pending().iter() {
+                    img { src: gallery_editor_url(image).unwrap_or_default() }
+                }
+            }
+        }
+        #[derive(Clone, Props, PartialEq)]
+        struct RouteProps {
+            show: std::rc::Rc<std::cell::Cell<bool>>,
+        }
+        fn route(props: RouteProps) -> Element {
+            rsx! { if props.show.get() { GalleryRouteFixture {} } }
+        }
+        PREVIEW_REVOCATIONS.with(|events| events.borrow_mut().clear());
+        let show = std::rc::Rc::new(std::cell::Cell::new(true));
+        let mut dom = VirtualDom::new_with_props(route, RouteProps { show: show.clone() });
+        dom.rebuild_in_place();
+        PREVIEW_REVOCATIONS.with(|events| assert!(events.borrow().is_empty()));
+        show.set(false);
+        dom.mark_dirty(ScopeId::APP);
+        dom.render_immediate(&mut dioxus::dioxus_core::NoOpMutations);
+        PREVIEW_REVOCATIONS.with(|events| {
+            assert_eq!(*events.borrow(), vec!["blob:gallery-route"]);
+        });
+        drop(dom);
+        PREVIEW_REVOCATIONS.with(|events| {
+            assert_eq!(*events.borrow(), vec!["blob:gallery-route"]);
+        });
     }
 
     #[test]
