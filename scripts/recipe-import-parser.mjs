@@ -2384,6 +2384,228 @@ function parseFoodComVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   return result;
 }
 
+function parseSallysVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
+  try {
+    const url = new URL(sourceUrl);
+    if (!["http:", "https:"].includes(url.protocol) || !["sallysbakingaddiction.com", "www.sallysbakingaddiction.com"].includes(url.hostname)) return null;
+  } catch { return null; }
+  const coreClasses = ["tasty-recipes", "tasty-recipes-entry-header", "tasty-recipes-title", "tasty-recipes-ingredients", "tasty-recipes-ingredients-header", "tasty-recipes-ingredients-body", "tasty-recipes-instructions", "tasty-recipes-instructions-header", "tasty-recipes-instructions-body"];
+  const optionalClasses = ["tasty-recipes-description-body", "tasty-recipes-details", "tasty-recipes-author-name", "tasty-recipes-prep-time", "tasty-recipes-cook-time", "tasty-recipes-total-time", "tasty-recipes-yield", "tasty-recipes-notes-body", "tasty-recipes-image"];
+  const markedCore = attributes => coreClasses.some(name => hasClass(attributes, name)) || attributes.has("data-tr-ingredient-checkbox") || /^instruction-step-/u.test(attributes.get("id") ?? "");
+  const coreElements = elementsMatchingAttributes(inertHtml, markedCore), complete = new Map();
+  for (const name of [...coreClasses, ...optionalClasses]) complete.set(name, elementsWithClass(inertHtml, name));
+  if (coreClasses.some(name => complete.get(name).length !== 1) || optionalClasses.some(name => complete.get(name).length > 1)) return null;
+  const mains = elementsMatchingAttributes(inertHtml, (_, tag) => tag === "main");
+  if (mains.length !== 1) return null;
+  const [main] = mains, [card] = complete.get("tasty-recipes"), [header] = complete.get("tasty-recipes-entry-header"), [title] = complete.get("tasty-recipes-title");
+  const inside = (element, container) => container.openingEnd <= element.index && element.end <= container.contentEnd;
+  if (!inside(card, main) || !inside(header, card) || !inside(title, header) || title.tag !== "h2" || hasAncestorTag(inertHtml, card.index, "nav")) return null;
+  const openingCounts = new Map([...complete.keys()].map(name => [name, 0]));
+  const hiddenRanges = elementsMatchingAttributes(inertHtml, attributes => listIsHidden({ attributes }) || hasClass(attributes, "hidden") || hasClass(attributes, "is-hidden"));
+  let coreOpenings = 0, mainOpenings = 0;
+  for (const match of inertHtml.matchAll(/<([a-z][a-z0-9:-]*)\b((?:"[^"]*"|'[^']*'|[^>"'])*)>/giu)) {
+    const attributes = htmlAttributes(match[2]);
+    if (match[1].toLowerCase() === "main") mainOpenings += 1;
+    if (markedCore(attributes)) coreOpenings += 1;
+    for (const name of openingCounts.keys()) if (hasClass(attributes, name)) openingCounts.set(name, openingCounts.get(name) + 1);
+    if ((listIsHidden({ attributes }) || hasClass(attributes, "hidden") || hasClass(attributes, "is-hidden")) && !hiddenRanges.some(element => element.index === match.index)) hiddenRanges.push({ index: match.index, end: inertHtml.length, innerHtml: inertHtml.slice(match.index + match[0].length) });
+  }
+  if (mainOpenings !== 1 || coreOpenings !== coreElements.length || [...openingCounts].some(([name, count]) => count !== complete.get(name).length)) return null;
+  const isHidden = (element, offset = 0, includeText = false) => hiddenRanges.some(range =>
+    (range.index <= offset + element.index && offset + element.index < range.end) ||
+    (includeText && offset + element.index <= range.index && range.index < offset + element.end && htmlText(range.innerHtml)));
+  if (isHidden(main) || isHidden(card) || isHidden(header) || isHidden(title, 0, true)) return null;
+  const text = html => htmlText(html).replace(/\s+([,.;:!?])/gu, "$1").replace(/\s+\)/gu, ")").replace(/\(\s+/gu, "(");
+  if (!text(title.innerHtml)) return null;
+  const directElements = html => elementsMatchingAttributes(html, () => true).filter(element => tagStackContext(html, element.index).length === 0);
+  const hasLooseText = (html, elements) => {
+    let end = 0;
+    for (const element of elements) { if (text(html.slice(end, element.index))) return true; end = element.end; }
+    return Boolean(text(html.slice(end)));
+  };
+  const consumedCore = new Set([card.index, header.index, title.index]);
+  const result = candidate({ id: "sallys-visible", version: "1", tier: "source_adapter", sourceAdapter: "sallys-baking-addiction" }, sourceUrl);
+  result.source.provider = "Sally's Baking Addiction";
+  result.source.provenance.provider = provenance("source_url", "hostname sallysbakingaddiction.com");
+  result.fields.title = scalar(text(title.innerHtml), "text/html", ".tasty-recipes-title");
+  const bodies = new Map();
+  for (const [name, label] of [["ingredients", "Ingredients"], ["instructions", "Instructions"]]) {
+    const [container] = complete.get(`tasty-recipes-${name}`), [body] = complete.get(`tasty-recipes-${name}-body`), [headingContainer] = complete.get(`tasty-recipes-${name}-header`);
+    const headings = elementsMatchingAttributes(headingContainer.innerHtml, (_, tag) => tag === "h3");
+    if (!inside(container, card) || !inside(body, container) || !inside(headingContainer, container) || headingContainer.end > body.index || headings.length !== 1 || text(headings[0].innerHtml) !== label || [container, body, headingContainer].some(element => isHidden(element)) || isHidden(headings[0], headingContainer.openingEnd, true)) return null;
+    const children = directElements(container.innerHtml), headerChildren = directElements(headingContainer.innerHtml);
+    if (hasLooseText(container.innerHtml, children) || hasLooseText(headingContainer.innerHtml, headerChildren)) return null;
+    for (const child of children) {
+      if (container.openingEnd + child.index === headingContainer.index || container.openingEnd + child.index === body.index) continue;
+      if (name === "ingredients" && child.tag === "div" && hasClass(child.attributes, "tasty-recipes-cook-mode") && text(child.innerHtml) === "Cook Mode Prevent your screen from going dark" && !/<(?:p|ul|ol|li|h[1-6])\b/iu.test(child.innerHtml)) continue;
+      return null;
+    }
+    for (const child of headerChildren) {
+      if (child.tag === "h3" && child.index === headings[0].index) continue;
+      if (name === "ingredients" && child.tag === "div" && hasClass(child.attributes, "tasty-recipes-ingredients-clipboard-container") && text(child.innerHtml) === "Ingredients" && elementsMatchingAttributes(child.innerHtml, (_, tag) => tag === "h3").length === 1) continue;
+      if (name === "ingredients" && child.tag === "div" && hasClass(child.attributes, "tasty-recipes-units-scale-container") && !text(child.innerHtml)) continue;
+      return null;
+    }
+    for (const element of [container, body, headingContainer]) consumedCore.add(element.index);
+    bodies.set(name, body);
+  }
+  if (header.end > complete.get("tasty-recipes-ingredients")[0].index || complete.get("tasty-recipes-ingredients")[0].end > complete.get("tasty-recipes-instructions")[0].index) return null;
+  const isEmptyAd = element => element.tag === "div" && hasClass(element.attributes, "adthrive-ad") && !text(element.innerHtml);
+  if (elementsWithClass(card.innerHtml, "adthrive-ad").some(element => !isEmptyAd(element))) return null;
+  const amount = `(?:\\d+\\s+and\\s+\\d+/\\d+|\\d+[\\u00bc-\\u00be\\u2150-\\u215e]|${TASTY_AMOUNT_PATTERN})`;
+  const range = `${amount}(?:\\s*(?:to|[-–—])\\s*${amount})?`, units = `${UNIT_PATTERN}|sticks?|quarts?|pints?`;
+  const compound = new RegExp(`^(${range}\\s+(?:${units})[.]?\\s+(?:plus|minus)\\s+${range}\\s+(?:${units})[.]?)\\s+(.+)$`, "iu");
+  const packageAmount = new RegExp(`^(${range})\\s+(\\(${amount}[- ](?:ounces?|oz|grams?|g|pounds?|lbs?)\\)\\s+(?:cans?|packages?|boxes?))\\s+(.+)$`, "iu");
+  const measured = new RegExp(`^(${range})\\s+(${units})[.]?\\s+(.+)$`, "iu");
+  const ingredientBody = bodies.get("ingredients"), ingredientBlocks = [];
+  const collectIngredientBlocks = (html, offset, inLegacyWrapper = false) => {
+    const blocks = directElements(html);
+    if (hasLooseText(html, blocks)) return false;
+    for (const block of blocks) {
+      if (isHidden(block, offset)) return false;
+      // One legacy card wraps a UL and the following H4 in ERSIngredients.
+      // Flatten that explicit transparent wrapper, never arbitrary containers.
+      if (block.tag === "div" && hasClass(block.attributes, "ERSIngredients") && !inLegacyWrapper) {
+        if (!collectIngredientBlocks(block.innerHtml, offset + block.openingEnd, true)) return false;
+      } else ingredientBlocks.push({ ...block, offset });
+    }
+    return true;
+  };
+  if (!collectIngredientBlocks(ingredientBody.innerHtml, ingredientBody.openingEnd)) return null;
+  let pendingName = null, awaitingList = false, emptyPlaceholders = 0;
+  for (const [blockIndex, block] of ingredientBlocks.entries()) {
+    if ((block.tag === "p" && !text(block.innerHtml)) || isEmptyAd(block)) continue;
+    // Gutenberg leaves empty H4/UL placeholders between complete groups. They
+    // carry no content or name; never skip a named group's only empty list.
+    const emptyEditorList = element => element?.tag === "ul" && hasClass(element.attributes, "wp-block-list") && !element.innerHtml.trim();
+    const nextBlock = ingredientBlocks[blockIndex + 1];
+    if (!awaitingList && (emptyEditorList(block) || (block.tag === "h4" && !text(block.innerHtml) && result.fields.ingredientSections.length && (emptyEditorList(nextBlock) || nextBlock?.tag === "h4")))) { emptyPlaceholders += 1; continue; }
+    if (block.tag === "h4") {
+      if (awaitingList || !text(block.innerHtml) || isHidden(block, block.offset, true)) return null;
+      pendingName = text(block.innerHtml).replace(/:\s*$/u, "");
+      if (!pendingName) return null;
+      awaitingList = true; continue;
+    }
+    if (block.tag !== "ul" || (result.fields.ingredientSections.length && !awaitingList)) return null;
+    const rows = directElements(block.innerHtml), offset = block.offset + block.openingEnd, items = [];
+    if (!rows.length || hasLooseText(block.innerHtml, rows)) return null;
+    for (const row of rows) {
+      if (isEmptyAd(row)) continue;
+      if (row.tag !== "li" || !row.attributes.has("data-tr-ingredient-checkbox") || isHidden(row, offset, true) || /<(?:ul|ol|li|div|h[1-6]|p|figure|table)\b/iu.test(row.innerHtml)) return null;
+      const raw = text(row.innerHtml);
+      if (!raw) return null;
+      consumedCore.add(offset + row.index);
+      // Scaling attributes and checkbox labels are not the clipboard's visible
+      // quantity. Keep written mixed fractions and conversions without guesses.
+      const expression = raw.match(compound), packaged = raw.match(packageAmount), measure = raw.match(measured);
+      const locator = `.tasty-recipes-ingredients-body group ${result.fields.ingredientSections.length + 1} li:nth-child(${items.length + 1})`;
+      items.push(expression ? { raw, amount: expression[1], unit: null, name: expression[2], confidence: "high", provenance: provenance("text/html", locator) }
+        : packaged ? { raw, amount: packaged[1], unit: packaged[2], name: packaged[3], confidence: "high", provenance: provenance("text/html", locator) }
+          : measure ? { raw, amount: measure[1], unit: measure[2], name: measure[3], confidence: "high", provenance: provenance("text/html", locator) }
+            : ingredient(raw, "text/html", locator, range));
+    }
+    if (!items.length) return null;
+    result.fields.ingredientSections.push({ name: pendingName, items }); pendingName = null; awaitingList = false;
+  }
+  if (!result.fields.ingredientSections.length || awaitingList) return null;
+  const procedure = bodies.get("instructions"), blocks = directElements(procedure.innerHtml);
+  if (hasLooseText(procedure.innerHtml, blocks)) return null;
+  const lists = blocks.filter(block => block.tag === "ol");
+  if (lists.length !== 1 || blocks.some(block => block !== lists[0] && !(block.tag === "p" && !text(block.innerHtml)) && !isEmptyAd(block))) return null;
+  const list = lists[0], rows = directElements(list.innerHtml), offset = procedure.openingEnd + list.openingEnd, steps = [], stepIds = new Set();
+  if (isHidden(list, procedure.openingEnd) || hasLooseText(list.innerHtml, rows)) return null;
+  for (const row of rows) {
+    if (isEmptyAd(row)) continue;
+    const id = row.attributes.get("id");
+    if (row.tag !== "li" || !/^instruction-step-\d+$/u.test(id ?? "") || stepIds.has(id) || isHidden(row, offset, true) || /<(?:ul|ol|li|div|h[1-6]|figure|table)\b/iu.test(row.innerHtml) || !text(row.innerHtml)) return null;
+    consumedCore.add(offset + row.index); stepIds.add(id);
+    steps.push(instruction(text(row.innerHtml), "text/html", `.tasty-recipes-instructions-body ol > li:nth-child(${steps.length + 1})`));
+  }
+  if (!steps.length || consumedCore.size !== coreElements.length || coreElements.some(element => !consumedCore.has(element.index))) return null;
+  result.fields.instructionSections.push({ name: null, steps });
+  const [description] = complete.get("tasty-recipes-description-body");
+  if (description) {
+    const paragraphs = directElements(description.innerHtml);
+    if (!inside(description, card) || isHidden(description, 0, true) || paragraphs.some(element => !["p", "div"].includes(element.tag) || /<(?:p|div|ul|ol|li|h[1-6]|figure|table)\b/iu.test(element.innerHtml)) || hasLooseText(description.innerHtml, paragraphs)) return null;
+    if (text(description.innerHtml)) result.fields.description = scalar(text(description.innerHtml), "text/html", ".tasty-recipes-description-body");
+  }
+  const [details] = complete.get("tasty-recipes-details");
+  if (details) {
+    const children = directElements(details.innerHtml);
+    if (!inside(details, header) || isHidden(details) || children.length !== 1 || children[0].tag !== "ul" || hasLooseText(details.innerHtml, children)) return null;
+    const detailList = children[0], items = directElements(detailList.innerHtml), offset = details.openingEnd + detailList.openingEnd, seenLabels = new Set();
+    if (hasLooseText(detailList.innerHtml, items)) return null;
+    for (const item of items) {
+      const labels = elementsWithClass(item.innerHtml, "tasty-recipes-label");
+      if (item.tag !== "li" || labels.length !== 1 || isHidden(item, offset, true)) return null;
+      const label = text(labels[0].innerHtml).replace(/:+\s*$/u, "");
+      if (!label || seenLabels.has(label)) return null;
+      seenLabels.add(label);
+      const mapping = { Author: ["author", "tasty-recipes-author-name"], "Prep Time": ["prepTime", "tasty-recipes-prep-time"], "Cook Time": ["cookTime", "tasty-recipes-cook-time"], "Total Time": ["totalTime", "tasty-recipes-total-time"], Yield: ["yield", "tasty-recipes-yield"] }[label];
+      if (!mapping) { if (text(item.innerHtml)) result.unclassifiedLines.push({ raw: text(item.innerHtml), provenance: provenance("text/html", ".tasty-recipes-details li") }); continue; }
+      const [field, className] = mapping, values = elementsWithClass(item.innerHtml, className), value = values.length === 1 ? text(values[0].innerHtml) : "";
+      if (!value || complete.get(className).length !== 1 || offset + item.openingEnd + values[0].index !== complete.get(className)[0].index || text(item.innerHtml) !== `${text(labels[0].innerHtml)} ${value}`) return null;
+      if (field === "author") { result.source.author = value; result.source.provenance.author = provenance("text/html", ".tasty-recipes-author-name"); }
+      else if (field === "yield") {
+        const count = value.match(/^(?:serves\s+(\d+)|(\d+)\s+servings?)$/iu), number = count ? Number(count[1] ?? count[2]) : null;
+        const servings = Number.isSafeInteger(number) && number > 0 ? number : null;
+        result.fields.yield = { ...scalar(value, "text/html", ".tasty-recipes-yield"), value: { display: value, servings } };
+      } else {
+        const token = "\\d+(?:\\.\\d+)?\\s*(?:days?|hours?|hrs?|hr|minutes?|mins?|min)";
+        const exact = new RegExp(`^${token}(?:(?:\\s+|\\s+and\\s+|,\\s*(?:and\\s+)?)${token})*$`, "iu").test(value), duration = labeledDuration(`${label}: ${value}`);
+        const minutes = exact && duration && Number.isSafeInteger(duration.value) && duration.value >= 0 ? duration.value : null;
+        result.fields[field] = { ...scalar(value, "text/html", `.${className}`), value: minutes, confidence: minutes === null ? "low" : "high" };
+        if (minutes === null) result.warnings.push({ code: "UNRESOLVED_PROVIDER_DURATION", severity: "warning", path: `fields.${field}`, message: "Qualified or unsupported duration text remains literal; exact minutes are not inferred." });
+      }
+    }
+  }
+  // Marked optional values outside their explicit card detail rows are not
+  // missing values. Refuse instead of silently omitting unmatched metadata.
+  for (const [name, field] of [["tasty-recipes-author-name", "author"], ["tasty-recipes-prep-time", "prepTime"], ["tasty-recipes-cook-time", "cookTime"], ["tasty-recipes-total-time", "totalTime"], ["tasty-recipes-yield", "yield"]]) {
+    if (complete.get(name).length && !(field === "author" ? result.source.author : result.fields[field])) return null;
+  }
+  const [notes] = complete.get("tasty-recipes-notes-body");
+  if (notes) {
+    const blocks = directElements(notes.innerHtml);
+    if (!inside(notes, card) || isHidden(notes, 0, true) || hasLooseText(notes.innerHtml, blocks)) return null;
+    for (const block of blocks) {
+      if (isEmptyAd(block) || (block.tag === "p" && !text(block.innerHtml))) continue;
+      if (block.tag === "p" && !/<(?:ul|ol|li|h[1-6])\b/iu.test(block.innerHtml)) result.fields.notes.push(scalar(text(block.innerHtml), "text/html", ".tasty-recipes-notes-body p"));
+      else if (["ol", "ul"].includes(block.tag)) {
+        const rows = directElements(block.innerHtml);
+        if (hasLooseText(block.innerHtml, rows)) return null;
+        for (const row of rows) {
+          if (isEmptyAd(row)) continue;
+          if (row.tag !== "li" || !text(row.innerHtml) || /<(?:ul|ol|li|h[1-6]|figure|table)\b/iu.test(row.innerHtml)) return null;
+          result.fields.notes.push(scalar(text(row.innerHtml), "text/html", ".tasty-recipes-notes-body li"));
+        }
+      } else return null;
+    }
+  }
+  const [imageContainer] = complete.get("tasty-recipes-image");
+  if (imageContainer && inside(imageContainer, header) && !isHidden(imageContainer)) {
+    for (const image of elementsMatchingAttributes(imageContainer.innerHtml, (_, tag) => tag === "img")) {
+      if (isHidden(image, imageContainer.openingEnd)) continue;
+      // Lazy card images use a data: placeholder; retain the first safe src or
+      // data-src URL as an unfetched reference, not the placeholder itself.
+      const url = [image.attributes.get("src"), image.attributes.get("data-src")].find(value => { try { return ["http:", "https:"].includes(new URL(value).protocol); } catch { return false; } });
+      if (url && !result.fields.images.some(retained => retained.sourceUrl === url)) result.fields.images.push({ sourceUrl: url, alt: image.attributes.get("alt") || null, credit: null, provenance: provenance("text/html", ".tasty-recipes-entry-header .tasty-recipes-image img") });
+    }
+  }
+  const pageTitles = elementsMatchingAttributes(main.innerHtml, (_, tag) => tag === "h1").filter(element => main.openingEnd + element.end <= card.index && !isHidden(element, main.openingEnd, true));
+  if (pageTitles.length === 1 && text(pageTitles[0].innerHtml) && text(pageTitles[0].innerHtml) !== result.fields.title.value) {
+    result.competingCandidates.push({ reason: "Page title differs from the selected complete recipe card", title: text(pageTitles[0].innerHtml), provenance: provenance("text/html", "main h1 before .tasty-recipes") });
+    result.warnings.push({ code: "COMPETING_RECIPE_REGION", severity: "warning", path: "competingCandidates[0]", message: "Confirm the embedded recipe card title; it differs from the surrounding page title." });
+  }
+  if (result.fields.ingredientSections.some(section => section.name)) result.warnings.push({ code: "SECTION_NAMES_NOT_PERSISTED", severity: "warning", path: "fields.ingredientSections", message: "Explicit group names remain in preview and optional commentary; the editor stores flat ingredients." });
+  if (emptyPlaceholders) result.warnings.push({ code: "EMPTY_PROVIDER_PLACEHOLDER", severity: "warning", path: "fields.ingredientSections", message: "Structurally empty editor placeholders were ignored between complete ingredient content. Review group presentation." });
+  if (result.unclassifiedLines.length) result.warnings.push({ code: "UNCLASSIFIED_PROVIDER_METADATA", severity: "warning", path: "unclassifiedLines", message: "Additional recipe metadata remains available for review, not silently mapped." });
+  result.warnings.push(...result.fields.images.map((_, index) => ({ code: "IMAGE_REFERENCE_REQUIRES_CONFIRMATION", severity: "info", path: `fields.images[${index}]`, message: "Image references are unfetched and require confirmation before mapping." })));
+  if (result.warnings.length) result.status = "needs_review";
+  appendHtmlAuditEvidence(result, htmlAudit, discardedRemoteResourceCount(htmlAudit, result.fields.images));
+  return result;
+}
+
 function parseSeriousEatsVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   try {
     const url = new URL(sourceUrl);
@@ -2876,7 +3098,8 @@ function parseNYTCookingVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
 function parseHtml(html, sourceUrl, htmlAudit) {
   // Remove active/raw-text regions before scanning. No markup is inserted into a DOM.
   const inertHtml = discardRawContent(html);
-  const sourceAdapterCandidate = parseSeriousEatsVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
+  const sourceAdapterCandidate = parseSallysVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
+    parseSeriousEatsVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseNYTCookingVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseFoodComVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseFood52VisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??

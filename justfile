@@ -142,6 +142,7 @@ recipe-import-provider-adapter-test:
 	@node --test scripts/tests/test-recipe-import-foodcom.mjs
 	@node --test scripts/tests/test-recipe-import-nyt.mjs
 	@node --test scripts/tests/test-recipe-import-serious-eats.mjs
+	@node --test scripts/tests/test-recipe-import-sallys.mjs
 
 # Verify browser clipboard capture, bounds, cancellation, and parser handoff.
 recipe-import-bridge-test:
