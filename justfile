@@ -148,6 +148,7 @@ recipe-import-provider-adapter-test:
 	@node --test scripts/tests/test-recipe-import-bonappetit.mjs
 	@node --test scripts/tests/test-recipe-import-epicurious.mjs
 	@node --test scripts/tests/test-recipe-import-conde-layout.mjs
+	@node --test scripts/tests/test-recipe-import-bbcgoodfood.mjs
 
 # Verify browser clipboard capture, bounds, cancellation, and parser handoff.
 recipe-import-bridge-test:
