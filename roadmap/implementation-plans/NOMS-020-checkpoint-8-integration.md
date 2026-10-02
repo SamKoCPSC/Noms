@@ -6444,3 +6444,91 @@ Screenshot: `/tmp/noms-020-editor-section-link-clears-photo.png`. This is the
 next fix: preserve same-page fragment navigation without losing local work,
 while retaining reset behavior for genuine route/query changes. The five broad
 checkpoint-8 acceptance groups remain open.
+
+## Editor section navigation acceptance 2026-10-02
+
+`a7bbcdf` fixes the fragment-navigation defect recorded above. The retained-form
+key now ignores URL fragments and normalizes an empty query delimiter, while
+preserving nonempty queries exactly. Section jumps no longer remount local form
+state; a different route or parent query remains a new form. Authentication,
+upload/save behavior and styling are unchanged.
+
+The existing isolated worktree is
+`/home/samko/GitRepos/Noms/.worktrees/NOMS-020-checkpoint-8`, branch
+`codex/NOMS-020-checkpoint-8`. The code was fast-forwarded into
+`codex/NOMS-020-visual-design-refinement` to test the existing deployment.
+
+### Tests and browser evidence
+
+Tests first reproduced two failures: a section fragment changed the key, and an
+actual routed collection form replaced its input node. The final regression
+dispatches a real serialized input event, verifies the edited text and original
+node survive section changes and Back/Forward, then checks that a changed parent
+query resets the form. Key cases retain encoded query characters and Unicode;
+the existing startup, account-retention and read-scope tests still pass.
+
+```sh
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server auth::session_page::tests
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target just ci
+```
+
+**8 focused tests passed; full CI: 973 passed, 0 failed, 12 ignored.** Native/WASM
+checks, Clippy, formatting, schema, secret, deployment and audit gates passed;
+eight existing allowed audit warnings remain. Logs:
+`/tmp/noms-020-section-navigation-red.log`,
+`/tmp/noms-020-section-navigation-green-final.log`,
+`/tmp/noms-020-section-navigation-ci.log` and
+`/tmp/noms-020-section-navigation-build.log`.
+
+Rebuilt and restarted only the existing app on `http://127.0.0.1:32768`.
+A forced uncached reload executed the rebuilt **14,403,161-byte WASM** resource,
+SHA-256 `cbd4206fed9e244dd1f6be71ae9f877080f9095ee8986bfc5a38a04e2137a4e2`.
+Normal mock sign-in used the existing `testuser` identity. A blank recipe form
+and synthetic PNGs supplied these browser checks without saving or uploading:
+
+- A Ready landscape photo survived Photos/Notes jumps and browser Back/Forward.
+  The retained-form DOM node was unchanged and its preview URL was not revoked.
+- A locally confirmed 10° rotation was still shown when the image editor reopened
+  after those jumps, and later after the gallery order changed.
+- A held native encoder callback left a second photo Processing across Notes and
+  Basics jumps. Publish, Cancel and Add Step stayed disabled. Restoring the
+  encoder and delivering the callback completed processing; both photos were
+  Ready and the controls re-enabled. The callback threw no error.
+- Enter on the second photo's Move image up control placed it first. Its order,
+  both Ready states and the landscape photo's rotation remained associated with
+  the right images after another section/history round trip.
+- Removing the portrait locally and jumping Notes to Photos retained the remaining
+  Ready landscape. Leaving for Explore revoked the remaining preview: **4 URLs
+  created, 4 revoked, 0 outstanding, 0 duplicate revocations**. No client error
+  logs were captured.
+
+Inspected screenshots: `/tmp/noms-020-section-retained-rotation.png`,
+`/tmp/noms-020-section-retained-gallery.png` and
+`/tmp/noms-020-section-navigation-fixed.png`. The rotation image shows the restored
+editor value after navigation. The last page capture includes the retained Ready
+row but is scrolled below the Photos heading; it is not a full-page visual audit.
+
+### Integrity review and remaining acceptance
+
+No recipe title/content edit, draft save, publication or server upload was sent.
+Before/after ordered full-row hashes match for 36 recipes, 71 versions, 10 drafts,
+31 collections and 3 users. Media count stays 10, but its full-row hash changed;
+unchanged media metadata is not claimed. Snapshots:
+`/tmp/noms-020-section-navigation-db-before.txt` and
+`/tmp/noms-020-section-navigation-db-after.txt`. Diagnostic wrappers and the cache
+override were removed, and the clean test tab was closed. Six earlier unsaved
+tabs were marked for retention without intentional reload or closure. Root main,
+unrelated edits and other deployments remain untouched; the integration stylesheet
+is restored to its pre-turn checksum after removing the generated grayscale utility.
+
+Second-pass self-review: **PASS for the scoped form-retention fix**; no independent
+agent review was used. The preceding key implementation at `34addeb` is the
+rollback baseline; no schema/data migration is involved.
+
+The follow-up keyboard reorder test exposed a separate existing gap: the order
+changes correctly, but the focused control is lost and `document.activeElement`
+becomes the body. The moved first row's upward control is disabled. The current
+gallery reorder handlers do not restore focus; no specific renderer/keying cause
+is claimed. Restore a useful focus target and check boundary/non-boundary moves
+next. Full keyboard, screen-reader, real-device and whole-app acceptance remain
+open; this fix does not close any of the five broad checkpoint-8 groups.
