@@ -2958,7 +2958,7 @@ function parseDotdashVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
 // New visible-card adapters share ownership/completeness checks, not guessing
 // rules. A marked node must be complete, visible, inside the unique root and
 // explicitly consumed by the provider's measured structure.
-function visibleProviderContext(html, rootClass, markerClasses) {
+function visibleProviderContext(html, rootClass, markerClasses, structuralMarker = () => false) {
   const openings = [...html.matchAll(/<([a-z][a-z0-9:-]*)\b((?:"[^"]*"|'[^']*'|[^>"'])*)>/giu)].map(match=>({tag:match[1].toLowerCase(),attributes:htmlAttributes(match[2]),index:match.index,openingEnd:match.index+match[0].length}));
   const matchesRoot = typeof rootClass === "function" ? rootClass : attributes => hasClass(attributes, rootClass);
   const matchesMarker = typeof markerClasses === "function" ? markerClasses : attributes => markerClasses.some(name => hasClass(attributes, name));
@@ -2971,7 +2971,9 @@ function visibleProviderContext(html, rootClass, markerClasses) {
     if (!hidden.some(range => range.index === e.index)) {const isVoid=["area","base","br","col","embed","hr","img","input","link","meta","param","source","track","wbr"].includes(e.tag);hidden.push({...e,end:isVoid?e.openingEnd:html.length,innerHtml:isVoid?"":html.slice(e.openingEnd)});}
   }
   const isHidden = (e, includeText = true) => hidden.some(range => (range.index <= e.index && e.index < range.end) || (includeText && e.index <= range.index && range.index < e.end && htmlText(range.innerHtml)));
-  if (hasAncestorTag(html, root.index, "nav") || isHidden(root, false) || selected.some(e => e.index !== root.index && (!inside(e) || isHidden(e) || hasAncestorTag(html,e.index,"nav")))) return null;
+  // Broad ownership shells may contain unrelated hidden widgets. Their own
+  // visibility is required; required recipe nodes still reject hidden text.
+  if (hasAncestorTag(html, root.index, "nav") || isHidden(root, false) || selected.some(e => e.index !== root.index && (!inside(e) || isHidden(e, !structuralMarker(e.attributes,e.tag)) || hasAncestorTag(html,e.index,"nav")))) return null;
   const consumed = new Set([root.index]);
   const all = name => selected.filter(e => typeof name === "function" ? name(e.attributes,e.tag) : hasClass(e.attributes, name));
   const children = e => elementsMatchingAttributes(e.innerHtml, () => true).filter(child => tagStackContext(e.innerHtml, child.index).length === 0).map(child => ({...child,index:e.openingEnd+child.index,openingEnd:e.openingEnd+child.openingEnd,contentEnd:e.openingEnd+child.contentEnd,end:e.openingEnd+child.end}));
@@ -3021,18 +3023,30 @@ function parseCondeVisibleRecipe(html, sourceUrl, htmlAudit) {
   try {const url=new URL(sourceUrl);if(!["http:","https:"].includes(url.protocol))return null;sourceAdapter=new Map([["bonappetit.com","bon-appetit"],["www.bonappetit.com","bon-appetit"],["epicurious.com","epicurious"],["www.epicurious.com","epicurious"]]).get(url.hostname);if(!sourceAdapter)return null;}catch{return null;}
   const component=(attributes,name)=>(attributes.get("class")??"").split(/\s+/u).some(token=>token.startsWith(`${name}-`));
   const testId=name=>attributes=>attributes.get("data-testid")===name;
-  const markers=["SplitScreenContentHeaderWrapper","ContentHeaderHed","recipe__main-content","BodyWrapper","InfoSliceList","IngredientList","InstructionsWrapper"];
+  const markers=["RecipePageArticle","RecipePageContentBackground","SplitScreenContentHeaderWrapper","ContentHeaderHed","recipe__main-content","BodyWrapper","InfoSliceList","IngredientList","InstructionsWrapper"];
   const components=["Amount","Description","SubHed","InstructionGroupHed","InstructionHed","InstructionHedSmall","InstructionListHed","InstructionGroupWrapper","InstructionListWrapper","InfoSliceKey","InfoSliceValue","InfoSliceItem"];
-  const c=visibleProviderContext(html,a=>component(a,"RecipePageWrapper"),a=>component(a,"RecipePageWrapper")||markers.includes(a.get("data-testid"))||components.some(name=>component(a,name)));
+  const c=visibleProviderContext(html,a=>component(a,"RecipePageWrapper"),a=>component(a,"RecipePageWrapper")||markers.includes(a.get("data-testid"))||components.some(name=>component(a,name)),a=>["RecipePageArticle","RecipePageContentBackground"].includes(a.get("data-testid")));
   if(!c)return null;
   const {all,inside,children,loose,text,inline,consume}=c;
   const groups=["SplitScreenContentHeaderWrapper","ContentHeaderHed","recipe__main-content","InstructionsWrapper"].map(name=>all(testId(name)));
   if(groups.some(es=>es.length!==1))return null;
   const [[header],[title],[body],[preparation]]=groups;
-  if(header.tag!=="header"||title.tag!=="h1"||!inside(title,header)||!inline(title)||header.end>body.index||!inside(preparation,body))return null;
+  if(header.tag!=="header"||title.tag!=="h1"||!inside(title,header)||!inline(title)||header.end>body.index)return null;
+  let recipeContent=body;
+  const articles=all(testId("RecipePageArticle")),backgrounds=all(testId("RecipePageContentBackground"));
+  if(articles.length>1||backgrounds.length>1)return null;
+  // Live Condé pages put the introduction and two-column recipe card beside
+  // each other, not inside recipe__main-content. Accept only their explicit
+  // shared article/content boundary; never borrow a card elsewhere on the page.
+  if(!inside(preparation,body)){
+    const article=articles[0],background=backgrounds[0];
+    if(!article||article.tag!=="article"||!background||background.tag!=="div"||!inside(header,article)||!inside(background,article)||header.end>background.index||!inside(body,background)||!inside(preparation,background)||body.end>preparation.index)return null;
+    recipeContent=background;
+  }
+  for(const e of [...articles,...backgrounds])consume(e);
   for(const e of [header,title,body,preparation])consume(e);
   const lists=all(testId("IngredientList")),primary=lists.filter(e=>text(children(e)[0]?.innerHtml??"")==="Ingredients");
-  if(primary.length!==1||lists.some(e=>!inside(e,body))||primary[0].end>preparation.index)return null;
+  if(primary.length!==1||lists.some(e=>!inside(e,recipeContent))||primary[0].end>preparation.index||recipeContent!==body&&body.end>primary[0].index)return null;
   const result=candidate({id:`${sourceAdapter}-visible`,version:"1",tier:"source_adapter",sourceAdapter},sourceUrl);
   result.source.provider=sourceAdapter==="epicurious"?"Epicurious":"Bon Appétit";result.source.provenance.provider=provenance("source_url",`hostname ${sourceAdapter==="epicurious"?"epicurious.com":"bonappetit.com"}`);
   result.fields.title=scalar(text(title.innerHtml),"text/html","[data-testid=ContentHeaderHed]");
@@ -3076,7 +3090,7 @@ function parseCondeVisibleRecipe(html, sourceUrl, htmlAudit) {
     if(awaiting||!result.fields.ingredientSections.length)return null;
   }
   if(all(testId("InfoSliceList")).length>1)return null;
-  for(const info of all(testId("InfoSliceList"))){if(!inside(info,body)||info.end>primary[0].index)return null;consume(info);const parts=children(info);if(parts.length!==2||parts[0].tag!=="h2"||text(parts[0].innerHtml)!=="Recipe information"||parts[1].tag!=="ul"||!component(parts[1].attributes,"InfoSliceList")||loose(info,parts))return null;const seen=new Set();
+  for(const info of all(testId("InfoSliceList"))){if(!inside(info,recipeContent)||info.end>primary[0].index)return null;consume(info);const parts=children(info);if(parts.length!==2||parts[0].tag!=="h2"||text(parts[0].innerHtml)!=="Recipe information"||parts[1].tag!=="ul"||!component(parts[1].attributes,"InfoSliceList")||loose(info,parts))return null;const seen=new Set();
     for(const row of children(parts[1])){const owners=children(row);if(row.tag!=="li"||owners.length!==1||!component(owners[0].attributes,"InfoSliceItem")||loose(row,owners))return null;const values=children(owners[0]);if(values.length!==2||values.some(e=>e.tag!=="p"||!inline(e))||!component(values[0].attributes,"InfoSliceKey")||!component(values[1].attributes,"InfoSliceValue")||loose(owners[0],values))return null;for(const e of [owners[0],...values])consume(e);const label=text(values[0].innerHtml),value=text(values[1].innerHtml);if(seen.has(label))return null;seen.add(label);if(label==="Yield"){const match=value.match(/^(\d+)\s+servings?$/iu),servings=match&&Number.isSafeInteger(Number(match[1]))&&Number(match[1])>0?Number(match[1]):null;result.fields.yield={...scalar(value,"text/html","InfoSliceItem Yield"),value:{display:value,servings}};}else visibleProviderDuration(result,label,value,`InfoSliceItem ${label}`);
     }if(loose(parts[1]))return null;
   }
