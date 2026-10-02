@@ -2606,10 +2606,14 @@ function parseSallysVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   return result;
 }
 
-function parseSeriousEatsVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
+// These exact-host adapters share the measured Dotdash article/card shape.
+// Simply Recipes extensions stay opt-in; Serious Eats output stays unchanged.
+function parseDotdashVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
+  let simplyRecipes = false;
   try {
     const url = new URL(sourceUrl);
-    if (!["http:", "https:"].includes(url.protocol) || !["seriouseats.com", "www.seriouseats.com"].includes(url.hostname)) return null;
+    simplyRecipes = ["simplyrecipes.com", "www.simplyrecipes.com"].includes(url.hostname);
+    if (!["http:", "https:"].includes(url.protocol) || (!simplyRecipes && !["seriouseats.com", "www.seriouseats.com"].includes(url.hostname))) return null;
   } catch { return null; }
   const mains = elementsMatchingAttributes(inertHtml, (_, tag) => tag === "main");
   const articles = elementsMatchingAttributes(inertHtml, (_, tag) => tag === "article");
@@ -2626,6 +2630,7 @@ function parseSeriousEatsVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
     [main, article, header, ingredientContainer, procedure].some(element => hasAncestorTag(inertHtml, element.index, "nav"))) return null;
   const coreClasses = ["mm-recipes-article-header", "article-heading", "mm-recipes-structured-ingredients", "mm-recipes-structured-ingredients__heading", "mm-recipes-structured-ingredients__list", "mm-recipes-structured-ingredients__list-heading", "mm-recipes-structured-ingredients__list-item", "mm-recipes-steps", "mm-recipes-steps__heading", "mm-recipes-steps__content", "mntl-sc-block-group--OL", "mntl-sc-block-group--LI"];
   const metadataClasses = ["article-subheading", "mntl-bylines__group--author", "mntl-attribution__item-name", "mm-recipes-details", "mm-recipes-details__item", "mm-recipes-details__label", "mm-recipes-details__value", "mm-recipes-details__note"];
+  if (simplyRecipes) metadataClasses.push("mm-recipes-details__title", "mm-recipes-details__content", "mm-recipes-details__note-label");
   const metadataOpenings = new Map(metadataClasses.map(name => [name, 0]));
   const markedCore = elementsMatchingAttributes(inertHtml, attributes => coreClasses.some(name => hasClass(attributes, name)));
   const hiddenRanges = elementsMatchingAttributes(inertHtml, attributes => listIsHidden({ attributes }) || hasClass(attributes, "is-hidden") || hasClass(attributes, "hidden"));
@@ -2652,17 +2657,19 @@ function parseSeriousEatsVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
     for (const element of elements) { if (htmlText(html.slice(end, element.index))) return true; end = element.end; }
     return Boolean(htmlText(html.slice(end)));
   };
-  const text = html => htmlText(html).replace(/\s+([,.;:!?])/gu, "$1").replace(/\s+\)/gu, ")").replace(/\(\s+/gu, "(");
+  // Clipboard spans can split a word ("oi" + "l"). Preserve source adjacency
+  // for inline markup instead of inserting spaces at every closing span.
+  const text = html => htmlText(simplyRecipes ? html.replace(/<\/?(?:span|strong|em|b|i|a|sup|sub)\b(?:"[^"]*"|'[^']*'|[^>"'])*>/giu, "") : html).replace(/\s+([,.;:!?])/gu, "$1").replace(/\s+\)/gu, ")").replace(/\(\s+/gu, "(");
   const consumedCore = new Set([header.index, title.index, ingredientContainer.index, procedure.index, content.index]);
-  const result = candidate({ id: "serious-eats-visible", version: "1", tier: "source_adapter", sourceAdapter: "serious-eats" }, sourceUrl);
-  result.source.provider = "Serious Eats";
-  result.source.provenance.provider = provenance("source_url", "hostname seriouseats.com");
+  const result = candidate({ id: simplyRecipes ? "simply-recipes-visible" : "serious-eats-visible", version: "1", tier: "source_adapter", sourceAdapter: simplyRecipes ? "simply-recipes" : "serious-eats" }, sourceUrl);
+  result.source.provider = simplyRecipes ? "Simply Recipes" : "Serious Eats";
+  result.source.provenance.provider = provenance("source_url", simplyRecipes ? "hostname simplyrecipes.com" : "hostname seriouseats.com");
   result.fields.title = scalar(text(title.innerHtml), "text/html", "h1.article-heading");
-  const amount = `(?:\\d+[\\u00bc-\\u00be\\u2150-\\u215e]|${TASTY_AMOUNT_PATTERN})`;
+  const amount = `(?:${simplyRecipes ? "\\d+\\s+and\\s+\\d+/\\d+|" : ""}\\d+[\\u00bc-\\u00be\\u2150-\\u215e]|${TASTY_AMOUNT_PATTERN})`;
   const range = `${amount}(?:\\s*(?:to|[-–—])\\s*${amount})?`;
-  const units = `${UNIT_PATTERN}|quarts?|pints?|sticks?|bunch(?:es)?|heads?`;
+  const units = `${UNIT_PATTERN}|quarts?|pints?|sticks?|bunch(?:es)?|heads?${simplyRecipes ? "|pinch" : ""}`;
   const compound = new RegExp(`^(${range}\\s+(?:${units})\\s+(?:plus|minus)\\s+${range}\\s+(?:${units}))\\s+(.+)$`, "iu");
-  const packaged = new RegExp(`^(${range})\\s+(\\(${amount}[- ](?:ounces?|oz|grams?|g|pounds?|lbs?)\\)\\s+(?:cans?|packages?|boxes?))\\s+(.+)$`, "iu");
+  const packaged = new RegExp(`^(${range})\\s+(\\(${amount}[- ](?:ounces?|oz|grams?|g|pounds?|lbs?)\\)\\s+(?:cans?|packages?|boxes?${simplyRecipes ? "|jars?|blocks?" : ""}))\\s+(.+)$`, "iu");
   const measured = new RegExp(`^(${range})\\s+(${units})\\s+(.+)$`, "iu");
   const ingredientChildren = directElements(ingredientContainer.innerHtml);
   if (hasLooseText(ingredientContainer.innerHtml, ingredientChildren)) return null;
@@ -2670,7 +2677,10 @@ function parseSeriousEatsVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   for (const child of ingredientChildren) {
     const offset = ingredientContainer.openingEnd;
     if (isHidden(child, offset)) return null;
-    if (hasClass(child.attributes, "mm-recipes-screen-wake") && !sawHeading) continue;
+    if (hasClass(child.attributes, "mm-recipes-screen-wake") && !sawHeading) {
+      if (simplyRecipes && (text(child.innerHtml) !== "Keep Screen Awake" || /<(?:p|ul|ol|li|h[1-6])\b/iu.test(child.innerHtml))) return null;
+      continue;
+    }
     const headings = elementsWithClass(child.innerHtml, "mm-recipes-structured-ingredients__heading");
     if (!sawHeading && headings.length === 1 && child.tag === "div") {
       const heading = headings[0];
@@ -2714,21 +2724,60 @@ function parseSeriousEatsVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   if (!rows.length || hasLooseText(list.innerHtml, rows)) return null;
   const supplementMode = label => /^(?:Special Equipment|Equipment)$/u.test(label) ? "equipment" : label === "Notes" || /^(?:Make[-– ]Ahead|Makes-Ahead)(?: and | & )Storage$/u.test(label) ? "notes" : label === "Read More" ? "related" : null;
   let currentPhase = null, flattenedNested = 0;
+  const procedureExtraClasses = ["mntl-sc-block-subheading", "mntl-sc-block-universal-callout", "mntl-sc-block-universal-callout__heading", "mntl-sc-block-universal-callout__body"];
+  const procedureExtras = simplyRecipes ? elementsMatchingAttributes(procedure.innerHtml, attributes => procedureExtraClasses.some(name => hasClass(attributes, name))) : [];
+  const consumedExtras = new Set();
+  if (simplyRecipes && procedureExtraClasses.some(name => openingHtmlElements(procedure.innerHtml).filter(element => hasClass(element.attributes, name)).length !== elementsWithClass(procedure.innerHtml, name).length)) return null;
+  const consumeExtra = (element, offset) => consumedExtras.add(offset + element.index - procedure.openingEnd);
+  const readCallout = (block, offset, isStep) => {
+    const children = directElements(block.innerHtml), headings = children.filter(child => hasClass(child.attributes, "mntl-sc-block-universal-callout__heading")), bodies = children.filter(child => hasClass(child.attributes, "mntl-sc-block-universal-callout__body"));
+    if (block.tag !== "div" || headings.length > 1 || bodies.length !== 1 || children.length !== headings.length + 1 || hasLooseText(block.innerHtml, children) || isHidden(block, offset, true)) return null;
+    const label = headings.length ? text(headings[0].innerHtml) : null;
+    if (headings.some(heading => heading.tag !== "h3") || (isStep ? label && !["Tip", "Tips", "Simply Recipes / Tip"].includes(label) : label !== "Recipe Notes")) return null;
+    const body = bodies[0], parts = directElements(body.innerHtml), texts = [];
+    if (body.tag !== "div" || hasLooseText(body.innerHtml, parts) || !parts.length) return null;
+    for (const part of parts) {
+      if (part.tag === "p" && !/<(?:p|div|ul|ol|li|h[1-6]|figure|table)\b/iu.test(part.innerHtml) && text(part.innerHtml)) texts.push(text(part.innerHtml));
+      else if (["ul", "ol"].includes(part.tag)) {
+        const entries = directElements(part.innerHtml);
+        if (!entries.length || hasLooseText(part.innerHtml, entries)) return null;
+        for (const entry of entries) {
+          if (entry.tag !== "li" || /<(?:p|div|ul|ol|li|h[1-6]|figure|table)\b/iu.test(entry.innerHtml) || !text(entry.innerHtml)) return null;
+          texts.push(text(entry.innerHtml));
+        }
+      } else return null;
+    }
+    consumeExtra(block, offset);
+    for (const child of children) consumeExtra(child, offset + block.openingEnd);
+    return { label, texts };
+  };
   // The same explicit supplement headings can appear after the OL or, in one
   // copied layout, within the last LI. Handle both without adding them to steps.
   const readBlocks = (html, offset, isStep) => {
-    const blocks = directElements(html), texts = []; let mode = null, headingLabel = null, phase = null;
+    const blocks = directElements(html), texts = []; let mode = null, headingLabel = null, phase = null, stepLabel = null;
     if (hasLooseText(html, blocks)) return null;
     for (const block of blocks) {
       if (hasClass(block.attributes, "heading-toc") && !text(block.innerHtml)) continue;
       if (hasClass(block.attributes, "mntl-sc-block-adslot") || block.tag === "figure" || hasClass(block.attributes, "mntl-sc-block-universal-callout--originalpublishdate")) {
+        if (simplyRecipes && hasClass(block.attributes, "mntl-sc-block-adslot") && text(block.innerHtml)) return null;
         for (const match of block.innerHtml.matchAll(/<[a-z][a-z0-9:-]*\b((?:"[^"]*"|'[^']*'|[^>"'])*)>/giu)) {
           const attributes = htmlAttributes(match[1]);
-          if (hasClass(attributes, "mntl-sc-block-html") || hasClass(attributes, "mntl-sc-block-heading")) return null;
+          if (hasClass(attributes, "mntl-sc-block-html") || hasClass(attributes, "mntl-sc-block-heading") || (simplyRecipes && procedureExtraClasses.some(name => hasClass(attributes, name)))) return null;
         }
         continue;
       }
       if (isHidden(block, offset, true)) return null;
+      if (simplyRecipes && hasClass(block.attributes, "mntl-sc-block-subheading")) {
+        if (!isStep || mode || stepLabel || texts.length || block.tag !== "h3" || /<(?:p|div|ul|ol|li|h[1-6])\b/iu.test(block.innerHtml) || !text(block.innerHtml).replace(/:\s*$/u, "")) return null;
+        stepLabel = text(block.innerHtml).replace(/:\s*$/u, ""); consumeExtra(block, offset); continue;
+      }
+      if (simplyRecipes && hasClass(block.attributes, "mntl-sc-block-universal-callout")) {
+        const callout = readCallout(block, offset, isStep && !mode);
+        if (!callout) return null;
+        if (isStep && !mode) texts.push(`${callout.label ? `${callout.label}: ` : ""}${callout.texts.join(" ")}`);
+        else for (const value of callout.texts) result.fields.notes.push(scalar(`${callout.label}: ${value}`, "text/html", ".mm-recipes-steps__content Recipe Notes"));
+        continue;
+      }
       if (block.tag === "h2" && hasClass(block.attributes, "mntl-sc-block-heading")) {
         const label = text(block.innerHtml), selectedMode = supplementMode(label);
         if (!label) return null;
@@ -2759,12 +2808,17 @@ function parseSeriousEatsVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
         retained = text(children[0].innerHtml); flattenedNested += 1;
       } else return null;
       if (!retained) return null;
+      if (simplyRecipes && isStep && !mode && retained === "Love the recipe? Leave us stars and a comment below!") continue;
       const locator = `.mm-recipes-steps__content ${headingLabel ?? "procedure"}`;
       if (mode === "equipment") result.fields.equipment.push(scalar(retained, "text/html", locator));
       else if (mode === "notes") result.fields.notes.push(scalar(`${headingLabel}: ${retained}`, "text/html", locator));
       else if (mode) return null;
       else if (isStep) texts.push(retained);
       else return null;
+    }
+    if (stepLabel) {
+      if (texts.length) texts[0] = `${stepLabel}${/[.!?]$/u.test(stepLabel) ? "" : ":"} ${texts[0]}`;
+      else texts.push(stepLabel);
     }
     return { texts, phase };
   };
@@ -2782,6 +2836,7 @@ function parseSeriousEatsVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   // Required markers embedded in ignored ads, figures or controls must not
   // disappear merely because the usual containers still look recognizable.
   if (consumedCore.size !== markedCore.length || markedCore.some(element => !consumedCore.has(element.index))) return null;
+  if (simplyRecipes && (consumedExtras.size !== procedureExtras.length || procedureExtras.some(element => !consumedExtras.has(element.index)))) return null;
   const descriptions = elementsWithClass(header.innerHtml, "article-subheading");
   if (descriptions.length > 1 || descriptions.some(element => isHidden(element, header.openingEnd, true))) return null;
   if (descriptions.length && text(descriptions[0].innerHtml)) result.fields.description = scalar(text(descriptions[0].innerHtml), "text/html", ".mm-recipes-article-header .article-subheading");
@@ -2798,6 +2853,41 @@ function parseSeriousEatsVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   const details = elementsWithClass(inertHtml, "mm-recipes-details");
   if (details.length > 1 || details.some(element => !inside(element, article) || element.index < header.end || element.end > ingredientContainer.index || isHidden(element))) return null;
   const metadata = new Map();
+  if (simplyRecipes) {
+    const cardTitles = elementsWithClass(inertHtml, "mm-recipes-details__title");
+    if (cardTitles.length > 1 || cardTitles.some(cardTitle => !details.length || !inside(cardTitle, details[0]) || cardTitle.tag !== "h2" || /<(?:p|div|ul|ol|li|h[1-6]|figure|table)\b/iu.test(cardTitle.innerHtml) || !text(cardTitle.innerHtml) || isHidden(cardTitle, 0, true))) return null;
+    if (cardTitles.length) {
+      const cardTitle = cardTitles[0];
+      if (text(cardTitle.innerHtml) !== result.fields.title.value) {
+        result.competingCandidates.push({ reason: "Article title differs from the explicit recipe card title", title: result.fields.title.value, provenance: result.fields.title.provenance });
+        result.warnings.push({ code: "COMPETING_RECIPE_REGION", severity: "warning", path: "competingCandidates[0]", message: "Confirm the explicit recipe card title; it differs from the surrounding article title." });
+      }
+      result.fields.title = scalar(text(cardTitle.innerHtml), "text/html", ".mm-recipes-details__title");
+    }
+    const detailContents = elementsWithClass(inertHtml, "mm-recipes-details__content");
+    if (detailContents.length !== details.length || detailContents.some(body => !inside(body, details[0]))) return null;
+    if (details.length) {
+      const children = directElements(details[0].innerHtml), body = detailContents[0], entries = directElements(body.innerHtml);
+      if (hasLooseText(details[0].innerHtml, children) || hasLooseText(body.innerHtml, entries) || entries.some(entry => !hasClass(entry.attributes, "mm-recipes-details__item")) || children.some(child => !["mm-recipes-details__title", "mm-recipes-details__content", "mm-recipes-details__note", "mm-recipes-details__nutrition-link-container"].some(name => hasClass(child.attributes, name)))) return null;
+      // Complete markers are not enough: every card body, title and note must
+      // be a direct owned child, and every item/label/value must be consumed.
+      for (const name of ["mm-recipes-details__title", "mm-recipes-details__content", "mm-recipes-details__note", "mm-recipes-details__nutrition-link-container"]) {
+        const owned = children.filter(child => hasClass(child.attributes, name));
+        if (elementsWithClass(inertHtml, name).some(element => !owned.some(child => details[0].openingEnd + child.index === element.index))) return null;
+      }
+      for (const name of ["mm-recipes-details__item", "mm-recipes-details__label", "mm-recipes-details__value"]) {
+        if (elementsWithClass(inertHtml, name).some(element => !entries.some(entry => name === "mm-recipes-details__item" ? body.openingEnd + entry.index === element.index : inside(element, { ...entry, openingEnd: body.openingEnd + entry.openingEnd, contentEnd: body.openingEnd + entry.contentEnd })))) return null;
+      }
+      const notes = elementsWithClass(inertHtml, "mm-recipes-details__note");
+      if (elementsWithClass(inertHtml, "mm-recipes-details__note-label").some(label => !notes.some(note => inside(label, note)))) return null;
+      for (const control of children.filter(child => hasClass(child.attributes, "mm-recipes-details__nutrition-link-container"))) {
+        const controls = directElements(control.innerHtml);
+        if (controls.length !== 1 || controls[0].tag !== "button" || text(control.innerHtml) !== "Jump to Nutrition Facts" || /<(?:p|ul|ol|li|h[1-6])\b/iu.test(controls[0].innerHtml) || hasLooseText(control.innerHtml, controls)) return null;
+      }
+    } else if (["mm-recipes-details__item", "mm-recipes-details__label", "mm-recipes-details__value", "mm-recipes-details__note", "mm-recipes-details__note-label"].some(name => elementsWithClass(inertHtml, name).length)) {
+      return null;
+    }
+  }
   if (details.length) {
     const items = elementsWithClass(details[0].innerHtml, "mm-recipes-details__item");
     for (const item of items) {
@@ -2826,7 +2916,11 @@ function parseSeriousEatsVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
     }
     for (const note of elementsWithClass(details[0].innerHtml, "mm-recipes-details__note")) {
       if (isHidden(note, details[0].openingEnd, true)) return null;
-      if (text(note.innerHtml)) result.unclassifiedLines.push({ raw: text(note.innerHtml), provenance: provenance("text/html", ".mm-recipes-details__note") });
+      if (simplyRecipes) {
+        const children = directElements(note.innerHtml), labels = children.filter(child => hasClass(child.attributes, "mm-recipes-details__note-label")), paragraphs = children.filter(child => child.tag === "p");
+        if (labels.length !== 1 || text(labels[0].innerHtml) !== "Note:" || children.length !== paragraphs.length + 1 || hasLooseText(note.innerHtml, children) || paragraphs.some(paragraph => /<(?:p|div|ul|ol|li|h[1-6])\b/iu.test(paragraph.innerHtml))) return null;
+        for (const paragraph of paragraphs) if (text(paragraph.innerHtml)) result.fields.notes.push(scalar(`Note: ${text(paragraph.innerHtml)}`, "text/html", ".mm-recipes-details__note"));
+      } else if (text(note.innerHtml)) result.unclassifiedLines.push({ raw: text(note.innerHtml), provenance: provenance("text/html", ".mm-recipes-details__note") });
     }
   }
   if (metadata.has("Servings") || metadata.has("Yield")) {
@@ -3099,7 +3193,7 @@ function parseHtml(html, sourceUrl, htmlAudit) {
   // Remove active/raw-text regions before scanning. No markup is inserted into a DOM.
   const inertHtml = discardRawContent(html);
   const sourceAdapterCandidate = parseSallysVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
-    parseSeriousEatsVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
+    parseDotdashVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseNYTCookingVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseFoodComVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseFood52VisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
