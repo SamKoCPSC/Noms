@@ -11,6 +11,7 @@ pub(super) enum RecipeWriteAction {
 }
 
 pub(super) const UNCONFIRMED_DRAFT_CREATION_MESSAGE: &str = "Could not confirm draft creation. A draft may already exist. Your entries are still here; check your dashboard in another tab and reopen the draft before saving again.";
+pub(super) const UNCONFIRMED_PUBLICATION_MESSAGE: &str = "Could not confirm publication. Your draft may have been published; check your dashboard in another tab before trying again. Your entries remain on this page.";
 
 /// A missing mutation response is not proof that the server did nothing.
 /// Creation cannot be blindly retried without its returned draft identity.
@@ -29,7 +30,7 @@ pub(super) fn recipe_write_feedback(
         #[cfg(any(target_arch = "wasm32", test))]
         RecipeWriteAction::Autosave => "Autosave could not complete. Your entries are still here; try Save draft or edit again to retry.",
         RecipeWriteAction::SaveDraft => "Could not save the draft. Your entries are still here; try Save draft again.",
-        RecipeWriteAction::Publish => "Could not confirm publication. Your draft may have been published; check your dashboard before trying again.",
+        RecipeWriteAction::Publish => UNCONFIRMED_PUBLICATION_MESSAGE,
         RecipeWriteAction::Discard => "Could not confirm draft removal. Check your dashboard before trying again; your entries remain on this page.",
         RecipeWriteAction::CreateDraft => UNCONFIRMED_DRAFT_CREATION_MESSAGE,
     }
@@ -119,7 +120,9 @@ mod tests {
         );
         assert!(source.contains("Check Dashboard"));
         assert!(source.contains("new_tab: true"));
-        assert!(source.contains("if draft_creation_unconfirmed() || error().is_some()"));
+        assert!(source.contains(
+            "if draft_creation_unconfirmed() || publication_unconfirmed() || error().is_some()"
+        ));
         let deferred_save = source
             .split("TimeoutFuture::new(2_000).await;")
             .nth(1)
@@ -137,5 +140,17 @@ mod tests {
             .find("publish_recipe_draft(saved.id.to_string(), None)")
             .unwrap();
         assert!(retained_id < submit);
+    }
+
+    #[test]
+    fn unknown_publication_response_remains_visible_and_blocks_later_writes() {
+        let source = include_str!("recipe_new.rs");
+        assert!(source.contains("let mut publication_unconfirmed = use_signal(|| false)"));
+        assert!(source.matches("publication_unconfirmed()").count() >= 6);
+        assert!(source.contains("publication_attempted = true"));
+        assert!(source.contains("publication_unconfirmed.set(true)"));
+        assert!(source.contains(
+            "if draft_creation_unconfirmed() || publication_unconfirmed() || error().is_some()"
+        ));
     }
 }

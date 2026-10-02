@@ -17,7 +17,7 @@ use crate::components::base::{
 use crate::components::AuthRequired;
 use crate::pages::draft_save::{
     draft_save_button_state, recipe_write_feedback, RecipeWriteAction,
-    UNCONFIRMED_DRAFT_CREATION_MESSAGE,
+    UNCONFIRMED_DRAFT_CREATION_MESSAGE, UNCONFIRMED_PUBLICATION_MESSAGE,
 };
 use crate::pages::recipe_editor_form::{
     apply_step_photo_edit, build_step_tree, can_indent_step, format_step_photo_file_size,
@@ -159,6 +159,7 @@ pub fn RecipeNew() -> Element {
     // Dashboard: another create could duplicate an already committed draft.
     #[allow(unused_mut)]
     let mut draft_creation_unconfirmed = use_signal(|| false);
+    let mut publication_unconfirmed = use_signal(|| false);
 
     // CP4: image upload state — shared with the `ImageUpload` component.
     // `images` is the sink for uploaded image records (read when calling
@@ -210,6 +211,7 @@ pub fn RecipeNew() -> Element {
             || !editor.tags.is_empty();
         if !meaningful
             || draft_creation_unconfirmed()
+            || publication_unconfirmed()
             || is_saving()
             || is_manually_saving()
             || last_saved_editor().as_ref() == Some(&editor)
@@ -229,6 +231,7 @@ pub fn RecipeNew() -> Element {
             gloo_timers::future::TimeoutFuture::new(2_000).await;
             if autosave_generation() != generation
                 || draft_creation_unconfirmed()
+                || publication_unconfirmed()
                 || is_saving()
                 || is_manually_saving()
             {
@@ -327,6 +330,7 @@ pub fn RecipeNew() -> Element {
                 || !editor.tags.is_empty();
             if !meaningful
                 || draft_creation_unconfirmed()
+                || publication_unconfirmed()
                 || is_saving()
                 || is_manually_saving()
                 || busy()
@@ -413,6 +417,7 @@ pub fn RecipeNew() -> Element {
     #[allow(unused_variables)]
     let step_photo_controls_locked = move || {
         draft_creation_unconfirmed()
+            || publication_unconfirmed()
             || is_saving()
             || is_manually_saving()
             || busy()
@@ -590,6 +595,7 @@ pub fn RecipeNew() -> Element {
     // ── Submit handler ───────────────────────────────────────────────────
     let on_submit = move |_| {
         if draft_creation_unconfirmed()
+            || publication_unconfirmed()
             || is_saving()
             || is_manually_saving()
             || busy()
@@ -753,6 +759,7 @@ pub fn RecipeNew() -> Element {
                 visibility: data.visibility,
                 tags: data.tags,
             };
+            let mut publication_attempted = false;
             let publish_result = async {
                 let saved = if let Some(current_draft_id) = draft_id() {
                     let current = get_recipe_draft_api(current_draft_id.clone()).await?;
@@ -780,6 +787,7 @@ pub fn RecipeNew() -> Element {
                 // commits but its response is lost, never create again.
                 draft_id.set(Some(saved.id.to_string()));
                 draft_revision.set(saved.revision);
+                publication_attempted = true;
                 publish_recipe_draft(saved.id.to_string(), None).await
             }
             .await;
@@ -797,6 +805,11 @@ pub fn RecipeNew() -> Element {
                     }
                 }
                 Err(e) => {
+                    if publication_attempted {
+                        // Do not let an autosave failure overwrite an unknown
+                        // publication outcome or suggest another blind write.
+                        publication_unconfirmed.set(true);
+                    }
                     let action = if draft_creation_unconfirmed() {
                         RecipeWriteAction::CreateDraft
                     } else {
@@ -903,6 +916,7 @@ pub fn RecipeNew() -> Element {
                             variant: ButtonVariant::Secondary,
                             disabled: !draft_save_state.is_actionable()
                                 || draft_creation_unconfirmed()
+                                || publication_unconfirmed()
                                 || is_saving()
                                 || busy()
                                 || step_photo_upload_count() > 0,
@@ -911,7 +925,7 @@ pub fn RecipeNew() -> Element {
                         }
                         Button {
                             variant: ButtonVariant::Primary,
-                            disabled: draft_creation_unconfirmed() || is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0,
+                            disabled: draft_creation_unconfirmed() || publication_unconfirmed() || is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0,
                             onclick: on_submit,
                             if step_photo_upload_count() > 0 {
                                 "Uploading images..."
@@ -1557,7 +1571,7 @@ pub fn RecipeNew() -> Element {
                     }
 
                     // ── Error message ───────────────────────────────────
-                    if draft_creation_unconfirmed() || error().is_some() {
+                    if draft_creation_unconfirmed() || publication_unconfirmed() || error().is_some() {
                         div {
                             role: "alert",
                             overflow_wrap: "anywhere",
@@ -1568,10 +1582,12 @@ pub fn RecipeNew() -> Element {
                             font_size: "14px",
                             if draft_creation_unconfirmed() {
                                 "{UNCONFIRMED_DRAFT_CREATION_MESSAGE}"
+                            } else if publication_unconfirmed() {
+                                "{UNCONFIRMED_PUBLICATION_MESSAGE}"
                             } else if let Some(err) = error() {
                                 "{err}"
                             }
-                            if draft_creation_unconfirmed() {
+                            if draft_creation_unconfirmed() || publication_unconfirmed() {
                                 p {
                                     Link {
                                         to: crate::Route::Dashboard {},
