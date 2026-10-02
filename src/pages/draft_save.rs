@@ -10,7 +10,7 @@ pub(super) enum RecipeWriteAction {
     Discard,
 }
 
-pub(super) const UNCONFIRMED_DRAFT_CREATION_MESSAGE: &str = "Could not confirm draft creation. A draft may already exist. Your entries are still here; check your dashboard and reopen the draft before saving again.";
+pub(super) const UNCONFIRMED_DRAFT_CREATION_MESSAGE: &str = "Could not confirm draft creation. A draft may already exist. Your entries are still here; check your dashboard in another tab and reopen the draft before saving again.";
 
 /// A missing mutation response is not proof that the server did nothing.
 /// Creation cannot be blindly retried without its returned draft identity.
@@ -101,6 +101,7 @@ mod tests {
         );
         assert!(message.contains("may already exist"));
         assert!(message.contains("dashboard"));
+        assert!(message.contains("another tab"));
         assert!(!message.contains("private database"));
         assert!(!message.contains("try Save draft again"));
     }
@@ -117,6 +118,7 @@ mod tests {
             3
         );
         assert!(source.contains("Check Dashboard"));
+        assert!(source.contains("new_tab: true"));
         assert!(source.contains("if draft_creation_unconfirmed() || error().is_some()"));
         let deferred_save = source
             .split("TimeoutFuture::new(2_000).await;")

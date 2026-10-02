@@ -1575,6 +1575,7 @@ pub fn RecipeNew() -> Element {
                                 p {
                                     Link {
                                         to: crate::Route::Dashboard {},
+                                        new_tab: true,
                                         class: "btn btn-secondary touch-target",
                                         "Check Dashboard"
                                     }
