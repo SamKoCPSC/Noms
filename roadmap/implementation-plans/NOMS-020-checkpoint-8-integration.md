@@ -4764,3 +4764,184 @@ fixed or considered closed here.
 lost responses, navigation/identity replacement, physical-device touch, screen
 readers and whole-app acceptance remain open. Destructive/account-linking
 actions still require a new isolated fixture and action-time approval.
+
+## Collection-cover and step-photo edit round trips — 2026-10-01
+
+**Contract:** reopen adjusted saved covers and method photos with their existing
+metadata, isolate cancelled edits, persist successful replacements, retain
+edits after pre-server save/publication failure, and support native keyboard
+reopening at desktop and 320px. No removal, deletion, account/provider mutation,
+post-commit lost-response or initial step-upload-failure acceptance is claimed.
+
+Used existing isolated local deployment `noms-c799915fcf93e034`, app port
+32768, PostgreSQL 32769, MinIO 32770/32771 and mock OAuth 32772. Original
+`testuser` / `@user-e13c` session remained signed in. Runtime started at
+`70ad0d4`, with evidence baseline `9a2ec9f`. Implementation used the existing
+`codex/NOMS-020-checkpoint-8` task worktree and fast-forwarded into the design
+worktree. No push, production deployment or unrelated deployment cleanup.
+
+Only new private synthetic content was changed:
+
+- Collection `ba957378-d935-4a52-a123-ad8e49fd3854`, **CP8 Cover round trip —
+  Local test only**, cover asset `e97193cd-1ea7-4470-99ae-253f77001403`;
+  no memberships or subcollections.
+- Recipe `a5a7ee84-28df-41d1-bd0e-44e3d554776d`, **CP8 Step photo round trip —
+  Local test only**, one ingredient and one method photo, no gallery photos;
+  asset `afa4cff4-e352-4ea6-8317-ed2398652f15`, v1/v2 and unchanged follow-up
+  draft `872997d1-b6be-410f-9ebb-22ace1d797ef` retained.
+- New unpublished draft `ba3917ec-1033-4e19-83aa-a4977109a297`, **CP8 New
+  editor step-photo reopen — Local test only**, one method photo, asset
+  `69af30a3-23b7-4d1e-9348-6eadae1231e5`; retained without publishing/discarding.
+
+All assets belong to mock user `6b1c56b4-945d-44d5-9f1b-eeb9525b8519` and
+are retained. The cover has one collection reference; the published step photo
+has one current-recipe and two historical-version references, plus its
+follow-up draft reference. Draft-only media remains attached to its draft.
+
+Selected `/tmp/noms-020-recipe-landscape.png`, the existing 2560 × 1440
+synthetic grid, SHA-256
+`27d2e37f687b25f107645fff6b5b41720f0db3dcf06d125aeee12fa5f9ea22d2`.
+Step-photo filename/size remain `noms-020-recipe-landscape.png` / 44989 bytes.
+
+### Collection cover
+
+1. New collection: applied crop 70%, X 120/Y −45, rotation 25°, saturation
+   70% and horizontal flip. Enter reopened the pending selection with those
+   values; Cancel left it unchanged. Real create/upload succeeded.
+2. Saved preview reopened the full 1920 × 1080 source, with normalized crop
+   displayed as 70%, X 90/Y −34 and all remaining settings restored. Changing
+   rotation to −90° then cancelling did not leak into the next reopening.
+3. Saved saturation 50%/vertical flip, then tested two actual pre-server
+   `update_collection*` failures, including a changed saturation of 40%.
+   Pending Save was disabled; safe failure feedback retained all entries and
+   re-enabled actions. Reopening after failure retained 40%.
+4. Cleared interception and retried: successful save/reload, no `upload_image`
+   request, same asset and URL. At 320 × 800, Enter reopened 70%, X 90/Y −34,
+   rotation 25°, saturation 40%, both flips; Escape returned focus to the
+   preview button and document width stayed 320px.
+
+The first attempted interception used a regex-like `[0-9]*` in a CDP glob and
+did **not** intercept; that synthetic save actually succeeded. Only the two
+later correctly matched failures are failure evidence. The generic shared
+preview name remains “Edit Saved recipe image”; collection-specific naming is
+an informational follow-up, not a change in this slice.
+
+### Step-photo reopening fix and acceptance
+
+Browser red evidence: after initial upload/edit and after v1 publication,
+method previews had no edit action; clicking the photo did not open a modal.
+Three tests were added before production changes. The corrected red run failed
+for missing production helpers/component; initial test scaffolding also needed
+a qualified `VirtualDom` import. Raw red log:
+`/tmp/noms-020-step-photo-red.log`.
+
+Local code commit `ecd04cc`, **NOMS-020: reopen saved step photos with their
+edits**, adds shared `StepPhotoEditButton` in both editors: a named native
+button, disabled during editor writes/uploads. It selects the saved
+`rectangle:16:9` metadata (or its default), edits the full source rather than
+the thumbnail and replaces only that named view. Asset/URL/file metadata and
+other named views remain unchanged. Upload-in-flight hand-off is only queued
+for a local blob without a completed photo index. Modal close clears its
+selection/initial metadata. The code/tests are one indivisible behavior commit;
+acceptance documentation is a separate commit.
+
+Fresh-build browser green evidence:
+
+1. Enter opened v1's saved photo with crop 70%, X 90/Y −34, rotation 25°,
+   saturation 70% and horizontal flip. Changed rotation −90°, Cancel, Space
+   reopening restored 25°.
+2. Applied saturation 50% plus vertical flip, waited for autosave and reloaded.
+   Reopening restored all settings, including both flips and saturation 50%.
+3. Held `publish_recipe_draft*` before server execution: Publishing and the
+   photo-edit action were disabled. Failed the request; safe uncertain-outcome
+   publication feedback appeared and reopening retained saturation 50%.
+   Cleared interception; real retry published v2 without any image upload.
+4. Reopened the unchanged follow-up draft at 320 × 800 with Space; settings
+   survived, document width was 320px, and Escape returned focus to
+   “Edit step photo: noms-020-recipe-landscape.png”.
+5. New-recipe flow uploaded another synthetic photo, applied rotation 15° /
+   saturation 80% and reopened it. Normal autosave transitioned to its named
+   draft route; cancelling rotation 60° restored 15°. Reload/reopening retained
+   15°/80%. This flow includes the normal New → Draft editor transition, not a
+   claim that it remained on the New component throughout autosave.
+6. SQL confirms v1 retained saturation 70% / no vertical flip while v2 has 50%
+   / vertical flip, with the exact same asset and file metadata. Browser v1
+   renders `saturate(0.700000)` and `scaleY(1.000000)` from its original full
+   image. Historical snapshots were not overwritten.
+
+The first restart and ordinary build reused stale Dioxus artifacts. Cleaned
+only NOMS package artifacts in the actual `wasm-dev` / `server-dev` custom
+profiles, preserving dependencies, DB and media; explicit build compiled both
+targets and the subsequent restart served the new edit button. Fresh build
+log: `/tmp/noms-020-step-photo-deployment-fresh-build.log`. Dioxus regenerated
+the already user-modified `assets/tailwind.css` with one extra generated rule;
+restored its exact pre-build bytes from a hash-verified cached asset using a
+narrow patch. Final hash matches the starting hash:
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+The dev-tool rebuilding banner still appeared in DOM snapshots; it did not
+prevent the observed app interactions and is not performance acceptance.
+
+### Stored bytes, tests and integrity
+
+Captured actual stored cover/step full and thumbnail bytes from observed
+successful browser responses. Both use the same non-destructive export
+pipeline and identical source, so their variant hashes match:
+
+- Full: `81011877c9a16c52e5539b16fe96e806e96e0aff4fba4ba0100a8d70f62474a0`.
+- Thumbnail: `f5eb709b6878c9af0cd10c87a476c76f8be2169d443a3fe79edfbb0062c666e0`.
+
+`python3 scripts/tests/check-recipe-image-export.py` with the original PNG and
+each `/tmp/noms-020-{cover,step}-stored-{full,thumb}.webp` pair passed: full
+1920 × 1080 and thumbnail 800 × 450, 176 flat interior samples each, maximum
+RGB error 1/2 and alpha error 0. This checks sampled non-destructive resizing,
+not all interpolation edges or a rendered-preview pixel equivalence.
+
+Validation:
+
+- `cargo fmt --all`, `git diff --check`: passed.
+- `SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration-worktree>/target cargo test
+  --features server step_photo -- --test-threads=4`: **5 passed, 0 failed**;
+  `/tmp/noms-020-step-photo-final-tests.log`.
+- `SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration-worktree>/target cargo check
+  --target wasm32-unknown-unknown --no-default-features --features web`: passed;
+  `/tmp/noms-020-step-photo-web.log`.
+- `PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true
+  CARGO_TARGET_DIR=<integration-worktree>/target just ci`: **927 passed,
+  0 failed, 12 ignored**, all remaining gates passed; raw final log
+  `/tmp/noms-020-cover-step-ci-final.log`. First sandboxed run passed tests but
+  could not lock the read-only Cargo advisory cache; authorized rerun completed
+  with the existing eight allowed advisory warnings.
+
+Excluding only this slice's new collection/recipe (and their versions/drafts)
+and new draft-only fixture, original content matches its starting hashes:
+
+| Rows | Count | Hash |
+| --- | ---: | --- |
+| Recipes | 31 | `ca156ae94adb947875212ab97b627946` |
+| Versions | 64 | `f216416ebd2518de1dac32d51f466f11` |
+| Collections | 29 | `917c84e8447402c9b3bfcb6e3d7b8075` |
+| Memberships | 28 | `fd3bc9401f1389c7fa08cff816e7b44b` |
+| Drafts | 2 | `d860a7535dfc63331592ca6512a1c27e` |
+| Users | 3 | `7bc139f2aea02af7488ad90b2d8f0cca` |
+
+Temporary screenshots: `/tmp/noms-020-cover-retained-after-failure.jpg`,
+`/tmp/noms-020-cover-reopened-320.jpg`, `/tmp/noms-020-step-photo-before.jpg`,
+`/tmp/noms-020-step-photo-reopened.jpg`,
+`/tmp/noms-020-step-photo-publication-failure.jpg` and
+`/tmp/noms-020-step-photo-320.jpg`. Settled cover/step 320px captures and the
+pre-fix method area were visually inspected. Interception cleared, cache
+restored, network observation disabled, viewport reset and temporary tab closed.
+
+Explicit second-pass self-review: **PASS for this scoped round trip**. Reviewed
+selection/reset behavior, full-source use, named-edit preservation, busy guards,
+upload hand-off, regression tests, stored media, historical integrity and
+bounded evidence claims. Removed unnecessary hand-off entries for completed
+local uploads during review. No independent agent review is claimed.
+
+**Next:** initial step-photo processing/upload failure recovery, local blob URL
+lifecycle and multi-file/reorder interactions. Their current log-only error
+paths are not covered by the gallery input-failure acceptance. Cancelling the
+initial step modal cancels edits, not an upload already underway. Post-commit
+lost responses, navigation/identity replacement, full accessibility and
+physical-device touch remain open; destructive/account-linking actions still
+need their separate authorization and fixtures.
