@@ -16,21 +16,18 @@ fn retains_local_work(route: &Route) -> bool {
     )
 }
 
-/// Browser location omits empty query/fragment delimiters that SSR history
-/// can retain. They must not turn hydration into a new editor visit; preserve
-/// all nonempty query/fragment text so real navigation still resets the scope.
+/// Section links change focus/scroll position, not the form being edited.
+/// Ignore fragments and the empty query delimiter SSR can retain during
+/// hydration, but keep nonempty queries (such as a collection parent) distinct.
 fn retained_form_visit_key(path: &str) -> String {
-    let (before_fragment, fragment) = path
+    let before_fragment = path
         .split_once('#')
-        .map_or((path, None), |(path, fragment)| (path, Some(fragment)));
-    let normalized = match before_fragment.split_once('?') {
+        .map_or(path, |(before_fragment, _)| before_fragment);
+    match before_fragment.split_once('?') {
         Some((path, "")) => path,
         _ => before_fragment,
-    };
-    match fragment.filter(|fragment| !fragment.is_empty()) {
-        Some(fragment) => format!("{normalized}#{fragment}"),
-        None => normalized.to_string(),
     }
+    .to_string()
 }
 
 #[component]
@@ -312,6 +309,78 @@ mod tests {
     }
 
     #[test]
+    fn section_navigation_keeps_the_actual_form_input_until_the_query_changes() {
+        use dioxus::html::{SerializedFormData, SerializedHtmlEventConverter};
+        set_event_converter(Box::new(SerializedHtmlEventConverter));
+        let control = Rc::new(RefCell::new(None));
+        let mut dom = VirtualDom::new_with_props(
+            RoutedSessionRoot,
+            RoutedSessionRootProps {
+                initial_path: "/collections/new".into(),
+                control: control.clone(),
+            },
+        );
+        let initial = dom.rebuild_to_vec();
+        let original_input = collection_name_input_assignment(&initial.edits).unwrap();
+        dom.runtime().handle_event(
+            "input",
+            Event::new(
+                Rc::new(PlatformEventData::new(Box::new(SerializedFormData::new(
+                    "Local section navigation test".into(),
+                    Vec::new(),
+                )))) as Rc<dyn std::any::Any>,
+                true,
+            ),
+            original_input,
+        );
+        dom.render_immediate(&mut dioxus_core::NoOpMutations);
+        assert!(dioxus_ssr::render(&dom).contains("Local section navigation test"));
+        for path in [
+            "/collections/new#cover",
+            "/collections/new#notes",
+            "/collections/new",
+        ] {
+            let (current, scope) = control.borrow().unwrap();
+            dom.in_scope(scope, || current.push(path));
+            let mut edits = dioxus_core::Mutations::default();
+            dom.render_immediate(&mut edits);
+            assert_eq!(
+                collection_name_input_assignment(&edits.edits),
+                None,
+                "Section navigation to {path} replaced the original input {original_input:?}"
+            );
+            assert!(dioxus_ssr::render(&dom).contains("Local section navigation test"));
+        }
+
+        for forward in [false, true] {
+            let (current, scope) = control.borrow().unwrap();
+            dom.in_scope(scope, || {
+                if forward {
+                    current.go_forward();
+                } else {
+                    current.go_back();
+                }
+            });
+            let mut edits = dioxus_core::Mutations::default();
+            dom.render_immediate(&mut edits);
+            assert_eq!(collection_name_input_assignment(&edits.edits), None);
+            assert!(dioxus_ssr::render(&dom).contains("Local section navigation test"));
+        }
+
+        let (current, scope) = control.borrow().unwrap();
+        dom.in_scope(scope, || {
+            current.push("/collections/new?parent=550e8400-e29b-41d4-a716-446655440000#cover")
+        });
+        let mut edits = dioxus_core::Mutations::default();
+        dom.render_immediate(&mut edits);
+        assert!(
+            collection_name_input_assignment(&edits.edits).is_some(),
+            "A different parent query must still create a new form"
+        );
+        assert!(!dioxus_ssr::render(&dom).contains("Local section navigation test"));
+    }
+
+    #[test]
     fn active_editor_inert_mutations_are_absent_not_false() {
         let control = Rc::new(RefCell::new(None));
         let mounts = Rc::new(Cell::new(0));
@@ -350,7 +419,7 @@ mod tests {
     }
 
     #[test]
-    fn retained_form_keys_normalize_only_empty_url_delimiters() {
+    fn retained_form_keys_ignore_sections_but_preserve_nonempty_queries() {
         for path in [
             "/collections/new",
             "/collections/new?",
@@ -361,16 +430,41 @@ mod tests {
         }
         assert_eq!(
             retained_form_visit_key("/collections/new?#cover"),
-            "/collections/new#cover"
+            "/collections/new"
         );
         for path in [
             "/collections/new?parent=550e8400-e29b-41d4-a716-446655440000",
             "/collections/new?note=what?",
-            "/collections/new?note=%3F%23&tag=湯麵#cover",
+            "/collections/new?note=%3F%23&tag=湯麵",
             "/settings/accounts?link_error=denied",
         ] {
             assert_eq!(retained_form_visit_key(path), path);
         }
+        for (path, expected) in [
+            ("/recipes/new#recipe-photos", "/recipes/new"),
+            ("/recipes/new#recipe-notes", "/recipes/new"),
+            ("/recipes/new#", "/recipes/new"),
+            ("/recipes/new?#recipe-photos", "/recipes/new"),
+            ("/settings/profile#avatar", "/settings/profile"),
+            (
+                "/collections/new?note=%3F%23&tag=湯麵#cover",
+                "/collections/new?note=%3F%23&tag=湯麵",
+            ),
+            (
+                "/collections/new?parent=one#cover",
+                "/collections/new?parent=one",
+            ),
+            (
+                "/collections/new?parent=two#cover",
+                "/collections/new?parent=two",
+            ),
+        ] {
+            assert_eq!(retained_form_visit_key(path), expected);
+        }
+        assert_ne!(
+            retained_form_visit_key("/recipes/new#recipe-photos"),
+            retained_form_visit_key("/collections/new#cover")
+        );
     }
 
     #[test]
