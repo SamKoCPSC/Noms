@@ -1434,6 +1434,107 @@ mod tests {
 
     // ── Storage interaction test ────────────────────────────────────────────
 
+    #[tokio::test]
+    async fn multipart_upload_keeps_request_owner_when_session_changes_during_storage() {
+        setup_test_env();
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let original_user_id = create_test_user(&pool).await;
+        let replacement_user_id = create_test_user(&pool).await;
+        let original_token = create_session_token(&pool, original_user_id).await;
+        let mock_server = wiremock::MockServer::start().await;
+        mock_empty_user_media_usage(&mock_server).await;
+        let storage_started = std::sync::Arc::new(tokio::sync::Notify::new());
+        let storage_notification = storage_started.clone();
+        wiremock::Mock::given(wiremock::matchers::method("PUT"))
+            .respond_with(move |_: &wiremock::Request| {
+                storage_notification.notify_one();
+                wiremock::ResponseTemplate::new(200).set_delay(std::time::Duration::from_secs(1))
+            })
+            .expect(2)
+            .mount(&mock_server)
+            .await;
+        let app = make_router_with_storage(
+            pool.clone(),
+            crate::storage::StorageClient::for_test_with_endpoint(&mock_server.uri()),
+        )
+        .await;
+
+        // Switch only after storage proves that the handler admitted the request.
+        // A replacement session must not become the owner of that admitted upload.
+        let (response, replacement_token) = tokio::join!(
+            app.clone().oneshot(build_multipart_request(
+                VALID_WEBP_BYTES,
+                VALID_WEBP_BYTES,
+                Some(&original_token),
+            )),
+            async {
+                tokio::time::timeout(
+                    std::time::Duration::from_secs(5),
+                    storage_started.notified(),
+                )
+                .await
+                .expect("upload should reach storage");
+                session::revoke_session(&pool, &original_token)
+                    .await
+                    .unwrap();
+                let replacement_token = create_session_token(&pool, replacement_user_id).await;
+                assert_eq!(
+                    sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM media_assets")
+                        .fetch_one(&pool)
+                        .await
+                        .unwrap(),
+                    0,
+                    "session replacement must occur before the upload completes"
+                );
+                replacement_token
+            }
+        );
+        let response = response.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(!response.headers().contains_key("set-cookie"));
+        let json = read_json(response).await;
+        let asset_id = uuid::Uuid::parse_str(json["asset_id"].as_str().unwrap()).unwrap();
+        let owner = sqlx::query_scalar::<_, uuid::Uuid>(
+            "SELECT uploader_id FROM media_assets WHERE id = $1",
+        )
+        .bind(asset_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(owner, original_user_id);
+        assert!(json["key"]
+            .as_str()
+            .unwrap()
+            .starts_with(&format!("recipes/{original_user_id}/")));
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>(
+                "SELECT COUNT(*) FROM media_assets WHERE uploader_id = $1",
+            )
+            .bind(replacement_user_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            0
+        );
+        // Subsequent requests use their own cookie, not the completed request's owner.
+        assert_eq!(
+            app.clone()
+                .oneshot(build_multipart_no_full(Some(&original_token)))
+                .await
+                .unwrap()
+                .status(),
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            app.oneshot(build_multipart_no_full(Some(&replacement_token)))
+                .await
+                .unwrap()
+                .status(),
+            StatusCode::BAD_REQUEST
+        );
+        session::clear_test_secret();
+    }
+
     /// Full success path: valid auth + valid WebP -> 200 with full_url, thumb_url, and key.
     ///
     /// Uses a request-scoped storage client pointed at a mock S3 server.

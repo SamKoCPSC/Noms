@@ -2080,6 +2080,76 @@ mod tests {
         }
 
         #[tokio::test]
+        async fn revoked_link_session_clears_only_transaction_cookie_without_linking() {
+            session::set_test_secret("test-secret-32-bytes-long-enough!!");
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let owner = test_user(&pool, "revoked_link_owner").await;
+            let replacement = test_user(&pool, "replacement").await;
+            let original_token = session::create_session(&pool, owner.id).await.unwrap();
+            let replacement_token = session::create_session(&pool, replacement.id)
+                .await
+                .unwrap();
+            let (state, provider) = mock_google_state(pool.clone(), &owner.email).await;
+            let state_id = format!("revoked-link-{}", test_utils::uid());
+            insert_callback_state(
+                &pool,
+                &state_id,
+                "google",
+                "/settings/accounts",
+                "test-verifier-minimum-43-characters-long-enough",
+                "link",
+                Some(owner.id),
+            )
+            .await;
+            session::revoke_session(&pool, &original_token)
+                .await
+                .unwrap();
+            let jar = add_test_browser_binding(
+                CookieJar::new().add(session::build_session_cookie(&original_token)),
+                &state_id,
+            );
+            let response = callback_route_handler(
+                State(state),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id.clone(),
+                    code: "unused-code".to_string(),
+                }),
+                jar,
+            )
+            .await;
+            assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+            assert!(!response.headers().contains_key("location"));
+            let cookies: Vec<_> = response.headers().get_all("set-cookie").iter().collect();
+            assert_eq!(cookies.len(), 1);
+            let cleared_cookie = cookie::Cookie::parse(cookies[0].to_str().unwrap()).unwrap();
+            assert_eq!(
+                cleared_cookie.name(),
+                browser_binding_cookie_name(&state_id)
+            );
+            assert_eq!(cleared_cookie.max_age(), Some(time::Duration::ZERO));
+            assert!(provider.received_requests().await.unwrap().is_empty());
+            assert_eq!(db::count_oauth_accounts(&pool, owner.id).await.unwrap(), 0);
+            assert_eq!(
+                db::count_oauth_accounts(&pool, replacement.id)
+                    .await
+                    .unwrap(),
+                0
+            );
+            assert_eq!(
+                session::verify_session(&pool, &replacement_token)
+                    .await
+                    .unwrap(),
+                replacement.id
+            );
+            assert!(db::delete_auth_state(&pool, &state_id)
+                .await
+                .unwrap()
+                .is_none());
+            session::clear_test_secret();
+        }
+
+        #[tokio::test]
         async fn unauthenticated_login_callback_creates_session() {
             session::set_test_secret("test-secret-32-bytes-long-enough!!");
             let (_db, pool) = test_utils::setup_test_db().await;
