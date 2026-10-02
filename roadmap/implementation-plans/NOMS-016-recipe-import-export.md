@@ -373,6 +373,12 @@ On the restarted canonical instance at port 32783, each invented provider-shaped
 
 The separate nine-candidate independent agent source-to-output review has 28/36 correct core fields: three candidates usable without correction and six after correction, none unusable. Remaining cleanup includes package/alternative quantity splitting, a source-marked attribution retained as a method step, one missing image credit and the photo-only step. The historical benchmark is unchanged and not combined with this purposive subset. See the semantic report for field labels and digest-bound reproducibility.
 
+### Live Bon Appétit/Epicurious layout correction — 2026-10-01
+
+The user's Food Network manual check passed, but two live Condé pages rejected. Their introduction and recipe card are sibling regions inside an explicit article/content background, not one introduction container. `6115345` supports this measured ownership variant while retaining complete-marker and visibility/nav defenses. Ten new tests pass; all 1,500 saved HTML/source-URL outcomes remain deeply unchanged. Both live DOM captures now retain every owned ingredient/procedure paragraph, and the exact tested parser is deployed on the canonical port-32783 instance. Independent review, cumulative parser/bridge/fixture/evaluator gates and `just fmt check lint` pass. Raw captures stay external; unrelated CSS is excluded.
+
+Fresh browser preview/native clipboard verification is still pending because browser automation hit focus timeouts/client blocking; no browser protection was bypassed. Refresh the import page, supply the recipe source URL, then re-copy/paste the page. The live DOM success is not a claim about the exact clipboard bytes the user originally pasted. No drafts were created or published. See the real-corpus report for commands, deployment hashes and limitations; full database CI was not rerun.
+
 ## First end-to-end clipboard integration
 
 Provider expansion is paused while the existing parser is connected to the application. The first slice adds an authenticated Import Recipe page: supply an optional source URL, paste the full page, preview the extracted fields and warnings, then explicitly create a private draft and open the existing recipe editor. Editing, autosaving and publishing use the existing draft workflow; preview alone must not persist a recipe or raw clipboard data.
