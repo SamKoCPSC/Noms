@@ -9,6 +9,19 @@ test('bridge feeds full HTML and text to the existing parser with the supplied s
   const payload = {html, plainText: null, sourceUrl: 'https://example.invalid/recipe'};
   assert.deepEqual(await parseClipboardPayload(payload, parseRecipeClipboard), parseRecipeClipboard(payload));
 });
+for (const [fixture, sourceUrl, adapter] of [
+  ['bbcgoodfood-visible.html', 'https://www.bbcgoodfood.com/recipes/cloud-bean-stew', 'bbc-good-food'],
+  ['kingarthur-visible.html', 'https://www.kingarthurbaking.com/recipes/aurora-cloud-rolls', 'king-arthur-baking'],
+]) test(`bridge preserves rich clipboard provider dispatch for ${adapter}`, async () => {
+  const html = await readFile(new URL(`../../tests/fixtures/recipe-import/providers/${fixture}`, import.meta.url), 'utf8');
+  const payload = {html, plainText:'Full clipboard text fallback', sourceUrl};
+  const parsed = await parseClipboardPayload(payload, parseRecipeClipboard);
+  assert.equal(parsed.parser.sourceAdapter, adapter);
+  assert.deepEqual(parsed, parseRecipeClipboard(payload));
+  assert.equal(parsed.fields.ingredientSections.flatMap(section => section.items).length, 3);
+  assert.equal(parsed.fields.instructionSections.flatMap(section => section.steps).length, 2);
+  assert.ok(parsed.fields.description.value);
+});
 test('bridge supports plain text and rejects empty, invalid URL and oversized input before parsing', async () => {
   let calls = 0;
   const parser = input => { calls++; return input; };

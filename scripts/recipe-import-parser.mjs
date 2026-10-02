@@ -3001,7 +3001,10 @@ function visibleProviderDuration(result, label, value, locator) {
   if (!field) {result.unclassifiedLines.push({raw,provenance:provenance("text/html",locator)});return;}
   const token = "\\d+(?:\\.\\d+)?\\s*(?:days?|hours?|hrs?|hr|minutes?|mins?|min)";
   const exact = new RegExp(`^${token}(?:(?:\\s+|\\s+and\\s+|,\\s*(?:and\\s+)?)${token})*$`,"iu").test(value);
-  const minutes = exact ? labeledDuration(raw)?.value??null : null;
+  // Repeated units might be additive or duplicated accessibility text. The
+  // generic duration helper collapses repetition, so preserve these literally.
+  const units=[...value.matchAll(/\d+(?:\.\d+)?\s*(days?|hours?|hrs?|hr|minutes?|mins?|min)/giu)].map(match=>/^d/iu.test(match[1])?"day":/^h/iu.test(match[1])?"hour":"minute");
+  const minutes = exact && new Set(units).size===units.length ? labeledDuration(raw)?.value??null : null;
   result.fields[field] = {...scalar(raw,"text/html",locator),value:minutes,confidence:minutes===null?"low":"high"};
   if(minutes===null)result.warnings.push({code:"UNRESOLVED_PROVIDER_DURATION",severity:"warning",path:`fields.${field}`,message:"Qualified duration remains literal; exact minutes are not inferred."});
 }
@@ -3013,6 +3016,95 @@ function finishVisibleProvider(result, htmlAudit) {
   if(result.warnings.length)result.status="needs_review";
   appendHtmlAuditEvidence(result,htmlAudit,discardedRemoteResourceCount(htmlAudit,result.fields.images));
   return result;
+}
+
+// King Arthur's header and recipe card are sibling articles inside the main
+// page. Its literal volume/weight conversions belong to one ingredient row;
+// footnotes and baker tips are supplements, never additional method steps.
+function parseKingArthurVisibleRecipe(html, sourceUrl, htmlAudit) {
+  try{const url=new URL(sourceUrl);if(!["http:","https:"].includes(url.protocol)||!["kingarthurbaking.com","www.kingarthurbaking.com"].includes(url.hostname))return null;}catch{return null;}
+  const markers=["quickview--recipe","quickview__description","quickview__blog-author","stats--recipe","stat__item--prep","stat__item--bake","stat__item--total","stat__item--yield","recipe__ingredients","recipe__ingredients-header","ingredients-list","ingredient-section","ingredient-section__footnote","recipe__instructions","recipe__instructions-header","field--recipe-steps","recipe__tips","recipe__tips-header"];
+  const c=visibleProviderContext(html,(a,t)=>t==="main"&&hasClass(a,"main"),(a,t)=>t==="h1"||t==="main"&&hasClass(a,"main")||markers.some(name=>hasClass(a,name)),a=>["quickview--recipe","recipe__ingredients","recipe__instructions"].some(name=>hasClass(a,name)));
+  if(!c)return null;const {all,inside,children,loose,text,inline,consume}=c;
+  const groups=["quickview--recipe","recipe__ingredients","recipe__ingredients-header","ingredients-list","recipe__instructions","recipe__instructions-header","field--recipe-steps"].map(all);if(groups.some(es=>es.length!==1))return null;
+  const [[header],[ingredients],[ingredientHeader],[ingredientList],[method],[methodHeader],[methodBody]]=groups;
+  const titles=all((_,tag)=>tag==="h1");
+  if(titles.length!==1||!inside(titles[0],header)||!inline(titles[0])||!inside(ingredientHeader,ingredients)||!inside(ingredientList,ingredients)||!inside(methodHeader,method)||!inside(methodBody,method)||header.end>ingredients.index||ingredients.end>method.index||text(methodHeader.innerHtml)!=="Instructions"||!inline(methodHeader))return null;
+  const ingredientHeadings=children(ingredientHeader).filter(e=>e.tag==="h2");if(ingredientHeadings.length!==1||!inline(ingredientHeadings[0])||text(ingredientHeadings[0].innerHtml)!=="Ingredients")return null;
+  if(loose(ingredientHeader)||children(ingredientHeader).some(e=>e.index!==ingredientHeadings[0].index&&!(e.tag==="a"&&hasClass(e.attributes,"shop-recipe-button")&&text(e.innerHtml)==="Shop this Recipe")))return null;
+  consume(titles[0]);
+  for(const e of [header,ingredients,ingredientHeader,ingredientList,method,methodHeader,methodBody])consume(e);
+  const result=candidate({id:"king-arthur-baking-visible",version:"1",tier:"source_adapter",sourceAdapter:"king-arthur-baking"},sourceUrl);
+  result.source.provider="King Arthur Baking";result.source.provenance.provider=provenance("source_url","hostname kingarthurbaking.com");
+  result.fields.title=scalar(text(titles[0].innerHtml),"text/html",".quickview--recipe h1");
+  const note=(raw,locator)=>result.fields.notes.push(scalar(raw,"text/html",locator));
+  // Use a closed set of written wrappers. Raw inline tips are measured, while
+  // tables, nested lists and unknown block structures must not silently vanish.
+  const written=element=>{
+    if(inline(element))return [text(element.innerHtml)];
+    const parts=children(element);
+    if(loose(element)||!parts.length)return null;
+    const output=[];
+    for(const part of parts){
+      if(hasClass(part.attributes,"quickview__blog-author")&&authors.some(author=>author.index===part.index))continue;
+      if(part.tag==="p"&&text(part.innerHtml)&&openingHtmlElements(part.innerHtml).every(e=>["span","strong","em","b","i","a","sup","sub","br","small","abbr","u","s","del","ins","mark","wbr","time","img","picture","source"].includes(e.tag)))output.push(text(part.innerHtml));
+      else if(part.tag==="div"){
+        const nested=written(part);
+        if(!nested)return null;
+        output.push(...nested);
+      }else if(["a","p","picture"].includes(part.tag)&&!text(part.innerHtml)&&openingHtmlElements(part.innerHtml).every(e=>["a","img","picture","source","br","span","o:p"].includes(e.tag)))continue;
+      else return null;
+    }
+    return output;
+  };
+  const authors=all("quickview__blog-author"),descriptions=all("quickview__description");if(authors.length>1||descriptions.length>1)return null;
+  if(authors.length){const author=authors[0];if(!inside(author,header)||!/^Recipe by\s+/iu.test(text(author.innerHtml))||openingHtmlElements(author.innerHtml).some(e=>!["a","span","strong","em","b","i"].includes(e.tag)))return null;const raw=text(author.innerHtml).replace(/^Recipe by\s+/iu,"");if(!raw)return null;result.source.author=raw;result.source.provenance.author=provenance("text/html",".quickview__blog-author");consume(author);}
+  if(descriptions.length){const description=descriptions[0];if(!inside(description,header))return null;const paragraphs=written(description);if(!paragraphs?.length)return null;result.fields.description=scalar(paragraphs.join(" "),"text/html",".quickview__description");consume(description);}
+  const seenStats=new Set();
+  for(const stats of all("stats--recipe")){if(!inside(stats,header)||loose(stats))return null;consume(stats);for(const item of children(stats)){if(hasClass(item.attributes,"affiliate-disclaimer")){if(!inline(item))return null;result.unclassifiedLines.push({raw:text(item.innerHtml),provenance:provenance("text/html",".affiliate-disclaimer")});continue;}
+      const parts=children(item),label=parts[0],value=parts[1];if(parts.length!==2||!hasClass(item.attributes,"stat__item")||!label||!hasClass(label.attributes,"label")||!inline(label)||!value||value.tag!=="span"||!inline(value)||loose(item))return null;
+      const key=text(label.innerHtml),raw=text(value.innerHtml);if(seenStats.has(key)||!["Prep","Bake","Total","Yield"].includes(key)||!hasClass(item.attributes,`stat__item--${key.toLowerCase()}`))return null;seenStats.add(key);consume(item);
+      if(key==="Yield"){const number=Number(raw.match(/^(\d+)\s+servings$/iu)?.[1]);result.fields.yield={...scalar(raw,"text/html",".stat__item--yield"),value:{display:raw,servings:Number.isSafeInteger(number)&&number>0?number:null}};}
+      else visibleProviderDuration(result,key==="Bake"?"Cook":key,raw,`.stat__item--${key.toLowerCase()}`);
+    }}
+  const ingredientParts=children(ingredients);if(loose(ingredients)||ingredientParts.some(e=>e.index!==ingredientHeader.index&&e.index!==ingredientList.index&&!(e.tag==="svg"&&!text(e.innerHtml))&&!["kaf-product-modal","recipe__ingredients-actions","recipe__featured-products","recipe-ad__wrapper"].some(name=>hasClass(e.attributes,name))))return null;
+  const sections=children(ingredientList);if(!sections.length||loose(ingredientList))return null;
+  for(const section of sections){if(section.tag!=="div"||!hasClass(section.attributes,"ingredient-section")||loose(section))return null;consume(section);const parts=children(section),heading=parts[0]?.tag==="p"?parts.shift():null,list=parts.shift();if(heading&&!inline(heading))return null;if(!list||list.tag!=="ul"||!hasClass(list.attributes,"list--bullets")||loose(list))return null;const items=children(list);if(!items.length||items.some(e=>e.tag!=="li"||!inline(e)))return null;
+    result.fields.ingredientSections.push({name:heading?text(heading.innerHtml):null,items:items.map((e,index)=>{const raw=text(e.innerHtml),normalized=raw.replace(/^(\d+(?:\.\d+)?)(kg|mg|g|ml|l)\b/iu,"$1 $2"),item=visibleProviderIngredient(normalized,`.ingredient-section li:nth-child(${index+1})`);item.raw=raw;return item;})});
+    for(const part of parts){if(part.tag!=="div"||!hasClass(part.attributes,"ingredient-section__footnote"))return null;const paragraphs=written(part);if(!paragraphs?.length)return null;for(const raw of paragraphs)note(raw,".ingredient-section__footnote");consume(part);}
+  }
+  const methodParts=children(method);if(loose(method)||methodParts.some(e=>e.index!==methodHeader.index&&e.index!==methodBody.index&&!hasClass(e.attributes,"recipe__tips")&&!hasClass(e.attributes,"cook-mode")&&!hasClass(e.attributes,"recipe__notes")&&!hasClass(e.attributes,"recipe__media-toggle")&&!/^lesson-wrap-/u.test(e.attributes.get("id")??"")))return null;
+  const methodLists=children(methodBody);if(methodLists.length!==1||methodLists[0].tag!=="ol"||!hasClass(methodLists[0].attributes,"list--numbers")||loose(methodBody)||loose(methodLists[0]))return null;const rows=children(methodLists[0]);if(!rows.length)return null;const steps=[];
+  // Promotional lessons are measured closed structures, not permission to
+  // discard arbitrary written instructions inside a familiar CSS wrapper.
+  const lessonPromotion=element=>{
+    if(!hasClass(element.attributes,"lesson-wrap")){const parts=children(element);if(loose(element)||parts.length!==1||!hasClass(parts[0].attributes,"lesson-wrap"))return false;element=parts[0];}
+    const parts=children(element),contents=parts.filter(e=>hasClass(e.attributes,"lesson-content"));
+    if(loose(element)||contents.length!==1||parts.some(e=>e.index!==contents[0].index&&!(e.tag==="a"&&hasClass(e.attributes,"lesson-link")&&!text(e.innerHtml)&&inline(e,true))&&!(e.tag==="div"&&hasClass(e.attributes,"lesson-rule")&&!text(e.innerHtml)&&!children(e).length)))return false;
+    const content=contents[0],body=children(content),head=body[0],description=body[1];
+    if(loose(content)||body.length!==2||!head||!hasClass(head.attributes,"lesson-header")||description?.tag!=="p"||!hasClass(description.attributes,"lesson-description")||!inline(description))return false;
+    const headerParts=children(head),title=headerParts[0],badge=headerParts[1];
+    if(loose(head)||headerParts.length!==2||title?.tag!=="h2"||!hasClass(title.attributes,"lesson-title")||!inline(title)||text(title.innerHtml)!=="Online Lessons, On-Demand"||!badge||!hasClass(badge.attributes,"lesson-badge")||loose(badge))return false;
+    const badges=children(badge);return badges.length>0&&badges.every(e=>e.tag==="span"&&(hasClass(e.attributes,"badge-text")&&inline(e)||hasClass(e.attributes,"play-icon")&&!text(e.innerHtml)&&openingHtmlElements(e.innerHtml).every(node=>["svg","rect","polygon","path"].includes(node.tag))));
+  };
+  for(const part of methodParts){if(hasClass(part.attributes,"cook-mode")&&!["Bake Mode","Bake Mode Prevent your screen from going dark as you follow along."].includes(text(part.innerHtml))||hasClass(part.attributes,"recipe__media-toggle")&&!(part.tag==="a"&&inline(part)&&text(part.innerHtml)==="Hide images")||/^lesson-wrap-/u.test(part.attributes.get("id")??"")&&!lessonPromotion(part))return null;}
+  const tutorial=element=>{const parts=children(element),heading=parts[0],embed=parts[1];if(parts.length!==2||loose(element)||heading?.tag!=="h4"||!inline(heading)||!["Perfect your technique","Take it a step further","Learn more","Substitute ingredients"].includes(text(heading.innerHtml))||!embed||!hasClass(embed.attributes,"article--embed"))return false;const embedParts=children(embed);return !loose(embed)&&embedParts.every(e=>e.tag==="a"&&!text(e.innerHtml)||e.tag==="div"&&hasClass(e.attributes,"article__content")&&!loose(e)&&children(e).every(p=>p.tag==="span"&&hasClass(p.attributes,"eyebrow")&&inline(p)&&text(p.innerHtml)==="Blog"||p.tag==="h5"&&inline(p)||p.tag==="p"&&hasClass(p.attributes,"article__author")&&inline(p)));};
+  const media=element=>{const fragment=element.innerHtml,captions=elementsMatchingAttributes(fragment,(_,tag)=>tag==="figcaption"),controls=elementsWithClass(fragment,"animated-gif__button");if(captions.some(e=>!inline(e))||controls.some(e=>!inline(e)||text(e.innerHtml).toLowerCase()!=="replay"))return false;const remainder=[...captions,...controls].sort((a,b)=>a.index-b.index).reduceRight((value,e)=>value.slice(0,e.index)+value.slice(e.end),fragment);if(text(remainder)||openingHtmlElements(remainder).some(e=>!["div","picture","source","img","video","track"].includes(e.tag)))return false;for(const caption of captions)note(text(caption.innerHtml),".field--recipe-steps figcaption");return true;};
+  for(const [index,row] of rows.entries()){if(row.tag!=="li"||!hasClass(row.attributes,"field__item")||loose(row)||c.isHidden(row))return null;const paragraphs=[];for(const part of children(row)){
+      if(part.tag==="p"&&inline(part))paragraphs.push(text(part.innerHtml));
+      else if(part.tag==="p"&&!text(part.innerHtml)&&openingHtmlElements(part.innerHtml).every(e=>["br","span","o:p"].includes(e.tag)))continue;
+      else if(part.tag==="aside"&&tutorial(part))continue;
+      else if(part.tag==="figure"||part.tag==="div"&&(hasClass(part.attributes,"embedded-entity")||hasClass(part.attributes,"wysiwyg__grid"))){if(!media(part))return null;}
+      else if(part.tag==="div"&&lessonPromotion(part))continue;
+      else return null;
+    }if(!paragraphs.length)return null;steps.push(instruction(paragraphs.join(" "),"text/html",`.field--recipe-steps li:nth-child(${index+1})`));}
+  result.fields.instructionSections.push({name:null,steps});
+  const tips=all("recipe__tips"),tipHeadings=all("recipe__tips-header");if(tips.length>1||tipHeadings.length!==tips.length)return null;
+  if(tips.length){const tip=tips[0],parts=children(tip),heading=parts[0],list=parts[1];if(!inside(tip,method)||parts.length!==2||heading.index!==tipHeadings[0].index||heading.tag!=="h2"||!inline(heading)||text(heading.innerHtml)!=="Tips from our Bakers"||list.tag!=="ul"||!hasClass(list.attributes,"list--star")||loose(tip)||loose(list))return null;consume(tip);consume(heading);const rows=children(list);if(!rows.length)return null;for(const row of rows){if(row.tag!=="li"||c.isHidden(row))return null;const paragraphs=written(row);if(!paragraphs?.length)return null;for(const raw of paragraphs)note(raw,".recipe__tips li");}}
+  if(!c.complete())return null;
+  const mediaContainers=elementsWithClass(header.innerHtml,"quickview__media");if(mediaContainers.length>1)return null;
+  if(mediaContainers.length){const container=mediaContainers[0];for(const image of c.openings.filter(e=>e.tag==="img"&&header.openingEnd+container.openingEnd<=e.index&&e.openingEnd<=header.openingEnd+container.contentEnd)){const raw=image.attributes.get("src");if(!raw?.trim()||c.isHidden(image,false)||hasAncestorTag(html,image.index,"nav"))continue;try{const url=new URL(raw,sourceUrl);if(["http:","https:"].includes(url.protocol)&&!result.fields.images.some(e=>e.sourceUrl===url.href))result.fields.images.push({sourceUrl:url.href,alt:image.attributes.get("alt")?.trim()||null,credit:null,provenance:provenance("text/html",".quickview__media img")});}catch{/* Safe explicit references only; no fetching. */}}}
+  return finishVisibleProvider(result,htmlAudit);
 }
 
 // Good Food's copied page uses explicit quantity/name/note spans and numbered
@@ -3049,7 +3141,7 @@ function parseBBCGoodFoodVisibleRecipe(html, sourceUrl, htmlAudit) {
         if(hasClass(item.attributes,"recipe-cook-and-prep-details__note")){result.fields.notes.push(scalar(raw,"text/html",".recipe-cook-and-prep-details__note"));consume(item);continue;}
         if(!hasClass(item.attributes,"recipe-cook-and-prep-details__item"))return null;consume(item);const key=item.attributes.get("data-testid");if(!key||seen.has(key))return null;seen.add(key);
         if(key==="recipe-cook-and-prep-details-servings"){const number=Number(raw.match(/^Serves\s+(\d+)$/iu)?.[1]);result.fields.yield={...scalar(raw,"text/html",key),value:{display:raw,servings:Number.isSafeInteger(number)&&number>0?number:null}};}
-        else if(["recipe-cook-and-prep-details-prep-time","recipe-cook-and-prep-details-cook-time"].includes(key)){const label=key.includes("prep-time")?"Prep":"Cook",match=raw.match(new RegExp(`^${label}:\\s*(.+)$`,"iu"));if(!match)return null;visibleProviderDuration(result,label,match[1],key);const units=[...match[1].matchAll(/\d+(?:\.\d+)?\s*(days?|hours?|hrs?|hr|minutes?|mins?|min)/giu)].map(m=>/^d/iu.test(m[1])?"day":/^h/iu.test(m[1])?"hour":"minute");if(new Set(units).size<units.length){const field=label==="Prep"?"prepTime":"cookTime";result.fields[field].value=null;result.fields[field].confidence="low";result.warnings.push({code:"UNRESOLVED_PROVIDER_DURATION",severity:"warning",path:`fields.${field}`,message:"Repeated duration units remain literal; no duplicate accessibility text or additive time is assumed."});}}
+        else if(["recipe-cook-and-prep-details-prep-time","recipe-cook-and-prep-details-cook-time"].includes(key)){const label=key.includes("prep-time")?"Prep":"Cook",match=raw.match(new RegExp(`^${label}:\\s*(.+)$`,"iu"));if(!match)return null;visibleProviderDuration(result,label,match[1],key);}
         else result.unclassifiedLines.push({raw,provenance:provenance("text/html",key)});
       }
     }
@@ -3571,7 +3663,8 @@ function parseNYTCookingVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
 function parseHtml(html, sourceUrl, htmlAudit) {
   // Remove active/raw-text regions before scanning. No markup is inserted into a DOM.
   const inertHtml = discardRawContent(html);
-  const sourceAdapterCandidate = parseBBCGoodFoodVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
+  const sourceAdapterCandidate = parseKingArthurVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
+    parseBBCGoodFoodVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseCondeVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseFoodNetworkVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
     parseSallysVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
