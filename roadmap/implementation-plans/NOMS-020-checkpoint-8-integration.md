@@ -6007,3 +6007,111 @@ and screen-reader checks, and whole-app acceptance remain open. This closes
 the first remaining checkpoint-8 group, not the entire checkpoint; five groups
 remain. Rollback is a scoped revert of `dfddc11` and `34c5bfe`, not a workspace
 reset or restoration over user edits.
+
+## Graph gesture cancellation and accessibility follow-up 2026-10-02
+
+**Synthetic gesture and native keyboard checks PASS; real-device and screen-reader
+acceptance OPEN.** The next graph gate was revisited on the existing private
+30-version history fixture, recipe `1c6173d6-505c-92d7-7493-97e30be37b85`, at
+`http://127.0.0.1:32768`. This is not the older deployment's 62-snapshot fixture.
+No new fixture or publication was needed.
+
+### Finding and implementation
+
+A synthetic two-finger touch held for more than the 550ms delay opened a
+snapshot context menu. The handlers inspected only the first touch, so a
+stationary multi-finger gesture could trigger the long-press action.
+`3d9e731` restricts candidates to exactly one finger and cancels the existing
+candidate on invalid starts or multi-finger movement. The token guards before
+and after asynchronous geometry lookup remain unchanged, as do early-release
+cancellation, the delay, and the 12px movement tolerance. The change does not
+prevent default scrolling/pinch behavior for rejected gestures.
+
+The coordinate helpers were first extracted without changing first-touch
+behavior. Tests using Dioxus serialized touch data then failed for both a
+two-finger start and a second finger joining. After the fix, those tests and
+the single-finger boundary/diagonal/empty-touch tests passed.
+
+### Browser and accessibility evidence
+
+Native `Input.dispatchTouchEvent` is unsupported in the selected in-app browser.
+The checks instead dispatched explicitly synthetic TouchEvents to the real
+rendered graph card and exercised the Rust handlers/timer. This does not test
+trusted compatibility clicks, native gesture arbitration or physical scrolling.
+
+After rebuilding/restarting the same app container and reloading the clean
+graph test tab:
+
+- Two-finger start, another finger joining through touchstart or touchmove,
+  movement of 13px, early release and touchcancel all left the menu closed
+  after 650ms. The first multi-case debugger request timed out before returning
+  its receipt; it was not counted as passing evidence. A fresh run with an
+  adequate timeout returned all six closed-menu results.
+- A single finger moved exactly 12px still opened the correct v30 snapshot
+  menu after 700ms and focused View snapshot. Ending the synthetic touch and
+  pressing native Escape returned focus to the v30 snapshot link without
+  navigating. Native Shift+F10 reopened the menu; End/Home moved to Zoom to
+  snapshot/View snapshot, and Escape restored link focus again.
+- The accessibility tree exposed named graph controls, labeled snapshot links,
+  menu roles and the current/outline state. The native outline disclosure
+  opened by click, collapsed/reopened by Return, and its older-history control
+  expanded the graph from 25 to 30 cards by Enter. Focus stayed on the same
+  control, now labeled Collapse older versions. The outline includes explicit
+  textual relationships instead of requiring interpretation of connector art.
+- The graph expansion status is a polite, atomic live region. This confirms
+  DOM semantics only, not whether a particular screen reader announces it at
+  the intended time. No screen-reader executable or connected device was found
+  in the available environment, and native app control is disabled.
+
+Temporary inspected screenshot: `/tmp/noms-020-graph-longpress-fixed.jpg`.
+The test tab was closed after recording results. Six earlier tabs with unsaved
+synthetic profile/collection/image entries remain preserved; they were not
+reloaded. No viewport, touch-emulation, interception or cache override was used
+or left behind by this follow-up. Local mock sign-in restored the existing
+fixture owner, without creating an account or changing profile content.
+
+### Validation and integrity
+
+On `codex/NOMS-020-checkpoint-8`, using the existing integration target:
+
+```sh
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server pages::recipe_version_graph::tests -- --test-threads=1
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target just ci
+```
+
+Focused tests: **64 passed**. Full CI: **959 passed, 0 failed, 12 ignored**;
+native/WASM checks, Clippy, formatting and all repository/audit gates passed.
+Eight existing audit warnings remain allowed. No fresh ignored storage/search
+integration run is claimed. Logs: `/tmp/noms-020-graph-gesture-red.log`,
+`/tmp/noms-020-graph-gesture-green.log`, `/tmp/noms-020-graph-gesture-ci.log` and
+`/tmp/noms-020-graph-gesture-build.log`.
+
+The ordered JSONB content checks taken after initial probes/before rebuilt-client
+testing and again after that testing match: 36 recipes, 71 versions, 10 drafts,
+31 collections, 3 users and 10 media assets. Recipe/version/draft/collection/user
+hashes also match the preceding acceptance record. Media's within-follow-up
+hash is `d0a508add61d319d45f45fe1c393fbed`; it differs from the earlier record,
+so no unchanged-media claim across the two turns is made. This slice performed
+no content/media upload, save or delete. User integration CSS was preserved,
+removing only the build-generated grayscale rule after restart.
+
+Second-pass self-review: **PASS for the scoped fix and stated evidence**;
+no independent-agent review. The fix was fast-forwarded into the existing
+NOMS-020 integration worktree; main and other deployments were not changed.
+Rollback is a scoped revert of `3d9e731`. Five acceptance groups remain open.
+
+### Required manual graph handoff
+
+- On a physical touch device, verify short tap navigation, deliberate long press,
+  release without accidental navigation, scroll/movement cancellation, two-finger
+  gestures and operating-system cancellation. Verify ordinary page/outline
+  scrolling and that graph controls remain reachable at phone/tablet sizes.
+- With an actual screen reader, verify snapshot/action identification, current
+  state, outline relationships, expanded/busy announcements, comparison direction
+  and focus restoration after dismissing menus. Confirm private/redacted content
+  stays unavailable. Accessibility-tree observations alone do not complete this.
+
+The next executable acceptance slice is the direct multipart upload/OAuth
+identity-edge audit. Keep the graph manual gate open until the physical-device
+and assistive-technology checks are recorded; do not repeat synthetic checks as
+if they could certify those environments.
