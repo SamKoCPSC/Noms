@@ -17,6 +17,9 @@ pub(super) trait ModalPlatform {
     fn focus_dialog(&self, element: &Self::Element, prevent_scroll: bool);
     fn controls(&self, dialog: &Self::Element) -> Vec<Self::Element>;
     fn is_open(&self, dialog: &Self::Element) -> bool;
+    fn suspended(&self, _dialog: &Self::Element) -> bool {
+        false
+    }
 }
 struct ModalEntry<E> {
     id: String,
@@ -24,6 +27,7 @@ struct ModalEntry<E> {
     previous_focus: Option<E>,
     selector: Option<String>,
     pending: bool,
+    suspended: bool,
 }
 pub(super) struct ModalLifecycle<P: ModalPlatform> {
     platform: P,
@@ -47,10 +51,11 @@ impl<P: ModalPlatform> ModalLifecycle<P> {
         } else {
             let previous_focus = self.platform.active();
             let target = self.platform.target(&dialog, selector);
-            if !self.platform.open(&dialog, target.as_ref()) {
+            let suspended = self.platform.suspended(&dialog);
+            if !suspended && !self.platform.open(&dialog, target.as_ref()) {
                 return;
             }
-            if self.entries.is_empty() {
+            if !suspended && self.scroll.is_none() {
                 self.scroll = Some(self.platform.lock_scroll());
             }
             self.entries.push(ModalEntry {
@@ -59,10 +64,16 @@ impl<P: ModalPlatform> ModalLifecycle<P> {
                 previous_focus,
                 selector: None,
                 pending: false,
+                suspended,
             });
             self.entries.len() - 1
         };
         let entry = &mut self.entries[index];
+        if entry.suspended {
+            entry.selector = Some(selector.into());
+            entry.pending = pending;
+            return;
+        }
         if entry.selector.as_deref() != Some(selector) || entry.pending != pending {
             if pending {
                 self.platform.focus_dialog(&entry.dialog, true);
@@ -73,22 +84,69 @@ impl<P: ModalPlatform> ModalLifecycle<P> {
             entry.pending = pending;
         }
     }
+    /// Release native background inertness without disposing editor state or
+    /// its original focus target. Hidden pending updates may continue safely.
+    pub fn suspend(&mut self, id: &str) {
+        if let Some(entry) = self
+            .entries
+            .iter_mut()
+            .find(|entry| entry.id == id && !entry.suspended)
+        {
+            entry.suspended = true;
+            self.platform.close(&entry.dialog);
+        }
+        if self.entries.iter().all(|entry| entry.suspended) {
+            if let Some(snapshot) = self.scroll.take() {
+                self.platform.restore_scroll(snapshot);
+            }
+        }
+    }
+    pub fn resume(&mut self, id: &str) {
+        let Some(entry) = self
+            .entries
+            .iter_mut()
+            .find(|entry| entry.id == id && entry.suspended)
+        else {
+            return;
+        };
+        if !self.platform.connected(&entry.dialog) || self.platform.suspended(&entry.dialog) {
+            return;
+        }
+        let target = entry
+            .selector
+            .as_deref()
+            .and_then(|selector| self.platform.target(&entry.dialog, selector));
+        if !self.platform.open(&entry.dialog, target.as_ref()) {
+            return;
+        }
+        entry.suspended = false;
+        if self.scroll.is_none() {
+            self.scroll = Some(self.platform.lock_scroll());
+        }
+        if entry.pending {
+            self.platform.focus_dialog(&entry.dialog, true);
+        } else if let Some(target) = target {
+            self.platform.focus(&target, false);
+        }
+    }
     pub fn dispose(&mut self, id: &str) {
         let Some(index) = self.entries.iter().position(|entry| entry.id == id) else {
             return;
         };
         let entry = self.entries.remove(index);
         self.platform.close(&entry.dialog);
-        if self.entries.is_empty() {
+        if self.entries.iter().all(|entry| entry.suspended) {
             if let Some(snapshot) = self.scroll.take() {
                 self.platform.restore_scroll(snapshot);
             }
         }
-        if let Some(previous) = entry.previous_focus {
+        if let Some(previous) = entry.previous_focus.filter(|_| !entry.suspended) {
             if self.platform.connected(&previous)
                 && self
                     .entries
-                    .last()
+                    .iter()
+                    .rev()
+                    .find(|entry| !entry.suspended)
                     .is_none_or(|top| self.platform.contains(&top.dialog, &previous))
             {
                 self.platform.focus(&previous, true);
@@ -96,7 +154,13 @@ impl<P: ModalPlatform> ModalLifecycle<P> {
         }
     }
     pub fn wrap_tab(&self, id: &str, backwards: bool) -> bool {
-        let Some(entry) = self.entries.last().filter(|entry| entry.id == id) else {
+        let Some(entry) = self
+            .entries
+            .iter()
+            .rev()
+            .find(|entry| !entry.suspended)
+            .filter(|entry| entry.id == id)
+        else {
             return false;
         };
         if !self.platform.is_open(&entry.dialog) || !self.platform.connected(&entry.dialog) {
@@ -208,6 +272,13 @@ pub(super) mod browser {
         fn is_open(&self, dialog: &HtmlElement) -> bool {
             dialog.unchecked_ref::<HtmlDialogElement>().open()
         }
+        fn suspended(&self, dialog: &HtmlElement) -> bool {
+            dialog
+                .closest("#session-retained-page[hidden]")
+                .ok()
+                .flatten()
+                .is_some()
+        }
         fn controls(&self, dialog: &HtmlElement) -> Vec<HtmlElement> {
             let Ok(nodes)=dialog.query_selector_all("button, input, select, textarea, a[href], area[href], summary, [tabindex], [contenteditable=\"true\"]") else {return vec![];};
             let mut controls: Vec<_> = (0..nodes.length())
@@ -241,5 +312,25 @@ pub(super) mod browser {
     }
     pub(crate) fn wrap_modal_tab(id: &str, backwards: bool) -> bool {
         MODALS.with_borrow(|modals| modals.wrap_tab(id, backwards))
+    }
+    pub(crate) fn set_form_modals_suspended(root_id: &str, suspended: bool) {
+        let Some(root) = dom::element(root_id) else {
+            return;
+        };
+        MODALS.with_borrow_mut(|modals| {
+            let ids: Vec<_> = modals
+                .entries
+                .iter()
+                .filter(|entry| root.contains(Some(&entry.dialog)))
+                .map(|entry| entry.id.clone())
+                .collect();
+            for id in ids {
+                if suspended {
+                    modals.suspend(&id);
+                } else {
+                    modals.resume(&id);
+                }
+            }
+        });
     }
 }

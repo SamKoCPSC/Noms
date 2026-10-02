@@ -239,3 +239,12 @@ pub(crate) fn dispose_account_menu(id: &str) {
         registry.remove(id);
     });
 }
+
+/// An identity change must not leave an account action menu open for its old user.
+pub(crate) fn close_account_menu(id: &str) {
+    MENUS.with_borrow(|registry| {
+        if let Some(registration) = registry.get(id) {
+            registration.menu.close(false);
+        }
+    });
+}

@@ -5771,3 +5771,8 @@ dialog.shared-modal::backdrop { background: transparent; }
         color: GrayText;
     }
 }
+/* Hidden retained editors must also hide descendants promoted to the top layer. */
+#session-retained-page[hidden] dialog,
+#session-retained-page[hidden] [popover] {
+    display: none !important;
+}

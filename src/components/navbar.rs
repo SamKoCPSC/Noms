@@ -45,6 +45,12 @@ pub fn Navbar(theme: UseTheme) -> Element {
     #[cfg(target_arch = "wasm32")]
     use_drop(|| dispose_account_menu("navbar-user-dropdown"));
     let auth = use_auth();
+    let identity = auth.current_user_id;
+    use_effect(use_reactive(&identity, move |_| {
+        menu_open.set(false);
+        #[cfg(target_arch = "wasm32")]
+        crate::components::base::account_menu::close_account_menu("navbar-user-dropdown");
+    }));
     let current_route = use_route::<Route>();
     // Browser Back/Forward or another route transition must not leave a stale dialog.
     use_effect(use_reactive(&current_route, move |_| menu_open.set(false)));

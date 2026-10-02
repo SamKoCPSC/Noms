@@ -1080,7 +1080,7 @@ pub fn SettingsProfile() -> Element {
         .current_user
         .as_ref()
         .and_then(|u| u.avatar_url.clone());
-    if let Some(ref url) = initial_avatar_url {
+    if let Some(ref url) = initial_avatar_url.filter(|_| form_account() == auth.current_user_id) {
         if avatar_url_signal.read().is_none() {
             avatar_url_signal.set(Some(url.clone()));
         }

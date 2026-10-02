@@ -162,3 +162,32 @@ fn modal_pending_anchors_focus_and_failure_restores_safe_target() {
     lifecycle.sync("10", "button", false);
     assert_eq!(dom.borrow().active, 11);
 }
+
+#[test]
+fn modal_session_suspension_retains_entries_releases_scroll_and_restores_pending_focus() {
+    let (mut lifecycle, dom) = fixture();
+    lifecycle.sync("10", "input", false);
+    lifecycle.sync("20", "button", false);
+    lifecycle.suspend("20");
+    assert_eq!(dom.borrow().overflow[0].0, "hidden");
+    lifecycle.suspend("10");
+    assert_eq!(dom.borrow().overflow[0].0, "scroll");
+    assert!(!lifecycle.wrap_tab("20", false));
+    dom.borrow_mut().active = 1;
+    lifecycle.sync("20", "button", true);
+    assert_eq!(
+        dom.borrow().active,
+        1,
+        "Hidden pending updates must not take focus"
+    );
+    assert_eq!(dom.borrow().opens, 2);
+    lifecycle.resume("10");
+    lifecycle.resume("20");
+    assert_eq!(dom.borrow().opens, 4);
+    assert_eq!(dom.borrow().active, 20);
+    assert_eq!(dom.borrow().overflow[0].0, "hidden");
+    lifecycle.dispose("20");
+    lifecycle.dispose("10");
+    assert_eq!(dom.borrow().overflow[0].0, "scroll");
+    assert_eq!(dom.borrow().active, 1);
+}

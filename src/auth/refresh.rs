@@ -6,6 +6,7 @@ use dioxus::prelude::*;
 #[derive(Default)]
 struct AuthRefreshState {
     pending: bool,
+    queued: bool,
     failed: bool,
     recovered: bool,
 }
@@ -17,10 +18,17 @@ impl AuthRefreshState {
 
     fn begin(&mut self) -> bool {
         if self.pending {
+            // A cookie may change while the request is in flight. Coalesce
+            // activation/navigation events into one fresh follow-up check.
+            self.queued = true;
             return false;
         }
         self.pending = true;
         true
+    }
+
+    fn take_queued(&mut self) -> bool {
+        std::mem::take(&mut self.queued)
     }
 
     fn finish(
@@ -84,6 +92,53 @@ async fn fetch_auth_refresh() -> Result<AuthContext, ()> {
     parse_auth_refresh(&response.text().await.map_err(|_| ())?)
 }
 
+/// Owned activation listeners: dropping the shared shell releases both the
+/// browser registrations and their WASM callbacks, without a JavaScript bridge.
+#[cfg(target_arch = "wasm32")]
+struct SessionActivityListener {
+    target: web_sys::EventTarget,
+    name: &'static str,
+    callback: wasm_bindgen::closure::Closure<dyn FnMut(web_sys::Event)>,
+}
+
+#[cfg(target_arch = "wasm32")]
+impl SessionActivityListener {
+    fn new(
+        target: web_sys::EventTarget,
+        name: &'static str,
+        refresh: Callback<()>,
+    ) -> Option<Self> {
+        use wasm_bindgen::JsCast;
+        let callback = wasm_bindgen::closure::Closure::wrap(Box::new(move |_: web_sys::Event| {
+            if web_sys::window()
+                .and_then(|window| window.document())
+                .is_some_and(|document| !document.hidden())
+            {
+                refresh.call(());
+            }
+        })
+            as Box<dyn FnMut(web_sys::Event)>);
+        target
+            .add_event_listener_with_callback(name, callback.as_ref().unchecked_ref())
+            .ok()?;
+        Some(Self {
+            target,
+            name,
+            callback,
+        })
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl Drop for SessionActivityListener {
+    fn drop(&mut self) {
+        use wasm_bindgen::JsCast;
+        let _ = self
+            .target
+            .remove_event_listener_with_callback(self.name, self.callback.as_ref().unchecked_ref());
+    }
+}
+
 #[component]
 fn AuthRefreshFeedback(pending: bool, failed: bool, on_action: EventHandler<()>) -> Element {
     rsx! {
@@ -126,20 +181,59 @@ pub fn AuthRefresh() -> Element {
         if !state.write().begin() {
             return;
         }
-        let started = auth.peek().clone();
         spawn(async move {
-            #[cfg(target_arch = "wasm32")]
-            let result = fetch_auth_refresh().await;
-            #[cfg(not(target_arch = "wasm32"))]
-            let result = Err(());
-            let current = auth.peek().clone();
-            if let Some(context) = state.write().finish(&started, &current, result) {
-                auth.set(context);
+            loop {
+                let started = auth.peek().clone();
+                #[cfg(target_arch = "wasm32")]
+                let result = fetch_auth_refresh().await;
+                #[cfg(not(target_arch = "wasm32"))]
+                let result = Err(());
+                let current = auth.peek().clone();
+                let completed = state.write().finish(&started, &current, result);
+                if let Some(context) = completed {
+                    if context != current {
+                        auth.set(context);
+                    }
+                }
+                let follow_up = state.write().take_queued();
+                if !follow_up {
+                    break;
+                }
+                let claimed = state.write().begin();
+                if !claimed {
+                    break;
+                }
             }
         });
     });
     #[cfg(target_arch = "wasm32")]
-    use_hook(move || refresh.call(()));
+    {
+        let listeners = use_hook(move || {
+            let mut listeners = Vec::new();
+            if let Some(window) = web_sys::window() {
+                for name in ["focus", "pageshow"] {
+                    listeners.extend(SessionActivityListener::new(
+                        window.clone().into(),
+                        name,
+                        refresh,
+                    ));
+                }
+                if let Some(document) = window.document() {
+                    listeners.extend(SessionActivityListener::new(
+                        document.into(),
+                        "visibilitychange",
+                        refresh,
+                    ));
+                }
+            }
+            std::rc::Rc::new(std::cell::RefCell::new(listeners))
+        });
+        use_drop(move || listeners.borrow_mut().clear());
+        // This reactive route read also checks after client-side navigation.
+        // The first client effect supplies the hydration check; SSR never fetches.
+        let route = router().full_route_string();
+        use_effect(use_reactive(&route, move |_| refresh.call(())));
+    }
 
     rsx! {
         if state.read().visible() {

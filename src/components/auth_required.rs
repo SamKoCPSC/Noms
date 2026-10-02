@@ -14,66 +14,76 @@ pub struct AuthRequiredProps {
     pub children: Element,
 }
 
-/// Renders children if authenticated, otherwise shows a login prompt.
+/// Renders children if authenticated, otherwise shows a login prompt. Keep an
+/// already-mounted editor hidden on sign-out so its fields and owned previews
+/// survive until its original account returns. Fresh guests never mount it.
 #[component]
 pub fn AuthRequired(props: AuthRequiredProps) -> Element {
     let auth = use_auth();
+    let mut previously_authenticated = use_signal(|| auth.is_authenticated);
+    let signed_in = auth.is_authenticated;
+    use_effect(use_reactive(&signed_in, move |signed_in| {
+        if signed_in {
+            previously_authenticated.set(true);
+        }
+    }));
 
+    rsx! {
+        if !auth.is_authenticated { SignInPrompt {} }
+        div { hidden: !auth.is_authenticated, inert: !auth.is_authenticated,
+            if auth.is_authenticated || previously_authenticated() { {&props.children} }
+        }
+    }
+}
+
+#[component]
+fn SignInPrompt() -> Element {
     // Not authenticated — show login prompt
-    if !auth.is_authenticated {
-        let sign_in_href = try_router()
-            .and_then(|router| {
-                // This read subscribes to navigation and retains the raw query
-                // rather than serializing a route that might drop parameters.
-                crate::auth::redirect::normalize_same_origin_redirect(&router.full_route_string())
-            })
-            .map(|target| {
-                let encoded = percent_encoding::utf8_percent_encode(
-                    &target,
-                    percent_encoding::NON_ALPHANUMERIC,
-                );
-                format!("/login?redirect_uri={encoded}")
-            })
-            .unwrap_or_else(|| "/login".to_string());
-        return rsx! {
+    let sign_in_href = try_router()
+        .and_then(|router| {
+            // This read subscribes to navigation and retains the raw query
+            // rather than serializing a route that might drop parameters.
+            crate::auth::redirect::normalize_same_origin_redirect(&router.full_route_string())
+        })
+        .map(|target| {
+            let encoded =
+                percent_encoding::utf8_percent_encode(&target, percent_encoding::NON_ALPHANUMERIC);
+            format!("/login?redirect_uri={encoded}")
+        })
+        .unwrap_or_else(|| "/login".to_string());
+    rsx! {
+        div {
+            class: "flex flex-col items-center justify-center min-h-[50vh] text-center px-4",
             div {
-                class: "flex flex-col items-center justify-center min-h-[50vh] text-center px-4",
-                div {
-                    class: "inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 mb-6",
-                    span {
-                        class: "text-3xl",
-                        aria_hidden: "true",
-                        "🔒"
-                    }
-                }
-                h2 {
-                    class: "text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2",
-                    "Sign in to continue"
-                }
-                p {
-                    class: "text-gray-600 dark:text-gray-400 mb-8 max-w-md",
-                    "This page requires you to be signed in. Please log in with your account to access your content."
-                }
-                div {
-                    class: "flex flex-col sm:flex-row gap-3",
-                    a {
-                        href: sign_in_href,
-                        class: "btn btn-primary touch-target",
-                        "Sign In"
-                    }
-                    a {
-                        href: "/",
-                        class: "btn btn-secondary touch-target",
-                        "Go Home"
-                    }
+                class: "inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 mb-6",
+                span {
+                    class: "text-3xl",
+                    aria_hidden: "true",
+                    "🔒"
                 }
             }
-        };
-    }
-
-    // Authenticated — render protected content
-    rsx! {
-        {&props.children}
+            h2 {
+                class: "text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2",
+                "Sign in to continue"
+            }
+            p {
+                class: "text-gray-600 dark:text-gray-400 mb-8 max-w-md",
+                "This page requires you to be signed in. Please log in with your account to access your content."
+            }
+            div {
+                class: "flex flex-col sm:flex-row gap-3",
+                a {
+                    href: sign_in_href,
+                    class: "btn btn-primary touch-target",
+                    "Sign In"
+                }
+                a {
+                    href: "/",
+                    class: "btn btn-secondary touch-target",
+                    "Go Home"
+                }
+            }
+        }
     }
 }
 

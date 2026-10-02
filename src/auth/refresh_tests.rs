@@ -213,3 +213,52 @@ fn shared_shell_owns_one_refresh_without_route_or_page_reset() {
     assert!(refresh.contains("state.write().finish("));
     assert!(!refresh.contains("location().reload"));
 }
+
+#[test]
+fn session_activity_during_a_check_is_coalesced_into_one_follow_up_check() {
+    let owner = signed_in();
+    let mut state = AuthRefreshState::default();
+    assert!(state.begin());
+    assert!(!state.begin());
+    assert!(!state.begin());
+    state.finish(&owner, &owner, Ok(owner.clone()));
+    assert!(
+        state.take_queued(),
+        "A focus/route change may replace the cookie mid-request"
+    );
+    assert!(!state.take_queued(), "Repeated events must coalesce");
+    assert!(state.begin());
+    assert_eq!(
+        state.finish(&owner, &owner, Ok(AuthContext::default())),
+        Some(AuthContext::default())
+    );
+    assert!(!state.take_queued());
+}
+
+#[test]
+fn shared_session_checks_follow_activation_and_routes_with_owned_listener_cleanup() {
+    let source = include_str!("refresh.rs");
+    for event in ["\"focus\"", "\"pageshow\"", "\"visibilitychange\""] {
+        assert!(
+            source.contains(event),
+            "Missing session activation event {event}"
+        );
+    }
+    assert!(source.contains("document.hidden()"));
+    assert!(source.contains("full_route_string()"));
+    assert!(source.contains("remove_event_listener_with_callback"));
+    assert!(source.contains("use_drop("));
+    assert!(
+        !source.contains("local_storage"),
+        "Never publish identities or tokens through storage"
+    );
+}
+
+#[test]
+fn session_routes_reset_read_views_but_preserve_and_hide_original_forms() {
+    let shell = include_str!("../components/app_layout.rs");
+    assert!(shell.contains("SessionPage {}"));
+    let gate = include_str!("../components/auth_required.rs");
+    assert!(gate.contains("previously_authenticated"));
+    assert!(gate.contains("hidden: !auth.is_authenticated"));
+}

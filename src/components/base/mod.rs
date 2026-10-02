@@ -58,6 +58,8 @@ mod shared_modal;
 pub(crate) mod account_menu;
 #[cfg(any(target_arch = "wasm32", test))]
 mod modal_lifecycle;
+#[cfg(target_arch = "wasm32")]
+pub(crate) use modal_lifecycle::browser::set_form_modals_suspended;
 #[cfg(test)]
 mod modal_lifecycle_tests;
 #[cfg(target_arch = "wasm32")]
