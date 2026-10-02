@@ -4945,3 +4945,149 @@ initial step modal cancels edits, not an upload already underway. Post-commit
 lost responses, navigation/identity replacement, full accessibility and
 physical-device touch remain open; destructive/account-linking actions still
 need their separate authorization and fixtures.
+
+## Initial step-photo upload recovery, preview lifecycle and ordering — 2026-10-01
+
+Continued the next scoped acceptance gate on the existing task worktree
+`codex/NOMS-020-checkpoint-8`, based on `f75bd30`. Source commits, in order:
+`703441e` (recovery, local preview ownership and batch/ordering guards),
+`5f49899` (client-only callback guards) and `ab4d386` (native file-selection
+stub consumption). These are fast-forward integrated into
+`codex/NOMS-020-visual-design-refinement`; nothing was pushed. Reused the
+established local project `noms-c799915fcf93e034` on port 32768, rebuilding and
+restarting only its app. Its existing database and media were retained.
+
+Contract and changes:
+
+- Both recipe editors validate original step files using the shared
+  JPEG/PNG/WebP, non-empty and 10 MB constraints before decoding. Safe,
+  filename-bounded inline alerts distinguish validation, processing and upload
+  failures; technical details remain in logs. The native file picker resets so
+  the same file can be chosen again.
+- One synchronous claim protects the entire selection batch. Pending uploads
+  disable and live-guard structural step/photo controls, including reorder,
+  drag, removal, another selection and Add Step. Publication/cancel guards
+  remain in place. Method text stays editable. The upload destination cannot
+  change through those controls between asynchronous files.
+- A single file opens the existing adjustment modal. Multi-file selection
+  uploads sequentially without replacing an unconfirmed modal; users can edit
+  each uploaded photo through its preview button. Valid files keep selection
+  order even when invalid files are skipped.
+- Each local modal URL has a single owned lease in the component signal.
+  Closing the modal, processing/upload failure or component teardown drops
+  that lease and revokes the URL. Upload tasks retain only string keys.
+  Failed pending-edit handoffs are removed, leaving other photos unchanged.
+  This does not change initial-modal cancellation into upload cancellation.
+
+Tests were added before implementation. The initial focused run failed on
+missing production helpers/components. Final focused command:
+`SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration-worktree>/target cargo test
+--features server step_photo -- --test-threads=4`: **8 passed, 0 failed**,
+`/tmp/noms-020-step-upload-green.log`. Coverage includes safe bounded messages,
+SSR status/alert semantics and source-contract checks for both upload paths;
+source checks are not a substitute for browser execution.
+
+`SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration-worktree>/target cargo check
+--target wasm32-unknown-unknown --no-default-features --features web` passed;
+`/tmp/noms-020-step-upload-web.log`. Final
+`PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true
+CARGO_TARGET_DIR=<integration-worktree>/target just ci`: **930 passed,
+0 failed, 12 ignored**, all remaining gates passed, with the eight existing
+allowed advisory warnings; `/tmp/noms-020-step-upload-ci-final.log`. Earlier CI
+attempts caught native-only needless-return/unused-file warnings; the two
+follow-up commits fix those rather than suppressing the checks. Formatting and
+`git diff --check` passed.
+
+Browser acceptance used the existing private unpublished draft
+`ba3917ec-1033-4e19-83aa-a4977109a297`, titled
+**CP8 New editor step-photo reopen — Local test only**, owned by the original
+mock account. Only this synthetic draft and three new recipe-image assets
+were durably changed; nothing was published or deleted.
+
+1. Before rebuilding, an empty PNG left the old initial modal open with no
+   visible failure alert (`/tmp/noms-020-step-upload-before.jpg`). After the
+   fix, empty/unsupported selections report actionable alerts without opening
+   a modal or allocating preview URLs. A malformed PNG closes its failed modal
+   and restores controls. Both local URLs observed for that decode were
+   revoked.
+2. Held a portrait upload before server execution. The existing photo,
+   Add Step, photo editing/reorder and both steps' structural controls were
+   disabled; Publish/Cancel/Discard were disabled. Confirmed temporary
+   rotation 35/saturation 85 while held, then failed the request. The one
+   existing photo stayed unchanged, the alert offered reselection, and
+   controls recovered.
+3. Retried the identical portrait file. Its modal started at rotation 0 and
+   saturation 100, not the failed handoff's values. Confirmed rotation 15 and
+   saturation 90; a real upload succeeded. Reopening restored those values.
+4. Selected JPEG, empty PNG and WebP together. While the first request was
+   held, there was no adjustment modal and the batch lock stayed active.
+   Resuming uploaded both valid files in selection order and retained the
+   empty-file warning. Moved WebP left then right; moved the photo-bearing
+   step down then up. Autosave/reload preserved the final order and associated
+   method text.
+5. At 320px, the malformed-photo alert wrapped within its panel (left 32,
+   right 273, width 241; viewport 320, document width 305). Four photos and
+   both method rows remained usable without document overflow. Screenshot
+   `/tmp/noms-020-step-upload-recovery-320.jpg` was visually inspected. This
+   checks narrow layout, not physical-device touch or screen-reader speech.
+6. On `/recipes/new`, malformed-file processing recovered with the same safe
+   alert. Then opened a valid portrait's local modal with its upload held;
+   normal same-document browser Back returned to the existing draft and
+   revoked the component-owned preview. Both held upload and draft-create
+   requests were aborted before execution, so no additional draft was made.
+
+Temporary diagnostic wrappers logged URL allocation/revocation in this test
+tab only. For the first edit-route sequence (malformed decode, failed single
+upload, successful retry and two valid batch files), eight unique local URLs
+were allocated and all eight revoked. The new-route teardown allocated two
+more and revoked both. Raw events:
+`/tmp/noms-020-step-upload-preview-events.json`. Reload removed the wrappers;
+interception was cleared, Runtime/Network observation disabled, viewport reset
+and the temporary tab closed. This is scoped URL-lifecycle evidence, not a
+claim that every image-processing callback or browser resource is leak-free.
+
+Saved draft provenance after reload:
+
+| Step 1 photo order | Asset ID | Rectangle edit |
+| --- | --- | --- |
+| Original landscape PNG | `69af30a3-23b7-4d1e-9348-6eadae1231e5` | Original rotation 15, saturation 0.8 preserved |
+| Retried portrait PNG | `70a18b88-6365-480f-9691-39e90eea33f0` | Rotation 15, saturation 0.9; crop y 0.359375, height 0.28125 |
+| Batch landscape JPEG | `755bb27f-dbcb-40a3-ab47-78c8e1d9fc2e` | Default full rectangle |
+| Batch landscape WebP | `0ec1cadf-097e-42fe-aaf3-34c4e5a1353f` | Default full rectangle |
+
+The second method row contains only **Synthetic destination guard step.**
+No crop adjustment was baked into upload pixels by this slice; earlier export
+acceptance remains the pixel evidence. No new stored-pixel comparison is
+claimed here.
+
+Final read-only database hashes match the start of this slice, excluding only
+the named synthetic draft:
+
+| Rows | Count | Hash |
+| --- | ---: | --- |
+| Recipes | 32 | `e8933d2d64c0b6bd5553833c8a0dab20` |
+| Versions | 66 | `ddeec72b8bfa497a60690729e3b65bac` |
+| Collections | 30 | `9f2f90802adafb72eca3ea15fc0bbacb` |
+| Memberships | 28 | `fd3bc9401f1389c7fa08cff816e7b44b` |
+| Other drafts | 3 | `56ecca403e09c456247b908907485805` |
+| Users | 3 | `7bc139f2aea02af7488ad90b2d8f0cca` |
+
+The rebuild regenerated a `.grayscale` utility in the integration worktree's
+user-owned dirty `assets/tailwind.css`. Removed only that generated block;
+the file's original SHA-256 is restored exactly:
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+It remains uncommitted; main's unrelated roadmap changes are untouched.
+
+Explicit second-pass self-review: **PASS for this scoped gate**. Reviewed both
+route diffs, native/WASM compilation, bounded safe feedback, whole-batch/live
+guards, pending-edit failure cleanup, URL lease ownership, real retry/order
+persistence, original-row integrity and evidence boundaries. No independent
+review agent was used. Cross-step photo dragging is not newly implemented or
+accepted; existing same-step arrow reordering is the tested interaction.
+
+**Next:** post-commit lost-response/navigation/identity-replacement recovery,
+remaining image-format/encoding edge cases, full accessibility/real-device
+checks and whole-app visual/behavior acceptance. Pre-server failure tests do
+not establish behavior after a committed mutation whose response is lost.
+Further destructive/account-linking tests still require separate authorization
+and isolated fixtures. Checkpoint 8 remains open.
