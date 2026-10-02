@@ -189,6 +189,38 @@ struct VersionGraphTouchContextCandidate {
     origin: (f64, f64),
 }
 
+impl VersionGraphTouchContextCandidate {
+    fn from_touches(
+        node_id: VersionGraphNodeId,
+        token: u64,
+        touches: &[dioxus::html::TouchPoint],
+    ) -> Option<Self> {
+        // A context menu owns one stationary finger, never a pinch/scroll
+        // gesture. Invalid starts also cancel any previously armed timer.
+        if touches.len() != 1 {
+            return None;
+        }
+        let position = touches.first()?.client_coordinates();
+        Some(Self {
+            node_id,
+            token,
+            origin: (position.x, position.y),
+        })
+    }
+
+    fn remains_within_tolerance(&self, touches: &[dioxus::html::TouchPoint]) -> bool {
+        if touches.len() != 1 {
+            return false;
+        }
+        let Some(touch) = touches.first() else {
+            return false;
+        };
+        let position = touch.client_coordinates();
+        (position.x - self.origin.0).hypot(position.y - self.origin.1)
+            <= GRAPH_TOUCH_CONTEXT_MENU_MOVE_TOLERANCE_PX
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct VersionGraphFrontierId {
     anchor: VersionGraphNodeId,
@@ -2556,19 +2588,13 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                     },
                                                     ontouchstart: move |event| {
                                                         let touches = event.data().touches();
-                                                        let Some(touch) = touches.first() else {
-                                                            return;
-                                                        };
-                                                        let position = touch.client_coordinates();
                                                         let token = touch_context_token()
                                                             .wrapping_add(1);
                                                         touch_context_token.set(token);
-                                                        let candidate =
-                                                            VersionGraphTouchContextCandidate {
-                                                                node_id,
-                                                                token,
-                                                                origin: (position.x, position.y),
-                                                            };
+                                                        let Some(candidate) = VersionGraphTouchContextCandidate::from_touches(node_id, token, &touches) else {
+                                                            touch_context_candidate.set(None);
+                                                            return;
+                                                        };
                                                         touch_context_candidate.set(Some(candidate));
                                                         #[cfg(target_arch = "wasm32")]
                                                         {
@@ -2636,16 +2662,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                                                             return;
                                                         }
                                                         let touches = event.data().touches();
-                                                        let Some(touch) = touches.first() else {
-                                                            touch_context_candidate.set(None);
-                                                            return;
-                                                        };
-                                                        let position = touch.client_coordinates();
-                                                        let distance = (position.x - candidate.origin.0)
-                                                            .hypot(position.y - candidate.origin.1);
-                                                        if distance
-                                                            > GRAPH_TOUCH_CONTEXT_MENU_MOVE_TOLERANCE_PX
-                                                        {
+                                                        if !candidate.remains_within_tolerance(&touches) {
                                                             touch_context_candidate.set(None);
                                                         }
                                                     },
@@ -3781,6 +3798,75 @@ pub fn RecipeVersionGraph(id: String) -> Element {
 
 #[cfg(test)]
 mod tests {
+    fn gesture_touches(points: &[(f64, f64)]) -> Vec<dioxus::html::TouchPoint> {
+        let points: Vec<_> = points
+            .iter()
+            .enumerate()
+            .map(|(identifier, (x, y))| {
+                serde_json::json!({
+                    "identifier": identifier, "client_x": x, "client_y": y,
+                    "page_x": x, "page_y": y, "screen_x": x, "screen_y": y,
+                    "force": 1.0, "radius_x": 1.0, "radius_y": 1.0, "rotation_angle": 0.0,
+                })
+            })
+            .collect();
+        let data: dioxus::html::SerializedTouchData = serde_json::from_value(serde_json::json!({
+            "alt_key": false, "ctrl_key": false, "meta_key": false, "shift_key": false,
+            "touches": points, "target_touches": [], "changed_touches": [],
+        }))
+        .unwrap();
+        dioxus::html::TouchData::from(data).touches()
+    }
+
+    #[test]
+    fn snapshot_long_press_rejects_multitouch_start() {
+        let node_id = super::VersionGraphNodeId {
+            recipe_id: uuid::Uuid::nil(),
+            version_number: 1,
+        };
+        assert!(super::VersionGraphTouchContextCandidate::from_touches(
+            node_id,
+            1,
+            &gesture_touches(&[(100.0, 100.0), (120.0, 100.0)]),
+        )
+        .is_none());
+        assert!(super::VersionGraphTouchContextCandidate::from_touches(node_id, 1, &[]).is_none());
+    }
+
+    #[test]
+    fn snapshot_long_press_cancels_when_second_finger_joins() {
+        let node_id = super::VersionGraphNodeId {
+            recipe_id: uuid::Uuid::nil(),
+            version_number: 1,
+        };
+        let candidate = super::VersionGraphTouchContextCandidate::from_touches(
+            node_id,
+            1,
+            &gesture_touches(&[(100.0, 100.0)]),
+        )
+        .unwrap();
+        assert!(!candidate
+            .remains_within_tolerance(&gesture_touches(&[(100.0, 100.0), (120.0, 100.0)])));
+    }
+
+    #[test]
+    fn snapshot_long_press_keeps_only_single_finger_within_tolerance() {
+        let node_id = super::VersionGraphNodeId {
+            recipe_id: uuid::Uuid::nil(),
+            version_number: 1,
+        };
+        let candidate = super::VersionGraphTouchContextCandidate::from_touches(
+            node_id,
+            1,
+            &gesture_touches(&[(100.0, 100.0)]),
+        )
+        .unwrap();
+        assert!(candidate.remains_within_tolerance(&gesture_touches(&[(112.0, 100.0)])));
+        assert!(!candidate.remains_within_tolerance(&gesture_touches(&[(113.0, 100.0)])));
+        assert!(!candidate.remains_within_tolerance(&gesture_touches(&[(109.0, 109.0)])));
+        assert!(!candidate.remains_within_tolerance(&[]));
+    }
+
     #[test]
     fn graph_expansion_spinner_respects_reduced_motion() {
         let css = include_str!("../../assets/recipe-version-graph.css");
