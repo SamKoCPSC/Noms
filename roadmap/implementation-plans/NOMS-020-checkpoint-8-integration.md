@@ -5596,3 +5596,183 @@ final-navigation paths, remaining image edge cases, full accessibility and
 real-device checks, and final whole-app acceptance. Any further destructive
 test needs a new isolated fixture and action-time approval. Checkpoint 8
 remains open.
+
+## Session refresh and protected-page lifecycle — 2026-10-01
+
+User approved the next planned session/navigation consistency step. Reused
+the dedicated checkpoint-8 worktree and local fast-forward integration flow;
+root roadmap dirt and integration user CSS remain outside this task.
+
+### Contract and ordered implementation
+
+1. `d7b3013`: recheck the verified session at hydration, client route changes,
+   window focus/pageshow and visible-document activation. Events during a
+   pending check coalesce into one follow-up, so a cookie replaced mid-request
+   is not silently missed. Failed/malformed checks retain the last context
+   and the existing explicit recovery control; local profile updates still
+   invalidate stale refresh responses.
+2. Separate read views from retained editors. Dashboard/library, collections,
+   Search and other read-only route trees reset on authenticated identity
+   change; profile-only updates do not reset them. New/edit recipe and
+   collection routes and both Settings pages retain their mounted state,
+   but hide/inert the original editor behind an account-change notice.
+   Returning to the initiating account reveals it without an automatic reload.
+   A native new-tab link lets the user start fresh without discarding the old tab.
+3. Preserve native modal state while suspending background inertness and scroll
+   locking. Restore the existing modal and its pending/focus stage when the
+   original account returns. Hidden top-layer dialogs/popovers cannot remain
+   visually exposed; account menus/navigation drawers close on identity change.
+   Fresh guests never mount protected children; an already-mounted form stays
+   hidden across sign-out. A replacement avatar cannot initialize the old form.
+4. `37935f4`: browser review found that a key on a single static Dioxus outlet
+   did **not** remount its resource scope. The first build updated profile links
+   but kept the original library. Fixed this using intentional one-item keyed
+   fragments for read identities and retained route visits. Added an actual
+   mount/cached-data regression, rather than relying on key-string wiring alone.
+   Added a 30-second visible-tab fallback for concurrently visible windows and
+   embedded browsers that do not emit activation on automated tab selection.
+   Hidden tabs do not poll; listeners and interval registrations are owned and
+   removed on shell teardown. No identity/token broadcasting or storage was added.
+
+This is **bounded eventual consistency**, not an immediate cookie-change
+notification mechanism. Failed checks cannot establish a new identity; their
+last-known context remains until recovery. Every request's server permission
+checks and the preceding account-bound write guards remain authoritative.
+Previously loaded original entries remain in the local browser's hidden DOM/
+component state; this preserves work, not erasure of cached private information.
+Every in-flight read/identity race and native OS/browser activation is not newly
+accepted by these tests. Direct multipart upload and OAuth contracts are unchanged.
+
+### Tests and review
+
+Eight added tests cover activation/route/listener wiring and cleanup, event
+coalescing, route policy, hidden/inert/top-layer behavior, one mounted form
+through original → guest → replacement → original, retained-modal suspension/
+scroll/pending focus, and actual data-scope remount through replacement, guest
+and return visits. Existing auth/permission/profile/overlay tests still pass.
+
+The initial route-wiring regression failed against the old shell. The browser
+cache-remount bug was then reproduced by a focused test: mount count stayed
+one when it should be two. It passed after the keyed-fragment change. Logs:
+`/tmp/noms-020-session-page-red.log`, `/tmp/noms-020-session-read-red.log`.
+Missing-method compile failures during initial test setup are not claimed as
+behavioral red results. The inert assertion was corrected to Dioxus's actual
+boolean serialization, without removing the inert requirement.
+
+```sh
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true \
+  CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target \
+  just ci
+```
+
+Full CI for the reviewed `37935f4` runtime: **951 passed, 0 failed, 12 ignored**,
+exit 0. Native/WASM checks, Clippy, formatting, schema/workflow and repository
+policy/advisory gates passed. Eight existing allowed advisory warnings remain;
+ignored storage/search integration tests were not freshly exercised.
+Raw log: `/tmp/noms-020-session-ci-reviewed.log`.
+
+Explicit second-pass self-review fixed the ignored static key, native modal
+inertness/scroll trap, omitted raw empty-string inert attribute and possible
+overlapping signal-write guards in the queued-refresh loop. No independent
+agent was used. Browser acceptance and cleanup results follow below; this
+section does not close checkpoint 8 or final accessibility acceptance.
+
+### Runtime setup and completed early checks
+
+Rebuilt only existing `noms-c799915fcf93e034` at `http://127.0.0.1:32768`.
+Only its NOMS client/server package artifacts were invalidated; no DB/media
+or dependency cleanup. Final build succeeded in 23.27s/49.38s:
+`/tmp/noms-020-session-build-reviewed.log`. First cached development assets
+caused a hydration error; target-scoped cache bypass and a fresh reload
+resolved it. Hydrated readonly-state and native controls were checked before
+testing. The always-present hidden rebuild overlay is not an app failure.
+
+Original mock `testuser` and existing `cp8avatarroundtrip20261001` identities
+were switched using normal mock sign-out/sign-in. No new identity/provider
+link was created; no content/profile save, publication or upload was submitted.
+Under the first build, simulated focus events were used because the embedded
+browser reported all tabs focused/visible and did not emit real activation
+when automation selected a tab. Real verified guest/replacement responses
+hid the original Settings form while retaining the synthetic name/bio.
+The open collection-cover image editor suspended with no native open dialog,
+released body scroll locking and focused the visible account notice.
+Restoring the original account resumed that same open editor with its unsaved
+15° rotation and restored the original profile text. These lifecycle paths
+are unchanged by the read-scope/fallback correction; final-build checks are
+recorded separately below.
+
+### Final-build browser acceptance and integrity
+
+Final `37935f4` was tested in fresh Dashboard/Settings tabs with no staged
+entries, leaving the earlier retained test tabs untouched. No simulated focus
+event or page reload was used to trigger these identity transitions:
+
+- Original Dashboard showed **9 saved recipes, 10 drafts** and `/u/user-e13c`.
+  After native sign-out elsewhere, the visible-tab fallback replaced its
+  workspace with the guest sign-in gate and retained `/dashboard` return context.
+- Native sign-in to the existing replacement account produced **0 recipes,
+  0 drafts, no collections**, and `/u/cp8-avatar-round-trip-lo-6894` in that
+  same Dashboard. No original library/collection scope survived the remount.
+- The original Settings route showed the account-change notice with its editor
+  hidden/inert and the notice heading focused. Tab moved to the safe native
+  new-tab link, not into original fields; zero original inputs/buttons were
+  visibly laid out. Actual 320×720 geometry: document width **305px**, no
+  horizontal overflow. The viewport override was cleared afterward.
+- Native mock sign-in restored original `testuser`; no fixture/profile/content
+  mutation was submitted by this pass. The same final Dashboard returned to
+  nine recipes, ten drafts and `/u/user-e13c`; its original Settings editor
+  became visible again with unchanged initial fields. Timer detection can take
+  up to its interval plus request latency; no stronger instantaneous guarantee
+  is claimed.
+
+Screenshots, local temporary evidence rather than tracked assets:
+`/tmp/noms-020-session-account-notice.jpg`,
+`/tmp/noms-020-session-account-notice-320.jpg`,
+`/tmp/noms-020-session-replacement-dashboard.jpg`.
+Desktop/narrow captures were visually inspected. Earlier hydration console
+errors are from cached assets before fresh loading, not the accepted hydrated
+flow. Real activation events and hidden-tab timer behavior have source/unit
+coverage here, not independent OS/browser runtime acceptance.
+
+Read-only ordered-row JSON hashes matched before and after native session
+switching, including the two prior account-binding fixtures; no new fixtures
+were added. All content/account rows and the post-restart media baseline match:
+
+| Table | Count | MD5 of ordered complete row JSON |
+| --- | ---: | --- |
+| Recipes | 36 | `5e44d4edd748ba5eb5ed6c240ce50f57` |
+| Versions | 71 | `7de62836d36d6aa66878fa55b8e50e90` |
+| Drafts | 10 | `99d240e9afcfe8672c286906c1bb7111` |
+| Collections | 31 | `dfb9250a2fc39efe4473234d2f7614d2` |
+| Users | 3 | `f414496eebb3dc762dc189b668b7f52b` |
+| Media | 10 | `66704ecf395a30cfdf2b593ec94ded0b` |
+
+Media baseline is after normal restart lifecycle processing, not the previous
+turn's pre-restart hash. No S3 byte/deletion proof is claimed. Authentication
+session rows naturally changed through the normal login/logout flows and are
+not included in these content-integrity hashes. No destructive browser flow
+or direct database write was performed; consumed `@cp8settings` was not recreated.
+
+Auto-review blocked reloading tabs with non-trivial unsaved state. Requested
+approval to discard only the synthetic profile entries/cover selection;
+continued final verification in fresh unmodified tabs instead. Until approved,
+the two earlier retained test tabs remain handed off, not silently closed.
+Temporary cache/network/viewport overrides were reset; all four unmodified
+test tabs were closed. Other native tabs/deployments remain untouched.
+Integration user CSS retains its exact starting SHA-256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e` by removing
+only the build-generated grayscale utility was removed.
+
+Second-pass review verdict: **PASS for scoped session refresh, identity-keyed
+read reset and retained-editor/modal lifecycle**, including the browser-found
+keying bug corrected before acceptance. Ordered runtime commits are
+`d7b3013` → `37935f4`; evidence/plan updates are a separate follow-up. Reused
+task branch `codex/NOMS-020-checkpoint-8` in `.worktrees/NOMS-020-checkpoint-8`,
+fast-forwarded `codex/NOMS-020-visual-design-refinement`; no push.
+
+**Next:** other mutations' post-commit response-loss/final-navigation outcomes,
+remaining identity races/direct multipart/OAuth scope, image edge cases and
+full accessibility/real-device/final whole-app acceptance. Checkpoint 8 is
+still open; destructive tests require fresh isolated fixtures and action-time
+approval. Preserving local test tabs pending cleanup approval is not whole-app
+acceptance or authority to discard any user-owned work.
