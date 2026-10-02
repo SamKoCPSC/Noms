@@ -52,12 +52,52 @@ pub struct CollectionFormProps {
     pub extra_fields: Option<Element>,
 }
 
+// Capture both fields together: updating only the field that emitted an event
+// leaves its early-edited sibling vulnerable to a controlled-value rerender.
+fn synchronize_visible_collection_fields(
+    mut name: Signal<String>,
+    mut description: Signal<String>,
+    visible_name: String,
+    visible_description: String,
+) {
+    if *name.peek() != visible_name {
+        name.set(visible_name);
+    }
+    if *description.peek() != visible_description {
+        description.set(visible_description);
+    }
+}
+
 #[component]
 pub fn CollectionForm(mut props: CollectionFormProps) -> Element {
     rsx! {
         form {
             class: "collection-form",
             aria_busy: props.submitting,
+            onmounted: move |_event| {
+                #[cfg(target_arch = "wasm32")]
+                {
+                    use dioxus_web::WebEventExt;
+                    use wasm_bindgen::JsCast;
+
+                    // Hydration retains the SSR nodes, but their live values can
+                    // differ from the initial Rust signals. Read the mounted form
+                    // before a later edit to either field can reset the other.
+                    if let Some(form) = _event.data().try_as_web_event() {
+                        let name = form.query_selector("[name='collection_name']")
+                            .ok().flatten()
+                            .and_then(|field| field.dyn_into::<web_sys::HtmlInputElement>().ok());
+                        let description = form.query_selector("[name='collection_description']")
+                            .ok().flatten()
+                            .and_then(|field| field.dyn_into::<web_sys::HtmlTextAreaElement>().ok());
+                        if let (Some(name), Some(description)) = (name, description) {
+                            synchronize_visible_collection_fields(
+                                props.name, props.description, name.value(), description.value(),
+                            );
+                        }
+                    }
+                }
+            },
             onsubmit: move |event| {
                 event.prevent_default();
                 if !props.submitting {
@@ -68,8 +108,10 @@ pub fn CollectionForm(mut props: CollectionFormProps) -> Element {
                         Some(FormValue::Text(value)) => value,
                         _ => String::new(),
                     };
-                    props.name.set(field_text("collection_name"));
-                    props.description.set(field_text("collection_description"));
+                    synchronize_visible_collection_fields(
+                        props.name, props.description,
+                        field_text("collection_name"), field_text("collection_description"),
+                    );
                     props.onsubmit.call(());
                 }
             },
@@ -218,6 +260,54 @@ mod tests {
         );
         assert!(html.contains("name=\"collection_name\""));
         assert!(html.contains("name=\"collection_description\""));
+    }
+
+    #[test]
+    fn collection_form_reads_early_native_edits_at_mount() {
+        let mut dom = VirtualDom::new_with_props(
+            FormHarness,
+            FormHarnessProps {
+                submitted: Rc::new(RefCell::new(None)),
+                submitting: false,
+            },
+        );
+        let mutations = dom.rebuild_to_vec();
+        assert!(
+            mutations.edits.iter().any(|edit| matches!(
+                edit,
+                dioxus_core::Mutation::NewEventListener { name, .. } if name == "mounted"
+            )),
+            "capture early native field values before subsequent controlled rerenders"
+        );
+    }
+
+    #[test]
+    fn captured_early_values_survive_editing_either_sibling_field() {
+        fn harness() -> Element {
+            let mut name = use_signal(|| "Untitled Collection".to_string());
+            let mut description = use_signal(String::new);
+            use_hook(move || {
+                super::synchronize_visible_collection_fields(
+                    name,
+                    description,
+                    "Early name 湯麵".into(),
+                    "Early description".into(),
+                );
+                description.set("Later description".into());
+                assert_eq!(name(), "Early name 湯麵");
+                name.set("Later name".into());
+                assert_eq!(description(), "Later description");
+            });
+            rsx! { CollectionForm {
+                name, description, submit_label: "Save", submitting: false, error: None,
+                onsubmit: |_| {},
+            } }
+        }
+        let mut dom = VirtualDom::new(harness);
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("Later name"));
+        assert!(html.contains("Later description"));
     }
 
     #[test]
