@@ -5893,3 +5893,117 @@ Second-pass self-review: **diagnostic evidence PASS; editor lifecycle acceptance
 FAIL pending the two fixes; overall checkpoint 8 OPEN**. No independent-agent
 review claimed. Reused the existing checkpoint task branch for this single
 cohesive documentation update; no runtime changes to roll back.
+
+## Collection startup and native editor recovery acceptance 2026-10-02
+
+The two defects from the preceding investigation are fixed in `34c5bfe`.
+Browser follow-up found and fixed one related handoff defect in `dfddc11`:
+retaining the input nodes alone preserved early text only until a later edit
+rerendered the form. CollectionForm now captures both live fields at client
+mount, so Rust signals match the values entered before hydration.
+
+### Scope and implementation
+
+- Retained-form keys omit only empty query/fragment delimiters. Nonempty raw
+  query and fragment text stays significant; a real parent change still starts
+  a new form scope. The original path remains available for context and links.
+- RetainedFormPage and AuthRequired emit inert only when blocked, and remove
+  the attribute when enabled. Native HTML treats even `inert="false"` as inert.
+- The collection form reads its own mounted input and textarea using typed Rust
+  browser APIs, capturing both values before updating either signal. The same
+  helper snapshots submitted named fields before parent validation. No global
+  DOM query or production JavaScript event bridge was added.
+- Reused the isolated checkpoint worktree and fast-forwarded the existing
+  integration branch. Main, unrelated roadmap edits and other deployments were
+  not changed. The running app at `http://127.0.0.1:32768` was rebuilt/restarted.
+
+### Automated evidence
+
+The route-key test reproduced replacement of the actual collection input node
+on `/collections/new?` → `/collections/new`. The inert test reproduced native
+renderer `Bool(false)` mutations. Both failed before `34c5bfe` and passed after.
+Seven session-page tests include real mount retention and genuine route resets.
+
+The mount-listener regression failed before the handoff fix; all seven
+collection-form tests then passed. Signal tests cover capturing both early
+values and editing either sibling. Native tests do not execute browser DOM
+hydration; the controlled browser checks below provide that evidence.
+
+```sh
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server auth::session_page::tests -- --test-threads=1
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server components::base::collection_form::tests -- --test-threads=1
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target just ci
+```
+
+Full CI on the final runtime changes: **956 passed, 0 failed, 12 ignored**;
+native/WASM checks, Clippy, formatting, schema/workflow/policy gates,
+tracked-secret scan, deployment artifacts and dependency audit passed. Eight
+existing warnings remain allowed. The advisory-cache check required reviewed
+access outside the worktree. No fresh ignored search/storage integration run is
+claimed. Logs: `/tmp/noms-020-startup-inert-red.log`,
+`/tmp/noms-020-startup-inert-green.log`,
+`/tmp/noms-020-hydration-handoff-red.log`,
+`/tmp/noms-020-hydration-handoff-green.log` and
+`/tmp/noms-020-hydration-handoff-ci.log`.
+
+### Browser acceptance
+
+Fresh forms used the rebuilt deployment, with only the client script paused
+while entering synthetic unsaved name/description text. Script interception was
+released before ordinary keyboard testing.
+
+1. Top-level early name `CP8 fixed startup text 湯麵` and its description survived
+   hydration in the same connected native nodes. Typing into the description
+   retained the name; typing into the name retained the description.
+2. The nested route with parent `7f535c8e-d0a1-4052-87a5-65b203479917` retained its
+   original nodes and early Unicode text, including subsequent description and
+   original-account name edits.
+3. A synthetic local cover image remained in its unsaved editor with 15°
+   rotation. Normal mock sign-out and sign-in as the existing alternate account
+   hid the original editor, set native inert true and suspended its dialog.
+   Both collection fields remained connected with unchanged values.
+4. Restoring the original account removed inert entirely, restored the same
+   fields and reopened the same image dialog at 15°. Native ArrowUp changed the
+   rotation to 16°, demonstrating resumed keyboard input rather than just a
+   visible DOM value. No image was applied or uploaded and no collection saved.
+5. On a separate stable form, a diagnostic DOM value change cleared the name
+   without emitting input. Temporarily bypassing native required validation let
+   the real submit handler run; it displayed `Collection name is required.`
+   rather than submitting the stale nonempty signal. Native validation was
+   restored afterward. This probe made no content write.
+
+Screenshots: `/tmp/noms-020-fixed-startup-handoff.jpg`,
+`/tmp/noms-020-fixed-session-image-resume.jpg` and
+`/tmp/noms-020-fixed-missed-event-validation.jpg`. These temporary files show
+the focused runtime states, not a new visual baseline or whole-page acceptance.
+
+### Integrity, cleanup and limits
+
+Before/after counts and hashes using the same ordered JSONB SQL query match:
+
+| Table | Rows | MD5 of ordered rows |
+| --- | ---: | --- |
+| recipes | 36 | 88e95c4d50e9b790acdc6828cefd592e |
+| recipe_versions | 71 | 98f8d09f235988b761228e6833b3ba8e |
+| recipe_drafts | 10 | 885e549be7306095015bc7acb012c876 |
+| collections | 31 | b9657f26c904b1b594740a0a3e0ccfec |
+| users | 3 | cbbdc47cfa8398755dd099086eca1572 |
+| media_assets | 10 | 735c0a80a3576ac89c8efc91c6d85a21 |
+
+Normal session rows changed through sign-in/out. Original account restored.
+All script interception, cache/network overrides and temporary DOM references
+were cleared. Closed only the clean sign-in tab and empty validation form.
+Earlier unsaved profile/cover/nested probes and the new unsaved startup/image
+forms remain preserved pending cleanup approval; no reload or deletion of
+those entries. Integration CSS retains SHA-256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e` after removing
+only the build-generated grayscale rule introduced by this rebuild.
+
+Second-pass self-review: **PASS for the two fixes and bounded startup/recovery
+acceptance**. No independent-agent review claimed. The exact historical rapid
+navigation sequence remains unconfirmed and must not be attributed to these
+newer regressions. Real-browser/OS activation, every identity race, full device
+and screen-reader checks, and whole-app acceptance remain open. This closes
+the first remaining checkpoint-8 group, not the entire checkpoint; five groups
+remain. Rollback is a scoped revert of `dfddc11` and `34c5bfe`, not a workspace
+reset or restoration over user edits.
