@@ -2981,13 +2981,14 @@ function visibleProviderContext(html, rootClass, markerClasses) {
   return {root,all,inside,children,loose,text,inline,isHidden,openings,consume:e=>consumed.add(e.index),complete:()=>selected.every(e=>consumed.has(e.index))};
 }
 
-function visibleProviderIngredient(raw, locator) {
+function visibleProviderIngredient(raw, locator, {allowDottedUnits=false}={}) {
   const amount = `(?:\\d+\\s+and\\s+\\d+/\\d+|\\d+[\\u00bc-\\u00be\\u2150-\\u215e]|${TASTY_AMOUNT_PATTERN})`;
   const range = `${amount}(?:\\s*(?:to|[-–—])\\s*${amount})?`;
   const units = `${UNIT_PATTERN}|pinch|quarts?|pints?|sticks?|bunch(?:es)?|heads?|jars?|blocks?`;
-  const compound = raw.match(new RegExp(`^(${range}\\s+(?:${units})\\s+(?:plus|minus)\\s+${range}\\s+(?:${units}))\\s+(.+)$`,"iu"));
+  const unitToken=`(?:${units})${allowDottedUnits?"\\.?":""}`;
+  const compound = raw.match(new RegExp(`^(${range}\\s+${unitToken}\\s+(?:plus|minus)\\s+${range}\\s+${unitToken})\\s+(.+)$`,"iu"));
   const packaged = raw.match(new RegExp(`^(${range})\\s+(\\(${amount}[- ](?:ounces?|oz|grams?|g|pounds?|lbs?)\\)\\s+(?:cans?|packages?|boxes?|jars?|blocks?))\\s+(.+)$`,"iu"));
-  const measured = raw.match(new RegExp(`^(${range})\\s+(${units})\\s+(.+)$`,"iu"));
+  const measured = raw.match(new RegExp(`^(${range})\\s+(${unitToken})\\s+(.+)$`,"iu"));
   const counted = raw.match(new RegExp(`^(${range})\\s+(.+)$`,"iu"));
   return {...ingredient(raw,"text/html",locator), amount:compound?.[1]??packaged?.[1]??measured?.[1]??counted?.[1]??null,unit:compound?null:packaged?.[2]??measured?.[2]??null,name:compound?.[2]??packaged?.[3]??measured?.[3]??counted?.[2]??raw};
 }
@@ -3016,7 +3017,8 @@ function finishVisibleProvider(result, htmlAudit) {
 // nodes and nests multiple numbered actions inside each preparation group.
 // Stable component names and test IDs identify ownership, never build hashes.
 function parseCondeVisibleRecipe(html, sourceUrl, htmlAudit) {
-  try {const url=new URL(sourceUrl);if(!["http:","https:"].includes(url.protocol)||!["bonappetit.com","www.bonappetit.com"].includes(url.hostname))return null;}catch{return null;}
+  let sourceAdapter;
+  try {const url=new URL(sourceUrl);if(!["http:","https:"].includes(url.protocol))return null;sourceAdapter=new Map([["bonappetit.com","bon-appetit"],["www.bonappetit.com","bon-appetit"],["epicurious.com","epicurious"],["www.epicurious.com","epicurious"]]).get(url.hostname);if(!sourceAdapter)return null;}catch{return null;}
   const component=(attributes,name)=>(attributes.get("class")??"").split(/\s+/u).some(token=>token.startsWith(`${name}-`));
   const testId=name=>attributes=>attributes.get("data-testid")===name;
   const markers=["SplitScreenContentHeaderWrapper","ContentHeaderHed","recipe__main-content","BodyWrapper","InfoSliceList","IngredientList","InstructionsWrapper"];
@@ -3031,8 +3033,8 @@ function parseCondeVisibleRecipe(html, sourceUrl, htmlAudit) {
   for(const e of [header,title,body,preparation])consume(e);
   const lists=all(testId("IngredientList")),primary=lists.filter(e=>text(children(e)[0]?.innerHtml??"")==="Ingredients");
   if(primary.length!==1||lists.some(e=>!inside(e,body))||primary[0].end>preparation.index)return null;
-  const result=candidate({id:"bon-appetit-visible",version:"1",tier:"source_adapter",sourceAdapter:"bon-appetit"},sourceUrl);
-  result.source.provider="Bon Appétit";result.source.provenance.provider=provenance("source_url","hostname bonappetit.com");
+  const result=candidate({id:`${sourceAdapter}-visible`,version:"1",tier:"source_adapter",sourceAdapter},sourceUrl);
+  result.source.provider=sourceAdapter==="epicurious"?"Epicurious":"Bon Appétit";result.source.provenance.provider=provenance("source_url",`hostname ${sourceAdapter==="epicurious"?"epicurious.com":"bonappetit.com"}`);
   result.fields.title=scalar(text(title.innerHtml),"text/html","[data-testid=ContentHeaderHed]");
   const authors=elementsMatchingAttributes(header.innerHtml,testId("BylineName"));
   if(authors.some(e=>hasAncestorTag(html,header.openingEnd+e.index,"nav")))return null;
@@ -3050,10 +3052,19 @@ function parseCondeVisibleRecipe(html, sourceUrl, htmlAudit) {
   for(const list of lists){consume(list);const parts=children(list);if(parts.length!==2||parts[0].tag!=="h2"||!inline(parts[0])||!component(parts[0].attributes,"Hed")||!component(parts[1].attributes,"List")||loose(list,parts))return null;
     const rows=children(parts[1]);if(loose(parts[1],rows))return null;
     if(list!==primary[0]){if(text(parts[0].innerHtml)!=="Nutrition Per Serving"||!rows.length||rows.some(e=>!component(e.attributes,"Description")||!inline(e)))return null;for(const e of rows)consume(e);result.unclassifiedLines.push({raw:`Nutrition Per Serving: ${rows.map(e=>text(e.innerHtml)).join(" ")}`,provenance:provenance("text/html","[data-testid=IngredientList] Nutrition Per Serving")});continue;}
+    const fullRows=sourceAdapter==="epicurious"&&!rows.some(e=>component(e.attributes,"Amount"));
     let name=null,awaiting=false;
     for(let index=0;index<rows.length;index++){
       const amount=rows[index];
       if(amount.tag==="h3"&&component(amount.attributes,"SubHed")){if(awaiting||!inline(amount))return null;consume(amount);name=text(amount.innerHtml);awaiting=true;continue;}
+      if(fullRows){
+        if(amount.tag!=="div"||!component(amount.attributes,"Description")||!inline(amount))return null;
+        consume(amount);if(!result.fields.ingredientSections.length||awaiting)result.fields.ingredientSections.push({name,items:[]});
+        const value=visibleProviderIngredient(text(amount.innerHtml),"[data-testid=IngredientList] Description",{allowDottedUnits:true});
+        // Epicurious keeps the quantity and dotted unit in the same visible
+        // row; do not require Bon Appétit's split quantity sibling.
+        result.fields.ingredientSections.at(-1).items.push(value);awaiting=false;continue;
+      }
       const description=rows[++index];
       if(amount.tag!=="p"||!component(amount.attributes,"Amount")||!description||description.tag!=="div"||!component(description.attributes,"Description")||!inline(amount,true)||!inline(description))return null;
       consume(amount);consume(description);
@@ -3102,9 +3113,20 @@ function parseCondeVisibleRecipe(html, sourceUrl, htmlAudit) {
       else if(part.tag==="inline-embed"&&part.attributes.get("name")==="anchor"){paragraphs=children(part);if(!paragraphs.length||paragraphs.some(e=>e.tag!=="p")||loose(part,paragraphs))return null;}
       else if(part.tag==="inline-embed"&&part.attributes.get("name")==="feature-small"){const pieces=children(part);if(pieces.length!==1||!media(pieces[0])||loose(part,pieces))return null;recordMedia(pieces[0]);continue;}
       else if(part.tag==="inline-embed"&&part.attributes.get("name")==="button-group"){const pieces=children(part);if(!pieces.length||loose(part,pieces)||pieces.some(e=>e.tag!=="p"||!inline(e)||children(e).length!==1||children(e)[0].tag!=="a"||text(e.innerHtml)!==text(children(e)[0].innerHtml)))return null;continue;}
+      else if(sourceAdapter==="epicurious"&&part.tag==="div"&&!text(part.innerHtml)){
+        // One measured Epicurious card has an unloaded, empty video teaser.
+        // Permit only that exact empty shell, never an arbitrary DIV subtree.
+        const pieces=children(part),teaser=pieces[0],figures=teaser?children(teaser):[],figure=figures[0],sticky=figure?children(figure):[];
+        if(pieces.length!==1||teaser.tag!=="div"||teaser.attributes.get("data-testid")!=="teaser-wrapper"||figures.length!==1||figure.tag!=="figure"||figure.attributes.get("data-testid")!=="video-embed-figure"||sticky.length!==1||sticky[0].tag!=="div"||sticky[0].attributes.get("data-testid")!=="sticky-wrapper"||children(sticky[0]).length)return null;
+        continue;
+      }
       else if(media(part)){recordMedia(part);continue;}
       else return null;
-      for(const paragraph of paragraphs){if(!inline(paragraph))return null;const raw=text(paragraph.innerHtml);const supplementary=/^(?:Do Ahead\s*:|Editor[’']s note\s*:|VARIATIONS$|Looking for .+Try this one:)/iu.test(raw);
+      for(const paragraph of paragraphs){if(!inline(paragraph))return null;const raw=text(paragraph.innerHtml);
+        // Epicurious sometimes numbers the make-ahead action itself. Honor
+        // that explicit heading; an unnumbered trailing note stays separate.
+        const numberedMakeAhead=sourceAdapter==="epicurious"&&step&&!step.paragraphs.length&&/^Do Ahead\s*:/iu.test(raw);
+        const supplementary=!numberedMakeAhead&&/^(?:Do Ahead\s*:|Editor[’']s note\s*:|VARIATIONS$|Looking for .+Try this one:)/iu.test(raw);
         if(tail||supplementary){if(!flush())return null;note(raw);if(/^VARIATIONS$|^Editor[’']s note\s*:|^Looking for /iu.test(raw))tail=true;continue;}
         if(!numbered){if(!result.fields.instructionSections.length||awaiting)result.fields.instructionSections.push({name:group,steps:[]});result.fields.instructionSections.at(-1).steps.push(instruction(raw,"text/html","InstructionListWrapper > p"));awaiting=false;}
         else {if(!step)return null;step.paragraphs.push(raw);}
