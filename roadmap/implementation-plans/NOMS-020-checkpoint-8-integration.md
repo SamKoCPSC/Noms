@@ -5760,8 +5760,10 @@ the two earlier retained test tabs remain handed off, not silently closed.
 Temporary cache/network/viewport overrides were reset; all four unmodified
 test tabs were closed. Other native tabs/deployments remain untouched.
 Integration user CSS retains its exact starting SHA-256
-`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e` by removing
-only the build-generated grayscale utility was removed.
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`;
+only the build-generated grayscale utility was removed. Final verification
+confirmed HTTP 200, a clean task worktree and only the pre-existing user CSS
+edit in integration. Root roadmap changes remain untouched.
 
 Second-pass review verdict: **PASS for scoped session refresh, identity-keyed
 read reset and retained-editor/modal lifecycle**, including the browser-found
