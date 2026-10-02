@@ -387,6 +387,8 @@ pub fn RecipeNew() -> Element {
     let on_step_photo_change = move |idx: usize| {
         move |files: Vec<dioxus::html::FileData>| {
             reset_step_photo_input(idx);
+            #[cfg(not(target_arch = "wasm32"))]
+            let _ = files;
             #[cfg(target_arch = "wasm32")]
             {
                 if files.is_empty() || step_photo_controls_locked() {
