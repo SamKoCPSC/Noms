@@ -121,6 +121,7 @@ fn trigger_file_input(_selector: &str) {}
 /// Create recipe page — full form with ingredients, steps, and tags.
 #[component]
 pub fn RecipeNew() -> Element {
+    let navigator = use_navigator();
     // Basic fields
     let mut title = use_signal(String::new);
     let mut active_editor_section = use_signal(|| "basics");
@@ -792,17 +793,12 @@ pub fn RecipeNew() -> Element {
             }
             .await;
             match publish_result {
-                #[allow(unused_variables)]
                 Ok(recipe) => {
-                    // Navigate to recipe detail page
-                    #[cfg(target_arch = "wasm32")]
-                    {
-                        if let Some(window) = web_sys::window() {
-                            let _ = window
-                                .location()
-                                .set_href(&format!("/recipes/{}", recipe.id));
-                        }
-                    }
+                    // The write is confirmed. Keep the app shell alive so a
+                    // failed destination read can use its normal retry UI.
+                    navigator.push(crate::Route::RecipeDetail {
+                        id: recipe.id.to_string(),
+                    });
                 }
                 Err(e) => {
                     if publication_attempted {

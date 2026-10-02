@@ -153,4 +153,50 @@ mod tests {
             "if draft_creation_unconfirmed() || publication_unconfirmed() || error().is_some()"
         ));
     }
+
+    #[test]
+    fn confirmed_publication_keeps_navigation_inside_the_app_in_both_editors() {
+        for source in [
+            include_str!("recipe_new.rs"),
+            include_str!("recipe_edit.rs"),
+        ] {
+            let completion = source
+                .split("match publish_result {")
+                .nth(1)
+                .unwrap()
+                .split("Err(e) =>")
+                .next()
+                .unwrap();
+            assert!(completion.contains("navigator.push(crate::Route::RecipeDetail"));
+            assert!(completion.contains("id: recipe.id.to_string()"));
+            assert!(!completion.contains("set_href"));
+            assert!(!completion.contains("window.location"));
+        }
+    }
+
+    #[test]
+    fn saved_editor_return_uses_a_typed_destination_only_after_save_succeeds() {
+        let source = include_str!("recipe_edit.rs");
+        assert!(source.contains("Option::<crate::Route>::None"));
+        let completion = source
+            .split("match save_result {")
+            .last()
+            .unwrap()
+            .split("Err(save_error)")
+            .next()
+            .unwrap();
+        assert!(completion.contains("Ok(saved)"));
+        assert!(completion.contains("navigator.push(destination)"));
+        assert!(!completion.contains("set_href"));
+        let cancel = source
+            .split("let on_cancel =")
+            .nth(1)
+            .unwrap()
+            .split("let id_for_discard")
+            .next()
+            .unwrap();
+        assert!(cancel.contains("crate::Route::Dashboard {}"));
+        assert!(cancel.contains("crate::Route::RecipeDetail"));
+        assert!(!cancel.contains("navigator.push"), "Cancel must save first");
+    }
 }

@@ -145,6 +145,7 @@ pub fn RecipeDraftEdit(id: String) -> Element {
 }
 
 fn recipe_editor(id: String, id_is_draft: bool) -> Element {
+    let navigator = use_navigator();
     // ── Form signals ─────────────────────────────────────────────────────
     let mut title = use_signal(String::new);
     let mut active_editor_section = use_signal(|| "basics");
@@ -185,7 +186,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
     #[allow(unused_mut)]
     let mut is_manually_saving = use_signal(|| false);
     let mut draft_save_after_upload = use_signal(|| false);
-    let mut draft_save_destination = use_signal(|| Option::<String>::None);
+    let mut draft_save_destination = use_signal(|| Option::<crate::Route>::None);
     let mut load_error = use_signal(|| Option::<String>::None);
     let mut form_error = use_signal(|| Option::<String>::None);
     #[allow(unused_mut)]
@@ -662,11 +663,10 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                         draft_revision.set(saved.revision);
                         last_saved_editor.set(Some(editor));
                         draft_save_error.set(None);
-                        #[cfg(target_arch = "wasm32")]
                         if let Some(destination) = draft_save_destination() {
-                            if let Some(window) = web_sys::window() {
-                                let _ = window.location().set_href(&destination);
-                            }
+                            // Save has committed before we leave. The router
+                            // preserves destination-load recovery in the shell.
+                            navigator.push(destination);
                         }
                     }
                     Err(save_error) => {
@@ -703,7 +703,6 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
             .await;
 
             match publish_result {
-                #[allow(unused_variables)]
                 Ok(recipe) => {
                     // Published history retains image metadata, so removed
                     // current images must stay in storage while an immutable
@@ -712,15 +711,9 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     // every database reference is gone.
                     pending_deletes.set(Vec::new());
 
-                    // Redirect to recipe detail page
-                    #[cfg(target_arch = "wasm32")]
-                    {
-                        if let Some(window) = web_sys::window() {
-                            let _ = window
-                                .location()
-                                .set_href(&format!("/recipes/{}", recipe.id));
-                        }
-                    }
+                    navigator.push(crate::Route::RecipeDetail {
+                        id: recipe.id.to_string(),
+                    });
                 }
                 Err(e) => {
                     form_error.set(Some(
@@ -742,9 +735,11 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
             return;
         }
         let destination = if id_is_draft {
-            "/dashboard".to_string()
+            crate::Route::Dashboard {}
         } else {
-            format!("/recipes/{id_for_cancel}")
+            crate::Route::RecipeDetail {
+                id: id_for_cancel.clone(),
+            }
         };
         form_error.set(None);
         is_manually_saving.set(true);
