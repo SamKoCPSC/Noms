@@ -15,7 +15,10 @@ use crate::components::base::{
     Button, ButtonVariant, ImageEditorModal, ImageUpload, PageHeader, UploadOutcome,
 };
 use crate::components::AuthRequired;
-use crate::pages::draft_save::draft_save_button_state;
+use crate::pages::draft_save::{
+    draft_save_button_state, recipe_write_feedback, RecipeWriteAction,
+    UNCONFIRMED_DRAFT_CREATION_MESSAGE,
+};
 use crate::pages::recipe_editor_form::{
     apply_step_photo_edit, build_step_tree, can_indent_step, format_step_photo_file_size,
     reset_step_photo_input, step_photo_display_name, step_photo_editor_edit, RecipeEditorContents,
@@ -152,6 +155,10 @@ pub fn RecipeNew() -> Element {
     let mut autosave_generation = use_signal(|| 0u64);
     #[allow(unused_mut)]
     let mut draft_creation_in_flight = use_signal(|| false);
+    // After an uncertain create, keep local entries but require recovery from
+    // Dashboard: another create could duplicate an already committed draft.
+    #[allow(unused_mut)]
+    let mut draft_creation_unconfirmed = use_signal(|| false);
 
     // CP4: image upload state — shared with the `ImageUpload` component.
     // `images` is the sink for uploaded image records (read when calling
@@ -202,6 +209,7 @@ pub fn RecipeNew() -> Element {
             || !editor.images.is_empty()
             || !editor.tags.is_empty();
         if !meaningful
+            || draft_creation_unconfirmed()
             || is_saving()
             || is_manually_saving()
             || last_saved_editor().as_ref() == Some(&editor)
@@ -219,7 +227,11 @@ pub fn RecipeNew() -> Element {
         #[cfg(target_arch = "wasm32")]
         spawn(async move {
             gloo_timers::future::TimeoutFuture::new(2_000).await;
-            if autosave_generation() != generation || is_saving() || is_manually_saving() {
+            if autosave_generation() != generation
+                || draft_creation_unconfirmed()
+                || is_saving()
+                || is_manually_saving()
+            {
                 return;
             }
             let result = if let Some(current_draft_id) = current_draft_id {
@@ -248,6 +260,9 @@ pub fn RecipeNew() -> Element {
             } else {
                 draft_creation_in_flight.set(true);
                 let created = create_recipe_draft(editor.clone()).await;
+                if created.is_err() {
+                    draft_creation_unconfirmed.set(true);
+                }
                 draft_creation_in_flight.set(false);
                 created
             };
@@ -272,7 +287,12 @@ pub fn RecipeNew() -> Element {
                     }
                 }
                 Err(save_error) if autosave_generation() == generation => {
-                    error.set(Some(format!("Autosave failed: {save_error}")));
+                    let action = if draft_creation_unconfirmed() {
+                        RecipeWriteAction::CreateDraft
+                    } else {
+                        RecipeWriteAction::Autosave
+                    };
+                    error.set(Some(recipe_write_feedback(action, &save_error).to_string()));
                 }
                 Err(_) => {}
             }
@@ -306,6 +326,7 @@ pub fn RecipeNew() -> Element {
                 || !editor.images.is_empty()
                 || !editor.tags.is_empty();
             if !meaningful
+                || draft_creation_unconfirmed()
                 || is_saving()
                 || is_manually_saving()
                 || busy()
@@ -348,6 +369,9 @@ pub fn RecipeNew() -> Element {
                 } else {
                     draft_creation_in_flight.set(true);
                     let created = create_recipe_draft(editor.clone()).await;
+                    if created.is_err() {
+                        draft_creation_unconfirmed.set(true);
+                    }
                     draft_creation_in_flight.set(false);
                     created
                 };
@@ -371,7 +395,12 @@ pub fn RecipeNew() -> Element {
                         last_saved_editor.set(Some(editor));
                     }
                     Err(save_error) => {
-                        error.set(Some(format!("Save draft failed: {save_error}")));
+                        let action = if draft_creation_unconfirmed() {
+                            RecipeWriteAction::CreateDraft
+                        } else {
+                            RecipeWriteAction::SaveDraft
+                        };
+                        error.set(Some(recipe_write_feedback(action, &save_error).to_string()));
                     }
                 }
                 is_manually_saving.set(false);
@@ -382,8 +411,13 @@ pub fn RecipeNew() -> Element {
     // ── Step photo upload handler ────────────────────────────────────────
     // Created per-step via closure capturing the step index
     #[allow(unused_variables)]
-    let step_photo_controls_locked =
-        move || is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0;
+    let step_photo_controls_locked = move || {
+        draft_creation_unconfirmed()
+            || is_saving()
+            || is_manually_saving()
+            || busy()
+            || step_photo_upload_count() > 0
+    };
     let on_step_photo_change = move |idx: usize| {
         move |files: Vec<dioxus::html::FileData>| {
             reset_step_photo_input(idx);
@@ -555,7 +589,12 @@ pub fn RecipeNew() -> Element {
 
     // ── Submit handler ───────────────────────────────────────────────────
     let on_submit = move |_| {
-        if is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0 {
+        if draft_creation_unconfirmed()
+            || is_saving()
+            || is_manually_saving()
+            || busy()
+            || step_photo_upload_count() > 0
+        {
             return;
         }
         // Clear previous errors
@@ -687,6 +726,11 @@ pub fn RecipeNew() -> Element {
             }
 
             error.set(None);
+            if draft_creation_unconfirmed() {
+                error.set(Some(UNCONFIRMED_DRAFT_CREATION_MESSAGE.to_string()));
+                is_saving.set(false);
+                return;
+            }
             if *draft_creation_in_flight.peek() {
                 error.set(Some(
                     "The first autosave is still finishing. Publish again in a moment.".to_string(),
@@ -726,8 +770,16 @@ pub fn RecipeNew() -> Element {
                         }
                     }
                 } else {
-                    create_recipe_draft(editor).await?
+                    let created = create_recipe_draft(editor).await;
+                    if created.is_err() {
+                        draft_creation_unconfirmed.set(true);
+                    }
+                    created?
                 };
+                // Retain the identity before publication. If publication
+                // commits but its response is lost, never create again.
+                draft_id.set(Some(saved.id.to_string()));
+                draft_revision.set(saved.revision);
                 publish_recipe_draft(saved.id.to_string(), None).await
             }
             .await;
@@ -745,13 +797,12 @@ pub fn RecipeNew() -> Element {
                     }
                 }
                 Err(e) => {
-                    let msg = match &e {
-                        dioxus::prelude::ServerFnError::ServerError { message, .. } => {
-                            message.clone()
-                        }
-                        _ => e.to_string(),
+                    let action = if draft_creation_unconfirmed() {
+                        RecipeWriteAction::CreateDraft
+                    } else {
+                        RecipeWriteAction::Publish
                     };
-                    error.set(Some(msg));
+                    error.set(Some(recipe_write_feedback(action, &e).to_string()));
                     is_saving.set(false);
                 }
             }
@@ -851,6 +902,7 @@ pub fn RecipeNew() -> Element {
                         Button {
                             variant: ButtonVariant::Secondary,
                             disabled: !draft_save_state.is_actionable()
+                                || draft_creation_unconfirmed()
                                 || is_saving()
                                 || busy()
                                 || step_photo_upload_count() > 0,
@@ -859,7 +911,7 @@ pub fn RecipeNew() -> Element {
                         }
                         Button {
                             variant: ButtonVariant::Primary,
-                            disabled: is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0,
+                            disabled: draft_creation_unconfirmed() || is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0,
                             onclick: on_submit,
                             if step_photo_upload_count() > 0 {
                                 "Uploading images..."
@@ -1505,14 +1557,29 @@ pub fn RecipeNew() -> Element {
                     }
 
                     // ── Error message ───────────────────────────────────
-                    if let Some(err) = error() {
+                    if draft_creation_unconfirmed() || error().is_some() {
                         div {
+                            role: "alert",
+                            overflow_wrap: "anywhere",
                             padding: "var(--space-sm) var(--space-md)",
                             background_color: "var(--error-bg)",
                             border_radius: "var(--radius-md)",
                             color: "var(--error-ink)",
                             font_size: "14px",
-                            "{err}"
+                            if draft_creation_unconfirmed() {
+                                "{UNCONFIRMED_DRAFT_CREATION_MESSAGE}"
+                            } else if let Some(err) = error() {
+                                "{err}"
+                            }
+                            if draft_creation_unconfirmed() {
+                                p {
+                                    Link {
+                                        to: crate::Route::Dashboard {},
+                                        class: "btn btn-secondary touch-target",
+                                        "Check Dashboard"
+                                    }
+                                }
+                            }
                         }
                     }
 

@@ -17,7 +17,7 @@ use crate::components::base::{
     UploadOutcome,
 };
 use crate::components::AuthRequired;
-use crate::pages::draft_save::draft_save_button_state;
+use crate::pages::draft_save::{draft_save_button_state, recipe_write_feedback, RecipeWriteAction};
 use crate::pages::recipe_editor_form::{
     apply_step_photo_edit, build_step_tree, can_indent_step, flatten_steps,
     format_step_photo_file_size, reset_step_photo_input, step_photo_display_name,
@@ -99,35 +99,11 @@ fn draft_allows_initial_visibility(recipe_id: Option<uuid::Uuid>) -> bool {
     recipe_id.is_none()
 }
 
-#[derive(Clone, Copy)]
-enum RecipeWriteAction {
-    #[cfg(any(target_arch = "wasm32", test))]
-    Autosave,
-    SaveDraft,
-    Publish,
-    Discard,
-}
-
 // Publication, draft saving and discard all mutate the same draft. Recheck
 // this at action time as well as disabling controls, so queued clicks cannot
 // start a competing write before the next render.
 fn editor_write_in_progress(publishing: bool, saving_draft: bool, discarding: bool) -> bool {
     publishing || saving_draft || discarding
-}
-
-fn recipe_write_feedback(action: RecipeWriteAction, error: &ServerFnError) -> &'static str {
-    if matches!(error, ServerFnError::ServerError { message, .. } if message == "Not authenticated")
-    {
-        return "Sign in again in another tab, then try again. Keep this page open to retain your entries.";
-    }
-    match action {
-        #[cfg(any(target_arch = "wasm32", test))]
-        RecipeWriteAction::Autosave => "Autosave could not complete. Your entries are still here; try Save draft or edit again to retry.",
-        RecipeWriteAction::SaveDraft => "Could not save the draft. Your entries are still here; try Save draft again.",
-        // A lost response is ambiguous: publication may already have committed.
-        RecipeWriteAction::Publish => "Could not confirm publication. Your draft may have been published; check your dashboard before trying again.",
-        RecipeWriteAction::Discard => "Could not confirm draft removal. Check your dashboard before trying again; your entries remain on this page.",
-    }
 }
 
 fn render_recipe_editor_unavailable() -> Element {
