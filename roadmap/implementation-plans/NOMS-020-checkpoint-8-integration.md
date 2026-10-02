@@ -5091,3 +5091,184 @@ checks and whole-app visual/behavior acceptance. Pre-server failure tests do
 not establish behavior after a committed mutation whose response is lost.
 Further destructive/account-linking tests still require separate authorization
 and isolated fixtures. Checkpoint 8 remains open.
+
+## Committed draft response loss and new-recipe outcome recovery — 2026-10-01
+
+Continued in the established task worktree `codex/NOMS-020-checkpoint-8`, based
+on `f40d4e9`, without touching main's unrelated roadmap edits. Reused the
+existing `noms-c799915fcf93e034` deployment on port 32768 and the synthetic
+fixtures; a fresh temporary browser tab initially reached the sign-in gate.
+Normal Google mock sign-in as `testuser` restored the existing `@user-e13c`
+owner. A preliminary GitHub provider page was opened but no GitHub sign-in or
+account link was submitted. No identity was created, replaced or deleted.
+
+This slice distinguishes a **response-stage** failure after an independently
+observed database commit from earlier pre-server failure checks. Original
+account/content rows remain unchanged, except for the named synthetic fixtures
+below. No Delete/Discard/provider-linking action was submitted. Two new private
+recipes were intentionally published as local test data; none was made public.
+
+### Existing-draft save and navigation evidence
+
+Used the unpublished step-photo fixture
+`ba3917ec-1033-4e19-83aa-a4977109a297`, initially revision 9 with empty Notes.
+The four existing photo records and method rows were retained. Browser and
+read-only SQL observations:
+
+- Autosave A reached HTTP 200 at the response-stage pause; SQL proved revision
+  10 with the submitted note before the response was failed. Existing
+  refresh/retry reconciled the revision and returned to **Saved**.
+- Autosave B committed, then a newer C note was entered before B's response
+  was failed. The newest generation won; SQL proved revision 13 containing C,
+  not B. No stale completion overwrote the local field.
+- Explicit Save Draft D committed revision 14 before its response was failed.
+  Pending controls were disabled. Safe draft-save feedback appeared, entries
+  stayed visible and the existing autosave reconciliation returned to Saved.
+  Reload restored D. This does not claim the original failed response itself
+  reached the client successfully.
+- Autosave E committed while its response was held. Native Dashboard
+  navigation showed revision 16. Reopening the draft loaded E. A new F note
+  was entered, then the old held response was failed; the new visit stayed
+  isolated and autosaved revision 17 with F. This tests leaving/returning
+  during a write, not a failed final browser navigation after success.
+
+Final note: **CP8 returned visit F is isolated — synthetic only.** Published
+recipes/versions and unrelated drafts were unchanged by these checks.
+
+### Confirmed issues and fixes
+
+1. On `/recipes/new`, the first creation committed draft
+   `a4e2d8f5-1514-458b-b429-e86a76840a13` at revision 0. After dropping its HTTP
+   200 response, the old UI exposed a raw transport exception. A subsequent
+   edit issued another creation request. That second request was held and
+   failed **before execution**, so no duplicate draft was actually inserted.
+2. Added an explicit unconfirmed-creation state. It preserves visible entries
+   while blocking autosave, pending debounce tasks, manual Save/Publish and
+   new step uploads. It renders safe feedback even when the failed creation
+   belongs to an older editor generation. Generic creation errors are treated
+   conservatively; this is a UI recovery guard, not server-side idempotency or
+   automatic content matching.
+3. Shared the existing safe recipe-write feedback with the new editor rather
+   than retaining raw creation/save/publication exceptions. Retain the returned
+   draft ID/revision **before** issuing publication, including the initial
+   publish-without-an-earlier-autosave path. A lost publication response must
+   never send the new editor back through another creation call.
+4. Review caught a local-entry loss risk: the recovery link must not leave the
+   current unsaved page. **Check Dashboard** opens a separate tab. Users can
+   inspect/reopen the saved draft while the original entries remain available
+   for manual reconciliation. It does not silently merge unsaved changes.
+5. The first publication response-loss run created exactly one private recipe
+   and v1, and a retry issued no duplicate creation/publication. However, a
+   later autosave error replaced the useful publication warning. Added an
+   explicit unconfirmed-publication state: once publication was attempted
+   and failed, keep the warning, pause further writes and expose the same
+   separate-tab Dashboard recovery. A failure before publication is attempted
+   does not claim that publication may have executed. This guard is also
+   deliberately conservative for server-reported publication failures.
+
+Ordered local source commits:
+
+- `d04e2cf` — creation guard, shared safe feedback and retained publish identity.
+- `63d3bd8` — separate-tab Dashboard recovery preserves local entries.
+- `fd6a232` — persistent uncertain-publication feedback and write pause.
+
+They are fast-forward integrated into `codex/NOMS-020-visual-design-refinement`;
+nothing was pushed. Only the existing test app was rebuilt/restarted; its
+database/media volumes and other deployments were not cleaned or restarted.
+
+### Final browser acceptance
+
+- Guarded autosave creation committed
+  `b232b960-1d24-4ae4-b1ee-4d2572a46922`. Entered a newer description while its
+  response was held, scheduling another debounce, then dropped the committed
+  response. Safe alert remained visible even though the failed request was
+  from the older generation. Observed zero new creation requests through that
+  debounce and another subsequent Notes edit. Save/Publish stayed disabled;
+  local description and note remained visible.
+- Native Check Dashboard opened a second tab without navigating the original.
+  Its draft card reopened the original ID. Manually transferred the retained
+  description/note and saved revision 1; no automatic merge is claimed.
+- At 320px, the creation alert spans x16–289 within document width 305 and
+  viewport 320. The wrapped warning and keyboard-focused recovery link were
+  visually inspected: `/tmp/noms-020-unconfirmed-draft-320.jpg`.
+- Final publication test began on a fresh new-recipe form. Filled a title,
+  synthetic ingredient and method, then clicked Publish before the autosave
+  debounce. Publication consumed draft
+  `afe7b3e0-761e-4ecb-85df-2454bb2bab27` and committed private recipe
+  `84e712e9-4088-4b7b-9599-e64c874d02a9` with exactly one v1; SQL proved this
+  before its HTTP 200 response was dropped.
+- Save/Publish remained disabled, Cancel usable, and the safe publication
+  warning stayed visible through another Notes edit. Observed **zero** further
+  create/save/publish requests. Native recovery opened Dashboard separately,
+  showing the committed recipe; reopening it created the normal edit draft.
+  Manually transferred the retained note, autosaved and reloaded successfully.
+  Published v1 remained unchanged; the note is private draft-only data.
+- Publication alert also fits x16–289 at 320px without document overflow;
+  `/tmp/noms-020-unconfirmed-publication-320.jpg` was visually inspected.
+  Narrow geometry and native focus are not physical-device or screen-reader
+  speech acceptance.
+
+New synthetic records retained for replay:
+
+| Fixture | ID | Final state |
+| --- | --- | --- |
+| Pre-fix first creation | `a4e2d8f5-1514-458b-b429-e86a76840a13` | Private draft, revision 0; duplicate request prevented before execution |
+| Guarded first creation | `b232b960-1d24-4ae4-b1ee-4d2572a46922` | Private draft, revision 1 with manually recovered description/note |
+| First lost-publication run | `640216dd-222e-4b56-8cf3-65ba77943dc1` | Private recipe, exactly one v1; source draft `6ee3f9ed-bf56-448f-8d58-389b00dda957` consumed by publication |
+| Final publication guard | `84e712e9-4088-4b7b-9599-e64c874d02a9` | Private recipe, exactly one v1 |
+| Continued edit after final publication | `35a5b54d-bae2-4df8-b1f0-480564056609` | Private edit draft, revision 1 with retained note; v1 not changed |
+
+### Automated evidence, integrity and review
+
+New tests preceded implementation. Initial run failed on missing shared helper;
+the later publication test failed on the absent publication state. Final
+`SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration-worktree>/target cargo test
+--features server draft_save -- --test-threads=4`: **5 passed, 0 failed**;
+`/tmp/noms-020-lost-response-green-final.log`. These include message and
+source-contract tests; browser/network/SQL observations, not those source
+checks alone, prove the runtime outcomes.
+
+Final `PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true
+CARGO_TARGET_DIR=<integration-worktree>/target just ci`: **933 passed,
+0 failed, 12 ignored**, native/WASM check and Clippy, formatting, schema/policy,
+secret/artifact checks and dependency audit all passed. The eight existing
+allowed advisory warnings remain; `/tmp/noms-020-lost-response-ci-final.log`.
+Final app build: `/tmp/noms-020-lost-response-deployment-accepted.log`.
+Scoped response/request-pause metadata (no cookies/headers):
+`/tmp/noms-020-lost-response-pauses.json`. The earlier 932-test gate is
+superseded by the final publication-guard revision.
+
+Final hashes equal this turn's baseline after excluding only the newly named
+fixtures and the existing synthetic step-photo draft whose Notes were edited:
+
+| Original rows | Count | Hash |
+| --- | ---: | --- |
+| Recipes | 32 | `e8933d2d64c0b6bd5553833c8a0dab20` |
+| Versions | 66 | `ddeec72b8bfa497a60690729e3b65bac` |
+| Collections | 30 | `9f2f90802adafb72eca3ea15fc0bbacb` |
+| Memberships | 28 | `fd3bc9401f1389c7fa08cff816e7b44b` |
+| Other original drafts | 3 | `56ecca403e09c456247b908907485805` |
+| Users | 3 | `7bc139f2aea02af7488ad90b2d8f0cca` |
+
+No images were uploaded in this slice. Rebuild-generated `.grayscale` utility
+was removed narrowly from the integration worktree's already-dirty
+`assets/tailwind.css`; its starting SHA-256 is restored exactly:
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+The user's CSS remains uncommitted. Interception was cleared, Network
+observation disabled, viewport reset and both recovery tabs/main temporary
+test tab closed. The normal original mock-owner session remains signed in.
+
+Explicit second-pass self-review: **PASS for this scoped gate**, with the
+same-tab recovery risk and autosave-warning overwrite fixed and retested.
+Reviewed live/deferred guards, older-generation feedback, retained draft
+identity, native/WASM compilation, actual commit-versus-response evidence,
+manual reconciliation, original-row integrity and honest evidence limits.
+No independent review agent was used.
+
+**Remaining:** other mutations' post-commit lost responses, failed final
+navigation after successful operations, identity replacement across open
+pages, broader image edge cases, full accessibility/real devices and final
+whole-app acceptance. UI-only guards do not supply server-side idempotency,
+cross-tab concurrency guarantees or automatic recovery of unsaved changes
+after reload. Destructive/account-linking replay still requires its separate
+authorization and fresh isolated fixtures. Checkpoint 8 remains open.
