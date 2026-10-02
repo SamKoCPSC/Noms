@@ -6330,3 +6330,117 @@ forget their closures and poll without a bound; the decoder revokes after its
 await rather than using cancellation-safe ownership. This slice does not accept
 those lifetimes, EXIF/wide-gamut/animation behavior, all cross-step interactions,
 physical-device gestures or screen-reader/whole-app sign-off.
+
+## Image processing callback and cancellation acceptance 2026-10-02
+
+The shared image pipeline now has bounded decoder, encoder and blob-read waits,
+and decoder URLs are released when their future is cancelled. This closes the
+specific lifetime gap recorded above, not all editor or checkpoint-8 acceptance.
+Implementation remains on `codex/NOMS-020-checkpoint-8` in its existing isolated
+worktree, fast-forwarded into `codex/NOMS-020-visual-design-refinement` for testing.
+
+### Implementation and automated evidence
+
+`0d1ddba` replaces forgotten encoder callbacks and unbounded FileReader polling.
+Each asynchronous stage races a 30-second browser timer. The native Blob promise
+has explicit success/rejection handlers; both hold weak completion references.
+Canvas encoding uses a one-shot callback with the same weak ownership. Dropping
+the waiting future drops its channel owner, so late callbacks discard their
+payload instead of retaining or resuming a cancelled form. A decoder URL lease
+revokes on success, failure or future cancellation. Dimensions, WebP quality,
+save/upload behavior and visual styling are unchanged.
+
+Native encoding/Blob work itself cannot be aborted through these APIs. Callback
+captures are released on invocation or browser garbage collection; immediate
+GC and compatibility with browsers lacking the wasm-bindgen weak-reference GC
+mechanism are not claimed. The tested browser exposes WeakRef and
+FinalizationRegistry. Timers can be delayed in suspended/background pages.
+
+Tests-first logs show the missing lifecycle helper and forgotten callback wiring
+failing before implementation. Seven native lifecycle tests cover completed and
+timed-out waits, cancellation of both operation and timer, decoder URL release,
+late payload disposal and first-result-only completion. A source-wiring regression
+checks the actual WASM pipeline uses the bounded operations rather than forgotten
+callbacks/FileReader. The existing broken-image decoder contract remains tested.
+
+```sh
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server utils::image_processing_lifecycle
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server image_encoder_and_blob_reader_use_bounded_owned_operations
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target just ci
+```
+
+Focused results: **7 and 1 passed**. Final full CI: **972 passed, 0 failed,
+12 ignored**, including native/WASM checks, Clippy, formatting, schema, secret,
+deployment and dependency-audit gates. Eight existing allowed audit warnings
+remain. The initial CI run found a Rustdoc list-spacing lint; adding the missing
+paragraph separator resolved it. No new ignored real-storage run is claimed.
+Logs are `/tmp/noms-020-image-callback-red.log`,
+`/tmp/noms-020-image-pipeline-wiring-red.log`,
+`/tmp/noms-020-image-completion-green.log`,
+`/tmp/noms-020-image-pipeline-wiring-green.log` and
+`/tmp/noms-020-image-pipeline-ci-final.log`.
+
+### Browser acceptance on the existing deployment
+
+Rebuilt and restarted only the existing app container on
+`http://127.0.0.1:32768`. Forced an uncached client reload and verified the
+executed WASM resource length was **14,403,796 bytes**, matching the rebuilt
+asset; SHA-256:
+`b606f64418f7f1efff3170003d7cced290f708050614320bbd28a3bafa4e8a21`.
+The subsequent documentation-only change does not alter pipeline behavior.
+Used blank forms, the existing mock `testuser` identity and synthetic local PNGs.
+No recipe title/content edit, server upload, draft save or publication was sent.
+
+- Normal landscape selection opened the editor and reached Ready on closing it:
+  43 KB to 5 KB, 86% smaller. One gallery URL remained while mounted; the decoder
+  URL had already been revoked.
+- A null encoder result showed the WebP error. A rejected native Blob promise
+  showed the read error, with no observed unhandled rejection.
+- Holding a real encoder callback past its deadline showed the encode timeout
+  and re-enabled Publish, Cancel and Add Step. Delivering that result afterward
+  threw no error. All eight URLs created up to that point had been revoked.
+- Holding a native Blob resolution past its deadline showed the read timeout.
+  Late resolution produced no error or Ready row. Ten URLs had been created and
+  revoked; none remained outstanding.
+- Forcing Blob-backed image `complete` to remain false, then navigating to
+  Explore while decoding was pending, revoked all twelve URLs created so far,
+  with no duplicate revocation.
+- Navigating to Explore during a held encode, then delivering its callback,
+  caused no error or revived editor. No URLs remained outstanding.
+- A separate forced-pending decoder reached its decode timeout and restored the
+  disabled controls. All sixteen URLs created so far had been revoked.
+- After restoring all native APIs, a valid landscape image again reached Ready.
+  A subsequent section-link probe cleared the form, described below. Final
+  counts were **18 created, 18 revoked, 0 outstanding, 0 duplicate revocations**;
+  the tab had no captured client error logs.
+
+Inspected screenshots: `/tmp/noms-020-image-reader-timeout.png` and
+`/tmp/noms-020-image-pipeline-recovered.png`. The former shows the recoverable
+timeout; the latter shows Ready after restoring native processing. Temporary
+diagnostic prototype wrappers and cache overrides were removed and the clean
+verification tab closed. The six earlier unsaved tabs were marked for retention
+and were not intentionally reloaded or closed.
+
+### Integrity review and next fix
+
+Before/after ordered full-row JSONB hashes match for 36 recipes, 71 versions,
+10 drafts, 31 collections, 3 users and 10 media assets. Raw snapshots are
+`/tmp/noms-020-image-pipeline-db-before.txt` and
+`/tmp/noms-020-image-pipeline-db-after.txt`. The integration stylesheet is
+byte-identical to its pre-turn checksum after removing only the generated
+grayscale utility. Root main, unrelated edits and other deployments are untouched.
+
+Second-pass self-review: **PASS for this scoped pipeline change**, with no
+independent agent review. No schema migration is involved; the pre-change
+pipeline is available at `0b284aa` if rollback is needed. No exact browser-GC
+timing, EXIF/wide-gamut/animation, native gesture or whole-app sign-off is claimed.
+
+A separate existing defect was reproduced twice: clicking the Photos section
+link from `/recipes/new` changes the fragment and remounts the retained form,
+clearing its local photo row. The second reproduction used a successfully
+processed Ready photo, not a failing operation. Source inspection shows
+`retained_form_visit_key` includes nonempty fragments in the component key.
+Screenshot: `/tmp/noms-020-editor-section-link-clears-photo.png`. This is the
+next fix: preserve same-page fragment navigation without losing local work,
+while retaining reset behavior for genuine route/query changes. The five broad
+checkpoint-8 acceptance groups remain open.

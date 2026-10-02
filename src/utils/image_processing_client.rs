@@ -40,6 +40,7 @@ pub struct ProcessedImage {
 /// 4. Export canvas as WebP blob via canvas.toBlob()
 /// 5. Read blob as ArrayBuffer → Vec<u8>
 /// 6. Repeat steps 3-5 for thumbnail (fit within THUMB_SIZE x THUMB_SIZE, aspect ratio preserved)
+///
 /// The decoder revokes its ObjectURL on completion, error, or cancellation.
 ///
 pub async fn process_image(file: web_sys::File) -> Result<ProcessedImage, String> {
