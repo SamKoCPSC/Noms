@@ -6834,11 +6834,10 @@ checkpoint-8 groups remain open.
 ## Image colour and animation audit 2026-10-02
 
 Sampled ICC colour conversion passed without a code change. The animation audit
-found a visible mismatch that remains open: the editor displays the original
-animated source while the full-size and thumbnail exports are first-frame stills.
-The recommended policy is to retain the existing static export behavior and show
-that same first-frame still in previews. Explicitly rejecting animated inputs is
-an alternative; no policy change was implemented without the user's choice.
+found a visible mismatch: the editor displays the original animated source while
+the full-size and thumbnail exports are first-frame stills. The subsequent user
+scope decision excludes animation handling from this editor overhaul. The mismatch
+remains a documented limitation; no processing or input-rejection change is required.
 
 ### Colour conversion evidence
 
@@ -6874,8 +6873,9 @@ Both formats still exported the red first frame in both variants. The four
 captured delayed-run blobs were also independently decoded by Pillow as
 single-frame, non-animated images. Thus this browser did **not** exhibit a
 full/thumbnail frame race in the tested cases. The delay was a tab-local diagnostic,
-not natural encoder latency. Preview agreement and any animation policy remain
-unaccepted; retaining animation would require a separately scoped feature.
+not natural encoder latency. Preview agreement for animated sources is not accepted
+or required under the subsequent still-image scope decision. Retaining animation
+would require a separately scoped feature.
 
 ### Reproduction and preservation
 
@@ -6911,10 +6911,25 @@ and its temporary tab closed. Existing user tabs and other deployments were not
 changed. User-owned integration CSS retains SHA256
 `74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
 
-Second-pass self-review: **PASS for sampled ICC export conversion; animation
-preview acceptance remains open**. No independent-agent review was used. This
-documentation-only slice uses one coherent evidence commit in the existing
+Second-pass self-review: **PASS for sampled ICC export conversion**. Animated-source
+preview agreement was not established and is now out of scope. No independent-agent
+review was used. This documentation-only slice uses one coherent evidence commit in the existing
 isolated `codex/NOMS-020-checkpoint-8` worktree, based on `4d3a385`; no runtime,
 schema or saved-content change requires deployment. All five broad checkpoint-8
-groups remain open. Next: user choice on matching first-frame previews versus
-rejecting animated files, followed by the remaining mutation and acceptance gates.
+groups remain open. Next: remaining mutation and still-image acceptance gates.
+
+## Still image editor scope decision 2026-10-02
+
+The user confirmed that the editor does not need to handle animations. The
+acceptance contract covers still images; it does not require animated playback,
+frame selection/editing, preservation or matching animated-source previews to
+exports. Existing first-frame conversion is retained. The observed later-frame
+preview is recorded above as a limitation, not a blocker or evidence of supported
+animation editing. No animation detection, rejection, preview flattening or
+processing change was implemented.
+
+This documentation-only clarification uses the existing isolated checkpoint-8
+worktree and one coherent scope commit. Diff whitespace and a second-pass
+self-review passed; runtime tests were not rerun because application code did
+not change. All five broad acceptance groups remain open. The next work returns
+to remaining mutation outcomes and still-image checks, not animation support.
