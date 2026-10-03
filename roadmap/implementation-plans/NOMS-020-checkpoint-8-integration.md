@@ -8032,3 +8032,122 @@ Next: collection creation upload completion and post-write navigation/account
 races, then mixed still-image upload batches and remaining gates. Suspended-tab
 timers, other identity races, real-device/screen-reader checks and final whole-app
 acceptance remain open. Animation handling remains excluded.
+
+## Collection creation uploads and committed completion account guards
+
+Accepted within the following scope on 2026-10-03 using the existing local
+deployment at `http://127.0.0.1:32768`. Actual successful responses were held at
+the browser response stage; route/account changes used normal UI controls and
+existing mock identities. No fabricated success response or injected cookie.
+
+### Defect and implementation
+
+Before `2d7259f`, an actual accepted collection creation acknowledgement released
+after account replacement redirected the retained original-account form to its
+private detail page. The replacement account saw “Collection unavailable”.
+The server correctly created the collection for its initiating owner; the bug
+was the late client navigation. Collection editing also lacked completion-account
+checks between its details, location and sharing stages.
+
+`2d7259f` checks initiating, current and returned-owner identities before applying
+accepted edit results, starting a subsequent stage or navigating. A changed-account
+completion retains accurate original-account feedback and blocks another save
+until the user inspects a fresh page. Creation remembers the confirmed ID before
+the account check, blocks duplicate submission even after owner recovery, and
+offers a separate-tab “Check created collection” link. Existing uncertain-response
+guards remain intact. This does not roll back accepted writes, make creation
+idempotent on the server or instantly detect shared-cookie changes.
+
+### Browser observations
+
+| Case | Result |
+| --- | --- |
+| Creation cover after route exit | Held the actual 9° cover upload acknowledgement, left for Collections and released it. No parent collection was created. Fresh creation had default fields and no stuck saving state. |
+| Creation cover after account replacement | Held a 13° cover upload, switched to the existing alternate account and waited for the old form to become hidden/inert. Release registered the upload but the account-bound parent creation rejected with HTTP 500. No collection was inserted; text and uploaded adjustment stayed in the retained form. |
+| Creation recovery under its owner | Restored `testuser`; reopened the same cover at 13°, cancelled only modal edits and explicitly created. The complete creation request interval contained one create and no upload. SQL and a fresh detail read confirmed the retained cover. |
+| Accepted creation after route exit | Held an actual committed creation acknowledgement, left for Collections and released it. Stayed on Collections. Exactly one private synthetic collection remained saved for the original owner. |
+| Accepted details after route exit | Held the accepted details response, left for Collections and released it. Stayed on Collections; the new fixture retained its accepted description. |
+| Accepted details after account replacement | Requested details and a subsequent move into CP8 Responsive library. Held the successful details response, replaced the account, waited for hidden/inert state and released. The old form stayed on its edit URL with accurate completion feedback. The complete observed interval contained no move or sharing request. SQL and fresh owner detail showed saved description, top-level location and private visibility. |
+| Accepted creation after account replacement | Held the owner recovery's accepted creation response, switched accounts, waited for hidden/inert state and released. No redirect. The returned collection ID was retained; Create stayed disabled with its separate-tab recovery link. Restoring the owner retained fields/cover and the disabled button. Exactly one matching collection existed. |
+| Partial-edit recovery | Restoring the owner kept Save disabled and exposed “Check saved collection”. A fresh separate-tab detail read showed the accepted description; the intended move remained local only. No blind replay was submitted. |
+
+The final creation acknowledgement cursor was 317; its complete interval
+contained one create request. Through cursor 349, the completion/recovery interval
+had no new create or upload request. The accepted details/account interval through
+cursor 346 had no move/sharing request. Each cited interval reported
+`hasMore=false`, `truncated=false`. Local cursors are not durable network artifacts.
+No headers, cookies, capabilities or response bodies were persisted. Hidden form
+inspection is diagnostic evidence, not a claim that replacement accounts can
+interact with its inert controls.
+
+Successful move and sharing completion races have source-wiring coverage, not
+new browser acceptance. Browser coverage here proves stopping a requested move
+after the earlier details completion changed accounts. No visibility expansion
+or destructive operation was submitted.
+
+### Fixtures and integrity
+
+Three new empty, top-level private collections belong to original testuser:
+
+- `79f1a70d-5a6c-452b-a6c4-28a924131354`: CP8 collection completion — Local test; created during reproduction, then deliberately updated for route/account details checks.
+- `c5734a3d-1f40-4a81-b6ad-570adcadabc1`: CP8 created before navigation — Local test; accepted during route-exit creation.
+- `24949c12-ca26-4ce7-887e-8a437d48ec9a`: CP8 creation upload completion — Local test; one creation after definitive rejection/recovery, with retained 13° cover.
+
+Collection count increased 36 → 39. The cancelled-creation fixture count remained
+zero. Two synthetic assets increased the media registry 38 → 40:
+`16e5f869-d049-4467-99ce-a48dfc9b5742` (route-cancelled uncommitted cover) and
+`f4769807-bea6-42b5-9a7b-c04071cd1a93` (retained new collection cover).
+No explicit deletion or storage cleanup was requested; eventual retirement is
+not accepted by this pass.
+
+Complete ordered `to_jsonb(row)::text` hashes, concatenated with an empty
+separator, matched the pre-pass baseline after excluding only these new rows:
+
+| Protected rows | Count | MD5 |
+| --- | --- | --- |
+| Earlier collections | 36 | `3c7909ef4b72a276a1645a43bb0b3235` |
+| Users | 3 | `5a84bb5b8604af4e42e6340240f575ea` |
+| Recipes | 36 | `ff40ea68a91ad2b0ea54e5af5a1917fe` |
+| Drafts | 11 | `a225a68a23cf7a6ae6f296c5fe67a4b6` |
+| Published versions | 71 | `f5dcc0816a77295b76897942a28866fd` |
+| Earlier collection media references | 3 | `f2adb04d2744f74851fa495051c37ce9` |
+
+Rows are ordered by ID, versions by recipe/version, and references by
+collection/asset. Exploratory `row_to_json` hashes used a different serialization
+and were not baseline comparisons; the table uses the matching baseline method.
+
+### Validation and closeout
+
+Three new regressions cover duplicate-submission policy and actual source wiring
+for creation/account checks and all three edit stage guards. Initial red command
+exited 101 for the missing new policy function; this was a compilation failure,
+not a failing behavioral assertion. Green focused tests: 35 passed, 0 failed.
+The guard-order tests inspect source wiring, not asynchronous mounted behavior;
+the held-response browser cases supply the scoped runtime evidence above.
+
+Full `SQLX_OFFLINE=true just ci`, with the integration target directory and
+`PGOPTIONS='-c log_min_error_statement=panic'`, passed: **1006 passed, 0 failed,
+12 ignored**. Format, native/WASM checks, Clippy, schema/policy, secret and deployment
+artifact checks passed; eight existing allowed advisory warnings remain.
+The first sandboxed attempt failed on a read-only advisory-cache lock; the
+approved rerun passed. Logs:
+`/tmp/noms-020-collection-completion-{red,green,ci}.log`.
+
+The existing deployment was rebuilt and restarted with this code; client/server
+builds passed and HTTP 200 returned after startup. No additional deployment,
+configuration change or push. Second-pass self-review: **PASS within this scope**,
+reviewing cancellation versus accepted server writes, returned-owner guards,
+stage ordering, sticky review/duplicate guards, fixture integrity and coverage
+limits. No independent agent review was used.
+
+Restored normal `testuser` sign-in, cleared interception, disabled temporary
+Network observation and closed all test tabs. No viewport override. Proof:
+`/tmp/noms-020-collection-created-account-recovery.png` (untracked full-page
+capture of retained fields/cover, completion feedback, disabled Create and
+recovery link). Preserve existing integration CSS edits; only the generated
+grayscale utility from rebuilding is excluded from this implementation.
+
+Next: actual accepted move/sharing response-stage races, then mixed still-image
+batches. Suspended-tab timer behavior, remaining identity races, real-device and
+screen-reader acceptance, and final whole-app sign-off stay open. Animation
+handling and dark-mode redesign remain out of scope/deferred respectively.
