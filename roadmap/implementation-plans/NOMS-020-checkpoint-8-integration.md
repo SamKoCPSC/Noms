@@ -7428,3 +7428,157 @@ submission behavior, cover upload response loss, in-flight route/account changes
 and full accessibility/device acceptance remain outside this slice. All five
 broad checkpoint groups stay open. Next: collection-cover upload response-loss
 recovery and the remaining mutation/still-image acceptance gates.
+
+## Collection cover upload response recovery 2026-10-03
+
+Collection creation and replacement now distinguish an unconfirmed upload from
+unsaved collection changes. Browser and database checks show that a lost upload
+acknowledgement does not create or update the collection. Local fields, preview
+and edits remain available; explicit Retry uploads only the image, and a later
+Save submits the current fields using the acknowledged asset. Retry may create
+an extra temporary media copy, which the UI now states honestly.
+
+### Regression and scoped change
+
+On baseline `f10cbe4`, the empty private hydration fixture
+`3fd31c06-c004-47b8-8091-047ff90ef8aa` selected the synthetic color-grid image
+`/tmp/noms-020-recipe-portrait.png`. The real upload HTTP200 response was held at
+the response stage. SQL confirmed registered collection-cover asset
+`de69e747-9eb9-4936-a63a-b98fb4053970`, while the collection's description and
+cover remained unchanged. Both stored variants subsequently returned HTTP200
+(5,600 full bytes; 1,874 thumbnail bytes).
+
+Dropping the response made the old UI claim the image could not be uploaded and
+the cover failed to upload. Fields and preview were retained, and Enter issued
+no second upload or collection mutation. Cancel left the fixture unchanged.
+The defect was the definite-failure wording, not a missing content-save guard.
+A new outcome regression failed against that wording before implementation.
+
+`cd23ef6` changes the shared uploader's unknown/transport-error copy to explain
+that the upload could not be confirmed, the preview is retained, and retrying
+may upload another copy. Known pre-write account, authentication, quota, rate,
+format and storage-availability messages remain specific and sanitized. Both
+collection parents now say their changes were not saved and direct the user to
+the image status. Existing single-use pending-save consumption, failed-item
+batch guards, explicit Retry and Remove behavior remain unchanged. No upload
+API, schema, idempotency mechanism or new automatic retry is introduced.
+
+Two new regressions cover retained processed bytes/edit metadata, no automatic
+re-upload on subsequent Save, single-use deferred completion and both collection
+parents' copy. The existing unknown-error wording expectation was updated to
+this explicit outcome contract; known-error and internal-detail checks remain.
+The shared item warning also applies to recipe galleries, but their parent
+summaries and post-commit upload flows are not newly accepted by this slice.
+
+### Browser and database observations
+
+The existing port **32768** deployment was rebuilt, with both client/server
+builds completing before restart. A fresh tab reloaded without cached client
+code. Upload interception targeted only `/api/upload_image*` Fetch/XHR responses;
+no fake response body or Document interception was used. Every lost-response
+probe held a real HTTP200 and confirmed the new media row before failing it.
+
+- **Creation:** SQL showed one new uncommitted upload but no collection. The
+  corrected uncertainty and unsaved-content messages appeared. Fields, preview,
+  Retry, Remove and Cancel remained usable. Enter issued no further upload or
+  create call. Editing the description and choosing Retry issued exactly one
+  upload, no create/update, and still left all 35 preceding collections unchanged.
+  A later Enter save issued exactly one create and no new upload, retaining the
+  newest Unicode description and attaching only the acknowledged retry asset.
+- **Replacement:** the new private fixture was reopened, its saved cover removed
+  only from the local editor, and a replacement selected with horizontal flip.
+  When its upload response was lost, SQL still showed the old saved cover and
+  description. The local replacement preview/intent survived; Enter again issued
+  no further upload or collection update. Explicit Retry issued one upload only;
+  SQL still showed the old durable cover until a separate Save changes action.
+  That action issued one update, no new upload/move/sharing mutation, saved the
+  newest description and retry asset, and returned to the collection. Reload
+  displayed the saved flipped cover. SQL confirmed `flip_x: true` metadata.
+
+The creation fixture is `accc52da-d29d-42ed-967b-dd3584e1fda0`, named
+CP8 cover response recovery 🥣. It remains top-level/private, with zero recipes
+and no subcollections. Its final description is Private replacement cover;
+newest café entries saved after explicit retry. Exactly one collection with
+that fixture-name prefix exists. No saved original collection was altered.
+
+Upload records observed during these probes:
+
+| Asset | Probe | Observed outcome |
+| --- | --- | --- |
+| `de69e747-9eb9-4936-a63a-b98fb4053970` | Baseline lost response | Uncommitted; no collection attachment |
+| `511d89c6-10fe-4053-a4a4-929d8e5d90aa` | Creation lost response | Uncommitted; no collection attachment |
+| `177c4afc-4cb6-4f79-b946-ec66a995063b` | Creation explicit retry | Retained by the first save; later replaced |
+| `740a5f71-6f6d-449c-94a8-5edf1ed9bdde` | Replacement lost response | Uncommitted; no collection attachment |
+| `e0d68c25-a263-448e-834c-353230de2a08` | Replacement explicit retry | Retained; sole final cover attachment |
+
+The three unconfirmed uploads had 15-minute expiry values. Direct HEAD requests
+confirmed both green lost-response variants were actually present. Code inspection
+shows expired uncommitted assets become cleanup candidates; that is eligibility,
+not proof that this worker deleted these objects. No cleanup job, expiry rewrite,
+discard capability or deletion was forced. The superseded retained asset also
+remains subject to normal reference-aware cleanup. These copies may consume
+quota until normal cleanup; no deduplication or exactly-once upload is claimed.
+
+The measured viewport was **1280×720**, document width **1265px**. Desktop failure
+feedback and the reloaded saved replacement screenshots were visually inspected.
+Temporary evidence:
+
+- `/tmp/noms-020-cover-response-red.png`
+- `/tmp/noms-020-cover-response-create-unconfirmed.png`
+- `/tmp/noms-020-cover-response-create-saved.png`
+- `/tmp/noms-020-cover-response-edit-unconfirmed.png`
+- `/tmp/noms-020-cover-response-replacement-saved.png`
+- `/tmp/noms-020-cover-response-network.json`
+
+Network intervals were read without truncation/unread pages; records retain only
+request sequence, URL, method and resource type, never bodies, cookies, headers
+or discard capabilities. An editor control's AX role differed from its DOM role;
+the observed DOM button was used after a temporary development rebuild overlay
+cleared. Local replacement intent survived that pause. Interception and cache
+disabling were cleared and both temporary tabs closed. No viewport override or
+new phone/tablet/touch/screen-reader acceptance is claimed.
+
+### Validation and preservation
+
+Branch `codex/NOMS-020-checkpoint-8`, worktree
+`/home/samko/GitRepos/Noms/.worktrees/NOMS-020-checkpoint-8`:
+
+```sh
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server unconfirmed_upload_preserves -- --test-threads=1
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server components::base::image_upload::tests -- --test-threads=1
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target just ci
+docker exec noms-c799915fcf93e034-app-1 dx build --platform web --force-sequential true --debug-symbols false
+```
+
+The focused red regression failed on the expected wording difference. After the
+fix, **50 uploader tests passed**, and full CI passed **999 tests, 0 failed,
+12 ignored**, including native/WASM compilation, formatting, Clippy, schema,
+policy, secret and deployment gates. Eight existing allowed audit warnings remain;
+no fresh ignored storage integration run is claimed. Logs:
+`/tmp/noms-020-cover-response-{red-tests,tests,ci,build}.log`. Explicit build exit0
+for both targets. The reloaded browser's WASM body was **14,444,557 bytes**,
+**14,444,857** including transfer overhead, matching the built file size. Built-file
+SHA256: `7269766eb149f04858a42a996a426833780ec2a5994f73c74ae61ba835e94de5`.
+
+Before/after ordered full-row hashes match for all **35 preceding collections**
+(`497df7ded873c88f3f2d7569a30dcb5d`), **36 recipes**, **71 versions**, **10 drafts**
+and **3 users**; the latter hashes match prior evidence. One new private collection
+and five new media records are retained, bringing the media-row count from 13
+to 18 at inspection. This is not a full object-store audit. The earlier hydration
+fixture stayed unchanged. No publication, permission change, manual object
+deletion or unrelated content mutation was submitted.
+
+Only the build-generated grayscale rule was removed from integration CSS,
+restoring the user's exact SHA256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+Main's unrelated changes and other deployments were untouched. Runtime copy/tests
+and documentation are separate coherent commits integrated by fast-forward.
+Rollback baseline `f10cbe4`; no migration.
+
+Second-pass self-review: **PASS for scoped collection-cover recovery**, no blocking
+or should-fix findings, no independent-agent review claimed. Unknown upload errors
+are conservative, recovery is explicit, and the warnings do not promise duplicate
+prevention or completed cleanup. Remaining recipe-gallery/step-photo post-commit
+upload outcomes, in-flight route/account replacement, cross-browser/device and
+accessibility checks remain open. All five broad checkpoint groups stay open.
+Next: recipe-gallery and step-photo upload response-loss acceptance.
