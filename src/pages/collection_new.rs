@@ -10,6 +10,8 @@ use crate::components::AuthRequired;
 use crate::types::{CollectionVisibility, RecipeImage};
 use crate::Route;
 
+const UNCONFIRMED_COLLECTION_CREATION_MESSAGE: &str = "We couldn't confirm whether your collection was created. Your entries are kept here. Check Collections in another tab before starting a new collection to avoid duplicates.";
+
 #[derive(Clone)]
 struct PendingCollectionCreate {
     name: String,
@@ -26,6 +28,9 @@ pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
     let name = use_signal(|| "Untitled Collection".to_string());
     let description = use_signal(String::new);
     let mut saving = use_signal(|| false);
+    // A failed response may follow a committed insert. Keep this visit's
+    // entries, but do not issue another non-idempotent creation blindly.
+    let mut creation_unconfirmed = use_signal(|| false);
     let mut error = use_signal(|| None::<String>);
     let mut visibility = use_signal(|| CollectionVisibility::Private);
     let navigator = use_navigator();
@@ -70,11 +75,15 @@ pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
                     });
                 }
                 Err(problem) => {
-                    error.set(Some(
+                    if let Some(feedback) =
                         crate::auth::account_binding::account_error_feedback(&problem)
-                            .map(str::to_string)
-                            .unwrap_or_else(|| problem.to_string()),
-                    ));
+                    {
+                        // This explicit account rejection occurs before writes.
+                        error.set(Some(feedback.to_string()));
+                    } else {
+                        creation_unconfirmed.set(true);
+                        error.set(Some(UNCONFIRMED_COLLECTION_CREATION_MESSAGE.to_string()));
+                    }
                     saving.set(false);
                 }
             }
@@ -85,7 +94,8 @@ pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
         nav { class: "collection-editor-breadcrumb", aria_label: "Breadcrumb", Link { to: Route::CollectionList {}, "Collections" } span { aria_hidden: "true", " / " } span { if parent.is_some() { "New subcollection" } else { "New collection" } } }
         h1 { class: "collection-editor-heading brand-title", PageIcon { kind: PageIconKind::Collections } span { if parent.is_some() { "New subcollection" } else { "New collection" } } }
         p { class: "collection-editor-intro", "Start an album for recipes you want to keep together." }
-        CollectionForm { name, description, submit_label: "Create collection", submitting: saving(), error: error(),
+        CollectionForm { name, description, submit_label: "Create collection", submitting: saving(),
+            submit_disabled: creation_unconfirmed(), error: error(),
             oncancel: move |_| { navigator.push(parent.map(|id| Route::CollectionDetail { id: id.to_string() }).unwrap_or(Route::CollectionList {})); },
             extra_fields: rsx! {
                 section { class: "collection-form-panel neumo-raised",
@@ -118,6 +128,7 @@ pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
                 }
             },
             onsubmit: move |_| {
+                if saving() || creation_unconfirmed() { return; }
                 let Ok((clean_name, clean_description)) = validate_collection_form(&name(), &description()) else {
                     error.set(Some(validate_collection_form(&name(), &description()).unwrap_err().to_string())); return;
                 };
@@ -130,6 +141,12 @@ pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
                     visibility: visibility(),
                 }));
                 upload_now.set(true);
+            }
+        }
+        if creation_unconfirmed() {
+            p { class: "collection-form-hint",
+                Link { to: Route::CollectionList {}, new_tab: true,
+                    class: "btn btn-secondary touch-target", "Check Collections" }
             }
         }
     } } }
@@ -233,5 +250,18 @@ mod tests {
         assert!(source.contains("pending_save.set"));
         assert!(source.contains("upload_now.set(true)"));
         assert!(source.contains("single_gallery_image(&images())"));
+    }
+
+    #[test]
+    fn collection_creation_recovery_blocks_blind_retries_and_keeps_a_separate_read_path() {
+        let source = include_str!("collection_new.rs");
+        let component = source.split("#[cfg(test)]").next().unwrap();
+        assert!(component.contains("let mut creation_unconfirmed"));
+        assert!(component.contains("submit_disabled: creation_unconfirmed()"));
+        assert!(component.contains("if saving() || creation_unconfirmed()"));
+        assert!(component.contains("creation_unconfirmed.set(true)"));
+        assert!(component.contains("new_tab: true"));
+        assert!(component.contains("Check Collections"));
+        assert!(!component.contains("problem.to_string()"));
     }
 }

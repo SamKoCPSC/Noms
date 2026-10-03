@@ -44,6 +44,10 @@ pub struct CollectionFormProps {
     pub description: Signal<String>,
     pub submit_label: String,
     pub submitting: bool,
+    /// An uncertain creation blocks another write without locking local entries
+    /// or Cancel; this is distinct from an actively running submission.
+    #[props(default)]
+    pub submit_disabled: bool,
     pub error: Option<String>,
     pub onsubmit: EventHandler<()>,
     #[props(default)]
@@ -100,7 +104,7 @@ pub fn CollectionForm(mut props: CollectionFormProps) -> Element {
             },
             onsubmit: move |event| {
                 event.prevent_default();
-                if !props.submitting {
+                if !props.submitting && !props.submit_disabled {
                     // Inputs can change before hydration or via autofill without
                     // an observed input event. Snapshot the visible named fields
                     // before the parent validates and starts a deferred upload.
@@ -160,7 +164,7 @@ pub fn CollectionForm(mut props: CollectionFormProps) -> Element {
                 button { class: "btn btn-secondary touch-target", r#type: "button", disabled: props.submitting,
                     onclick: move |_| oncancel.call(()), "Cancel" }
             }
-            button { class: "btn btn-primary touch-target", r#type: "submit", disabled: props.submitting,
+            button { class: "btn btn-primary touch-target", r#type: "submit", disabled: props.submitting || props.submit_disabled,
                 if props.submitting { "Saving…" } else { "{props.submit_label}" }
             }
             }
@@ -182,6 +186,7 @@ mod tests {
     struct FormHarnessProps {
         submitted: SubmittedFields,
         submitting: bool,
+        submit_disabled: bool,
     }
 
     #[allow(non_snake_case)]
@@ -189,13 +194,23 @@ mod tests {
         let name = use_signal(|| "Untitled Collection".to_string());
         let description = use_signal(String::new);
         rsx! { CollectionForm {
-            name, description, submit_label: "Save", submitting: props.submitting, error: None,
+            name, description, submit_label: "Save", submitting: props.submitting,
+            submit_disabled: props.submit_disabled, error: None,
+            oncancel: |_| {},
             onsubmit: move |_| *props.submitted.borrow_mut() = Some((name(), description())),
         } }
     }
 
     fn submit_without_input_events(
         submitting: bool,
+        fields: &[(&str, &str)],
+    ) -> (String, Option<(String, String)>) {
+        dispatch_form_submit(submitting, false, fields)
+    }
+
+    fn dispatch_form_submit(
+        submitting: bool,
+        submit_disabled: bool,
         fields: &[(&str, &str)],
     ) -> (String, Option<(String, String)>) {
         set_event_converter(Box::new(SerializedHtmlEventConverter));
@@ -205,6 +220,7 @@ mod tests {
             FormHarnessProps {
                 submitted: submitted.clone(),
                 submitting,
+                submit_disabled,
             },
         );
         let mutations = dom.rebuild_to_vec();
@@ -269,6 +285,7 @@ mod tests {
             FormHarnessProps {
                 submitted: Rc::new(RefCell::new(None)),
                 submitting: false,
+                submit_disabled: false,
             },
         );
         let mutations = dom.rebuild_to_vec();
@@ -331,6 +348,52 @@ mod tests {
         let (_, submitted) =
             submit_without_input_events(true, &[("collection_name", "Not a second save")]);
         assert_eq!(submitted, None);
+    }
+
+    #[test]
+    fn collection_creation_recovery_disables_only_submission_not_local_fields_or_cancel() {
+        let source = include_str!("collection_form.rs");
+        let component = source.split("#[cfg(test)]").next().unwrap();
+        assert!(component.contains("pub submit_disabled: bool"));
+        assert!(component.contains("if !props.submitting && !props.submit_disabled"));
+        assert!(component.contains("disabled: props.submitting || props.submit_disabled"));
+        assert!(component.contains("disabled: props.submitting,"));
+    }
+
+    #[test]
+    fn unconfirmed_collection_creation_rejects_a_real_form_submit_but_keeps_entries_and_cancel() {
+        let (html, submitted) = dispatch_form_submit(
+            false,
+            true,
+            &[("collection_name", "Must not create another collection")],
+        );
+        assert_eq!(submitted, None);
+        assert!(html.contains("value=\"Untitled Collection\""), "{html}");
+        let input = html
+            .split("name=\"collection_name\"")
+            .nth(1)
+            .unwrap()
+            .split('>')
+            .next()
+            .unwrap();
+        assert!(!input.contains("disabled"), "{html}");
+        let cancel = html
+            .split(">Cancel</button>")
+            .next()
+            .unwrap()
+            .rsplit("<button")
+            .next()
+            .unwrap();
+        assert!(!cancel.contains("disabled"), "{html}");
+        let save = html
+            .split(">Save</button>")
+            .next()
+            .unwrap()
+            .rsplit("<button")
+            .next()
+            .unwrap();
+        assert!(save.contains("disabled"), "{html}");
+        assert!(!html.contains("Saving…"), "{html}");
     }
 
     #[test]
