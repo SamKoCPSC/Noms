@@ -137,6 +137,7 @@ recipe-import-parser-semantic-test:
 # Validate source-scoped adapters and conservative generic fallback.
 recipe-import-provider-adapter-test:
 	@node --test scripts/tests/test-recipe-import-extraction-gaps.mjs
+	@node --test scripts/tests/test-recipe-import-quantity-gaps.mjs
 	@node --test scripts/tests/test-recipe-import-provider-selection.mjs
 	@node --test scripts/tests/test-recipe-import-provider-adapters.mjs
 	@node --test scripts/tests/test-recipe-import-allrecipes.mjs

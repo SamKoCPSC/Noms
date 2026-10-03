@@ -1589,7 +1589,17 @@ function parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit, routingUrl = so
       "wprm-recipe-instructions-container",
     )[0];
     if (!title || !ingredientContainer || !instructionContainer) return [];
-    const ingredientSections = wprmIngredientSections(ingredientContainer.innerHtml);
+    const ingredientSections = wprmIngredientSections(ingredientContainer.innerHtml, (html, locator) => {
+      const item = wprmIngredient(html, locator);
+      if (!item) return null;
+      // Some RTE cards put a package noun inside the amount span. Split only
+      // a complete weight expression; keep dual-system measurements literal.
+      const measurement = "\\d+(?:\\.\\d+)?\\s*(?:kg|g|oz|lb)";
+      const packaged = item.amount?.match(new RegExp(`^(${measurement}(?:\\s*\\/\\s*${measurement})?)\\s+(cans?|packets?|envelopes?|containers?|jars?)$`, "iu"));
+      if (packaged && !item.unit) {item.amount = packaged[1]; item.unit = packaged[2];}
+      if (item.unit && /^(?:pinch|heads?|cups?|tablespoons?|teaspoons?|tbsp|tsp)$/iu.test(item.unit)) item.name = item.name.replace(/^of\s+/iu, "");
+      return item;
+    });
     const instructionExtraction = wprmInstructionSections(instructionContainer.innerHtml);
     return ingredientSections && instructionExtraction
       ? [{
@@ -1661,11 +1671,11 @@ function parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit, routingUrl = so
   const hidden = elementsMatchingAttributes(inertHtml, attributes =>
     listIsHidden({attributes}) || hasClass(attributes, "hidden") || hasClass(attributes, "is-hidden"));
   const navigation = elementsMatchingAttributes(inertHtml, (_, tag) => tag === "nav");
-  const visibleCardElement = element => {
+  const visibleCardElement = (element, includeHiddenDescendants = true) => {
     const index = card.openingEnd + element.index;
     const end = card.openingEnd + element.end;
-    return ![...hidden, ...navigation].some(range =>
-      range.index <= index && index < range.end || index <= range.index && range.index < end);
+    const overlaps = range => range.index <= index && index < range.end || index <= range.index && range.index < end;
+    return !navigation.some(overlaps) && !hidden.some(range => range.index <= index && index < range.end || includeHiddenDescendants && overlaps(range));
   };
   for (const container of elementsWithClass(card.innerHtml, "wprm-recipe-notes-container")) {
     if (!visibleCardElement(container)) continue;
@@ -1677,9 +1687,15 @@ function parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit, routingUrl = so
     }
   }
   for (const time of elementsWithClass(card.innerHtml, "wprm-recipe-custom-time-container")) {
-    if (!visibleCardElement(time)) continue;
-    const label = firstClassText(time.innerHtml, "wprm-recipe-custom-time-label")?.text;
-    const value = wprmDuration(time.innerHtml, "wprm-recipe-custom_time")?.raw ?? firstClassText(time.innerHtml, "wprm-recipe-custom_time")?.text;
+    if (!visibleCardElement(time, false)) continue;
+    const offset = card.openingEnd + time.openingEnd;
+    const hiddenChildren = hidden.filter(e => offset <= e.index && e.end <= card.openingEnd + time.contentEnd);
+    let timeHtml = time.innerHtml;
+    // Visible screen-reader units are meaningful; aria-hidden duplicates are
+    // not. Remove only outer hidden ranges before reading the literal time.
+    for (const part of hiddenChildren.filter(e => !hiddenChildren.some(parent => parent.index < e.index && e.end <= parent.end)).sort((a,b) => b.index-a.index)) timeHtml = timeHtml.slice(0, part.index-offset) + timeHtml.slice(part.end-offset);
+    const label = firstClassText(timeHtml, "wprm-recipe-custom-time-label")?.text;
+    const value = wprmDuration(timeHtml, "wprm-recipe-custom_time")?.raw ?? firstClassText(timeHtml, "wprm-recipe-custom_time")?.text;
     if (label && value) result.unclassifiedLines.push({raw: `${label.replace(/:+\s*$/u, "")}: ${value}`, provenance: provenance("text/html", ".wprm-recipe-custom-time-container")});
   }
   if (result.unclassifiedLines.length) result.warnings.push({code: "UNCLASSIFIED_PROVIDER_METADATA", severity: "warning", path: "unclassifiedLines", message: "Custom recipe times remain literal; no total duration is inferred."});
@@ -3050,6 +3066,29 @@ function visibleProviderIngredient(raw, locator, {allowDottedUnits=false}={}) {
   return {...ingredient(raw,"text/html",locator), amount:compound?.[1]??packaged?.[1]??measured?.[1]??counted?.[1]??null,unit:compound?null:packaged?.[2]??measured?.[2]??null,name:compound?.[2]??packaged?.[3]??measured?.[3]??counted?.[2]??raw};
 }
 
+// Narrow forms verified in Food Network and Condé captures. Keep the original
+// line verbatim and never convert package weights or alternative quantities.
+// Other providers and the generic parser deliberately retain their contracts.
+function reviewedProviderIngredient(item, result) {
+  const amount = `(?:\\d+\\s+and\\s+\\d+/\\d+|\\d+[\\u00bc-\\u00be\\u2150-\\u215e]|${TASTY_AMOUNT_PATTERN})`;
+  const range = `${amount}(?:\\s*(?:to|[-–—])\\s*${amount})?`;
+  const units = `(?:${UNIT_PATTERN}|pinch|quarts?|pints?|sticks?|bunch(?:es)?|heads?|jars?|blocks?|dashes?)\\.?`;
+  const weight = "(?:ounces?|oz|grams?|g|pounds?|lbs?)\\.?";
+  const packageUnit = `(?:\\(${amount}[- ]${weight}\\)|${amount}[- ]${weight})\\s+(?:cans?|packages?|boxes?|jars?|blocks?|containers?|packets?|envelopes?)(?:\\s+\\(${range}\\s+${units}\\))?`;
+  const packaged = item.raw.match(new RegExp(`^(${range})\\s+(${packageUnit})\\s+(.+)$`, "iu"));
+  const sizedAlternative = item.raw.match(new RegExp(`^(${amount}\\s+(?:small|medium|large)\\s+or\\s+${amount}\\s+(?:small|medium|large))\\s+(?:(${units})\\s+)?(.+)$`, "iu"));
+  const brandedSalt = item.raw.match(new RegExp(`^(${range}\\s+${units}\\s+(?:Diamond Crystal|Morton)\\s+or\\s+${range}\\s+${units}\\s+(?:Diamond Crystal|Morton))\\s+(kosher salt\\b.*)$`, "iu"));
+  const dashes = item.raw.match(new RegExp(`^(${range})\\s+(dashes?)\\s+(.+)$`, "iu"));
+  let parsed = item;
+  if (packaged) parsed = {...item, amount: packaged[1], unit: packaged[2], name: packaged[3]};
+  else if (sizedAlternative) parsed = {...item, amount: sizedAlternative[1], unit: sizedAlternative[2] ?? null, name: sizedAlternative[3], confidence: "low"};
+  else if (brandedSalt) parsed = {...item, amount: brandedSalt[1], unit: null, name: brandedSalt[2], confidence: "low"};
+  else if (dashes) parsed = {...item, amount: dashes[1], unit: dashes[2], name: dashes[3]};
+  if (parsed.unit && /^of\s+/iu.test(parsed.name)) parsed = {...parsed, name: parsed.name.replace(/^of\s+/iu, "")};
+  if (sizedAlternative || brandedSalt) result.warnings.push({code: "UNRESOLVED_PROVIDER_QUANTITY", severity: "warning", path: "fields.ingredientSections", message: "Alternative quantities remain a complete literal expression; choose the appropriate amount before editing."});
+  return parsed;
+}
+
 function visibleProviderDuration(result, label, value, locator) {
   const field = {Prep:"prepTime","Prep Time":"prepTime",Cook:"cookTime","Cook Time":"cookTime",Total:"totalTime","Total Time":"totalTime"}[label];
   const raw = `${label}: ${value}`;
@@ -3243,21 +3282,35 @@ function parseBBCGoodFoodVisibleRecipe(html, sourceUrl, htmlAudit, routingUrl = 
   // BBC publishes recipe tips after the method, separately from prep notes.
   // Require the explicit tips heading and its owned editorial highlight boxes;
   // similarly styled promotions or reader comments are not recipe notes.
-  const endings=elementsWithClass(html,"post__content-end").filter(e=>inside(e)&&e.index>=content.end);
+  const commentAreas=elementsMatchingAttributes(html,a=>a.get("id")==="commentsFeed"||hasClass(a,"pocket")&&a.get("data-placement")==="recipeContentBottom");
+  const endings=elementsWithClass(html,"post__content-end").filter(e=>inside(e)&&e.index>=content.end&&!hasAncestorTag(html,e.index,"aside")&&!hasAncestorTag(html,e.index,"nav")&&!commentAreas.some(area=>inside(e,area)));
   for(const ending of endings){
     for(const summary of elementsMatchingAttributes(ending.innerHtml,a=>hasClass(a,"editor-content")&&a.get("data-placement")==="Summary")){
-      const headings=elementsMatchingAttributes(summary.innerHtml,(a,t)=>t==="h6"&&/^recipe-tips-/u.test(a.get("id")??""));
+      const absolute={...summary,index:ending.openingEnd+summary.index,openingEnd:ending.openingEnd+summary.openingEnd,contentEnd:ending.openingEnd+summary.contentEnd,end:ending.openingEnd+summary.end};
+      if(hasAncestorTag(html,absolute.index,"aside")||hasAncestorTag(html,absolute.index,"nav")||commentAreas.some(area=>inside(absolute,area)))continue;
+      const headings=elementsMatchingAttributes(summary.innerHtml,(a,t)=>/^h[2-6]$/u.test(t)&&/^recipe-tips-/u.test(a.get("id")??""));
+      const headingOpenings=openingHtmlElements(summary.innerHtml).filter(e=>/^recipe-tips-/u.test(e.attributes.get("id")??""));
+      if(headingOpenings.length!==headings.length)return null;
       if(!headings.length)continue;
-      const absolute={...summary,index:ending.openingEnd+summary.index,end:ending.openingEnd+summary.end};
+      if(commentAreas.some(area=>inside(area,absolute)))return null;
       if(c.isHidden(absolute)||hasAncestorTag(html,absolute.index,"nav"))return null;
       const parts=elementsMatchingAttributes(summary.innerHtml,()=>true).filter(e=>tagStackContext(summary.innerHtml,e.index).length===0);
-      if(headings.length!==1||!parts.some(e=>e.index===headings[0].index)||text(headings[0].innerHtml)!=="RECIPE TIPS"||!inline(headings[0])||parts.length<2)return null;
+      if(headings.length!==1||!parts.some(e=>e.index===headings[0].index)||!/^recipe tips$/iu.test(text(headings[0].innerHtml))||!inline(headings[0])||parts.length<2)return null;
       let discovery=false;
       for(const box of parts){
         if(box.index===headings[0].index)continue;
+        if(box.tag==="hr"&&!text(box.innerHtml))continue;
+        if(["ul","ol"].includes(box.tag)){
+          const rows=elementsMatchingAttributes(box.innerHtml,(_,tag)=>tag==="li");
+          if(!rows.length||rows.some(e=>!inline(e))||text(box.innerHtml)!==rows.map(e=>text(e.innerHtml)).join(" "))return null;
+          const raw=text(box.innerHtml);
+          if(discovery)result.unclassifiedLines.push({raw,provenance:provenance("text/html",".post__content-end [data-placement=Summary] (discovery list)")});
+          else result.fields.notes.push(scalar(raw,"text/html",".post__content-end [data-placement=Summary] (editorial advice list)"));
+          continue;
+        }
         if(/^h[2-6]$/u.test(box.tag)||box.tag==="p"){
           if(!inline(box))return null;
-          if(box.tag==="h6"&&/^also-discover-/u.test(box.attributes.get("id")??""))discovery=true;
+          if(/^h[2-6]$/u.test(box.tag)&&/^also-discover-/u.test(box.attributes.get("id")??""))discovery=true;
           const raw=text(box.innerHtml);
           if(discovery)result.unclassifiedLines.push({raw,provenance:provenance("text/html",".post__content-end [data-placement=Summary] (discovery)")});
           else result.fields.notes.push(scalar(raw,"text/html",".post__content-end [data-placement=Summary] (editorial advice)"));
@@ -3265,7 +3318,7 @@ function parseBBCGoodFoodVisibleRecipe(html, sourceUrl, htmlAudit, routingUrl = 
         }
         if(box.tag!=="section"||!hasClass(box.attributes,"highlight-box")||box.attributes.get("data-feature")!=="Highlight Box")return null;
         const contents=elementsWithClass(box.innerHtml,"highlight-box__content");
-        if(contents.length!==1||text(box.innerHtml)!==text(contents[0].innerHtml)||openingHtmlElements(contents[0].innerHtml).some(e=>!["h6","p","ul","ol","li","span","strong","em","b","i","a","sup","sub","br"].includes(e.tag)))return null;
+        if(contents.length!==1||text(box.innerHtml)!==text(contents[0].innerHtml)||openingHtmlElements(contents[0].innerHtml).some(e=>!["h2","h3","h4","h5","h6","div","p","ul","ol","li","span","strong","em","b","i","a","sup","sub","br"].includes(e.tag)))return null;
         const raw=text(contents[0].innerHtml);if(!raw)return null;
         if(discovery)result.unclassifiedLines.push({raw,provenance:provenance("text/html",".post__content-end .highlight-box (discovery)")});
         else result.fields.notes.push(scalar(raw,"text/html",".post__content-end [id^=recipe-tips-] ~ .highlight-box .highlight-box__content"));
@@ -3341,7 +3394,7 @@ function parseCondeVisibleRecipe(html, sourceUrl, htmlAudit, routingUrl = source
         const value=visibleProviderIngredient(text(amount.innerHtml),"[data-testid=IngredientList] Description",{allowDottedUnits:true});
         // Epicurious keeps the quantity and dotted unit in the same visible
         // row; do not require Bon Appétit's split quantity sibling.
-        result.fields.ingredientSections.at(-1).items.push(value);awaiting=false;continue;
+        result.fields.ingredientSections.at(-1).items.push(reviewedProviderIngredient(value,result));awaiting=false;continue;
       }
       const description=rows[++index];
       if(amount.tag!=="p"||!component(amount.attributes,"Amount")||!description||description.tag!=="div"||!component(description.attributes,"Description")||!inline(amount,true)||!inline(description))return null;
@@ -3349,7 +3402,7 @@ function parseCondeVisibleRecipe(html, sourceUrl, htmlAudit, routingUrl = source
       if(!result.fields.ingredientSections.length||awaiting)result.fields.ingredientSections.push({name,items:[]});
       const quantity=text(amount.innerHtml)||null,detail=text(description.innerHtml),raw=[quantity,detail].filter(Boolean).join(" ");
       const unit=quantity?detail.match(new RegExp(`^(${UNIT_PATTERN}|quarts?|pints?|sticks?|bunch(?:es)?|heads?|jars?|blocks?)(\\.)?\\s+(.+)$`,"iu")):null;
-      result.fields.ingredientSections.at(-1).items.push({...ingredient(raw,"text/html","[data-testid=IngredientList] Amount + Description"),amount:quantity,unit:unit?unit[1]+(unit[2]??""):null,name:unit?.[3]??detail});awaiting=false;
+      result.fields.ingredientSections.at(-1).items.push(reviewedProviderIngredient({...ingredient(raw,"text/html","[data-testid=IngredientList] Amount + Description"),amount:quantity,unit:unit?unit[1]+(unit[2]??""):null,name:unit?.[3]??detail},result));awaiting=false;
     }
     if(awaiting||!result.fields.ingredientSections.length)return null;
   }
@@ -3450,8 +3503,12 @@ function parseFoodNetworkVisibleRecipe(html, sourceUrl, htmlAudit, routingUrl = 
     if(labels.length!==1||!inline(labels[0])||text(part.innerHtml)!==text(labels[0].innerHtml))return null;
     consume(part);consume(labels[0]);
     if(hasClass(part.attributes,"o-Ingredients__a-Ingredient--SelectAll")){if(!["Select All","Deselect All"].includes(text(part.innerHtml)))return null;continue;}
+    const raw=text(labels[0].innerHtml);
+    // Only an exact duplicate of an explicit section heading is structural.
+    // Unmarked labels (including unquantified ingredients) remain literal.
+    if(group&&raw===`${group}:`){result.unclassifiedLines.push({raw,provenance:provenance("text/html",".o-Ingredients__a-Ingredient--CheckboxLabel (duplicate heading)")});continue;}
     if(!result.fields.ingredientSections.length||awaiting)result.fields.ingredientSections.push({name:group,items:[]});
-    result.fields.ingredientSections.at(-1).items.push(visibleProviderIngredient(text(labels[0].innerHtml),".o-Ingredients__a-Ingredient--CheckboxLabel"));awaiting=false;
+    result.fields.ingredientSections.at(-1).items.push(reviewedProviderIngredient(visibleProviderIngredient(raw,".o-Ingredients__a-Ingredient--CheckboxLabel"),result));awaiting=false;
   }
   if(awaiting||!result.fields.ingredientSections.length)return null;
   const blocks=children(methodBody);if(loose(methodBody,blocks))return null;
@@ -3466,8 +3523,18 @@ function parseFoodNetworkVisibleRecipe(html, sourceUrl, htmlAudit, routingUrl = 
     }
     if(block.tag!=="ol")return null;
     const rows=children(block);if(!rows.length||loose(block,rows))return null;
-    const steps=[];for(const row of rows){if(row.tag!=="li"||!hasClass(row.attributes,"o-Method__m-Step")||!inline(row))return null;consume(row);steps.push(instruction(text(row.innerHtml),"text/html",".o-Method__m-Step"));}
-    result.fields.instructionSections.push({name:group,steps});awaiting=false;
+    const steps=[];for(const row of rows){
+      if(row.tag!=="li"||!hasClass(row.attributes,"o-Method__m-Step")||!inline(row))return null;consume(row);
+      const raw=text(row.innerHtml);
+      // An entire bibliographic line, not an arbitrary "Recipe from..." action.
+      if(/^Recipe from ["“][^"”]+["”], by [^.]+\. Published by [^.]+, \d{4}\.$/u.test(raw)){
+        if(!result.source.attribution){result.source.attribution=raw;result.source.provenance.attribution=provenance("text/html",".o-Method__m-Step (book citation)");}
+        else result.fields.notes.push(scalar(raw,"text/html",".o-Method__m-Step (additional book citation)"));
+        continue;
+      }
+      steps.push(instruction(raw,"text/html",".o-Method__m-Step"));
+    }
+    if(steps.length){result.fields.instructionSections.push({name:group,steps});awaiting=false;}
   }
   if(awaiting||!result.fields.instructionSections.length)return null;
   const descriptions=all("o-AssetDescription__a-Description");if(descriptions.length>1||descriptions.some(e=>e.end>ingredients.index||!inline(e)))return null;
@@ -3510,6 +3577,11 @@ function parseFoodNetworkVisibleRecipe(html, sourceUrl, htmlAudit, routingUrl = 
     const image=images.find(e=>!c.isHidden({...e,index:media[0].openingEnd+e.index,end:media[0].openingEnd+e.end}));
     const imageSource=image?.attributes.get("src")?.trim();
     if(imageSource){try{const url=new URL(imageSource,result.source.normalizedUrl??undefined);if(["http:","https:"].includes(url.protocol))result.fields.images.push({sourceUrl:url.href,alt:image.attributes.get("alt")||null,credit:null,provenance:provenance("text/html",".o-RecipeLead__m-RecipeMedia img")});}catch{}}
+  }
+  const footers=elementsWithClass(html,"bodyRight-footer").filter(e=>inside(e)&&!c.isHidden(e)&&!hasAncestorTag(html,e.index,"nav"));
+  if(footers.length===1&&result.fields.images.length===1){
+    const credits=elementsWithClass(html,"o-PhotoCredit__a-Credit").filter(e=>inside(e,footers[0])&&!c.isHidden(e)&&!hasAncestorTag(html,e.index,"nav"));
+    if(credits.length===1&&credits[0].tag==="p"&&inline(credits[0])&&/^Photograph by\s+\S/iu.test(text(credits[0].innerHtml)))result.fields.images[0].credit=text(credits[0].innerHtml);
   }
   if(!c.complete())return null;
   return finishVisibleProvider(result,htmlAudit);
