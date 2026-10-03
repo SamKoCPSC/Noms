@@ -20,14 +20,14 @@ use crate::components::AuthRequired;
 use crate::pages::draft_save::{draft_save_button_state, recipe_write_feedback, RecipeWriteAction};
 use crate::pages::recipe_editor_form::{
     apply_step_photo_edit, build_step_tree, can_indent_step, flatten_steps,
-    format_step_photo_file_size, reset_step_photo_input, step_photo_display_name,
-    step_photo_editor_edit, RecipeEditorContents, RecipeEditorInput as Input, StepForm,
-    StepPhotoEditButton, StepPhotoPreview, StepPhotoUploadFeedback,
+    format_step_photo_file_size, reorder_step_photo_within_step, reset_step_photo_input,
+    step_photo_display_name, step_photo_editor_edit, RecipeEditorContents,
+    RecipeEditorInput as Input, StepForm, StepPhotoEditButton, StepPhotoPreview,
+    StepPhotoUploadFeedback,
 };
 use crate::types::{
     RecipeEditorState, RecipeEquipment, RecipeImage, RecipeImageEdit, RecipeIngredient,
 };
-use crate::utils::reorder::move_item;
 
 // ── Local form types ─────────────────────────────────────────────────────────
 
@@ -1335,13 +1335,11 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                                                         event.prevent_default();
                                                     if step_photo_controls_locked() { return; }
                                                         if let Some((source_step_idx, source_photo_idx)) = dragged_step_photo() {
-                                                            if source_step_idx == idx {
-                                                                move_item(
-                                                                    &mut steps.write()[idx].photos,
-                                                                    source_photo_idx,
-                                                                    photo_idx,
-                                                                );
-                                                            }
+                                                            reorder_step_photo_within_step(
+                                                                &mut steps.write(),
+                                                                (source_step_idx, source_photo_idx),
+                                                                (idx, photo_idx),
+                                                            );
                                                         }
                                                         dragged_step_photo.set(None);
                                                     },

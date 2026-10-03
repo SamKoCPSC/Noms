@@ -1854,6 +1854,68 @@ mod tests {
     }
 
     #[test]
+    fn gallery_drag_preserves_complete_records_during_processing_and_failure() {
+        let saved = gallery_images_from_persisted(&[RecipeImage::managed(
+            uuid::Uuid::from_u128(42),
+            "saved.webp".into(),
+            Some("saved-thumb.webp".into()),
+            RecipeImageEdit::default_rect_16x9(),
+        )])
+        .remove(0);
+        let mut processing = pending_image_with_uploaded_url(10, None);
+        processing.status = UploadStatus::Processing;
+        processing.edit.transform.rotation = 12.0;
+        processing.preview_url = Some(Arc::new(GalleryPreviewUrl {
+            url: "blob:processing-drag".into(),
+            revoke: record_preview_revocation,
+        }));
+        let mut failed = pending_image_with_uploaded_url(20, None);
+        failed.error = Some("Retry this image".into());
+        failed.full_bytes = Arc::new(vec![1, 2, 3]);
+        failed.thumb_bytes = Arc::new(vec![4, 5, 6]);
+        let originals = vec![saved, processing, failed];
+        let mut gallery = originals.clone();
+        assert!(reorder_gallery_images(&mut gallery, 10, 0));
+        assert_eq!(
+            gallery.iter().map(|image| image.id).collect::<Vec<_>>(),
+            [10, 0, 20]
+        );
+        for original in &originals {
+            assert!(
+                gallery
+                    .iter()
+                    .find(|image| image.id == original.id)
+                    .unwrap()
+                    == original
+            );
+        }
+        // Completion finds the moved placeholder by ID rather than the old slot.
+        let completed = gallery.iter_mut().find(|image| image.id == 10).unwrap();
+        completed.full_bytes = Arc::new(vec![7, 8]);
+        completed.thumb_bytes = Arc::new(vec![9]);
+        completed.status = UploadStatus::Ready;
+        assert_eq!(gallery[0].id, 10);
+        assert_eq!(gallery[0].edit.transform.rotation, 12.0);
+        assert!(gallery[1] == originals[0]);
+        assert!(gallery[2] == originals[2]);
+        assert_eq!(pending_upload_count(&gallery), 2);
+        assert_eq!(uploaded_images_in_pending_order(&gallery).len(), 1);
+    }
+
+    #[test]
+    fn gallery_drag_self_and_missing_targets_leave_every_record_unchanged() {
+        let mut gallery = vec![
+            pending_image_with_uploaded_url(10, Some("first")),
+            pending_image_with_uploaded_url(20, None),
+        ];
+        let original = gallery.clone();
+        assert!(reorder_gallery_images(&mut gallery, 10, 10));
+        assert!(!reorder_gallery_images(&mut gallery, 99, 10));
+        assert!(!reorder_gallery_images(&mut gallery, 10, 99));
+        assert!(gallery == original);
+    }
+
+    #[test]
     fn adjacent_gallery_ids_are_safe_at_boundaries_and_after_reorder() {
         let mut gallery = vec![
             pending_image_with_uploaded_url(10, Some("first")),

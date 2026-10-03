@@ -141,6 +141,22 @@ pub(super) struct StepForm {
     pub(super) photos: Vec<RecipeImage>,
 }
 
+/// Reorder whole image records, without transferring photos between steps.
+/// Stale/missing positions are harmless; both editor routes share this boundary.
+pub(super) fn reorder_step_photo_within_step(
+    steps: &mut [StepForm],
+    source: (usize, usize),
+    target: (usize, usize),
+) -> bool {
+    if source.0 != target.0 {
+        return false;
+    }
+    let Some(step) = steps.get_mut(source.0) else {
+        return false;
+    };
+    crate::utils::reorder::move_item(&mut step.photos, source.1, target.1)
+}
+
 const MAX_STEP_DEPTH: usize = 3;
 
 pub(super) fn can_indent_step(depth: usize) -> bool {
@@ -351,6 +367,105 @@ pub(super) fn reset_step_photo_input(_step_index: usize) {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn both_editors_use_the_shared_step_photo_drop_boundary_and_live_lock() {
+        for source in [
+            include_str!("recipe_new.rs"),
+            include_str!("recipe_edit.rs"),
+        ] {
+            let drop = source
+                .split("ondrop: move |event| {")
+                .nth(1)
+                .unwrap()
+                .split("StepPhotoEditButton {")
+                .next()
+                .unwrap();
+            assert!(drop.contains("if step_photo_controls_locked() { return; }"));
+            assert!(drop.contains("reorder_step_photo_within_step("));
+            assert!(drop.contains("(source_step_idx, source_photo_idx)"));
+            assert!(drop.contains("(idx, photo_idx)"));
+            assert!(drop.contains("dragged_step_photo.set(None)"));
+            assert!(!drop.contains("photos.remove("));
+        }
+    }
+
+    #[test]
+    fn step_photo_drag_preserves_metadata_and_other_steps() {
+        let mut edited = photo("second.webp", "second.png", 2048);
+        edited.asset_id = Some(uuid::Uuid::from_u128(43));
+        edited
+            .edits
+            .push(crate::types::RecipeImageEdit::default_ellipse_1x1());
+        let mut steps = vec![
+            super::StepForm {
+                text: "First step".into(),
+                depth: 0,
+                photos: vec![photo("first.webp", "first.png", 1024), edited.clone()],
+            },
+            super::StepForm {
+                text: "Second step".into(),
+                depth: 1,
+                photos: vec![photo("third.webp", "third.png", 3072)],
+            },
+        ];
+        let original = steps.clone();
+        assert!(super::reorder_step_photo_within_step(
+            &mut steps,
+            (0, 1),
+            (0, 0)
+        ));
+        assert_eq!(steps[0].photos, vec![edited, original[0].photos[0].clone()]);
+        assert_eq!(steps[0].text, original[0].text);
+        assert_eq!(steps[0].depth, original[0].depth);
+        assert_eq!(steps[1], original[1]);
+        let persisted = super::build_step_tree(&steps);
+        assert_eq!(persisted[0].photos, steps[0].photos);
+        assert_eq!(persisted[0].sub_steps[0].photos, original[1].photos);
+    }
+
+    #[test]
+    fn cross_step_stale_and_self_photo_drops_do_not_lose_or_transfer_images() {
+        let mut steps = vec![
+            super::StepForm {
+                text: "First step".into(),
+                depth: 0,
+                photos: vec![
+                    photo("first.webp", "first.png", 1024),
+                    photo("second.webp", "second.png", 2048),
+                ],
+            },
+            super::StepForm {
+                text: "Second step".into(),
+                depth: 0,
+                photos: vec![photo("third.webp", "third.png", 3072)],
+            },
+        ];
+        let original = steps.clone();
+        for (source, target) in [
+            ((0, 0), (1, 0)),
+            ((1, 0), (0, 1)),
+            ((9, 0), (9, 0)),
+            ((0, 9), (0, 0)),
+            ((0, 0), (0, 9)),
+        ] {
+            assert!(!super::reorder_step_photo_within_step(
+                &mut steps, source, target
+            ));
+            assert_eq!(steps, original);
+        }
+        assert!(super::reorder_step_photo_within_step(
+            &mut steps,
+            (0, 0),
+            (0, 0)
+        ));
+        assert_eq!(steps, original);
+        assert!(!super::reorder_step_photo_within_step(
+            &mut [],
+            (0, 0),
+            (0, 0)
+        ));
+    }
+
     #[test]
     fn repeated_editor_field_has_an_accessible_name_and_keeps_its_value() {
         use dioxus::prelude::*;
