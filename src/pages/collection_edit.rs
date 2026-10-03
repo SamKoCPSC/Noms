@@ -8,6 +8,10 @@ use crate::api::collection::{
     get_collection_share_preview, get_owned_collection, load_all_my_collections, move_collection,
     update_collection, update_collection_visibility,
 };
+use crate::auth::account_binding::{
+    account_completion_matches, ACCOUNT_COMPLETION_CHANGED_FEEDBACK,
+};
+use crate::auth::context::AuthContext;
 use crate::components::base::{
     complete_deferred_upload, single_gallery_image, validate_collection_form, Button,
     ButtonVariant, Card, CollectionForm, CollectionVisibilityField, DeferredUploadCompletion,
@@ -108,6 +112,7 @@ struct PendingCollectionEdit {
 #[component]
 pub fn CollectionEdit(id: String) -> Element {
     let form_account = crate::auth::account_binding::use_form_account();
+    let auth_context = use_context::<Signal<AuthContext>>();
     let resource_id = id.clone();
     let mut data = use_resource(move || {
         let id = resource_id.clone();
@@ -125,6 +130,7 @@ pub fn CollectionEdit(id: String) -> Element {
     let mut initialized = use_signal(|| false);
     let mut saving = use_signal(|| false);
     let mut save_unconfirmed = use_signal(|| false);
+    let mut completion_account_changed = use_signal(|| false);
     let mut error = use_signal(|| None::<String>);
     let mut images = use_signal(Vec::<RecipeImage>::new);
     let mut upload_now = use_signal(|| false);
@@ -183,6 +189,19 @@ pub fn CollectionEdit(id: String) -> Element {
                             error.set(Some(failure.message));
                             saving.set(false);
                         };
+                        // Each accepted stage may outlive the current account.
+                        // Stop the chain before applying local results, starting
+                        // another stage or navigating away from the retained form.
+                        let mut accept_completion = move |owner_id| {
+                            if account_completion_matches(form_account(), auth_context.peek().current_user_id, owner_id) {
+                                true
+                            } else {
+                                completion_account_changed.set(true);
+                                error.set(Some(ACCOUNT_COMPLETION_CHANGED_FEEDBACK.into()));
+                                saving.set(false);
+                                false
+                            }
+                        };
                         let update = update_collection(form_account(),
                             collection_id.to_string(),
                             pending.name,
@@ -193,18 +212,25 @@ pub fn CollectionEdit(id: String) -> Element {
                             Ok(updated) => updated,
                             Err(problem) => { record_save_failure(CollectionEditSaveStage::Details, problem); return; }
                         };
+                        if !accept_completion(updated.owner_id) { return; }
                         name.set(updated.name);
                         description.set(updated.description.unwrap_or_default());
                         if pending.desired_parent != pending.current_parent {
-                            if let Err(problem) = move_collection(form_account(), collection_id.to_string(), pending.desired_parent).await {
-                                // Keep the intended destination: losing an acknowledgement
-                                // must not manufacture a move back to the old parent.
-                                record_save_failure(CollectionEditSaveStage::Location, problem); return;
-                            }
+                            let moved = match move_collection(form_account(), collection_id.to_string(), pending.desired_parent).await {
+                                Ok(moved) => moved,
+                                Err(problem) => {
+                                    // Keep the intended destination after a lost acknowledgement.
+                                    record_save_failure(CollectionEditSaveStage::Location, problem); return;
+                                }
+                            };
+                            if !accept_completion(moved.owner_id) { return; }
                         }
                         if pending.desired_visibility != pending.current_visibility {
                             match update_collection_visibility(form_account(), collection_id.to_string(), pending.desired_visibility).await {
-                                Ok(updated) => selected_visibility.set(updated.visibility),
+                                Ok(updated_visibility) => {
+                                    if !accept_completion(updated_visibility.owner_id) { return; }
+                                    selected_visibility.set(updated_visibility.visibility);
+                                }
                                 Err(problem) => { record_save_failure(CollectionEditSaveStage::Sharing, problem); return; }
                             }
                         }
@@ -221,7 +247,7 @@ pub fn CollectionEdit(id: String) -> Element {
                     h1 { class: "collection-editor-heading brand-title", PageIcon { kind: PageIconKind::Collections } span { "Edit collection" } }
                     p { class: "collection-editor-intro", "Update your album’s details, cover and place in your library." }
                     CollectionForm { name, description, submit_label: "Save changes", submitting: saving(), error: error(),
-                        submit_disabled: save_unconfirmed(),
+                        submit_disabled: save_unconfirmed() || completion_account_changed(),
                         oncancel: move |_| { navigator.push(Route::CollectionDetail { id: collection_id.to_string() }); },
                         extra_fields: rsx! {
                             section { class: "collection-form-panel neumo-raised",
@@ -272,7 +298,7 @@ pub fn CollectionEdit(id: String) -> Element {
                             }
                         },
                         onsubmit: move |_| {
-                            if saving() || save_unconfirmed() { return; }
+                            if saving() || save_unconfirmed() || completion_account_changed() { return; }
                             let validated = validate_collection_form(&name(), &description());
                             let Ok((clean_name, clean_description)) = validated else { error.set(Some(validated.unwrap_err().to_string())); return; };
                             if image_busy() { error.set(Some("The cover image is still processing.".to_string())); return; }
@@ -293,7 +319,7 @@ pub fn CollectionEdit(id: String) -> Element {
                             upload_now.set(true);
                         }
                     }
-                    if save_unconfirmed() {
+                    if save_unconfirmed() || completion_account_changed() {
                         p { class: "collection-form-hint",
                             Link {
                                 class: "btn btn-secondary touch-target",
@@ -315,13 +341,45 @@ mod tests {
     use dioxus::router::components::HistoryProvider;
 
     #[test]
+    fn collection_edit_checks_each_completion_before_followup_or_navigation() {
+        let source = include_str!("collection_edit.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        assert!(source.contains("account_completion_matches("));
+        assert!(source.contains("ACCOUNT_COMPLETION_CHANGED_FEEDBACK"));
+        assert!(source.contains("completion_account_changed.set(true)"));
+        assert_eq!(source.matches("if !accept_completion(").count(), 3);
+        let details = source
+            .find("if !accept_completion(updated.owner_id)")
+            .unwrap();
+        assert!(details < source.find("name.set(updated.name)").unwrap());
+        let location = source
+            .find("if !accept_completion(moved.owner_id)")
+            .unwrap();
+        assert!(location < source.find("if pending.desired_visibility").unwrap());
+        let sharing = source
+            .find("if !accept_completion(updated_visibility.owner_id)")
+            .unwrap();
+        assert!(
+            sharing
+                < source
+                    .find("navigator.push(Route::CollectionDetail")
+                    .unwrap()
+        );
+        assert!(source.contains("save_unconfirmed() || completion_account_changed()"));
+    }
+
+    #[test]
     fn collection_edit_recovery_blocks_blind_retries_but_preserves_local_inputs() {
         let source = include_str!("collection_edit.rs")
             .split("#[cfg(test)]")
             .next()
             .unwrap();
         assert!(source.contains("submit_disabled: save_unconfirmed()"));
-        assert!(source.contains("if saving() || save_unconfirmed() { return; }"));
+        assert!(source.contains(
+            "if saving() || save_unconfirmed() || completion_account_changed() { return; }"
+        ));
         assert!(!source.contains("selected_parent.set(pending.current_parent"));
         assert!(source.contains("new_tab: true"));
         assert!(source.contains("Check saved collection"));

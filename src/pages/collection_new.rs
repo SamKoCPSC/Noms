@@ -2,6 +2,10 @@ use crate::components::base::{PageIcon, PageIconKind};
 use dioxus::prelude::*;
 
 use crate::api::collection::create_collection;
+use crate::auth::account_binding::{
+    account_completion_matches, ACCOUNT_COMPLETION_CHANGED_FEEDBACK,
+};
+use crate::auth::context::AuthContext;
 use crate::components::base::{
     complete_deferred_upload, single_gallery_image, validate_collection_form, CollectionForm,
     CollectionVisibilityField, DeferredUploadCompletion, ImageUpload, UploadOutcome,
@@ -11,6 +15,10 @@ use crate::types::{CollectionVisibility, RecipeImage};
 use crate::Route;
 
 const UNCONFIRMED_COLLECTION_CREATION_MESSAGE: &str = "We couldn't confirm whether your collection was created. Your entries are kept here. Check Collections in another tab before starting a new collection to avoid duplicates.";
+
+fn collection_creation_submit_blocked(saving: bool, unconfirmed: bool, created: bool) -> bool {
+    saving || unconfirmed || created
+}
 
 #[derive(Clone)]
 struct PendingCollectionCreate {
@@ -23,6 +31,7 @@ struct PendingCollectionCreate {
 #[component]
 pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
     let form_account = crate::auth::account_binding::use_form_account();
+    let auth_context = use_context::<Signal<AuthContext>>();
     // Route props preserve the parent through SSR, hydration and query-only
     // navigation; do not initialize it once from browser-only location state.
     let name = use_signal(|| "Untitled Collection".to_string());
@@ -31,6 +40,9 @@ pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
     // A failed response may follow a committed insert. Keep this visit's
     // entries, but do not issue another non-idempotent creation blindly.
     let mut creation_unconfirmed = use_signal(|| false);
+    // A confirmed response can arrive after account replacement. Remember its
+    // destination without navigating or allowing a duplicate insert on recovery.
+    let mut created_collection = use_signal(|| None::<uuid::Uuid>);
     let mut error = use_signal(|| None::<String>);
     let mut visibility = use_signal(|| CollectionVisibility::Private);
     let navigator = use_navigator();
@@ -70,6 +82,16 @@ pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
             .await
             {
                 Ok(collection) => {
+                    created_collection.set(Some(collection.id));
+                    if !account_completion_matches(
+                        form_account(),
+                        auth_context.peek().current_user_id,
+                        collection.owner_id,
+                    ) {
+                        error.set(Some(ACCOUNT_COMPLETION_CHANGED_FEEDBACK.into()));
+                        saving.set(false);
+                        return;
+                    }
                     navigator.push(Route::CollectionDetail {
                         id: collection.id.to_string(),
                     });
@@ -95,7 +117,7 @@ pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
         h1 { class: "collection-editor-heading brand-title", PageIcon { kind: PageIconKind::Collections } span { if parent.is_some() { "New subcollection" } else { "New collection" } } }
         p { class: "collection-editor-intro", "Start an album for recipes you want to keep together." }
         CollectionForm { name, description, submit_label: "Create collection", submitting: saving(),
-            submit_disabled: creation_unconfirmed(), error: error(),
+            submit_disabled: collection_creation_submit_blocked(false, creation_unconfirmed(), created_collection().is_some()), error: error(),
             oncancel: move |_| { navigator.push(parent.map(|id| Route::CollectionDetail { id: id.to_string() }).unwrap_or(Route::CollectionList {})); },
             extra_fields: rsx! {
                 section { class: "collection-form-panel neumo-raised",
@@ -128,7 +150,7 @@ pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
                 }
             },
             onsubmit: move |_| {
-                if saving() || creation_unconfirmed() { return; }
+                if collection_creation_submit_blocked(saving(), creation_unconfirmed(), created_collection().is_some()) { return; }
                 let Ok((clean_name, clean_description)) = validate_collection_form(&name(), &description()) else {
                     error.set(Some(validate_collection_form(&name(), &description()).unwrap_err().to_string())); return;
                 };
@@ -143,7 +165,12 @@ pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
                 upload_now.set(true);
             }
         }
-        if creation_unconfirmed() {
+        if let Some(collection_id) = created_collection() {
+            p { class: "collection-form-hint",
+                Link { to: Route::CollectionDetail { id: collection_id.to_string() }, new_tab: true,
+                    class: "btn btn-secondary touch-target", "Check created collection" }
+            }
+        } else if creation_unconfirmed() {
             p { class: "collection-form-hint",
                 Link { to: Route::CollectionList {}, new_tab: true,
                     class: "btn btn-secondary touch-target", "Check Collections" }
@@ -161,6 +188,43 @@ mod tests {
     use dioxus_core::NoOpMutations;
 
     const PARENT_ID: &str = "550e8400-e29b-41d4-a716-446655440000";
+
+    #[test]
+    fn completed_collection_creation_blocks_duplicate_submission_after_account_recovery() {
+        for (saving, unconfirmed, created, blocked) in [
+            (false, false, false, false),
+            (true, false, false, true),
+            (false, true, false, true),
+            (false, false, true, true),
+        ] {
+            assert_eq!(
+                collection_creation_submit_blocked(saving, unconfirmed, created),
+                blocked
+            );
+        }
+    }
+
+    #[test]
+    fn collection_creation_checks_completion_account_before_navigation() {
+        let source = include_str!("collection_new.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        let completion = source.split("Ok(collection) => {").nth(1).unwrap();
+        assert!(
+            completion
+                .find("created_collection.set(Some(collection.id))")
+                .unwrap()
+                < completion.find("account_completion_matches(").unwrap()
+        );
+        assert!(
+            completion.find("account_completion_matches(").unwrap()
+                < completion.find("navigator.push(").unwrap()
+        );
+        assert!(source.contains("ACCOUNT_COMPLETION_CHANGED_FEEDBACK"));
+        assert!(source.contains("created_collection().is_some()"));
+        assert!(source.contains("Check created collection"));
+    }
 
     #[component]
     fn CollectionCreationTestRoot(url: String) -> Element {
@@ -257,8 +321,8 @@ mod tests {
         let source = include_str!("collection_new.rs");
         let component = source.split("#[cfg(test)]").next().unwrap();
         assert!(component.contains("let mut creation_unconfirmed"));
-        assert!(component.contains("submit_disabled: creation_unconfirmed()"));
-        assert!(component.contains("if saving() || creation_unconfirmed()"));
+        assert!(component.contains("submit_disabled: collection_creation_submit_blocked(false, creation_unconfirmed(), created_collection().is_some())"));
+        assert!(component.contains("if collection_creation_submit_blocked(saving(), creation_unconfirmed(), created_collection().is_some())"));
         assert!(component.contains("creation_unconfirmed.set(true)"));
         assert!(component.contains("new_tab: true"));
         assert!(component.contains("Check Collections"));
