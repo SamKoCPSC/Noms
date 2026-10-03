@@ -7070,3 +7070,110 @@ collection editing/moving/sharing, unhydrated submits, cross-tab duplicate
 prevention, real-device/screen-reader checks and whole-app sign-off are not newly
 accepted. All five broad checkpoint-8 groups remain open. Next: collection
 edit/move/sharing response-loss and final-navigation recovery.
+
+## Graph device and screen reader checklist 2026-10-03
+
+**Supporting automated and browser checks PASS; physical touch and actual
+screen-reader acceptance remain OPEN.** The user requested all checks in the
+first remaining group. Its outstanding contract requires real gesture arbitration
+and spoken assistive-technology behavior, neither of which the available browser
+tools can certify. No production code was changed or application rebuild needed.
+
+### Checks performed
+
+On code baseline `73217d1` in the existing isolated checkpoint-8 worktree:
+
+```sh
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server pages::recipe_version_graph -- --test-threads=1
+```
+
+**67 passed, 0 failed, 0 ignored**, including long-press candidate cancellation,
+menu navigation, focus positioning, outline markup and request recovery. This is
+a focused run, not a new whole-repository CI result.
+
+The existing app at `http://127.0.0.1:32768` was tested in one clean in-app tab
+using retained private recipe `1c6173d6-505c-92d7-7493-97e30be37b85`, titled
+CP8 History root – Local test only. Normal mock Google sign-in restored the
+existing `testuser` account. An initial mistaken `/graph` URL returned the normal
+404; the actual `/version-graph` route was then reached through Recipe actions →
+View version graph. The 404 attempt is not graph evidence.
+
+- Shift+F10 on v30 opened its snapshot menu and focused View snapshot. End moved
+  focus to Zoom to snapshot; Escape closed the menu and restored the v30 link.
+- At 390×844, Enter opened the native Accessible graph outline disclosure. Its
+  text identified current v30 and directional version relationships. Enter on
+  Expand 5 older versions loaded 25 → 30 cards and 30 outline links; focus remained
+  on the same control, now Collapse older versions, with `aria-expanded=true`.
+- The expansion status exposed `role=status`, `aria-live=polite` and
+  `aria-atomic=true`. Comparison text retained explicit Before → After direction.
+  These observations verify markup, not spoken output or announcement timing.
+- At 320×720, all eight pan/zoom/Fit/Current controls were 44px high and at least
+  45px wide, entirely within the page. The document width was 305px, including
+  the browser's scrollbar allowance. At 820×1180, those controls were at least
+  44×44px and the document width was 805px. At 390×844 the document width was
+  375px. These are viewport/keyboard observations, not physical-device acceptance.
+
+Inspected screenshots: `/tmp/noms-020-graph-phone-controls-2026-10-03.png`
+(comparison and opened outline at 390px) and
+`/tmp/noms-020-graph-320-2026-10-03.png` (page heading and wrapped toolbar at 320px).
+Temporary viewport overrides were reset and the test tab closed. Existing user
+tabs and other deployments were untouched. No content mutation, upload, restore,
+publication, sharing change or deletion was submitted. No storage-integrity hash
+audit is newly claimed.
+
+### Environment limits
+
+A fresh `Input.dispatchTouchEvent` touch-cancel capability probe returned
+unsupported in the in-app browser. Native computer APIs are disabled and the
+enabled-surface inventory exposes no native app. Read-only environment discovery
+found no `orca`, `speech-dispatcher` or `adb` executable and no `/dev/input`
+directory. There is no connected physical test device or operable screen reader
+available through these tools. No software was installed and no phone access,
+network exposure or security setting was changed to work around those limits.
+
+### Physical touch walkthrough still required
+
+Use the private fixture in an authorized browser on a real phone and portrait
+tablet. Record device, OS, browser/version and viewport alongside each result.
+Do not publish, restore or delete a recipe as part of this walkthrough.
+
+- [ ] A short snapshot tap opens the intended historical snapshot once; Back
+  returns to a usable graph.
+- [ ] Holding one finger beyond 550ms opens the correct snapshot menu. Releasing
+  does not accidentally navigate. Dismissing restores the snapshot context.
+- [ ] Releasing before 550ms does not leave a delayed menu. Movement beyond 12px
+  while holding cancels the menu; ordinary scrolling continues.
+- [ ] Starting with two fingers or adding a second finger cancels the candidate;
+  native pinch/scroll behavior is not blocked and no stale menu appears.
+- [ ] OS/browser gesture cancellation and leaving the page during a pending
+  hold do not leave a delayed menu or navigate a replacement page.
+- [ ] Page and outline scrolling work on phone and tablet; toolbar, expansion,
+  comparison and menu controls remain reachable without accidental activation.
+
+### Screen reader walkthrough still required
+
+Use an actual screen reader with the fixture owner signed in, recording the
+screen reader/version, OS and browser. Accessibility-tree snapshots do not count
+as completing these items.
+
+- [ ] Heading/landmark navigation reaches the graph and outline; snapshot links
+  identify recipe and version, and current/main/ancestor/descendant states can
+  be understood without connector colors or images.
+- [ ] Snapshot actions and keyboard menu invocation are discoverable; menu items
+  and unavailable states are spoken correctly. Arrow/Home/End navigation works,
+  and Escape returns focus without accidental navigation.
+- [ ] Outline disclosure announces expanded/collapsed state. Version and fork
+  relationships are understandable in reading order.
+- [ ] Expansion loading/busy/completion and a controlled read failure/retry are
+  announced at useful times without unwanted repetition; focus remains usable.
+- [ ] Before and After selections, swap direction and comparison results are
+  spoken in the intended order, including when selection changes.
+- [ ] Signed-out and non-owner private/redacted states do not expose protected
+  snapshot content in spoken output or the accessible outline.
+
+Second-pass self-review: PASS for the bounded test record and explicit limits;
+no independent-agent review. This documentation update is one coherent concern.
+The first remaining group is not complete, and all five broad checkpoint-8
+groups remain open. Completing this group requires a device/screen-reader
+walkthrough supplied by the user or an authorized environment exposing those
+capabilities, not another synthetic-event pass.
