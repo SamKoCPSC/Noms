@@ -173,7 +173,7 @@ pub fn CollectionEdit(id: String) -> Element {
                                 error.set(Some(problem)); saving.set(false); return;
                             }
                             DeferredUploadCompletion::Failed => {
-                                error.set(Some("The cover image failed to upload. Retry or remove it, then save again.".to_string()));
+                                error.set(Some("Collection changes were not saved. Check the cover image status, then retry or remove it and save again.".to_string()));
                                 saving.set(false); return;
                             }
                         };

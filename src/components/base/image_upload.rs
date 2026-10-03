@@ -44,6 +44,10 @@ const ALLOWED_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp"];
 // ── Pure helpers (cross-platform, unit-tested) ──────────────────────────────
 
 fn upload_error_message(error: &ServerFnError) -> &'static str {
+    // Storage may have registered a temporary asset before its acknowledgement
+    // was lost. Only explicit pre-write errors settle failure; an intentional
+    // Retry can upload a second copy, but must never imply the first did not exist.
+    const UNCONFIRMED_UPLOAD: &str = "We couldn't confirm this image upload. Your preview is kept here. Retrying may upload another copy.";
     if let Some(feedback) = crate::auth::account_binding::account_error_feedback(error) {
         return feedback;
     }
@@ -71,9 +75,9 @@ fn upload_error_message(error: &ServerFnError) -> &'static str {
             "Image storage is unavailable" | "Unable to verify media quota" => {
                 "Image storage is temporarily unavailable. Try again later."
             }
-            _ => "This image could not be uploaded. Check your connection and retry.",
+            _ => UNCONFIRMED_UPLOAD,
         },
-        _ => "This image could not be uploaded. Check your connection and retry.",
+        _ => UNCONFIRMED_UPLOAD,
     }
 }
 
@@ -1550,8 +1554,61 @@ mod tests {
         ] {
             assert_eq!(
                 upload_error_message(&error),
-                "This image could not be uploaded. Check your connection and retry."
+                "We couldn't confirm this image upload. Your preview is kept here. Retrying may upload another copy."
             );
+        }
+    }
+
+    #[test]
+    fn unconfirmed_upload_preserves_local_bytes_and_blocks_later_content_save_batches() {
+        let mut image = pending_image_with_uploaded_url(1, None);
+        image.status = UploadStatus::Uploading;
+        image.full_bytes = Arc::new(vec![1, 2, 3]);
+        image.thumb_bytes = Arc::new(vec![4, 5]);
+        let full = image.full_bytes.clone();
+        let thumbnail = image.thumb_bytes.clone();
+        let edit = image.edit.clone();
+
+        // A malformed/lost success response cannot prove that storage failed.
+        mark_upload_failed(
+            &mut image,
+            &ServerFnError::Deserialization("private response".into()),
+        );
+        assert_eq!(image.error.as_deref(), Some("We couldn't confirm this image upload. Your preview is kept here. Retrying may upload another copy."));
+        assert!(matches!(image.status, UploadStatus::Failed));
+        assert!(Arc::ptr_eq(&full, &image.full_bytes));
+        assert!(Arc::ptr_eq(&thumbnail, &image.thumb_bytes));
+        assert_eq!(image.edit, edit);
+        let (ready, failed) = upload_batch_plan(&[image]);
+        assert!(
+            ready.is_empty(),
+            "a later Save must not re-upload automatically"
+        );
+        let mut pending = Some("intended collection changes");
+        let outcome = UploadOutcome {
+            succeeded: 0,
+            failed,
+            aborted: None,
+        };
+        assert_eq!(
+            complete_deferred_upload(&mut pending, outcome.clone()),
+            DeferredUploadCompletion::Failed
+        );
+        assert_eq!(
+            complete_deferred_upload(&mut pending, outcome),
+            DeferredUploadCompletion::NoPendingSave
+        );
+    }
+
+    #[test]
+    fn collection_cover_failure_copy_distinguishes_unsaved_content_from_upload_outcome() {
+        for source in [
+            include_str!("../../pages/collection_new.rs"),
+            include_str!("../../pages/collection_edit.rs"),
+        ] {
+            let component = source.split("#[cfg(test)]").next().unwrap();
+            assert!(component.contains("Collection changes were not saved. Check the cover image status, then retry or remove it and save again."));
+            assert!(!component.contains("The cover image failed to upload."));
         }
     }
 

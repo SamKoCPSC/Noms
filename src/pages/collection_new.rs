@@ -52,7 +52,7 @@ pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
                 }
                 DeferredUploadCompletion::Failed => {
                     error.set(Some(
-                        "The cover image failed to upload. Retry or remove it, then save again."
+                        "Collection changes were not saved. Check the cover image status, then retry or remove it and save again."
                             .to_string(),
                     ));
                     saving.set(false);
