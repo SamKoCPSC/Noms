@@ -6618,3 +6618,116 @@ and cross-step drag interaction checks, then remaining mutation/identity gates.
 Native drag gestures, real touch, screen-reader announcements and full accessibility
 are not accepted by these keyboard checks; all five broad checkpoint-8 groups
 remain open.
+
+## Gallery and method photo drag acceptance 2026-10-02
+
+The desktop drag slice passed. Gallery reorder keeps the complete image record
+together while encoding finishes. Method photos reorder only inside their own
+step; dropping onto a different step intentionally leaves both steps unchanged.
+This records the existing no-transfer contract, not a new cross-step feature or
+a previously reproduced data-loss defect.
+
+Runtime commit `53a34e4` adds a shared tested method-photo reorder helper to both
+recipe editor routes, replacing their duplicate drop logic. It rejects missing
+steps and out-of-range photo positions without indexing panics. Gallery runtime
+behavior is unchanged; its additions are regression tests. Work used the clean
+isolated `codex/NOMS-020-checkpoint-8` worktree at
+`/home/samko/GitRepos/Noms/.worktrees/NOMS-020-checkpoint-8`, based on `1c955c1`.
+The runtime commit was fast-forwarded into the design integration branch and
+rebuilt in the existing port-32768 deployment. Other deployments were untouched.
+
+### Automated validation
+
+Five new regressions cover complete gallery records during Processing/Failed
+states, self/missing gallery targets, step-photo metadata and nested step-tree
+preservation, cross-step/out-of-range/self drops, and both routes' source wiring
+to the shared helper with live upload locks and drag cleanup. The wiring check
+inspects actual handler source; it is not a mounted-browser test. The first
+tests-first run failed to compile because the new shared helper did not yet exist;
+this is not evidence of a behavioral failure in the original implementation.
+
+```sh
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server drag
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server step_photo
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target just ci
+docker exec noms-c799915fcf93e034-app-1 dx build --platform web --force-sequential true --debug-symbols false
+docker restart noms-c799915fcf93e034-app-1
+```
+
+The drag filter passed **4 tests**, including one existing image-editor test.
+The step-photo filter passed **10 tests**. Full CI passed **982 tests, 0 failed,
+12 ignored**, with formatting, native/WASM, Clippy, schema, security, secret and
+deployment checks successful. Eight existing allowed dependency-audit warnings
+remain. Logs are `/tmp/noms-020-step-drag-contract-red.log`,
+`/tmp/noms-020-drag-green-final.log`,
+`/tmp/noms-020-step-photo-regressions.log`, `/tmp/noms-020-drag-ci.log` and
+`/tmp/noms-020-drag-build.log`.
+
+### Browser acceptance
+
+Two fresh temporary tabs used the existing mock `testuser` session and synthetic
+landscape/portrait files. No Save or Publish action was submitted. The gallery
+checks executed the previous unchanged gallery runtime at `1c955c1`, with uncached
+WASM size **14,431,506 bytes**. The method-photo checks executed the rebuilt
+**14,431,740-byte** WASM, SHA256
+`204e7e50d76c276cb1c144ae06c00daa3cd571cd5ef6fd500a631e9be1dddd10`.
+
+- A trusted native gallery drag moved the second Ready image first. Its 12°
+  rotation remained attached to that image when reopened.
+- A temporary diagnostic held one real canvas encoder callback while a third
+  image remained Processing. Dragging that row changed order from `1,0,2` to
+  `1,2,0`. Releasing the original callback made the moved image Ready at its new
+  position, with all three images present and disabled processing controls
+  reenabled. No fabricated encoding result was injected.
+- Gallery self-drop left order unchanged. An outside drop produced dragstart/end
+  without a drop event. Both cleared the drag indicator.
+- Two method steps held two photos and one photo respectively. A trusted native
+  same-step drag moved the portrait photo first; reopening it still showed 12°.
+- Cross-step drops in both directions produced trusted dragstart/drop/dragend
+  events, left the two photo lists unchanged and cleared the dragging class.
+  The high-level fast vertical drag initially released before a final target
+  dragover, producing only dragstart/end. Stepped native CDP mouse input then
+  held the pointer over the observed target before release and verified the
+  actual drop handler. No JavaScript-dispatched DragEvent was used.
+- Method self-drop and outside cancellation retained all three photos and
+  cleared the dragging class. Controls remained usable afterward.
+
+Adding method steps triggers autosave even with an empty title. In the verification
+tab only, 2-second autosave timers were held as 10-minute timers before adding
+the fixture. This isolates drag state and does **not** accept normal autosave
+or drag-plus-persistence behavior. The captured request interval was complete
+and contained exactly three POSTs, all to the real step-photo upload endpoint;
+no draft save or publication request occurred. Media asset count increased from
+10 to 13; these unreferenced synthetic uploads were retained, not deleted. No
+media-store integrity or worker-cleanup claim is made.
+
+Before/after counts and full-row hashes match for recipes (36), versions (71),
+drafts (10), collections (31) and users (3), recorded in
+`/tmp/noms-020-drag-db-before.txt` and `/tmp/noms-020-drag-db-after.txt`.
+Sanitized trusted-event evidence is in `/tmp/noms-020-gallery-drag-events.json`
+and `/tmp/noms-020-step-drag-events.json`; method POST paths are in
+`/tmp/noms-020-step-drag-network.json`. Inspected screenshots
+`/tmp/noms-020-gallery-drag-ready.png` and `/tmp/noms-020-step-drag-ready.png`
+show Ready gallery rows and the reordered rotated method photo alongside the
+unchanged second step. These are desktop interaction captures, not full-page
+or device audits.
+
+The encoder prototype, autosave timer override and diagnostic listeners were
+restored/removed; pending held timers were cleared after navigating away. Cache
+overrides were cleared and both temporary tabs closed. Existing browser tabs
+were not reloaded or closed. The integration worktree's user-owned Tailwind
+edits retain exact SHA256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`;
+only the generated grayscale rule was removed after the build. Root work remains
+untouched.
+
+Second-pass self-review: **PASS for the scoped desktop drag contract**, with no
+remaining blocking or should-fix findings. The helper comment was narrowed to
+missing/out-of-range positions: index-based method dragging does not promise
+stable identity during simultaneous structural edits. No independent-agent
+review was used. Rollback baseline is `1c955c1`; no schema migration is involved.
+Native edit-route gestures are not newly accepted, though shared behavior and
+both handlers' wiring are tested. Real touch, screen readers, general accessibility,
+normal autosave, EXIF orientation, wide-gamut/animated files and remaining mutation
+or identity gates stay open. Next: image orientation and export edge cases. All
+five broad checkpoint-8 groups remain open.

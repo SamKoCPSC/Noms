@@ -142,7 +142,7 @@ pub(super) struct StepForm {
 }
 
 /// Reorder whole image records, without transferring photos between steps.
-/// Stale/missing positions are harmless; both editor routes share this boundary.
+/// Missing/out-of-range positions are harmless; both routes share this boundary.
 pub(super) fn reorder_step_photo_within_step(
     steps: &mut [StepForm],
     source: (usize, usize),
