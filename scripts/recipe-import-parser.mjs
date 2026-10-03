@@ -3950,7 +3950,89 @@ function parseHtml(html, sourceUrl, htmlAudit) {
   return result;
 }
 
+// Clipboard serialization can omit OL/UL markers while keeping written recipe
+// paragraphs. Use King Arthur's measured text boundaries only on its exact
+// host; never relax the generic parser or infer recipe ownership from a title.
+function parseKingArthurPlainText(plainText, sourceUrl) {
+  try {const url=new URL(sourceUrl);if(!["http:","https:"].includes(url.protocol)||!["kingarthurbaking.com","www.kingarthurbaking.com"].includes(url.hostname))return null;}catch{return null;}
+  const lines=plainText.replaceAll("\r\n","\n").replaceAll("\r","\n").split("\n").map((raw,index)=>({raw:normalizeWhitespace(raw),number:index+1})).filter(line=>line.raw);
+  const matches=pattern=>lines.flatMap((line,index)=>pattern.test(line.raw)?[index]:[]);
+  const ingredientsHeadings=matches(/^Ingredients$/iu),methodHeadings=matches(/^Instructions$/iu),authors=matches(/^Recipe by\s+\S/iu);
+  if(ingredientsHeadings.length!==1||methodHeadings.length!==1||authors.length!==1)return null;
+  const ingredientStart=ingredientsHeadings[0],methodStart=methodHeadings[0],authorIndex=authors[0],title=lines[authorIndex-1];
+  if(!title||/^(?:Shop|Recipes|Learn|Baking School|Impact|Search|Collections|Categories|Features|Sign in|Skip to main content)$/iu.test(title.raw)||authorIndex>=ingredientStart||ingredientStart>=methodStart)return null;
+  const stats=["Prep","Bake","Total","Yield"].map(label=>lines.flatMap((line,index)=>index>authorIndex&&index<ingredientStart&&line.raw.toLowerCase()===label.toLowerCase()?[index]:[]));
+  if(stats.some(indices=>indices.length!==1)||stats.some((indices,index)=>index>0&&indices[0]!==stats[index-1][0]+2)||stats[3][0]+1>=ingredientStart)return null;
+  const footerPattern=/^(?:My Notes:|Baker[’']s Resources|Reviews|Q&A|For more recipes like this subscribe to our newsletter)$/iu;
+  const footerIndex=lines.findIndex((line,index)=>index>methodStart&&footerPattern.test(line.raw));
+  const tipsIndices=matches(/^Tips from our Bakers$/iu);
+  if(footerIndex<0||tipsIndices.length>1||tipsIndices.some(index=>index<=methodStart||index>=footerIndex))return null;
+  const methodEnd=tipsIndices[0]??footerIndex;
+  const result=candidate({id:"king-arthur-baking-text",version:"1",tier:"source_adapter",sourceAdapter:"king-arthur-baking"},sourceUrl);
+  const locator=line=>`line ${line.number}`;
+  result.source.provider="King Arthur Baking";result.source.provenance.provider=provenance("source_url","hostname kingarthurbaking.com");
+  result.source.author=lines[authorIndex].raw.replace(/^Recipe by\s+/iu,"");result.source.provenance.author=provenance("text/plain",locator(lines[authorIndex]));
+  result.fields.title=scalar(title.raw,"text/plain",locator(title));
+  const description=lines.slice(authorIndex+1,stats[0][0]).filter(line=>!/^\d+\s+Reviews$/iu.test(line.raw)&&!/^\d+(?:\.\d+)?\s+out of 5 stars$/iu.test(line.raw)&&line.raw!=="Bake it Easy");
+  if(description.length)result.fields.description=scalar(description.map(line=>line.raw).join(" "),"text/plain",locator(description[0]));
+  for(const [index,label] of ["Prep","Cook","Total"].entries()){
+    const value=lines[stats[index][0]+1];if(!/^\d/u.test(value.raw)||!/(?<!\p{L})(?:days?|hours?|hrs?|hr|minutes?|mins?|min)(?!\p{L})/iu.test(value.raw))return null;
+    visibleProviderDuration(result,label,value.raw,locator(value));
+    result.fields[{Prep:"prepTime",Cook:"cookTime",Total:"totalTime"}[label]].provenance=provenance("text/plain",locator(value));
+  }
+  const yieldLine=lines[stats[3][0]+1],number=Number(yieldLine.raw.match(/^(\d+)\s+servings$/iu)?.[1]);
+  if(!/\d/u.test(yieldLine.raw)&&! /^(?:one|two|three|four|five|six|seven|eight|nine|ten|a|an)\s+\S/iu.test(yieldLine.raw))return null;
+  result.fields.yield={...scalar(yieldLine.raw,"text/plain",locator(yieldLine)),value:{display:yieldLine.raw,servings:Number.isSafeInteger(number)&&number>0?number:null}};
+  const note=line=>result.fields.notes.push(scalar(line.raw,"text/plain",locator(line)));
+  const ingredientEnd=lines.findIndex((line,index)=>index>ingredientStart&&index<methodStart&&/^(?:Nutrition Information|Featured products)$/iu.test(line.raw));
+  if(ingredientEnd>=0){
+    const controls=lines.slice(ingredientEnd,methodStart);
+    if(/^Nutrition Information$/iu.test(controls[0]?.raw??""))controls.shift();
+    if(controls.length){
+      if(!/^Featured products$/iu.test(controls.shift().raw)||controls.length%2!==0)return null;
+      for(let index=0;index<controls.length;index+=2)if(/[.!?]$/u.test(controls[index].raw)||!/^\$\d+(?:,\d{3})*(?:\.\d{2})?$/u.test(controls[index+1].raw))return null;
+    }
+  }
+  const ingredientLines=lines.slice(ingredientStart+1,ingredientEnd<0?methodStart:ingredientEnd),items=[];
+  for(const line of ingredientLines){
+    const raw=line.raw.replace(/^[-•]\s+|^\*\s+(?=\d|[\u00bc-\u00be\u2150-\u215e])/u,"");
+    if(raw.startsWith("*")){note(line);continue;}
+    // Unmarked group names and wrapped rows cannot be reliably distinguished
+    // from ingredients in this flat text variant. Refuse rather than drop them.
+    if(!new RegExp(`^${AMOUNT_PATTERN}\\s+\\S`,"u").test(raw))return null;
+    const item=visibleProviderIngredient(raw,locator(line));item.provenance=provenance("text/plain",locator(line));items.push(item);
+  }
+  if(!items.length)return null;
+  result.fields.ingredientSections=[{name:null,items}];
+  const steps=[];let pending=[],previousNumber=null,numbered=null,nextOrdinal=1;
+  const flush=()=>{if(pending.length){steps.push(instruction(pending.map(line=>line.raw).join(" "),"text/plain",locator(pending[0])));pending=[];}};
+  const tutorialPattern=/^(?:Perfect your technique|Take it a step further|Learn more|Substitute ingredients)$/iu;
+  for(let index=methodStart+1;index<methodEnd;index++){
+    const line=lines[index];
+    if(/^Bake Mode$/iu.test(line.raw)){if(index!==methodStart+1||lines[index+1]?.raw!=="Prevent your screen from going dark as you follow along.")return null;index++;continue;}
+    if(tutorialPattern.test(line.raw)){
+      flush();const blogIndex=/^Blog$/iu.test(lines[index+1]?.raw??"")?index+1:index+2,caption=blogIndex===index+2?lines[index+1]:null;
+      if(blogIndex+2>=methodEnd||!/^Blog$/iu.test(lines[blogIndex]?.raw??"")||!/^By\s+\S/iu.test(lines[blogIndex+2]?.raw??"")||caption&&/[.!?]$/u.test(caption.raw)||lines[blogIndex+3]&&lines[blogIndex+3].number===lines[blogIndex+2].number+1)return null;
+      index=blogIndex+2;previousNumber=null;continue;
+    }
+    if(/^(?:Online Lessons, On-Demand|Blog|Featured products|Nutrition Information|Bake Mode|Prevent your screen from going dark as you follow along\.)$/iu.test(line.raw)||/^By\s+/iu.test(line.raw))return null;
+    const ordinal=line.raw.match(/^(\d+)[.)]\s+(.+)$/u);
+    if(numbered===null)numbered=Boolean(ordinal);
+    if(numbered){if(!ordinal||Number(ordinal[1])!==nextOrdinal++)return null;flush();steps.push(instruction(ordinal[2],"text/plain",locator(line)));}
+    else {if(ordinal)return null;if(previousNumber!==null&&line.number>previousNumber+1)flush();pending.push(line);}
+    previousNumber=line.number;
+  }
+  flush();if(!steps.length)return null;
+  result.fields.instructionSections=[{name:null,steps}];
+  if(tipsIndices.length)for(const line of lines.slice(tipsIndices[0]+1,footerIndex))note(line);
+  result.status="needs_review";
+  result.warnings.push({code:"PLAIN_TEXT_PROVIDER_REQUIRES_REVIEW",severity:"warning",path:"fields",message:"Plain-text recipe boundaries and paragraph breaks are best effort. Review extracted fields; text cannot recover image references or HTML ownership."});
+  return result;
+}
+
 function parsePlainText(plainText, sourceUrl) {
+  const sourceAdapterCandidate=parseKingArthurPlainText(plainText,sourceUrl);
+  if(sourceAdapterCandidate)return sourceAdapterCandidate;
   const lines = plainText.replaceAll("\r\n", "\n").replaceAll("\r", "\n").split("\n")
     .map((raw, index) => ({ raw: raw.trim(), number: index + 1 }))
     .filter(({ raw }) => raw !== "");

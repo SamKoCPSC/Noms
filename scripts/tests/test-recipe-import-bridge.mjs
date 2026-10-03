@@ -9,6 +9,14 @@ test('bridge feeds full HTML and text to the existing parser with the supplied s
   const payload = {html, plainText: null, sourceUrl: 'https://example.invalid/recipe'};
   assert.deepEqual(await parseClipboardPayload(payload, parseRecipeClipboard), parseRecipeClipboard(payload));
 });
+test('bridge accepts King Arthur full-page plain text when list markers are absent', async () => {
+  const plainText=await readFile(new URL('../../tests/fixtures/recipe-import/providers/kingarthur-plain.txt',import.meta.url),'utf8');
+  const payload={html:'',plainText,sourceUrl:'https://www.kingarthurbaking.com/recipes/invented-muffins'};
+  const parsed=await parseClipboardPayload(payload,parseRecipeClipboard);
+  assert.equal(parsed.parser.id,'king-arthur-baking-text');
+  assert.equal(parsed.fields.title.value,'Aurora Cloud Muffins');
+  assert.deepEqual(parsed.fields.instructionSections[0].steps.map(step=>step.text),['Mix the flour and sugar.','Whisk in the eggs.','Divide the batter and bake.']);
+});
 for (const [fixture, sourceUrl, adapter] of [
   ['bbcgoodfood-visible.html', 'https://www.bbcgoodfood.com/recipes/cloud-bean-stew', 'bbc-good-food'],
   ['kingarthur-visible.html', 'https://www.kingarthurbaking.com/recipes/aurora-cloud-rolls', 'king-arthur-baking'],
