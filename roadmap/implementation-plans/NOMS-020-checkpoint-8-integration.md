@@ -7177,3 +7177,134 @@ The first remaining group is not complete, and all five broad checkpoint-8
 groups remain open. Completing this group requires a device/screen-reader
 walkthrough supplied by the user or an authorized environment exposing those
 capabilities, not another synthetic-event pass.
+
+## Collection edit outcome recovery 2026-10-03
+
+**Scoped details, move, sharing and confirmed destination recovery PASS.** The
+existing save sequence uses separate requests, not one atomic transaction. A lost
+acknowledgement must not claim a definite failure, reset the intended location,
+issue later writes or invite a blind retry. This slice reused empty synthetic
+collections at `http://127.0.0.1:32768`, without changing existing user content.
+
+### Reproduction and fix
+
+On baseline `7692350`, the red fixture
+`f67d7f0e-0cfd-4767-9a2a-373aa5d8c627` was moved inside fixture
+`5cadc14b-c8cc-4c96-a0ad-a2644c2fa6d0`. The real HTTP200 move response was held;
+SQL independently confirmed its description and parent had committed. Failing
+that response made the old UI claim the move failed, reset location to top level
+and enable Save changes. No second save was submitted in this red probe.
+
+`62e7b20` adds stage-specific uncertainty feedback, a submission-only block and a
+live submit guard. Details/location/sharing failures stop the sequence immediately
+and preserve intended values. Only the explicit pre-write account-change
+rejection stays retryable; later-stage account feedback acknowledges preceding
+confirmed details. Other errors are conservative unconfirmed outcomes, without
+raw backend details. A Check saved collection link opens the known collection ID
+in a separate tab. Local edits and Cancel remain available. No automatic retry,
+server idempotency, transaction, schema change or automatic reconciliation is
+introduced. The old definite-failure test was updated to this explicit contract.
+
+Two new wiring regressions failed before implementation. After implementation,
+four focused recovery tests passed, including stage feedback and account-rejection
+handling; broader collection coverage passed **107 tests, 0 failed, 2 ignored**.
+The existing shared-form real-submit regression also passed within that run.
+There are three net new tests; source-wiring checks alone are not runtime proof.
+
+### Browser and database observations
+
+The green fixture `9d6595fe-7e22-42ca-ad59-e170716a1fe1` was reused, with no cover,
+recipes or subcollections. Each probe held a real response at the Fetch/XHR
+response stage, confirmed database state before failing that response, and then
+observed the actual Rust UI. No response body was fabricated. Interception was
+restricted to mutation endpoints and never to Document requests.
+
+- **Details:** one update committed the name CP8 collection edited recovery and
+  description. Its acknowledgement was lost before any move/sharing request.
+  The UI retained the desired parent and Unlisted selection while SQL still
+  showed top-level/private. Save was disabled, local fields editable, and Enter
+  issued no further POST. A further local name edit remained in the original
+  tab while the Check saved collection link opened the committed name,
+  description and Private badge in a second tab. Cancel was usable.
+- **Location:** fresh editing loaded confirmed state. Details and a move into
+  the destination fixture committed, then the move acknowledgement was lost.
+  The intended parent remained selected, not reset; desired Unlisted remained
+  local while stored visibility stayed Private. The request interval contained
+  one details and one move mutation, no sharing write and no Enter retry.
+  Cancel and fresh Edit loaded the committed parent/description.
+- **Sharing:** a fresh save confirmed details and a move back to top level,
+  then SQL proved Unlisted committed before the sharing acknowledgement was
+  lost. The UI correctly reported unconfirmed sharing, kept its selection and
+  enabled Cancel but not Save. The interval contained exactly one request per
+  stage, without an Enter retry. Fresh Edit loaded stored Unlisted.
+- **Final destination:** another save restored Private. After SQL confirmed it,
+  the held successful sharing response was continued unchanged with the tab
+  offline. Typed navigation reached the same collection URL and displayed
+  Retry collection plus sign-in-check recovery, not a browser error page. Enter
+  retry while offline remained usable. Restoring connectivity and using the
+  two read-retry controls loaded the saved description/Private badge and focused
+  collection-detail-content. The interval contained one details and one sharing
+  mutation, three collection reads and **zero Document requests**. Read retry
+  did not repeat either save.
+
+The final recovery viewport measured **400×900**, document width **381px**. A
+requested 320×720 override did not apply to this tab; these results and screenshot
+are not claimed as 320px acceptance. The existing 320px collection-create check
+is separate evidence. Full-page uncertainty screenshots were inspected at the
+default desktop size. Temporary files:
+
+- `/tmp/noms-020-collection-edit-uncertain-details.png`
+- `/tmp/noms-020-collection-edit-uncertain-move.png`
+- `/tmp/noms-020-collection-edit-destination-offline.png`
+- `/tmp/noms-020-collection-edit-destination-recovered.png`
+- `/tmp/noms-020-collection-edit-{details,move,sharing,destination}-network.json`
+
+Network records contain only request sequence, URL, method and resource type;
+no headers, credentials or request/response bodies were saved. All response-loss
+and retry intervals were read without event truncation. The fixture ended
+top-level/private; the red fixture remains private inside the destination fixture.
+No publication, deletion, recipe restore or upload was submitted. The two
+temporary tabs were closed; interception, offline mode, cache disabling and the
+attempted viewport override were cleared.
+
+### Validation and preservation
+
+On the existing isolated `codex/NOMS-020-checkpoint-8` branch:
+
+```sh
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server collection_edit_recovery -- --test-threads=1
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server collection_ -- --test-threads=1
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target just ci
+docker exec noms-c799915fcf93e034-app-1 dx build --platform web --force-sequential true --debug-symbols false
+```
+
+Full CI **995 passed, 0 failed, 12 ignored**; native/WASM compilation, Clippy,
+formatting, schema, policy, secret and deployment gates passed with eight existing
+allowed audit warnings. No fresh ignored storage/search integration run claimed.
+CI log: `/tmp/noms-020-collection-edit-ci.log`. The first explicit build was
+interrupted by a premature app restart after client compilation (exit137), so it
+is not counted as successful. A second build completed both client/server with
+exit0; log `/tmp/noms-020-collection-edit-build-complete.log`. The reloaded client
+transferred 14,443,226 decoded WASM bytes (14,443,526 including transfer overhead),
+matching the built file size. The built file's SHA256 is
+`06a5b00b9fa86c477b28598b1a1842bbe8c0e36bf34193e2b912a89f2ee37c7d`.
+
+Within this follow-up, ordered full-row hashes match for 36 recipes, 71 versions,
+10 drafts, 3 users and the original 31 collections (excluding the three explicit
+synthetic collection IDs). Version rows were ordered by recipe ID/version number:
+`f5dcc0816a77295b76897942a28866fd`; other hashes match the preceding records.
+Media count remains 13, which is not an object-store integrity audit. Only the
+named synthetic collection edits/moves and temporary Unlisted visibility changed.
+The user's integration CSS was restored byte-for-byte by removing only the
+build-generated grayscale rule; SHA256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+Main's unrelated roadmap edits and other deployments were untouched.
+
+Second-pass self-review: **PASS for the scoped outcome contract**, no blocking or
+should-fix findings; no independent-agent review. The runtime fix/tests are one
+coherent commit and this evidence is separate. The fix was fast-forwarded into
+the existing NOMS-020 integration worktree. Rollback baseline `7692350`; no
+migration. Cover upload response loss, concurrent external edits, in-flight route
+or identity replacement, real-device/screen-reader acceptance and whole-app signoff
+are not closed by this slice. All five broad groups remain open. Next: prevent
+native collection form submission before hydration without losing early values.
