@@ -6532,3 +6532,89 @@ gallery reorder handlers do not restore focus; no specific renderer/keying cause
 is claimed. Restore a useful focus target and check boundary/non-boundary moves
 next. Full keyboard, screen-reader, real-device and whole-app acceptance remain
 open; this fix does not close any of the five broad checkpoint-8 groups.
+
+## Gallery reorder focus acceptance 2026-10-02
+
+The gallery focus gap recorded above is fixed by `e21c559`. Keyboard reordering
+now keeps focus on the moved image's enabled reorder control. Middle moves retain
+the requested direction; reaching the first or last row switches focus to the
+opposite action on the same image. The effect runs after the DOM commit, scopes
+button IDs to each uploader, avoids disabled/inert/hidden targets and does not
+take focus from a different active control. Drag-and-drop does not request this
+focus restoration. Upload, save, image-processing and visual contracts are unchanged.
+
+Work used the clean existing isolated acceptance worktree
+`/home/samko/GitRepos/Noms/.worktrees/NOMS-020-checkpoint-8`, branch
+`codex/NOMS-020-checkpoint-8`, based on `715f6a4`. The runtime commit was
+fast-forwarded into `codex/NOMS-020-visual-design-refinement` to rebuild the
+existing deployment at `http://127.0.0.1:32768`; other deployments were untouched.
+
+### Automated validation
+
+Tests-first checks reproduced the missing boundary fallback: one passed and two
+failed. Four final regressions cover both boundaries, middle moves, missing and
+single-item galleries, invalid directions, twelve unique controls across two
+uploaders, and actual rendered button-handler reordering. Native tests verify
+the focus decision and wiring; browser checks below prove actual DOM focus.
+
+```sh
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server components::base::image_upload::tests
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target just ci
+docker exec noms-c799915fcf93e034-app-1 dx build --platform web --force-sequential true --debug-symbols false
+docker restart noms-c799915fcf93e034-app-1
+```
+
+Focused gallery tests: **46 passed**. Final full CI: **977 passed, 0 failed,
+12 ignored**, including native/WASM checks, formatting, Clippy, schema, security,
+secret and deployment gates. Eight existing allowed audit warnings remain.
+The first run failed while an upload test created its temporary user because
+PostgreSQL terminated the connection; the unchanged rerun passed all tests but
+could not update the read-only dependency-advisory cache. A final reviewed
+permission rerun passed the entire gate. Logs:
+`/tmp/noms-020-gallery-focus-red.log`,
+`/tmp/noms-020-gallery-focus-green-final.log`,
+`/tmp/noms-020-gallery-focus-ci.log`,
+`/tmp/noms-020-gallery-focus-ci-rerun.log`,
+`/tmp/noms-020-gallery-focus-ci-final.log` and
+`/tmp/noms-020-gallery-focus-build.log`.
+
+### Browser acceptance
+
+A fresh temporary tab used the existing mock `testuser` login and synthetic
+landscape/portrait images; no recipe title/content or Save/Publish action was
+submitted. An uncached reload executed the rebuilt **14,431,506-byte** WASM,
+SHA256 `7d0d65701c958b6bbf6c4c83b4ed93a2047f2ee1ef1331eca1a7ce453b9f20e1`.
+
+- Enter moved the second image to first, then focused its enabled Down action.
+  Space on that restored control moved it back and focused its enabled Up action.
+- With four Ready rows, Up and Down middle moves retained the same direction and
+  stable image ID. Tab from Up reached Down; Space then reordered that same image.
+- Notes navigation and browser Back retained all rows. Reopening the moved image
+  still showed its 10° rotation; another image's adjustment was not substituted.
+- At 320px, repeated Enter moves reached the first row and switched to its enabled
+  Down action. Document scroll width was 305px within the 320px viewport.
+- No captured browser warnings/errors appeared. Returning to Explore succeeded.
+
+Inspected screenshots: `/tmp/noms-020-gallery-focus-middle.png` shows the focused
+Down action on a rotated Ready image; `/tmp/noms-020-gallery-focus-mobile-full.png`
+shows the same image and enabled focused boundary action at 320px. These are
+interaction-state captures, not complete page audits. The browser's first narrow
+screenshot was scaled incorrectly; the full-height CDP capture replaced it for
+evidence. Temporary emulation/cache overrides were cleared and the new tab closed;
+existing tabs were not reloaded or closed.
+
+Before/after full-row counts and hashes for recipes, versions, drafts,
+collections and users match exactly in
+`/tmp/noms-020-gallery-focus-db-before.txt` and
+`/tmp/noms-020-gallery-focus-db-after.txt`. No media-store integrity comparison is
+claimed. The integration worktree's pre-existing Tailwind edits remain byte-for-byte
+unchanged at SHA256 `74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`;
+only the build-generated grayscale rule was removed. Unrelated root work was preserved.
+
+Second-pass self-review: **PASS for scoped gallery-button focus**, with no remaining
+blocking or should-fix findings. No independent-agent review was used. Rollback
+baseline is `715f6a4`; no schema/data migration is involved. Continue multi-image
+and cross-step drag interaction checks, then remaining mutation/identity gates.
+Native drag gestures, real touch, screen-reader announcements and full accessibility
+are not accepted by these keyboard checks; all five broad checkpoint-8 groups
+remain open.
