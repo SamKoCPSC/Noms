@@ -5,6 +5,9 @@ pub mod reorder;
 pub mod theme;
 
 #[cfg(any(target_arch = "wasm32", test))]
+pub mod image_dimensions;
+
+#[cfg(any(target_arch = "wasm32", test))]
 pub mod image_processing_lifecycle;
 
 #[cfg(target_arch = "wasm32")]

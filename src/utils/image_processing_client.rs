@@ -5,6 +5,7 @@
 #![cfg(target_arch = "wasm32")]
 #![allow(dead_code)]
 
+use super::image_dimensions::calculate_dimensions;
 use super::image_processing_lifecycle::{
     wait_for_image_operation, ImageCompletionOwner, ImageDecodeUrl,
 };
@@ -101,23 +102,6 @@ pub async fn load_image_from_blob(blob: &web_sys::Blob) -> Result<HtmlImageEleme
         "This image took too long to decode. Remove it and choose another image.",
     )
     .await?
-}
-
-/// Calculate target dimensions maintaining aspect ratio.
-///
-/// If the source fits within max_dim x max_dim, returns original dimensions.
-/// Otherwise, scales down to fit within the constraint.
-fn calculate_dimensions(src_w: u32, src_h: u32, max_dim: u32) -> (u32, u32) {
-    if src_w <= max_dim && src_h <= max_dim {
-        return (src_w, src_h);
-    }
-
-    let ratio = src_w as f64 / src_h as f64;
-    if src_w > src_h {
-        (max_dim, (max_dim as f64 / ratio) as u32)
-    } else {
-        ((max_dim as f64 * ratio) as u32, max_dim)
-    }
 }
 
 /// Draw an image to an offscreen canvas and export as WebP blob at the
