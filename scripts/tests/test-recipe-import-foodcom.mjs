@@ -22,6 +22,12 @@ function refuses(html,sourceUrl) {
  let c;try { c=parse(html,sourceUrl); } catch(error) {assert.equal(error.message,'Clipboard input does not contain a recognizable recipe.');return;}
  assert.notEqual(c.parser.sourceAdapter,'foodcom');
 }
+test('Food.com supports selection without a recipe URL',()=>{
+ const c=parseRecipeClipboard({html:recipe,providerId:'foodcom'});
+ assert.equal(c.parser.sourceAdapter,'foodcom');assert.equal(c.source.suppliedUrl,null);
+ assert.deepEqual(validateImportCandidate(c),[]);assert.deepEqual(validateJsonSchema(c,schema),[]);
+});
+
 test('Food.com preserves all explicit ingredient and direction groups, including inline recipe notes',()=>{
  const c=parse();assert.equal(c.parser.sourceAdapter,'foodcom');
  assert.deepEqual(c.fields.ingredientSections.map(s=>s.name),['Dough','Finish']);

@@ -28,6 +28,12 @@ function parse(html = recipe, sourceUrl = "https://www.allrecipes.com/recipe/1/l
   return parseRecipeClipboard({ html, plainText: null, sourceUrl });
 }
 
+test('AllRecipes supports selection without a recipe URL',()=>{
+  const c=parseRecipeClipboard({html:recipe,providerId:'allrecipes'});
+  assert.equal(c.parser.sourceAdapter,'allrecipes');assert.equal(c.source.suppliedUrl,null);
+  assert.deepEqual(validateImportCandidate(c),[]);assert.deepEqual(validateJsonSchema(c,schema),[]);
+});
+
 test("AllRecipes extracts structured rows, all groups and clean multi-paragraph steps", () => {
   const c = parse();
   assert.equal(c.parser.sourceAdapter, "allrecipes");

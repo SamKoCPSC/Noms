@@ -1,3 +1,23 @@
+// This local catalogue also supplies the UI choices. Origins are routing hints,
+// never claimed as the user's recipe URL or fetched by the parser.
+export const RECIPE_IMPORT_PROVIDERS = Object.freeze([
+  {id:"allrecipes",label:"AllRecipes",origin:"https://www.allrecipes.com/"},
+  {id:"bbc-good-food",label:"BBC Good Food",origin:"https://www.bbcgoodfood.com/"},
+  {id:"bon-appetit",label:"Bon Appétit",origin:"https://www.bonappetit.com/"},
+  {id:"budgetbytes",label:"Budget Bytes",origin:"https://www.budgetbytes.com/"},
+  {id:"epicurious",label:"Epicurious",origin:"https://www.epicurious.com/"},
+  {id:"foodcom",label:"Food.com",origin:"https://www.food.com/"},
+  {id:"food52",label:"Food52",origin:"https://food52.com/"},
+  {id:"foodnetwork",label:"Food Network",origin:"https://www.foodnetwork.com/"},
+  {id:"king-arthur-baking",label:"King Arthur Baking",origin:"https://www.kingarthurbaking.com/"},
+  {id:"nyt-cooking",label:"NYT Cooking",origin:"https://cooking.nytimes.com/"},
+  {id:"recipetineats",label:"RecipeTin Eats",origin:"https://www.recipetineats.com/"},
+  {id:"sallys-baking-addiction",label:"Sally’s Baking Addiction",origin:"https://sallysbakingaddiction.com/"},
+  {id:"serious-eats",label:"Serious Eats",origin:"https://www.seriouseats.com/"},
+  {id:"simply-recipes",label:"Simply Recipes",origin:"https://www.simplyrecipes.com/"},
+  {id:"tasty",label:"Tasty",origin:"https://tasty.co/"},
+].map(provider=>Object.freeze(provider)));
+
 const INGREDIENT_HEADINGS = new Set(["ingredient", "ingredients"]);
 const INSTRUCTION_HEADINGS = new Set([
   "direction",
@@ -1335,8 +1355,8 @@ function tastyImageReferences(html) {
   return images;
 }
 
-function parseTastyVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
-  if (!tastyHostname(sourceUrl)) return null;
+function parseTastyVisibleRecipe(inertHtml, sourceUrl, htmlAudit, routingUrl = sourceUrl) {
+  if (!tastyHostname(routingUrl)) return null;
   const titles = elementsWithClass(inertHtml, "recipe-name");
   const ingredientContainers = elementsWithClass(inertHtml, "ingredients-prep");
   const preparationContainers = elementsWithClass(inertHtml, "preparation");
@@ -1556,8 +1576,8 @@ function wprmInstructionSections(containerHtml) {
   return sections.length > 0 ? { sections, ignoredEmptySections } : null;
 }
 
-function parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit) {
-  if (!recipeTinEatsHostname(sourceUrl)) return null;
+function parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit, routingUrl = sourceUrl) {
+  if (!recipeTinEatsHostname(routingUrl)) return null;
   const completeCards = elementsWithClass(inertHtml, "wprm-recipe-container").flatMap((card) => {
     const title = firstClassText(card.innerHtml, "wprm-recipe-name");
     const ingredientContainer = elementsWithClass(
@@ -1714,9 +1734,9 @@ function budgetBytesIngredient(itemHtml, locator) {
   return parsed;
 }
 
-function parseBudgetBytesWprm(inertHtml, sourceUrl, htmlAudit) {
+function parseBudgetBytesWprm(inertHtml, sourceUrl, htmlAudit, routingUrl = sourceUrl) {
   try {
-    const url = new URL(sourceUrl);
+    const url = new URL(routingUrl);
     if (!["http:", "https:"].includes(url.protocol) ||
       !(url.hostname === "budgetbytes.com" || url.hostname.endsWith(".budgetbytes.com"))) return null;
   } catch { return null; }
@@ -1787,9 +1807,9 @@ function parseBudgetBytesWprm(inertHtml, sourceUrl, htmlAudit) {
   return result;
 }
 
-function parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
+function parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit, routingUrl = sourceUrl) {
   try {
-    const url = new URL(sourceUrl);
+    const url = new URL(routingUrl);
     if (!["http:", "https:"].includes(url.protocol) ||
       !["allrecipes.com", "www.allrecipes.com"].includes(url.hostname)) return null;
   } catch { return null; }
@@ -1989,9 +2009,9 @@ function parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   return result;
 }
 
-function parseFood52VisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
+function parseFood52VisibleRecipe(inertHtml, sourceUrl, htmlAudit, routingUrl = sourceUrl) {
   try {
-    const url = new URL(sourceUrl);
+    const url = new URL(routingUrl);
     if (!["http:", "https:"].includes(url.protocol) ||
       !["food52.com", "www.food52.com"].includes(url.hostname)) return null;
   } catch { return null; }
@@ -2190,9 +2210,9 @@ function parseFood52VisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   return result;
 }
 
-function parseFoodComVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
+function parseFoodComVisibleRecipe(inertHtml, sourceUrl, htmlAudit, routingUrl = sourceUrl) {
   try {
-    const url = new URL(sourceUrl);
+    const url = new URL(routingUrl);
     if (!["http:", "https:"].includes(url.protocol) || !["food.com", "www.food.com"].includes(url.hostname)) return null;
   } catch { return null; }
   const mains = elementsMatchingAttributes(inertHtml, (_, tag) => tag === "main");
@@ -2384,9 +2404,9 @@ function parseFoodComVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   return result;
 }
 
-function parseSallysVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
+function parseSallysVisibleRecipe(inertHtml, sourceUrl, htmlAudit, routingUrl = sourceUrl) {
   try {
-    const url = new URL(sourceUrl);
+    const url = new URL(routingUrl);
     if (!["http:", "https:"].includes(url.protocol) || !["sallysbakingaddiction.com", "www.sallysbakingaddiction.com"].includes(url.hostname)) return null;
   } catch { return null; }
   const coreClasses = ["tasty-recipes", "tasty-recipes-entry-header", "tasty-recipes-title", "tasty-recipes-ingredients", "tasty-recipes-ingredients-header", "tasty-recipes-ingredients-body", "tasty-recipes-instructions", "tasty-recipes-instructions-header", "tasty-recipes-instructions-body"];
@@ -2608,10 +2628,10 @@ function parseSallysVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
 
 // These exact-host adapters share the measured Dotdash article/card shape.
 // Simply Recipes extensions stay opt-in; Serious Eats output stays unchanged.
-function parseDotdashVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
+function parseDotdashVisibleRecipe(inertHtml, sourceUrl, htmlAudit, routingUrl = sourceUrl) {
   let simplyRecipes = false;
   try {
-    const url = new URL(sourceUrl);
+    const url = new URL(routingUrl);
     simplyRecipes = ["simplyrecipes.com", "www.simplyrecipes.com"].includes(url.hostname);
     if (!["http:", "https:"].includes(url.protocol) || (!simplyRecipes && !["seriouseats.com", "www.seriouseats.com"].includes(url.hostname))) return null;
   } catch { return null; }
@@ -3021,8 +3041,8 @@ function finishVisibleProvider(result, htmlAudit) {
 // King Arthur's header and recipe card are sibling articles inside the main
 // page. Its literal volume/weight conversions belong to one ingredient row;
 // footnotes and baker tips are supplements, never additional method steps.
-function parseKingArthurVisibleRecipe(html, sourceUrl, htmlAudit) {
-  try{const url=new URL(sourceUrl);if(!["http:","https:"].includes(url.protocol)||!["kingarthurbaking.com","www.kingarthurbaking.com"].includes(url.hostname))return null;}catch{return null;}
+function parseKingArthurVisibleRecipe(html, sourceUrl, htmlAudit, routingUrl = sourceUrl) {
+  try{const url=new URL(routingUrl);if(!["http:","https:"].includes(url.protocol)||!["kingarthurbaking.com","www.kingarthurbaking.com"].includes(url.hostname))return null;}catch{return null;}
   const markers=["quickview--recipe","quickview__description","quickview__blog-author","stats--recipe","stat__item--prep","stat__item--bake","stat__item--total","stat__item--yield","recipe__ingredients","recipe__ingredients-header","ingredients-list","ingredient-section","ingredient-section__footnote","recipe__instructions","recipe__instructions-header","field--recipe-steps","recipe__tips","recipe__tips-header"];
   const c=visibleProviderContext(html,(a,t)=>t==="main"&&hasClass(a,"main"),(a,t)=>t==="h1"||t==="main"&&hasClass(a,"main")||markers.some(name=>hasClass(a,name)),a=>["quickview--recipe","recipe__ingredients","recipe__instructions"].some(name=>hasClass(a,name)));
   if(!c)return null;const {all,inside,children,loose,text,inline,consume}=c;
@@ -3103,15 +3123,15 @@ function parseKingArthurVisibleRecipe(html, sourceUrl, htmlAudit) {
   if(tips.length){const tip=tips[0],parts=children(tip),heading=parts[0],list=parts[1];if(!inside(tip,method)||parts.length!==2||heading.index!==tipHeadings[0].index||heading.tag!=="h2"||!inline(heading)||text(heading.innerHtml)!=="Tips from our Bakers"||list.tag!=="ul"||!hasClass(list.attributes,"list--star")||loose(tip)||loose(list))return null;consume(tip);consume(heading);const rows=children(list);if(!rows.length)return null;for(const row of rows){if(row.tag!=="li"||c.isHidden(row))return null;const paragraphs=written(row);if(!paragraphs?.length)return null;for(const raw of paragraphs)note(raw,".recipe__tips li");}}
   if(!c.complete())return null;
   const mediaContainers=elementsWithClass(header.innerHtml,"quickview__media");if(mediaContainers.length>1)return null;
-  if(mediaContainers.length){const container=mediaContainers[0];for(const image of c.openings.filter(e=>e.tag==="img"&&header.openingEnd+container.openingEnd<=e.index&&e.openingEnd<=header.openingEnd+container.contentEnd)){const raw=image.attributes.get("src");if(!raw?.trim()||c.isHidden(image,false)||hasAncestorTag(html,image.index,"nav"))continue;try{const url=new URL(raw,sourceUrl);if(["http:","https:"].includes(url.protocol)&&!result.fields.images.some(e=>e.sourceUrl===url.href))result.fields.images.push({sourceUrl:url.href,alt:image.attributes.get("alt")?.trim()||null,credit:null,provenance:provenance("text/html",".quickview__media img")});}catch{/* Safe explicit references only; no fetching. */}}}
+  if(mediaContainers.length){const container=mediaContainers[0];for(const image of c.openings.filter(e=>e.tag==="img"&&header.openingEnd+container.openingEnd<=e.index&&e.openingEnd<=header.openingEnd+container.contentEnd)){const raw=image.attributes.get("src");if(!raw?.trim()||c.isHidden(image,false)||hasAncestorTag(html,image.index,"nav"))continue;try{const url=new URL(raw,sourceUrl??undefined);if(["http:","https:"].includes(url.protocol)&&!result.fields.images.some(e=>e.sourceUrl===url.href))result.fields.images.push({sourceUrl:url.href,alt:image.attributes.get("alt")?.trim()||null,credit:null,provenance:provenance("text/html",".quickview__media img")});}catch{/* Safe explicit references only; no fetching. */}}}
   return finishVisibleProvider(result,htmlAudit);
 }
 
 // Good Food's copied page uses explicit quantity/name/note spans and numbered
 // method rows, not a generic pair of sibling heading/list regions. Account for
 // every marked core node; never join controls, nutrition or reader comments.
-function parseBBCGoodFoodVisibleRecipe(html, sourceUrl, htmlAudit) {
-  try {const url=new URL(sourceUrl);if(!["http:","https:"].includes(url.protocol)||!["bbcgoodfood.com","www.bbcgoodfood.com"].includes(url.hostname))return null;}catch{return null;}
+function parseBBCGoodFoodVisibleRecipe(html, sourceUrl, htmlAudit, routingUrl = sourceUrl) {
+  try {const url=new URL(routingUrl);if(!["http:","https:"].includes(url.protocol)||!["bbcgoodfood.com","www.bbcgoodfood.com"].includes(url.hostname))return null;}catch{return null;}
   const rootMarker=a=>hasClass(a,"post")&&hasClass(a,"recipe");
   const markers=["post-header__body","post-header__title","post-header__body__author","recipe-masthead__description","recipe-cook-and-prep-details","recipe-cook-and-prep-details__section","recipe-cook-and-prep-details__item","recipe-cook-and-prep-details__note","recipe__instructions","ingredients-list","ingredients-list__item","ingredients-list__item-quantity","ingredients-list__item-ingredient","ingredients-list__item-note","method-steps","method-steps__heading","method-steps__list","method-steps__list-item","method-steps__item-heading","unit-toggle"];
   const c=visibleProviderContext(html,rootMarker,(a,t)=>rootMarker(a)||markers.some(name=>hasClass(a,name))||t==="h3"&&hasClass(a,"ingredients-list__heading"),a=>hasClass(a,"recipe__instructions")||hasClass(a,"post-header__body"));
@@ -3186,16 +3206,16 @@ function parseBBCGoodFoodVisibleRecipe(html, sourceUrl, htmlAudit) {
   }
   result.fields.instructionSections.push({name:null,steps});if(!c.complete())return null;
   const heroes=elementsWithClass(c.root.innerHtml,"post-header--masthead__hero");if(heroes.length>1)return null;
-  if(heroes.length){const hero=heroes[0],images=c.openings.filter(e=>e.tag==="img"&&c.root.openingEnd+hero.openingEnd<=e.index&&e.openingEnd<=c.root.openingEnd+hero.contentEnd);for(const image of images){const raw=image.attributes.get("src");if(!raw?.trim()||c.isHidden(image,false)||hasAncestorTag(html,image.index,"nav"))continue;try{const url=new URL(raw,sourceUrl);if(["http:","https:"].includes(url.protocol)&&!result.fields.images.some(i=>i.sourceUrl===url.href))result.fields.images.push({sourceUrl:url.href,alt:image.attributes.get("alt")?.trim()||null,credit:null,provenance:provenance("text/html",".post-header--masthead__hero img")});}catch{/* Image references remain unfetched. */}}}
+  if(heroes.length){const hero=heroes[0],images=c.openings.filter(e=>e.tag==="img"&&c.root.openingEnd+hero.openingEnd<=e.index&&e.openingEnd<=c.root.openingEnd+hero.contentEnd);for(const image of images){const raw=image.attributes.get("src");if(!raw?.trim()||c.isHidden(image,false)||hasAncestorTag(html,image.index,"nav"))continue;try{const url=new URL(raw,sourceUrl??undefined);if(["http:","https:"].includes(url.protocol)&&!result.fields.images.some(i=>i.sourceUrl===url.href))result.fields.images.push({sourceUrl:url.href,alt:image.attributes.get("alt")?.trim()||null,credit:null,provenance:provenance("text/html",".post-header--masthead__hero img")});}catch{/* Image references remain unfetched. */}}}
   return finishVisibleProvider(result,htmlAudit);
 }
 
 // Condé Nast's measured visible layout pairs sibling quantity/description
 // nodes and nests multiple numbered actions inside each preparation group.
 // Stable component names and test IDs identify ownership, never build hashes.
-function parseCondeVisibleRecipe(html, sourceUrl, htmlAudit) {
+function parseCondeVisibleRecipe(html, sourceUrl, htmlAudit, routingUrl = sourceUrl) {
   let sourceAdapter;
-  try {const url=new URL(sourceUrl);if(!["http:","https:"].includes(url.protocol))return null;sourceAdapter=new Map([["bonappetit.com","bon-appetit"],["www.bonappetit.com","bon-appetit"],["epicurious.com","epicurious"],["www.epicurious.com","epicurious"]]).get(url.hostname);if(!sourceAdapter)return null;}catch{return null;}
+  try {const url=new URL(routingUrl);if(!["http:","https:"].includes(url.protocol))return null;sourceAdapter=new Map([["bonappetit.com","bon-appetit"],["www.bonappetit.com","bon-appetit"],["epicurious.com","epicurious"],["www.epicurious.com","epicurious"]]).get(url.hostname);if(!sourceAdapter)return null;}catch{return null;}
   const component=(attributes,name)=>(attributes.get("class")??"").split(/\s+/u).some(token=>token.startsWith(`${name}-`));
   const testId=name=>attributes=>attributes.get("data-testid")===name;
   const markers=["RecipePageArticle","RecipePageContentBackground","SplitScreenContentHeaderWrapper","ContentHeaderHed","recipe__main-content","BodyWrapper","InfoSliceList","IngredientList","InstructionsWrapper"];
@@ -3292,7 +3312,7 @@ function parseCondeVisibleRecipe(html, sourceUrl, htmlAudit) {
     for(const e of ignored.filter(e=>!ignored.some(owner=>inside(e,owner))).sort((a,b)=>b.index-a.index))remainder=remainder.slice(0,e.index)+" "+remainder.slice(e.end);
     return !text(remainder);
   };
-  const recordMedia=part=>{if(!step)return;for(const image of c.openings.filter(e=>e.tag==="img"&&part.openingEnd<=e.index&&e.openingEnd<=part.contentEnd)){const raw=image.attributes.get("src");if(!raw?.trim()||c.isHidden(image,false)||hasAncestorTag(html,image.index,"nav"))continue;try{if(["http:","https:"].includes(new URL(raw,sourceUrl).protocol))step.hasImage=true;}catch{/* No safe visible image means no image-only evidence. */}}};
+  const recordMedia=part=>{if(!step)return;for(const image of c.openings.filter(e=>e.tag==="img"&&part.openingEnd<=e.index&&e.openingEnd<=part.contentEnd)){const raw=image.attributes.get("src");if(!raw?.trim()||c.isHidden(image,false)||hasAncestorTag(html,image.index,"nav"))continue;try{if(["http:","https:"].includes(new URL(raw,sourceUrl??undefined).protocol))step.hasImage=true;}catch{/* No safe visible image means no image-only evidence. */}}};
   for(const row of rows){if(row.tag!=="li"||!component(row.attributes,"InstructionListWrapper"))return null;consume(row);const pieces=children(row);if(loose(row,pieces))return null;
     for(const part of pieces){
       if(part.tag==="h3"&&component(part.attributes,"InstructionGroupHed")){if(awaiting||!inline(part)||!flush())return null;consume(part);group=text(part.innerHtml);awaiting=true;tail=false;continue;}
@@ -3324,12 +3344,12 @@ function parseCondeVisibleRecipe(html, sourceUrl, htmlAudit) {
   }
   if(!result.fields.instructionSections.length||!c.complete())return null;
   const leads=elementsMatchingAttributes(header.innerHtml,testId("ContentHeaderLeadAsset"));if(leads.length>1)return null;
-  if(leads.length){const lead=leads[0],images=c.openings.filter(e=>e.tag==="img"&&header.openingEnd+lead.openingEnd<=e.index&&e.openingEnd<=header.openingEnd+lead.contentEnd);const image=images.find(e=>!c.isHidden(e,false)&&!hasAncestorTag(html,e.index,"nav")),raw=image?.attributes.get("src");if(raw?.trim()){try{const resolved=new URL(raw,sourceUrl);if(["http:","https:"].includes(resolved.protocol)){const credits=elementsWithClass(header.innerHtml,"caption__credit").filter(e=>inline(e)&&!hasAncestorTag(html,header.openingEnd+e.index,"nav"));result.fields.images.push({sourceUrl:resolved.href,alt:image.attributes.get("alt")?.trim()||null,credit:credits.length===1?text(credits[0].innerHtml):null,provenance:provenance("text/html","header [data-testid=ContentHeaderLeadAsset] img")});}}catch{/* Only safe, explicit references are retained. */}}}
+  if(leads.length){const lead=leads[0],images=c.openings.filter(e=>e.tag==="img"&&header.openingEnd+lead.openingEnd<=e.index&&e.openingEnd<=header.openingEnd+lead.contentEnd);const image=images.find(e=>!c.isHidden(e,false)&&!hasAncestorTag(html,e.index,"nav")),raw=image?.attributes.get("src");if(raw?.trim()){try{const resolved=new URL(raw,sourceUrl??undefined);if(["http:","https:"].includes(resolved.protocol)){const credits=elementsWithClass(header.innerHtml,"caption__credit").filter(e=>inline(e)&&!hasAncestorTag(html,header.openingEnd+e.index,"nav"));result.fields.images.push({sourceUrl:resolved.href,alt:image.attributes.get("alt")?.trim()||null,credit:credits.length===1?text(credits[0].innerHtml):null,provenance:provenance("text/html","header [data-testid=ContentHeaderLeadAsset] img")});}}catch{/* Only safe, explicit references are retained. */}}}
   return finishVisibleProvider(result,htmlAudit);
 }
 
-function parseFoodNetworkVisibleRecipe(html, sourceUrl, htmlAudit) {
-  try {const url=new URL(sourceUrl);if(!["http:","https:"].includes(url.protocol)||!["foodnetwork.com","www.foodnetwork.com"].includes(url.hostname))return null;}catch{return null;}
+function parseFoodNetworkVisibleRecipe(html, sourceUrl, htmlAudit, routingUrl = sourceUrl) {
+  try {const url=new URL(routingUrl);if(!["http:","https:"].includes(url.protocol)||!["foodnetwork.com","www.foodnetwork.com"].includes(url.hostname))return null;}catch{return null;}
   const markerClasses=["o-Recipe","o-AssetTitle__a-Headline","o-Ingredients","o-Ingredients__m-Body","o-Ingredients__a-Ingredient","o-Ingredients__a-Ingredient--CheckboxLabel","o-Ingredients__a-SubHeadline","o-Method","o-Method__m-Body","o-Method__m-Step","o-Method__a-SubHeadline","o-Method__m-Yield","o-Method__a-Description","o-RecipeInfo","o-RecipeInfo__a-Headline","o-RecipeInfo__a-Description","o-RecipeInfo__a-Note","o-AssetDescription__a-Description","o-Attribution__m-Author","o-ChefNotes","o-ChefNotes__a-Description","o-Warnings","o-Warnings__a-Description"];
   const c=visibleProviderContext(html,"o-Recipe",markerClasses);
   if(!c||c.root.tag!=="section")return null;
@@ -3420,15 +3440,15 @@ function parseFoodNetworkVisibleRecipe(html, sourceUrl, htmlAudit) {
     const images=elementsMatchingAttributes(media[0].innerHtml,(a,tag)=>tag==="img"&&hasClass(a,"m-MediaBlock__a-Image"));
     const image=images.find(e=>!c.isHidden({...e,index:media[0].openingEnd+e.index,end:media[0].openingEnd+e.end}));
     const imageSource=image?.attributes.get("src")?.trim();
-    if(imageSource){try{const url=new URL(imageSource,result.source.normalizedUrl);if(["http:","https:"].includes(url.protocol))result.fields.images.push({sourceUrl:url.href,alt:image.attributes.get("alt")||null,credit:null,provenance:provenance("text/html",".o-RecipeLead__m-RecipeMedia img")});}catch{}}
+    if(imageSource){try{const url=new URL(imageSource,result.source.normalizedUrl??undefined);if(["http:","https:"].includes(url.protocol))result.fields.images.push({sourceUrl:url.href,alt:image.attributes.get("alt")||null,credit:null,provenance:provenance("text/html",".o-RecipeLead__m-RecipeMedia img")});}catch{}}
   }
   if(!c.complete())return null;
   return finishVisibleProvider(result,htmlAudit);
 }
 
-function parseNYTCookingVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
+function parseNYTCookingVisibleRecipe(inertHtml, sourceUrl, htmlAudit, routingUrl = sourceUrl) {
   try {
-    const url = new URL(sourceUrl);
+    const url = new URL(routingUrl);
     if (!["http:", "https:"].includes(url.protocol) || url.hostname !== "cooking.nytimes.com") return null;
   } catch { return null; }
   // CSS-module hashes change between builds; match the component name, not a
@@ -3660,22 +3680,22 @@ function parseNYTCookingVisibleRecipe(inertHtml, sourceUrl, htmlAudit) {
   return result;
 }
 
-function parseHtml(html, sourceUrl, htmlAudit) {
+function parseHtml(html, sourceUrl, htmlAudit, routingUrl = sourceUrl) {
   // Remove active/raw-text regions before scanning. No markup is inserted into a DOM.
   const inertHtml = discardRawContent(html);
-  const sourceAdapterCandidate = parseKingArthurVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
-    parseBBCGoodFoodVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
-    parseCondeVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
-    parseFoodNetworkVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
-    parseSallysVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
-    parseDotdashVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
-    parseNYTCookingVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
-    parseFoodComVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
-    parseFood52VisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
-    parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
-    parseBudgetBytesWprm(inertHtml, sourceUrl, htmlAudit) ??
-    parseTastyVisibleRecipe(inertHtml, sourceUrl, htmlAudit) ??
-    parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit);
+  const sourceAdapterCandidate = parseKingArthurVisibleRecipe(inertHtml, sourceUrl, htmlAudit, routingUrl) ??
+    parseBBCGoodFoodVisibleRecipe(inertHtml, sourceUrl, htmlAudit, routingUrl) ??
+    parseCondeVisibleRecipe(inertHtml, sourceUrl, htmlAudit, routingUrl) ??
+    parseFoodNetworkVisibleRecipe(inertHtml, sourceUrl, htmlAudit, routingUrl) ??
+    parseSallysVisibleRecipe(inertHtml, sourceUrl, htmlAudit, routingUrl) ??
+    parseDotdashVisibleRecipe(inertHtml, sourceUrl, htmlAudit, routingUrl) ??
+    parseNYTCookingVisibleRecipe(inertHtml, sourceUrl, htmlAudit, routingUrl) ??
+    parseFoodComVisibleRecipe(inertHtml, sourceUrl, htmlAudit, routingUrl) ??
+    parseFood52VisibleRecipe(inertHtml, sourceUrl, htmlAudit, routingUrl) ??
+    parseAllRecipesVisibleRecipe(inertHtml, sourceUrl, htmlAudit, routingUrl) ??
+    parseBudgetBytesWprm(inertHtml, sourceUrl, htmlAudit, routingUrl) ??
+    parseTastyVisibleRecipe(inertHtml, sourceUrl, htmlAudit, routingUrl) ??
+    parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit, routingUrl);
   if (sourceAdapterCandidate) return sourceAdapterCandidate;
   const headings = htmlHeadings(inertHtml);
   const roots = rootRanges(inertHtml);
@@ -3953,8 +3973,8 @@ function parseHtml(html, sourceUrl, htmlAudit) {
 // Clipboard serialization can omit OL/UL markers while keeping written recipe
 // paragraphs. Use King Arthur's measured text boundaries only on its exact
 // host; never relax the generic parser or infer recipe ownership from a title.
-function parseKingArthurPlainText(plainText, sourceUrl) {
-  try {const url=new URL(sourceUrl);if(!["http:","https:"].includes(url.protocol)||!["kingarthurbaking.com","www.kingarthurbaking.com"].includes(url.hostname))return null;}catch{return null;}
+function parseKingArthurPlainText(plainText, sourceUrl, routingUrl = sourceUrl) {
+  try {const url=new URL(routingUrl);if(!["http:","https:"].includes(url.protocol)||!["kingarthurbaking.com","www.kingarthurbaking.com"].includes(url.hostname))return null;}catch{return null;}
   const lines=plainText.replaceAll("\r\n","\n").replaceAll("\r","\n").split("\n").map((raw,index)=>({raw:normalizeWhitespace(raw),number:index+1})).filter(line=>line.raw);
   const matches=pattern=>lines.flatMap((line,index)=>pattern.test(line.raw)?[index]:[]);
   const ingredientsHeadings=matches(/^Ingredients$/iu),methodHeadings=matches(/^Instructions$/iu),authors=matches(/^Recipe by\s+\S/iu);
@@ -4030,8 +4050,8 @@ function parseKingArthurPlainText(plainText, sourceUrl) {
   return result;
 }
 
-function parsePlainText(plainText, sourceUrl) {
-  const sourceAdapterCandidate=parseKingArthurPlainText(plainText,sourceUrl);
+function parsePlainText(plainText, sourceUrl, routingUrl = sourceUrl) {
+  const sourceAdapterCandidate=parseKingArthurPlainText(plainText,sourceUrl,routingUrl);
   if(sourceAdapterCandidate)return sourceAdapterCandidate;
   const lines = plainText.replaceAll("\r\n", "\n").replaceAll("\r", "\n").split("\n")
     .map((raw, index) => ({ raw: raw.trim(), number: index + 1 }))
@@ -4083,26 +4103,48 @@ function parsePlainText(plainText, sourceUrl) {
 export function parseRecipeClipboard(input) {
   const html = typeof input?.html === "string" ? input.html.trim() : "";
   const plainText = typeof input?.plainText === "string" ? input.plainText : "";
-  const sourceUrl = input?.sourceUrl ?? null;
+  let sourceUrl = input?.sourceUrl ?? null;
+  const providerId=input?.providerId;
+  const provider=providerId===undefined||providerId===null||providerId===""?null:RECIPE_IMPORT_PROVIDERS.find(choice=>choice.id===providerId);
+  if(providerId!==undefined&&providerId!==null&&providerId!==""&&!provider)throw new Error("Choose a supported recipe provider or Automatic.");
+  if(provider&&typeof sourceUrl==="string")sourceUrl=sourceUrl.trim()||null;
+  if(provider&&sourceUrl){
+    let url;try{url=new URL(sourceUrl);}catch{throw new Error("Enter a valid HTTP or HTTPS recipe URL.");}
+    const host=new URL(provider.origin).hostname.replace(/^www\./u,"");
+    if(!["http:","https:"].includes(url.protocol)||![host,`www.${host}`].includes(url.hostname))throw new Error("Recipe URL does not match the selected provider. Change the provider or remove the URL.");
+  }
+  const routingUrl=sourceUrl??provider?.origin??null;
+  const finish=result=>{
+    if(!provider)return result;
+    // Routing has its own input: adapters and generic fallback always retain
+    // the actual URL, and only that URL can resolve page-relative image paths.
+    if(result.parser.sourceAdapter===provider.id)result.source.provenance.provider=provenance("provider_selection",`import provider selector: ${provider.id}`);
+    else{result.warnings.push({code:"SELECTED_PROVIDER_FALLBACK",severity:"warning",path:"parser",message:"The selected provider layout was not recognized. Generic best-effort parsing was used; review all extracted fields."});result.status="needs_review";}
+    if(!sourceUrl&&openingHtmlElements(discardRawContent(html)).some(image=>image.tag==="img"&&["src","data-src"].some(attribute=>{const raw=image.attributes.get(attribute);return raw&&/^(?:\.{0,2}\/|[\w-]+(?:\/|\.))/u.test(raw)&&!/^https?:/iu.test(raw);}))) {
+      result.warnings.push({code:"RELATIVE_IMAGE_SOURCE_URL_MISSING",severity:"warning",path:"fields.images",message:"Relative image paths cannot be resolved without the original recipe URL. Add the optional source URL to retain those references."});
+      result.status="needs_review";
+    }
+    return result;
+  };
   if (html) {
     const htmlAudit = clipboardHtmlAudit(html);
-    const htmlCandidate = parseHtml(html, sourceUrl, htmlAudit);
-    if (htmlCandidate) return htmlCandidate;
+    const htmlCandidate = parseHtml(html, sourceUrl, htmlAudit, routingUrl);
+    if (htmlCandidate) return finish(htmlCandidate);
     if (plainText.trim()) {
-      const textCandidate = parsePlainText(plainText, sourceUrl);
+      const textCandidate = parsePlainText(plainText, sourceUrl, routingUrl);
       if (textCandidate) {
         appendHtmlAuditEvidence(
           textCandidate,
           htmlAudit,
           discardedRemoteResourceCount(htmlAudit, []),
         );
-        return textCandidate;
+        return finish(textCandidate);
       }
     }
   }
   if (plainText.trim()) {
-    const textCandidate = parsePlainText(plainText, sourceUrl);
-    if (textCandidate) return textCandidate;
+    const textCandidate = parsePlainText(plainText, sourceUrl, routingUrl);
+    if (textCandidate) return finish(textCandidate);
   }
   throw new Error("Clipboard input does not contain a recognizable recipe.");
 }

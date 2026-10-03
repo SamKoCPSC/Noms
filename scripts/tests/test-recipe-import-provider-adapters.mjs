@@ -47,6 +47,12 @@ function parseBudgetBytes(html = budgetBytesHtml, sourceUrl = "https://www.budge
   return parseRecipeClipboard({ html, plainText: null, sourceUrl });
 }
 
+test('Tasty supports selection without a recipe URL',()=>{
+  const c=parseRecipeClipboard({html:tastyHtml,providerId:'tasty'});
+  assert.equal(c.parser.sourceAdapter,'tasty');assert.equal(c.source.suppliedUrl,null);
+  assert.deepEqual(validateImportCandidate(c),[]);assert.deepEqual(validateJsonSchema(c,schema),[]);
+});
+
 test("BudgetBytes adapter preserves groups, structured quantities and preparation notes without costs", () => {
   const c = parseBudgetBytes();
   assert.equal(c.parser.sourceAdapter, "budgetbytes");
@@ -220,6 +226,14 @@ const recipeTinHtml = `
     <figcaption>Photo by Aster Vale</figcaption>
   </figure>
 </main>`;
+
+test('Budget Bytes and RecipeTin Eats support selection without a recipe URL',()=>{
+  for(const [providerId,html] of [['budgetbytes',budgetBytesHtml],['recipetineats',recipeTinHtml]]){
+    const c=parseRecipeClipboard({html,providerId});
+    assert.equal(c.parser.sourceAdapter,providerId);assert.equal(c.source.suppliedUrl,null);
+    assert.deepEqual(validateImportCandidate(c),[]);assert.deepEqual(validateJsonSchema(c,schema),[]);
+  }
+});
 
 const tastyHtml = `
 <main>

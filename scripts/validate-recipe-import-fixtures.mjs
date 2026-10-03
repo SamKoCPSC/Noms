@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const STATUSES = new Set(["ready", "needs_review", "unsupported"]);
 const CONFIDENCES = new Set(["high", "medium", "low"]);
 const TIERS = new Set(["generic_html", "generic_text", "source_adapter", "none"]);
-const REPRESENTATIONS = new Set(["text/html", "text/plain", "source_url"]);
+const REPRESENTATIONS = new Set(["text/html", "text/plain", "source_url", "provider_selection"]);
 const SEVERITIES = new Set(["info", "warning", "error"]);
 const JSON_SCHEMA_TYPES = new Set(["array", "boolean", "integer", "null", "number", "object", "string"]);
 const JSON_SCHEMA_KEYWORDS = new Set([

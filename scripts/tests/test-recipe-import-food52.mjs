@@ -34,6 +34,12 @@ function refusesAdapter(html, sourceUrl, message) {
   assert.notEqual(candidate.parser.sourceAdapter, "food52", message);
 }
 
+test('Food52 supports selection without a recipe URL',()=>{
+  const c=parseRecipeClipboard({html:recipe,providerId:'food52'});
+  assert.equal(c.parser.sourceAdapter,'food52');assert.equal(c.source.suppliedUrl,null);
+  assert.deepEqual(validateImportCandidate(c),[]);assert.deepEqual(validateJsonSchema(c,schema),[]);
+});
+
 test("Food52 retains complete ingredient and direction groups without video, navigation or step labels", () => {
   const c = parse();
   assert.equal(c.parser.sourceAdapter, "food52");
