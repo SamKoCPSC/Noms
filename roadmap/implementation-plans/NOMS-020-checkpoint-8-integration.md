@@ -8276,3 +8276,102 @@ completion and investigate early sharing selection, then mixed still-image
 batches and remaining gates. Real-device/screen-reader, suspended-tab timer
 behavior and final whole-app acceptance stay open. Animation is excluded and
 dark-mode redesign remains deferred.
+
+## Settled sharing completion and startup selection follow up
+
+Follow-up on 2026-10-03 closed the previously open settled-replacement sharing
+case on the unchanged runtime at `http://127.0.0.1:32768`. Screenshots and normal
+click navigation initially worked again. Controlled startup testing then
+reproduced a sharing-control mismatch, before browser input/capture became
+unreliable again. No production code was changed or newly accepted for that
+startup issue.
+
+### Sharing completion after observed replacement
+
+Reused the existing empty fixture
+`58ace93f-8d30-498c-accd-f99d40ea60da`. SQL confirmed it had no recipes,
+subcollections or image and belonged to the original synthetic account. A
+normal ready-form save temporarily set it Unlisted solely to prepare the test;
+the tested mutation reduced it to Private. No real content was exposed.
+
+Held the actual successful visibility response at the response stage. SQL
+confirmed Private had committed before the acknowledgement reached the browser.
+In a separate tab, normal mock OAuth sign-out/sign-in selected the existing
+alternate account. Before releasing the response, the retained editor itself
+showed both “Your signed-in account changed” and the replacement account's
+avatar, and `#session-retained-page` was inert. This is distinct from the earlier
+guest-phase observation.
+
+After release, the editor stayed at its original edit URL behind the account
+guard. Read-only inspection of the retained subtree showed accurate
+completed-original-account feedback, disabled Save and “Check saved collection”.
+Restoring `testuser` through normal sign-in and allowing the ordinary session
+refresh made those controls visible without reloading the retained form. Save
+remained disabled, and the saved-state link targeted a separate tab. A fresh
+detail read showed Private, parent A, the original owner and zero recipes;
+SQL agreed. No rollback, automatic replay or replacement-account navigation.
+
+Complete response-observation intervals reported `hasMore=false` and
+`truncated=false`: cursor 155 → 171 captured the real HTTP 200 hold, and
+171 → 191 captured release completion with no additional collection mutation
+requests. These are bounded browser observations, not a global network claim.
+No headers, cookies, capabilities or response bodies were saved.
+
+### Controlled early sharing choice
+
+Opened a new subcollection form under that empty fixture, without submitting
+it. Observed the actual `/wasm/noms_bg.wasm` startup request, then held its real
+HTTP 200 Fetch response during reload. The hold interval 652 → 813 was complete
+and untruncated. Create was disabled before client startup.
+
+Normal native-select interaction chose Unlisted while WASM was held. After
+releasing startup, the name was retained and Create became enabled, but the
+select still visibly chose Unlisted while its accessible name and explanation
+said “Private: only you can access it.” This establishes a reproducible
+post-hydration UI/state mismatch. Source inspection shows that mounted capture
+currently synchronizes name/description, while the sharing component has no
+equivalent capture of its early native selection. That is a candidate cause to
+test, not proof that a particular attempted save used the wrong value.
+
+Prepared only synthetic name/description values for a save check. The Create
+click timed out after the browser viewport became zero-sized. A supported
+1265 × 712 override restored DOM layout measurements, but screenshot capture
+still timed out. No retry, synthetic click or alternative browser-control
+mechanism was used. The form was closed without a verified submit and collection
+count remained 44. The final startup-network read reported truncation, so it
+does not independently establish a complete no-write interval. Fix and retest
+the selection/explanation/submitted-value contract before closing this item.
+
+### Integrity, evidence and cleanup
+
+Only the existing empty sharing fixture was intentionally updated and it ends
+Private under parent A. No new collection, recipe or media upload was created.
+Protected complete-row hashes matched the pre-pass values:
+
+| Protected rows | Count | MD5 |
+| --- | --- | --- |
+| Other collections | 43 | `bbf50527ff1bec6b4b76e3ed39bd30c9` |
+| Users | 3 | `5a84bb5b8604af4e42e6340240f575ea` |
+| Recipes | 36 | `ff40ea68a91ad2b0ea54e5af5a1917fe` |
+| Drafts | 11 | `a225a68a23cf7a6ae6f296c5fe67a4b6` |
+
+Proof `/tmp/noms-020-sharing-owner-recovery.png` was captured before the browser
+failure and visually inspected: retained fields, accurate completion feedback,
+disabled Save and the saved-state link. The mismatch was observed in DOM/native
+selection state; its screenshot failed, so no visual capture is claimed for it.
+
+Second-pass self-review: **PASS for settled sharing completion; startup
+selection remains open**. Reviewed account identity at release, accepted write
+versus navigation, sticky recovery, fixture scope, complete versus truncated
+event intervals and the limited startup evidence. No independent review agent.
+No new code/test run or full CI; the latest unchanged-runtime CI remains 1006
+passed, 0 failed, 12 ignored.
+
+Restored the original testuser account, cleared both interception configurations,
+disabled temporary Network observation, reset the viewport override and closed
+only the two temporary tabs. Browser tab inventory was empty afterward. User
+CSS remained unchanged (SHA-256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`).
+The app remains running. Next: early sharing-selection fix and runtime retest,
+then mixed still-image batches and the remaining checkpoint gates. No
+whole-app, real-device, screen-reader or dark-mode acceptance is implied.
