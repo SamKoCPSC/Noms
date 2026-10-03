@@ -6830,3 +6830,91 @@ browser engines, all EXIF containers, ICC/wide-gamut conversion, animation/frame
 policy, persisted upload delivery or real-device behavior. Next: wide-gamut and
 animated-image handling, then remaining mutation/identity gates. All five broad
 checkpoint-8 groups remain open.
+
+## Image colour and animation audit 2026-10-02
+
+Sampled ICC colour conversion passed without a code change. The animation audit
+found a visible mismatch that remains open: the editor displays the original
+animated source while the full-size and thumbnail exports are first-frame stills.
+The recommended policy is to retain the existing static export behavior and show
+that same first-frame still in previews. Explicitly rejecting animated inputs is
+an alternative; no policy change was implemented without the user's choice.
+
+### Colour conversion evidence
+
+Six 480×320 fixtures embed the installed Artifex sRGB, A98 and ROMMRGB ICC
+profiles, each in PNG and JPEG. The independent reference uses Pillow ImageCms
+to convert each decoded source to the installed sRGB profile. JPEG expectations
+use the decoded JPEG pixels rather than the pre-compression source. Four solid
+quadrants distinguish profile conversion from simply ignoring the profile.
+
+The real recipe-gallery pipeline produced 12 nonempty `image/webp` exports.
+All stayed 480×320, preserving no-upscale behavior. All 48 sampled corner pixels
+matched the independent sRGB reference within **2 channel levels**, below the
+predeclared tolerance of 8 for browser conversion and lossy WebP encoding. Full
+and thumbnail results matched each other at every sampled corner. This accepts
+these embedded profiles' conversion to sRGB in the tested browser, not retention
+of out-of-sRGB colours, HDR, all profiles or every browser engine. Editor colour
+adjustment fidelity was not newly tested by these export samples.
+
+### Animation finding
+
+Two-frame PNG and lossless WebP fixtures contain a red first frame for 200 ms
+and a blue second frame for 2000 ms. Both were admitted normally and became Ready.
+Both full and thumbnail exports sampled red `[220, 41, 40, 255]`, within one
+channel level of the source first frame. Reopening the WebP editor showed the
+blue later frame; inspected screenshot `/tmp/noms-020-animation-editor.png`
+records the mismatch. The original source preview remains visible after
+processing, explaining why Ready does not imply preview/export agreement.
+
+A separate controlled diagnostic delayed delivery of each native full-size
+encoder callback by 700 ms before thumbnail generation. The original blobs were
+passed unchanged to the application; no success or error result was fabricated.
+Both formats still exported the red first frame in both variants. The four
+captured delayed-run blobs were also independently decoded by Pillow as
+single-frame, non-animated images. Thus this browser did **not** exhibit a
+full/thumbnail frame race in the tested cases. The delay was a tab-local diagnostic,
+not natural encoder latency. Preview agreement and any animation policy remain
+unaccepted; retaining animation would require a separately scoped feature.
+
+### Reproduction and preservation
+
+Fixture generator: `/tmp/noms-020-colour-animation-fixtures.py`; manifest:
+`/tmp/noms-020-colour-animation/expected.json`. Reference profiles come from
+`/usr/share/ghostscript/iccprofiles/`, with names read directly from the profiles.
+The existing bundled Python/Pillow runtime was used; no dependency was installed.
+Raw observations: `/tmp/noms-020-colour-observed.json` and
+`/tmp/noms-020-colour-animation-observed.json`. Reproduction of the assertions:
+
+```sh
+/home/samko/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 /tmp/noms-020-colour-animation-fixtures.py
+/home/samko/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 /tmp/noms-020-check-colour-animation.py
+```
+
+Assertions passed for 12 ICC exports, 48 corner samples, eight animated-input
+exports and four independently decoded delayed blobs. A fresh temporary tab
+used the existing test session and an uncached reload on port 32768. The existing
+application was not rebuilt or restarted. No source code changed and full CI was
+not rerun; the latest code baseline remains `03095e9` with 989 passed, 0 failed,
+12 ignored. The final page showed ten Ready images: six ICC, two animation and
+two renamed delayed-run fixtures. Reselecting the identical animation files
+produced no new rows or encoder calls, so renamed files were used for the delayed
+pass; that picker behavior is not a new acceptance claim.
+
+The complete captured interval had 24 requests, **zero POSTs**, no truncation or
+remaining pages, recorded in `/tmp/noms-020-colour-animation-network.json`.
+No title/content edits, Save or Publish were submitted. Recipe, version, draft,
+collection and user counts/full-row hashes match the preceding recorded baseline;
+media count remains 13. No object-store integrity claim is made from that count.
+Canvas instrumentation and cache override were restored, the test navigated away
+and its temporary tab closed. Existing user tabs and other deployments were not
+changed. User-owned integration CSS retains SHA256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+
+Second-pass self-review: **PASS for sampled ICC export conversion; animation
+preview acceptance remains open**. No independent-agent review was used. This
+documentation-only slice uses one coherent evidence commit in the existing
+isolated `codex/NOMS-020-checkpoint-8` worktree, based on `4d3a385`; no runtime,
+schema or saved-content change requires deployment. All five broad checkpoint-8
+groups remain open. Next: user choice on matching first-frame previews versus
+rejecting animated files, followed by the remaining mutation and acceptance gates.
