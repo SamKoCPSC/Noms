@@ -7907,3 +7907,128 @@ Next: collection-cover/avatar upload completion across route/account changes,
 then remaining mutation and still-image gates. Mixed sequential upload batches,
 hidden-tab timer suspension, remaining identity races, screen-reader/real-device
 and final whole-app acceptance stay open. Animation handling remains excluded.
+
+## Collection cover and avatar uploads completing after navigation or account replacement
+
+Accepted on 2026-10-03 using the existing local deployment at
+`http://127.0.0.1:32768`. No runtime changes or rebuild were needed. The checks
+held four actual HTTP 200 upload acknowledgements at the browser response stage,
+then changed the route or signed-in account through normal UI controls before
+releasing each response. Requests were not fabricated and cookies were not
+injected. Only synthetic images and existing local test identities were used.
+
+The two upload contracts differ. A collection cover is registered as an
+uncommitted asset before its parent save. Confirming an avatar saves the profile
+immediately, before the browser receives the response. Leaving the avatar editor
+cannot undo an already accepted server write; the acceptance criterion is that
+its late response does not revive the old form or overwrite another account's
+global profile state.
+
+### Browser observations
+
+| Case | Observed result |
+| --- | --- |
+| Cover response after leaving Edit collection | Selected a synthetic JPEG with 14° rotation in the coverless private hydration fixture. Held the successful upload response, used the navbar to leave for Collections, then released it. The collection remained coverless with its complete row hash unchanged. A fresh New collection form had default text, no cover and no stuck saving state. |
+| Cover response after account replacement | Selected the same JPEG with 17° rotation and held its acknowledgement. Signed out and into the existing alternate test account in another tab. The old editor became hidden and inert. Releasing the upload triggered `update_collection`, which returned HTTP 500 with the account-change rejection. The original collection row remained unchanged; its hidden form retained the uploaded image and displayed the definitive no-save guidance. |
+| Cover recovery under its owner | Restored normal `testuser` sign-in. The same mounted editor became available again. Reopening the image editor showed 17° rotation. Cancelled only the modal edits, then explicitly saved. The complete observed request interval contained one successful `update_collection` and no second upload. Detail navigation and reload showed the private collection and its cover; SQL confirmed the retained asset and 17° metadata. |
+| Avatar response after leaving Settings | Under the existing synthetic avatar account, confirmed an 11° adjusted JPEG and held its successful response. SQL already showed the new managed avatar reference. Navigated to Dashboard, released the response and reopened Settings. The fresh form showed that committed avatar with no retained retry control or uploading state. |
+| Avatar response after account replacement | Confirmed a second synthetic avatar with 19° rotation under the same test account and held its successful response. Restored `testuser` in another tab and waited for normal session refresh. The original Settings form became hidden/inert. Releasing the response retained accurate feedback that the request completed for the original account, rather than claiming the server did not save. The navbar and a fresh Settings visit remained `testuser`, with no avatar from the alternate account. A fresh public-profile visit showed the alternate account's committed 19° asset. |
+
+The retained avatar form keeps its selected source for an explicit retry and
+tells the user to check the original account in another tab. This pass did not
+retry that already committed avatar or test reconciliation of the old form's
+local avatar preview after restoring its owner. It does not establish upload
+idempotency or immediate cross-tab notification.
+
+Sanitized response cursors were 50 for cover route cancellation, 51 for cover
+account replacement, 188 for avatar route cancellation and 53 for avatar account
+replacement, each with `hasMore=false` and `truncated=false`. The cover rejection
+interval through cursor 213 included the actual upload HTTP 200 followed by
+`update_collection` HTTP 500. Owner recovery through cursor 479 included one
+`update_collection` HTTP 200, the detail read and session refresh; it was complete
+and contained no upload request. Numeric cursors are local observations, not
+durable network artifacts. No headers, cookies, upload capabilities or response
+bodies were persisted.
+
+### Fixture integrity
+
+No recipe, published version or draft changed. Complete ordered row hashes
+matched before and after:
+
+| Protected rows | Count | MD5 |
+| --- | --- | --- |
+| Recipes | 36 | `ff40ea68a91ad2b0ea54e5af5a1917fe` |
+| Published versions | 71 | `f5dcc0816a77295b76897942a28866fd` |
+| Drafts | 11 | `a225a68a23cf7a6ae6f296c5fe67a4b6` |
+| Users excluding the synthetic avatar account | 2 | `feb16f8275be655bead23d8bc53efbbc` |
+
+The existing private collection `3fd31c06-c004-47b8-8091-047ff90ef8aa`
+(`CP8 hydration collection 湯麵`) deliberately gained one cover. Its pre-save row
+hash `6588d833ea2a9f70bc06b6aa4b7b0e5b` stayed unchanged across both delayed
+upload cases and the rejected account-mismatch write. After owner recovery its
+hash was `75c059690ab687872246285501f4cbfe`. Name, description, top-level location,
+private visibility and empty membership stayed the same. The other 35 collection
+rows had final hash `0fff434275251baea33172be78df504e`; that subset was not hashed
+separately beforehand, so this is not an independently matched baseline claim.
+Total collection count stayed 36.
+
+Four new managed upload records increased the registry from 34 to 38:
+
+- `6e8c75a1-f69c-4eed-80b6-20d39107f8a1`: route-cancelled cover, uncommitted at the check.
+- `ecfecea4-ecd1-46d2-9fe9-9ff6e51ad3ef`: recovered 17° cover, retained by the private fixture.
+- `30d8633d-715e-4692-bbe5-075b4c8909df`: accepted 11° avatar, subsequently replaced.
+- `3af9e8ff-9e3f-49b0-8314-20a4fe2dd3f4`: accepted 19° avatar, current managed reference for the synthetic account.
+
+The avatar account is existing `89f18aba-5a00-47d1-9d86-ea7330fe9a2c`
+(`cp8avatarroundtrip20261001`). Its original managed avatar reference was
+`d620ae2f-cb7d-4a5f-b238-26ce55fec355`; URLs in the legacy users columns remain
+NULL by design, with managed URLs projected from `avatar_media_refs` and the
+asset registry. The final synthetic user-row hash is
+`f8128e6ed887d7a4de44b0f0173389a6`. No profile text, provider linkage, collection
+sharing or published content was submitted. No explicit account deletion, avatar
+removal, image deletion or storage cleanup request was performed; normal avatar
+replacement can stage retirement of its predecessor. Eventual cleanup remains
+unaccepted.
+
+### Validation and closeout
+
+Fresh existing focused tests used `SQLX_OFFLINE=true` and the integration target
+directory with `cargo test --features server <filter> -- --test-threads=1`:
+
+| Filter | Passed | Failed | Ignored |
+| --- | --- | --- | --- |
+| `settings_profile` | 25 | 0 | 0 |
+| `collection` | 117 | 0 | 2 |
+| `auth::` | 162 | 0 | 0 |
+| `image_upload` | 50 | 0 | 0 |
+
+All commands exited 0: **354 passed, 0 failed, 2 existing tests ignored**.
+The ignored cases require `SEARCH_TEST_DATABASE_URL` backed by the pinned
+ParadeDB image; they were not run by these focused commands.
+Logs are `/tmp/noms-020-cover-avatar-completion-{settings,collection,auth,upload}-tests.log`.
+This was a documentation-only acceptance pass, not a new implementation cycle
+or full CI run. The unchanged runtime's latest full CI remains 1003 passed,
+0 failed, 12 ignored.
+
+Second-pass self-review: **PASS for these scoped completion cases**. Reviewed
+task cancellation, retained form ownership, expected-account rejection, avatar
+post-commit feedback, recovery without cover re-upload, managed references and
+the limits of network/hash observations. No independent agent review was used.
+The task worktree is `NOMS-020-checkpoint-8`; its documentation commit is
+fast-forwarded into the established visual-design integration worktree. No source
+fix, migration, push, new deployment or unrelated cleanup.
+
+Temporary viewport screenshots, not tracked assets:
+`/tmp/noms-020-cover-account-completion.png`,
+`/tmp/noms-020-avatar-account-completion.png`, and
+`/tmp/noms-020-avatar-completed-public-profile.png`. The cover screenshot shows
+the top of the reloaded detail page, not the entire page. Restored `testuser`,
+cleared response interception, disabled temporary Network observation and closed
+all four test tabs. No viewport override was applied. Integration CSS retained
+its existing user-owned SHA256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+
+Next: collection creation upload completion and post-write navigation/account
+races, then mixed still-image upload batches and remaining gates. Suspended-tab
+timers, other identity races, real-device/screen-reader checks and final whole-app
+acceptance remain open. Animation handling remains excluded.
