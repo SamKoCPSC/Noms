@@ -6933,3 +6933,140 @@ worktree and one coherent scope commit. Diff whitespace and a second-pass
 self-review passed; runtime tests were not rerun because application code did
 not change. All five broad acceptance groups remain open. The next work returns
 to remaining mutation outcomes and still-image checks, not animation support.
+
+## Collection creation outcome recovery 2026-10-02
+
+Collection creation now preserves local entries and prevents a blind second
+creation after an uncertain response. The real pre-fix insert committed before
+its HTTP 200 response was dropped. The old form exposed a raw transport error and
+allowed another Create click. That second request was blocked at request stage
+before execution, so no duplicate collection was actually inserted.
+
+`e8a7382` adds an unconfirmed-creation state, safe feedback and a Check Collections
+link that opens a separate tab. Create and implicit form submission stay disabled
+in this state, while local fields and Cancel remain usable. The parent handler
+also checks live state before beginning a deferred upload. The shared form's new
+submission-only flag defaults to false, leaving collection editing unchanged.
+Known account-change rejection preserves its existing safe retry feedback because
+it occurs before writes. Other create failures conservatively require checking
+Collections; the client does not infer rollback from a transport/server failure.
+This is a visit-local guard, not server-side idempotency or cross-tab protection.
+
+### Tests and deployment
+
+Two tests-first source-contract regressions failed for the missing state and
+submission-only guard. After implementation, five focused collection-creation
+tests passed, including the existing API/route tests and a new real serialized
+form-submit regression. That regression confirms no parent submission is
+dispatched while unconfirmed, the saved field value is retained, input and Cancel
+are enabled, Create is disabled and the form does not pretend it is still saving.
+Three new regressions were added in total.
+
+Full CI passed **992 tests, 0 failed, 12 ignored**, including formatting, Clippy,
+native/WASM compilation, schema, security policy, secret and deployment gates.
+Eight existing allowed dependency warnings remain. Commands:
+
+```sh
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server collection_creation_recovery
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server collection_creation
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target just ci
+docker exec noms-c799915fcf93e034-app-1 dx build --platform web --force-sequential true --debug-symbols false
+docker restart noms-c799915fcf93e034-app-1
+```
+
+Logs: `/tmp/noms-020-collection-create-red.log`,
+`/tmp/noms-020-collection-create-green.log`,
+`/tmp/noms-020-collection-create-ci.log` and
+`/tmp/noms-020-collection-create-build.log`. Only the existing port-32768 app
+was rebuilt/restarted. The rebuilt WASM is 14,439,034 bytes, SHA256
+`e80e5aab5f218437c8c288de43bc4396bf903bd7f99fa9474e743477d4522066`.
+An uncached reload and the new runtime feedback/disabled behavior verified that
+the browser exercised the fix. Normal mock Google sign-in restored the existing
+`testuser` account; no user or provider link was created.
+
+### Browser and database observations
+
+The local fixture owner is `6b1c56b4-945d-44d5-9f1b-eeb9525b8519` / `@user-e13c`.
+All three collections are private, top-level, empty and have no cover:
+
+| Fixture | ID | Purpose |
+| --- | --- | --- |
+| CP8 collection response-loss red | `f67d7f0e-0cfd-4767-9a2a-373aa5d8c627` | Pre-fix committed response loss; duplicate attempt failed before execution. |
+| CP8 collection response-loss green | `9d6595fe-7e22-42ca-ad59-e170716a1fe1` | Post-fix committed response loss and separate-tab recovery. |
+| CP8 collection confirmed destination | `5cadc14b-c8cc-4c96-a0ad-a2644c2fa6d0` | Confirmed success followed by offline destination reads. |
+
+Response-stage Fetch/XHR interception held each real HTTP 200 creation response.
+Read-only SQL independently proved the named row, private visibility and correct
+owner existed before the response was failed or continued. No replacement success
+response was fabricated. Browser-managed Document interception was not used.
+
+Post-fix lost-response observations:
+
+- Safe uncertainty feedback appeared; Create stayed disabled. Name/description,
+  sharing selection and Cancel remained available. Editing the name afterward
+  and pressing Enter produced **zero POSTs** in the complete observed interval.
+- Check Collections had `target="_blank"`; clicking opened a separate read tab.
+  Filtering the library found exactly one matching collection, and opening it
+  loaded the committed description. The original form retained its modified
+  local name and warning. Cancel subsequently returned to the library normally.
+- A temporary raw device-metrics probe measured 305px document width at 320px,
+  but the screenshot API changed that override. The resulting narrow form capture
+  is not claimed as full 320px recovery-layout acceptance. The destination test
+  below used the supported viewport capability instead.
+
+For the confirmed-success fixture, SQL again proved the commit before connectivity
+was set offline and the held response continued. Typed navigation retained the
+app shell at the new detail URL, with Collection unavailable, Retry collection,
+Back to collections and sign-in-check recovery. An Enter retry at the actual
+320×720 viewport remained usable; document width was 305px. Restoring connectivity
+and retrying sign-in/collection reads loaded the exact created collection. The
+complete interval contained **one create POST and zero Document requests**;
+destination retries did not issue another creation.
+
+Inspected captures: `/tmp/noms-020-collection-create-green.png` shows the safe
+warning, disabled Create, enabled Cancel and Check Collections. The actual narrow
+destination state is `/tmp/noms-020-collection-create-destination-narrow.png`;
+desktop offline and recovered states are
+`/tmp/noms-020-collection-create-destination-offline.png` and
+`/tmp/noms-020-collection-create-destination-recovered.png`. Request metadata,
+without credentials or request bodies, is saved in
+`/tmp/noms-020-collection-create-no-retry.json` and
+`/tmp/noms-020-collection-create-destination-network.json`.
+
+A preliminary attempt clicked Create before the uncached client had hydrated,
+causing native GET form navigation with named fields in the query, not an API
+creation. After hydration those entries reset; no collection was inserted by that
+attempt. The real post-fix acceptance occurred after hydration, and the final
+confirmed-success run explicitly verified a reactive sharing-hint update before
+submission. Pre-hydration submission is a separate remaining startup gate, not
+accepted by these checks. Startup navigation briefly failed while the rebuilt
+app was not ready; normal navigation succeeded after the endpoint was available.
+
+### Preservation and review
+
+Before/after SQL records are `/tmp/noms-020-collection-outcome-before.txt` and
+`/tmp/noms-020-collection-outcome-after.txt`. Recipes (36), versions (71), drafts
+(10), users (3) and the **31 original collection rows** retain their exact previous
+full-row hashes. Excluding only the three explicit new fixture IDs reproduces the
+original collection hash. Total collection count is now 34. Media count remains
+13; no upload, deletion, publication, move or sharing change was submitted. No
+object-store integrity claim is inferred from the media count.
+
+Interception, offline emulation, cache and both temporary viewport overrides were
+cleared; all four agent-created test/recovery tabs were closed. Existing user tabs
+and other deployments were not reloaded or closed. The generated grayscale rule
+was removed narrowly after build/restart, restoring the user's integration CSS
+byte-for-byte at SHA256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+Unrelated root roadmap edits remain untouched.
+
+Second-pass self-review: **PASS for hydrated collection creation response loss
+and confirmed destination recovery**, with no blocking or should-fix findings in
+that bounded contract. No independent-agent review was used. The production fix
+and regressions form one coherent runtime commit; evidence is a separate commit,
+both in the existing isolated `codex/NOMS-020-checkpoint-8` worktree. Rollback
+baseline is `c36486b`; no schema migration is involved. Cover-upload response loss,
+collection editing/moving/sharing, unhydrated submits, cross-tab duplicate
+prevention, real-device/screen-reader checks and whole-app sign-off are not newly
+accepted. All five broad checkpoint-8 groups remain open. Next: collection
+edit/move/sharing response-loss and final-navigation recovery.
