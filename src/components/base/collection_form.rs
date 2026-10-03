@@ -44,7 +44,7 @@ pub struct CollectionFormProps {
     pub description: Signal<String>,
     pub submit_label: String,
     pub submitting: bool,
-    /// An uncertain creation blocks another write without locking local entries
+    /// An uncertain save blocks another write without locking local entries
     /// or Cancel; this is distinct from an actively running submission.
     #[props(default)]
     pub submit_disabled: bool,

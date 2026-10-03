@@ -38,12 +38,45 @@ fn invalid_move_destinations(
     }
 }
 
-fn save_failure_message(details_saved: bool) -> String {
-    if details_saved {
-        "Collection details were saved, but the move failed. Check the location and try saving again.".to_string()
-    } else {
-        "Could not save collection details. Your entries are still here; try saving again."
-            .to_string()
+#[derive(Clone, Copy, Debug)]
+enum CollectionEditSaveStage {
+    Details,
+    Location,
+    Sharing,
+}
+
+struct CollectionEditSaveFailure {
+    message: String,
+    unconfirmed: bool,
+}
+
+impl CollectionEditSaveStage {
+    fn failure(self, problem: &ServerFnError) -> CollectionEditSaveFailure {
+        // Only the explicit pre-write identity rejection proves this request did
+        // not commit. A transport/error response otherwise cannot settle outcome.
+        if let Some(feedback) = crate::auth::account_binding::account_error_feedback(problem) {
+            let confirmed = match self {
+                Self::Details => "",
+                Self::Location | Self::Sharing => "Collection details were saved. ",
+            };
+            return CollectionEditSaveFailure {
+                message: format!("{confirmed}{feedback}"),
+                unconfirmed: false,
+            };
+        }
+        let outcome = match self {
+            Self::Details => "We couldn't confirm whether your collection details were saved.",
+            Self::Location => {
+                "Collection details were saved, but we couldn't confirm your location change."
+            }
+            Self::Sharing => {
+                "Collection details were saved, but we couldn't confirm your sharing change."
+            }
+        };
+        CollectionEditSaveFailure {
+            message: format!("{outcome} Your entries are kept here. Check the saved collection in another tab before continuing; this save will not be retried automatically."),
+            unconfirmed: true,
+        }
     }
 }
 
@@ -91,6 +124,7 @@ pub fn CollectionEdit(id: String) -> Element {
     let mut selected_visibility = use_signal(|| CollectionVisibility::Private);
     let mut initialized = use_signal(|| false);
     let mut saving = use_signal(|| false);
+    let mut save_unconfirmed = use_signal(|| false);
     let mut error = use_signal(|| None::<String>);
     let mut images = use_signal(Vec::<RecipeImage>::new);
     let mut upload_now = use_signal(|| false);
@@ -143,6 +177,12 @@ pub fn CollectionEdit(id: String) -> Element {
                                 saving.set(false); return;
                             }
                         };
+                        let mut record_save_failure = move |stage: CollectionEditSaveStage, problem: ServerFnError| {
+                            let failure = stage.failure(&problem);
+                            save_unconfirmed.set(failure.unconfirmed);
+                            error.set(Some(failure.message));
+                            saving.set(false);
+                        };
                         let update = update_collection(form_account(),
                             collection_id.to_string(),
                             pending.name,
@@ -151,23 +191,21 @@ pub fn CollectionEdit(id: String) -> Element {
                         ).await;
                         let updated = match update {
                             Ok(updated) => updated,
-                            Err(problem) => { error.set(Some(crate::auth::account_binding::account_error_feedback(&problem).map(str::to_string).unwrap_or_else(|| save_failure_message(false)))); saving.set(false); return; }
+                            Err(problem) => { record_save_failure(CollectionEditSaveStage::Details, problem); return; }
                         };
                         name.set(updated.name);
                         description.set(updated.description.unwrap_or_default());
-                        if pending.desired_parent != pending.current_parent
-                            && move_collection(form_account(), collection_id.to_string(), pending.desired_parent).await.is_err() {
-                                selected_parent.set(pending.current_parent.unwrap_or_default());
-                                error.set(Some(save_failure_message(true)));
-                                saving.set(false); return;
+                        if pending.desired_parent != pending.current_parent {
+                            if let Err(problem) = move_collection(form_account(), collection_id.to_string(), pending.desired_parent).await {
+                                // Keep the intended destination: losing an acknowledgement
+                                // must not manufacture a move back to the old parent.
+                                record_save_failure(CollectionEditSaveStage::Location, problem); return;
+                            }
                         }
                         if pending.desired_visibility != pending.current_visibility {
                             match update_collection_visibility(form_account(), collection_id.to_string(), pending.desired_visibility).await {
                                 Ok(updated) => selected_visibility.set(updated.visibility),
-                                Err(_) => {
-                                    error.set(Some("Collection details and location were saved, but sharing could not be updated. Check the sharing setting and try saving again.".to_string()));
-                                    saving.set(false); return;
-                                }
+                                Err(problem) => { record_save_failure(CollectionEditSaveStage::Sharing, problem); return; }
                             }
                         }
                         navigator.push(Route::CollectionDetail { id: collection_id.to_string() });
@@ -183,6 +221,7 @@ pub fn CollectionEdit(id: String) -> Element {
                     h1 { class: "collection-editor-heading brand-title", PageIcon { kind: PageIconKind::Collections } span { "Edit collection" } }
                     p { class: "collection-editor-intro", "Update your album’s details, cover and place in your library." }
                     CollectionForm { name, description, submit_label: "Save changes", submitting: saving(), error: error(),
+                        submit_disabled: save_unconfirmed(),
                         oncancel: move |_| { navigator.push(Route::CollectionDetail { id: collection_id.to_string() }); },
                         extra_fields: rsx! {
                             section { class: "collection-form-panel neumo-raised",
@@ -233,6 +272,7 @@ pub fn CollectionEdit(id: String) -> Element {
                             }
                         },
                         onsubmit: move |_| {
+                            if saving() || save_unconfirmed() { return; }
                             let validated = validate_collection_form(&name(), &description());
                             let Ok((clean_name, clean_description)) = validated else { error.set(Some(validated.unwrap_err().to_string())); return; };
                             if image_busy() { error.set(Some("The cover image is still processing.".to_string())); return; }
@@ -253,6 +293,16 @@ pub fn CollectionEdit(id: String) -> Element {
                             upload_now.set(true);
                         }
                     }
+                    if save_unconfirmed() {
+                        p { class: "collection-form-hint",
+                            Link {
+                                class: "btn btn-secondary touch-target",
+                                to: Route::CollectionDetail { id: collection_id.to_string() },
+                                new_tab: true,
+                                "Check saved collection"
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -265,15 +315,81 @@ mod tests {
     use dioxus::router::components::HistoryProvider;
 
     #[test]
-    fn move_failure_discloses_that_field_updates_were_saved() {
-        assert_eq!(
-            save_failure_message(true),
-            "Collection details were saved, but the move failed. Check the location and try saving again."
-        );
-        assert_eq!(
-            save_failure_message(false),
-            "Could not save collection details. Your entries are still here; try saving again."
-        );
+    fn collection_edit_recovery_blocks_blind_retries_but_preserves_local_inputs() {
+        let source = include_str!("collection_edit.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        assert!(source.contains("submit_disabled: save_unconfirmed()"));
+        assert!(source.contains("if saving() || save_unconfirmed() { return; }"));
+        assert!(!source.contains("selected_parent.set(pending.current_parent"));
+        assert!(source.contains("new_tab: true"));
+        assert!(source.contains("Check saved collection"));
+    }
+
+    #[test]
+    fn collection_edit_recovery_records_the_first_unconfirmed_stage() {
+        let source = include_str!("collection_edit.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        for stage in ["Details", "Location", "Sharing"] {
+            assert!(source.contains(&format!(
+                "record_save_failure(CollectionEditSaveStage::{stage}, problem)"
+            )));
+        }
+        assert!(!source.contains(".await.is_err()"));
+        assert!(!source.contains("Err(_) =>"));
+    }
+
+    #[test]
+    fn collection_edit_recovery_distinguishes_confirmed_details_from_unknown_outcomes() {
+        for (stage, expected) in [
+            (
+                CollectionEditSaveStage::Details,
+                "We couldn't confirm whether your collection details were saved.",
+            ),
+            (
+                CollectionEditSaveStage::Location,
+                "Collection details were saved, but we couldn't confirm your location change.",
+            ),
+            (
+                CollectionEditSaveStage::Sharing,
+                "Collection details were saved, but we couldn't confirm your sharing change.",
+            ),
+        ] {
+            let failure = stage.failure(&ServerFnError::new("private database/transport details"));
+            assert!(failure.unconfirmed);
+            assert!(failure.message.starts_with(expected), "{}", failure.message);
+            assert!(failure.message.contains("Your entries are kept here"));
+            assert!(!failure
+                .message
+                .contains("private database/transport details"));
+            assert!(!failure.message.contains("try saving again"));
+        }
+    }
+
+    #[test]
+    fn collection_edit_recovery_allows_retry_only_for_explicit_prewrite_account_rejection() {
+        for stage in [
+            CollectionEditSaveStage::Details,
+            CollectionEditSaveStage::Location,
+            CollectionEditSaveStage::Sharing,
+        ] {
+            let failure = stage.failure(&ServerFnError::new(
+                crate::auth::account_binding::ACCOUNT_CHANGED_MESSAGE,
+            ));
+            assert!(!failure.unconfirmed);
+            assert!(failure
+                .message
+                .contains(crate::auth::account_binding::ACCOUNT_CHANGED_FEEDBACK));
+            assert_eq!(
+                failure
+                    .message
+                    .starts_with("Collection details were saved."),
+                !matches!(stage, CollectionEditSaveStage::Details)
+            );
+        }
     }
 
     #[derive(Clone, PartialEq, Routable)]
