@@ -1639,7 +1639,8 @@ function parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit, routingUrl = so
   const servingsUnit = firstClassText(card.innerHtml, "wprm-recipe-servings-unit");
   if (servings) {
     const display = normalizeWhitespace([servings.text, servingsUnit?.text].filter(Boolean).join(" "));
-    const numericServings = Number.parseFloat(servings.text.replace(",", "."));
+    // A prefix of a range or qualified yield is not an exact serving count.
+    const numericServings = /^\d+$/u.test(servings.text) ? Number(servings.text) : NaN;
     result.fields.yield = {
       raw: display,
       value: {
@@ -1654,6 +1655,34 @@ function parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit, routingUrl = so
   }
   result.fields.ingredientSections = ingredientSections;
   result.fields.instructionSections = instructionSections;
+
+  // Supplements and photos must belong to this card, not the surrounding
+  // article (which contains reader comments, related dishes and profile photos).
+  const hidden = elementsMatchingAttributes(inertHtml, attributes =>
+    listIsHidden({attributes}) || hasClass(attributes, "hidden") || hasClass(attributes, "is-hidden"));
+  const navigation = elementsMatchingAttributes(inertHtml, (_, tag) => tag === "nav");
+  const visibleCardElement = element => {
+    const index = card.openingEnd + element.index;
+    const end = card.openingEnd + element.end;
+    return ![...hidden, ...navigation].some(range =>
+      range.index <= index && index < range.end || index <= range.index && range.index < end);
+  };
+  for (const container of elementsWithClass(card.innerHtml, "wprm-recipe-notes-container")) {
+    if (!visibleCardElement(container)) continue;
+    for (const note of elementsWithClass(container.innerHtml, "wprm-recipe-notes")) {
+      // Block spans are footnote boundaries; removing inline tags alone must
+      // not insert spaces before punctuation or concatenate numbered notes.
+      const raw = htmlText(note.innerHtml.replace(/<\/?(?:span|strong|em|b|i|a|sup|sub)\b(?:"[^"]*"|'[^']*'|[^>"'])*>/giu, tag => /display\s*:\s*block/iu.test(tag) ? " " : ""));
+      if (raw) result.fields.notes.push(scalar(raw, "text/html", ".wprm-recipe-notes-container .wprm-recipe-notes"));
+    }
+  }
+  for (const time of elementsWithClass(card.innerHtml, "wprm-recipe-custom-time-container")) {
+    if (!visibleCardElement(time)) continue;
+    const label = firstClassText(time.innerHtml, "wprm-recipe-custom-time-label")?.text;
+    const value = wprmDuration(time.innerHtml, "wprm-recipe-custom_time")?.raw ?? firstClassText(time.innerHtml, "wprm-recipe-custom_time")?.text;
+    if (label && value) result.unclassifiedLines.push({raw: `${label.replace(/:+\s*$/u, "")}: ${value}`, provenance: provenance("text/html", ".wprm-recipe-custom-time-container")});
+  }
+  if (result.unclassifiedLines.length) result.warnings.push({code: "UNCLASSIFIED_PROVIDER_METADATA", severity: "warning", path: "unclassifiedLines", message: "Custom recipe times remain literal; no total duration is inferred."});
 
   const hasNamedSections = ingredientSections.some(({ name }) => name !== null) ||
     instructionSections.some(({ name }) => name !== null);
@@ -1675,16 +1704,21 @@ function parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit, routingUrl = so
       message: "Empty provider instruction sections were ignored while complete sections were retained.",
     });
   }
-  const roots = rootRanges(inertHtml);
-  const root = closestRoot(roots, card.index);
-  const imageExtraction = imageReferences(inertHtml, roots, root);
-  result.fields.images = imageExtraction.images;
+  for (const media of elementsWithClass(card.innerHtml, "wprm-recipe-image")) {
+    if (!visibleCardElement(media)) continue;
+    const captions = elementsMatchingAttributes(media.innerHtml, (_, tag) => tag === "figcaption");
+    const credit = captions.length === 1 ? htmlText(captions[0].innerHtml) || null : null;
+    for (const image of openingHtmlElements(media.innerHtml).filter(e => e.tag === "img")) {
+      const raw = image.attributes.get("src");
+      if (!raw?.trim()) continue;
+      try {
+        const url = new URL(raw, sourceUrl ?? undefined);
+        if (["http:", "https:"].includes(url.protocol) && !result.fields.images.some(i => i.sourceUrl === url.href)) result.fields.images.push({sourceUrl: url.href, alt: normalizeWhitespace(image.attributes.get("alt") ?? "") || null, credit, provenance: provenance("text/html", ".wprm-recipe-container .wprm-recipe-image img")});
+      } catch { /* References remain unfetched; an absent source URL is not a base URL. */ }
+    }
+  }
   if (result.fields.images.length > 0) {
     result.status = "needs_review";
-    if (imageExtraction.attribution) {
-      result.source.attribution = imageExtraction.attribution.value;
-      result.source.provenance.attribution = imageExtraction.attribution.provenance;
-    }
     result.warnings.push(...result.fields.images.map((_, index) => ({
       code: "IMAGE_REFERENCE_REQUIRES_CONFIRMATION",
       severity: "info",
@@ -1692,6 +1726,7 @@ function parseRecipeTinEatsWprm(inertHtml, sourceUrl, htmlAudit, routingUrl = so
       message: "The image reference is not fetched and requires confirmation before mapping.",
     })));
   }
+  if (result.warnings.length) result.status = "needs_review";
   appendHtmlAuditEvidence(
     result,
     htmlAudit,
@@ -3205,6 +3240,40 @@ function parseBBCGoodFoodVisibleRecipe(html, sourceUrl, htmlAudit, routingUrl = 
     if(!paragraphs.length)return null;steps.push(instruction(paragraphs.join(" "),"text/html",`.method-steps__list li:nth-child(${index+1})`));
   }
   result.fields.instructionSections.push({name:null,steps});if(!c.complete())return null;
+  // BBC publishes recipe tips after the method, separately from prep notes.
+  // Require the explicit tips heading and its owned editorial highlight boxes;
+  // similarly styled promotions or reader comments are not recipe notes.
+  const endings=elementsWithClass(html,"post__content-end").filter(e=>inside(e)&&e.index>=content.end);
+  for(const ending of endings){
+    for(const summary of elementsMatchingAttributes(ending.innerHtml,a=>hasClass(a,"editor-content")&&a.get("data-placement")==="Summary")){
+      const headings=elementsMatchingAttributes(summary.innerHtml,(a,t)=>t==="h6"&&/^recipe-tips-/u.test(a.get("id")??""));
+      if(!headings.length)continue;
+      const absolute={...summary,index:ending.openingEnd+summary.index,end:ending.openingEnd+summary.end};
+      if(c.isHidden(absolute)||hasAncestorTag(html,absolute.index,"nav"))return null;
+      const parts=elementsMatchingAttributes(summary.innerHtml,()=>true).filter(e=>tagStackContext(summary.innerHtml,e.index).length===0);
+      if(headings.length!==1||!parts.some(e=>e.index===headings[0].index)||text(headings[0].innerHtml)!=="RECIPE TIPS"||!inline(headings[0])||parts.length<2)return null;
+      let discovery=false;
+      for(const box of parts){
+        if(box.index===headings[0].index)continue;
+        if(/^h[2-6]$/u.test(box.tag)||box.tag==="p"){
+          if(!inline(box))return null;
+          if(box.tag==="h6"&&/^also-discover-/u.test(box.attributes.get("id")??""))discovery=true;
+          const raw=text(box.innerHtml);
+          if(discovery)result.unclassifiedLines.push({raw,provenance:provenance("text/html",".post__content-end [data-placement=Summary] (discovery)")});
+          else result.fields.notes.push(scalar(raw,"text/html",".post__content-end [data-placement=Summary] (editorial advice)"));
+          continue;
+        }
+        if(box.tag!=="section"||!hasClass(box.attributes,"highlight-box")||box.attributes.get("data-feature")!=="Highlight Box")return null;
+        const contents=elementsWithClass(box.innerHtml,"highlight-box__content");
+        if(contents.length!==1||text(box.innerHtml)!==text(contents[0].innerHtml)||openingHtmlElements(contents[0].innerHtml).some(e=>!["h6","p","ul","ol","li","span","strong","em","b","i","a","sup","sub","br"].includes(e.tag)))return null;
+        const raw=text(contents[0].innerHtml);if(!raw)return null;
+        if(discovery)result.unclassifiedLines.push({raw,provenance:provenance("text/html",".post__content-end .highlight-box (discovery)")});
+        else result.fields.notes.push(scalar(raw,"text/html",".post__content-end [id^=recipe-tips-] ~ .highlight-box .highlight-box__content"));
+      }
+      // Do not silently drop loose text outside recognized boxes.
+      let remainder=summary.innerHtml;for(const part of [...parts].reverse())remainder=remainder.slice(0,part.index)+remainder.slice(part.end);if(text(remainder))return null;
+    }
+  }
   const heroes=elementsWithClass(c.root.innerHtml,"post-header--masthead__hero");if(heroes.length>1)return null;
   if(heroes.length){const hero=heroes[0],images=c.openings.filter(e=>e.tag==="img"&&c.root.openingEnd+hero.openingEnd<=e.index&&e.openingEnd<=c.root.openingEnd+hero.contentEnd);for(const image of images){const raw=image.attributes.get("src");if(!raw?.trim()||c.isHidden(image,false)||hasAncestorTag(html,image.index,"nav"))continue;try{const url=new URL(raw,sourceUrl??undefined);if(["http:","https:"].includes(url.protocol)&&!result.fields.images.some(i=>i.sourceUrl===url.href))result.fields.images.push({sourceUrl:url.href,alt:image.attributes.get("alt")?.trim()||null,credit:null,provenance:provenance("text/html",".post-header--masthead__hero img")});}catch{/* Image references remain unfetched. */}}}
   return finishVisibleProvider(result,htmlAudit);

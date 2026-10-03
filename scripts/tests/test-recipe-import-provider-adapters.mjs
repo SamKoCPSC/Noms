@@ -220,11 +220,11 @@ const recipeTinHtml = `
         </ul>
       </div>
     </div>
-  </div>
-  <figure>
+    <figure class="wprm-recipe-image">
     <img src="https://images.example.invalid/moonlit-noodles.webp" alt="Moonlit noodles in a bowl">
     <figcaption>Photo by Aster Vale</figcaption>
-  </figure>
+    </figure>
+  </div>
 </main>`;
 
 test('Budget Bytes and RecipeTin Eats support selection without a recipe URL',()=>{
@@ -564,7 +564,8 @@ test("RecipeTinEats adapter extracts complete WPRM groups and structured fields"
       credit: "Photo by Aster Vale",
     }],
   );
-  assert.equal(candidate.source.attribution, "Photo by Aster Vale");
+  // Photo credit belongs to the image, not the recipe's authorship/source.
+  assert.equal(candidate.source.attribution, null);
   assert.equal(candidate.status, "needs_review");
   assert(candidate.warnings.some(({ code }) => code === "SECTION_NAMES_NOT_PERSISTED"));
   assert(candidate.warnings.some(({ code }) => code === "IMAGE_REFERENCE_REQUIRES_CONFIRMATION"));
