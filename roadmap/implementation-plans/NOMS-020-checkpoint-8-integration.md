@@ -6731,3 +6731,102 @@ both handlers' wiring are tested. Real touch, screen readers, general accessibil
 normal autosave, EXIF orientation, wide-gamut/animated files and remaining mutation
 or identity gates stay open. Next: image orientation and export edge cases. All
 five broad checkpoint-8 groups remain open.
+
+## Image orientation and export acceptance 2026-10-02
+
+Sampled orientation, resize and transparency checks passed after fixing a real
+thin-image defect in `03095e9`. Before the fix, valid 4096×1 and 1×4096 PNGs
+produced 1920×0 and 0×1920 canvases. Native canvas encoding returned null and
+both gallery rows showed the safe WebP error. The resized short axis now keeps
+at least one pixel. Ordinary sizes, no-upscale behavior and the 1920/800 bounds
+remain unchanged; aspect ratio necessarily quantizes at the one-pixel boundary.
+
+The sizing helper moved from the WASM-only processing module into
+`src/utils/image_dimensions.rs` so native CI tests the production calculation.
+The original eight WASM-module sizing tests remain intact. Seven new native
+regressions cover thin axes, common landscape/portrait/square output, small and
+exact-boundary sources, maximum u32 inputs, 147 positive size/bound combinations,
+empty inputs and actual full/thumbnail pipeline source wiring. Maximum u32 tests
+are arithmetic checks, not claims that the browser decodes such large images.
+
+### Validation and deployment
+
+The tests-first run reported **2 passed and 4 failed**: three failures reproduced
+zero-pixel output and one identified the not-yet-connected shared helper. After
+the fix, **7 focused tests passed**. Full CI passed **989 tests, 0 failed,
+12 ignored**, including formatting, Clippy, native/WASM, schema, security, secret
+and deployment gates; eight existing allowed audit warnings remain.
+
+```sh
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server image_dimensions
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target just ci
+docker exec noms-c799915fcf93e034-app-1 dx build --platform web --force-sequential true --debug-symbols false
+docker restart noms-c799915fcf93e034-app-1
+/home/samko/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 /tmp/noms-020-check-image-exports.py /tmp/noms-020-image-format-green.json
+```
+
+Logs: `/tmp/noms-020-image-dimensions-red.log`,
+`/tmp/noms-020-image-dimensions-green.log`, `/tmp/noms-020-image-format-ci.log`
+and `/tmp/noms-020-image-format-build.log`. The Python pixel/dimension assertion
+script passed. Temporary fixture generation uses bundled Pillow, not a new
+dependency. Work used the clean existing isolated `codex/NOMS-020-checkpoint-8`
+worktree, based on `02ed58e`, and fast-forwarded the runtime fix into the design
+integration branch. Only the existing port-32768 deployment was rebuilt/restarted.
+
+### Browser evidence and limits
+
+A fresh temporary browser tab used the normal mock `testuser` login. Initial
+thin-image failures were captured on the previous runtime. After rebuilding,
+an uncached reload executed **14,431,923-byte** WASM, SHA256
+`f8085fb72c7c13ad8aa739a58566a99aeb23e213cfc334f39d8833eb51096ef3`.
+Twelve synthetic images completed as Ready through the real gallery pipeline:
+
+- Eight JPEG files shared asymmetric coloured corners with EXIF orientation
+  values 1–8. Both full and thumbnail WebP exports matched independently generated
+  Pillow orientation results: 480×320 for 1–4 and 320×480 for 5–8. All 64 sampled
+  opaque corner pixels matched their expected RGB values within 8 channel levels,
+  allowing lossy WebP compression. Rotation and mirroring were therefore checked
+  by pixels, not dimensions alone. The oriented crop preview was also inspected.
+- The repaired thin sources exported 1920×1 / 800×1 and 1×1920 / 1×800. All four
+  blobs were nonempty `image/webp` and decoded successfully.
+- A 3072×2048 PNG exported 1920×1280 and 800×533. Small EXIF and alpha fixtures
+  were not enlarged.
+- A transparent PNG retained alpha 0 at four corners and alpha 128 at its centre
+  in both exports; sampled centre RGB remained within the same tolerance.
+
+A temporary canvas diagnostic recorded native encoder dimensions, MIME type and
+blob size, then independently decoded the returned blobs to sample pixels. It
+passed the original blobs straight through to the application; no replacement
+result was injected. Raw red/green observations are
+`/tmp/noms-020-image-formats-red.json`,
+`/tmp/noms-020-exif-export-observed.json` and
+`/tmp/noms-020-image-format-green.json`. The fixture manifest and generation script
+are `/tmp/noms-020-image-formats/expected.json` and
+`/tmp/noms-020-image-format-fixtures.py`.
+
+Inspected screenshot `/tmp/noms-020-image-format-ready.png` shows the repaired
+tall-strip Ready row and correctly oriented large-image Ready row in the app;
+`/tmp/noms-020-exif-6-preview.png` shows the oriented crop preview. They are sampled
+interaction captures, not complete editor/layout acceptance. The post-fix request
+interval was complete and contained **zero POSTs**, recorded in
+`/tmp/noms-020-image-format-network.json`. No title/step/content edits, Save or
+Publish were submitted, and no autosave timer override was needed.
+
+Recipes (36), versions (71), drafts (10), collections (31) and users (3) retain
+the exact full-row hashes from the previous drag baseline, checked before and
+after the post-fix browser pass. Media asset count remains 13; no media-row hash
+or object-store integrity claim is made. The canvas diagnostic and cache override
+were removed, the test navigated to Explore and the temporary tab closed. Existing
+tabs and other deployments were untouched. User-owned integration Tailwind edits
+remain byte-identical at SHA256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`;
+only the generated grayscale rule was removed. Unrelated root work was preserved.
+
+Second-pass self-review: **PASS for sampled image orientation and resize/export**;
+no remaining blocking or should-fix findings in this contract. No independent
+agent review was used. Rollback baseline is `02ed58e`; no schema/data migration is
+involved. This accepts the tested browser's decoder/encoder samples, not all
+browser engines, all EXIF containers, ICC/wide-gamut conversion, animation/frame
+policy, persisted upload delivery or real-device behavior. Next: wide-gamut and
+animated-image handling, then remaining mutation/identity gates. All five broad
+checkpoint-8 groups remain open.
