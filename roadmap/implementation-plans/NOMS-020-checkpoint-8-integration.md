@@ -7308,3 +7308,123 @@ migration. Cover upload response loss, concurrent external edits, in-flight rout
 or identity replacement, real-device/screen-reader acceptance and whole-app signoff
 are not closed by this slice. All five broad groups remain open. Next: prevent
 native collection form submission before hydration without losing early values.
+
+## Collection form hydration readiness 2026-10-03
+
+The shared collection form now blocks native submission until client mounting
+has captured the live name and description. Early typing stays available; Save
+starts disabled, with a Preparing editor status, and becomes available only after
+capture. This closes the observed startup navigation/data-loss gap, not the
+remaining whole-app or real-device acceptance groups.
+
+### Regression and implementation
+
+On baseline `1f406e7`, delaying the actual `/wasm/noms_bg.wasm` XHR while the new
+collection SSR form was visible reproduced the defect. Typing Unicode name and
+description values and pressing Enter issued a native GET Document request with
+both fields in its query string. No create mutation was submitted. The new
+unmounted-form event regression also failed before implementation because it
+dispatched a save.
+
+`2417416` adds a local readiness signal initialized false, a disabled default
+submit button and a live submit-handler readiness guard. The mounted browser
+handler captures both fields together before enabling Save. Missing DOM form or
+named fields fail closed. Pending-save and uncertain-outcome guards still apply;
+the fields and Cancel are not locked merely because startup is incomplete.
+Native tests dispatch actual mounted/submit events rather than injecting a
+readiness prop. They cover SSR disabling, editable fields, post-mount submission,
+Unicode snapshot values and the existing pending/uncertain-save behavior. The
+native harness cannot model browser DOM capture; the browser checks below supply
+that evidence. No schema, API, JavaScript implementation or dependency changes.
+
+### Browser observations
+
+The existing local deployment on port **32768** was rebuilt and restarted only
+after both client and server builds completed. A fresh test tab loaded the new
+bundle with cache disabled. Only the real WASM Fetch/XHR request was held; no
+Document request was deliberately intercepted or continued by this test.
+
+- **Top-level creation:** early name `CP8 hydration collection 湯麵` and
+  description `Early café notes 🥣` remained editable. Enter and clicking the
+  disabled Create collection button produced zero Document/API requests and no
+  URL change. The Preparing editor status and disabled Save were visible.
+- **Hydration handoff:** continuing the unchanged WASM request removed the status
+  and enabled Save. Both values survived. Browser backend node IDs stayed
+  **463** for the name and **466** for the description before/after hydration,
+  confirming that the same early-edited input nodes were retained.
+- **Validation and normal save:** a whitespace-only name showed Collection name
+  is required, retained the early description and issued no API/Document request.
+  Editing the sibling field after hydration did not reset the name. One valid
+  submission issued exactly one create mutation, no Document navigation, and
+  displayed the saved private collection. SQL confirmed its Unicode fields.
+- **Nested creation:** delaying WASM on the observed New subcollection link
+  retained its parent query/context and both early fields. Enter/click caused no
+  API/Document requests. Fields survived hydration and a subsequent sibling edit;
+  Cancel returned to the parent without creating a nested collection.
+- **Existing editing:** with WASM delayed, a direct edit-route reload displayed
+  Loading rather than an editable SSR form. No early edit-form typing claim is
+  made for that state. Releasing WASM loaded the saved fields and enabled Save;
+  one normal description update issued exactly one update mutation, no Document
+  request, and returned to the correctly updated private collection.
+
+The measured browser viewport was **1280×720**, document width **1265px**. The
+full-page startup and saved-state screenshots were inspected. No new phone,
+tablet, real-touch or screen-reader acceptance is claimed. Temporary evidence:
+
+- `/tmp/noms-020-collection-startup-blocked.png`
+- `/tmp/noms-020-collection-startup-saved.png`
+- `/tmp/noms-020-collection-startup-edited.png`
+- `/tmp/noms-020-collection-startup-network.json`
+
+All checked event intervals had no truncation or unread pages. The sanitized
+network record contains only sequence, URL, method, resource type and the two
+node identities, not credentials, headers or bodies. An old test tab's navigation
+was blocked after the red native GET probe; it was closed and a clean tab used
+for all green checks. Interception and cache disabling were cleared; both
+temporary tabs were closed. No user browser tab or other deployment was changed.
+
+### Validation and preservation
+
+Commands run on branch `codex/NOMS-020-checkpoint-8`, in the existing isolated
+worktree `/home/samko/GitRepos/Noms/.worktrees/NOMS-020-checkpoint-8`:
+
+```sh
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server collection_form_blocks_submission_until_mounted -- --test-threads=1
+SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target cargo test --features server collection_ -- --test-threads=1
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target just ci
+docker exec noms-c799915fcf93e034-app-1 dx build --platform web --force-sequential true --debug-symbols false
+```
+
+The first command failed as expected before implementation. Focused collection
+coverage then passed **109 tests, 0 failed, 2 ignored**. Full CI passed **997 tests,
+0 failed, 12 ignored**, including native/WASM compilation, formatting, Clippy,
+schema/policy/secret/deployment checks, with eight existing allowed audit warnings.
+Logs: `/tmp/noms-020-collection-startup-{tests,ci,build}.log`. The explicit build
+completed both targets with exit0. The reloaded browser transferred **14,444,429**
+encoded WASM bytes, **14,444,729** including transfer overhead, matching the built
+file size. Built-file SHA256:
+`723f39512cc29af36f24546b6360649cc1baf723ec7d66bdc7f123c8a080f8f9`.
+
+Only one new private, coverless, empty synthetic collection was created and then
+edited: `3fd31c06-c004-47b8-8091-047ff90ef8aa`, retained for later checks. It remains
+top-level/private, with zero recipe memberships or subcollections. Before/after
+ordered full-row hashes match for all preceding **34 collections**, **36 recipes**,
+**71 versions**, **10 drafts** and **3 users**. The preceding-collection hash is
+`9686fb5ae162c5aa4bd3997941f80e43`; the other hashes match the preceding evidence.
+Media count remains **13**; this is not an object-store audit. No upload, sharing
+change, deletion or publication was performed.
+
+The build-generated grayscale rule alone was removed from the integration CSS,
+restoring the user's exact pre-build SHA256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+Main's unrelated roadmap changes were untouched. Runtime fix/tests and acceptance
+documentation are separate coherent commits, fast-forwarded into the existing
+NOMS-020 integration worktree. Rollback baseline is `1f406e7`; no migration.
+
+Second-pass self-review: **PASS for this readiness contract**, no blocking or
+should-fix findings. No independent-agent review claimed. Non-text option changes
+before hydration, unsupported capture failure recovery, other forms' native
+submission behavior, cover upload response loss, in-flight route/account changes
+and full accessibility/device acceptance remain outside this slice. All five
+broad checkpoint groups stay open. Next: collection-cover upload response-loss
+recovery and the remaining mutation/still-image acceptance gates.
