@@ -501,9 +501,8 @@ pub fn RecipeNew() -> Element {
                             Some(file) => file,
                             None => {
                                 step_photo_upload_errors.write().push(
-                                    crate::pages::recipe_editor_form::step_photo_upload_failure(
+                                    crate::pages::recipe_editor_form::step_photo_processing_failure(
                                         &photo_file_name,
-                                        true,
                                     ),
                                 );
                                 continue;
@@ -533,11 +532,10 @@ pub fn RecipeNew() -> Element {
                                 Err(problem) => {
                                     tracing::warn!("Step photo processing failed: {problem}");
                                     step_photo_upload_errors.write().push(
-                                        crate::pages::recipe_editor_form::step_photo_upload_failure(
-                                            &photo_file_name,
-                                            true,
-                                        ),
-                                    );
+                                    crate::pages::recipe_editor_form::step_photo_processing_failure(
+                                        &photo_file_name,
+                                    ),
+                                );
                                     release_failed_preview(&preview_url);
                                     continue;
                                 }
@@ -555,9 +553,9 @@ pub fn RecipeNew() -> Element {
                             Err(problem) => {
                                 tracing::warn!("Step photo upload failed: {problem}");
                                 step_photo_upload_errors.write().push(
-                                    crate::pages::recipe_editor_form::step_photo_upload_failure(
+                                    crate::pages::recipe_editor_form::step_photo_upload_error_message(
                                         &photo_file_name,
-                                        false,
+                                        &problem,
                                     ),
                                 );
                                 release_failed_preview(&preview_url);
@@ -738,10 +736,10 @@ pub fn RecipeNew() -> Element {
             }
 
             if outcome.failed > 0 {
-                // Some uploads failed — do NOT save. User retries/removes
+                // Uploads need attention — do NOT perform the requested save. User retries/removes
                 // via the component UI, then clicks Save again.
                 error.set(Some(format!(
-                    "{} image(s) failed to upload. Use the Retry button on each failed image (or remove them), then click Save again.",
+                    "{} image(s) need attention before saving. Check each image's status, then retry or remove it and save again.",
                     outcome.failed
                 )));
                 is_saving.set(false);

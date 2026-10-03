@@ -447,9 +447,8 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                             Some(file) => file,
                             None => {
                                 step_photo_upload_errors.write().push(
-                                    crate::pages::recipe_editor_form::step_photo_upload_failure(
+                                    crate::pages::recipe_editor_form::step_photo_processing_failure(
                                         &photo_file_name,
-                                        true,
                                     ),
                                 );
                                 continue;
@@ -479,11 +478,10 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                                 Err(problem) => {
                                     tracing::warn!("Step photo processing failed: {problem}");
                                     step_photo_upload_errors.write().push(
-                                        crate::pages::recipe_editor_form::step_photo_upload_failure(
-                                            &photo_file_name,
-                                            true,
-                                        ),
-                                    );
+                                    crate::pages::recipe_editor_form::step_photo_processing_failure(
+                                        &photo_file_name,
+                                    ),
+                                );
                                     release_failed_preview(&preview_url);
                                     continue;
                                 }
@@ -501,9 +499,9 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                             Err(problem) => {
                                 tracing::warn!("Step photo upload failed: {problem}");
                                 step_photo_upload_errors.write().push(
-                                    crate::pages::recipe_editor_form::step_photo_upload_failure(
+                                    crate::pages::recipe_editor_form::step_photo_upload_error_message(
                                         &photo_file_name,
-                                        false,
+                                        &problem,
                                     ),
                                 );
                                 release_failed_preview(&preview_url);
@@ -628,7 +626,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
 
             if outcome.failed > 0 {
                 form_error.set(Some(format!(
-                    "{} image(s) failed to upload. Use the Retry button on each failed image (or remove them), then click Save again.",
+                    "{} image(s) need attention before saving. Check each image's status, then retry or remove it and save again.",
                     outcome.failed
                 )));
                 is_saving.set(false);

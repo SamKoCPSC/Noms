@@ -44,10 +44,23 @@ const ALLOWED_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp"];
 // ── Pure helpers (cross-platform, unit-tested) ──────────────────────────────
 
 fn upload_error_message(error: &ServerFnError) -> &'static str {
+    image_upload_error_message(error, true)
+}
+
+/// Share safe outcome classification with immediate step uploads, whose failed
+/// local previews are released rather than retained by the gallery retry queue.
+pub(crate) fn image_upload_error_message(
+    error: &ServerFnError,
+    preview_retained: bool,
+) -> &'static str {
     // Storage may have registered a temporary asset before its acknowledgement
     // was lost. Only explicit pre-write errors settle failure; an intentional
     // Retry can upload a second copy, but must never imply the first did not exist.
-    const UNCONFIRMED_UPLOAD: &str = "We couldn't confirm this image upload. Your preview is kept here. Retrying may upload another copy.";
+    let unconfirmed_upload = if preview_retained {
+        "We couldn't confirm this image upload. Your preview is kept here. Retrying may upload another copy."
+    } else {
+        "We couldn't confirm this image upload. Retrying may upload another copy."
+    };
     if let Some(feedback) = crate::auth::account_binding::account_error_feedback(error) {
         return feedback;
     }
@@ -75,9 +88,9 @@ fn upload_error_message(error: &ServerFnError) -> &'static str {
             "Image storage is unavailable" | "Unable to verify media quota" => {
                 "Image storage is temporarily unavailable. Try again later."
             }
-            _ => UNCONFIRMED_UPLOAD,
+            _ => unconfirmed_upload,
         },
-        _ => UNCONFIRMED_UPLOAD,
+        _ => unconfirmed_upload,
     }
 }
 

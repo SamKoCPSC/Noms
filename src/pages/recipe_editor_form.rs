@@ -325,13 +325,16 @@ impl Drop for StepPhotoPreview {
 }
 
 #[cfg(any(target_arch = "wasm32", test))]
-pub(super) fn step_photo_upload_failure(filename: &str, processing: bool) -> String {
+pub(super) fn step_photo_processing_failure(filename: &str) -> String {
     let filename: String = filename.chars().take(120).collect();
-    if processing {
-        format!("Could not process \"{filename}\". Choose a valid JPEG, PNG, or WebP image.")
-    } else {
-        format!("Could not upload \"{filename}\". Choose the photo again to retry; other photos are unchanged.")
-    }
+    format!("Could not process \"{filename}\". Choose a valid JPEG, PNG, or WebP image.")
+}
+
+#[cfg(any(target_arch = "wasm32", test))]
+pub(super) fn step_photo_upload_error_message(filename: &str, error: &ServerFnError) -> String {
+    let filename: String = filename.chars().take(120).collect();
+    let feedback = crate::components::base::image_upload_error_message(error, false);
+    format!("\"{filename}\": {feedback} Choose the photo again to retry; adjustments must be reapplied. Other photos are unchanged.")
 }
 
 #[component]
@@ -615,12 +618,65 @@ mod tests {
 
     #[test]
     fn step_photo_upload_errors_are_actionable_and_bound_filename_length() {
-        let message = super::step_photo_upload_failure("sample.png", false);
+        let message = super::step_photo_upload_error_message(
+            "sample.png",
+            &dioxus::prelude::ServerFnError::Deserialization("lost response".into()),
+        );
         assert!(message.contains("sample.png"));
         assert!(message.contains("Choose the photo again"));
-        let message = super::step_photo_upload_failure(&"x".repeat(400), true);
+        let message = super::step_photo_processing_failure(&"x".repeat(400));
         assert!(message.len() < 240);
         assert!(message.contains("valid JPEG, PNG, or WebP"));
+    }
+
+    #[test]
+    fn recipe_upload_response_loss_uses_outcome_aware_feedback_in_both_editors() {
+        for source in [
+            include_str!("recipe_new.rs"),
+            include_str!("recipe_edit.rs"),
+        ] {
+            assert!(source.contains("step_photo_upload_error_message("));
+            assert!(source.contains("&problem,"));
+            assert!(source.contains("image(s) need attention before saving"));
+            assert!(!source.contains("image(s) failed to upload"));
+        }
+    }
+
+    #[test]
+    fn step_photo_response_loss_warns_about_extra_copies_without_claiming_a_kept_preview() {
+        use dioxus::prelude::ServerFnError;
+        for error in [
+            ServerFnError::Deserialization("private response detail".into()),
+            ServerFnError::new("private backend detail"),
+        ] {
+            let message = super::step_photo_upload_error_message("sample.png", &error);
+            assert!(message.contains("sample.png"));
+            assert!(message.contains("couldn't confirm"));
+            assert!(message.contains("another copy"));
+            assert!(message.contains("Choose the photo again"));
+            assert!(message.contains("adjustments must be reapplied"));
+            assert!(!message.contains("preview is kept"));
+            assert!(!message.contains("private"));
+            assert!(!message.contains("Could not upload"));
+        }
+    }
+
+    #[test]
+    fn step_photo_known_rejections_keep_specific_safe_feedback_and_bound_filenames() {
+        use dioxus::prelude::ServerFnError;
+        let message = super::step_photo_upload_error_message(
+            &"x".repeat(400),
+            &ServerFnError::new("Upload rate limit exceeded"),
+        );
+        assert!(message.contains("Too many uploads"));
+        assert!(message.len() < 400);
+        assert!(!message.contains("couldn't confirm"));
+        assert!(!message.contains("another copy"));
+        let message = super::step_photo_upload_error_message(
+            "sample.png",
+            &ServerFnError::new("Not authenticated"),
+        );
+        assert!(message.contains("Sign in again in another tab"));
     }
 
     #[test]
@@ -630,7 +686,10 @@ mod tests {
             rsx! {
                 super::StepPhotoUploadFeedback {
                     uploading: true,
-                    errors: vec!["Could not upload test.png. Choose the photo again.".into()],
+                    errors: vec![super::step_photo_upload_error_message(
+                        "test.png",
+                        &ServerFnError::Deserialization("private backend detail".into()),
+                    )],
                 }
             }
         });
@@ -639,6 +698,8 @@ mod tests {
         assert!(html.contains("role=\"status\""), "{html}");
         assert!(html.contains("role=\"alert\""), "{html}");
         assert!(html.contains("Choose the photo again"), "{html}");
+        assert!(html.contains("another copy"), "{html}");
+        assert!(!html.contains("private backend detail"), "{html}");
         assert!(html.contains("overflow-wrap:anywhere"), "{html}");
     }
 
@@ -658,7 +719,8 @@ mod tests {
             assert!(upload.contains("validate_image_input"));
             assert!(upload.contains("step_photo_upload_count.set(1)"));
             assert!(upload.contains("let open_preview = files.len() == 1"));
-            assert!(upload.contains("step_photo_upload_failure"));
+            assert!(upload.contains("step_photo_processing_failure"));
+            assert!(upload.contains("step_photo_upload_error_message"));
             assert!(upload.contains("step_photo_upload_errors.write().push"));
             assert!(source.contains("StepPhotoUploadFeedback {"));
             assert!(source.contains("step_photo_previews.write().clear()"));
