@@ -7582,3 +7582,171 @@ prevention or completed cleanup. Remaining recipe-gallery/step-photo post-commit
 upload outcomes, in-flight route/account replacement, cross-browser/device and
 accessibility checks remain open. All five broad checkpoint groups stay open.
 Next: recipe-gallery and step-photo upload response-loss acceptance.
+
+## Recipe gallery and step photo upload response recovery
+
+On 2026-10-03, tested successful upload responses lost after server execution
+in both recipe editor controllers. Unknown outcomes now have honest feedback,
+and resolving gallery uploads clears their warning without hiding unrelated
+validation or write errors. Checkpoint 8 remains open.
+
+Continued in `/home/samko/GitRepos/Noms/.worktrees/NOMS-020-checkpoint-8`,
+branch `codex/NOMS-020-checkpoint-8`, from `4a3c6bf`. Ordered code commits:
+`779f0d8` changes outcome/retry feedback; `6c447a4` fixes the stale gallery
+warning discovered during browser acceptance. Both are fast-forward integrated
+into `codex/NOMS-020-visual-design-refinement`. No push, schema change or
+upload API/idempotency change. Rebuilt and restarted only the established
+`noms-c799915fcf93e034-app-1` deployment on port 32768. Its data was retained;
+other deployments and main's unrelated roadmap edits were untouched.
+
+### Contract and fixes
+
+- Share the gallery's safe upload-error classification with immediate step
+  uploads. Known account, rate, quota and format/storage rejections retain
+  specific feedback; unknown backend/transport/deserialization errors do not
+  imply that no asset was created or expose technical details.
+- Gallery failures retain processed bytes, local preview and adjustments for
+  explicit Retry. Step uploads keep their existing failure cleanup: the local
+  preview and pending adjustments are released. Their warning now explains
+  that users must choose the file again and reapply adjustments, and that
+  retrying may upload an extra copy. No kept step preview is promised.
+- Parent recipe feedback says images need attention, not that the server
+  definitively failed to upload them. Existing failed-item and consumed-save
+  guards prevent repeated Save/Publish from implicitly uploading again or
+  publishing unresolved content.
+- Browser review found the gallery parent warning remained after a successful
+  Retry and private autosave. Give that warning its own state in both editors;
+  clear it only when the uploader reports zero pending items. Do not clear
+  generic validation, account, draft-save or unconfirmed-publication feedback.
+  No automatic publication was added. Normal private draft autosave remains
+  allowed after confirmed images or editable text change.
+
+### Browser and database acceptance
+
+Used normal mock Google sign-in as `testuser`, restoring the existing owner.
+No account was created, linked, replaced or deleted. At each response-loss
+check, paused the real `/api/upload_image18225498019565404576` HTTP 200
+response, independently read its newly registered media row and current draft,
+then failed the held response. No fabricated successful response was used.
+
+1. Baseline in unpublished draft `ba3917ec-1033-4e19-83aa-a4977109a297`,
+   initially revision 17: a step upload registered an asset, but the old alert
+   said **Could not upload**. A gallery upload similarly produced the honest
+   per-image unconfirmed warning beside the old definite-failure parent copy.
+   Reload left that draft unchanged. The baseline step event window was
+   truncated across preliminary navigation/restart; it supports the observed
+   held HTTP 200, not a complete zero-request claim. Subsequent named event
+   intervals have `hasMore: false` and `truncated: false`.
+2. Rebuilt draft editor: lost a step response after confirming a temporary 30°
+   adjustment. The four existing first-step photos remained unchanged, the
+   second step stayed empty and controls recovered. The warning offered
+   explicit reselection and explained lost adjustments/possible extra copies.
+   Reselected the same file, applied 15°, and confirmed successful upload,
+   ordinary private autosave and saved metadata.
+3. Gallery: lost a response for a horizontally flipped portrait. Save Draft
+   again issued no upload or draft-save POST. Entered newer description text,
+   then used the item's Retry: exactly one upload appeared in the observed
+   interval, followed by normal private autosave, not publication. Reopening
+   the image retained the horizontal flip. SQL retained the latest description.
+   The disabled **Saved** control prevented a redundant manual Save; this is
+   autosave evidence, not a claimed manual-save action.
+4. After the warning-lifecycle fix, repeated gallery response loss/retry with
+   a 12° landscape image. The item and parent warnings both disappeared on
+   successful Retry, followed by ordinary autosave. Reload restored both
+   gallery images, the latest description and the second-step 15° photo.
+5. Started `/recipes/new` and entered one synthetic ingredient and method
+   step. Normal autosave created exactly one private unpublished draft,
+   `98354de1-4158-4447-90e9-223f0ebecc1c`; the new-recipe controller remained
+   mounted after its normal history URL replacement. Lost a step upload
+   response after a temporary 35° adjustment. Reselection started at 0°;
+   reapplied 10°, uploaded successfully and autosaved the same draft.
+6. In that new-recipe controller, lost a gallery response for a 20° image
+   during the upload-before-publication phase. Publish again issued no new
+   upload, draft-save, creation or publication POST in the observed interval.
+   A deliberately blank ingredient produced a separate validation alert.
+   Explicit image Retry cleared only the gallery warnings; **At least one
+   ingredient must have a name** remained. Restored the ingredient, entered
+   newer description text and used normal Save Draft. Reload restored the
+   20° gallery/10° step metadata and latest text with no alerts. No recipe
+   or version was published.
+
+Final synthetic state:
+
+| Draft | Revision | Retained additions |
+| --- | ---: | --- |
+| Existing `ba3917ec-1033-4e19-83aa-a4977109a297` | 21 | Gallery `81371d19-8547-4f20-991e-77608e6877c5` with horizontal flip; gallery `28f5efdd-f7ea-47c5-bd9d-4a5f9072b019` at 12°; second-step photo `bfa112de-1c45-40e2-b699-7e5c68d85da2` at 15° |
+| New `98354de1-4158-4447-90e9-223f0ebecc1c` | 5 | Gallery `3b4fc0c3-1e01-4b5f-87e1-917da6036715` at 20°; step photo `bea73335-0726-465f-94fa-aa43365823fc` at 10° |
+
+Both drafts remain unpublished. The existing draft's original first-step full
+JSON hash is `1105517d62c594c37fd1ef0a765f2f0d` before/after the final gallery
+check; its original four asset IDs/adjustments match the initial read. Its
+original Notes and method text remain unchanged. Twelve synthetic upload
+records were added in this slice: five retained, seven uncommitted at final
+inspection; media records total 30. Lost acknowledgements leave temporary
+copies with the existing 15-minute expiry. No object cleanup was forced or
+observed, no saved-pixel comparison was performed, and no exactly-once upload
+or worker-deletion claim is made.
+
+Ordered full-row hashes match the initial reads for all unrelated content:
+
+| Rows | Count | Matching hash |
+| --- | ---: | --- |
+| Recipes | 36 | `ff40ea68a91ad2b0ea54e5af5a1917fe` |
+| Versions | 71 | `f5dcc0816a77295b76897942a28866fd` |
+| Other drafts excluding the two named fixtures | 9 | `c264e75d04b15dffd496b354c8731038` |
+| Collections | 36 | `47bfc76eca58ba329e8525aa3f965c1f` |
+| Users | 3 | `2810da957acc911f44b716e3bcee1965` |
+
+### Validation and review
+
+Four new regressions cover both-route wiring, safe unknown step outcomes,
+bounded known rejection feedback and isolated warning cleanup. Existing
+processing and SSR status/alert tests were retained and adapted to the shared
+feedback helper. Both source-contract RED runs failed for the intended missing
+behavior before their production changes. Source assertions are not a substitute
+for the browser checks above.
+
+Commands used `SQLX_OFFLINE=true` and
+`CARGO_TARGET_DIR=/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement/target`:
+`cargo test --features server step_photo -- --test-threads=1` passed 12 tests;
+`cargo test --features server components::base::image_upload::tests -- --test-threads=1`
+passed 50. The two focused wiring/cleanup tests passed. Final
+`PGOPTIONS='-c log_min_error_statement=panic' just ci` passed **1003 tests,
+0 failed, 12 ignored**, native/WASM compilation, formatting, Clippy, schema,
+policy, secret and deployment checks. Eight existing allowed audit warnings
+remain; no fresh ignored storage integration run is claimed.
+
+Logs are `/tmp/noms-020-recipe-response-{red,green,tests-final,gallery-tests}.log`
+and `/tmp/noms-020-recipe-response-clear-{red,green,ci,build}.log`. Both final
+explicit build targets exited successfully. Reloaded uncached WASM body size
+**14,468,147 bytes** matched the built file; transfer size **14,468,447**.
+Built-file SHA256:
+`fce3f68ca1df222abc9874a3d32a9b9f9c075630441a4fe60ee3679edcebde30`.
+
+Temporary screenshots include
+`/tmp/noms-020-recipe-response-step-before.png`,
+`/tmp/noms-020-recipe-response-gallery-before.png`,
+`/tmp/noms-020-recipe-response-step-after.png`,
+`/tmp/noms-020-recipe-response-gallery-after.png`,
+`/tmp/noms-020-recipe-response-new-step-warning.png` and
+`/tmp/noms-020-recipe-response-final.png`. The final image was visually
+inspected. Event artifact `/tmp/noms-020-recipe-response-network.json` retains
+only sequence/URL/method/type/status metadata, not request/response bodies,
+credentials or discard capabilities. Cleared interception and cache overrides
+and closed the test tab. Desktop viewport 1280×720, document width 1265;
+no phone/tablet, real-touch or screen-reader acceptance is claimed.
+
+Removed only the build-generated grayscale utility from integration CSS,
+restoring the user's exact SHA256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+Second-pass self-review: **PASS for this scoped gate**. The stale-warning
+should-fix finding was corrected and revalidated. Reviewed the complete ordered
+diff, error classification, retained/released preview contracts, unrelated-error
+preservation, save guards, fixture integrity and evidence limits. No independent
+agent review is claimed. Rollback baseline `4a3c6bf`; no migration.
+
+Next: in-flight upload route/account replacement recovery, then remaining
+mutation/still-image, accessibility/device and whole-app acceptance. This does
+not newly accept a published-recipe save roundtrip, mixed post-commit upload
+batches, object cleanup, cross-browser behavior or all remaining five checkpoint
+groups. Animation handling stays out of scope.
