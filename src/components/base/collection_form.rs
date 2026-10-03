@@ -74,6 +74,9 @@ fn synchronize_visible_collection_fields(
 
 #[component]
 pub fn CollectionForm(mut props: CollectionFormProps) -> Element {
+    // SSR has no submit handler yet. A disabled default submit button also
+    // blocks native Enter submission while still allowing early field edits.
+    let mut form_ready = use_signal(|| false);
     rsx! {
         form {
             class: "collection-form",
@@ -87,24 +90,25 @@ pub fn CollectionForm(mut props: CollectionFormProps) -> Element {
                     // Hydration retains the SSR nodes, but their live values can
                     // differ from the initial Rust signals. Read the mounted form
                     // before a later edit to either field can reset the other.
-                    if let Some(form) = _event.data().try_as_web_event() {
-                        let name = form.query_selector("[name='collection_name']")
+                    let Some(form) = _event.data().try_as_web_event() else { return; };
+                    let name = form.query_selector("[name='collection_name']")
                             .ok().flatten()
                             .and_then(|field| field.dyn_into::<web_sys::HtmlInputElement>().ok());
-                        let description = form.query_selector("[name='collection_description']")
+                    let description = form.query_selector("[name='collection_description']")
                             .ok().flatten()
                             .and_then(|field| field.dyn_into::<web_sys::HtmlTextAreaElement>().ok());
-                        if let (Some(name), Some(description)) = (name, description) {
-                            synchronize_visible_collection_fields(
-                                props.name, props.description, name.value(), description.value(),
-                            );
-                        }
-                    }
+                    let (Some(name), Some(description)) = (name, description) else { return; };
+                    synchronize_visible_collection_fields(
+                        props.name, props.description, name.value(), description.value(),
+                    );
                 }
+                // Fail closed if the browser could not capture either field.
+                // Native renderers have no pre-hydration DOM values to capture.
+                form_ready.set(true);
             },
             onsubmit: move |event| {
                 event.prevent_default();
-                if !props.submitting && !props.submit_disabled {
+                if !props.submitting && !props.submit_disabled && form_ready() {
                     // Inputs can change before hydration or via autofill without
                     // an observed input event. Snapshot the visible named fields
                     // before the parent validates and starts a deferred upload.
@@ -160,11 +164,14 @@ pub fn CollectionForm(mut props: CollectionFormProps) -> Element {
                 p { class: "collection-form-error", role: "alert", "{error}" }
             }
             div { class: "collection-form-actions",
+            if !form_ready() {
+                p { class: "collection-form-hint", role: "status", "Preparing editor… You can start typing." }
+            }
             if let Some(oncancel) = props.oncancel {
                 button { class: "btn btn-secondary touch-target", r#type: "button", disabled: props.submitting,
                     onclick: move |_| oncancel.call(()), "Cancel" }
             }
-            button { class: "btn btn-primary touch-target", r#type: "submit", disabled: props.submitting || props.submit_disabled,
+            button { class: "btn btn-primary touch-target", r#type: "submit", disabled: props.submitting || props.submit_disabled || !form_ready(),
                 if props.submitting { "Saving…" } else { "{props.submit_label}" }
             }
             }
@@ -213,6 +220,15 @@ mod tests {
         submit_disabled: bool,
         fields: &[(&str, &str)],
     ) -> (String, Option<(String, String)>) {
+        dispatch_form_submit_with_mount(submitting, submit_disabled, fields, true)
+    }
+
+    fn dispatch_form_submit_with_mount(
+        submitting: bool,
+        submit_disabled: bool,
+        fields: &[(&str, &str)],
+        mount: bool,
+    ) -> (String, Option<(String, String)>) {
         set_event_converter(Box::new(SerializedHtmlEventConverter));
         let submitted = Rc::new(RefCell::new(None));
         let mut dom = VirtualDom::new_with_props(
@@ -234,6 +250,18 @@ mod tests {
                 _ => None,
             })
             .expect("form submit listener");
+        if mount {
+            dom.runtime().handle_event(
+                "mounted",
+                Event::new(
+                    Rc::new(PlatformEventData::new(Box::new(MountedData::new(()))))
+                        as Rc<dyn std::any::Any>,
+                    false,
+                ),
+                form_id,
+            );
+            dom.render_immediate_to_vec();
+        }
         let html = dioxus_ssr::render(&dom);
         let data = SerializedFormData::new(
             String::new(),
@@ -256,6 +284,86 @@ mod tests {
         );
         let result = submitted.borrow().clone();
         (html, result)
+    }
+
+    #[test]
+    fn collection_form_blocks_submission_until_mounted_without_locking_early_typing() {
+        let (html, submitted) = dispatch_form_submit_with_mount(
+            false,
+            false,
+            &[("collection_name", "Early name 湯麵")],
+            false,
+        );
+        assert_eq!(
+            submitted, None,
+            "an unmounted form must not dispatch a save"
+        );
+        let save = html
+            .split(">Save</button>")
+            .next()
+            .unwrap()
+            .rsplit("<button")
+            .next()
+            .unwrap();
+        assert!(
+            save.contains("disabled"),
+            "native SSR submission must be blocked: {html}"
+        );
+        let input = html
+            .split("name=\"collection_name\"")
+            .nth(1)
+            .unwrap()
+            .split('>')
+            .next()
+            .unwrap();
+        assert!(
+            !input.contains("disabled"),
+            "early typing stays available: {html}"
+        );
+        let description = html
+            .split("name=\"collection_description\"")
+            .nth(1)
+            .unwrap()
+            .split('>')
+            .next()
+            .unwrap();
+        assert!(!description.contains("disabled"), "{html}");
+        let cancel = html
+            .split(">Cancel</button>")
+            .next()
+            .unwrap()
+            .rsplit("<button")
+            .next()
+            .unwrap();
+        assert!(!cancel.contains("disabled"), "{html}");
+        assert!(
+            !html.contains("Saving…"),
+            "startup is not a pending save: {html}"
+        );
+    }
+
+    #[test]
+    fn collection_form_mount_enables_submission_and_retains_visible_unicode_fields() {
+        let (html, submitted) = dispatch_form_submit(
+            false,
+            false,
+            &[
+                ("collection_name", "Early name 湯麵"),
+                ("collection_description", "Café recipes 🥣"),
+            ],
+        );
+        let save = html
+            .split(">Save</button>")
+            .next()
+            .unwrap()
+            .rsplit("<button")
+            .next()
+            .unwrap();
+        assert!(!save.contains("disabled"), "mounted form is ready: {html}");
+        assert_eq!(
+            submitted,
+            Some(("Early name 湯麵".into(), "Café recipes 🥣".into()))
+        );
     }
 
     #[test]
