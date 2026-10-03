@@ -166,6 +166,15 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
     let mut upload_now = use_signal(|| false);
     let busy = use_signal(|| false);
     let pending_image_count = use_signal(|| 0usize);
+    let mut gallery_upload_error = use_signal(|| Option::<String>::None);
+    // Clear only the gallery upload warning after all pending items are
+    // resolved. A successful retry can autosave the draft without publication;
+    // unrelated write/account errors must keep their own recovery feedback.
+    use_effect(move || {
+        if pending_image_count() == 0 && gallery_upload_error().is_some() {
+            gallery_upload_error.set(None);
+        }
+    });
     let mut step_editor_modal_url = use_signal(|| Option::<String>::None);
     let mut step_editor_idx = use_signal(|| Option::<usize>::None);
     let mut step_editor_photo_idx = use_signal(|| Option::<usize>::None);
@@ -625,7 +634,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
             }
 
             if outcome.failed > 0 {
-                form_error.set(Some(format!(
+                gallery_upload_error.set(Some(format!(
                     "{} image(s) need attention before saving. Check each image's status, then retry or remove it and save again.",
                     outcome.failed
                 )));
@@ -1605,6 +1614,14 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
 
                     // ── Error message ───────────────────────────────────
+                    if let Some(err) = gallery_upload_error() {
+                        div {
+                            role: "alert", overflow_wrap: "anywhere",
+                            padding: "var(--space-sm) var(--space-md)",
+                            background_color: "var(--error-bg)", border_radius: "var(--radius-md)",
+                            color: "var(--error-ink)", font_size: "14px", "{err}"
+                        }
+                    }
                     if let Some(err) = draft_save_error() {
                         div {
                             role: "alert", padding: "var(--space-sm) var(--space-md)",

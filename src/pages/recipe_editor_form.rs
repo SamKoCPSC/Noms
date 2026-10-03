@@ -643,6 +643,27 @@ mod tests {
     }
 
     #[test]
+    fn resolved_gallery_uploads_clear_only_their_own_warning_in_both_editors() {
+        for source in [
+            include_str!("recipe_new.rs"),
+            include_str!("recipe_edit.rs"),
+        ] {
+            let recovery = source
+                .split("// Clear only the gallery upload warning")
+                .nth(1)
+                .unwrap()
+                .split("});")
+                .next()
+                .unwrap();
+            assert!(recovery.contains("pending_image_count() == 0"));
+            assert!(recovery.contains("gallery_upload_error.set(None)"));
+            assert!(!recovery.contains("form_error.set"));
+            assert!(!recovery.contains(" error.set("));
+            assert!(source.contains("if let Some(err) = gallery_upload_error()"));
+        }
+    }
+
+    #[test]
     fn step_photo_response_loss_warns_about_extra_copies_without_claiming_a_kept_preview() {
         use dioxus::prelude::ServerFnError;
         for error in [
