@@ -9,6 +9,35 @@ const PARSER: Asset = asset!("/scripts/recipe-import-parser.mjs");
 // Track the external parser as a Rust build input so incremental asset builds
 // cannot keep an old fingerprint after a JavaScript-only adapter change.
 const _: &[u8] = include_bytes!("../../scripts/recipe-import-parser.mjs");
+const _: &[u8] = include_bytes!("../../assets/recipe-import-bridge.mjs");
+
+/// Choices come from the same local catalogue used by the worker's parser.
+#[derive(Clone, PartialEq, serde::Deserialize)]
+struct ImportProvider {
+    id: String,
+    label: String,
+}
+
+#[component]
+fn ProviderSelector(
+    provider_choices: Vec<ImportProvider>,
+    selected_provider: String,
+    disabled: bool,
+    on_change: Option<EventHandler<String>>,
+) -> Element {
+    rsx! {
+        label { r#for: "recipe-import-provider", "Recipe provider" }
+        select {
+            id: "recipe-import-provider", class: "input", width: "100%",
+            value: selected_provider, disabled,
+            onchange: move |event| { if let Some(handler) = on_change { handler.call(event.value()); } },
+            option { value: "", "Automatic (URL or generic parser)" }
+            for provider in provider_choices {
+                option { key: "{provider.id}", value: provider.id, "{provider.label}" }
+            }
+        }
+    }
+}
 
 #[component]
 pub fn RecipeImport() -> Element {
@@ -23,6 +52,8 @@ fn ImportForm() -> Element {
     let mut ready = use_signal(|| false);
     let mut error = use_signal(|| None::<String>);
     let mut source = use_signal(String::new);
+    let mut provider = use_signal(String::new);
+    let mut provider_choices = use_signal(Vec::<ImportProvider>::new);
     let mut parsing = use_signal(|| false);
     let mut saving = use_signal(|| false);
     let mut keep_context = use_signal(|| true);
@@ -38,25 +69,40 @@ fn ImportForm() -> Element {
         main { class: "container", max_width: "850px", padding_bottom: "var(--space-xl)",
             h1 { "Import a recipe" }
             p { "Copy the whole recipe page, then paste below. Parsing happens in your browser. NOMS does not fetch the source page." }
+            ProviderSelector {
+                provider_choices: provider_choices(), selected_provider: provider(), disabled: saving() || !ready(),
+                on_change: move |value: String| {
+                    provider.set(value); candidate.set(None); error.set(None); parsing.set(false);
+                    let detail = serde_json::json!({"sourceUrl":source(),"providerId":provider()});
+                    let _ = document::eval(&format!("document.getElementById('recipe-import-paste')?.dispatchEvent(new CustomEvent('noms-source-change', {{detail:{detail}}}));"));
+                }
+            }
+            p { "Choose the recipe site to use its parser without a URL. Automatic uses the optional URL, or generic parsing when it is blank." }
             label { r#for: "recipe-import-source", "Recipe source URL (optional)" }
             input { id: "recipe-import-source", r#type: "url", class: "input", width: "100%", value: "{source}", disabled: saving() || !ready(),
                 placeholder: "https://…",
                 oninput: move |event| {
                     source.set(event.value()); candidate.set(None); error.set(None); parsing.set(false);
-                    let _ = document::eval("document.getElementById('recipe-import-paste')?.dispatchEvent(new CustomEvent('noms-source-change'));");
+                    let detail = serde_json::json!({"sourceUrl":source(),"providerId":provider()});
+                    let _ = document::eval(&format!("document.getElementById('recipe-import-paste')?.dispatchEvent(new CustomEvent('noms-source-change', {{detail:{detail}}}));"));
                 }
             }
-            p { "Provide the URL to use a provider-specific parser. Without it, the generic parser is used." }
+            p { "Optional: keep the original recipe link for attribution and relative image references. It must match the selected provider." }
             label { r#for: "recipe-import-paste", "Full clipboard paste" }
             textarea { id: "recipe-import-paste", rows: "9", width: "100%", disabled: saving() || !ready(),
                 placeholder: "On the recipe page, select all and copy. Paste here.",
                 onmounted: move |_| {
                     spawn(async move {
-                        let script = format!("try {{ const el = document.getElementById('recipe-import-paste'); const {{mountClipboardImport}} = await import({}); if (el?.isConnected) window.nomsImportCleanup = mountClipboardImport(el, {}, value => dioxus.send(value)); }} catch(e) {{ dioxus.send({{type:'error',message:String(e)}}); }}", serde_json::to_string(&BRIDGE.to_string()).unwrap(), serde_json::to_string(&PARSER.to_string()).unwrap());
+                        let script = format!("try {{ const el = document.getElementById('recipe-import-paste'); const {{mountClipboardImport}} = await import({}); const parserUrl = {}; const {{RECIPE_IMPORT_PROVIDERS}} = await import(parserUrl); if (el?.isConnected) window.nomsImportCleanup = mountClipboardImport(el, parserUrl, value => dioxus.send(value.type === 'ready' ? {{...value,providers:RECIPE_IMPORT_PROVIDERS}} : value)); }} catch(e) {{ dioxus.send({{type:'error',message:String(e)}}); }}", serde_json::to_string(&BRIDGE.to_string()).unwrap(), serde_json::to_string(&PARSER.to_string()).unwrap());
                         let mut bridge = document::eval(&script);
                         while let Ok(event) = bridge.recv::<Value>().await {
                             match event["type"].as_str() {
-                                Some("ready") => { ready.set(true); message.set("Paste a full recipe page to begin.".into()); }
+                                Some("ready") => {
+                                    match serde_json::from_value::<Vec<ImportProvider>>(event["providers"].clone()) {
+                                        Ok(choices) if !choices.is_empty() => { provider_choices.set(choices); ready.set(true); message.set("Choose a provider and paste a full recipe page to begin.".into()); }
+                                        _ => { error.set(Some("Unable to load recipe provider choices. Refresh and try again.".into())); }
+                                    }
+                                }
                                 Some("captured") => { candidate.set(None); error.set(None); parsing.set(false); message.set(if event["html"].as_bool().unwrap_or(false) { "HTML and text captured. Ready to preview." } else { "Text captured. Ready to preview." }.into()); }
                                 Some("parsing") => { parsing.set(true); error.set(None); candidate.set(None); message.set("Parsing recipe…".into()); }
                                 Some("result") => { parsing.set(false); candidate.set(Some(event["candidate"].clone())); message.set("Preview ready. Check the extracted content before creating a draft.".into()); }
@@ -70,7 +116,7 @@ fn ImportForm() -> Element {
             p { role: "status", aria_live: "polite", "{message}" }
             button { class: "btn btn-secondary", disabled: parsing() || saving() || !ready(),
                 onclick: move |_| {
-                    let detail = serde_json::json!({"sourceUrl":source()});
+                    let detail = serde_json::json!({"sourceUrl":source(),"providerId":provider()});
                     let _ = document::eval(&format!("document.getElementById('recipe-import-paste')?.dispatchEvent(new CustomEvent('noms-preview', {{detail:{detail}}}));"));
                 }, "Preview recipe"
             }
@@ -151,7 +197,7 @@ fn ImportMetadataPreview(candidate: Value, keep_context: bool) -> Element {
             p { "Prep time (minutes): " {number(mapped.as_ref().and_then(|editor| editor.prep_time_minutes))} }
             p { "Cook time (minutes): " {number(mapped.as_ref().and_then(|editor| editor.cook_time_minutes))} }
             p { "Servings: " {number(mapped.as_ref().and_then(|editor| editor.servings))} }
-            for (key, label) in [("suppliedUrl", "Source"), ("author", "Author"), ("attribution", "Attribution")] {
+            for (key, label) in [("provider", "Provider"), ("suppliedUrl", "Source"), ("author", "Author"), ("attribution", "Attribution")] {
                 p { "{label}: " {display_value(&candidate["source"][key])} }
             }
             h4 { "Original time and yield text" }
@@ -191,6 +237,46 @@ fn render_steps(steps: &[Value]) -> Element {
 mod tests {
     use super::*;
     use dioxus_core::NoOpMutations;
+
+    #[test]
+    fn provider_selector_renders_accessible_choices_and_escapes_labels() {
+        let mut dom = VirtualDom::new_with_props(
+            ProviderSelector,
+            ProviderSelectorProps {
+                provider_choices: vec![
+                    ImportProvider {
+                        id: "allrecipes".into(),
+                        label: "AllRecipes".into(),
+                    },
+                    ImportProvider {
+                        id: "king-arthur-baking".into(),
+                        label: "King Arthur Baking".into(),
+                    },
+                    ImportProvider {
+                        id: "test".into(),
+                        label: "<script>no</script>".into(),
+                    },
+                ],
+                selected_provider: "king-arthur-baking".into(),
+                disabled: true,
+                on_change: None,
+            },
+        );
+        dom.rebuild(&mut NoOpMutations);
+        let html = dioxus_ssr::render(&dom);
+        for expected in [
+            "recipe-import-provider",
+            "Recipe provider",
+            "Automatic",
+            "AllRecipes",
+            "King Arthur Baking",
+            "disabled",
+        ] {
+            assert!(html.contains(expected), "Missing {expected}: {html}");
+        }
+        assert_eq!(html.matches("<option").count(), 4);
+        assert!(!html.contains("<script>"));
+    }
 
     #[test]
     fn metadata_preview_shows_saved_numbers_source_context_and_unloaded_image_references() {

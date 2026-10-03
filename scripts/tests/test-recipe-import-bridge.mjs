@@ -45,6 +45,36 @@ test('bridge supports plain text and rejects empty, invalid URL and oversized in
   assert.equal(calls,1);
 });
 
+test('bridge forwards provider selection independently of optional source URL', async () => {
+  const parsed = await parseClipboardPayload({plainText:'Recipe text', providerId:'king-arthur-baking'}, payload => payload);
+  assert.equal(parsed.providerId,'king-arthur-baking');
+  assert.equal(parsed.sourceUrl,null);
+});
+
+test('changing provider cancels an obsolete preview without discarding captured HTML', () => {
+  const originalWorker=globalThis.Worker, originalDocument=globalThis.document, workers=[], messages=[];
+  globalThis.Worker=class {constructor(){workers.push(this);}postMessage(payload){this.payload=payload;}terminate(){this.terminated=true;}};
+  globalThis.document={baseURI:'http://localhost/recipes/import'};
+  const textarea=Object.assign(new EventTarget(),{value:'',matches:()=>true});
+  const dispatch=(type,properties={})=>textarea.dispatchEvent(Object.assign(new Event(type,{cancelable:true}),properties));
+  let cleanup;
+  try{
+    cleanup=mountClipboardImport(textarea,'/assets/parser.mjs',value=>messages.push(value));
+    dispatch('paste',{clipboardData:{getData:type=>type==='text/html'?'<h1>Soup</h1>':'Soup'}});
+    dispatch('noms-preview',{detail:{providerId:'allrecipes'}});
+    assert.equal(workers[0].payload.providerId,'allrecipes');
+    dispatch('noms-source-change',{detail:{providerId:'king-arthur-baking'}});
+    assert.equal(workers[0].terminated,true);
+    workers[0].onmessage({data:{type:'result',candidate:{obsolete:true}}});
+    assert.ok(!messages.some(message=>message.type==='result'));
+    dispatch('noms-preview');
+    assert.equal(workers[1].payload.providerId,'king-arthur-baking');
+    assert.equal(workers[1].payload.html,'<h1>Soup</h1>');
+    dispatch('noms-preview',{detail:{providerId:''}});
+    assert.equal(workers[2].payload.providerId,undefined);
+  }finally{cleanup?.();globalThis.Worker=originalWorker;globalThis.document=originalDocument;}
+});
+
 test('bridge cancels obsolete results, preserves both MIME types and cleans up on unmount', () => {
   const originalWorker = globalThis.Worker;
   const originalDocument = globalThis.document;

@@ -5,6 +5,8 @@ function checkedPayload(payload) {
   const html = typeof payload?.html === 'string' ? payload.html : '';
   const plainText = typeof payload?.plainText === 'string' ? payload.plainText : '';
   const sourceUrl = typeof payload?.sourceUrl === 'string' ? payload.sourceUrl.trim() : '';
+  const providerId = payload?.providerId;
+  if (providerId != null && typeof providerId !== 'string') throw new Error('Choose a supported recipe provider or Automatic.');
   if (encoder.encode(html).length + encoder.encode(plainText).length > MAX_CLIPBOARD_BYTES) {
     throw new Error('Clipboard content exceeds the 4 MiB limit. Copy a smaller recipe selection.');
   }
@@ -14,7 +16,8 @@ function checkedPayload(payload) {
     try { url = new URL(sourceUrl); } catch { throw new Error('Enter a valid HTTP or HTTPS recipe URL.'); }
     if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Enter a valid HTTP or HTTPS recipe URL.');
   }
-  return { html: payload?.html ?? '', plainText: payload?.plainText ?? '', sourceUrl: sourceUrl || null };
+  return { html: payload?.html ?? '', plainText: payload?.plainText ?? '', sourceUrl: sourceUrl || null,
+    ...(providerId ? {providerId} : {}) };
 }
 
 export async function parseClipboardPayload(payload, parser) {
@@ -27,6 +30,7 @@ export function mountClipboardImport(element, parserUrl, send) {
   if (!textarea) throw new Error('Recipe import requires a textarea.');
   let html = '';
   let sourceUrl = '';
+  let providerId = '';
   let worker = null;
   let workerUrl = null;
   let timer = null;
@@ -55,14 +59,16 @@ export function mountClipboardImport(element, parserUrl, send) {
   const input = () => { stop(); html = ''; captured(); };
   const sourceChange = event => {
     stop();
-    sourceUrl = event.detail?.sourceUrl ?? '';
+    sourceUrl = event.detail?.sourceUrl ?? sourceUrl;
+    providerId = event.detail?.providerId ?? providerId;
     captured();
   };
   const preview = event => {
     stop();
     sourceUrl = event.detail?.sourceUrl ?? sourceUrl;
+    providerId = event.detail?.providerId ?? providerId;
     let payload;
-    try { payload = checkedPayload({ html, plainText: textarea.value, sourceUrl }); }
+    try { payload = checkedPayload({ html, plainText: textarea.value, sourceUrl, providerId }); }
     catch (error) { send({type: 'error', message: error.message}); return; }
     const token = generation;
     try {
