@@ -8151,3 +8151,128 @@ Next: actual accepted move/sharing response-stage races, then mixed still-image
 batches. Suspended-tab timer behavior, remaining identity races, real-device and
 screen-reader acceptance, and final whole-app sign-off stay open. Animation
 handling and dark-mode redesign remain out of scope/deferred respectively.
+
+## Collection move and sharing completion observations
+
+Scoped acceptance on 2026-10-03 reuses the unchanged runtime at
+`http://127.0.0.1:32768`. Move responses passed route-exit and observed
+replacement-account checks. Sharing responses passed route exit and the guest
+phase of account replacement. The fully settled replacement-account sharing
+case remains open because the browser surface collapsed to zero width.
+
+### Restoring the existing local environment
+
+Rancher Desktop and all local app containers were stopped at entry. `rdctl start`
+did not leave a running process; launching the installed `rancher-desktop`
+executable restored the existing runtime without changing its settings. Only
+the existing `noms-c799915fcf93e034` database, MinIO, mock OAuth/GitHub and app
+containers were restarted. Other NOMS test instances remained stopped.
+
+The restarted database initially acquired dynamic port 32768, colliding with
+the app's fixed binding. Stopped only that just-started database, reserved the
+app binding, then restarted the same database on 32769. The failed app start
+had left its Docker network attachment absent. Restored it to its original
+`noms-c799915fcf93e034_default` network with service alias `app`, then restarted
+the existing app after database readiness. The app returned HTTP 200 and healthy
+status at port 32768. No containers/volumes were recreated, no data was deleted,
+and no deployment configuration or image was changed. Startup rebuilt the same
+mounted source; no new source fix or full CI run was required.
+
+### Browser cases and limits
+
+Normal UI created two private parent collections and two empty Unlisted
+children containing only synthetic local-test text. No recipe, image, personal
+content or sensitive permission was exposed. Sharing mutations reduced access
+to Private. Held actual HTTP 200 acknowledgements using response-stage
+interception; no fabricated success, cookie injection or destructive action.
+
+| Case | Observation |
+| --- | --- |
+| Accepted move after route exit | Moved the sharing child from parent B to A while also requesting Private visibility. Held the successful move response, left for Collections, then released. Stayed on Collections; SQL showed the accepted parent A move. No subsequent sharing request appeared; visibility remained Unlisted until the later explicit fresh edit. |
+| Accepted move after replacement | Moved the other child from A to B while requesting Private. Held the accepted move response, switched through normal mock sign-in, and verified the replacement avatar and hidden/inert old form before release. Stayed at the old edit URL with accurate completed-original-account feedback. No sharing follow-up. SQL showed parent B and still-Unlisted visibility. |
+| Owner recovery after move | Restored `testuser`; the same old form retained its requested values, disabled Save and separate-tab “Check saved collection” link. This does not imply its intended Private choice had been applied. |
+| Accepted sharing after route exit | A fresh owner edit of the first child requested Private. Held the real sharing response, left for Collections and released. Stayed on Collections with no repeated mutation. SQL confirmed Private visibility and parent A. |
+| Accepted sharing after sign-out | A fresh owner edit of the moved child requested Private. Held the sharing response and signed out/into the alternate account. The retained editor first observed the guest phase and became hidden/inert. Released at that point: no redirect, accurate completed-original-account feedback, disabled Save and recovery link. Later normal refresh visibly showed the replacement avatar without navigation. SQL confirmed Private and parent B. |
+| Owner recovery after sharing | Restoring `testuser` retained the review link and disabled Save. This is not a separate settled-replacement-at-release acceptance case. |
+
+Complete event intervals reported `hasMore=false`, `truncated=false`:
+move/route acknowledgement cursor 254 → 305, move/replacement 538 → 559,
+sharing/route 80 → 123 and sharing/guest 347 → 359. The first move interval
+included details and move requests; neither move completion interval included
+a later sharing request. Sharing intervals included details and visibility
+requests; their completion intervals contained no repeated mutation. Cursors
+are local diagnostics, not persisted network artifacts. No headers, cookies,
+upload capabilities or response bodies were saved.
+
+### Open follow-up and browser blocker
+
+Created a fifth empty fixture to repeat sharing after the editor explicitly
+observes the replacement account, rather than the intermediate guest state.
+Its requested early Unlisted selection did not become the saved value; the
+fixture was created Private. This is a preliminary startup-selection observation,
+not a controlled hydration reproduction or established root cause. The earlier
+name/description hydration acceptance does not cover every sharing control.
+Investigate with held client startup and no parent write before claiming a fix.
+
+Before preparing that fixture further, browser clicks began timing out and
+screenshots failed with zero width. The DOM showed collapsed navigation.
+Supported viewport override (1265 × 712) and visibility controls did not restore
+the surface; `open_in_codex` queued the panel for this hidden desktop chat.
+No browser internals, alternative automation or synthetic click injection was
+used. The fifth fixture remains Private; no setup sharing change was submitted.
+Reopen this chat and a usable browser panel in the desktop app to finish the
+settled replacement case and controlled early-selection reproduction.
+
+### Fixture integrity and validation
+
+Five new empty fixtures increased collection count 39 → 44. All end Private:
+
+- Parent A: `a27d830b-75ca-4442-9714-619ce2a97ec1`.
+- Parent B: `b0a7cc62-d9aa-4c23-b6bd-6f2d78ad49e6`.
+- Move child under B: `15fa1a7b-bb15-4fcf-b220-a277e3135faa`.
+- Sharing child under A: `ec6ba8cd-ed6d-4094-8eaf-0a1bd39de4db`.
+- Unused settled-replacement fixture under A: `58ace93f-8d30-498c-accd-f99d40ea60da`.
+
+Existing complete-row hashes matched their pre-pass baselines using
+`md5(string_agg(to_jsonb(row)::text, '' ORDER BY ...))`, excluding only those five
+new collections. Ordered by ID, versions by recipe/version, references by
+collection/asset:
+
+| Protected rows | Count | MD5 |
+| --- | --- | --- |
+| Earlier collections | 39 | `47a998a5c4eb27ba4b6617b8cd6b0118` |
+| Users | 3 | `5a84bb5b8604af4e42e6340240f575ea` |
+| Recipes | 36 | `ff40ea68a91ad2b0ea54e5af5a1917fe` |
+| Drafts | 11 | `a225a68a23cf7a6ae6f296c5fe67a4b6` |
+| Published versions | 71 | `f5dcc0816a77295b76897942a28866fd` |
+| Collection media references | 4 | `3790389dfdb129db42ccfb089e72cac5` |
+
+Fresh `SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration>/target cargo test
+--features server <filter> -- --test-threads=1` commands passed:
+`collection_edit` 7, `api::collection::tests` 12 and `account_binding` 5.
+Total **24 passed, 0 failed, 0 ignored**. Logs:
+`/tmp/noms-020-move-sharing-{editor,api,binding}-tests.log`.
+The latest unchanged-runtime full CI remains 1006 passed, 0 failed, 12 ignored;
+it was not rerun for this documentation-only pass.
+
+Second-pass self-review: **PASS for the recorded move and route/guest sharing
+cases; incomplete for settled replacement and startup selection**. Reviewed
+accepted server writes versus cancellation, all staged completion guards,
+hidden-form ownership, sticky review controls, request intervals and protected
+row comparisons. No independent review agent was used. No source change,
+migration, push, unrelated cleanup or checkpoint-8 sign-off.
+
+The original testuser session was restored. Cleared interception, disabled
+Network observation, reset the temporary viewport override and restored hidden
+browser visibility. Tab inventory was empty after cleanup despite a final
+webview-attach timeout. The app remains running for inspection. Screenshot
+`/tmp/noms-020-move-account-recovery.png` was captured and visually checked before
+the browser collapsed; it shows retained intended values, completion feedback,
+disabled Save and recovery link, not a fresh read of saved sharing. Preserve
+existing user CSS edits and remove only the regenerated grayscale utility.
+
+Next: restore the desktop browser surface, finish settled-replacement sharing
+completion and investigate early sharing selection, then mixed still-image
+batches and remaining gates. Real-device/screen-reader, suspended-tab timer
+behavior and final whole-app acceptance stay open. Animation is excluded and
+dark-mode redesign remains deferred.
