@@ -1,5 +1,45 @@
 use super::*;
 
+#[test]
+fn profile_display_name_preserves_oauth_names_within_storage_limit() {
+    let provider_name = "CP8 Avatar Round Trip — Local Test";
+    assert_eq!(provider_name.len(), 36);
+    assert_eq!(provider_name.chars().count(), 34);
+    assert_eq!(validate_profile_display_name(provider_name), Ok(()));
+    assert_eq!(validate_profile_display_name(&"a".repeat(100)), Ok(()));
+    assert_eq!(
+        validate_profile_display_name(&format!("  {}  ", "a".repeat(100))),
+        Ok(())
+    );
+    assert_eq!(
+        validate_profile_display_name(&"a".repeat(101)),
+        Err("Display name must be 2-100 characters")
+    );
+}
+
+#[test]
+fn profile_display_name_counts_unicode_characters_not_bytes() {
+    for character in ["中", "é", "🍲"] {
+        assert_eq!(
+            validate_profile_display_name(&character.repeat(100)),
+            Ok(())
+        );
+        assert_eq!(
+            validate_profile_display_name(&character.repeat(101)),
+            Err("Display name must be 2-100 characters")
+        );
+        assert_eq!(
+            validate_profile_display_name(character),
+            Err("Display name must be 2-100 characters")
+        );
+    }
+    assert_eq!(
+        validate_profile_display_name(" "),
+        Err("Display name must be 2-100 characters")
+    );
+    assert_eq!(validate_profile_display_name(" 中文 "), Ok(()));
+}
+
 #[tokio::test]
 async fn unauthenticated_profile_write_stops_before_database_access() {
     let error = save_profile(Some(uuid::Uuid::new_v4()), "Valid name".into(), None, None)
@@ -84,6 +124,7 @@ fn profile_save_feedback_keeps_known_validation_and_session_guidance() {
         "Username can only contain letters, numbers, hyphens, and underscores",
         "Username cannot start or end with a hyphen or underscore",
         "Display name must be 2-30 characters",
+        "Display name must be 2-100 characters",
         "Bio must be 160 characters or less",
         "That username is already taken. Please choose another.",
     ] {

@@ -58,6 +58,23 @@ mod presentation_tests {
     }
 
     #[test]
+    fn profile_name_counter_and_input_match_the_storage_character_limit() {
+        let html = render(true);
+        assert!(html.contains("9/100"), "{html}");
+        let input = html
+            .split("id=\"profile-display-name\"")
+            .nth(1)
+            .unwrap()
+            .split('>')
+            .next()
+            .unwrap();
+        // HTML maxlength counts UTF-16 units, unlike PostgreSQL varchar and
+        // Rust scalar counts. Do not silently truncate a valid Unicode name.
+        assert!(!input.contains("maxlength"), "{input}");
+        assert!(input.contains("aria-invalid=false"), "{input}");
+    }
+
+    #[test]
     fn profile_fields_have_labels_and_deletion_is_closed_by_default() {
         let html = render(true);
         for id in ["profile-display-name", "profile-username", "profile-bio"] {

@@ -23,6 +23,18 @@ use crate::types::RecipeImageEdit;
 #[path = "settings_recovery_tests.rs"]
 mod recovery_tests;
 
+// Matches users.display_name VARCHAR(100), including names imported by OAuth.
+const PROFILE_DISPLAY_NAME_MAX_CHARACTERS: usize = 100;
+
+/// Shared display-name validation for the form and its server write boundary.
+fn validate_profile_display_name(name: &str) -> Result<(), &'static str> {
+    // PostgreSQL varchar counts Unicode scalars, not UTF-8 bytes or UTF-16 units.
+    if !(2..=PROFILE_DISPLAY_NAME_MAX_CHARACTERS).contains(&name.trim().chars().count()) {
+        return Err("Display name must be 2-100 characters");
+    }
+    Ok(())
+}
+
 /// Only known validation messages are safe to show verbatim. Transport and
 /// unknown server errors must not expose internal details or discard entries.
 fn profile_save_feedback(error: &ServerFnError) -> &str {
@@ -35,6 +47,7 @@ fn profile_save_feedback(error: &ServerFnError) -> &str {
             | "Username can only contain letters, numbers, hyphens, and underscores"
             | "Username cannot start or end with a hyphen or underscore"
             | "Display name must be 2-30 characters"
+            | "Display name must be 2-100 characters"
             | "Bio must be 160 characters or less"
             | "That username is already taken. Please choose another." => return message,
             "Not authenticated" => return "Sign in again in another tab, then retry saving. Keep this page open to retain your entries.",
@@ -271,9 +284,7 @@ pub async fn save_profile(
 
     // --- Display name validation ---
     let trimmed_name = display_name.trim().to_string();
-    if trimmed_name.len() < 2 || trimmed_name.len() > 30 {
-        return Err(ServerFnError::new("Display name must be 2-30 characters"));
-    }
+    validate_profile_display_name(&trimmed_name).map_err(ServerFnError::new)?;
 
     // --- Bio validation ---
     let trimmed_bio = bio.map(|b| b.trim().to_string());
@@ -1182,8 +1193,8 @@ pub fn SettingsProfile() -> Element {
         }
 
         // Validate client-side
-        if trimmed_name.len() < 2 || trimmed_name.len() > 30 {
-            error.set(Some("Display name must be 2-30 characters".to_string()));
+        if let Err(reason) = validate_profile_display_name(&trimmed_name) {
+            error.set(Some(reason.to_string()));
             return;
         }
         if let Some(ref b) = trimmed_bio {
@@ -1268,7 +1279,10 @@ pub fn SettingsProfile() -> Element {
             }
         };
 
-        initialized() && n.len() >= 2 && n.len() <= 30 && b.len() <= 160 && username_valid
+        initialized()
+            && validate_profile_display_name(&n).is_ok()
+            && b.len() <= 160
+            && username_valid
     };
 
     // Current username for typed confirmation
@@ -1697,12 +1711,17 @@ pub fn SettingsProfile() -> Element {
                             label { r#for: "profile-display-name", "Display name" }
                             input {
                                 id: "profile-display-name", class: "input input--shared neumo-inset", r#type: "text",
-                                value: display_name(), placeholder: "Your name", maxlength: "30",
+                                value: display_name(), placeholder: "Your name",
+                                // Avoid HTML maxlength's UTF-16 counting and silent truncation.
+                                aria_invalid: validate_profile_display_name(&display_name()).is_err(),
                                 readonly: is_saving() || !initialized(),
                                 aria_describedby: "profile-display-name-hint",
                                 oninput: move |evt| { if initialized() && !is_saving() { display_name.set(evt.value()); error.set(None); saved_message.set(None); } },
                             }
-                            span { id: "profile-display-name-hint", class: "user-settings__hint", "{display_name().trim().len()}/30" }
+                            span { id: "profile-display-name-hint", class: "user-settings__hint",
+                                "{display_name().trim().chars().count()}/{PROFILE_DISPLAY_NAME_MAX_CHARACTERS}"
+                                if validate_profile_display_name(&display_name()).is_err() { " · Use 2–100 characters." }
+                            }
                         }
                         div { class: "user-settings__field",
                             label { r#for: "profile-username", "Username" }
