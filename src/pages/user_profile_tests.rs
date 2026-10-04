@@ -1,6 +1,22 @@
 use super::*;
 
 #[test]
+fn profile_disclosure_content_wraps_long_display_names() {
+    let css = include_str!("../../assets/user-pages.css");
+    let rule = css.split(".user-profile .user-disclosure__body {").nth(1);
+    assert!(
+        rule.is_some(),
+        "Profile empty-state copy needs scoped wrapping"
+    );
+    assert!(rule
+        .unwrap()
+        .split('}')
+        .next()
+        .unwrap()
+        .contains("overflow-wrap: anywhere"));
+}
+
+#[test]
 fn profile_pages_retry_failed_offsets_and_claim_requests_synchronously() {
     let mut page = ProfilePageState::<u32>::default();
     assert!(!page.begin(ProfilePageAction::LoadMore));
