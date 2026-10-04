@@ -562,54 +562,45 @@ impl GallerySelectionPreview {
 // closure could only be consumed once. Passing the (Copy) signals into a
 // plain `async fn` lets the effect spawn a fresh future on every re-fire.
 
-/// Process a single picked file: validate type/size (client), create a
-/// preview object URL (wasm), push a `Processing` placeholder, run the CP3
-/// resize+WebP pipeline, fill the byte fields, and transition to `Ready`
-/// (or `Failed` on error / overflow).
-///
-/// The non-wasm branch is a no-op so the function compiles on both targets
-/// (the handlers never fire on the server, but `dx serve` SSR still
-/// type-checks the call site). The `mut` on signal params is only used
-/// inside the wasm block — `allow(unused_mut)` covers the server build.
-#[allow(unused_mut)]
-async fn process_one_file(
+/// Admit the whole selection before any encoder yields. Stable IDs identify
+/// completions; appending rather than sorting also preserves manual reordering.
+#[cfg(any(target_arch = "wasm32", test))]
+fn append_gallery_selection(
+    pending: &mut Vec<PendingImage>,
+    next_id: &mut usize,
+    mut selected: Vec<PendingImage>,
+) -> Vec<usize> {
+    let mut ids = Vec::with_capacity(selected.len());
+    for image in &mut selected {
+        image.id = *next_id;
+        ids.push(*next_id);
+        *next_id += 1;
+    }
+    pending.extend(selected);
+    ids
+}
+
+/// Validate and retain a local preview without starting asynchronous processing.
+#[cfg(target_arch = "wasm32")]
+fn prepare_gallery_file(
     file: dioxus::html::FileData,
-    mut pending: Signal<Vec<PendingImage>>,
-    mut next_id: Signal<usize>,
     mut error: Signal<Option<String>>,
-    mut editor_modal_url: Signal<Option<String>>,
-    mut editor_modal_img_id: Signal<Option<usize>>,
-    #[cfg(target_arch = "wasm32")] selection_preview: &mut GallerySelectionPreview,
-) {
-    #[cfg(target_arch = "wasm32")]
-    {
-        let name = file.name();
-        let original_size = file.size();
-
-        let Some(web_file) = file.get_web_file() else {
-            return;
-        };
-
-        // `accept` is only a picker hint; enforce the original input contract.
-        if let Err(reason) = validate_image_input(&name, original_size) {
-            error.set(Some(format!("Skipped \"{name}\": {reason}")));
-            return;
-        }
-
-        // Build a preview object URL (wasm only).
-        let preview_url = web_sys::Url::create_object_url_with_blob(&web_file).ok();
-
-        // Allocate an id + push a placeholder so the UI shows "Processing…"
-        // immediately (before the await on the canvas pipeline).
-        let id = next_id();
-        next_id.set(id + 1);
-        pending.write().push(PendingImage {
-            id,
+) -> Option<(PendingImage, web_sys::File)> {
+    let name = file.name();
+    let original_size = file.size();
+    let web_file = file.get_web_file()?;
+    // `accept` is only a picker hint; enforce the original input contract.
+    if let Err(reason) = validate_image_input(&name, original_size) {
+        error.set(Some(format!("Skipped \"{name}\": {reason}")));
+        return None;
+    }
+    let preview_url = web_sys::Url::create_object_url_with_blob(&web_file).ok();
+    Some((
+        PendingImage {
+            id: 0, // Assigned atomically with the rest of this selection.
             persisted: false,
-            name: name.clone(),
-            preview_url: preview_url
-                .as_ref()
-                .map(|url| Arc::new(GalleryPreviewUrl::new(url.clone()))),
+            name,
+            preview_url: preview_url.map(|url| Arc::new(GalleryPreviewUrl::new(url))),
             original_size,
             full_bytes: Arc::new(Vec::new()),
             thumb_bytes: Arc::new(Vec::new()),
@@ -617,60 +608,57 @@ async fn process_one_file(
             status: UploadStatus::Processing,
             error: None,
             uploaded_image: None,
-        });
+        },
+        web_file,
+    ))
+}
 
-        // Only the first preview in this batch may open an idle editor.
-        if let Some(url) = &preview_url {
-            selection_preview.open_first(id, url, editor_modal_url, editor_modal_img_id);
-        }
-
-        // Process using the standard compressed path.
-        match process_image(web_file).await {
-            Ok(processed) => {
-                let full_len = processed.full_bytes.len();
-                let mut guard = pending.write();
-                if let Some(p) = guard.iter_mut().find(|p| p.id == id) {
-                    p.full_bytes = Arc::new(processed.full_bytes);
-                    p.thumb_bytes = Arc::new(processed.thumb_bytes);
-                    if full_len > MAX_FILE_SIZE as usize {
-                        p.status = UploadStatus::Failed;
-                        p.error = Some(format!(
-                            "Image is {} — too large even at standard quality. Use a smaller image.",
-                            format_file_size(full_len as u64)
-                        ));
-                    } else {
-                        p.status = UploadStatus::Ready;
-                    }
-                }
-            }
-            Err(msg) => {
-                let mut guard = pending.write();
-                if let Some(p) = guard.iter_mut().find(|p| p.id == id) {
-                    p.status = UploadStatus::Failed;
-                    p.error = Some(msg);
-                    p.preview_url = None;
-                }
-                // Do not leave an unusable crop dialog open, or close a newer
-                // selection's dialog after an older decode has failed.
-                if editor_modal_img_id() == Some(id) {
-                    editor_modal_url.set(None);
-                    editor_modal_img_id.set(None);
-                }
-            }
-        }
+/// Complete a pre-admitted row by stable identity, never by display position.
+#[cfg(target_arch = "wasm32")]
+async fn process_gallery_file(
+    id: usize,
+    web_file: web_sys::File,
+    mut pending: Signal<Vec<PendingImage>>,
+    mut editor_modal_url: Signal<Option<String>>,
+    mut editor_modal_img_id: Signal<Option<usize>>,
+) {
+    // A queued row may have been removed while an earlier file processed.
+    if !pending().iter().any(|image| image.id == id) {
+        return;
     }
-
-    // Non-wasm no-op: consume the params so nothing is unused.
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let _ = (
-            file,
-            pending,
-            next_id,
-            error,
-            editor_modal_url,
-            editor_modal_img_id,
-        );
+    // Process using the standard compressed path.
+    match process_image(web_file).await {
+        Ok(processed) => {
+            let full_len = processed.full_bytes.len();
+            let mut guard = pending.write();
+            if let Some(p) = guard.iter_mut().find(|p| p.id == id) {
+                p.full_bytes = Arc::new(processed.full_bytes);
+                p.thumb_bytes = Arc::new(processed.thumb_bytes);
+                if full_len > MAX_FILE_SIZE as usize {
+                    p.status = UploadStatus::Failed;
+                    p.error = Some(format!(
+                        "Image is {} — too large even at standard quality. Use a smaller image.",
+                        format_file_size(full_len as u64)
+                    ));
+                } else {
+                    p.status = UploadStatus::Ready;
+                }
+            }
+        }
+        Err(msg) => {
+            let mut guard = pending.write();
+            if let Some(p) = guard.iter_mut().find(|p| p.id == id) {
+                p.status = UploadStatus::Failed;
+                p.error = Some(msg);
+                p.preview_url = None;
+            }
+            // Do not leave an unusable crop dialog open, or close a newer
+            // selection's dialog after an older decode has failed.
+            if editor_modal_img_id() == Some(id) {
+                editor_modal_url.set(None);
+                editor_modal_img_id.set(None);
+            }
+        }
     }
 }
 
@@ -924,19 +912,40 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                 None => unreachable!("an unlimited gallery accepts every selected file"),
             }));
         }
-        for file in files.into_iter().take(available) {
-            process_one_file(
-                file,
-                pending,
-                next_id,
-                error,
-                editor_modal_url,
-                editor_modal_img_id,
-                #[cfg(target_arch = "wasm32")]
-                &mut selection_preview,
-            )
-            .await;
+        #[cfg(target_arch = "wasm32")]
+        {
+            let (selected, web_files): (Vec<_>, Vec<_>) = files
+                .into_iter()
+                .take(available)
+                .filter_map(|file| prepare_gallery_file(file, error))
+                .unzip();
+            let first_preview = selected
+                .iter()
+                .enumerate()
+                .find_map(|(index, image)| gallery_editor_url(image).map(|url| (index, url)));
+            // All placeholders and capacity reservations exist before the first
+            // await, so later picker/drop batches cannot interleave this batch.
+            let mut selection_next_id = next_id;
+            let ids = append_gallery_selection(
+                &mut pending.write(),
+                &mut selection_next_id.write(),
+                selected,
+            );
+            if let Some((index, url)) = first_preview {
+                selection_preview.open_first(
+                    ids[index],
+                    &url,
+                    editor_modal_url,
+                    editor_modal_img_id,
+                );
+            }
+            for (id, web_file) in ids.into_iter().zip(web_files) {
+                process_gallery_file(id, web_file, pending, editor_modal_url, editor_modal_img_id)
+                    .await;
+            }
         }
+        #[cfg(not(target_arch = "wasm32"))]
+        let _ = (files, available, next_id);
     };
 
     // ── use_effect for the upload trigger ────────────────────────────────
@@ -1267,6 +1276,63 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn overlapping_gallery_selections_reserve_contiguous_pending_rows() {
+        let mut pending = vec![pending_image_with_uploaded_url(7, Some("saved.webp"))];
+        let mut next_id = 8;
+        let first_batch = append_gallery_selection(
+            &mut pending,
+            &mut next_id,
+            vec![
+                pending_image_with_uploaded_url(0, None),
+                pending_image_with_uploaded_url(0, None),
+            ],
+        );
+        // The first encoder is still outstanding when another picker/drop arrives.
+        let second_batch = append_gallery_selection(
+            &mut pending,
+            &mut next_id,
+            vec![pending_image_with_uploaded_url(0, None)],
+        );
+        assert_eq!(first_batch, vec![8, 9]);
+        assert_eq!(second_batch, vec![10]);
+        assert_eq!(
+            pending.iter().map(|image| image.id).collect::<Vec<_>>(),
+            vec![7, 8, 9, 10]
+        );
+        assert_eq!(next_id, 11);
+        assert_eq!(pending_upload_count(&pending), 3);
+        assert_eq!(available_image_slots(pending.len(), 1, Some(4)), 0);
+    }
+
+    #[test]
+    fn later_gallery_admission_preserves_manual_order_and_existing_edits() {
+        let mut pending = vec![
+            pending_image_with_uploaded_url(2, None),
+            pending_image_with_uploaded_url(1, None),
+        ];
+        pending[0].edit.transform.rotation = 23.0;
+        let mut next_id = 3;
+        assert_eq!(
+            append_gallery_selection(&mut pending, &mut next_id, vec![]),
+            Vec::<usize>::new()
+        );
+        assert_eq!(next_id, 3);
+        assert_eq!(
+            append_gallery_selection(
+                &mut pending,
+                &mut next_id,
+                vec![pending_image_with_uploaded_url(0, None)]
+            ),
+            vec![3]
+        );
+        assert_eq!(
+            pending.iter().map(|image| image.id).collect::<Vec<_>>(),
+            vec![2, 1, 3]
+        );
+        assert_eq!(pending[0].edit.transform.rotation, 23.0);
+    }
 
     thread_local! {
         static PREVIEW_REVOCATIONS: std::cell::RefCell<Vec<String>> = const {
