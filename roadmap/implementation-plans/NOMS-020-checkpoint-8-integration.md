@@ -8668,3 +8668,94 @@ CSS to preserve user changes, restoring SHA-256
 The app remains running. Next: mixed still-image batches with a lost upload
 acknowledgement after actual server acceptance. Whole-checkpoint/device
 acceptance stays open; animation handling is excluded and dark redesign deferred.
+
+## Mixed gallery accepted response loss and explicit recovery
+
+On 2026-10-04, reused private unpublished draft
+`e3bb438b-2d31-49e1-a07a-a613dc048094`, initially revision 3 with six saved
+images. Through the real multiple-file chooser added the existing synthetic
+PNG/JPEG/WebP fixtures and applied a 31° adjustment to the middle JPEG. No
+runtime change or rebuild was needed.
+
+Intercepted only upload responses, not requests. Delivered the first actual
+HTTP 200 normally. Held the middle actual HTTP 200; SQL showed 48 media assets
+(46 baseline plus two accepted uploads), including
+`37c52916-14c5-491d-bb33-ad8688752635` for the middle upload. Only after confirming
+that server-side record, aborted its response before the editor received it.
+The third upload reached the actual server and its HTTP 200 was delivered.
+This tests a lost acknowledgement after server acceptance, not an injected
+pre-write failure. No fake success response, response-body replacement or
+cookie injection was used.
+
+The gallery retained the middle image's preview and displayed the accurate
+warning that Retry may upload another copy. The two acknowledged images
+autosaved privately, giving revision 4 with eight images/eight references;
+publication stayed blocked. Media count was 49. A repeated Publish retained
+the same feedback and produced no request in the complete observation interval.
+
+Clicked only the middle image's explicit Retry. One new actual upload and one
+private autosave succeeded. The two already acknowledged images and six
+pre-existing saved images were not uploaded again. The warning cleared, the
+replacement returned to its original pending position, and the 31° adjustment
+remained. A fresh separate tab loaded nine Saved images, Private visibility
+and the correct draft title; reopening the eighth image showed 31°.
+
+Complete Network/Fetch observation intervals were **115 → 161** for the batch
+and partial autosave, **161 → 161** for repeated Publish, and **161 → 200** for
+Retry/autosave. Every read was untruncated with `hasMore=false`. The initial
+interval contains three real upload requests and three response-stage HTTP 200
+pauses, with the middle response subsequently failing `net::ERR_ABORTED`, plus
+one successful draft save. The repeat interval is empty. The retry interval
+contains one upload and one draft save, both HTTP 200, plus profile reads.
+No publication request was observed in these intervals.
+
+SQL confirms final revision 5, nine images, nine draft media references,
+`recipe_id=NULL` and `initial_visibility=private`. The first six asset IDs
+and their edits are unchanged, including the earlier fifth image's 11° edit.
+New image asset IDs in displayed order:
+`41a81f82-3d34-4c82-a46d-260a42b30e00`,
+`cade690d-cb9a-4766-b13e-a501c64227c2` (retry, 31°) and
+`af1b8989-50b2-4b95-ba21-608236eeacea`.
+
+Four new media records remain from these upload attempts; media count is
+50. Three are referenced by the private draft. The unacknowledged original
+`37c52916-14c5-491d-bb33-ad8688752635` is still `uncommitted`, with no draft,
+recipe, version, collection or avatar reference at the recorded read. Its
+expiry is `2026-10-04 23:38:16.872834+00`. The explicit Retry creates a second
+asset, as the warning states. This is not upload idempotency, successful orphan
+cleanup or a claim that object deletion has completed; no deletion was triggered
+for this check.
+
+Only the existing synthetic draft and four new media records changed. Protected
+full-row hashes match the starting baselines:
+
+| Protected rows | Count | MD5 |
+| --- | --- | --- |
+| Collections | 45 | `89ce0d4ee260e3c08adacdd07ac083e9` |
+| Users | 3 | `5a84bb5b8604af4e42e6340240f575ea` |
+| Recipes | 36 | `ff40ea68a91ad2b0ea54e5af5a1917fe` |
+| Other drafts | 11 | `a225a68a23cf7a6ae6f296c5fe67a4b6` |
+| Published versions | 71 | `f5dcc0816a77295b76897942a28866fd` |
+| Collection media references | 4 | `3790389dfdb129db42ccfb089e72cac5` |
+
+Fresh `SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration>/target cargo test
+--features server image_upload::tests -- --test-threads=1` passed **53 tests,
+0 failed**; log `/tmp/noms-020-mixed-lost-ack-tests.log`. Latest unchanged-runtime
+full CI remains **1012 passed, 0 failed, 12 ignored**; no new full CI run is
+claimed. Screenshots: `/tmp/noms-020-mixed-lost-ack-blocked.png`,
+`/tmp/noms-020-mixed-lost-ack-recovered.png` and
+`/tmp/noms-020-mixed-lost-ack-reloaded-edit.png`. Visually inspected the fresh
+reopened 31° editor.
+
+Second-pass self-review: **PASS for this mixed accepted-response-loss scope**.
+Reviewed server acceptance versus client acknowledgement, retained bytes/edit,
+selection-order merge, safe warning, repeated-Publish guard, explicit-copy
+semantics, private autosave/publication separation and protected rows. No
+independent agent review. Cleared Fetch patterns, disabled Network observation
+and closed both owned tabs; in-app browser inventory was empty. No viewport
+override, destructive action, source edit or deployment rebuild. User CSS
+SHA-256 remains `74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+The app remains running on port 32768. Next: overlapping gallery selections
+and ordering during still-image processing. Whole-app/device/accessibility
+acceptance, cleanup and other identity races remain open; animation handling
+is out of scope and dark-mode redesign deferred.
