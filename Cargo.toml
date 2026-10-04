@@ -47,7 +47,7 @@ futures-channel = "0.3"
 dioxus-web = "0.7"
 web-sys = { version = "0.3.98", features = [
     "Window", "Storage", "Location", "History", "Document", "Navigator", "Clipboard", "ShareData", "MouseEvent", "Element", "Node",
-    "HtmlCanvasElement", "CanvasRenderingContext2d", "HtmlImageElement", "HtmlInputElement", "HtmlTextAreaElement", "ImageData",
+    "HtmlCanvasElement", "CanvasRenderingContext2d", "HtmlImageElement", "HtmlInputElement", "HtmlTextAreaElement", "HtmlSelectElement", "ImageData",
     "Blob", "File", "FileReader", "Url",
     "DataTransfer", "DataTransferItem",
     "DragEvent", "KeyboardEvent", "Event", "EventTarget", "HtmlElement", "HtmlDialogElement",
