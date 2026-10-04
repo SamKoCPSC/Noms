@@ -8494,3 +8494,83 @@ grayscale CSS block to restore the pre-existing user CSS; its SHA-256 remains
 The app remains running. Next: mixed batches with server-side upload failures
 and explicit recovery, then the remaining checkpoint gates. Animation handling
 is out of scope; dark-mode redesign remains deferred.
+
+## Mixed gallery HTTP failure and explicit retry
+
+On 2026-10-04, reused the private unpublished draft
+`e3bb438b-2d31-49e1-a07a-a613dc048094` with its three saved images.
+The real multiple-file chooser added `first.png`, `second.jpg` and `third.webp`
+from the existing synthetic fixture directory. After processing settled,
+applied an 11° rotation to the second image through the normal image editor.
+Runtime source was unchanged.
+
+At the request stage, allowed the first upload to reach the actual server,
+fulfilled the second with an injected HTTP 503, and allowed the third to reach
+the actual server. This simulates an HTTP failure in the browser; it does not
+demonstrate a real server/storage outage. The rejected second request never
+reached the server. The two real uploads returned HTTP 200. The gallery kept
+the failed middle preview and its adjustment, with safe outcome-uncertainty
+copy and a per-item Retry button. Publication remained blocked. Private
+autosave retained five successful images and five draft media references;
+media assets increased from 43 to 45, with no recipe/version created.
+
+A repeated Publish retained the warning without another upload or publication
+request. Cleared the fault patterns and clicked only the second image's Retry.
+Exactly one real upload returned HTTP 200, followed by a real private draft
+autosave. Both per-item and parent feedback cleared. Successful images were
+not uploaded again; the retried middle image returned to its original position
+rather than being appended after the third image.
+
+Complete Network/Fetch observations included event sequences 119–150 for the
+initial batch, then cursors 150 → 163 for repeated Publish and 163 → 177 for
+Retry/autosave, all untruncated with `hasMore=false`. The initial interval contained three upload
+attempts with statuses 200/503/200 and one draft save; the repeat interval
+contained only a profile read; the retry interval contained one upload and one
+draft save. No publication request was observed. No fake successful response,
+cookie injection or permanent removal was used.
+
+SQL confirms draft revision 3, six images, six media references,
+`recipe_id=NULL` and `initial_visibility=private`. Its first three asset IDs
+are unchanged. New assets in displayed order are
+`738f0169-e92f-4638-a810-c8f7d3f1448a`,
+`75ec18f2-f7a8-4009-9e88-f149f382fc85` and
+`4cb5431a-1d7c-4a17-a7dc-b05cc69c76e9`; the middle asset's rectangle edit
+has rotation 11°, while the others retain 0°. A separate fresh tab loaded six
+Saved entries and Private visibility, then reopened the fifth displayed image
+with the rotation input at 11°. Closed that editor without a further edit.
+
+Only the existing synthetic unpublished draft and three new media assets
+changed; media count is now 46. Full-row hashes match the starting baselines:
+
+| Protected rows | Count | MD5 |
+| --- | --- | --- |
+| Collections | 45 | `89ce0d4ee260e3c08adacdd07ac083e9` |
+| Users | 3 | `5a84bb5b8604af4e42e6340240f575ea` |
+| Recipes | 36 | `ff40ea68a91ad2b0ea54e5af5a1917fe` |
+| Other drafts | 11 | `a225a68a23cf7a6ae6f296c5fe67a4b6` |
+| Published versions | 71 | `f5dcc0816a77295b76897942a28866fd` |
+| Collection media references | 4 | `3790389dfdb129db42ccfb089e72cac5` |
+
+Screenshots captured: `/tmp/noms-020-mixed-server-failure.png`,
+`/tmp/noms-020-mixed-server-recovered.png` and
+`/tmp/noms-020-mixed-server-reloaded-edit.png`. Visually inspected the failure
+gallery and fresh reopened editor. Fresh `image_upload::tests` passed
+**50 tests, 0 failed**, using the integration target and server feature;
+log `/tmp/noms-020-mixed-server-recovery-tests.log`. Latest unchanged-runtime
+full CI remains **1009 passed, 0 failed, 12 ignored**; no full CI rerun is
+claimed for this documentation-only continuation.
+
+Second-pass self-review: **PASS within this mixed HTTP failure/retry scope**.
+Checked sequential batch planning, failed-item byte/edit retention, pending
+display order, per-item retry, parent warning clearing, private autosave versus
+publication, request-observation completeness and protected rows. No independent
+agent review. This does not establish server idempotency, post-commit mixed
+failure recovery, cleanup/removal, concurrent modal editing during processing,
+every browser/decoder, real-device or full accessibility acceptance.
+
+Cleared Fetch patterns, disabled Network observation and closed both owned
+test tabs; in-app browser tab inventory was empty. No viewport override or
+destructive action. Existing testuser remains signed in. No deployment rebuild
+was needed; the app remains running on port 32768. User CSS SHA-256 is unchanged
+at `74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+Next: concurrent image-editor interactions during still-image batch processing.
