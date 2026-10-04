@@ -530,6 +530,31 @@ fn reorder_pending_images(
 }
 
 // ── Module-scope async helpers ──────────────────────────────────────────────
+
+#[cfg(any(target_arch = "wasm32", test))]
+#[derive(Default)]
+// One automatic preview per selection batch. Closing it must not invite a
+// later file to reopen it, and an existing editor owns its unconfirmed edits.
+struct GallerySelectionPreview {
+    claimed: bool,
+}
+
+#[cfg(any(target_arch = "wasm32", test))]
+impl GallerySelectionPreview {
+    fn open_first(
+        &mut self,
+        image_id: usize,
+        preview_url: &str,
+        mut editor_url: Signal<Option<String>>,
+        mut editor_image_id: Signal<Option<usize>>,
+    ) {
+        if std::mem::replace(&mut self.claimed, true) || editor_url().is_some() {
+            return;
+        }
+        editor_image_id.set(Some(image_id));
+        editor_url.set(Some(preview_url.to_string()));
+    }
+}
 //
 // Defined at module scope (not as `let upload_all = async move { ... }` inside
 // the component) because `use_effect` re-fires when its signal dependencies
@@ -554,6 +579,7 @@ async fn process_one_file(
     mut error: Signal<Option<String>>,
     mut editor_modal_url: Signal<Option<String>>,
     mut editor_modal_img_id: Signal<Option<usize>>,
+    #[cfg(target_arch = "wasm32")] selection_preview: &mut GallerySelectionPreview,
 ) {
     #[cfg(target_arch = "wasm32")]
     {
@@ -593,10 +619,9 @@ async fn process_one_file(
             uploaded_image: None,
         });
 
-        // Open the preview modal for the newly selected image.
+        // Only the first preview in this batch may open an idle editor.
         if let Some(url) = &preview_url {
-            editor_modal_img_id.set(Some(id));
-            editor_modal_url.set(Some(url.clone()));
+            selection_preview.open_first(id, url, editor_modal_url, editor_modal_img_id);
         }
 
         // Process using the standard compressed path.
@@ -888,6 +913,8 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
     // ── handle_files ─────────────────────────────────────────────────────
     // Shared by the `<input onchange>` and `<div ondrop>` handlers.
     let handle_files = move |files: Vec<dioxus::html::FileData>| async move {
+        #[cfg(target_arch = "wasm32")]
+        let mut selection_preview = GallerySelectionPreview::default();
         let current_count = pending().len();
         let available = available_image_slots(current_count, files.len(), max_images);
         if available < files.len() {
@@ -905,6 +932,8 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                 error,
                 editor_modal_url,
                 editor_modal_img_id,
+                #[cfg(target_arch = "wasm32")]
+                &mut selection_preview,
             )
             .await;
         }
@@ -1243,10 +1272,109 @@ mod tests {
         static PREVIEW_REVOCATIONS: std::cell::RefCell<Vec<String>> = const {
             std::cell::RefCell::new(Vec::new())
         };
+        static SELECTION_PREVIEWS: std::cell::RefCell<Vec<(Option<String>, Option<usize>)>> = const {
+            std::cell::RefCell::new(Vec::new())
+        };
+        static SELECTION_EDIT_ROTATIONS: std::cell::RefCell<Vec<f64>> = const {
+            std::cell::RefCell::new(Vec::new())
+        };
     }
 
     fn record_preview_revocation(url: &str) {
         PREVIEW_REVOCATIONS.with(|events| events.borrow_mut().push(url.to_string()));
+    }
+
+    fn record_selection_preview(url: Signal<Option<String>>, image_id: Signal<Option<usize>>) {
+        SELECTION_PREVIEWS.with(|events| events.borrow_mut().push((url(), image_id())));
+    }
+
+    #[test]
+    fn gallery_batch_keeps_the_first_editor_and_applies_its_edit_to_the_same_image() {
+        SELECTION_PREVIEWS.with(|events| events.borrow_mut().clear());
+        SELECTION_EDIT_ROTATIONS.with(|events| events.borrow_mut().clear());
+        let mut dom = VirtualDom::new(|| {
+            let editor_url = use_signal(|| None);
+            let editor_image_id = use_signal(|| None);
+            let mut selection = GallerySelectionPreview::default();
+            selection.open_first(0, "blob:first", editor_url, editor_image_id);
+            selection.open_first(1, "blob:second", editor_url, editor_image_id);
+            record_selection_preview(editor_url, editor_image_id);
+            let mut gallery = vec![
+                pending_image_with_uploaded_url(0, None),
+                pending_image_with_uploaded_url(1, None),
+            ];
+            let mut edit = RecipeImageEdit::default_rect_16x9();
+            edit.transform.rotation = 17.0;
+            apply_gallery_edit(&mut gallery, editor_image_id().unwrap(), edit);
+            SELECTION_EDIT_ROTATIONS.with(|rotations| {
+                *rotations.borrow_mut() = gallery
+                    .iter()
+                    .map(|image| image.edit.transform.rotation)
+                    .collect();
+            });
+            rsx! { div { "Batch edit identity" } }
+        });
+        dom.rebuild_in_place();
+        // Assert outside rendering: Dioxus catches component panics at its error boundary.
+        SELECTION_PREVIEWS.with(|events| {
+            assert_eq!(*events.borrow(), vec![(Some("blob:first".into()), Some(0))]);
+        });
+        SELECTION_EDIT_ROTATIONS.with(|rotations| assert_eq!(*rotations.borrow(), vec![17.0, 0.0]));
+    }
+
+    #[test]
+    fn gallery_batch_does_not_reopen_an_editor_closed_during_processing() {
+        SELECTION_PREVIEWS.with(|events| events.borrow_mut().clear());
+        let mut dom = VirtualDom::new(|| {
+            let mut editor_url = use_signal(|| None);
+            let mut editor_image_id = use_signal(|| None);
+            let mut selection = GallerySelectionPreview::default();
+            selection.open_first(0, "blob:first", editor_url, editor_image_id);
+            editor_url.set(None);
+            editor_image_id.set(None);
+            selection.open_first(1, "blob:second", editor_url, editor_image_id);
+            record_selection_preview(editor_url, editor_image_id);
+            // A deliberate new selection can open its own first preview.
+            GallerySelectionPreview::default().open_first(
+                2,
+                "blob:new-batch",
+                editor_url,
+                editor_image_id,
+            );
+            record_selection_preview(editor_url, editor_image_id);
+            rsx! { div { "Closed batch preview" } }
+        });
+        dom.rebuild_in_place();
+        SELECTION_PREVIEWS.with(|events| {
+            assert_eq!(
+                *events.borrow(),
+                vec![(None, None), (Some("blob:new-batch".into()), Some(2))]
+            );
+        });
+    }
+
+    #[test]
+    fn gallery_batch_never_replaces_an_already_open_editor() {
+        SELECTION_PREVIEWS.with(|events| events.borrow_mut().clear());
+        let mut dom = VirtualDom::new(|| {
+            let mut editor_url = use_signal(|| Some("saved-full.webp".to_string()));
+            let mut editor_image_id = use_signal(|| Some(9));
+            let mut selection = GallerySelectionPreview::default();
+            selection.open_first(0, "blob:first", editor_url, editor_image_id);
+            record_selection_preview(editor_url, editor_image_id);
+            editor_url.set(None);
+            editor_image_id.set(None);
+            selection.open_first(1, "blob:second", editor_url, editor_image_id);
+            record_selection_preview(editor_url, editor_image_id);
+            rsx! { div { "Existing editor ownership" } }
+        });
+        dom.rebuild_in_place();
+        SELECTION_PREVIEWS.with(|events| {
+            assert_eq!(
+                *events.borrow(),
+                vec![(Some("saved-full.webp".into()), Some(9)), (None, None)]
+            );
+        });
     }
 
     #[test]
