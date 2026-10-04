@@ -8759,3 +8759,95 @@ The app remains running on port 32768. Next: overlapping gallery selections
 and ordering during still-image processing. Whole-app/device/accessibility
 acceptance, cleanup and other identity races remain open; animation handling
 is out of scope and dark-mode redesign deferred.
+
+## Overlapping gallery selection ordering
+
+On 2026-10-04, reproduced an ordering defect in the running deployment using
+the real multiple-file chooser and synthetic PNG, JPEG and WebP inputs. Held
+the first native encoder callback, selected PNG/JPEG together, closed the
+automatic editor, then selected WebP before releasing the callback. The final
+gallery displayed PNG, WebP, JPEG rather than PNG, JPEG, WebP. All three files
+were valid; this was admission-order interleaving, not a failed upload.
+
+Commit `9cd5631` validates and prepares the entire selection synchronously,
+then appends all Processing placeholders with stable IDs before the first
+encoding await. Later selections append after these reserved rows. Encoding
+still proceeds sequentially within each batch and completes by stable ID, so
+manual reordering and edits made before encoding starts are retained. Queued
+rows also keep parent save controls busy and count against gallery capacity.
+Removed queued rows are skipped rather than processed or reinserted. No
+server upload, persistence contract, theme or artwork change was introduced.
+
+Added two native regression tests for contiguous batch IDs/order, capacity,
+pending counts, empty admission and preservation of existing order/edits.
+The tests were added before the helper implementation; the recorded red run
+failed compilation because the admission helper did not yet exist. The
+pre-fix browser reproduction supplies the behavioral failure evidence; this
+is not a claim that the old implementation ran and failed those unit assertions.
+Assertions execute directly in test functions, outside Dioxus rendering.
+
+Rebuilt and restarted only the existing port-32768 deployment. With browser
+cache disabled, Network observation confirmed a fresh WASM response, HTTP 200
+and `fromDiskCache=false`. Repeated the overlapping picker sequence:
+
+- Both PNG/JPEG placeholders appeared before the first encoder returned;
+  Publish was disabled while processing. Final order was PNG, JPEG, WebP,
+  each Ready exactly once.
+- The newer WebP editor retained an unconfirmed 31° adjustment while the older
+  batch finished. Confirming and reopening WebP showed 31°.
+- In a fresh blank form, moved the queued JPEG before PNG and confirmed 23°
+  before its encoding began. An overlapping selection skipped TXT, marked a
+  corrupt PNG failed with safe feedback, and processed a valid WebP. The final
+  order remained JPEG, PNG, corrupt PNG, WebP. The failed editor closed without
+  reopening for the later valid file.
+- Reopening JPEG showed 23°; PNG and WebP remained 0°. Three valid images were
+  Ready and controls recovered after processing. No Remove, Save, Publish or
+  meaningful recipe-title action was taken.
+
+Protected full-row hashes match before and after both blank-form checks:
+
+| Protected rows | Count | MD5 |
+| --- | --- | --- |
+| All drafts | 12 | `c9c7c1956760ac85f6307e8e57adfc99` |
+| Recipes | 36 | `ff40ea68a91ad2b0ea54e5af5a1917fe` |
+| Collections | 45 | `89ce0d4ee260e3c08adacdd07ac083e9` |
+| Users | 3 | `5a84bb5b8604af4e42e6340240f575ea` |
+
+Media record count remained 50; no image was uploaded by this check. This
+count alone is not evidence about background orphan cleanup or object deletion.
+
+Validation used the existing integration target cache:
+
+```bash
+SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration>/target cargo test --features server image_upload::tests -- --test-threads=1
+SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration>/target cargo check --target wasm32-unknown-unknown
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration>/target just ci
+SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration>/target cargo clippy --target wasm32-unknown-unknown -- -D warnings
+```
+
+Focused tests: **55 passed, 0 failed**. Full CI: **1014 passed, 0 failed,
+12 ignored**, with all compilation, lint, schema, security and artifact gates
+passing and eight existing allowed advisory warnings. Final WASM Clippy passed
+after the second-pass refinement that avoids scanning the whole pending gallery
+once per admitted image. Logs: `/tmp/noms-020-overlap-{red,focused,wasm,ci,final-wasm,build}.log`.
+Browser screenshots: `/tmp/noms-020-overlapping-selection-before.png`,
+`/tmp/noms-020-overlapping-selection-after.png` (visually inspected), and
+`/tmp/noms-020-overlapping-selection-reordered-edit.png`.
+
+Second-pass self-review: **PASS for overlapping gallery admission**. Reviewed
+synchronous reservation, stable completion identity, manual order/edit isolation,
+capacity/busy behavior, preview ownership, rejected inputs, removed-row guards,
+test assertion placement and both compilation targets. One indivisible runtime
+fix/test commit is followed by a separate acceptance-documentation commit. No
+independent agent review was performed. Browser callbacks/cache settings were
+restored, diagnostics removed, Network disabled and the owned tab closed.
+Preserved user CSS exactly at SHA-256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`
+after removing only the build-generated grayscale utility. The app remains
+running on port 32768.
+
+These are picker-based browser checks of the shared admission path, not native
+drag/drop, real-device touch, every decoder or complete dense-editor sign-off.
+Next: the recorded OAuth/profile display-name length mismatch, followed by
+the remaining acceptance gates. Animation handling stays out of scope and
+dark-mode redesign remains deferred.
