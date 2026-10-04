@@ -8574,3 +8574,97 @@ destructive action. Existing testuser remains signed in. No deployment rebuild
 was needed; the app remains running on port 32768. User CSS SHA-256 is unchanged
 at `74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
 Next: concurrent image-editor interactions during still-image batch processing.
+
+## Active image editor ownership during gallery batch processing
+
+On 2026-10-04, a blank new-recipe form reproduced a real gallery defect. A
+temporary canvas diagnostic held the first native encoder result while the
+first image's editor was open. Entered 17° without confirming it, then restored
+the encoder and delivered its actual result. When the next selected file
+started, the modal switched images and reset rotation to 0°. Reopening the
+first image confirmed that the unconfirmed adjustment was lost. No recipe
+title, upload, publication or destructive action was submitted.
+
+`c3616b4` adds a preview-ownership claim scoped to each file-selection batch.
+Only its first available preview may open an idle editor. Subsequent files
+cannot replace the active URL/image ID, even if the user closes or confirms
+that preview before processing ends. A previously open editor also retains
+ownership; a later deliberate selection can open a new preview when idle.
+Skipped inputs do not consume the preview claim. Processing, admission,
+selection order, stored bytes, upload/retry and existing edit application are
+unchanged. The shared component serves both recipe editors and collection
+covers; this browser walkthrough exercised the new-recipe route.
+
+Three native signal regressions failed with the extracted original behavior:
+active editor/image identity, closure during processing, and an already open
+editor. They pass after the fix. Assertions run outside the VirtualDom render
+because Dioxus catches component panics; an initial harness asserted inside
+render and falsely reported success, so it was corrected before the recorded
+red run. The edit-identity test also checks that 17° applies to the first
+pending image while the second remains at 0°.
+
+Rebuilt and restarted only the existing deployment on port 32768. Its first
+browser run still showed the previous behavior. Disabled browser caching,
+reloaded normally, and observed the actual WASM HTTP 200 response with
+`fromDiskCache=false` before repeating the walkthrough. The uncached rebuilt
+runtime passed these checks using the real file chooser and native controls:
+
+- Held the first encoder result for two valid files, entered 17°, and released
+  the result. Both images became Ready without switching the modal or resetting
+  rotation. Confirmed it, reopened the first image at 17°, then reopened the
+  second at 0°.
+- Selected three valid files, held the first result, entered 23° and closed
+  the editor. After release all three became Ready, the modal stayed closed,
+  and Publish re-enabled. Manually reopening the first image showed 0°;
+  cancelled edits did not leak into it.
+- Selected unsupported TXT followed by PNG and JPEG. The TXT was skipped;
+  the first valid image opened its editor. Confirmed 29° while its processing
+  result was still held. After release both images became Ready without
+  reopening the editor; manually reopening the first retained 29°.
+
+The diagnostic delays a real native callback, not a fabricated processed
+image, and every held callback was delivered before its processing deadline.
+Removed all wrappers after each test. This is controlled timing coverage, not
+proof of all natural decoder timing, overlapping selections, drag/drop, touch
+or screen-reader behavior. Network observations across reloads were truncated
+(`54 → 1641`, `truncated=true`); they do not support a complete no-request
+claim. SQL confirms all durable content rows remained unchanged and the media
+count stayed 46:
+
+| Protected rows | Count | MD5 |
+| --- | --- | --- |
+| Collections | 45 | `89ce0d4ee260e3c08adacdd07ac083e9` |
+| Users | 3 | `5a84bb5b8604af4e42e6340240f575ea` |
+| Recipes | 36 | `ff40ea68a91ad2b0ea54e5af5a1917fe` |
+| Drafts | 12 | `c2ebc1b251de67ccb11264463c2786f4` |
+| Published versions | 71 | `f5dcc0816a77295b76897942a28866fd` |
+
+Validation commands from the existing isolated checkpoint worktree:
+
+```sh
+SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration>/target cargo test --features server gallery_batch_ -- --test-threads=1
+SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration>/target cargo test --features server image_upload::tests -- --test-threads=1
+SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration>/target cargo check --target wasm32-unknown-unknown
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration>/target just ci
+```
+
+Recorded red run: three failed for the intended selection mismatches. Final
+focused run: **53 passed, 0 failed**. Full CI: **1012 passed, 0 failed,
+12 ignored**, all compile/lint/schema/security gates and eight existing allowed
+advisory warnings. Logs `/tmp/noms-020-batch-editor-{red,green,wasm,ci,build}.log`.
+Screenshot `/tmp/noms-020-batch-editor-retained.png` was visually inspected;
+`/tmp/noms-020-batch-editor-confirmed-early.png` captures the reopened 29° edit.
+The pre-fix screenshot is `/tmp/noms-020-batch-editor-before-fix.png`.
+
+Second-pass self-review: **PASS within this active batch-editor scope**.
+Reviewed lifetime of the batch claim, existing editor ownership, disabled
+parent controls, preserved pending identity/edit data, skipped-file admission,
+assertion placement, native versus WASM coverage and browser cache limitations.
+No independent agent review. Restored cache behavior, disabled Network capture,
+removed diagnostics and closed owned tabs; in-app browser inventory was empty.
+No viewport override or content deletion. Removed only regenerated grayscale
+CSS to preserve user changes, restoring SHA-256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+The app remains running. Next: mixed still-image batches with a lost upload
+acknowledgement after actual server acceptance. Whole-checkpoint/device
+acceptance stays open; animation handling is excluded and dark redesign deferred.
