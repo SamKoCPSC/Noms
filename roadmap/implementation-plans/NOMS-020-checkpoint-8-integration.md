@@ -8375,3 +8375,122 @@ CSS remained unchanged (SHA-256
 The app remains running. Next: early sharing-selection fix and runtime retest,
 then mixed still-image batches and the remaining checkpoint gates. No
 whole-app, real-device, screen-reader or dark-mode acceptance is implied.
+
+## Collection sharing startup acceptance
+
+On 2026-10-04, `e7fe07d` fixed the earlier controlled startup mismatch. The shared
+Rust visibility component captures its live native selection at mount using
+`HtmlSelectElement`, routes it through the same parsed/disabled/changed-value
+guard as ordinary changes, and marks the actual option selected in SSR HTML.
+A select's `value` attribute alone did not identify the initial browser option.
+No API, account-binding, permission policy or JavaScript implementation change.
+
+Three new native regressions failed on the old implementation: missing mount
+capture registration, missing SSR selected option, and disabled events changing
+sharing. The actual component harness also checks normal changes, explanation
+updates, duplicate suppression and invalid-value rejection. Final self-review
+tightened the SSR assertion to inspect only the selected option's opening tag,
+not subsequent options. Native registration tests do not execute the WASM DOM
+capture; the real browser test below supplies that evidence.
+
+Restarted only the existing test deployment's app/infrastructure containers,
+then rebuilt and restarted its app with the new source. Other instances stayed
+stopped; no container, volume or data deletion. Reused port 32768.
+
+Held the actual HTTP 200 `/wasm/noms_bg.wasm` Fetch response during a fresh
+collection-form reload. Before release, selected Unlisted and entered synthetic
+Unicode text; Create remained disabled. After release, selection, explanation,
+text and enabled submission agreed. Normal Create saved Unlisted, confirmed by
+the detail page and SQL. Normal Edit loaded the same choice and successfully
+reduced the empty fixture to Private. An unsaved nested form separately retained
+an early Public choice and matching explanation after startup and a sibling
+name edit; Cancel returned without creating a child. No Public save was made.
+Complete startup hold intervals: 419 → 587 and 288 → 485, both untruncated with
+`hasMore=false`. No fake success response or cookie injection.
+
+New empty root fixture: `fd292d26-2417-4a95-902e-68017eb9d6ae`; it ends Private,
+with no image, recipe or child. Earlier 44 collection rows retain MD5
+`75600fe85473c49f9b791330731d40f4` (complete JSON rows ordered by ID, excluding
+only the new fixture). Screenshots captured and visually inspected:
+`/tmp/noms-020-sharing-selection-retained.png` shows matching early choice/copy,
+and `/tmp/noms-020-sharing-selection-saved.png` shows the saved Unlisted result
+before the later reduction. The browser connection changed during testing;
+reconnected through the documented inventory and recovered the same test tab.
+
+Validation: `SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration>/target cargo test
+--features server collection_visibility::tests -- --test-threads=1` passed
+4 tests. `PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true
+CARGO_TARGET_DIR=<integration>/target just ci` passed **1009 tests, 0 failed,
+12 ignored**, all compile/lint/schema/security gates and eight existing allowed
+advisory warnings. An initial sandbox run could not lock the advisory cache;
+the first authorized rerun timed out setting up one temporary database
+(`PoolTimedOut`, before that test's assertions) while a deployment build ran.
+Subsequent full runs, including the final strengthened assertion, passed.
+Logs: `/tmp/noms-020-sharing-selection-{red,green,ci,ci-full,ci-retry,ci-final,build}.log`.
+No tests were skipped or weakened to pass.
+
+## Mixed gallery admission and publication blocking
+
+Continued the next scoped gate on 2026-10-04 with unchanged gallery runtime.
+Generated deterministic 160 × 90 synthetic PNG/JPEG/WebP colour blocks and
+corrupt/unsupported text inputs in `/tmp/noms-020-mixed-files.vkPA6N`.
+Used the real multiple-file chooser on a fresh recipe editor, selecting PNG,
+TXT, corrupt PNG, JPEG, SVG and WebP in that order.
+
+The gallery settled as `first.png` Ready, `corrupt.png` Failed, `second.jpg`
+Ready and `third.webp` Ready, retaining relative order around the failure.
+TXT/SVG added no gallery entries. A bounded banner describes the last skipped
+file; the corrupt file retains its own readable decoding error. This is not
+acceptance of a full per-file rejection history. Closed the final valid image's
+automatic editor after processing settled; did not interact with changing
+modals during processing.
+
+Entered only synthetic title, ingredient and method text, keeping Private.
+Publish uploaded the three Ready images but did not publish while the corrupt
+entry remained. Normal private autosave retained the successful images and
+latest text. A second Publish kept the same failure feedback with no additional
+upload/publication request. Complete observation intervals 587 → 624 and
+624 → 624 were untruncated with `hasMore=false`: the first contained three real
+`upload_image` POSTs and one `save_recipe_draft` POST; the second contained none.
+No publication request was observed in either interval.
+
+SQL confirms the new draft `e3bb438b-2d31-49e1-a07a-a613dc048094` has
+`recipe_id=NULL`, `initial_visibility=private`, three images and three draft
+media references. Its assets, in snapshot order:
+`b3717b0e-4e73-4b12-ab7f-f352a4b91800`,
+`c9c3bdb0-d863-41da-8665-eaae3b34c02a`,
+`8e6fdcbb-b108-49e4-9406-3a6a02e32c10`.
+A separate fresh tab loaded the correct title, Private setting and exactly
+three Saved gallery entries. The corrupt pending entry was local, not persisted.
+Screenshot `/tmp/noms-020-mixed-gallery-blocked.png` was visually inspected and
+shows successful uploads, decoding/rejection feedback and the publication guard.
+
+One new private unpublished draft and three media assets were retained;
+media count is 43. No published recipe/version or existing draft was changed.
+Complete-row hashes match the starting baselines:
+
+| Protected rows | Count | MD5 |
+| --- | --- | --- |
+| Earlier collections | 44 | `75600fe85473c49f9b791330731d40f4` |
+| Users | 3 | `5a84bb5b8604af4e42e6340240f575ea` |
+| Recipes | 36 | `ff40ea68a91ad2b0ea54e5af5a1917fe` |
+| Earlier drafts | 11 | `a225a68a23cf7a6ae6f296c5fe67a4b6` |
+| Published versions | 71 | `f5dcc0816a77295b76897942a28866fd` |
+| Collection media references | 4 | `3790389dfdb129db42ccfb089e72cac5` |
+
+Second-pass self-review: **PASS for sharing startup and sampled mixed
+admission/publication blocking**. Reviewed selected-option assertions, native
+versus browser coverage, disabled/invalid changes, actual server writes,
+private autosave versus publication, retained failures, bounded request
+observations and protected content. No independent review agent. Mixed HTTP
+upload failures, explicit failed-item retry/removal, concurrent modal edits,
+real-device/screen-reader and whole-app sign-off remain open.
+
+Cleared interception, disabled Network observation and closed both owned test
+tabs; browser inventory was empty. No viewport override or destructive action.
+The existing testuser account remains signed in. Removed only the regenerated
+grayscale CSS block to restore the pre-existing user CSS; its SHA-256 remains
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+The app remains running. Next: mixed batches with server-side upload failures
+and explicit recovery, then the remaining checkpoint gates. Animation handling
+is out of scope; dark-mode redesign remains deferred.

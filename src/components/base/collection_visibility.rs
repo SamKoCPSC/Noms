@@ -153,7 +153,8 @@ mod tests {
             let selected_options: Vec<_> = html
                 .split("<option")
                 .skip(1)
-                .filter(|option| option.split('>').next().unwrap().contains("selected"))
+                .map(|option| option.split('>').next().unwrap())
+                .filter(|option| option.contains("selected"))
                 .collect();
             assert_eq!(
                 selected_options.len(),
