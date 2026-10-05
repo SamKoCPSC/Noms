@@ -144,7 +144,7 @@ fn profile_save_feedback_never_displays_unknown_server_or_transport_details() {
     ] {
         assert_eq!(
             profile_save_feedback(&error),
-            "Could not save your profile. Your entries are kept here; try Save changes again."
+            "Could not confirm the profile save. Your entries are kept here; check your saved profile in another tab before trying Save changes again."
         );
     }
 }

@@ -54,7 +54,7 @@ fn profile_save_feedback(error: &ServerFnError) -> &str {
             _ => {}
         }
     }
-    "Could not save your profile. Your entries are kept here; try Save changes again."
+    "Could not confirm the profile save. Your entries are kept here; check your saved profile in another tab before trying Save changes again."
 }
 
 #[component]
