@@ -9077,3 +9077,111 @@ and acceptance documentation are separate coherent local commits. Rollback is
 a scoped revert of `48d4340`, not a reset over user changes. Remaining packages
 and handoff gates stay open; animation support and dark redesign stay deferred.
 Next: the four named nondestructive mutation outcomes in the bounded queue.
+
+## Nondestructive mutation response loss
+
+Recorded 2026-10-05. The four remaining nondestructive mutation outcomes pass
+within this local acceptance scope. Each test held an actual HTTP 200 response
+after the database confirmed its write, then failed response delivery. These
+are accepted-response-loss checks, not request-stage failures or a real network
+outage. The profile check exposed misleading failure wording; `e11e60f` corrects
+it and passes the rebuilt browser regression. Other runtime behavior is unchanged.
+
+### Environment and test data
+
+Restored the retained local project `noms-c799915fcf93e034` after the computer
+restart. Docker had assigned its old app port to its own Postgres container.
+Recreated only Postgres with fixed port 32769 and its original named data volume,
+restored the app's existing Compose network attachment, and restarted the app on
+32768. Other projects were not changed. A temporary browser navigation block
+cleared on the next normal navigation after recovery; no protection was disabled.
+
+Used the existing synthetic mock account `@cp8-avatar-round-trip-lo-6894`.
+The insert-only transactional fixture
+`scripts/dev-fixtures/noms-020-mutation-response-loss.sql` added one private
+recipe, `19665c93-4719-8fd4-81fd-650e972938cd`, with two synthetic snapshots.
+It refuses replay rather than resetting browser-modified state. No original
+recipe, draft, collection or real profile was used for these writes.
+
+### Browser observations
+
+| Action | Accepted write and lost response | Recovery |
+| --- | --- | --- |
+| Profile Save | Changed only synthetic display name and bio; SQL confirmed both before dropping HTTP 200. | Original wording incorrectly said the save failed. After the fix and an uncached reload, a second accepted Save restored the original name and NULL bio. Dropping its response produced “Could not confirm the profile save” with separate-tab checking guidance. Entries and Save-button focus remained; a separate Settings tab showed the saved values. |
+| Visibility Save | Selected Unlisted on the synthetic recipe; SQL confirmed it before dropping HTTP 200. | Original page retained the selection and announced uncertainty. A separate recipe read showed Unlisted; a normal Save returned it to Private. No Public setting was submitted. |
+| Fork | Exactly one draft was created from source version 2 before dropping HTTP 200. | Original page announced uncertainty and exposed Check your drafts. A separate Dashboard rendered the one private revision-zero draft and its source attribution. No second Fork was submitted after failure. |
+| Restore | Restoring v1 created v3 and changed the synthetic method before dropping HTTP 200. | Original page announced uncertainty and advised checking the current version. A separate read showed v3, its restored method and all three snapshots. Explicit retry from the stale original page created no additional version. A normal restore of v2 then created v4, returning the method without deleting any history. |
+
+For every held response, a forced activation of the aria-disabled pending action
+sent no second request. Response-stage events and complete Network event intervals
+showed one initial write and zero follow-up writes during the pending activation
+and failure handling (`hasMore=false`, `truncated=false`). This proves the sampled
+pending guards and absence of automatic retry, not idempotency of future manual
+Fork attempts. The stale Restore's existing optimistic version guard prevented
+an extra version; its UI continued to use safe generic uncertainty feedback.
+
+An attempted wait for specific “changed” wording after stale Restore did not
+match; inspecting the actual alert and database established the result instead.
+Do not cite that unsuccessful wait as conflict-specific UI copy evidence.
+
+Interception targeted only the four server functions' Fetch/XHR responses.
+Document requests, authentication cookies and other user tabs were not modified.
+Cleared Fetch patterns and cache/Network overrides, signed out the temporary
+synthetic browser session and closed owned tabs after capturing evidence.
+Screenshots: `/tmp/noms-020-response-loss-profile.jpg` and
+`/tmp/noms-020-response-loss-recipe.jpg`. The recipe screenshot deliberately
+shows the stale original page's retained state and recovery messages; the
+independent read and SQL, not its old version badge, establish saved state.
+
+### Validation and integrity
+
+Updated the existing unknown-server/transport feedback regression before changing
+the runtime wording. It failed with the old message, then passed after the fix.
+Known validation/session/account-change handling remains covered unchanged.
+
+```sh
+SQLX_OFFLINE=true cargo test --features server profile_save_feedback_never_displays_unknown_server_or_transport_details -- --test-threads=1
+SQLX_OFFLINE=true cargo test --features server pages::settings::settings_profile::recovery_tests -- --test-threads=1
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true just ci
+```
+
+All runs used the existing integration `CARGO_TARGET_DIR`. Final focused suite:
+**11 passed, 0 failed**. An earlier filter named `settings_recovery_tests` matched
+zero tests and is not validation evidence. Full CI: **1020 passed, 0 failed,
+12 ignored**, with compilation, formatting, Clippy, schema/policy, dependency,
+secret and deployment-artifact gates passing. Eight existing allowed advisory
+warnings remain. Eleven search integrations still require the pinned ParadeDB
+test URL; the storage integration requires its hard-coded MinIO port 9000 and
+bucket. These ignored integrations were not run in this slice.
+Log: `/tmp/noms-020-response-loss-ci.log`.
+
+The explicit `dx build` completed the client bundle, but was interrupted with
+exit 137 when the app was restarted before its server build finished. The
+restarted `dx serve` subsequently compiled the server and served the corrected
+client. The observed new profile message confirms the runtime revision; the
+interrupted build command is not reported as a complete successful build.
+
+Protected ordered JSONB hashes match their pre-write baselines:
+
+| Protected rows | Count | MD5 |
+| --- | ---: | --- |
+| Existing recipes | 36 | ff40ea68a91ad2b0ea54e5af5a1917fe |
+| Existing drafts | 12 | c9c7c1956760ac85f6307e8e57adfc99 |
+| Collections | 45 | 89ce0d4ee260e3c08adacdd07ac083e9 |
+| Other users | 2 | feb16f8275be655bead23d8bc53efbbc |
+| Existing recipe versions | 71 | f5dcc0816a77295b76897942a28866fd |
+
+Retained additions are one private synthetic recipe with four snapshots and one
+private unpublished fork draft, `1a1cceb6-2ad3-4172-89e7-8001a5c3ba38`. The selected
+synthetic profile's original display name and NULL bio are restored; its write
+timestamp changed, so no full-row restoration claim is made. No upload, Publish,
+Delete, Discard, unlink, avatar removal or account deletion was submitted. Media
+worker activity is outside these content hashes and is not a cleanup acceptance.
+Preserved user-owned CSS, restoring its recorded SHA-256 after removing only the
+known build-generated grayscale rule.
+
+Explicit second-pass self-review: PASS for the bounded fix and observations;
+no independent-agent review. Rollback is a scoped revert of `e11e60f`, not a reset
+over user work. Four executable closeout packages and the separate physical
+device, screen-reader, destructive-action and user acceptance gates remain open.
+Next: still image lifecycle and concurrent structure.
