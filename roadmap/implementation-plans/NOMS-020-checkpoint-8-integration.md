@@ -8851,3 +8851,110 @@ drag/drop, real-device touch, every decoder or complete dense-editor sign-off.
 Next: the recorded OAuth/profile display-name length mismatch, followed by
 the remaining acceptance gates. Animation handling stays out of scope and
 dark-mode redesign remains deferred.
+
+## Profile display name limits and long name layout
+
+On 2026-10-04, verified that Settings blocked a bio save for the existing
+synthetic OAuth profile because its display name exceeded the form's 30-byte
+limit. The earlier recorded counter was 36/30: the name actually contains
+34 Unicode scalar values and 36 UTF-8 bytes. The database already stores
+display names in `VARCHAR(100)`, and OAuth had preserved this name unchanged.
+
+Commit `70690b1` aligns Settings with that existing storage ceiling rather
+than truncating imported names. Shared validation now accepts trimmed names
+of 2–100 Unicode scalar values in the client save handler, Save validity and
+server write boundary. The counter uses the same units; invalid entries retain
+their text, expose `aria-invalid` and a descriptive hint, and cannot save.
+Removed HTML maxlength because its UTF-16 counting would truncate valid emoji
+names differently. Username and bio policies, authentication/account binding,
+OAuth admission, storage schema and existing profile data were not changed.
+This counts scalars like PostgreSQL, not user-perceived grapheme clusters.
+
+Three test-first regressions failed for the old behavior: existing provider
+and 100-character names were rejected, Unicode was measured in bytes, and
+rendered counter/input semantics used 30. Assertions execute outside Dioxus
+rendering. Focused Settings validation passed **41 tests**.
+
+Through normal mock sign-in, used only existing synthetic account
+`89f18aba-5a00-47d1-9d86-ea7330fe9a2c` / `@cp8-avatar-round-trip-lo-6894`.
+Rebuilt the existing deployment and confirmed uncached WASM HTTP 200 with
+`fromDiskCache=false`. The original 34-character name showed 34/100 and could
+save a bio without being shortened. Successful form writes and reloads
+preserved 100 Chinese characters and 100 soup emoji. SQL confirmed the emoji
+name as 100 characters/400 UTF-8 bytes; the browser reported 100 scalars/200
+UTF-16 units. Leading/trailing spaces around the Chinese name were trimmed
+only on the successful save.
+
+A 101-character ASCII entry remained visible with 101/100, corrective hint,
+`aria-invalid=true` and Save marked `aria-disabled=true`. Ordinary automation
+click/press refused this disabled control; a force-click of the still-focusable
+DOM button exercised its actual handler guard without changing page code.
+The complete Network interval had only two GET `/api/user_profile` refreshes,
+no write request (`truncated=false`, `hasMore=false`). One emoji and 101 emoji
+also showed the correct counters and disabled save state. No keyboard-activation
+acceptance is inferred from the refused automation press.
+
+Saving 100 unbroken ASCII characters exposed a related public-profile overflow
+at 320px: document width was 305px but scroll width was 1119px. The heading
+already wrapped; empty-state descriptions containing the name did not.
+Commit `d5b4021` adds wrapping only to public-profile disclosure content. Its
+CSS regression failed before the fix and passed afterward; it is a style
+presence guard, not a browser-layout test. All **9 profile tests** passed.
+After rebuilding, waited for the actual populated profile before checking
+geometry: document client/scroll widths both 320px, each description 216px
+wide with `overflow-wrap:anywhere`. The full screenshot was visually inspected.
+
+Restored the synthetic profile's original 34-character name and NULL bio
+through the normal form, then verified a fresh load and SQL. Username, avatar
+asset `3af9e8ff-9e3f-49b0-8314-20a4fe2dd3f4` and avatar-edit MD5
+`f93c443bacb8c4235d51988ef5c36d21` stayed unchanged. The fixture's update
+timestamp reflects these five successful profile saves; no full-row restoration
+of that fixture is claimed. No account creation, avatar replacement/removal,
+content deletion or direct database mutation occurred. Original account session
+`testuser` / `@user-e13c` was restored through normal mock login.
+
+Protected full-row hashes match before and after:
+
+| Protected rows | Count | MD5 |
+| --- | --- | --- |
+| Users excluding the synthetic profile | 2 | `feb16f8275be655bead23d8bc53efbbc` |
+| All drafts | 12 | `c9c7c1956760ac85f6307e8e57adfc99` |
+| Recipes | 36 | `ff40ea68a91ad2b0ea54e5af5a1917fe` |
+| Collections | 45 | `89ce0d4ee260e3c08adacdd07ac083e9` |
+
+Media record count remained 50; no upload occurred. Normal sign-in session
+metadata changes are not covered by these profile/content hashes.
+
+Validation commands reused the integration target cache:
+
+```bash
+SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration>/target cargo test --features server pages::settings -- --test-threads=4
+SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration>/target cargo test --features server pages::user_profile -- --test-threads=1
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true CARGO_TARGET_DIR=<integration>/target just ci
+```
+
+Final full CI passed **1018 tests, 0 failed, 12 ignored**, including both
+compilation/lint targets, schema, security and artifact gates; eight existing
+allowed advisory warnings remain. The initial run failed one unrelated collection
+test at temporary-database connection with `PoolTimedOut` (1016 passed, one
+failed); its full rerun passed 1017 tests before the additional wrapping
+regression. No test was weakened or skipped. Logs:
+`/tmp/noms-020-profile-name-{red,presentation-red,focused,ci,ci-retry,wrap-red,wrap-green,final-focused,final-ci,build,wrap-build}.log`.
+Screenshots: `/tmp/noms-020-profile-name-{before,preserved,invalid,unicode,restored}.png`
+and `/tmp/noms-020-profile-name-public-mobile-fixed.png`.
+
+Second-pass self-review: **PASS for this name-limit and wrapping scope**.
+Reviewed storage/code-point agreement, trim timing, shared server/client
+validation, minimum/maximum handling, safe legacy/new validation feedback,
+retained invalid text, scoped CSS, test assertion placement, fresh loaded
+browser evidence and fixture restoration. No independent-agent review.
+Separated validation, layout and acceptance documentation into coherent local
+commits. Reset viewport/cache settings, disabled Network and closed the owned
+tab. Preserved unrelated user CSS at SHA-256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`
+after removing only regenerated grayscale CSS. App remains running on port 32768.
+
+Next: reconcile the remaining acceptance gates into a bounded executable list
+and a real-device/screen-reader handoff. This does not close all identity races,
+all profile input policies, physical-device interaction or whole-app sign-off.
+Animation handling stays out of scope and dark-mode redesign remains deferred.
