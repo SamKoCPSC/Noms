@@ -1605,6 +1605,71 @@ mod tests {
             .unwrap()
         }
 
+        /// Hold the token exchange until the test explicitly releases it, rather
+        /// than assuming a fixed delay is long enough for a database mutation.
+        struct GatedGoogleProvider {
+            state: AppState,
+            admitted: std::sync::Arc<tokio::sync::Notify>,
+            release: std::sync::Arc<tokio::sync::Notify>,
+            _userinfo_server: wiremock::MockServer,
+            token_task: tokio::task::JoinHandle<()>,
+        }
+
+        impl Drop for GatedGoogleProvider {
+            fn drop(&mut self) {
+                self.token_task.abort();
+            }
+        }
+
+        async fn gated_google_state(pool: PgPool, email: &str) -> GatedGoogleProvider {
+            let (mut state, userinfo_server) = mock_google_state(pool, email).await;
+            let admitted = std::sync::Arc::new(tokio::sync::Notify::new());
+            let release = std::sync::Arc::new(tokio::sync::Notify::new());
+            let gate = (admitted.clone(), release.clone());
+            let router = axum::Router::new().route(
+                "/token",
+                axum::routing::post(move || {
+                    let (admitted, release) = gate.clone();
+                    async move {
+                        admitted.notify_one();
+                        release.notified().await;
+                        axum::Json(serde_json::json!({
+                            "access_token": "test-access-token",
+                            "token_type": "Bearer"
+                        }))
+                    }
+                }),
+            );
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            state.google_client = state.google_client.set_token_uri(
+                TokenUrl::new(format!("http://{}/token", listener.local_addr().unwrap())).unwrap(),
+            );
+            let token_task = tokio::spawn(async move {
+                axum::serve(listener, router).await.unwrap();
+            });
+            GatedGoogleProvider {
+                state,
+                admitted,
+                release,
+                _userinfo_server: userinfo_server,
+                token_task,
+            }
+        }
+
+        fn response_session_cookie(response: &axum::response::Response) -> cookie::Cookie<'static> {
+            response
+                .headers()
+                .get_all(axum::http::header::SET_COOKIE)
+                .iter()
+                .map(|value| {
+                    cookie::Cookie::parse(value.to_str().unwrap().to_string())
+                        .unwrap()
+                        .into_owned()
+                })
+                .find(|cookie| cookie.name() == session::cookie_name().as_ref())
+                .expect("login response should set the configured session cookie")
+        }
+
         #[tokio::test]
         async fn link_start_requires_valid_session() {
             let (_db, pool) = test_utils::setup_test_db().await;
@@ -2146,6 +2211,214 @@ mod tests {
                 .await
                 .unwrap()
                 .is_none());
+            session::clear_test_secret();
+        }
+
+        #[tokio::test]
+        async fn admitted_link_retains_original_authority_after_session_revocation_and_replacement()
+        {
+            session::set_test_secret("test-secret-32-bytes-long-enough!!");
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let owner = test_user(&pool, "link_owner").await;
+            let replacement = test_user(&pool, "link_replacement").await;
+            let original_token = session::create_session(&pool, owner.id).await.unwrap();
+            let provider = gated_google_state(pool.clone(), &owner.email).await;
+            let state_id = format!("admitted-link-{}", test_utils::uid());
+            insert_callback_state(
+                &pool,
+                &state_id,
+                "google",
+                "/settings/accounts",
+                "test-verifier-minimum-43-characters-long-enough",
+                "link",
+                Some(owner.id),
+            )
+            .await;
+            let callback = callback_route_handler(
+                State(provider.state.clone()),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id.clone(),
+                    code: "valid-code".to_string(),
+                }),
+                add_test_browser_binding(
+                    CookieJar::new().add(session::build_session_cookie(&original_token)),
+                    &state_id,
+                ),
+            );
+            let replace_session = async {
+                provider.admitted.notified().await;
+                assert_eq!(db::count_oauth_accounts(&pool, owner.id).await.unwrap(), 0);
+                session::revoke_session(&pool, &original_token)
+                    .await
+                    .unwrap();
+                let replacement_token = session::create_session(&pool, replacement.id)
+                    .await
+                    .unwrap();
+                provider.release.notify_one();
+                replacement_token
+            };
+            let (response, replacement_token) =
+                tokio::time::timeout(std::time::Duration::from_secs(15), async {
+                    tokio::join!(callback, replace_session)
+                })
+                .await
+                .expect("gated callback should complete");
+
+            // Current authority is fixed at admission, not rechecked after the
+            // provider awaits. Linking never issues a replacement session cookie.
+            assert_eq!(response.status(), StatusCode::SEE_OTHER);
+            assert_eq!(response.headers()["location"], "/settings/accounts");
+            let cookies: Vec<_> = response.headers().get_all("set-cookie").iter().collect();
+            assert_eq!(cookies.len(), 1);
+            let cleared = cookie::Cookie::parse(cookies[0].to_str().unwrap()).unwrap();
+            assert_eq!(cleared.name(), browser_binding_cookie_name(&state_id));
+            assert_eq!(cleared.max_age(), Some(time::Duration::ZERO));
+            assert_eq!(db::count_oauth_accounts(&pool, owner.id).await.unwrap(), 1);
+            assert_eq!(
+                db::count_oauth_accounts(&pool, replacement.id)
+                    .await
+                    .unwrap(),
+                0
+            );
+            assert!(session::verify_session(&pool, &original_token)
+                .await
+                .is_err());
+            assert_eq!(
+                session::verify_session(&pool, &replacement_token)
+                    .await
+                    .unwrap(),
+                replacement.id
+            );
+            assert!(db::delete_auth_state(&pool, &state_id)
+                .await
+                .unwrap()
+                .is_none());
+            session::clear_test_secret();
+        }
+
+        #[tokio::test]
+        async fn competing_guest_logins_issue_independent_sessions_in_response_completion_order() {
+            session::set_test_secret("test-secret-32-bytes-long-enough!!");
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let first_email = format!("delayed-login{}@example.com", test_utils::uid());
+            let second_email = format!("later-login{}@example.com", test_utils::uid());
+            let first = gated_google_state(pool.clone(), &first_email).await;
+            let (second_state, _second_server) =
+                mock_google_state(pool.clone(), &second_email).await;
+            let first_id = format!("delayed-login-{}", test_utils::uid());
+            let second_id = format!("later-login-{}", test_utils::uid());
+            for state_id in [&first_id, &second_id] {
+                insert_callback_state(
+                    &pool,
+                    state_id,
+                    "google",
+                    "/dashboard",
+                    "test-verifier-minimum-43-characters-long-enough",
+                    "login",
+                    None,
+                )
+                .await;
+            }
+            let first_callback = callback_route_handler(
+                State(first.state.clone()),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: first_id.clone(),
+                    code: "first-code".to_string(),
+                }),
+                add_test_browser_binding(CookieJar::new(), &first_id),
+            );
+            let later_login = async {
+                first.admitted.notified().await;
+                let response = callback_route_handler(
+                    State(second_state),
+                    Path("google".to_string()),
+                    Query(CallbackQuery {
+                        state: second_id.clone(),
+                        code: "second-code".to_string(),
+                    }),
+                    add_test_browser_binding(CookieJar::new(), &second_id),
+                )
+                .await;
+                assert_eq!(response.status(), StatusCode::SEE_OTHER);
+                assert!(
+                    session::verify_session(&pool, response_session_cookie(&response).value())
+                        .await
+                        .is_ok()
+                );
+                first.release.notify_one();
+                response
+            };
+            let (first_response, second_response) =
+                tokio::time::timeout(std::time::Duration::from_secs(15), async {
+                    tokio::join!(first_callback, later_login)
+                })
+                .await
+                .expect("competing callbacks should complete");
+            assert_eq!(first_response.status(), StatusCode::SEE_OTHER);
+            let first_cookie = response_session_cookie(&first_response);
+            let second_cookie = response_session_cookie(&second_response);
+            let first_user = session::verify_session(&pool, first_cookie.value())
+                .await
+                .unwrap();
+            let second_user = session::verify_session(&pool, second_cookie.value())
+                .await
+                .unwrap();
+            assert_ne!(first_user, second_user);
+            assert_eq!(
+                db::get_user_by_id(&pool, first_user)
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .email,
+                first_email
+            );
+            assert_eq!(
+                db::get_user_by_id(&pool, second_user)
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .email,
+                second_email
+            );
+
+            // Explicit header-delivery replay, not a claim about native browser
+            // scheduling: the most recently applied cookie determines identity.
+            let jar = CookieJar::new()
+                .add(second_cookie.clone())
+                .add(first_cookie.clone());
+            assert_eq!(
+                session::verify_session(
+                    &pool,
+                    jar.get(session::cookie_name().as_ref()).unwrap().value()
+                )
+                .await
+                .unwrap(),
+                first_user
+            );
+            let jar = jar.add(second_cookie);
+            assert_eq!(
+                session::verify_session(
+                    &pool,
+                    jar.get(session::cookie_name().as_ref()).unwrap().value()
+                )
+                .await
+                .unwrap(),
+                second_user
+            );
+            let sessions: i64 =
+                sqlx::query_scalar("SELECT COUNT(*) FROM sessions WHERE revoked = FALSE")
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap();
+            assert_eq!(sessions, 2);
+            for state_id in [&first_id, &second_id] {
+                assert!(db::delete_auth_state(&pool, state_id)
+                    .await
+                    .unwrap()
+                    .is_none());
+            }
             session::clear_test_secret();
         }
 

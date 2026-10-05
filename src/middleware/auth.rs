@@ -199,6 +199,217 @@ fn redirect_to(location: &str) -> Response<Body> {
 mod tests {
     use super::is_protected_path;
 
+    async fn test_user(pool: &sqlx::PgPool, label: &str) -> crate::db::User {
+        let unique = crate::test_utils::uid();
+        crate::db::insert_user(
+            pool,
+            &format!("{label}_{unique}"),
+            label,
+            &format!("{label}{unique}@example.com"),
+            None,
+        )
+        .await
+        .unwrap()
+    }
+
+    fn identity_router(pool: sqlx::PgPool) -> axum::Router {
+        axum::Router::new()
+            .route(
+                "/dashboard",
+                axum::routing::get(
+                    |axum::Extension(user): axum::Extension<crate::auth::context::AuthUser>| async move {
+                        user.user_id.to_string()
+                    },
+                ),
+            )
+            .layer(axum::middleware::from_fn_with_state(pool, super::handle_auth))
+    }
+
+    fn session_request(token: &str) -> axum::http::Request<axum::body::Body> {
+        axum::http::Request::builder()
+            .uri("/dashboard")
+            .header(
+                "cookie",
+                format!("{}={token}", crate::auth::session::cookie_name()),
+            )
+            .body(axum::body::Body::empty())
+            .unwrap()
+    }
+
+    async fn make_session_refreshable(pool: &sqlx::PgPool, user_id: uuid::Uuid) {
+        sqlx::query(
+            "UPDATE sessions SET expires_at = NOW() + INTERVAL '5 minutes' WHERE user_id = $1",
+        )
+        .bind(user_id)
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn session_revoked_during_downstream_work_emits_no_refresh_cookie() {
+        use crate::auth::session;
+        use tower::ServiceExt;
+
+        session::set_test_secret("test-secret-32-bytes-long-enough!!");
+        let (_db, pool) = crate::test_utils::setup_test_db().await;
+        let owner = test_user(&pool, "pending_refresh").await;
+        let replacement = test_user(&pool, "replacement_refresh").await;
+        let token = session::create_session(&pool, owner.id).await.unwrap();
+        make_session_refreshable(&pool, owner.id).await;
+        assert!(session::should_refresh(&pool, &token).await.unwrap());
+
+        let admitted = std::sync::Arc::new(tokio::sync::Notify::new());
+        let release = std::sync::Arc::new(tokio::sync::Notify::new());
+        let gate = (admitted.clone(), release.clone());
+        let router = axum::Router::new()
+            .route(
+                "/dashboard",
+                axum::routing::get(
+                    move |axum::Extension(user): axum::Extension<
+                        crate::auth::context::AuthUser,
+                    >| {
+                        let (admitted, release) = gate.clone();
+                        async move {
+                            admitted.notify_one();
+                            release.notified().await;
+                            user.user_id.to_string()
+                        }
+                    },
+                ),
+            )
+            .layer(axum::middleware::from_fn_with_state(
+                pool.clone(),
+                super::handle_auth,
+            ));
+        let pending = router.oneshot(session_request(&token));
+        let revoke = async {
+            admitted.notified().await;
+            session::revoke_session(&pool, &token).await.unwrap();
+            let replacement_token = session::create_session(&pool, replacement.id)
+                .await
+                .unwrap();
+            release.notify_one();
+            replacement_token
+        };
+        let (response, replacement_token) =
+            tokio::time::timeout(std::time::Duration::from_secs(15), async {
+                tokio::join!(pending, revoke)
+            })
+            .await
+            .expect("pending request should complete");
+        let response = response.unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+        assert!(!response.headers().contains_key("set-cookie"));
+        let body = axum::body::to_bytes(response.into_body(), 128)
+            .await
+            .unwrap();
+        assert_eq!(body.as_ref(), owner.id.to_string().as_bytes());
+        assert!(session::verify_session(&pool, &token).await.is_err());
+        assert_eq!(
+            session::verify_session(&pool, &replacement_token)
+                .await
+                .unwrap(),
+            replacement.id
+        );
+        session::clear_test_secret();
+    }
+
+    #[tokio::test]
+    async fn delayed_refresh_cookie_can_replace_active_identity_but_cannot_revive_revoked_session()
+    {
+        use crate::auth::session;
+        use tower::ServiceExt;
+
+        session::set_test_secret("test-secret-32-bytes-long-enough!!");
+        let (_db, pool) = crate::test_utils::setup_test_db().await;
+        let original = test_user(&pool, "delivered_refresh").await;
+        let replacement = test_user(&pool, "delivered_replacement").await;
+        let token = session::create_session(&pool, original.id).await.unwrap();
+        make_session_refreshable(&pool, original.id).await;
+        let response = identity_router(pool.clone())
+            .oneshot(session_request(&token))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+        let refresh_cookie = axum_extra::extract::cookie::Cookie::parse(
+            response.headers()["set-cookie"]
+                .to_str()
+                .unwrap()
+                .to_string(),
+        )
+        .unwrap()
+        .into_owned();
+        assert_eq!(refresh_cookie.name(), session::cookie_name().as_ref());
+        assert_eq!(
+            session::verify_session(&pool, refresh_cookie.value())
+                .await
+                .unwrap(),
+            original.id
+        );
+        let replacement_token = session::create_session(&pool, replacement.id)
+            .await
+            .unwrap();
+
+        // Replay delivery of an already generated response after the newer
+        // identity's cookie. No browser scheduler or authentication epoch is modeled.
+        let replacement_cookie = session::build_session_cookie(&replacement_token);
+        let jar = axum_extra::extract::cookie::CookieJar::new()
+            .add(replacement_cookie.clone())
+            .add(refresh_cookie.clone());
+        let response = identity_router(pool.clone())
+            .oneshot(session_request(
+                jar.get(session::cookie_name().as_ref()).unwrap().value(),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), 128)
+            .await
+            .unwrap();
+        assert_eq!(body.as_ref(), original.id.to_string().as_bytes());
+
+        session::revoke_session(&pool, &token).await.unwrap();
+        let jar = axum_extra::extract::cookie::CookieJar::new()
+            .add(replacement_cookie)
+            .add(refresh_cookie.clone());
+        let response = identity_router(pool.clone())
+            .oneshot(session_request(
+                jar.get(session::cookie_name().as_ref()).unwrap().value(),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::FOUND);
+        assert_eq!(
+            response.headers()["location"],
+            "/login?redirect_uri=%2Fdashboard"
+        );
+        assert!(!response.headers().contains_key("set-cookie"));
+        assert!(session::verify_session(&pool, refresh_cookie.value())
+            .await
+            .is_err());
+        assert!(session::refresh_session(&pool, refresh_cookie.value())
+            .await
+            .is_err());
+        assert_eq!(
+            session::verify_session(&pool, &replacement_token)
+                .await
+                .unwrap(),
+            replacement.id
+        );
+        let session_count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM sessions WHERE user_id = $1")
+                .bind(original.id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(
+            session_count, 1,
+            "rolling refresh updates the original row, not a new session"
+        );
+        session::clear_test_secret();
+    }
+
     #[test]
     fn community_home_requires_sign_in_but_the_landing_page_remains_public() {
         assert!(is_protected_path("/home"));
