@@ -9283,3 +9283,113 @@ of `4f8fd79`. Explicit second-pass self-review: PASS within these limits;
 no independent-agent review or physical-device/screen-reader certification.
 Next active work: OAuth response races, with the scheduled cleanup read still
 pending. Four executable packages remain, one waiting on that observation.
+
+## Normal upload cleanup and OAuth response races
+
+Recorded 2026-10-05. The still-image package now has its missing scheduled
+cleanup observation. `a665035` adds four isolated characterization tests for
+existing callback and session response behavior; no production authentication
+change is made. Two executable packages remain: the final rendered route/shared
+component sweep and final automated integration/review. Physical devices,
+screen readers, native activation and user acceptance remain separate gates.
+
+### Normal worker cleanup
+
+The retained unacknowledged asset
+`37c52916-14c5-491d-bb33-ad8688752635` is now `deleted`, with
+`cleanup_checked_at=2026-10-05 08:01:18.574968+00`,
+`deleted_at=2026-10-05 08:01:18.586607+00` and NULL `delete_failure`.
+It has zero references across recipe, recipe-version, draft, collection and
+avatar holders. Read-only HEAD requests to its exact `_full.webp` and
+`_thumb.webp` URLs both return HTTP 404 / `NoSuchKey`.
+
+The three acknowledged assets from the same response-loss test remain
+`retained`, each with one holder reference:
+`41a81f82-3d34-4c82-a46d-260a42b30e00`,
+`cade690d-cb9a-4766-b13e-a501c64227c2` and
+`af1b8989-50b2-4b95-ba21-608236eeacea`. All six full/thumbnail URLs return
+HTTP 200. The private draft's ordered row hash still matches the prior slice.
+This closes cleanup of this specific expired unacknowledged upload, not upload
+idempotency or arbitrary legacy-bucket reconciliation.
+
+No cleanup endpoint, deletion command, expiry change or manual worker tick was
+issued. The observed database timestamps and actual missing objects follow the
+worker's normal cycle after the previously recorded restart. Existing saved
+media receives worker bookkeeping updates; no unchanged media-row hash is
+claimed.
+
+### Callback authority and response ordering
+
+Tests use temporary `pgtemp` databases, synthetic accounts, a local mock
+provider and the actual callback/session middleware implementations. Token
+exchange is held behind an explicit notification gate rather than a sleep.
+The controller revokes/replaces the session or completes another callback
+before releasing the first exchange. JWT values, credentials and browser
+binding secrets are not recorded in evidence.
+
+| Case | Observed current contract |
+| --- | --- |
+| Link admitted as account A; revoke A and establish B before token exchange finishes | The callback still links the provider to A and redirects to Settings. It clears only its transaction cookie, does not issue a session cookie, does not link B, and does not revive A's revoked session. B's session remains valid. This differs from the existing pre-admission revocation test, which rejects before contacting the provider. |
+| Two separately bound guest login callbacks; first exchange held while second finishes | Both callbacks create independent valid sessions. The earlier callback can complete last. Applying its session cookie after the second cookie selects its account; reversing cookie application selects the second account. Both state records are consumed once. No latest-started-login policy exists in this tested path. |
+| Refreshable authenticated request held downstream; revoke A and establish B before it returns | The already admitted handler returns its original A identity, but middleware emits no refresh cookie. A remains invalid and B remains valid. This does not certify arbitrary downstream writes or continuous authorization after admission. |
+| Generate A's real rolling-refresh response, then replay its cookie after B's cookie | If A is still active, the next protected request sees A. If A is revoked first, the same late cookie redirects the next protected request to sign-in; it cannot be verified or refreshed. B's server session remains valid, although the modeled shared cookie has been overwritten. Rolling refresh updates A's existing row rather than creating a new session. |
+
+The callback tests make real HTTP token/user-info requests to the isolated
+provider; the middleware tests make in-process HTTP router requests. Cookie
+application is an explicit header-delivery model, **not** a native browser
+scheduler, physical-device or OS-activation test. The replacement cookie in
+the refresh test is built from a real server-created session, not a second
+full provider exchange; the competing-login test covers two actual exchanges.
+The callback tests do not claim full production-router cookie composition.
+
+These tests characterize existing behavior and pass without a runtime fix.
+They do not approve stronger guarantees by inference. Linking authority is
+checked at admission; revocation while provider work is pending does not cancel
+the admitted link. The last applied valid shared-session cookie can replace a
+newer identity; a late revoked cookie can displace it but cannot restore its old
+authority. Rechecking linking at commit or imposing a latest-intent/session
+generation policy would be an authentication contract change, not visual
+closeout work. Retain that explicit choice for user acceptance rather than
+silently implementing or marking it solved.
+
+### Validation and preservation
+
+```sh
+SQLX_OFFLINE=true cargo test --features server auth::oauth::tests::db_tests -- --test-threads=1
+SQLX_OFFLINE=true cargo test --features server middleware::auth::tests -- --test-threads=1
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true just ci
+```
+
+Used the existing integration `CARGO_TARGET_DIR`. Final focused results:
+**34 OAuth database tests and 7 middleware tests passed**. An initial compile
+failed because a test helper's response type was unqualified; a subsequent
+OAuth run exposed an overlong synthetic username. Corrected only the helper
+type and fixture label, then reran the complete focused suite. These harness
+failures are not production regressions or red-before-fix evidence.
+
+Full CI: **1026 passed, 0 failed, 12 ignored**. Native/WASM checks, formatting,
+Clippy, schema/policy, dependency, secret and deployment-artifact gates pass.
+Eight existing allowed advisory warnings remain. Eleven search integrations
+still require `SEARCH_TEST_DATABASE_URL` backed by the pinned ParadeDB image;
+`storage::tests::test_health_check_success` requires its hard-coded MinIO port
+9000 and bucket. The existing retained storage service is on port 32770; the
+ignored integrations were not run here. Logs:
+`/tmp/noms-020-oauth-response-tests.log`,
+`/tmp/noms-020-refresh-response-tests.log` and
+`/tmp/noms-020-oauth-response-ci.log`.
+
+Live ordered JSONB hashes match the prior slice: recipes 37,
+`78ceaa6c1dff749437c8c544ad0ac69a`; drafts 13,
+`983fa57ed88ddbce4d7d965ea424395d`; collections 45,
+`89ce0d4ee260e3c08adacdd07ac083e9`; users 3,
+`a9f2b2d78d1c9ed376e390c6006609ce`. Auth tests write only to temporary databases,
+not the retained application database. User-owned integration CSS is preserved
+at its recorded SHA-256. No browser account change, content mutation, new upload,
+publication or manual persisted-image deletion was submitted in this slice.
+
+Explicit second-pass self-review: PASS for characterization and the scoped
+cleanup observation, not approval of authentication policy or whole-app
+sign-off. No independent-agent review is claimed. Scoped rollback is a revert
+of test-only `a665035`; documentation is committed separately. The running app
+needs no explicit restart for these tests. Next: final rendered route and
+shared component sweep, with policy/device/accessibility limitations retained.
