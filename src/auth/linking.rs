@@ -10,6 +10,7 @@ use std::ops::DerefMut;
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
+use crate::auth::session;
 use crate::db;
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -77,6 +78,8 @@ pub struct LinkResult {
 pub enum LinkError {
     /// A database error occurred.
     Db(db::DbError),
+    /// The admitting session no longer authorizes this link transaction.
+    Session(session::SessionError),
     /// All attempts to generate a unique username failed.
     UsernameGenerationFailed,
     /// The provider did not return a usable stable subject identifier.
@@ -91,6 +94,7 @@ impl std::fmt::Display for LinkError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LinkError::Db(e) => write!(f, "database error: {e}"),
+            LinkError::Session(e) => write!(f, "linking session: {e}"),
             LinkError::UsernameGenerationFailed => {
                 write!(f, "failed to generate a unique username after all attempts")
             }
@@ -114,6 +118,7 @@ impl std::error::Error for LinkError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             LinkError::Db(e) => Some(e),
+            LinkError::Session(e) => Some(e),
             LinkError::UsernameGenerationFailed => None,
             LinkError::InvalidProviderIdentity => None,
             LinkError::EmailAlreadyInUse => None,
@@ -209,10 +214,14 @@ async fn generate_unique_username(
 
 // ── Main linking function ────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum IdentityResolution {
+// Do not derive Debug: explicit-link resolution contains a session credential.
+#[derive(Clone, Copy)]
+enum IdentityResolution<'a> {
     Login,
-    LinkTo(Uuid),
+    LinkTo {
+        user_id: Uuid,
+        session_token: &'a str,
+    },
 }
 
 /// Resolve a provider identity for an unauthenticated login.
@@ -224,17 +233,21 @@ pub async fn login_or_create(
     resolve_provider_identity(pool, info, IdentityResolution::Login, refresh_token).await
 }
 
-/// Link a provider identity to one explicitly authenticated user.
+/// Link a provider identity while the admitting session still authorizes its user.
 pub async fn link_to_user(
     pool: &PgPool,
     user_id: Uuid,
+    session_token: &str,
     info: OauthUserInfo,
     refresh_token: Option<String>,
 ) -> Result<LinkResult, LinkError> {
     resolve_provider_identity(
         pool,
         info,
-        IdentityResolution::LinkTo(user_id),
+        IdentityResolution::LinkTo {
+            user_id,
+            session_token,
+        },
         refresh_token,
     )
     .await
@@ -243,13 +256,13 @@ pub async fn link_to_user(
 /// Resolve an OAuth identity according to the purpose validated by the callback.
 ///
 /// Runs inside a single atomic transaction:
-/// 0. For `LinkTo(user_id)` → link directly to that user.
+/// 0. For `LinkTo` → lock and revalidate its session, then link to that user.
 /// 1. Existing stable provider identity → update its metadata and return.
 /// 2. Brand-new identity → create a user + OAuth account.
 async fn resolve_provider_identity(
     pool: &PgPool,
     info: OauthUserInfo,
-    resolution: IdentityResolution,
+    resolution: IdentityResolution<'_>,
     refresh_token: Option<String>,
 ) -> Result<LinkResult, LinkError> {
     // Reject unusable subjects before acquiring a connection or beginning any
@@ -278,9 +291,17 @@ async fn resolve_provider_identity(
         .await
         .map_err(db::DbError::Query)?;
 
-    // Linking is bound to the user validated by the OAuth callback. Login never
-    // enters this branch, even if some unrelated session exists in the browser.
-    if let IdentityResolution::LinkTo(user_id) = resolution {
+    // Revalidate only after the provider lock wait, then retain the session
+    // lock through commit. No session lock is held during provider HTTP calls.
+    // Login never enters this branch, even with an unrelated browser session.
+    if let IdentityResolution::LinkTo {
+        user_id,
+        session_token,
+    } = resolution
+    {
+        session::lock_active_session_for_user(&mut tx, session_token, user_id)
+            .await
+            .map_err(LinkError::Session)?;
         let user = db::get_user_by_id(tx.deref_mut(), user_id)
             .await?
             .ok_or(LinkError::Db(db::DbError::Query(sqlx::Error::RowNotFound)))?;
@@ -873,9 +894,12 @@ mod tests {
         .unwrap();
 
         // Now link a GitHub account with the existing user's ID
+        session::set_test_secret("test-secret-32-bytes-long-enough!!");
+        let token = session::create_session(&pool, user.id).await.unwrap();
         let result = link_to_user(
             &pool,
             user.id,
+            &token,
             OauthUserInfo {
                 provider: Provider::GitHub,
                 provider_uid: format!("github-{u}"),
@@ -1006,9 +1030,12 @@ mod tests {
         .unwrap();
 
         // User B attempts to link the same Google account — should error
+        session::set_test_secret("test-secret-32-bytes-long-enough!!");
+        let token = session::create_session(&pool, user_b.id).await.unwrap();
         let result = link_to_user(
             &pool,
             user_b.id,
+            &token,
             OauthUserInfo {
                 provider: Provider::Google,
                 provider_uid: format!("google-conflict-{u}"),
@@ -1082,9 +1109,12 @@ mod tests {
         .unwrap();
 
         // Same user re-links the same provider — should succeed (re-login case)
+        session::set_test_secret("test-secret-32-bytes-long-enough!!");
+        let token = session::create_session(&pool, user.id).await.unwrap();
         let result = link_to_user(
             &pool,
             user.id,
+            &token,
             OauthUserInfo {
                 provider: Provider::Google,
                 provider_uid: format!("google-sameuser-{u}"),
@@ -1101,6 +1131,46 @@ mod tests {
         assert_eq!(result.user_id, user.id);
         assert_eq!(result.oauth_account_id, account.id);
         assert!(!result.is_new_user);
+
+        let before: serde_json::Value = sqlx::query_scalar(
+            "SELECT to_jsonb(account) FROM oauth_accounts account WHERE id = $1",
+        )
+        .bind(account.id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        session::revoke_session(&pool, &token).await.unwrap();
+        let rejected = link_to_user(
+            &pool,
+            user.id,
+            &token,
+            OauthUserInfo {
+                provider: Provider::Google,
+                provider_uid: format!("google-sameuser-{u}"),
+                email: Some(format!("changed{u}@example.com")),
+                email_verified: true,
+                display_name: "Changed Provider Metadata".to_string(),
+                avatar_url: None,
+            },
+            None,
+        )
+        .await;
+        assert!(matches!(
+            rejected,
+            Err(LinkError::Session(session::SessionError::SessionInvalid))
+        ));
+        let after: serde_json::Value = sqlx::query_scalar(
+            "SELECT to_jsonb(account) FROM oauth_accounts account WHERE id = $1",
+        )
+        .bind(account.id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            before, after,
+            "a revoked relink must not update provider metadata"
+        );
+        session::clear_test_secret();
     }
 
     #[tokio::test]
@@ -1143,9 +1213,12 @@ mod tests {
         .unwrap();
 
         // User B attempts to link the same GitHub account — should error
+        session::set_test_secret("test-secret-32-bytes-long-enough!!");
+        let token = session::create_session(&pool, user_b.id).await.unwrap();
         let result = link_to_user(
             &pool,
             user_b.id,
+            &token,
             OauthUserInfo {
                 provider: Provider::GitHub,
                 provider_uid: format!("github-conflict-{u}"),

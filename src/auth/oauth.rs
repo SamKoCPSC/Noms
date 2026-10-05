@@ -806,11 +806,23 @@ async fn callback_inner(
             linking::login_or_create(&state.pool, user_info, refresh_token).await
         }
         CallbackIntent::Link(user_id) => {
-            linking::link_to_user(&state.pool, user_id, user_info, refresh_token).await
+            let token = jar
+                .get(configured_cookie_name.as_ref())
+                .ok_or(OAuthError::LinkSessionRequired)?
+                .value();
+            linking::link_to_user(&state.pool, user_id, token, user_info, refresh_token).await
         }
     };
     let link_result = match link_result {
         Ok(result) => result,
+        Err(linking::LinkError::Session(error)) => {
+            return Err(match error {
+                session::SessionError::InvalidToken
+                | session::SessionError::Expired
+                | session::SessionError::SessionInvalid => OAuthError::LinkSessionRequired,
+                error => OAuthError::SessionError(error.to_string()),
+            });
+        }
         Err(linking::LinkError::AccountAlreadyLinked(provider)) => {
             let redirect_uri = format!(
                 "/settings/accounts?error=account_already_linked&provider={}",
@@ -2215,8 +2227,16 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn admitted_link_retains_original_authority_after_session_revocation_and_replacement()
-        {
+        async fn admitted_link_rejects_session_revocation_before_provider_completion() {
+            assert_admitted_link_rejects_invalidated_session(false).await;
+        }
+
+        #[tokio::test]
+        async fn admitted_link_rejects_session_expiry_before_provider_completion() {
+            assert_admitted_link_rejects_invalidated_session(true).await;
+        }
+
+        async fn assert_admitted_link_rejects_invalidated_session(expire: bool) {
             session::set_test_secret("test-secret-32-bytes-long-enough!!");
             let (_db, pool) = test_utils::setup_test_db().await;
             let owner = test_user(&pool, "link_owner").await;
@@ -2249,9 +2269,14 @@ mod tests {
             let replace_session = async {
                 provider.admitted.notified().await;
                 assert_eq!(db::count_oauth_accounts(&pool, owner.id).await.unwrap(), 0);
-                session::revoke_session(&pool, &original_token)
-                    .await
-                    .unwrap();
+                if expire {
+                    sqlx::query("UPDATE sessions SET expires_at = NOW() - INTERVAL '1 second' WHERE user_id = $1")
+                        .bind(owner.id).execute(&pool).await.unwrap();
+                } else {
+                    session::revoke_session(&pool, &original_token)
+                        .await
+                        .unwrap();
+                }
                 let replacement_token = session::create_session(&pool, replacement.id)
                     .await
                     .unwrap();
@@ -2265,16 +2290,16 @@ mod tests {
                 .await
                 .expect("gated callback should complete");
 
-            // Current authority is fixed at admission, not rechecked after the
-            // provider awaits. Linking never issues a replacement session cookie.
-            assert_eq!(response.status(), StatusCode::SEE_OTHER);
-            assert_eq!(response.headers()["location"], "/settings/accounts");
+            // User-authorized contract change: admission alone is insufficient.
+            // A rejected link must not redirect or overwrite the replacement cookie.
+            assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+            assert!(!response.headers().contains_key("location"));
             let cookies: Vec<_> = response.headers().get_all("set-cookie").iter().collect();
             assert_eq!(cookies.len(), 1);
             let cleared = cookie::Cookie::parse(cookies[0].to_str().unwrap()).unwrap();
             assert_eq!(cleared.name(), browser_binding_cookie_name(&state_id));
             assert_eq!(cleared.max_age(), Some(time::Duration::ZERO));
-            assert_eq!(db::count_oauth_accounts(&pool, owner.id).await.unwrap(), 1);
+            assert_eq!(db::count_oauth_accounts(&pool, owner.id).await.unwrap(), 0);
             assert_eq!(
                 db::count_oauth_accounts(&pool, replacement.id)
                     .await
@@ -2294,6 +2319,74 @@ mod tests {
                 .await
                 .unwrap()
                 .is_none());
+            session::clear_test_secret();
+        }
+
+        #[tokio::test]
+        async fn admitted_link_rechecks_session_after_provider_identity_lock_wait() {
+            session::set_test_secret("test-secret-32-bytes-long-enough!!");
+            let (_db, pool) = test_utils::setup_test_db().await;
+            let owner = test_user(&pool, "locked_link").await;
+            let token = session::create_session(&pool, owner.id).await.unwrap();
+            let (state, _server) = mock_google_state(pool.clone(), &owner.email).await;
+            let state_id = format!("locked-link-{}", test_utils::uid());
+            insert_callback_state(
+                &pool,
+                &state_id,
+                "google",
+                "/settings/accounts",
+                "test-verifier-minimum-43-characters-long-enough",
+                "link",
+                Some(owner.id),
+            )
+            .await;
+            let mut identity_holder = pool.begin().await.unwrap();
+            sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))")
+                .bind(format!("google:subject-{}", owner.email))
+                .execute(&mut *identity_holder)
+                .await
+                .unwrap();
+            let callback = callback_route_handler(
+                State(state),
+                Path("google".to_string()),
+                Query(CallbackQuery {
+                    state: state_id.clone(),
+                    code: "valid-code".to_string(),
+                }),
+                add_test_browser_binding(
+                    CookieJar::new().add(session::build_session_cookie(&token)),
+                    &state_id,
+                ),
+            );
+            let revoke_while_waiting = async {
+                // Observe the actual provider-resolution wait before revoking,
+                // so a check made before that await cannot satisfy this regression.
+                loop {
+                    let waiting: bool = sqlx::query_scalar(
+                        "SELECT EXISTS(SELECT 1 FROM pg_locks WHERE locktype = 'advisory' AND NOT granted AND database = (SELECT oid FROM pg_database WHERE datname = current_database()))"
+                    ).fetch_one(&pool).await.unwrap();
+                    if waiting {
+                        break;
+                    }
+                    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                }
+                session::revoke_session(&pool, &token).await.unwrap();
+                identity_holder.rollback().await.unwrap();
+            };
+            let (response, ()) = tokio::time::timeout(std::time::Duration::from_secs(15), async {
+                tokio::join!(callback, revoke_while_waiting)
+            })
+            .await
+            .expect("link and revocation should serialize without deadlock");
+            assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+            assert!(!response.headers().contains_key("location"));
+            assert_eq!(db::count_oauth_accounts(&pool, owner.id).await.unwrap(), 0);
+            assert!(session::verify_session(&pool, &token).await.is_err());
+            let cookies: Vec<_> = response.headers().get_all("set-cookie").iter().collect();
+            assert_eq!(cookies.len(), 1);
+            let cleared = cookie::Cookie::parse(cookies[0].to_str().unwrap()).unwrap();
+            assert_eq!(cleared.name(), browser_binding_cookie_name(&state_id));
+            assert_eq!(cleared.max_age(), Some(time::Duration::ZERO));
             session::clear_test_secret();
         }
 
@@ -2718,12 +2811,11 @@ mod tests {
             // Verify the session was read correctly
             assert_eq!(existing_user_id, Some(user.id));
 
-            session::clear_test_secret();
-
             // Now link the GitHub identity to the authenticated user.
             let result = linking::link_to_user(
                 &pool,
                 existing_user_id.expect("session user should be present"),
+                &jwt,
                 linking::OauthUserInfo {
                     provider: linking::Provider::GitHub,
                     provider_uid: format!("github-sessionlink-{u}"),
@@ -2736,6 +2828,8 @@ mod tests {
             )
             .await
             .unwrap();
+
+            session::clear_test_secret();
 
             // Should link to the existing user
             assert_eq!(result.user_id, user.id);

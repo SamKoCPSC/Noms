@@ -2639,6 +2639,35 @@ pub async fn get_active_session(
     .map_err(DbError::Query)
 }
 
+/// Lock the user, then the session, until a guarded mutation finishes.
+///
+/// Return the row without an activity predicate: callers must check expiry
+/// against wall-clock time after a lock wait, not the transaction-start time.
+/// User-first ordering matches account deletion; KEY SHARE also protects the
+/// provider insertion's user FK without blocking ordinary profile updates.
+pub async fn lock_session_for_user_mutation(
+    transaction: &mut sqlx::Transaction<'_, Postgres>,
+    session_id: Uuid,
+    expected_user_id: Uuid,
+) -> Result<Option<Session>, DbError> {
+    let user: Option<Uuid> = sqlx::query_scalar("SELECT id FROM users WHERE id = $1 FOR KEY SHARE")
+        .bind(expected_user_id)
+        .fetch_optional(&mut **transaction)
+        .await
+        .map_err(DbError::Query)?;
+    if user.is_none() {
+        return Ok(None);
+    }
+    sqlx::query_as::<_, Session>(
+        "SELECT id, user_id, created_at, expires_at, refreshed_at, revoked
+         FROM sessions WHERE id = $1 FOR UPDATE",
+    )
+    .bind(session_id)
+    .fetch_optional(&mut **transaction)
+    .await
+    .map_err(DbError::Query)
+}
+
 /// Revoke a session by ID. Returns `true` if a row was updated.
 pub async fn revoke_session(
     executor: impl sqlx::Executor<'_, Database = Postgres>,

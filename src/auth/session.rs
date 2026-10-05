@@ -234,6 +234,38 @@ pub async fn verify_session(pool: &PgPool, token: &str) -> Result<Uuid, SessionE
     Ok(session_row.user_id)
 }
 
+/// Authorize a sensitive mutation and hold its admitting session's row lock.
+///
+/// Logout and refresh update the same row, so completed revocation wins before
+/// this lock, while later revocation waits until the mutation commits. Check
+/// both JWT and database expiry after waiting; transaction-start time is stale.
+pub async fn lock_active_session_for_user(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    token: &str,
+    expected_user_id: Uuid,
+) -> Result<(), SessionError> {
+    let secret = read_secret()?;
+    let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
+    validation.validate_exp = false;
+    let claims = decode::<SessionClaims>(token, &DecodingKey::from_secret(&secret), &validation)
+        .map_err(|_| SessionError::InvalidToken)?
+        .claims;
+    if claims.exp < now_secs() as usize {
+        return Err(SessionError::Expired);
+    }
+    let row = crate::db::lock_session_for_user_mutation(transaction, claims.sub, expected_user_id)
+        .await
+        .map_err(|error| SessionError::DbError(error.to_string()))?
+        .ok_or(SessionError::SessionInvalid)?;
+    if claims.exp < now_secs() as usize {
+        return Err(SessionError::Expired);
+    }
+    if row.revoked || row.expires_at <= chrono::Utc::now() || row.user_id != expected_user_id {
+        return Err(SessionError::SessionInvalid);
+    }
+    Ok(())
+}
+
 /// Build an HttpOnly, Secure session cookie from a JWT token.
 ///
 /// The cookie is set to `/`, has `SameSite=Lax`, and a max-age matching
@@ -452,6 +484,226 @@ mod tests {
     }
 
     // ── DB-backed session tests ──────────────────────────────────────────
+
+    #[tokio::test]
+    async fn mutation_session_lock_rejects_wrong_identity_and_inactive_credentials() {
+        with_secret(TEST_SECRET);
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let unique = test_utils::uid();
+        let user = crate::db::insert_user(
+            &pool,
+            &format!("lock_{unique}"),
+            "Lock User",
+            &format!("lock{unique}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+        let other_user = crate::db::insert_user(
+            &pool,
+            &format!("other_lock_{unique}"),
+            "Other Lock User",
+            &format!("other-lock{unique}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+        let token = create_session(&pool, user.id).await.unwrap();
+        let claims = decode::<SessionClaims>(
+            &token,
+            &DecodingKey::from_secret(TEST_SECRET.as_bytes()),
+            &Validation::new(jsonwebtoken::Algorithm::HS256),
+        )
+        .unwrap()
+        .claims;
+        let expired_token = encode(
+            &Header::default(),
+            &SessionClaims {
+                sub: claims.sub,
+                exp: now_secs() as usize - 1,
+                iat: 0,
+            },
+            &EncodingKey::from_secret(TEST_SECRET.as_bytes()),
+        )
+        .unwrap();
+        let missing_token = encode(
+            &Header::default(),
+            &SessionClaims {
+                sub: Uuid::new_v4(),
+                exp: claims.exp,
+                iat: claims.iat,
+            },
+            &EncodingKey::from_secret(TEST_SECRET.as_bytes()),
+        )
+        .unwrap();
+        let invalid_signature = encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(b"different-signing-secret"),
+        )
+        .unwrap();
+        for (credential, expected_user, expected_error) in [
+            (token.as_str(), other_user.id, SessionError::SessionInvalid),
+            (expired_token.as_str(), user.id, SessionError::Expired),
+            (
+                missing_token.as_str(),
+                user.id,
+                SessionError::SessionInvalid,
+            ),
+            (
+                invalid_signature.as_str(),
+                user.id,
+                SessionError::InvalidToken,
+            ),
+            ("not-a-token", user.id, SessionError::InvalidToken),
+        ] {
+            let mut transaction = pool.begin().await.unwrap();
+            assert_eq!(
+                lock_active_session_for_user(&mut transaction, credential, expected_user).await,
+                Err(expected_error),
+            );
+            transaction.rollback().await.unwrap();
+        }
+        let mut transaction = pool.begin().await.unwrap();
+        lock_active_session_for_user(&mut transaction, &token, user.id)
+            .await
+            .unwrap();
+        transaction.commit().await.unwrap();
+        revoke_session(&pool, &token).await.unwrap();
+        let mut transaction = pool.begin().await.unwrap();
+        assert_eq!(
+            lock_active_session_for_user(&mut transaction, &token, user.id).await,
+            Err(SessionError::SessionInvalid)
+        );
+        transaction.rollback().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn mutation_session_lock_serializes_revocation_until_transaction_completion() {
+        with_secret(TEST_SECRET);
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let unique = test_utils::uid();
+        let user = crate::db::insert_user(
+            &pool,
+            &format!("serial_{unique}"),
+            "Serial User",
+            &format!("serial{unique}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+        let token = create_session(&pool, user.id).await.unwrap();
+        let claims = decode::<SessionClaims>(
+            &token,
+            &DecodingKey::from_secret(TEST_SECRET.as_bytes()),
+            &Validation::new(jsonwebtoken::Algorithm::HS256),
+        )
+        .unwrap()
+        .claims;
+        let mut transaction = pool.begin().await.unwrap();
+        lock_active_session_for_user(&mut transaction, &token, user.id)
+            .await
+            .unwrap();
+        let mut revoker = pool.acquire().await.unwrap();
+        let revoker_pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
+            .fetch_one(&mut *revoker)
+            .await
+            .unwrap();
+        let revoke = crate::db::revoke_session(&mut *revoker, claims.sub);
+        let release = async {
+            loop {
+                let waiting: bool = sqlx::query_scalar(
+                    "SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE pid = $1 AND wait_event_type = 'Lock')"
+                ).bind(revoker_pid).fetch_one(&pool).await.unwrap();
+                if waiting {
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+            // Revocation has actually reached PostgreSQL and is waiting on our
+            // session row; retaining the transaction, not timing, is the guard.
+            assert_eq!(verify_session(&pool, &token).await.unwrap(), user.id);
+            transaction.commit().await.unwrap();
+        };
+        let (revoked, ()) = tokio::time::timeout(std::time::Duration::from_secs(15), async {
+            tokio::join!(revoke, release)
+        })
+        .await
+        .expect("revocation should resume after the guarded transaction commits");
+        assert!(revoked.unwrap());
+        assert_eq!(
+            verify_session(&pool, &token).await,
+            Err(SessionError::SessionInvalid)
+        );
+    }
+
+    #[tokio::test]
+    async fn mutation_session_lock_avoids_user_deletion_foreign_key_deadlock() {
+        with_secret(TEST_SECRET);
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let unique = test_utils::uid();
+        let user = crate::db::insert_user(
+            &pool,
+            &format!("delete_lock_{unique}"),
+            "Delete Lock",
+            &format!("delete-lock{unique}@example.com"),
+            None,
+        )
+        .await
+        .unwrap();
+        let token = create_session(&pool, user.id).await.unwrap();
+        let mut transaction = pool.begin().await.unwrap();
+        lock_active_session_for_user(&mut transaction, &token, user.id)
+            .await
+            .unwrap();
+        let mut deleter = pool.acquire().await.unwrap();
+        let deleter_pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
+            .fetch_one(&mut *deleter)
+            .await
+            .unwrap();
+        let delete = sqlx::query("DELETE FROM users WHERE id = $1")
+            .bind(user.id)
+            .execute(&mut *deleter);
+        let finish_link = async {
+            loop {
+                let waiting: bool = sqlx::query_scalar(
+                    "SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE pid = $1 AND wait_event_type = 'Lock')"
+                ).bind(deleter_pid).fetch_one(&pool).await.unwrap();
+                if waiting {
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+            // Inserting a provider needs a user FK lock. Taking only the session
+            // lock lets deletion lock the user first, creating the reverse order.
+            crate::db::insert_oauth_account(
+                &mut *transaction,
+                user.id,
+                "github",
+                &format!("guard-{unique}"),
+                None,
+                None,
+                None,
+            )
+            .await
+            .expect("guarded linking must not deadlock with a cascading user deletion");
+            transaction.commit().await.unwrap();
+        };
+        let (deleted, ()) = tokio::time::timeout(std::time::Duration::from_secs(15), async {
+            tokio::join!(delete, finish_link)
+        })
+        .await
+        .expect("guarded link and isolated user deletion should finish");
+        assert_eq!(deleted.unwrap().rows_affected(), 1);
+        assert!(crate::db::get_user_by_id(&pool, user.id)
+            .await
+            .unwrap()
+            .is_none());
+        assert_eq!(
+            verify_session(&pool, &token).await,
+            Err(SessionError::SessionInvalid)
+        );
+    }
 
     #[tokio::test]
     async fn create_and_verify_session() {
