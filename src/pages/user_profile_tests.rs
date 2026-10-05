@@ -1,6 +1,34 @@
 use super::*;
 
 #[test]
+fn profile_retry_focus_requires_owned_focus_and_an_active_document() {
+    for retry_requested in [false, true] {
+        for document_has_focus in [false, true] {
+            for body_has_focus in [false, true] {
+                assert_eq!(
+                    profile_retry_should_focus_heading(
+                        retry_requested,
+                        document_has_focus,
+                        body_has_focus,
+                    ),
+                    retry_requested && document_has_focus && body_has_focus,
+                    "retry={retry_requested}, document={document_has_focus}, body={body_has_focus}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn profile_recovery_cancels_focus_transfer_when_the_user_leaves_retry() {
+    let source = include_str!("user_profile.rs");
+    assert!(source.contains("onfocusout: move |_| retry_focus_requested.set(false)"));
+    assert!(source.contains("id: \"public-profile-title\", tabindex: \"-1\""));
+    assert!(source.contains("let restore_retry_focus = *retry_focus_requested.peek();"));
+    assert!(source.contains("document.has_focus().unwrap_or(false)"));
+}
+
+#[test]
 fn profile_disclosure_content_wraps_long_display_names() {
     let css = include_str!("../../assets/user-pages.css");
     let rule = css.split(".user-profile .user-disclosure__body {").nth(1);

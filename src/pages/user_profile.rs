@@ -18,6 +18,15 @@ use crate::Route;
 
 const PAGE_SIZE: i64 = 12;
 
+#[cfg(any(target_arch = "wasm32", test))]
+fn profile_retry_should_focus_heading(
+    retry_requested: bool,
+    document_has_focus: bool,
+    body_has_focus: bool,
+) -> bool {
+    retry_requested && document_has_focus && body_has_focus
+}
+
 #[cfg(test)]
 #[path = "user_profile_tests.rs"]
 mod recovery_tests;
@@ -186,6 +195,7 @@ fn UserProfileContents(username: String) -> Element {
     let uname_profile = username.clone();
     let mut profile = use_resource(move || get_user_profile(uname_profile.clone()));
     let profile_pending = *profile.state().read() == UseResourceState::Pending;
+    let mut retry_focus_requested = use_signal(|| false);
     let mut collection_pages = use_signal(ProfilePageState::<CollectionSummary>::default);
     let mut recipe_pages = use_signal(ProfilePageState::<RecipeCardSummary>::default);
     // Subscribe only to the request ticket. Appending cards or setting a failure
@@ -221,11 +231,21 @@ fn UserProfileContents(username: String) -> Element {
         return rsx! {
             div { class: "container user-profile",
                 h1 { "Profile unavailable" }
-                LoadRecovery {
-                    pending: profile_pending,
-                    message: "This profile couldn’t be loaded. It may be unavailable, or there may be a connection problem.",
-                    retry_label: "Retry profile",
-                    onretry: move |_| { if !profile.pending() { profile.restart(); } },
+                // Leaving Retry cancels the focus handoff, even if the user
+                // later returns to the document body while the read is pending.
+                div {
+                    onfocusout: move |_| retry_focus_requested.set(false),
+                    LoadRecovery {
+                        pending: profile_pending,
+                        message: "This profile couldn’t be loaded. It may be unavailable, or there may be a connection problem.",
+                        retry_label: "Retry profile",
+                        onretry: move |_| {
+                            if !profile.pending() {
+                                retry_focus_requested.set(true);
+                                profile.restart();
+                            }
+                        },
+                    }
                 }
                 Link { to: Route::Explore {}, class: "btn btn-ghost touch-target", "Browse public recipes" }
             }
@@ -247,6 +267,9 @@ fn UserProfileContents(username: String) -> Element {
         };
     };
     let profile_name = public_profile_name(&profile_data).to_string();
+    // Capture before removing the focused recovery control. Consume once on
+    // mount; an ordinary initial load or a different username must not refocus.
+    let restore_retry_focus = *retry_focus_requested.peek();
 
     // Compute recipe count text (pluralization must be outside rsx!)
     let recipe_count_text = if profile_data.public_recipe_count == 1 {
@@ -272,7 +295,30 @@ fn UserProfileContents(username: String) -> Element {
                 }
                 div { class: "user-profile__identity",
                 p { class: "user-page-eyebrow brand-title", PageIcon { kind: PageIconKind::Profile, compact: true } span { "Public profile" } }
-                h1 { class: "profile-name", "{profile_name}" }
+                h1 {
+                    class: "profile-name",
+                    id: "public-profile-title", tabindex: "-1",
+                    onmounted: move |event| async move {
+                        if restore_retry_focus {
+                            retry_focus_requested.set(false);
+                            #[cfg(target_arch = "wasm32")]
+                            if let Some(document) = web_sys::window().and_then(|window| window.document()) {
+                                let body_has_focus = document.active_element()
+                                    .is_some_and(|element| element.tag_name() == "BODY");
+                                if profile_retry_should_focus_heading(
+                                    restore_retry_focus,
+                                    document.has_focus().unwrap_or(false),
+                                    body_has_focus,
+                                ) {
+                                    let _ = event.data().set_focus(true).await;
+                                }
+                            }
+                        }
+                        #[cfg(not(target_arch = "wasm32"))]
+                        let _ = event;
+                    },
+                    "{profile_name}"
+                }
                 p { class: "profile-username", "@{profile_data.username}" }
                 if let Some(ref bio) = profile_data.bio {
                     p { class: "profile-bio", "{bio}" }
