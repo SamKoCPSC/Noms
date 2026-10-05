@@ -8958,3 +8958,122 @@ Next: reconcile the remaining acceptance gates into a bounded executable list
 and a real-device/screen-reader handoff. This does not close all identity races,
 all profile input policies, physical-device interaction or whole-app sign-off.
 Animation handling stays out of scope and dark-mode redesign remains deferred.
+
+## Bounded closeout and public profile recovery focus
+
+On 2026-10-04, consolidated the current acceptance queue in the
+[bounded closeout section](NOMS-020-visual-design-refinement.md#bounded-checkpoint-8-closeout).
+Six concrete work packages replace the generic follow-up queue; the first now
+passes, leaving five executable packages. The original five broad groups remain
+acceptance categories, not five individual tests. Chronological “remaining”
+statements are not reopened when later evidence already covers them. Physical
+devices/native activation, actual screen readers, further destructive outcomes
+and final user acceptance are separate handoffs. No scope deferral or whole-app
+sign-off is inferred from this bookkeeping.
+
+### Reproduction and fix
+
+On baseline `872effb`, a controlled failed public-profile read followed by Enter
+on Retry profile retained button focus while pending, but the actual successful
+response removed that control and left focus on BODY. This reproduces the
+post-success focus gap recorded in the earlier public-profile recovery section.
+An initial heading wait used the wrong spacing; a fresh DOM snapshot supplied
+the actual fixture heading before recording the successful read and lost focus.
+
+Commit `48d4340` adds a route-local focus handoff. Retry arms it; leaving the
+recovery control cancels it. The recovered heading captures the request before
+removing the recovery branch, consumes it once on mount, and focuses only when
+the document is active and the body has focus. Normal loading, later pagination
+and other focused controls do not receive unsolicited focus changes. The heading
+has `tabindex=-1`, preserving ordinary tab order. The implementation is Rust;
+no new JavaScript behavior, shared primitive API, auth/API or storage change.
+
+The focus-policy test first failed for the required true/true/true case; a
+separate source guard first failed for the missing cancellation/heading wiring.
+The policy test covers all eight Boolean combinations. The source guard is not
+a browser focus test; the runtime observations below supply that evidence.
+
+### Existing deployment browser checks
+
+Rebuilt and restarted only `noms-c799915fcf93e034` on port 32768. A new temporary
+in-app tab used the existing public synthetic profile `@cp8profile`, without
+sign-in, content edits or uploads. An uncached reload loaded the new WASM with
+HTTP 200 and `fromDiskCache=false`; the new heading ID confirmed the fix was
+present. The development rebuild toast exists in hidden DOM markup; screenshot
+and native accessibility inspection did not show it as a visible app failure.
+
+- Ordinary initial loading left focus on BODY and rendered 12 public collections
+  and 12 recipes.
+- At 320×720, a failed read exposed safe recovery. Enter kept Retry focused while
+  pending. A repeated failure retained the same focused Retry control and one
+  alert. A subsequent real successful response focused the populated H1
+  `public-profile-title`; document client/scroll widths were both 305px.
+- At 820×1180, a delayed retry completed after the test moved focus to the
+  navigation menu button using its normal keyboard locator. That control stayed
+  focused; no menu opened. Document client/scroll widths were both 805px.
+- In a separate delayed retry, moving away and then clicking the unavailable
+  heading returned focus to BODY. Successful completion still left BODY focused,
+  proving cancellation rather than relying only on the other-control guard.
+- Loading a second collection page afterwards produced 24 cards and retained
+  Load more collections focus; it did not refocus the profile heading.
+
+Read interception targeted only the profile server function's Fetch/XHR requests.
+Browser-managed Document events were observed but not modified. One attempt to
+press Shift+Tab on the aria-disabled pending button was refused by the automation
+adapter and is not keyboard-order evidence; the subsequent focus-movement check
+used the enabled navigation button. All intercepted reads were released or
+failed intentionally, then raw interception was cleared with empty patterns.
+Cache/Network and viewport overrides were reset and the owned tab closed.
+Other user tabs and deployments were not changed.
+
+Visually inspected screenshots:
+`/tmp/noms-020-profile-retry-heading-phone.png` and
+`/tmp/noms-020-profile-retry-retained-focus-tablet.png`. These show the recovered
+heading and retained menu focus; they do not certify screen-reader speech or
+physical devices.
+
+### Validation and integrity
+
+Commands used the existing integration target directory and `SQLX_OFFLINE=true`:
+
+```sh
+cargo test --features server profile_retry_focus -- --test-threads=1
+cargo test --features server profile_recovery_cancels_focus_transfer -- --test-threads=1
+cargo test --features server pages::user_profile -- --test-threads=1
+PGOPTIONS='-c log_min_error_statement=panic' just ci
+```
+
+The first two runs failed before implementation as described above. Final
+profile tests: **11 passed, 0 failed, 0 ignored**. Full CI on the runtime changes:
+**1020 passed, 0 failed, 12 ignored**, with native/WASM compilation and Clippy,
+formatting, schema/policy, secret/artifact and dependency checks passing. Eight
+existing allowed advisory warnings remain. Eleven ignored tests require
+`SEARCH_TEST_DATABASE_URL` backed by pinned ParadeDB; the remaining
+`storage::tests::test_health_check_success` requires its hard-coded local MinIO
+endpoint on port 9000 and test bucket. Neither integration group was freshly
+run in this slice. Logs: `/tmp/noms-020-profile-focus-red.log`,
+`/tmp/noms-020-profile-focus-markup-red.log`,
+`/tmp/noms-020-profile-focus-green.log`, `/tmp/noms-020-profile-focus-ci.log`
+and `/tmp/noms-020-profile-focus-build.log`.
+
+Before/after ordered JSONB hashes match:
+
+| Table | Rows | MD5 of ordered rows |
+| --- | ---: | --- |
+| recipes | 36 | ff40ea68a91ad2b0ea54e5af5a1917fe |
+| recipe_drafts | 12 | c9c7c1956760ac85f6307e8e57adfc99 |
+| collections | 45 | 89ce0d4ee260e3c08adacdd07ac083e9 |
+| users | 3 | 9b2d5be15103571e0dacee345bf94d89 |
+
+Media count stayed 50; this does not establish object cleanup or full-row media
+integrity. No Save, Publish, Fork, Restore, sharing, account mutation or deletion
+was submitted. Preserve the unrelated integration CSS, removing only the known
+build-generated grayscale block to restore SHA-256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+
+Explicit second-pass self-review: PASS for the scoped focus fix, tests, runtime
+observations and bounded planning update; no independent-agent review. The code
+and acceptance documentation are separate coherent local commits. Rollback is
+a scoped revert of `48d4340`, not a reset over user changes. Remaining packages
+and handoff gates stay open; animation support and dark redesign stay deferred.
+Next: the four named nondestructive mutation outcomes in the bounded queue.
