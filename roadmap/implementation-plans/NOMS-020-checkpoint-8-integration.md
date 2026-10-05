@@ -9393,3 +9393,134 @@ sign-off. No independent-agent review is claimed. Scoped rollback is a revert
 of test-only `a665035`; documentation is committed separately. The running app
 needs no explicit restart for these tests. Next: final rendered route and
 shared component sweep, with policy/device/accessibility limitations retained.
+
+## Transactional OAuth linking session revalidation
+
+Recorded 2026-10-05 after the user requested tightening the previously
+characterized auth races. `b855ac9` fixes the pending-link race. The shared
+cookie delivery race is **not** fixed; the broader browser-scoped protocol
+design is the next auth step before final rendered acceptance. Three executable
+packages now remain, because the requested stronger contract reopens the OAuth
+package beyond its previous characterization criteria.
+
+### Changed linking contract
+
+Callback admission still checks the browser-bound OAuth state and matching
+session before provider HTTP work. Linking now also passes that same credential
+to its database transaction. After acquiring the provider-identity advisory
+lock, it locks the expected user with `FOR KEY SHARE`, then the admitting
+session with `FOR UPDATE`. It validates the signature, matching account,
+revocation, JWT expiry and database expiry before entering either the new-link
+or existing-provider metadata branch. The user and session locks remain held
+through commit or rollback; no database lock is held during provider HTTP work.
+
+Completed logout/revocation before the session lock causes HTTP 401, no link
+write and no redirect. Expiry at the guarded boundary also rejects the link.
+JWT expiry is checked before and after the row waits; database expiry is
+compared with current wall-clock time, not the transaction's earlier `NOW()`.
+The callback clears only its OAuth transaction cookie, never another account's
+session cookie. The consumed state remains one-use; retry starts a new flow.
+
+This is serialized authorization, not a promise to cancel a transaction that
+has already acquired the guard. If linking holds the lock first, revocation
+waits for that transaction to finish and then invalidates the session. Once
+revocation completes, it cannot be bypassed by a pending callback. Login and
+rolling-refresh issuance remain otherwise unchanged. No schema migration or
+session-lifetime change is introduced.
+
+### Regressions and review correction
+
+- Replaced the previous post-admission characterization assertion with the
+  explicitly requested stronger contract. Revocation and database expiry while
+  the token exchange was held each reproduced HTTP 303 instead of required 401
+  before the fix. Both now reject, create no provider link and preserve the
+  independent replacement account's valid session.
+- Held the real provider-subject advisory lock, observed the callback's actual
+  PostgreSQL lock wait, completed revocation, then released it. This reproduced
+  the old unauthorized link and now rejects. A standalone session recheck before
+  the advisory wait cannot satisfy this regression.
+- Session guard tests cover a credential for another existing account, expired
+  JWT, missing session row, bad signature, malformed token, revoked session and
+  the active matching success path. A second connection actually blocks on
+  revocation until the guarded transaction commits, then verification rejects.
+- Review identified a reverse lock order with cascading user deletion. The
+  first implementation locked only the session; a new isolated test reproduced
+  PostgreSQL `40P01` when provider insertion needed the user foreign-key lock.
+  Locking the user before the session fixes this. The test observes deletion
+  waiting, completes the provider insertion, then allows deletion to finish.
+  It deletes only a synthetic account inside its temporary test database, not
+  any retained application fixture.
+- Extended the existing same-user relink test: normal relinking succeeds;
+  repeating it with a revoked token rejects and leaves the provider's complete
+  JSONB row unchanged, including its email and last-used timestamp. Existing
+  provider-conflict and login tests still pass. The credential-bearing internal
+  resolution type no longer derives `Debug`.
+
+The callback tests use real local HTTP token/user-info exchanges and temporary
+PostgreSQL databases. The lock-order tests observe actual database waits, not
+fixed timing assumptions. No deployed-browser race, native OS activation or
+independent-agent review is claimed. Source:
+`src/auth/oauth.rs`, `src/auth/linking.rs`, `src/auth/session.rs` and
+`src/db/mod.rs`.
+
+### Validation and retained data
+
+```sh
+SQLX_OFFLINE=true cargo test --features server admitted_link_rejects -- --test-threads=1
+SQLX_OFFLINE=true cargo test --features server admitted_link_rechecks_session_after_provider_identity_lock_wait -- --test-threads=1
+SQLX_OFFLINE=true cargo test --features server mutation_session_lock_avoids_user_deletion_foreign_key_deadlock -- --test-threads=1
+SQLX_OFFLINE=true cargo test --features server auth:: -- --test-threads=1
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true just ci
+```
+
+The first three commands supplied the expected red evidence described above;
+they are not passing validation claims for those revisions. Final focused auth
+suite: **171 passed, 0 failed**. Final CI on the complete runtime/test diff:
+**1031 passed, 0 failed, 12 ignored**. WASM/native checks, formatting, Clippy,
+schema/policy, dependency, secret and deployment-artifact gates pass, with eight
+existing allowed advisory warnings. The eleven pinned-ParadeDB integrations and
+the hard-coded port-9000 MinIO health test were not run. Logs:
+`/tmp/noms-020-link-revalidation-red.log`, `/tmp/noms-020-link-lock-red.log`,
+`/tmp/noms-020-link-lock-order-red.log`,
+`/tmp/noms-020-link-guard-auth-tests.log` and
+`/tmp/noms-020-link-guard-ci.log`. Used the existing integration target directory.
+
+During implementation, compilation also identified an old direct test caller
+missing the new credential argument. A later test addition matched the wrong
+same-shaped assertion block and did not compile; moved it to the intended
+same-user relink test and reran validation. Neither is runtime red evidence.
+Both are corrected in the final passing diff.
+
+The retained deployment was not used for auth mutations. Its content hashes
+match the prior slice: recipes 37, `78ceaa6c1dff749437c8c544ad0ac69a`;
+drafts 13, `983fa57ed88ddbce4d7d965ea424395d`; collections 45,
+`89ce0d4ee260e3c08adacdd07ac083e9`; users 3,
+`a9f2b2d78d1c9ed376e390c6006609ce`. Protected user-owned integration CSS is
+preserved. All mutation/deletion tests use disposable `pgtemp` databases.
+
+Explicit second-pass self-review: PASS for transactional linking. The
+lock-order finding and misleading wrong-user fixture were corrected and
+retested. The remaining cookie race blocks stronger-auth acceptance, not this
+narrow fix's verification. Scoped rollback is a revert of `b855ac9`, including
+its changed characterization assertion and direct caller signatures. Evidence
+and queue changes are committed separately; no production deployment is made.
+
+### Remaining cookie protocol decision
+
+The previous actual callback/middleware characterization still applies to
+competing login and refresh responses. Adding another server check cannot
+withdraw a `Set-Cookie` header already sent. Removing rolling refresh would
+change session behavior without solving competing initial logins; invalidating
+every session for an account would wrongly affect other devices. Neither is an
+accepted shortcut.
+
+Recommended next design: a browser-scoped auth-intent generation, tied to OAuth
+state and logout, with separately named/versioned session credentials so an old
+response cannot overwrite the current credential. Server-side selection must
+honor the current generation and never fall back to an older account after
+logout. Preserve HttpOnly/Secure/SameSite attributes, bounded cookie cleanup,
+rolling expiry, local-instance isolation and other-device independence. Plan
+legacy-cookie migration and both first-login bootstrap and concurrent-tab races
+before coding. This is a proposed protocol direction, **not an implemented or
+fully settled design**. Keep the OAuth package open until the concrete design
+is approved and its login/refresh/logout response-order regressions pass.
