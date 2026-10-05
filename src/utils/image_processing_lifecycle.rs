@@ -140,6 +140,54 @@ mod tests {
     }
 
     #[test]
+    fn resumed_image_wait_prefers_completion_when_both_events_are_ready() {
+        let (complete, operation) = futures_channel::oneshot::channel();
+        let (expire, deadline) = futures_channel::oneshot::channel();
+        let mut wait = Box::pin(wait_for_image_operation(
+            operation,
+            async {
+                let _ = deadline.await;
+            },
+            "Timed out",
+        ));
+        let mut context = Context::from_waker(Waker::noop());
+        assert_eq!(wait.as_mut().poll(&mut context), Poll::Pending);
+
+        // Model a suspended page: neither event is polled until resumption.
+        // A completed encode must win even if its deadline elapsed first.
+        expire.send(()).unwrap();
+        complete.send(42).unwrap();
+        assert_eq!(wait.as_mut().poll(&mut context), Poll::Ready(Ok(Ok(42))));
+    }
+
+    #[test]
+    fn resumed_image_timeout_drops_owner_before_late_completion() {
+        let drops = Rc::new(Cell::new(0));
+        let (owner, receiver) = ImageCompletionOwner::channel();
+        let completion = owner.callback();
+        let (expire, deadline) = futures_channel::oneshot::channel();
+        let mut wait = Box::pin(async move {
+            let result = wait_for_image_operation(
+                receiver,
+                async {
+                    let _ = deadline.await;
+                },
+                "Image encoding timed out",
+            )
+            .await;
+            drop(owner);
+            result
+        });
+        let mut context = Context::from_waker(Waker::noop());
+        assert!(wait.as_mut().poll(&mut context).is_pending());
+        expire.send(()).unwrap();
+        assert!(matches!(wait.as_mut().poll(&mut context),
+            Poll::Ready(Err(message)) if message == "Image encoding timed out"));
+        completion.complete(PendingOperation(drops.clone()));
+        assert_eq!(drops.get(), 1);
+    }
+
+    #[test]
     fn cancelling_image_wait_drops_operation_and_deadline() {
         let drops = Rc::new(Cell::new(0));
         let mut operation = Box::pin(wait_for_image_operation(
