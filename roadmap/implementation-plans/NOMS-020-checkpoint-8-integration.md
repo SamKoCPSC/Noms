@@ -9185,3 +9185,101 @@ no independent-agent review. Rollback is a scoped revert of `e11e60f`, not a res
 over user work. Four executable closeout packages and the separate physical
 device, screen-reader, destructive-action and user acceptance gates remain open.
 Next: still image lifecycle and concurrent structure.
+
+## Resumed image processing and concurrent gallery structure
+
+Recorded 2026-10-05. The paused/resumed pipeline and concurrent gallery
+structure checks pass on the unchanged production runtime. `4f8fd79` adds two
+deterministic regression tests only. The image package remains open solely for
+observation of the retained upload's scheduled cleanup; no cleanup success or
+whole-editor/device acceptance is claimed.
+
+### Browser observations
+
+Used a fresh background in-app tab on the existing deployment, port 32768,
+signed in through the existing mock `testuser` account. Opened a blank New Recipe
+form without entering text, saving or publishing. Rasterized the repository's
+synthetic `image-export-grid.svg` into local PNG, JPEG and WebP fixtures. Temporary
+developer wrappers recorded object URL creation/revocation and held one real
+native canvas encoder callback; they did not replace returned bytes or change
+the pipeline's 30-second deadline.
+
+- After the real encoder produced its result, the wrapper held its delivery
+  while the UI showed Processing. Closed the initial crop dialog, froze the
+  page through `Page.setWebLifecycleState` for 35 seconds, then resumed it.
+  The image showed the encode-timeout message and Publish was re-enabled.
+  Delivering the held callback afterward threw no error and did not change the
+  failed row to Ready. Both temporary URLs had been revoked exactly once.
+- Removed that unsaved failed row, then admitted PNG/JPEG/WebP in one chooser
+  batch while holding the PNG's encode completion. All three rows appeared
+  immediately as Processing; Add Step was disabled. Moved WebP ahead of JPEG
+  with its normal arrow control, then removed the queued JPEG locally.
+- Opened the queued WebP and confirmed a 27° edit. Released the PNG callback.
+  PNG and WebP reached Ready in that order; JPEG did not return. Reopening WebP
+  retained 27°, while PNG retained 0°. This covers stable identity during queue
+  changes, not native dragging, structural step editing or server-side deletion.
+- Before navigation, the two surviving gallery previews were the only live
+  leases. Navigating to Explore released them. Final totals were **7 created,
+  7 revoked, 0 outstanding, 0 duplicate revocations**. No client error logs were
+  captured. Screenshot `/tmp/noms-020-lifecycle-structure.jpg` was inspected and
+  shows both Ready rows with the edit on WebP only.
+
+The complete Network interval ended at cursor 256 with `hasMore=false` and
+`truncated=false`. It contains only Blob reads, profile reads and Explore reads;
+no upload, draft save or publication request. No persisted image was removed.
+Restored the native URL/canvas APIs, active page lifecycle and Network capture,
+signed out and closed the owned tab. Other browser tabs were not changed.
+
+### Scheduled cleanup observation remains open
+
+Read the retained unacknowledged asset
+`37c52916-14c5-491d-bb33-ad8688752635` after its recorded expiry. It remains
+`uncommitted`, with NULL cleanup/deletion timestamps. Read-only HEAD requests to
+its exact full and thumbnail URLs both returned HTTP 200, each 696 bytes. Thus
+neither a reconciled registry state nor actual object removal has been observed.
+
+The configured default interval is 3600 seconds, with no environment override;
+the worker skips its initial immediate tick. The app container was restarted
+at 07:00:19 UTC in the previous slice and no post-restart cleanup cycle has been
+observed in this slice. Historical worker logs are not evidence of a new cycle.
+Do not infer a failed worker merely from this pre-cycle read, change the interval,
+invoke cleanup manually, or issue object/database deletion to close the check.
+A later normal-cycle read must reconcile the registry and actual objects.
+Source: `src/worker/orphan_cleanup.rs`; this is not a cleanup completion claim.
+
+### Automated validation and integrity
+
+The new native tests model resuming with both a completed operation and an elapsed
+deadline, and resuming with only an elapsed deadline followed by a late payload.
+They confirm completion preference in the first case and owner/payload release
+in the second. These tests pass against existing behavior; no red production-fix
+claim is made. Native tests model event readiness, while the actual page freeze
+and browser callback observations above supply runtime evidence.
+
+```sh
+SQLX_OFFLINE=true cargo test --features server utils::image_processing_lifecycle -- --test-threads=1
+SQLX_OFFLINE=true cargo test --features server image_upload::tests -- --test-threads=1
+PGOPTIONS='-c log_min_error_statement=panic' SQLX_OFFLINE=true just ci
+```
+
+Used the existing integration `CARGO_TARGET_DIR`. Lifecycle suite: **9 passed**;
+gallery suite: **55 passed**. Full CI: **1022 passed, 0 failed, 12 ignored**;
+native/WASM compilation, formatting, Clippy, schema/policy, dependency,
+secret/artifact checks pass. Eight existing allowed advisory warnings remain.
+The eleven pinned-ParadeDB search integrations and hard-coded port-9000 MinIO
+integration were not run. Logs: `/tmp/noms-020-lifecycle-resume-tests.log`,
+`/tmp/noms-020-lifecycle-gallery-tests.log`, `/tmp/noms-020-lifecycle-ci.log`.
+
+Before/after ordered JSONB hashes match: recipes 37,
+`78ceaa6c1dff749437c8c544ad0ac69a`; drafts 13,
+`983fa57ed88ddbce4d7d965ea424395d`; collections 45,
+`89ce0d4ee260e3c08adacdd07ac083e9`; users 3,
+`a9f2b2d78d1c9ed376e390c6006609ce`. No persisted content mutation, upload or
+publication was submitted; local queue removal deleted no stored object.
+Preserved user-owned integration CSS at its recorded SHA-256. Tests and evidence
+are separate coherent commits in the existing checkpoint worktree; no new
+runtime deployment is needed for test-only changes. Scoped rollback is a revert
+of `4f8fd79`. Explicit second-pass self-review: PASS within these limits;
+no independent-agent review or physical-device/screen-reader certification.
+Next active work: OAuth response races, with the scheduled cleanup read still
+pending. Four executable packages remain, one waiting on that observation.
