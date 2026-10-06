@@ -22,14 +22,14 @@ use crate::components::base::{
     ActionMenu, AddToCollectionDropdown, Card, EditedRecipeImage, LoadRecovery, LoadingSpinner,
     PageHeader, SharedModal,
 };
-#[cfg(target_arch = "wasm32")]
+#[cfg(any(target_arch = "wasm32", test))]
 use crate::components::base::{Button, ButtonVariant};
 use crate::types::{
     ForkAttribution, Recipe, RecipeEquipment, RecipeIngredient, RecipeLineageBranch,
     RecipeLineageNode, RecipeLineageView, RecipeStep, RecipeVersionChange, RecipeVersionComparison,
     RecipeVersionSummary, RecipeVersionSummaryPage, RecipeVersionView,
 };
-#[cfg(target_arch = "wasm32")]
+#[cfg(any(target_arch = "wasm32", test))]
 use crate::utils::recipe_scaler::{
     format_amount, parse_amount, IngredientRef, ScaleCalculator, ScaleMode, ScaledIngredient,
 };
@@ -598,6 +598,84 @@ mod layout_tests {
     };
     use crate::types::{RecipeLineageBranch, RecipeLineageNode};
     use dioxus::prelude::*;
+
+    #[test]
+    fn expanded_scalers_have_unique_associated_labels_and_distinct_apply_actions() {
+        use dioxus::html::{SerializedHtmlEventConverter, SerializedMouseData};
+        use std::rc::Rc;
+        set_event_converter(Box::new(SerializedHtmlEventConverter));
+        let mut dom = VirtualDom::new(|| {
+            let ingredients = vec![crate::types::RecipeIngredient {
+                amount: "2".into(),
+                unit: "cups".into(),
+                name: "water".into(),
+            }];
+            rsx! {
+                super::RecipeScaler { ingredients: ingredients.clone() }
+                super::RecipeScaler { ingredients }
+            }
+        });
+        let mutations = dom.rebuild_to_vec();
+        let toggles = mutations
+            .edits
+            .iter()
+            .filter_map(|edit| match edit {
+                dioxus_core::Mutation::NewEventListener { name, id } if name == "click" => {
+                    Some(*id)
+                }
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(toggles.len(), 2);
+        for toggle in toggles {
+            dom.runtime().handle_event(
+                "click",
+                Event::new(
+                    Rc::new(PlatformEventData::new(Box::new(
+                        SerializedMouseData::default(),
+                    ))) as Rc<dyn std::any::Any>,
+                    true,
+                ),
+                toggle,
+            );
+        }
+        dom.render_immediate(&mut dioxus_core::NoOpMutations);
+        let html = dioxus_ssr::render(&dom);
+        let control_ids = html
+            .split('<')
+            .filter(|tag| tag.starts_with("input ") || tag.starts_with("select "))
+            .map(|tag| {
+                tag.split("id=\"")
+                    .nth(1)
+                    .expect("scaling control needs an id")
+                    .split('"')
+                    .next()
+                    .unwrap()
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(control_ids.len(), 6, "{html}");
+        assert_eq!(
+            control_ids
+                .iter()
+                .collect::<std::collections::HashSet<_>>()
+                .len(),
+            6
+        );
+        for id in control_ids {
+            assert!(html.contains(&format!("for=\"{id}\"")), "{html}");
+        }
+        assert_eq!(html.matches(" multiplier</span>").count(), 2, "{html}");
+        assert_eq!(
+            html.matches(" ingredient amount</span>").count(),
+            2,
+            "{html}"
+        );
+        assert_eq!(
+            html.matches("Desired ingredient amount</label>").count(),
+            2,
+            "{html}"
+        );
+    }
 
     #[test]
     fn album_without_photos_renders_an_accessible_empty_state() {
@@ -1217,7 +1295,7 @@ fn StepNode(step: RecipeStep, path: Vec<usize>, level: usize) -> Element {
 /// Supports two modes:
 /// - Multiplier: user enters a direct multiplier (e.g. 2x, 0.5x)
 /// - Target Ingredient: user picks an ingredient and desired amount
-#[cfg(target_arch = "wasm32")]
+#[cfg(any(target_arch = "wasm32", test))]
 #[component]
 fn RecipeScaler(
     ingredients: Vec<RecipeIngredient>,
@@ -1226,6 +1304,8 @@ fn RecipeScaler(
     servings: Option<i32>,
 ) -> Element {
     let mut is_expanded = use_signal(|| false);
+    // A recipe view can contain more than one scaler; labels must remain local.
+    let scaler_id = use_hook(|| format!("recipe-scaler-{}", uuid::Uuid::new_v4()));
 
     // Convert RecipeIngredient -> IngredientRef for ScaleCalculator
     let refs: Vec<IngredientRef> = ingredients
@@ -1352,6 +1432,7 @@ fn RecipeScaler(
                     // Mode: Multiplier
                     div {
                         label {
+                            r#for: "{scaler_id}-multiplier",
                             display: "block",
                             font_size: "13px",
                             font_weight: "600",
@@ -1364,6 +1445,7 @@ fn RecipeScaler(
                             gap: "var(--space-sm)",
                             align_items: "center",
                             input {
+                                id: "{scaler_id}-multiplier",
                                 class: "recipe-scaler__input",
                                 r#type: "text",
                                 placeholder: "e.g. 2",
@@ -1374,6 +1456,7 @@ fn RecipeScaler(
                                 variant: ButtonVariant::Primary,
                                 onclick: on_set_multiplier,
                                 "Apply"
+                                span { class: "sr-only", " multiplier" }
                             }
                         }
                         // Presets
@@ -1398,6 +1481,7 @@ fn RecipeScaler(
                     div {
                         margin_top: "var(--space-md)",
                         label {
+                            r#for: "{scaler_id}-ingredient",
                             display: "block",
                             font_size: "13px",
                             font_weight: "600",
@@ -1406,18 +1490,21 @@ fn RecipeScaler(
                             "Or scale by target ingredient"
                         }
                         select {
+                            id: "{scaler_id}-ingredient",
                             class: "recipe-scaler__select",
                             onchange: on_select_ingredient,
                             for (idx, label) in option_labels.iter().enumerate() {
                                 option { value: idx.to_string(), "{label}" }
                             }
                         }
+                        label { r#for: "{scaler_id}-amount", class: "sr-only", "Desired ingredient amount" }
                         div {
                             display: "flex",
                             gap: "var(--space-sm)",
                             align_items: "center",
                             margin_top: "var(--space-xs)",
                             input {
+                                id: "{scaler_id}-amount",
                                 class: "recipe-scaler__input",
                                 r#type: "text",
                                 placeholder: "desired amount",
@@ -1428,6 +1515,7 @@ fn RecipeScaler(
                                 variant: ButtonVariant::Secondary,
                                 onclick: on_set_target,
                                 "Apply"
+                                span { class: "sr-only", " ingredient amount" }
                             }
                         }
                     }
