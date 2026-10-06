@@ -427,6 +427,34 @@ mod tests {
         assert!(!config.hsts_enabled());
     }
 
+    #[tokio::test]
+    async fn production_requests_are_not_canonicalized_as_local_loopback_aliases() {
+        use axum::body::Body;
+        use axum::http::{header, Request, StatusCode};
+        use tower::ServiceExt;
+
+        let mut environment = valid_production_environment();
+        environment.insert("BASE_URL".into(), "https://localhost:32768".into());
+        let config = load(&environment).unwrap();
+        let app = axum::Router::new()
+            .fallback(|| async { "unchanged" })
+            .layer(axum::middleware::from_fn_with_state(
+                config,
+                crate::middleware::local_origin::canonicalize_local_origin,
+            ));
+        let response = app
+            .oneshot(
+                Request::get("/login")
+                    .header(header::HOST, "127.0.0.1:32768")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(!response.headers().contains_key(header::LOCATION));
+    }
+
     #[test]
     fn railway_deployments_cannot_enable_local_security_bypasses() {
         let environment = HashMap::from([

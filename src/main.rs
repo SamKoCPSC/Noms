@@ -210,6 +210,10 @@ async fn build_application_router() -> axum::Router {
     oauth_router
         .merge(dioxus_router)
         .layer(axum::middleware::from_fn_with_state(
+            runtime_config.clone(),
+            middleware::local_origin::canonicalize_local_origin,
+        ))
+        .layer(axum::middleware::from_fn_with_state(
             runtime_config.security_headers(),
             config::security_headers_middleware,
         ))
