@@ -165,6 +165,23 @@ impl RuntimeConfig {
         &self.base_url
     }
 
+    pub(crate) fn local_loopback_origin(&self) -> Option<String> {
+        if self.mode != DeploymentMode::Local {
+            return None;
+        }
+        let base = Url::parse(&self.base_url).expect("validated local BASE_URL");
+        if !matches!(base.host_str(), Some("localhost" | "127.0.0.1" | "[::1]"))
+            || !base.username().is_empty()
+            || base.password().is_some()
+            || base.path() != "/"
+            || base.query().is_some()
+            || base.fragment().is_some()
+        {
+            return None;
+        }
+        Some(base.origin().ascii_serialization())
+    }
+
     pub(crate) fn cookie_domain(&self) -> Option<&str> {
         self.cookie_domain.as_deref()
     }
@@ -436,6 +453,7 @@ mod tests {
         let mut environment = valid_production_environment();
         environment.insert("BASE_URL".into(), "https://localhost:32768".into());
         let config = load(&environment).unwrap();
+        assert!(config.local_loopback_origin().is_none());
         let app = axum::Router::new()
             .fallback(|| async { "unchanged" })
             .layer(axum::middleware::from_fn_with_state(
@@ -453,6 +471,33 @@ mod tests {
             .unwrap();
         assert_eq!(response.status(), StatusCode::OK);
         assert!(!response.headers().contains_key(header::LOCATION));
+    }
+
+    #[test]
+    fn local_origin_hydration_exposes_only_plain_loopback_origins() {
+        for (base, expected) in [
+            ("http://127.0.0.1:32768", Some("http://127.0.0.1:32768")),
+            ("http://localhost:32768/", Some("http://localhost:32768")),
+            ("http://[::1]:32768", Some("http://[::1]:32768")),
+            ("http://dev.example:32768", None),
+            ("http://localhost:32768/path", None),
+            ("http://localhost:32768?query=value", None),
+            ("http://localhost:32768#fragment", None),
+            ("http://username:password@localhost:32768", None),
+        ] {
+            let environment = HashMap::from([
+                ("NOMS_ENV".into(), "local".into()),
+                ("BASE_URL".into(), base.into()),
+            ]);
+            assert_eq!(
+                load(&environment)
+                    .unwrap()
+                    .local_loopback_origin()
+                    .as_deref(),
+                expected,
+                "{base}"
+            );
+        }
     }
 
     #[test]

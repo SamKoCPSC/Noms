@@ -2,6 +2,7 @@
 
 pub mod account_binding;
 pub mod context;
+pub(crate) mod local_origin;
 pub mod redirect;
 pub mod refresh;
 pub mod session_page;

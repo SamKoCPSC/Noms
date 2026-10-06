@@ -209,6 +209,9 @@ async fn build_application_router() -> axum::Router {
 
     oauth_router
         .merge(dioxus_router)
+        .layer(axum::Extension(auth::local_origin::LocalCanonicalOrigin(
+            runtime_config.local_loopback_origin(),
+        )))
         .layer(axum::middleware::from_fn_with_state(
             runtime_config.clone(),
             middleware::local_origin::canonicalize_local_origin,
@@ -482,6 +485,25 @@ fn main() {
 
 #[component]
 fn App() -> Element {
+    // dx serve rewrites Host before proxying to Axum. Hydrate the configured
+    // local origin, not a forwarded header, so the browser can converge too.
+    let local_origin = use_server_cached(auth::local_origin::from_fullstack);
+    provide_context(local_origin.clone());
+    use_effect(move || {
+        #[cfg(target_arch = "wasm32")]
+        if let (Some(canonical), Some(window)) = (&local_origin.0, web_sys::window()) {
+            let location = window.location();
+            if let Ok(current) = location.href() {
+                if let Some(target) =
+                    auth::local_origin::canonical_local_navigation_target(canonical, &current)
+                {
+                    let _ = location.replace(&target);
+                }
+            }
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        let _ = &local_origin;
+    });
     // Provide AuthContext as a signal at the root of the component tree so it's available
     // on both server (SSR) and client (hydration + client-side navigation).
     // We use a signal so we can update the context after fetching user profile.

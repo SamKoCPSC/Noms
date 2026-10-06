@@ -5,7 +5,7 @@ use axum::http::{header, uri::Authority, Method, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Redirect, Response};
 
-use crate::config::{DeploymentMode, RuntimeConfig};
+use crate::config::RuntimeConfig;
 
 pub(crate) async fn canonicalize_local_origin(
     State(config): State<RuntimeConfig>,
@@ -15,26 +15,16 @@ pub(crate) async fn canonicalize_local_origin(
     // Canonicalize before any route can set a host-only session/transaction
     // cookie. Do not change production routing or accept arbitrary Host values
     // as callback origins; OAuth and logout retain the configured BASE_URL.
-    if config.mode() != DeploymentMode::Local {
+    let Some(canonical_origin) = config.local_loopback_origin() else {
         return next.run(request).await;
-    }
-    let base = url::Url::parse(config.base_url()).expect("validated local BASE_URL");
+    };
+    let base = url::Url::parse(&canonical_origin).expect("validated local origin");
     let is_loopback = |host: &str| {
         host.eq_ignore_ascii_case("localhost") || matches!(host, "127.0.0.1" | "[::1]")
     };
     let Some(canonical_host) = base.host_str().filter(|host| is_loopback(host)) else {
         return next.run(request).await;
     };
-    // Local configuration permits URLs with paths, but only a plain origin is
-    // eligible for loopback alias normalization.
-    if !base.username().is_empty()
-        || base.password().is_some()
-        || base.path() != "/"
-        || base.query().is_some()
-        || base.fragment().is_some()
-    {
-        return next.run(request).await;
-    }
     let mut hosts = request.headers().get_all(header::HOST).iter();
     let Some(host) = hosts.next() else {
         return next.run(request).await;

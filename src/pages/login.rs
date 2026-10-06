@@ -14,6 +14,8 @@ const GITHUB_MARK: Asset = asset!("/assets/sign-in/GitHub_Invertocat_Black.svg")
 #[component]
 pub fn Login() -> Element {
     let redirect_uri = use_hook(extract_redirect_uri);
+    let local_origin = try_consume_context::<crate::auth::local_origin::LocalCanonicalOrigin>()
+        .unwrap_or_default();
 
     rsx! {
         document::Link { rel: "stylesheet", href: SIGN_IN_CSS }
@@ -29,7 +31,7 @@ pub fn Login() -> Element {
                 for (provider, label, mark) in [("google", "Google", GOOGLE_MARK), ("github", "GitHub", GITHUB_MARK)] {
                     a {
                         key: "{provider}",
-                        href: oauth_start_url(provider, &redirect_uri),
+                        href: local_origin.on_canonical_origin(&oauth_start_url(provider, &redirect_uri)),
                         class: "btn btn-secondary touch-target sign-in-provider",
                         span { class: "sign-in-provider__icon", aria_hidden: "true",
                             img { src: mark, alt: "", width: "20", height: "20" }
@@ -155,6 +157,24 @@ mod tests {
     use super::*;
     use dioxus::router::components::HistoryProvider;
     use dioxus_core::NoOpMutations;
+
+    #[test]
+    fn local_sign_in_links_use_canonical_origin_before_client_hydration() {
+        fn root() -> Element {
+            use_context_provider(|| {
+                crate::auth::local_origin::LocalCanonicalOrigin(Some(
+                    "http://127.0.0.1:32768".into(),
+                ))
+            });
+            rsx! { LoginTestRoot {} }
+        }
+        let mut dom = VirtualDom::new(root);
+        dom.rebuild(&mut NoOpMutations);
+        let html = dioxus_ssr::render(&dom);
+        for provider in ["google", "github"] {
+            assert!(html.contains(&format!("href=\"http://127.0.0.1:32768/auth/{provider}/start?redirect_uri=%2Fhome&#38;purpose=login\"")), "{html}");
+        }
+    }
 
     #[test]
     fn sign_in_renders_the_painted_brand_mark_as_decorative_artwork() {
