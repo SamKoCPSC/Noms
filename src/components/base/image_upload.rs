@@ -1015,9 +1015,10 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
             }
 
             // One ordered gallery contains persisted and newly selected images.
-            for img in pending().iter() {
+            for (image_index, img) in pending().iter().enumerate() {
                 {
                     let img_id = img.id;
+                    let image_position = image_index + 1;
                     let img_persisted = img.persisted;
                     let img_name = img.name.clone();
                     let img_preview = img.preview_url.as_ref().map(|preview| preview.url.clone());
@@ -1224,6 +1225,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                             button {
                                 r#type: "button",
                                 class: "btn btn-ghost touch-target",
+                                aria_label: "Remove image {image_position}: {img_name}",
                                 disabled: img_status == UploadStatus::Uploading,
                                 onclick: move |_| {
                                     if img_persisted {
@@ -1244,7 +1246,7 @@ pub fn ImageUpload(props: ImageUploadProps) -> Element {
                                         }
                                     }
                                 },
-                                "✕"
+                                span { aria_hidden: "true", "✕" }
                             }
                         }
                     }
@@ -1619,6 +1621,46 @@ mod tests {
             .next()
             .unwrap();
         assert!(source.contains("initial_edit: current_editor_edit"));
+    }
+
+    #[test]
+    fn gallery_remove_buttons_name_each_image_including_unnamed_duplicates() {
+        let mut dom = VirtualDom::new(|| {
+            let images = use_signal(|| {
+                let image = RecipeImage::new(
+                    "full.webp".into(),
+                    None,
+                    RecipeImageEdit::default_rect_16x9(),
+                );
+                vec![
+                    image.clone().with_file_metadata("Soup.png".into(), 1234),
+                    image.clone(),
+                    image,
+                ]
+            });
+            let upload_now = use_signal(|| false);
+            let busy = use_signal(|| false);
+            let pending_count = use_signal(|| 0);
+            let form_account = use_signal(|| None);
+            rsx! { ImageUpload {
+                images, upload_now, busy, pending_count, form_account,
+                purpose: crate::api::upload::UploadPurpose::Recipe,
+                on_remove_existing: |_| {}, on_upload_complete: |_| {},
+            } }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        for name in [
+            "Remove image 1: Soup.png",
+            "Remove image 2: Saved recipe image",
+            "Remove image 3: Saved recipe image",
+        ] {
+            assert_eq!(
+                html.matches(&format!("aria-label=\"{name}\"")).count(),
+                1,
+                "{html}"
+            );
+        }
     }
 
     #[test]
@@ -2317,6 +2359,14 @@ mod tests {
         let after = dioxus_ssr::render(&dom);
         assert!(
             after.find("second.png").unwrap() < after.find("first.png").unwrap(),
+            "{after}"
+        );
+        assert!(
+            after.contains("aria-label=\"Remove image 1: second.png\""),
+            "{after}"
+        );
+        assert!(
+            after.contains("aria-label=\"Remove image 2: first.png\""),
             "{after}"
         );
         let moved_button = after
