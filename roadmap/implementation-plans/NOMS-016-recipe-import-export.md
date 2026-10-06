@@ -1,10 +1,10 @@
 # NOMS-016: Recipe Import & Export — Implementation Plan
 
-**Status:** Discovery in progress — clipboard compatibility spike started
+**Status:** Clipboard import implemented for 15 providers; guided import/editor validation in progress. Export remains planned.
 **Created:** 2026-08-15
 **Depends on:** Current recipe, draft, versioning, collection, and image models
 **Coordination:** NOMS-017 structured metadata must define how imported and exported taxonomy fields are represented.
-**Approach:** Start with user-initiated clipboard import and an editable private-draft preview. Parse pasted HTML and plain text deterministically, refine compatibility for selected recipe-site layouts, and defer NLP and browser-assisted clipping until the simpler workflow is validated. Schema.org remains the preferred contract for later URL import and interoperable export; Noms JSON remains the lossless portability format.
+**Approach:** User-initiated clipboard import opens an editable private draft directly after validation. Parse pasted HTML and plain text deterministically, refine compatibility for selected recipe-site layouts, and defer NLP and browser-assisted clipping until the simpler workflow is validated. Schema.org remains the preferred contract for later URL import and interoperable export; Noms JSON remains the lossless portability format.
 
 ---
 
@@ -17,7 +17,7 @@ Users can bring recipes into Noms without retyping them and can take their recip
 - Import recipe content that a user explicitly copies and pastes from another website, accepting both clipboard HTML and plain text.
 - Parse common recipe headings, metadata, ingredient lists, instruction lists, and sections without requiring NLP.
 - Research representative clipboard output from selected recipe sites and add small source-specific refinements only where the generic parser is insufficient.
-- Present parsed data for review and correction before saving it as a draft.
+- Save a validated import as a private draft only after an explicit Import click; review and correction happen in the existing editor before publication.
 - Preserve source URL and attribution when supplied; imported recipes must default to private.
 - Define clipboard sanitization, parsing, payload-size, remote-resource, and attribution rules.
 - Define a later URL-import path that prioritizes Schema.org `Recipe` JSON-LD and applies safe fetch, timeout, redirect, SSRF, access-policy, and attribution rules.
@@ -32,13 +32,13 @@ Users can bring recipes into Noms without retyping them and can take their recip
 The first usable import flow should avoid server-side fetching and browser automation and use one provider-neutral instruction:
 
 1. The user opens the recipe page and presses `Ctrl+A` then `Ctrl+C` (`Cmd+A` then `Cmd+C` on macOS) to copy the whole rendered page.
-2. The user pastes into a dedicated Noms import screen.
+2. The user selects the recipe website (or Automatic) and pastes into the dedicated Noms import screen. An original link is optional under Source details.
 3. The client captures both `text/html` and `text/plain` clipboard representations when available.
-4. Noms sanitizes the input, extracts a recipe candidate, and reports ambiguous or missing fields.
-5. The user reviews and corrects the candidate in the recipe editor.
-6. Noms saves only after confirmation, as a private draft with source attribution.
+4. The user clicks Import recipe. Noms sanitizes the input and validates an extracted recipe candidate. Failed imports stay on this screen with a recoverable error; no draft is created.
+5. Noms creates a private draft and opens the populated recipe editor. Source attribution, original wording, group labels, notes, actionable warnings and unclassified recipe text are retained in editable Notes.
+6. The user reviews and corrects the draft before separately choosing to publish. Import never publishes automatically.
 
-Whole-page copying is intentionally best effort. The first-pass spike found recognizable recipe signals in whole-page copies from all twelve primary providers, which is sufficient to begin implementation, but it does not promise complete extraction for every page or provider. Print views and focused recipe-card selections remain optional recovery guidance when the initial paste is oversized, ambiguous, or incomplete; users should not need provider-specific instructions before their first attempt. Provider feasibility and the boundary between generic parsing and narrow adapters will be tested during implementation with synthetic fixtures and parser-prototype results. Unsupported or incomplete shapes must fail into an editable preview with preserved raw lines and warnings rather than block the import feature or silently invent data.
+Whole-page copying is intentionally best effort. The first-pass spike found recognizable recipe signals in whole-page copies from all twelve primary providers, which is sufficient to begin implementation, but it does not promise complete extraction for every page or provider. Print views and focused recipe-card selections remain optional recovery guidance when the initial paste is oversized, ambiguous, or incomplete; users should not need provider-specific instructions before their first attempt. Provider feasibility and the boundary between generic parsing and narrow adapters are verified with synthetic fixtures and parser results. Uncertain but valid candidates retain literal wording and review warnings in the draft; unsupported or incomplete core content must refuse with an actionable error rather than invent a recipe.
 
 The clipboard importer should use a layered, deterministic pipeline:
 
@@ -61,9 +61,9 @@ Initial extraction rules should recognize:
 - Ingredient and instruction section headings, including subordinate sauces or components.
 - Source URL and author when present in the clipboard content or supplied separately.
 
-Ingredient normalization must be conservative. A line may be split into `amount`, `unit`, and `name` only when the result is sufficiently unambiguous; otherwise the complete original line should be retained as the ingredient name for user correction. Every parser should return warnings or confidence information suitable for the preview UI.
+Ingredient normalization must be conservative. A line may be split into `amount`, `unit`, and `name` only when the result is sufficiently unambiguous; otherwise the complete original line should be retained as the ingredient name for user correction. Every parser returns warnings or confidence information; actionable warnings remain available in the editor’s Notes.
 
-Parsing must produce an import-only candidate before mapping fields into `RecipeEditorState`. The candidate retains ordered ingredient and instruction sections, original lines, textual and parsed time/yield values, unclassified lines, source and field provenance, image references, parser identity, competing candidates, and warnings for the active preview session. This intermediate model is required because the current recipe persistence model cannot represent every observed provider shape without loss. Raw clipboard payloads are discarded when the preview ends and are never saved as recipe content.
+Parsing must produce an import-only candidate before mapping fields into `RecipeEditorState`. The candidate retains ordered ingredient and instruction sections, original lines, textual and parsed time/yield values, unclassified lines, source and field provenance, image references, parser identity, competing candidates, and warnings for the active import session. This intermediate model is required because the current recipe persistence model cannot represent every observed provider shape without loss. Raw clipboard payloads are discarded on leaving the import screen and are never saved as recipe content. The direct-to-editor mapping preserves actionable warnings, unclassified recipe text and competing-region summaries in Notes; image downloads and persistence remain outside this slice.
 
 The paste screen must expose an optional source URL field. A normal clipboard selection does not reliably contain the page's canonical URL; links, image hosts, or retained provider markers may suggest a provider but must not silently manufacture source attribution.
 
@@ -435,3 +435,26 @@ Rebased all 55 NOMS-016 commits onto `codex/NOMS-020-checkpoint-8` at `52da873`,
 The parser, clipboard bridge, candidate mapping, import page and recipe fixtures are byte-for-byte unchanged from the original branch. `just ci` passes, including WASM/server checks, both Clippy targets, the server test suite, schema/security gates and the cumulative import/provider/bridge targets. The final upstream documentation-only checkpoint does not change the validated source or build inputs. The broader optional parser acceptance suite still has its pre-existing unsupported-access-shell failure (59 of 60 combined JavaScript tests pass); this case is outside the cumulative CI slice and was not changed during rebasing.
 
 The existing import integration compiles against the current NOMS-020 draft/editor contracts. The next integration checkpoint is a browser rerun on this updated application, especially direct private-recipe reload, before declaring the earlier end-to-end acceptance gate complete.
+
+### Guided import redesign — 2026-10-06
+
+The user selected the reference’s A · Guided import direction and explicitly approved removing the intermediate preview/confirmation screen. `b19c495` implements the painted heading, raised source card, inset controls and separate keyboard/workflow guidance. Users choose one of the existing 15 providers or Automatic, paste a page, and click Import recipe to validate and create a private draft in the existing editor. The optional original link is retained under Source details rather than requiring a URL for routing. The prototype’s illustrative sample/editor controls are not production features; the real editor, autosave and draft authorization remain unchanged.
+
+The Import button stays disabled until clipboard capture is initialized, a website choice is made and content is captured, and during parsing/saving. Paste/edit/source/provider changes cancel import intent and obsolete parsing; only a requested valid result can create a draft. Unsupported content or invalid source URLs refuse inline. Original recipe wording, source/author attribution and notes are retained automatically; actionable warnings, unclassified text and alternate-region summaries remain editable in Notes instead of being lost with the removed preview. Raw page HTML, scripts and remote images are not persisted or fetched.
+
+Verification: 14 focused Rust import UI/mapping tests, 134 recipe-page/editor regressions and the existing 360 JavaScript provider/clipboard/fixture/evaluation tests pass. `just check lint`, formatting and whitespace checks pass. Chrome checks cover logged-out gating, loading/empty input, all provider choices, invalid-recipe and invalid-URL recovery, rich HTML plus text paste, plain-text paste, direct private-draft creation, editing, autosave/reload and retained review Notes. The canonical local database stayed at 0 recipes / 7 drafts / 0 versions before Import and after invalid input; two explicit successful imports left 0 recipes / 9 drafts / 0 versions. Both invented test drafts remain unpublished. No existing draft was discarded. The final provider/alternate-region Notes supplement is additionally covered by a red-to-green Rust regression; it does not change parsing or draft routing.
+
+Reproducible commands (134 recipe-page tests include the 14 import tests):
+
+```sh
+SQLX_OFFLINE=true cargo test --features server pages::recipe_import -- --nocapture
+SQLX_OFFLINE=true cargo test --features server pages::recipe -- --nocapture
+just recipe-import-provider-adapter-test recipe-import-bridge-test recipe-import-parser-active-content-test recipe-import-fixture-test recipe-import-parser-corpus-test recipe-import-parser-semantic-test
+just check lint
+cargo fmt --check
+git diff --check
+```
+
+Desktop browser inspection confirms the final stylesheet’s two-column layout and heading weight. A 390px viewport DOM check confirms a single stacked source/guide column with no horizontal overflow; viewport overrides were reset. Mobile screenshot capture was unreliable with browser emulation, so this is a responsive layout measurement, not a physical-phone or cross-browser claim. Default-size screenshots are external at `/tmp/noms016-redesign-desktop-final.jpg` and `/tmp/noms016-redesign-editor.jpg`; test logs are `/tmp/noms016-redesign-{js,rust,build,editor-tests}.txt`. Full database CI, Firefox/Safari, dark-theme interaction and publishing were not rerun for this redesign.
+
+The canonical NOMS-016 branch/worktree was reused to honor the user’s earlier consolidation instruction. A second source/diff review passes after fixing Automatic’s native-required semantics and preserving provider/alternate-region review context. No independent agent review was performed this turn. Generated `assets/tailwind.css` remains excluded. The app is left open on the canonical port-32783 import route for user review. This checkpoint supersedes earlier preview/confirmation workflow descriptions; export implementation remains separate.
