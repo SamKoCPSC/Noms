@@ -9680,3 +9680,89 @@ recorded crop-comparison polish limitation, then complete final automated
 integration/review with ignored-test prerequisites accounted for. Physical
 devices, native activation, actual screen-reader operation and user visual
 sign-off remain separate handoffs; this sweep does not mark checkpoint 8 complete.
+
+## Gallery removal and recipe scaling label fixes
+
+Accepted bounded follow-up, 2026-10-05 (PDT). This resolves the two accessibility
+findings above, not the whole checkpoint or the crop-comparison limitation.
+Implementation reused the existing isolated `codex/NOMS-020-checkpoint-8`
+worktree; the integrated `codex/NOMS-020-visual-design-refinement` branch was
+fast-forwarded without including its user-owned CSS changes.
+
+Ordered runtime commits:
+
+1. `5207110` — image-removal buttons expose `Remove image {position}: {name}`;
+   their visible X glyph is hidden from the accessibility tree. Positions follow
+   current gallery order and distinguish duplicate saved-image fallback names.
+2. `0dabf80` — stable per-instance scaler IDs associate the existing visible
+   multiplier/ingredient labels and a screen-reader-only desired-amount label.
+   Screen-reader-only text distinguishes Apply multiplier from Apply ingredient
+   amount without changing visible button text or layout.
+
+Removal/upload handlers, scaling arithmetic, shared button APIs and visual
+styles are unchanged. The regression tests first failed on the missing gallery
+name and scaler input IDs, then passed after implementation. The gallery suite
+also checks that labels follow actual reorder. The scaler test expands two real
+components and checks six unique control IDs, associated labels and both Apply
+names.
+
+### Automated evidence and second-pass review
+
+Commands ran in the checkpoint worktree with `SQLX_OFFLINE=true` and the retained
+integration target directory where applicable:
+
+- `cargo test --features server components::base::image_upload::tests -- --test-threads=1`: 56 passed.
+- `cargo test --features server pages::recipe_detail -- --test-threads=1`: 60 passed.
+- `cargo test --features server utils::recipe_scaler -- --test-threads=1`: 24 passed.
+- `cargo fmt --check`, `cargo check --target wasm32-unknown-unknown`,
+  `cargo clippy --target wasm32-unknown-unknown -- -D warnings`,
+  `cargo clippy --features server -- -D warnings` and `git diff --check`: passed.
+
+The 140 focused tests include the new regressions; they are not a full CI rerun.
+Extra `cargo clippy --features server --tests -- -D warnings` did not pass:
+eight pre-existing test-target diagnostics remain in account-delete module
+loading, upload assertions, versioning loop style, search allocation, unlink
+recovery and scaler boolean assertions. Those diagnostics are outside the
+modified lines and were not suppressed or fixed in this scoped follow-up.
+The normal server/WASM lint targets passed. Final combined CI and integration
+review remain open.
+
+Second-pass self-review: **PASS for this bounded patch**, with the extra
+test-target lint limitation above. Reviewed ordered diffs, instance-local label
+IDs, reordered image positions, hidden text semantics and unchanged handlers.
+No independent-agent or actual screen-reader review is claimed. The two runtime
+commits can be reverted independently if needed; do not reset user-owned CSS.
+
+### Running-app acceptance
+
+The retained app remains at `http://127.0.0.1:32768`. Restart alone initially
+served an older bundle; explicit `dx build --platform web --debug-symbols false
+--force-sequential true` inside the app container, followed by app-only restart
+and an uncached reload, produced the verified revision. No services or volumes
+were recreated.
+
+- The retained nine-image draft exposes nine descriptive Remove image names;
+  each X is hidden from the accessibility tree. Focus was inspected without
+  activating removal, reorder, upload, Save, Publish or Discard.
+- The public recipe's three scaling controls expose the expected names and DOM
+  label associations. Clicking Multiplier focuses its input. Keyboard activation
+  of Apply multiplier changes 2 cups water to 4; Apply ingredient amount changes
+  it to 6. Reset restores 2 cups and ×1.0. These are local cooking-view changes,
+  not saved recipe writes.
+- At 390×844, Tab reaches Apply multiplier from its input and document width
+  remains within the viewport. Visible controls and styling are unchanged.
+  Temporary screenshot: `/tmp/noms-020-labels-scaler-phone.png`.
+
+Recipe, collection, user and the 13 protected original-draft hashes still match
+the sweep table above. There are 14 drafts total, including the sweep-created
+working draft; this follow-up created no further draft. Media count remains 50.
+Normal mock sign-in/sign-out bookkeeping is expected. Integration CSS retains
+the pre-turn SHA-256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`;
+only the newly watch-generated `.grayscale` utility was removed. The temporary
+browser tab was closed and cache settings restored after normal sign-out.
+
+Next: final automated integration/review and acceptance or a fix for the
+separate crop-comparison polish limitation. The user's late-cookie deferral
+remains in effect. Physical-device, actual screen-reader and final user
+acceptance handoffs are not completed by these label checks.
