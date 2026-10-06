@@ -9524,3 +9524,159 @@ legacy-cookie migration and both first-login bootstrap and concurrent-tab races
 before coding. This is a proposed protocol direction, **not an implemented or
 fully settled design**. Keep the OAuth package open until the concrete design
 is approved and its login/refresh/logout response-order regressions pass.
+
+## Final browser sweep — 2026-10-05
+
+Requested final rendered sweep on runtime `55dfbeb`, with the retained local
+deployment at `http://127.0.0.1:32768`. Recorded on 2026-10-05 Vancouver time
+(finished 2026-10-06 UTC). **Sweep performed; acceptance remains open for the
+two findings below and the existing crop-comparison display noise.** No runtime
+fix, CI rerun, production deployment or independent review is part of this slice.
+
+The user explicitly asked to leave the unobserved late-cookie concern alone.
+That supersedes the preceding section's proposed next protocol work: retain its
+characterization as deferred evidence, not an implemented guarantee. Transactional
+linking revalidation on `b855ac9` remains accepted within its recorded scope.
+
+### Environment and coverage
+
+The retained `noms-c799915fcf93e034` containers were stopped after the computer
+restart. Started those exact app/Postgres/MinIO/mock-OAuth/mock-GitHub containers;
+did not recreate containers, volumes or fixtures. All five report healthy.
+The app mounts the integrated visual-design worktree. Browser work used a
+temporary Codex in-app tab, existing mock `testuser` identity and existing
+synthetic populated fixtures. User browser tabs were not changed. Temporary
+viewport overrides were reset and the owned tab closed after signing out and
+restoring light appearance. The deployment remains running for user review.
+
+Light layout inspection used **1440×900 desktop, 820×1180 portrait tablet and
+390×844 phone**. Checked rendered screenshots, route headings, loaded content,
+page width, visible image failures and accessible controls. Loaded/settled reads
+supersede initial Loading/Searching snapshots. A hidden rebuild heading and the
+transient development hot-patch toast are not product errors.
+
+| Route variants / scenarios | Desktop | Tablet | Phone |
+| --- | --- | --- | --- |
+| Landing `/`, Community `/home`, About, How to | Inspected | Inspected | Inspected |
+| Guest sign-in, including both feature sections | Inspected | Inspected | Inspected |
+| Dashboard with saved recipes, drafts and collection sidebar | Inspected | Inspected | Inspected |
+| New recipe, published recipe edit, retained nine-image draft edit | Inspected | Inspected | Inspected |
+| Recipe detail, historical snapshot, populated version graph | Inspected | Inspected | Inspected |
+| Collection list, new collection, existing collection edit/detail | Inspected | Inspected | Inspected |
+| Nested collection creation and populated parent/subcollection detail | Parent detail reused prior evidence | Inspected | Inspected |
+| Explore, populated multi-scope Search, public profile | Inspected | Inspected | Inspected |
+| Settings profile/accounts, `/settings` alias, catch-all 404 | Inspected | Inspected | Inspected |
+| Guest public collection detail | Inspected | Inspected | Inspected |
+
+This reconciles the 22 variants in `src/main.rs`, plus Settings alias and nested
+creation. The owner detail/history/graph fixture has 30 published versions;
+initial bounded history load shows 25, with older-version controls present.
+The owner collection fixture has one direct recipe and one nested collection.
+Explore/profile use the retained 25-public-recipe/25-public-collection identity.
+Search settles to 34 recipes, 18 collections and two cooks for `CP8` as owner.
+No page-level horizontal overflow or broken completed visible image was found
+in the settled sampled views. This does not assert all lazy images were fetched.
+
+After normal Sign Out, guest requests to Dashboard, new recipe, collection list,
+Search with its query and both Settings pages reached Sign In with the matching
+encoded return destination. Public Explore, recipe, profile and collection
+views remained readable; the public collection did not expose owner actions.
+The guest public-recipe scaling expansion is the source of finding 2 below.
+
+Legacy dark smoke sampled Search, landing, Community, Dashboard, recipe detail,
+graph, retained draft editor, collections, Explore and Settings; also inspected
+phone Explore and sign-in at all three sizes. Explicit settled `.dark` reads
+were used on representative templates because initial SSR may precede theme
+hydration. This is compatibility smoke, not a dark redesign or every-state audit.
+Existing semantic-ink/contrast evidence remains supporting evidence; screenshots
+and DOM inspection do not certify exhaustive rendered contrast or WCAG conformance.
+
+### Shared components and findings
+
+- Phone navigation drawer: keyboard opening focuses Close; Shift+Tab from Close
+  reaches the final theme action, Tab returns to Close; Escape closes and restores
+  the navigation trigger. Drawer content is internally scrollable.
+- Image editor: existing saved image opens the landscape desktop dialog with
+  Frame/Transform/Color controls and coral sliders; phone adapts to scrollable
+  controls. All ten adjustment sliders have names. Tab/Shift+Tab wrap through
+  the enabled dialog endpoints; Escape closes and restores the image Edit button.
+  Did not press OK, reset an adjustment, upload or alter an image.
+- Recipe action menu: ArrowDown moves from View version graph to Fork, End to
+  Delete recipe; Escape returns focus to the trigger. No action activated.
+  Account menu End reaches Sign Out; Escape returns to its trigger. Normal
+  Sign Out was subsequently used for guest checks.
+- Collection picker: named search receives initial focus. Cancel is keyboard
+  reachable, Escape restores its trigger, and Tab leaving the nonmodal picker
+  dismisses without trapping focus. Its long list scrolls inside the panel.
+  Did not select memberships or submit Add. Phone/desktop screenshots show the
+  initial upper portion; they are not evidence that the footer is fixed onscreen.
+- Toast/tooltip consumers: **reuse**, not a fresh outcome test. Checkpoint 1's
+  [T2 and Rust lifecycle evidence](NOMS-020-checkpoint-1-foundations.md) covers
+  collection sharing feedback/focus help and picker result toasts. The retained
+  signed-in identity owns only private collections, so it has no Copy link/Share
+  tooltip consumer. Did not change visibility, create an identity or write
+  memberships solely to produce a toast. Fresh toast/tooltip rendered outcome
+  coverage is not claimed by this sweep.
+
+Confirmed findings, left unmodified:
+
+1. **Gallery removal has a glyph-only accessible name.** The retained gallery's
+   nine remove buttons expose “✕”, without a descriptive `aria-label`, associated
+   text or title. `src/components/base/image_upload.rs`, remove button near line
+   1224. Add a meaningful action name, ideally distinguishing the image; do not
+   confuse a nonempty glyph name with a useful screen-reader label.
+2. **Expanded recipe scaling controls lack associated labels.** The multiplier
+   input, target-ingredient select and desired-amount input have no associated
+   labels or ARIA names. Nearby “Multiplier”/“Or scale by target ingredient” text
+   is not programmatically associated, and placeholders do not substitute for
+   labels. Observed in the accessibility tree and DOM on the guest public recipe.
+   `src/pages/recipe_detail.rs`, controls near lines 1352–1423. Repeated “Apply”
+   actions should also be distinguishable in context when improving this form.
+
+An early tablet Dashboard screenshot appeared to wrap the last letters of
+WORKSPACE/COLLECTIONS. The settled 820px recheck and complete-viewport capture
+show both labels on one line, so this is **not a confirmed steady-state defect**.
+The previously recorded insignificant floating-point crop-comparison noise
+remains a separate unaccepted display limitation; no visible crop change is
+claimed and no further image mutation was performed to retest it.
+
+### Preserved data and artifacts
+
+Opening published recipe edit through its normal route created one private
+working draft: `d38a108d-fffe-40b8-98b6-7fd008001843`, bound to history fixture
+`1c6173d6-505c-92d7-7493-97e30be37b85`, revision 0. It was not edited or
+published, and was left intact rather than deleted to hide the route side effect.
+No explicit Save, Publish, Restore, Fork, membership write, upload or deletion
+was issued. Normal mock sign-in/sign-out updates authentication bookkeeping.
+
+Before/after hashes use `md5(string_agg(to_jsonb(row)::text, '' ORDER BY id))`:
+
+| Protected rows | Count | Matching hash |
+| --- | --- | --- |
+| Recipes | 37 | `78ceaa6c1dff749437c8c544ad0ac69a` |
+| Existing drafts, excluding the new working draft | 13 | `983fa57ed88ddbce4d7d965ea424395d` |
+| Collections | 45 | `89ce0d4ee260e3c08adacdd07ac083e9` |
+| Users | 3 | `a9f2b2d78d1c9ed376e390c6006609ce` |
+
+Published versions remain 75; media assets remain 50. User-owned integration
+CSS was preserved: removed only the newly watch-generated `.grayscale` utility
+and verified the exact pre-sweep SHA-256
+`74ca12aca7f2fc6409c26eda25a669a522dcb188915fafb111037529227e598e`.
+
+Temporary local evidence (not durable repository assets):
+`/tmp/noms-020-final-browser-metrics.json` contains 92 intermediate/settled layout
+reads, not 92 passing tests. Screenshots include
+`/tmp/noms-020-final-image-dialog-desktop.png`,
+`/tmp/noms-020-final-dashboard-tablet.png`,
+`/tmp/noms-020-final-collection-picker-phone.png`,
+`/tmp/noms-020-final-search-dark-desktop.png`,
+`/tmp/noms-020-final-login-light-desktop.png`,
+`/tmp/noms-020-final-login-light-tablet.png`,
+`/tmp/noms-020-final-login-light-phone.png` and
+`/tmp/noms-020-final-scale-controls-phone.png`.
+
+Next: fix or explicitly accept the two named accessibility findings and the
+recorded crop-comparison polish limitation, then complete final automated
+integration/review with ignored-test prerequisites accounted for. Physical
+devices, native activation, actual screen-reader operation and user visual
+sign-off remain separate handoffs; this sweep does not mark checkpoint 8 complete.
