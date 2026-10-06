@@ -9766,3 +9766,89 @@ Next: final automated integration/review and acceptance or a fix for the
 separate crop-comparison polish limitation. The user's late-cookie deferral
 remains in effect. Physical-device, actual screen-reader and final user
 acceptance handoffs are not completed by these label checks.
+
+## Local OAuth loopback origin fix
+
+Accepted scoped follow-up, 2026-10-06 (PDT). Login initiated on `localhost`
+issued a host-only transaction cookie there, but the retained configuration's
+callback returned to `127.0.0.1`. The browser could not send that cookie across
+hostnames. The fix converges local visits and OAuth starts onto the configured
+origin; it does not broaden cookie domains, trust forwarded host headers or
+relax logout-origin and browser-binding checks.
+
+Implementation branch `codex/NOMS-020-local-oauth-origin` uses the isolated
+`.worktrees/NOMS-020-local-oauth-origin` checkout, based on `0c6b422`.
+Both runtime commits were fast-forwarded into the retained NOMS-020 integration
+worktree without committing its user-owned CSS:
+
+1. `1485307`: a local-only Axum gate redirects recognized loopback GET/HEAD
+   aliases on the configured port before downstream cookie issuance. It rejects
+   unsafe alias methods and malformed/duplicate Host values without replaying a
+   mutation. Production requests pass through unchanged.
+2. `f238c1d`: covers the development proxy, which replaces Host before forwarding
+   to Axum ([installed Dioxus proxy source](https://raw.githubusercontent.com/DioxusLabs/dioxus/bfcc111/packages/cli/src/serve/proxy.rs)).
+   Only the public local origin is hydrated through Rust's existing
+   `use_server_cached` mechanism. Rust/WASM replaces the alias page URL while
+   preserving path/query/fragment; SSR sign-in and provider-connect links already
+   target the canonical origin before hydration. No credentials are serialized.
+
+### Validation and review
+
+Regression tests first failed on the absent server redirect, absent canonical
+SSR links and missing client navigation target, then passed after implementation.
+Commands ran with `SQLX_OFFLINE=true` for server checks and
+`CARGO_TARGET_DIR=.worktrees/NOMS-020-visual-design-refinement/target` resolved
+from the repository root:
+
+- `cargo test --features server local_origin -- --test-threads=1`: 9 passed
+  (includes one existing gallery test and the config origin test below).
+- `cargo test --features server config::tests -- --test-threads=1`: 12 passed.
+- `cargo test --features server pages::login -- --test-threads=1`: 9 passed.
+- `cargo test --features server pages::settings::settings_accounts -- --test-threads=4`: 5 passed.
+- `cargo test --features server server_tests -- --test-threads=4`: 4 passed.
+- `cargo test --features server auth::oauth -- --test-threads=4`: 61 passed.
+- `cargo test --features server auth::logout -- --test-threads=4`: 14 passed.
+- `cargo fmt --check`, server and WASM Clippy with `-D warnings`, and
+  `git diff 0c6b422..HEAD --check`: passed. This is not a final full-CI run.
+
+Second-pass self-review: **PASS for this scoped fix**. Reviewed both ordered
+runtime diffs, the local-only eligibility contract, SSR context propagation,
+hydration equality/loop avoidance, encoded routing data, strict port boundaries,
+and unchanged OAuth/session/logout authorization. No independent-agent review
+is claimed. Revert `f238c1d` before `1485307` if rolling back the complete feature.
+
+### Retained local runtime
+
+The app-only container was explicitly rebuilt with `dx build --platform web
+--debug-symbols false --force-sequential true` and restarted; services and volumes
+were retained. The application remains on port 32768 with canonical origin
+`http://127.0.0.1:32768`.
+
+`python3 /tmp/noms-local-oauth-acceptance.py` passed with independent, fresh
+cookie jars starting from both `http://localhost:32768` and the canonical origin.
+It follows the actual SSR Google sign-in link, verifies a host-only transaction
+cookie, completes mock login with the existing `testuser`, verifies authenticated
+profile access, rejects cross-origin logout with HTTP 403 without losing the
+session, then confirms canonical-origin logout removes authenticated access.
+The temporary script prints outcomes only, not cookies or tokens.
+
+Browser acceptance independently passed: a localhost login page converged to the
+canonical origin, Google login reached the populated Dashboard, Account menu
+identified the existing test user, and normal Sign Out returned to the guest
+landing page. A second localhost navigation preserved
+`/login?redirect_uri=%2Fdashboard#providers`. GitHub initiation exposed the
+canonical callback with PKCE and required scopes; it was not submitted, avoiding
+new user creation. Full GitHub provider completion is not a browser claim here.
+An earlier pre-fix browser callback was blocked by the browser client; the fresh
+post-fix Google flow completed successfully. Temporary proof screenshot:
+`/tmp/noms-local-oauth-browser.png`. The owned tab was closed after sign-out.
+
+Before/after hashes using the sweep's method match for all 37 recipes, all 14
+drafts, 45 collections and 3 users. No recipe writes, account creation, provider
+link/unlink, upload or deletion were performed. Normal authentication bookkeeping
+is expected. No production provider was contacted. Handcrafted alias OAuth URLs
+behind Host-rewriting proxies are not a supported substitute for the canonical
+SSR links; the direct Axum gate applies when the original Host is preserved.
+
+The final whole-app CI/review and user/device acceptance gates remain open, and
+the late-cookie deferral and crop-comparison limitation remain unchanged.

@@ -61,6 +61,20 @@ The fixed example URLs are intended only for manually managed standalone
 services. An isolated environment's generated values are stored with mode
 `0600` under its printed runtime path.
 
+#### Local OAuth addresses
+
+Local environments use the printed application URL as their canonical origin.
+If you open the same port using `localhost` instead of `127.0.0.1` (or vice
+versa), the browser switches to the configured address while preserving the
+path, query and fragment. Sign-in and provider-connect links already target that
+address before client hydration. Cookies remain host-only; they are not shared
+between the aliases. Use these links, or the canonical URL, when starting OAuth
+through `dx serve`, whose development proxy replaces the original Host header.
+
+This behavior is limited to `NOMS_ENV=local` with a plain loopback `BASE_URL`.
+Production routing, registered callbacks and exact-origin logout checks are
+unchanged. Other hostnames and different ports are not treated as aliases.
+
 #### OAuth rate limiting behind a reverse proxy
 
 OAuth start and callback requests are limited per client address. Forwarded
