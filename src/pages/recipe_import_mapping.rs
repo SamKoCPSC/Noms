@@ -93,6 +93,52 @@ pub(super) fn map_import_candidate(
     Ok(editor)
 }
 
+/// Without an intermediate review screen, actionable warnings and unmapped
+/// text belong in editable Notes so they survive autosave and reload.
+pub(super) fn map_direct_import_candidate(candidate: &Value) -> Result<RecipeEditorState, String> {
+    let mut editor = map_import_candidate(candidate, true)?;
+    if let Some(provider) = candidate["source"]["provider"].as_str() {
+        let original = editor.commentary.take().unwrap_or_default();
+        editor.commentary = Some(format!("Recipe website: {provider}\n{original}"));
+    }
+    let mut review = Vec::new();
+    if let Some(warnings) = candidate["warnings"].as_array() {
+        for warning in warnings {
+            if matches!(warning["severity"].as_str(), Some("warning" | "error")) {
+                if let Some(message) = warning["message"].as_str() {
+                    review.push(message.to_owned());
+                }
+            }
+        }
+    }
+    if let Some(lines) = candidate["unclassifiedLines"].as_array() {
+        for line in lines {
+            if let Some(raw) = line["raw"].as_str() {
+                review.push(format!("Additional recipe text: {raw}"));
+            }
+        }
+    }
+    if let Some(alternatives) = candidate["competingCandidates"].as_array() {
+        for alternative in alternatives {
+            if let Some(title) = alternative["title"].as_str() {
+                let reason = alternative["reason"]
+                    .as_str()
+                    .unwrap_or("Other recipe region");
+                review.push(format!("Other recipe region: {title} — {reason}"));
+            }
+        }
+    }
+    if !review.is_empty() {
+        let notes = editor.commentary.get_or_insert_with(String::new);
+        if !notes.is_empty() {
+            notes.push_str("\n\n");
+        }
+        notes.push_str("Import review — check these details before publishing:\n");
+        notes.push_str(&review.join("\n"));
+    }
+    Ok(editor)
+}
+
 /// Reject malformed core text rather than silently losing content during mapping.
 fn required_text(value: &Value) -> Result<String, String> {
     value
@@ -281,5 +327,49 @@ mod tests {
         }
         c["fields"]["instructionSections"][0]["steps"] = json!([step]);
         assert!(map_import_candidate(&c, true).is_ok());
+    }
+
+    #[test]
+    fn direct_import_preserves_review_warnings_and_unclassified_recipe_text_in_notes() {
+        let mut c = candidate();
+        c["warnings"] = json!([
+            {"severity":"warning","message":"Check the alternative quantities."},
+            {"severity":"info","message":"Active content was discarded."}
+        ]);
+        c["unclassifiedLines"] = json!([{"raw":"Dough rising: 2 hours"}]);
+        let editor = super::map_direct_import_candidate(&c).unwrap();
+        let notes = editor.commentary.unwrap();
+        assert!(notes.contains("Import review"));
+        assert!(notes.contains("Check the alternative quantities."));
+        assert!(notes.contains("Dough rising: 2 hours"));
+        assert!(!notes.contains("Active content was discarded."));
+        assert_eq!(editor.visibility, "private");
+        assert!(editor.images.is_empty());
+    }
+
+    #[test]
+    fn direct_import_refuses_invalid_candidates_and_retains_original_wording() {
+        let c = candidate();
+        let mapped = super::map_direct_import_candidate(&c).unwrap();
+        assert!(mapped.commentary.unwrap().contains("Ingredient:"));
+        let mut invalid = c;
+        invalid["status"] = json!("unsupported");
+        assert!(super::map_direct_import_candidate(&invalid).is_err());
+    }
+
+    #[test]
+    fn direct_import_retains_provider_and_alternative_region_context_without_inventing_a_link() {
+        let mut c = candidate();
+        c["source"]["provider"] = json!("RecipeTinEats");
+        c["source"]["suppliedUrl"] = Value::Null;
+        c["competingCandidates"] =
+            json!([{"title":"Other soup","reason":"Earlier editorial region"}]);
+        let notes = super::map_direct_import_candidate(&c)
+            .unwrap()
+            .commentary
+            .unwrap();
+        assert!(notes.contains("Recipe website: RecipeTinEats"));
+        assert!(notes.contains("Other soup — Earlier editorial region"));
+        assert!(!notes.contains("https://www.recipetineats.com"));
     }
 }

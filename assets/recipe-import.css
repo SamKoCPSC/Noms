@@ -1,0 +1,74 @@
+/* Guided import shares the application's warm material in both themes. */
+.recipe-import { max-width: 1320px; padding-top: 20px; padding-bottom: 64px; }
+.recipe-import__breadcrumb { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: var(--text-secondary); margin-bottom: 28px; }
+.recipe-import__breadcrumb a { color: inherit; }
+.recipe-import__header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 32px; }
+.recipe-import__identity { display: flex; align-items: center; gap: 20px; min-width: 0; }
+.recipe-import__identity h1 { margin: 0 0 8px; font-size: clamp(30px, 3.4vw, 44px); font-weight: 500; letter-spacing: -.025em; }
+.recipe-import__identity p { margin: 0; color: var(--text-secondary); }
+.recipe-import__privacy { display: flex; align-items: center; gap: 8px; flex: none; font-size: 13px; color: var(--text-secondary); margin: 0; }
+.recipe-import__grid { display: grid; grid-template-columns: minmax(0, 690px) minmax(280px, 310px); gap: 38px; margin-left: 92px; align-items: start; }
+.recipe-import__source { min-width: 0; padding: 30px; border-radius: 26px; }
+.recipe-import__eyebrow { margin: 0 0 8px; color: var(--accent-ink); font-size: 12px; font-weight: 800; letter-spacing: .035em; }
+.recipe-import__source h2 { margin: 0 0 6px; font-size: 28px; font-weight: 500; }
+.recipe-import__intro { margin: 0 0 24px; color: var(--text-secondary); }
+.recipe-import__field { display: grid; gap: 9px; min-width: 0; }
+.recipe-import__field label { font-weight: 800; font-size: 14px; }
+.recipe-import__field label span { font-weight: 400; color: var(--text-secondary); }
+.recipe-import .recipe-import__input { display: block; width: 100%; min-width: 0; min-height: 48px; padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 14px; font: inherit; font-size: 14px; color: var(--text-primary); }
+.recipe-import .recipe-import__input::placeholder { color: var(--field-placeholder); opacity: 1; }
+.recipe-import .recipe-import__input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+.recipe-import .recipe-import__input:disabled { opacity: .65; cursor: not-allowed; }
+.recipe-import .recipe-import__input option { background: var(--surface); color: var(--text-primary); }
+.recipe-import__hint { font-size: 13px; line-height: 1.6; margin: 0; color: var(--text-secondary); }
+.recipe-import__clipboard { margin-top: 28px; }
+.recipe-import textarea.recipe-import__input { min-height: 196px; resize: vertical; line-height: 1.8; }
+.recipe-import kbd { display: inline-block; border: 1px solid var(--border-color); border-radius: 5px; padding: 1px 5px; font-family: var(--font-body); font-size: 12px; white-space: nowrap; color: var(--text-primary); background: var(--surface); box-shadow: 0 1px 1px var(--shadow-dark); }
+.recipe-import__source-details { margin-top: 22px; font-size: 13px; }
+.recipe-import__source-details summary { color: var(--accent-ink); font-weight: 700; cursor: pointer; padding-block: 10px; min-height: 44px; }
+.recipe-import__source-details summary:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+.recipe-import__source-details .recipe-import__field { margin-top: 10px; }
+.recipe-import__status { margin: 14px 0 0; font-size: 13px; color: var(--text-secondary); }
+.recipe-import__error { margin-top: 16px; padding: 16px; border: 1px solid var(--error); border-radius: 12px; background: var(--error-bg); overflow-wrap: anywhere; }
+.recipe-import__error h3 { font-size: 18px; margin: 0 0 6px; }
+.recipe-import__error p { margin: 0 0 6px; font-size: 14px; }
+.recipe-import__actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--border-color); margin-top: 24px; padding-top: 24px; }
+.recipe-import__actions p { margin: 0; font-size: 12px; color: var(--text-secondary); }
+.recipe-import__actions .btn { flex: none; min-height: 48px; gap: 14px; }
+.recipe-import__actions .btn span { font-size: 22px; line-height: 1; }
+.recipe-import__local-note { margin: 16px 0 0; font-size: 12px; color: var(--text-secondary); }
+.recipe-import__guide { padding-top: 12px; min-width: 0; }
+.recipe-import__guide h2 { margin: 0 0 22px; font-size: 23px; font-weight: 500; }
+.recipe-import__shortcuts { border-radius: 16px; padding: 16px; }
+.recipe-import__shortcuts table { width: 100%; text-align: left; border-collapse: collapse; }
+.recipe-import__shortcuts thead th { font-size: 10px; font-weight: 700; color: var(--text-secondary); padding-bottom: 10px; }
+.recipe-import__shortcuts tbody th { font-size: 12px; }
+.recipe-import__shortcuts td { padding: 8px 3px; }
+.recipe-import__shortcuts p { margin: 16px 0 0; font-size: 12px; color: var(--text-secondary); }
+.recipe-import__steps { list-style: none; counter-reset: import-step; padding: 0; margin: 28px 0 20px; }
+.recipe-import__steps li { position: relative; counter-increment: import-step; padding-left: 38px; margin-bottom: 23px; font-size: 14px; }
+.recipe-import__steps li::before { content: counter(import-step); position: absolute; left: 0; top: 0; display: grid; place-items: center; width: 25px; height: 25px; border-radius: 8px; background: color-mix(in srgb, var(--success) 12%, var(--surface)); color: var(--text-secondary); font-size: 12px; font-weight: 700; }
+.recipe-import__steps strong { display: block; margin-bottom: 8px; }
+.recipe-import__steps p { margin: 0; color: var(--text-secondary); line-height: 1.65; }
+.recipe-import__footnote { padding-top: 16px; border-top: 1px solid var(--border-color); font-size: 12px; color: var(--text-secondary); }
+.recipe-import__footnote p { margin: 0 0 10px; }
+@media (max-width: 1100px) {
+    .recipe-import__grid { margin-left: 0; gap: 28px; }
+    .recipe-import__privacy { max-width: 180px; flex-shrink: 1; }
+}
+@media (max-width: 760px) {
+    .recipe-import { padding-top: 12px; }
+    .recipe-import__header { flex-direction: column; align-items: flex-start; gap: 16px; }
+    .recipe-import__identity { gap: 12px; }
+    .recipe-import__identity .page-identity-icon { width: 56px; height: 56px; }
+    .recipe-import__privacy { max-width: none; }
+    .recipe-import__grid { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+    .recipe-import__source { padding: 24px; }
+    .recipe-import__guide { padding: 8px 4px; }
+    .recipe-import__actions { flex-wrap: wrap; }
+}
+@media (max-width: 420px) {
+    .recipe-import__source { padding: 20px 16px; }
+    .recipe-import__actions .btn { width: 100%; }
+    .recipe-import__identity h1 { font-size: 29px; }
+}
