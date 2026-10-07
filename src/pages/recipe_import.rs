@@ -66,7 +66,7 @@ fn ImportLayout(children: Element) -> Element {
             }
             header { class: "recipe-import__header",
                 div { class: "recipe-import__identity",
-                    PageIcon { kind: PageIconKind::Editor }
+                    PageIcon { kind: PageIconKind::Import }
                     div { h1 { "Bring a recipe home." } p { "Copy a recipe you love. Make it part of your kitchen." } }
                 }
                 p { class: "recipe-import__privacy", span { aria_hidden: "true", "🔒" } "Private until you choose to share" }
@@ -246,6 +246,8 @@ mod tests {
     #[test]
     fn guided_import_layout_has_named_source_and_keyboard_guidance_without_a_preview() {
         let html = dioxus_ssr::render_element(rsx! { ImportLayout { p { "Source controls" } } });
+        assert!(html.contains("import-v1"), "{html}");
+        assert!(!html.contains("editor-v1"), "{html}");
         for expected in [
             "Bring a recipe home.",
             "Private until you choose to share",

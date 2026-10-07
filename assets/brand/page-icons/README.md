@@ -1,5 +1,9 @@
 # NOMS painted page icons
 
+## Recipe import — 2026-10-07
+
+Approved asset: [import-v1.png](import-v1.png), the simple clipboard with a short coral inward arrow selected from the 2026-10-06 concepts. Original 1254 × 1254 transparent RGBA PNG generated with the built-in image tool using editor/dashboard artwork as style references. The import heading uses `PageIconKind::Import` and the shared 192 × 192 WebP pipeline; editor artwork remains unchanged. Preserve alpha, aspect ratio, and decorative accessibility treatment.
+
 ## About and How-to — selected 2026-09-28
 
 Approved directions: **A3 Information index card** for About and **H3 Recipe checklist and pencil** for How-to. [Concept sheet](../../../roadmap/assets/NOMS-020/page-icons/about-how-to-a1-h3-v1.png). Standalone assets: [about-v1.png](about-v1.png) and [how-to-v1.png](how-to-v1.png), each 1254 × 1254 RGBA PNG. Generated using the built-in image tool; visually checked against the selected concepts. Integrated 2026-09-28 into page headings and navigation drawer destinations through the shared Rust components: transparent 192 × 192 WebP derivatives, 72px desktop/56px compact headings and 32px drawer artwork. Existing hero illustrations and copy remain unchanged.

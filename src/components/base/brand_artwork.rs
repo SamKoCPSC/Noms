@@ -20,6 +20,7 @@ pub enum PageIconKind {
     Search,
     Collections,
     Editor,
+    Import,
     History,
     Profile,
     Settings,
@@ -88,6 +89,15 @@ impl PageIconKind {
             ),
             Self::Editor => asset!(
                 "/assets/brand/page-icons/editor-v1.png",
+                ImageAssetOptions::new()
+                    .with_webp()
+                    .with_size(ImageSize::Manual {
+                        width: 192,
+                        height: 192
+                    })
+            ),
+            Self::Import => asset!(
+                "/assets/brand/page-icons/import-v1.png",
                 ImageAssetOptions::new()
                     .with_webp()
                     .with_size(ImageSize::Manual {
@@ -214,6 +224,7 @@ mod tests {
             (PageIconKind::Search, "search-v1"),
             (PageIconKind::Collections, "collections-v1"),
             (PageIconKind::Editor, "editor-v1"),
+            (PageIconKind::Import, "import-v1"),
             (PageIconKind::History, "history-v1"),
             (PageIconKind::Profile, "profile-v1"),
             (PageIconKind::Settings, "settings-v1"),
