@@ -3,7 +3,7 @@
 **Status:** Clipboard import implemented for 15 providers; guided import/editor validation in progress. Export remains planned.
 **Created:** 2026-08-15
 **Depends on:** Current recipe, draft, versioning, collection, and image models
-**Coordination:** NOMS-017 structured metadata must define how imported and exported taxonomy fields are represented.
+**Coordination:** NOMS-017 defines flexible authored recipe metadata and optional autocomplete-vocabulary references. Agree their portable representation with NOMS-016 before freezing the snapshot schema; completing the autocomplete implementation is not a prerequisite for starting export.
 **Approach:** User-initiated clipboard import opens an editable private draft directly after validation. Parse pasted HTML and plain text deterministically, refine compatibility for selected recipe-site layouts, and defer NLP and browser-assisted clipping until the simpler workflow is validated. Schema.org remains the preferred contract for later URL import and interoperable export; Noms JSON remains the lossless portability format.
 
 ---
@@ -159,7 +159,7 @@ Noms exports portable recipe snapshots rather than complete database backups. Or
 
 ### Canonical Noms recipe snapshot
 
-`noms.recipe.snapshot.v1` is the authoritative lossless interchange contract. It must contain every field in the portable recipe model, including fields whose values are `null`, empty strings, empty arrays, or empty objects. NOMS-017 must define the portable taxonomy fields before this schema is frozen.
+`noms.recipe.snapshot.v1` is the authoritative lossless interchange contract. It must contain every field in the portable recipe model, including fields whose values are `null`, empty strings, empty arrays, or empty objects. Coordinate portable authored metadata and optional vocabulary references with NOMS-017 before freezing this schema. The first export slice can prove serialization and round trips of currently persisted fields while that representation is agreed; it must not claim support for metadata that the application does not yet store. Changes after schema freeze require a new snapshot-schema identifier and explicit compatibility rules.
 
 The canonical snapshot must distinguish three field states:
 
@@ -172,6 +172,22 @@ Every canonical recipe field must be present, so `Missing` is not represented by
 Presentation renderers must visibly label every absent field as `None`, every empty field as `Empty`, and every unavailable or unrepresentable field as `Missing`, optionally followed by a reason such as `Missing — excluded by image mode`. A format that conventionally omits absent values, such as Schema.org JSON-LD, must record the field status in Noms export metadata or a companion sidecar rather than emitting invalid or misleading standard properties.
 
 Every export envelope must include the portable format and version, generator name and version, export timestamp, scope, portable ID, snapshot digest, source attribution, image mode, and any fields the selected renderer could not represent. Export-envelope metadata is not part of the recipe snapshot itself.
+
+### Authored metadata and optional vocabulary references (NOMS-017)
+
+NOMS-017 provides autocomplete and optional recognition, not a controlled taxonomy. Portable recipes must remain usable without vocabulary access or successful recognition.
+
+- Preserve the actual authored text independently of any optional vocabulary reference. Keep ingredient and equipment wording, quantities, units, preparation details, and existing freeform tags intact; do not replace text with a preferred label, expand aliases, infer hierarchies, or reclassify tags during import or export.
+- Align with the seven NOMS-017 dimensions: ingredient names, cuisines/culinary traditions, difficulty, derived time classification, dish types, equipment names, and cooking methods/techniques. All are optional; difficulty and time have at most one value, while the other dimensions permit multiple entries. Each applicable authored entry may have at most one optional recognition reference.
+- Serialize the dimension, authored text, optional reference identity, and relevant user-visible source/recognition provenance losslessly where supported by the agreed recipe model. Define reference identity and resolution across installations before freezing the representation; never assume that an incoming identifier is a valid local database foreign key or proof of authorization.
+- Unmatched or ambiguous values remain valid without mandatory resolution. Unknown, retired, or unavailable references must not block viewing or saving the authored text. Preserve incoming reference information as unresolved provenance when it cannot be safely attached locally, so re-export does not silently erase it; do not invent a replacement reference or automatically link an ambiguous match.
+- Vocabulary renames, aliases, merges, retirements, and lookup availability must not rewrite authored text or historical snapshots. Presentation uses snapshot text, not a freshly resolved vocabulary label. Recognition added later is an explicit recipe change governed by the normal draft/version rules.
+- Numeric prep and cook times remain the source of truth. Time classification is derived, not an independently authored label. Missing numeric times must not imply zero duration or a category. NOMS-017 still owns classification boundaries, incomplete-time behavior, and whether/how a derived category and its rule version appear in a portable snapshot.
+- Include supported authored metadata and stored optional references/provenance in the logical snapshot digest. Digest calculation must not consult live vocabulary data or include transient resolution status; vocabulary maintenance alone must not change an existing snapshot's digest. Preserve repeatable-field order unless the agreed schema explicitly defines it as set-like.
+- Noms JSON is the lossless representation. Map only valid corresponding fields into Schema.org; retain Noms-specific metadata and references in export metadata or a companion sidecar, declaring unsupported fields rather than fabricating standard properties. Presentation formats display authored values and retain the complete metadata in their details sections.
+- Export only metadata and provenance already visible with the authorized recipe snapshot. Do not export personal autocomplete history, private values from other recipes, vocabulary-maintenance records, or global suggestion data as recipe content.
+
+Before schema freeze, agree the exact text-plus-reference representation, provenance fields, unresolved-reference preservation, and old/new snapshot compatibility with NOMS-017. Older files without these fields need explicit version-aware import rules; do not infer recognition or convert an absent value into authored text. These contract decisions do not require shipping autocomplete, seeds, or vocabulary-maintenance tooling first.
 
 ### Portable identity and duplicate detection
 
@@ -265,6 +281,10 @@ Automated and manual verification must cover:
 - Stable JCS/SHA-256 digests across whitespace and object-key ordering changes, and changed digests for logical snapshot changes.
 - Portable-ID duplicate and conflict handling.
 - Nested instructions, sections, Unicode, fractions, metadata, and ordered fields.
+- Lossless authored metadata round trips for custom values, aliases, optional references and provenance, including Unicode, multiple labels and explicit null/empty states.
+- Unknown, retired, unavailable and cross-installation references retain authored text and unresolved provenance without mandatory lookup or ambiguous automatic linking.
+- Vocabulary label/alias changes and outages leave historical snapshot text and digests unchanged; actual stored text/reference changes alter the digest.
+- Version-aware old/new snapshot compatibility, singular/repeatable cardinality, derived-time behavior once specified, and no export of private suggestion history.
 - Every renderer's declared fidelity and visible `None`, `Empty`, and `Missing` representations.
 - Schema.org validation and offline HTML rendering/printing.
 - Image modes, checksums, missing assets, unsafe remote responses, and archive-size limits.
@@ -282,6 +302,7 @@ Automated and manual verification must cover:
 - When URL fetching is added, what rate limits, SSRF protections, provider-policy rules, and failure behavior apply?
 - What concrete client/server item, byte, concurrency, and time limits apply to in-memory export generation?
 - Which Rust/WASM-compatible archive, PDF, HTML-sanitization, JCS, and hashing libraries satisfy the export contract?
+- What exact NOMS-017 text-plus-reference/provenance representation, cross-installation identity, unresolved-reference preservation, old/new snapshot compatibility, and derived-time serialization rules must be agreed before snapshot-schema freeze?
 
 ## Required implementation-plan deliverables
 
@@ -290,7 +311,7 @@ Automated and manual verification must cover:
 - Clipboard compatibility fixtures and deterministic parsing rules.
 - Versioned snapshot, portable-ID, digest, collection, lineage, and renderer contracts.
 - Test-first checkpoints, migrations, UI states, and rollback considerations.
-- Compatibility rules for NOMS-017 metadata.
+- Compatibility rules for NOMS-017 authored metadata, optional vocabulary references, provenance, unresolved identities, derived time, and mixed old/new snapshots.
 - Automated, manual, security, and portability verification matrix.
 
 ## Definition of ready
@@ -298,6 +319,7 @@ Automated and manual verification must cover:
 - [ ] Product scope and supported formats are approved.
 - [ ] Clipboard compatibility targets, sanitization, and resource limits are specified.
 - [ ] The canonical portable recipe schema, portable identity, digest, and missing-field semantics are documented.
+- [ ] NOMS-017 portable metadata representation and compatibility rules are agreed, without requiring autocomplete delivery or vocabulary resolution to save imported recipes.
 - [ ] Collection, lineage, image, renderer, and client-orchestration contracts are documented.
 - [ ] Checkpoints, acceptance evidence, and release gates are defined.
 
