@@ -137,6 +137,7 @@ fn ImportAction(
 /// source/provider changes cancel that intent as well as any obsolete worker.
 #[component]
 fn ImportForm() -> Element {
+    let form_account = crate::auth::account_binding::use_form_account();
     let mut message = use_signal(|| "Loading clipboard capture…".to_string());
     let mut ready = use_signal(|| false);
     let mut error = use_signal(|| None::<String>);
@@ -188,9 +189,9 @@ fn ImportForm() -> Element {
                                         match map_direct_import_candidate(&event["candidate"]) {
                                             Ok(editor) => {
                                                 saving.set(true); message.set("Creating your private draft…".into());
-                                                match create_recipe_draft(editor).await {
+                                                match create_recipe_draft(form_account(), editor).await {
                                                     Ok(draft) => { navigator.push(Route::RecipeDraftEdit { id: draft.id.to_string() }); }
-                                                    Err(problem) => { error.set(Some(format!("Could not create draft: {problem}"))); saving.set(false); message.set("Your pasted recipe is still here. Try importing again.".into()); }
+                                                    Err(problem) => { error.set(Some(crate::auth::account_binding::account_error_feedback(&problem).map(str::to_owned).unwrap_or_else(|| format!("Could not create draft: {problem}")))); saving.set(false); message.set("Your pasted recipe is still here. Try importing again.".into()); }
                                                 }
                                             }
                                             Err(problem) => { error.set(Some(problem)); message.set("Check your paste and try again. No draft was created.".into()); }
@@ -242,6 +243,21 @@ fn ImportForm() -> Element {
 mod tests {
     use super::*;
     use dioxus_core::NoOpMutations;
+
+    #[test]
+    fn direct_import_binds_draft_creation_to_the_initiating_account() {
+        // Keep the same account-switch protection as other recipe editors;
+        // a replaceable session must not reassign a pasted recipe's ownership.
+        let source = include_str!("recipe_import.rs")
+            .split("\n#[cfg(all(test, feature = \"server\"))]")
+            .next()
+            .unwrap();
+        assert!(
+            source.contains("let form_account = crate::auth::account_binding::use_form_account();")
+        );
+        assert!(source.contains("create_recipe_draft(form_account(), editor).await"));
+        assert!(source.contains("account_error_feedback(&problem)"));
+    }
 
     #[test]
     fn guided_import_layout_has_named_source_and_keyboard_guidance_without_a_preview() {
