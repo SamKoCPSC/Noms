@@ -59,6 +59,11 @@ correctness, resilience, and maintainability follow-ups.
     session. The page also starts its search resources before rendering the
     authentication prompt, so anonymous navigation both hides Search and emits
     a misleading HTTP 500 for an expected signed-out request.
+13. `docs/manual-test-guide.md` predates the isolated development workflow and
+    current public-route contract. Its mostly authentication-focused cases do
+    not provide a current regression inventory for recipe, collection, search,
+    and media workflows, and there is no established automated browser E2E
+    suite to replay those journeys reliably.
 
 ## Implementation checkpoints
 
@@ -189,9 +194,62 @@ correctness, resilience, and maintainability follow-ups.
   with server and browser tests. Invalid or expired credentials must safely
   degrade to the anonymous result set without granting viewer-only visibility.
 
-### CP12: Integrated release verification
+### CP12: Formalize manual regression coverage and automate core E2E journeys
+
+- Audit `docs/manual-test-guide.md` against implemented routes, current product
+  contracts, NOMS-015 invariants, and CP1–CP11. Update it as the canonical manual
+  regression guide; distinguish implemented behavior, known defects, and future
+  roadmap features so unfinished features are not treated as passing behavior.
+- Replace fixed-port and standalone startup assumptions with the isolated
+  development workflow and its generated app and mock-provider URLs. Document
+  prerequisites, deterministic fixture setup, reset, and teardown without
+  requiring production accounts, credentials, or shared data.
+- Give each case a stable ID, priority, viewer/fixture prerequisites, reproducible
+  steps, and observable expected results. Separate the case definition from run
+  evidence (revision, environment, date, outcome, and linked defects); retire
+  obsolete assertions explicitly instead of carrying historical `FIXED` labels
+  forward as proof of current behavior.
+- Cover public and protected navigation, mock-provider login/linking/logout,
+  profile/settings, recipe create/edit/draft/publish/delete, version history and
+  forks, collection organization and visibility, anonymous/authenticated search
+  and autocomplete, Explore text/tag pagination, image success/failure feedback,
+  route metadata, and representative responsive and keyboard interactions.
+- Establish a repository-owned browser E2E runner with a documented single
+  command. Exercise the real browser, application server, pinned ParadeDB,
+  isolated object storage, and mock OAuth providers. Keep authentication setup
+  confined to test infrastructure without adding production authentication
+  bypasses; exercise the actual login flow in dedicated authentication cases.
+- Implement a required smoke suite for anonymous discovery and metadata,
+  login/logout, recipe draft-to-publish/edit, collection membership, and
+  cross-user visibility. Add regression cases for CP5, CP8, CP10, and CP11,
+  including corrupt images, stale search responses, pagination, and private
+  collection ancestors/members. Assert visible outcomes and persisted behavior,
+  including after reload where relevant.
+- Map manual case IDs to automated tests. Mark remaining cases as manual or
+  covered at another test layer with a rationale; retain focused database and
+  integration tests for cleanup fairness, query plans, and resource bounds
+  instead of forcing every internal invariant through the browser.
+- Keep runs independent using deterministic fixtures, separate viewer sessions,
+  isolated state, stable accessible selectors, and bounded condition-based
+  waits. Document the initial supported browser/viewport matrix and cover at
+  least desktop Chromium plus a representative mobile viewport; do not imply
+  cross-browser coverage from viewport emulation alone.
+- Run the smoke suite as a required CI gate and provide a documented full-suite
+  CI/release command. Bound concurrency and runtime, always tear down disposable
+  resources, and retain useful failure traces/screenshots/logs without secrets.
+  Retries must not silently turn reproducible failures into passing evidence;
+  record flaky or quarantined cases with an owner and linked follow-up.
+- Verify the guide by replaying the smoke cases manually in a fresh environment,
+  and prove the automated suite passes on two consecutive clean environments.
+  Require future behavior changes to update the affected guide cases and tests
+  together so the manual and automated coverage remain aligned.
+
+### CP13: Integrated release verification
 
 - Run `just ci` and all pinned ParadeDB integration tests.
+- Run CP12's automated smoke and full E2E suites and record the remaining manual
+  release-case outcomes against the same revision. Unexplained skips or missing
+  evidence do not satisfy the release gate.
 - Complete a clean production Docker image build and runtime health check.
 - In a fresh isolated browser deployment, verify dashboard loading, text and tag
   discovery, corrupt-image failure feedback, graph/history reads, and cleanup
@@ -223,6 +281,10 @@ correctness, resilience, and maintainability follow-ups.
   descriptive names, explicit state transitions, and durable invariant-focused
   documentation without changing observable behavior.
 - The integrated code, production image, and fresh-browser regression gate pass.
+- The canonical manual guide matches current behavior and isolated setup, with
+  stable case IDs and traceable automated coverage or explicit manual rationale.
+- Core user journeys and NOMS-021 browser regressions have repeatable E2E tests,
+  a required CI smoke gate, failure artifacts, and successful clean-run evidence.
 
 ## Out of scope
 

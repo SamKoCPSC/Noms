@@ -1,4 +1,0 @@
-interface:
-  display_name: "Implement Review Loop"
-  short_description: "Implement, review, validate, and iterate"
-  default_prompt: "Use $implement-review to implement this change and iterate through review until the result is clean."

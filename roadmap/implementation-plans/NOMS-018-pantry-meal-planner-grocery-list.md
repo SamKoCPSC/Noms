@@ -2,9 +2,9 @@
 
 **Status:** Discovery — product scope agreed; implementation contracts under refinement
 **Created:** 2026-08-15
-**Updated:** 2026-09-08
-**Depends on:** Current recipe scaling, ingredient, and equipment models; NOMS-017 canonical ingredient and equipment identities
-**Coordination:** NOMS-017 owns taxonomy identities and aliases; NOMS-018 owns availability, quantities, units, feasibility, and shopping semantics. NOMS-016 imported recipes must degrade safely when requirements cannot be normalized.
+**Updated:** 2026-09-12
+**Depends on:** Current recipe scaling, ingredient, and equipment models. Initial matching can proceed with exact names before NOMS-017 identity integration.
+**Coordination:** NOMS-017 owns canonical ingredient/equipment identities and aliases for later integration; NOMS-018 initially treats distinct exact names as distinct identities and owns availability, gram quantities, feasibility, and shopping semantics. NOMS-016 imported recipes must preserve requirements whose quantities cannot be evaluated in grams.
 **Approach:** Persist named kitchen profiles, match recipes against their ingredients and equipment, and combine selected recipes into understandable requirements and a mobile shopping checklist.
 
 ---
@@ -26,27 +26,36 @@ Saved kitchen profiles make these workflows reusable. A shopping checklist carri
 - Allow creating, renaming, editing, duplicating, and deleting profiles, and quickly marking ingredients as out.
 - Evaluate against one selected profile at a time and remember the last selected profile. Do not implicitly combine supplies across locations.
 - Require explicit availability for every ingredient, including salt, oil, and water; there are no assumed staples.
-- Allow ingredient presence without a quantity. Optional quantities and units enable sufficiency checks; unknown quantities must remain distinguishable from sufficient quantities.
+- Allow ingredient presence without a quantity. Optional numeric quantities are in grams only and enable sufficiency checks; unknown quantities must remain distinguishable from sufficient quantities.
 - Keep inventory changes deliberate. Selecting or making a recipe and checking off a shopping item do not automatically deduct or replenish inventory.
+
+### Initial matching and quantity rules
+
+- Identify ingredients by exact name equality. Distinct names are distinct ingredients; do not infer aliases, spelling/case equivalence, varieties, or substitutions. Canonical identity resolution belongs to later NOMS-017 integration.
+- Identify equipment by exact name equality in the same way. Each distinct equipment name represents a unique type checked for presence; do not model physical instances, counts, size, capacity, or compatibility initially.
+- Support grams only for numeric ingredient quantities, scaling, aggregation, and availability subtraction. Unit conversions and count-based calculations are deferred.
+- Preserve existing non-gram or textual recipe quantities for display. They can participate in ingredient-presence matching but cannot establish quantity sufficiency or a numeric shortage; show quantity uncertainty instead of inventing gram values.
 
 ### Recipe feasibility
 
 - Match both ingredient and equipment requirements against the selected profile.
 - Explain results with missing ingredients, missing equipment, insufficient quantities, and unknown quantities. Having every ingredient is distinct from having enough to make the recipe.
-- Include near matches with explicit missing requirements.
-- Evaluate recipes individually while browsing and collectively when selected together: two eggs may cover either of two recipes individually while the pair requires four.
+- Use the categories Ready; Ready, quantity uncertain; Missing ingredients; Missing equipment; and Missing both.
+- Known ingredient shortages count under Missing ingredients, including when the ingredient is present but its gram quantity is insufficient. Missing both means ingredient shortages and missing equipment coexist.
+- Use Ready only when required ingredients have sufficient known quantities and required equipment is present. Use Ready, quantity uncertain when there are no known missing requirements but sufficiency cannot be established. Preserve uncertainty details alongside any missing-requirement category.
+- Include near matches with explicit missing requirements. Feasibility ranking is deferred.
+- Evaluate recipes individually while browsing and collectively when selected together: 200 g of rice may cover either of two recipes individually while the pair requires 400 g.
 - Missing explicitly optional ingredients must not disqualify a recipe. Accept alternatives only where the recipe explicitly permits them.
-- Preserve equipment requirements such as size or capacity; a shared name alone does not establish suitability.
-- Preserve unresolved ingredient or equipment text and expose uncertainty rather than claiming a confirmed match.
+- Explicitly declared alternatives use the same exact-name checks; no equipment compatibility inference is performed.
 
 ### Combined requirements
 
 - Select multiple recipes and serving counts without requiring a calendar.
 - Aggregate compatible ingredient quantities and subtract known availability once across the selection. Expose remaining shortages and unknown quantities.
-- Deduplicate reusable equipment across recipes while preserving explicit quantity, size, and capacity constraints. Scheduling simultaneous equipment use is outside the initial scope.
+- Deduplicate equipment by exact name across recipes. Counts, size/capacity compatibility, and scheduling simultaneous equipment use are outside the initial scope.
 - Retain source-recipe links for every generated requirement and show which recipes contribute to it.
 - Recalculate requirements when serving counts or selected recipes change.
-- Merge only compatible quantities for the same ingredient identity. Keep ambiguous quantities separate and do not infer mass-to-volume conversions without supported ingredient-specific data.
+- Merge gram quantities only for ingredients with the same exact name. Keep unsupported quantities visible and separate, including when other requirements for that ingredient have known gram quantities.
 
 ### Shopping checklist UI
 
@@ -65,12 +74,12 @@ Saved kitchen profiles make these workflows reusable. A shopping checklist carri
 - Household sharing or combining multiple kitchen profiles for a match.
 - Expiration tracking, automatic inventory consumption or replenishment, and automatic substitution suggestions.
 - Full offline editing of kitchen profiles and recipe selections; the offline commitment here is the shopping checklist.
+- Units other than grams, unit conversions, inferred ingredient/equipment equivalence, equipment counts and compatibility, and feasibility ranking. Canonical identity integration is a later step coordinated with NOMS-017.
 
 ## Questions to resolve
 
-- Which quantity forms and unit conversions are supported initially, and how are unparseable quantities or missing base serving counts presented?
-- How do taxonomy mappings, miscellaneous identities, equipment constraints, and explicit recipe alternatives participate in matching?
-- How are near matches ordered and filtered without hiding missing equipment or unknown quantities?
+- What numeric precision and input validation should gram quantities use, and how are missing base serving counts handled?
+- How will exact-name entries migrate to NOMS-017 identities when that integration is introduced?
 - How are optional requirements and equipment alternatives represented in recipe data?
 - When recipes, serving counts, or inventory change, how are existing checklist quantities and completed states reconciled? How are recipe versions retained or refreshed?
 - How are offline edits synchronized across devices, conflicts resolved, and profile deletion handled for existing lists?
@@ -78,7 +87,7 @@ Saved kitchen profiles make these workflows reusable. A shopping checklist carri
 
 ## Required implementation-plan deliverables
 
-- Ingredient and equipment matching, quantity, and unit-conversion contracts aligned with NOMS-017.
+- Exact-name ingredient/equipment matching and grams-only quantity contracts, with a later NOMS-017 identity integration path.
 - Kitchen profile, recipe selection, combined requirements, checklist, and provenance data models.
 - Authorization, privacy, migration, and offline behavior.
 - Test-first checkpoints for each vertical slice and their integration.
@@ -89,7 +98,10 @@ Saved kitchen profiles make these workflows reusable. A shopping checklist carri
 - A user switches between Home and Cabin and sees results based only on the selected profile, including after a reload.
 - A recipe requiring salt reports it missing when salt has not been explicitly included.
 - A recipe with all ingredient names present but unknown amounts shows quantity uncertainty; missing required equipment remains visible.
-- Two selected recipes requiring two eggs each, against a profile containing two eggs, produce a two-egg shortage.
+- Two selected recipes requiring 200 g of rice each, against a profile containing 200 g of rice, produce a 200 g shortage.
+- A profile listing `scallion` does not satisfy `green onion`; distinct equipment names likewise do not match automatically.
+- A recipe requiring rice in cups with rice present in the profile reports quantity uncertainty and does not convert cups to grams.
+- Feasibility categories distinguish known ingredient shortages, missing equipment, both, full coverage, and coverage with uncertain quantities; uncertainty remains visible even alongside a known shortage.
 - Two recipes requiring the same reusable blender produce one equipment requirement with both source recipes retained.
 - An absent optional garnish does not block a match; an explicitly permitted equipment alternative can satisfy its requirement.
 - Changing serving counts updates requirements without losing manual shopping items or silently misrepresenting completed purchases.
