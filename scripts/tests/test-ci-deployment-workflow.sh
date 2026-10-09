@@ -39,6 +39,8 @@ done
 
 # Go installs tools outside PATH on hosted runners. Both schema consumers need
 # the explicit path export, not just the search integration job.
+# Match literal workflow shell expressions without evaluating them here.
+# shellcheck disable=SC2016
 for job in search-integration schema-check; do
     steps="$(job_steps "$job")"
     grep -Fq 'go install github.com/pgplex/pgschema@v1.12.1' <<< "$steps" \
@@ -50,5 +52,20 @@ for job in search-integration schema-check; do
 done
 grep -Fq 'fetch-depth: 0' <<< "$(job_steps schema-check)" \
     || fail 'schema PR checks need the base commit for their git diff'
+
+dockerfile="$repo_root/Dockerfile"
+if grep -Eq '^RUN cargo (fmt|clippy|test)([[:space:]]|$)' "$dockerfile"; then
+    fail 'deployment builds must not duplicate CI validation'
+fi
+# The runtime still needs postgresql-client for migrations; only inspect
+# the builder stage, where server binaries existed solely for pgtemp.
+builder_steps="$(awk '/ AS builder$/ { active = 1; next } active && /^FROM / { exit } active { print }' "$dockerfile")"
+if grep -Eq 'apt-get install.*(postgresql|sudo)|rustup component add.*(rustfmt|clippy)' <<< "$builder_steps"; then
+    fail 'deployment builders must not install validation-only tools'
+fi
+grep -Fq 'RUN dx bundle --platform web --release --force-sequential true' "$dockerfile" \
+    || fail 'deployment builds must still produce the release web bundle'
+grep -Fq 'RUN cargo chef cook --release --recipe-path recipe.json' "$dockerfile" \
+    || fail 'deployment builds must preserve dependency caching'
 
 echo 'PASS: CI owns validation and exposes its database tools'

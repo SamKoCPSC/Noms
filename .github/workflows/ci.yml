@@ -93,7 +93,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y postgresql postgresql-client libpq-dev
-          echo "$(pg_config --bindir)" >> "$GITHUB_PATH"
+          pg_config --bindir >> "$GITHUB_PATH"
 
       - name: Verify PostgreSQL test tools
         run: |
@@ -136,7 +136,7 @@ jobs:
             --env POSTGRES_PASSWORD=noms_ci_pass \
             --env POSTGRES_DB=noms_search_test \
             noms-search-postgres-ci
-          for attempt in {1..60}; do
+          for _ in {1..60}; do
             if docker exec noms-search-postgres-ci \
               pg_isready --host 127.0.0.1 --username noms_ci --dbname noms_search_test; then
               exit 0
@@ -243,7 +243,7 @@ jobs:
             --env POSTGRES_PASSWORD=noms_ci_pass \
             --env POSTGRES_DB=noms_ci_test \
             noms-schema-postgres-ci
-          for attempt in {1..60}; do
+          for _ in {1..60}; do
             if docker exec noms-schema-postgres-ci \
               pg_isready --host 127.0.0.1 --username noms_ci --dbname noms_ci_test; then
               exit 0

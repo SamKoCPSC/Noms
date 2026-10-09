@@ -9,22 +9,14 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 # === Stage 2: Compile dependencies (cached across builds) ===
 FROM rust:1-slim-bookworm@sha256:2775a09d208ff0d7c1f50490c45b62db929e87ba1dcbc3f2132ac71a704bcdd3 AS builder
-# Install build deps + PostgreSQL server binaries + sudo for pgtemp integration tests.
-# pgtemp detects Docker's root user and shells out to `sudo -u postgres` to
-# run initdb/postgres — sudo must be available or tests will panic.
-RUN apt-get update && apt-get install -y pkg-config libssl-dev curl postgresql postgresql-client sudo && rm -rf /var/lib/apt/lists/* \
-    && ln -sf /usr/lib/postgresql/*/bin/initdb /usr/local/bin/initdb \
-    && ln -sf /usr/lib/postgresql/*/bin/postgres /usr/local/bin/postgres
-RUN rustup component add rustfmt clippy
+RUN apt-get update && apt-get install -y pkg-config libssl-dev curl && rm -rf /var/lib/apt/lists/*
 RUN cargo install cargo-chef --version 0.1.78 --locked
 RUN cargo install dioxus-cli@0.7.9 --locked
 WORKDIR /usr/src/app
 COPY --from=planner /usr/src/app/recipe.json recipe.json
-# Bound application compilation on shared builders. Clippy and tests otherwise
-# use debug info and all available CPUs, while Dioxus can build two targets at once.
+# Bound application compilation on shared builders; Dioxus also builds its
+# client and server targets sequentially below to limit peak memory usage.
 ENV CARGO_BUILD_JOBS=2 \
-    CARGO_PROFILE_DEV_DEBUG=0 \
-    CARGO_PROFILE_DEV_INCREMENTAL=false \
     SQLX_OFFLINE=true
 RUN cargo chef cook --release --recipe-path recipe.json
 
@@ -32,15 +24,13 @@ RUN cargo chef cook --release --recipe-path recipe.json
 FROM golang:1.24-bookworm@sha256:1a6d4452c65dea36aac2e2d606b01b4a029ec90cc1ae53890540ce6173ea77ac AS pgschema-builder
 RUN go install github.com/pgplex/pgschema@v1.12.1
 
-# === Stage 3: Checks + final build ===
+# === Stage 3: Release bundle ===
+# Formatting, linting and tests run in GitHub CI. Railway's GitHub deployment
+# trigger must have Wait for CI enabled before using this build-only image.
 # Must switch back to the Rust builder context — the pgschema-builder stage
 # uses a Go image which has no cargo toolchain.
 FROM builder AS build-check
 COPY . .
-RUN cargo fmt --check
-RUN cargo clippy --locked --no-default-features --features server -- -D warnings
-# Each database test starts its own PostgreSQL process; bound runtime concurrency too.
-RUN cargo test --locked --no-default-features --features server -- --test-threads=8
 RUN dx bundle --platform web --release --force-sequential true
 
 # === Stage 4: Runtime ===

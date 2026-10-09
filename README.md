@@ -191,6 +191,35 @@ just down instance=agent-a
 uses a wildcard or an implicit Compose project, and it refuses to remove
 containers that do not carry matching Noms ownership labels.
 
+## CI and Railway deployment
+
+GitHub Actions owns formatting, WASM/server compilation and linting, database
+tests, search integration tests, and security checks. Its PostgreSQL test job
+installs the server binaries needed by `pgtemp` and adds their directory to
+`PATH`. Both schema jobs expose the pinned `pgschema` executable on `PATH`.
+
+The production Dockerfile only builds and packages the release application;
+it does not rerun CI checks. This avoids spending Railway's limited build
+budget compiling a separate test profile. The runtime still includes migration
+tools and retains its non-root user and healthcheck.
+
+For each Railway app service connected to GitHub, enable **Settings → Source →
+Wait for CI**. Staging's `Noms-App` trigger for `main` has this enabled. Verify
+the same setting before connecting another environment. Railway waits for
+GitHub Actions workflows on that commit; a failed workflow skips the deploy.
+This setting lives in Railway, not `railway.toml`. Manual/CLI deployments are
+not protected by this GitHub gate, so validate their exact revision first.
+See [Railway's autodeploy documentation](https://docs.railway.com/deployments/github-autodeploys).
+
+Run the workflow regression check with:
+
+```bash
+bash scripts/tests/test-ci-deployment-workflow.sh
+```
+
+Removing duplicate validation reduces deployment work but does not guarantee
+that a cold release build fits the Free plan's ten-minute build limit.
+
 ## Available Commands
 
 | Command | Description |
