@@ -3,8 +3,8 @@
 **Status:** Discovery — product scope agreed; implementation contracts under refinement
 **Created:** 2026-08-15
 **Updated:** 2026-09-12
-**Depends on:** Current recipe scaling, ingredient, and equipment models. Initial matching can proceed with exact names before NOMS-017 identity integration.
-**Coordination:** NOMS-017 owns canonical ingredient/equipment identities and aliases for later integration; NOMS-018 initially treats distinct exact names as distinct identities and owns availability, gram quantities, feasibility, and shopping semantics. NOMS-016 imported recipes must preserve requirements whose quantities cannot be evaluated in grams.
+**Depends on:** Current recipe scaling, ingredient, and equipment models. Initial matching can proceed with exact names before optional NOMS-017 vocabulary-reference integration.
+**Coordination:** NOMS-017 owns ingredient/equipment autocomplete, reviewed aliases, and optional vocabulary references for later integration; these references alone do not establish quantitative compatibility. NOMS-018 initially treats distinct exact names as distinct identities and owns availability, gram quantities, feasibility, and shopping semantics. NOMS-016 imported recipes must preserve requirements whose quantities cannot be evaluated in grams.
 **Approach:** Persist named kitchen profiles, match recipes against their ingredients and equipment, and combine selected recipes into understandable requirements and a mobile shopping checklist.
 
 ---
@@ -31,7 +31,7 @@ Saved kitchen profiles make these workflows reusable. A shopping checklist carri
 
 ### Initial matching and quantity rules
 
-- Identify ingredients by exact name equality. Distinct names are distinct ingredients; do not infer aliases, spelling/case equivalence, varieties, or substitutions. Canonical identity resolution belongs to later NOMS-017 integration.
+- Identify ingredients by exact name equality. Distinct names are distinct ingredients; do not infer aliases, spelling/case equivalence, varieties, or substitutions. Using optional NOMS-017 vocabulary references requires a later explicit compatibility contract; recognition alone does not authorize aggregation.
 - Identify equipment by exact name equality in the same way. Each distinct equipment name represents a unique type checked for presence; do not model physical instances, counts, size, capacity, or compatibility initially.
 - Support grams only for numeric ingredient quantities, scaling, aggregation, and availability subtraction. Unit conversions and count-based calculations are deferred.
 - Preserve existing non-gram or textual recipe quantities for display. They can participate in ingredient-presence matching but cannot establish quantity sufficiency or a numeric shortage; show quantity uncertainty instead of inventing gram values.
@@ -74,12 +74,12 @@ Saved kitchen profiles make these workflows reusable. A shopping checklist carri
 - Household sharing or combining multiple kitchen profiles for a match.
 - Expiration tracking, automatic inventory consumption or replenishment, and automatic substitution suggestions.
 - Full offline editing of kitchen profiles and recipe selections; the offline commitment here is the shopping checklist.
-- Units other than grams, unit conversions, inferred ingredient/equipment equivalence, equipment counts and compatibility, and feasibility ranking. Canonical identity integration is a later step coordinated with NOMS-017.
+- Units other than grams, unit conversions, inferred ingredient/equipment equivalence, equipment counts and compatibility, and feasibility ranking. Optional vocabulary-reference integration is a later step coordinated with NOMS-017.
 
 ## Questions to resolve
 
 - What numeric precision and input validation should gram quantities use, and how are missing base serving counts handled?
-- How will exact-name entries migrate to NOMS-017 identities when that integration is introduced?
+- How will exact-name entries use optional NOMS-017 references without changing authored names or assuming ingredient/equipment equivalence?
 - How are optional requirements and equipment alternatives represented in recipe data?
 - When recipes, serving counts, or inventory change, how are existing checklist quantities and completed states reconciled? How are recipe versions retained or refreshed?
 - How are offline edits synchronized across devices, conflicts resolved, and profile deletion handled for existing lists?
@@ -87,7 +87,7 @@ Saved kitchen profiles make these workflows reusable. A shopping checklist carri
 
 ## Required implementation-plan deliverables
 
-- Exact-name ingredient/equipment matching and grams-only quantity contracts, with a later NOMS-017 identity integration path.
+- Exact-name ingredient/equipment matching and grams-only quantity contracts, with a later optional NOMS-017 vocabulary-reference integration path.
 - Kitchen profile, recipe selection, combined requirements, checklist, and provenance data models.
 - Authorization, privacy, migration, and offline behavior.
 - Test-first checkpoints for each vertical slice and their integration.
