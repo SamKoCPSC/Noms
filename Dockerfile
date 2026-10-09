@@ -20,6 +20,12 @@ RUN cargo install cargo-chef --version 0.1.78 --locked
 RUN cargo install dioxus-cli@0.7.9 --locked
 WORKDIR /usr/src/app
 COPY --from=planner /usr/src/app/recipe.json recipe.json
+# Bound application compilation on shared builders. Clippy and tests otherwise
+# use debug info and all available CPUs, while Dioxus can build two targets at once.
+ENV CARGO_BUILD_JOBS=2 \
+    CARGO_PROFILE_DEV_DEBUG=0 \
+    CARGO_PROFILE_DEV_INCREMENTAL=false \
+    SQLX_OFFLINE=true
 RUN cargo chef cook --release --recipe-path recipe.json
 
 # === Stage 2b: Build pgschema ===
@@ -32,9 +38,10 @@ RUN go install github.com/pgplex/pgschema@v1.12.1
 FROM builder AS build-check
 COPY . .
 RUN cargo fmt --check
-RUN cargo clippy --no-default-features --features server -- -D warnings
-RUN cargo test --no-default-features --features server
-RUN dx bundle --platform web --release
+RUN cargo clippy --locked --no-default-features --features server -- -D warnings
+# Each database test starts its own PostgreSQL process; bound runtime concurrency too.
+RUN cargo test --locked --no-default-features --features server -- --test-threads=8
+RUN dx bundle --platform web --release --force-sequential true
 
 # === Stage 4: Runtime ===
 FROM debian:bookworm-slim@sha256:abd67ffcfa541b485a3dff59865ab629aa048a6c613e639d36e7456b0b229241
