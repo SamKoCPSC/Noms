@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["*"]
+    branches: ["**"]
   pull_request:
     branches: [main]
 
@@ -28,13 +28,13 @@ jobs:
 
       - name: Check WASM client
         if: matrix.target == 'wasm'
-        run: cargo check --target wasm32-unknown-unknown
+        run: cargo check --locked --target wasm32-unknown-unknown
 
       - name: Check native server
         if: matrix.target == 'server'
         env:
           SQLX_OFFLINE: true
-        run: cargo check --features server
+        run: cargo check --locked --no-default-features --features server
 
   clippy:
     strategy:
@@ -55,13 +55,13 @@ jobs:
 
       - name: Clippy WASM client
         if: matrix.target == 'wasm'
-        run: cargo clippy --target wasm32-unknown-unknown -- -D warnings
+        run: cargo clippy --locked --target wasm32-unknown-unknown -- -D warnings
 
       - name: Clippy native server
         if: matrix.target == 'server'
         env:
           SQLX_OFFLINE: true
-        run: cargo clippy --features server -- -D warnings
+        run: cargo clippy --locked --no-default-features --features server -- -D warnings
 
   fmt:
     runs-on: ubuntu-latest
@@ -87,10 +87,23 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c
 
+      # pgtemp starts a disposable PostgreSQL server for each database test.
+      # Ubuntu's server binaries live outside the default PATH.
+      - name: Install PostgreSQL test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql postgresql-client libpq-dev
+          echo "$(pg_config --bindir)" >> "$GITHUB_PATH"
+
+      - name: Verify PostgreSQL test tools
+        run: |
+          initdb --version
+          postgres --version
+
       - name: Run tests
         env:
           SQLX_OFFLINE: true
-        run: cargo test --features server
+        run: cargo test --locked --no-default-features --features server -- --test-threads=8
 
 
   # Search tests require the repository's pinned PostgreSQL image because
@@ -107,7 +120,10 @@ jobs:
         uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c
 
       - name: Install pgschema
-        run: go install github.com/pgplex/pgschema@v1.12.1
+        run: |
+          go install github.com/pgplex/pgschema@v1.12.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          "$(go env GOPATH)/bin/pgschema" --help
 
       - name: Build pinned PostgreSQL image
         run: docker build --tag noms-search-postgres-ci docker/postgres
@@ -154,7 +170,7 @@ jobs:
         env:
           SEARCH_TEST_DATABASE_URL: postgres://noms_ci:noms_ci_pass@localhost:5432/noms_search_test
           SQLX_OFFLINE: true
-        run: cargo test --features server search_integration_ -- --ignored
+        run: cargo test --locked --no-default-features --features server search_integration_ -- --ignored --test-threads=8
 
       - name: Stop pinned PostgreSQL image
         if: always()
@@ -180,6 +196,9 @@ jobs:
       - name: Verify pinned deployment artifacts
         run: ./scripts/check-deployment-artifacts.sh
 
+      - name: Verify CI and deployment workflow
+        run: bash scripts/tests/test-ci-deployment-workflow.sh
+
   # Schema drift detection and destructive change blocking.
   # Runs on PRs that modify migrations/schema.sql or migrations/extensions.sql.
   # Uses pgschema to generate a plan against the staging database, then
@@ -191,6 +210,8 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
 
       - name: Check if schema files changed
         id: schema-changed
@@ -204,7 +225,10 @@ jobs:
 
       - name: Install pgschema
         if: steps.schema-changed.outputs.changed == 'true'
-        run: go install github.com/pgplex/pgschema@v1.12.1
+        run: |
+          go install github.com/pgplex/pgschema@v1.12.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          "$(go env GOPATH)/bin/pgschema" --help
 
       - name: Build extension-capable PostgreSQL image
         if: steps.schema-changed.outputs.changed == 'true'
