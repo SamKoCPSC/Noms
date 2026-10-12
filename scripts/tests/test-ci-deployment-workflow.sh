@@ -53,6 +53,17 @@ done
 grep -Fq 'fetch-depth: 0' <<< "$(job_steps schema-check)" \
     || fail 'schema PR checks need the base commit for their git diff'
 
+publish_steps="$(job_steps publish-image)"
+for expected in \
+    'needs: [check, clippy, fmt, test, search-integration, security]' \
+    "if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'" \
+    'packages: write' 'platforms: linux/amd64' \
+    'cache-to: type=gha,scope=noms-release,mode=max' \
+    ':sha-${{ github.sha }}' ':main'; do
+    grep -Fq -- "$expected" <<< "$publish_steps" \
+        || fail "release image publishing is missing: $expected"
+done
+
 dockerfile="$repo_root/Dockerfile"
 if grep -Eq '^RUN cargo (fmt|clippy|test)([[:space:]]|$)' "$dockerfile"; then
     fail 'deployment builds must not duplicate CI validation'

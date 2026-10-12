@@ -203,13 +203,26 @@ it does not rerun CI checks. This avoids spending Railway's limited build
 budget compiling a separate test profile. The runtime still includes migration
 tools and retains its non-root user and healthcheck.
 
-For each Railway app service connected to GitHub, enable **Settings → Source →
-Wait for CI**. Staging's `Noms-App` trigger for `main` has this enabled. Verify
-the same setting before connecting another environment. Railway waits for
-GitHub Actions workflows on that commit; a failed workflow skips the deploy.
-This setting lives in Railway, not `railway.toml`. Manual/CLI deployments are
-not protected by this GitHub gate, so validate their exact revision first.
-See [Railway's autodeploy documentation](https://docs.railway.com/deployments/github-autodeploys).
+On `main`, CI's `publish-image` job waits for all six validation jobs, builds
+the production Dockerfile for `linux/amd64`, and publishes
+`ghcr.io/samkocpsc/noms:main` plus `sha-<full-commit-sha>`. It uses the job's
+`GITHUB_TOKEN` with `packages: write`; no registry password needs to be saved
+as a repository secret. BuildKit layers are cached in GitHub Actions.
+The workflow can also be run manually on `main` to retry a failed build.
+
+Staging's `Noms-App` should use the public Docker image
+`ghcr.io/samkocpsc/noms:main` as its Railway source. Keep the HTTP healthcheck
+at `/` with a 300-second timeout and preserve its runtime variables and domain.
+Enable image auto-updates if the Railway plan supports them; otherwise redeploy
+after each successful image publication. For a rollback, select a published
+`sha-<full-commit-sha>` tag or the immutable digest recorded in the CI summary.
+GHCR packages initially default to private: the `noms` package must be made
+public for Railway's Free plan to pull it. Credentials are injected by Railway
+at runtime, never passed as Docker build arguments.
+
+The PostgreSQL service continues using the repository source with root directory
+`/docker/postgres` and config file `/docker/postgres/railway.json`. App HTTP
+healthchecks must not be applied to that service.
 
 Run the workflow regression check with:
 
@@ -217,8 +230,7 @@ Run the workflow regression check with:
 bash scripts/tests/test-ci-deployment-workflow.sh
 ```
 
-Removing duplicate validation reduces deployment work but does not guarantee
-that a cold release build fits the Free plan's ten-minute build limit.
+Railway now pulls an existing image, avoiding its cold-build time limit.
 
 ## Available Commands
 

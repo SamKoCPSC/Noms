@@ -25,8 +25,8 @@ FROM golang:1.24-bookworm@sha256:1a6d4452c65dea36aac2e2d606b01b4a029ec90cc1ae538
 RUN go install github.com/pgplex/pgschema@v1.12.1
 
 # === Stage 3: Release bundle ===
-# Formatting, linting and tests run in GitHub CI. Railway's GitHub deployment
-# trigger must have Wait for CI enabled before using this build-only image.
+# Formatting, linting and tests run in GitHub CI before the publish-image job.
+# Railway pulls the published release image instead of compiling it again.
 # Must switch back to the Rust builder context — the pgschema-builder stage
 # uses a Go image which has no cargo toolchain.
 FROM builder AS build-check
