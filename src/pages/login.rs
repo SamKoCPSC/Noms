@@ -14,11 +14,15 @@ const GITHUB_MARK: Asset = asset!("/assets/sign-in/GitHub_Invertocat_Black.svg")
 #[component]
 pub fn Login() -> Element {
     let redirect_uri = use_hook(extract_redirect_uri);
+    let mut show_email_conflict = use_signal(|| has_email_conflict(&extract_login_query()));
     let local_origin = try_consume_context::<crate::auth::local_origin::LocalCanonicalOrigin>()
         .unwrap_or_default();
 
     rsx! {
         document::Link { rel: "stylesheet", href: SIGN_IN_CSS }
+        if show_email_conflict() {
+            EmailConflictDialog { on_dismiss: move |_| show_email_conflict.set(false) }
+        }
         section { class: "sign-in-page", aria_labelledby: "sign-in-title",
             header { class: "sign-in-heading",
                 crate::components::base::BrandMark { large: true }
@@ -77,6 +81,33 @@ pub fn Login() -> Element {
 }
 
 #[component]
+fn EmailConflictDialog(on_dismiss: EventHandler<()>) -> Element {
+    rsx! {
+        crate::components::base::SharedModal {
+            aria_labelledby: "email-conflict-title",
+            focus_selector: "#email-conflict-dismiss",
+            on_dismiss,
+            div {
+                class: "modal-card", onclick: move |event| event.stop_propagation(),
+                display: "flex", flex_direction: "column", gap: "var(--space-md)",
+                h2 { id: "email-conflict-title", "Account already exists" }
+                p { "An account with the same email address already exists using a different sign-in provider." }
+                p { "Sign in to your existing account using that provider, then go to Settings → Accounts to link this provider manually." }
+                button {
+                    id: "email-conflict-dismiss", class: "btn btn-primary touch-target",
+                    onclick: move |_| on_dismiss.call(()), "Back to sign in"
+                }
+            }
+        }
+    }
+}
+
+fn has_email_conflict(query: &str) -> bool {
+    url::form_urlencoded::parse(query.trim_start_matches('?').as_bytes())
+        .any(|(key, value)| key == "error" && value == "email_already_in_use")
+}
+
+#[component]
 fn SignInFeature(text: &'static str) -> Element {
     rsx! {
         li {
@@ -101,15 +132,19 @@ fn oauth_start_url(provider: &str, redirect_uri: &str) -> String {
 /// On WASM, reads from `window.location.search`. On the server, reads
 /// from the `FullstackContext` request URI. Falls back to `"/home"`.
 fn extract_redirect_uri() -> String {
+    parse_redirect_uri(&extract_login_query())
+}
+
+fn extract_login_query() -> String {
     #[cfg(target_arch = "wasm32")]
     {
         if let Some(window) = web_sys::window() {
             let location = window.location();
             if let Ok(search) = location.search() {
-                return parse_redirect_uri(&search);
+                return search.trim_start_matches('?').to_string();
             }
         }
-        "/home".to_string()
+        String::new()
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -117,10 +152,10 @@ fn extract_redirect_uri() -> String {
         if let Some(fsc) = dioxus_fullstack::FullstackContext::current() {
             let parts = fsc.parts_mut();
             if let Some(query) = parts.uri.query() {
-                return parse_redirect_uri(query);
+                return query.to_string();
             }
         }
-        "/home".to_string()
+        String::new()
     }
 }
 
@@ -157,6 +192,40 @@ mod tests {
     use super::*;
     use dioxus::router::components::HistoryProvider;
     use dioxus_core::NoOpMutations;
+
+    #[test]
+    fn email_conflict_feedback_accepts_only_the_known_error_code() {
+        assert!(has_email_conflict("?error=email_already_in_use"));
+        assert!(has_email_conflict(
+            "redirect_uri=%2Fdashboard&error=email_already_in_use"
+        ));
+        assert!(!has_email_conflict(""));
+        assert!(!has_email_conflict("error=unknown"));
+        assert!(!has_email_conflict(
+            "redirect_uri=%2Fhome%3Ferror%3Demail_already_in_use"
+        ));
+    }
+
+    #[test]
+    fn email_conflict_modal_renders_manual_linking_instructions_and_dismiss_control() {
+        fn root() -> Element {
+            rsx! { EmailConflictDialog { on_dismiss: |_| {} } }
+        }
+        let mut dom = VirtualDom::new(root);
+        dom.rebuild(&mut NoOpMutations);
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("<dialog"), "{html}");
+        assert!(
+            html.contains("aria-labelledby=\"email-conflict-title\""),
+            "{html}"
+        );
+        assert!(html.contains("Account already exists"), "{html}");
+        assert!(html.contains("different sign-in provider"), "{html}");
+        assert!(html.contains("Settings → Accounts"), "{html}");
+        assert!(html.contains("link this provider manually"), "{html}");
+        assert!(html.contains("id=\"email-conflict-dismiss\""), "{html}");
+        assert!(html.contains("Back to sign in"), "{html}");
+    }
 
     #[test]
     fn local_sign_in_links_use_canonical_origin_before_client_hydration() {

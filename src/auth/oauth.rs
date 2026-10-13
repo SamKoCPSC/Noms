@@ -142,6 +142,7 @@ pub enum OAuthError {
     InvalidPurpose,
     LinkSessionRequired,
     LoginSessionConflict,
+    EmailAlreadyInUse(String),
     BrowserBindingMissing,
     BrowserBindingMalformed,
     BrowserBindingMismatch,
@@ -170,6 +171,10 @@ impl std::fmt::Display for OAuthError {
             Self::LoginSessionConflict => {
                 write!(f, "OAuth login cannot complete with an active session")
             }
+            Self::EmailAlreadyInUse(_) => write!(
+                f,
+                "An account with the same email address already exists using a different sign-in provider. Sign in to your existing account using that provider, then go to Settings → Accounts to link this provider manually."
+            ),
             Self::BrowserBindingMissing => write!(f, "OAuth browser binding is missing"),
             Self::BrowserBindingMalformed => write!(f, "OAuth browser binding is malformed"),
             Self::BrowserBindingMismatch => write!(f, "OAuth browser binding does not match"),
@@ -201,6 +206,7 @@ impl OAuthError {
             Self::InvalidPurpose => "invalid_purpose",
             Self::LinkSessionRequired => "link_session_required",
             Self::LoginSessionConflict => "login_session_conflict",
+            Self::EmailAlreadyInUse(_) => "email_already_in_use",
             Self::BrowserBindingMissing => "browser_binding_missing",
             Self::BrowserBindingMalformed => "browser_binding_malformed",
             Self::BrowserBindingMismatch => "browser_binding_mismatch",
@@ -230,6 +236,7 @@ impl OAuthError {
             | Self::InvalidPurpose
             | Self::LinkSessionRequired
             | Self::LoginSessionConflict
+            | Self::EmailAlreadyInUse(_)
             | Self::BrowserBindingMissing
             | Self::BrowserBindingMalformed
             | Self::BrowserBindingMismatch
@@ -249,6 +256,19 @@ impl OAuthError {
 
 impl IntoResponse for OAuthError {
     fn into_response(self) -> axum::response::Response {
+        if let Self::EmailAlreadyInUse(redirect_uri) = &self {
+            let encoded = percent_encoding::utf8_percent_encode(
+                redirect_uri,
+                percent_encoding::NON_ALPHANUMERIC,
+            );
+            let location = format!("/login?error=email_already_in_use&redirect_uri={encoded}");
+            tracing::warn!(
+                error_code = self.log_code(),
+                "OAuth email conflict — returning to sign-in"
+            );
+            return (StatusCode::SEE_OTHER, [("location", location)]).into_response();
+        }
+
         // Special case: AccountAlreadyLinked returns a redirect with error params
         if let Self::AccountAlreadyLinked(provider) = &self {
             let redirect_uri = format!(
@@ -272,6 +292,7 @@ impl IntoResponse for OAuthError {
             Self::InvalidPurpose => StatusCode::BAD_REQUEST,
             Self::LinkSessionRequired => StatusCode::UNAUTHORIZED,
             Self::LoginSessionConflict => StatusCode::CONFLICT,
+            Self::EmailAlreadyInUse(_) => StatusCode::CONFLICT,
             Self::BrowserBindingMissing
             | Self::BrowserBindingMalformed
             | Self::BrowserBindingMismatch => StatusCode::UNAUTHORIZED,
@@ -830,6 +851,9 @@ async fn callback_inner(
             );
             return Ok((StatusCode::SEE_OTHER, [("location", redirect_uri)]).into_response());
         }
+        Err(linking::LinkError::EmailAlreadyInUse) => {
+            return Err(OAuthError::EmailAlreadyInUse(redirect_uri));
+        }
         Err(e) => return Err(OAuthError::LinkError(e.to_string())),
     };
 
@@ -1387,6 +1411,30 @@ mod tests {
         assert_eq!(
             OAuthError::AccountAlreadyLinked("google".to_string()).sanitized_message(),
             "The google account is already linked to another user"
+        );
+    }
+
+    #[test]
+    fn email_conflict_redirects_to_login_preserving_the_return_destination() {
+        let error = OAuthError::EmailAlreadyInUse("/search?q=soup&scope=recipes".into());
+        assert_eq!(error.log_code(), "email_already_in_use");
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::SEE_OTHER);
+        let location = response
+            .headers()
+            .get("location")
+            .unwrap()
+            .to_str()
+            .unwrap();
+        let url = url::Url::parse(&format!("https://noms.example{location}")).unwrap();
+        assert_eq!(url.path(), "/login");
+        let pairs: Vec<_> = url.query_pairs().collect();
+        assert_eq!(
+            pairs,
+            vec![
+                ("error".into(), "email_already_in_use".into()),
+                ("redirect_uri".into(), "/search?q=soup&scope=recipes".into())
+            ]
         );
     }
 
