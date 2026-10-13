@@ -1363,7 +1363,9 @@ mod tests {
                 RateLimitState::from_configuration(Some("railway-edge"), None, true).unwrap();
             let (address, shutdown_tx, server) = spawn_production_oauth_server(limiter).await;
             let client = oauth_http_client();
-            let endpoint = format!("http://{address}/auth/google/start");
+            let endpoint = format!(
+                "http://{address}/auth/google/start?redirect_uri=%2Fdashboard&purpose=login"
+            );
 
             for invalid in ["", "not-an-ip", "203.0.113.60, 203.0.113.61"] {
                 assert_eq!(
