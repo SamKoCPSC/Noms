@@ -36,10 +36,22 @@ Leave `COOKIE_DOMAIN` unset for host-only session cookies. Set it only when
 sessions deliberately need to span trusted subdomains; it must be a bare DNS
 domain rather than a URL.
 
-`TRUSTED_PROXIES` must contain only the CIDRs of reverse proxies that connect
-directly to the application. Do not use `0.0.0.0/0` or `::/0`. Re-confirm the
-CIDRs when Railway routing changes. An empty value ignores forwarded headers
-and uses the direct peer address.
+Client address handling defaults to `CLIENT_IP_POLICY=proxy-chain`.
+`TRUSTED_PROXIES` must contain only verified direct-proxy IPs/CIDRs; do not use
+`0.0.0.0/0` or `::/0`. Railway runtimes using that policy require a nonempty
+value. Non-proxy local runtimes can use an empty value for direct peer identity.
+
+`CLIENT_IP_POLICY=railway-edge` explicitly selects Railway's overwritten
+`X-Real-IP` for client identity, requires Railway deployment metadata, and rejects
+missing, malformed, or duplicate values. It does not require agreement with
+`X-Forwarded-For` or use `TRUSTED_PROXIES` for identity. Enable it only when the
+app has no public TCP proxy and every workload sharing its project/environment
+(including databases and private-network sandboxes) is trusted to supply client
+identity. Private callers bypass edge sanitization; no request-level mechanism
+proves edge origin. Railway's ingress CIDRs are not a stable trust contract.
+Review that network boundary whenever adding workloads or public ingress.
+Unknown/empty policy values fail startup; `NOMS_ENV` does not select the policy.
+See the README's OAuth rate limiting section for the explicit deployment setup.
 
 Railway is configured to build the repository Dockerfile, use `/` as its
 health check, and restart failed processes. The container runs as the

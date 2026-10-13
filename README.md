@@ -77,27 +77,40 @@ unchanged. Other hostnames and different ports are not treated as aliases.
 
 #### OAuth rate limiting behind a reverse proxy
 
-OAuth start and callback requests are limited per client address. Forwarded
-address headers are ignored unless the request's direct TCP peer is included
-in the comma-separated `TRUSTED_PROXIES` setting. Entries may be individual IP
-addresses or CIDR ranges. The default is empty; do not add loopback, private,
-or platform ranges unless they are the verified addresses of the proxy that
-connects directly to this application.
+OAuth start and callback requests are limited per client address. Select the
+client address policy explicitly with `CLIENT_IP_POLICY`:
 
-Railway currently documents its private proxy network as `100.0.0.0/8`, so a
-Railway deployment can explicitly set:
+- `proxy-chain` (default): forwarding headers are accepted only from direct
+  peers configured in comma-separated `TRUSTED_PROXIES` IPs/CIDRs. The chain
+  is unwound from the right; `X-Real-IP` must agree when both headers exist.
+  Railway runtimes using this policy require nonempty `TRUSTED_PROXIES`.
+- `railway-edge`: opt-in for Railway public HTTP ingress. Requires Railway
+  deployment metadata and one valid `X-Real-IP`; missing, malformed, or duplicate
+  values fail closed without falling back to another header or the peer IP.
+  `X-Forwarded-For` does not determine identity in this policy. `TRUSTED_PROXIES`
+  is not used for identity, and may be omitted. Invalid supplied CIDRs still
+  reject startup. Unknown or empty policy values also reject startup.
+
+For Railway staging, set this on the **app service**, then redeploy:
 
 ```text
-TRUSTED_PROXIES=100.0.0.0/8
+CLIENT_IP_POLICY=railway-edge
 ```
 
-The application accepts `X-Real-IP` or a strictly unwound
-`X-Forwarded-For` chain from configured peers. If both are present, they must
-identify the same client. Invalid configuration stops startup. A runtime with
-Railway deployment metadata also refuses to start when `TRUSTED_PROXIES` is
-missing or empty, preventing a silently shared proxy-wide bucket. Missing or
-ambiguous request identity fails closed only on the rate-limited OAuth
-endpoints.
+This setting declares that **all workloads able to reach the app privately in
+its project/environment are trusted**. Verify the app has no public TCP proxy
+and review every service and private-network sandbox sharing that environment.
+Private callers bypass HTTP edge header sanitization and can supply arbitrary
+`X-Real-IP` values. The application cannot authenticate edge origin from headers
+or a stable proxy CIDR. Do not enable this policy for an untrusted private caller
+or raw public TCP ingress. Railway's proxy address ranges are not guaranteed
+stable; do not treat `100.0.0.0/8` as a durable ingress authentication contract.
+See [Railway's confirmed header and network trust model](https://station.railway.com/questions/fastapi-uvicorn-trusted-proxy-configura-9c06fa12).
+
+The policy applies to OAuth rate limiting and the normalized client identity
+passed to server functions. Rejection logs record the policy and reason without
+raw IP addresses, headers, or credentials. Keep `NOMS_ENV` independent of this
+setting; it does not enable the Railway policy automatically.
 
 The limiter is stored in process memory and therefore applies independently
 to each application replica. Deployments requiring a global limit across

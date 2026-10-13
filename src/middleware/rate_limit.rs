@@ -107,6 +107,26 @@ fn load_trusted_proxy_configuration(
     configured.map_or_else(|| Ok(TrustedProxyList::default()), TrustedProxyList::parse)
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+enum ClientIpPolicy {
+    #[default]
+    ProxyChain,
+    RailwayEdge,
+}
+
+impl ClientIpPolicy {
+    fn parse(configured: Option<&str>, railway_runtime: bool) -> Result<Self, String> {
+        match configured {
+            None | Some("proxy-chain") => Ok(Self::ProxyChain),
+            Some("railway-edge") if railway_runtime => Ok(Self::RailwayEdge),
+            Some("railway-edge") => {
+                Err("CLIENT_IP_POLICY=railway-edge requires Railway deployment metadata".into())
+            }
+            Some(_) => Err("CLIENT_IP_POLICY must be proxy-chain or railway-edge".into()),
+        }
+    }
+}
+
 // ── Endpoint categories ──────────────────────────────────────────────────────
 
 /// Which category of OAuth endpoint a request targets.
@@ -142,6 +162,7 @@ pub struct RateLimitState {
     start_windows: Arc<DashMap<IpAddr, VecDeque<Instant>>>,
     callback_windows: Arc<DashMap<IpAddr, VecDeque<Instant>>>,
     trusted_proxies: TrustedProxyList,
+    client_ip_policy: ClientIpPolicy,
 }
 
 impl Default for RateLimitState {
@@ -150,6 +171,7 @@ impl Default for RateLimitState {
             start_windows: Arc::new(DashMap::new()),
             callback_windows: Arc::new(DashMap::new()),
             trusted_proxies: TrustedProxyList::default(),
+            client_ip_policy: ClientIpPolicy::default(),
         }
     }
 }
@@ -163,12 +185,19 @@ impl RateLimitState {
         }
     }
 
-    /// Load the explicit proxy trust boundary from `TRUSTED_PROXIES`.
+    /// Load the explicitly selected client-IP policy and proxy trust boundary.
     ///
     /// Invalid configuration is an error rather than a partially applied list,
     /// because silently changing the trust boundary can merge users into a
     /// proxy-wide bucket or make forwarding headers spoofable.
     pub fn from_environment() -> Result<Self, String> {
+        let policy = match std::env::var("CLIENT_IP_POLICY") {
+            Ok(value) => Some(value),
+            Err(std::env::VarError::NotPresent) => None,
+            Err(std::env::VarError::NotUnicode(_)) => {
+                return Err("CLIENT_IP_POLICY is not valid Unicode".into());
+            }
+        };
         let configured = match std::env::var("TRUSTED_PROXIES") {
             Ok(value) => Some(value),
             Err(std::env::VarError::NotPresent) => None,
@@ -178,10 +207,46 @@ impl RateLimitState {
         };
         let proxy_hosted_runtime = std::env::var_os("RAILWAY_PROJECT_ID").is_some()
             || std::env::var_os("RAILWAY_ENVIRONMENT_ID").is_some();
-        let trusted_proxies =
-            load_trusted_proxy_configuration(configured.as_deref(), proxy_hosted_runtime)?;
+        Self::from_configuration(
+            policy.as_deref(),
+            configured.as_deref(),
+            proxy_hosted_runtime,
+        )
+    }
 
-        Ok(Self::with_trusted_proxies(trusted_proxies))
+    fn from_configuration(
+        policy: Option<&str>,
+        trusted_proxies: Option<&str>,
+        railway_runtime: bool,
+    ) -> Result<Self, String> {
+        let client_ip_policy = ClientIpPolicy::parse(policy, railway_runtime)?;
+        let trusted_proxies = load_trusted_proxy_configuration(
+            trusted_proxies,
+            railway_runtime && client_ip_policy == ClientIpPolicy::ProxyChain,
+        )?;
+
+        tracing::info!(?client_ip_policy, "Configured client-IP policy");
+        Ok(Self {
+            client_ip_policy,
+            ..Self::with_trusted_proxies(trusted_proxies)
+        })
+    }
+
+    fn resolve_client_ip(&self, req: &Request<Body>) -> Result<IpAddr, ClientIdentityRejection> {
+        match self.client_ip_policy {
+            ClientIpPolicy::ProxyChain => resolve_client_ip(req, &self.trusted_proxies),
+            // This opt-in trusts every workload in the Railway project/environment.
+            // Public TCP ingress must be absent; private callers can forge headers.
+            // Railway's ingress CIDRs are not a stable authentication mechanism.
+            ClientIpPolicy::RailwayEdge => {
+                req.extensions()
+                    .get::<ConnectInfo<SocketAddr>>()
+                    .ok_or(ClientIdentityRejection::MissingPeer)?;
+                parse_single_ip_header(req.headers(), &X_REAL_IP)
+                    .map_err(|_| ClientIdentityRejection::InvalidRealIp)?
+                    .ok_or(ClientIdentityRejection::MissingRealIp)
+            }
+        }
     }
 
     /// Check whether a request from `ip` in the given category is allowed.
@@ -267,6 +332,7 @@ impl RateLimitState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ClientIdentityRejection {
     MissingPeer,
+    MissingRealIp,
     InvalidForwardedFor,
     InvalidRealIp,
     ConflictingHeaders,
@@ -278,6 +344,7 @@ impl ClientIdentityRejection {
     fn as_str(self) -> &'static str {
         match self {
             Self::MissingPeer => "missing_peer",
+            Self::MissingRealIp => "missing_x_real_ip",
             Self::InvalidForwardedFor => "invalid_x_forwarded_for",
             Self::InvalidRealIp => "invalid_x_real_ip",
             Self::ConflictingHeaders => "conflicting_forwarded_headers",
@@ -295,6 +362,7 @@ impl ClientIdentityRejection {
 ///
 /// Missing peer information or an unusable trusted-proxy chain returns `None`,
 /// causing rate-limited endpoints to fail closed instead of sharing a fallback.
+#[cfg(test)]
 fn extract_client_ip(req: &Request<Body>, trusted_proxies: &TrustedProxyList) -> Option<IpAddr> {
     resolve_client_ip(req, trusted_proxies).ok()
 }
@@ -453,12 +521,13 @@ pub async fn rate_limit_middleware(
         None => return next.run(req).await,
     };
 
-    let ip = match resolve_client_ip(&req, &app_state.rate_limit.trusted_proxies) {
+    let ip = match app_state.rate_limit.resolve_client_ip(&req) {
         Ok(ip) => ip,
         Err(reason) => {
             tracing::warn!(
                 path,
                 reason = reason.as_str(),
+                policy = ?app_state.rate_limit.client_ip_policy,
                 "OAuth request rejected because no trustworthy client identity was available"
             );
             return make_503_response();
@@ -479,7 +548,7 @@ pub async fn resolved_client_ip_middleware(
     next: Next,
 ) -> Response<Body> {
     req.headers_mut().remove(&*RESOLVED_CLIENT_IP);
-    if let Some(ip) = extract_client_ip(&req, &rate_limit.trusted_proxies) {
+    if let Ok(ip) = rate_limit.resolve_client_ip(&req) {
         if let Ok(value) = HeaderValue::from_str(&ip.to_string()) {
             req.headers_mut().insert(RESOLVED_CLIENT_IP.clone(), value);
         }
@@ -495,6 +564,112 @@ mod tests {
     use std::time::Duration;
 
     // ── Unit tests ───────────────────────────────────────────────────────────
+
+    #[test]
+    fn railway_policy_requires_explicit_valid_configuration() {
+        assert_eq!(
+            ClientIpPolicy::parse(None, true).unwrap(),
+            ClientIpPolicy::ProxyChain
+        );
+        assert!(RateLimitState::from_configuration(None, None, true).is_err());
+        assert!(RateLimitState::from_configuration(Some("railway-edge"), None, true).is_ok());
+        assert!(RateLimitState::from_configuration(Some("railway-edge"), None, false).is_err());
+        for invalid in ["", "railway", "Railway-edge"] {
+            assert!(RateLimitState::from_configuration(Some(invalid), None, true).is_err());
+        }
+    }
+
+    fn railway_request(real_ip: Option<&str>) -> Request<Body> {
+        let mut request = Request::new(Body::empty());
+        request
+            .extensions_mut()
+            .insert(ConnectInfo(SocketAddr::from(([192, 0, 2, 1], 8080))));
+        if let Some(value) = real_ip {
+            request
+                .headers_mut()
+                .insert(X_REAL_IP.clone(), value.parse().unwrap());
+        }
+        request
+    }
+
+    #[test]
+    fn railway_policy_uses_real_ip_without_requiring_chain_agreement() {
+        let state = RateLimitState::from_configuration(Some("railway-edge"), None, true).unwrap();
+        for forwarded_for in ["198.51.100.10, 192.0.2.2", "malformed", ""] {
+            let mut request = railway_request(Some("203.0.113.60"));
+            request
+                .headers_mut()
+                .insert(X_FORWARDED_FOR.clone(), forwarded_for.parse().unwrap());
+            assert_eq!(
+                state.resolve_client_ip(&request),
+                Ok(IpAddr::from([203, 0, 113, 60]))
+            );
+        }
+        assert_eq!(
+            state.resolve_client_ip(&railway_request(Some("::ffff:203.0.113.60"))),
+            Ok(IpAddr::from([203, 0, 113, 60]))
+        );
+    }
+
+    #[test]
+    fn railway_policy_rejects_missing_invalid_and_duplicate_real_ip_without_fallback() {
+        let state = RateLimitState::from_configuration(Some("railway-edge"), None, true).unwrap();
+        for (value, expected) in [
+            (None, ClientIdentityRejection::MissingRealIp),
+            (Some(""), ClientIdentityRejection::InvalidRealIp),
+            (Some("not-an-ip"), ClientIdentityRejection::InvalidRealIp),
+            (
+                Some("203.0.113.1, 203.0.113.2"),
+                ClientIdentityRejection::InvalidRealIp,
+            ),
+        ] {
+            let mut request = railway_request(value);
+            request.headers_mut().insert(
+                X_FORWARDED_FOR.clone(),
+                HeaderValue::from_static("203.0.113.60"),
+            );
+            assert_eq!(state.resolve_client_ip(&request), Err(expected));
+        }
+        let mut request = railway_request(Some("203.0.113.60"));
+        request
+            .headers_mut()
+            .append(X_REAL_IP.clone(), HeaderValue::from_static("203.0.113.60"));
+        assert_eq!(
+            state.resolve_client_ip(&request),
+            Err(ClientIdentityRejection::InvalidRealIp)
+        );
+        let mut request = railway_request(Some("203.0.113.60"));
+        request.extensions_mut().remove::<ConnectInfo<SocketAddr>>();
+        assert_eq!(
+            state.resolve_client_ip(&request),
+            Err(ClientIdentityRejection::MissingPeer)
+        );
+    }
+
+    #[test]
+    fn railway_policy_keeps_client_limits_independent_of_forwarded_chain() {
+        let state = RateLimitState::from_configuration(Some("railway-edge"), None, true).unwrap();
+        for category in [EndpointCategory::Start, EndpointCategory::Callback] {
+            for index in 0..category.limit() {
+                let mut request = railway_request(Some("203.0.113.60"));
+                request.headers_mut().insert(
+                    X_FORWARDED_FOR.clone(),
+                    format!("198.51.100.{index}").parse().unwrap(),
+                );
+                assert!(state
+                    .check(state.resolve_client_ip(&request).unwrap(), category)
+                    .is_ok());
+            }
+            let ip = state
+                .resolve_client_ip(&railway_request(Some("203.0.113.60")))
+                .unwrap();
+            assert!(state.check(ip, category).is_err());
+            let other = state
+                .resolve_client_ip(&railway_request(Some("203.0.113.61")))
+                .unwrap();
+            assert!(state.check(other, category).is_ok());
+        }
+    }
 
     #[test]
     fn client_identity_rejections_report_specific_reasons() {
@@ -1180,6 +1355,76 @@ mod tests {
                 StatusCode::SERVICE_UNAVAILABLE,
                 "missing peer identity must fail closed instead of sharing a global bucket"
             );
+        }
+
+        #[tokio::test]
+        async fn production_tcp_railway_policy_validates_real_ip_and_preserves_limits() {
+            let limiter =
+                RateLimitState::from_configuration(Some("railway-edge"), None, true).unwrap();
+            let (address, shutdown_tx, server) = spawn_production_oauth_server(limiter).await;
+            let client = oauth_http_client();
+            let endpoint = format!("http://{address}/auth/google/start");
+
+            for invalid in ["", "not-an-ip", "203.0.113.60, 203.0.113.61"] {
+                assert_eq!(
+                    client
+                        .get(&endpoint)
+                        .header("x-real-ip", invalid)
+                        .header("x-forwarded-for", "203.0.113.60")
+                        .send()
+                        .await
+                        .unwrap()
+                        .status(),
+                    StatusCode::SERVICE_UNAVAILABLE
+                );
+            }
+            assert_eq!(
+                client.get(&endpoint).send().await.unwrap().status(),
+                StatusCode::SERVICE_UNAVAILABLE
+            );
+            assert_eq!(
+                client
+                    .get(&endpoint)
+                    .header("x-real-ip", "203.0.113.60")
+                    .header("x-real-ip", "203.0.113.61")
+                    .send()
+                    .await
+                    .unwrap()
+                    .status(),
+                StatusCode::SERVICE_UNAVAILABLE
+            );
+            for index in 0..START_LIMIT_PER_MIN {
+                let response = client
+                    .get(&endpoint)
+                    .header("x-real-ip", "203.0.113.60")
+                    .header("x-forwarded-for", format!("198.51.100.{index}"))
+                    .send()
+                    .await
+                    .unwrap();
+                assert_eq!(response.status(), StatusCode::TEMPORARY_REDIRECT);
+            }
+            let limited = client
+                .get(&endpoint)
+                .header("x-real-ip", "203.0.113.60")
+                .header("x-forwarded-for", "malformed")
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(limited.status(), StatusCode::TOO_MANY_REQUESTS);
+            assert!(limited.headers().contains_key(RETRY_AFTER));
+            assert_eq!(
+                client
+                    .get(&endpoint)
+                    .header("x-real-ip", "203.0.113.61")
+                    .send()
+                    .await
+                    .unwrap()
+                    .status(),
+                StatusCode::TEMPORARY_REDIRECT
+            );
+
+            let _ = shutdown_tx.send(());
+            server.await.unwrap();
         }
 
         #[tokio::test]
