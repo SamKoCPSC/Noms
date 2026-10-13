@@ -263,6 +263,30 @@ impl RateLimitState {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+/// Safe diagnostic labels: never include raw headers, addresses, or credentials.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ClientIdentityRejection {
+    MissingPeer,
+    InvalidForwardedFor,
+    InvalidRealIp,
+    ConflictingHeaders,
+    MissingForwardedAddress,
+    NoNonProxyAddress,
+}
+
+impl ClientIdentityRejection {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::MissingPeer => "missing_peer",
+            Self::InvalidForwardedFor => "invalid_x_forwarded_for",
+            Self::InvalidRealIp => "invalid_x_real_ip",
+            Self::ConflictingHeaders => "conflicting_forwarded_headers",
+            Self::MissingForwardedAddress => "missing_forwarded_address",
+            Self::NoNonProxyAddress => "no_non_proxy_address",
+        }
+    }
+}
+
 /// Extract the client IP address from the request.
 ///
 /// An untrusted direct peer is always its own identity, regardless of forwarding
@@ -272,21 +296,37 @@ impl RateLimitState {
 /// Missing peer information or an unusable trusted-proxy chain returns `None`,
 /// causing rate-limited endpoints to fail closed instead of sharing a fallback.
 fn extract_client_ip(req: &Request<Body>, trusted_proxies: &TrustedProxyList) -> Option<IpAddr> {
-    let direct_peer = normalize_ip(req.extensions().get::<ConnectInfo<SocketAddr>>()?.0.ip());
+    resolve_client_ip(req, trusted_proxies).ok()
+}
+
+fn resolve_client_ip(
+    req: &Request<Body>,
+    trusted_proxies: &TrustedProxyList,
+) -> Result<IpAddr, ClientIdentityRejection> {
+    let peer = req
+        .extensions()
+        .get::<ConnectInfo<SocketAddr>>()
+        .ok_or(ClientIdentityRejection::MissingPeer)?;
+    let direct_peer = normalize_ip(peer.0.ip());
 
     if !trusted_proxies.is_trusted(&direct_peer) {
-        return Some(direct_peer);
+        return Ok(direct_peer);
     }
 
-    let forwarded_for = parse_x_forwarded_for(req.headers(), trusted_proxies).ok()?;
-    let real_ip = parse_single_ip_header(req.headers(), &X_REAL_IP).ok()?;
+    let forwarded_for = parse_x_forwarded_for(req.headers(), trusted_proxies)
+        .map_err(|_| ClientIdentityRejection::InvalidForwardedFor)?;
+    let real_ip = parse_single_ip_header(req.headers(), &X_REAL_IP)
+        .map_err(|_| ClientIdentityRejection::InvalidRealIp)?;
 
     match (forwarded_for, real_ip) {
-        (Some(forwarded), Some(real)) if forwarded == real => Some(forwarded),
-        (Some(_), Some(_)) => None,
-        (Some(forwarded), None) => Some(forwarded),
-        (None, Some(real)) if !trusted_proxies.is_trusted(&real) => Some(real),
-        _ => None,
+        (Some(forwarded), Some(real)) if forwarded == real => Ok(forwarded),
+        (Some(_), Some(_)) => Err(ClientIdentityRejection::ConflictingHeaders),
+        (Some(forwarded), None) => Ok(forwarded),
+        (None, Some(real)) if !trusted_proxies.is_trusted(&real) => Ok(real),
+        (None, None) if !req.headers().contains_key(&*X_FORWARDED_FOR) => {
+            Err(ClientIdentityRejection::MissingForwardedAddress)
+        }
+        _ => Err(ClientIdentityRejection::NoNonProxyAddress),
     }
 }
 
@@ -413,12 +453,16 @@ pub async fn rate_limit_middleware(
         None => return next.run(req).await,
     };
 
-    let Some(ip) = extract_client_ip(&req, &app_state.rate_limit.trusted_proxies) else {
-        tracing::warn!(
-            path,
-            "OAuth request rejected because no trustworthy client identity was available"
-        );
-        return make_503_response();
+    let ip = match resolve_client_ip(&req, &app_state.rate_limit.trusted_proxies) {
+        Ok(ip) => ip,
+        Err(reason) => {
+            tracing::warn!(
+                path,
+                reason = reason.as_str(),
+                "OAuth request rejected because no trustworthy client identity was available"
+            );
+            return make_503_response();
+        }
     };
 
     match app_state.rate_limit.check(ip, category) {
@@ -451,6 +495,88 @@ mod tests {
     use std::time::Duration;
 
     // ── Unit tests ───────────────────────────────────────────────────────────
+
+    #[test]
+    fn client_identity_rejections_report_specific_reasons() {
+        let trusted_proxies = TrustedProxyList::parse("127.0.0.1/32").unwrap();
+        let cases = [
+            (None, None, ClientIdentityRejection::MissingForwardedAddress),
+            (
+                Some("not-an-ip"),
+                Some("203.0.113.60"),
+                ClientIdentityRejection::InvalidForwardedFor,
+            ),
+            (
+                Some("203.0.113.60"),
+                Some("not-an-ip"),
+                ClientIdentityRejection::InvalidRealIp,
+            ),
+            (
+                Some("203.0.113.60"),
+                Some("203.0.113.61"),
+                ClientIdentityRejection::ConflictingHeaders,
+            ),
+            (
+                Some("127.0.0.1"),
+                None,
+                ClientIdentityRejection::NoNonProxyAddress,
+            ),
+            (
+                None,
+                Some("127.0.0.1"),
+                ClientIdentityRejection::NoNonProxyAddress,
+            ),
+        ];
+
+        for (forwarded_for, real_ip, expected) in cases {
+            let mut request = Request::new(Body::empty());
+            request
+                .extensions_mut()
+                .insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 8080))));
+            if let Some(value) = forwarded_for {
+                request
+                    .headers_mut()
+                    .insert(X_FORWARDED_FOR.clone(), HeaderValue::from_static(value));
+            }
+            if let Some(value) = real_ip {
+                request
+                    .headers_mut()
+                    .insert(X_REAL_IP.clone(), HeaderValue::from_static(value));
+            }
+            assert_eq!(resolve_client_ip(&request, &trusted_proxies), Err(expected));
+            assert_eq!(extract_client_ip(&request, &trusted_proxies), None);
+        }
+
+        let request = Request::new(Body::empty());
+        assert_eq!(
+            resolve_client_ip(&request, &trusted_proxies),
+            Err(ClientIdentityRejection::MissingPeer)
+        );
+    }
+
+    #[test]
+    fn duplicate_forwarding_headers_report_invalid_header() {
+        let trusted_proxies = TrustedProxyList::parse("127.0.0.1/32").unwrap();
+        for (header, expected) in [
+            (
+                X_FORWARDED_FOR.clone(),
+                ClientIdentityRejection::InvalidForwardedFor,
+            ),
+            (X_REAL_IP.clone(), ClientIdentityRejection::InvalidRealIp),
+        ] {
+            let mut request = Request::new(Body::empty());
+            request
+                .extensions_mut()
+                .insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 8080))));
+            request
+                .headers_mut()
+                .append(header.clone(), HeaderValue::from_static("203.0.113.60"));
+            request
+                .headers_mut()
+                .append(header, HeaderValue::from_static("203.0.113.60"));
+            assert_eq!(resolve_client_ip(&request, &trusted_proxies), Err(expected));
+        }
+    }
 
     #[test]
     fn test_start_allows_up_to_limit() {
