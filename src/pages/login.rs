@@ -14,7 +14,12 @@ const GITHUB_MARK: Asset = asset!("/assets/sign-in/GitHub_Invertocat_Black.svg")
 #[component]
 pub fn Login() -> Element {
     let redirect_uri = use_hook(extract_redirect_uri);
-    let mut show_email_conflict = use_signal(|| has_email_conflict(&extract_login_query()));
+    // Mount the shared dialog after hydration: its generated DOM id must be
+    // created in the browser, rather than differ between SSR and hydration.
+    let mut show_email_conflict = use_signal(|| false);
+    use_effect(move || {
+        show_email_conflict.set(has_email_conflict(&extract_login_query()));
+    });
     let local_origin = try_consume_context::<crate::auth::local_origin::LocalCanonicalOrigin>()
         .unwrap_or_default();
 
