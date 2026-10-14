@@ -1,0 +1,78 @@
+/* NOMS-020 P1 Kitchen Passport / P8 Cozy Accordion. Route-owned styles. */
+.user-profile, .user-settings { padding-block: 28px 64px; }
+.user-settings { max-width: var(--content-max-width); }
+.user-page-heading { margin-bottom: 24px; }
+.user-page-heading h1 { font-size: clamp(30px, 4vw, 42px); margin-bottom: 8px; }
+.user-page-heading p, .user-settings p { color: var(--text-secondary); }
+.user-page-eyebrow, .user-settings .user-page-eyebrow { color: var(--accent-ink); font-weight: 800; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.user-profile__passport { display: flex; align-items: center; gap: 28px; padding: clamp(24px, 4vw, 40px); margin-bottom: 32px; background: var(--neumo-surface); box-shadow: var(--elevation-raised); border-radius: 28px; }
+.user-profile__identity { min-width: 0; overflow-wrap: anywhere; }
+/* The shared avatar's inline dimensions are sized for compact UI. */
+.user-portrait > div { width: 112px !important; height: 112px !important; font-size: 36px !important; color: var(--on-accent) !important; box-shadow: var(--elevation-raised-compact); }
+.user-portrait { flex-shrink: 0; }
+.user-profile .profile-name { font-size: clamp(28px, 4vw, 40px); margin: 4px 0; }
+.user-profile .profile-username { font-size: 16px; color: var(--text-secondary); }
+.user-profile .profile-bio { max-width: 640px; margin-block: 12px; font-size: 16px; white-space: pre-wrap; }
+.user-profile .profile-stats { display: inline-block; color: var(--accent-ink); background: var(--neumo-surface); padding: 6px 12px; border-radius: 999px; box-shadow: var(--elevation-inset-compact); }
+.user-disclosure { background: var(--neumo-surface); border-radius: 24px; box-shadow: var(--elevation-raised); margin-bottom: 28px; min-width: 0; }
+.user-disclosure > summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px; cursor: pointer; list-style: none; border-radius: 24px; }
+.user-disclosure > summary::-webkit-details-marker { display: none; }
+.user-disclosure > summary h2 { font-size: 22px; }
+.user-disclosure > summary p { font-size: 14px; margin-top: 4px; }
+.user-disclosure__chevron { font-size: 24px; line-height: 1; color: var(--text-secondary); }
+.user-disclosure[open] > summary .user-disclosure__chevron { transform: rotate(180deg); }
+.user-disclosure__body { padding: 0 24px 24px; }
+/* Public empty-state descriptions include names, which may be long unbroken words. */
+.user-profile .user-disclosure__body { overflow-wrap: anywhere; }
+.user-profile__collections, .user-profile__recipes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 24px; }
+.user-profile .profile-pagination { flex-direction: column; align-items: center; gap: var(--space-sm); }
+.user-profile .profile-pagination p { margin: 0; max-width: 100%; text-align: center; overflow-wrap: anywhere; }
+.user-profile__collection { min-width: 0; overflow-wrap: anywhere; border-radius: 20px; }
+.user-profile__collection > p { font-size: 14px; }
+.user-settings__profile-grid { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; padding: 0 28px 28px; }
+.user-settings__avatar { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px 12px; border-radius: 20px; background: var(--neumo-surface); box-shadow: var(--elevation-inset); align-self: start; }
+.user-settings__avatar-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.user-settings__fields { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.user-settings__field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.user-settings__field label { font-weight: 700; font-size: 14px; }
+.user-settings__field .input { width: 100%; min-width: 0; min-height: 48px; padding: 12px 16px; font: inherit; color: var(--text-primary); }
+.user-settings__field textarea { resize: vertical; min-height: 112px; }
+.user-settings__hint { font-size: 13px; color: var(--text-secondary); }
+.user-settings__readonly { padding: 12px 16px; background: var(--neumo-surface); border-radius: 12px; overflow-wrap: anywhere; }
+.user-settings__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding-top: 4px; }
+.user-settings__link-card { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px; margin-bottom: 28px; background: var(--neumo-surface); box-shadow: var(--elevation-raised); border-radius: 24px; }
+.user-settings__link-card h2 { font-size: 22px; margin-bottom: 6px; }
+.user-settings__danger > summary h2 { color: var(--error-ink); }
+.user-settings__danger .user-disclosure__body { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; }
+.user-feedback { padding: 14px 16px; border-radius: 14px; font-size: 14px; overflow-wrap: anywhere; }
+.user-feedback--error { background: var(--error-bg); color: var(--error-ink); }
+.user-feedback--success { background: var(--success-bg); color: var(--success-ink); }
+.user-settings .settings-tabs { margin-bottom: 28px; flex-wrap: wrap; max-width: 100%; }
+.user-settings .settings-tab-active { color: var(--accent-ink); background: var(--neumo-surface); box-shadow: var(--elevation-inset); }
+.user-accounts__list { display: flex; flex-direction: column; gap: 20px; }
+.user-accounts__row { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-width: 0; }
+.user-accounts__identity { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.user-accounts__details { min-width: 0; overflow-wrap: anywhere; }
+.user-accounts__provider { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.user-accounts__provider h2 { font-size: 20px; }
+.user-accounts__status { padding: 4px 10px; border-radius: 999px; background: var(--neumo-surface); color: var(--text-secondary); font-size: 12px; font-weight: 700; }
+.user-accounts__connect { padding: 24px; margin-top: 8px; border-radius: 24px; box-shadow: var(--elevation-raised); background: var(--neumo-surface); }
+.user-accounts__connect h2 { font-size: 22px; margin-bottom: 8px; }
+.user-accounts__connect-links { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 20px; }
+.user-accounts__guidance { margin-bottom: 24px; padding: 18px 22px; border-radius: 18px; background: var(--neumo-surface); box-shadow: var(--elevation-inset); }
+@media (max-width: 700px) {
+    .user-profile__passport { align-items: flex-start; gap: 20px; padding: 24px; }
+    .user-settings__profile-grid { grid-template-columns: 1fr; gap: 24px; padding: 0 20px 24px; }
+    .user-settings__avatar { width: 100%; }
+    .user-settings__link-card { align-items: flex-start; flex-direction: column; }
+    .user-disclosure > summary { padding: 20px; }
+    .user-disclosure__body { padding: 0 20px 20px; }
+    .user-accounts__row { align-items: flex-start; flex-direction: column; }
+}
+@media (max-width: 420px) {
+    .user-profile__passport { flex-direction: column; }
+    .user-settings__actions > *, .user-settings__link-card > a { width: 100%; }
+}
+@media (forced-colors: active) {
+    .user-disclosure, .user-profile__passport, .user-settings__link-card, .user-accounts__connect, .user-accounts__guidance { border: 1px solid CanvasText; }
+}

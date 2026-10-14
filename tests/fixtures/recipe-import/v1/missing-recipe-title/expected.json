@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "status": "unsupported",
+  "parser": { "id": "generic-region-scorer", "version": "1", "tier": "generic_html", "sourceAdapter": null },
+  "source": {
+    "suppliedUrl": null, "normalizedUrl": null, "provider": null, "author": null, "attribution": null,
+    "provenance": { "suppliedUrl": [], "normalizedUrl": [], "provider": [], "author": [], "attribution": [] }
+  },
+  "fields": {
+    "title": null, "description": null, "prepTime": null, "cookTime": null, "totalTime": null, "yield": null,
+    "ingredientSections": [], "instructionSections": [], "equipment": [], "notes": [], "images": []
+  },
+  "unclassifiedLines": [
+    { "raw": "1 moon squash", "provenance": [{ "representation": "text/html", "locator": "article ul > li:nth-child(1)" }] },
+    { "raw": "Roast until bright.", "provenance": [{ "representation": "text/html", "locator": "article ol > li:nth-child(1)" }] }
+  ],
+  "competingCandidates": [],
+  "warnings": [{
+    "code": "MISSING_RECIPE_TITLE", "severity": "error", "path": "fields.title",
+    "message": "An ingredient and instruction region was found without a coherent recipe title."
+  }],
+  "discardedContent": []
+}

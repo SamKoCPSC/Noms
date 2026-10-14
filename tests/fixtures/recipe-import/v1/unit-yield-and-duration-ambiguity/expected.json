@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "status": "needs_review",
+  "parser": {
+    "id": "generic-headings",
+    "version": "1",
+    "tier": "generic_html",
+    "sourceAdapter": null
+  },
+  "source": {
+    "suppliedUrl": null,
+    "normalizedUrl": null,
+    "provider": null,
+    "author": null,
+    "attribution": null,
+    "provenance": { "suppliedUrl": [], "normalizedUrl": [], "provider": [], "author": [], "attribution": [] }
+  },
+  "fields": {
+    "title": {
+      "raw": "Clockwork Rolls",
+      "value": "Clockwork Rolls",
+      "confidence": "high",
+      "provenance": [
+        {
+          "representation": "text/html",
+          "locator": "article > h1"
+        }
+      ]
+    },
+    "description": null,
+    "prepTime": null,
+    "cookTime": {
+      "raw": "Active: 20 hr 20 hr",
+      "value": 1200,
+      "confidence": "low",
+      "provenance": [
+        {
+          "representation": "text/html",
+          "locator": "article > div:nth-of-type(1)"
+        }
+      ]
+    },
+    "totalTime": {
+      "raw": "Total: 1 hr 30 min 1 hr 30 min",
+      "value": 90,
+      "confidence": "high",
+      "provenance": [
+        {
+          "representation": "text/html",
+          "locator": "article > div:nth-of-type(2)"
+        }
+      ]
+    },
+    "yield": {
+      "raw": "12 rolls",
+      "value": {
+        "display": "12 rolls",
+        "servings": 12
+      },
+      "confidence": "high",
+      "provenance": [
+        {
+          "representation": "text/html",
+          "locator": "select > option[selected]"
+        }
+      ]
+    },
+    "ingredientSections": [
+      {
+        "name": null,
+        "items": [
+          {
+            "raw": "2 cups sky flour",
+            "amount": "2",
+            "unit": "cups",
+            "name": "sky flour",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/html",
+                "locator": "ul[data-unit=us] > li"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "instructionSections": [
+      {
+        "name": null,
+        "steps": [
+          {
+            "raw": "Shape and bake.",
+            "text": "Shape and bake.",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/html",
+                "locator": "ol > li"
+              }
+            ],
+            "substeps": []
+          }
+        ]
+      }
+    ],
+    "equipment": [],
+    "notes": [],
+    "images": []
+  },
+  "unclassifiedLines": [],
+  "competingCandidates": [
+    {
+      "reason": "Inactive metric measurement variant",
+      "title": null,
+      "provenance": [
+        {
+          "representation": "text/html",
+          "locator": "ul[data-unit=metric]"
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "code": "SUSPICIOUS_DURATION",
+      "severity": "warning",
+      "path": "fields.cookTime",
+      "message": "Active time exceeds total time; preserve the source value for review."
+    }
+  ],
+  "discardedContent": [
+    {
+      "kind": "form_control",
+      "count": 3,
+      "reason": "Controls are evidence of active state, not recipe content."
+    }
+  ]
+}

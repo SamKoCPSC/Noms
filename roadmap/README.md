@@ -19,6 +19,10 @@ A lightweight Kanban board for tracking work. Every item lives here; no external
 | [NOMS-001](issues/NOMS-001-design-document.md) | Write design document outlining the high-level plan | ✅ Done | Pre-work | `DESIGN.md` — 2,338 lines covering product vision, architecture, data model, visual design, offline strategy |
 | [NOMS-002](issues/NOMS-002-initial-project-setup.md) | Initial project setup — repository, workspace & infrastructure | ✅ Done | Pre-work | Rust workspace, Railway project + Postgres, R2 bucket, CI skeleton, local dev tooling |
 | [NOMS-003](issues/NOMS-003-ui-scaffold.md) | UI scaffold & application shell | ⚪ Backlog | Phase 1 | Route architecture, layout components, design system foundations, template cleanup |
+| [NOMS-008](issues/NOMS-008-recipe-crud.md) | Recipe CRUD & Versioning | 🔵 Ready | Phase 1 | Core recipe creation, viewing, editing, deletion, and version history. [Implementation plan](implementation-plans/NOMS-008-recipe-crud.md) — 8 checkpoints, bottom-up by dependency |
+| [NOMS-014](issues/NOMS-014-isolated-development-environments.md) | Fully isolated `just up` development environments | ✅ Done | Developer infrastructure | Disposable per-invocation app and infrastructure stacks for concurrent agents. [Implementation plan](implementation-plans/NOMS-014-isolated-development-environments.md) — 7 checkpoints |
+| [NOMS-015](issues/NOMS-015-security-hardening.md) | Security hardening to a good-enough baseline | 🔵 Ready | Security | Close the confirmed OAuth account-takeover, cross-tenant media deletion, and global OAuth rate-limit paths. [Implementation plan](implementation-plans/NOMS-015-security-hardening.md) — 8 test-first checkpoints with independent adversarial review. |
+| [NOMS-021](issues/NOMS-021-production-readiness-follow-ups.md) | Production readiness and reliability follow-ups | 🔵 Ready | Production hardening | Resolve the final NOMS-015 review findings, restore anonymous public search and route-correct SPA metadata, complete a bounded readability pass, and formalize manual regression coverage with automated E2E tests. |
 
 ## Conventions
 

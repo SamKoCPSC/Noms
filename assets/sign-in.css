@@ -1,0 +1,97 @@
+/* L6B sign-in composition. Shared materials and controls remain in main.css. */
+.sign-in-page {
+    max-width: 1040px;
+    margin-inline: auto;
+    padding: 24px 24px 8px;
+    text-align: center;
+}
+
+.sign-in-heading h1 {
+    font-size: clamp(32px, 4vw, 44px);
+    margin-bottom: 10px;
+}
+
+.sign-in-heading p {
+    color: var(--field-placeholder);
+    font-size: 18px;
+}
+
+.sign-in-providers {
+    display: grid;
+    gap: 18px;
+    width: min(100%, 500px);
+    margin: 28px auto 12px;
+    padding: 28px;
+    border-radius: 22px;
+}
+
+.sign-in-provider {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 14px;
+    min-height: 58px;
+    padding: 16px 20px;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.sign-in-provider__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: white;
+}
+
+.sign-in-provider__icon img { width: 20px; height: 20px; object-fit: contain; }
+
+.sign-in-guest-link, .sign-in-home-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 8px;
+    color: var(--accent-ink);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    border-radius: var(--radius-sm);
+}
+
+.sign-in-guest-link:hover, .sign-in-home-link:hover {
+    color: var(--accent-ink);
+    text-decoration-thickness: 2px;
+}
+
+.sign-in-features {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    margin-top: 24px;
+    text-align: left;
+}
+
+.sign-in-feature-panel { min-width: 0; padding: 28px; border-radius: 22px; }
+.sign-in-feature-panel h2 { font-size: 25px; margin-bottom: 8px; }
+.sign-in-feature-panel p { color: var(--field-placeholder); font-size: 14px; line-height: 1.6; }
+.sign-in-feature-panel ul { display: grid; gap: 16px; list-style: none; margin-top: 20px; }
+.sign-in-feature-panel li { display: flex; align-items: flex-start; gap: 12px; line-height: 1.55; }
+.sign-in-feature-check { flex: 0 0 24px; width: 24px; height: 24px; color: var(--accent-ink); }
+.sign-in-home-link { margin-top: 22px; }
+
+@media (max-width: 640px) {
+    .sign-in-page { padding: 16px 20px 8px; }
+    .sign-in-features { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+    .sign-in-providers { padding: 20px; }
+    .sign-in-feature-panel { padding: 24px; }
+    .sign-in-provider { gap: 10px; padding-inline: 14px; font-size: 15px; }
+}
+
+@media (max-height: 700px) and (min-width: 641px) {
+    .sign-in-page { padding-top: 8px; }
+    .sign-in-providers { margin-top: 20px; }
+}

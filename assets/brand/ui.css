@@ -1,0 +1,53 @@
+/* Supporting artwork shares the existing page typography, palette and layout. */
+.brand-mark {
+    display: block;
+    width: 32px;
+    height: 40px;
+    object-fit: contain;
+    flex: none;
+}
+.brand-mark--large {
+    width: 96px;
+    height: 120px;
+    margin: 0 auto 12px;
+}
+.footer-logo { display: inline-flex; align-items: center; gap: 8px; }
+.brand-title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+.brand-title > span { min-width: 0; overflow-wrap: anywhere; }
+.page-identity-icon {
+    display: block;
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    flex: none;
+}
+.page-identity-icon--compact { width: 48px; height: 48px; }
+
+/* Navigation art has its own small well; page-heading sizes stay unchanged. */
+.navigation-artwork,
+.navigation-artwork-slot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 40px;
+    flex: 0 0 32px;
+}
+.navigation-artwork .page-identity-icon { width: 32px; height: 32px; }
+.navigation-artwork-label { display: flex; align-items: center; gap: 12px; }
+.navigation-artwork-label > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.navigation-drawer-links .navbar-link,
+.navigation-drawer-account .navbar-link { display: flex; align-items: center; gap: 12px; }
+.dashboard-workspace-nav a > .navigation-artwork { width: 32px; }
+
+@media (max-width: 520px) {
+    .brand-title { gap: 10px; }
+    .page-identity-icon { width: 56px; height: 56px; }
+    .page-identity-icon--compact { width: 40px; height: 40px; }
+    .brand-mark--large { width: 80px; height: 100px; }
+}

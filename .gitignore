@@ -17,5 +17,8 @@
 .vscode/
 .idea/
 
+# Isolated local development worktrees
+.worktrees/
+
 # Tailwind
 node_modules/

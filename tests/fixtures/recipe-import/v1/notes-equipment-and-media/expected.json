@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "status": "needs_review",
+  "parser": {
+    "id": "generic-headings",
+    "version": "1",
+    "tier": "generic_html",
+    "sourceAdapter": null
+  },
+  "source": {
+    "suppliedUrl": "https://example.test/silver-hash",
+    "normalizedUrl": "https://example.test/silver-hash",
+    "provider": null,
+    "author": null,
+    "attribution": "Photo by Nova Cook",
+    "provenance": {
+      "suppliedUrl": [
+        { "representation": "source_url", "locator": "import source URL field" }
+      ],
+      "normalizedUrl": [
+        { "representation": "source_url", "locator": "normalized from supplied URL" }
+      ],
+      "provider": [],
+      "author": [],
+      "attribution": [
+        { "representation": "text/html", "locator": "figure > figcaption" }
+      ]
+    }
+  },
+  "fields": {
+    "title": {
+      "raw": "Silver Skillet Hash",
+      "value": "Silver Skillet Hash",
+      "confidence": "high",
+      "provenance": [
+        {
+          "representation": "text/html",
+          "locator": "article > h1"
+        }
+      ]
+    },
+    "description": null,
+    "prepTime": null,
+    "cookTime": null,
+    "totalTime": null,
+    "yield": null,
+    "ingredientSections": [
+      {
+        "name": null,
+        "items": [
+          {
+            "raw": "2 cups dusk potatoes",
+            "amount": "2",
+            "unit": "cups",
+            "name": "dusk potatoes",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/html",
+                "locator": "article > ul:nth-of-type(1) > li"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "instructionSections": [
+      {
+        "name": null,
+        "steps": [
+          {
+            "raw": "Brown the potatoes.",
+            "text": "Brown the potatoes.",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/html",
+                "locator": "article > ol > li"
+              }
+            ],
+            "substeps": []
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "raw": "Silver skillet",
+        "value": "Silver skillet",
+        "confidence": "high",
+        "provenance": [
+          {
+            "representation": "text/html",
+            "locator": "article > ul:nth-of-type(2) > li"
+          }
+        ]
+      }
+    ],
+    "notes": [
+      {
+        "raw": "Cool before storing.",
+        "value": "Cool before storing.",
+        "confidence": "high",
+        "provenance": [
+          {
+            "representation": "text/html",
+            "locator": "h2:nth-of-type(4) + p"
+          }
+        ]
+      }
+    ],
+    "images": [
+      {
+        "sourceUrl": "https://example.test/media/hash.jpg",
+        "alt": "Hash in a silver bowl",
+        "credit": "Photo by Nova Cook",
+        "provenance": [
+          {
+            "representation": "text/html",
+            "locator": "article > figure"
+          }
+        ]
+      }
+    ]
+  },
+  "unclassifiedLines": [],
+  "competingCandidates": [],
+  "warnings": [
+    {
+      "code": "IMAGE_REFERENCE_REQUIRES_CONFIRMATION",
+      "severity": "info",
+      "path": "fields.images[0]",
+      "message": "The image reference is not fetched and requires confirmation before mapping."
+    },
+    {
+      "code": "NOTES_REQUIRE_MAPPING",
+      "severity": "info",
+      "path": "fields.notes",
+      "message": "Notes remain separate until the user chooses where to place them."
+    }
+  ],
+  "discardedContent": []
+}

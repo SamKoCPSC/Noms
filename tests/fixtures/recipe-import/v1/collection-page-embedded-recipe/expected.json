@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "status": "needs_review",
+  "parser": { "id": "generic-region-scorer", "version": "1", "tier": "generic_html", "sourceAdapter": null },
+  "source": {
+    "suppliedUrl": "https://example.test/bright-suppers",
+    "normalizedUrl": "https://example.test/bright-suppers",
+    "provider": null,
+    "author": null,
+    "attribution": null,
+    "provenance": {
+      "suppliedUrl": [{ "representation": "source_url", "locator": "import source URL field" }],
+      "normalizedUrl": [{ "representation": "source_url", "locator": "normalized from supplied URL" }],
+      "provider": [], "author": [], "attribution": []
+    }
+  },
+  "fields": {
+    "title": {
+      "raw": "Moon Pie", "value": "Moon Pie", "confidence": "high",
+      "provenance": [{ "representation": "text/html", "locator": "main section:nth-of-type(1) > h2:nth-of-type(1)" }]
+    },
+    "description": null, "prepTime": null, "cookTime": null, "totalTime": null, "yield": null,
+    "ingredientSections": [{
+      "name": null,
+      "items": [{
+        "raw": "2 cups moon flour", "amount": "2", "unit": "cups", "name": "moon flour", "confidence": "high",
+        "provenance": [{ "representation": "text/html", "locator": "ul > li:nth-child(1)" }]
+      }]
+    }],
+    "instructionSections": [{
+      "name": null,
+      "steps": [{
+        "raw": "Bake until silver.", "text": "Bake until silver.", "confidence": "high",
+        "provenance": [{ "representation": "text/html", "locator": "ol > li:nth-child(1)" }], "substeps": []
+      }]
+    }],
+    "equipment": [], "notes": [], "images": []
+  },
+  "unclassifiedLines": [],
+  "competingCandidates": [{
+    "reason": "Page title describes a collection above the selected recipe region",
+    "title": "Five Best Moon Pie Recipes",
+    "provenance": [{ "representation": "text/html", "locator": "main > h1" }]
+  }],
+  "warnings": [{
+    "code": "COMPETING_RECIPE_REGION", "severity": "warning", "path": "competingCandidates[0]",
+    "message": "The selected recipe is nested below a different page title; confirm the embedded recipe title."
+  }],
+  "discardedContent": []
+}

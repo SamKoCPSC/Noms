@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "status": "ready",
+  "parser": {
+    "id": "generic-headings",
+    "version": "1",
+    "tier": "generic_html",
+    "sourceAdapter": null
+  },
+  "source": {
+    "suppliedUrl": "https://example.test/moonbean-soup",
+    "normalizedUrl": "https://example.test/moonbean-soup",
+    "provider": null,
+    "author": null,
+    "attribution": null,
+    "provenance": {
+      "suppliedUrl": [
+        { "representation": "source_url", "locator": "import source URL field" }
+      ],
+      "normalizedUrl": [
+        { "representation": "source_url", "locator": "normalized from supplied URL" }
+      ],
+      "provider": [],
+      "author": [],
+      "attribution": []
+    }
+  },
+  "fields": {
+    "title": {
+      "raw": "Moonbean Soup",
+      "value": "Moonbean Soup",
+      "confidence": "high",
+      "provenance": [
+        {
+          "representation": "text/html",
+          "locator": "article > h1"
+        }
+      ]
+    },
+    "description": {
+      "raw": "A bright bowl for a quiet night.",
+      "value": "A bright bowl for a quiet night.",
+      "confidence": "high",
+      "provenance": [
+        {
+          "representation": "text/html",
+          "locator": "article > p"
+        }
+      ]
+    },
+    "prepTime": null,
+    "cookTime": null,
+    "totalTime": null,
+    "yield": null,
+    "ingredientSections": [
+      {
+        "name": null,
+        "items": [
+          {
+            "raw": "2 cups moonbeans",
+            "amount": "2",
+            "unit": "cups",
+            "name": "moonbeans",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/html",
+                "locator": "ul > li:nth-child(1)"
+              }
+            ]
+          },
+          {
+            "raw": "1 tsp comet salt",
+            "amount": "1",
+            "unit": "tsp",
+            "name": "comet salt",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/html",
+                "locator": "ul > li:nth-child(2)"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "instructionSections": [
+      {
+        "name": null,
+        "steps": [
+          {
+            "raw": "Warm the moonbeans.",
+            "text": "Warm the moonbeans.",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/html",
+                "locator": "ol > li:nth-child(1)"
+              }
+            ],
+            "substeps": []
+          },
+          {
+            "raw": "Season and serve.",
+            "text": "Season and serve.",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/html",
+                "locator": "ol > li:nth-child(2)"
+              }
+            ],
+            "substeps": []
+          }
+        ]
+      }
+    ],
+    "equipment": [],
+    "notes": [],
+    "images": []
+  },
+  "unclassifiedLines": [],
+  "competingCandidates": [],
+  "warnings": [],
+  "discardedContent": []
+}

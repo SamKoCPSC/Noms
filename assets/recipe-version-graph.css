@@ -1,0 +1,114 @@
+/* G4A Balanced Cards. Geometry stays in the graph layout; these rules only
+   style its surfaces, so edges and expansion anchors retain their contracts. */
+.recipe-version-graph-page { --graph-before: #426c98; }
+.dark .recipe-version-graph-page { --graph-before: #a8c9ef; }
+.recipe-version-graph-page .recipe-version-graph__shell { min-width: 0; }
+.recipe-version-graph-page .recipe-version-graph { gap: 20px; }
+.recipe-version-graph-page .recipe-version-graph__description { margin: 0; }
+.recipe-version-graph-page .recipe-version-graph__lineage-counts { margin: 0; gap: 12px; }
+.recipe-version-graph-page .recipe-version-graph__lineage-count { background: var(--surface); border-radius: 18px; box-shadow: var(--elevation-raised-compact); padding: 10px 16px; }
+.recipe-version-graph-page .recipe-version-graph__toolbar,
+.recipe-version-graph-page .recipe-version-graph__comparison,
+.recipe-version-graph-page .recipe-version-graph__comparison-result,
+.recipe-version-graph-page .recipe-version-graph__outline {
+    padding: 20px; border: 1px solid var(--border-color); border-radius: 22px;
+    background: var(--surface); box-shadow: var(--elevation-raised);
+}
+.recipe-version-graph-page .recipe-version-graph__toolbar { gap: 18px; margin-bottom: -8px; }
+.recipe-version-graph-page .recipe-version-graph__controls-group { flex-wrap: wrap; gap: 18px; }
+.recipe-version-graph-page .recipe-version-graph__control,
+.recipe-version-graph-page .recipe-version-graph__snapshot-menu,
+.recipe-version-graph-page .recipe-version-graph__frontier-button,
+.recipe-version-graph-page .recipe-version-graph__outline-frontier-button {
+    min-height: 44px; min-width: 44px; border: 1px solid var(--border-color);
+    border-radius: 14px; color: var(--text-primary); background: var(--surface);
+    box-shadow: var(--elevation-raised-compact); font-family: var(--font-body); cursor: pointer;
+}
+.recipe-version-graph-page .recipe-version-graph__lineage-toggle { display: flex; align-items: center; gap: 8px; padding: 8px; min-height: 44px; }
+.recipe-version-graph-page .recipe-version-graph__lineage-toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
+.recipe-version-graph-page .recipe-version-graph__control:hover:not(:disabled),
+.recipe-version-graph-page .recipe-version-graph__snapshot-menu:hover { background: var(--bg-base); }
+.recipe-version-graph-page :is(button, a, summary):focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 4px; }
+.recipe-version-graph-page button:disabled { cursor: not-allowed; }
+.recipe-version-graph-page :is(.recipe-version-graph__frontier-button, .recipe-version-graph__outline-frontier-button)[aria-disabled="true"] { cursor: not-allowed; opacity: .65; }
+.recipe-version-graph-page .recipe-version-graph__mouse-controls { gap: 12px; }
+.recipe-version-graph-page .recipe-version-graph__mouse-control { font-size: 12px; }
+.recipe-version-graph-page .recipe-version-graph__mouse-control kbd { background: transparent; box-shadow: none; padding: 0; border: 0; }
+.recipe-version-graph-page .recipe-version-graph__legend { gap: 16px; }
+.recipe-version-graph-page .recipe-version-graph__legend-swatch { animation: none; box-shadow: none; outline: none; border-radius: 50%; }
+.recipe-version-graph-page .recipe-version-graph__edge { stroke: var(--accent-ink); }
+.recipe-version-graph-page :is(#recipe-version-graph-arrow-version, #recipe-version-graph-arrow-fork) path { fill: var(--accent-ink); }
+.recipe-version-graph-page .recipe-version-graph__legend-line { border-top-color: var(--accent-ink); }
+.recipe-version-graph-page .recipe-version-graph__canvas-viewport {
+    height: clamp(430px, 64vh, 680px); border-radius: 22px; background: var(--bg-base);
+    overflow: clip;
+    border: 1px solid var(--border-color); box-shadow: var(--elevation-inset);
+}
+.recipe-version-graph-page .recipe-version-graph__node,
+.recipe-version-graph-page .recipe-version-graph__node-link:hover .recipe-version-graph__node {
+    position: relative; padding: 14px; border: 2px solid var(--border-color);
+    border-radius: 18px; background: var(--surface); box-shadow: var(--elevation-raised);
+    animation: none; outline: none; transform: none;
+}
+.recipe-version-graph-page .recipe-version-graph__node--main-recipe { border-color: var(--success); }
+.recipe-version-graph-page .recipe-version-graph__node--ancestor { border-color: var(--graph-before); }
+.recipe-version-graph-page .recipe-version-graph__node--immediate-descendant { border-color: var(--warning); }
+.recipe-version-graph-page .recipe-version-graph__node--main-recipe::after { content: none; }
+.recipe-version-graph-page .recipe-version-graph__canvas-node { width: 304px; height: 228px; }
+.recipe-version-graph-page .recipe-version-graph__thumbnail { position: absolute; top: 14px; left: 14px; width: 76px; height: 64px; border-radius: 10px; overflow: hidden; }
+.recipe-version-graph-page .recipe-version-graph__node-body { padding: 0; gap: 5px; }
+.recipe-version-graph-page .recipe-version-graph__node-heading { display: contents; }
+.recipe-version-graph-page .recipe-version-graph__version { position: absolute; top: 86px; left: 14px; font-size: 12px; color: var(--text-secondary); letter-spacing: 0; text-transform: none; }
+.recipe-version-graph-page .recipe-version-graph__badges { position: absolute; bottom: 37px; left: 14px; right: 14px; justify-content: flex-start; gap: 5px; padding: 0; }
+.recipe-version-graph-page .recipe-version-graph__node h2 { margin: 0 20px 0 88px; min-height: 44px; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font: 600 18px/1.2 var(--font-display); }
+.recipe-version-graph-page .recipe-version-graph__owner,
+.recipe-version-graph-page .recipe-version-graph__node time { margin-left: 88px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.recipe-version-graph-page .recipe-version-graph__summary { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 10px !important; line-height: 1.35; }
+.recipe-version-graph-page :is(.recipe-version-graph__main-recipe-badge, .recipe-version-graph__current-badge, .recipe-version-graph__relationship-badge) {
+    padding: 3px 7px; border: 0; border-radius: 8px; color: var(--text-primary);
+    font-size: 11px; text-transform: none; letter-spacing: 0; line-height: 1.4;
+}
+.recipe-version-graph-page .recipe-version-graph__main-recipe-badge { background: color-mix(in srgb, var(--success) 22%, var(--surface)); }
+.recipe-version-graph-page .recipe-version-graph__current-badge { background: color-mix(in srgb, var(--text-secondary) 14%, var(--surface)); }
+.recipe-version-graph-page .recipe-version-graph__snapshot-menu { position: absolute; right: 9px; top: 8px; z-index: 3; min-width: 34px; min-height: 34px; font-size: 24px; line-height: 1; box-shadow: none; }
+.recipe-version-graph-page .recipe-version-graph__selection-roles { position: absolute; z-index: 2; bottom: 10px; right: 12px; display: flex; gap: 5px; pointer-events: none; }
+.recipe-version-graph-page .recipe-version-graph__selection-roles span { padding: 3px 8px; border-radius: 8px; color: var(--text-primary); background: color-mix(in srgb, var(--graph-before) 20%, var(--surface)); font-size: 12px; font-weight: 800; }
+.recipe-version-graph-page [data-before="true"] .recipe-version-graph__node { border-color: var(--graph-before); }
+.recipe-version-graph-page [data-after="true"] .recipe-version-graph__node { border-color: var(--accent); }
+.recipe-version-graph-page [data-after="true"] .recipe-version-graph__selection-roles span:last-child { background: color-mix(in srgb, var(--accent) 25%, var(--surface)); }
+.recipe-version-graph-page .recipe-version-graph__context-menu { background: var(--surface); border-radius: 18px; box-shadow: var(--overlay-shadow); }
+.recipe-version-graph-page .recipe-version-graph__context-menu-item { min-height: 44px; border-radius: 10px; }
+.recipe-version-graph-page .recipe-version-graph__comparison { margin-top: 0; gap: 18px; }
+.recipe-version-graph-page .recipe-version-graph__comparison-selection > div { min-width: 0; min-height: 92px; align-content: center; gap: 8px; border-radius: 16px; padding: 16px; box-shadow: var(--elevation-inset); }
+.recipe-version-graph-page .recipe-version-graph__comparison-selection strong { overflow-wrap: anywhere; }
+.recipe-version-graph-page .recipe-version-graph__comparison-selection > div:first-child > span { color: var(--graph-before); }
+.recipe-version-graph-page .recipe-version-graph__comparison-selection > div:last-child > span { color: var(--accent-ink); }
+.recipe-version-graph-page .recipe-version-graph__comparison-help { margin: 0; color: var(--text-secondary); font-size: 14px; }
+.recipe-version-graph-page .recipe-version-graph__comparison-pair { margin: 0; font: 600 24px/1.3 var(--font-display); overflow-wrap: anywhere; }
+.recipe-version-graph-page .recipe-version-graph__comparison-path { display: block; margin-top: 4px; color: var(--text-secondary); font-size: 12px; overflow-wrap: anywhere; }
+.recipe-version-graph-page .recipe-version-graph__comparison-change { border-radius: 16px; padding: 18px; background: var(--bg-base); }
+.recipe-version-graph-page .recipe-version-graph__comparison-change header { align-items: baseline; overflow-wrap: anywhere; }
+.recipe-version-graph-page .recipe-version-graph__comparison-change header span { color: var(--text-primary); background: color-mix(in srgb, var(--success) 18%, var(--surface)); border-radius: 8px; padding: 4px 10px; }
+.recipe-version-graph-page .recipe-version-graph__comparison-value { min-width: 0; padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface); }
+.recipe-version-graph-page .recipe-version-graph__comparison-value--before > strong { color: var(--graph-before); }
+.recipe-version-graph-page .recipe-version-graph__comparison-value--after > strong { color: var(--accent-ink); }
+.recipe-version-graph-page .recipe-version-graph__comparison-value pre { margin-top: 12px; }
+.recipe-version-graph-page .recipe-version-graph__outline { padding: 0; }
+.recipe-version-graph-page .recipe-version-graph__outline summary { padding: 18px 20px; }
+@media (max-width: 720px) {
+    .recipe-version-graph-page .recipe-version-graph__toolbar,
+    .recipe-version-graph-page .recipe-version-graph__comparison,
+    .recipe-version-graph-page .recipe-version-graph__comparison-result { padding: 14px; }
+    .recipe-version-graph-page .recipe-version-graph__comparison-heading { flex-direction: column; }
+    .recipe-version-graph-page .recipe-version-graph__comparison-values { grid-template-columns: minmax(0, 1fr); }
+    .recipe-version-graph-page .recipe-version-graph__comparison-selection { gap: 8px; }
+    .recipe-version-graph-page .recipe-version-graph__comparison-selection > div { padding: 12px; }
+    .recipe-version-graph-page .recipe-version-graph__comparison-submit { width: 100%; white-space: normal; }
+}
+@media (forced-colors: active) {
+    .recipe-version-graph-page .recipe-version-graph__node { border-color: CanvasText; }
+    .recipe-version-graph-page .recipe-version-graph__selection-roles span { border: 1px solid CanvasText; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .recipe-version-graph-page .recipe-version-graph__frontier-spinner { animation: none; }
+}

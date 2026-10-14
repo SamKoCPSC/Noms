@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NOMS — SVG and painted PNG</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: #e8e2d6; color: #293a2b; font: 16px system-ui, sans-serif; }
+  h1 { font-size: 24px; }
+  main { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; max-width: 700px; }
+  section { padding: 20px; border-radius: 20px; background: #f5efe2; }
+  h2 { margin: 0 0 16px; font-size: 18px; }
+  img { display: block; width: 100%; height: 320px; object-fit: contain; }
+  p { font-size: 14px; line-height: 1.5; }
+  .dark { background: #26342d; color: #f5efe2; }
+  .dark img { height: 160px; }
+  @media (max-width: 500px) { main { grid-template-columns: 1fr; } }
+</style>
+<h1>NOMS · S3 format comparison</h1>
+<main>
+  <section><h2>SVG · vector</h2><img src="noms-logo.svg" alt="S3 vector book logo"><p>Simplified shading; exact Fredoka outlines. Approximately 11 KB.</p></section>
+  <section><h2>PNG · painted</h2><img src="noms-logo-painted-s3-v1.png" alt="S3 painted book logo"><p>Richer brush texture; generated lettering. 1122 × 1402 pixels, approximately 1.36 MB.</p></section>
+  <section class="dark"><h2>SVG on dark</h2><img src="noms-logo.svg" alt="Vector logo on dark background"></section>
+  <section class="dark"><h2>PNG on dark</h2><img src="noms-logo-painted-s3-v1.png" alt="Painted logo on dark background"></section>
+</main>
+</html>

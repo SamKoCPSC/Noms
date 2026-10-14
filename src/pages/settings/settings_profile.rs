@@ -1,63 +1,2174 @@
+use crate::components::base::{PageIcon, PageIconKind};
 use dioxus::prelude::*;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::JsCast;
 
-use crate::components::base::{Card, Input, PageHeader};
+use super::account_delete_flow::{AccountDeleteStep as DeleteStep, AccountDeletionState};
+use super::mutation_recovery::{
+    settings_mutation_feedback, SettingsMutation, SettingsMutationControl,
+};
+use crate::auth::account_binding::{
+    account_completion_matches, account_error_feedback, check_account_binding, use_form_account,
+    ACCOUNT_COMPLETION_CHANGED_FEEDBACK,
+};
+use crate::auth::context::{use_auth, AuthContext, UserProfile};
+use crate::components::base::{
+    Avatar, AvatarSize, Button, ButtonVariant, ImageEditorCropMode, ImageEditorModal, SettingsTab,
+    SettingsTabs, SharedModal,
+};
+use crate::components::AuthRequired;
+use crate::types::RecipeImageEdit;
 
-/// User profile settings — placeholder.
+#[cfg(test)]
+#[path = "settings_recovery_tests.rs"]
+mod recovery_tests;
+
+// Matches users.display_name VARCHAR(100), including names imported by OAuth.
+const PROFILE_DISPLAY_NAME_MAX_CHARACTERS: usize = 100;
+
+/// Shared display-name validation for the form and its server write boundary.
+fn validate_profile_display_name(name: &str) -> Result<(), &'static str> {
+    // PostgreSQL varchar counts Unicode scalars, not UTF-8 bytes or UTF-16 units.
+    if !(2..=PROFILE_DISPLAY_NAME_MAX_CHARACTERS).contains(&name.trim().chars().count()) {
+        return Err("Display name must be 2-100 characters");
+    }
+    Ok(())
+}
+
+/// Only known validation messages are safe to show verbatim. Transport and
+/// unknown server errors must not expose internal details or discard entries.
+fn profile_save_feedback(error: &ServerFnError) -> &str {
+    if let Some(feedback) = account_error_feedback(error) {
+        return feedback;
+    }
+    if let ServerFnError::ServerError { message, .. } = error {
+        match message.as_str() {
+            "Username must be 3-30 characters"
+            | "Username can only contain letters, numbers, hyphens, and underscores"
+            | "Username cannot start or end with a hyphen or underscore"
+            | "Display name must be 2-30 characters"
+            | "Display name must be 2-100 characters"
+            | "Bio must be 160 characters or less"
+            | "That username is already taken. Please choose another." => return message,
+            "Not authenticated" => return "Sign in again in another tab, then retry saving. Keep this page open to retain your entries.",
+            _ => {}
+        }
+    }
+    "Could not confirm the profile save. Your entries are kept here; check your saved profile in another tab before trying Save changes again."
+}
+
+#[component]
+fn ProfileSaveControl(pending: bool, valid: bool, on_save: EventHandler<()>) -> Element {
+    rsx! {
+        if pending { span { role: "status", "Saving profile…" } }
+        // Keep the same focusable node across pending/failure/success states.
+        button { r#type: "button", class: "btn btn-primary touch-target",
+            aria_disabled: pending || !valid,
+            onclick: move |_| { if !pending && valid { on_save.call(()); } },
+            if pending { "Saving…" } else { "Save changes" }
+        }
+    }
+}
+
+#[component]
+fn AccountDeletionFeedback(pending: bool, error: Option<String>) -> Element {
+    rsx! {
+        if pending {
+            p { role: "status", "Deleting account…" }
+        } else if let Some(error) = error {
+            div {
+                class: "user-feedback user-feedback--error", role: "alert",
+                overflow_wrap: "anywhere",
+                p { "{error}" }
+                a { href: "/login", target: "_blank", rel: "noopener", "Check sign-in in another tab" }
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct AvatarEditSource {
+    pub original_url: String,
+    pub edit: RecipeImageEdit,
+}
+
+fn avatar_photo_actions(has_avatar: bool) -> &'static [&'static str] {
+    if has_avatar {
+        &["Edit Photo", "Change Photo", "Remove"]
+    } else {
+        &["Choose Photo"]
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+type AvatarImageSource = web_sys::Blob;
+#[cfg(not(target_arch = "wasm32"))]
+type AvatarImageSource = Vec<u8>;
+
+// Keep the original image and exact confirmed edit independently of the modal's
+// preview URL. Closing the modal must not destroy a failed upload's retry data.
+#[derive(Clone)]
+struct AvatarUploadState<Source> {
+    pending: Option<(Source, RecipeImageEdit)>,
+    uploading: bool,
+    removing: bool,
+}
+
+impl<Source> Default for AvatarUploadState<Source> {
+    fn default() -> Self {
+        Self {
+            pending: None,
+            uploading: false,
+            removing: false,
+        }
+    }
+}
+
+impl<Source: Clone> AvatarUploadState<Source> {
+    #[cfg(any(target_arch = "wasm32", test))]
+    fn select(&mut self, source: Source, edit: RecipeImageEdit) -> bool {
+        if self.uploading {
+            return false;
+        }
+        self.pending = Some((source, edit));
+        true
+    }
+
+    #[cfg(any(target_arch = "wasm32", test))]
+    fn begin_upload(&mut self) -> Option<(Source, RecipeImageEdit)> {
+        if self.uploading {
+            return None;
+        }
+        let attempt = self.pending.clone()?;
+        self.uploading = true;
+        Some(attempt)
+    }
+
+    fn begin_removal(&mut self) -> bool {
+        if self.uploading {
+            return false;
+        }
+        self.uploading = true;
+        self.removing = true;
+        true
+    }
+
+    fn finish(&mut self, succeeded: bool) {
+        self.uploading = false;
+        self.removing = false;
+        if succeeded {
+            self.pending = None;
+        }
+    }
+}
+
+#[cfg(any(target_arch = "wasm32", test))]
+fn avatar_upload_feedback(error: &ServerFnError) -> &'static str {
+    if let Some(feedback) = account_error_feedback(error) {
+        return feedback;
+    }
+    match error {
+        ServerFnError::ServerError { message, .. } => match message.as_str() {
+            "Not authenticated" => "Sign in again in another tab, then retry your photo. Keep this page open to retain your image and edits.",
+            "Upload rate limit exceeded" => "Too many uploads. Wait a moment, then retry your photo.",
+            "Media storage quota exceeded" => "Your media storage is full. Free some space before retrying your photo.",
+            _ => "Could not save your photo. Your selected image and edits are kept here; try again.",
+        },
+        _ => "Could not save your photo. Your selected image and edits are kept here; try again.",
+    }
+}
+
+#[cfg(test)]
+mod avatar_action_tests {
+    use super::*;
+
+    #[test]
+    fn existing_avatar_offers_edit_without_requiring_replacement() {
+        assert_eq!(
+            avatar_photo_actions(true),
+            &["Edit Photo", "Change Photo", "Remove"]
+        );
+        assert_eq!(avatar_photo_actions(false), &["Choose Photo"]);
+    }
+
+    #[test]
+    fn avatar_retry_retains_source_and_edits_without_overlapping_requests() {
+        let mut state = AvatarUploadState::<Vec<u8>>::default();
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.transform.rotation = 25.0;
+        assert!(state.select(vec![1, 2, 3], edit.clone()));
+        assert_eq!(state.begin_upload(), Some((vec![1, 2, 3], edit.clone())));
+        assert!(state.begin_upload().is_none());
+        assert!(!state.select(vec![4], RecipeImageEdit::default_ellipse_1x1()));
+        state.finish(false);
+        assert_eq!(state.begin_upload(), Some((vec![1, 2, 3], edit)));
+        state.finish(true);
+        assert!(state.begin_upload().is_none());
+        assert!(state.pending.is_none());
+        assert!(!state.uploading);
+    }
+
+    #[test]
+    fn new_avatar_attempt_replaces_failed_attempt_only_when_idle() {
+        let mut state = AvatarUploadState::<Vec<u8>>::default();
+        let edit = RecipeImageEdit::default_ellipse_1x1();
+        state.select(vec![1], edit.clone());
+        state.begin_upload();
+        state.finish(false);
+        state.select(vec![2], edit.clone());
+        assert_eq!(state.begin_upload(), Some((vec![2], edit)));
+    }
+
+    #[test]
+    fn avatar_upload_feedback_does_not_expose_transport_errors() {
+        let raw = ServerFnError::new("internal database details");
+        assert_eq!(
+            avatar_upload_feedback(&raw),
+            "Could not save your photo. Your selected image and edits are kept here; try again."
+        );
+        assert!(
+            avatar_upload_feedback(&ServerFnError::new("Not authenticated")).contains("Sign in")
+        );
+    }
+}
+
+/// Delete the authenticated user's account.
+///
+/// Atomically stages durable storage cleanup authority before deleting the user
+/// row (oauth_accounts cascade automatically). The caller redirects without
+/// logging out: a replacement session must not be cleared by this completion.
+#[server]
+pub async fn delete_account(expected_account_id: Option<uuid::Uuid>) -> Result<(), ServerFnError> {
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
+    let pool = crate::db::get_pool();
+    let _media_lifecycle_guard = crate::api::upload::acquire_media_lifecycle_guard(user_id).await;
+
+    crate::db::delete_user_with_media_cleanup(&pool, user_id)
+        .await
+        .map_err(|e| ServerFnError::new(e.to_string()))?;
+
+    Ok(())
+}
+
+/// Save user profile via server function.
+#[server]
+pub async fn save_profile(
+    expected_account_id: Option<uuid::Uuid>,
+    display_name: String,
+    bio: Option<String>,
+    new_username: Option<String>,
+) -> Result<UserProfile, ServerFnError> {
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
+    let pool = crate::db::get_pool();
+
+    // --- Username validation ---
+    let trimmed_username = new_username.as_ref().map(|u| u.trim().to_string());
+    if let Some(ref username) = trimmed_username {
+        if username.len() < 3 || username.len() > 30 {
+            return Err(ServerFnError::new("Username must be 3-30 characters"));
+        }
+        if !username
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+        {
+            return Err(ServerFnError::new(
+                "Username can only contain letters, numbers, hyphens, and underscores",
+            ));
+        }
+        if username.starts_with(['-', '_']) || username.ends_with(['-', '_']) {
+            return Err(ServerFnError::new(
+                "Username cannot start or end with a hyphen or underscore",
+            ));
+        }
+    }
+
+    // --- Display name validation ---
+    let trimmed_name = display_name.trim().to_string();
+    validate_profile_display_name(&trimmed_name).map_err(ServerFnError::new)?;
+
+    // --- Bio validation ---
+    let trimmed_bio = bio.map(|b| b.trim().to_string());
+    if let Some(ref b) = trimmed_bio {
+        if b.len() > 160 {
+            return Err(ServerFnError::new("Bio must be 160 characters or less"));
+        }
+    }
+
+    // --- Apply username change if provided ---
+    if let Some(ref username) = trimmed_username {
+        crate::db::update_username(&pool, user_id, username)
+            .await
+            .map_err(|e| match &e {
+                crate::db::DbError::UsernameTaken => {
+                    ServerFnError::new("That username is already taken. Please choose another.")
+                }
+                _ => ServerFnError::new(e.to_string()),
+            })?;
+    }
+
+    // --- Apply display_name + bio update ---
+    let updated =
+        crate::db::update_user_profile(&pool, user_id, &trimmed_name, trimmed_bio.as_deref())
+            .await
+            .map_err(|e| ServerFnError::new(e.to_string()))?;
+
+    Ok(UserProfile {
+        id: updated.id,
+        username: updated.username,
+        display_name: updated.display_name,
+        email: updated.email,
+        avatar_url: updated.avatar_url,
+        bio: updated.bio,
+    })
+}
+
+/// Upload a new avatar image for the authenticated user.
+///
+/// Expects raw WebP image bytes for both the full-size (400x400) and
+/// thumbnail (100x100) variants. The images have already been
+/// processed client-side before being sent here.
+///
+/// If the user already has an avatar, its old image files are deleted
+/// best-effort only after the new avatar is uploaded and persisted.
+#[cfg(feature = "server")]
+fn validate_avatar_payload<'a>(
+    original_bytes: &'a [u8],
+    full_bytes: &'a [u8],
+    thumbnail_bytes: &'a [u8],
+    edit: &RecipeImageEdit,
+) -> Result<crate::api::upload::MediaUploadRequest<'a>, String> {
+    if original_bytes.is_empty() || full_bytes.is_empty() || thumbnail_bytes.is_empty() {
+        return Err("Avatar image variants must not be empty".to_string());
+    }
+    crate::security::validate_image_edit_metadata(edit)
+        .map_err(|_| "Avatar edit metadata is invalid".to_string())?;
+    crate::api::upload::MediaUploadRequest::avatar(original_bytes, full_bytes, thumbnail_bytes)
+}
+
+#[cfg(feature = "server")]
+fn map_avatar_upload_error(
+    error: crate::api::upload::MediaUploadError,
+    user_id: uuid::Uuid,
+) -> ServerFnError {
+    match error {
+        crate::api::upload::MediaUploadError::RateLimited => {
+            ServerFnError::new("Upload rate limit exceeded")
+        }
+        crate::api::upload::MediaUploadError::UsageUnavailable => {
+            ServerFnError::new("Unable to verify media quota")
+        }
+        crate::api::upload::MediaUploadError::QuotaExceeded => {
+            ServerFnError::new("Media storage quota exceeded")
+        }
+        crate::api::upload::MediaUploadError::Storage(error) => {
+            tracing::error!(%error, %user_id, "Failed to upload avatar media variants");
+            ServerFnError::new("Failed to upload avatar")
+        }
+    }
+}
+
+#[cfg(feature = "server")]
+async fn persist_uploaded_avatar(
+    pool: &sqlx::PgPool,
+    storage: &crate::storage::StorageClient,
+    user_id: uuid::Uuid,
+    uploaded: crate::api::upload::UploadedMedia,
+    edit_json: serde_json::Value,
+) -> Result<(crate::db::User, crate::api::upload::UploadedMedia), ServerFnError> {
+    let uploaded_urls = (
+        uploaded.url(crate::storage::MediaObjectKind::AvatarOriginal),
+        uploaded.url(crate::storage::MediaObjectKind::AvatarFull),
+        uploaded.url(crate::storage::MediaObjectKind::AvatarThumbnail),
+    );
+    let (Some(original_url), Some(full_url), Some(_thumbnail_url)) = uploaded_urls else {
+        uploaded.compensate(storage).await;
+        return Err(ServerFnError::new(
+            "Uploaded avatar response was incomplete",
+        ));
+    };
+    let original_url = original_url.to_string();
+    let full_url = full_url.to_string();
+    let original_key = uploaded
+        .key(crate::storage::MediaObjectKind::AvatarOriginal)
+        .ok_or_else(|| ServerFnError::new("Uploaded avatar is missing its original key"))?
+        .to_string();
+    let full_key = uploaded
+        .key(crate::storage::MediaObjectKind::AvatarFull)
+        .ok_or_else(|| ServerFnError::new("Uploaded avatar is missing its full key"))?
+        .to_string();
+    let thumbnail_key = uploaded
+        .key(crate::storage::MediaObjectKind::AvatarThumbnail)
+        .ok_or_else(|| ServerFnError::new("Uploaded avatar is missing its thumbnail key"))?
+        .to_string();
+    let thumbnail_url = uploaded
+        .url(crate::storage::MediaObjectKind::AvatarThumbnail)
+        .expect("validated above")
+        .to_string();
+    let asset = crate::db::NewMediaAsset {
+        id: uploaded.asset_id(),
+        uploader_id: user_id,
+        purpose: crate::db::MediaPurpose::Avatar,
+        full_url: full_url.clone(),
+        thumbnail_url,
+        original_url: Some(original_url.clone()),
+        full_key,
+        thumbnail_key,
+        original_key: Some(original_key),
+        capability_digest: None,
+        expires_at: None,
+    };
+    let mut transaction = pool
+        .begin()
+        .await
+        .map_err(|error| ServerFnError::new(format!("Failed to save avatar: {error}")))?;
+    let updated = async {
+        crate::db::register_media_asset_in_transaction(&mut transaction, &asset).await?;
+        crate::db::replace_avatar_media_reference_in_transaction(
+            &mut transaction,
+            user_id,
+            asset.id,
+        )
+        .await?;
+        sqlx::query(
+            "UPDATE users SET avatar_url = NULL, avatar_original_url = NULL, \
+                 avatar_edit = $2, updated_at = NOW() WHERE id = $1",
+        )
+        .bind(user_id)
+        .bind(Some(edit_json))
+        .execute(&mut *transaction)
+        .await
+        .map_err(crate::db::DbError::Query)?;
+        let updated = crate::db::get_user_by_id(&mut *transaction, user_id)
+            .await?
+            .ok_or(crate::db::DbError::Query(sqlx::Error::RowNotFound))?;
+        transaction
+            .commit()
+            .await
+            .map_err(crate::db::DbError::Query)?;
+        Ok::<_, crate::db::DbError>(updated)
+    }
+    .await;
+    match updated {
+        Ok(updated) => Ok((updated, uploaded)),
+        Err(error) => {
+            uploaded.compensate(storage).await;
+            Err(ServerFnError::new(format!(
+                "Failed to save avatar URL: {error}"
+            )))
+        }
+    }
+}
+
+#[server]
+pub async fn upload_avatar(
+    expected_account_id: Option<uuid::Uuid>,
+    original_bytes: Vec<u8>,
+    full_bytes: Vec<u8>,
+    thumb_bytes: Vec<u8>,
+    edit: RecipeImageEdit,
+) -> Result<UserProfile, ServerFnError> {
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
+    let pool = crate::db::get_pool();
+    let storage = crate::storage::get_storage_client();
+
+    let upload_request = validate_avatar_payload(&original_bytes, &full_bytes, &thumb_bytes, &edit)
+        .map_err(ServerFnError::new)?;
+    // Serialize the complete read-upload-write-retire lifecycle. Acquiring the
+    // permit after reading the old URLs would let concurrent replacements both
+    // retire the same predecessor and leave the first new avatar unreferenced.
+    let upload_permit = crate::api::upload::acquire_media_upload_permit(user_id)
+        .await
+        .map_err(|error| map_avatar_upload_error(error, user_id))?;
+
+    let edit_json = serde_json::to_value(&edit)
+        .map_err(|e| ServerFnError::new(format!("Failed to serialize avatar edit: {e}")))?;
+    let uploaded = upload_permit
+        .upload(&storage, upload_request)
+        .await
+        .map_err(|error| map_avatar_upload_error(error, user_id))?;
+    let (updated, _uploaded_lifecycle_guard) =
+        persist_uploaded_avatar(&pool, &storage, user_id, uploaded, edit_json).await?;
+
+    Ok(UserProfile {
+        id: updated.id,
+        username: updated.username,
+        display_name: updated.display_name,
+        email: updated.email,
+        avatar_url: updated.avatar_url,
+        bio: updated.bio,
+    })
+}
+
+#[server]
+pub async fn get_avatar_edit_source(
+    expected_account_id: Option<uuid::Uuid>,
+) -> Result<Option<AvatarEditSource>, ServerFnError> {
+    use sqlx::Row;
+
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
+    let pool = crate::db::get_pool();
+    let row = sqlx::query(
+        "SELECT CASE WHEN media_ref.asset_id IS NOT NULL \
+                     THEN asset.full_url \
+                     WHEN users.avatar_original_url IS NULL AND users.avatar_edit IS NULL \
+                     THEN users.avatar_url END AS avatar_url, \
+                CASE WHEN media_ref.asset_id IS NOT NULL \
+                     THEN COALESCE(asset.original_url, asset.full_url) \
+                     WHEN users.avatar_original_url IS NULL AND users.avatar_edit IS NULL \
+                     THEN users.avatar_url \
+                END AS avatar_original_url, \
+                users.avatar_edit \
+         FROM users \
+         LEFT JOIN avatar_media_refs media_ref ON media_ref.user_id = users.id \
+         LEFT JOIN media_assets asset ON asset.id = media_ref.asset_id \
+         WHERE users.id = $1",
+    )
+    .bind(user_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Failed to load avatar edit: {e}")))?
+    .ok_or_else(|| ServerFnError::new("User not found"))?;
+    let avatar_url: Option<String> = row.try_get("avatar_url").ok();
+    let original_url: Option<String> = row.try_get("avatar_original_url").ok();
+    let edit_json: Option<serde_json::Value> = row.try_get("avatar_edit").ok();
+    let Some(original_url) = original_url.or(avatar_url) else {
+        return Ok(None);
+    };
+    let edit = edit_json
+        .map(serde_json::from_value)
+        .transpose()
+        .map_err(|e| ServerFnError::new(format!("Invalid saved avatar edit: {e}")))?
+        .unwrap_or_else(RecipeImageEdit::default_ellipse_1x1);
+
+    Ok(Some(AvatarEditSource { original_url, edit }))
+}
+
+/// Remove the authenticated user's avatar.
+///
+/// Clears the user fields and durable avatar reference atomically. The shared
+/// media worker reclaims the asset only after its final reference disappears.
+#[server]
+pub async fn remove_avatar(
+    expected_account_id: Option<uuid::Uuid>,
+) -> Result<UserProfile, ServerFnError> {
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
+    crate::security::enforce_user_request_budget(user_id, crate::security::RequestClass::Mutation)
+        .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
+    let pool = crate::db::get_pool();
+    let _media_lifecycle_guard = crate::api::upload::acquire_media_lifecycle_guard(user_id).await;
+    let mut transaction = pool
+        .begin()
+        .await
+        .map_err(|error| ServerFnError::new(format!("Failed to remove avatar: {error}")))?;
+    crate::db::clear_avatar_media_reference_in_transaction(&mut transaction, user_id)
+        .await
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    sqlx::query(
+        "UPDATE users SET avatar_url = NULL, avatar_original_url = NULL, avatar_edit = NULL, updated_at = NOW() \
+         WHERE id = $1",
+    )
+    .bind(user_id)
+    .execute(&mut *transaction)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Failed to remove avatar: {e}")))?;
+    let updated = crate::db::get_user_by_id(&mut *transaction, user_id)
+        .await
+        .map_err(|e| ServerFnError::new(format!("Failed to remove avatar: {e}")))?
+        .ok_or_else(|| ServerFnError::new("User not found"))?;
+    transaction
+        .commit()
+        .await
+        .map_err(|error| ServerFnError::new(format!("Failed to remove avatar: {error}")))?;
+
+    Ok(UserProfile {
+        id: updated.id,
+        username: updated.username,
+        display_name: updated.display_name,
+        email: updated.email,
+        avatar_url: updated.avatar_url,
+        bio: updated.bio,
+    })
+}
+
+/// Source rectangle in original-image pixels used when rendering an avatar.
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[allow(dead_code)]
+pub(crate) struct AvatarSourceRect {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
+/// Convert the editor's normalized crop metadata into a safe pixel source
+/// rectangle for canvas rendering.
+#[allow(dead_code)]
+pub(crate) fn avatar_source_rect(
+    edit: &RecipeImageEdit,
+    image_width: f64,
+    image_height: f64,
+) -> AvatarSourceRect {
+    let image_width = if image_width.is_finite() {
+        image_width.max(0.0)
+    } else {
+        0.0
+    };
+    let image_height = if image_height.is_finite() {
+        image_height.max(0.0)
+    } else {
+        0.0
+    };
+    let width = edit.crop.width.clamp(0.0, 1.0);
+    let height = edit.crop.height.clamp(0.0, 1.0);
+    let x = edit.crop.x.clamp(0.0, 1.0 - width);
+    let y = edit.crop.y.clamp(0.0, 1.0 - height);
+
+    AvatarSourceRect {
+        x: x * image_width,
+        y: y * image_height,
+        width: width * image_width,
+        height: height * image_height,
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg(any(target_arch = "wasm32", test))]
+struct AvatarTransform {
+    rotation_radians: f64,
+    scale_x: f64,
+    scale_y: f64,
+}
+
+#[cfg(any(target_arch = "wasm32", test))]
+struct AvatarCanvasGeometry {
+    output_scale_x: f64,
+    output_scale_y: f64,
+    image_center_x: f64,
+    image_center_y: f64,
+    image_width: f64,
+    image_height: f64,
+}
+
+/// Map the fixed crop viewport to output pixels without recentering the image.
+/// The editor transforms the whole image first, around its own centre, while
+/// its crop stays fixed. Cropping before that transform changes offset framing.
+#[cfg(any(target_arch = "wasm32", test))]
+fn avatar_canvas_geometry(
+    source: AvatarSourceRect,
+    image_width: f64,
+    image_height: f64,
+    size: u32,
+) -> AvatarCanvasGeometry {
+    let output_scale_x = size as f64 / source.width;
+    let output_scale_y = size as f64 / source.height;
+    AvatarCanvasGeometry {
+        output_scale_x,
+        output_scale_y,
+        image_center_x: (image_width / 2.0 - source.x) * output_scale_x,
+        image_center_y: (image_height / 2.0 - source.y) * output_scale_y,
+        image_width,
+        image_height,
+    }
+}
+
+#[cfg(any(target_arch = "wasm32", test))]
+fn avatar_transform(
+    edit: &RecipeImageEdit,
+    image_width: f64,
+    image_height: f64,
+) -> AvatarTransform {
+    let stretch_x = edit.transform.stretch_x.abs();
+    let stretch_y = edit.transform.stretch_y.abs();
+    let radians = edit.transform.rotation.to_radians();
+    let cos = radians.cos().abs();
+    let sin = radians.sin().abs();
+    let transformed_width = image_width * stretch_x * cos + image_height * stretch_y * sin;
+    let transformed_height = image_width * stretch_x * sin + image_height * stretch_y * cos;
+    let fit_x = if transformed_width > 0.0 {
+        image_width / transformed_width
+    } else {
+        1.0
+    };
+    let fit_y = if transformed_height > 0.0 {
+        image_height / transformed_height
+    } else {
+        1.0
+    };
+    let fit_scale = fit_x.min(fit_y).clamp(0.1, 1.0);
+
+    AvatarTransform {
+        rotation_radians: radians,
+        scale_x: edit.transform.stretch_x
+            * fit_scale
+            * if edit.transform.flip_x { -1.0 } else { 1.0 },
+        scale_y: edit.transform.stretch_y
+            * fit_scale
+            * if edit.transform.flip_y { -1.0 } else { 1.0 },
+    }
+}
+
+#[cfg(any(target_arch = "wasm32", test))]
+fn apply_avatar_color(red: u8, green: u8, blue: u8, edit: &RecipeImageEdit) -> (u8, u8, u8) {
+    let apply_contrast = |channel: u8, contrast: f64| {
+        (channel as f64 * contrast.max(0.0))
+            .round()
+            .clamp(0.0, 255.0)
+    };
+    let red = apply_contrast(red, edit.color.contrast_r);
+    let green = apply_contrast(green, edit.color.contrast_g);
+    let blue = apply_contrast(blue, edit.color.contrast_b);
+    let saturation = edit.color.saturation.max(0.0);
+    let luminance = red * 0.2126 + green * 0.7152 + blue * 0.0722;
+    let apply_saturation = |channel: f64| {
+        (luminance + (channel - luminance) * saturation)
+            .round()
+            .clamp(0.0, 255.0) as u8
+    };
+
+    (
+        apply_saturation(red),
+        apply_saturation(green),
+        apply_saturation(blue),
+    )
+}
+
+#[cfg(test)]
+mod avatar_crop_tests {
+    use super::{apply_avatar_color, avatar_canvas_geometry, avatar_source_rect, avatar_transform};
+    use crate::types::{ImageCropRect, RecipeImageEdit};
+
+    #[test]
+    fn avatar_source_rect_applies_the_selected_normalized_crop() {
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.crop = ImageCropRect {
+            x: 0.25,
+            y: 0.1,
+            width: 0.5,
+            height: 0.8,
+        };
+
+        let source = avatar_source_rect(&edit, 800.0, 600.0);
+
+        assert_eq!(source.x, 200.0);
+        assert_eq!(source.y, 60.0);
+        assert_eq!(source.width, 400.0);
+        assert_eq!(source.height, 480.0);
+    }
+
+    #[test]
+    fn avatar_source_rect_clamps_crop_to_image_bounds() {
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.crop = ImageCropRect {
+            x: 0.9,
+            y: -0.5,
+            width: 0.4,
+            height: 2.0,
+        };
+
+        let source = avatar_source_rect(&edit, 100.0, 200.0);
+
+        assert_eq!(source.x, 60.0);
+        assert_eq!(source.y, 0.0);
+        assert_eq!(source.width, 40.0);
+        assert_eq!(source.height, 200.0);
+    }
+
+    #[test]
+    fn avatar_transform_applies_rotation_stretch_and_flips() {
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.transform.rotation = 90.0;
+        edit.transform.stretch_x = 0.75;
+        edit.transform.stretch_y = 0.5;
+        edit.transform.flip_x = true;
+
+        let transform = avatar_transform(&edit, 800.0, 600.0);
+
+        assert!((transform.rotation_radians - std::f64::consts::FRAC_PI_2).abs() < 0.0001);
+        assert_eq!(transform.scale_x, -0.75);
+        assert_eq!(transform.scale_y, 0.5);
+    }
+
+    #[test]
+    fn avatar_transform_fits_a_square_rotated_45_degrees() {
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.transform.rotation = 45.0;
+
+        let transform = avatar_transform(&edit, 400.0, 400.0);
+
+        let expected = std::f64::consts::FRAC_1_SQRT_2;
+        assert!((transform.scale_x - expected).abs() < 0.0001);
+        assert!((transform.scale_y - expected).abs() < 0.0001);
+    }
+
+    #[test]
+    fn avatar_canvas_preserves_the_full_image_center_for_an_offset_crop() {
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.crop = ImageCropRect {
+            x: 68.0 / 512.0,
+            y: 163.0 / 512.0,
+            width: 0.5,
+            height: 0.5,
+        };
+        edit.transform.rotation = 90.0;
+        edit.transform.flip_x = true;
+        let source = avatar_source_rect(&edit, 512.0, 512.0);
+        let geometry = avatar_canvas_geometry(source, 512.0, 512.0, 400);
+
+        assert_eq!(geometry.output_scale_x, 400.0 / 256.0);
+        assert_eq!(geometry.output_scale_y, 400.0 / 256.0);
+        assert_eq!(geometry.image_center_x, 293.75);
+        assert_eq!(geometry.image_center_y, 145.3125);
+        assert_eq!(geometry.image_width, 512.0);
+        assert_eq!(geometry.image_height, 512.0);
+    }
+
+    #[test]
+    fn avatar_canvas_preserves_portrait_image_geometry_inside_square_crop() {
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.crop = ImageCropRect {
+            x: 0.0,
+            y: 0.25,
+            width: 1.0,
+            height: 0.5,
+        };
+        let source = avatar_source_rect(&edit, 400.0, 800.0);
+        let geometry = avatar_canvas_geometry(source, 400.0, 800.0, 100);
+
+        assert_eq!(geometry.output_scale_x, 0.25);
+        assert_eq!(geometry.output_scale_y, 0.25);
+        assert_eq!(geometry.image_center_x, 50.0);
+        assert_eq!(geometry.image_center_y, 50.0);
+        assert_eq!(geometry.image_width, 400.0);
+        assert_eq!(geometry.image_height, 800.0);
+    }
+
+    #[test]
+    fn avatar_color_applies_saturation_and_channel_contrast() {
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.color.saturation = 0.0;
+        edit.color.contrast_r = 0.5;
+        edit.color.contrast_g = 1.0;
+        edit.color.contrast_b = 1.5;
+
+        assert_eq!(apply_avatar_color(100, 150, 200, &edit), (136, 136, 136));
+    }
+}
+
+/// Processed avatar result: full-size (400x400) and thumbnail (100x100) WebP bytes.
+#[cfg(target_arch = "wasm32")]
+struct ProcessedAvatar {
+    /// Full-size circular WebP bytes (400x400)
+    full_bytes: Vec<u8>,
+    /// Circular thumbnail WebP bytes (100x100)
+    thumb_bytes: Vec<u8>,
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn render_avatar_variant(
+    document: &web_sys::Document,
+    img: &web_sys::HtmlImageElement,
+    source: AvatarSourceRect,
+    edit: &RecipeImageEdit,
+    size: u32,
+    quality: f64,
+) -> Result<Vec<u8>, String> {
+    use wasm_bindgen::{Clamped, JsCast};
+
+    let canvas = document
+        .create_element("canvas")
+        .map_err(|e| format!("Failed to create canvas: {:?}", e))?
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .map_err(|_| "Failed to cast to HtmlCanvasElement")?;
+    canvas.set_width(size);
+    canvas.set_height(size);
+
+    let ctx = canvas
+        .get_context("2d")
+        .map_err(|e| format!("Failed to get 2D context: {:?}", e))?
+        .and_then(|value| value.dyn_into::<web_sys::CanvasRenderingContext2d>().ok())
+        .ok_or("Failed to cast context")?;
+    let half_size = size as f64 / 2.0;
+
+    ctx.begin_path();
+    ctx.arc(half_size, half_size, half_size, 0.0, std::f64::consts::TAU)
+        .map_err(|e| format!("Failed to create avatar mask: {:?}", e))?;
+    ctx.clip();
+
+    let transform = avatar_transform(
+        edit,
+        img.natural_width() as f64,
+        img.natural_height() as f64,
+    );
+    let geometry = avatar_canvas_geometry(
+        source,
+        img.natural_width() as f64,
+        img.natural_height() as f64,
+        size,
+    );
+    ctx.save();
+    ctx.translate(geometry.image_center_x, geometry.image_center_y)
+        .map_err(|e| format!("Failed to position avatar: {:?}", e))?;
+    ctx.scale(geometry.output_scale_x, geometry.output_scale_y)
+        .map_err(|e| format!("Failed to size avatar crop: {:?}", e))?;
+    ctx.rotate(transform.rotation_radians)
+        .map_err(|e| format!("Failed to rotate avatar: {:?}", e))?;
+    ctx.scale(transform.scale_x, transform.scale_y)
+        .map_err(|e| format!("Failed to scale avatar: {:?}", e))?;
+    let draw_result = ctx.draw_image_with_html_image_element_and_dw_and_dh(
+        img,
+        -geometry.image_width / 2.0,
+        -geometry.image_height / 2.0,
+        geometry.image_width,
+        geometry.image_height,
+    );
+    ctx.restore();
+    draw_result.map_err(|e| format!("draw_image error: {:?}", e))?;
+
+    let image_data = ctx
+        .get_image_data(0.0, 0.0, size as f64, size as f64)
+        .map_err(|e| format!("Failed to read avatar pixels: {:?}", e))?;
+    let mut pixels = image_data.data().0;
+    for pixel in pixels.chunks_exact_mut(4) {
+        let (red, green, blue) = apply_avatar_color(pixel[0], pixel[1], pixel[2], edit);
+        pixel[0] = red;
+        pixel[1] = green;
+        pixel[2] = blue;
+    }
+    let adjusted = web_sys::ImageData::new_with_u8_clamped_array_and_sh(
+        Clamped(pixels.as_slice()),
+        size,
+        size,
+    )
+    .map_err(|e| format!("Failed to create adjusted avatar pixels: {:?}", e))?;
+    ctx.put_image_data(&adjusted, 0.0, 0.0)
+        .map_err(|e| format!("Failed to write avatar pixels: {:?}", e))?;
+
+    crate::utils::image_processing_client::blob_from_canvas(&canvas, quality).await
+}
+
+/// Process an avatar image client-side using the editor's selected crop and
+/// generate transparent circular 400px and 100px WebP variants.
+///
+/// Only available on wasm32 target.
+#[cfg(target_arch = "wasm32")]
+async fn process_avatar_image(
+    image_blob: web_sys::Blob,
+    edit: &RecipeImageEdit,
+) -> Result<ProcessedAvatar, String> {
+    let window = web_sys::window().ok_or("No window")?;
+    let document = window.document().ok_or("No document")?;
+
+    // Load the image using the existing utility
+    let img = crate::utils::image_processing_client::load_image_from_blob(&image_blob).await?;
+
+    let source = avatar_source_rect(
+        edit,
+        img.natural_width() as f64,
+        img.natural_height() as f64,
+    );
+    if source.width <= 0.0 || source.height <= 0.0 {
+        return Err("Selected crop is empty".to_string());
+    }
+
+    let full_bytes = render_avatar_variant(&document, &img, source, edit, 400, 0.9).await?;
+    let thumb_bytes = render_avatar_variant(&document, &img, source, edit, 100, 0.8).await?;
+
+    Ok(ProcessedAvatar {
+        full_bytes,
+        thumb_bytes,
+    })
+}
+
+/// Programmatically trigger a click on a file input element by ID.
+/// Only active on wasm32; no-op during SSR.
+#[cfg(target_arch = "wasm32")]
+fn trigger_file_input(id: &str) {
+    if let Some(window) = web_sys::window() {
+        if let Some(doc) = window.document() {
+            if let Ok(Some(input)) = doc.query_selector(id) {
+                if let Some(file_input) = input.dyn_ref::<web_sys::HtmlInputElement>() {
+                    file_input.click();
+                }
+            }
+        }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn reset_file_input(id: &str) {
+    if let Some(input) = web_sys::window()
+        .and_then(|window| window.document())
+        .and_then(|document| document.query_selector(id).ok().flatten())
+        .and_then(|element| element.dyn_into::<web_sys::HtmlInputElement>().ok())
+    {
+        input.set_value("");
+    }
+}
+
+/// No-op stub for non-wasm32 targets (SSR).
+#[cfg(not(target_arch = "wasm32"))]
+fn trigger_file_input(_id: &str) {
+    // No DOM available during server-side rendering
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn reset_file_input(_id: &str) {}
+
+/// User profile settings page.
+///
+/// Displays editable display name and bio fields with validation,
+/// retained entries on save failure and server-authoritative updates on success.
 #[component]
 pub fn SettingsProfile() -> Element {
-    rsx! {
-        div { class: "container",
-            PageHeader {
-                title: "Profile Settings",
+    let auth = use_auth();
+    let form_account = use_form_account();
+
+    // Populate before the first editable render when auth data is available.
+    // An effect-only initialization can overwrite text entered immediately.
+    let initial_username = auth
+        .current_user
+        .as_ref()
+        .map(|user| user.username.clone())
+        .unwrap_or_default();
+    let initial_name = auth
+        .current_user
+        .as_ref()
+        .map(|user| user.display_name.clone())
+        .unwrap_or_default();
+    let initial_bio = auth
+        .current_user
+        .as_ref()
+        .and_then(|user| user.bio.clone())
+        .unwrap_or_default();
+    let mut username = use_signal(move || initial_username);
+    let mut display_name = use_signal(move || initial_name);
+    let mut bio = use_signal(move || initial_bio);
+    let mut is_saving = use_signal(|| false);
+    let mut error = use_signal(|| Option::<String>::None);
+    let mut saved_message = use_signal(|| Option::<String>::None);
+    let mut avatar_removal_focus_pending = use_signal(|| false);
+
+    // Delete account state
+    let mut deletion = use_signal(AccountDeletionState::default);
+
+    // Avatar upload state
+    #[allow(unused_mut)]
+    let mut avatar_upload_state = use_signal(AvatarUploadState::<AvatarImageSource>::default);
+    let mut avatar_url_signal = use_signal(|| Option::<String>::None);
+    let mut avatar_editor_url = use_signal(|| Option::<String>::None);
+    let mut avatar_editor_initial_edit = use_signal(|| Option::<RecipeImageEdit>::None);
+    #[cfg(target_arch = "wasm32")]
+    let mut avatar_editor_blob = use_signal(|| Option::<web_sys::Blob>::None);
+
+    // Revoke a selected file's preview URL if the settings page unmounts
+    // while its editor is open.
+    #[cfg(target_arch = "wasm32")]
+    {
+        use dioxus::prelude::use_drop;
+        use_drop(move || {
+            if let Some(url) = avatar_editor_url() {
+                let _ = web_sys::Url::revoke_object_url(&url);
             }
-            div {
-                max_width: "500px",
-                Card {
+        });
+    }
+
+    // Extract username for typed confirmation (before use_effect consumes auth.current_user)
+    let delete_username = auth
+        .current_user
+        .as_ref()
+        .map(|u| u.username.clone())
+        .unwrap_or_default();
+
+    // Extract email for read-only display
+    let email = auth
+        .current_user
+        .as_ref()
+        .map(|u| u.email.clone())
+        .unwrap_or_default();
+
+    // Extract avatar URL for display - initialize signal from auth context
+    let initial_avatar_url = auth
+        .current_user
+        .as_ref()
+        .and_then(|u| u.avatar_url.clone());
+    if let Some(ref url) = initial_avatar_url.filter(|_| form_account() == auth.current_user_id) {
+        if avatar_url_signal.read().is_none() {
+            avatar_url_signal.set(Some(url.clone()));
+        }
+    }
+    let avatar_url = avatar_url_signal.read().clone();
+
+    // Avatar name: use display_name, fall back to username if empty
+    let avatar_name = {
+        let dn = display_name();
+        if dn.trim().is_empty() {
+            username()
+        } else {
+            dn
+        }
+    };
+
+    // Hold a reference to the auth context signal for updating after save (Issue #5)
+    let mut auth_context = use_context::<Signal<AuthContext>>();
+
+    // SSR values are visible but read-only until this scope's client effect
+    // runs. Otherwise native edits before hydration can be lost on attachment.
+    let mut initialized = use_signal(|| false);
+
+    // Load profile from auth context when it becomes available.
+    // Reading `auth_context.read()` inside the effect closure subscribes the
+    // effect to the signal, so it re-runs when auth data arrives asynchronously.
+    // The `initialized` guard ensures we only populate once.
+    use_effect(move || {
+        if !initialized() {
+            if let Some(user) = auth_context.read().current_user.as_ref() {
+                username.set(user.username.clone());
+                display_name.set(user.display_name.clone());
+                bio.set(user.bio.clone().unwrap_or_default());
+                initialized.set(true);
+            }
+        }
+    });
+
+    let on_save = move |_| {
+        // Check the live signal before validation/spawning, not only the last
+        // rendered button prop, so rapid activations cannot overlap saves.
+        if is_saving() || !initialized() {
+            return;
+        }
+        saved_message.set(None);
+        if let Err(problem) =
+            check_account_binding(form_account(), auth_context.peek().current_user_id)
+        {
+            error.set(Some(profile_save_feedback(&problem).into()));
+            return;
+        }
+        let new_username = username().clone();
+        let new_name = display_name().clone();
+        let new_bio = bio().clone();
+        let trimmed_username = new_username.trim().to_string();
+        let trimmed_name = new_name.trim().to_string();
+        let trimmed_bio = if new_bio.trim().is_empty() {
+            None
+        } else {
+            Some(new_bio.trim().to_string())
+        };
+
+        // Read current username from the same bound account at handler time,
+        // not captured at render time. This avoids the issue where
+        // `current_username` is `None` on initial client render. (Issue #4)
+        let current_user = auth_context.read().current_user.clone();
+        let username_changed = current_user
+            .as_ref()
+            .is_some_and(|cu| cu.username != trimmed_username);
+
+        let username_to_send = if username_changed {
+            Some(trimmed_username.clone())
+        } else {
+            None
+        };
+
+        // --- Username validation (client-side) ---
+        if username_changed {
+            if trimmed_username.len() < 3 || trimmed_username.len() > 30 {
+                error.set(Some("Username must be 3-30 characters".to_string()));
+                return;
+            }
+            if !trimmed_username
+                .chars()
+                .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+            {
+                error.set(Some(
+                    "Username can only contain letters, numbers, hyphens, and underscores"
+                        .to_string(),
+                ));
+                return;
+            }
+            if trimmed_username.starts_with(['-', '_']) || trimmed_username.ends_with(['-', '_']) {
+                error.set(Some(
+                    "Username cannot start or end with a hyphen or underscore".to_string(),
+                ));
+                return;
+            }
+        }
+
+        // Validate client-side
+        if let Err(reason) = validate_profile_display_name(&trimmed_name) {
+            error.set(Some(reason.to_string()));
+            return;
+        }
+        if let Some(ref b) = trimmed_bio {
+            if b.len() > 160 {
+                error.set(Some("Bio must be 160 characters or less".to_string()));
+                return;
+            }
+        }
+
+        // Keep the entered text until success. A failed request must never
+        // replace it with the last committed profile or trimmed submission.
+        is_saving.set(true);
+        error.set(None);
+
+        // Spawn async save
+        let username_for_server = username_to_send.clone();
+        let name_for_server = trimmed_name.clone();
+        let bio_for_server = trimmed_bio.clone();
+        spawn(async move {
+            match save_profile(
+                form_account(),
+                name_for_server,
+                bio_for_server,
+                username_for_server,
+            )
+            .await
+            {
+                Ok(profile) => {
+                    if !account_completion_matches(
+                        form_account(),
+                        auth_context.peek().current_user_id,
+                        profile.id,
+                    ) {
+                        error.set(Some(ACCOUNT_COMPLETION_CHANGED_FEEDBACK.into()));
+                        is_saving.set(false);
+                        return;
+                    }
+                    // Apply server-authoritative values
+                    username.set(profile.username.clone());
+                    display_name.set(profile.display_name.clone());
+                    bio.set(profile.bio.clone().unwrap_or_default());
+
+                    // Update the global auth context so navbar reflects changes immediately
+                    auth_context.write().current_user = Some(profile);
+
+                    saved_message.set(Some("Profile saved successfully!".to_string()));
+                    is_saving.set(false);
+                }
+                Err(e) => {
+                    // Clear any previous success message so it doesn't show alongside error
+                    saved_message.set(None);
+
+                    error.set(Some(profile_save_feedback(&e).to_string()));
+                    is_saving.set(false);
+                }
+            }
+        });
+    };
+
+    let is_valid = {
+        let u = username().trim().to_string();
+        let n = display_name().trim().to_string();
+        let b = bio().trim().to_string();
+
+        // Username validity: if changed, must meet constraints; if unchanged, always valid.
+        // Read current username from auth context FRESH (not captured at render time). (Issue #4)
+        let username_valid = {
+            let current = auth_context
+                .read()
+                .current_user
+                .as_ref()
+                .map(|u| u.username.clone());
+            if current.as_ref().is_some_and(|cu| cu.as_str() != u.as_str()) {
+                u.len() >= 3
+                    && u.len() <= 30
+                    && u.chars()
+                        .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+                    && !u.starts_with(['-', '_'])
+                    && !u.ends_with(['-', '_'])
+            } else {
+                true
+            }
+        };
+
+        initialized()
+            && validate_profile_display_name(&n).is_ok()
+            && b.len() <= 160
+            && username_valid
+    };
+
+    // Current username for typed confirmation
+    let expected_confirm = format!("delete {}", delete_username);
+    let input_matches = deletion.read().confirmation == expected_confirm;
+    let deleting = deletion.read().pending;
+
+    // Delete account handlers
+    let on_delete_confirm = move |_| {
+        deletion.write().confirm();
+    };
+
+    let on_delete_cancel = move |_| {
+        deletion.write().cancel();
+    };
+
+    let continue_username = delete_username.clone();
+    let on_delete_continue = move |_| {
+        deletion.write().advance(&continue_username);
+    };
+
+    let on_delete_go_back = move |_| {
+        deletion.write().go_back();
+    };
+
+    let on_delete_final = move |_| {
+        if let Err(problem) =
+            check_account_binding(form_account(), auth_context.peek().current_user_id)
+        {
+            deletion.write().error =
+                Some(settings_mutation_feedback(SettingsMutation::DeleteAccount, &problem).into());
+            return;
+        }
+        // Synchronous claim prevents queued/double clicks from spawning two requests.
+        let current_username = auth_context
+            .peek()
+            .current_user
+            .as_ref()
+            .map(|profile| profile.username.clone())
+            .unwrap_or_default();
+        if !auth_context.peek().is_authenticated
+            || !deletion.write().begin_delete(&current_username)
+        {
+            return;
+        }
+
+        spawn(async move {
+            match delete_account(form_account()).await {
+                Ok(()) => {
+                    // Deletion invalidates the original database session. Do
+                    // not POST logout here: another tab may have replaced the
+                    // cookie while deletion was running, logging out that user.
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        if auth_context.peek().current_user_id != form_account() {
+                            deletion
+                                .write()
+                                .fail_delete(ACCOUNT_COMPLETION_CHANGED_FEEDBACK.into());
+                            return;
+                        }
+                        if let Some(window) = web_sys::window() {
+                            let _ = window.location().set_href("/");
+                        }
+                    }
+                }
+                Err(e) => {
+                    deletion.write().fail_delete(
+                        settings_mutation_feedback(SettingsMutation::DeleteAccount, &e).into(),
+                    );
+                }
+            }
+        });
+    };
+
+    // Selecting an avatar opens the editor. Processing and upload only begin
+    // after the user confirms their crop.
+    #[allow(unused_mut)]
+    let mut on_avatar_file_change = move |files: Vec<dioxus::html::FileData>| {
+        if files.is_empty() {
+            return;
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            use dioxus_web::WebFileExt;
+
+            error.set(None);
+            saved_message.set(None);
+
+            if let Err(reason) =
+                crate::components::base::validate_image_input(&files[0].name(), files[0].size())
+            {
+                error.set(Some(reason.to_string()));
+                reset_file_input("#avatar-upload-input");
+                return;
+            }
+
+            let Some(web_file) = files[0].get_web_file() else {
+                error.set(Some("Could not read file".to_string()));
+                return;
+            };
+
+            let object_url = match web_sys::Url::create_object_url_with_blob(&web_file) {
+                Ok(url) => url,
+                Err(_) => {
+                    error.set(Some("Could not preview the selected image".to_string()));
+                    return;
+                }
+            };
+
+            if let Some(previous_url) = avatar_editor_url() {
+                let _ = web_sys::Url::revoke_object_url(&previous_url);
+            }
+            avatar_editor_blob.set(Some(web_file.into()));
+            avatar_editor_initial_edit.set(Some(RecipeImageEdit::default_ellipse_1x1()));
+            avatar_editor_url.set(Some(object_url));
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let _ = &files;
+        }
+    };
+
+    let on_edit_existing_avatar = move |_| {
+        #[cfg(target_arch = "wasm32")]
+        {
+            spawn(async move {
+                error.set(None);
+                let source = match get_avatar_edit_source(form_account()).await {
+                    Ok(Some(source)) => source,
+                    Ok(None) => {
+                        error.set(Some("No avatar is available to edit".to_string()));
+                        return;
+                    }
+                    Err(_) => {
+                        error.set(Some("Could not load the saved avatar edit".to_string()));
+                        return;
+                    }
+                };
+                let response = match gloo_net::http::Request::get(&source.original_url)
+                    .send()
+                    .await
+                {
+                    Ok(response) if response.ok() => response,
+                    Ok(response) => {
+                        error.set(Some(format!(
+                            "Could not load the current avatar (HTTP {})",
+                            response.status()
+                        )));
+                        return;
+                    }
+                    Err(_) => {
+                        error.set(Some(
+                            "Could not load the current avatar for editing".to_string(),
+                        ));
+                        return;
+                    }
+                };
+                let bytes = match response.binary().await {
+                    Ok(bytes) => bytes,
+                    Err(_) => {
+                        error.set(Some("Could not read the current avatar".to_string()));
+                        return;
+                    }
+                };
+                let byte_array = js_sys::Uint8Array::from(bytes.as_slice());
+                let parts = js_sys::Array::new();
+                parts.push(&byte_array);
+                let blob = match web_sys::Blob::new_with_u8_array_sequence(&parts) {
+                    Ok(blob) => blob,
+                    Err(_) => {
+                        error.set(Some(
+                            "Could not prepare the current avatar for editing".to_string(),
+                        ));
+                        return;
+                    }
+                };
+                let object_url = match web_sys::Url::create_object_url_with_blob(&blob) {
+                    Ok(url) => url,
+                    Err(_) => {
+                        error.set(Some("Could not preview the current avatar".to_string()));
+                        return;
+                    }
+                };
+
+                if let Some(previous_url) = avatar_editor_url() {
+                    let _ = web_sys::Url::revoke_object_url(&previous_url);
+                }
+                avatar_editor_blob.set(Some(blob));
+                avatar_editor_initial_edit.set(Some(source.edit));
+                avatar_editor_url.set(Some(object_url));
+            });
+        }
+    };
+
+    let on_avatar_editor_close = move |_| {
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(url) = avatar_editor_url() {
+                let _ = web_sys::Url::revoke_object_url(&url);
+            }
+            avatar_editor_blob.set(None);
+        }
+        avatar_editor_initial_edit.set(None);
+        avatar_editor_url.set(None);
+        reset_file_input("#avatar-upload-input");
+    };
+
+    let on_upload_avatar = use_callback(move |_: ()| {
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Err(problem) =
+                check_account_binding(form_account(), auth_context.peek().current_user_id)
+            {
+                error.set(Some(avatar_upload_feedback(&problem).into()));
+                return;
+            }
+            // Claim synchronously before spawning so queued clicks cannot
+            // submit the same media twice.
+            let Some((image_blob, edit)) = avatar_upload_state.write().begin_upload() else {
+                return;
+            };
+            let mut auth_context = auth_context;
+            let mut avatar_url = avatar_url_signal;
+            let mut avatar_upload_state = avatar_upload_state;
+            let mut error = error;
+            let mut saved_message = saved_message;
+
+            spawn(async move {
+                error.set(None);
+                saved_message.set(None);
+
+                let original_bytes =
+                    match crate::utils::image_processing_client::blob_to_bytes(&image_blob).await {
+                        Ok(bytes) => bytes,
+                        Err(_) => {
+                            error.set(Some(
+                                "Could not read your photo. Try again or choose another image."
+                                    .to_string(),
+                            ));
+                            avatar_upload_state.write().finish(false);
+                            return;
+                        }
+                    };
+
+                let processed = match process_avatar_image(image_blob, &edit).await {
+                    Ok(data) => data,
+                    Err(_) => {
+                        error.set(Some(
+                            "Could not process your photo. Try again or choose another image."
+                                .to_string(),
+                        ));
+                        avatar_upload_state.write().finish(false);
+                        return;
+                    }
+                };
+
+                match upload_avatar(
+                    form_account(),
+                    original_bytes,
+                    processed.full_bytes,
+                    processed.thumb_bytes,
+                    edit,
+                )
+                .await
+                {
+                    Ok(profile) => {
+                        if !account_completion_matches(
+                            form_account(),
+                            auth_context.peek().current_user_id,
+                            profile.id,
+                        ) {
+                            error.set(Some(ACCOUNT_COMPLETION_CHANGED_FEEDBACK.into()));
+                            avatar_upload_state.write().finish(false);
+                            return;
+                        }
+                        avatar_url.set(profile.avatar_url.clone());
+                        auth_context.write().current_user = Some(profile);
+                        saved_message.set(Some("Avatar updated successfully!".to_string()));
+                        avatar_upload_state.write().finish(true);
+                    }
+                    Err(e) => {
+                        error.set(Some(avatar_upload_feedback(&e).to_string()));
+                        avatar_upload_state.write().finish(false);
+                    }
+                }
+            });
+        }
+    });
+
+    let on_avatar_edit_save = move |edit: RecipeImageEdit| {
+        #[cfg(target_arch = "wasm32")]
+        {
+            let Some(image_blob) = avatar_editor_blob() else {
+                error.set(Some(
+                    "The selected image is no longer available. Choose it again.".to_string(),
+                ));
+                return;
+            };
+            let selected = avatar_upload_state.write().select(image_blob, edit);
+            if selected {
+                on_upload_avatar.call(());
+            }
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let _ = edit;
+        }
+    };
+
+    // Avatar remove handler
+    let on_remove_avatar = move |_| {
+        if let Err(problem) =
+            check_account_binding(form_account(), auth_context.peek().current_user_id)
+        {
+            error.set(Some(
+                settings_mutation_feedback(SettingsMutation::RemoveAvatar, &problem).into(),
+            ));
+            return;
+        }
+        let mut auth_context = auth_context;
+        let mut avatar_url = avatar_url_signal;
+        let mut avatar_upload_state = avatar_upload_state;
+        let mut error = error;
+        let mut saved_message = saved_message;
+
+        if !auth_context.peek().is_authenticated
+            || avatar_url.peek().is_none()
+            || !avatar_upload_state.write().begin_removal()
+        {
+            return;
+        }
+        spawn(async move {
+            error.set(None);
+            saved_message.set(None);
+
+            match remove_avatar(form_account()).await {
+                Ok(profile) => {
+                    if !account_completion_matches(
+                        form_account(),
+                        auth_context.peek().current_user_id,
+                        profile.id,
+                    ) {
+                        error.set(Some(ACCOUNT_COMPLETION_CHANGED_FEEDBACK.into()));
+                        avatar_upload_state.write().finish(false);
+                        return;
+                    }
+                    avatar_url.set(profile.avatar_url.clone());
+                    auth_context.write().current_user = Some(profile);
+                    avatar_removal_focus_pending.set(true);
+                    saved_message.set(Some("Avatar removed successfully!".to_string()));
+                    avatar_upload_state.write().finish(true);
+                }
+                Err(e) => {
+                    error.set(Some(
+                        settings_mutation_feedback(SettingsMutation::RemoveAvatar, &e).into(),
+                    ));
+                    avatar_upload_state.write().finish(false);
+                }
+            }
+        });
+    };
+
+    rsx! {
+        document::Stylesheet { href: asset!("/assets/user-pages.css") }
+        AuthRequired {
+            div { class: "container user-settings",
+            header { class: "user-page-heading",
+                p { class: "user-page-eyebrow", "Your account" }
+                h1 { class: "brand-title", PageIcon { kind: PageIconKind::Settings } span { "Profile settings" } }
+                p { "Make your profile feel like you. Your name, photo and bio are public." }
+            }
+            SettingsTabs { active: SettingsTab::Profile }
+            details { class: "user-disclosure", open: true,
+                summary {
                     div {
-                        display: "flex",
-                        flex_direction: "column",
-                        gap: "var(--space-md)",
-                        div {
-                            display: "flex",
-                            flex_direction: "column",
-                            gap: "var(--space-sm)",
-                            label {
-                                font_size: "14px",
-                                font_weight: "600",
-                                color: "var(--text-secondary)",
-                                "Display Name"
-                            }
-                            Input {
-                                placeholder: "Your name",
-                                oninput: move |_| {},
+                        h2 { "Your profile" }
+                        p { "The details people see alongside your recipes." }
+                    }
+                    span { class: "user-disclosure__chevron", aria_hidden: "true", "⌄" }
+                }
+                div { class: "user-settings__profile-grid",
+                    div { class: "user-settings__avatar",
+                        div { class: "user-portrait",
+                            Avatar { size: AvatarSize::Large, src: avatar_url.clone(), username: avatar_name.clone() }
+                        }
+                        if avatar_upload_state.read().uploading {
+                            span { role: "status",
+                                if avatar_upload_state.read().removing { "Removing photo…" } else { "Uploading…" }
                             }
                         }
+                        if avatar_url.is_some() {
+                            div { class: "user-settings__avatar-actions",
+                                Button { variant: ButtonVariant::Secondary, disabled: avatar_upload_state.read().uploading, onclick: on_edit_existing_avatar, "{avatar_photo_actions(true)[0]}" }
+                                Button { variant: ButtonVariant::Secondary, disabled: avatar_upload_state.read().uploading, onclick: move |_| trigger_file_input("#avatar-upload-input"), "Change Photo" }
+                                SettingsMutationControl {
+                                    id: "avatar-remove-photo", variant: ButtonVariant::Ghost,
+                                    pending: avatar_upload_state.read().removing,
+                                    unavailable: avatar_upload_state.read().uploading && !avatar_upload_state.read().removing,
+                                    label: "Remove photo", pending_label: "Removing…", on_action: on_remove_avatar,
+                                }
+                            }
+                        } else {
+                            Button { variant: ButtonVariant::Secondary, disabled: avatar_upload_state.read().uploading, onclick: move |_| trigger_file_input("#avatar-upload-input"), "Choose Photo" }
+                        }
+                        if avatar_upload_state.read().pending.is_some() {
+                            button { r#type: "button", class: "btn btn-secondary touch-target",
+                                aria_disabled: avatar_upload_state.read().uploading,
+                                onclick: move |_| on_upload_avatar.call(()),
+                                if avatar_upload_state.read().removing { "Removing photo…" }
+                                else if avatar_upload_state.read().uploading { "Uploading photo…" } else { "Retry photo upload" }
+                            }
+                            p { class: "user-settings__hint", "Your selected image and edits are kept until this page closes." }
+                        }
+                        p { class: "user-settings__hint", "Your photo appears on your public profile." }
+                        input {
+                            id: "avatar-upload-input", r#type: "file",
+                            accept: "image/png,image/jpeg,image/webp,image/gif", display: "none",
+                            onchange: move |evt| on_avatar_file_change(evt.files()),
+                        }
+                    }
+                    div { class: "user-settings__fields",
+                        div { class: "user-settings__field",
+                            label { r#for: "profile-display-name", "Display name" }
+                            input {
+                                id: "profile-display-name", class: "input input--shared neumo-inset", r#type: "text",
+                                value: display_name(), placeholder: "Your name",
+                                // Avoid HTML maxlength's UTF-16 counting and silent truncation.
+                                aria_invalid: validate_profile_display_name(&display_name()).is_err(),
+                                readonly: is_saving() || !initialized(),
+                                aria_describedby: "profile-display-name-hint",
+                                oninput: move |evt| { if initialized() && !is_saving() { display_name.set(evt.value()); error.set(None); saved_message.set(None); } },
+                            }
+                            span { id: "profile-display-name-hint", class: "user-settings__hint",
+                                "{display_name().trim().chars().count()}/{PROFILE_DISPLAY_NAME_MAX_CHARACTERS}"
+                                if validate_profile_display_name(&display_name()).is_err() { " · Use 2–100 characters." }
+                            }
+                        }
+                        div { class: "user-settings__field",
+                            label { r#for: "profile-username", "Username" }
+                            input {
+                                id: "profile-username", class: "input input--shared neumo-inset", r#type: "text",
+                                value: username(), placeholder: "username", maxlength: "30",
+                                readonly: is_saving() || !initialized(),
+                                aria_describedby: "profile-username-hint",
+                                oninput: move |evt| { if initialized() && !is_saving() { username.set(evt.value()); error.set(None); saved_message.set(None); } },
+                            }
+                            span { id: "profile-username-hint", class: "user-settings__hint", "Your public handle · {username().trim().len()}/30" }
+                        }
+                        div { class: "user-settings__field",
+                            label { r#for: "profile-bio", "Bio" }
+                            textarea {
+                                id: "profile-bio", class: "neumo-inset input", placeholder: "Tell us about yourself…",
+                                rows: "3", maxlength: "160", value: "{bio()}", aria_describedby: "profile-bio-hint",
+                                readonly: is_saving() || !initialized(),
+                                oninput: move |evt| { if initialized() && !is_saving() { bio.set(evt.value()); error.set(None); saved_message.set(None); } },
+                            }
+                            span { id: "profile-bio-hint", class: "user-settings__hint", "{bio().trim().len()}/160" }
+                        }
+                        div { class: "user-settings__field",
+                            span { "Email" }
+                            p { class: "user-settings__readonly", "{email}" }
+                            p { class: "user-settings__hint", "Private account information. Not shown on your public profile." }
+                        }
+                        if let Some(err) = error() {
+                            div { class: "user-feedback user-feedback--error", role: "alert", "{err}" }
+                        }
+                        if let Some(msg) = saved_message() {
+                            div {
+                                id: "profile-save-success", tabindex: "-1",
+                                class: "user-feedback user-feedback--success", role: "status",
+                                onmounted: move |event| async move {
+                                    // Removal unmounts its focused button. Ordinary saves
+                                    // retain their control; only this removal claims result focus.
+                                    if avatar_removal_focus_pending() {
+                                        avatar_removal_focus_pending.set(false);
+                                        let _ = event.data().set_focus(true).await;
+                                    }
+                                },
+                                "{msg}"
+                            }
+                        }
+                        div { class: "user-settings__actions",
+                            ProfileSaveControl { pending: is_saving(), valid: is_valid, on_save }
+                            Link { to: crate::Route::UserProfile { username: delete_username.clone() }, "View public profile →" }
+                        }
+                    }
+                }
+            }
+            section { class: "user-settings__link-card",
+                div {
+                    h2 { "Linked accounts" }
+                    p { "Manage the accounts you use to sign in to Noms." }
+                }
+                Link { class: "btn btn-secondary", to: crate::Route::SettingsAccounts {}, "Manage accounts" }
+            }
+            details { class: "user-disclosure user-settings__danger",
+                summary {
+                    div {
+                        h2 { "Account deletion" }
+                        p { "Permanently delete your account and associated data." }
+                    }
+                    span { class: "user-disclosure__chevron", aria_hidden: "true", "⌄" }
+                }
+                div { class: "user-disclosure__body",
+                    p { "Review the impact and confirm before anything is deleted." }
+                    Button {
+                        variant: ButtonVariant::Danger,
+                        onclick: move |_| { deletion.write().open(); },
+                        "Delete Account"
+                    }
+                }
+            }
+
+            // ── Modal Overlays ───────────────────────────────────────────
+            ImageEditorModal {
+                image_url: avatar_editor_url,
+                crop_mode: ImageEditorCropMode::Ellipse1x1,
+                initial_edit: avatar_editor_initial_edit(),
+                on_save: on_avatar_edit_save,
+                on_close: on_avatar_editor_close,
+            }
+
+            if let Some(step) = deletion.read().step {
+                SharedModal {
+                    aria_labelledby: "account-delete-title",
+                    focus_selector: match step {
+                        DeleteStep::Confirming => "#account-delete-cancel button",
+                        DeleteStep::Typing => "#account-delete-phrase",
+                        DeleteStep::Final => "#account-delete-back button",
+                    },
+                    pending: deleting,
+                    dismiss_on_backdrop: step != DeleteStep::Typing,
+                    on_dismiss: move |_| deletion.write().cancel(),
+
+                    // Layer 1: Initial Confirmation
+                    if step == DeleteStep::Confirming {
                         div {
+                            class: "modal-card",
+                            onclick: move |evt| evt.stop_propagation(),
                             display: "flex",
                             flex_direction: "column",
-                            gap: "var(--space-sm)",
-                            label {
-                                font_size: "14px",
-                                font_weight: "600",
-                                color: "var(--text-secondary)",
-                                "Bio"
+                            gap: "var(--space-md)",
+                            h2 {
+                                id: "account-delete-title",
+                                "Are you sure?"
                             }
-                            textarea {
-                                class: "neumo-inset input",
-                                placeholder: "Tell us about yourself...",
-                                rows: "3",
-                                padding: "var(--space-sm) var(--space-md)",
-                                font_family: "var(--font-body)",
+                            p {
                                 font_size: "14px",
-                                color: "var(--text-primary)",
-                                background_color: "var(--surface)",
-                                outline: "none",
-                                resize: "vertical",
+                                color: "var(--text-secondary)",
+                                "This will permanently delete your account and all associated data."
+                            }
+                            div {
+                                display: "flex",
+                                justify_content: "flex-end",
+                                gap: "var(--space-sm)",
+                                span { id: "account-delete-cancel",
+                                    Button {
+                                        variant: ButtonVariant::Ghost,
+                                        disabled: deleting,
+                                        onclick: on_delete_cancel,
+                                        "Cancel"
+                                    }
+                                }
+                                Button {
+                                    variant: ButtonVariant::Danger,
+                                    disabled: deleting,
+                                    onclick: on_delete_confirm,
+                                    "Confirm"
+                                }
+                            }
+                        }
+                    }
+
+                    // Layer 2: Typed Confirmation
+                    if step == DeleteStep::Typing {
+                        div {
+                            class: "modal-card",
+                            onclick: move |evt| evt.stop_propagation(),
+                            display: "flex",
+                            flex_direction: "column",
+                            gap: "var(--space-md)",
+                            label {
+                                id: "account-delete-title",
+                                r#for: "account-delete-phrase",
+                                font_size: "14px",
+                                color: "var(--text-secondary)",
+                                "Type "
+                                code {
+                                    "`delete {delete_username}`"
+                                }
+                                " to continue"
+                            }
+                            input {
+                                id: "account-delete-phrase",
+                                class: "neumo-inset input input--shared",
+                                r#type: "text",
+                                value: deletion.read().confirmation.clone(),
+                                placeholder: "delete ...",
+                                disabled: deleting,
+                                oninput: move |event| deletion.write().set_confirmation(event.value()),
+                            }
+                            div {
+                                display: "flex",
+                                justify_content: "flex-end",
+                                gap: "var(--space-sm)",
+                                Button {
+                                    variant: ButtonVariant::Ghost,
+                                    disabled: deleting,
+                                    onclick: on_delete_cancel,
+                                    "Cancel"
+                                }
+                                Button {
+                                    variant: ButtonVariant::Danger,
+                                    disabled: deleting || !input_matches,
+                                    onclick: on_delete_continue,
+                                    "Continue"
+                                }
+                            }
+                        }
+                    }
+
+                    // Layer 3: Final Confirmation
+                    if step == DeleteStep::Final {
+                        div {
+                            class: "modal-card",
+                            onclick: move |evt| evt.stop_propagation(),
+                            display: "flex",
+                            flex_direction: "column",
+                            gap: "var(--space-md)",
+                            h2 {
+                                id: "account-delete-title",
+                                "This cannot be undone"
+                            }
+                            p {
+                                font_size: "14px",
+                                color: "var(--text-secondary)",
+                                "All your data will be permanently deleted."
+                            }
+                            AccountDeletionFeedback {
+                                pending: deleting, error: deletion.read().error.clone(),
+                            }
+                            div {
+                                display: "flex",
+                                flex_wrap: "wrap",
+                                justify_content: "flex-end",
+                                gap: "var(--space-sm)",
+                                span { id: "account-delete-back",
+                                    SettingsMutationControl {
+                                        id: "account-delete-back-button",
+                                        variant: ButtonVariant::Ghost,
+                                        pending: deleting, label: "Go Back", pending_label: "Go Back",
+                                        on_action: on_delete_go_back,
+                                    }
+                                }
+                                SettingsMutationControl {
+                                    id: "account-delete-final",
+                                    variant: ButtonVariant::Danger,
+                                    pending: deleting, label: "Delete My Account", pending_label: "Deleting…",
+                                    on_action: on_delete_final,
+                                }
                             }
                         }
                     }
                 }
             }
         }
+        }
+    }
+}
+
+#[cfg(all(feature = "server", test))]
+mod avatar_media_ownership_tests {
+    use super::{persist_uploaded_avatar, validate_avatar_payload};
+    use crate::types::RecipeImageEdit;
+
+    const VALID_WEBP_BYTES: &[u8] = b"RIFF\x24\x00\x00\x00WEBP";
+
+    #[test]
+    fn avatar_payload_rejects_every_empty_variant() {
+        let edit = RecipeImageEdit::default_ellipse_1x1();
+        for result in [
+            validate_avatar_payload(&[], VALID_WEBP_BYTES, VALID_WEBP_BYTES, &edit),
+            validate_avatar_payload(b"original", &[], VALID_WEBP_BYTES, &edit),
+            validate_avatar_payload(b"original", VALID_WEBP_BYTES, &[], &edit),
+        ] {
+            assert_eq!(
+                result.unwrap_err(),
+                "Avatar image variants must not be empty"
+            );
+        }
+        assert!(
+            validate_avatar_payload(b"original", VALID_WEBP_BYTES, VALID_WEBP_BYTES, &edit).is_ok()
+        );
+    }
+
+    #[test]
+    fn avatar_payload_rejects_oversized_edit_metadata() {
+        let mut edit = RecipeImageEdit::default_ellipse_1x1();
+        edit.name = "e".repeat(crate::security::MAX_IMAGE_EDIT_NAME_CHARS + 1);
+        assert!(
+            validate_avatar_payload(b"original", VALID_WEBP_BYTES, VALID_WEBP_BYTES, &edit,)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn avatar_payload_preserves_format_and_size_error_contracts() {
+        let edit = RecipeImageEdit::default_ellipse_1x1();
+        assert_eq!(
+            validate_avatar_payload(b"original", b"not webp", VALID_WEBP_BYTES, &edit).unwrap_err(),
+            "Invalid image format: must be WebP"
+        );
+
+        let mut oversized = vec![0_u8; 2 * 1024 * 1024 + 1];
+        oversized[0..4].copy_from_slice(b"RIFF");
+        oversized[8..12].copy_from_slice(b"WEBP");
+        assert_eq!(
+            validate_avatar_payload(b"original", &oversized, VALID_WEBP_BYTES, &edit).unwrap_err(),
+            format!(
+                "Image too large: {} bytes (max {} bytes)",
+                oversized.len(),
+                2 * 1024 * 1024
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn managed_avatar_persistence_keeps_urls_in_the_asset_registry_only() {
+        let (_database, pool) = crate::test_utils::setup_test_db().await;
+        let user = crate::db::insert_user(
+            &pool,
+            "avatar_registry",
+            "Avatar Registry",
+            "avatar-registry@example.com",
+            None,
+        )
+        .await
+        .unwrap();
+        let mock_server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("PUT"))
+            .respond_with(wiremock::ResponseTemplate::new(200))
+            .expect(3)
+            .mount(&mock_server)
+            .await;
+        let storage = crate::storage::StorageClient::for_test_with_endpoint_and_public_url(
+            &mock_server.uri(),
+            "https://cdn.example.com/media",
+        );
+        let request = crate::api::upload::MediaUploadRequest::avatar(
+            b"original image bytes",
+            VALID_WEBP_BYTES,
+            VALID_WEBP_BYTES,
+        )
+        .unwrap();
+        let uploaded =
+            crate::api::upload::upload_media_transaction_for_test(&storage, user.id, request)
+                .await
+                .unwrap();
+        let asset_id = uploaded.asset_id();
+        let expected_full = uploaded
+            .url(crate::storage::MediaObjectKind::AvatarFull)
+            .unwrap()
+            .to_string();
+
+        let (projected, _guard) =
+            persist_uploaded_avatar(&pool, &storage, user.id, uploaded, serde_json::json!({}))
+                .await
+                .unwrap();
+        assert_eq!(
+            projected.avatar_url.as_deref(),
+            Some(expected_full.as_str())
+        );
+        assert_eq!(
+            sqlx::query_as::<_, (Option<String>, Option<String>)>(
+                "SELECT avatar_url, avatar_original_url FROM users WHERE id = $1",
+            )
+            .bind(user.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            (None, None)
+        );
+        assert_eq!(
+            sqlx::query_scalar::<_, uuid::Uuid>(
+                "SELECT asset_id FROM avatar_media_refs WHERE user_id = $1",
+            )
+            .bind(user.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            asset_id
+        );
+    }
+
+    #[tokio::test]
+    async fn avatar_database_failure_compensates_new_objects_and_preserves_previous_state() {
+        let (_database, pool) = crate::test_utils::setup_test_db().await;
+        let user = crate::db::insert_user(
+            &pool,
+            "avatar_db_failure",
+            "Avatar DB Failure",
+            "avatar-db-failure@example.com",
+            None,
+        )
+        .await
+        .unwrap();
+        let owner_id = user.id;
+        let previous_object = uuid::Uuid::new_v4();
+        let previous_full =
+            format!("https://cdn.example.com/media/avatars/{owner_id}/{previous_object}.webp");
+        let previous_original =
+            format!("https://cdn.example.com/media/avatars/{owner_id}/{previous_object}-original");
+        sqlx::query("UPDATE users SET avatar_url = $2, avatar_original_url = $3 WHERE id = $1")
+            .bind(owner_id)
+            .bind(&previous_full)
+            .bind(&previous_original)
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "CREATE FUNCTION reject_avatar_update() RETURNS trigger AS $$ \
+             BEGIN RAISE EXCEPTION 'injected avatar update failure'; END; \
+             $$ LANGUAGE plpgsql",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "CREATE TRIGGER reject_avatar_update_trigger BEFORE UPDATE OF avatar_url ON users \
+             FOR EACH ROW EXECUTE FUNCTION reject_avatar_update()",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let mock_server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("PUT"))
+            .respond_with(wiremock::ResponseTemplate::new(200))
+            .expect(3)
+            .mount(&mock_server)
+            .await;
+        wiremock::Mock::given(wiremock::matchers::method("DELETE"))
+            .respond_with(wiremock::ResponseTemplate::new(204))
+            .expect(3)
+            .mount(&mock_server)
+            .await;
+        let storage = crate::storage::StorageClient::for_test_with_endpoint_and_public_url(
+            &mock_server.uri(),
+            "https://cdn.example.com/media",
+        );
+        let request = crate::api::upload::MediaUploadRequest::avatar(
+            b"original image bytes",
+            VALID_WEBP_BYTES,
+            VALID_WEBP_BYTES,
+        )
+        .unwrap();
+        let uploaded =
+            crate::api::upload::upload_media_transaction_for_test(&storage, owner_id, request)
+                .await
+                .unwrap();
+
+        let result =
+            persist_uploaded_avatar(&pool, &storage, owner_id, uploaded, serde_json::json!({}))
+                .await;
+        assert!(result.is_err());
+
+        let preserved: (Option<String>, Option<String>) =
+            sqlx::query_as("SELECT avatar_url, avatar_original_url FROM users WHERE id = $1")
+                .bind(owner_id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(preserved.0.as_deref(), Some(previous_full.as_str()));
+        assert_eq!(preserved.1.as_deref(), Some(previous_original.as_str()));
+        let requests = mock_server.received_requests().await.unwrap();
+        let deleted_paths: Vec<_> = requests
+            .iter()
+            .filter(|request| request.method.as_str() == "DELETE")
+            .map(|request| request.url.path().to_string())
+            .collect();
+        assert_eq!(deleted_paths.len(), 3);
+        assert!(deleted_paths
+            .iter()
+            .all(|path| !path.contains(&previous_object.to_string())));
     }
 }

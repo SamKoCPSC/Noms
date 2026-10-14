@@ -1,0 +1,91 @@
+/* C3 Kitchen Albums: route-scoped composition over the shared NOMS material. */
+.collections-page {
+    padding-block: 36px 64px;
+    min-width: 0;
+}
+.collections-heading { min-width: 0; margin-bottom: 24px; }
+.collections-heading h1 { font-size: clamp(30px, 3.4vw, 44px); overflow-wrap: anywhere; }
+.collections-heading p { color: var(--text-secondary); margin-top: 10px; max-width: 70ch; }
+.collections-toolbar { display: flex; align-items: center; gap: 20px; margin: 28px 0 10px; }
+.collections-toolbar > .btn { flex-shrink: 0; min-height: 48px; }
+.collections-filter { position: relative; flex: 1; min-width: 0; max-width: 680px; }
+.collections-filter svg { position: absolute; left: 17px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none; }
+.collections-filter .input { min-height: 48px; border-radius: 16px; padding-left: 48px; }
+.collections-help, .collections-result-count { font-size: 13px; color: var(--text-secondary); }
+.collections-result-count { margin: 24px 0 16px; }
+.collections-state { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 40px 24px; margin: 28px 0; border-radius: 24px; background: var(--neumo-surface); box-shadow: var(--elevation-inset); text-align: center; overflow-wrap: anywhere; }
+.collections-state > p[role="alert"] { color: var(--error-ink); }
+.collection-album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); gap: 28px; }
+.collection-album {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 12px;
+    border-radius: 24px;
+    background: var(--neumo-surface);
+    box-shadow: var(--elevation-raised);
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: box-shadow 180ms ease;
+}
+.collection-album:hover { color: var(--text-primary); box-shadow: var(--elevation-raised-hover); }
+.collection-album:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 5px; }
+.collection-album .collection-cover { aspect-ratio: 16 / 9; border-radius: 16px; background: var(--neumo-surface); box-shadow: var(--elevation-inset); }
+.collection-album .collection-cover__mosaic { gap: 5px; padding: 3px; background: transparent; }
+.collection-album .collection-cover__mosaic-tile { border-radius: 9px; }
+.collection-album__body { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-width: 0; padding: 16px 10px 10px; flex: 1; }
+.collection-album__body :is(h2, h3) { font-size: 23px; padding-right: 24px; overflow-wrap: anywhere; }
+.collection-album__counts { color: var(--text-secondary); font-size: 13px; }
+.collection-album__description { color: var(--text-secondary); font-size: 15px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.collection-album__body > span:last-child { margin-top: auto; }
+.collection-album__bookmark { position: absolute; top: 18px; right: 10px; width: 13px; height: 22px; border-radius: 3px 3px 0 0; background: var(--accent); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 76%, 0 100%); }
+.collections-breadcrumbs { font-size: 14px; color: var(--text-secondary); }
+.collections-breadcrumbs a { color: var(--text-secondary); }
+.collections-breadcrumbs a:hover { color: var(--accent-ink); text-decoration: underline; }
+.collections-breadcrumbs a[aria-current="page"] { color: var(--text-primary); font-weight: 700; }
+.collection-detail-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin: 26px 0; }
+.collection-detail-heading .collections-heading { flex: 1 1 440px; margin: 0; }
+.collection-detail-description { overflow-wrap: anywhere; white-space: pre-line; }
+.collection-detail-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.collection-detail-meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 16px; font-size: 14px; }
+.collection-detail-meta a { color: var(--text-secondary); overflow-wrap: anywhere; }
+.collection-detail-meta a:hover { text-decoration: underline; }
+.collection-detail-cover { aspect-ratio: 16 / 9; border-radius: 22px; padding: 0; background: var(--neumo-surface); box-shadow: var(--elevation-inset); margin-bottom: 32px; }
+.collection-detail-cover > .edited-recipe-image, .collection-detail-cover .collection-cover__mosaic-tile { border-radius: 14px; overflow: hidden; }
+.collection-detail-cover .collection-cover__mosaic { grid-template-rows: 1fr; gap: 8px; background: transparent; }
+.collection-detail-cover .collection-cover__mosaic--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.collection-detail-cover .collection-cover__mosaic--four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.collection-detail-cover .collection-cover__mosaic--three .collection-cover__mosaic-tile:first-child { grid-row: auto; }
+.collections-section-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin: 30px 0 18px; }
+.collections-section-heading h2 { font-size: 26px; }
+.collections-section-heading p { color: var(--text-secondary); font-size: 14px; margin-top: 4px; }
+.collection-child-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 24px; }
+.collection-child { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.collection-child > div:last-child { align-self: flex-end; }
+.collection-album--compact { flex-direction: row; gap: 6px; flex: 1; border-radius: 20px; }
+.collection-album--compact .collection-cover { width: 112px; flex-shrink: 0; align-self: flex-start; }
+.collection-album--compact .collection-album__body { padding: 4px 8px; gap: 6px; }
+.collection-album--compact .collection-album__body h3 { font-size: 20px; }
+.collection-album--compact .collection-album__bookmark { top: 5px; right: 4px; }
+.collection-album--compact .collection-album__description { font-size: 13px; -webkit-line-clamp: 2; }
+.collections-empty-note { padding: 20px; border-radius: 16px; box-shadow: var(--elevation-inset); color: var(--text-secondary); font-size: 14px; }
+.collection-recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 28px; margin-bottom: 28px; }
+.collection-recipe { display: grid; grid-template-columns: 1fr auto; align-content: start; gap: 12px; min-width: 0; }
+.collection-recipe > .recipe-card { grid-column: 1 / -1; }
+.collection-recipe > .btn { align-self: center; }
+.collection-detail-page > p[role="alert"] { color: var(--error-ink); margin-block: 16px; }
+.collection-pagination[aria-disabled="true"] { opacity: .5; cursor: not-allowed; transform: none; }
+
+@media (max-width: 640px) {
+    .collections-page { padding-block: 24px 40px; }
+    .collections-toolbar { align-items: stretch; flex-direction: column; gap: 14px; }
+    .collections-toolbar > .btn { align-self: flex-start; }
+    .collection-detail-heading { gap: 18px; }
+    .collection-album--compact .collection-cover { width: 88px; }
+    .collection-album-grid, .collection-recipe-grid { gap: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { .collection-album { transition: none; } }
+@media (forced-colors: active) {
+    .collection-album, .collections-state, .collections-empty-note, .collection-detail-cover { border: 1px solid CanvasText; box-shadow: none; }
+    .collection-album__bookmark { display: none; }
+}

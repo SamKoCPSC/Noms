@@ -11,22 +11,52 @@ dioxus = { version = "0.7.1", features = ["router", "fullstack"] }
 tracing = "0.1"
 
 # Server-only — never compiled into the WASM client
-sqlx             = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"], optional = true }
-aws-sdk-s3       = { version = "1", optional = true }
+sqlx             = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json", "macros"], optional = true }
+# The AWS defaults also enable their legacy Hyper 0.14 / rustls 0.21 connector.
+# R2 uses the modern HTTP 1.x default client, so keep the legacy TLS graph out
+# of the production binary explicitly.
+aws-sdk-s3       = { version = "1", default-features = false, features = ["http-1x", "default-https-client", "rt-tokio", "behavior-version-latest"], optional = true }
+aws-config       = { version = "1", default-features = false, features = ["default-https-client", "rt-tokio", "behavior-version-latest"], optional = true }
 tracing-subscriber = { version = "0.3", features = ["json"], optional = true }
 oauth2           = { version = "5", optional = true }
 jsonwebtoken     = { version = "9", optional = true }
+axum             = { version = "0.8", features = ["multipart"], optional = true }
 axum-extra       = { version = "0.10", features = ["cookie"], optional = true }
 reqwest          = { version = "0.12", features = ["json"], optional = true }
-uuid             = { version = "1", features = ["v4", "serde"], optional = true }
-serde            = { version = "1", features = ["derive"], optional = true }
-serde_json       = { version = "1", optional = true }
+uuid             = { version = "1", features = ["v4", "serde", "js"] }
+serde            = { version = "1", features = ["derive"] }
+percent-encoding = "2"
+url                = "2"
+serde_json       = "1"
 time             = { version = "0.3", optional = true }
 cookie           = { version = "0.18", optional = true }
-chrono           = { version = "0.4", features = ["serde"], optional = true }
+chrono           = { version = "0.4", features = ["serde"] }
 tokio            = { version = "1", features = ["rt-multi-thread", "macros"], optional = true }
-unicode-normalization = { version = "0.1", optional = true }
-web-sys = { version = "0.3.98", features = ["Window", "Storage"] }
+unicode-normalization = "0.1"
+dashmap = { version = "6", optional = true }
+ipnet = { version = "2", optional = true }
+sha2 = { version = "0.10", optional = true }
+wasm-bindgen = "0.2"
+futures-channel = "0.3"
+
+# Target-specific — only compiled for the WASM client build.
+# `dioxus_web::WebFileExt` bridges Dioxus `FileData` to `web_sys::File` for
+# CP4's image upload component. Cargo.lock already resolves dioxus-web 0.7.9
+# as a transitive dep of `dioxus = "0.7.1"`, so this is zero-risk.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+dioxus-web = "0.7"
+web-sys = { version = "0.3.98", features = [
+    "Window", "Storage", "Location", "History", "Document", "Navigator", "Clipboard", "ShareData", "MouseEvent", "Element", "Node",
+    "HtmlCanvasElement", "CanvasRenderingContext2d", "HtmlImageElement", "HtmlInputElement", "HtmlTextAreaElement", "HtmlSelectElement", "ImageData",
+    "Blob", "File", "FileReader", "Url",
+    "DataTransfer", "DataTransferItem",
+    "DragEvent", "KeyboardEvent", "Event", "EventTarget", "HtmlElement", "HtmlDialogElement",
+    "CssStyleDeclaration", "DomRect", "DomRectList", "NodeList", "FocusOptions"
+] }
+js-sys = "0.3"
+wasm-bindgen-futures = "0.4"
+gloo-net = { version = "0.6", features = ["http"] }
+gloo-timers = "0.3"
 
 [features]
 default = ["web"]
@@ -37,23 +67,29 @@ server  = [
     "dioxus/server",
     "sqlx",
     "aws-sdk-s3",
+    "dep:aws-config",
     "tracing-subscriber",
     "oauth2",
     "jsonwebtoken",
+    "axum",
     "axum-extra",
     "reqwest",
-    "uuid",
-    "serde",
-    "serde_json",
     "time",
     "cookie",
-    "chrono",
     "tokio",
-    "unicode-normalization",
+    "dashmap",
+    "ipnet",
+    "sha2",
 ]
 
 [dev-dependencies]
 pgtemp = "0.7"
+wiremock = "0.6"
+tower = { version = "0.5", features = ["util"] }
+dioxus-ssr = "0.7"
+dioxus-core = "0.7"
+# Dispatch real serialized form events in component regressions (test-only).
+dioxus-html = { version = "0.7", features = ["serialize"] }
 
 [lints.rust]
 warnings = "deny"

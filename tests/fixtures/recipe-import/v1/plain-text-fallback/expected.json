@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "status": "ready",
+  "parser": {
+    "id": "generic-text-headings",
+    "version": "1",
+    "tier": "generic_text",
+    "sourceAdapter": null
+  },
+  "source": {
+    "suppliedUrl": null,
+    "normalizedUrl": null,
+    "provider": null,
+    "author": null,
+    "attribution": null,
+    "provenance": { "suppliedUrl": [], "normalizedUrl": [], "provider": [], "author": [], "attribution": [] }
+  },
+  "fields": {
+    "title": {
+      "raw": "Aurora Porridge",
+      "value": "Aurora Porridge",
+      "confidence": "high",
+      "provenance": [
+        {
+          "representation": "text/plain",
+          "locator": "line 1"
+        }
+      ]
+    },
+    "description": null,
+    "prepTime": null,
+    "cookTime": null,
+    "totalTime": null,
+    "yield": null,
+    "ingredientSections": [
+      {
+        "name": null,
+        "items": [
+          {
+            "raw": "1 cup aurora oats",
+            "amount": "1",
+            "unit": "cup",
+            "name": "aurora oats",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/plain",
+                "locator": "line 4"
+              }
+            ]
+          },
+          {
+            "raw": "2 cups water",
+            "amount": "2",
+            "unit": "cups",
+            "name": "water",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/plain",
+                "locator": "line 5"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "instructionSections": [
+      {
+        "name": null,
+        "steps": [
+          {
+            "raw": "Simmer the oats.",
+            "text": "Simmer the oats.",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/plain",
+                "locator": "line 8"
+              }
+            ],
+            "substeps": []
+          },
+          {
+            "raw": "Rest for five minutes.",
+            "text": "Rest for five minutes.",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/plain",
+                "locator": "line 9"
+              }
+            ],
+            "substeps": []
+          }
+        ]
+      }
+    ],
+    "equipment": [],
+    "notes": [],
+    "images": []
+  },
+  "unclassifiedLines": [],
+  "competingCandidates": [],
+  "warnings": [
+    {
+      "code": "SOURCE_URL_MISSING",
+      "severity": "info",
+      "path": "source.suppliedUrl",
+      "message": "No source URL accompanied the pasted text."
+    }
+  ],
+  "discardedContent": []
+}

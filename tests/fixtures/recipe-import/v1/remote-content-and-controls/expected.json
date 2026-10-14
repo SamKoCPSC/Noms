@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "status": "ready",
+  "parser": {
+    "id": "generic-headings",
+    "version": "1",
+    "tier": "generic_html",
+    "sourceAdapter": null
+  },
+  "source": {
+    "suppliedUrl": null,
+    "normalizedUrl": null,
+    "provider": null,
+    "author": null,
+    "attribution": null,
+    "provenance": { "suppliedUrl": [], "normalizedUrl": [], "provider": [], "author": [], "attribution": [] }
+  },
+  "fields": {
+    "title": {
+      "raw": "Safe Comet Rice",
+      "value": "Safe Comet Rice",
+      "confidence": "high",
+      "provenance": [
+        {
+          "representation": "text/html",
+          "locator": "article > h1"
+        }
+      ]
+    },
+    "description": null,
+    "prepTime": null,
+    "cookTime": null,
+    "totalTime": null,
+    "yield": null,
+    "ingredientSections": [
+      {
+        "name": null,
+        "items": [
+          {
+            "raw": "1 cup comet rice",
+            "amount": "1",
+            "unit": "cup",
+            "name": "comet rice",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/html",
+                "locator": "article ul > li"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "instructionSections": [
+      {
+        "name": null,
+        "steps": [
+          {
+            "raw": "Steam the rice.",
+            "text": "Steam the rice.",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/html",
+                "locator": "article ol > li"
+              }
+            ],
+            "substeps": []
+          }
+        ]
+      }
+    ],
+    "equipment": [],
+    "notes": [],
+    "images": []
+  },
+  "unclassifiedLines": [],
+  "competingCandidates": [],
+  "warnings": [
+    {
+      "code": "ACTIVE_CONTENT_DISCARDED",
+      "severity": "info",
+      "path": "discardedContent",
+      "message": "Active and remote page elements were removed before parsing."
+    }
+  ],
+  "discardedContent": [
+    {
+      "kind": "script",
+      "count": 1,
+      "reason": "Executable content is never parsed or rendered."
+    },
+    {
+      "kind": "iframe",
+      "count": 1,
+      "reason": "Frames are never loaded."
+    },
+    {
+      "kind": "form_control",
+      "count": 3,
+      "reason": "Interactive controls are not recipe content."
+    },
+    {
+      "kind": "remote_resource",
+      "count": 4,
+      "reason": "Parsing performs no network requests."
+    }
+  ]
+}

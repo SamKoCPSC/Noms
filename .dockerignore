@@ -1,0 +1,8 @@
+.git
+.worktrees
+.agents
+.codex
+target
+dist
+node_modules
+.env.local

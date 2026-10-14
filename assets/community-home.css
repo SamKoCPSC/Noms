@@ -1,0 +1,45 @@
+/* Community Home uses shared NOMS materials; personal management stays in Dashboard. */
+.community-home { padding-block: 24px 56px; }
+.community-home-heading { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 32px; }
+.community-home-heading h1 { font-size: clamp(32px, 4vw, 48px); margin-bottom: 12px; }
+.community-home-heading .brand-mark { width: 48px; height: 60px; }
+.community-home-eyebrow { color: var(--accent-ink); font-size: 13px; font-weight: 800; letter-spacing: .06em; margin-bottom: 8px; }
+.community-home-muted { color: var(--text-secondary); max-width: 65ch; }
+.community-home-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 28px; align-items: start; }
+.community-home-panel { padding: 28px; border-radius: 24px; min-width: 0; }
+.community-home-panel h2 { font-size: 24px; }
+.community-home-section-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 12px; }
+.community-home-text-link { display: inline-block; font-weight: 700; padding-block: 10px; min-height: 44px; }
+.community-home-spotlight .recipe-card { margin-top: 24px; }
+.community-home-spotlight .recipe-card__link { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: center; gap: 28px; }
+.community-home-spotlight .recipe-card__image { width: 100%; }
+.community-home-spotlight .recipe-card__content { min-width: 0; padding: 12px 8px 12px 0; }
+.community-home-spotlight .recipe-card__title { font-size: clamp(24px, 2.4vw, 34px); }
+.community-home-spotlight .recipe-card__description { -webkit-line-clamp: 4; }
+.community-home-spotlight .recipe-card__author { margin-top: 18px; }
+.community-home-side { display: grid; grid-column: 2; grid-row: 1 / span 2; gap: 28px; min-width: 0; }
+.community-home-notice { margin-top: 24px; }
+.community-home-notice-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+.community-home-notice-meta time { color: var(--text-secondary); font-size: 13px; }
+.community-home-notice h3 { font-size: 20px; margin-bottom: 12px; }
+.community-home-participation { display: grid; gap: 16px; margin-top: 24px; }
+.community-home-action { display: grid; gap: 8px; padding: 18px; border-radius: 18px; color: var(--text-primary); overflow-wrap: anywhere; }
+.community-home-action span { font-size: 14px; color: var(--text-secondary); }
+.community-home-state { display: grid; justify-items: start; gap: 16px; padding-block: 32px; color: var(--text-secondary); }
+.community-home-state h3 { color: var(--text-primary); font-size: 20px; }
+.community-home-recipes { grid-column: 1; }
+.community-home-recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 24px; margin-top: 24px; }
+@media (max-width: 1199px) {
+    .community-home-layout { grid-template-columns: minmax(0, 1fr) 320px; }
+    .community-home-spotlight .recipe-card__link { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .community-home-spotlight .recipe-card__content { padding: 16px 4px 0; }
+}
+@media (max-width: 800px) {
+    .community-home-heading { align-items: start; flex-direction: column; gap: 16px; }
+    .community-home-layout { grid-template-columns: minmax(0, 1fr); }
+    .community-home-side { grid-column: auto; grid-row: auto; }
+    .community-home-panel { padding: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .community-home .recipe-card { transition: none; }
+}

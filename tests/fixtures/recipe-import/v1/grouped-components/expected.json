@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "status": "needs_review",
+  "parser": {
+    "id": "generic-headings",
+    "version": "1",
+    "tier": "generic_html",
+    "sourceAdapter": null
+  },
+  "source": {
+    "suppliedUrl": null,
+    "normalizedUrl": null,
+    "provider": null,
+    "author": null,
+    "attribution": null,
+    "provenance": { "suppliedUrl": [], "normalizedUrl": [], "provider": [], "author": [], "attribution": [] }
+  },
+  "fields": {
+    "title": {
+      "raw": "Orbit Tart",
+      "value": "Orbit Tart",
+      "confidence": "high",
+      "provenance": [
+        {
+          "representation": "text/html",
+          "locator": "main > h1"
+        }
+      ]
+    },
+    "description": null,
+    "prepTime": null,
+    "cookTime": null,
+    "totalTime": null,
+    "yield": null,
+    "ingredientSections": [
+      {
+        "name": "Crust",
+        "items": [
+          {
+            "raw": "1 cup star flour",
+            "amount": "1",
+            "unit": "cup",
+            "name": "star flour",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/html",
+                "locator": "h3:nth-of-type(1) + ul > li"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Filling",
+        "items": [
+          {
+            "raw": "3 orbit plums",
+            "amount": "3",
+            "unit": null,
+            "name": "orbit plums",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/html",
+                "locator": "h3:nth-of-type(2) + ul > li"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "instructionSections": [
+      {
+        "name": "Build",
+        "steps": [
+          {
+            "raw": "Press the crust.",
+            "text": "Press the crust.",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/html",
+                "locator": "h3:nth-of-type(3) + ol > li"
+              }
+            ],
+            "substeps": []
+          }
+        ]
+      },
+      {
+        "name": "Finish",
+        "steps": [
+          {
+            "raw": "Add filling and bake.",
+            "text": "Add filling and bake.",
+            "confidence": "high",
+            "provenance": [
+              {
+                "representation": "text/html",
+                "locator": "h3:nth-of-type(4) + ol > li"
+              }
+            ],
+            "substeps": []
+          }
+        ]
+      }
+    ],
+    "equipment": [],
+    "notes": [],
+    "images": []
+  },
+  "unclassifiedLines": [],
+  "competingCandidates": [],
+  "warnings": [
+    {
+      "code": "SECTION_NAMES_NOT_PERSISTED",
+      "severity": "warning",
+      "path": "fields.ingredientSections",
+      "message": "Section names remain in preview but the current editor stores flat ingredients."
+    }
+  ],
+  "discardedContent": []
+}

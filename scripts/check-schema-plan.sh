@@ -16,7 +16,7 @@
 # developers to use the additive pattern instead (add new column → backfill
 # → update code → later drop old column).
 #
-# Verified against pgschema v1.9.0 JSON output format:
+# Verified against pgschema v1.12.1 JSON output format:
 #   {
 #     "groups": [
 #       {
