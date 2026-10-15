@@ -78,4 +78,21 @@ if NOMS_DEPLOYMENT_ROOT="$deployment_fixture" \
 fi
 grep -q 'Dockerfile' "$test_root/deployment.out"
 
+# Native builder selection must not hide a moving image tag from validation.
+mkdir -p "$deployment_fixture/tools"
+mv "$deployment_fixture/Dockerfile" "$deployment_fixture/tools/Dockerfile"
+printf '%s\n' 'FROM --platform=$BUILDPLATFORM golang:latest AS builder' \
+    > "$deployment_fixture/tools/Dockerfile"
+if NOMS_DEPLOYMENT_ROOT="$deployment_fixture" \
+    "$repo_root/scripts/check-deployment-artifacts.sh" \
+    >"$test_root/platform-deployment.out" 2>&1; then
+    echo "moving native builder tags must fail deployment validation" >&2
+    exit 1
+fi
+grep -q 'unpinned container base' "$test_root/platform-deployment.out"
+printf '%s\n' 'FROM --platform=$BUILDPLATFORM golang:1.25.3-bookworm@sha256:4f43b271f9673eb7bd0cb3a49cc17b08d8d6ee110277e26dbacc93c43a5a7793 AS builder' \
+    > "$deployment_fixture/tools/Dockerfile"
+NOMS_DEPLOYMENT_ROOT="$deployment_fixture" \
+    "$repo_root/scripts/check-deployment-artifacts.sh"
+
 echo "security policy script tests passed"

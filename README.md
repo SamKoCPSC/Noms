@@ -41,6 +41,13 @@ installed in the development image used by `just up`. Install them on the host
 only if you also want to run standalone commands such as `just check`,
 `just migrate`, or `just dev`.
 
+MinIO and its `mc` client are also built from pinned official source versions
+in that image because the former public MinIO container images are unavailable.
+The first build downloads Go modules and compiles these tools; subsequent
+builds can reuse Docker's cached layers. No MinIO registry login is needed.
+Go tools compile on the Docker builder's native architecture and cross-compile
+for the runtime image, avoiding emulated Go/GCC builds on Apple Silicon.
+
 For host-side Rust checks, add the WASM compilation target:
 
 ```bash
