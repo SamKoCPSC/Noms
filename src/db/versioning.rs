@@ -3111,7 +3111,6 @@ async fn insert_recipe_draft_with_source(
     forked_from_version_number: Option<i32>,
     forked_from_title: Option<&str>,
     fork_message: Option<&str>,
-    imported_media_source: Option<Uuid>,
 ) -> Result<RecipeDraft, DbError> {
     if fork_message.is_some_and(|value| value.chars().count() > MAX_FORK_MESSAGE_CHARS) {
         return Err(DbError::InvalidRecipeSnapshot(
@@ -3147,9 +3146,8 @@ async fn insert_recipe_draft_with_source(
             .unwrap_or(DbError::DraftNotFound(Uuid::nil()))
     })?;
     let decoded = inserted.decoded_snapshot()?;
-    let authority = imported_media_source
-        .map(super::MediaAttachAuthority::PublishedRecipe)
-        .or_else(|| forked_from_recipe_id.map(super::MediaAttachAuthority::Recipe))
+    let authority = forked_from_recipe_id
+        .map(super::MediaAttachAuthority::Recipe)
         .or_else(|| recipe_id.map(super::MediaAttachAuthority::Recipe))
         .unwrap_or(super::MediaAttachAuthority::UploaderOnly);
     super::sync_recipe_media_references(
@@ -3183,7 +3181,6 @@ pub async fn insert_recipe_draft(
         None,
         None,
         None,
-        None,
     )
     .await?;
     transaction.commit().await.map_err(DbError::Query)?;
@@ -3196,42 +3193,6 @@ pub async fn create_new_recipe_draft(
     payload: &RecipeDraftPayload,
 ) -> Result<RecipeDraft, DbError> {
     insert_recipe_draft(pool, user_id, None, None, payload).await
-}
-
-/// Import is a new copy, not an edit, fork or publication. Only an accessible
-/// current source may authorize reuse of its managed image references.
-pub async fn create_json_recipe_draft(
-    pool: &PgPool,
-    user_id: Uuid,
-    payload: &RecipeDraftPayload,
-    source_id: Uuid,
-) -> Result<RecipeDraft, DbError> {
-    let mut transaction = pool.begin().await.map_err(DbError::Query)?;
-    lock_resource_owner(&mut transaction, user_id).await?;
-    let source = sqlx::query_scalar::<_, Uuid>(
-        "SELECT id FROM recipes WHERE id = $1 \
-         AND (user_id = $2 OR visibility IN ('public', 'unlisted')) FOR SHARE",
-    )
-    .bind(source_id)
-    .bind(user_id)
-    .fetch_optional(&mut *transaction)
-    .await
-    .map_err(DbError::Query)?;
-    let draft = insert_recipe_draft_with_source(
-        &mut transaction,
-        user_id,
-        None,
-        None,
-        payload,
-        None,
-        None,
-        None,
-        None,
-        source,
-    )
-    .await?;
-    transaction.commit().await.map_err(DbError::Query)?;
-    Ok(draft)
 }
 
 pub async fn get_recipe_draft(
@@ -3396,7 +3357,6 @@ pub async fn create_edit_draft(
         Some(recipe_id),
         Some(latest.version_number),
         &snapshot,
-        None,
         None,
         None,
         None,
@@ -3799,7 +3759,6 @@ pub async fn create_fork_draft(
         Some(latest.version_number),
         Some(&source.title),
         message,
-        None,
     )
     .await?;
     transaction.commit().await.map_err(DbError::Query)?;

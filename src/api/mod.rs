@@ -4,3 +4,6 @@ pub mod recipe;
 pub mod search;
 
 pub mod upload;
+
+#[cfg(feature = "server")]
+pub mod recipe_archive;

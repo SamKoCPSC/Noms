@@ -236,6 +236,10 @@ fn build_dioxus_router(pool: sqlx::PgPool, storage_client: storage::StorageClien
             "/api/upload",
             axum::routing::post(api::upload::upload_handler),
         )
+        .route(
+            "/api/recipes/{id}/export-images",
+            axum::routing::get(api::recipe_archive::download),
+        )
         .with_state(auth::user_profile::UserProfileState { pool: pool.clone() })
         .serve_dioxus_application(ServeConfig::new(), App);
 

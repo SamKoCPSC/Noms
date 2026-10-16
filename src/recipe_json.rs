@@ -14,7 +14,7 @@ mod server {
     use uuid::Uuid;
 
     const FORMAT: &str = "noms.recipe.json";
-    const SCHEMA: &str = "noms.recipe.snapshot.v1";
+    const SCHEMA: &str = "noms.recipe.snapshot.v2";
 
     #[derive(Debug, Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
@@ -85,7 +85,7 @@ mod server {
         recipe: &crate::types::Recipe,
         tags: Vec<String>,
     ) -> Result<String, String> {
-        let editor = RecipeEditorState {
+        let mut editor = RecipeEditorState {
             title: recipe.title.clone(),
             description: recipe.description.clone(),
             commentary: recipe.commentary.clone(),
@@ -104,6 +104,7 @@ mod server {
             crate::security::RecipeValidationMode::Draft,
         )
         .map_err(|e| e.to_string())?;
+        remove_images(&mut editor);
         let mut snapshot = snapshot_value(&editor)?;
         // Tags have set semantics; all other arrays retain authored order.
         let tags = snapshot["tags"].as_array_mut().unwrap();
@@ -111,7 +112,7 @@ mod server {
         tags.dedup();
         let file = RecipeFile {
             format: FORMAT.into(),
-            version: 1,
+            version: 2,
             snapshot_schema: SCHEMA.into(),
             generator: Generator {
                 name: "Noms".into(),
@@ -123,7 +124,7 @@ mod server {
             source_attribution: SourceAttribution {
                 author_username: recipe.author_username.clone(),
             },
-            image_mode: "references".into(),
+            image_mode: "none".into(),
             missing_fields: vec![],
             snapshot_digest: digest(&snapshot)?,
             snapshot,
@@ -143,10 +144,15 @@ mod server {
         let file: RecipeFile =
             serde_json::from_str(json).map_err(|_| "This is not a valid Noms recipe JSON file.")?;
         if file.format != FORMAT
-            || file.version != 1
-            || file.snapshot_schema != SCHEMA
+            || !matches!(
+                (
+                    file.version,
+                    file.snapshot_schema.as_str(),
+                    file.image_mode.as_str()
+                ),
+                (2, SCHEMA, "none") | (1, "noms.recipe.snapshot.v1", "references")
+            )
             || file.scope != "recipe"
-            || file.image_mode != "references"
             || !file.missing_fields.is_empty()
         {
             return Err(
@@ -168,7 +174,7 @@ mod server {
             return Err("Portable snapshots cannot set visibility.".into());
         }
         object.insert("visibility".into(), json!("private"));
-        let editor: RecipeEditorState =
+        let mut editor: RecipeEditorState =
             serde_json::from_value(value).map_err(|_| "Invalid recipe fields.")?;
         // A round-trip shape check rejects missing, unknown or defaulted fields
         // throughout nested steps and image edits instead of silently losing them.
@@ -188,7 +194,38 @@ mod server {
         {
             return Err("Recipe times and servings contain invalid values.".into());
         }
+        if file.version == 2 && has_images(&editor) {
+            return Err(
+                "This JSON format must not contain images. Add images manually after importing."
+                    .into(),
+            );
+        }
+        // Older reference-based files remain readable, but never attach media.
+        remove_images(&mut editor);
         Ok((file, editor))
+    }
+
+    fn has_images(editor: &RecipeEditorState) -> bool {
+        let mut steps: Vec<_> = editor.instructions.iter().collect();
+        if !editor.images.is_empty() {
+            return true;
+        }
+        while let Some(step) = steps.pop() {
+            if !step.photos.is_empty() {
+                return true;
+            }
+            steps.extend(step.sub_steps.iter());
+        }
+        false
+    }
+
+    fn remove_images(editor: &mut RecipeEditorState) {
+        editor.images.clear();
+        let mut steps: Vec<_> = editor.instructions.iter_mut().collect();
+        while let Some(step) = steps.pop() {
+            step.photos.clear();
+            steps.extend(step.sub_steps.iter_mut());
+        }
     }
 
     pub fn source_recipe_id(file: &RecipeFile) -> Result<Uuid, String> {
@@ -259,7 +296,7 @@ mod server {
         }
 
         #[test]
-        fn json_round_trip_preserves_all_authored_fields_nulls_empty_values_and_image_edits() {
+        fn json_round_trip_preserves_text_and_excludes_all_recipe_and_nested_images() {
             let original = recipe();
             let output = export_recipe(&original, vec!["soup".into(), "beans".into()]).unwrap();
             let (file, editor) = parse_recipe(&output).unwrap();
@@ -270,7 +307,9 @@ mod server {
             assert_eq!(editor.cook_time_minutes, Some(45));
             assert_eq!(editor.servings, Some(2));
             assert_eq!(editor.ingredients, original.ingredients);
-            assert_eq!(editor.instructions, original.instructions);
+            let mut expected_steps = original.instructions.clone();
+            expected_steps[0].sub_steps[0].photos.clear();
+            assert_eq!(editor.instructions, expected_steps);
             assert_eq!(editor.equipment, original.equipment);
             assert_eq!(editor.images, original.images);
             assert_eq!(editor.tags, vec!["beans", "soup"]);
@@ -278,10 +317,13 @@ mod server {
             assert_eq!(source_recipe_id(&file).unwrap(), original.id);
             assert!(file.snapshot.get("description").unwrap().is_null());
             assert_eq!(file.snapshot["instructions"][0]["photos"], json!([]));
-            assert!(
-                file.snapshot["instructions"][0]["sub_steps"][0]["photos"][0]["thumb_url"]
-                    .is_null()
+            assert_eq!(
+                file.snapshot["instructions"][0]["sub_steps"][0]["photos"],
+                json!([])
             );
+            assert!(!output.contains("images.example.test"));
+            assert!(!output.contains("asset_id"));
+            assert_eq!(file.image_mode, "none");
             for forbidden in ["user_id", "visibility", "created_at", "drafts", "versions"] {
                 assert!(file.snapshot.get(forbidden).is_none());
             }
@@ -308,6 +350,30 @@ mod server {
         }
 
         #[test]
+        fn legacy_json_images_are_discarded_and_v2_cannot_smuggle_image_references() {
+            let mut file = file();
+            let image = serde_json::to_value(RecipeImage::new(
+                "https://legacy.example/image.webp".into(),
+                None,
+                RecipeImageEdit::default_rect_16x9(),
+            ))
+            .unwrap();
+            file.snapshot["images"] = json!([image.clone()]);
+            file.snapshot["instructions"][0]["sub_steps"][0]["photos"] = json!([image]);
+            explicit_fields(&mut file.snapshot);
+            resign(&mut file);
+            assert!(parse_recipe(&encode(&file)).is_err());
+            file.version = 1;
+            file.snapshot_schema = "noms.recipe.snapshot.v1".into();
+            file.image_mode = "references".into();
+            let (_, editor) = parse_recipe(&encode(&file)).unwrap();
+            assert!(editor.images.is_empty());
+            assert!(editor.instructions[0].sub_steps[0].photos.is_empty());
+            let output = export_recipe(&recipe(), vec![]).unwrap();
+            assert!(!output.contains("legacy.example"));
+        }
+
+        #[test]
         fn json_preserves_explicit_empty_recipe_lists_in_an_editable_draft() {
             let mut file = file();
             for field in ["ingredients", "instructions", "equipment", "images", "tags"] {
@@ -328,7 +394,7 @@ mod server {
                 .unwrap_err()
                 .contains("checksum"));
             resign(&mut file);
-            file.version = 2;
+            file.version = 99;
             assert!(parse_recipe(&encode(&file)).is_err());
             assert!(parse_recipe("not json").is_err());
             assert!(parse_recipe(&" ".repeat(MAX_JSON_BYTES + 1)).is_err());

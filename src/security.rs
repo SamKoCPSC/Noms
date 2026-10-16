@@ -729,12 +729,19 @@ pub fn enforce_request_budget(
     authenticated_user_id: Option<Uuid>,
     class: RequestClass,
 ) -> Result<(), SecurityLimitError> {
+    enforce_resolved_request_budget(authenticated_user_id, resolved_anonymous_actor(), class)
+}
+
+/// Raw HTTP handlers use the IP pinned by the trusted client-IP middleware.
+pub fn enforce_resolved_request_budget(
+    authenticated_user_id: Option<Uuid>,
+    anonymous_ip: Option<IpAddr>,
+    class: RequestClass,
+) -> Result<(), SecurityLimitError> {
     let actor = if let Some(user_id) = authenticated_user_id {
         RequestActor::User(user_id)
     } else {
-        RequestActor::Ip(
-            resolved_anonymous_actor().ok_or(SecurityLimitError::RequestBudgetExceeded)?,
-        )
+        RequestActor::Ip(anonymous_ip.ok_or(SecurityLimitError::RequestBudgetExceeded)?)
     };
     USER_REQUEST_LIMITER
         .get_or_init(UserRequestLimiter::consumer_defaults)
