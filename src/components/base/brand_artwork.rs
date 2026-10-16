@@ -15,6 +15,8 @@ const PAINTED_BOOK: Asset = asset!(
 /// Painted header identities, not replacements for small interactive icons.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum PageIconKind {
+    /// H1 kitchen cottage: the shared Home destination identity.
+    Home,
     Dashboard,
     Explore,
     Search,
@@ -33,6 +35,15 @@ impl PageIconKind {
         // Preserve the source paintings; ship appropriately sized transparent
         // derivatives through the normal hashed Dioxus asset pipeline.
         match self {
+            Self::Home => asset!(
+                "/assets/brand/page-icons/home-v1.png",
+                ImageAssetOptions::new()
+                    .with_webp()
+                    .with_size(ImageSize::Manual {
+                        width: 192,
+                        height: 192
+                    })
+            ),
             Self::About => asset!(
                 "/assets/brand/page-icons/about-v1.png",
                 ImageAssetOptions::new()
@@ -219,6 +230,7 @@ mod tests {
     #[test]
     fn all_page_identities_render_distinct_decorative_sized_assets() {
         let icons = [
+            (PageIconKind::Home, "home-v1"),
             (PageIconKind::Dashboard, "dashboard-v1"),
             (PageIconKind::Explore, "explore-v1"),
             (PageIconKind::Search, "search-v1"),

@@ -207,7 +207,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
                     NavigationSearch { compact: false, on_navigate: move |_| menu_open.set(false) }
                     nav { class: "navigation-drawer-links", aria_label: "All destinations",
                         for (route, label, icon) in [
-                            (if is_signed_in { Route::CommunityHome {} } else { Route::Home {} }, "Home", None),
+                            (if is_signed_in { Route::CommunityHome {} } else { Route::Home {} }, "Home", Some(PageIconKind::Home)),
                             (Route::Dashboard {}, "Dashboard", Some(PageIconKind::Dashboard)),
                             (Route::CollectionList {}, "Collections", Some(PageIconKind::Collections)),
                             (Route::Explore {}, "Explore", Some(PageIconKind::Explore)),
@@ -228,7 +228,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
                         }
                     }
                     if is_signed_in {
-                        Link { to: Route::Home {}, class: "navbar-link", onclick: move |_| menu_open.set(false), "Noms introduction" }
+                        Link { to: Route::Home {}, class: "navbar-link", onclick: move |_| menu_open.set(false), NavigationArtwork { kind: Some(PageIconKind::Home) } span { "Noms introduction" } }
                     }
                     div { class: "navigation-drawer-account",
                         if is_signed_in {
