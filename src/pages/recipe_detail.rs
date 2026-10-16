@@ -2580,6 +2580,7 @@ fn RecipeDetailContents(id: String) -> Element {
                                         recipe_title: recipe.title.clone(),
                                     }
                                 }
+                                super::recipe_json_controls::RecipeJsonExport { recipe_id: recipe.id.to_string() }
                                 ActionMenu {
                                   Link {
                                     to: crate::Route::RecipeVersionGraph { id: recipe.id.to_string() },

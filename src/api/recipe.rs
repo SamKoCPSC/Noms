@@ -2156,3 +2156,199 @@ mod media_ownership_tests {
         assert!(mock_server.received_requests().await.unwrap().is_empty());
     }
 }
+
+/// Download the current saved content visible to this viewer, never an editor draft.
+#[server]
+pub async fn export_recipe_json(recipe_id: String) -> Result<String, ServerFnError> {
+    let viewer = crate::auth::session::extract_user_id_from_fullstack().await;
+    enforce_graph_budget(viewer)?;
+    let id =
+        uuid::Uuid::parse_str(&recipe_id).map_err(|_| ServerFnError::new("Invalid recipe ID"))?;
+    crate::security::run_with_database_budget(
+        crate::security::DATABASE_EXECUTION_BUDGET,
+        export_recipe_json_for_viewer(&crate::db::get_pool(), id, viewer),
+    )
+    .await
+    .map_err(|_| ServerFnError::new("Recipe export timed out"))?
+}
+
+#[cfg(feature = "server")]
+async fn export_recipe_json_for_viewer(
+    pool: &sqlx::PgPool,
+    id: uuid::Uuid,
+    viewer: Option<uuid::Uuid>,
+) -> Result<String, ServerFnError> {
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|_| ServerFnError::new("Cannot read recipe"))?;
+    sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| ServerFnError::new("Cannot read recipe"))?;
+    let recipe = match crate::db::get_recipe_by_id_public(&mut *tx, id)
+        .await
+        .map_err(|_| ServerFnError::new("Cannot read recipe"))?
+    {
+        Some(recipe) => recipe,
+        None => match viewer {
+            Some(owner) => crate::db::get_recipe_by_id_and_owner(&mut *tx, id, owner)
+                .await
+                .map_err(|_| ServerFnError::new("Recipe not found"))?,
+            None => return Err(ServerFnError::new("Recipe not found")),
+        },
+    };
+    let tags = crate::db::get_recipe_tags(&mut *tx, id)
+        .await
+        .map_err(|_| ServerFnError::new("Cannot read recipe tags"))?
+        .into_iter()
+        .map(|tag| tag.tag)
+        .collect();
+    let output = crate::recipe_json::export_recipe(&recipe, tags).map_err(ServerFnError::new)?;
+    tx.commit()
+        .await
+        .map_err(|_| ServerFnError::new("Cannot finish recipe export"))?;
+    Ok(output)
+}
+
+/// Validate the exact versioned JSON contract before creating one private copy.
+#[server]
+pub async fn import_recipe_json(
+    expected_account_id: Option<uuid::Uuid>,
+    json: String,
+) -> Result<crate::types::RecipeDraftView, ServerFnError> {
+    let user = crate::auth::account_binding::require_form_account(expected_account_id).await?;
+    enforce_mutation_budget(user)?;
+    let (file, mut editor) = crate::recipe_json::parse_recipe(&json).map_err(ServerFnError::new)?;
+    let source = crate::recipe_json::source_recipe_id(&file).map_err(ServerFnError::new)?;
+    let storage = crate::storage::get_storage_client();
+    prepare_imported_media(&storage, &mut editor)?;
+    validate_recipe_media_references(&storage, &editor.images, &editor.instructions)?;
+    let draft = bounded_database_operation(crate::db::create_json_recipe_draft(
+        &crate::db::get_pool(),
+        user,
+        &editor_to_draft_payload(editor),
+        source,
+    ))
+    .await?;
+    draft_to_view(draft).map_err(|e| ServerFnError::new(e.to_string()))
+}
+
+#[cfg(feature = "server")]
+fn prepare_imported_media(
+    storage: &crate::storage::StorageClient,
+    editor: &mut crate::types::RecipeEditorState,
+) -> Result<(), ServerFnError> {
+    fn prepare(
+        storage: &crate::storage::StorageClient,
+        image: &mut RecipeImage,
+    ) -> Result<(), ServerFnError> {
+        if storage
+            .classify_media_url(&image.url)
+            .map_err(ServerFnError::new)?
+            == crate::storage::MediaUrl::ExternalHttps
+        {
+            // Foreign asset identifiers are provenance, never local capabilities.
+            image.asset_id = None;
+        }
+        Ok(())
+    }
+    for image in &mut editor.images {
+        prepare(storage, image)?;
+    }
+    let mut steps: Vec<_> = editor.instructions.iter_mut().collect();
+    while let Some(step) = steps.pop() {
+        for image in &mut step.photos {
+            prepare(storage, image)?;
+        }
+        steps.extend(step.sub_steps.iter_mut());
+    }
+    Ok(())
+}
+
+#[cfg(all(test, feature = "server"))]
+mod recipe_json_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn json_export_enforces_visibility_and_exports_saved_content_not_owner_drafts() {
+        let (_db, pool) = crate::test_utils::setup_test_db().await;
+        let unique = crate::test_utils::uid();
+        let owner = crate::db::insert_user(
+            &pool,
+            &format!("json_{unique}"),
+            "Cook",
+            &format!("{unique}@example.test"),
+            None,
+        )
+        .await
+        .unwrap();
+        let recipe =
+            crate::test_utils::create_test_published_recipe(&pool, owner.id, "Saved recipe").await;
+        assert!(export_recipe_json_for_viewer(&pool, recipe.id, None)
+            .await
+            .is_err());
+        assert!(
+            export_recipe_json_for_viewer(&pool, recipe.id, Some(uuid::Uuid::new_v4()))
+                .await
+                .is_err()
+        );
+        let draft = crate::test_utils::create_test_edit_draft(&pool, owner.id, recipe.id).await;
+        let mut edited = draft.decoded_snapshot().unwrap();
+        edited.content.title = "Unpublished secret".into();
+        crate::db::update_recipe_draft(&pool, draft.id, owner.id, draft.revision, &edited)
+            .await
+            .unwrap();
+        let json = export_recipe_json_for_viewer(&pool, recipe.id, Some(owner.id))
+            .await
+            .unwrap();
+        let (_, content) = crate::recipe_json::parse_recipe(&json).unwrap();
+        assert_eq!(content.title, "Saved recipe");
+        assert!(!json.contains(&draft.id.to_string()));
+        for visibility in ["public", "unlisted"] {
+            crate::db::update_recipe_visibility(&pool, recipe.id, owner.id, visibility)
+                .await
+                .unwrap();
+            let json = export_recipe_json_for_viewer(&pool, recipe.id, None)
+                .await
+                .unwrap();
+            let (file, content) = crate::recipe_json::parse_recipe(&json).unwrap();
+            assert_eq!(content.visibility, "private");
+            assert_eq!(file.source_attribution.author_username, owner.username);
+        }
+        assert!(
+            export_recipe_json_for_viewer(&pool, uuid::Uuid::new_v4(), Some(owner.id))
+                .await
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn json_media_preparation_never_trusts_foreign_asset_ids_or_active_urls() {
+        let storage = crate::storage::StorageClient::for_test();
+        let mut editor = crate::types::RecipeEditorState {
+            images: vec![RecipeImage::managed(
+                uuid::Uuid::new_v4(),
+                "https://foreign.example/image.webp".into(),
+                None,
+                crate::types::RecipeImageEdit::default_rect_16x9(),
+            )],
+            ..Default::default()
+        };
+        prepare_imported_media(&storage, &mut editor).unwrap();
+        assert!(editor.images[0].asset_id.is_none());
+        validate_recipe_media_references(&storage, &editor.images, &editor.instructions).unwrap();
+        for url in [
+            "javascript:alert(1)",
+            "data:image/png;base64,eA==",
+            "file:///etc/passwd",
+            "http://foreign.example/image.webp",
+        ] {
+            editor.images[0].url = url.into();
+            assert!(
+                prepare_imported_media(&storage, &mut editor).is_err(),
+                "{url}"
+            );
+        }
+    }
+}

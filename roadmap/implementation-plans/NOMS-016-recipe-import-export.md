@@ -1,6 +1,6 @@
 # NOMS-016: Recipe Import & Export — Implementation Plan
 
-**Status:** Clipboard import implemented for 15 providers; guided import/editor validation in progress. Export remains planned.
+**Status:** Clipboard import implemented for 15 providers and manually accepted. First single-recipe JSON export/import slice implemented and verified. Broader export remains planned.
 **Created:** 2026-08-15
 **Depends on:** Current recipe, draft, versioning, collection, and image models
 **Coordination:** NOMS-017 defines flexible authored recipe metadata and optional autocomplete-vocabulary references. Agree their portable representation with NOMS-016 before freezing the snapshot schema; completing the autocomplete implementation is not a prerequisite for starting export.
@@ -480,3 +480,15 @@ git diff --check
 Desktop browser inspection confirms the final stylesheet’s two-column layout and heading weight. A 390px viewport DOM check confirms a single stacked source/guide column with no horizontal overflow; viewport overrides were reset. Mobile screenshot capture was unreliable with browser emulation, so this is a responsive layout measurement, not a physical-phone or cross-browser claim. Default-size screenshots are external at `/tmp/noms016-redesign-desktop-final.jpg` and `/tmp/noms016-redesign-editor.jpg`; test logs are `/tmp/noms016-redesign-{js,rust,build,editor-tests}.txt`. Full database CI, Firefox/Safari, dark-theme interaction and publishing were not rerun for this redesign.
 
 The canonical NOMS-016 branch/worktree was reused to honor the user’s earlier consolidation instruction. A second source/diff review passes after fixing Automatic’s native-required semantics and preserving provider/alternate-region review context. No independent agent review was performed this turn. Generated `assets/tailwind.css` remains excluded. The app is left open on the canonical port-32783 import route for user review. This checkpoint supersedes earlier preview/confirmation workflow descriptions; export implementation remains separate.
+
+
+### First JSON export/import slice — 2026-10-16
+
+The user confirmed the clipboard import milestone after manual testing and approved starting export with simple JSON plus canonical JSON import. The first slice adds **Export JSON** to saved recipes and a bounded JSON-file picker to the existing import page. Import explicitly creates a new private draft and opens the normal editor; it never overwrites or publishes existing content.
+
+The versioned envelope carries the current persisted recipe snapshot, JCS/SHA-256 digest, portable source identity, author attribution, generator/time metadata and image-reference mode. Drafts and histories are excluded. Snapshot fields retain explicit null and empty values, nested instructions, tags, equipment, images and edit metadata. Read authorization, account binding, content limits and atomic media attachment are enforced on the server.
+
+See [the v1 contract and scope](../spikes/NOMS-016-json-portability-v1.md). Collection/historical export, other renderers, image-byte archives, duplicate/conflict handling and persisted cross-installation origin provenance remain follow-ups. This slice does not close the wider NOMS-016 plan or freeze future NOMS-017 metadata fields.
+
+
+Verification for the JSON slice: 36 focused native tests passed (8 JSON contract/API tests, 15 existing clipboard-import tests, 13 media-asset tests including the atomic JSON import regression). Temporary PostgreSQL databases were isolated from the running app. Chromium exercised damaged-checksum rejection with unchanged row counts, file import into a private draft, private publication of a synthetic fixture, actual JSON download, complete snapshot/digest equality, re-import of that download, draft reload and cleanup through the UI. The final browser run reported no page errors; synthetic recipe/draft counts returned to baseline. The download bridge now returns explicit success, preventing a false failure message after a successful download. The final browser run asserts that no export alert appears. Formatting and both server/WebAssembly Clippy targets passed. A hydration-readiness regression found during the check is fixed: file selection and export stay disabled until their client handlers mount. The plain-Cargo import layout test now accommodates unprocessed Dioxus asset paths while retaining its artwork assertion in processed builds. This is focused verification, not a new full-CI or cross-browser acceptance claim.
