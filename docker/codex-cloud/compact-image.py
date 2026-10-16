@@ -15,7 +15,10 @@ try:
     for volume_path in original['Config'].get('Volumes') or {}:
         contents = run('cp', container + ':' + volume_path + '/.', '-')
         with tarfile.open(fileobj=io.BytesIO(contents)) as volume_tar:
-            if not all(member.isdir() for member in volume_tar):
+            members = volume_tar.getmembers()
+            # docker cp emits one directory entry for an empty volume root.
+            # Even nested empty directories count as contents we must not omit.
+            if len(members) > 1 or any(not member.isdir() for member in members):
                 raise RuntimeError('Export would omit volume data; refusing compaction')
     with tempfile.TemporaryDirectory(prefix='noms-compact-', dir=os.environ.get('NOMS_CLOUD_STATE_DIR')) as directory:
         layer = Path(directory) / 'layer.tar'
