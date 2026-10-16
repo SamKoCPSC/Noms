@@ -194,6 +194,11 @@ jobs:
       - name: Scan tracked files for credential material
         run: ./scripts/check-tracked-secrets.sh
 
+      - name: Verify Codex cloud development configuration
+        run: |
+          python3 -m unittest discover -s docker/codex-cloud -p 'test_*.py' -v
+          bash -n docker/codex-cloud/cloud.sh docker/codex-cloud/app-entrypoint.sh
+
       - name: Verify pinned deployment artifacts
         run: ./scripts/check-deployment-artifacts.sh
 
