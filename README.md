@@ -54,6 +54,8 @@ For host-side Rust checks, add the WASM compilation target:
 rustup target add wasm32-unknown-unknown
 ```
 
+For managed Codex cloud sessions, use the [Codex cloud development guide](docker/codex-cloud/README.md), including headless browser checks and screenshots. The normal local and production workflows remain unchanged.
+
 ### 2. Configure Environment Variables for Standalone Commands
 
 `just up` generates a private environment for every invocation and does not
