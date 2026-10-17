@@ -18,6 +18,9 @@ pub enum ButtonVariant {
 /// Props for the [`Button`] component.
 #[derive(Props, Clone, PartialEq)]
 pub struct ButtonProps {
+    /// Stable target for a page-owned action, including the guarded mobile Back action.
+    #[props(default)]
+    pub id: Option<String>,
     /// Visual style variant.
     #[props(default)]
     pub variant: ButtonVariant,
@@ -42,6 +45,7 @@ pub fn Button(props: ButtonProps) -> Element {
 
     rsx! {
         button {
+            id: props.id,
             class: "btn {variant_class} touch-target",
             disabled: props.disabled,
             onclick: move |evt| props.onclick.call(evt),

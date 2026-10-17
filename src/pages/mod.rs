@@ -46,3 +46,5 @@ pub use search::Search;
 pub use settings::SettingsAccounts;
 pub use settings::SettingsProfile;
 pub use user_profile::UserProfile;
+
+pub use crate::components::mobile::MobileYou;

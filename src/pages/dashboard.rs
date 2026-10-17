@@ -36,6 +36,7 @@ pub fn Dashboard() -> Element {
 fn DashboardWorkspace() -> Element {
     let auth = use_auth();
     let mut offset = use_signal(|| 0i64);
+    let mut mobile_library = use_signal(|| "recipes");
     let mut grid_view = use_signal(|| false);
     let mut show_all_drafts = use_signal(|| false);
     let mut recipes = use_resource(move || {
@@ -61,7 +62,7 @@ fn DashboardWorkspace() -> Element {
     let current_offset = offset();
 
     rsx! {
-        div { class: "container dashboard-workspace", id: "workspace-overview",
+        div { class: "container dashboard-workspace", id: "workspace-overview", "data-mobile-library": mobile_library(),
             aside { class: "dashboard-sidebar neumo-card", aria_label: "Workspace",
                 p { class: "dashboard-eyebrow navigation-artwork-label", NavigationArtwork {} span { "Workspace" } }
                 nav { class: "dashboard-workspace-nav", aria_label: "Dashboard sections",
@@ -99,6 +100,12 @@ fn DashboardWorkspace() -> Element {
                         }
                     }
                     Link { to: Route::RecipeNew {}, class: "btn btn-primary touch-target", "+ New recipe" }
+                    crate::components::mobile::MobileCreateButton {}
+                }
+                nav { class: "mobile-library-tabs", aria_label: "Library sections",
+                    button { r#type: "button", aria_pressed: mobile_library() == "recipes", onclick: move |_| mobile_library.set("recipes"), "Recipes" }
+                    Link { to: Route::CollectionList {}, "Collections" }
+                    button { r#type: "button", aria_pressed: mobile_library() == "drafts", onclick: move |_| { mobile_library.set("drafts"); show_all_drafts.set(true); }, "Drafts" }
                 }
                 section { class: "dashboard-drafts neumo-card", id: "dashboard-drafts", aria_label: "Continue editing",
                     div { class: "dashboard-section-heading",
