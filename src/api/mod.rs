@@ -7,3 +7,6 @@ pub mod upload;
 
 #[cfg(feature = "server")]
 pub mod recipe_archive;
+
+#[cfg(feature = "server")]
+mod recipe_json_media;

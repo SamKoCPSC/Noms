@@ -347,6 +347,28 @@ impl StorageClient {
         Ok(self.object_url(key))
     }
 
+    /// Check configured storage only, never a URL supplied in an import.
+    pub async fn export_image_exists(&self, key: &str) -> Result<bool, ()> {
+        match self
+            .inner
+            .head_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .send()
+            .await
+        {
+            Ok(_) => Ok(true),
+            Err(error)
+                if error
+                    .as_service_error()
+                    .is_some_and(|error| error.is_not_found()) =>
+            {
+                Ok(false)
+            }
+            Err(_) => Err(()),
+        }
+    }
+
     /// Read a saved object with a hard streaming byte limit.
     pub async fn read_export_image(
         &self,

@@ -42,7 +42,7 @@ async fn bounded_database_operation<T>(
 }
 
 #[cfg(feature = "server")]
-fn editor_to_draft_payload(
+pub(super) fn editor_to_draft_payload(
     editor: crate::types::RecipeEditorState,
 ) -> crate::db::diff::RecipeDraftPayload {
     crate::db::diff::RecipeDraftPayload {
@@ -96,6 +96,7 @@ fn draft_to_view(
             .unwrap_or_else(|| "private".to_string()),
     );
     Ok(crate::types::RecipeDraftView {
+        import_images: crate::db::json_import_review(&draft)?.images,
         id: draft.id,
         recipe_id: draft.recipe_id,
         base_version_number: draft.base_version_number,
@@ -2227,16 +2228,20 @@ pub(super) async fn read_recipe_export(
 pub async fn import_recipe_json(
     expected_account_id: Option<uuid::Uuid>,
     json: String,
+    available_external_urls: Vec<String>,
 ) -> Result<crate::types::RecipeDraftView, ServerFnError> {
     let user = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     enforce_mutation_budget(user)?;
-    let (_, editor) = crate::recipe_json::parse_recipe(&json).map_err(ServerFnError::new)?;
-    let draft = bounded_database_operation(crate::db::create_new_recipe_draft(
-        &crate::db::get_pool(),
-        user,
-        &editor_to_draft_payload(editor),
-    ))
-    .await?;
+    let draft =
+        crate::security::run_with_expensive_read_work_budget(super::recipe_json_media::import(
+            &crate::db::get_pool(),
+            &crate::storage::get_storage_client(),
+            user,
+            &json,
+            &available_external_urls,
+        ))
+        .await
+        .map_err(|_| ServerFnError::new("Image checks are busy. Try again shortly."))??;
     draft_to_view(draft).map_err(|e| ServerFnError::new(e.to_string()))
 }
 
@@ -2296,4 +2301,83 @@ mod recipe_json_tests {
                 .is_err()
         );
     }
+}
+
+#[server]
+pub async fn resolve_imported_image(
+    expected_account_id: Option<uuid::Uuid>,
+    draft_id: String,
+    expected_revision: i64,
+    image_id: uuid::Uuid,
+    omit: bool,
+    available_external_urls: Vec<String>,
+) -> Result<crate::types::RecipeDraftView, ServerFnError> {
+    let user = crate::auth::account_binding::require_form_account(expected_account_id).await?;
+    enforce_mutation_budget(user)?;
+    let id = uuid::Uuid::parse_str(&draft_id).map_err(|_| ServerFnError::new("Invalid draft"))?;
+    let draft =
+        crate::security::run_with_expensive_read_work_budget(super::recipe_json_media::resolve(
+            &crate::db::get_pool(),
+            &crate::storage::get_storage_client(),
+            user,
+            id,
+            expected_revision,
+            image_id,
+            omit,
+            &available_external_urls,
+        ))
+        .await
+        .map_err(|_| ServerFnError::new("Image checks are busy. Try again shortly."))??;
+    draft_to_view(draft).map_err(|e| ServerFnError::new(e.to_string()))
+}
+/// Validate the file before the browser checks external display images.
+#[server]
+pub async fn recipe_json_image_urls(
+    expected_account_id: Option<uuid::Uuid>,
+    json: String,
+) -> Result<Vec<String>, ServerFnError> {
+    let user = crate::auth::account_binding::require_form_account(expected_account_id).await?;
+    crate::security::enforce_user_request_budget(user, crate::security::RequestClass::Graph)
+        .map_err(|_| ServerFnError::new("Too many image checks"))?;
+    let (_, mut editor) = crate::recipe_json::parse_recipe(&json).map_err(ServerFnError::new)?;
+    Ok(super::recipe_json_media::external_urls(
+        &mut editor,
+        &crate::storage::get_storage_client(),
+    ))
+}
+#[server]
+pub async fn imported_image_external_url(
+    expected_account_id: Option<uuid::Uuid>,
+    draft_id: String,
+    image_id: uuid::Uuid,
+) -> Result<Vec<String>, ServerFnError> {
+    let user = crate::auth::account_binding::require_form_account(expected_account_id).await?;
+    crate::security::enforce_user_request_budget(user, crate::security::RequestClass::Graph)
+        .map_err(|_| ServerFnError::new("Too many image checks"))?;
+    let id = uuid::Uuid::parse_str(&draft_id).map_err(|_| ServerFnError::new("Invalid draft"))?;
+    let draft = bounded_database_operation(crate::db::get_recipe_draft(
+        &crate::db::get_pool(),
+        id,
+        user,
+    ))
+    .await?;
+    let review = crate::db::json_import_review(&draft)
+        .map_err(|_| ServerFnError::new("Image review unavailable"))?;
+    let candidate = review
+        .images
+        .into_iter()
+        .find(|i| i.id == image_id)
+        .ok_or_else(|| ServerFnError::new("Imported image not found"))?;
+    let storage = crate::storage::get_storage_client();
+    Ok(
+        if matches!(
+            storage.classify_media_url(&candidate.image.url),
+            Ok(crate::storage::MediaUrl::ExternalHttps)
+        ) && super::recipe_json_media::external_url_allowed(&candidate.image.url)
+        {
+            vec![candidate.image.url]
+        } else {
+            vec![]
+        },
+    )
 }

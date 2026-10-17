@@ -159,7 +159,7 @@ Noms exports portable recipe snapshots rather than complete database backups. Or
 
 ### Canonical Noms recipe snapshot
 
-`noms.recipe.snapshot.v2` is the current text-content interchange contract. Following the user's simplified image workflow, recipe JSON excludes image URLs, asset identities and edits; image and nested photo arrays are empty placeholders. An optional ZIP packages saved image files separately for manual reattachment after import. All supported authored text/numeric fields retain explicit null and empty values. Coordinate future NOMS-017 metadata with the versioned contract before adding fields. Previously exported v1 files remain importable, with their image references discarded after validation. See the [current contract](../spikes/NOMS-016-json-portability-v2.md).
+`noms.recipe.snapshot.v3` is the current interchange contract. JSON preserves image references, edits, nested photos and authored text/numeric fields. Import reuses accessible images and stores unresolved references in private draft recovery metadata for retry, re-upload or omission. The optional ZIP provides stored files for manual replacement. Original v1/reference and image-free v2/none files remain importable. See the [current contract](../spikes/NOMS-016-json-portability-v3.md).
 
 The canonical snapshot must distinguish three field states:
 
@@ -238,11 +238,11 @@ Collection import reconstructs parent-child collections from directory nesting, 
 
 A lineage archive contains one current or explicitly selected snapshot per included member and a small `lineage.json` descriptor. The descriptor contains portable member IDs and parent-child `derived_from` edges only. It excludes drafts, complete version histories, diffs, fork messages, and unrelated ownership or operational data.
 
-### Image downloads (simplified user decision, 2026-10-17)
+### Image references and optional downloads (revised user decision, 2026-10-17)
 
-Recipe JSON excludes image references and image data. The export dialog offers an unchecked **Download saved images too** checkbox. Selecting it downloads one ZIP containing the same image-free `recipe.json`, saved full-size WebP files and manual re-import instructions. Recipe and nested-step files are included once each. Externally linked images are not fetched; the dialog and ZIP README disclose this. Editor crop/adjustment metadata is not exported or baked into the saved files.
+Recipe JSON preserves image URLs and edit metadata. Import checks managed storage after permission validation and asks the browser to check external HTTPS display images. Accessible images are reused; unresolved references remain in a private draft review panel with retry and omission controls. Users can upload replacements manually. Storage 404s are distinguished from temporary/access failures; no arbitrary URL fetching is added to the server. See the [v3 contract](../spikes/NOMS-016-json-portability-v3.md).
 
-The same recipe view authorization applies to the ZIP. The current single-recipe archive is assembled on the server with a 32 MiB total limit, 10 MiB per-image read limit, 60-second deadline and bounded concurrency. Missing/invalid saved images fail the ZIP without affecting the independent JSON-only option. Imported drafts always start without images; users upload desired files manually. The earlier proposed `references` and remote-fetch `all` export modes are superseded by this decision.
+The optional **Download saved images too** ZIP contains the same reference-preserving JSON, saved full-size WebP files and recovery instructions. External image bytes are not downloaded, and crops/adjustments are not baked in. The ZIP retains recipe view authorization, a 32 MiB total limit, 10 MiB per-image limit, 60-second deadline and bounded concurrency. Missing images may fail the ZIP without affecting JSON-only export.
 
 ### Client-orchestrated generation
 
@@ -492,3 +492,7 @@ Verification for the JSON slice: 36 focused native tests passed (8 JSON contract
 The user requested image-free JSON and an option to download image files for manual reattachment. New exports use v2, with empty recipe/step-image arrays and no structured image references or edits. Older v1 files import after validation but discard all media. JSON draft creation now uses the ordinary private-copy path without source-media inheritance. **Export recipe** opens a dialog offering JSON by default or an optional ZIP with saved image files and instructions. External links are not fetched; stored image retrieval is authorized and bounded. See [the revised contract](../spikes/NOMS-016-json-portability-v2.md). Earlier acceptance evidence above describes the original reference-based slice; revised verification is recorded separately.
 
 Revised verification: 94 focused native tests passed: 8 JSON contract/API, 2 ZIP/access/bounds, 15 clipboard-import, 12 existing media-asset, 18 security-limit and 39 trusted-IP/rate-limit tests. Formatting, server Clippy and WebAssembly Clippy passed. Chromium verified manual image upload, real image-free JSON and saved-image ZIP downloads, text/digest preservation, JSON re-import as a private draft and reload, with no page errors and synthetic recipe/draft counts restored. Visual inspection also corrected the export dialog to use the existing modal card layout. Full CI and cross-browser acceptance were not rerun.
+
+### Image reference reuse and recovery — 2026-10-17
+
+The user revised the image-free decision: retain canonical image references, reuse accessible images, and let users recover unavailable images manually. The v3 contract supersedes v2 for new exports. The prior image-free verification above remains historical evidence, not verification of this revised behavior. No schema migration is needed; private recovery metadata lives in draft JSONB and survives autosaves and reloads without entering published/exported content.

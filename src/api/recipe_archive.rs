@@ -1,4 +1,4 @@
-//! Optional image files alongside image-free recipe JSON.
+//! Optional image files alongside reference-preserving recipe JSON.
 use crate::{
     auth::context::AuthUser,
     storage::{MediaObjectKind, MediaUrl, StorageClient},
@@ -110,7 +110,7 @@ async fn prepare_archive(
     let mut total = 0;
     write_file(&mut zip, &mut total, "recipe.json", json.as_bytes())?;
     let readme = format!(
-        "Import recipe.json into Noms, then add the image files manually.\n\
+        "Import recipe.json into Noms. Accessible image links are reused; add these files manually if a linked image cannot be restored.\n\
          These are saved full-size image files; editor crops and adjustments are not baked in.\n\
          Recipe and step filenames indicate their original placement. Repeated files are included once.\n\
          {external_count} externally linked images were not downloaded. Only images stored in Noms are included.\n"
@@ -252,7 +252,7 @@ fn image_files(storage: &StorageClient, recipe: &Recipe) -> Result<(ImageFiles, 
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::{
         db::{
@@ -271,7 +271,7 @@ mod tests {
     use tower::ServiceExt;
     use wiremock::{matchers::method, Mock, MockServer, ResponseTemplate};
 
-    async fn source(pool: &sqlx::PgPool, storage: &StorageClient) -> (Recipe, Uuid) {
+    pub(crate) async fn source(pool: &sqlx::PgPool, storage: &StorageClient) -> (Recipe, Uuid) {
         let suffix = crate::test_utils::uid();
         let owner = db::insert_user(
             pool,
@@ -367,7 +367,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn image_zip_checks_access_and_contains_image_free_json_and_unique_saved_files() {
+    async fn image_zip_checks_access_and_contains_canonical_json_and_unique_saved_files() {
         let (_db, pool) = crate::test_utils::setup_test_db().await;
         let mock = MockServer::start().await;
         let bytes = b"RIFF0000WEBPsynthetic";
@@ -433,11 +433,11 @@ mod tests {
             let mut json = String::new();
             std::io::Read::read_to_string(&mut zip.by_name("recipe.json").unwrap(), &mut json)
                 .unwrap();
-            assert!(!json.contains("saved.example"));
-            assert!(!json.contains("external.example"));
+            assert!(json.contains("saved.example"));
+            assert!(json.contains("external.example"));
             let (_, editor) = crate::recipe_json::parse_recipe(&json).unwrap();
-            assert!(editor.images.is_empty());
-            assert!(editor.instructions[0].sub_steps[0].photos.is_empty());
+            assert_eq!(editor.images.len(), 2);
+            assert_eq!(editor.instructions[0].sub_steps[0].photos.len(), 1);
             let mut image = Vec::new();
             std::io::Read::read_to_end(
                 &mut zip.by_name("images/recipe-001.webp").unwrap(),

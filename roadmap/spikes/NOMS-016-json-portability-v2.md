@@ -1,5 +1,7 @@
 # NOMS-016 — image-free JSON and optional image files
 
+Historical contract. New exports use the [v3 reference-preserving contract](NOMS-016-json-portability-v3.md); v2 files remain importable.
+
 The user accepted the clipboard-import milestone, approved JSON portability, and then requested that image URLs be excluded from recipe JSON. Images are downloaded separately when explicitly selected and added manually after re-import.
 
 ## User workflow
