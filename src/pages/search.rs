@@ -573,6 +573,7 @@ struct SearchControlsProps {
 fn SearchControls(props: SearchControlsProps) -> Element {
     let request = props.parsed.request.clone();
     let mut filters_open = use_signal(|| false);
+    let mut mobile_filters_open = use_signal(|| false);
     let initial_required_tags = match &request {
         ActiveSearchRequest::Recipes(recipe) => recipe.tags_all.join(", "),
         _ => String::new(),
@@ -587,55 +588,9 @@ fn SearchControls(props: SearchControlsProps) -> Element {
             }
         },
     ));
-    rsx! {
-        section { class: "search-controls", aria_label: "Search filters",
-            if matches!(&request, ActiveSearchRequest::Recipes(_)) {
-                button { class: "btn btn-secondary search-filter-toggle", r#type: "button",
-                    aria_expanded: filters_open(), aria_controls: "search-filter-fields",
-                    onclick: move |_| filters_open.toggle(),
-                    "Filters"
-                }
-            }
-            label { class: "search-control search-sort-control",
-                span { "Sort by" }
-                select {
-                    value: sort_value(&request),
-                    onchange: {
-                        let request = request.clone();
-                        move |event| {
-                            let mut request = request.clone();
-                            apply_sort(&mut request, &event.value());
-                            update_page(&mut request, 1);
-                            props.onsort.call(request);
-                        }
-                    },
-                    {sort_options(&request)}
-                }
-            }
-            if has_filters(&request) {
-                div { class: "active-filter-row",
-                    for chip in filter_chips(&request) {
-                        button { class: "filter-chip", r#type: "button", aria_label: "Remove {chip}",
-                            onclick: {
-                                let request = request.clone();
-                                let chip = chip.clone();
-                                move |_| props.onchange.call(remove_filter(request.clone(), &chip))
-                            },
-                            "{chip}" span { aria_hidden: "true", " ×" }
-                        }
-                    }
-                    button {
-                        class: "clear-filters",
-                        onclick: {
-                            let request = request.clone();
-                            move |_| props.onchange.call(clear_filters(request.clone()))
-                        },
-                        "Clear filters"
-                    }
-                }
-            }
+    let filter_fields = rsx! {
             if let ActiveSearchRequest::Recipes(recipe) = &request {
-              div { id: "search-filter-fields", class: "search-filter-fields", hidden: !filters_open(),
+              div { id: "search-filter-fields", class: "search-filter-fields", hidden: !filters_open() && !mobile_filters_open(),
                 label { class: "search-control",
                     span { "Visibility" }
                     select {
@@ -711,6 +666,65 @@ fn SearchControls(props: SearchControlsProps) -> Element {
                 }
               }
             }
+    };
+    rsx! {
+        section { class: "search-controls", aria_label: "Search filters",
+            if matches!(&request, ActiveSearchRequest::Recipes(_)) {
+                button { class: "btn btn-secondary search-filter-toggle", r#type: "button",
+                    aria_expanded: filters_open() || mobile_filters_open(), aria_controls: "search-filter-fields",
+                    onclick: move |_| { if crate::components::mobile::is_mobile_layout() { mobile_filters_open.set(true); } else { filters_open.toggle(); } },
+                    "Filters"
+                }
+            }
+            label { class: "search-control search-sort-control",
+                span { "Sort by" }
+                select {
+                    value: sort_value(&request),
+                    onchange: {
+                        let request = request.clone();
+                        move |event| {
+                            let mut request = request.clone();
+                            apply_sort(&mut request, &event.value());
+                            update_page(&mut request, 1);
+                            props.onsort.call(request);
+                        }
+                    },
+                    {sort_options(&request)}
+                }
+            }
+            if has_filters(&request) {
+                div { class: "active-filter-row",
+                    for chip in filter_chips(&request) {
+                        button { class: "filter-chip", r#type: "button", aria_label: "Remove {chip}",
+                            onclick: {
+                                let request = request.clone();
+                                let chip = chip.clone();
+                                move |_| props.onchange.call(remove_filter(request.clone(), &chip))
+                            },
+                            "{chip}" span { aria_hidden: "true", " ×" }
+                        }
+                    }
+                    button {
+                        class: "clear-filters",
+                        onclick: {
+                            let request = request.clone();
+                            move |_| props.onchange.call(clear_filters(request.clone()))
+                        },
+                        "Clear filters"
+                    }
+                }
+            }
+            if mobile_filters_open() {
+                crate::components::base::SharedModal {
+                    aria_labelledby: "mobile-search-filters-title", focus_selector: "#mobile-search-filters-close", on_dismiss: move |_| mobile_filters_open.set(false),
+                    div { class: "modal-card mobile-search-filters", onclick: move |event| event.stop_propagation(),
+                        div { class: "mobile-sheet-heading", h2 { id: "mobile-search-filters-title", "Find your kind of recipe" } button { id: "mobile-search-filters-close", class: "btn btn-ghost touch-target", aria_label: "Close filters", onclick: move |_| mobile_filters_open.set(false), "✕" } }
+                        {filter_fields.clone()}
+                        button { class: "btn btn-primary touch-target", onclick: move |_| mobile_filters_open.set(false), "Show results" }
+                    }
+                }
+            } else { {filter_fields} }
+
         }
     }
 }

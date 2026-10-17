@@ -11,6 +11,7 @@ mod app_layout;
 mod auth_required;
 mod error_fallback;
 mod footer;
+pub mod mobile;
 mod navbar;
 
 #[cfg(test)]
