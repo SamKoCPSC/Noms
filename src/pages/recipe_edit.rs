@@ -163,6 +163,8 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
 
     // CP5: image management signals
     let mut images = use_signal(Vec::<RecipeImage>::new);
+    let mut import_images = use_signal(Vec::<crate::types::ImportedRecipeImage>::new);
+    let mut reviewing_image = use_signal(|| false);
     let mut upload_now = use_signal(|| false);
     let busy = use_signal(|| false);
     let pending_image_count = use_signal(|| 0usize);
@@ -224,6 +226,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
             match loaded {
                 Ok(draft) => {
                     let editor = draft.editor.clone();
+                    import_images.set(draft.import_images.clone());
                     draft_id.set(Some(draft.id.to_string()));
                     draft_recipe_id.set(draft.recipe_id);
                     draft_revision.set(draft.revision);
@@ -911,13 +914,98 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
         pending_image_count() > 0 || last_saved_editor().as_ref() != Some(&current_editor),
     );
 
+    let review_enabled = last_saved_editor().as_ref() == Some(&current_editor)
+        && !editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
+        && !busy()
+        && pending_image_count() == 0
+        && step_photo_upload_count() == 0;
+    let on_review_image = move |(image_id, omit): (uuid::Uuid, bool)| {
+        // Check live signals as well as rendered state to guard queued clicks.
+        let latest = editor_state(
+            title(),
+            description(),
+            commentary(),
+            prep_time(),
+            cook_time(),
+            servings(),
+            ingredients(),
+            steps(),
+            equipment(),
+            images(),
+            visibility(),
+            tags_input(),
+        );
+        if last_saved_editor().as_ref() != Some(&latest)
+            || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
+            || busy()
+            || pending_image_count() > 0
+            || step_photo_upload_count() > 0
+            || reviewing_image()
+        {
+            return;
+        }
+        let Some(id) = draft_id() else {
+            return;
+        };
+        let revision = draft_revision();
+        reviewing_image.set(true);
+        is_manually_saving.set(true);
+        autosave_generation.set(autosave_generation() + 1);
+        draft_save_error.set(None);
+        spawn(async move {
+            let external = if omit {
+                Ok(vec![])
+            } else {
+                crate::api::recipe::imported_image_external_url(
+                    form_account(),
+                    id.clone(),
+                    image_id,
+                )
+                .await
+            };
+            let result = match external {
+                Ok(urls) => {
+                    let available =
+                        crate::pages::recipe_json_controls::check_linked_images(urls).await;
+                    crate::api::recipe::resolve_imported_image(
+                        form_account(),
+                        id,
+                        revision,
+                        image_id,
+                        omit,
+                        available,
+                    )
+                    .await
+                }
+                Err(error) => Err(error),
+            };
+            match result {
+                Ok(draft) => {
+                    images.set(draft.editor.images.clone());
+                    steps.set(flatten_steps(&draft.editor.instructions));
+                    draft_revision.set(draft.revision);
+                    last_saved_editor.set(Some(draft.editor));
+                    import_images.set(draft.import_images);
+                }
+                Err(error) => {
+                    draft_save_error.set(Some(format!("Could not review imported image: {error}")))
+                }
+            }
+            reviewing_image.set(false);
+            is_manually_saving.set(false);
+        });
+    };
+
     // ── Render: form ────────────────────────────────────────────────────
     rsx! {
         AuthRequired {
-            div { class: "container recipe-editor",
+            div { class: "container recipe-editor", inert: reviewing_image(),
                 PageHeader {
                     icon: Some(PageIconKind::Editor),
                     title: if id_is_draft { "Edit Draft" } else { "Edit Recipe Draft" },
+                }
+                crate::pages::recipe_json_controls::ImportedImageReview {
+                    images: import_images(), enabled: review_enabled, pending: reviewing_image(), on_resolve: on_review_image,
                 }
                 if let Some(source_title) = forked_from_title() {
                     div {

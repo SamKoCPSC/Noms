@@ -3257,7 +3257,9 @@ pub async fn update_recipe_draft(
     let mut transaction = pool.begin().await.map_err(DbError::Query)?;
     let snapshot = serde_json::to_value(payload).map_err(DbError::SerdeJson)?;
     let updated = sqlx::query_as::<_, RecipeDraft>(&format!(
-        "UPDATE recipe_drafts SET snapshot = $4, revision = revision + 1, updated_at = NOW() \
+        "UPDATE recipe_drafts SET snapshot = $4 || \
+             CASE WHEN snapshot ? '_import_image_review' THEN jsonb_build_object('_import_image_review', snapshot->'_import_image_review') ELSE '{{}}'::jsonb END, \
+             revision = revision + 1, updated_at = NOW() \
          WHERE id = $1 AND user_id = $2 AND revision = $3 RETURNING {DRAFT_COLUMNS}"
     ))
     .bind(draft_id)
@@ -6658,3 +6660,6 @@ mod tests {
         );
     }
 }
+
+mod json_import;
+pub use json_import::*;

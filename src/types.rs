@@ -358,8 +358,62 @@ impl Default for RecipeEditorState {
     }
 }
 
+/// Private recovery metadata, separate from recipe content and exports.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ImportedRecipeImage {
+    pub id: Uuid,
+    pub image: RecipeImage,
+    pub step_path: Vec<usize>,
+    pub step_text: Option<String>,
+    pub position: usize,
+    pub status: ImportImageStatus,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ImportImageStatus {
+    Missing,
+    Unavailable,
+    NotReusable,
+    UnsafeUrl,
+    PlacementChanged,
+}
+impl ImportImageStatus {
+    pub fn message(self) -> &'static str {
+        match self {
+            Self::Missing => "This image no longer exists in Noms storage.",
+            Self::Unavailable => "Couldn't access this image. It may be temporarily unavailable.",
+            Self::NotReusable => {
+                "This image is unavailable or you don't have permission to reuse it."
+            }
+            Self::UnsafeUrl => "This image URL isn't supported for reuse.",
+            Self::PlacementChanged => {
+                "The original step has changed. Add this image manually to the desired step."
+            }
+        }
+    }
+}
+impl ImportedRecipeImage {
+    pub fn placement(&self) -> String {
+        if self.step_path.is_empty() {
+            format!("Recipe image {}", self.position + 1)
+        } else {
+            format!(
+                "Step {} photo {}",
+                self.step_path
+                    .iter()
+                    .map(|n| (n + 1).to_string())
+                    .collect::<Vec<_>>()
+                    .join("."),
+                self.position + 1
+            )
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RecipeDraftView {
+    #[serde(default)]
+    pub import_images: Vec<ImportedRecipeImage>,
     pub id: Uuid,
     pub recipe_id: Option<Uuid>,
     pub base_version_number: Option<i32>,
