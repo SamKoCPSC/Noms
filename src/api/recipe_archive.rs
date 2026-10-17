@@ -419,7 +419,10 @@ pub(crate) mod tests {
                 .await
                 .unwrap();
             let mut zip = zip::ZipArchive::new(Cursor::new(body)).unwrap();
-            let mut names = zip.file_names().map(str::to_owned).collect::<Vec<_>>();
+            let mut names = zip
+                .file_names()
+                .map(|name| name.unwrap().into_owned())
+                .collect::<Vec<_>>();
             names.sort();
             assert_eq!(
                 names,
