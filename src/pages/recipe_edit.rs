@@ -1016,7 +1016,8 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     },
                 }
             }
-            div { class: "container recipe-editor", inert: reviewing_image(),
+            // HTML inert is enabled by presence, including inert="false" after hydration.
+            div { class: "container recipe-editor", inert: reviewing_image().then_some(""),
                 PageHeader {
                     icon: Some(PageIconKind::Editor),
                     title: if id_is_draft { "Edit Draft" } else { "Edit Recipe Draft" },
