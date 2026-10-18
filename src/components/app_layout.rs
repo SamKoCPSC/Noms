@@ -11,23 +11,9 @@ pub fn AppLayout() -> Element {
     let theme = use_theme();
     use_context_provider(|| theme);
     let route = use_route::<crate::Route>();
+    // The hook owns the registrations until this layout unmounts.
     #[cfg(target_arch = "wasm32")]
-    use_effect(|| {
-        spawn(async {
-            let module = asset!("/assets/mobile-runtime.mjs").to_string();
-            let script = format!(
-                "import({}).then(module => module.mountMobileViewport())",
-                serde_json::to_string(&module).unwrap()
-            );
-            let _ = document::eval(&script).await;
-        });
-    });
-    #[cfg(target_arch = "wasm32")]
-    use_drop(|| {
-        spawn(async {
-            let _ = document::eval("window.nomsMobileViewportCleanup?.()").await;
-        });
-    });
+    let _mobile_viewport = use_hook(|| std::rc::Rc::new(crate::utils::mobile_viewport::mount()));
 
     rsx! {
         div {

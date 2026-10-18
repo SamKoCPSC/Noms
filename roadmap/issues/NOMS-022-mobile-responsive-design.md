@@ -21,6 +21,7 @@ The mobile designs were reviewed as a combined HTML document, aligned with the e
 - Recipe readers, serving controls and ingredient checklists, collection selection, full-screen cooking, immutable versions, and timeline/map history navigation.
 - Sectioned new/edit/draft editors with mounted form state, fixed actions, image editing, publication review and save/resume behavior; responsive recipe import.
 - Integration with NOMS-016's JSON import/export and imported-image review after rebasing onto current main.
+- A Rust `web_sys` viewport helper with scope-owned event listeners, animation-frame coalescing, editor-section focus and automatic cleanup; the standalone JavaScript runtime asset has been removed.
 - Light/dark appearance, compact 320px layouts, focus targets, reduced-motion behavior and keyboard viewport positioning. Physical-device keyboard and safe-area behavior still require device testing.
 
 ## Acceptance criteria
@@ -44,6 +45,7 @@ The mobile designs were reviewed as a combined HTML document, aligned with the e
 - Browser checks cover section-heading focus, draft save-before-exit, bottom navigation and theme persistence.
 - All 506 focused UI tests passed (182 component tests and 324 page tests). Focused native component/page tests use `cargo test --locked --no-default-features --features server --bin noms` with the `components::` and `pages::` filters. Page tests exclude `avatar_media_ownership_tests`, which require separate PostgreSQL OS-user fixtures; this is not a full database suite result.
 - Current-main browser checks at 320px and 390px cover six route families and a real JSON export/import round trip into an interactive private draft, followed by publication review. The imported-draft editor emits `inert` only while image review is pending, so hydration cannot disable the idle editor.
+- The Rust viewport follow-up passed the live client/server build, three new Cargo tests and [browser lifecycle/viewport checks](../assets/mobile-responsive-design/web-sys-runtime-checks.json), including cleanup and repeated mounting. Keyboard resizing was simulated.
 - Formatting and whitespace checks: `cargo fmt --all -- --check` and `git diff origin/main --check`.
 
 ## Limits and follow-ups

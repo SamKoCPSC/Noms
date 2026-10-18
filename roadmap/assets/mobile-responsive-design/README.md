@@ -31,3 +31,22 @@ whitespace and JavaScript syntax checks passed.
 These checks do not establish physical-device keyboard/safe-area behavior,
 assistive-technology compatibility or cross-browser support. The viewport helper
 supports visual-keyboard changes, but that behavior still needs device testing.
+
+## Rust viewport follow-up
+
+The mobile viewport helper now uses typed `web_sys` APIs in
+`src/utils/mobile_viewport.rs` and `src/utils/mobile_viewport/browser.rs`.
+The standalone JavaScript asset and its dynamic import have been removed.
+A scope-owned Rust registration removes listeners, cancels queued animation
+frames and clears viewport CSS state when the layout unmounts.
+
+The client/server build and three new Cargo tests passed.
+[Runtime browser checks](web-sys-runtime-checks.json) verify all six editor-section
+focus targets, a simulated 300px keyboard offset, fixed-action positioning,
+blur/reset behavior, bottom-tab hiding/restoration, desktop behavior and browsers
+without `visualViewport`. No handwritten mobile-runtime asset was requested and
+no JavaScript page errors occurred. An isolated WASM harness built from the exact
+helper source verified that unmounting cancels both pending frames and removes
+all six listeners; repeated mounts do not accumulate listeners, and 50 resize
+events coalesce into one update. These checks simulate viewport changes and do
+not replace physical-device keyboard testing.
