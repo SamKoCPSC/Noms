@@ -53,7 +53,8 @@ web-sys = { version = "0.3.98", features = [
     "Blob", "File", "FileReader", "Url",
     "DataTransfer", "DataTransferItem",
     "DragEvent", "KeyboardEvent", "Event", "EventTarget", "HtmlElement", "HtmlDialogElement",
-    "CssStyleDeclaration", "DomRect", "DomRectList", "NodeList", "FocusOptions"
+    "CssStyleDeclaration", "DomRect", "DomRectList", "NodeList", "FocusOptions",
+    "VisualViewport", "ScrollIntoViewOptions", "ScrollLogicalPosition", "ScrollBehavior"
 ] }
 js-sys = "0.3"
 wasm-bindgen-futures = "0.4"

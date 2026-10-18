@@ -150,6 +150,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
     // ── Form signals ─────────────────────────────────────────────────────
     let mut title = use_signal(String::new);
     let mut active_editor_section = use_signal(|| "basics");
+    let mut publication_review_open = use_signal(|| false);
     let mut description = use_signal(String::new);
     let mut commentary = use_signal(String::new);
     let mut prep_time = use_signal(String::new);
@@ -999,7 +1000,24 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
     // ── Render: form ────────────────────────────────────────────────────
     rsx! {
         AuthRequired {
-            div { class: "container recipe-editor", inert: reviewing_image(),
+            if publication_review_open() {
+                crate::pages::recipe_editor_form::PublicationReview {
+                    title: title(), ingredient_count: ingredients().iter().filter(|item| !item.name.trim().is_empty()).count(),
+                    step_count: steps().iter().filter(|step| !step.text.trim().is_empty()).count(), visibility: visibility(),
+                    preserve_visibility: !id_is_draft,
+                    oncancel: move |_| publication_review_open.set(false),
+                    onconfirm: move |event| {
+                        publication_review_open.set(false);
+                        if title().trim().is_empty() { active_editor_section.set("basics"); }
+                        else if ingredients().iter().all(|item| item.name.trim().is_empty()) { active_editor_section.set("ingredients"); }
+                        else if steps().iter().all(|step| step.text.trim().is_empty()) { active_editor_section.set("method"); }
+                        let mut submit = on_submit;
+                        submit(event);
+                    },
+                }
+            }
+            // HTML inert is enabled by presence, including inert="false" after hydration.
+            div { class: "container recipe-editor", inert: reviewing_image().then_some(""),
                 PageHeader {
                     icon: Some(PageIconKind::Editor),
                     title: if id_is_draft { "Edit Draft" } else { "Edit Recipe Draft" },
@@ -1046,18 +1064,23 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                         Button {
                             variant: ButtonVariant::Primary,
                             disabled: editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding()) || busy() || step_photo_upload_count() > 0,
-                            onclick: on_submit,
+                            onclick: move |event| {
+                                if crate::components::mobile::is_mobile_layout() { publication_review_open.set(true); }
+                                else { let mut submit = on_submit; submit(event); }
+                            },
                             if step_photo_upload_count() > 0 || (is_saving() && busy()) {
                                 "Uploading images..."
                             } else if is_saving() {
                                 "Publishing..."
                             } else {
-                                "Publish Changes"
+                                span { class: "desktop-publish-label", "Publish Changes" }
+                                span { class: "mobile-only", "Review & publish" }
                             }
                         }
                         Button {
                             variant: ButtonVariant::Ghost,
                             disabled: editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding()) || busy() || step_photo_upload_count() > 0,
+                            id: "recipe-editor-exit",
                             onclick: on_cancel,
                             "Cancel"
                         }
@@ -1081,6 +1104,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     div { class: "recipe-editor__panels",
 
                     section { class: "recipe-editor__panel recipe-editor__basics neumo-raised", aria_labelledby: "recipe-basics",
+                        "data-mobile-active": active_editor_section() == "basics",
                         onfocusin: move |_| active_editor_section.set("basics"),
                         onclick: move |_| active_editor_section.set("basics"),
                         h2 { id: "recipe-basics", tabindex: "-1", "Basics" }
@@ -1258,6 +1282,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
 
                     section { class: "recipe-editor__panel recipe-editor__photos neumo-raised", aria_labelledby: "recipe-photos",
+                        "data-mobile-active": active_editor_section() == "photos",
                         onfocusin: move |_| active_editor_section.set("photos"),
                         onclick: move |_| active_editor_section.set("photos"),
                         h2 { id: "recipe-photos", tabindex: "-1", "Photos" span { " · Optional" } }
@@ -1288,6 +1313,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
 
                     section { class: "recipe-editor__panel recipe-editor__ingredients neumo-raised", aria_labelledby: "recipe-ingredients",
+                        "data-mobile-active": active_editor_section() == "ingredients",
                         onfocusin: move |_| active_editor_section.set("ingredients"),
                         onclick: move |_| active_editor_section.set("ingredients"),
                         h2 { id: "recipe-ingredients", tabindex: "-1", "Ingredients" }
@@ -1359,6 +1385,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
 
                     section { class: "recipe-editor__panel recipe-editor__method neumo-raised", aria_labelledby: "recipe-method",
+                        "data-mobile-active": active_editor_section() == "method",
                         onfocusin: move |_| active_editor_section.set("method"),
                         onclick: move |_| active_editor_section.set("method"),
                         h2 { id: "recipe-method", tabindex: "-1", "Method" }
@@ -1628,6 +1655,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
 
                     section { class: "recipe-editor__panel recipe-editor__equipment neumo-raised", aria_labelledby: "recipe-equipment",
+                        "data-mobile-active": active_editor_section() == "equipment",
                         onfocusin: move |_| active_editor_section.set("equipment"),
                         onclick: move |_| active_editor_section.set("equipment"),
                         h2 { id: "recipe-equipment", tabindex: "-1", "Equipment" span { " · Optional" } }
@@ -1673,6 +1701,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
 
                     section { class: "recipe-editor__panel recipe-editor__notes neumo-raised", aria_labelledby: "recipe-notes",
+                        "data-mobile-active": active_editor_section() == "notes",
                         onfocusin: move |_| active_editor_section.set("notes"),
                         onclick: move |_| active_editor_section.set("notes"),
                         h2 { id: "recipe-notes", tabindex: "-1", "Notes" span { " · Optional" } }

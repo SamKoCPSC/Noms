@@ -12,3 +12,6 @@ pub mod image_processing_lifecycle;
 
 #[cfg(target_arch = "wasm32")]
 pub mod image_processing_client;
+
+#[cfg(any(target_arch = "wasm32", test))]
+pub mod mobile_viewport;

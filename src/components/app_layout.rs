@@ -9,10 +9,15 @@ use crate::utils::theme::use_theme;
 #[component]
 pub fn AppLayout() -> Element {
     let theme = use_theme();
+    use_context_provider(|| theme);
+    let route = use_route::<crate::Route>();
+    // The hook owns the registrations until this layout unmounts.
+    #[cfg(target_arch = "wasm32")]
+    let _mobile_viewport = use_hook(|| std::rc::Rc::new(crate::utils::mobile_viewport::mount()));
 
     rsx! {
         div {
-            class: "app-shell",
+            class: if crate::components::mobile::focused_route(&route) { "app-shell mobile-focused" } else { "app-shell mobile-tabbed" },
             Navbar { theme }
             main {
                 class: "main-content bg-gradient-animated",
@@ -20,6 +25,7 @@ pub fn AppLayout() -> Element {
                 SessionPage {}
             }
             Footer {}
+            crate::components::mobile::MobileNavigation {}
         }
     }
 }
