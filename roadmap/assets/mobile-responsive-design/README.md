@@ -50,3 +50,20 @@ helper source verified that unmounting cancels both pending frames and removes
 all six listeners; repeated mounts do not accumulate listeners, and 50 resize
 events coalesce into one update. These checks simulate viewport changes and do
 not replace physical-device keyboard testing.
+
+## Mobile drawer alignment follow-up
+
+The mobile drawer inherited the desktop `position: fixed` and 16px offsets.
+At a 393px viewport its left edge was -16px and its right edge was 377px,
+clipping the left side and leaving a gap on the right. The mobile rule now resets
+`position` and `inset`, allowing the native dialog's flex layout to place it as a
+full-width, bottom-aligned sheet.
+
+[Corrected drawer](drawer-alignment.png) and
+[browser measurements](drawer-alignment-checks.json) cover eight mobile sizes
+(320–760px wide, including 740 × 360 landscape) in light and dark appearance,
+plus signed-in navigation at 393 × 800. Every measured mobile sheet has its left
+edge at zero, right edge at the viewport width and bottom at the viewport height.
+Scrolling to a navigation link, Escape/focus restoration and backdrop dismissal
+passed without page errors. A 1440px desktop check retains the 360px right drawer
+with its original 16px inset.
