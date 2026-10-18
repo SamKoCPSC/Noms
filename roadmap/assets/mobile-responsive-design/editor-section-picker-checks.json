@@ -1,0 +1,122 @@
+{
+  "mobile_sizes": [
+    {
+      "theme": "light",
+      "width": 320,
+      "rows": 2,
+      "sections": 6,
+      "clipped": false,
+      "min_touch_height": 44
+    },
+    {
+      "theme": "light",
+      "width": 360,
+      "rows": 2,
+      "sections": 6,
+      "clipped": false,
+      "min_touch_height": 44
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "rows": 2,
+      "sections": 6,
+      "clipped": false,
+      "min_touch_height": 44
+    },
+    {
+      "theme": "light",
+      "width": 393,
+      "rows": 2,
+      "sections": 6,
+      "clipped": false,
+      "min_touch_height": 44
+    },
+    {
+      "theme": "light",
+      "width": 412,
+      "rows": 2,
+      "sections": 6,
+      "clipped": false,
+      "min_touch_height": 44
+    },
+    {
+      "theme": "light",
+      "width": 600,
+      "rows": 2,
+      "sections": 6,
+      "clipped": false,
+      "min_touch_height": 44
+    },
+    {
+      "theme": "light",
+      "width": 760,
+      "rows": 2,
+      "sections": 6,
+      "clipped": false,
+      "min_touch_height": 44
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "rows": 2,
+      "sections": 6,
+      "clipped": false,
+      "min_touch_height": 44
+    },
+    {
+      "theme": "dark",
+      "width": 360,
+      "rows": 2,
+      "sections": 6,
+      "clipped": false,
+      "min_touch_height": 44
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "rows": 2,
+      "sections": 6,
+      "clipped": false,
+      "min_touch_height": 44
+    },
+    {
+      "theme": "dark",
+      "width": 393,
+      "rows": 2,
+      "sections": 6,
+      "clipped": false,
+      "min_touch_height": 44
+    },
+    {
+      "theme": "dark",
+      "width": 412,
+      "rows": 2,
+      "sections": 6,
+      "clipped": false,
+      "min_touch_height": 44
+    },
+    {
+      "theme": "dark",
+      "width": 600,
+      "rows": 2,
+      "sections": 6,
+      "clipped": false,
+      "min_touch_height": 44
+    },
+    {
+      "theme": "dark",
+      "width": 760,
+      "rows": 2,
+      "sections": 6,
+      "clipped": false,
+      "min_touch_height": 44
+    }
+  ],
+  "section_focus_and_active_state": true,
+  "headings_below_sticky_picker": true,
+  "form_state_preserved": true,
+  "existing_draft_editor": true,
+  "desktop_sidebar_preserved": true,
+  "page_errors": []
+}

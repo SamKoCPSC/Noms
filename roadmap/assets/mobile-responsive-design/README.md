@@ -67,3 +67,20 @@ edge at zero, right edge at the viewport width and bottom at the viewport height
 Scrolling to a navigation link, Escape/focus restoration and backdrop dismissal
 passed without page errors. A 1440px desktop check retains the 360px right drawer
 with its original 16px inset.
+
+## Rounded mobile editor sections
+
+The mobile editor's square, horizontally scrolling section strip is now a
+rounded inset group with six pill-shaped controls in two rows. Every section is
+visible without horizontal scrolling; a raised pill identifies the current
+section. Heading scroll clearance accounts for the taller sticky picker.
+
+[Section picker](editor-section-picker.png), [dark appearance](editor-section-picker-dark.png)
+and [the complete new-recipe viewport](new-recipe-section-picker.png) show the
+updated design. [Browser checks](editor-section-picker-checks.json) passed at
+320, 360, 390, 393, 412, 600 and 760px in both themes: two rows, no clipped labels
+or horizontal overflow, and touch targets at least 44px tall. All six section
+links update the active state and move focus below the sticky picker; entered
+recipe text survives section changes. The existing-draft editor and the 1440px
+desktop sidebar also passed, with no JavaScript page errors. This refinement
+changes mobile CSS only.
