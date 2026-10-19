@@ -4,7 +4,7 @@ use super::how_to::HOW_TO_SECTIONS;
 use dioxus::prelude::*;
 
 #[component]
-fn LandingSearchTestRoot(signed_in: bool) -> Element {
+fn LandingTestRoot(signed_in: bool) -> Element {
     let auth = use_signal(move || crate::auth::context::AuthContext {
         is_authenticated: signed_in,
         ..Default::default()
@@ -23,14 +23,9 @@ fn signed_out_home_cta_starts_recipe_creation_through_login() {
     let cta = home_cta(false);
     let home_source = include_str!("home.rs");
 
-    assert_eq!(cta.label, "Start creating");
+    assert_eq!(cta.label, "Start your recipe book");
     assert_eq!(cta.destination, HomeCtaDestination::LoginThenCreateRecipe);
-    assert!(
-        home_source
-            .matches("/login?redirect_uri=/recipes/new")
-            .count()
-            >= 2
-    );
+    assert!(home_source.contains("/login?redirect_uri=/recipes/new"));
 }
 
 #[test]
@@ -110,33 +105,24 @@ fn public_page_copy_does_not_claim_unshipped_full_search() {
 }
 
 #[test]
-fn landing_search_explains_the_account_gate_and_public_explore_alternative() {
+fn landing_preserves_public_exploration_and_authenticated_creation() {
     for signed_in in [false, true] {
-        let mut dom = VirtualDom::new_with_props(
-            LandingSearchTestRoot,
-            LandingSearchTestRootProps { signed_in },
-        );
+        let mut dom =
+            VirtualDom::new_with_props(LandingTestRoot, LandingTestRootProps { signed_in });
         dom.rebuild_in_place();
         let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("The Ultimate Recipe Manager"));
+        assert!(html.contains("href=\"/explore\""));
         assert_eq!(
-            html.contains("aria-describedby=\"landing-search-access\""),
+            html.contains("href=\"/login?redirect_uri=/recipes/new\""),
             !signed_in
         );
-        assert_eq!(html.contains("id=\"landing-search-access\""), !signed_in);
-        assert_eq!(html.contains("Full search requires sign-in."), !signed_in);
-        assert_eq!(
-            html.contains("Search public recipes in Explore"),
-            !signed_in
-        );
-        if !signed_in {
-            let help = html
-                .split("id=\"landing-search-access\"")
-                .nth(1)
-                .unwrap()
-                .split("</p>")
-                .next()
-                .unwrap();
-            assert!(help.contains("href=\"/explore\""));
-        }
+        assert_eq!(html.contains("Open dashboard"), signed_in);
+        assert_eq!(html.contains("Create a recipe →"), signed_in);
+        assert!(html.contains("Free to use."));
+        assert!(html.contains("Your data is never shared or sold."));
+        assert!(html.contains("loading=\"lazy\""));
+        assert!(!html.contains("<iframe"));
+        assert!(!html.contains("Maya Chen"));
     }
 }

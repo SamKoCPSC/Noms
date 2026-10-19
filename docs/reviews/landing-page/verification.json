@@ -1,0 +1,33 @@
+{
+  "viewports": [
+    {
+      "width": 1440,
+      "no_overflow": true,
+      "images_decoded": true
+    },
+    {
+      "width": 393,
+      "no_overflow": true,
+      "images_decoded": true
+    },
+    {
+      "width": 320,
+      "no_overflow": true,
+      "images_decoded": true
+    },
+    {
+      "width": 768,
+      "no_overflow": true,
+      "images_decoded": true
+    }
+  ],
+  "eight_screenshot_dialogs": true,
+  "escape_and_focus_restoration": true,
+  "animation_controls": true,
+  "dark_theme": true,
+  "server_rendered_without_javascript": true,
+  "normal_and_reduced_motion": true,
+  "signed_out_cta_and_public_explore": true,
+  "page_errors": [],
+  "http_errors": []
+}

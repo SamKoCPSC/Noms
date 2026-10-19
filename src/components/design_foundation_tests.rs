@@ -19,10 +19,6 @@ fn desktop_shell_and_page_compositions_share_a_wide_container_token() {
         (CSS, ".about-page > .container"),
         (CSS, ".search-page"),
         (
-            include_str!("../../assets/home.css"),
-            ".home-page .container",
-        ),
-        (
             include_str!("../../assets/how-to.css"),
             ".how-to-page .container",
         ),
@@ -63,6 +59,8 @@ fn desktop_shell_and_page_compositions_share_a_wide_container_token() {
     // Wider composition must not widen text measures or remove the mobile gutter.
     assert_eq!(token(rule(".container"), "padding"), "0 var(--space-md)");
     assert!(CSS.contains("max-width: 650px;"));
+    // The approved landing page uses a narrower editorial measure inside the shell.
+    assert!(include_str!("../../assets/home.css").contains("max-width: 1248px;"));
     assert!(include_str!("../../assets/home.css").contains("max-width: 470px;"));
 }
 
@@ -329,7 +327,7 @@ fn contained_primary_actions_share_the_homepage_button_material() {
     let navbar = include_str!("navbar.rs");
     let home = include_str!("../pages/home.rs");
     let image_editor = include_str!("base/image_editor_modal.rs");
-    assert!(home.contains("button { class: \"btn btn-primary\", r#type: \"submit\", \"Search\" }"));
+    assert!(navbar.contains("role: \"search\""));
     assert!(home.contains("class: \"btn btn-primary touch-target\""));
     for class in [
         "navbar-link navbar-sign-in btn btn-primary navbar-contained-action",
