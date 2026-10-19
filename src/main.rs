@@ -13,6 +13,7 @@ mod db;
 #[cfg(feature = "server")]
 mod middleware;
 mod pages;
+mod recipe_html;
 mod recipe_json;
 mod routing;
 mod search;

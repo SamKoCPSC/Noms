@@ -4423,6 +4423,7 @@ dependencies = [
  "aws-sdk-s3",
  "axum",
  "axum-extra",
+ "base64",
  "chrono",
  "cookie",
  "dashmap",

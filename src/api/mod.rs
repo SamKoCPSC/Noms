@@ -10,3 +10,6 @@ pub mod recipe_archive;
 
 #[cfg(feature = "server")]
 mod recipe_json_media;
+
+#[cfg(feature = "server")]
+pub(crate) mod recipe_html;
