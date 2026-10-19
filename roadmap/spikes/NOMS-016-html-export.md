@@ -28,13 +28,3 @@ Chromium exercised the actual app's HTML download with an embedded image, text-o
 After converting the download helper to Rust, server and WebAssembly Clippy, formatting and the fullstack app build passed. Chromium reverified real JSON, embedded-image HTML, text-only HTML and ZIP downloads, including filenames, MIME types, Unicode text and ZIP integrity. A simulated anchor-attachment error revoked its object URL immediately and allowed retry; a simulated ZIP HTTP 503 created neither a file nor an object URL and also allowed retry. Same-origin cookies accompanied the ZIP request. All five object URLs created across these checks were revoked, temporary anchors were removed, and no browser page errors occurred. No additional dependency version was introduced.
 
 Synthetic recipes and a synthetic illustration were used in an isolated temporary PostgreSQL database; no existing recipe data was modified. The synthetic warning recipe's visibility was corrected to public after its canonical-import helper correctly defaulted to private. An initial fake-storage query-string handling error was also corrected before the successful final browser run. Visual inspection found no clipping or overlapping content in the final captures.
-
-Screenshot evidence:
-
-- [JSON purpose and limitations](../assets/html-export/dialog-json.png)
-- [HTML purpose, limitations, and image option](../assets/html-export/dialog-html.png)
-- [Mobile export dialog](../assets/html-export/dialog-mobile.png)
-- [Explicit image-omission confirmation](../assets/html-export/dialog-omissions.png)
-- [Desktop offline reading copy](../assets/html-export/offline-desktop.png)
-- [Mobile offline reading copy](../assets/html-export/offline-mobile.png)
-- [Print page 1](../assets/html-export/print-1.png) and [page 2](../assets/html-export/print-2.png)
