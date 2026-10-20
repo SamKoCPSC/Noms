@@ -1,25 +1,29 @@
 use dioxus::prelude::*;
 
-const HOME_CSS: Asset = asset!("/assets/home.css");
-const HOME_HERO: Asset = asset!("/assets/home-kitchen-illustration.png");
-
 use crate::auth::context::use_auth;
-use crate::components::informational::{CallToActionPanel, PageMeta};
-use crate::pages::search::landing_search_route;
+use crate::components::base::{NavigationArtwork, PageIconKind, SharedModal};
+use crate::components::informational::PageMeta;
 use crate::Route;
+
+const HOME_CSS: Asset = asset!("/assets/home.css");
+const TABLE: Asset = asset!("/assets/landing/table.webp");
+const COOKING: Asset = asset!("/assets/landing/cooking.webp");
+const MOBILE_BROWSE: Asset = asset!("/assets/landing/mobile-browse.webp");
+const MOBILE_EDIT: Asset = asset!("/assets/landing/mobile-edit.webp");
+const COOK_ONE: Asset = asset!("/assets/landing/cook-1.webp");
+const COOK_TWO: Asset = asset!("/assets/landing/cook-2.webp");
+const COOK_THREE: Asset = asset!("/assets/landing/cook-3.webp");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum HomeCtaDestination {
     LoginThenCreateRecipe,
     Dashboard,
 }
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct HomeCta {
     pub label: &'static str,
     pub destination: HomeCtaDestination,
 }
-
 pub(super) fn home_cta(is_authenticated: bool) -> HomeCta {
     if is_authenticated {
         HomeCta {
@@ -28,336 +32,267 @@ pub(super) fn home_cta(is_authenticated: bool) -> HomeCta {
         }
     } else {
         HomeCta {
-            label: "Start creating",
+            label: "Start your recipe book",
             destination: HomeCtaDestination::LoginThenCreateRecipe,
         }
     }
 }
 
+#[derive(Clone, Copy, PartialEq)]
+struct Story {
+    number: &'static str,
+    title: &'static str,
+    body: &'static str,
+    caption: &'static str,
+    image: Asset,
+    size: (u32, u32),
+}
+const STORIES: &[Story] = &[
+    Story { number: "01", title: "Discover new recipes.", body: "Find dishes you've never tried and get inspiration for your next weekend meal.", caption: "Croissants, chocolate cake, and Korean fried chicken in Explore.", image: asset!("/assets/landing/discover.webp"), size: (1120, 780) },
+    Story { number: "02", title: "Create your signature recipe.", body: "Save all your favorite recipes, and easily make changes as you refine them.", caption: "Refine a caramelized onion and mushroom burger in a private draft.", image: asset!("/assets/landing/create.webp"), size: (1120, 780) },
+    Story { number: "03", title: "Make cooking your favorites convenient", body: "Easily adjust proportions with the recipe calculator, make use of the built-in ingredients checklist, and cook with cooking mode.", caption: "Scale chili garlic oil noodles, then check off the ingredients.", image: asset!("/assets/landing/calculator-checklist.webp"), size: (900, 958) },
+    Story { number: "04", title: "Study how your recipes change.", body: "View a precise breakdown of how your recipes change over time to see what works and what doesn't.", caption: "Compare two batches of chocolate chip cookies, ingredient by ingredient.", image: asset!("/assets/landing/history.webp"), size: (1120, 1200) },
+    Story { number: "05", title: "Share your best creations.", body: "Publish and share recipes you're proud of, and let others know what you're working on.", caption: "Robert McRobertson’s public recipes and collections.", image: asset!("/assets/landing/share.webp"), size: (1120, 900) },
+];
+
+const FEATURES: &[(PageIconKind, &str, &str)] = &[
+    (PageIconKind::Editor, "Recipe editor", "Keep ingredients, amounts, instructions, timings, servings, equipment, and notes together."),
+    (PageIconKind::Editor, "Recipe and step photos", "Add photos to the whole recipe or to individual steps when a picture helps explain."),
+    (PageIconKind::Editor, "Photo editing", "Crop, rotate, and adjust your photos before saving them."),
+    (PageIconKind::History, "Autosaved drafts", "Work on a private draft and keep your edits as you go. Publish when you’re ready."),
+    (PageIconKind::Editor, "Clipboard import", "Paste a copied recipe from a supported website into an editable draft."),
+    (PageIconKind::Collections, "Nested collections", "Group recipes in collections and subcollections, then arrange them in your own order."),
+    (PageIconKind::Explore, "Search and filters", "Browse public recipes in Explore. Sign in to search recipes, collections, and cooks with filters."),
+    (PageIconKind::Editor, "Servings calculator", "Adjust portions for your table and recalculate the ingredient quantities."),
+    (PageIconKind::Editor, "Ingredient-based scaling", "Have a fixed amount of one ingredient? Scale the rest of the recipe around it."),
+    (PageIconKind::Editor, "Ingredient checklist", "Check off ingredients as you prepare them in the mobile recipe view."),
+    (PageIconKind::Editor, "Step-by-step cooking", "Follow one step at a time in a focused mobile cooking view."),
+    (PageIconKind::History, "Version history", "Keep a record of published updates so earlier versions remain available."),
+    (PageIconKind::History, "Version comparisons", "See the before and after of each field to understand exactly what changed."),
+    (PageIconKind::History, "Restore a version", "Bring an earlier published version back as a new update."),
+    (PageIconKind::Explore, "Adapt with attribution", "Fork a recipe into a private draft while keeping the original source attached."),
+    (PageIconKind::Collections, "Visibility controls", "Choose private, unlisted, or public access for recipes and collections."),
+    (PageIconKind::Explore, "Public cook profiles", "Share your published recipes and collections on your own cook profile."),
+    (PageIconKind::Collections, "JSON import and export", "Move recipes with Noms JSON. Include a saved-image archive when exporting."),
+];
+
 #[component]
 pub fn Home() -> Element {
     let auth = use_auth();
-    let mut search_text = use_signal(String::new);
-    let primary_cta = home_cta(auth.is_authenticated);
-    let final_primary_label = if auth.is_authenticated {
-        "Create a recipe"
-    } else {
-        "Start your first recipe"
-    };
-    let final_primary_route = if auth.is_authenticated {
-        Route::RecipeNew {}
-    } else {
-        Route::Login {}
-    };
-    let final_primary_href = (!auth.is_authenticated).then_some("/login?redirect_uri=/recipes/new");
-
+    let mut paused = use_signal(|| false);
     rsx! {
         document::Link { rel: "stylesheet", href: HOME_CSS }
         PageMeta {
-            title: "Noms — Recipes worth keeping",
-            description: "Capture recipes in detail, organize your library, preserve every published version, and share on your terms.",
+            title: "Noms — The Ultimate Recipe Manager",
+            description: "Noms is a community-focused recipe archive designed for saving, sharing, and developing recipes",
             path: "/",
         }
-
-        div { class: "marketing-page home-page",
-            section { class: "marketing-hero home-hero container", aria_labelledby: "home-title",
-                div { class: "marketing-hero__copy",
-                    p { class: "marketing-eyebrow", "A recipe journal that grows with you" }
-                    h1 { id: "home-title", "A cozy home for your recipes." }
-                    p { class: "marketing-lede",
-                        "Save the meals you love, keep your notes, and make each version your own."
+        div { class: "home-page landing-page",
+            section { class: "landing-hero landing-wrap", aria_labelledby: "home-title",
+                div { class: "landing-hero-copy",
+                    h1 { id: "home-title", "The Ultimate Recipe Manager" }
+                    p { class: "landing-intro", "Noms is a community-focused recipe archive designed for saving, sharing, and developing recipes" }
+                    LandingActions { signed_in: auth.is_authenticated, search: true }
+                }
+                div { class: "landing-hero-visual",
+                    img { src: TABLE, alt: "A shared table with homemade pasta, soup, bread, and salad", width: "1536", height: "1024", fetchpriority: "high" }
+                    div { class: "landing-floating-note",
+                        strong { "A recipe is a starting point." }
+                        span { "Keep learning. Keep cooking." }
                     }
-                    form {
-                        class: "landing-search",
-                        role: "search",
-                        onsubmit: move |event| {
-                            event.prevent_default();
-                            if let Some(route) = landing_search_route(&search_text()) {
-                                navigator().push(route);
+                }
+            }
+            div { class: "landing-promises landing-wrap", aria_label: "Noms commitments",
+                for promise in ["For every kind of cook", "Free to use", "No intrusive advertising", "Your data stays yours"] {
+                    span { "{promise}" }
+                }
+            }
+            section { class: "landing-mission landing-wrap", aria_labelledby: "landing-mission-title",
+                div { class: "landing-section-head",
+                    p { class: "landing-eyebrow", "Why Noms exists" }
+                    h2 { id: "landing-mission-title", "Create and share your signature recipes." }
+                    p { "Noms makes it easier for cooks from all backgrounds to save and discover their best dishes. Bringing together a community that's passionate about making and eating great food." }
+                }
+                figure {
+                    img { src: COOKING, alt: "Two home cooks preparing a meal together in a sunlit kitchen", width: "1536", height: "1024", loading: "lazy", decoding: "async" }
+                    figcaption { "Good food brings people together." }
+                }
+            }
+            section { class: "landing-chapters landing-wrap", aria_label: "Five ways to use Noms",
+                for story in STORIES.iter().copied() {
+                    article { class: "landing-chapter", key: "{story.number}",
+                        div { class: "landing-chapter-copy",
+                            span { class: "landing-chapter-number", "{story.number}" }
+                            h2 { "{story.title}" }
+                            p { "{story.body}" }
+                        }
+                        LandingScreenshot { source: story.image, title: story.title, caption: story.caption, size: story.size }
+                    }
+                }
+            }
+            section { class: "landing-features landing-wrap", id: "landing-features", aria_labelledby: "landing-features-title",
+                div { class: "landing-section-head",
+                    p { class: "landing-eyebrow", "What you can do" }
+                    h2 { id: "landing-features-title", "Recipe features, at a glance." }
+                    p { "Tools for writing, organizing, cooking, and keeping track of your recipes." }
+                }
+                div { class: "landing-feature-grid",
+                    for (index, (icon, title, body)) in FEATURES.iter().enumerate() {
+                        article { class: "landing-feature-card", key: "{title}",
+                            div { class: "landing-feature-top",
+                                NavigationArtwork { kind: *icon }
+                                span { aria_hidden: "true", "{index + 1:02}" }
                             }
-                        },
-                        label { r#for: "landing-search-query", class: "sr-only", "Search Noms" }
-                        input {
-                            id: "landing-search-query",
-                            r#type: "search",
-                            aria_describedby: (!auth.is_authenticated).then_some("landing-search-access"),
-                            value: search_text(),
-                            placeholder: "Search recipes, collections, and cooks",
-                            autocomplete: "off",
-                            oninput: move |event| search_text.set(event.value()),
-                        }
-                        button { class: "btn btn-primary", r#type: "submit", "Search" }
-                    }
-                    if !auth.is_authenticated {
-                        p { id: "landing-search-access", class: "marketing-note",
-                            "Full search requires sign-in. "
-                            Link { to: Route::Explore {}, "Search public recipes in Explore" }
-                            "."
+                            h3 { "{title}" }
+                            p { "{body}" }
                         }
                     }
-                    div { class: "marketing-actions",
-                        match primary_cta.destination {
-                            HomeCtaDestination::Dashboard => rsx! {
-                                Link { to: Route::Dashboard {}, class: "btn btn-primary touch-target", "{primary_cta.label}" }
-                            },
-                            HomeCtaDestination::LoginThenCreateRecipe => rsx! {
-                                a { href: "/login?redirect_uri=/recipes/new", class: "btn btn-primary touch-target", "{primary_cta.label}" }
-                            },
-                        }
-                        Link { to: Route::Explore {}, class: "btn btn-secondary touch-target", "Explore recipes" }
-                    }
-                    p { class: "marketing-note", "Your drafts stay private until you’re ready to publish." }
                 }
-
-                div { class: "home-hero-illustration", aria_hidden: "true",
-                    div { class: "home-hero-illustration__glow" }
-                    img {
-                        class: "home-hero-illustration__image",
-                        src: HOME_HERO,
-                        alt: "",
-                        width: "1536",
-                        height: "1024",
+            }
+            section { class: "landing-mobile landing-wrap", aria_labelledby: "landing-mobile-title",
+                div { class: "landing-section-head",
+                    p { class: "landing-eyebrow", "Noms on mobile" }
+                    h2 { id: "landing-mobile-title", "Your recipes, wherever you cook." }
+                    p { "Look up a recipe at the shops, refine an idea on the sofa, or keep the method beside you at the stove. Noms brings the same recipe tools to a layout made for your phone." }
+                }
+                div { class: "landing-mobile-grid",
+                    MobilePreview { source: MOBILE_BROWSE, number: "01", title: "Find your next recipe", body: "Browse dishes and open your library with navigation that stays within reach." }
+                    MobilePreview { source: MOBILE_EDIT, number: "02", title: "Keep an idea moving", body: "Edit a recipe in clear sections, with your draft saved while you work." }
+                    MobilePreview { source: COOK_ONE, number: "03", title: "A hand in the kitchen", body: "Adjust portions, check ingredients, and follow the method one step at a time.", animate: true, paused: paused() }
+                }
+                div { class: "landing-motion-control",
+                    button { class: "btn btn-secondary", r#type: "button", aria_pressed: paused(), onclick: move |_| { let next = !paused(); paused.set(next); },
+                        if paused() { "Play animation" } else { "Pause animation" }
+                    }
+                    p { "Actual Noms screens. Tap any screen to view it larger." }
+                }
+            }
+            section { class: "landing-trust landing-wrap", aria_labelledby: "landing-trust-title",
+                div { class: "landing-section-head",
+                    p { class: "landing-eyebrow", "Our approach" }
+                    h2 { id: "landing-trust-title", "Here for your cooking." }
+                    p { "Noms is free to use. We want a useful place to cook and share, built on respect for the people who use it." }
+                }
+                div { class: "landing-trust-grid",
+                    for (index, title, body) in [
+                        ("01", "Free to use.", "Save, manage, develop, and share your recipes without a subscription."),
+                        ("02", "No intrusive advertising.", "Space to focus on recipes, without advertising getting in the way of cooking."),
+                        ("03", "Your data stays yours.", "Your data is never shared or sold. It isn’t used to manipulate you into buying other products.")
+                    ] {
+                        article { span { aria_hidden: "true", "{index}" } h3 { "{title}" } p { "{body}" } }
                     }
                 }
             }
-
-            section { class: "home-benefits container", aria_label: "What Noms helps you do",
-                HomeBenefitCard { kind: "capture", title: "Capture", body: "Ingredients, photos, and those little notes you don’t want to forget." }
-                HomeBenefitCard { kind: "organize", title: "Organize", body: "Collections that keep family favorites and new discoveries close at hand." }
-                HomeBenefitCard { kind: "personalize", title: "Make it yours", body: "Tweak, taste, and try again. Every published version stays in your story." }
-            }
-
-            section { class: "home-version-story container", aria_labelledby: "home-version-title",
-                div { class: "home-version-story__copy",
-                    p { class: "marketing-eyebrow", "The recipe journal" }
-                    h2 { id: "home-version-title", "A little better, every time." }
-                    p { "Recipes aren’t set in stone. Keep notes, try new things, and watch your favorites get even better." }
-                    Link { to: Route::HowTo {}, class: "marketing-text-link", "See how versions work →" }
+            section { class: "landing-closing landing-wrap", aria_labelledby: "landing-closing-title",
+                p { class: "landing-eyebrow", "You can start with one recipe." }
+                h2 { id: "landing-closing-title", "Begin your kitchen journal." }
+                LandingActions { signed_in: auth.is_authenticated, create: true }
+                div { class: "landing-more-links",
+                    Link { to: Route::About {}, "About Noms" }
+                    Link { to: Route::HowTo {}, "How to use Noms" }
                 }
-                ol { class: "home-version-story__notes", aria_label: "Illustrative recipe version journey",
-                    li { class: "home-version-note",
-                        span { class: "home-version-note__number", "01" }
-                        span { class: "home-version-note__label", "Version 1" }
-                        strong { "First keeper" }
-                        p { "Roasted tomato soup. A good place to start." }
-                    }
-                    li { class: "home-version-note",
-                        span { class: "home-version-note__number", "02" }
-                        span { class: "home-version-note__label", "Version 2" }
-                        strong { "A small tweak" }
-                        p { "More garlic. A handful of fresh basil." }
-                    }
-                    li { class: "home-version-note",
-                        span { class: "home-version-note__number", "03" }
-                        span { class: "home-version-note__label", "Version 3" }
-                        strong { "Just right" }
-                        p { "A gentler simmer. This one’s a keeper." }
-                    }
-                }
-            }
-
-            section { class: "marketing-feature-list container", aria_label: "Noms features",
-                FeatureStory {
-                    eyebrow: "A calm place to work",
-                    title: "Start rough. Publish when it’s ready.",
-                    body: "Recipes rarely arrive fully formed. Noms keeps new recipes and edits as private, autosaved drafts while you measure, rewrite, and add the details that matter.",
-                    route: Route::RecipeNew {},
-                    link_label: "Create a recipe",
-                    visual_kind: "draft",
-                }
-                FeatureStory {
-                    eyebrow: "A library with structure",
-                    title: "Give every recipe a place.",
-                    body: "Group recipes into collections, add subcollections when one level is not enough, and arrange everything in an order that makes sense to you.",
-                    route: Route::CollectionList {},
-                    link_label: "Open collections",
-                    visual_kind: "collections",
-                    reverse: true,
-                }
-                FeatureStory {
-                    eyebrow: "History that stays useful",
-                    title: "See how a recipe became the one you trust.",
-                    body: "Each published update joins the recipe’s history. Open an earlier snapshot, compare versions, or restore a previous version as a new update.",
-                    route: Route::HowTo {},
-                    link_label: "Learn about versions",
-                    visual_kind: "versions",
-                }
-            }
-
-            section { class: "marketing-community container", aria_labelledby: "community-title",
-                div { class: "marketing-community__copy",
-                    p { class: "marketing-eyebrow", "Cook, adapt, contribute" }
-                    h2 { id: "community-title", "Find something worth cooking—and make it your own." }
-                    p {
-                        "Explore public recipes and visit creator profiles to see what people have chosen to share. When a recipe sparks an idea, fork it into a private draft with its source attached."
-                    }
-                    div { class: "marketing-actions",
-                        Link { to: Route::Explore {}, class: "btn btn-primary touch-target", "Explore recipes" }
-                        Link { to: Route::HowTo {}, class: "btn btn-secondary touch-target", "How forking works" }
-                    }
-                }
-                div { class: "marketing-community__scale-card",
-                    span { class: "marketing-community__scale-label", "Cooking for more?" }
-                    strong { "Scale 4 servings → 6" }
-                    div { class: "marketing-community__scale-line",
-                        span { "2 cups" }
-                        span { "3 cups" }
-                    }
-                    p { "Adjust the cooking view without changing the saved recipe." }
-                }
-            }
-
-            CallToActionPanel {
-                title: "Make room for the recipes you return to.",
-                body: "Start with one recipe. Add the details you care about, organize it your way, and let it improve each time you cook.",
-                primary_label: final_primary_label,
-                primary_route: final_primary_route,
-                primary_href: final_primary_href,
-                secondary_label: "See how Noms works",
-                secondary_route: Route::HowTo {},
             }
         }
     }
 }
 
-#[derive(Props, Clone, PartialEq)]
-struct HomeBenefitCardProps {
-    kind: &'static str,
+#[component]
+fn LandingActions(
+    signed_in: bool,
+    #[props(default)] create: bool,
+    #[props(default)] search: bool,
+) -> Element {
+    let cta = home_cta(signed_in);
+    rsx! {
+        if search {
+            form { class: "landing-recipe-search", role: "search", aria_label: "Find a recipe", action: "/explore", method: "get",
+                label { class: "sr-only", r#for: "landing-recipe-query", "Search public recipes" }
+                svg { view_box: "0 0 24 24", width: "20", height: "20", fill: "none", stroke: "currentColor", stroke_width: "1.8", "aria-hidden": "true",
+                    circle { cx: "10.5", cy: "10.5", r: "6.5" }
+                    path { d: "m16 16 4 4" }
+                }
+                input { id: "landing-recipe-query", name: "q", r#type: "search", placeholder: "Find your next recipe…", maxlength: "256" }
+                button { class: "btn btn-primary", r#type: "submit", "Search" }
+            }
+        }
+        div { class: "landing-actions",
+            if cta.destination == HomeCtaDestination::Dashboard {
+                if create { Link { to: Route::RecipeNew {}, class: "btn btn-primary touch-target", "Create a recipe →" } }
+                else { Link { to: Route::Dashboard {}, class: "btn btn-primary touch-target", "{cta.label} →" } }
+            } else {
+                a { href: "/login?redirect_uri=/recipes/new", class: "btn btn-primary touch-target", "{cta.label} →" }
+            }
+            if !search {
+                Link { to: Route::Explore {}, class: "btn btn-secondary touch-target", "Explore recipes" }
+            }
+        }
+        p { class: "landing-tiny", "Free to use · Browse public recipes without an account" }
+    }
+}
+
+#[component]
+fn LandingScreenshot(
+    source: Asset,
+    title: &'static str,
+    caption: &'static str,
+    #[props(default = (1120, 780))] size: (u32, u32),
+    #[props(default)] phone: bool,
+    #[props(default)] animate: bool,
+    #[props(default)] paused: bool,
+) -> Element {
+    let mut open = use_signal(|| false);
+    let id = use_hook(|| format!("landing-shot-{}", uuid::Uuid::new_v4()));
+    let title_id = format!("{id}-title");
+    let close_id = format!("{id}-close");
+    rsx! {
+        figure { class: if phone { "landing-phone" } else { "landing-app-window" },
+            if !phone {
+                div { class: "landing-window-bar", aria_hidden: "true", i {} i {} i {} span { "Noms / {title}" } }
+            }
+            button { class: "landing-shot-button", r#type: "button", aria_label: "Enlarge screenshot: {title}", onclick: move |_| open.set(true),
+                if animate {
+                    div { class: if paused { "landing-cooking-frames is-paused" } else { "landing-cooking-frames" },
+                        img { src: source, alt: "Noms mobile cooking mode: miso mushroom ramen, step one", width: "390", height: "780", loading: "lazy", decoding: "async" }
+                        img { src: COOK_TWO, alt: "", aria_hidden: "true", width: "390", height: "780", loading: "lazy", decoding: "async" }
+                        img { src: COOK_THREE, alt: "", aria_hidden: "true", width: "390", height: "780", loading: "lazy", decoding: "async" }
+                    }
+                } else {
+                    img { src: source, alt: caption, width: "{size.0}", height: "{size.1}", loading: "lazy", decoding: "async" }
+                }
+            }
+            if !phone { figcaption { "{caption}" span { "View larger →" } } }
+        }
+        if open() {
+            SharedModal { aria_labelledby: title_id.clone(), focus_selector: format!("#{close_id}"), on_dismiss: move |_| open.set(false),
+                div { class: "landing-screenshot-dialog", onclick: move |event| event.stop_propagation(),
+                    header {
+                        h2 { id: title_id, "{title}" }
+                        button { id: close_id, class: "btn btn-secondary", r#type: "button", onclick: move |_| open.set(false), "Close screenshot" }
+                    }
+                    div { class: "landing-screenshot-scroll",
+                        img { class: if phone { "landing-enlarged-phone" } else { "landing-enlarged-desktop" }, src: source, alt: caption }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn MobilePreview(
+    source: Asset,
+    number: &'static str,
     title: &'static str,
     body: &'static str,
-}
-
-#[component]
-fn HomeBenefitCard(props: HomeBenefitCardProps) -> Element {
+    #[props(default)] animate: bool,
+    #[props(default)] paused: bool,
+) -> Element {
     rsx! {
-        article { class: "home-benefit-card neumo-card",
-            div { class: "home-benefit-card__art home-benefit-card__art--{props.kind}", aria_hidden: "true",
-                span {}
-                span {}
-                span {}
-            }
-            div { class: "home-benefit-card__copy",
-                h2 { "{props.title}" }
-                p { "{props.body}" }
-            }
+        article { class: "landing-mobile-card",
+            LandingScreenshot { source, title, caption: title, size: (390, 780), phone: true, animate, paused }
+            span { class: "landing-mobile-index", "{number} / MOBILE" }
+            h3 { "{title}" }
+            p { "{body}" }
         }
-    }
-}
-
-#[derive(Props, Clone, PartialEq)]
-struct FeatureStoryProps {
-    eyebrow: &'static str,
-    title: &'static str,
-    body: &'static str,
-    route: Route,
-    link_label: &'static str,
-    visual_kind: &'static str,
-    #[props(default)]
-    reverse: bool,
-}
-
-#[component]
-fn FeatureStory(props: FeatureStoryProps) -> Element {
-    let class = if props.reverse {
-        "marketing-feature marketing-feature--reverse"
-    } else {
-        "marketing-feature"
-    };
-
-    rsx! {
-        article { class,
-            div { class: "marketing-feature__copy",
-                p { class: "marketing-eyebrow", "{props.eyebrow}" }
-                h2 { "{props.title}" }
-                p { "{props.body}" }
-                Link { to: props.route, class: "marketing-text-link", "{props.link_label} →" }
-            }
-            FeatureVisual { kind: props.visual_kind }
-        }
-    }
-}
-
-#[derive(Props, Clone, PartialEq)]
-struct FeatureVisualProps {
-    kind: &'static str,
-}
-
-#[component]
-fn FeatureVisual(props: FeatureVisualProps) -> Element {
-    match props.kind {
-        "collections" => rsx! {
-            div { class: "marketing-feature__visual marketing-collection-visual", aria_hidden: "true",
-                div { class: "marketing-folder marketing-folder--main", span { "Weeknight dinners" } }
-                div { class: "marketing-folder marketing-folder--second", span { "Bread notebook" } }
-                div { class: "marketing-folder marketing-folder--third", span { "Family recipes" } }
-            }
-        },
-        "versions" => rsx! {
-            div { class: "marketing-feature__visual marketing-version-visual", aria_hidden: "true",
-                div { class: "marketing-version-line" }
-                div { class: "marketing-version-node", strong { "v1" } span { "The first keeper" } }
-                div { class: "marketing-version-node marketing-version-node--current", strong { "v4" } span { "Current · better timing" } }
-                div { class: "marketing-version-node", strong { "v2" } span { "More garlic" } }
-            }
-        },
-        _ => rsx! {
-            div { class: "marketing-feature__visual marketing-draft-visual", aria_hidden: "true",
-                div { class: "marketing-draft-visual__status", span { class: "marketing-status-dot" } "Autosaved privately" }
-                div { class: "marketing-draft-visual__line marketing-draft-visual__line--title" }
-                div { class: "marketing-draft-visual__line" }
-                div { class: "marketing-draft-visual__line marketing-draft-visual__line--short" }
-                div { class: "marketing-draft-visual__ingredients",
-                    span { "tomatoes" }
-                    span { "basil" }
-                    span { "+ one good note" }
-                }
-            }
-        },
-    }
-}
-
-#[cfg(test)]
-mod design_tests {
-    const HOME: &str = include_str!("home.rs");
-    const HOME_CSS: &str = include_str!("../../assets/home.css");
-
-    #[test]
-    fn cozy_home_has_three_benefits_and_a_version_story() {
-        assert!(HOME.contains("class: \"home-hero-illustration\""));
-        assert!(HOME.contains("class: \"home-benefits container\""));
-        assert_eq!(
-            HOME.lines()
-                .filter(|line| line.trim_start().starts_with("HomeBenefitCard { kind:"))
-                .count(),
-            3
-        );
-        assert!(HOME.contains("class: \"home-version-story container\""));
-        assert_eq!(
-            HOME.lines()
-                .filter(|line| line
-                    .trim_start()
-                    .starts_with("li { class: \"home-version-note\""))
-                .count(),
-            3
-        );
-    }
-
-    #[test]
-    fn home_keeps_search_and_authenticated_creation_routes() {
-        assert!(HOME.contains("landing_search_route(&search_text())"));
-        assert!(HOME.contains("/login?redirect_uri=/recipes/new"));
-        assert!(HOME.contains("Route::Dashboard {}"));
-        assert!(HOME.contains("Route::Explore {}"));
-    }
-
-    #[test]
-    fn home_illustration_is_decorative_and_layout_is_route_scoped() {
-        assert!(HOME.contains("class: \"home-hero-illustration\", aria_hidden: \"true\""));
-        assert!(HOME.contains("aria_label: \"Illustrative recipe version journey\""));
-        assert!(HOME.contains("document::Link { rel: \"stylesheet\", href: HOME_CSS }"));
-        assert!(HOME_CSS.contains(".home-page .home-hero"));
-        assert!(HOME_CSS.contains("@media (max-width: 900px)"));
-        assert!(HOME_CSS.contains("@media (max-width: 719px)"));
-        assert!(HOME_CSS.contains("@media (forced-colors: active)"));
     }
 }
