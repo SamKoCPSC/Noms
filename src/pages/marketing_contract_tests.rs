@@ -112,6 +112,18 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
         dom.rebuild_in_place();
         let html = dioxus_ssr::render(&dom);
         assert!(html.contains("The Ultimate Recipe Manager"));
+        let stories = html
+            .split("class=\"landing-chapters landing-wrap\"")
+            .nth(1)
+            .unwrap()
+            .split("class=\"landing-features landing-wrap\"")
+            .next()
+            .unwrap();
+        assert_eq!(stories.matches("class=\"landing-chapter-copy\"").count(), 6);
+        assert!(stories.contains("Use anywhere"));
+        assert!(stories.contains("features anywhere with a mobile-optimized experience"));
+        assert!(!html.contains("landing-chapter-number"));
+        assert!(!html.contains("landing-mobile landing-wrap"));
         assert_eq!(html.matches("class=\"landing-recipe-search\"").count(), 1);
         assert!(html.contains("action=\"/explore\""));
         assert!(html.contains("method=\"get\""));

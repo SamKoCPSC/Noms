@@ -101,9 +101,19 @@ async def main():
         ]:
             await p.set_viewport_size({"width": width, "height": 900})
             await p.evaluate("scrollTo(0,0)")
-            await expect(p.locator(".landing-chapter")).to_have_count(5)
+            await expect(p.locator(".landing-chapter")).to_have_count(6)
             await expect(p.locator(".landing-feature-card")).to_have_count(18)
             await expect(p.locator(".landing-mobile-card")).to_have_count(3)
+            await expect(p.locator(".landing-chapter-number")).to_have_count(0)
+            await expect(p.locator("section.landing-mobile")).to_have_count(0)
+            await expect(p.locator(".landing-chapter").last.locator("h2")).to_have_text(
+                "Use anywhere"
+            )
+            await expect(
+                p.locator(".landing-chapter").last.locator(".landing-chapter-copy p")
+            ).to_have_text(
+                "access all of Noms' features anywhere with a mobile-optimized experience"
+            )
             dims = await p.evaluate(
                 '({width:innerWidth,scroll:document.documentElement.scrollWidth,missing:[...document.querySelectorAll(".landing-page img")].filter(i=>i.getClientRects().length&&(!i.complete||!i.naturalWidth)).map(i=>i.alt)})'
             )
@@ -149,7 +159,7 @@ async def main():
             p.get_by_role("button", name="Play animation", exact=True)
         ).to_have_attribute("aria-pressed", "true")
         await p.get_by_role("button", name="Play animation", exact=True).click()
-        await capture_section(p, ".landing-mobile", "mobile-experience.jpg")
+        await capture_section(p, ".landing-chapter--mobile", "mobile-experience.jpg")
         await p.set_viewport_size({"width": 1440, "height": 1000})
         await capture_section(
             p, ".landing-chapter:nth-child(3)", "calculator-checklist.jpg"
@@ -211,7 +221,7 @@ async def main():
         static = await static_ctx.new_page()
         await common.go(static, "/")
         await expect(static.locator("h1")).to_have_text("The Ultimate Recipe Manager")
-        await expect(static.locator(".landing-chapter")).to_have_count(5)
+        await expect(static.locator(".landing-chapter")).to_have_count(6)
         await expect(static.locator(".landing-feature-card")).to_have_count(18)
         static_form = static.get_by_role("search", name="Find a recipe", exact=True)
         await static_form.get_by_role(
@@ -226,7 +236,7 @@ async def main():
         )
         motion = await motion_ctx.new_page()
         await common.go(motion, "/")
-        await motion.locator(".landing-mobile").scroll_into_view_if_needed()
+        await motion.locator(".landing-chapter--mobile").scroll_into_view_if_needed()
         frames = motion.locator(".landing-cooking-frames img")
         assert (
             await frames.first.evaluate("e=>getComputedStyle(e).animationName")
@@ -251,6 +261,8 @@ async def main():
             {
                 "viewports": results,
                 "eight_screenshot_dialogs": True,
+                "six_unnumbered_stories": True,
+                "mobile_story_copy_and_animation": True,
                 "escape_and_focus_restoration": True,
                 "animation_controls": True,
                 "dark_theme": True,
