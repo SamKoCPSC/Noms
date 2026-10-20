@@ -5,6 +5,7 @@ use manganis::CssAssetOptions;
 
 mod api;
 mod auth;
+mod collection_json;
 mod components;
 #[cfg(feature = "server")]
 mod config;

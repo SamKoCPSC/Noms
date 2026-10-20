@@ -357,6 +357,7 @@ fn CollectionDetailContents(id: String) -> Element {
                             if can_edit {
                                 Link { to: Route::Dashboard {}, class: "btn btn-primary touch-target", "＋ Add recipes" }
                                 Link { to: Route::CollectionEdit { id: collection_id.clone() }, class: "btn btn-secondary touch-target", "Edit" }
+                                super::collection_json_controls::CollectionJsonExport { collection_id: collection_id.clone() }
                                 span {
                                     id: "delete-collection-trigger",
                                     Button { variant: ButtonVariant::Danger, disabled: deleting(), onclick: move |_| {

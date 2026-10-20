@@ -46,7 +46,7 @@ mod server {
         pub author_username: String,
     }
 
-    fn digest(snapshot: &Value) -> Result<String, String> {
+    pub(crate) fn digest(snapshot: &Value) -> Result<String, String> {
         let canonical =
             serde_jcs::to_vec(snapshot).map_err(|_| "Cannot canonicalize recipe JSON.")?;
         Ok(format!("sha256:{:x}", Sha256::digest(canonical)))

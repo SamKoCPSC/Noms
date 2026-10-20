@@ -1,4 +1,5 @@
 pub mod collection;
+pub mod collection_portability;
 pub mod recipe;
 
 pub mod search;

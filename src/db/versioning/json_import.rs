@@ -7,6 +7,188 @@ pub struct JsonImportReview {
     pub source: Option<Uuid>,
     pub images: Vec<ImportedRecipeImage>,
 }
+
+pub struct PreparedJsonRecipe {
+    pub portable_id: String,
+    pub payload: RecipeDraftPayload,
+    pub review: JsonImportReview,
+    pub checked: Vec<ImportedRecipeImage>,
+}
+
+/// Recreate a private collection tree and private saved copies in one commit.
+pub async fn create_collection_json_import(
+    pool: &PgPool,
+    user: Uuid,
+    nodes: Vec<crate::collection_json::PortableCollection>,
+    prepared: Vec<PreparedJsonRecipe>,
+    covers: HashMap<String, crate::types::RecipeImage>,
+    mut warnings: Vec<String>,
+) -> Result<crate::collection_json::CollectionImportResult, DbError> {
+    let invalid = || DbError::InvalidRecipeSnapshot("Invalid collection import.".into());
+    if nodes.is_empty()
+        || nodes.len() > crate::collection_json::MAX_COLLECTIONS
+        || prepared.len() > crate::collection_json::MAX_RECIPES
+    {
+        return Err(invalid());
+    }
+    let mut tx = pool.begin().await.map_err(DbError::Query)?;
+    lock_resource_owner(&mut tx, user).await?;
+    let (count, roots): (i64, i64) = sqlx::query_as("SELECT COUNT(*), COUNT(*) FILTER (WHERE parent_collection_id IS NULL) FROM collections WHERE owner_id=$1")
+        .bind(user).fetch_one(&mut *tx).await.map_err(DbError::Query)?;
+    if count as usize + nodes.len() > crate::security::MAX_COLLECTIONS_PER_USER
+        || roots as usize >= crate::security::MAX_COLLECTION_CHILDREN
+    {
+        return Err(DbError::CollectionLimitExceeded(
+            "collection import capacity",
+        ));
+    }
+    let existing_names: Vec<String> = sqlx::query_scalar(
+        "SELECT lower(name) FROM collections WHERE owner_id=$1 AND parent_collection_id IS NULL",
+    )
+    .bind(user)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(DbError::Query)?;
+    let original_name = &nodes[0].name;
+    let mut root_name = original_name.clone();
+    for copy in 1..=crate::security::MAX_COLLECTION_CHILDREN + 1 {
+        if !existing_names.contains(&root_name.to_lowercase()) {
+            break;
+        }
+        let suffix = if copy == 1 {
+            " (imported)".into()
+        } else {
+            format!(" (imported {copy})")
+        };
+        root_name = original_name
+            .chars()
+            .take(crate::security::MAX_COLLECTION_NAME_CHARS - suffix.chars().count())
+            .collect::<String>()
+            + &suffix;
+    }
+    if root_name != *original_name {
+        warnings.push(format!(
+            "The existing collection was kept. The imported copy is named ‘{root_name}’."
+        ));
+    }
+    let mut recipe_ids = HashMap::new();
+    let mut image_reviews = vec![];
+    for mut item in prepared {
+        let source = apply_checked(
+            &mut tx,
+            user,
+            None,
+            &mut item.payload,
+            &mut item.review,
+            &item.checked,
+        )
+        .await?;
+        let snapshot = normalized_snapshot(&item.payload.content);
+        validate_snapshot_for_publish(&snapshot, "private")?;
+        let recipe = insert_recipe_from_snapshot(
+            &mut tx,
+            user,
+            &snapshot,
+            "private",
+            super::super::MediaAttachAuthority::JsonImport {
+                source,
+                draft: Uuid::nil(),
+            },
+        )
+        .await?;
+        insert_recipe_version(&mut tx, recipe.id, user, 1, &snapshot, None).await?;
+        super::super::insert_recipe_tags(&mut tx, recipe.id, &snapshot.tags).await?;
+        if !item.review.images.is_empty() {
+            item.payload.initial_visibility = None;
+            let draft = insert_recipe_draft_with_source(
+                &mut tx,
+                user,
+                Some(recipe.id),
+                Some(1),
+                &item.payload,
+                None,
+                None,
+                None,
+                None,
+            )
+            .await?;
+            write_review(&mut tx, draft.id, user, &item.payload, &item.review).await?;
+            image_reviews.push(crate::collection_json::CollectionImageReview {
+                recipe_id: recipe.id,
+                draft_id: draft.id,
+                title: recipe.title.clone(),
+                image_count: item.review.images.len(),
+            });
+        }
+        if recipe_ids.insert(item.portable_id, recipe.id).is_some() {
+            return Err(invalid());
+        }
+    }
+    let root_order: i32 = sqlx::query_scalar("SELECT COALESCE(MAX(sort_order),-1)+1 FROM collections WHERE owner_id=$1 AND parent_collection_id IS NULL")
+        .bind(user).fetch_one(&mut *tx).await.map_err(DbError::Query)?;
+    let mut collection_ids = HashMap::new();
+    let mut orders = HashMap::<Uuid, i32>::new();
+    let mut root = None;
+    for (index, node) in nodes.iter().enumerate() {
+        let parent = node
+            .parent_collection
+            .as_ref()
+            .map(|p| collection_ids.get(p).copied().ok_or_else(invalid))
+            .transpose()?;
+        if (index == 0) != parent.is_none() {
+            return Err(invalid());
+        }
+        let order = if let Some(parent) = parent {
+            let order = orders.entry(parent).or_default();
+            let current = *order;
+            *order += 1;
+            current
+        } else {
+            root_order
+        };
+        let name = if index == 0 {
+            root_name.as_str()
+        } else {
+            node.name.as_str()
+        };
+        let id = super::super::insert_collection_import_node(
+            &mut tx,
+            user,
+            parent,
+            name,
+            node,
+            order,
+            covers.get(&node.portable_id),
+        )
+        .await?;
+        if index == 0 {
+            root = Some(id);
+        }
+        if collection_ids
+            .insert(node.portable_id.clone(), id)
+            .is_some()
+        {
+            return Err(invalid());
+        }
+        let members = node
+            .recipes
+            .iter()
+            .map(|r| recipe_ids.get(r).copied().ok_or_else(invalid))
+            .collect::<Result<Vec<_>, _>>()?;
+        sqlx::query("INSERT INTO collection_recipes (collection_id, recipe_id, sort_order) SELECT $1, recipe, (ordinality-1)::integer FROM unnest($2::uuid[]) WITH ORDINALITY AS members(recipe, ordinality)")
+            .bind(id).bind(&members).execute(&mut *tx).await.map_err(DbError::Query)?;
+    }
+    let result = crate::collection_json::CollectionImportResult {
+        owner_id: user,
+        collection_id: root.ok_or_else(invalid)?,
+        collection_count: collection_ids.len(),
+        recipe_count: recipe_ids.len(),
+        warnings,
+        image_reviews,
+    };
+    tx.commit().await.map_err(DbError::Query)?;
+    Ok(result)
+}
 pub fn json_import_review(draft: &RecipeDraft) -> Result<JsonImportReview, DbError> {
     draft
         .snapshot
@@ -40,6 +222,27 @@ async fn attach_checked(
     review: &mut JsonImportReview,
     checked: &[ImportedRecipeImage],
 ) -> Result<(), DbError> {
+    let source = apply_checked(tx, user, Some(draft), payload, review, checked).await?;
+    super::super::sync_recipe_media_references(
+        tx,
+        super::super::MediaHolder::Draft(draft),
+        user,
+        super::super::MediaPurpose::Recipe,
+        &payload.images,
+        &payload.instructions,
+        super::super::MediaAttachAuthority::JsonImport { source, draft },
+    )
+    .await
+}
+
+async fn apply_checked(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    user: Uuid,
+    draft: Option<Uuid>,
+    payload: &mut RecipeDraftPayload,
+    review: &mut JsonImportReview,
+    checked: &[ImportedRecipeImage],
+) -> Result<Option<Uuid>, DbError> {
     let source = if let Some(source) = review.source {
         sqlx::query_scalar::<_, Uuid>("SELECT id FROM recipes WHERE id = $1 AND (user_id = $2 OR visibility IN ('public','unlisted')) FOR SHARE")
             .bind(source).bind(user).fetch_optional(&mut **tx).await.map_err(DbError::Query)?
@@ -118,16 +321,7 @@ async fn attach_checked(
         }
     }
     validate_draft_payload(payload)?;
-    super::super::sync_recipe_media_references(
-        tx,
-        super::super::MediaHolder::Draft(draft),
-        user,
-        super::super::MediaPurpose::Recipe,
-        &payload.images,
-        &payload.instructions,
-        super::super::MediaAttachAuthority::JsonImport { source, draft },
-    )
-    .await
+    Ok(source)
 }
 async fn write_review(
     tx: &mut sqlx::Transaction<'_, Postgres>,

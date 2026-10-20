@@ -515,7 +515,7 @@ pub async fn create_test_new_draft(pool: &PgPool, user_id: Uuid) -> crate::db::R
 }
 
 #[allow(dead_code)]
-fn test_recipe_snapshot(title: &str) -> crate::db::diff::RecipeSnapshot {
+pub(crate) fn test_recipe_snapshot(title: &str) -> crate::db::diff::RecipeSnapshot {
     crate::db::diff::RecipeSnapshot {
         title: title.to_string(),
         description: None,
