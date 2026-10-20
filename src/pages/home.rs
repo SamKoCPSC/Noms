@@ -40,7 +40,6 @@ pub(super) fn home_cta(is_authenticated: bool) -> HomeCta {
 
 #[derive(Clone, Copy, PartialEq)]
 struct Story {
-    number: &'static str,
     title: &'static str,
     body: &'static str,
     caption: &'static str,
@@ -48,11 +47,11 @@ struct Story {
     size: (u32, u32),
 }
 const STORIES: &[Story] = &[
-    Story { number: "01", title: "Discover new recipes.", body: "Find dishes you've never tried and get inspiration for your next weekend meal.", caption: "Croissants, chocolate cake, and Korean fried chicken in Explore.", image: asset!("/assets/landing/discover.webp"), size: (1120, 780) },
-    Story { number: "02", title: "Create your signature recipe.", body: "Save all your favorite recipes, and easily make changes as you refine them.", caption: "Refine a caramelized onion and mushroom burger in a private draft.", image: asset!("/assets/landing/create.webp"), size: (1120, 780) },
-    Story { number: "03", title: "Make cooking your favorites convenient", body: "Easily adjust proportions with the recipe calculator, make use of the built-in ingredients checklist, and cook with cooking mode.", caption: "Scale chili garlic oil noodles, then check off the ingredients.", image: asset!("/assets/landing/calculator-checklist.webp"), size: (900, 958) },
-    Story { number: "04", title: "Study how your recipes change.", body: "View a precise breakdown of how your recipes change over time to see what works and what doesn't.", caption: "Compare two batches of chocolate chip cookies, ingredient by ingredient.", image: asset!("/assets/landing/history.webp"), size: (1120, 1200) },
-    Story { number: "05", title: "Share your best creations.", body: "Publish and share recipes you're proud of, and let others know what you're working on.", caption: "Robert McRobertson’s public recipes and collections.", image: asset!("/assets/landing/share.webp"), size: (1120, 900) },
+    Story { title: "Discover new recipes.", body: "Find dishes you've never tried and get inspiration for your next weekend meal.", caption: "Croissants, chocolate cake, and Korean fried chicken in Explore.", image: asset!("/assets/landing/discover.webp"), size: (1120, 780) },
+    Story { title: "Create your signature recipe.", body: "Save all your favorite recipes, and easily make changes as you refine them.", caption: "Refine a caramelized onion and mushroom burger in a private draft.", image: asset!("/assets/landing/create.webp"), size: (1120, 780) },
+    Story { title: "Make cooking your favorites convenient", body: "Easily adjust proportions with the recipe calculator, make use of the built-in ingredients checklist, and cook with cooking mode.", caption: "Scale chili garlic oil noodles, then check off the ingredients.", image: asset!("/assets/landing/calculator-checklist.webp"), size: (900, 958) },
+    Story { title: "Study how your recipes change.", body: "View a precise breakdown of how your recipes change over time to see what works and what doesn't.", caption: "Compare two batches of chocolate chip cookies, ingredient by ingredient.", image: asset!("/assets/landing/history.webp"), size: (1120, 1200) },
+    Story { title: "Share your best creations.", body: "Publish and share recipes you're proud of, and let others know what you're working on.", caption: "Robert McRobertson’s public recipes and collections.", image: asset!("/assets/landing/share.webp"), size: (1120, 900) },
 ];
 
 const FEATURES: &[(PageIconKind, &str, &str)] = &[
@@ -118,15 +117,33 @@ pub fn Home() -> Element {
                     figcaption { "Good food brings people together." }
                 }
             }
-            section { class: "landing-chapters landing-wrap", aria_label: "Five ways to use Noms",
+            section { class: "landing-chapters landing-wrap", aria_label: "Six ways to use Noms",
                 for story in STORIES.iter().copied() {
-                    article { class: "landing-chapter", key: "{story.number}",
+                    article { class: "landing-chapter", key: "{story.title}",
                         div { class: "landing-chapter-copy",
-                            span { class: "landing-chapter-number", "{story.number}" }
                             h2 { "{story.title}" }
                             p { "{story.body}" }
                         }
                         LandingScreenshot { source: story.image, title: story.title, caption: story.caption, size: story.size }
+                    }
+                }
+                article { class: "landing-chapter landing-chapter--mobile", aria_labelledby: "landing-anywhere-title",
+                    div { class: "landing-chapter-copy",
+                        h2 { id: "landing-anywhere-title", "Use anywhere" }
+                        p { "access all of Noms' features anywhere with a mobile-optimized experience" }
+                    }
+                    div { class: "landing-mobile-story",
+                        div { class: "landing-mobile-grid",
+                            MobilePreview { source: MOBILE_BROWSE, title: "Browse recipes on mobile" }
+                            MobilePreview { source: MOBILE_EDIT, title: "Edit recipes on mobile" }
+                            MobilePreview { source: COOK_ONE, title: "Cook on mobile", animate: true, paused: paused() }
+                        }
+                        div { class: "landing-motion-control",
+                            button { class: "btn btn-secondary", r#type: "button", aria_pressed: paused(), onclick: move |_| { let next = !paused(); paused.set(next); },
+                                if paused() { "Play animation" } else { "Pause animation" }
+                            }
+                            p { "Actual Noms screens. Tap any screen to view it larger." }
+                        }
                     }
                 }
             }
@@ -149,29 +166,11 @@ pub fn Home() -> Element {
                     }
                 }
             }
-            section { class: "landing-mobile landing-wrap", aria_labelledby: "landing-mobile-title",
-                div { class: "landing-section-head",
-                    p { class: "landing-eyebrow", "Noms on mobile" }
-                    h2 { id: "landing-mobile-title", "Your recipes, wherever you cook." }
-                    p { "Look up a recipe at the shops, refine an idea on the sofa, or keep the method beside you at the stove. Noms brings the same recipe tools to a layout made for your phone." }
-                }
-                div { class: "landing-mobile-grid",
-                    MobilePreview { source: MOBILE_BROWSE, number: "01", title: "Find your next recipe", body: "Browse dishes and open your library with navigation that stays within reach." }
-                    MobilePreview { source: MOBILE_EDIT, number: "02", title: "Keep an idea moving", body: "Edit a recipe in clear sections, with your draft saved while you work." }
-                    MobilePreview { source: COOK_ONE, number: "03", title: "A hand in the kitchen", body: "Adjust portions, check ingredients, and follow the method one step at a time.", animate: true, paused: paused() }
-                }
-                div { class: "landing-motion-control",
-                    button { class: "btn btn-secondary", r#type: "button", aria_pressed: paused(), onclick: move |_| { let next = !paused(); paused.set(next); },
-                        if paused() { "Play animation" } else { "Pause animation" }
-                    }
-                    p { "Actual Noms screens. Tap any screen to view it larger." }
-                }
-            }
             section { class: "landing-trust landing-wrap", aria_labelledby: "landing-trust-title",
                 div { class: "landing-section-head",
                     p { class: "landing-eyebrow", "Our approach" }
-                    h2 { id: "landing-trust-title", "Here for your cooking." }
-                    p { "Noms is free to use. We want a useful place to cook and share, built on respect for the people who use it." }
+                    h2 { id: "landing-trust-title", "Prioritizing a great user experience." }
+                    p { "Noms aims to provide a simple and frictionless experience that focuses on being the ultimate platform for cooking great food and sharing your favorite recipes." }
                 }
                 div { class: "landing-trust-grid",
                     for (index, title, body) in [
@@ -281,18 +280,13 @@ fn LandingScreenshot(
 #[component]
 fn MobilePreview(
     source: Asset,
-    number: &'static str,
     title: &'static str,
-    body: &'static str,
     #[props(default)] animate: bool,
     #[props(default)] paused: bool,
 ) -> Element {
     rsx! {
         article { class: "landing-mobile-card",
             LandingScreenshot { source, title, caption: title, size: (390, 780), phone: true, animate, paused }
-            span { class: "landing-mobile-index", "{number} / MOBILE" }
-            h3 { "{title}" }
-            p { "{body}" }
         }
     }
 }
