@@ -169,8 +169,8 @@ pub fn Home() -> Element {
             section { class: "landing-trust landing-wrap", aria_labelledby: "landing-trust-title",
                 div { class: "landing-section-head",
                     p { class: "landing-eyebrow", "Our approach" }
-                    h2 { id: "landing-trust-title", "Here for your cooking." }
-                    p { "Noms is free to use. We want a useful place to cook and share, built on respect for the people who use it." }
+                    h2 { id: "landing-trust-title", "Prioritizing a great user experience." }
+                    p { "Noms aims to provide a simple and frictionless experience that focuses on being the ultimate platform for cooking great food and sharing your favorite recipes." }
                 }
                 div { class: "landing-trust-grid",
                     for (index, title, body) in [
