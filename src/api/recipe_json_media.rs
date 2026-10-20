@@ -57,6 +57,7 @@ pub fn external_urls(editor: &mut RecipeEditorState, storage: &StorageClient) ->
     urls.dedup();
     urls
 }
+#[allow(clippy::too_many_arguments)]
 async fn check(
     pool: &sqlx::PgPool,
     storage: &StorageClient,
@@ -65,6 +66,7 @@ async fn check(
     candidates: Vec<ImportedRecipeImage>,
     available: &[String],
     draft: Option<Uuid>,
+    deadline: tokio::time::Instant,
 ) -> Result<(Vec<ImportedRecipeImage>, Vec<ImportedRecipeImage>), ServerFnError> {
     if available.len() > crate::security::MAX_RECIPE_IMAGES
         || available
@@ -73,6 +75,21 @@ async fn check(
     {
         return Err(ServerFnError::new("Too many image checks"));
     }
+    if candidates.is_empty() {
+        return Ok((vec![], vec![]));
+    }
+    if tokio::time::Instant::now() >= deadline {
+        return Ok((
+            vec![],
+            candidates
+                .into_iter()
+                .map(|mut image| {
+                    image.status = ImportImageStatus::Unavailable;
+                    image
+                })
+                .collect(),
+        ));
+    }
     let ids = candidates
         .iter()
         .filter_map(|i| storage.parse_media_url(&i.image.url).ok())
@@ -80,13 +97,13 @@ async fn check(
         .map(|object| object.object_id())
         .collect::<Vec<_>>();
     let allowed = crate::security::run_with_database_budget(
-        crate::security::DATABASE_EXECUTION_BUDGET,
+        crate::security::DATABASE_EXECUTION_BUDGET
+            .min(deadline.saturating_duration_since(tokio::time::Instant::now())),
         db::json_import_asset_access(pool, user, source, &ids, draft),
     )
     .await
     .map_err(|_| ServerFnError::new("Image permission check timed out"))?
     .map_err(|_| ServerFnError::new("Could not check image permissions"))?;
-    let deadline = tokio::time::Instant::now() + Duration::from_secs(12);
     let (mut checked, mut issues) = (vec![], vec![]);
     let mut cache = std::collections::HashMap::new();
     for mut candidate in candidates {
@@ -142,6 +159,46 @@ async fn check(
     }
     Ok((checked, issues))
 }
+#[allow(clippy::too_many_arguments)]
+pub async fn prepare_collection_recipe(
+    pool: &sqlx::PgPool,
+    storage: &StorageClient,
+    user: Uuid,
+    source: Uuid,
+    mut editor: RecipeEditorState,
+    available: &[String],
+    deadline: tokio::time::Instant,
+) -> Result<db::PreparedJsonRecipe, ServerFnError> {
+    let candidates = take_images(&mut editor);
+    let relevant = candidates
+        .iter()
+        .filter(|image| available.contains(&image.image.url))
+        .map(|image| image.image.url.clone())
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    let (checked, issues) = check(
+        pool,
+        storage,
+        user,
+        Some(source),
+        candidates,
+        &relevant,
+        None,
+        deadline,
+    )
+    .await?;
+    Ok(db::PreparedJsonRecipe {
+        portable_id: format!("urn:noms:recipe:{source}"),
+        payload: super::recipe::editor_to_draft_payload(editor),
+        review: db::JsonImportReview {
+            source: Some(source),
+            images: issues,
+        },
+        checked,
+    })
+}
+
 pub async fn import(
     pool: &sqlx::PgPool,
     storage: &StorageClient,
@@ -152,7 +209,17 @@ pub async fn import(
     let (file, mut editor) = crate::recipe_json::parse_recipe(json).map_err(ServerFnError::new)?;
     let source = Some(crate::recipe_json::source_recipe_id(&file).map_err(ServerFnError::new)?);
     let candidates = take_images(&mut editor);
-    let (checked, issues) = check(pool, storage, user, source, candidates, available, None).await?;
+    let (checked, issues) = check(
+        pool,
+        storage,
+        user,
+        source,
+        candidates,
+        available,
+        None,
+        tokio::time::Instant::now() + Duration::from_secs(12),
+    )
+    .await?;
     crate::security::run_with_database_budget(
         crate::security::DATABASE_EXECUTION_BUDGET,
         db::create_json_import_draft(
@@ -206,6 +273,7 @@ pub async fn resolve(
             vec![candidate],
             available,
             Some(draft),
+            tokio::time::Instant::now() + Duration::from_secs(12),
         )
         .await?
     };

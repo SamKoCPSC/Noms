@@ -1,6 +1,6 @@
 # NOMS-016: Recipe Import & Export — Implementation Plan
 
-**Status:** Clipboard import implemented for 15 providers and manually accepted. Single-recipe JSON export/import, image recovery, and standalone HTML reading copies implemented. Collection and interoperable structured export remain planned.
+**Status:** Clipboard import implemented for 15 providers and manually accepted. Single-recipe and collection-tree JSON round trips, image recovery, and standalone recipe HTML reading copies implemented. Collection HTML and interoperable structured export remain planned.
 **Created:** 2026-08-15
 **Depends on:** Current recipe, draft, versioning, collection, and image models
 **Coordination:** NOMS-017 defines flexible authored recipe metadata and optional autocomplete-vocabulary references. Agree their portable representation with NOMS-016 before freezing the snapshot schema; completing the autocomplete implementation is not a prerequisite for starting export.
@@ -498,3 +498,12 @@ Revised verification: 94 focused native tests passed: 8 JSON contract/API, 2 ZIP
 The user revised the image-free decision: retain canonical image references, reuse accessible images, and let users recover unavailable images manually. The v3 contract supersedes v2 for new exports. The prior image-free verification above remains historical evidence, not verification of this revised behavior. No schema migration is needed; private recovery metadata lives in draft JSONB and survives autosaves and reloads without entering published/exported content.
 
 Verification after workspace recovery: 101 focused native tests passed (15 JSON contract/API/recovery/rendering tests, 2 ZIP tests, 15 clipboard-import tests, 12 media-asset tests, 18 security-limit tests and 39 trusted-IP/rate-limit tests). Server Clippy, formatting and whitespace checks passed. WebAssembly Clippy passed with the unrelated existing `chunks_exact_to_as_chunks` rule suppressed for the recovered Rust 1.99 toolchain; no unrelated application code was changed. Chromium ran the actual image-check script against intercepted synthetic responses, verifying valid-image decoding, missing/invalid/timeout handling and no referrer. The full running-app browser flow, full CI and cross-browser acceptance were not rerun after the workspace reset.
+
+### Collection JSON round trips — 2026-10-20
+
+Collection owners can export a bounded collection subtree with canonical v3 saved-recipe snapshots, then import it as a new private tree with new private saved recipe copies. Nested/empty collections, sibling and recipe order, and shared recipe membership are preserved. A file-check preview precedes import; existing names are resolved with an imported-copy suffix. Unavailable recipe images remain reviewable in private edit drafts, and unavailable collection covers produce explicit warnings. The import is atomic across collections, recipes, versions, tags, memberships and image-review drafts. See the [collection JSON v1 contract and verification](../spikes/NOMS-016-collection-json-v1.md). Single-recipe draft import and the [standalone HTML reading copy](../spikes/NOMS-016-html-export.md) remain available.
+
+
+### Collection HTML layouts — 2026-10-20
+
+Collection export now offers JSON for round trips or HTML for offline viewing/sharing/printing. HTML can be a single cookbook with a linked contents list or a ZIP of individual standalone recipe documents with an index. Both retain nested collections, ordering and shared memberships without duplicating distinct recipes. Optional embedded saved images use the existing bounded renderer and omission notices. See [HTML layouts, limits and verification](../spikes/NOMS-016-html-export.md#collection-html-layouts--2026-10-20). Schema.org interoperability remains a follow-up.

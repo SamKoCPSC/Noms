@@ -49,6 +49,7 @@ pub fn CollectionList() -> Element {
                         }
                     }
                     Link { to: Route::CollectionNew { parent: None }, class: "btn btn-primary touch-target", "＋ New collection" }
+                    super::collection_json_controls::CollectionJsonImport { on_imported: move |_| collections.restart() }
                 }
                 p { id: "collections-filter-help", class: "collections-help", "Showing top-level collections. Open an album to see its subcollections." }
                 match collections.read().as_ref() {

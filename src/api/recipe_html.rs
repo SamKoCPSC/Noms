@@ -10,7 +10,7 @@ use uuid::Uuid;
 const MAX_HTML_BYTES: usize = 32 * 1024 * 1024;
 const MAX_IMAGE_BYTES: usize = 10 * 1024 * 1024;
 
-fn image_references(recipe: &Recipe) -> Vec<(String, String, bool)> {
+pub(crate) fn image_references(recipe: &Recipe) -> Vec<(String, String, bool)> {
     fn steps(items: &[RecipeStep], prefix: &str, refs: &mut Vec<(String, String, bool)>) {
         for (i, step) in items.iter().enumerate() {
             let path = format!("{prefix}{}", i + 1);
@@ -99,18 +99,41 @@ pub(crate) async fn prepare(
         .flatten()
         .filter_map(|v| v.as_str().map(str::to_owned))
         .collect::<Vec<_>>();
+    prepare_saved(
+        storage,
+        &recipe,
+        &tags,
+        include_images,
+        tokio::time::Instant::now() + Duration::from_secs(15),
+        MAX_HTML_BYTES,
+        None,
+    )
+    .await
+}
+
+pub(crate) async fn prepare_saved(
+    storage: &StorageClient,
+    recipe: &Recipe,
+    tags: &[String],
+    include_images: bool,
+    deadline: tokio::time::Instant,
+    max_bytes: usize,
+    index: Option<usize>,
+) -> Result<HtmlExport, String> {
     let mut embedded = HashMap::new();
     let mut warnings = vec![];
-    let base_size = render::document(&recipe, &tags, &embedded, &warnings, include_images).len();
+    let base_size = render::document(recipe, tags, &embedded, &warnings, include_images).len();
+    if base_size > max_bytes {
+        return Err("HTML exceeds 32 MiB. Try a smaller collection or text-only HTML.".into());
+    }
     if include_images {
-        let references = image_references(&recipe);
+        let references = image_references(recipe);
         let mut counts = HashMap::<String, usize>::new();
         for (_, url, _) in &references {
             *counts.entry(url.clone()).or_default() += 1;
         }
         let mut cache = HashMap::<String, Result<(), String>>::new();
-        let mut remaining = MAX_HTML_BYTES.saturating_sub(base_size + 64 * 1024);
-        let deadline = tokio::time::Instant::now() + Duration::from_secs(15);
+        let mut remaining = max_bytes.saturating_sub(base_size + 64 * 1024);
         for (label, url, managed) in references {
             if !cache.contains_key(&url) {
                 let result = match embed(storage, &url, managed, deadline).await {
@@ -133,8 +156,12 @@ pub(crate) async fn prepare(
             }
         }
     }
-    let html = render::document(&recipe, &tags, &embedded, &warnings, include_images);
-    if html.len() > MAX_HTML_BYTES {
+    let html = if let Some(index) = index {
+        render::article(recipe, tags, &embedded, &warnings, Some(index))
+    } else {
+        render::document(recipe, tags, &embedded, &warnings, include_images)
+    };
+    if html.len() > max_bytes {
         return Err("HTML exceeds 32 MiB. Try a text-only HTML export.".into());
     }
     Ok(HtmlExport { html, warnings })

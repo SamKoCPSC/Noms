@@ -5,6 +5,7 @@ use manganis::CssAssetOptions;
 
 mod api;
 mod auth;
+mod collection_json;
 mod components;
 #[cfg(feature = "server")]
 mod config;
@@ -244,6 +245,10 @@ fn build_dioxus_router(pool: sqlx::PgPool, storage_client: storage::StorageClien
         .route(
             "/api/recipes/{id}/export-images",
             axum::routing::get(api::recipe_archive::download),
+        )
+        .route(
+            "/api/collections/{id}/export-html",
+            axum::routing::get(api::collection_html::download),
         )
         .with_state(auth::user_profile::UserProfileState { pool: pool.clone() })
         .serve_dioxus_application(ServeConfig::new(), App);

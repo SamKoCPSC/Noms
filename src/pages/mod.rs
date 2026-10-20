@@ -1,6 +1,7 @@
 mod about;
 mod collection_detail;
 mod collection_edit;
+mod collection_json_controls;
 mod collection_list;
 mod collection_new;
 mod community_home;
