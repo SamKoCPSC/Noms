@@ -2381,3 +2381,25 @@ pub async fn imported_image_external_url(
         },
     )
 }
+
+/// A standalone reading copy; unresolved images are returned for review before download.
+#[server]
+pub async fn export_recipe_html(
+    recipe_id: String,
+    include_images: bool,
+) -> Result<crate::recipe_html::HtmlExport, ServerFnError> {
+    let viewer = crate::auth::session::extract_user_id_from_fullstack().await;
+    enforce_graph_budget(viewer)?;
+    let id =
+        uuid::Uuid::parse_str(&recipe_id).map_err(|_| ServerFnError::new("Invalid recipe ID"))?;
+    crate::security::run_with_expensive_read_work_budget(super::recipe_html::prepare(
+        &crate::db::get_pool(),
+        &crate::storage::get_storage_client(),
+        id,
+        viewer,
+        include_images,
+    ))
+    .await
+    .map_err(|_| ServerFnError::new("Exports are busy. Try again shortly."))?
+    .map_err(ServerFnError::new)
+}

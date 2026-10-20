@@ -1,6 +1,6 @@
 # NOMS-016: Recipe Import & Export — Implementation Plan
 
-**Status:** Clipboard import implemented for 15 providers and manually accepted. First single-recipe JSON export/import slice implemented and verified. Broader export remains planned.
+**Status:** Clipboard import implemented for 15 providers and manually accepted. Single-recipe JSON export/import, image recovery, and standalone HTML reading copies implemented. Collection and interoperable structured export remain planned.
 **Created:** 2026-08-15
 **Depends on:** Current recipe, draft, versioning, collection, and image models
 **Coordination:** NOMS-017 defines flexible authored recipe metadata and optional autocomplete-vocabulary references. Agree their portable representation with NOMS-016 before freezing the snapshot schema; completing the autocomplete implementation is not a prerequisite for starting export.
