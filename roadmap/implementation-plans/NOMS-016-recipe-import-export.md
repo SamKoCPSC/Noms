@@ -502,3 +502,8 @@ Verification after workspace recovery: 101 focused native tests passed (15 JSON 
 ### Collection JSON round trips — 2026-10-20
 
 Collection owners can export a bounded collection subtree with canonical v3 saved-recipe snapshots, then import it as a new private tree with new private saved recipe copies. Nested/empty collections, sibling and recipe order, and shared recipe membership are preserved. A file-check preview precedes import; existing names are resolved with an imported-copy suffix. Unavailable recipe images remain reviewable in private edit drafts, and unavailable collection covers produce explicit warnings. The import is atomic across collections, recipes, versions, tags, memberships and image-review drafts. See the [collection JSON v1 contract and verification](../spikes/NOMS-016-collection-json-v1.md). Single-recipe draft import and the [standalone HTML reading copy](../spikes/NOMS-016-html-export.md) remain available.
+
+
+### Collection HTML layouts — 2026-10-20
+
+Collection export now offers JSON for round trips or HTML for offline viewing/sharing/printing. HTML can be a single cookbook with a linked contents list or a ZIP of individual standalone recipe documents with an index. Both retain nested collections, ordering and shared memberships without duplicating distinct recipes. Optional embedded saved images use the existing bounded renderer and omission notices. See [HTML layouts, limits and verification](../spikes/NOMS-016-html-export.md#collection-html-layouts--2026-10-20). Schema.org interoperability remains a follow-up.

@@ -43,6 +43,7 @@ pub use collection_search::search_collections;
 mod collection_json;
 pub use collection_json::export_collection_json;
 pub(crate) use collection_json::insert_collection_import_node;
+pub(crate) use collection_json::{read_collection_export, CollectionExport};
 mod all_search;
 pub use all_search::search_all;
 mod autocomplete;

@@ -3,7 +3,7 @@ use crate::collection_json::{CollectionImportPreview, CollectionImportResult};
 
 #[cfg(all(test, feature = "server"))]
 #[path = "collection_portability_tests.rs"]
-mod tests;
+pub(crate) mod tests;
 use dioxus::prelude::*;
 
 #[server]

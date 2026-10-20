@@ -31,11 +31,34 @@ pub(crate) async fn insert_collection_import_node(
     Ok(id)
 }
 
+pub(crate) struct CollectionExport {
+    pub collections: Vec<PortableCollection>,
+    pub recipes: Vec<(Recipe, Vec<String>)>,
+}
+
 pub async fn export_collection_json(
     pool: &PgPool,
     user: Uuid,
     root: Uuid,
 ) -> Result<String, String> {
+    let data = read_collection_export(pool, user, root).await?;
+    let mut snapshots = vec![];
+    for (recipe, tags) in data.recipes {
+        let json = crate::recipe_json::export_recipe(&recipe, tags)?;
+        snapshots.push(serde_json::from_str(&json).map_err(|_| "Cannot encode recipe snapshot.")?);
+    }
+    collection_json::export(CollectionSnapshot {
+        root_collection: collection_json::portable_collection_id(root),
+        collections: data.collections,
+        recipes: snapshots,
+    })
+}
+
+pub(crate) async fn read_collection_export(
+    pool: &PgPool,
+    user: Uuid,
+    root: Uuid,
+) -> Result<CollectionExport, String> {
     let mut tx = pool
         .begin()
         .await
@@ -132,7 +155,7 @@ pub async fn export_collection_json(
     .fetch_all(&mut *tx)
     .await
     .map_err(|_| "Cannot read recipe snapshots.")?;
-    let recipes = recipes
+    let mut recipes = recipes
         .into_iter()
         .map(|r| (r.id, r))
         .collect::<HashMap<_, _>>();
@@ -147,13 +170,12 @@ pub async fn export_collection_json(
     {
         tags.entry(id).or_default().push(tag);
     }
-    let mut snapshots = vec![];
+    let mut ordered_recipes = vec![];
     for id in recipe_ids {
         let recipe = recipes
-            .get(&id)
+            .remove(&id)
             .ok_or("A collection recipe is unavailable.")?;
-        let json = crate::recipe_json::export_recipe(recipe, tags.remove(&id).unwrap_or_default())?;
-        snapshots.push(serde_json::from_str(&json).map_err(|_| "Cannot encode recipe snapshot.")?);
+        ordered_recipes.push((recipe, tags.remove(&id).unwrap_or_default()));
     }
     let nodes = selected
         .iter()
@@ -175,13 +197,11 @@ pub async fn export_collection_json(
                 .collect(),
         })
         .collect();
-    let output = collection_json::export(CollectionSnapshot {
-        root_collection: collection_json::portable_collection_id(root),
-        collections: nodes,
-        recipes: snapshots,
-    })?;
     tx.commit()
         .await
         .map_err(|_| "Cannot finish collection export.")?;
-    Ok(output)
+    Ok(CollectionExport {
+        collections: nodes,
+        recipes: ordered_recipes,
+    })
 }

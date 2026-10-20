@@ -14,3 +14,6 @@ mod recipe_json_media;
 
 #[cfg(feature = "server")]
 pub(crate) mod recipe_html;
+
+#[cfg(feature = "server")]
+pub(crate) mod collection_html;

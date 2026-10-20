@@ -63,18 +63,43 @@ pub(crate) mod render {
         }
         out.push_str("</ol>");
     }
-    pub fn document(
+    pub fn start_document(title: &str) -> String {
+        let mut out = String::with_capacity(16 * 1024);
+        write!(out, "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"referrer\" content=\"no-referrer\"><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'\"><title>{} · Noms</title><style>{}</style></head><body><main>", escape(title), include_str!("../assets/recipe-export.css")).unwrap();
+        out.push_str("<header class=\"masthead\"><div class=\"brand\"><svg viewBox=\"0 0 36 40\" aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"4\" y=\"3\" width=\"27\" height=\"34\" rx=\"4\" fill=\"#647447\"/><path d=\"M8 4v31h22\" fill=\"none\" stroke=\"#c4bd91\" stroke-width=\"2\"/><rect x=\"12\" y=\"12\" width=\"14\" height=\"10\" rx=\"2\" fill=\"#f5ebd6\"/><path d=\"M26 3v30l4 4V3\" fill=\"#d9735a\"/></svg>Noms</div><span class=\"offline-label\">Your offline reading copy</span></header>");
+        out
+    }
+
+    pub fn footer(images_requested: bool) -> String {
+        let mut out = String::new();
+        out.push_str("<footer class=\"footnote\"><p>A reading copy from Noms · Open, share, or print this file without an internet connection.</p><p>This copy contains current saved recipes. Editing, history, and re-import require Noms and its JSON format.</p>");
+        out.push_str(if images_requested { "<p>Included images are embedded originals; Noms crops and adjustments are not applied.</p>" } else { "<p>Text-only export. Recipe and step images were left out.</p>" });
+        out.push_str("</footer></main></body></html>");
+        out
+    }
+
+    pub fn article(
         recipe: &Recipe,
         tags: &[String],
         embedded: &HashMap<String, String>,
         warnings: &[String],
-        images_requested: bool,
+        index: Option<usize>,
     ) -> String {
-        let mut out = String::with_capacity(16 * 1024);
-        write!(out, "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"referrer\" content=\"no-referrer\"><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'\"><title>{} · Noms</title><style>{}</style></head><body><main>", escape(&recipe.title), include_str!("../assets/recipe-export.css")).unwrap();
-        out.push_str("<header class=\"masthead\"><div class=\"brand\"><svg viewBox=\"0 0 36 40\" aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"4\" y=\"3\" width=\"27\" height=\"34\" rx=\"4\" fill=\"#647447\"/><path d=\"M8 4v31h22\" fill=\"none\" stroke=\"#c4bd91\" stroke-width=\"2\"/><rect x=\"12\" y=\"12\" width=\"14\" height=\"10\" rx=\"2\" fill=\"#f5ebd6\"/><path d=\"M26 3v30l4 4V3\" fill=\"#d9735a\"/></svg>Noms</div><span class=\"offline-label\">Your offline recipe copy</span></header>");
-        out.push_str("<article><header class=\"card hero\"><span class=\"eyebrow\">From your recipe collection</span>");
-        write!(out, "<h1>{}</h1>", escape(&recipe.title)).unwrap();
+        let mut out = String::new();
+        let section_heading = if index.is_some() { "h3" } else { "h2" };
+        if let Some(index) = index {
+            write!(out, "<article id=\"recipe-{index}\" class=\"cookbook-recipe\"><a class=\"back-link\" href=\"#contents\">Back to contents</a>").unwrap();
+        } else {
+            out.push_str("<article>");
+        }
+        out.push_str("<header class=\"card hero\"><span class=\"eyebrow\">From your recipe collection</span>");
+        let heading = if index.is_some() { "h2" } else { "h1" };
+        write!(
+            out,
+            "<{heading} class=\"recipe-title\">{}</{heading}>",
+            escape(&recipe.title)
+        )
+        .unwrap();
         paragraph(
             &mut out,
             recipe.description.as_deref(),
@@ -112,7 +137,7 @@ pub(crate) mod render {
         photos(&mut out, &recipe.images, embedded, "Recipe");
         out.push_str("</header>");
         if !warnings.is_empty() {
-            out.push_str("<aside class=\"notice\"><h2>Some images are not in this copy</h2><ul>");
+            write!(out, "<aside class=\"notice\"><{section_heading}>Some images are not in this copy</{section_heading}><ul>").unwrap();
             for warning in warnings {
                 write!(out, "<li>{}</li>", escape(warning)).unwrap();
             }
@@ -120,7 +145,7 @@ pub(crate) mod render {
         }
         out.push_str("<div class=\"columns\"><div>");
         if !recipe.ingredients.is_empty() {
-            out.push_str("<section class=\"card\"><h2 class=\"section-title\">Ingredients</h2><ul class=\"ingredients\">");
+            write!(out, "<section class=\"card\"><{section_heading} class=\"section-title\">Ingredients</{section_heading}><ul class=\"ingredients\">").unwrap();
             for ingredient in &recipe.ingredients {
                 let quantity = format!("{} {}", ingredient.amount, ingredient.unit);
                 write!(
@@ -134,7 +159,7 @@ pub(crate) mod render {
             out.push_str("</ul></section>");
         }
         if !recipe.equipment.is_empty() {
-            out.push_str("<section class=\"card\"><h2 class=\"section-title\">Equipment</h2><ul class=\"equipment\">");
+            write!(out, "<section class=\"card\"><{section_heading} class=\"section-title\">Equipment</{section_heading}><ul class=\"equipment\">").unwrap();
             for item in &recipe.equipment {
                 write!(out, "<li>{}</li>", escape(&item.name)).unwrap();
             }
@@ -142,21 +167,30 @@ pub(crate) mod render {
         }
         out.push_str("</div><div>");
         if !recipe.instructions.is_empty() {
-            out.push_str("<section class=\"card\"><h2 class=\"section-title\">Method</h2>");
+            write!(out, "<section class=\"card\"><{section_heading} class=\"section-title\">Method</{section_heading}>").unwrap();
             steps(&mut out, &recipe.instructions, embedded, "");
             out.push_str("</section>");
         }
         out.push_str("</div></div>");
         if recipe.commentary.as_ref().is_some_and(|s| !s.is_empty()) {
-            out.push_str(
-                "<section class=\"card notes\"><h2 class=\"section-title\">Recipe notes</h2>",
-            );
+            write!(out, "<section class=\"card notes\"><{section_heading} class=\"section-title\">Recipe notes</{section_heading}>").unwrap();
             paragraph(&mut out, recipe.commentary.as_deref(), "authored");
             out.push_str("</section>");
         }
-        out.push_str("</article><footer class=\"footnote\"><p>A reading copy from Noms · Open, share, or print this file without an internet connection.</p><p>This is the current saved recipe. Editing, history, and re-import require Noms and its JSON format.</p>");
-        out.push_str(if images_requested { "<p>Included images are embedded originals; Noms crops and adjustments are not applied.</p>" } else { "<p>Text-only export. Recipe and step images were left out.</p>" });
-        out.push_str("</footer></main></body></html>");
+        out.push_str("</article>");
+        out
+    }
+
+    pub fn document(
+        recipe: &Recipe,
+        tags: &[String],
+        embedded: &HashMap<String, String>,
+        warnings: &[String],
+        images_requested: bool,
+    ) -> String {
+        let mut out = start_document(&recipe.title);
+        out.push_str(&article(recipe, tags, embedded, warnings, None));
+        out.push_str(&footer(images_requested));
         out
     }
 }

@@ -7,24 +7,64 @@ use dioxus::{html::FileData, prelude::*};
 use std::rc::Rc;
 
 #[component]
-pub(super) fn CollectionJsonExport(collection_id: String) -> Element {
+pub(super) fn CollectionExport(collection_id: String) -> Element {
     let mut ready = use_signal(|| false);
     let mut open = use_signal(|| false);
+    let mut format = use_signal(|| "json");
+    let mut layout = use_signal(|| "unified");
+    let mut images = use_signal(|| true);
     let mut pending = use_signal(|| false);
     let mut error = use_signal(|| None::<String>);
+    use_effect(use_reactive((&collection_id,), move |_| {
+        open.set(false);
+        error.set(None);
+    }));
     rsx! {
+        document::Stylesheet { href: asset!("/assets/recipe-export-dialog.css") }
         button { r#type: "button", class: "btn btn-secondary touch-target", disabled: !ready(),
-            onmounted: move |_| ready.set(true), onclick: move |_| { error.set(None); open.set(true); }, "Export JSON" }
+            onmounted: move |_| ready.set(true), onclick: move |_| { error.set(None); open.set(true); }, "Export collection" }
         if open() {
             crate::components::base::SharedModal {
-                aria_labelledby: "collection-export-title", focus_selector: "[data-collection-export]", pending: pending(),
+                aria_labelledby: "collection-export-title", focus_selector: "input[name=collection-export-format]:checked", pending: pending(),
                 on_dismiss: move |_| { if !pending() { open.set(false); } },
                 div { class: "modal-card", max_width: "580px", display: "flex", flex_direction: "column", gap: "var(--space-md)",
                     onclick: move |event| event.stop_propagation(),
-                    h2 { id: "collection-export-title", "Export collection JSON" }
-                    p { "Back up this collection and all its subcollections, with their ordered saved recipes. Recipes used more than once are stored once and keep their memberships." }
-                    p { "JSON is for Noms re-import. It keeps image links and edits, but does not contain image files, drafts or history. Linked images may become unavailable. Collection covers can be reused only by their uploader." }
-                    p { "Up to 100 collections, 100 recipes, 1,000 memberships, 128 image placements and 8 MiB per file. Export a smaller subcollection if needed." }
+                    h2 { id: "collection-export-title", "Export collection" }
+                    p { "Export this collection and its subcollections with their ordered saved recipes. Recipes used more than once are included once." }
+                    fieldset { class: "recipe-export__fieldset", disabled: pending(),
+                        legend { "Format" }
+                        div { class: "recipe-export__formats",
+                            label { class: "recipe-export__format",
+                                input { r#type: "radio", name: "collection-export-format", value: "json", checked: format() == "json", onchange: move |_| { format.set("json"); error.set(None); } }
+                                span { strong { "JSON" } small { "Back up and re-import into Noms." } }
+                            }
+                            label { class: "recipe-export__format",
+                                input { r#type: "radio", name: "collection-export-format", value: "html", checked: format() == "html", onchange: move |_| { format.set("html"); error.set(None); } }
+                                span { strong { "HTML" } small { "Read, share and print offline." } }
+                            }
+                        }
+                    }
+                    if format() == "json" {
+                        p { class: "recipe-export__help", "JSON keeps image links and edits, but does not contain image files, drafts or history. Linked images may become unavailable. Collection covers can be reused only by their uploader." }
+                        p { class: "recipe-export__help", "Up to 100 collections, 100 recipes, 1,000 memberships, 128 image placements and 8 MiB per file. Export a smaller subcollection if needed." }
+                    } else {
+                        label { r#for: "collection-html-layout", "HTML layout" }
+                        select { id: "collection-html-layout", class: "neumo-inset input collection-export__layout", disabled: pending(), value: layout(),
+                            onchange: move |event| { if event.value() == "individual" { layout.set("individual"); } else { layout.set("unified"); } error.set(None); },
+                            option { value: "unified", "One unified document (.html)" }
+                            option { value: "individual", "Individual documents (.zip)" }
+                        }
+                        p { class: "recipe-export__help",
+                            if layout() == "unified" { "One cookbook with a contents list and links to each recipe. Convenient for sharing or printing the whole collection." }
+                            else { "A ZIP with one standalone HTML file per recipe and a collection index. Extract it, then open index.html or share individual recipe files." }
+                        }
+                        label { class: "recipe-export__images",
+                            input { r#type: "checkbox", checked: images(), disabled: pending(), onchange: move |event| images.set(event.checked()) }
+                            "Include saved recipe images"
+                        }
+                        p { class: "recipe-export__help", "HTML is a reading copy; use JSON for re-import. Covers, history and drafts are excluded. Included images are embedded originals without crops or adjustments. External or unavailable images are omitted with notices in the recipe documents." }
+                        p { class: "recipe-export__help", "Up to 100 collections, 100 recipes, 1,000 memberships, 128 image placements and 32 MiB per download. Export a smaller subcollection if needed." }
+                    }
                     if let Some(problem) = error() { p { role: "alert", "{problem}" } }
                     div { display: "flex", gap: "var(--space-sm)", justify_content: "flex-end", flex_wrap: "wrap",
                         button { r#type: "button", class: "btn btn-secondary touch-target", disabled: pending(), onclick: move |_| open.set(false), "Cancel" }
@@ -34,17 +74,25 @@ pub(super) fn CollectionJsonExport(collection_id: String) -> Element {
                                 pending.set(true); error.set(None);
                                 let id = collection_id.clone();
                                 spawn(async move {
-                                    match export_collection_json(id.clone()).await {
-                                        Ok(json) => match download_file(json, format!("noms-collection-{id}.json"), "application/json", None).await {
-                                            Ok(()) => open.set(false),
-                                            Err(_) => error.set(Some("Could not download this collection. Try again.".into())),
-                                        },
-                                        Err(problem) => error.set(Some(format!("Could not export this collection: {problem}"))),
+                                    let download = if format() == "html" {
+                                        let extension = if layout() == "individual" { "zip" } else { "html" };
+                                        download_file(String::new(), format!("noms-collection-{id}.{extension}"),
+                                            if extension == "zip" { "application/zip" } else { "text/html" },
+                                            Some(format!("/api/collections/{id}/export-html?layout={}&images={}", layout(), images()))).await
+                                    } else {
+                                        match export_collection_json(id.clone()).await {
+                                            Ok(json) => download_file(json, format!("noms-collection-{id}.json"), "application/json", None).await,
+                                            Err(problem) => Err(format!("Could not export this collection: {problem}")),
+                                        }
+                                    };
+                                    match download {
+                                        Ok(()) => open.set(false),
+                                        Err(problem) => error.set(Some(format!("{problem} Try a smaller collection or text-only HTML."))),
                                     }
                                     pending.set(false);
                                 });
                             },
-                            if pending() { "Preparing download…" } else { "Download JSON" }
+                            if pending() { "Preparing download…" } else if format() == "json" { "Download JSON" } else if layout() == "individual" { "Download HTML ZIP" } else { "Download HTML" }
                         }
                     }
                 }

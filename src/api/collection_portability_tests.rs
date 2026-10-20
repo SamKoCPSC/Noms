@@ -16,7 +16,7 @@ async fn user(pool: &sqlx::PgPool, label: &str) -> db::User {
     .unwrap()
 }
 
-async fn tree(pool: &sqlx::PgPool) -> (db::User, Uuid, Vec<Uuid>) {
+pub(crate) async fn tree(pool: &sqlx::PgPool) -> (db::User, Uuid, Vec<Uuid>) {
     let owner = user(pool, "tree").await;
     let other = user(pool, "shared").await;
     let root = db::insert_collection(
