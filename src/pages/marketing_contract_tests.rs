@@ -112,6 +112,10 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
         dom.rebuild_in_place();
         let html = dioxus_ssr::render(&dom);
         assert!(html.contains("The Ultimate Recipe Manager"));
+        assert_eq!(html.matches("class=\"landing-recipe-search\"").count(), 1);
+        assert!(html.contains("action=\"/explore\""));
+        assert!(html.contains("method=\"get\""));
+        assert!(html.contains("name=\"q\""));
         assert!(html.contains("href=\"/explore\""));
         assert_eq!(
             html.contains("href=\"/login?redirect_uri=/recipes/new\""),

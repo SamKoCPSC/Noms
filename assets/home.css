@@ -40,6 +40,14 @@
 .landing-hero-copy { min-width: 0; }
 .landing-page .landing-hero h1 { font-size: clamp(44px,4.65vw,72px); line-height: 1.06; letter-spacing: -.035em; margin-bottom: 25px; }
 .landing-page .landing-intro { max-width: 470px; font-size: 19px; }
+/* Native GET search lets visitors browse public recipes before signing in. */
+.landing-recipe-search { display: flex; flex-direction: row; align-items: center; gap: 12px; min-height: 66px; margin-top: 28px; padding: 7px 8px 7px 18px; border-radius: 21px; background: var(--landing-surface); box-shadow: var(--landing-inset); }
+.landing-recipe-search>svg { flex-shrink: 0; color: var(--landing-muted); }
+.landing-recipe-search input { flex: 1; min-width: 0; width: 0; border: 0; outline: none; background: transparent; color: var(--landing-ink); font: inherit; font-size: 16px; padding-block: 12px; }
+.landing-recipe-search input::placeholder { color: var(--landing-muted); opacity: 1; }
+.landing-recipe-search:focus-within { outline: 2px solid var(--landing-accent); outline-offset: 4px; }
+.landing-recipe-search .btn { flex-shrink: 0; }
+.landing-hero .landing-actions { margin-top: 18px; }
 .landing-actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 28px; }
 .landing-page .landing-tiny { font-size: 12px; margin-top: 16px; }
 .landing-hero-visual { height: 470px; min-width: 0; position: relative; }
@@ -206,4 +214,15 @@
 @media (forced-colors: active) {
     .landing-feature-card, .landing-app-window, .landing-phone, .landing-mobile, .landing-trust { border: 1px solid CanvasText; }
     .landing-page .btn-primary { color: ButtonText; background: ButtonFace; border: 1px solid ButtonText; }
+}
+
+@media (max-width: 760px) {
+    .landing-recipe-search { gap: 8px; padding-left: 14px; min-height: 62px; border-radius: 18px; }
+    .landing-recipe-search input { font-size: 16px; }
+    .landing-recipe-search .btn { padding-inline: 16px; }
+}
+@media (max-width: 359px) {
+    .landing-recipe-search { gap: 6px; padding-left: 12px; }
+    .landing-recipe-search>svg { width: 18px; height: 18px; }
+    .landing-recipe-search .btn { padding-inline: 12px; }
 }

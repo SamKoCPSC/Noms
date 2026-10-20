@@ -108,6 +108,14 @@ async def main():
                 '({width:innerWidth,scroll:document.documentElement.scrollWidth,missing:[...document.querySelectorAll(".landing-page img")].filter(i=>i.getClientRects().length&&(!i.complete||!i.naturalWidth)).map(i=>i.alt)})'
             )
             assert dims["width"] >= dims["scroll"] and not dims["missing"], dims
+            geometry = await p.locator(".landing-recipe-search").evaluate(
+                "e=>{const input=e.querySelector('input').getBoundingClientRect(),button=e.querySelector('button').getBoundingClientRect();return {height:e.getBoundingClientRect().height,sameRow:input.top<button.bottom&&button.top<input.bottom,inputWidth:input.width}}"
+            )
+            assert (
+                geometry["height"] <= 90
+                and geometry["sameRow"]
+                and geometry["inputWidth"] >= 100
+            ), geometry
             if name in ["desktop", "mobile"]:
                 await p.screenshot(
                     path=str(ROOT / f"{name}-full.jpg"),
@@ -177,22 +185,41 @@ async def main():
         await p.wait_for_url(re.compile("/login\\?redirect_uri="))
         assert "/recipes/new" in unquote(p.url)
         await common.go(p, "/")
-        await p.locator(".landing-actions").first.get_by_role(
-            "link", name="Explore recipes", exact=True
-        ).click()
-        await p.wait_for_url(common.app_url() + "/explore")
+        public_query = "noms-no-match fish & chips + lime #1"
+        form = p.get_by_role("search", name="Find a recipe", exact=True)
+        await form.get_by_role(
+            "searchbox", name="Search public recipes", exact=True
+        ).fill(public_query)
+        await form.get_by_role(
+            "searchbox", name="Search public recipes", exact=True
+        ).press("Enter")
+        await p.wait_for_url(re.compile(r"/explore\?q="))
+        await expect(p.locator("#explore-query")).to_have_value(public_query)
         await expect(
-            p.get_by_role("heading", name="Explore", exact=True)
+            p.get_by_role("heading", name="No recipes found", exact=True)
         ).to_be_visible()
+        await p.reload(wait_until="networkidle")
+        await expect(p.locator("#explore-query")).to_have_value(public_query)
+        await p.go_back(wait_until="networkidle")
+        await expect(p.locator("h1")).to_have_text("The Ultimate Recipe Manager")
         await ctx.close()
         static_ctx = await b.new_context(
-            java_script_enabled=False, viewport={"width": 393, "height": 900}
+            java_script_enabled=False,
+            viewport={"width": 393, "height": 900},
+            reduced_motion="reduce",
         )
         static = await static_ctx.new_page()
         await common.go(static, "/")
         await expect(static.locator("h1")).to_have_text("The Ultimate Recipe Manager")
         await expect(static.locator(".landing-chapter")).to_have_count(5)
         await expect(static.locator(".landing-feature-card")).to_have_count(18)
+        static_form = static.get_by_role("search", name="Find a recipe", exact=True)
+        await static_form.get_by_role(
+            "searchbox", name="Search public recipes", exact=True
+        ).fill("ramen & noodles")
+        await static_form.get_by_role("button", name="Search", exact=True).click()
+        await static.wait_for_url(re.compile(r"/explore\?q="))
+        await expect(static.locator("#explore-query")).to_have_value("ramen & noodles")
         await static_ctx.close()
         motion_ctx = await b.new_context(
             viewport={"width": 393, "height": 900}, reduced_motion="no-preference"
@@ -230,6 +257,8 @@ async def main():
                 "server_rendered_without_javascript": True,
                 "normal_and_reduced_motion": True,
                 "signed_out_cta_and_public_explore": True,
+                "hero_public_search_encoded_query_reload_and_back": True,
+                "native_search_without_javascript": True,
                 "page_errors": errors,
                 "http_errors": failures,
             },

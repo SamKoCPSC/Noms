@@ -92,7 +92,7 @@ pub fn Home() -> Element {
                 div { class: "landing-hero-copy",
                     h1 { id: "home-title", "The Ultimate Recipe Manager" }
                     p { class: "landing-intro", "Noms is a community-focused recipe archive designed for saving, sharing, and developing recipes" }
-                    LandingActions { signed_in: auth.is_authenticated }
+                    LandingActions { signed_in: auth.is_authenticated, search: true }
                 }
                 div { class: "landing-hero-visual",
                     img { src: TABLE, alt: "A shared table with homemade pasta, soup, bread, and salad", width: "1536", height: "1024", fetchpriority: "high" }
@@ -197,9 +197,24 @@ pub fn Home() -> Element {
 }
 
 #[component]
-fn LandingActions(signed_in: bool, #[props(default)] create: bool) -> Element {
+fn LandingActions(
+    signed_in: bool,
+    #[props(default)] create: bool,
+    #[props(default)] search: bool,
+) -> Element {
     let cta = home_cta(signed_in);
     rsx! {
+        if search {
+            form { class: "landing-recipe-search", role: "search", aria_label: "Find a recipe", action: "/explore", method: "get",
+                label { class: "sr-only", r#for: "landing-recipe-query", "Search public recipes" }
+                svg { view_box: "0 0 24 24", width: "20", height: "20", fill: "none", stroke: "currentColor", stroke_width: "1.8", "aria-hidden": "true",
+                    circle { cx: "10.5", cy: "10.5", r: "6.5" }
+                    path { d: "m16 16 4 4" }
+                }
+                input { id: "landing-recipe-query", name: "q", r#type: "search", placeholder: "Find your next recipe…", maxlength: "256" }
+                button { class: "btn btn-primary", r#type: "submit", "Search" }
+            }
+        }
         div { class: "landing-actions",
             if cta.destination == HomeCtaDestination::Dashboard {
                 if create { Link { to: Route::RecipeNew {}, class: "btn btn-primary touch-target", "Create a recipe →" } }
@@ -207,7 +222,9 @@ fn LandingActions(signed_in: bool, #[props(default)] create: bool) -> Element {
             } else {
                 a { href: "/login?redirect_uri=/recipes/new", class: "btn btn-primary touch-target", "{cta.label} →" }
             }
-            Link { to: Route::Explore {}, class: "btn btn-secondary touch-target", "Explore recipes" }
+            if !search {
+                Link { to: Route::Explore {}, class: "btn btn-secondary touch-target", "Explore recipes" }
+            }
         }
         p { class: "landing-tiny", "Free to use · Browse public recipes without an account" }
     }
