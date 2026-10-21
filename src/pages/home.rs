@@ -95,10 +95,6 @@ pub fn Home() -> Element {
                 }
                 div { class: "landing-hero-visual",
                     img { src: TABLE, alt: "A shared table with homemade pasta, soup, bread, and salad", width: "1536", height: "1024", fetchpriority: "high" }
-                    div { class: "landing-floating-note",
-                        strong { "A recipe is a starting point." }
-                        span { "Keep learning. Keep cooking." }
-                    }
                 }
             }
             div { class: "landing-promises landing-wrap", aria_label: "Noms commitments",
