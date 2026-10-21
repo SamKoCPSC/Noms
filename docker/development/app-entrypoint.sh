@@ -15,6 +15,11 @@ fi
 : "${BASE_URL:?Missing isolated application origin}"
 
 cd /workspace
+
+# Schema initialization is a Compose dependency. Load reviewed vocabulary once
+# before serving; production startup never invokes the seed CLI.
+cargo run --features server --bin seed-vocabulary --quiet
+
 dx serve \
     --platform web \
     --addr 0.0.0.0 \

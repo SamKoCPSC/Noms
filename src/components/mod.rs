@@ -32,3 +32,5 @@ mod informational_module_tests {
         assert!(std::any::type_name_of_val(&CallToActionPanel).contains("informational"));
     }
 }
+
+pub mod ingredient_autocomplete;

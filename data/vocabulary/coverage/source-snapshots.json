@@ -1,0 +1,32 @@
+{
+  "reviewed_on": "2026-10-21",
+  "foodon": {
+    "commit": "cd73540243a84bcd511a500d9a497d12d7dc02f6",
+    "url": "https://raw.githubusercontent.com/FoodOntology/foodon/cd73540243a84bcd511a500d9a497d12d7dc02f6/foodon.owl",
+    "sha256": "b897bf64c1b265c422db9ee01e1235c10c0b809e7f02326ef810a52068347edf",
+    "bytes": 40779019,
+    "version_iri": "http://purl.obolibrary.org/obo/foodon/releases/2026-09-20/foodon.owl",
+    "version_info_values": [
+      "2026-02-02",
+      "2026-09-20"
+    ],
+    "metadata_note": "Source exposes two versionInfo values; commit and digest identify the precise artifact.",
+    "license": "CC-BY-4.0"
+  },
+  "wikidata": {
+    "method": "Indexed search plus direct public item pages and relation traversal; non-atomic cached representations",
+    "license": "CC0 structured data",
+    "api_status": "proxy HTTP 403; no atomic bulk snapshot"
+  },
+  "usda": {
+    "status": "not assessed; proxy HTTP 403 on official endpoint",
+    "download_page": "https://fdc.nal.usda.gov/download-datasets/",
+    "intended_scope": [
+      "Foundation",
+      "SR Legacy",
+      "FNDDS",
+      "Branded separately"
+    ],
+    "license": "CC0 according to USDA API guide"
+  }
+}

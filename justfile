@@ -163,3 +163,12 @@ recipe-import-bridge-test:
 ci: fmt check lint test schema-check-test security-policy-test security-check recipe-import-fixture-test recipe-import-parser-active-content-test recipe-import-parser-corpus-test recipe-import-parser-semantic-test recipe-import-provider-adapter-test recipe-import-bridge-test
 	@echo ""
 	@echo "✅ All checks passed."
+
+# Seed maintained ingredient suggestions after `just migrate` (DATABASE_URL required).
+# Usage: just seed-vocabulary --dry-run
+seed-vocabulary *args:
+	SQLX_OFFLINE=true cargo run --features server --bin seed-vocabulary -- {{args}}
+
+# Backfill after schema rollout; also repairs ingredient popularity counters.
+reconcile-vocabulary-counts *args:
+	SQLX_OFFLINE=true cargo run --features server --bin reconcile-vocabulary-counts -- {{args}}

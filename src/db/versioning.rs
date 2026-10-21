@@ -4716,6 +4716,7 @@ mod tests {
                 cook_time_minutes: Some(15),
                 servings: Some(2),
                 ingredients: vec![crate::types::RecipeIngredient {
+                    vocabulary_id: None,
                     amount: "1".into(),
                     unit: "cup".into(),
                     name: "beans".into(),
@@ -5938,6 +5939,190 @@ mod tests {
                 .len(),
             1
         );
+    }
+
+    #[tokio::test]
+    async fn ingredient_popularity_tracks_publication_edits_forks_restore_and_deletion() {
+        use noms::vocabulary::{store, SeedFile, SourceManifest};
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let seeds: SeedFile =
+            serde_json::from_str(include_str!("../../data/vocabulary/ingredients.json")).unwrap();
+        let sources: SourceManifest =
+            serde_json::from_str(include_str!("../../data/vocabulary/sources.json")).unwrap();
+        store::seed(&pool, &seeds, &sources, false).await.unwrap();
+        let a = seeds.entries[0].id;
+        let b = seeds.entries[1].id;
+        async fn counts(pool: &PgPool, a: Uuid, b: Uuid) -> (i64, i64) {
+            sqlx::query_as("SELECT (SELECT recipe_count FROM vocabulary_entries WHERE id=$1), (SELECT recipe_count FROM vocabulary_entries WHERE id=$2)")
+                .bind(a).bind(b).fetch_one(pool).await.unwrap()
+        }
+        let user = owner(&pool, "popularity").await;
+        let other = owner(&pool, "popularity-other").await;
+        let mut original = snapshot("Popularity", "public");
+        original.content.ingredients[0].vocabulary_id = Some(a);
+        original
+            .content
+            .ingredients
+            .push(original.content.ingredients[0].clone());
+        let draft = create_new_recipe_draft(&pool, user.id, &original)
+            .await
+            .unwrap();
+        let draft = update_recipe_draft(&pool, draft.id, user.id, draft.revision, &original)
+            .await
+            .unwrap();
+        assert_eq!(counts(&pool, a, b).await, (0, 0), "drafts never count");
+        assert!(publish_recipe_draft(&pool, draft.id, other.id, None)
+            .await
+            .is_err());
+        let recipe = publish_recipe_draft(&pool, draft.id, user.id, None)
+            .await
+            .unwrap();
+        assert_eq!(
+            counts(&pool, a, b).await,
+            (1, 0),
+            "duplicate rows count once"
+        );
+        assert!(publish_recipe_draft(&pool, draft.id, user.id, None)
+            .await
+            .is_err());
+        publish_snapshot(&pool, recipe.id, user.id, 1, &original.content, None)
+            .await
+            .unwrap();
+        assert_eq!(
+            counts(&pool, a, b).await,
+            (1, 0),
+            "repeat versions do not count again"
+        );
+
+        let mut edited = original.content.clone();
+        edited.ingredients.truncate(1);
+        edited.ingredients[0].vocabulary_id = Some(b);
+        // A late tag constraint failure must roll back counter changes as well.
+        sqlx::raw_sql("ALTER TABLE recipe_tags ADD CONSTRAINT reject_popularity_tag CHECK (tag <> 'reject-popularity')").execute(&pool).await.unwrap();
+        edited.tags = vec!["reject-popularity".into()];
+        assert!(
+            publish_snapshot(&pool, recipe.id, user.id, 2, &edited, None)
+                .await
+                .is_err()
+        );
+        assert_eq!(counts(&pool, a, b).await, (1, 0));
+        edited.tags.clear();
+        publish_snapshot(&pool, recipe.id, user.id, 2, &edited, None)
+            .await
+            .unwrap();
+        assert_eq!(counts(&pool, a, b).await, (0, 1));
+        assert!(
+            publish_snapshot(&pool, recipe.id, user.id, 2, &original.content, None)
+                .await
+                .is_err()
+        );
+        assert_eq!(
+            counts(&pool, a, b).await,
+            (0, 1),
+            "stale publish has no effects"
+        );
+        restore_recipe_version(&pool, recipe.id, user.id, 1, 3)
+            .await
+            .unwrap();
+        assert_eq!(counts(&pool, a, b).await, (1, 0));
+        for visibility in ["private", "unlisted"] {
+            crate::db::update_recipe_visibility(&pool, recipe.id, user.id, visibility)
+                .await
+                .unwrap();
+            assert_eq!(
+                counts(&pool, a, b).await,
+                (0, 0),
+                "hidden recipes never affect global popularity"
+            );
+        }
+        crate::db::update_recipe_visibility(&pool, recipe.id, user.id, "public")
+            .await
+            .unwrap();
+        assert_eq!(counts(&pool, a, b).await, (1, 0));
+        let fork = create_fork_draft(&pool, recipe.id, other.id, None)
+            .await
+            .unwrap();
+        assert_eq!(counts(&pool, a, b).await, (1, 0));
+        let fork = publish_recipe_draft(&pool, fork.id, other.id, None)
+            .await
+            .unwrap();
+        assert_eq!(counts(&pool, a, b).await, (2, 0));
+        assert!(crate::db::delete_recipe(&pool, recipe.id, other.id)
+            .await
+            .is_err());
+        assert_eq!(counts(&pool, a, b).await, (2, 0));
+        crate::db::delete_recipe(&pool, fork.id, other.id)
+            .await
+            .unwrap();
+        assert_eq!(counts(&pool, a, b).await, (1, 0));
+        // Removing the last recognition (free text) removes its contribution.
+        let mut custom = original.content.clone();
+        for row in &mut custom.ingredients {
+            row.vocabulary_id = None;
+        }
+        publish_snapshot(&pool, recipe.id, user.id, 4, &custom, None)
+            .await
+            .unwrap();
+        assert_eq!(counts(&pool, a, b).await, (0, 0));
+        restore_recipe_version(&pool, recipe.id, user.id, 1, 5)
+            .await
+            .unwrap();
+        assert_eq!(counts(&pool, a, b).await, (1, 0));
+        // Account deletion cascades through recipes and the same trigger.
+        sqlx::query("DELETE FROM users WHERE id=$1")
+            .bind(user.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        assert_eq!(counts(&pool, a, b).await, (0, 0));
+    }
+
+    #[tokio::test]
+    async fn ingredient_vocabulary_survives_drafts_forks_and_restored_history() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let user = owner(&pool, "vocabulary-history").await;
+        let mut original = snapshot("Vocabulary recipe", "public");
+        let id = Uuid::new_v4();
+        original.content.ingredients[0].name = "chickpea".into();
+        original.content.ingredients[0].vocabulary_id = Some(id);
+        let draft = create_new_recipe_draft(&pool, user.id, &original)
+            .await
+            .unwrap();
+        let saved = update_recipe_draft(&pool, draft.id, user.id, draft.revision, &original)
+            .await
+            .unwrap();
+        assert_eq!(
+            saved.decoded_snapshot().unwrap().content.ingredients[0].vocabulary_id,
+            Some(id)
+        );
+        let published = publish_recipe_draft(&pool, draft.id, user.id, None)
+            .await
+            .unwrap();
+        assert_eq!(published.ingredients[0].vocabulary_id, Some(id));
+        let fork_owner = owner(&pool, "vocabulary-fork").await;
+        let fork = create_fork_draft(&pool, published.id, fork_owner.id, None)
+            .await
+            .unwrap();
+        assert_eq!(
+            fork.decoded_snapshot().unwrap().content.ingredients[0].vocabulary_id,
+            Some(id)
+        );
+        let mut edited = original.content.clone();
+        edited.ingredients[0].name = "grandma's spice mix".into();
+        edited.ingredients[0].vocabulary_id = None;
+        publish_snapshot(&pool, published.id, user.id, 1, &edited, None)
+            .await
+            .unwrap();
+        let restored = restore_recipe_version(&pool, published.id, user.id, 1, 2)
+            .await
+            .unwrap();
+        assert_eq!(restored.ingredients[0].name, "chickpea");
+        assert_eq!(restored.ingredients[0].vocabulary_id, Some(id));
+        let versions = get_recipe_versions(&pool, published.id).await.unwrap();
+        assert_eq!(versions[0].snapshot, versions[2].snapshot);
+        assert!(versions[1].snapshot["ingredients"][0]
+            .get("vocabulary_id")
+            .is_none());
     }
 
     #[tokio::test]

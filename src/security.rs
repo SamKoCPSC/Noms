@@ -907,6 +907,7 @@ mod tests {
             description: Some("A practical dinner".to_string()),
             commentary: Some("Serve warm".to_string()),
             ingredients: vec![RecipeIngredient {
+                vocabulary_id: None,
                 amount: "1".to_string(),
                 unit: "cup".to_string(),
                 name: "stock".to_string(),
@@ -962,6 +963,7 @@ mod tests {
             .collect();
         editor.ingredients = (0..MAX_RECIPE_INGREDIENTS)
             .map(|_| RecipeIngredient {
+                vocabulary_id: None,
                 amount: "a".repeat(MAX_INGREDIENT_AMOUNT_CHARS),
                 unit: "u".repeat(MAX_INGREDIENT_UNIT_CHARS),
                 name: "n".repeat(MAX_INGREDIENT_NAME_CHARS),
@@ -1008,6 +1010,7 @@ mod tests {
         let mut editor = valid_editor();
         editor.ingredients = (0..=MAX_RECIPE_INGREDIENTS)
             .map(|_| RecipeIngredient {
+                vocabulary_id: None,
                 amount: "1".to_string(),
                 unit: "cup".to_string(),
                 name: "stock".to_string(),

@@ -15,6 +15,7 @@ fn draft_payload(title: &str) -> crate::db::diff::RecipeDraftPayload {
             cook_time_minutes: None,
             servings: None,
             ingredients: vec![RecipeIngredient {
+                vocabulary_id: None,
                 amount: "1".to_string(),
                 unit: "cup".to_string(),
                 name: "stock".to_string(),
