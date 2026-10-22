@@ -292,6 +292,7 @@ mod tests {
         ]
         .into_iter()
         .map(|(amount, unit, name)| RecipeIngredient {
+            vocabulary_id: None,
             amount: amount.into(),
             unit: unit.into(),
             name: name.into(),
