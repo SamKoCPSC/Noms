@@ -195,6 +195,33 @@ edits, visibility changes, restores, and deletions. The deployment-only
 Exact label and alias matches retain priority over popularity, and the UI remains
 label only. See the vocabulary README for rollout and concurrency details.
 
-For the saved implementation state, focused verification, provisional international
-source coverage, and the remaining USDA/environment work, read the
-[2026-10-21 session handoff](../handoffs/NOMS-017-ingredient-vocabulary-2026-10-21.md).
+For the saved implementation state, focused verification and the completed USDA
+benchmark review, read the 2026-10-22 update in the
+[dated session handoff](../handoffs/NOMS-017-ingredient-vocabulary-2026-10-21.md).
+The [coverage report](../../data/vocabulary/coverage/README.md) distinguishes
+27/100 generic USDA matches from 34 additional branded-only products. The
+three-source union is 84/100 with generic USDA evidence, or 91/100 including
+products; these research candidates have not been promoted to seed mappings.
+
+The initial [FoodOn adapter](../../scripts/vocabulary/README.md) now extracts a
+pinned local OWL file into review candidates and builds complete canonical
+seed/source files from approved decisions. Existing IDs/text remain stable and
+source synonyms retain their scopes. Full-snapshot extraction, 14 offline
+regressions and the actual Rust seed CLI validation passed. The durable pilot
+review records 50 mappings (28 exact, 8 broader, 12 narrower, 2 related) and
+preserves all 100 existing identities/texts. The pilot initially left the maintained seed unchanged.
+The generated pilot and a cumin-seed import probe were subsequently loaded into
+the disposable development DB (101 entries, 51 mappings). Verified dry-run
+rollback, idempotency, and the browser flow through mock sign-in, alias lookup,
+keyboard/mouse selection, canonical UUID autosave, reload, and free-text fallback
+all passed. The [repeatable UI check](../../scripts/vocabulary/browser-smoke.py)
+requires a live local stack and loaded bundle; no provenance-management UI is included.
+
+The subsequent cooking-focused expansion is now promoted: **10,148 active entries**
+(100 curated plus 10,048 imported), with 60 staged UUIDs retained retired.
+All prior development IDs remain in the maintained seed, resolving the pilot's
+startup-seed constraint. The selection policy, original baseline, UUID/review
+ledger and counts are versioned under `data/vocabulary/adapters/foodon-cooking-*`.
+Source annotations and complete hold queues stay outside Git. This is policy-based
+screening with explicit exceptions; unresolved semantic overlaps can still need
+editorial consolidation. The coverage study remains the fixed 100-entry benchmark.

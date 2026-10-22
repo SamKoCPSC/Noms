@@ -243,6 +243,9 @@ pub async fn autocomplete(pool: &PgPool, text: &str) -> Result<Vec<Suggestion>, 
 mod tests {
     use super::*;
 
+    // Keep ranking/transaction fixtures stable as the maintained catalog grows.
+    // The full catalog is validated separately by vocabulary::tests and the seed CLI.
+
     async fn popularity_db() -> (pgtemp::PgTempDB, PgPool, SeedFile, SourceManifest) {
         let db = pgtemp::PgTempDB::async_new().await;
         let pool = sqlx::postgres::PgPoolOptions::new()
@@ -261,10 +264,14 @@ mod tests {
             .execute(&pool)
             .await
             .unwrap();
-        let file: SeedFile =
-            serde_json::from_str(include_str!("../../data/vocabulary/ingredients.json")).unwrap();
-        let sources: SourceManifest =
-            serde_json::from_str(include_str!("../../data/vocabulary/sources.json")).unwrap();
+        let file: SeedFile = serde_json::from_str(include_str!(
+            "../../data/vocabulary/adapters/foodon-cooking-base-ingredients.json"
+        ))
+        .unwrap();
+        let sources: SourceManifest = serde_json::from_str(include_str!(
+            "../../data/vocabulary/adapters/foodon-cooking-base-sources.json"
+        ))
+        .unwrap();
         seed(&pool, &file, &sources, false).await.unwrap();
         (db, pool, file, sources)
     }
@@ -501,10 +508,14 @@ mod tests {
             .execute(&pool)
             .await
             .unwrap();
-        let file: SeedFile =
-            serde_json::from_str(include_str!("../../data/vocabulary/ingredients.json")).unwrap();
-        let sources: SourceManifest =
-            serde_json::from_str(include_str!("../../data/vocabulary/sources.json")).unwrap();
+        let file: SeedFile = serde_json::from_str(include_str!(
+            "../../data/vocabulary/adapters/foodon-cooking-base-ingredients.json"
+        ))
+        .unwrap();
+        let sources: SourceManifest = serde_json::from_str(include_str!(
+            "../../data/vocabulary/adapters/foodon-cooking-base-sources.json"
+        ))
+        .unwrap();
         let mut original = file.clone();
         original.entries.truncate(10);
         assert_eq!(

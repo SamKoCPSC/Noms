@@ -1,14 +1,34 @@
 # Maintained ingredient vocabulary
 
 `ingredients.json` is the reviewed source of truth for ingredient suggestions.
-The original fifteen entries retain their IDs. The seed now contains 100 curated
-ingredients across 19 benchmark strata, including regional staples, fermented
-condiments, grains, herbs, and spice blends. The sampling strata describe culinary
-usage contexts, not exclusive origins. See `coverage/benchmark.json` and the
-coverage review for source-matching evidence. These remain curated entries;
-research candidates have not been automatically promoted to source mappings.
+The seed contains **10,148 active ingredients**: the original 100 curated entries
+plus 10,048 FoodOn-derived cooking/pantry entries. Another 60 staged identities
+are retained as retired after the deployment review removed unsuitable categories.
+Every original ID and authored
+label/alias/description is preserved, including the original fifteen IDs. The
+previously tested cumin-seed UUID is also retained. There are 12,016 FoodOn source
+mappings (11,956 on active entries); overlapping source records use conservative `related` relationships
+rather than inferred exact equivalence from matching names.
+
+The expansion uses a recorded cooking-scope policy and explicit source-specific
+exceptions. This is batch screening, not individual semantic certification of
+every source annotation. It includes regional foods, edible parts, named varieties,
+pantry products and useful forms; organizational/industrial/medical categories,
+complete meals and unclear terms are held out. Source synonyms are not copied
+wholesale. See `adapters/foodon-cooking-policy.json` and the persisted UUID/review
+ledger in `adapters/foodon-cooking-review.json`.
+
+The source coverage research still measures the original **100-ingredient**
+benchmark across 19 strata. Those percentages do not describe the expanded seed.
+See `coverage/benchmark.json` and the coverage review for source-matching evidence.
 Personal suggestions are deferred. Time classification
 is outside this dataset and belongs in shared application code.
+
+The [FoodOn adapter](../../scripts/vocabulary/README.md) extracts a checksum-pinned
+OWL snapshot into review candidates and converts approved decisions into complete
+canonical seed/source files. It preserves existing IDs and authored wording.
+Use `just seed-vocabulary --validate-only --file PATH --sources PATH` to run the
+Rust validator without connecting to a database before a normal loader dry-run.
 
 Apply the declarative schema with the existing `just migrate` workflow first.
 With the deployment/seed role's `DATABASE_URL` exported, run:
@@ -43,9 +63,11 @@ of subsequent vocabulary changes. A reference does not imply interchangeability.
   `related` relationship. These mappings do not merge Noms entries.
 
 `sources.json` records external source IDs, HTTPS URLs, versions, SHA-256 checksums
-(as 64 hexadecimal characters), licenses, and attribution. The current entries
-are manually authored, so their external mappings/references and the manifest are
-empty; no upstream review or attribution is implied.
+(as 64 hexadecimal characters), licenses, and attribution. The manifest now pins
+FoodOn's 2026-09-20 snapshot with CC-BY-4.0 attribution. Per-term source notices
+remain in the adapter's generated report; the manifest does not replace review
+of third-party definition attribution. The original entries retain curated origin;
+new source-derived entries use imported origin.
 
 A normalized label/alias must be unique within an entry. Collisions between
 entries produce warnings and remain separate suggestions for review. IDs are

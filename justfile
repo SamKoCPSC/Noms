@@ -164,10 +164,17 @@ ci: fmt check lint test schema-check-test security-policy-test security-check re
 	@echo ""
 	@echo "✅ All checks passed."
 
-# Seed maintained ingredient suggestions after `just migrate` (DATABASE_URL required).
-# Usage: just seed-vocabulary --dry-run
+# Seed after `just migrate`; --validate-only checks files without DATABASE_URL.
+# Usage: just seed-vocabulary --dry-run | just seed-vocabulary --validate-only
 seed-vocabulary *args:
 	SQLX_OFFLINE=true cargo run --features server --bin seed-vocabulary -- {{args}}
+
+# Offline FoodOn extraction and approved canonical seed generation.
+foodon-adapter *args:
+	@python3 scripts/vocabulary/foodon.py {{args}}
+
+foodon-adapter-test:
+	@python3 -m unittest discover -s scripts/vocabulary -p 'test_*.py' -v
 
 # Backfill after schema rollout; also repairs ingredient popularity counters.
 reconcile-vocabulary-counts *args:
