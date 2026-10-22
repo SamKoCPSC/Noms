@@ -32,7 +32,6 @@ pub fn Footer() -> Element {
             }
             div { class: "footer-bottom container",
                 p { "© 2026 Noms" }
-                p { "Built with care and Dioxus." }
             }
         }
     }
