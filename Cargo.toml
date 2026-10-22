@@ -29,6 +29,9 @@ serde            = { version = "1", features = ["derive"] }
 percent-encoding = "2"
 url                = "2"
 serde_json       = "1"
+serde_jcs = { version = "0.1", optional = true }
+zip = { version = "9.0.4", default-features = false, optional = true }
+base64 = { version = "0.22", optional = true }
 time             = { version = "0.3", optional = true }
 cookie           = { version = "0.18", optional = true }
 chrono           = { version = "0.4", features = ["serde"] }
@@ -49,10 +52,11 @@ dioxus-web = "0.7"
 web-sys = { version = "0.3.98", features = [
     "Window", "Storage", "Location", "History", "Document", "Navigator", "Clipboard", "ShareData", "MouseEvent", "Element", "Node",
     "HtmlCanvasElement", "CanvasRenderingContext2d", "HtmlImageElement", "HtmlInputElement", "HtmlTextAreaElement", "HtmlSelectElement", "ImageData",
-    "Blob", "File", "FileReader", "Url",
+    "Blob", "BlobPropertyBag", "File", "FileReader", "Url", "HtmlAnchorElement", "Response", "RequestCredentials",
     "DataTransfer", "DataTransferItem",
     "DragEvent", "KeyboardEvent", "Event", "EventTarget", "HtmlElement", "HtmlDialogElement",
-    "CssStyleDeclaration", "DomRect", "DomRectList", "NodeList", "FocusOptions"
+    "CssStyleDeclaration", "DomRect", "DomRectList", "NodeList", "FocusOptions",
+    "VisualViewport", "ScrollIntoViewOptions", "ScrollLogicalPosition", "ScrollBehavior"
 ] }
 js-sys = "0.3"
 wasm-bindgen-futures = "0.4"
@@ -81,6 +85,9 @@ server  = [
     "dashmap",
     "ipnet",
     "sha2",
+    "serde_jcs",
+    "dep:zip",
+    "dep:base64",
 ]
 
 [dev-dependencies]

@@ -52,6 +52,10 @@ pub fn Navbar(theme: UseTheme) -> Element {
         crate::components::base::account_menu::close_account_menu("navbar-user-dropdown");
     }));
     let current_route = use_route::<Route>();
+    let editor_back = matches!(
+        current_route,
+        Route::RecipeNew {} | Route::RecipeEdit { .. } | Route::RecipeDraftEdit { .. }
+    );
     // Browser Back/Forward or another route transition must not leave a stale dialog.
     use_effect(use_reactive(&current_route, move |_| menu_open.set(false)));
     let is_signed_in = auth.is_authenticated;
@@ -74,6 +78,21 @@ pub fn Navbar(theme: UseTheme) -> Element {
     rsx! {
         nav { class: "navbar", aria_label: "Primary navigation",
             div { class: "navbar-inner",
+                if let Some((heading, parent)) = crate::components::mobile::route_heading(&current_route) {
+                    div { class: "mobile-route-heading",
+                        Link { to: parent, class: "mobile-back-link touch-target", aria_label: "Back", onclick_only: editor_back,
+                            onclick: move |event: MouseEvent| {
+                                if editor_back {
+                                    event.prevent_default();
+                                    #[cfg(target_arch = "wasm32")]
+                                    spawn(async { let _ = document::eval("document.getElementById('recipe-editor-exit')?.click()").await; });
+                                }
+                            },
+                            crate::components::mobile::MobileIcon { kind: "back" }
+                        }
+                        span { "{heading}" }
+                    }
+                }
                 Link { to: Route::Home {}, class: "navbar-logo", aria_label: "Noms introduction",
                     BrandMark {}
                     span { "Noms" }
@@ -89,6 +108,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
                     }
                 }
                 NavigationSearch { compact: true }
+                Link { to: Route::Search { query: Default::default() }, class: "mobile-search-link touch-target", aria_label: "Search Noms", crate::components::mobile::MobileIcon { kind: "search" } }
                 div { class: "navbar-actions",
                     if is_signed_in {
                         Link { to: Route::RecipeNew {}, class: "btn btn-primary navbar-create", "New recipe" }
@@ -207,7 +227,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
                     NavigationSearch { compact: false, on_navigate: move |_| menu_open.set(false) }
                     nav { class: "navigation-drawer-links", aria_label: "All destinations",
                         for (route, label, icon) in [
-                            (if is_signed_in { Route::CommunityHome {} } else { Route::Home {} }, "Home", None),
+                            (if is_signed_in { Route::CommunityHome {} } else { Route::Home {} }, "Home", Some(PageIconKind::Home)),
                             (Route::Dashboard {}, "Dashboard", Some(PageIconKind::Dashboard)),
                             (Route::CollectionList {}, "Collections", Some(PageIconKind::Collections)),
                             (Route::Explore {}, "Explore", Some(PageIconKind::Explore)),
@@ -228,7 +248,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
                         }
                     }
                     if is_signed_in {
-                        Link { to: Route::Home {}, class: "navbar-link", onclick: move |_| menu_open.set(false), "Noms introduction" }
+                        Link { to: Route::Home {}, class: "navbar-link", onclick: move |_| menu_open.set(false), NavigationArtwork { kind: Some(PageIconKind::Home) } span { "Noms introduction" } }
                     }
                     div { class: "navigation-drawer-account",
                         if is_signed_in {

@@ -76,11 +76,32 @@ fn ExplorePagination(
     } }
 }
 
+/// Read the native landing search's query on both SSR and hydration. Keep each
+/// form value encoded until parsing so literal +, &, and # survive unchanged.
+fn initial_search_query() -> String {
+    #[cfg(target_arch = "wasm32")]
+    let query = web_sys::window()
+        .and_then(|window| window.location().search().ok())
+        .unwrap_or_default();
+    #[cfg(not(target_arch = "wasm32"))]
+    let query = dioxus_fullstack::FullstackContext::current()
+        .and_then(|context| context.parts_mut().uri.query().map(str::to_owned))
+        .unwrap_or_default();
+    parse_public_search_query(&query)
+}
+
+fn parse_public_search_query(query: &str) -> String {
+    url::form_urlencoded::parse(query.trim_start_matches('?').as_bytes())
+        .find(|(name, _)| name == "q")
+        .map(|(_, value)| value.trim().to_string())
+        .unwrap_or_default()
+}
+
 /// Public recipe discovery page with server-side search.
 #[component]
 pub fn Explore() -> Element {
     // ── Signal state ─────────────────────────────────────────────────────
-    let mut search_query = use_signal(String::new);
+    let mut search_query = use_signal(initial_search_query);
     let mut offset = use_signal(|| 0i64);
     let has_more = use_signal(|| true);
     let loaded_recipes = use_signal(Vec::<RecipeCardSummary>::new);
@@ -286,6 +307,32 @@ pub fn Explore() -> Element {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod public_search_query_tests {
+    use super::parse_public_search_query;
+
+    #[test]
+    fn native_form_query_preserves_food_names_and_encoded_delimiters() {
+        assert_eq!(
+            parse_public_search_query("?q=+chili+garlic+noodles+"),
+            "chili garlic noodles"
+        );
+        assert_eq!(
+            parse_public_search_query("q=fish+%26+chips+%2B+lime+%231"),
+            "fish & chips + lime #1"
+        );
+        assert_eq!(parse_public_search_query("q=%E9%9D%A2%E6%9D%A1"), "面条");
+    }
+
+    #[test]
+    fn empty_query_browses_all_public_recipes() {
+        assert_eq!(parse_public_search_query(""), "");
+        assert_eq!(parse_public_search_query("q=+++"), "");
+        assert_eq!(parse_public_search_query("other=ramen"), "");
+        assert_eq!(parse_public_search_query("q=ramen&q=burger"), "ramen");
     }
 }
 

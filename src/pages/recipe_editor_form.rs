@@ -1,6 +1,45 @@
 use crate::components::base::EditedRecipeImage;
 use crate::types::{RecipeImage, RecipeImageEdit, RecipeStep};
 use dioxus::prelude::*;
+
+#[component]
+pub(super) fn PublicationReview(
+    title: String,
+    ingredient_count: usize,
+    step_count: usize,
+    visibility: String,
+    preserve_visibility: bool,
+    oncancel: EventHandler<()>,
+    onconfirm: EventHandler<MouseEvent>,
+) -> Element {
+    rsx! {
+        crate::components::base::SharedModal {
+            aria_labelledby: "publication-review-title", focus_selector: "#publication-review-back", on_dismiss: oncancel,
+            div { class: "modal-card mobile-action-sheet", onclick: move |event| event.stop_propagation(),
+                div { class: "mobile-sheet-heading", h2 { id: "publication-review-title", "Review your recipe" } button { id: "publication-review-back", r#type: "button", class: "btn btn-ghost touch-target", aria_label: "Back to editing", onclick: move |_| oncancel.call(()), "✕" } }
+                p { class: "recipe-editor__hint", "Your working draft is private. Publishing creates a snapshot in your recipe history." }
+                h3 { class: "mobile-review-recipe-title", if title.trim().is_empty() { "Untitled recipe" } else { "{title}" } }
+                p { "{ingredient_count} " if ingredient_count == 1 { "ingredient" } else { "ingredients" } " · {step_count} " if step_count == 1 { "step" } else { "steps" } }
+                div { class: "mobile-review-visibility neumo-inset",
+                    if preserve_visibility { strong { "Sharing stays the same" } p { "Publishing keeps this recipe’s current visibility. Manage sharing from the published recipe." } }
+                    else { strong { "Who can see the published recipe?" } p {
+                        match visibility.as_str() {
+                            "public" => "Public — appears in Explore and search.",
+                            "unlisted" => "Unlisted — anyone with the link can view.",
+                            _ => "Private — only you can see this recipe.",
+                        }
+                    } }
+                }
+                p { class: "recipe-editor__hint", "To change recipe details, return to editing. Nothing is published until you confirm." }
+                div { class: "mobile-review-actions",
+                    button { r#type: "button", class: "btn btn-secondary touch-target", onclick: move |_| oncancel.call(()), "Keep editing" }
+                    button { r#type: "button", class: "btn btn-primary touch-target", onclick: move |event| onconfirm.call(event), "Publish recipe" }
+                }
+            }
+        }
+    }
+}
+
 /// Editor fields need stable accessible names, including repeated ingredient
 /// rows whose visible labels would otherwise be only placeholders.
 #[component]

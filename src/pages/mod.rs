@@ -1,6 +1,7 @@
 mod about;
 mod collection_detail;
 mod collection_edit;
+mod collection_json_controls;
 mod collection_list;
 mod collection_new;
 mod community_home;
@@ -18,6 +19,7 @@ mod recipe_edit;
 mod recipe_editor_form;
 mod recipe_import;
 mod recipe_import_mapping;
+mod recipe_json_controls;
 mod recipe_new;
 mod recipe_version_graph;
 pub(crate) mod search;
@@ -45,3 +47,5 @@ pub use search::Search;
 pub use settings::SettingsAccounts;
 pub use settings::SettingsProfile;
 pub use user_profile::UserProfile;
+
+pub use crate::components::mobile::MobileYou;

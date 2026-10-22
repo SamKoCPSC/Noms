@@ -42,7 +42,7 @@ async fn bounded_database_operation<T>(
 }
 
 #[cfg(feature = "server")]
-fn editor_to_draft_payload(
+pub(super) fn editor_to_draft_payload(
     editor: crate::types::RecipeEditorState,
 ) -> crate::db::diff::RecipeDraftPayload {
     crate::db::diff::RecipeDraftPayload {
@@ -96,6 +96,7 @@ fn draft_to_view(
             .unwrap_or_else(|| "private".to_string()),
     );
     Ok(crate::types::RecipeDraftView {
+        import_images: crate::db::json_import_review(&draft)?.images,
         id: draft.id,
         recipe_id: draft.recipe_id,
         base_version_number: draft.base_version_number,
@@ -2155,4 +2156,250 @@ mod media_ownership_tests {
         );
         assert!(mock_server.received_requests().await.unwrap().is_empty());
     }
+}
+
+/// Download the current saved content visible to this viewer, never an editor draft.
+#[server]
+pub async fn export_recipe_json(recipe_id: String) -> Result<String, ServerFnError> {
+    let viewer = crate::auth::session::extract_user_id_from_fullstack().await;
+    enforce_graph_budget(viewer)?;
+    let id =
+        uuid::Uuid::parse_str(&recipe_id).map_err(|_| ServerFnError::new("Invalid recipe ID"))?;
+    crate::security::run_with_database_budget(
+        crate::security::DATABASE_EXECUTION_BUDGET,
+        export_recipe_json_for_viewer(&crate::db::get_pool(), id, viewer),
+    )
+    .await
+    .map_err(|_| ServerFnError::new("Recipe export timed out"))?
+}
+
+#[cfg(feature = "server")]
+async fn export_recipe_json_for_viewer(
+    pool: &sqlx::PgPool,
+    id: uuid::Uuid,
+    viewer: Option<uuid::Uuid>,
+) -> Result<String, ServerFnError> {
+    read_recipe_export(pool, id, viewer)
+        .await
+        .map(|(_, json)| json)
+}
+
+#[cfg(feature = "server")]
+pub(super) async fn read_recipe_export(
+    pool: &sqlx::PgPool,
+    id: uuid::Uuid,
+    viewer: Option<uuid::Uuid>,
+) -> Result<(crate::types::Recipe, String), ServerFnError> {
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|_| ServerFnError::new("Cannot read recipe"))?;
+    sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| ServerFnError::new("Cannot read recipe"))?;
+    let recipe = match crate::db::get_recipe_by_id_public(&mut *tx, id)
+        .await
+        .map_err(|_| ServerFnError::new("Cannot read recipe"))?
+    {
+        Some(recipe) => recipe,
+        None => match viewer {
+            Some(owner) => crate::db::get_recipe_by_id_and_owner(&mut *tx, id, owner)
+                .await
+                .map_err(|_| ServerFnError::new("Recipe not found"))?,
+            None => return Err(ServerFnError::new("Recipe not found")),
+        },
+    };
+    let tags = crate::db::get_recipe_tags(&mut *tx, id)
+        .await
+        .map_err(|_| ServerFnError::new("Cannot read recipe tags"))?
+        .into_iter()
+        .map(|tag| tag.tag)
+        .collect();
+    let output = crate::recipe_json::export_recipe(&recipe, tags).map_err(ServerFnError::new)?;
+    tx.commit()
+        .await
+        .map_err(|_| ServerFnError::new("Cannot finish recipe export"))?;
+    Ok((recipe, output))
+}
+
+/// Validate the exact versioned JSON contract before creating one private copy.
+#[server]
+pub async fn import_recipe_json(
+    expected_account_id: Option<uuid::Uuid>,
+    json: String,
+    available_external_urls: Vec<String>,
+) -> Result<crate::types::RecipeDraftView, ServerFnError> {
+    let user = crate::auth::account_binding::require_form_account(expected_account_id).await?;
+    enforce_mutation_budget(user)?;
+    let draft =
+        crate::security::run_with_expensive_read_work_budget(super::recipe_json_media::import(
+            &crate::db::get_pool(),
+            &crate::storage::get_storage_client(),
+            user,
+            &json,
+            &available_external_urls,
+        ))
+        .await
+        .map_err(|_| ServerFnError::new("Image checks are busy. Try again shortly."))??;
+    draft_to_view(draft).map_err(|e| ServerFnError::new(e.to_string()))
+}
+
+#[cfg(all(test, feature = "server"))]
+mod recipe_json_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn json_export_enforces_visibility_and_exports_saved_content_not_owner_drafts() {
+        let (_db, pool) = crate::test_utils::setup_test_db().await;
+        let unique = crate::test_utils::uid();
+        let owner = crate::db::insert_user(
+            &pool,
+            &format!("json_{unique}"),
+            "Cook",
+            &format!("{unique}@example.test"),
+            None,
+        )
+        .await
+        .unwrap();
+        let recipe =
+            crate::test_utils::create_test_published_recipe(&pool, owner.id, "Saved recipe").await;
+        assert!(export_recipe_json_for_viewer(&pool, recipe.id, None)
+            .await
+            .is_err());
+        assert!(
+            export_recipe_json_for_viewer(&pool, recipe.id, Some(uuid::Uuid::new_v4()))
+                .await
+                .is_err()
+        );
+        let draft = crate::test_utils::create_test_edit_draft(&pool, owner.id, recipe.id).await;
+        let mut edited = draft.decoded_snapshot().unwrap();
+        edited.content.title = "Unpublished secret".into();
+        crate::db::update_recipe_draft(&pool, draft.id, owner.id, draft.revision, &edited)
+            .await
+            .unwrap();
+        let json = export_recipe_json_for_viewer(&pool, recipe.id, Some(owner.id))
+            .await
+            .unwrap();
+        let (_, content) = crate::recipe_json::parse_recipe(&json).unwrap();
+        assert_eq!(content.title, "Saved recipe");
+        assert!(!json.contains(&draft.id.to_string()));
+        for visibility in ["public", "unlisted"] {
+            crate::db::update_recipe_visibility(&pool, recipe.id, owner.id, visibility)
+                .await
+                .unwrap();
+            let json = export_recipe_json_for_viewer(&pool, recipe.id, None)
+                .await
+                .unwrap();
+            let (file, content) = crate::recipe_json::parse_recipe(&json).unwrap();
+            assert_eq!(content.visibility, "private");
+            assert_eq!(file.source_attribution.author_username, owner.username);
+        }
+        assert!(
+            export_recipe_json_for_viewer(&pool, uuid::Uuid::new_v4(), Some(owner.id))
+                .await
+                .is_err()
+        );
+    }
+}
+
+#[server]
+pub async fn resolve_imported_image(
+    expected_account_id: Option<uuid::Uuid>,
+    draft_id: String,
+    expected_revision: i64,
+    image_id: uuid::Uuid,
+    omit: bool,
+    available_external_urls: Vec<String>,
+) -> Result<crate::types::RecipeDraftView, ServerFnError> {
+    let user = crate::auth::account_binding::require_form_account(expected_account_id).await?;
+    enforce_mutation_budget(user)?;
+    let id = uuid::Uuid::parse_str(&draft_id).map_err(|_| ServerFnError::new("Invalid draft"))?;
+    let draft =
+        crate::security::run_with_expensive_read_work_budget(super::recipe_json_media::resolve(
+            &crate::db::get_pool(),
+            &crate::storage::get_storage_client(),
+            user,
+            id,
+            expected_revision,
+            image_id,
+            omit,
+            &available_external_urls,
+        ))
+        .await
+        .map_err(|_| ServerFnError::new("Image checks are busy. Try again shortly."))??;
+    draft_to_view(draft).map_err(|e| ServerFnError::new(e.to_string()))
+}
+/// Validate the file before the browser checks external display images.
+#[server]
+pub async fn recipe_json_image_urls(
+    expected_account_id: Option<uuid::Uuid>,
+    json: String,
+) -> Result<Vec<String>, ServerFnError> {
+    let user = crate::auth::account_binding::require_form_account(expected_account_id).await?;
+    crate::security::enforce_user_request_budget(user, crate::security::RequestClass::Graph)
+        .map_err(|_| ServerFnError::new("Too many image checks"))?;
+    let (_, mut editor) = crate::recipe_json::parse_recipe(&json).map_err(ServerFnError::new)?;
+    Ok(super::recipe_json_media::external_urls(
+        &mut editor,
+        &crate::storage::get_storage_client(),
+    ))
+}
+#[server]
+pub async fn imported_image_external_url(
+    expected_account_id: Option<uuid::Uuid>,
+    draft_id: String,
+    image_id: uuid::Uuid,
+) -> Result<Vec<String>, ServerFnError> {
+    let user = crate::auth::account_binding::require_form_account(expected_account_id).await?;
+    crate::security::enforce_user_request_budget(user, crate::security::RequestClass::Graph)
+        .map_err(|_| ServerFnError::new("Too many image checks"))?;
+    let id = uuid::Uuid::parse_str(&draft_id).map_err(|_| ServerFnError::new("Invalid draft"))?;
+    let draft = bounded_database_operation(crate::db::get_recipe_draft(
+        &crate::db::get_pool(),
+        id,
+        user,
+    ))
+    .await?;
+    let review = crate::db::json_import_review(&draft)
+        .map_err(|_| ServerFnError::new("Image review unavailable"))?;
+    let candidate = review
+        .images
+        .into_iter()
+        .find(|i| i.id == image_id)
+        .ok_or_else(|| ServerFnError::new("Imported image not found"))?;
+    let storage = crate::storage::get_storage_client();
+    Ok(
+        if matches!(
+            storage.classify_media_url(&candidate.image.url),
+            Ok(crate::storage::MediaUrl::ExternalHttps)
+        ) && super::recipe_json_media::external_url_allowed(&candidate.image.url)
+        {
+            vec![candidate.image.url]
+        } else {
+            vec![]
+        },
+    )
+}
+
+/// A standalone reading copy; unresolved images are returned for review before download.
+#[server]
+pub async fn export_recipe_html(
+    recipe_id: String,
+    include_images: bool,
+) -> Result<crate::recipe_html::HtmlExport, ServerFnError> {
+    let viewer = crate::auth::session::extract_user_id_from_fullstack().await;
+    enforce_graph_budget(viewer)?;
+    let id =
+        uuid::Uuid::parse_str(&recipe_id).map_err(|_| ServerFnError::new("Invalid recipe ID"))?;
+    crate::security::run_with_expensive_read_work_budget(super::recipe_html::prepare(
+        &crate::db::get_pool(),
+        &crate::storage::get_storage_client(),
+        id,
+        viewer,
+        include_images,
+    ))
+    .await
+    .map_err(|_| ServerFnError::new("Exports are busy. Try again shortly."))?
+    .map_err(ServerFnError::new)
 }

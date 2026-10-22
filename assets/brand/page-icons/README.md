@@ -1,5 +1,9 @@
 # NOMS painted page icons
 
+## Home — finalized 2026-10-16
+
+Approved direction: **H1 Kitchen cottage**, selected from six Home concepts. Asset: [home-v1.png](home-v1.png), a standalone transparent PNG generated from the selected concept with the built-in image tool. Cream cottage, rounded olive roof, coral arched door and chimney cap, four-pane window, and olive doorstep. Preserve the painted texture, warm upper-left light, alpha, and aspect ratio. `PageIconKind::Home` uses the shared 192 × 192 WebP pipeline for 32px artwork in Home drawer destinations and the Noms introduction link. Home page headings retain their original presentation.
+
 ## Recipe import — 2026-10-07
 
 Approved asset: [import-v1.png](import-v1.png), the simple clipboard with a short coral inward arrow selected from the 2026-10-06 concepts. Original 1254 × 1254 transparent RGBA PNG generated with the built-in image tool using editor/dashboard artwork as style references. The import heading uses `PageIconKind::Import` and the shared 192 × 192 WebP pipeline; editor artwork remains unchanged. Preserve alpha, aspect ratio, and decorative accessibility treatment.
@@ -16,7 +20,7 @@ Generated 2026-09-27 with the built-in image-generation tool from the eight sele
 
 [Gallery](../page-icons.html)
 
-Navigation integration (2026-09-27, extended 2026-09-28): `NavigationArtwork` reuses these assets at 32 × 32 beside matching drawer destinations and dashboard sidebar labels. The book remains 32 × 40. Home retains an aligned empty artwork slot; About/How to now use their approved identities. Profile artwork remains separate from the user's avatar, and small action controls retain conventional icons. See the drawer/sidebar validation in the integration checkpoint.
+Navigation integration (2026-09-27, extended 2026-09-28): `NavigationArtwork` reuses these assets at 32 × 32 beside matching drawer destinations and dashboard sidebar labels. The book remains 32 × 40. Home now uses the finalized H1 kitchen cottage (2026-10-16); About/How to now use their approved identities. Profile artwork remains separate from the user's avatar, and small action controls retain conventional icons. See the drawer/sidebar validation in the integration checkpoint.
 
 ## Dashboard
 

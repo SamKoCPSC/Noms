@@ -1,6 +1,6 @@
 # NOMS-016: Recipe Import & Export — Implementation Plan
 
-**Status:** Clipboard import implemented for 15 providers; guided import/editor validation in progress. Export remains planned.
+**Status:** Clipboard import implemented for 15 providers and manually accepted. Single-recipe and collection-tree JSON round trips, image recovery, and standalone recipe HTML reading copies implemented. Collection HTML and interoperable structured export remain planned.
 **Created:** 2026-08-15
 **Depends on:** Current recipe, draft, versioning, collection, and image models
 **Coordination:** NOMS-017 defines flexible authored recipe metadata and optional autocomplete-vocabulary references. Agree their portable representation with NOMS-016 before freezing the snapshot schema; completing the autocomplete implementation is not a prerequisite for starting export.
@@ -159,7 +159,7 @@ Noms exports portable recipe snapshots rather than complete database backups. Or
 
 ### Canonical Noms recipe snapshot
 
-`noms.recipe.snapshot.v1` is the authoritative lossless interchange contract. It must contain every field in the portable recipe model, including fields whose values are `null`, empty strings, empty arrays, or empty objects. Coordinate portable authored metadata and optional vocabulary references with NOMS-017 before freezing this schema. The first export slice can prove serialization and round trips of currently persisted fields while that representation is agreed; it must not claim support for metadata that the application does not yet store. Changes after schema freeze require a new snapshot-schema identifier and explicit compatibility rules.
+`noms.recipe.snapshot.v3` is the current interchange contract. JSON preserves image references, edits, nested photos and authored text/numeric fields. Import reuses accessible images and stores unresolved references in private draft recovery metadata for retry, re-upload or omission. The optional ZIP provides stored files for manual replacement. Original v1/reference and image-free v2/none files remain importable. See the [current contract](../spikes/NOMS-016-json-portability-v3.md).
 
 The canonical snapshot must distinguish three field states:
 
@@ -204,13 +204,13 @@ Re-import behavior is:
 
 The snapshot digest identifies the exact logical content independently of whitespace, object-key order, export time, output filename, renderer, or image-packaging choice. Noms must:
 
-1. Build the complete `noms.recipe.snapshot.v1` value with explicit null and empty fields.
+1. Build the complete `noms.recipe.snapshot.v2` text-content value with explicit null and empty fields.
 2. Normalize set-like fields such as tags by applying the schema's documented deduplication and ordering rules; preserve order for ingredients, instructions, equipment, images, and every other order-sensitive array.
 3. Canonicalize the snapshot using the JSON Canonicalization Scheme (JCS) from [RFC 8785](https://www.rfc-editor.org/info/rfc8785/).
 4. Encode the canonical representation as UTF-8.
 5. Calculate SHA-256 and record the algorithm, canonicalization method, snapshot-schema identifier, and digest value.
 
-The digest input excludes the portable ID, export-envelope metadata, export timestamp, generator version, collection membership, lineage edges, archive paths, and the choice to package or omit image bytes. Logical image records remain part of the snapshot; packaged image files receive separate SHA-256 checksums in archive metadata. A future snapshot-schema change must use a new schema identifier so old and new digest meanings cannot be confused.
+The digest input excludes the portable ID, export-envelope metadata, export timestamp, generator version, collection membership, lineage edges, archive paths, and the choice to package or omit image bytes. Images are excluded from the v2 JSON snapshot and its digest. The optional ZIP carries saved image files separately; these are manually reattached after import. A future snapshot-schema change must use a new schema identifier so old and new digest meanings cannot be confused.
 
 ### Export formats and phases
 
@@ -238,22 +238,15 @@ Collection import reconstructs parent-child collections from directory nesting, 
 
 A lineage archive contains one current or explicitly selected snapshot per included member and a small `lineage.json` descriptor. The descriptor contains portable member IDs and parent-child `derived_from` edges only. It excludes drafts, complete version histories, diffs, fork messages, and unrelated ownership or operational data.
 
-### Image export modes
+### Image references and optional downloads (revised user decision, 2026-10-17)
 
-The export UI must offer explicit image modes:
+Recipe JSON preserves image URLs and edit metadata. Import checks managed storage after permission validation and asks the browser to check external HTTPS display images. Accessible images are reused; unresolved references remain in a private draft review panel with retry and omission controls. Users can upload replacements manually. Storage 404s are distinguished from temporary/access failures; no arbitrary URL fetching is added to the server. See the [v3 contract](../spikes/NOMS-016-json-portability-v3.md).
 
-- `none`: omit packaged files and image references from presentation output while retaining canonical field status.
-- `references`: retain URLs and attribution without copying bytes.
-- `stored`: package image bytes already stored and viewable through Noms.
-- `all`: package stored images and explicitly attempt to retrieve referenced remote images.
-
-Any image attached to an exportable snapshot may be selected; exporting is not restricted to images uploaded by the exporting user. Every image must still pass the same view authorization as its recipe. Remote images are never fetched implicitly. The `all` mode must preserve original URL and attribution, apply public HTTP(S), DNS/redirect, SSRF, content-type, decompression, file-size, and timeout protections, and report individual retrieval failures as `Missing` without failing the entire recipe export. SVG requires rejection or a separately specified sanitization path.
-
-Packaged images receive stable archive paths and SHA-256 checksums. The image mode does not alter the logical snapshot digest. Formats that cannot embed bytes may emit references and record the limitation explicitly.
+The optional **Download saved images too** ZIP contains the same reference-preserving JSON, saved full-size WebP files and recovery instructions. External image bytes are not downloaded, and crops/adjustments are not baked in. The ZIP retains recipe view authorization, a 32 MiB total limit, 10 MiB per-image limit, 60-second deadline and bounded concurrency. Missing images may fail the ZIP without affecting JSON-only export.
 
 ### Client-orchestrated generation
 
-The first release keeps server APIs small and has the Dioxus client orchestrate multi-recipe export generation. The server exposes authorized operations to retrieve an immutable recipe export snapshot, retrieve a collection-tree descriptor, and retrieve or safely fetch an allowed image. Each operation rechecks the same visibility rules used by the corresponding recipe, version, collection, lineage, or image view.
+Future multi-recipe export may use client orchestration; it is not part of the implemented single-recipe JSON/optional ZIP slice. The following multi-recipe design remains proposed. It keeps server APIs small and has the Dioxus client orchestrate multi-recipe export generation. The server exposes authorized operations to retrieve an immutable recipe export snapshot, retrieve a collection-tree descriptor, and retrieve or safely fetch an allowed image. Each operation rechecks the same visibility rules used by the corresponding recipe, version, collection, lineage, or image view.
 
 The client:
 
@@ -480,3 +473,37 @@ git diff --check
 Desktop browser inspection confirms the final stylesheet’s two-column layout and heading weight. A 390px viewport DOM check confirms a single stacked source/guide column with no horizontal overflow; viewport overrides were reset. Mobile screenshot capture was unreliable with browser emulation, so this is a responsive layout measurement, not a physical-phone or cross-browser claim. Default-size screenshots are external at `/tmp/noms016-redesign-desktop-final.jpg` and `/tmp/noms016-redesign-editor.jpg`; test logs are `/tmp/noms016-redesign-{js,rust,build,editor-tests}.txt`. Full database CI, Firefox/Safari, dark-theme interaction and publishing were not rerun for this redesign.
 
 The canonical NOMS-016 branch/worktree was reused to honor the user’s earlier consolidation instruction. A second source/diff review passes after fixing Automatic’s native-required semantics and preserving provider/alternate-region review context. No independent agent review was performed this turn. Generated `assets/tailwind.css` remains excluded. The app is left open on the canonical port-32783 import route for user review. This checkpoint supersedes earlier preview/confirmation workflow descriptions; export implementation remains separate.
+
+
+### First JSON export/import slice — 2026-10-16
+
+The user confirmed the clipboard import milestone after manual testing and approved starting export with simple JSON plus canonical JSON import. The first slice adds **Export JSON** to saved recipes and a bounded JSON-file picker to the existing import page. Import explicitly creates a new private draft and opens the normal editor; it never overwrites or publishes existing content.
+
+The versioned envelope carries the current persisted recipe snapshot, JCS/SHA-256 digest, portable source identity, author attribution, generator/time metadata and image-reference mode. Drafts and histories are excluded. Snapshot fields retain explicit null and empty values, nested instructions, tags, equipment, images and edit metadata. Read authorization, account binding, content limits and atomic media attachment are enforced on the server.
+
+The [revised v2 contract](../spikes/NOMS-016-json-portability-v2.md) supersedes this original v1 contract. Collection/historical export, other renderers, image-byte archives, duplicate/conflict handling and persisted cross-installation origin provenance remain follow-ups. This slice does not close the wider NOMS-016 plan or freeze future NOMS-017 metadata fields.
+
+
+Verification for the JSON slice: 36 focused native tests passed (8 JSON contract/API tests, 15 existing clipboard-import tests, 13 media-asset tests including the atomic JSON import regression). Temporary PostgreSQL databases were isolated from the running app. Chromium exercised damaged-checksum rejection with unchanged row counts, file import into a private draft, private publication of a synthetic fixture, actual JSON download, complete snapshot/digest equality, re-import of that download, draft reload and cleanup through the UI. The final browser run reported no page errors; synthetic recipe/draft counts returned to baseline. The download bridge now returns explicit success, preventing a false failure message after a successful download. The final browser run asserts that no export alert appears. Formatting and both server/WebAssembly Clippy targets passed. A hydration-readiness regression found during the check is fixed: file selection and export stay disabled until their client handlers mount. The plain-Cargo import layout test now accommodates unprocessed Dioxus asset paths while retaining its artwork assertion in processed builds. This is focused verification, not a new full-CI or cross-browser acceptance claim.
+
+
+### Simplified image handling — 2026-10-17
+
+The user requested image-free JSON and an option to download image files for manual reattachment. New exports use v2, with empty recipe/step-image arrays and no structured image references or edits. Older v1 files import after validation but discard all media. JSON draft creation now uses the ordinary private-copy path without source-media inheritance. **Export recipe** opens a dialog offering JSON by default or an optional ZIP with saved image files and instructions. External links are not fetched; stored image retrieval is authorized and bounded. See [the revised contract](../spikes/NOMS-016-json-portability-v2.md). Earlier acceptance evidence above describes the original reference-based slice; revised verification is recorded separately.
+
+Revised verification: 94 focused native tests passed: 8 JSON contract/API, 2 ZIP/access/bounds, 15 clipboard-import, 12 existing media-asset, 18 security-limit and 39 trusted-IP/rate-limit tests. Formatting, server Clippy and WebAssembly Clippy passed. Chromium verified manual image upload, real image-free JSON and saved-image ZIP downloads, text/digest preservation, JSON re-import as a private draft and reload, with no page errors and synthetic recipe/draft counts restored. Visual inspection also corrected the export dialog to use the existing modal card layout. Full CI and cross-browser acceptance were not rerun.
+
+### Image reference reuse and recovery — 2026-10-17
+
+The user revised the image-free decision: retain canonical image references, reuse accessible images, and let users recover unavailable images manually. The v3 contract supersedes v2 for new exports. The prior image-free verification above remains historical evidence, not verification of this revised behavior. No schema migration is needed; private recovery metadata lives in draft JSONB and survives autosaves and reloads without entering published/exported content.
+
+Verification after workspace recovery: 101 focused native tests passed (15 JSON contract/API/recovery/rendering tests, 2 ZIP tests, 15 clipboard-import tests, 12 media-asset tests, 18 security-limit tests and 39 trusted-IP/rate-limit tests). Server Clippy, formatting and whitespace checks passed. WebAssembly Clippy passed with the unrelated existing `chunks_exact_to_as_chunks` rule suppressed for the recovered Rust 1.99 toolchain; no unrelated application code was changed. Chromium ran the actual image-check script against intercepted synthetic responses, verifying valid-image decoding, missing/invalid/timeout handling and no referrer. The full running-app browser flow, full CI and cross-browser acceptance were not rerun after the workspace reset.
+
+### Collection JSON round trips — 2026-10-20
+
+Collection owners can export a bounded collection subtree with canonical v3 saved-recipe snapshots, then import it as a new private tree with new private saved recipe copies. Nested/empty collections, sibling and recipe order, and shared recipe membership are preserved. A file-check preview precedes import; existing names are resolved with an imported-copy suffix. Unavailable recipe images remain reviewable in private edit drafts, and unavailable collection covers produce explicit warnings. The import is atomic across collections, recipes, versions, tags, memberships and image-review drafts. See the [collection JSON v1 contract and verification](../spikes/NOMS-016-collection-json-v1.md). Single-recipe draft import and the [standalone HTML reading copy](../spikes/NOMS-016-html-export.md) remain available.
+
+
+### Collection HTML layouts — 2026-10-20
+
+Collection export now offers JSON for round trips or HTML for offline viewing/sharing/printing. HTML can be a single cookbook with a linked contents list or a ZIP of individual standalone recipe documents with an index. Both retain nested collections, ordering and shared memberships without duplicating distinct recipes. Optional embedded saved images use the existing bounded renderer and omission notices. See [HTML layouts, limits and verification](../spikes/NOMS-016-html-export.md#collection-html-layouts--2026-10-20). Schema.org interoperability remains a follow-up.

@@ -7,6 +7,7 @@ use noms::vocabulary;
 
 mod api;
 mod auth;
+mod collection_json;
 mod components;
 #[cfg(feature = "server")]
 mod config;
@@ -15,6 +16,8 @@ mod db;
 #[cfg(feature = "server")]
 mod middleware;
 mod pages;
+mod recipe_html;
+mod recipe_json;
 mod routing;
 mod search;
 mod search_url;
@@ -35,9 +38,9 @@ use auth::context::build_context_from_fullstack;
 use components::{AppLayout, ErrorFallback};
 use pages::{
     About, CollectionDetail, CollectionEdit, CollectionList, CollectionNew, CommunityHome,
-    Dashboard, Explore, Home, HowTo, Login, NotFound, RecipeDetail, RecipeDraftEdit, RecipeEdit,
-    RecipeImport, RecipeNew, RecipeVersionDetail, RecipeVersionGraph, Search, SettingsAccounts,
-    SettingsProfile, UserProfile,
+    Dashboard, Explore, Home, HowTo, Login, MobileYou, NotFound, RecipeDetail, RecipeDraftEdit,
+    RecipeEdit, RecipeImport, RecipeNew, RecipeVersionDetail, RecipeVersionGraph, Search,
+    SettingsAccounts, SettingsProfile, UserProfile,
 };
 
 // The route inventory is shared by the generated renderer and the raw-query boundary.
@@ -90,6 +93,8 @@ enum GeneratedRoute {
         #[route("/settings/profile")]
         #[route("/settings/profile")]
         SettingsProfile {},
+        #[route("/you")]
+        MobileYou {},
         #[route("/settings/accounts")]
         SettingsAccounts {},
         // Catch-all: matches any route not defined above
@@ -116,7 +121,9 @@ const COLLECTION_FORMS_CSS: Asset = asset!(
     CssAssetOptions::new().with_minify(false)
 );
 
-const GOOGLE_FONTS: &str = "https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;500;600;700&display=swap";
+const MOBILE_CSS: Asset = asset!("/assets/mobile.css");
+const FREDOKA: Asset = asset!("/assets/fonts/Fredoka.ttf");
+const NUNITO: Asset = asset!("/assets/fonts/Nunito.ttf");
 
 #[cfg(feature = "server")]
 fn main() {
@@ -236,6 +243,14 @@ fn build_dioxus_router(pool: sqlx::PgPool, storage_client: storage::StorageClien
         .route(
             "/api/upload",
             axum::routing::post(api::upload::upload_handler),
+        )
+        .route(
+            "/api/recipes/{id}/export-images",
+            axum::routing::get(api::recipe_archive::download),
+        )
+        .route(
+            "/api/collections/{id}/export-html",
+            axum::routing::get(api::collection_html::download),
         )
         .with_state(auth::user_profile::UserProfileState { pool: pool.clone() })
         .serve_dioxus_application(ServeConfig::new(), App);
@@ -522,10 +537,9 @@ fn App() -> Element {
         document::Link { rel: "stylesheet", href: COLLECTIONS_CSS }
         document::Link { rel: "stylesheet", href: COLLECTION_FORMS_CSS }
         document::Link { rel: "stylesheet", href: TAILWIND_CSS }
-        document::Link { rel: "preconnect", href: "https://fonts.googleapis.com" }
-        document::Link { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "anonymous" }
-        document::Link { rel: "stylesheet", href: GOOGLE_FONTS }
-        document::Meta { name: "viewport", content: "width=device-width, initial-scale=1" }
+        document::Link { rel: "stylesheet", href: MOBILE_CSS }
+        document::Style { {format!("@font-face{{font-family:Fredoka;font-style:normal;font-weight:300 700;font-display:swap;src:url('{}') format('truetype')}}@font-face{{font-family:Nunito;font-style:normal;font-weight:200 1000;font-display:swap;src:url('{}') format('truetype')}}", FREDOKA, NUNITO)} }
+        document::Meta { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" }
 
         // Error boundary wrapping all routes
         ErrorBoundary {

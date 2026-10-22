@@ -150,6 +150,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
     // ── Form signals ─────────────────────────────────────────────────────
     let mut title = use_signal(String::new);
     let mut active_editor_section = use_signal(|| "basics");
+    let mut publication_review_open = use_signal(|| false);
     let mut description = use_signal(String::new);
     let mut commentary = use_signal(String::new);
     let mut prep_time = use_signal(String::new);
@@ -163,6 +164,8 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
 
     // CP5: image management signals
     let mut images = use_signal(Vec::<RecipeImage>::new);
+    let mut import_images = use_signal(Vec::<crate::types::ImportedRecipeImage>::new);
+    let mut reviewing_image = use_signal(|| false);
     let mut upload_now = use_signal(|| false);
     let busy = use_signal(|| false);
     let pending_image_count = use_signal(|| 0usize);
@@ -224,6 +227,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
             match loaded {
                 Ok(draft) => {
                     let editor = draft.editor.clone();
+                    import_images.set(draft.import_images.clone());
                     draft_id.set(Some(draft.id.to_string()));
                     draft_recipe_id.set(draft.recipe_id);
                     draft_revision.set(draft.revision);
@@ -912,13 +916,115 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
         pending_image_count() > 0 || last_saved_editor().as_ref() != Some(&current_editor),
     );
 
+    let review_enabled = last_saved_editor().as_ref() == Some(&current_editor)
+        && !editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
+        && !busy()
+        && pending_image_count() == 0
+        && step_photo_upload_count() == 0;
+    let on_review_image = move |(image_id, omit): (uuid::Uuid, bool)| {
+        // Check live signals as well as rendered state to guard queued clicks.
+        let latest = editor_state(
+            title(),
+            description(),
+            commentary(),
+            prep_time(),
+            cook_time(),
+            servings(),
+            ingredients(),
+            steps(),
+            equipment(),
+            images(),
+            visibility(),
+            tags_input(),
+        );
+        if last_saved_editor().as_ref() != Some(&latest)
+            || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
+            || busy()
+            || pending_image_count() > 0
+            || step_photo_upload_count() > 0
+            || reviewing_image()
+        {
+            return;
+        }
+        let Some(id) = draft_id() else {
+            return;
+        };
+        let revision = draft_revision();
+        reviewing_image.set(true);
+        is_manually_saving.set(true);
+        autosave_generation.set(autosave_generation() + 1);
+        draft_save_error.set(None);
+        spawn(async move {
+            let external = if omit {
+                Ok(vec![])
+            } else {
+                crate::api::recipe::imported_image_external_url(
+                    form_account(),
+                    id.clone(),
+                    image_id,
+                )
+                .await
+            };
+            let result = match external {
+                Ok(urls) => {
+                    let available =
+                        crate::pages::recipe_json_controls::check_linked_images(urls).await;
+                    crate::api::recipe::resolve_imported_image(
+                        form_account(),
+                        id,
+                        revision,
+                        image_id,
+                        omit,
+                        available,
+                    )
+                    .await
+                }
+                Err(error) => Err(error),
+            };
+            match result {
+                Ok(draft) => {
+                    images.set(draft.editor.images.clone());
+                    steps.set(flatten_steps(&draft.editor.instructions));
+                    draft_revision.set(draft.revision);
+                    last_saved_editor.set(Some(draft.editor));
+                    import_images.set(draft.import_images);
+                }
+                Err(error) => {
+                    draft_save_error.set(Some(format!("Could not review imported image: {error}")))
+                }
+            }
+            reviewing_image.set(false);
+            is_manually_saving.set(false);
+        });
+    };
+
     // ── Render: form ────────────────────────────────────────────────────
     rsx! {
         AuthRequired {
-            div { class: "container recipe-editor",
+            if publication_review_open() {
+                crate::pages::recipe_editor_form::PublicationReview {
+                    title: title(), ingredient_count: ingredients().iter().filter(|item| !item.name.trim().is_empty()).count(),
+                    step_count: steps().iter().filter(|step| !step.text.trim().is_empty()).count(), visibility: visibility(),
+                    preserve_visibility: !id_is_draft,
+                    oncancel: move |_| publication_review_open.set(false),
+                    onconfirm: move |event| {
+                        publication_review_open.set(false);
+                        if title().trim().is_empty() { active_editor_section.set("basics"); }
+                        else if ingredients().iter().all(|item| item.name.trim().is_empty()) { active_editor_section.set("ingredients"); }
+                        else if steps().iter().all(|step| step.text.trim().is_empty()) { active_editor_section.set("method"); }
+                        let mut submit = on_submit;
+                        submit(event);
+                    },
+                }
+            }
+            // HTML inert is enabled by presence, including inert="false" after hydration.
+            div { class: "container recipe-editor", inert: reviewing_image().then_some(""),
                 PageHeader {
                     icon: Some(PageIconKind::Editor),
                     title: if id_is_draft { "Edit Draft" } else { "Edit Recipe Draft" },
+                }
+                crate::pages::recipe_json_controls::ImportedImageReview {
+                    images: import_images(), enabled: review_enabled, pending: reviewing_image(), on_resolve: on_review_image,
                 }
                 if let Some(source_title) = forked_from_title() {
                     div {
@@ -959,18 +1065,23 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                         Button {
                             variant: ButtonVariant::Primary,
                             disabled: editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding()) || busy() || step_photo_upload_count() > 0,
-                            onclick: on_submit,
+                            onclick: move |event| {
+                                if crate::components::mobile::is_mobile_layout() { publication_review_open.set(true); }
+                                else { let mut submit = on_submit; submit(event); }
+                            },
                             if step_photo_upload_count() > 0 || (is_saving() && busy()) {
                                 "Uploading images..."
                             } else if is_saving() {
                                 "Publishing..."
                             } else {
-                                "Publish Changes"
+                                span { class: "desktop-publish-label", "Publish Changes" }
+                                span { class: "mobile-only", "Review & publish" }
                             }
                         }
                         Button {
                             variant: ButtonVariant::Ghost,
                             disabled: editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding()) || busy() || step_photo_upload_count() > 0,
+                            id: "recipe-editor-exit",
                             onclick: on_cancel,
                             "Cancel"
                         }
@@ -994,6 +1105,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     div { class: "recipe-editor__panels",
 
                     section { class: "recipe-editor__panel recipe-editor__basics neumo-raised", aria_labelledby: "recipe-basics",
+                        "data-mobile-active": active_editor_section() == "basics",
                         onfocusin: move |_| active_editor_section.set("basics"),
                         onclick: move |_| active_editor_section.set("basics"),
                         h2 { id: "recipe-basics", tabindex: "-1", "Basics" }
@@ -1171,6 +1283,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
 
                     section { class: "recipe-editor__panel recipe-editor__photos neumo-raised", aria_labelledby: "recipe-photos",
+                        "data-mobile-active": active_editor_section() == "photos",
                         onfocusin: move |_| active_editor_section.set("photos"),
                         onclick: move |_| active_editor_section.set("photos"),
                         h2 { id: "recipe-photos", tabindex: "-1", "Photos" span { " · Optional" } }
@@ -1201,6 +1314,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
 
                     section { class: "recipe-editor__panel recipe-editor__ingredients neumo-raised", aria_labelledby: "recipe-ingredients",
+                        "data-mobile-active": active_editor_section() == "ingredients",
                         onfocusin: move |_| active_editor_section.set("ingredients"),
                         onclick: move |_| active_editor_section.set("ingredients"),
                         h2 { id: "recipe-ingredients", tabindex: "-1", "Ingredients" }
@@ -1273,6 +1387,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
 
                     section { class: "recipe-editor__panel recipe-editor__method neumo-raised", aria_labelledby: "recipe-method",
+                        "data-mobile-active": active_editor_section() == "method",
                         onfocusin: move |_| active_editor_section.set("method"),
                         onclick: move |_| active_editor_section.set("method"),
                         h2 { id: "recipe-method", tabindex: "-1", "Method" }
@@ -1542,6 +1657,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
 
                     section { class: "recipe-editor__panel recipe-editor__equipment neumo-raised", aria_labelledby: "recipe-equipment",
+                        "data-mobile-active": active_editor_section() == "equipment",
                         onfocusin: move |_| active_editor_section.set("equipment"),
                         onclick: move |_| active_editor_section.set("equipment"),
                         h2 { id: "recipe-equipment", tabindex: "-1", "Equipment" span { " · Optional" } }
@@ -1587,6 +1703,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
 
                     section { class: "recipe-editor__panel recipe-editor__notes neumo-raised", aria_labelledby: "recipe-notes",
+                        "data-mobile-active": active_editor_section() == "notes",
                         onfocusin: move |_| active_editor_section.set("notes"),
                         onclick: move |_| active_editor_section.set("notes"),
                         h2 { id: "recipe-notes", tabindex: "-1", "Notes" span { " · Optional" } }
