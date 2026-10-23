@@ -14,17 +14,24 @@ they are not item entities. This is a bounded discovery set, not all foods in
 Wikidata. Query-service data and entity revisions are not one atomic global dump.
 
 All captured labels and all **10,148 active baseline Noms names**, including their
-aliases, were mechanically screened. The saved policy includes 129 explicit
-editorial cases. The resulting batch contains:
+aliases, were mechanically screened. After the initial 129 editorial cases,
+the identity pass records a decision and rationale for all **4,449 unresolved
+candidates** (4,267 potential new identities and 182 ambiguous name matches):
 
-- **45 new pantry ingredients**, including garam masala, ssamjang, XO sauce,
-  mirin, ponzu, kecap manis and Urfa biber.
-- **616 mappings across 607 existing ingredients**. The 548 associations from
-  unambiguous normalized labels use `related`; the 68 explicit mappings retain
-  their reviewed relationship, including narrower/broader/related scope.
-- **8,536 held source entities**, including missing English text, taxonomy,
-  non-food objects, brands, chemicals, complete dishes and unresolved identities.
-  Of these, 4,267 need identity/deduplication review before any new import.
+- **2,505 additional ingredients**, including specific cheeses, sauces, edible
+  animal materials, plant parts and pantry preparations.
+- **504 additional related source mappings**, including spelling/synonym
+  overlaps with existing entries and repeated source-name families.
+- **1,440 held candidates** with specific evidence or scope reasons, including
+  insufficient culinary definition, medical/technical materials, commercial
+  products, generic classifications and unspecified animal parts.
+
+The complete Wikidata batch now contains **2,550 imports and 1,120 additional
+source mappings**, including the initial 45 imports and 616 mappings. The 548
+initial unambiguous normalized-label associations and the identity-pass mappings
+use `related`; the initial 68 explicit mappings retain their reviewed scope.
+Across the full capture, **5,527 source entities remain held**. No item remains
+in the generic new-identity or ambiguous-name queue; held cases remain excluded.
 
 Every item receives a disposition. This is policy-assisted screening with
 explicit case review, not individual semantic certification of all 9,197 items.
@@ -32,8 +39,9 @@ A held or unmatched name is not proof that Wikidata lacks the ingredient. The
 fixed coverage benchmark is unchanged; its discovery grades are not imported
 as exact mappings automatically.
 
-The combined seed has **10,193 active entries and 60 retired entries**. All prior
-10,208 UUIDs, authored fields, origins and FoodOn mappings are preserved. New
+The combined seed has **12,698 active entries and 60 retired entries**. All prior
+10,253 UUIDs (including the initial Wikidata batch), authored fields, origins,
+references and mappings are preserved. New
 aliases are explicit editorial choices; Wikidata aliases are never bulk copied.
 Taxa/disambiguation/category/list pages and unresolved redirects cannot become
 culinary identities. For example, Scotch bonnet's pinned taxon record remains
@@ -41,11 +49,24 @@ held, tahini's toasted/hulled scope is narrower, and generic bagoong is broader
 than shrimp-specific bagoong alamang. Museum eggs, bleach, turpentine, fictional
 syrups and a percussion instrument found in the hierarchy are excluded.
 
+Identity decisions use scoped spelling, accents, word order and selected food
+suffixes, with retained non-deprecated P31/P279 food-type paths and description
+evidence. Negative scope checks take precedence over misleading food ancestry.
+Explicit exceptions include reviewed FoodOn exact-synonym evidence, without
+copying those synonyms into Noms. Soy milk/soybean milk, besan/gram flour and
+brunost/gjetost associate with maintained entries. Raw/canned/dried forms,
+species, seeds/leaves and active/inactive yeast retain their distinctions.
+Source aliases only propose related evidence. Where legacy UUIDs already share
+a name family, one representative receives the association; every old UUID and
+its wording remains. No hard merge, redirect or exact-equivalence inference is
+performed. Complete case coverage is not individual semantic certification.
+
 ## Maintained inputs
 
 - `data/vocabulary/adapters/wikidata.json`: snapshot checksum/bytes, capture
   context, discovery membership, every entity revision, and the baseline commit.
-- `wikidata-cooking-policy.json`: cooking holds and explicit editorial decisions.
+- `wikidata-cooking-policy.json`: cooking holds, case decisions and identity
+  exceptions. Generated identity decisions retain their rationale in this policy.
 - `wikidata-cooking-review.json`: approved revision/UUID/mapping decisions and
   checksums binding them to the descriptor and baseline seed/source files.
 - `wikidata-ingredients.rq`: repeatable item discovery query for future captures.
@@ -94,6 +115,12 @@ python3 scripts/vocabulary/wikidata.py extract \
   --seed /tmp/noms-wikidata-base/ingredients.json \
   --sources /tmp/noms-wikidata-base/sources.json \
   --output /tmp/noms-wikidata-candidates
+python3 scripts/vocabulary/resolve_wikidata_identities.py \
+  --snapshot /tmp/noms-wikidata-snapshot/entities.json \
+  --seed /tmp/noms-wikidata-base/ingredients.json \
+  --sources /tmp/noms-wikidata-base/sources.json \
+  --output /tmp/noms-wikidata-identities
+cmp /tmp/noms-wikidata-identities/policy.json data/vocabulary/adapters/wikidata-cooking-policy.json
 python3 scripts/vocabulary/review_wikidata.py \
   --snapshot /tmp/noms-wikidata-snapshot/entities.json \
   --seed /tmp/noms-wikidata-base/ingredients.json \
@@ -102,7 +129,9 @@ python3 scripts/vocabulary/review_wikidata.py \
 cmp /tmp/noms-wikidata-review/review.json data/vocabulary/adapters/wikidata-cooking-review.json
 ```
 
-The review directory includes `source-names.csv` (every captured item),
+The identity directory includes all 4,449 cases in `identity-review.json` and
+their resolution counts. The review directory includes `source-names.csv`
+(every captured item, with approved canonical IDs and case rationale),
 `seed-names.csv` (every active baseline ingredient), full JSON evidence and a
 summary with policy checksum. Unmatched, ambiguous and held records stay visible.
 The command reuses persisted import UUIDs and refuses to silently drop them.
@@ -142,7 +171,11 @@ python3 -m unittest discover -s scripts/vocabulary -p 'test_*.py' -v
 
 Offline fixtures cover revision/checksum binding, rank semantics, unresolved
 redirects/taxa, explicit approvals, collision rejection, preservation of authored
-fields and retirements, stable UUID reruns, policy holds and the maintained ledger.
+fields and retirements, stable UUID reruns, policy holds, food-part/form distinctions,
+negative scope before food ancestry, legacy duplicate preservation and maps to
+newly approved imports. All **48 Python tests** and **six Rust vocabulary tests**
+pass; the authoritative Rust validator accepts **12,758 entries and two sources**
+with no warnings.
 The full capture, source/name audits, review and seed/source files were reproduced
 with zero alias collisions. Raw capture is a separate integration check, not a
 network dependency in CI.

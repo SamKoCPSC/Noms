@@ -4,6 +4,7 @@ Started 2026-10-21; current state updated 2026-10-23.
 FoodOn branch: `codex/noms-017-ingredient-vocabulary`.
 Wikidata follow-up: `codex/noms-017-wikidata-adapter`.
 PR: https://github.com/SamKoCPSC/Noms/pull/16
+Wikidata PR: https://github.com/SamKoCPSC/Noms/pull/17
 
 ## Delivered state
 
@@ -11,8 +12,8 @@ Ingredient autocomplete, PostgreSQL persistence, deployment-only seed loading,
 source provenance and public-recipe popularity tracking are implemented. The
 FoodOn baseline has **10,148 active ingredients** (100 curated plus 10,048
 imported), **60 retired identities**, and 12,016 FoodOn mappings, of which 11,956
-belong to active entries. The Wikidata follow-up adds 45 pantry ingredients and
-661 Wikidata mappings, producing **10,193 active entries** with the same retirements.
+belong to active entries. The Wikidata follow-up adds 2,550 ingredients and
+3,670 Wikidata mappings, producing **12,698 active entries** with the same retirements.
 All original curated IDs and authored wording remain
 unchanged; all 101 prior development identities, including the cumin probe, are
 retained. Retired entries remain available to recipe history and are hidden
@@ -114,14 +115,24 @@ The [Wikidata guide](../../scripts/vocabulary/WIKIDATA.md) records the revision
 capture, policy screening of 9,197 source entities and all 10,148 active baseline
 names, and reproduction commands. Descriptor, policy and approved UUID/revision
 ledger are maintained; raw snapshots and all-name CSVs remain outside Git.
-616 mappings enrich 607 existing ingredients; 45 named pantry ingredients are
-new. Held entities include 4,267 possible new identities requiring further
-deduplication/semantic review. The canonical bundle is validated offline; this
-follow-up has not been applied to a live database. Its 42 offline Python tests,
-six Rust vocabulary tests and the authoritative Rust validator pass (10,253
-entries, two sources, no warnings). Revision restoration, review and canonical
-seed/source generation reproduce byte-for-byte; all prior identities, wording
-and mappings are preserved.
+The identity pass covers 4,267 possible new names and 182 ambiguous overlaps:
+2,505 additional imports, 504 related mappings and 1,440 specific holds. The
+complete batch now has 2,550 imports and 1,120 additional source associations.
+Every candidate has a recorded outcome; insufficient definitions, technical or
+medical materials, commercial products and unclear scope remain excluded.
+Names and scoped aliases propose related associations; explicit exceptions
+address synonym traps and geographic/food ambiguity. Existing duplicate UUIDs
+are retained, with one representative receiving related evidence. No hard merge
+or redirects are introduced. See `resolve_wikidata_identities.py` for replay.
+
+The canonical bundle is validated offline; this follow-up has not been applied
+to a live database. All 48 Python tests and six Rust vocabulary tests pass; the
+Rust validator accepts 12,758 entries and two sources with no warnings.
+The identity-pass regressions cover form/species/part
+distinctions, negative scope before misleading food ancestry, legacy duplicate
+preservation, maps to new imports and stable UUID reruns. Revision restoration,
+review and canonical seed/source generation reproduce byte-for-byte; all prior
+10,253 identities, authored wording, origins, references and mappings are preserved.
 
 ## Remaining scope
 

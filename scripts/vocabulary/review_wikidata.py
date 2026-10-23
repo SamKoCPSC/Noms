@@ -46,6 +46,20 @@ def prepare(args):
     overrides = {d['term_id']: d for d in explicit}
     rows, decisions, matched = [], [], collections.defaultdict(list)
     ownership = {k: set(v) for k, v in index.items()}
+    # Allocate every approved import before resolving mappings. A related source
+    # record may target a newly approved identity regardless of QID sort order.
+    import_ids = {}
+    for d in explicit:
+        if d['action'] != 'import':
+            continue
+        qid = d['term_id']
+        eid = prior.get(qid) or str(uuid.uuid4())
+        import_ids[qid] = eid
+        by_id[eid] = dict(id=eid, **d['canonical'], status='active')
+        for name in [d['canonical']['label'], *d['canonical']['aliases']]:
+            key = normalize(name)
+            require(not ownership.get(key), f'Explicit import collides with maintained name: {name}')
+            ownership[key] = {eid}
     for qid, term in terms.items():
         status = disposition(term, policy)
         matches = sorted(set().union(*(index[normalize(n)] for n in [term['label'], *term['aliases']] if n)))
@@ -61,19 +75,17 @@ def prepare(args):
                 d = dict(approved=True, action=action, term_id=qid, revision=term['revision'],
                          relationship=override['relationship'], note=policy['version'] + '; ' + override['note'])
                 if action == 'map':
-                    eid = override['canonical_id']
+                    target = override.get('target_term_id')
+                    require(target is None or target in import_ids, 'Map target must be a reviewed import')
+                    eid = import_ids[target] if target else override['canonical_id']
                     require(eid in by_id and by_id[eid]['status'] == 'active', 'Explicit map needs an active canonical ID')
                 else:
-                    eid = prior.get(qid) or str(uuid.uuid4())
+                    eid = import_ids[qid]
                     d['canonical'] = override['canonical']
-                    for name in [d['canonical']['label'], *d['canonical']['aliases']]:
-                        key = normalize(name)
-                        require(not ownership.get(key), f'Explicit import collides with maintained name: {name}')
-                        ownership[key] = {eid}
                 d['canonical_id'] = eid
                 decisions.append(d)
                 matched[eid].append(qid)
-                row.update(status='approved_' + action, canonical_id=eid)
+                row.update(status='approved_' + action, canonical_id=eid, note=d['note'])
         elif status == 'review_culinary_candidate':
             label_matches = sorted(index[normalize(term['label'])])
             if len(matches) == 1 and label_matches == matches:
@@ -83,7 +95,7 @@ def prepare(args):
                     canonical_id=eid, relationship='related',
                     note=policy['version'] + '; ingredient-scope entity with an unambiguous normalized label overlap. Related discovery evidence only; no exact-equivalence claim or alias adoption.'))
                 matched[eid].append(qid)
-                row.update(status='approved_related_name', canonical_id=eid)
+                row.update(status='approved_related_name', canonical_id=eid, note=decisions[-1]['note'])
             elif matches:
                 row['status'] = 'hold_alias_or_identity_ambiguity'
             else:
@@ -92,6 +104,8 @@ def prepare(args):
     # Never silently discard persisted canonical identities on an editorial rerun.
     require(set(prior) <= {d['term_id'] for d in decisions if d['action'] == 'import'},
             'Policy drops a persisted import; retain it explicitly and review retirement through the canonical workflow')
+    # Imports precede maps to those identities in the canonical builder.
+    decisions.sort(key=lambda d: d['action'] != 'import')
     review = {**wd.bindings(args, descriptor), 'decisions': decisions}
     coverage = [dict(canonical_id=e['id'], label=e['label'], aliases=e['aliases'],
                      mappings=sorted(matched[e['id']]), status='mapped' if matched[e['id']] else 'held_or_unmatched')
@@ -103,7 +117,7 @@ def prepare(args):
                    method='All captured entities and active seed names mechanically screened; explicit editorial overrides. Holds and unmatched names are not absence claims or semantic certification.')
     write_bundle(args.output, {'review.json': review, 'source-name-review.json': rows,
                               'seed-name-review.json': coverage, 'summary.json': summary})
-    for name, records, fields in [('source-names.csv', rows, ['term_id','revision','label','description','status','name_matches','flags']),
+    for name, records, fields in [('source-names.csv', rows, ['term_id','revision','label','description','status','name_matches','flags','canonical_id','note']),
                                   ('seed-names.csv', coverage, ['canonical_id','label','aliases','status','mappings'])]:
         with (args.output/name).open('w', encoding='utf-8-sig', newline='') as stream:
             writer=csv.DictWriter(stream,fieldnames=fields,extrasaction='ignore');writer.writeheader()
