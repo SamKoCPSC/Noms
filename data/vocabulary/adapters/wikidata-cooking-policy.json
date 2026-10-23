@@ -1,0 +1,1092 @@
+{
+  "schema_version": 1,
+  "version": "wikidata-cooking-v1",
+  "descriptor_checksum": "12949e4c862e7cf035d4805697e75b7673c132f600c735a6c3dc995f631ba629",
+  "hold_rules": [
+    {
+      "field": "combined",
+      "status": "hold_artifact_or_organization",
+      "pattern": "\\b(?:museum|painting|artwork|sculpture|fossil|specimen|catalogue|catalog number|manufacture of|manufacturing process|company|brand|manufacturer|enterprise|restaurant|corporation|album|novel|film|surname|given name|fictional|disambiguation|Wikimedia|encyclopedia|dictionary entry)\\b|\\b(?:video game|Papa.s|Paleteria|Cupcakeria|fiction|trademark|registered trade|cooking technique|cooking method|style of cooking|primal cut)\\b"
+    },
+    {
+      "field": "combined",
+      "status": "hold_taxonomy_or_nonfood",
+      "pattern": "\\b(?:species|genus|taxon|cultivar group|family of|extinct|ornamental|toxic|poisonous|inedible|inedible|animal feed|pet food|fodder|fertilizer|pharmaceutical|medicine|drug|medicinal|narcotic)\\b|\\b(?:cultivar|strain|breed|variety of apple|apple variety|recreational cannabis|cannabis|hashish|nothospecies|hybrid plant)\\b"
+    },
+    {
+      "field": "combined",
+      "status": "hold_chemical_or_industrial",
+      "pattern": "\\b(?:chemical compound|chemical element|chemical substance|food additive|additive used|polymer|enzyme|protein family|vitamin|dietary supplement|emulsifier|sweetening agent|E number|processing aid|chemical formula|pigment|stabilizer|stabiliser|disinfectant|antibiotic|microorganism|bacterial|bacterium|contrast enhancer)\\b|\\b(?:chemical product|carbohydrate|molecule|solvent|fuel|hydrocarbon|saline|buffer solution|bleach|turpentine|essential oil|surfactant|beta.galactosidase|cytotoxic)\\b"
+    },
+    {
+      "field": "combined",
+      "status": "hold_complete_dish",
+      "pattern": "\\b(?:dish|dessert|meal|sandwich|casserole|stew|salad|pizza|pudding|dumpling|sushi|risotto|biryani|omelette|taco|burrito|confection|candy|sweet pastry|cake|torte|cocktail|mocktail|soup)\\b|\\b(?:entree|porridge|snack|cooked meal|popsicle|ice pop|ice lolly)\\b"
+    },
+    {
+      "field": "label",
+      "status": "hold_generic_or_technical",
+      "pattern": "^(?:food|ingredient|fruit|vegetable|meat|fish|cheese|spice|condiment|oil|seed|grain|dairy product|edible plant|fermented food|beverage|drink|list of .+|type of .+|class of .+|category of .+|E[ -]?\\d+|RMNH\\..+)$|\\b(?:products|foods|foodstuffs|category|classification|miscellaneous|unspecified|unknown)\\b|^(?:root vegetable|red meat|seed oil|nut oil|nut butter|Italian cheese|soft cheese|fresh cheese|canned meat|game meat|canned seafood|fish offal|fruit sauce|food paste|purée|sauce|seafood|offal|drink|beverage)$"
+    }
+  ],
+  "decisions": [
+    {
+      "term_id": "Q21156930",
+      "action": "map",
+      "canonical_id": "686f2847-4f4b-4e0b-ae8f-c493e2e94bcb",
+      "relationship": "exact",
+      "note": "Edible chickpea seed item. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q699637",
+      "action": "map",
+      "canonical_id": "a6483249-cd58-43f3-b4f5-5cbc0e393745",
+      "relationship": "exact",
+      "note": "Specific Korean chili paste. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q21546392",
+      "action": "map",
+      "canonical_id": "9e257b68-7c43-41b4-a331-c42f559beda1",
+      "relationship": "exact",
+      "note": "Garlic culinary ingredient rather than Allium sativum taxon. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q10716334",
+      "action": "map",
+      "canonical_id": "090daaac-dfca-41c8-b9c7-e7cd0d414f43",
+      "relationship": "exact",
+      "note": "Garlic powder. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q165199",
+      "action": "map",
+      "canonical_id": "b940ee2d-3277-4160-9f09-346458e3e104",
+      "relationship": "exact",
+      "note": "Chili pepper ingredient. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q20638126",
+      "action": "map",
+      "canonical_id": "1c29f668-5bfa-4600-8e17-0133f91b68de",
+      "relationship": "exact",
+      "note": "Tomato fruit; Q23501 is the plant and its deprecated food statement points here. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q93165",
+      "action": "map",
+      "canonical_id": "47359146-a677-400e-b6b5-c106520355e7",
+      "relationship": "exact",
+      "note": "Olive oil; redirected duplicate IDs must be resolved. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q229385",
+      "action": "map",
+      "canonical_id": "42f9281f-bd16-4212-998f-0370128f6e07",
+      "relationship": "exact",
+      "note": "Soy sauce. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q11254",
+      "action": "map",
+      "canonical_id": "090e6228-0da4-4920-b48d-3a2fb09c4a92",
+      "relationship": "exact",
+      "note": "Table salt rather than the general chemical class salt. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q383389",
+      "action": "map",
+      "canonical_id": "dea12fbf-c0e9-44ad-968e-0e8a438ec8fa",
+      "relationship": "narrower",
+      "note": "Tehina/tahini sesame paste; Q1251144 redirects here. Pinned English text and food/part/form reviewed against the authored canonical scope. Source specifies a narrower species/preparation than the maintained ingredient."
+    },
+    {
+      "term_id": "Q16131953",
+      "action": "map",
+      "canonical_id": "e82dd25f-0dfe-42cb-a8c7-6077f00537d7",
+      "relationship": "broader",
+      "note": "Sumac spice, distinct from Rhus plants. Pinned English text and food/part/form reviewed against the authored canonical scope. Source covers dried fruit beyond the canonical ground seasoning."
+    },
+    {
+      "term_id": "Q1849012",
+      "action": "map",
+      "canonical_id": "984aeedb-d887-406b-9dc3-f7ad851905a4",
+      "relationship": "exact",
+      "note": "Rice vinegar. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q1196289",
+      "action": "map",
+      "canonical_id": "3a5e2d1a-568c-481b-a8a6-2985dce2d901",
+      "relationship": "exact",
+      "note": "Specific Korean doenjang. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q27650144",
+      "action": "map",
+      "canonical_id": "f0167f19-be00-4876-9c15-b3ae35dd8fda",
+      "relationship": "narrower",
+      "note": "Perilla leaf found by following the plant's source-of relation. Pinned English text and food/part/form reviewed against the authored canonical scope. Source specifies a narrower species/preparation than the maintained ingredient."
+    },
+    {
+      "term_id": "Q843252",
+      "action": "map",
+      "canonical_id": "44c966e1-7876-4162-b5cf-465a6fd39ec3",
+      "relationship": "exact",
+      "note": "Specific salted shrimp jeotgal. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q1071614",
+      "action": "map",
+      "canonical_id": "65af547b-4b32-491c-874b-8af2a39c7653",
+      "relationship": "exact",
+      "note": "Cheonggukjang seasoning. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q11261547",
+      "action": "map",
+      "canonical_id": "feb4a7c0-79a0-4a0e-8443-27fbe0def3ca",
+      "relationship": "exact",
+      "note": "Edible kombu kelp; similarly named disambiguation item rejected. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q113739",
+      "action": "map",
+      "canonical_id": "c7779987-cdf8-43a3-a590-5933db0144e3",
+      "relationship": "exact",
+      "note": "Dried smoked fermented skipjack katsuobushi. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q11428977",
+      "action": "map",
+      "canonical_id": "2947f8d1-fe85-4c19-82f6-1f7c16340611",
+      "relationship": "exact",
+      "note": "Shio koji, located through the Japanese Wikipedia item link. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q1045417",
+      "action": "map",
+      "canonical_id": "830372c1-a460-4bfb-a296-de7fe8485f4e",
+      "relationship": "exact",
+      "note": "Pickled umeboshi. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q3273096",
+      "action": "map",
+      "canonical_id": "ab889f59-7478-4a6f-b41a-7f86edb11a99",
+      "relationship": "exact",
+      "note": "Specific doubanjiang paste. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q3242685",
+      "action": "map",
+      "canonical_id": "5beb3af7-0cbd-469a-a9aa-84614ce356b2",
+      "relationship": "exact",
+      "note": "Douchi salted fermented black soybeans. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q175245",
+      "action": "map",
+      "canonical_id": "4219d969-e654-4d43-bf01-0254bcde496a",
+      "relationship": "exact",
+      "note": "Shaoxing wine. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q756800",
+      "action": "map",
+      "canonical_id": "c761993e-774c-44a8-b8b9-c9ca3acb5153",
+      "relationship": "exact",
+      "note": "Sichuan pepper culinary spice, not only Zanthoxylum species. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q67202802",
+      "action": "map",
+      "canonical_id": "8f4baf3d-6b84-4661-9b7c-4b6e21fd68eb",
+      "relationship": "exact",
+      "note": "Kaffir lime leaf ingredient corresponds to makrut lime leaf. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q6853367",
+      "action": "map",
+      "canonical_id": "8c95b124-718b-48b9-9807-4028dbf6e61c",
+      "relationship": "exact",
+      "note": "Lao padaek condiment, not generic fish sauce. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q104821775",
+      "action": "map",
+      "canonical_id": "1222f8ec-b845-444e-80a6-507100c5e02e",
+      "relationship": "exact",
+      "note": "Kukui nut/candlenut food item linked from the plant. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q120096",
+      "action": "map",
+      "canonical_id": "3ecc32bd-292a-4dbf-82ee-0a621c0a35b0",
+      "relationship": "exact",
+      "note": "Tempeh soy food, not the place of the same name. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q12512536",
+      "action": "map",
+      "canonical_id": "005eea8b-e644-4fc3-8b74-027c825862e0",
+      "relationship": "exact",
+      "note": "Buah keluak seed, not only Pangium edule tree. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q3907811",
+      "action": "map",
+      "canonical_id": "4c6dc81c-c401-4b02-b01d-792a14544cc0",
+      "relationship": "exact",
+      "note": "Banana ketchup condiment. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q104188819",
+      "action": "map",
+      "canonical_id": "3324a5ff-1c10-4628-9c2a-edebc3da77d7",
+      "relationship": "exact",
+      "note": "Pili nut seed item linked from Canarium ovatum. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q16530385",
+      "action": "map",
+      "canonical_id": "e6992fa3-02dd-4c85-8e4d-93c5a6c9554e",
+      "relationship": "related",
+      "note": "Asafoetida resin spice, not only the plant. Pinned English text and food/part/form reviewed against the authored canonical scope. Source wording includes a cultivar, medicinal use or additional dish scope; keep related evidence without asserting exact equivalence."
+    },
+    {
+      "term_id": "Q2015681",
+      "action": "map",
+      "canonical_id": "16437fb4-9b6d-4d65-abdc-640a8565c97f",
+      "relationship": "exact",
+      "note": "Amchoor dried unripe mango powder. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q460570",
+      "action": "map",
+      "canonical_id": "e3cfeb2e-c61e-4d0f-ac05-61763351a44c",
+      "relationship": "exact",
+      "note": "Dried/black lime ingredient. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q139555604",
+      "action": "map",
+      "canonical_id": "720a47b3-c780-4cb6-8ecf-0e9eb7559b20",
+      "relationship": "exact",
+      "note": "Edible barberry fruit item linked from Berberis vulgaris. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q2906012",
+      "action": "map",
+      "canonical_id": "c9f207f5-03d9-4017-8415-c23a64823472",
+      "relationship": "exact",
+      "note": "Georgian fruit leather used as tklapi. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q250432",
+      "action": "map",
+      "canonical_id": "4b264aa4-561a-4178-9cb7-01f3fd119b0b",
+      "relationship": "exact",
+      "note": "Bulgur food; redirects resolved. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q771079",
+      "action": "map",
+      "canonical_id": "03f5c898-e2f1-4cb9-9dfb-a2a1ef7d531f",
+      "relationship": "exact",
+      "note": "Freekeh cereal food; redirects resolved. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q108946643",
+      "action": "map",
+      "canonical_id": "3ce7350d-ff75-4495-8e1a-bc158f7cef62",
+      "relationship": "exact",
+      "note": "Boiled-down pomegranate juice condiment. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q465554",
+      "action": "map",
+      "canonical_id": "b5095c0d-b9fc-44f5-ab17-5299eda2bf9f",
+      "relationship": "exact",
+      "note": "Mahleb spice from cherry kernels. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q486606",
+      "action": "map",
+      "canonical_id": "8015d5fb-d05b-4957-b73a-a3af56688088",
+      "relationship": "related",
+      "note": "Aleppo pepper culinary type. Pinned English text and food/part/form reviewed against the authored canonical scope. Source wording includes a cultivar, medicinal use or additional dish scope; keep related evidence without asserting exact equivalence."
+    },
+    {
+      "term_id": "Q966327",
+      "action": "hold",
+      "note": "Benchmark discovery evidence retained, but pinned entity has missing_or_invalid_english_label. No culinary equivalence or import inferred."
+    },
+    {
+      "term_id": "Q2723408",
+      "action": "map",
+      "canonical_id": "1d04609f-089d-4511-911f-cdfbd3871abe",
+      "relationship": "exact",
+      "note": "Preserved lemon condiment. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q1067261",
+      "action": "map",
+      "canonical_id": "c0769e59-5b1d-4ea1-92f3-be0ef6431eab",
+      "relationship": "exact",
+      "note": "Ras el hanout blend. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q2397413",
+      "action": "map",
+      "canonical_id": "673b2e07-3f81-48e6-bf69-4be34b338970",
+      "relationship": "related",
+      "note": "Smen fermented butter. Pinned English text and food/part/form reviewed against the authored canonical scope. Source wording includes a cultivar, medicinal use or additional dish scope; keep related evidence without asserting exact equivalence."
+    },
+    {
+      "term_id": "Q103205493",
+      "action": "map",
+      "canonical_id": "9bbcd5fd-19cc-426d-ba90-b62fc3e578ae",
+      "relationship": "exact",
+      "note": "Teff seed item linked from the plant. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q818763",
+      "action": "map",
+      "canonical_id": "f4360289-278f-4604-b9a0-3dbae52f0ad6",
+      "relationship": "exact",
+      "note": "Berbere spice blend, not Berber people or language. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q1762278",
+      "action": "map",
+      "canonical_id": "5ec1efad-5eed-4c79-a29c-3ec164194f65",
+      "relationship": "exact",
+      "note": "Mitmita blend. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q2697883",
+      "action": "map",
+      "canonical_id": "033ea407-15ce-4bcf-acb5-c959d9390465",
+      "relationship": "exact",
+      "note": "Niter kibbeh seasoned clarified butter. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q10771593",
+      "action": "map",
+      "canonical_id": "dc13ff20-fc84-44ee-a2b7-fd129c98e05b",
+      "relationship": "exact",
+      "note": "Egusi seed type, not egusi soup. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q137835655",
+      "action": "map",
+      "canonical_id": "b9b2cea7-294e-4514-ba3d-3cce61a1c3ec",
+      "relationship": "exact",
+      "note": "Iru condiment item linked from the specific Wikipedia page; English description is empty. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q7080074",
+      "action": "map",
+      "canonical_id": "af7e36b4-a1c4-4764-8f1b-99ad532f4fc0",
+      "relationship": "exact",
+      "note": "Ogiri fermented oilseed seasoning. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q84574093",
+      "action": "map",
+      "canonical_id": "730d6833-d1a8-4236-acc3-843bad189887",
+      "relationship": "exact",
+      "note": "Grains of paradise spice seed, not just the source plant. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q7302262",
+      "action": "map",
+      "canonical_id": "e9f15d6f-2f72-49f4-8dec-4223fbc4ac12",
+      "relationship": "exact",
+      "note": "Recado rojo/achiote seasoning paste. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q860808",
+      "action": "map",
+      "canonical_id": "8417c4ea-f01e-4c0f-a9f9-aa1f94643110",
+      "relationship": "exact",
+      "note": "Smoke-dried jalapeno chipotle. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q61413777",
+      "action": "hold",
+      "note": "Benchmark discovery evidence retained, but pinned entity has taxon_or_wikimedia_page. No culinary equivalence or import inferred."
+    },
+    {
+      "term_id": "Q2352129",
+      "action": "map",
+      "canonical_id": "558f302a-55c1-4664-ae31-375151652c6a",
+      "relationship": "exact",
+      "note": "Freeze-dried chuno potato. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q104006555",
+      "action": "map",
+      "canonical_id": "10a2bad8-f96a-40e8-8ceb-6f99b656081b",
+      "relationship": "exact",
+      "note": "Rocoto fruit item linked from Capsicum pubescens. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q491222",
+      "action": "map",
+      "canonical_id": "14b01ff2-b064-45bd-873f-a172a53cd7df",
+      "relationship": "exact",
+      "note": "Tucupi cassava sauce. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q25434",
+      "action": "map",
+      "canonical_id": "2e12ec9c-1436-4e68-9756-d43eb7e8c3c8",
+      "relationship": "exact",
+      "note": "Saffron spice, not saffron crocus plant. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q3229775",
+      "action": "map",
+      "canonical_id": "4c8a0655-faa1-43e5-bde4-b6ac3176c3d3",
+      "relationship": "exact",
+      "note": "Caper edible flower bud, not caper bush. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q21155816",
+      "action": "map",
+      "canonical_id": "bd4c815d-9619-4b73-ad56-7867e2222c9e",
+      "relationship": "exact",
+      "note": "Caraway seeds. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q10658708",
+      "action": "map",
+      "canonical_id": "9c423f9f-9c2d-4b5f-b53d-cd32bb1ef367",
+      "relationship": "exact",
+      "note": "Rye flour; redirects resolved. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q12339956",
+      "action": "map",
+      "canonical_id": "efa6a1dc-185e-40ee-83de-43c2134b8a4f",
+      "relationship": "exact",
+      "note": "Lingonberry fruit, not Vaccinium vitis-idaea plant. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q1963621",
+      "action": "map",
+      "canonical_id": "67858c66-1cfa-4cab-8bfc-4cb1c28d58f2",
+      "relationship": "exact",
+      "note": "Allspice spice item, not Pimenta dioica plant. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q466854",
+      "action": "hold",
+      "note": "Benchmark discovery evidence retained, but pinned entity has taxon_or_wikimedia_page. No culinary equivalence or import inferred."
+    },
+    {
+      "term_id": "Q134452914",
+      "action": "map",
+      "canonical_id": "ff25c95e-e585-4f5c-9f16-b64909014aae",
+      "relationship": "exact",
+      "note": "Taro root/corm food item linked from Colocasia esculenta. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q841779",
+      "action": "map",
+      "canonical_id": "463e1b6b-4d83-4044-9b8f-5f164d1e73c0",
+      "relationship": "exact",
+      "note": "Coconut milk, not coconut water. Pinned English text and food/part/form reviewed against the authored canonical scope."
+    },
+    {
+      "term_id": "Q1051492",
+      "action": "map",
+      "canonical_id": "51681146-d109-4974-bfc7-c547ec42fd5e",
+      "relationship": "exact",
+      "note": "Chinese five-spice mixture; preserved FoodOn wording describes the same culinary blend."
+    },
+    {
+      "term_id": "Q3514675",
+      "action": "map",
+      "canonical_id": "9ff12030-a37d-4555-bd37-688aaa4f6f96",
+      "relationship": "exact",
+      "note": "Tamari soy sauce; preserve its distinction from generic soy sauce."
+    },
+    {
+      "term_id": "Q4842073",
+      "action": "map",
+      "canonical_id": "2105155e-5310-4ecf-91a4-2a5f4b17fa56",
+      "relationship": "broader",
+      "note": "Bagoong includes fermented fish and shrimp preparations; the Noms ingredient is specifically shrimp-based bagoong alamang."
+    },
+    {
+      "term_id": "Q14624",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "garam masala",
+        "aliases": [],
+        "description": "Indian blend of ground spices"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q148306",
+      "action": "hold",
+      "note": "Za’atar can denote herbs and a prepared blend; resolve the source scope before creating a distinct blend identity."
+    },
+    {
+      "term_id": "Q206491",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "lemon pepper",
+        "aliases": [],
+        "description": "seasoning made from granulated lemon zest and cracked black peppercorns"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q222463",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "prahok",
+        "aliases": [],
+        "description": "crushed, salted and fermented fish paste used in Cambodian cuisine"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q241933",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "panch phoron",
+        "aliases": [],
+        "description": "South Asian spice blend"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q477103",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "Svan salt",
+        "aliases": [],
+        "description": "spice blend in Georgian cuisine"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q536829",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "hawaij",
+        "aliases": [],
+        "description": "variety of Yemeni spice mixtures"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q538656",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "baharat",
+        "aliases": [],
+        "description": "spice mix"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q602006",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "quatre épices",
+        "aliases": [],
+        "description": "spice mix used mainly in French cuisine"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q685077",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "gomashio",
+        "aliases": [],
+        "description": "dry condiment made from sesame seeds"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q908304",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "ssamjang",
+        "aliases": [],
+        "description": "spicy Korean paste"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q958214",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "kroeung",
+        "aliases": [],
+        "description": "Cambodian curry paste"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q978363",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "skhug",
+        "aliases": [
+          "zhug"
+        ],
+        "description": "Hot sauce known as skhug."
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q1026822",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "chili oil",
+        "aliases": [],
+        "description": "oil-based condiment infused with chili peppers"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q1026857",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "XO sauce",
+        "aliases": [],
+        "description": "spicy seafood sauce from Hong Kong"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q1040612",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "tianmianjiang",
+        "aliases": [],
+        "description": "Chinese sauce in the form of a thick brown paste"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q1045910",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "mirin",
+        "aliases": [],
+        "description": "essential condiment used in Japanese cuisine"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q1056554",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "sambal",
+        "aliases": [],
+        "description": "condiment"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q1068141",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "chaat masala",
+        "aliases": [],
+        "description": "spice mix, used in Pakistani and Indian Cuisine"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q1148919",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "shichimi togarashi",
+        "aliases": [
+          "shichimi"
+        ],
+        "description": "Japanese seven spice mix"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q1392674",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "sriracha sauce",
+        "aliases": [],
+        "description": "hot sauce"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q1517449",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "tandoori masala",
+        "aliases": [],
+        "description": "spice mixture used in Indian cuisine"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q1541119",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "yuzu kosho",
+        "aliases": [
+          "yuzukoshō"
+        ],
+        "description": "Japanese fermented paste"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q2068389",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "advieh",
+        "aliases": [],
+        "description": "Iranian spice mixture"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q2123759",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "qâlat daqqa",
+        "aliases": [],
+        "description": "Tunisian spice blend"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q2354397",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "kecap manis",
+        "aliases": [],
+        "description": "sweetened aromatic soy sauce, originating from Java island"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q2557649",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "amba",
+        "aliases": [],
+        "description": "mango pickle condiment"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q2623066",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "pumpkin pie spice",
+        "aliases": [],
+        "description": "mixture of spices used to flavor pumpkin pie"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q2722814",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "ponzu",
+        "aliases": [],
+        "description": "Japanese citrus-based condiment"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q3314986",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "vadouvan",
+        "aliases": [],
+        "description": "blend of spices of French-Indian heritage"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q3512759",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "tabil",
+        "aliases": [],
+        "description": "Algerian and Tunisian spice mixture"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q3897482",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "anchovy paste",
+        "aliases": [],
+        "description": "food product"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q4922876",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "nam phrik",
+        "aliases": [],
+        "description": "Thai chili sauce"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q5794326",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "jaew bong",
+        "aliases": [],
+        "description": "sweet and savory Lao chili paste"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q6393931",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "kerisik",
+        "aliases": [],
+        "description": "Malaysian ingredient from coconut ground paste"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q6704473",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "lunumiris",
+        "aliases": [],
+        "description": "spicy Sri Lankan sambal paste"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q7688659",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "tauco",
+        "aliases": [],
+        "description": "Indonesian fermented bean paste"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q7862790",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "tương",
+        "aliases": [],
+        "description": "condiment made from soybeans"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q8484030",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "dark soy sauce",
+        "aliases": [],
+        "description": "Chinese dark-coloured soy sauce used mainly for adding colour and flavour to dishes"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q8529545",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "light soy sauce",
+        "aliases": [],
+        "description": "variety of Chinese soy sauce"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q11047203",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "Shanxi mature vinegar",
+        "aliases": [],
+        "description": "condiment"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q11264544",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "kanzuri",
+        "aliases": [],
+        "description": "Japanese fermented chili paste"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q12812990",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "Urfa biber",
+        "aliases": [],
+        "description": "dried and processed red pepper spice from Şanlıurfa, Turkey"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q13069284",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "pon ye gyi",
+        "aliases": [],
+        "description": "Burmese fermented bean paste"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q16254010",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "ʻinamona",
+        "aliases": [],
+        "description": "condiment or relish used in traditional Hawaiian cooking"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q19571204",
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "celery powder",
+        "aliases": [],
+        "description": "seasoning and food preservative"
+      },
+      "note": "Named culinary seasoning, sauce or pantry paste; reviewed source label/description and existing labels/aliases. Preserve this specific preparation rather than merging it with a generic ingredient or another regional condiment. No upstream aliases bulk copied."
+    },
+    {
+      "term_id": "Q2845",
+      "action": "hold",
+      "note": "Cannabis product outside the initial cooking pantry scope."
+    },
+    {
+      "term_id": "Q11587",
+      "action": "hold",
+      "note": "Bleach is a cleaning chemical, not an ingredient."
+    },
+    {
+      "term_id": "Q189211",
+      "action": "hold",
+      "note": "Drinking straw is equipment, not edible material."
+    },
+    {
+      "term_id": "Q201382",
+      "action": "hold",
+      "note": "Turpentine is a solvent, not a cooking oil."
+    },
+    {
+      "term_id": "Q208465",
+      "action": "hold",
+      "note": "Laboratory buffer solution, not a pantry ingredient."
+    },
+    {
+      "term_id": "Q134700210",
+      "action": "hold",
+      "note": "Shekere is a percussion instrument; hierarchy membership does not establish edibility."
+    },
+    {
+      "term_id": "Q170885",
+      "action": "hold",
+      "note": "Essential oil is an unspecific category with non-food uses; no blanket culinary mapping."
+    },
+    {
+      "term_id": "Q20136",
+      "action": "hold",
+      "note": "Root vegetable is a broad organizational group, not a specific ingredient."
+    },
+    {
+      "term_id": "Q360459",
+      "action": "hold",
+      "note": "Adobo spans a cooking method, dishes and seasonings; resolve its source scope before attaching a canonical reference."
+    },
+    {
+      "term_id": "Q17315191",
+      "action": "hold",
+      "note": "Italian cheese is a geographical category, not a specific ingredient."
+    },
+    {
+      "term_id": "Q127713530",
+      "action": "hold",
+      "note": "Fictional game syrup from Papa Louie, not a real pantry product."
+    },
+    {
+      "term_id": "Q138965375",
+      "action": "hold",
+      "note": "A historical collection of eggs, not a culinary ingredient."
+    }
+  ],
+  "review_method": "All source labels and active canonical labels/aliases are screened against this bounded revision snapshot. Unambiguous ingredient-label overlaps may be associated as related only. New identities and stronger mappings require explicit case decisions. This is policy-assisted screening, not individual semantic certification of every term; unresolved names remain held."
+}

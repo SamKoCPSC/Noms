@@ -1,16 +1,19 @@
 # NOMS-017 ingredient vocabulary: handoff
 
 Started 2026-10-21; current state updated 2026-10-23.
-Branch: `codex/noms-017-ingredient-vocabulary`.
+FoodOn branch: `codex/noms-017-ingredient-vocabulary`.
+Wikidata follow-up: `codex/noms-017-wikidata-adapter`.
 PR: https://github.com/SamKoCPSC/Noms/pull/16
 
 ## Delivered state
 
 Ingredient autocomplete, PostgreSQL persistence, deployment-only seed loading,
 source provenance and public-recipe popularity tracking are implemented. The
-maintained seed has **10,148 active ingredients** (100 curated plus 10,048
+FoodOn baseline has **10,148 active ingredients** (100 curated plus 10,048
 imported), **60 retired identities**, and 12,016 FoodOn mappings, of which 11,956
-belong to active entries. All original curated IDs and authored wording remain
+belong to active entries. The Wikidata follow-up adds 45 pantry ingredients and
+661 Wikidata mappings, producing **10,193 active entries** with the same retirements.
+All original curated IDs and authored wording remain
 unchanged; all 101 prior development identities, including the cumin probe, are
 retained. Retired entries remain available to recipe history and are hidden
 from suggestions.
@@ -105,9 +108,24 @@ and inspect current runtime metadata instead of assuming an old stack survives.
 For an existing database, follow the seed guide: pause recipe writes, apply schema
 and runtime grants with deployment credentials, seed/reconcile, then resume writes.
 
+## Wikidata follow-up
+
+The [Wikidata guide](../../scripts/vocabulary/WIKIDATA.md) records the revision
+capture, policy screening of 9,197 source entities and all 10,148 active baseline
+names, and reproduction commands. Descriptor, policy and approved UUID/revision
+ledger are maintained; raw snapshots and all-name CSVs remain outside Git.
+616 mappings enrich 607 existing ingredients; 45 named pantry ingredients are
+new. Held entities include 4,267 possible new identities requiring further
+deduplication/semantic review. The canonical bundle is validated offline; this
+follow-up has not been applied to a live database. Its 42 offline Python tests,
+six Rust vocabulary tests and the authoritative Rust validator pass (10,253
+entries, two sources, no warnings). Revision restoration, review and canonical
+seed/source generation reproduce byte-for-byte; all prior identities, wording
+and mappings are preserved.
+
 ## Remaining scope
 
-Other metadata dimensions, localization, Wikidata/USDA ingestion adapters,
+Other metadata dimensions, localization, further Wikidata curation, USDA ingestion,
 automatic recognition/backfill, vocabulary-aware portability policy, search
 facets, merge redirects and personal suggestions remain future work. See the
 [implementation plan](../implementation-plans/NOMS-017-recipe-metadata-autocomplete-vocabulary.md).
