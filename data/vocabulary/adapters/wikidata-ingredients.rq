@@ -1,0 +1,9 @@
+# Ingredient instances and subclasses; discovery is not import approval.
+# schema:version pins the actual entity revisions used in the review.
+SELECT DISTINCT ?item ?revision WHERE {
+  { ?item wdt:P31/wdt:P279* wd:Q25403900 }
+  UNION
+  { ?item wdt:P279+ wd:Q25403900 }
+  ?item schema:version ?revision .
+  FILTER(STRSTARTS(STR(?item), "http://www.wikidata.org/entity/Q"))
+}

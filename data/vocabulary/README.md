@@ -1,8 +1,9 @@
 # Maintained ingredient vocabulary
 
 `ingredients.json` is the reviewed source of truth for ingredient suggestions.
-The seed contains **10,148 active ingredients**: the original 100 curated entries
-plus 10,048 FoodOn-derived cooking/pantry entries. Another 60 staged identities
+The seed contains **12,698 active ingredients**: the original 100 curated entries,
+10,048 FoodOn-derived cooking/pantry entries and 2,550 Wikidata additions.
+Another 60 staged identities
 are retained as retired after the deployment review removed unsuitable categories.
 Every original ID and authored
 label/alias/description is preserved, including the original fifteen IDs. The
@@ -17,6 +18,15 @@ pantry products and useful forms; organizational/industrial/medical categories,
 complete meals and unclear terms are held out. Source synonyms are not copied
 wholesale. See `adapters/foodon-cooking-policy.json` and the persisted UUID/review
 ledger in `adapters/foodon-cooking-review.json`.
+
+The [Wikidata adapter](../../scripts/vocabulary/WIKIDATA.md) adds 2,550 ingredients
+and 1,120 additional source associations, totaling 3,670 Wikidata mappings.
+Its identity review gives all 4,449 initially unresolved candidates an explicit
+outcome; 1,440 stay held for specific scope/evidence reasons. The combined seed
+also retains the same 60 retired identities. Existing IDs and authored wording
+are preserved; related evidence does not hard-merge duplicate legacy UUIDs.
+The source snapshot is pinned by entity revisions and checksum, and full case
+audits remain outside Git. This batch has not been loaded into a live database.
 
 The source coverage research still measures the original **100-ingredient**
 benchmark across 19 strata. Those percentages do not describe the expanded seed.
@@ -64,7 +74,8 @@ of subsequent vocabulary changes. A reference does not imply interchangeability.
 
 `sources.json` records external source IDs, HTTPS URLs, versions, SHA-256 checksums
 (as 64 hexadecimal characters), licenses, and attribution. The manifest now pins
-FoodOn's 2026-09-20 snapshot with CC-BY-4.0 attribution. Per-term source notices
+FoodOn's 2026-09-20 snapshot with CC-BY-4.0 attribution and a revision-pinned
+Wikidata structured-data capture under CC0-1.0. Per-term FoodOn source notices
 remain in the adapter's generated report; the manifest does not replace review
 of third-party definition attribution. The original entries retain curated origin;
 new source-derived entries use imported origin.
