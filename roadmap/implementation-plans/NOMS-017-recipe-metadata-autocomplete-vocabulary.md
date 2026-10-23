@@ -181,10 +181,11 @@ English ingredient autocomplete in new/edit recipe forms. See
 [`data/vocabulary/README.md`](../../data/vocabulary/README.md) for the seed contract
 and loading procedure. Optional ingredient IDs travel with authored text in
 existing JSON drafts and snapshots; editing the name clears the UI reference.
-The current file has 100 curated ingredients, retaining the original fifteen IDs
-and adding an international coverage benchmark. Source assessments live beside
-the seed under `data/vocabulary/coverage`. This does not complete the other dimensions, upstream ingestion,
-portable export specification, or personal suggestion work.
+The maintained seed includes 100 curated ingredients plus the FoodOn expansion
+described below, retaining the original fifteen IDs. Source assessments use a
+fixed 100-ingredient international benchmark under `data/vocabulary/coverage`.
+Other metadata dimensions, additional source adapters, vocabulary-aware portable
+export policy and personal suggestions remain future work.
 
 Ingredient suggestions also rank prefix matches by a maintained `recipe_count`
 on the canonical row. Only current public published recipes contribute, once per
@@ -195,8 +196,8 @@ edits, visibility changes, restores, and deletions. The deployment-only
 Exact label and alias matches retain priority over popularity, and the UI remains
 label only. See the vocabulary README for rollout and concurrency details.
 
-For the saved implementation state, focused verification and the completed USDA
-benchmark review, read the 2026-10-22 update in the
+For current implementation state, verification and the completed USDA
+benchmark review, read the
 [dated session handoff](../handoffs/NOMS-017-ingredient-vocabulary-2026-10-21.md).
 The [coverage report](../../data/vocabulary/coverage/README.md) distinguishes
 27/100 generic USDA matches from 34 additional branded-only products. The
@@ -206,7 +207,7 @@ products; these research candidates have not been promoted to seed mappings.
 The initial [FoodOn adapter](../../scripts/vocabulary/README.md) now extracts a
 pinned local OWL file into review candidates and builds complete canonical
 seed/source files from approved decisions. Existing IDs/text remain stable and
-source synonyms retain their scopes. Full-snapshot extraction, 14 offline
+source synonyms retain their scopes. Full-snapshot extraction, 20 offline
 regressions and the actual Rust seed CLI validation passed. The durable pilot
 review records 50 mappings (28 exact, 8 broader, 12 narrower, 2 related) and
 preserves all 100 existing identities/texts. The pilot initially left the maintained seed unchanged.
@@ -221,7 +222,8 @@ The subsequent cooking-focused expansion is now promoted: **10,148 active entrie
 (100 curated plus 10,048 imported), with 60 staged UUIDs retained retired.
 All prior development IDs remain in the maintained seed, resolving the pilot's
 startup-seed constraint. The selection policy, original baseline, UUID/review
-ledger and counts are versioned under `data/vocabulary/adapters/foodon-cooking-*`.
-Source annotations and complete hold queues stay outside Git. This is policy-based
+ledger are versioned under `data/vocabulary/adapters/foodon-cooking-*`.
+The adapter guide records seed counts; generated summaries, source annotations
+and complete hold queues stay outside Git. This is policy-based
 screening with explicit exceptions; unresolved semantic overlaps can still need
 editorial consolidation. The coverage study remains the fixed 100-entry benchmark.

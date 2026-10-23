@@ -57,13 +57,21 @@ truncation. Exact synonyms can still be culinarily ambiguous: review them.
 
 ## Review mappings and new entries
 
-The pre-expansion review is documented in the
-[candidate label audit](../../data/vocabulary/adapters/foodon-label-audit.md).
-It screens all 20,152 structurally eligible terms and records 54 source-specific
-findings: classification labels, broad categories, animal-feed/hazard branches,
-ambiguous aliases, source text errors and ingredient-form distinctions. Its
+The pre-expansion audit mechanically screens all 20,152 structurally eligible
+terms from 29,239 named classes. It flags 5,999 classification labels, 1,154 terms
+with ontology wording, and seven proposals that violate the canonical text
+contract. There are 346 shared normalized label/alias strings across 587 terms;
+10,303 terms lack an English definition. These overlapping signals are review
+hints, not accepted/rejected ingredient counts or semantic approval.
+
+The 54 source-specific
 [editorial findings](../../data/vocabulary/adapters/foodon-label-review.json)
-are recommendations, not adapter import approvals or canonical UUID allocations.
+cover broad categories, animal-feed/hazard branches, ambiguous aliases, source
+text errors and meaningful ingredient forms. They remain inputs to the audit
+and cooking selection; they are not adapter import approvals or UUID allocations.
+Preserve distinctions such as active/inactive yeast, dried/canned tomatoes,
+peppercorns/Capsicum, allspice/pimiento and caper buds/fruit. A friendlier label
+cannot repair a source definition or establish exact equivalence.
 
 Reproduce the complete review queue from an extracted catalog:
 
@@ -75,7 +83,8 @@ python3 scripts/vocabulary/audit_foodon_labels.py \
 
 The fresh output includes all eligible candidates with reason flags, shared
 normalized names, canonical-name overlaps, diagnostic variant families and input
-checksums. Keep the full CSV/catalog outside Git. No flag automatically accepts,
+checksums, plus a Markdown report containing the detailed findings. Keep these
+generated reports and the full CSV/catalog outside Git. No flag automatically accepts,
 rejects, renames or merges an ingredient. Preparation, missing definitions and
 unfamiliar names alone do not establish unsuitable ingredients.
 
@@ -251,9 +260,12 @@ The immutable baseline files preserve the original 100-entry seed from commit
 `aee6b6ae2ad4e3f5eed7e59e8b82d63971d2139d`. The default UUID registry is the
 versioned `foodon-cooking-review.json`; reruns reuse its UUIDv4 assignments.
 Previously staged identities removed by later selection changes remain retired,
-with their mapping evidence, rather than disappearing. `foodon-cooking-summary.json`
-records disposition counts and the policy checksum. The generated full selection
-queue and term-annotation report remain outside Git. Promoted seed files reproduce
+with their mapping evidence, rather than disappearing. The selection command emits
+`summary.json` with disposition counts and the policy checksum, alongside
+`review.json` and the full `selection.json` queue in the fresh output directory.
+Keep the generated summary, selection queue and term-annotation report outside
+Git; maintain the approved review/UUID ledger and policy in the repository.
+Promoted seed files reproduce
 from the saved review; do not regenerate random identities on each run.
 
 The fixed 100-ingredient source-coverage benchmark and database test fixtures use
