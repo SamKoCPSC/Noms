@@ -1,8 +1,9 @@
 # Maintained ingredient vocabulary
 
 `ingredients.json` is the reviewed source of truth for ingredient suggestions.
-The seed contains **12,698 active ingredients**: the original 100 curated entries,
-10,048 FoodOn-derived cooking/pantry entries and 2,550 Wikidata additions.
+The seed contains **12,802 active ingredients**: the original 100 curated entries,
+10,048 FoodOn-derived cooking/pantry entries, 2,550 Wikidata additions and 104
+USDA additions.
 Another 60 staged identities
 are retained as retired after the deployment review removed unsuitable categories.
 Every original ID and authored
@@ -26,7 +27,16 @@ outcome; 1,440 stay held for specific scope/evidence reasons. The combined seed
 also retains the same 60 retired identities. Existing IDs and authored wording
 are preserved; related evidence does not hard-merge duplicate legacy UUIDs.
 The source snapshot is pinned by entity revisions and checksum, and full case
-audits remain outside Git. This batch has not been loaded into a live database.
+audits remain outside Git.
+
+The [USDA adapter](../../scripts/vocabulary/USDA.md) screens all 8,262 food records
+in pinned Foundation Foods and SR Legacy releases, adds 104 explicitly reviewed
+identities and 1,142 related associations, and holds 7,016 records for scope or
+further definition. Its 1,246 mappings retain FDC IDs and archive provenance.
+Analytical/production qualifiers can propose related evidence for an existing
+ingredient; they do not establish exact equivalence or link nutrient values.
+All 12,758 pre-USDA IDs and authored fields are preserved. Raw archives and full
+audits stay outside Git. FNDDS, Branded and nutrient ingestion remain deferred.
 
 The source coverage research still measures the original **100-ingredient**
 benchmark across 19 strata. Those percentages do not describe the expanded seed.
@@ -75,7 +85,9 @@ of subsequent vocabulary changes. A reference does not imply interchangeability.
 `sources.json` records external source IDs, HTTPS URLs, versions, SHA-256 checksums
 (as 64 hexadecimal characters), licenses, and attribution. The manifest now pins
 FoodOn's 2026-09-20 snapshot with CC-BY-4.0 attribution and a revision-pinned
-Wikidata structured-data capture under CC0-1.0. Per-term FoodOn source notices
+Wikidata structured-data capture under CC0-1.0, and USDA Foundation Foods
+2026-04-30 and SR Legacy 2018-04 public-domain archives under CC0-1.0.
+Per-term FoodOn source notices
 remain in the adapter's generated report; the manifest does not replace review
 of third-party definition attribution. The original entries retain curated origin;
 new source-derived entries use imported origin.

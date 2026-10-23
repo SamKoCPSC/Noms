@@ -3,6 +3,7 @@
 Started 2026-10-21; current state updated 2026-10-23.
 FoodOn branch: `codex/noms-017-ingredient-vocabulary`.
 Wikidata follow-up: `codex/noms-017-wikidata-adapter`.
+USDA follow-up: `codex/noms-017-usda-adapter`.
 PR: https://github.com/SamKoCPSC/Noms/pull/16
 Wikidata PR: https://github.com/SamKoCPSC/Noms/pull/17
 
@@ -14,6 +15,8 @@ FoodOn baseline has **10,148 active ingredients** (100 curated plus 10,048
 imported), **60 retired identities**, and 12,016 FoodOn mappings, of which 11,956
 belong to active entries. The Wikidata follow-up adds 2,550 ingredients and
 3,670 Wikidata mappings, producing **12,698 active entries** with the same retirements.
+The USDA follow-up adds 104 ingredients and 1,246 USDA mappings, producing
+**12,802 active entries and 60 retired entries** across four pinned sources.
 All original curated IDs and authored wording remain
 unchanged; all 101 prior development identities, including the cumin probe, are
 retained. Retired entries remain available to recipe history and are hidden
@@ -125,8 +128,8 @@ address synonym traps and geographic/food ambiguity. Existing duplicate UUIDs
 are retained, with one representative receiving related evidence. No hard merge
 or redirects are introduced. See `resolve_wikidata_identities.py` for replay.
 
-The canonical bundle is validated offline; this follow-up has not been applied
-to a live database. All 48 Python tests and six Rust vocabulary tests pass; the
+The canonical bundle was validated offline; the subsequent USDA pass loads the
+combined bundle into the disposable test stack. All 48 Python tests and six Rust vocabulary tests passed; the
 Rust validator accepts 12,758 entries and two sources with no warnings.
 The identity-pass regressions cover form/species/part
 distinctions, negative scope before misleading food ancestry, legacy duplicate
@@ -134,9 +137,46 @@ preservation, maps to new imports and stable UUID reruns. Revision restoration,
 review and canonical seed/source generation reproduce byte-for-byte; all prior
 10,253 identities, authored wording, origins, references and mappings are preserved.
 
+## USDA follow-up
+
+The [USDA guide](../../scripts/vocabulary/USDA.md) documents checksum-pinned
+Foundation Foods 2026-04-30 and SR Legacy 2018-04 ingestion. All 8,262 eligible
+records and 12,698 active baseline names are mechanically screened. Foundation's
+87,521 sample/acquisition rows are excluded. No API key or nutrient ingestion is
+needed. FNDDS and Branded are deferred; named commercial records within SR Legacy
+are held as well.
+
+The batch adds 104 explicitly reviewed identities, 1,142 related associations
+(including two to new name families), and retains 7,016 held source records.
+Of the holds, 4,319 complex/unmatched descriptions still need a specific editorial
+definition. Complete case coverage is not individual semantic certification.
+Analytical/preparation simplifications only propose related associations, never
+exact nutrient links or new import wording. New imports require explicit policy
+decisions. All 12,758 previous IDs, authored fields, origins, references and
+mappings are preserved. No hard merges or redirects are introduced.
+
+The approved UUID ledger and canonical seed/source files reproduce byte-for-byte
+from the immutable pre-USDA baseline at `ab7ab53c32d48ff89f8fbd90833008f0ba292a73`.
+All 61 Python tests and six Rust vocabulary tests pass, and the authoritative Rust
+validator accepts 12,862 entries/four sources with no warnings. Raw ZIPs, catalogs,
+all-name CSVs, summaries and deployment/browser evidence remain outside Git.
+Both pinned download URLs returned HTTP 200 in the current environment. No
+production rollout occurred.
+
+The disposable local stack loaded the combined seed: 2,654 additions and 1,476
+enriched definitions over its FoodOn-only database. Dry-run rollback, unchanged
+authored recipes/drafts, all 12,862 canonical database definitions and idempotent
+reload were verified. Headless Chromium passed UUID selection/autosave/reload,
+reference clearing, free-text fallback and 109 authenticated lookup checks,
+including all 104 USDA additions. Browser artifacts and runtime metadata remain
+external. After environment recovery, inspect actual container ports and health;
+old runtime metadata may not survive. Retained dependency archives allowed
+offline Docker startup without a cold rebuild.
+
 ## Remaining scope
 
-Other metadata dimensions, localization, further Wikidata curation, USDA ingestion,
+Other metadata dimensions, localization, further Wikidata/USDA curation, FNDDS and
+Branded ingestion, nutrient linkage,
 automatic recognition/backfill, vocabulary-aware portability policy, search
 facets, merge redirects and personal suggestions remain future work. See the
 [implementation plan](../implementation-plans/NOMS-017-recipe-metadata-autocomplete-vocabulary.md).
