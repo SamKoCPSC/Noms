@@ -2,6 +2,8 @@
 
 For Wikidata revision capture, complete name screening and canonical ingestion,
 see the [Wikidata adapter guide](WIKIDATA.md).
+For pinned USDA Foundation Foods and SR Legacy ingestion and name review,
+see the [USDA adapter guide](USDA.md).
 
 Requires Python 3.11+ and the standard library. This is offline ingestion tooling,
 independent of autocomplete and server startup. It consumes a local RDF/XML OWL
