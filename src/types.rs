@@ -181,6 +181,9 @@ impl RecipeImage {
 /// A single ingredient in a recipe.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RecipeIngredient {
+    /// Optional suggestion identity. Authored names remain authoritative.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vocabulary_id: Option<Uuid>,
     pub amount: String,
     pub unit: String,
     pub name: String,
@@ -1808,5 +1811,23 @@ mod tests {
             serde_json::from_value(serde_json::to_value(&page).unwrap()).unwrap();
 
         assert_eq!(restored, page);
+    }
+}
+
+#[cfg(test)]
+mod ingredient_vocabulary_tests {
+    use super::*;
+    #[test]
+    fn ingredient_vocabulary_reference_is_optional_and_lossless() {
+        let old = serde_json::json!({"amount":"1","unit":"cup","name":"grandma's spice mix"});
+        let mut ingredient: RecipeIngredient = serde_json::from_value(old.clone()).unwrap();
+        assert_eq!(ingredient.vocabulary_id, None);
+        assert_eq!(serde_json::to_value(&ingredient).unwrap(), old);
+        ingredient.vocabulary_id = Some(Uuid::new_v4());
+        let new = serde_json::to_value(&ingredient).unwrap();
+        assert_eq!(
+            serde_json::from_value::<RecipeIngredient>(new).unwrap(),
+            ingredient
+        );
     }
 }

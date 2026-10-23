@@ -243,6 +243,7 @@ mod server {
                 cook_time_minutes: Some(45),
                 servings: Some(2),
                 ingredients: vec![RecipeIngredient {
+                    vocabulary_id: None,
                     amount: "1 ½".into(),
                     unit: "cups".into(),
                     name: "beans".into(),

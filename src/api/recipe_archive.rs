@@ -326,6 +326,7 @@ pub(crate) mod tests {
                     cook_time_minutes: None,
                     servings: None,
                     ingredients: vec![RecipeIngredient {
+                        vocabulary_id: None,
                         amount: "1".into(),
                         unit: "cup".into(),
                         name: "beans".into(),

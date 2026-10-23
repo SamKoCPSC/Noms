@@ -460,6 +460,15 @@ pub async fn apply_test_schema(pool: &PgPool) {
     .execute(pool)
     .await
     .expect("failed to create collection_recipes recipe index");
+
+    let schema = include_str!("../migrations/schema.sql");
+    let start = schema
+        .find("-- NOMS-017: maintained")
+        .expect("vocabulary schema marker");
+    sqlx::raw_sql(&schema[start..])
+        .execute(pool)
+        .await
+        .expect("failed to create vocabulary schema");
 }
 
 /// Generate a unique 8-character suffix for test data to avoid duplicate key conflicts.
@@ -524,6 +533,7 @@ pub(crate) fn test_recipe_snapshot(title: &str) -> crate::db::diff::RecipeSnapsh
         cook_time_minutes: None,
         servings: None,
         ingredients: vec![crate::types::RecipeIngredient {
+            vocabulary_id: None,
             amount: "1".to_string(),
             unit: "cup".to_string(),
             name: "test ingredient".to_string(),

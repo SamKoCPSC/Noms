@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "source": {
+    "id": "foodon",
+    "url": "https://raw.githubusercontent.com/FoodOntology/foodon/cd73540243a84bcd511a500d9a497d12d7dc02f6/foodon.owl",
+    "version": "2026-09-20 (cd73540243a84bcd511a500d9a497d12d7dc02f6)",
+    "checksum": "b897bf64c1b265c422db9ee01e1235c10c0b809e7f02326ef810a52068347edf",
+    "license": "CC-BY-4.0",
+    "attribution": "FoodOn contributors, FoodOn food ontology, https://foodon.org/. Selected term annotations and definition sources are retained in the extraction catalog; review those notices before reusing upstream wording."
+  },
+  "bytes": 40779019,
+  "version_iri": "http://purl.obolibrary.org/obo/foodon/releases/2026-09-20/foodon.owl",
+  "ingredient_root": "FOODON_00002403",
+  "reviewed_ingredient_terms": {
+    "FOODON_03317000": "Dried konbu is an edible kelp ingredient. Its named ancestry follows konbu vegetable food product and algae material to organism material, outside the food-material branch in this snapshot.",
+    "FOODON_03000015": "Annatto seed is explicitly defined as a whole Bixa orellana seed. This edible spice material is classified under Plant Ontology seed PO_0009010 rather than the food-material branch.",
+    "FOODON_03000255": "Teff kernel is explicitly defined as an Eragrostis tef caryopsis fruit. This edible cereal material is classified under Plant Ontology caryopsis fruit PO_0030104 rather than the food-material branch."
+  }
+}

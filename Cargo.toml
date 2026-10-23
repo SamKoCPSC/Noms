@@ -3,6 +3,7 @@ name = "noms"
 version = "0.1.0"
 authors = ["samko_rba <samko@ritchiebros.com>"]
 edition = "2021"
+default-run = "noms"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -103,3 +104,17 @@ warnings = "deny"
 
 [lints.clippy]
 all = "warn"
+
+[[bin]]
+name = "noms"
+path = "src/main.rs"
+
+[[bin]]
+name = "seed-vocabulary"
+path = "src/bin/seed-vocabulary.rs"
+required-features = ["server"]
+
+[[bin]]
+name = "reconcile-vocabulary-counts"
+path = "src/bin/reconcile-vocabulary-counts.rs"
+required-features = ["server"]

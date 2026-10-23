@@ -199,6 +199,9 @@ jobs:
           python3 -m unittest discover -s docker/codex-cloud -p 'test_*.py' -v
           bash -n docker/codex-cloud/cloud.sh docker/codex-cloud/app-entrypoint.sh
 
+      - name: Verify offline vocabulary adapters
+        run: python3 -m unittest discover -s scripts/vocabulary -p 'test_*.py' -v
+
       - name: Verify pinned deployment artifacts
         run: ./scripts/check-deployment-artifacts.sh
 

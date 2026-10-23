@@ -606,6 +606,7 @@ mod layout_tests {
         set_event_converter(Box::new(SerializedHtmlEventConverter));
         let mut dom = VirtualDom::new(|| {
             let ingredients = vec![crate::types::RecipeIngredient {
+                vocabulary_id: None,
                 amount: "2".into(),
                 unit: "cups".into(),
                 name: "water".into(),

@@ -1,0 +1,241 @@
+[
+  {
+    "query": "garbanzo bean",
+    "first": "chickpea"
+  },
+  {
+    "query": "cumin",
+    "first": "cumin seed"
+  },
+  {
+    "query": "ＣＵＭＩＮ",
+    "first": "cumin seed"
+  },
+  {
+    "query": "  CUMIN  ",
+    "first": "cumin seed"
+  },
+  {
+    "query": "cilantro",
+    "first": "coriander leaf"
+  },
+  {
+    "query": "aubergine",
+    "first": "eggplant"
+  },
+  {
+    "query": "courgette",
+    "first": "zucchini"
+  },
+  {
+    "query": "bicarbonate of soda",
+    "first": "baking soda"
+  },
+  {
+    "query": "icing sugar",
+    "first": "powdered sugar"
+  },
+  {
+    "query": "cornstarch",
+    "first": "corn starch"
+  },
+  {
+    "query": "milk",
+    "first": "cow's milk"
+  },
+  {
+    "query": "all purpose flour",
+    "first": "all-purpose flour"
+  },
+  {
+    "query": "butter",
+    "first": "butter"
+  },
+  {
+    "query": "active dry yeast",
+    "first": "active dry yeast"
+  },
+  {
+    "query": "inactive dry yeast",
+    "first": "inactive dry yeast"
+  },
+  {
+    "query": "fresh yeast",
+    "first": "fresh yeast"
+  },
+  {
+    "query": "baby spinach",
+    "first": "baby spinach"
+  },
+  {
+    "query": "bee pollen",
+    "first": "bee pollen"
+  },
+  {
+    "query": "cream of mushroom soup",
+    "first": "cream of mushroom soup"
+  },
+  {
+    "query": "canned mushroom soup",
+    "first": "canned mushroom soup"
+  },
+  {
+    "query": "vanilla extract",
+    "first": "vanilla extract"
+  },
+  {
+    "query": "gochujang",
+    "first": "gochujang"
+  },
+  {
+    "query": "paneer",
+    "first": "paneer"
+  },
+  {
+    "query": "panch phoron (whole spices)",
+    "first": "panch phoron (whole spices)"
+  },
+  {
+    "query": "chicken broth",
+    "first": "chicken broth"
+  },
+  {
+    "query": "beef broth",
+    "first": "beef broth"
+  },
+  {
+    "query": "vegetable stock",
+    "first": "vegetable stock"
+  },
+  {
+    "query": "Capsicum pepper",
+    "first": "Capsicum pepper"
+  },
+  {
+    "query": "c",
+    "empty": true
+  },
+  {
+    "query": "%_",
+    "empty": true
+  },
+  {
+    "query": "ch%",
+    "empty": true
+  },
+  {
+    "query": "ch_",
+    "empty": true
+  },
+  {
+    "query": "pet food",
+    "empty": true
+  },
+  {
+    "query": "animal feed",
+    "empty": true
+  },
+  {
+    "query": "infant formula",
+    "empty": true
+  },
+  {
+    "query": "hazardous",
+    "empty": true
+  },
+  {
+    "query": "efsa foodex2",
+    "empty": true
+  },
+  {
+    "query": "03541304",
+    "empty": true
+  },
+  {
+    "query": "Glucuronolactone",
+    "empty": true
+  },
+  {
+    "query": "meshanger",
+    "empty": true
+  },
+  {
+    "query": "ch"
+  },
+  {
+    "query": "co"
+  },
+  {
+    "query": "to"
+  },
+  {
+    "query": "pe"
+  },
+  {
+    "query": "sa"
+  },
+  {
+    "query": "ma"
+  },
+  {
+    "query": "mi"
+  },
+  {
+    "query": "ri"
+  },
+  {
+    "query": "pepper",
+    "forbidden": [
+      "pepper",
+      "black or white pepper product"
+    ]
+  },
+  {
+    "query": "microbial refined",
+    "empty": true
+  },
+  {
+    "query": "composite dishes",
+    "empty": true
+  },
+  {
+    "query": "solution for injection",
+    "empty": true
+  },
+  {
+    "query": "parenteral preparation",
+    "empty": true
+  },
+  {
+    "query": "rice based dishes",
+    "empty": true
+  },
+  {
+    "query": "liquid, higher viscosity",
+    "empty": true
+  },
+  {
+    "query": "cheddar cheese (for manufacturing)",
+    "empty": true
+  },
+  {
+    "query": "chicken",
+    "first": "chicken meat"
+  },
+  {
+    "query": "beef",
+    "first": "beef"
+  },
+  {
+    "query": "pork",
+    "first": "pork meat"
+  },
+  {
+    "query": "lettuce",
+    "first": "lettuce leaf"
+  },
+  {
+    "query": "ground pepper",
+    "first": "ground peppercorn"
+  }
+]

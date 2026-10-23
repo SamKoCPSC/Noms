@@ -380,3 +380,106 @@ CREATE INDEX IF NOT EXISTS idx_collection_recipes_order
 
 CREATE INDEX IF NOT EXISTS idx_collection_recipes_recipe_id
     ON collection_recipes(recipe_id);
+
+-- NOMS-017: maintained ingredient suggestions. The seed CLI owns these rows;
+-- authored recipe text and optional IDs remain in existing JSON snapshots.
+CREATE TABLE IF NOT EXISTS vocabulary_entries (
+    id UUID PRIMARY KEY,
+    dimension TEXT NOT NULL CHECK (dimension IN ('ingredient')),
+    locale TEXT NOT NULL CHECK (locale IN ('en')),
+    label TEXT NOT NULL CHECK (length(btrim(label)) BETWEEN 1 AND 200),
+    normalized_label TEXT NOT NULL CHECK (length(normalized_label) > 0),
+    description TEXT NOT NULL CHECK (length(description) <= 2000),
+    status TEXT NOT NULL CHECK (status IN ('active', 'retired')),
+    definition JSONB NOT NULL CHECK (jsonb_typeof(definition) = 'object'),
+    recipe_count BIGINT NOT NULL DEFAULT 0 CHECK (recipe_count >= 0),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_vocabulary_active_label
+    ON vocabulary_entries (dimension, locale, normalized_label text_pattern_ops)
+    WHERE status = 'active';
+
+CREATE TABLE IF NOT EXISTS vocabulary_aliases (
+    entry_id UUID NOT NULL REFERENCES vocabulary_entries(id) ON DELETE RESTRICT,
+    alias TEXT NOT NULL CHECK (length(btrim(alias)) BETWEEN 1 AND 200),
+    normalized_alias TEXT NOT NULL CHECK (length(normalized_alias) > 0),
+    PRIMARY KEY (entry_id, normalized_alias)
+);
+-- Aliases may be ambiguous across entries; do not enforce global uniqueness.
+CREATE INDEX IF NOT EXISTS idx_vocabulary_alias_prefix
+    ON vocabulary_aliases (normalized_alias text_pattern_ops, entry_id);
+
+CREATE TABLE IF NOT EXISTS vocabulary_sources (
+    id TEXT PRIMARY KEY,
+    definition JSONB NOT NULL CHECK (jsonb_typeof(definition) = 'object')
+);
+CREATE TABLE IF NOT EXISTS vocabulary_source_mappings (
+    entry_id UUID NOT NULL REFERENCES vocabulary_entries(id) ON DELETE RESTRICT,
+    source_id TEXT NOT NULL REFERENCES vocabulary_sources(id) ON DELETE RESTRICT,
+    external_id TEXT NOT NULL,
+    relationship TEXT NOT NULL CHECK (relationship IN ('exact', 'broader', 'narrower', 'related')),
+    PRIMARY KEY (entry_id, source_id, external_id, relationship)
+);
+CREATE TABLE IF NOT EXISTS vocabulary_seed_runs (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    checksum TEXT NOT NULL CHECK (length(checksum) = 64),
+    entry_count INTEGER NOT NULL CHECK (entry_count > 0),
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Only current public published recipes contribute; private/unlisted recipes,
+-- drafts and immutable versions never influence global popularity.
+-- Unknown IDs remain valid recipe history and are ignored until seeded.
+CREATE OR REPLACE FUNCTION ingredient_vocabulary_ids(ingredients JSONB)
+RETURNS UUID[] LANGUAGE sql IMMUTABLE PARALLEL SAFE
+SET search_path = pg_catalog
+AS $$
+    SELECT COALESCE(array_agg(DISTINCT CASE
+        WHEN item->>'vocabulary_id' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        THEN (item->>'vocabulary_id')::uuid END), '{}'::uuid[])
+    FROM jsonb_array_elements(CASE WHEN jsonb_typeof(ingredients) = 'array'
+        THEN ingredients ELSE '[]'::jsonb END) AS item
+$$;
+
+CREATE OR REPLACE FUNCTION maintain_ingredient_recipe_counts()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    old_ids UUID[] := '{}';
+    new_ids UUID[] := '{}';
+    change RECORD;
+BEGIN
+    -- Shared by recipe writers, exclusive for reconciliation/seed loading.
+    -- Take this before vocabulary row locks. Updates use a stable UUID order.
+    PERFORM pg_advisory_xact_lock_shared(170018);
+    IF TG_OP <> 'INSERT' THEN
+        IF OLD.visibility = 'public' THEN
+            old_ids := public.ingredient_vocabulary_ids(OLD.ingredients);
+        END IF;
+    END IF;
+    IF TG_OP <> 'DELETE' THEN
+        IF NEW.visibility = 'public' THEN
+            new_ids := public.ingredient_vocabulary_ids(NEW.ingredients);
+        END IF;
+    END IF;
+    FOR change IN
+        SELECT id, sum(delta) AS delta FROM (
+            SELECT unnest(new_ids) AS id, 1 AS delta
+            UNION ALL
+            SELECT unnest(old_ids) AS id, -1 AS delta
+        ) AS changes
+        WHERE id IS NOT NULL
+        GROUP BY id HAVING sum(delta) <> 0 ORDER BY id
+    LOOP
+        UPDATE public.vocabulary_entries
+        SET recipe_count = recipe_count + change.delta
+        WHERE id = change.id AND dimension = 'ingredient';
+    END LOOP;
+    RETURN NULL;
+END
+$$;
+
+CREATE TRIGGER ingredient_recipe_counts
+AFTER INSERT OR UPDATE OF ingredients, visibility OR DELETE ON recipes
+FOR EACH ROW EXECUTE FUNCTION maintain_ingredient_recipe_counts();

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "foodon",
+      "url": "https://raw.githubusercontent.com/FoodOntology/foodon/cd73540243a84bcd511a500d9a497d12d7dc02f6/foodon.owl",
+      "version": "2026-09-20 (cd73540243a84bcd511a500d9a497d12d7dc02f6)",
+      "checksum": "b897bf64c1b265c422db9ee01e1235c10c0b809e7f02326ef810a52068347edf",
+      "license": "CC-BY-4.0",
+      "attribution": "FoodOn contributors, FoodOn food ontology, https://foodon.org/. Selected term annotations and definition sources are retained in the extraction catalog; review those notices before reusing upstream wording."
+    }
+  ]
+}

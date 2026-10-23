@@ -1,0 +1,344 @@
+{
+  "schema_version": 1,
+  "source_checksum": "b897bf64c1b265c422db9ee01e1235c10c0b809e7f02326ef810a52068347edf",
+  "review_date": "2026-10-22",
+  "purpose": "Editorial findings only; no adapter import approvals or canonical UUID assignments.",
+  "findings": [
+    {
+      "term_id": "FOODON_00001002",
+      "source_label": "food product",
+      "recommendation": "exclude_initial",
+      "note": "Top-level processed consumable category includes human and animal products; not a specific ingredient."
+    },
+    {
+      "term_id": "FOODON_00001015",
+      "source_label": "plant food product",
+      "recommendation": "exclude_initial",
+      "note": "Broad plant-derived product category; keep as taxonomy rather than a suggestion."
+    },
+    {
+      "term_id": "FOODON_00002454",
+      "source_label": "food material by characteristic",
+      "recommendation": "exclude_initial",
+      "note": "Organizational category by characteristic. Do not exclude all descendants: many are legitimate ingredients."
+    },
+    {
+      "term_id": "FOODON_00002645",
+      "source_label": "food material by process",
+      "recommendation": "exclude_initial",
+      "note": "Organizational category by process. Its fermented/pickled ingredient descendants need individual review."
+    },
+    {
+      "term_id": "FOODON_00002147",
+      "source_label": "food material by consumer group",
+      "recommendation": "exclude_initial",
+      "note": "Organizational category by consumer group."
+    },
+    {
+      "term_id": "FOODON_00003366",
+      "source_label": "food (spoiled)",
+      "recommendation": "exclude_initial",
+      "note": "Spoilage state of unspecified food rather than an ingredient identity."
+    },
+    {
+      "term_id": "FOODON_00005146",
+      "source_label": "hazardous food material",
+      "recommendation": "exclude_initial",
+      "note": "Hazard classification rather than an ingredient identity; review its 13 structurally eligible branch terms separately from edible ingredients."
+    },
+    {
+      "term_id": "FOODON_00005152",
+      "source_label": "Hot food material which may trigger skin burns when handled without protective gloves.",
+      "recommendation": "exclude_initial",
+      "note": "A sentence describing a burn hazard is stored as the label; not an ingredient name."
+    },
+    {
+      "term_id": "FOODON_00004325",
+      "source_label": "animal feed",
+      "recommendation": "exclude_initial",
+      "note": "Explicit animal-feed category, not a human recipe ingredient."
+    },
+    {
+      "term_id": "FOODON_00002682",
+      "source_label": "pet food",
+      "recommendation": "exclude_initial",
+      "note": "Explicit pet-food category; outside the initial human recipe seed."
+    },
+    {
+      "term_id": "FOODON_00004324",
+      "source_label": "compound feed premix (medicated)",
+      "recommendation": "exclude_initial",
+      "note": "Medicated animal-feed premix; outside the initial human recipe seed."
+    },
+    {
+      "term_id": "FOODON_03301424",
+      "source_label": "bee pollen",
+      "recommendation": "review_scope",
+      "note": "Counterexample to blanket feed-ancestry exclusion: bee pollen may have human culinary use, although this term descends from animal-feed material. Definition is absent; check the specific source identity."
+    },
+    {
+      "term_id": "FOODON_00000070",
+      "source_label": "lobster tail food product",
+      "recommendation": "edit_label",
+      "note": "Replace ontology phrasing with a culinary label after checking whether the source covers meat, shell-on tails or tail products generally. Do not imply an exact meat-only scope automatically.",
+      "proposed_label": "lobster tail"
+    },
+    {
+      "term_id": "FOODON_00001025",
+      "source_label": "camembert cheese food product",
+      "recommendation": "edit_label",
+      "note": "Remove ontology suffix after reconciling the other Camembert source term; preserve the curated spelling rather than creating parallel entries.",
+      "proposed_label": "Camembert cheese"
+    },
+    {
+      "term_id": "FOODON_00001042",
+      "source_label": "bovine milk beverage",
+      "recommendation": "edit_label",
+      "note": "Prefer familiar animal terminology. Reconcile the bovine/cow milk branches and beverage-versus-ingredient scope first.",
+      "proposed_label": "cow’s milk"
+    },
+    {
+      "term_id": "FOODON_00001070",
+      "source_label": "miso food product",
+      "recommendation": "review_identity",
+      "note": "A food-product category and a specific miso term both exist. Compare the broader rice/barley/soy fermentation definition with the soybean-based term before assigning mappings."
+    },
+    {
+      "term_id": "FOODON_00003208",
+      "source_label": "miso",
+      "recommendation": "review_identity",
+      "note": "Specific miso definition overlaps the food-product term. Candidate for one reviewed culinary entry with appropriate source relationships, not an automatic string merge."
+    },
+    {
+      "term_id": "FOODON_03541304",
+      "source_label": "13040 - cumin seed (efsa foodex2)",
+      "recommendation": "review_identity",
+      "note": "The numeric prefix and classification suffix should not appear in the UI. Existing cumin-seed concepts already exist; shortening this label does not justify a new UUID or exact equivalence.",
+      "proposed_label": "cumin seed"
+    },
+    {
+      "term_id": "FOODON_03400113",
+      "source_label": "spice or herb (us cfr)",
+      "recommendation": "exclude_initial",
+      "note": "A regulatory spice-or-herb umbrella category; stripping the source suffix would still leave a broad disjunction."
+    },
+    {
+      "term_id": "FOODON_03400343",
+      "source_label": "packaging gas (ec)",
+      "recommendation": "exclude_initial",
+      "note": "Functional classification of packaging gases, not a specific cooking ingredient."
+    },
+    {
+      "term_id": "FOODON_00005799",
+      "source_label": "emulsifier",
+      "recommendation": "review_scope",
+      "note": "Emulsifier is a functional role shared by different ingredients. Prefer named ingredients such as lecithin where evidence supports the specific identity."
+    },
+    {
+      "term_id": "FOODON_00003928",
+      "source_label": "pizza",
+      "recommendation": "defer_complete_dish",
+      "note": "Pizza describes a prepared dish; lower priority for an initial ingredient seed. This is a scope recommendation, not an assertion that dishes can never be used as ingredients."
+    },
+    {
+      "term_id": "FOODON_00003930",
+      "source_label": "hawaiian pizza",
+      "recommendation": "defer_complete_dish",
+      "note": "A named complete pizza variant would add suggestion noise in an ingredient list."
+    },
+    {
+      "term_id": "FOODON_03310321",
+      "source_label": "mushroom soup (canned)",
+      "recommendation": "consider_ingredient_use",
+      "note": "Canned mushroom soup can be a recipe ingredient. A soup-keyword exclusion would lose useful pantry products; check identity and wording individually.",
+      "proposed_label": "canned mushroom soup"
+    },
+    {
+      "term_id": "FOODON_00002977",
+      "source_label": "baby spinach",
+      "recommendation": "retain_candidate",
+      "note": "Baby spinach is a legitimate harvested vegetable stage. Do not treat the word baby as infant-formula evidence."
+    },
+    {
+      "term_id": "FOODON_00004437",
+      "source_label": "baby arugula greens",
+      "recommendation": "retain_candidate",
+      "note": "Baby arugula is a legitimate vegetable stage; avoid broad baby-keyword exclusion."
+    },
+    {
+      "term_id": "FOODON_00001649",
+      "source_label": "black or white pepper product",
+      "recommendation": "review_aliases",
+      "note": "Exact source alias pepper collides with Capsicum pepper and raw Capsicum pepper. Keep peppercorn seasoning distinct from the vegetable."
+    },
+    {
+      "term_id": "FOODON_00003520",
+      "source_label": "pepper",
+      "recommendation": "review_aliases",
+      "note": "Definition identifies a Capsicum berry. Its label pepper collides with an exact alias for black/white peppercorn products; generic pepper must not merge these identities."
+    },
+    {
+      "term_id": "FOODON_00002667",
+      "source_label": "allspice",
+      "recommendation": "review_aliases",
+      "note": "Exact alias pimento is also used for pimiento pepper. Allspice is Pimenta dioica fruit; preserve the regional ambiguity without equating the foods."
+    },
+    {
+      "term_id": "FOODON_00003484",
+      "source_label": "pimiento",
+      "recommendation": "review_aliases",
+      "note": "Exact alias pimento overlaps allspice. Confirm the Capsicum/cherry-pepper identity and scope before canonical alias assignment."
+    },
+    {
+      "term_id": "FOODON_00001681",
+      "source_label": "caper food product",
+      "recommendation": "review_identity",
+      "note": "Source definition includes caper flower buds OR fruit, whereas the caper child denotes buds. A shared caper alias does not establish identical scope."
+    },
+    {
+      "term_id": "FOODON_00003493",
+      "source_label": "caper",
+      "recommendation": "review_aliases",
+      "note": "Source definition identifies an edible flower bud, but exact aliases Flinders rose and caper bush name the plant. Do not copy those plant-name synonyms automatically."
+    },
+    {
+      "term_id": "FOODON_00002465",
+      "source_label": "scone",
+      "recommendation": "review_aliases",
+      "note": "Source labels this as scone and supplies biscuit as an exact alias. Regional biscuit terminology needs review alongside the hard-biscuit/cookie/cracker term."
+    },
+    {
+      "term_id": "FOODON_00002466",
+      "source_label": "biscuit (hard) food product",
+      "recommendation": "review_aliases",
+      "note": "Source exact aliases biscuit, cookie and cracker cross regional/sweet/savoury distinctions. They should not automatically merge those canonical foods."
+    },
+    {
+      "term_id": "FOODON_00003717",
+      "source_label": "ginger root",
+      "recommendation": "review_identity",
+      "note": "Definition says ginger root rather than rhizome; common culinary wording and botanical identity need reconciliation. Ginger also names multiple source scopes."
+    },
+    {
+      "term_id": "FOODON_00003752",
+      "source_label": "taro root",
+      "recommendation": "review_aliases",
+      "note": "Definition says root rather than corm, and aliases include malanga, cocoyam and elephant’s ear. These names can cross plant/edible-part/species scopes; retain the pilot’s conservative mapping until resolved."
+    },
+    {
+      "term_id": "FOODON_00003441",
+      "source_label": "saffron thread",
+      "recommendation": "review_definition",
+      "note": "Source definition says anther, whereas culinary saffron is the stigma. The pilot keeps related evidence; a friendlier label cannot repair the definition or establish exact equivalence."
+    },
+    {
+      "term_id": "FOODON_00003855",
+      "source_label": "tahini",
+      "recommendation": "retain_specific_scope",
+      "note": "A clean-looking tahini label has a toasted-ground-hulled sesame definition. The pilot maps it narrower than generic tahini; preserve that semantic distinction."
+    },
+    {
+      "term_id": "FOODON_00002746",
+      "source_label": "soft-shell crab",
+      "recommendation": "repair_alias",
+      "note": "An exact synonym is actually a 326-character explanatory paragraph. Keep the culinary label; quarantine the paragraph from aliases. The separate softshell crab alias can be reviewed normally."
+    },
+    {
+      "term_id": "FOODON_00001021",
+      "source_label": "acifified beer wort food product",
+      "recommendation": "hold_for_source_check",
+      "note": "Likely source spelling error acifified. Acidified beer wort is a plausible correction, but confirm the intended identity and whether brewing intermediates belong in the initial seed."
+    },
+    {
+      "term_id": "FOODON_00001036",
+      "source_label": "pont ieveque cheese food product",
+      "recommendation": "hold_for_source_check",
+      "note": "Likely misspelled Pont-l’Évêque cheese; its Normandy soft-cheese definition supports investigation. Confirm the name before promotion.",
+      "proposed_label": "Pont-l’Évêque cheese"
+    },
+    {
+      "term_id": "FOODON_00001048",
+      "source_label": "meshanger cheese food product",
+      "recommendation": "hold_for_source_check",
+      "note": "Meshanger is unclear and has no English definition. Do not guess a replacement cheese name."
+    },
+    {
+      "term_id": "FOODON_03540200",
+      "source_label": "02000 - yeast bread  pizza dough (efsa foodex2)",
+      "recommendation": "repair_text",
+      "note": "Label contains U+0096 control/mojibake where punctuation was intended. It fails the canonical text contract; recover punctuation from source evidence before editing."
+    },
+    {
+      "term_id": "FOODON_03543540",
+      "source_label": "35400 - shepherds purse infusion leaves (efsa foodex2)",
+      "recommendation": "repair_text",
+      "note": "Label contains U+0092 control/mojibake in the possessive. Repair text and review the classification term before proposing culinary wording."
+    },
+    {
+      "term_id": "FOODON_03400750",
+      "source_label": "045  crustaceans (wc) (ccpr)",
+      "recommendation": "repair_text",
+      "note": "The first proposed description is 2,164 characters, exceeding the 2,000-character canonical limit. It is also a broad regulatory crustaceans group; do not truncate into an approved ingredient."
+    },
+    {
+      "term_id": "FOODON_03302626",
+      "source_label": "yeast (fine, dry, active)",
+      "recommendation": "keep_distinct_form",
+      "note": "Active dry yeast is functionally different from inactive yeast and fresh yeast. Preserve activity/form when choosing labels.",
+      "proposed_label": "active dry yeast"
+    },
+    {
+      "term_id": "FOODON_03310891",
+      "source_label": "yeast (fine, dry, inactive)",
+      "recommendation": "keep_distinct_form",
+      "note": "Dry inactive yeast must not merge into active baking yeast. Check whether a specific nutritional-yeast identity is justified; inactivity alone does not establish it.",
+      "proposed_label": "inactive dry yeast"
+    },
+    {
+      "term_id": "FOODON_03315025",
+      "source_label": "yeast (fresh)",
+      "recommendation": "keep_distinct_form",
+      "note": "Fresh yeast has different recipe handling and conversion from active dry yeast; preserve the form.",
+      "proposed_label": "fresh yeast"
+    },
+    {
+      "term_id": "FOODON_00005302",
+      "source_label": "tomato (sun-dried)",
+      "recommendation": "keep_distinct_form",
+      "note": "Sun-dried tomatoes are a distinct pantry ingredient from fresh or canned tomatoes. Removing parentheses must not collapse them.",
+      "proposed_label": "sun-dried tomato"
+    },
+    {
+      "term_id": "FOODON_03301452",
+      "source_label": "tomato (canned)",
+      "recommendation": "keep_distinct_form",
+      "note": "Canned tomato is a meaningful ingredient form. Whole/diced/puréed variants may warrant additional distinctions after review.",
+      "proposed_label": "canned tomato"
+    },
+    {
+      "term_id": "FOODON_03309927",
+      "source_label": "tomato (raw)",
+      "recommendation": "review_form_granularity",
+      "note": "Raw tomato can be considered under a general culinary tomato entry only after scope review; no automatic equivalence to canned or dried forms."
+    },
+    {
+      "term_id": "FOODON_03301223",
+      "source_label": "paprika (ground)",
+      "recommendation": "retain_specific_scope",
+      "note": "Definition identifies non-pungent ground paprika. Do not turn this into smoked paprika or infer preparation variants absent from the source.",
+      "proposed_label": "paprika"
+    },
+    {
+      "term_id": "FOODON_03304679",
+      "source_label": "squaw tea (dry)",
+      "recommendation": "hold_for_editorial_review",
+      "note": "Source uses an outdated derogatory common name. Investigate botanical identity and a current culinary name before display; do not invent a replacement from the label alone."
+    },
+    {
+      "term_id": "FOODON_03414434",
+      "source_label": "4-hexylresorcinol",
+      "recommendation": "review_scope",
+      "note": "A real chemical name with a numeric locant. The adapter flags it as technical because it begins with a digit and hyphen; that is not evidence of a classification code. Review additive/culinary scope separately and preserve the numeric name."
+    }
+  ]
+}

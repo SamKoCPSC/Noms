@@ -3,6 +3,8 @@ use dioxus::prelude::*;
 use dioxus::server::{DioxusRouterExt, ServeConfig};
 use manganis::CssAssetOptions;
 
+use noms::vocabulary;
+
 mod api;
 mod auth;
 mod collection_json;
