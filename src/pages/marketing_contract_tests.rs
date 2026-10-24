@@ -49,6 +49,16 @@ fn about_renders_the_four_approved_chapters_and_readable_fallback() {
     assert_eq!(html.matches("<article").count(), 4);
     assert!(html.contains("class=\"kitchen-fallback\""));
     assert!(html.contains("loading=\"lazy\""));
+    let opening = html.split("id=\"panel-1\"").next().unwrap();
+    assert!(opening.contains("kitchen-fallback"));
+    let creator = html
+        .split("id=\"panel-2\"")
+        .nth(1)
+        .unwrap()
+        .split("id=\"panel-3\"")
+        .next()
+        .unwrap();
+    assert!(!creator.contains("kitchen-fallback"));
     assert!(html.contains("Nowadays I continue to support the project"));
     assert!(!html.contains("How did Noms start"));
 }

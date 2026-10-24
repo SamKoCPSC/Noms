@@ -3,8 +3,8 @@ use super::math::*;
 use std::f32::consts::PI;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{
-    CanvasRenderingContext2d, Document, HtmlCanvasElement, WebGlBuffer, WebGlProgram,
-    WebGlRenderingContext as Gl, WebGlShader, WebGlTexture, WebGlUniformLocation,
+    CanvasRenderingContext2d, Document, HtmlCanvasElement, HtmlImageElement, WebGlBuffer,
+    WebGlProgram, WebGlRenderingContext as Gl, WebGlShader, WebGlTexture, WebGlUniformLocation,
 };
 
 const VERTEX: &str = r#"
@@ -46,6 +46,10 @@ void main(){
  vec3 base=u_color.rgb*v_color.rgb;if(u_textured>0.5)base*=texture2D(u_texture,v_uv).rgb;
  if(u_kitchen>0.5){
   // Neutral studio fill keeps the master's terracotta, peach, ivory and oak distinct.
+  if(u_textured>0.5){
+   vec3 tex=texture2D(u_texture,v_uv).rgb;
+   base=u_color.rgb*v_color.rgb*mix(tex/12.92,pow((tex+0.055)/1.055,vec3(2.4)),step(vec3(0.04045),tex));
+  }
   float key=max(dot(n,normalize(vec3(-3.0,7.0,5.0))),0.0);
   float fill=max(dot(n,normalize(vec3(5.0,3.0,-2.0))),0.0);
   float illumination=0.95+0.55*key+0.20*fill;
@@ -65,6 +69,10 @@ struct Mesh {
     buffer: WebGlBuffer,
     count: i32,
     colored: bool,
+}
+struct KitchenDraw {
+    mesh: Mesh,
+    part: super::gltf::KitchenPart,
 }
 struct Uniforms {
     model: WebGlUniformLocation,
@@ -90,7 +98,7 @@ pub struct Renderer {
     grid: Mesh,
     arch: Mesh,
     textures: Vec<WebGlTexture>,
-    kitchen: Option<Mesh>,
+    kitchen: Vec<KitchenDraw>,
     a_pos: u32,
     a_normal: u32,
     a_uv: u32,
@@ -169,21 +177,42 @@ impl Renderer {
             grid,
             arch,
             textures,
-            kitchen: None,
+            kitchen: vec![],
             a_pos,
             a_normal,
             a_uv,
             a_color,
         })
     }
-    pub fn upload_kitchen(&mut self, data: &super::gltf::KitchenMesh) -> Result<(), JsValue> {
-        let mut model = mesh(&self.gl, &data.vertices)?;
-        model.count = (data.vertices.len() / 12) as i32;
-        model.colored = true;
-        if let Some(old) = self.kitchen.take() {
-            self.gl.delete_buffer(Some(&old.buffer));
+    pub fn upload_kitchen(
+        &mut self,
+        data: &super::gltf::KitchenMesh,
+        images: &[HtmlImageElement; 2],
+    ) -> Result<(), JsValue> {
+        for image in images {
+            self.textures.push(image_texture(&self.gl, image)?);
         }
-        self.kitchen = Some(model);
+        let _ = self.canvas.set_attribute(
+            "data-kitchen-groups",
+            &data
+                .parts
+                .iter()
+                .map(|p| p.name.as_str())
+                .collect::<Vec<_>>()
+                .join(","),
+        );
+        for part in &data.parts {
+            let mut model = mesh(
+                &self.gl,
+                &data.vertices[part.first * 12..(part.first + part.count) * 12],
+            )?;
+            model.count = part.count as i32;
+            model.colored = true;
+            self.kitchen.push(KitchenDraw {
+                mesh: model,
+                part: part.clone(),
+            });
+        }
         Ok(())
     }
     pub fn resize(&self, dpr: f64) {
@@ -376,7 +405,14 @@ impl Renderer {
             2.,
         );
     }
-    pub fn render(&self, camera: &Camera, time: f32, motion: bool, mobile: bool) {
+    pub fn render(
+        &self,
+        camera: &Camera,
+        time: f32,
+        motion: bool,
+        mobile: bool,
+        assembly_frame: f32,
+    ) {
         let gl = &self.gl;
         gl.use_program(Some(&self.program));
         gl.clear(Gl::COLOR_BUFFER_BIT | Gl::DEPTH_BUFFER_BIT);
@@ -407,19 +443,48 @@ impl Renderer {
             };
             // Each arch belongs to the world; the camera flies through it en route.
             self.draw(&self.arch, root, color, None, false, 2.);
-            if i == 2 {
-                if let Some(kitchen) = &self.kitchen {
-                    let ratio = self.canvas.width() as f32 / self.canvas.height().max(1) as f32;
-                    let (x, y, sc) = if mobile {
-                        (0., 2.7, 0.34)
-                    } else {
-                        (ratio * 2.35, -1.45, 0.78)
-                    };
-                    let model = mul(root, transform([x, y, -11.7], [0.58, -0.62, 0.], [sc; 3]));
-                    self.draw(kitchen, model, [1., 1., 1., 1.], None, false, 2.);
+            if i == 0 {
+                let ratio = self.canvas.width() as f32 / self.canvas.height().max(1) as f32;
+                let (x, y, sc) = if mobile {
+                    (0., 2.7, 0.34)
+                } else {
+                    (ratio * 2.35, -1.45, 0.78)
+                };
+                let model = mul(root, transform([x, y, -11.7], [0.58, -0.62, 0.], [sc; 3]));
+                for draw in &self.kitchen {
+                    let p = &draw.part;
+                    let t = super::assembly::amount(assembly_frame, p.start, p.end);
+                    if t <= 0. {
+                        continue;
+                    }
+                    let sc = 0.85 + 0.15 * t;
+                    let local = mul(
+                        translate(
+                            p.pivot[0] + p.offset[0] * (1. - t),
+                            p.pivot[1] + p.offset[1] * (1. - t),
+                            p.pivot[2] + p.offset[2] * (1. - t),
+                        ),
+                        mul(
+                            scale(sc, sc, sc),
+                            translate(-p.pivot[0], -p.pivot[1], -p.pivot[2]),
+                        ),
+                    );
+                    self.draw(
+                        &draw.mesh,
+                        mul(model, local),
+                        [1., 1., 1., 1.],
+                        if p.texture > 0 {
+                            Some(4 + p.texture)
+                        } else {
+                            None
+                        },
+                        false,
+                        2.,
+                    );
                 }
                 continue;
             }
+            // The creator now has its own placeholder exhibit; the kitchen belongs to the idea.
             let bob = if motion {
                 (time * 0.65 + i as f32).sin() * 0.045
             } else {
@@ -570,8 +635,8 @@ impl Drop for Renderer {
         ] {
             self.gl.delete_buffer(Some(&m.buffer));
         }
-        if let Some(mesh) = &self.kitchen {
-            self.gl.delete_buffer(Some(&mesh.buffer));
+        for draw in &self.kitchen {
+            self.gl.delete_buffer(Some(&draw.mesh.buffer));
         }
         for t in &self.textures {
             self.gl.delete_texture(Some(t));
@@ -873,6 +938,33 @@ fn texture(gl: &Gl, doc: &Document, kind: usize) -> Result<WebGlTexture, JsValue
         Gl::RGBA,
         Gl::UNSIGNED_BYTE,
         &canvas,
+    )?;
+    gl.generate_mipmap(Gl::TEXTURE_2D);
+    gl.tex_parameteri(
+        Gl::TEXTURE_2D,
+        Gl::TEXTURE_MIN_FILTER,
+        Gl::LINEAR_MIPMAP_LINEAR as i32,
+    );
+    gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_MAG_FILTER, Gl::LINEAR as i32);
+    gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_S, Gl::CLAMP_TO_EDGE as i32);
+    gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_T, Gl::CLAMP_TO_EDGE as i32);
+    Ok(tex)
+}
+
+fn image_texture(gl: &Gl, image: &HtmlImageElement) -> Result<WebGlTexture, JsValue> {
+    let tex = gl
+        .create_texture()
+        .ok_or_else(|| JsValue::from_str("No kitchen texture"))?;
+    gl.bind_texture(Gl::TEXTURE_2D, Some(&tex));
+    // glTF UVs have their origin at the top of the supplied print image.
+    gl.pixel_storei(Gl::UNPACK_FLIP_Y_WEBGL, 0);
+    gl.tex_image_2d_with_u32_and_u32_and_image(
+        Gl::TEXTURE_2D,
+        0,
+        Gl::RGBA as i32,
+        Gl::RGBA,
+        Gl::UNSIGNED_BYTE,
+        image,
     )?;
     gl.generate_mipmap(Gl::TEXTURE_2D);
     gl.tex_parameteri(

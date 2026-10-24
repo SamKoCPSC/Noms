@@ -5,7 +5,18 @@ const TOUR_CSS: Asset = asset!(
     CssAssetOptions::new().with_minify(false)
 );
 const KITCHEN_MODEL: Asset = asset!("/assets/about/sams-kitchen-detailed.glb");
-const KITCHEN_POSTER: Asset = asset!("/assets/about/sams-kitchen.webp");
+const KITCHEN_LAPTOP: Asset = asset!(
+    "/assets/about/kitchen-laptop.webp",
+    manganis::AssetOptions::builder()
+);
+const KITCHEN_COOKBOOK: Asset = asset!(
+    "/assets/about/kitchen-cookbook.webp",
+    manganis::AssetOptions::builder()
+);
+const KITCHEN_POSTER: Asset = asset!(
+    "/assets/about/sams-kitchen.webp",
+    manganis::AssetOptions::builder()
+);
 const IDS: [&str; 4] = ["idea", "why", "creator", "community"];
 const NAMES: [&str; 4] = ["The idea", "The reason", "The creator", "The philosophy"];
 const EYEBROWS: [&str; 4] = [
@@ -34,7 +45,7 @@ pub fn About() -> Element {
     rsx! {
       PageMeta{title:"About Noms — The Ultimate Recipe Manager", description:"Meet Sam, learn why Noms was created, and explore the philosophy behind an easier way to save, develop and share recipes.",path:"/about"}
       document::Stylesheet{href:TOUR_CSS}
-      div{id:"about-tour",class:"about-tour is-reader","data-kitchen-url":KITCHEN_MODEL,
+      div{id:"about-tour",class:"about-tour is-reader","data-kitchen-url":KITCHEN_MODEL,"data-kitchen-laptop-url":KITCHEN_LAPTOP,"data-kitchen-cookbook-url":KITCHEN_COOKBOOK,
         onmounted: move |_| {
           #[cfg(target_arch="wasm32")]
           if let Err(error)=super::about_tour::start(){tracing::warn!(?error,"About tour uses its reading fallback");}
@@ -56,11 +67,11 @@ pub fn About() -> Element {
         span{id:"{IDS[i]}",class:"reader-anchor",aria_hidden:"true"}
         div{class:"panel-meta",span{class:"eyebrow","{EYEBROWS[i]}"}span{class:"panel-number","0{i+1}"}}
         if i==0{h1{id:"title-{i}","{TITLES[i]}"}}else{h2{id:"title-{i}","{TITLES[i]}"}}
-        if i==2 {figure{class:"kitchen-fallback",img{src:KITCHEN_POSTER,alt:"Sam's kitchen, with coffee equipment, sourdough, pastries and a meal on the island",loading:"lazy",width:960,height:960}}}
+        if i==0 {figure{class:"kitchen-fallback",img{src:KITCHEN_POSTER,alt:"A kitchen for saving and developing recipes, with the Noms editor on a laptop and an open recipe book on the island",loading:"lazy",width:960,height:960}}}
         for (j, paragraph) in CONTENT[i].iter().enumerate() {p{class:if j==0{"lead"}else{"detail"},"{paragraph}"}}
         if i==3 {div{class:"values",span{"Key features free"}span{"No intrusive ads"}span{"Your data stays yours"}}}
         a{class:"next-link",href:if i<3{format!("#{}",IDS[i+1])}else{"#idea".into()},
-         if i==0{"Begin the journey"}else if i==3{"Take the tour again"}else{"Continue the story"}
+         if i==0{"Continue the story"}else if i==3{"Take the tour again"}else{"Continue the story"}
          span{class:"arrow",aria_hidden:"true"}
         }
        }
@@ -70,7 +81,7 @@ pub fn About() -> Element {
       for i in 0..4 {div{id:"stop-{i}",class:"waypoint","data-waypoint":"{i}"}}
      }
      nav{class:"tour-nav",aria_label:"Story chapters",
-      div{class:"nav-top",span{class:"tour-word","OUR STORY"}span{id:"stop-name",aria_live:"polite","The idea"}span{class:"scroll-hint","Scroll to travel"}}
+      div{class:"nav-top",span{class:"tour-word","OUR STORY"}span{id:"stop-name",aria_live:"polite","The idea"}span{id:"scroll-hint",class:"scroll-hint","Scroll to assemble"}}
       div{class:"route",div{class:"route-line",span{id:"route-progress"}}
        for i in 0..4 {a{id:"nav-{i}",href:"#{IDS[i]}",aria_label:"Chapter {i+1}: {NAMES[i]}",aria_current:if i==0{"step"}else{"false"},span{class:"route-dot"}span{class:"route-label","data-short":["Idea","Why","Creator","Philosophy"][i],"{NAMES[i]}"}}}
       }

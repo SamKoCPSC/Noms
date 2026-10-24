@@ -4228,5 +4228,797 @@
     "source_triangles": 48460,
     "web_triangles": 3600,
     "preserved": false
+  },
+  {
+    "name": "Laptop \u00b7 softly rounded aluminium chassis",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 supporting rubber pad",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 supporting rubber pad.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 supporting rubber pad.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 supporting rubber pad.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 recessed keyboard well",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.008",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.008",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.009",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.009",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.010",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.010",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.011",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.011",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.012",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.012",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.013",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.013",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.014",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.014",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.015",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.015",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.016",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.016",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.017",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.017",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.018",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.018",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.019",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.019",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.020",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.020",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.021",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.021",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.022",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.022",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.023",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.023",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.024",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.024",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.025",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.025",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.026",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.026",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.027",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.027",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.028",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.028",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.029",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.029",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.030",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.030",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.031",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.031",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.032",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.032",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.033",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.033",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.034",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.034",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.035",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.035",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.036",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.036",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.037",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.037",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.038",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.038",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.039",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.039",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.040",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.040",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.041",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.041",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.042",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.042",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.043",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.043",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.044",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.044",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.045",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.045",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.046",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.046",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.047",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.047",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.048",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.048",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.049",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.049",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.050",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.050",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.051",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.051",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 space bar",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 trackpad outline",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 flush satin trackpad",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 display hinge",
+    "source_triangles": 764,
+    "web_triangles": 764,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 display hinge.001",
+    "source_triangles": 764,
+    "web_triangles": 764,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 rounded display casing",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 inset forest screen bezel",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 Noms editor display",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 webcam lens",
+    "source_triangles": 764,
+    "web_triangles": 764,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 rounded forest linen cover",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 recessed cloth spine",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 left curved paper block",
+    "source_triangles": 228,
+    "web_triangles": 228,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 left printed recipe page",
+    "source_triangles": 56,
+    "web_triangles": 56,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 distinct paper edge",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 distinct paper edge.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 distinct paper edge.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 right curved paper block",
+    "source_triangles": 228,
+    "web_triangles": 228,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 right printed recipe page",
+    "source_triangles": 56,
+    "web_triangles": 56,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 distinct paper edge.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 distinct paper edge.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 distinct paper edge.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 draped terracotta bookmark",
+    "source_triangles": 44,
+    "web_triangles": 44,
+    "preserved": true
   }
 ]
