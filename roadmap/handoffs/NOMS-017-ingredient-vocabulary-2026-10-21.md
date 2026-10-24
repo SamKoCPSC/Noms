@@ -1,11 +1,14 @@
 # NOMS-017 ingredient vocabulary: handoff
 
-Started 2026-10-21; current state updated 2026-10-23.
+Started 2026-10-21; current state updated 2026-10-24.
 FoodOn branch: `codex/noms-017-ingredient-vocabulary`.
 Wikidata follow-up: `codex/noms-017-wikidata-adapter`.
 USDA follow-up: `codex/noms-017-usda-adapter`.
+Alias follow-up: `codex/noms-017-vocabulary-aliases`.
 PR: https://github.com/SamKoCPSC/Noms/pull/16
 Wikidata PR: https://github.com/SamKoCPSC/Noms/pull/17
+USDA PR: https://github.com/SamKoCPSC/Noms/pull/18
+Combined alias/scope PR: https://github.com/SamKoCPSC/Noms/pull/19
 
 ## Delivered state
 
@@ -17,6 +20,8 @@ belong to active entries. The Wikidata follow-up adds 2,550 ingredients and
 3,670 Wikidata mappings, producing **12,698 active entries** with the same retirements.
 The USDA follow-up adds 104 ingredients and 1,246 USDA mappings, producing
 **12,802 active entries and 60 retired entries** across four pinned sources.
+The later label-scope review retires another 21 entries, leaving the current
+bundle at **12,781 active and 81 retired entries**, with all 12,862 UUIDs retained.
 All original curated IDs and authored wording remain
 unchanged; all 101 prior development identities, including the cumin probe, are
 retained. Retired entries remain available to recipe history and are hidden
@@ -172,6 +177,77 @@ including all 104 USDA additions. Browser artifacts and runtime metadata remain
 external. After environment recovery, inspect actual container ports and health;
 old runtime metadata may not survive. Retained dependency archives allowed
 offline Docker startup without a cold rebuild.
+
+## Alias review follow-up (2026-10-24)
+
+The [alias guide](../../scripts/vocabulary/ALIASES.md) documents the final overlay
+on immutable pre-alias commit `c60162b0ad827963be7541ec12f21fd29764781d`.
+All 12,802 active entries receive lexical screening; the 60 retired entries are
+unchanged. The policy contains count-noun and regional spelling lexicons,
+qualifier-preserving word order, 227 explicit ingredient alternatives, conflict
+holds and reviewed suggestion representatives. It adds **7,009 aliases to 4,823
+entries**, totaling 7,139 active aliases. Another 216 proposal/target pairs are
+held. These counts precede the scope cleanup below. All UUIDs, labels, original aliases/order, definitions, statuses, source
+relationships, provenance and source metadata are preserved. This is complete
+lexical screening with explicit semantic exceptions, not individual semantic
+certification of every imported concept. Upstream synonyms are not bulk copied.
+
+The approved policy pins baseline seed/source and output checksums. Build/replay
+must apply the overlay after source ingestion, rather than rewriting source
+ledgers to absorb later authored aliases. Generated per-entry and per-alias CSVs,
+source synonym queues and deployment/browser evidence stay outside Git. The
+Rust validator accepts the complete bundle without warnings. Dry-run rollback,
+canonical definition equality, repeat-load idempotence and unchanged existing
+recipes/drafts were checked in the retained disposable local deployment.
+All 73 offline Python regressions pass, including 12 alias tests; source-stage
+tests now allow only appended aliases while retaining original wording/order.
+Headless Chromium passed 31 additional lookup cases, keyboard/mouse selection,
+UUID autosave/reload, edit clearing, free-text fallback and WASM delivery without
+page errors. Its one new private synthetic draft is separate from the five
+unchanged existing drafts. No production rollout occurred.
+
+The frozen real-recipe check uses 100 TheMealDB recipes from 20 countries,
+1,110 ingredient lines and 382 names. Source/ingredient availability decisions
+are unchanged: 1,008 covered lines. Full-wording retrieval improves from
+**747/1,008 (74.1%) to 941/1,008 (93.4%)**, with 194 recovered lines and zero
+full-query regressions. Full or three-/four-character prefix retrieval improves
+from 848 to 942 lines. Recipes with every line covered and found by full wording
+increase from five to 22. This is a purposive sample, not a population estimate.
+The run captured 978 API query forms; after 25 final spelling/plural aliases,
+all forms were rechecked against the unchanged production SQL and the six
+changed forms were also rechecked through the API. Remaining issues include
+ambiguous names, preparation wording, named ingredient gaps and label scope;
+aliases do not silently solve those by discarding food-form distinctions.
+
+## Label scope cleanup (2026-10-24)
+
+The same alias follow-up now includes source/definition review of **200 flagged
+active labels**, plus an explicit bee-pollen ancestry exception. The pinned
+policy retires **21 entries**: animal feed, clinical/supplement formulations,
+manufacturing or unclear technical labels, catch-all classifications, unspecified
+breakfast formulas and complete breakfast/pizza/eggs-Benedict meals. Exact source
+mapping, original label and a case-specific rationale are required. Keyword
+matches never retire entries automatically. Soup mixes, cereals/sausages, salad
+dressings, pizza components, mold-ripened cheeses, edible blood, and rare/regional
+foods remain available.
+
+Current totals are **12,781 active, 81 retired, 7,137 active aliases** and two
+aliases retained on newly retired entries. Relative to the alias-only commit
+`12658575d3ca86f1cbfc83a8c2db369503252af7`, only 21 statuses change. Every UUID,
+label, alias, definition, source relationship and provenance field is unchanged.
+Replay from the original pre-alias seed still produces the final bundle
+byte-for-byte. Full entry/proposal/scope audits remain outside Git.
+
+All **76 Python tests** pass, including 15 alias/scope regressions. The Rust
+validator accepts 12,862 entries/four sources without warnings. The disposable
+deployment passes dry-run rollback, exact definition checks, idempotent reload
+and unchanged authored rows. A private test draft selected a livestock-salt UUID
+before retirement; after seeding it reloads with the same name/UUID and unchanged
+stored row. **53 authenticated live lookups** confirm all newly retired IDs and
+aliases are hidden while reviewed pantry ingredients remain available; Chromium
+reports no page errors. The frozen 100-recipe/978-query SQL replay retains
+941/1,008 full-wording hits and 942/1,008 full-or-prefix hits with zero regressions.
+No production rollout occurred.
 
 ## Remaining scope
 
