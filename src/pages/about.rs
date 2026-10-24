@@ -4,7 +4,7 @@ const TOUR_CSS: Asset = asset!(
     "/assets/about-tour.css",
     CssAssetOptions::new().with_minify(false)
 );
-const KITCHEN_MODEL: Asset = asset!("/assets/about/sams-kitchen.glb");
+const KITCHEN_MODEL: Asset = asset!("/assets/about/sams-kitchen-detailed.glb");
 const KITCHEN_POSTER: Asset = asset!("/assets/about/sams-kitchen.webp");
 const IDS: [&str; 4] = ["idea", "why", "creator", "community"];
 const NAMES: [&str; 4] = ["The idea", "The reason", "The creator", "The philosophy"];

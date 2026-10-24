@@ -197,10 +197,10 @@ mod tests {
     }
     #[test]
     fn delivered_kitchen_preserves_colors_and_fits_the_web_budget() {
-        let bytes = include_bytes!("../../../assets/about/sams-kitchen.glb");
+        let bytes = include_bytes!("../../../assets/about/sams-kitchen-detailed.glb");
         let m = decode(bytes).unwrap();
-        assert!(bytes.len() < 2_000_000);
-        assert!(m.vertices.len() / 36 < 100_000);
+        assert!(bytes.len() < 5_000_000);
+        assert!(m.vertices.len() / 36 < 175_000);
         assert!(m.vertices.len() / 36 > 10_000);
         assert!(m.vertices.iter().all(|v| v.is_finite()));
         let colors = m

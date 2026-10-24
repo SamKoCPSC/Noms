@@ -10,21 +10,32 @@ bpy.ops.object.select_all(action='DESELECT')
 for o in bpy.data.objects:
  if o.type in ['MESH','CURVE'] and o.name!='Studio ground':
   o.select_set(True)
-  if o.type=='CURVE':o.data.resolution_u=6;o.data.bevel_resolution=min(o.data.bevel_resolution,2)
+  if o.type=='CURVE':o.data.resolution_u=8;o.data.bevel_resolution=min(o.data.bevel_resolution,3)
   for m in o.modifiers:
-   if m.type=='BEVEL':m.segments=min(3,m.segments)
+   if m.type=='BEVEL':m.segments=min(4,m.segments)
    if o.name.startswith('Checker tile') and m.type in ['BEVEL','WEIGHTED_NORMAL']:o.modifiers.remove(m)
 bpy.context.view_layer.objects.active=next(o for o in bpy.context.selected_objects if o.type=='MESH');bpy.ops.object.convert(target='MESH')
 objects=list(bpy.context.selected_objects)
+# Keep radial/rim geometry intact: collapse decimation makes these silhouettes angular.
+# Simplification is concentrated on less visible surfaces and foliage instead.
+protected_prefixes=('Wok ·','Burger meal ·','Burger ·','Cookies · porcelain plate','Stool · rounded terracotta seat','Soda ·','Onion ·','Croissant tray ·','Espresso ·','Fridge ·')
+protected_words=('bowl','porcelain','carafe','pot','dripper','rounded sill','ivory frame')
+geometry_audit=[]
 for o in objects:
  o.data.calc_loop_triangles();tris=len(o.data.loop_triangles)
- if o.name.startswith('Walls ·'):ratio=1
- elif 'rolled triangular dough' in o.name:ratio=min(1,1800/max(1,tris))
- elif o.name.startswith(('Cookie','Bread knife','Fries','Soda','Onion','Burger')):ratio=.4
- else:ratio=.22 if tris>150 else 1
+ protected=o.name.startswith(protected_prefixes) or any(word in o.name.lower() for word in protected_words)
+ if protected or o.name.startswith('Walls ·'):ratio=1
+ elif 'rolled triangular dough' in o.name:ratio=min(1,3600/max(1,tris))
+ elif o.name.startswith(('Cookie','Bread knife','Fries')):ratio=.65
+ elif any(c.name=='02 · Terracotta cabinetry' for c in o.users_collection):ratio=.5
+ else:ratio=.45 if tris>150 else 1
  if ratio<1:
   o.data=o.data.copy()
   bpy.context.view_layer.objects.active=o;m=o.modifiers.new('Web silhouette budget','DECIMATE');m.ratio=ratio;bpy.ops.object.modifier_apply(modifier=m.name)
+ o.data.calc_loop_triangles()
+ geometry_audit.append({'name':o.name,'source_triangles':tris,'web_triangles':len(o.data.loop_triangles),'preserved':protected})
+ if protected:assert len(o.data.loop_triangles)==tris,o.name
+(out/'kitchen-geometry-audit.json').write_text(json.dumps(geometry_audit,indent=2))
 # Bake low-frequency contact shading to vertex colors instead of fragmenting curved surfaces into UV islands.
 # This also avoids a separate texture decode/upload and keeps the model to a single draw call.
 bpy.context.view_layer.objects.active=objects[0];bpy.ops.object.join();o=bpy.context.object;o.name='Sams kitchen · web diorama'
@@ -49,4 +60,4 @@ o.data.materials.clear();o.data.materials.append(mat)
 for face in o.data.polygons:face.material_index=0
 for name in [layer.name for layer in o.data.uv_layers]:o.data.uv_layers.remove(o.data.uv_layers[name])
 bpy.ops.export_scene.gltf(filepath=str(out/'sams-kitchen.glb'),export_format='GLB',use_selection=True,export_apply=True,export_cameras=False,export_lights=False,export_yup=True,export_materials='EXPORT')
-o.data.calc_loop_triangles();report={'source_revision':11,'triangles':len(o.data.loop_triangles),'draw_calls':1,'textures':0,'contact_shading':'baked vertex ambient occlusion','glb_bytes':(out/'sams-kitchen.glb').stat().st_size,'native_master_unchanged':True};(out/'kitchen-budget.json').write_text(json.dumps(report,indent=2));print('WEB_ASSET',json.dumps(report),flush=True)
+o.data.calc_loop_triangles();report={'source_revision':11,'geometry_profile':'curved props preserved','triangles':len(o.data.loop_triangles),'draw_calls':1,'textures':0,'contact_shading':'baked vertex ambient occlusion','glb_bytes':(out/'sams-kitchen.glb').stat().st_size,'native_master_unchanged':True};(out/'kitchen-budget.json').write_text(json.dumps(report,indent=2));print('WEB_ASSET',json.dumps(report),flush=True)

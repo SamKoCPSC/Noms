@@ -2,9 +2,10 @@
 
 Web derivative of Sam's approved **revision 11** Blender kitchen. The editable master and source renders remain on the [model review page](https://chatgpt.com/space/page_a00991c491f4819185d71cf3ade6f712); this directory contains the production derivative, not the native master.
 
-- `sams-kitchen.glb`: 54,988 triangles, one mesh/material/draw call, baked vertex colors and soft contact shading. Standard `KHR_mesh_quantization` reduces the file to 1,588,000 bytes. Uniform position quantization is approximately 0.11 mm per step in the source units.
+- `sams-kitchen-detailed.glb`: 148,143 triangles, one mesh/material/draw call, baked vertex colors and soft contact shading. Standard `KHR_mesh_quantization` reduces the file to 4,135,128 bytes. Uniform position quantization is approximately 0.11 mm per step in the source units.
 - `sams-kitchen.webp`: 960px still image used in reading mode, reduced motion and graphics fallbacks.
 - `kitchen-budget.json`: generated budget/provenance record.
+- `kitchen-geometry-audit.json`: per-object source/export triangle counts. Curved props such as the wok, serving plates, cups and stool seats retain their evaluated source geometry.
 
 ## Rebuild
 
@@ -14,10 +15,11 @@ Requires Blender 4.3.2 and Python 3. The approved master is read without modifyi
 blender -b /path/to/revision-11/sams-kitchen.blend --threads 5 \
   --python tools/about/export_kitchen.py -- /tmp/noms-kitchen-web
 python tools/about/pack_kitchen.py /tmp/noms-kitchen-web
-cp /tmp/noms-kitchen-web/{sams-kitchen.glb,kitchen-budget.json} assets/about/
+cp /tmp/noms-kitchen-web/sams-kitchen.glb assets/about/sams-kitchen-detailed.glb
+cp /tmp/noms-kitchen-web/{kitchen-budget.json,kitchen-geometry-audit.json} assets/about/
 ```
 
-The exporter evaluates rounded edges, simplifies silhouettes, joins the diorama and bakes subtle contact shading into the material palette at mesh corners. The packer removes unused attributes and quantizes positions, normals and colors. No image textures or UV atlas are required by the kitchen. The app reads this deliberately small GLB contract in Rust; arbitrary third-party GLBs are not supported by this loader.
+The exporter preserves radial/rim geometry, uses gentler simplification on other surfaces, evaluates rounded edges, joins the diorama and bakes subtle contact shading into the material palette at mesh corners. The packer removes unused attributes and quantizes positions, normals and colors. No image textures or UV atlas are required by the kitchen. The app reads this deliberately small GLB contract in Rust; arbitrary third-party GLBs are not supported by this loader.
 
 ## Runtime
 
