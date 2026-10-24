@@ -38,6 +38,13 @@ ingredient; they do not establish exact equivalence or link nutrient values.
 All 12,758 pre-USDA IDs and authored fields are preserved. Raw archives and full
 audits stay outside Git. FNDDS, Branded and nutrient ingestion remain deferred.
 
+The subsequent [alias review](../../scripts/vocabulary/ALIASES.md) screens every
+active name and adds 7,009 reviewed plurals, regional spellings, alternative names
+and qualified word-order variants to 4,823 entries. There are now 7,139 active
+aliases. The recorded policy preserves all previous aliases, UUIDs and non-alias
+fields, holds conflicting proposals, and reproduces from the immutable combined
+pre-alias seed. It does not add ingredients or change runtime matching semantics.
+
 The source coverage research still measures the original **100-ingredient**
 benchmark across 19 strata. Those percentages do not describe the expanded seed.
 See `coverage/benchmark.json` and the coverage review for source-matching evidence.

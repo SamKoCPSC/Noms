@@ -1,9 +1,10 @@
 # NOMS-017 ingredient vocabulary: handoff
 
-Started 2026-10-21; current state updated 2026-10-23.
+Started 2026-10-21; current state updated 2026-10-24.
 FoodOn branch: `codex/noms-017-ingredient-vocabulary`.
 Wikidata follow-up: `codex/noms-017-wikidata-adapter`.
 USDA follow-up: `codex/noms-017-usda-adapter`.
+Alias follow-up: `codex/noms-017-vocabulary-aliases`.
 PR: https://github.com/SamKoCPSC/Noms/pull/16
 Wikidata PR: https://github.com/SamKoCPSC/Noms/pull/17
 
@@ -172,6 +173,47 @@ including all 104 USDA additions. Browser artifacts and runtime metadata remain
 external. After environment recovery, inspect actual container ports and health;
 old runtime metadata may not survive. Retained dependency archives allowed
 offline Docker startup without a cold rebuild.
+
+## Alias review follow-up (2026-10-24)
+
+The [alias guide](../../scripts/vocabulary/ALIASES.md) documents the final overlay
+on immutable pre-alias commit `c60162b0ad827963be7541ec12f21fd29764781d`.
+All 12,802 active entries receive lexical screening; the 60 retired entries are
+unchanged. The policy contains count-noun and regional spelling lexicons,
+qualifier-preserving word order, 227 explicit ingredient alternatives, conflict
+holds and reviewed suggestion representatives. It adds **7,009 aliases to 4,823
+entries**, totaling 7,139 active aliases. Another 216 proposal/target pairs are
+held. All UUIDs, labels, original aliases/order, definitions, statuses, source
+relationships, provenance and source metadata are preserved. This is complete
+lexical screening with explicit semantic exceptions, not individual semantic
+certification of every imported concept. Upstream synonyms are not bulk copied.
+
+The approved policy pins baseline seed/source and output checksums. Build/replay
+must apply the overlay after source ingestion, rather than rewriting source
+ledgers to absorb later authored aliases. Generated per-entry and per-alias CSVs,
+source synonym queues and deployment/browser evidence stay outside Git. The
+Rust validator accepts the complete bundle without warnings. Dry-run rollback,
+canonical definition equality, repeat-load idempotence and unchanged existing
+recipes/drafts were checked in the retained disposable local deployment.
+All 73 offline Python regressions pass, including 12 alias tests; source-stage
+tests now allow only appended aliases while retaining original wording/order.
+Headless Chromium passed 31 additional lookup cases, keyboard/mouse selection,
+UUID autosave/reload, edit clearing, free-text fallback and WASM delivery without
+page errors. Its one new private synthetic draft is separate from the five
+unchanged existing drafts. No production rollout occurred.
+
+The frozen real-recipe check uses 100 TheMealDB recipes from 20 countries,
+1,110 ingredient lines and 382 names. Source/ingredient availability decisions
+are unchanged: 1,008 covered lines. Full-wording retrieval improves from
+**747/1,008 (74.1%) to 941/1,008 (93.4%)**, with 194 recovered lines and zero
+full-query regressions. Full or three-/four-character prefix retrieval improves
+from 848 to 942 lines. Recipes with every line covered and found by full wording
+increase from five to 22. This is a purposive sample, not a population estimate.
+The run captured 978 API query forms; after 25 final spelling/plural aliases,
+all forms were rechecked against the unchanged production SQL and the six
+changed forms were also rechecked through the API. Remaining issues include
+ambiguous names, preparation wording, named ingredient gaps and label scope;
+aliases do not silently solve those by discarding food-form distinctions.
 
 ## Remaining scope
 

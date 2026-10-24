@@ -98,11 +98,16 @@ python3 scripts/vocabulary/usda.py build \
   --sources /tmp/noms-usda-base/sources.json \
   --review data/vocabulary/adapters/usda-cooking-review.json \
   --output /tmp/noms-usda-seed
-cmp /tmp/noms-usda-seed/ingredients.json data/vocabulary/ingredients.json
-cmp /tmp/noms-usda-seed/sources.json data/vocabulary/sources.json
+# USDA reproduces the pre-alias stage. Apply the later reviewed overlay last.
+python3 scripts/vocabulary/review_aliases.py build \
+  --seed /tmp/noms-usda-seed/ingredients.json \
+  --sources /tmp/noms-usda-seed/sources.json \
+  --output /tmp/noms-maintained-seed
+cmp /tmp/noms-maintained-seed/ingredients.json data/vocabulary/ingredients.json
+cmp /tmp/noms-maintained-seed/sources.json data/vocabulary/sources.json
 just seed-vocabulary --validate-only \
-  --file /tmp/noms-usda-seed/ingredients.json \
-  --sources /tmp/noms-usda-seed/sources.json
+  --file /tmp/noms-maintained-seed/ingredients.json \
+  --sources /tmp/noms-maintained-seed/sources.json
 ```
 
 Review emits `source-names.csv` and its JSON evidence for all 8,262 records,

@@ -4,6 +4,9 @@ For Wikidata revision capture, complete name screening and canonical ingestion,
 see the [Wikidata adapter guide](WIKIDATA.md).
 For pinned USDA Foundation Foods and SR Legacy ingestion and name review,
 see the [USDA adapter guide](USDA.md).
+The maintained combined bundle then applies the
+[reviewed alias overlay](ALIASES.md); reproduce each source's own stage before
+applying that final alias-only step.
 
 Requires Python 3.11+ and the standard library. This is offline ingestion tooling,
 independent of autocomplete and server startup. It consumes a local RDF/XML OWL
