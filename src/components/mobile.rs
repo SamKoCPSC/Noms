@@ -12,6 +12,7 @@ pub fn focused_route(route: &Route) -> bool {
             | Route::Login {}
             | Route::About {}
             | Route::HowTo {}
+            | Route::GroceryListNew {}
             | Route::RecipeNew {}
             | Route::RecipeImport {}
             | Route::RecipeEdit { .. }
@@ -44,6 +45,8 @@ pub fn route_heading(route: &Route) -> Option<(&'static str, Route)> {
         Route::Login {} => Some(("Sign in", Route::Home {})),
         Route::About {} => Some(("About Noms", Route::MobileYou {})),
         Route::HowTo {} => Some(("How to use Noms", Route::MobileYou {})),
+        Route::GroceryListNew {} => Some(("New grocery list", Route::GroceryLists {})),
+        Route::GroceryListDetail { .. } => Some(("Grocery list", Route::GroceryLists {})),
         Route::RecipeNew {} => Some(("New recipe", Route::Dashboard {})),
         Route::RecipeImport {} => Some(("Import recipe", Route::Dashboard {})),
         Route::RecipeEdit { id } => Some(("Edit recipe", Route::RecipeDetail { id: id.clone() })),
@@ -75,9 +78,11 @@ pub fn route_heading(route: &Route) -> Option<(&'static str, Route)> {
 
 fn selected_tab(route: &Route) -> &'static str {
     match route {
-        Route::Dashboard {} | Route::CollectionList {} | Route::CollectionDetail { .. } => {
-            "Library"
-        }
+        Route::Dashboard {}
+        | Route::CollectionList {}
+        | Route::CollectionDetail { .. }
+        | Route::GroceryLists {}
+        | Route::GroceryListDetail { .. } => "Library",
         Route::Explore {} | Route::Search { .. } => "Explore",
         Route::MobileYou {}
         | Route::SettingsProfile {}
@@ -139,6 +144,7 @@ pub fn MobileCreateButton() -> Element {
                         ("New recipe", "Start with a title and a little inspiration.", PageIconKind::Editor, Route::RecipeNew {}),
                         ("Import recipe", "Paste content from a recipe page.", PageIconKind::Import, Route::RecipeImport {}),
                         ("New collection", "Give your recipes a place.", PageIconKind::Collections, Route::CollectionNew { parent: None }),
+                        ("New grocery list", "Recipes, essentials, or a blank list.", PageIconKind::Collections, Route::GroceryListNew {}),
                     ] {
                         Link { to: target, class: "mobile-hub-row", onclick: move |_| open.set(false), NavigationArtwork { kind: Some(kind) } div { strong { "{label}" } small { "{detail}" } } span { aria_hidden: "true", "›" } }
                     }

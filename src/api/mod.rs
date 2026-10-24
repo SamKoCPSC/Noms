@@ -1,5 +1,6 @@
 pub mod collection;
 pub mod collection_portability;
+pub mod grocery_list;
 pub mod recipe;
 
 pub mod search;

@@ -230,6 +230,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
                             (if is_signed_in { Route::CommunityHome {} } else { Route::Home {} }, "Home", Some(PageIconKind::Home)),
                             (Route::Dashboard {}, "Dashboard", Some(PageIconKind::Dashboard)),
                             (Route::CollectionList {}, "Collections", Some(PageIconKind::Collections)),
+                            (Route::GroceryLists {}, "Grocery lists", None),
                             (Route::Explore {}, "Explore", Some(PageIconKind::Explore)),
                             (Route::Search { query: Default::default() }, "Search", Some(PageIconKind::Search)),
                             (Route::RecipeNew {}, "New recipe", Some(PageIconKind::Editor)),
@@ -309,6 +310,7 @@ fn primary_navigation(signed_in: bool) -> Vec<(Route, &'static str)> {
             (Route::CommunityHome {}, "Home"),
             (Route::Dashboard {}, "Dashboard"),
             (Route::CollectionList {}, "Collections"),
+            (Route::GroceryLists {}, "Grocery lists"),
             (Route::Explore {}, "Explore"),
         ]
     } else {
@@ -329,6 +331,10 @@ fn navigation_is_current(destination: &Route, current: &Route) -> bool {
             | Route::CollectionNew { .. }
             | Route::CollectionDetail { .. }
             | Route::CollectionEdit { .. },
+        ) => true,
+        (
+            Route::GroceryLists {},
+            Route::GroceryLists {} | Route::GroceryListNew {} | Route::GroceryListDetail { .. },
         ) => true,
         (Route::Search { .. }, Route::Search { .. }) => true,
         _ => destination == current,
