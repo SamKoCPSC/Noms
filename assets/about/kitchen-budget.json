@@ -1,0 +1,13 @@
+{
+  "source_revision": 11,
+  "geometry_profile": "curved props preserved",
+  "triangles": 148143,
+  "draw_calls": 1,
+  "textures": 0,
+  "contact_shading": "baked vertex ambient occlusion",
+  "glb_bytes": 4135128,
+  "native_master_unchanged": true,
+  "position_quantum": 0.00011440899057956566,
+  "quantization": "KHR_mesh_quantization",
+  "materials": 1
+}

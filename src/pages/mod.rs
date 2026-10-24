@@ -1,4 +1,6 @@
 mod about;
+// The About route owns and disposes its client-side 3D runtime.
+mod about_tour;
 mod collection_detail;
 mod collection_edit;
 mod collection_json_controls;
