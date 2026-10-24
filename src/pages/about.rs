@@ -1,242 +1,83 @@
+use crate::components::informational::PageMeta;
 use dioxus::prelude::*;
-
-use crate::auth::context::use_auth;
-use crate::components::base::{PageIcon, PageIconKind};
-use crate::components::informational::{CallToActionPanel, PageMeta};
-use crate::Route;
-
-pub(super) struct AboutSection {
-    pub id: &'static str,
-    number: &'static str,
-    eyebrow: &'static str,
-    title: &'static str,
-    paragraphs: &'static [&'static str],
-}
-
-pub(super) const ABOUT_SECTIONS: &[AboutSection] = &[
-    AboutSection {
-        id: "capture",
-        number: "01",
-        eyebrow: "Capture",
-        title: "Keep the little details.",
-        paragraphs: &["The useful version of a recipe includes more than a title and ingredient list. Noms keeps instructions, timing, servings, equipment, tags, commentary, and photos together so the knowledge behind the dish stays with it."],
-    },
-    AboutSection {
-        id: "organize",
-        number: "02",
-        eyebrow: "Organize",
-        title: "Everything in its place.",
-        paragraphs: &["A flat pile works until it doesn’t. Collections and subcollections give recipes a place without forcing every cook into the same filing system.", "Organize by season, cuisine, person, project, or whatever helps you find your way back."],
-    },
-    AboutSection {
-        id: "evolve",
-        number: "03",
-        eyebrow: "Evolve",
-        title: "Room to grow.",
-        paragraphs: &["Every published update becomes part of the recipe’s history. Inspect an earlier snapshot, compare versions, and restore an older version as a new update.", "The trusted version remains easy to find, while experiments still have somewhere to go."],
-    },
-    AboutSection {
-        id: "cook",
-        number: "04",
-        eyebrow: "Cook",
-        title: "Make it fit your table.",
-        paragraphs: &["Scale a recipe for the people at the table or around the ingredient you have on hand. Noms adjusts quantities, servings, and timing for the cooking session while leaving the saved recipe intact."],
-    },
-    AboutSection {
-        id: "share",
-        number: "05",
-        eyebrow: "Share",
-        title: "Share on your terms.",
-        paragraphs: &["Some recipes are private working notes. Some are meant for one link. Others deserve a place in the public collection.", "Noms gives recipes and collections clear visibility choices, so sharing is deliberate rather than automatic."],
-    },
-    AboutSection {
-        id: "build",
-        number: "06",
-        eyebrow: "Build on good ideas",
-        title: "A new take, not a blank page.",
-        paragraphs: &["Public recipes can be forked into private drafts. The new recipe is yours to change, while its connection to the source remains visible.", "That is the kind of community Noms is designed for: useful ideas moving between cooks without losing their history."],
-    },
+const TOUR_CSS: Asset = asset!(
+    "/assets/about-tour.css",
+    CssAssetOptions::new().with_minify(false)
+);
+const KITCHEN_MODEL: Asset = asset!("/assets/about/sams-kitchen.glb");
+const KITCHEN_POSTER: Asset = asset!("/assets/about/sams-kitchen.webp");
+const IDS: [&str; 4] = ["idea", "why", "creator", "community"];
+const NAMES: [&str; 4] = ["The idea", "The reason", "The creator", "The philosophy"];
+const EYEBROWS: [&str; 4] = [
+    "About Noms",
+    "Why was Noms created?",
+    "About the creator",
+    "The Noms Philosophy",
+];
+const TITLES: [&str; 4] = [
+    "The Ultimate Recipe Manager",
+    "A side project that grew in to something larger.",
+    "Hi, I'm Sam!",
+    "Just a simple and easy-to-use app.",
+];
+const CONTENT: [&[&str];4] = [
+&["Noms is designed to be the ultimate unified solution for managing all your recipes.", "With tools that help cooks save and share their signature recipes, iterate and develop new recipes, and organize and plan meals.", "Featuring an optimized search engine, recipe editor, ingredient-scaling calculator, cooking mode, a grocery organizer, and more."],
+&["Noms started a simple side project made to be presented on a resume.", "Motivated by the desire to solve the ongoing issue of needing to constantly write and rewrite disorganized recipes on Google Docs.", "What started as a side project idea later became an actual solution to a real problem, and has since grown in to a suite of tools for the everyday cook and the larger cooking community."],
+&["I'm a professional software engineer and casual computer science enthusiast from Vancouver, Canada who happens to enjoy cooking in his spare time.", "I enjoy experimenting with food, everything from sandwiches to pastas to breads, cakes, noodles, etc. And also beverages like coffee and tea.", "As a cooking hobbyist, some of the consistent inconveniences I had was organizing recipes that changed over time, keeping track of what changes worked and didn't work, finding out what I could cook with limited ingredients, and scaling recipes when certain ingredients had awkward proportions.", "I initially wondered if there existed an app that could solve these issues, and although some attempts seem to have been made, existing solutions consistently seemed to lack the user experience that I would consider ideal. As such, I set out to build my own solution.", "To be honest, it started out as a somewhat non-serious side project that was simply meant to support my ongoing job search at that time as software engineering job recruiters typically identify passion and interest through non-academic work particularly in inexperienced candidates.", "After securing a job I took a break from working on the project for about a year, but later decided to rewrite the app properly, but with the same fundamental idea.", "Nowadays I continue to support the project as it solves a genuine problem I have, and my hope is to be able to share the app with other people in the community."],
+&["Noms puts the user experience first.", "One of the fundamental problems with modern software these days seems to be the constant disruptive designs that make it difficult to simply enjoy the tool as a solution to a problem.", "Ultimately, every project does need a pathway to sustainability if it hopes to scale beyond one user, but usability should never be sacrificed for short-term profitability.", "As such, Noms aims to keep key features free and accessible without a subscription or inconvenient restrictions that you have to pay to remove.", "It aims to avoid any disruptive or instrusive advertising or sponsorships that get in the way actually using the app.", "And it commits to respecting user privacy by only collecting data that is necessary to specific features, being transparent about what data is collected, never selling or sharing the data for any reason, and not using the data to manipulate users in to making purchases.", "Noms philosophy is that its primary purpose is to be a great product that people can enjoy using."]
 ];
 
 #[component]
 pub fn About() -> Element {
-    let auth = use_auth();
-    let (primary_label, primary_route, primary_href, secondary_label, secondary_route) =
-        if auth.is_authenticated {
-            (
-                "Start a new recipe",
-                Route::RecipeNew {},
-                None,
-                "Open your recipe library",
-                Route::Dashboard {},
-            )
-        } else {
-            (
-                "Start your recipe book",
-                Route::Login {},
-                Some("/login?redirect_uri=/recipes/new"),
-                "Explore recipes",
-                Route::Explore {},
-            )
-        };
-
+    #[cfg(target_arch = "wasm32")]
+    use_drop(super::about_tour::stop);
     rsx! {
-        PageMeta {
-            title: "About Noms — Good recipes deserve a little home",
-            description: "Learn why Noms treats recipes as living knowledge: detailed, organized, versioned, and shared with intention.",
-            path: "/about",
+      PageMeta{title:"About Noms — The Ultimate Recipe Manager", description:"Meet Sam, learn why Noms was created, and explore the philosophy behind an easier way to save, develop and share recipes.",path:"/about"}
+      document::Stylesheet{href:TOUR_CSS}
+      div{id:"about-tour",class:"about-tour is-reader","data-kitchen-url":KITCHEN_MODEL,
+        onmounted: move |_| {
+          #[cfg(target_arch="wasm32")]
+          if let Err(error)=super::about_tour::start(){tracing::warn!(?error,"About tour uses its reading fallback");}
+        },
+     a{class:"skip-link",href:"#idea","Skip to the story"}
+     header{class:"site-header",
+      span{class:"tour-brand","About Noms"}
+      span{class:"header-label","A JOURNEY THROUGH OUR STORY"}
+      div{class:"header-controls",
+       button{id:"motion-toggle",r#type:"button",disabled:true,aria_pressed:"false",aria_label:"Pause ambient motion",span{class:"pause-icon",aria_hidden:"true"}span{id:"motion-label","Pause drift"}}
+       button{id:"mode-toggle",r#type:"button",disabled:true,aria_pressed:"false","Reading view"}
+      }
+     }
+     div{id:"world",class:"world",aria_hidden:"true",canvas{id:"story-canvas",tabindex:"-1"}div{class:"world-vignette"}}
+     div{class:"journey-caption",aria_hidden:"true",span{"FOLLOW THE THREAD"}i{}span{id:"chapter-count","01 / 04"}}
+     div{id:"story",class:"story",
+      for i in 0..4 {
+       article{id:"panel-{i}",class:"story-panel","data-panel":"{i}",aria_labelledby:"title-{i}",
+        span{id:"{IDS[i]}",class:"reader-anchor",aria_hidden:"true"}
+        div{class:"panel-meta",span{class:"eyebrow","{EYEBROWS[i]}"}span{class:"panel-number","0{i+1}"}}
+        if i==0{h1{id:"title-{i}","{TITLES[i]}"}}else{h2{id:"title-{i}","{TITLES[i]}"}}
+        if i==2 {figure{class:"kitchen-fallback",img{src:KITCHEN_POSTER,alt:"Sam's kitchen, with coffee equipment, sourdough, pastries and a meal on the island",loading:"lazy",width:960,height:960}}}
+        for (j, paragraph) in CONTENT[i].iter().enumerate() {p{class:if j==0{"lead"}else{"detail"},"{paragraph}"}}
+        if i==3 {div{class:"values",span{"Key features free"}span{"No intrusive ads"}span{"Your data stays yours"}}}
+        a{class:"next-link",href:if i<3{format!("#{}",IDS[i+1])}else{"#idea".into()},
+         if i==0{"Begin the journey"}else if i==3{"Take the tour again"}else{"Continue the story"}
+         span{class:"arrow",aria_hidden:"true"}
         }
-
-        div { class: "marketing-page about-page",
-            header { class: "about-hero container", aria_labelledby: "about-title",
-                div { class: "about-hero__copy",
-                    p { class: "marketing-eyebrow", "Why Noms exists" }
-                    h1 { id: "about-title", class: "brand-title",
-                        PageIcon { kind: PageIconKind::About }
-                        span { "Good recipes deserve a little home." }
-                    }
-                    p { class: "marketing-lede", "Noms keeps your recipes, notes, and kitchen discoveries together, with room for every version to grow." }
-                    div { class: "marketing-actions",
-                        if auth.is_authenticated {
-                            Link { to: Route::RecipeNew {}, class: "btn btn-primary touch-target", "Start a new recipe" }
-                        } else {
-                            a { href: "/login?redirect_uri=/recipes/new", class: "btn btn-primary touch-target", "Start your recipe book" }
-                        }
-                        Link { to: Route::Explore {}, class: "btn btn-secondary touch-target", "Explore recipes" }
-                    }
-                }
-                div { class: "about-hero__illustration", aria_hidden: "true",
-                    div { class: "about-hero__cloth" }
-                    div { class: "about-hero__book",
-                        div { class: "about-hero__book-spine" }
-                        div { class: "about-hero__book-label", "Recipe notes" }
-                        div { class: "about-hero__book-band" }
-                        div { class: "about-hero__book-pages" }
-                        div { class: "about-hero__bookmark" }
-                    }
-                    div { class: "about-hero__mug" }
-                    div { class: "about-hero__note", span { "Kitchen notes" } span { "A little more lemon." } }
-                    div { class: "about-hero__sprig",
-                        span {}
-                        span {}
-                        span {}
-                        span {}
-                    }
-                }
-            }
-
-            // Provisional brand copy: the owner will replace these three narratives.
-            div { class: "about-purpose container",
-                section { id: "mission", class: "about-purpose__mission", aria_labelledby: "mission-title",
-                    div {
-                        p { class: "marketing-eyebrow", "Our mission" }
-                        h2 { id: "mission-title", "Keep the recipe. Carry the knowledge forward." }
-                    }
-                    p { "We want to give everyday cooking a lasting home. A place where the small discoveries, personal touches, and recipes worth passing on stay together—and keep getting better every time someone cooks them." }
-                }
-                section { id: "origin", class: "about-purpose__story", aria_labelledby: "origin-title",
-                    p { class: "marketing-eyebrow", "How it started" }
-                    h2 { id: "origin-title", "Too many scraps. One missing recipe." }
-                    p { "The idea for Noms began with a familiar collection: a flour-dusted notebook, saved messages, and a few recipes that only existed in someone’s memory. The ingredients were there. The little adjustments that made them special were harder to find." }
-                    p { "We imagined a recipe book that could hold all of it, without treating a recipe as finished forever. Somewhere to keep the original, try something new, and remember what worked." }
-                }
-                section { id: "audience", class: "about-purpose__audience", aria_labelledby: "audience-title",
-                    p { class: "marketing-eyebrow", "Who it’s for" }
-                    h2 { id: "audience-title", "For the way you actually cook." }
-                    p { "You don’t need a perfect recipe collection to start. Just something you’d like to make again." }
-                    ul {
-                        li { strong { "The everyday cook" } span { "Keeping weeknight favorites close at hand." } }
-                        li { strong { "The curious tinkerer" } span { "Trying a swap, taking notes, and making it their own." } }
-                        li { strong { "The family archivist" } span { "Saving the recipes—and the details—worth passing down." } }
-                    }
-                }
-            }
-
-            nav { class: "about-contents container", aria_label: "About page sections",
-                for section in ABOUT_SECTIONS {
-                    a { href: "#{section.id}", "{section.number} {section.eyebrow}" }
-                }
-            }
-
-            div { class: "about-story container",
-                for section in ABOUT_SECTIONS {
-                    section {
-                        id: section.id,
-                        class: "about-story__section",
-                        AboutVisual { kind: section.id }
-                        div { class: "about-story__copy",
-                            p { class: "marketing-eyebrow", "{section.number} · {section.eyebrow}" }
-                            h2 { "{section.title}" }
-                            for paragraph in section.paragraphs {
-                                p { "{paragraph}" }
-                            }
-                        }
-                    }
-                }
-            }
-
-            CallToActionPanel {
-                title: "Something worth keeping?",
-                body: "Make a place for the recipes you return to and the knowledge that makes them work.",
-                primary_label,
-                primary_route,
-                primary_href,
-                secondary_label,
-                secondary_route,
-            }
-        }
-    }
-}
-
-#[derive(Props, Clone, PartialEq)]
-struct AboutVisualProps {
-    kind: &'static str,
-}
-
-#[component]
-fn AboutVisual(props: AboutVisualProps) -> Element {
-    rsx! {
-        div { class: "about-story__visual about-story__visual--{props.kind}", aria_hidden: "true",
-            if props.kind == "evolve" {
-                div { class: "about-story__versions",
-                    span { small { "VERSION 1" } strong { "The original" } i {} i {} }
-                    span { small { "VERSION 2" } strong { "Less sugar" } i {} i {} }
-                    span { small { "VERSION 3" } strong { "Just right" } i {} i {} }
-                }
-            } else if props.kind == "share" {
-                div { class: "about-story__visibility",
-                    span { strong { "Private" } small { "Only you" } }
-                    span { strong { "Unlisted" } small { "Anyone with the link" } }
-                    span { strong { "Public" } small { "Everyone" } }
-                }
-            } else if props.kind == "organize" {
-                div { class: "about-story__folders",
-                    span { "Weeknight favorites" }
-                    span { "Something sweet" }
-                    span { "Family recipes" }
-                }
-            } else if props.kind == "cook" {
-                div { class: "about-story__scaling",
-                    div { small { "SERVINGS" } strong { "2" } }
-                    span { "→" }
-                    div { small { "SERVINGS" } strong { "6" } }
-                    p { "Same recipe. More seats at the table." }
-                }
-            } else if props.kind == "build" {
-                div { class: "about-story__lineage",
-                    div { small { "ORIGINAL" } strong { "Lemon cake" } }
-                    span { "↳" }
-                    div { small { "YOUR TAKE" } strong { "Lemon & poppy seed" } }
-                }
-            } else {
-                div { class: "about-story__card",
-                    span { "FROM THE RECIPE BOOK" }
-                    strong { "Lemon herb pasta" }
-                    p { "Extra zest. A little more garlic." }
-                    i {} i {}
-                }
-                div { class: "about-story__accent" }
-            }
-        }
+       }
+      }
+     }
+     div{id:"scroll-track",class:"scroll-track",aria_hidden:"true",
+      for i in 0..4 {div{id:"stop-{i}",class:"waypoint","data-waypoint":"{i}"}}
+     }
+     nav{class:"tour-nav",aria_label:"Story chapters",
+      div{class:"nav-top",span{class:"tour-word","OUR STORY"}span{id:"stop-name",aria_live:"polite","The idea"}span{class:"scroll-hint","Scroll to travel"}}
+      div{class:"route",div{class:"route-line",span{id:"route-progress"}}
+       for i in 0..4 {a{id:"nav-{i}",href:"#{IDS[i]}",aria_label:"Chapter {i+1}: {NAMES[i]}",aria_current:if i==0{"step"}else{"false"},span{class:"route-dot"}span{class:"route-label","data-short":["Idea","Why","Creator","Philosophy"][i],"{NAMES[i]}"}}}
+      }
+     }
+     footer{class:"reader-footer",p{"Noms · Making great meals more accessible."}
+      a{href:"/explore",class:"btn btn-secondary","Explore recipes"}
+     }
+      }
     }
 }
