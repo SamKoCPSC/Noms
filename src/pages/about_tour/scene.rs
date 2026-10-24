@@ -16,14 +16,45 @@ void main(){vec4 w=u_model*vec4(a_pos,1.0);v_world=w.xyz;v_normal=normalize(u_no
 const FRAGMENT: &str = r#"
 precision mediump float;
 uniform vec4 u_color; uniform vec3 u_eye; uniform sampler2D u_texture;
-uniform float u_textured; uniform float u_shadow; uniform float u_reveal;
+uniform float u_textured; uniform float u_shadow; uniform float u_reveal; uniform float u_kitchen;
 varying vec3 v_normal; varying vec3 v_world; varying vec2 v_uv; varying vec4 v_color;
+// The glTF kitchen palette is scene-linear; display encoding happens after lighting.
+vec3 display_srgb(vec3 c){
+ c=max(c,vec3(0.0));
+ return mix(c*12.92,1.055*pow(c,vec3(1.0/2.4))-0.055,step(vec3(0.0031308),c));
+}
+// AgX approximation adapted from three.js (MIT); see assets/about/THIRD_PARTY_LICENSES.txt.
+// Blender's AgX display treatment softens bright ivory without shifting orange into yellow.
+vec3 kitchen_agx(vec3 color){
+ const mat3 to2020=mat3(0.627404,0.069097,0.0163916,0.329283,0.919540,0.0880132,0.0433136,0.0113612,0.895595);
+ const mat3 toSRGB=mat3(1.660491,-0.124550,-0.018151,-0.587641,1.132900,-0.100579,-0.072850,-0.008349,1.118730);
+ const mat3 inset=mat3(0.8566271533,0.1373189729,0.1118982130,0.0951212405,0.7612419906,0.0767994186,0.0482516061,0.1014390365,0.8113023684);
+ const mat3 outset=mat3(1.1271005818,-0.1413297635,-0.1413297635,-0.1106066431,1.1578237022,-0.1106066431,-0.0164939387,-0.0164939387,1.2519364066);
+ vec3 x=clamp((log2(max(inset*to2020*color,vec3(0.00001)))+12.47393)/16.5,0.0,1.0);
+ vec3 x2=x*x;vec3 x4=x2*x2;
+ x=15.5*x4*x2-40.14*x4*x+31.96*x4-6.868*x2*x+0.4298*x2+0.1191*x-0.00232;
+ // A modest contrast/saturation look approximates the master's Medium High Contrast setting.
+ x=pow(max(x,vec3(0.0)),vec3(1.25));
+ x=mix(vec3(dot(x,vec3(0.2126,0.7152,0.0722))),x,1.50);
+ return clamp(toSRGB*pow(max(outset*x,vec3(0.0)),vec3(2.2)),0.0,1.0);
+}
 void main(){
  if(v_uv.x>u_reveal)discard;
  if(u_shadow>0.5){float r=length(v_uv*2.0-1.0);gl_FragColor=vec4(u_color.rgb,u_color.a*exp(-3.2*r*r)*(1.0-smoothstep(0.65,1.0,r)));return;}
  vec3 n=normalize(v_normal);vec3 light=normalize(vec3(-3.0,7.0,5.0));
  float diffuse=max(dot(n,light),0.0);float hemi=n.y*0.5+0.5;
  vec3 base=u_color.rgb*v_color.rgb;if(u_textured>0.5)base*=texture2D(u_texture,v_uv).rgb;
+ if(u_kitchen>0.5){
+  // Neutral studio fill keeps the master's terracotta, peach, ivory and oak distinct.
+  float key=max(dot(n,normalize(vec3(-3.0,7.0,5.0))),0.0);
+  float fill=max(dot(n,normalize(vec3(5.0,3.0,-2.0))),0.0);
+  float illumination=0.95+0.55*key+0.20*fill;
+  vec3 halfway=normalize(light+normalize(u_eye-v_world));
+  float spec=pow(max(dot(n,halfway),0.0),48.0)*0.025;
+  vec3 radiance=base*illumination*2.00+vec3(spec);
+  gl_FragColor=vec4(display_srgb(kitchen_agx(radiance)),u_color.a);
+  return;
+ }
  vec3 lighting=vec3(0.44,0.45,0.39)+vec3(0.47,0.45,0.39)*diffuse+vec3(0.13)*hemi;
  vec3 halfway=normalize(light+normalize(u_eye-v_world));float spec=pow(max(dot(n,halfway),0.0),36.0)*0.09;
  float fog=1.0-exp(-0.00115*pow(length(u_eye-v_world),2.0));
@@ -44,6 +75,7 @@ struct Uniforms {
     textured: WebGlUniformLocation,
     shadow: WebGlUniformLocation,
     reveal: WebGlUniformLocation,
+    kitchen: WebGlUniformLocation,
 }
 pub struct Renderer {
     gl: Gl,
@@ -103,6 +135,7 @@ impl Renderer {
             textured: uniform("u_textured")?,
             shadow: uniform("u_shadow")?,
             reveal: uniform("u_reveal")?,
+            kitchen: uniform("u_kitchen")?,
         };
         let a_pos = gl.get_attrib_location(&program, "a_pos") as u32;
         let a_normal = gl.get_attrib_location(&program, "a_normal") as u32;
@@ -214,6 +247,10 @@ impl Renderer {
         );
         gl.uniform1f(Some(&self.uniforms.shadow), if shadow { 1. } else { 0. });
         gl.uniform1f(Some(&self.uniforms.reveal), reveal);
+        gl.uniform1f(
+            Some(&self.uniforms.kitchen),
+            if mesh.colored { 1. } else { 0. },
+        );
         if let Some(i) = texture {
             gl.bind_texture(Gl::TEXTURE_2D, Some(&self.textures[i]));
         }

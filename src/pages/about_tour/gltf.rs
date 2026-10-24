@@ -172,16 +172,13 @@ pub fn decode(bytes: &[u8]) -> Result<KitchenMesh, String> {
         vertices.extend_from_slice(pos.get(i * 3..i * 3 + 3).ok_or_else(invalid)?);
         vertices.extend_from_slice(normals.get(i * 3..i * 3 + 3).ok_or_else(invalid)?);
         vertices.extend_from_slice(&[0., 0.]);
-        for c in colors
-            .get(i * color_width..i * color_width + 3)
-            .ok_or_else(invalid)?
-        {
-            vertices.push(if *c <= 0.0031308 {
-                c * 12.92
-            } else {
-                1.055 * c.powf(1. / 2.4) - 0.055
-            });
-        }
+        // glTF COLOR_0 values are linear, including normalized integer attributes.
+        // Keep them linear for lighting; the fragment shader applies the display transfer.
+        vertices.extend_from_slice(
+            colors
+                .get(i * color_width..i * color_width + 3)
+                .ok_or_else(invalid)?,
+        );
         vertices.push(1.);
     }
     Ok(KitchenMesh { vertices })
@@ -193,6 +190,48 @@ mod tests {
     fn rejects_missing_or_invalid_glb() {
         for data in [&b""[..], &b"glTF"[..], &[0; 32][..]] {
             assert!(decode(data).is_err());
+        }
+    }
+    #[test]
+    fn normalized_gltf_colors_stay_linear_until_fragment_lighting() {
+        // A small neutral/midtone fixture detects accidental display encoding in the loader.
+        let mut data = vec![0_u8; 24]; // one position and one normal
+        data.extend_from_slice(&[64, 128, 192, 255]);
+        data.extend_from_slice(&[0; 8]); // three u16 indices and alignment
+        let doc = serde_json::json!({
+            "meshes": [{"primitives": [{"attributes": {"POSITION": 0, "NORMAL": 1, "COLOR_0": 2}, "indices": 3}]}],
+            "bufferViews": [
+                {"buffer": 0, "byteOffset": 0, "byteLength": 12},
+                {"buffer": 0, "byteOffset": 12, "byteLength": 12},
+                {"buffer": 0, "byteOffset": 24, "byteLength": 4},
+                {"buffer": 0, "byteOffset": 28, "byteLength": 6}
+            ],
+            "accessors": [
+                {"bufferView": 0, "componentType": 5126, "count": 1, "type": "VEC3"},
+                {"bufferView": 1, "componentType": 5126, "count": 1, "type": "VEC3"},
+                {"bufferView": 2, "componentType": 5121, "normalized": true, "count": 1, "type": "VEC4"},
+                {"bufferView": 3, "componentType": 5123, "count": 3, "type": "SCALAR"}
+            ]
+        });
+        let mut json = serde_json::to_vec(&doc).unwrap();
+        while json.len() % 4 != 0 {
+            json.push(b' ');
+        }
+        let mut bytes = b"glTF".to_vec();
+        for v in [
+            2,
+            (28 + json.len() + data.len()) as u32,
+            json.len() as u32,
+            0x4e4f534a,
+        ] {
+            bytes.extend_from_slice(&v.to_le_bytes());
+        }
+        bytes.extend(json);
+        bytes.extend_from_slice(&(data.len() as u32).to_le_bytes());
+        bytes.extend_from_slice(&0x004e4942_u32.to_le_bytes());
+        bytes.extend(data);
+        for vertex in decode(&bytes).unwrap().vertices.chunks_exact(12) {
+            assert_eq!(&vertex[8..12], &[64. / 255., 128. / 255., 192. / 255., 1.]);
         }
     }
     #[test]

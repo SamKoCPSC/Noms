@@ -27,6 +27,8 @@ The exporter preserves radial/rim geometry, uses gentler simplification on other
 
 Mobile starts with ambient drift paused. Camera travel still follows native scrolling. Pause/read controls, reduced-motion changes, WebGL/context-loss fallbacks and route unmounting stop rendering or dispose resources. Restoring graphics rebuilds the scene and reloads the kitchen if needed. Reading mode uses the lazy still image.
 
+The loader preserves linear glTF vertex colors until fragment lighting. The kitchen uses neutral studio fill and an AgX tone-mapping approximation, followed by sRGB display encoding, to bring its terracotta, peach, cream and oak closer to the Blender master. The tour's green atmospheric fog does not tint the kitchen. This remains a lightweight web lighting approximation rather than the master's Cycles render. The other tour objects keep their existing lighting. See `THIRD_PARTY_LICENSES.txt` for the tone-mapping attribution.
+
 ## Checks
 
 ```sh
