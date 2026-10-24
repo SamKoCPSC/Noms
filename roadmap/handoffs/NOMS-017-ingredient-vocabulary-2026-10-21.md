@@ -7,6 +7,8 @@ USDA follow-up: `codex/noms-017-usda-adapter`.
 Alias follow-up: `codex/noms-017-vocabulary-aliases`.
 PR: https://github.com/SamKoCPSC/Noms/pull/16
 Wikidata PR: https://github.com/SamKoCPSC/Noms/pull/17
+USDA PR: https://github.com/SamKoCPSC/Noms/pull/18
+Combined alias/scope PR: https://github.com/SamKoCPSC/Noms/pull/19
 
 ## Delivered state
 
