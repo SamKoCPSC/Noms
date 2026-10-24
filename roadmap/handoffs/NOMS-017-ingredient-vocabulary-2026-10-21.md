@@ -18,6 +18,8 @@ belong to active entries. The Wikidata follow-up adds 2,550 ingredients and
 3,670 Wikidata mappings, producing **12,698 active entries** with the same retirements.
 The USDA follow-up adds 104 ingredients and 1,246 USDA mappings, producing
 **12,802 active entries and 60 retired entries** across four pinned sources.
+The later label-scope review retires another 21 entries, leaving the current
+bundle at **12,781 active and 81 retired entries**, with all 12,862 UUIDs retained.
 All original curated IDs and authored wording remain
 unchanged; all 101 prior development identities, including the cumin probe, are
 retained. Retired entries remain available to recipe history and are hidden
@@ -183,7 +185,7 @@ unchanged. The policy contains count-noun and regional spelling lexicons,
 qualifier-preserving word order, 227 explicit ingredient alternatives, conflict
 holds and reviewed suggestion representatives. It adds **7,009 aliases to 4,823
 entries**, totaling 7,139 active aliases. Another 216 proposal/target pairs are
-held. All UUIDs, labels, original aliases/order, definitions, statuses, source
+held. These counts precede the scope cleanup below. All UUIDs, labels, original aliases/order, definitions, statuses, source
 relationships, provenance and source metadata are preserved. This is complete
 lexical screening with explicit semantic exceptions, not individual semantic
 certification of every imported concept. Upstream synonyms are not bulk copied.
@@ -214,6 +216,36 @@ all forms were rechecked against the unchanged production SQL and the six
 changed forms were also rechecked through the API. Remaining issues include
 ambiguous names, preparation wording, named ingredient gaps and label scope;
 aliases do not silently solve those by discarding food-form distinctions.
+
+## Label scope cleanup (2026-10-24)
+
+The same alias follow-up now includes source/definition review of **200 flagged
+active labels**, plus an explicit bee-pollen ancestry exception. The pinned
+policy retires **21 entries**: animal feed, clinical/supplement formulations,
+manufacturing or unclear technical labels, catch-all classifications, unspecified
+breakfast formulas and complete breakfast/pizza/eggs-Benedict meals. Exact source
+mapping, original label and a case-specific rationale are required. Keyword
+matches never retire entries automatically. Soup mixes, cereals/sausages, salad
+dressings, pizza components, mold-ripened cheeses, edible blood, and rare/regional
+foods remain available.
+
+Current totals are **12,781 active, 81 retired, 7,137 active aliases** and two
+aliases retained on newly retired entries. Relative to the alias-only commit
+`12658575d3ca86f1cbfc83a8c2db369503252af7`, only 21 statuses change. Every UUID,
+label, alias, definition, source relationship and provenance field is unchanged.
+Replay from the original pre-alias seed still produces the final bundle
+byte-for-byte. Full entry/proposal/scope audits remain outside Git.
+
+All **76 Python tests** pass, including 15 alias/scope regressions. The Rust
+validator accepts 12,862 entries/four sources without warnings. The disposable
+deployment passes dry-run rollback, exact definition checks, idempotent reload
+and unchanged authored rows. A private test draft selected a livestock-salt UUID
+before retirement; after seeding it reloads with the same name/UUID and unchanged
+stored row. **53 authenticated live lookups** confirm all newly retired IDs and
+aliases are hidden while reviewed pantry ingredients remain available; Chromium
+reports no page errors. The frozen 100-recipe/978-query SQL replay retains
+941/1,008 full-wording hits and 942/1,008 full-or-prefix hits with zero regressions.
+No production rollout occurred.
 
 ## Remaining scope
 

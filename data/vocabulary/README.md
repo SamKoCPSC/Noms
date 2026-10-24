@@ -1,15 +1,15 @@
 # Maintained ingredient vocabulary
 
 `ingredients.json` is the reviewed source of truth for ingredient suggestions.
-The seed contains **12,802 active ingredients**: the original 100 curated entries,
-10,048 FoodOn-derived cooking/pantry entries, 2,550 Wikidata additions and 104
+The seed contains **12,781 active ingredients**: the original 100 curated entries,
+10,027 FoodOn-derived cooking/pantry entries, 2,550 Wikidata additions and 104
 USDA additions.
-Another 60 staged identities
-are retained as retired after the deployment review removed unsuitable categories.
+Another 81 identities are retained as retired: 60 from the original deployment
+review and 21 from the subsequent ingredient-scope cleanup.
 Every original ID and authored
 label/alias/description is preserved, including the original fifteen IDs. The
 previously tested cumin-seed UUID is also retained. There are 12,016 FoodOn source
-mappings (11,956 on active entries); overlapping source records use conservative `related` relationships
+mappings (11,935 on active entries); overlapping source records use conservative `related` relationships
 rather than inferred exact equivalence from matching names.
 
 The expansion uses a recorded cooking-scope policy and explicit source-specific
@@ -38,12 +38,16 @@ ingredient; they do not establish exact equivalence or link nutrient values.
 All 12,758 pre-USDA IDs and authored fields are preserved. Raw archives and full
 audits stay outside Git. FNDDS, Branded and nutrient ingestion remain deferred.
 
-The subsequent [alias review](../../scripts/vocabulary/ALIASES.md) screens every
+The subsequent [alias and scope review](../../scripts/vocabulary/ALIASES.md) screens every
 active name and adds 7,009 reviewed plurals, regional spellings, alternative names
-and qualified word-order variants to 4,823 entries. There are now 7,139 active
-aliases. The recorded policy preserves all previous aliases, UUIDs and non-alias
-fields, holds conflicting proposals, and reproduces from the immutable combined
-pre-alias seed. It does not add ingredients or change runtime matching semantics.
+and qualified word-order variants to 4,823 entries. There are now 7,137 active
+aliases, plus two retained on newly retired entries. Source/definition review of
+200 flagged labels retires 21 unsuitable entries, including livestock salt blocks,
+clinical formulations, manufacturing terms, catch-all categories and finished
+meals. Their UUIDs, labels, aliases and source evidence remain available for
+history; only active suggestion status changes. The recorded policy holds
+conflicting aliases and reproduces from the immutable combined pre-alias seed.
+It does not add ingredients or change runtime matching semantics.
 
 The source coverage research still measures the original **100-ingredient**
 benchmark across 19 strata. Those percentages do not describe the expanded seed.

@@ -14,6 +14,7 @@ class AliasTest(unittest.TestCase):
         self.policy['entry_aliases']={}
         self.policy['representatives']={}
         self.policy['entry_rule_holds']={}
+        self.policy['scope_review']={}
 
     def entry(self, label, id='one', **kw):
         return dict(id=id,label=label,aliases=[],description='Authored definition.',locale='en',status='active',
@@ -67,6 +68,42 @@ class AliasTest(unittest.TestCase):
         for label,forbidden in [('heavy cream','double cream'),('corn starch','corn flour'),
                                  ('black pepper','pepper'),('chili (canned)','canned chilies')]:
             self.assertNotIn(forbidden,by_label[label]['aliases'])
+        for label in ['salt block for livestock','calf milk replacer','oil grill','starch molding','eggs benedict']:
+            self.assertEqual(by_label[label]['status'],'retired')
+        for label in ['blood (fresh, livestock)','bee pollen','breakfast cereal','canned mushroom soup','pizza sauce']:
+            self.assertEqual(by_label[label]['status'],'active')
+
+    def test_scope_retirement_preserves_identity_wording_aliases_and_evidence(self):
+        entry=self.entry('salt block for livestock')
+        mapping=dict(source='foodon',external_id='FOODON_fixture',relationship='exact')
+        entry['source_mappings']=[mapping];entry['aliases']=['livestock salt lick']
+        self.policy['scope_review']=dict(retirements={'one':dict(label=entry['label'],category='animal_feed',
+            note='Animal feed material, not human cooking salt.',source_mapping=mapping)})
+        result,rows,_,summary=self.run_review(entry)
+        self.assertEqual(result['entries'][0],{**entry,'status':'retired'})
+        self.assertEqual(summary['entries_retired'],1)
+        self.assertEqual(summary['active_final'],0)
+        self.assertEqual(rows[0]['outcome'],'retired_scope_review')
+
+    def test_scope_keywords_never_automatically_retire_a_food(self):
+        self.policy['scope_review']=dict(label_flags={'feed':r'\blivestock\b','meal':r'\bbreakfast\b'})
+        result,rows,_,summary=self.run_review(self.entry('blood (fresh, livestock)'),self.entry('breakfast cereal','two'))
+        self.assertTrue(all(e['status']=='active' for e in result['entries']))
+        self.assertEqual(summary['scope_flagged'],2)
+        self.assertEqual(summary['entries_retired'],0)
+        self.assertTrue(all(r['scope_action']=='retain_reviewed' for r in rows))
+
+    def test_scope_decision_requires_fresh_exact_evidence_and_cannot_conflict(self):
+        entry=self.entry('oil grill');mapping=dict(source='foodon',external_id='FOODON_fixture',relationship='exact')
+        entry['source_mappings']=[mapping]
+        decision=dict(label='wrong label',category='unclear',note='No definition.',source_mapping=mapping)
+        self.policy['scope_review']=dict(retirements={'one':decision})
+        with self.assertRaisesRegex(ValueError,'stale scope'):self.run_review(entry)
+        decision['label']='oil grill';decision['source_mapping']={**mapping,'external_id':'unknown'}
+        with self.assertRaisesRegex(ValueError,'scope evidence'):self.run_review(entry)
+        decision['source_mapping']=mapping
+        self.policy['scope_review']['retained']={'one':dict(label='oil grill',note='Keep.')}
+        with self.assertRaisesRegex(ValueError,'Conflicting'):self.run_review(entry)
 
     def test_every_entry_is_screened_and_only_aliases_change(self):
         original=self.entry('egg');retired=self.entry('old tomato','retired');retired['status']='retired'

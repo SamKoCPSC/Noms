@@ -28642,7 +28642,7 @@
       ],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -28663,7 +28663,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -29022,7 +29022,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -34500,7 +34500,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -60958,7 +60958,7 @@
       "aliases": [],
       "description": "The group includes any type of Cocoa ingredients. The part consumed/analysed is by default unspecified. When relevant, information on the part consumed/analysed has to be reported with additional facet descriptors.",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -63464,7 +63464,7 @@
       "aliases": [],
       "description": "The group includes any type of Coffee ingredients. The part consumed/analysed is by default unspecified. When relevant, information on the part consumed/analysed has to be reported with additional facet descriptors.",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -81366,7 +81366,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -82341,7 +82341,7 @@
       "aliases": [],
       "description": "The group includes any type of Eggs Benedict, a dish consisting of toasted bread, topped with ham or bacon, poached eggs and Hollandaise sauce.[https://en.wikipedia.org/wiki/Eggs_benedict] and [https://www.google.co.uk/search?tbm=isch&q=Eggs benedict]",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -89502,7 +89502,7 @@
       "aliases": [],
       "description": "A moulded portion of dough.",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -104129,7 +104129,7 @@
       "aliases": [],
       "description": "The group includes any type of ingredient to prepare gravies. The part consumed/analysed is by default the whole marketed unit or a homogeneous representative portion.[https://en.wikipedia.org/wiki/Gravy] and [https://www.google.co.uk/search?tbm=isch&q=gravy sauce packet ingredients]",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -131772,7 +131772,7 @@
       ],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -149795,7 +149795,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -152624,7 +152624,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -152947,7 +152947,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -152968,7 +152968,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -154239,7 +154239,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -171073,7 +171073,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -171159,7 +171159,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -192643,7 +192643,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -212085,7 +212085,7 @@
       "aliases": [],
       "description": "The starch mogul system is a method of molding candy that allows runnier materials to be used than normal processes. The starch mogul system uses a machine with trays of starch. Each tray has a mold firmly pushed down in it to create cavities in the starch. The cavities are then filled with the candy material, and allowed to cool or harden as necessary. [https://en.wikipedia.org/wiki/Starch_mogul_system]",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -230177,7 +230177,7 @@
       "aliases": [],
       "description": "The group includes various pastries not listed elsewhere. The part consumed/analysed is by default the whole or a portion of it representing the observed heterogeneity.[https://www.google.co.uk/search?tbm=isch&q=pastries]",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",

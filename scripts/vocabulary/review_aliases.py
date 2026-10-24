@@ -1,8 +1,9 @@
-"""Offline, alias-only editorial overlay on an immutable canonical seed.
+"""Offline alias and ingredient-scope overlay on an immutable canonical seed.
 
 Every active entry is screened. Approved lexical rules preserve the whole food
 name; semantic alternatives require explicit per-identity decisions. Collisions
-are held, never resolved by iteration order. No runtime fuzzy matching or stemming.
+are held, never resolved by iteration order. Explicit scope retirements preserve
+all UUIDs and wording for history. No runtime fuzzy matching or stemming.
 """
 import argparse
 import collections
@@ -100,6 +101,19 @@ def enrich(seed, policy):
     require(len(set(policy['count_nouns'].values())) == len(policy['count_nouns']), 'Ambiguous plural lexicon')
     entries = {e['id']:e for e in seed['entries']}
     require(len(entries)==len(seed['entries']), 'Duplicate seed UUID')
+    scope = policy.get('scope_review', {})
+    retirements = scope.get('retirements', {})
+    retained = scope.get('retained', {})
+    require(not (set(retirements) & set(retained)), 'Conflicting scope decisions')
+    for id, decision in {**retirements, **retained}.items():
+        require(id in entries and entries[id]['status']=='active'
+                and decision['label']==entries[id]['label'] and decision['note'].strip(),
+                f'Unknown, retired or stale scope target: {id}')
+    for id, decision in retirements.items():
+        require(set(decision)=={'label','category','note','source_mapping'} and decision['category'].strip()
+                and decision['source_mapping'].get('relationship')=='exact'
+                and decision['source_mapping'] in entries[id]['source_mappings'],
+                f'Invalid scope evidence: {id}')
     for id, decision in policy.get('entry_rule_holds', {}).items():
         require(id in entries and decision['note'].strip() and decision['rules'], 'Invalid per-entry rule hold')
     for id, decision in policy['entry_aliases'].items():
@@ -150,11 +164,24 @@ def enrich(seed, policy):
                 decisions.append(dict(canonical_id=e['id'], label=e['label'], **item, status=status, note=note))
         e['aliases'] += additions
         require(len(e['aliases'])<=100, f'Alias limit exceeded: {e["label"]}')
+        flags = [name for name, pattern in scope.get('label_flags', {}).items() if re.search(pattern, e['label'], re.I)]
+        if e['id'] in retirements:
+            e['status'] = 'retired'
+        scope_action = ('previously_retired' if entries[e['id']]['status']=='retired' else 'retire' if e['id'] in retirements
+                        else 'retain_reviewed' if flags or e['id'] in retained else 'no_scope_finding')
+        scope_note = retirements.get(e['id'], retained.get(e['id'], {})).get('note',
+            'Keyword/context screened; recognizable culinary material or pantry preparation retained.' if flags
+            else 'No finding under the recorded lexical screen; not individual semantic certification.')
         audit.append(dict(canonical_id=e['id'], label=e['label'], status=e['status'], existing_aliases=len(entries[e['id']]['aliases']),
-            added_aliases=len(additions), held_proposals=held,
-            outcome='retired_unchanged' if e['status']!='active' else 'aliases_added' if additions else 'screened_no_safe_addition'))
-    require(all(before=={**after, 'aliases':before['aliases']} for before,after in zip(seed['entries'],result['entries'])),
-            'Alias overlay changed a non-alias field')
+            added_aliases=len(additions), held_proposals=held, scope_flags=';'.join(flags), scope_action=scope_action, scope_note=scope_note,
+            outcome='retired_scope_review' if e['id'] in retirements else 'retired_unchanged' if e['status']!='active'
+                    else 'aliases_added' if additions else 'screened_no_safe_addition'))
+    for before, after in zip(seed['entries'], result['entries']):
+        expected_status = 'retired' if before['id'] in retirements else before['status']
+        require(after['status']==expected_status and before=={**after,'aliases':before['aliases'],'status':before['status']},
+                'Overlay changed a field outside aliases or an approved retirement')
+        if before['status']=='retired':
+            require(before==after, 'Previously retired entry changed')
     # A final global pass protects against ambiguous additions, including ones
     # independently generated for two entries without an existing label match.
     final = {}
@@ -167,6 +194,10 @@ def enrich(seed, policy):
     summary = dict(entries_screened=len(audit), active_screened=len(proposals), retired_unchanged=len(audit)-len(proposals),
         entries_enriched=sum(bool(r['added_aliases']) for r in audit), added_aliases=totals['add'],
         held_proposals=sum(v for k,v in totals.items() if k!='add'), dispositions=dict(totals),
+        scope_flagged=sum(bool(r['scope_flags']) for r in audit if r['canonical_id'] in proposals),
+        entries_retired=len(retirements), active_final=sum(e['status']=='active' for e in result['entries']),
+        retired_final=sum(e['status']=='retired' for e in result['entries']),
+        active_aliases=sum(len(e['aliases']) for e in result['entries'] if e['status']=='active'),
         output_checksum=hashlib.sha256(encoded(result)).hexdigest())
     return result, audit, decisions, summary
 

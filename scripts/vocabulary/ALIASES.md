@@ -1,10 +1,12 @@
-# Reviewed ingredient aliases
+# Reviewed ingredient aliases and scope
 
 The alias overlay follows FoodOn, Wikidata and USDA ingestion. It screens all
 **12,802 active entries**, retains 60 retired entries unchanged, and adds **7,009
-aliases to 4,823 entries**. The seed now has 7,139 active aliases. UUIDs, labels,
-original aliases/order, definitions, statuses, source mappings, provenance and the
-source manifest are preserved. It does not create ingredients, merge identities,
+aliases to 4,823 entries**. Scope review then retires 21 unsuitable entries,
+leaving **12,781 active and 81 retired identities**, with 7,137 active aliases
+and two aliases retained on newly retired entries. UUIDs, labels, original
+aliases/order, definitions, source mappings, provenance and the source manifest
+are preserved; only the 21 explicitly approved statuses change. It does not create ingredients, merge identities,
 infer substitutes, ingest nutrients or change the runtime search algorithm.
 
 ## Review scope
@@ -15,6 +17,8 @@ qualified/inverted word order, 227 explicit ingredient-name decisions, ambiguity
 holds and suggestion representatives. The complete pre-alias seed and source
 checksums, base commit and approved output checksum bind the review. The Python
 builder refuses stale inputs or output that differs from the approved result.
+Scope retirements additionally require the original label, an exact source
+mapping already attached to the UUID, a category and a specific rationale.
 
 Every active entry receives a generated review row, including entries with no
 safe addition. This is comprehensive lexical screening plus explicit culinary
@@ -47,6 +51,33 @@ pepper plurals such as `canned chilies`. Names such as pepper, corn flour,
 coriander, lime leaves and king prawns need context or more precise identities.
 Preparation instructions and quality claims are not stripped to inflate lookup
 success. Missing ingredients are a separate curation task.
+
+## Reviewed label retirements
+
+Screening flags 200 active labels for source/definition review. Keywords never
+automatically retire an entry. The policy records these 21 explicit retirements:
+
+| Reason | Retired labels |
+|---|---|
+| Animal feed | salt block for livestock; calf milk replacer |
+| Manufacturing or unclear technical identity | starch molding; flour dough moulding; oil grill; edible coating; nut coating |
+| Clinical/supplement formulation | nutritive preparation for clinical use; nutritional preparation |
+| Undefined or catch-all category | natural extractive; coffee ingredients; cocoa ingredients; gravy ingredients; loaf (nonspecific); various pastry |
+| Finished meal | eggs benedict; breakfast (frozen); breakfast, ready; pizza (sausage with cheese, mix); pizza with meat topping |
+| Undefined breakfast formula | breakfast beverage (dry, instant) |
+
+Soup mixes, canned mushroom soup, breakfast cereals/sausages, salad dressings,
+pizza dough/sauce/toppings, mold-ripened cheeses and edible blood are retained.
+Bee pollen remains despite an animal-food ancestry path: its human ingredient
+use was explicitly reviewed. Unfamiliar or regional names, missing definitions,
+and preparation words alone are not exclusion grounds. Undefined technical
+labels are retired pending clarification, never guessed into a new ingredient.
+
+All 12,862 UUIDs and their complete definitions remain in the seed/database.
+Retirement hides the label and every alias from suggestions without rewriting
+authored recipes or drafts. Existing retired identities are unchanged. Audit
+rows record scope flags, action and rationale alongside alias outcomes. A
+future return to active use requires a separately reviewed policy change.
 
 ## Reproduction
 

@@ -5,8 +5,8 @@
   "base_commit": "c60162b0ad827963be7541ec12f21fd29764781d",
   "base_seed_checksum": "e0c81295695b84d2d9183364a066b169a3b2d063856117e1812415272e88c312",
   "base_sources_checksum": "1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c",
-  "scope": "Complete active-name screening by reviewed lexical rules plus explicit semantic alternatives; not individual semantic certification of every imported source concept. No blanket import of source synonyms, no qualifier removal, no hard merge and no runtime stemming.",
-  "expected_output_checksum": "dc91ffdbfe629e949d3f3dabc3b831e29b9756d60cda4a295d051b01c2b631ca",
+  "scope": "Reproducible alias review plus explicit ingredient-scope retirements. Keep all UUIDs, mappings and wording for history; no hard merge, runtime stemming, blanket synonym import or automatic keyword retirement.",
+  "expected_output_checksum": "1726e0d5332dd3869cf6ba9cb7a5ee3e6adc76cb606a9f4d00aee2d9c67a73ca",
   "count_nouns": {
     "almond": "almonds",
     "apple": "apples",
@@ -2271,6 +2271,310 @@
         "count-noun-number"
       ],
       "note": "Canned chili is a prepared chili dish, not countable chili peppers. Retain regional spelling but never infer chilies/chillies."
+    }
+  },
+  "scope_review": {
+    "version": "ingredient-scope-2026-10-24-v1",
+    "criterion": "Keyword screening of every active label with source/definition review of flagged contexts. Explicit retirements only; keep named pantry ingredients and culinary materials, including rare/regional names. Absence of a flag is not semantic certification.",
+    "label_flags": {
+      "feed_clinical_or_process": "\\b(?:feed|fodder|livestock|silage|for animals|pet food|replacer|grill|moulding|molding|packaging|industrial|manufactur|pharmaceutical|injection|parenteral|intravenous|medicinal|medical|clinical|therapeutic|tablet|capsule|supplement)\\b",
+      "catchall": "\\b(?:unspecified|not specified|unknown|miscellaneous|unidentified|unclassified|various|nonspecific|nondescript|other|nonfood|inedible|unfit|inedibility)\\b",
+      "technical": "\\b(?:substance|material|product|extractive|fraction|formulation|residue|waste|byproduct|by-product|biomass|substrate|medium|standard|sample|additive|reagent|suspension|alkali|acidulant|ingredients|preparation|process|processing|coating|mould|mold|molding|moulding|gelifying|insecticide|feedstuff|laboratory)\\b",
+      "meal_word": "\\b(?:benedict|breakfast|dinner|meal|platter|pizza|sandwich|casserole|stew|curry|salad|soup|pasta|rice dish|noodle dish|hotpot|hot pot|luncheon|lunch)\\b"
+    },
+    "retirements": {
+      "d2460389-6b12-4739-aa38-23cd1beb71a5": {
+        "label": "salt block for livestock",
+        "category": "animal_feed",
+        "note": "Livestock feed/salt-lick material is outside human recipe ingredients; preserve the ID for historical references.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03302932",
+          "relationship": "exact"
+        }
+      },
+      "2339aecb-1c17-4c4a-8ce2-b9f94bffc0d5": {
+        "label": "calf milk replacer",
+        "category": "animal_feed",
+        "note": "Calf-rearing milk replacement is animal feed, not a cooking milk or human milk substitute.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03304398",
+          "relationship": "exact"
+        }
+      },
+      "e8545363-0862-4a85-a9a3-0eafbea8b4d2": {
+        "label": "oil grill",
+        "category": "unclear_identity",
+        "note": "The source supplies an unexplained oil-grill label with no definition; no reliable cooking identity can be assigned. Retire pending source clarification, not an inferred rename to cooking oil.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03315524",
+          "relationship": "exact"
+        }
+      },
+      "f261fbec-205d-4b2f-b476-28b17989d680": {
+        "label": "flour dough moulding",
+        "category": "technical_label",
+        "note": "The source means a moulded portion of dough; this production-unit label does not identify a useful recipe ingredient. Keep flour/dough ingredients separately.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03316657",
+          "relationship": "exact"
+        }
+      },
+      "41be81af-520f-42ca-9cd4-ce6d7eba0bb7": {
+        "label": "starch molding",
+        "category": "manufacturing_process",
+        "note": "The source definition describes the starch-mogul candy manufacturing method, not edible starch as an ingredient.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03315182",
+          "relationship": "exact"
+        }
+      },
+      "f2977f78-2ad0-4a4b-b9d7-8c9350f7644e": {
+        "label": "nutritive preparation for clinical use",
+        "category": "clinical_formulation",
+        "note": "Clinical nutritional formulation, outside the cooking seed; do not equate with ordinary food.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03316899",
+          "relationship": "exact"
+        }
+      },
+      "76af8740-0c4b-4444-85c4-9abf722ca095": {
+        "label": "nutritional preparation",
+        "category": "supplement_category",
+        "note": "An undefined food-supplement preparation, not a named cooking material; its source parent is food supplement.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03317089",
+          "relationship": "exact"
+        }
+      },
+      "1f60e1f4-2336-4eda-8362-26d790ff101e": {
+        "label": "natural extractive",
+        "category": "undefined_category",
+        "note": "No plant/animal identity or extract formulation is supplied; the generic extract/concentrate/isolate category is not an actionable ingredient name.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03315655",
+          "relationship": "exact"
+        }
+      },
+      "8bbfc799-81af-4798-954a-132967d8b358": {
+        "label": "cocoa ingredients",
+        "category": "classification_catchall",
+        "note": "FoodEx2 category for any cocoa-related ingredients, not a particular ingredient. Cocoa and cocoa powder remain available.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03543428",
+          "relationship": "exact"
+        }
+      },
+      "00033baf-954a-4d6c-8e9e-8e1fe2f34c37": {
+        "label": "coffee ingredients",
+        "category": "classification_catchall",
+        "note": "FoodEx2 category for any coffee-related ingredients, not a particular ingredient. Coffee products remain available.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03543404",
+          "relationship": "exact"
+        }
+      },
+      "142e2d0e-d53b-4b9b-b3e2-e51925c23f19": {
+        "label": "gravy ingredients",
+        "category": "classification_catchall",
+        "note": "Catch-all class for anything used in gravies, with no ingredient composition. Defined gravy mixes and sauce materials remain available.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03544068",
+          "relationship": "exact"
+        }
+      },
+      "d2a95f47-bf96-4149-8387-31f8ed9e1b48": {
+        "label": "loaf (nonspecific)",
+        "category": "undefined_category",
+        "note": "Explicitly nonspecific loaf with no formulation or definition; named breads and loaves remain available.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03317301",
+          "relationship": "exact"
+        }
+      },
+      "8bf9c925-c563-4426-abc4-68ca6b8ccc55": {
+        "label": "various pastry",
+        "category": "classification_catchall",
+        "note": "FoodEx2 miscellaneous pastries not listed elsewhere; this catalog bucket does not identify a recipe ingredient.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03540297",
+          "relationship": "exact"
+        }
+      },
+      "66556019-ce5a-4a8b-a9e2-56fc76b2f1db": {
+        "label": "breakfast (frozen)",
+        "category": "finished_meal",
+        "note": "Unspecified complete frozen breakfast, not a cooking ingredient; cereal, sausage and other breakfast ingredients are retained.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03304282",
+          "relationship": "exact"
+        }
+      },
+      "16fcd2fa-4c5f-4541-8f92-99c69de5cf3a": {
+        "label": "breakfast, ready",
+        "category": "finished_meal",
+        "note": "Source classifies a ready-to-consume breakfast meal; no single ingredient identity is supplied.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03315812",
+          "relationship": "exact"
+        }
+      },
+      "bcc61acc-7f1e-4695-a67a-2b610b17e237": {
+        "label": "eggs benedict",
+        "category": "finished_meal",
+        "note": "Source defines a complete dish of toast, ham/bacon, eggs and Hollandaise; it is not an alias or form of ordinary eggs.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03543879",
+          "relationship": "exact"
+        }
+      },
+      "a937f97c-31a6-40cb-84b8-7892e944012a": {
+        "label": "pizza (sausage with cheese, mix)",
+        "category": "finished_meal",
+        "note": "Source places this under pizza food product, with sausage/cheese as a complete dish composition. Pizza crust, dough, sauce and toppings remain available.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03306792",
+          "relationship": "exact"
+        }
+      },
+      "a9e201c2-1b86-4a68-aaa7-8af91ef51cd2": {
+        "label": "pizza with meat topping",
+        "category": "finished_meal",
+        "note": "Complete pizza with meat topping, not a cooking ingredient. Individual pizza components remain available.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03311484",
+          "relationship": "exact"
+        }
+      },
+      "7fe2f7f2-4cda-4582-b51b-32d84a5c6edc": {
+        "label": "breakfast beverage (dry, instant)",
+        "category": "undefined_formula",
+        "note": "Unspecified breakfast milk-formula drink, with no ingredient composition; not an ordinary instant coffee/cocoa cooking ingredient.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03306353",
+          "relationship": "exact"
+        }
+      },
+      "5cffc882-00cf-4964-a18c-025d14e87058": {
+        "label": "nut coating",
+        "category": "unclear_identity",
+        "note": "No definition distinguishes a coating made of nuts from a coating applied to nuts; do not guess an ingredient or formulation.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03316142",
+          "relationship": "exact"
+        }
+      },
+      "f5cc094c-3e91-41fc-9777-960246345c3d": {
+        "label": "edible coating",
+        "category": "technical_category",
+        "note": "Undefined baking-supply/coating category without composition. Defined batters, chocolate coatings and icing ingredients remain available.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03305702",
+          "relationship": "exact"
+        }
+      }
+    },
+    "retained": {
+      "bcdfd942-1852-44f9-9abf-7139d0fe3ca6": {
+        "label": "blood (fresh, livestock)",
+        "note": "Edible animal blood can be used in recipes; livestock describes origin and does not make this animal feed."
+      },
+      "30fb0c21-06c2-45da-a957-83f50f35ac84": {
+        "label": "bee pollen",
+        "note": "Previously reviewed edible human ingredient even though FoodOn also places it under animal food material. Ancestry alone does not justify retirement."
+      },
+      "9bb5eef7-5ccf-41c1-87f5-ba4429874b07": {
+        "label": "breakfast cereal",
+        "note": "Recognizable pantry ingredient used in cooking; the word breakfast does not make cereal a complete plated meal."
+      },
+      "2c0aff7b-dd0e-4b7c-ae1a-cbc9351b798c": {
+        "label": "breakfast sausage",
+        "note": "Recognizable sausage ingredient, not an unspecified breakfast meal."
+      },
+      "9c4c9280-7aca-441a-8304-d123cb56a022": {
+        "label": "canned mushroom soup",
+        "note": "A reviewed convenience ingredient used in recipes; complete-dish word matching must not remove it."
+      },
+      "d34b969b-6238-46bb-ba74-1a8298bf1499": {
+        "label": "cream of mushroom soup",
+        "note": "A reviewed convenience ingredient used in recipes; retained alongside soup mixes."
+      },
+      "c33b24bb-4186-4bb1-ac04-abb344da81a5": {
+        "label": "salad dressing",
+        "note": "Recognizable sauce/condiment ingredient; salad in the name is not a scope violation."
+      },
+      "55d7a42c-a927-40fc-bd9b-3a22fa9cf6f8": {
+        "label": "pizza crust dough",
+        "note": "Dough component used to make pizza; not a finished pizza meal."
+      },
+      "3dbbba75-2d45-4a4e-b0e8-9e0462df5aa1": {
+        "label": "pizza sauce",
+        "note": "Defined tomato-based pizza sauce, not finished pizza."
+      },
+      "3f247fd8-844e-4acf-85c5-e1bd00c73943": {
+        "label": "pizza topping (meat-based)",
+        "note": "Defined cooking component category; distinguish a topping from a complete pizza."
+      },
+      "2adf35ca-5854-41d6-af64-7f3b8473fdf0": {
+        "label": "cocoa (breakfast)",
+        "note": "Source defines pulverized cocoa material after cocoa-butter removal; this is cooking cocoa, not a breakfast meal."
+      },
+      "9fe95189-fe66-4def-b2b6-9ebd25bd31a7": {
+        "label": "beef (ground, medium)",
+        "note": "Medium is the grind size, not laboratory culture medium."
+      },
+      "224e9a20-2c14-4658-b46a-e676b0b3e0cd": {
+        "label": "oyster (standard)",
+        "note": "Standard is a food grade; do not infer a laboratory standard."
+      },
+      "fabd31e0-4ba8-4397-9ecc-fd0c0a39e412": {
+        "label": "medium rye flour",
+        "note": "Medium is a milling/refinement grade, a legitimate flour form."
+      },
+      "9bb02b57-1535-425f-bac8-24e9671cca01": {
+        "label": "olive oil (refined residue blends)",
+        "note": "An identified refined oil blend, not an industrial waste classification; no source evidence justifies exclusion."
+      },
+      "c89f93d8-524d-4af0-9d41-25ebd3336d74": {
+        "label": "fruit mix soup",
+        "note": "An edible fruit-soup preparation; unfamiliar/region-specific food names alone are not grounds for retirement."
+      },
+      "46fd4ccd-d211-42db-ba5d-a2a61f64ab23": {
+        "label": "beverage powder for home preparation of drinks",
+        "note": "Identifies a pantry drink-mix material under beverage mix; retain despite verbose wording."
+      },
+      "8b7a36f6-db21-4b76-9004-eca0e540900f": {
+        "label": "beverage powder for preparation of hot beverage",
+        "note": "A pantry hot-drink powder/mix, not a manufacturing process or medical preparation."
+      },
+      "2b7bee5c-764e-412d-9822-5b9ac1a65642": {
+        "label": "drink mix for the preparation of alcoholic beverage",
+        "note": "A drink-mix ingredient used to make a beverage, not the finished alcoholic drink."
+      },
+      "b6d3f928-6a9c-45ab-ab9b-048accddd9dc": {
+        "label": "coating cream for zwieback",
+        "note": "A culinary cream/coating component for rusks; retains a specified cooking use."
+      }
     }
   }
 }

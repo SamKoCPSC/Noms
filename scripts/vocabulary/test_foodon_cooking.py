@@ -15,6 +15,7 @@ class CookingSeedTest(unittest.TestCase):
         cls.review = json.loads((ROOT / 'data/vocabulary/adapters/foodon-cooking-review.json').read_text())
         cls.by_id = {e['id']: e for e in cls.seed['entries']}
         cls.by_name = {normalize(e['label']): e for e in cls.seed['entries'] if e['status'] == 'active'}
+        cls.scope_retirements = json.loads((ROOT / 'data/vocabulary/adapters/ingredient-alias-policy.json').read_text()).get('scope_review', {}).get('retirements', {})
 
     def test_complete_seed_retains_original_authored_identities(self):
         self.assertEqual(validate(self.seed, self.manifest), [])
@@ -65,7 +66,14 @@ class CookingSeedTest(unittest.TestCase):
                                relationship=decision['relationship']), entry['source_mappings'])
             if decision['action'] == 'import':
                 for key, value in decision['canonical'].items():
-                    current = entry[key][:len(value)] if key == 'aliases' and entry['status'] == 'active' else entry[key]
+                    # Later scope review may retire an exact source identity;
+                    # every authored field and source relationship is retained.
+                    approved_retirement = entry['id'] in self.scope_retirements
+                    if key == 'status' and approved_retirement:
+                        self.assertEqual(value, 'active')
+                        self.assertEqual(entry[key], 'retired')
+                        continue
+                    current = entry[key][:len(value)] if key == 'aliases' and (entry['status'] == 'active' or approved_retirement) else entry[key]
                     self.assertEqual(current, value)
         pilot = json.loads((ROOT / 'data/vocabulary/adapters/foodon-pilot-review.json').read_text())
         for decision in pilot['decisions']:
