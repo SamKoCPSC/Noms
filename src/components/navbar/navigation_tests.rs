@@ -50,6 +50,7 @@ fn primary_destinations_match_authentication_without_inventing_routes() {
             (Route::CommunityHome {}, "Home"),
             (Route::Dashboard {}, "Dashboard"),
             (Route::CollectionList {}, "Collections"),
+            (Route::GroceryLists {}, "Grocery lists"),
             (Route::Explore {}, "Explore")
         ]
     );
@@ -126,4 +127,16 @@ fn navigation_is_neumorphic_with_bounded_responsive_controls() {
     assert!(navigation.contains("@media (max-width: 1099px)"));
     assert!(navigation.contains("overflow-wrap: anywhere"));
     assert!(navigation.contains(":focus-visible"));
+}
+
+#[test]
+fn grocery_routes_keep_their_navigation_section_selected() {
+    for route in [
+        Route::GroceryLists {},
+        Route::GroceryListNew {},
+        Route::GroceryListDetail { id: "list".into() },
+    ] {
+        assert!(navigation_is_current(&Route::GroceryLists {}, &route));
+        assert!(!navigation_is_current(&Route::CollectionList {}, &route));
+    }
 }

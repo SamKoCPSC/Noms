@@ -1,3 +1,5 @@
+mod grocery;
+pub use grocery::{GroceryListDetail, GroceryListNew, GroceryLists};
 mod about;
 // The About route owns and disposes its client-side 3D runtime.
 mod about_tour;

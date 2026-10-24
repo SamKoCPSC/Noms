@@ -460,6 +460,10 @@ pub async fn apply_test_schema(pool: &PgPool) {
     .execute(pool)
     .await
     .expect("failed to create collection_recipes recipe index");
+    sqlx::raw_sql(include_str!("../migrations/grocery-lists.sql"))
+        .execute(pool)
+        .await
+        .expect("failed to create grocery tables");
 }
 
 /// Generate a unique 8-character suffix for test data to avoid duplicate key conflicts.

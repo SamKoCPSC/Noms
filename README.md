@@ -15,6 +15,7 @@ Noms is a full-stack recipe management and sharing platform that combines person
 - **Fork model** — Iterate on other user recipes while tracking attribution
 - **URL import** — Import recipe data from other websites
 - **Collections** — Organize recipes in folders
+- **Grocery lists** — Save independent lists from accessible recipes or your own items, scale by servings, edit quantities and units, and track purchases with recipe context
 - **Community interactions** — Public profiles, shareable links, likes, and comments
 - **Built-in calculator** — Easily scale recipes to specific proportions
 - **Public informational pages** — Server-rendered Home, About, and task-oriented How-to pages
