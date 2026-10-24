@@ -50,8 +50,18 @@ pub fn About() -> Element {
           #[cfg(target_arch="wasm32")]
           if let Err(error)=super::about_tour::start(){tracing::warn!(?error,"About tour uses its reading fallback");}
         },
+     section{id:"tour-loader",class:"tour-loader",aria_labelledby:"tour-loader-title",
+      div{class:"tour-loader-card",
+       div{class:"tour-loader-book",aria_hidden:"true",span{}span{}span{}}
+       span{class:"eyebrow","ABOUT NOMS"}
+       h2{id:"tour-loader-title","Getting the kitchen ready"}
+       p{id:"tour-loading-status",role:"status",aria_live:"polite","Loading the kitchen…"}
+       div{class:"tour-loader-track",aria_hidden:"true",span{}}
+       button{id:"tour-loader-read",r#type:"button","Read the story instead"}
+      }
+     }
      a{class:"skip-link",href:"#idea","Skip to the story"}
-     header{class:"site-header",
+     header{id:"tour-header",class:"site-header",
       span{class:"tour-brand","About Noms"}
       span{class:"header-label","A JOURNEY THROUGH OUR STORY"}
       div{class:"header-controls",
@@ -80,7 +90,7 @@ pub fn About() -> Element {
      div{id:"scroll-track",class:"scroll-track",aria_hidden:"true",
       for i in 0..4 {div{id:"stop-{i}",class:"waypoint","data-waypoint":"{i}"}}
      }
-     nav{class:"tour-nav",aria_label:"Story chapters",
+     nav{id:"tour-navigation",class:"tour-nav",aria_label:"Story chapters",
       div{class:"nav-top",span{class:"tour-word","OUR STORY"}span{id:"stop-name",aria_live:"polite","The idea"}span{id:"scroll-hint",class:"scroll-hint","Scroll to assemble"}}
       div{class:"route",div{class:"route-line",span{id:"route-progress"}}
        for i in 0..4 {a{id:"nav-{i}",href:"#{IDS[i]}",aria_label:"Chapter {i+1}: {NAMES[i]}",aria_current:if i==0{"step"}else{"false"},span{class:"route-dot"}span{class:"route-label","data-short":["Idea","Why","Creator","Philosophy"][i],"{NAMES[i]}"}}}

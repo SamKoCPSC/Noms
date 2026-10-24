@@ -1,4 +1,4 @@
-use super::{flight, scene::Renderer};
+use super::{flight, loading::Gate, scene::Renderer};
 use std::{
     cell::RefCell,
     rc::{Rc, Weak},
@@ -57,6 +57,9 @@ struct State {
     initial_alignment: u8,
     kitchen_requested: bool,
     generation: u32,
+    kitchen_ready: bool,
+    gate: Gate,
+    loading_timeout: Option<gloo_timers::callback::Timeout>,
 }
 impl Drop for State {
     fn drop(&mut self) {
@@ -128,6 +131,9 @@ pub fn start() -> Result<(), JsValue> {
         initial_alignment: 3,
         kitchen_requested: false,
         generation: 0,
+        kitchen_ready: false,
+        gate: Gate::Open,
+        loading_timeout: None,
     }));
     let weak = Rc::downgrade(&state);
     let callback = Closure::wrap(Box::new(move |time: f64| {
@@ -135,6 +141,7 @@ pub fn start() -> Result<(), JsValue> {
             s.borrow_mut().raf = None;
             let again = s.borrow_mut().tick(time);
             maybe_load_kitchen(&s);
+            arm_loading_timeout(&s);
             if again {
                 schedule(&s)
             }
@@ -170,6 +177,7 @@ pub fn start() -> Result<(), JsValue> {
             s.renderer = None;
             s.generation += 1;
             s.kitchen_requested = false;
+            s.kitchen_ready = false;
         } else if s.renderer.is_none() {
             s.renderer = Renderer::new(s.canvas.clone(), &s.doc).ok();
         }
@@ -177,6 +185,18 @@ pub fn start() -> Result<(), JsValue> {
         s.apply_mode();
         s.navigate(i, false, false);
     });
+    listen(
+        &state,
+        el(&doc, "tour-loader-read")?.into(),
+        "click",
+        |s, _| {
+            let i = s.active.min(3);
+            s.manual_read = true;
+            s.apply_mode();
+            s.navigate(i, false, false);
+            s.focus_chapter(i);
+        },
+    );
     listen(&state, el(&doc, "mode-toggle")?.into(), "click", |s, _| {
         let i = s.active.min(3);
         s.manual_read = !s.manual_read;
@@ -252,6 +272,7 @@ pub fn start() -> Result<(), JsValue> {
         s.renderer = None;
         s.generation += 1;
         s.kitchen_requested = false;
+        s.kitchen_ready = false;
         s.apply_mode();
         s.navigate(i, false, false);
     });
@@ -284,7 +305,7 @@ pub fn stop() {
 fn maybe_load_kitchen(state: &StateRef) {
     let (url, image_urls, generation) = {
         let mut s = state.borrow_mut();
-        if !s.flying || s.reduced || s.kitchen_requested || s.target > 1.65 {
+        if !s.flying || s.reduced || s.kitchen_requested {
             return;
         }
         let Some(url) = s.root.get_attribute("data-kitchen-url") else {
@@ -319,6 +340,13 @@ fn maybe_load_kitchen(state: &StateRef) {
                 .binary()
                 .await
                 .map_err(|_| JsValue::from_str("Kitchen download failed"))?;
+            if let Some(state) = weak.upgrade() {
+                let s = state.borrow();
+                if s.generation != generation {
+                    return Err(JsValue::from_str("Tour changed"));
+                }
+                s.loading_status("Preparing the recipe book and laptop…");
+            }
             let data = super::gltf::decode(&bytes).map_err(|e| JsValue::from_str(&e))?;
             let mut images = Vec::new();
             for url in image_urls {
@@ -346,11 +374,34 @@ fn maybe_load_kitchen(state: &StateRef) {
                 "data-kitchen-state",
                 if loaded { "ready" } else { "failed" },
             );
+            if loaded {
+                s.kitchen_ready = true;
+                if s.flying {
+                    s.gate = Gate::Warming;
+                    s.sync_gate();
+                }
+                s.loading_status("Adding the finishing touches…");
+            } else {
+                s.reading_fallback();
+            }
             s.dirty = true;
             drop(s);
             schedule(&state);
         }
     });
+}
+fn arm_loading_timeout(state: &StateRef) {
+    let mut s = state.borrow_mut();
+    if !s.gate.blocked() || s.loading_timeout.is_some() {
+        return;
+    }
+    let weak = Rc::downgrade(state);
+    s.loading_timeout = Some(gloo_timers::callback::Timeout::new(25_000, move || {
+        if let Some(state) = weak.upgrade() {
+            state.borrow_mut().reading_fallback();
+            schedule(&state);
+        }
+    }));
 }
 fn listen(state: &StateRef, target: EventTarget, name: &'static str, f: fn(&mut State, Event)) {
     let weak: Weak<RefCell<State>> = Rc::downgrade(state);
@@ -386,6 +437,66 @@ fn schedule(s: &StateRef) {
     }
 }
 impl State {
+    fn loading_status(&self, text: &str) {
+        if let Ok(status) = el(&self.doc, "tour-loading-status") {
+            status.set_text_content(Some(text));
+        }
+    }
+    fn focus_chapter(&self, i: usize) {
+        if let Ok(title) = el(&self.doc, &format!("title-{i}")) {
+            let _ = title.set_attribute("tabindex", "-1");
+            if let Some(title) = title.dyn_ref::<HtmlElement>() {
+                let options = web_sys::FocusOptions::new();
+                options.set_prevent_scroll(true);
+                let _ = title.focus_with_options(&options);
+            }
+        }
+    }
+    fn sync_gate(&mut self) {
+        let blocked = self.gate.blocked();
+        let focus_loading_control = self
+            .doc
+            .active_element()
+            .is_some_and(|e| e.id() == "tour-loader-read");
+        let _ = self.root.set_attribute(
+            "data-entry-state",
+            if blocked { "loading" } else { "ready" },
+        );
+        if let Ok(loader) = el(&self.doc, "tour-loader") {
+            let _ = loader.set_attribute("aria-hidden", if blocked { "false" } else { "true" });
+        }
+        for id in ["story", "tour-header", "tour-navigation"] {
+            if let Ok(e) = el(&self.doc, id) {
+                if blocked {
+                    let _ = e.set_attribute("inert", "");
+                    let _ = e.set_attribute("aria-hidden", "true");
+                } else {
+                    let _ = e.remove_attribute("inert");
+                    let _ = e.remove_attribute("aria-hidden");
+                }
+            }
+        }
+        if let Ok(story) = el(&self.doc, "story") {
+            let _ = story.set_attribute("aria-busy", if blocked { "true" } else { "false" });
+        }
+        if !blocked {
+            self.loading_timeout = None;
+            if focus_loading_control {
+                self.focus_chapter(self.active.min(3));
+            }
+        }
+    }
+    fn reading_fallback(&mut self) {
+        let i = self.active.min(3);
+        self.generation += 1;
+        self.kitchen_ready = false;
+        self.kitchen_requested = false;
+        self.renderer = None;
+        self.manual_read = true;
+        let _ = self.root.set_attribute("data-kitchen-state", "failed");
+        self.apply_mode();
+        self.navigate(i, false, false);
+    }
     fn buttons(&self) {
         let _ = self
             .motion_button
@@ -425,6 +536,7 @@ impl State {
         let _ = self.motion_button.remove_attribute("disabled");
     }
     fn apply_mode(&mut self) {
+        let was_flying = self.flying;
         self.flying = self.renderer.is_some() && !self.reduced && !self.manual_read;
         {
             let body = &self.root;
@@ -469,6 +581,17 @@ impl State {
             let _ = panel.remove_attribute("inert");
             let _ = panel.remove_attribute("aria-hidden");
         }
+        if self.flying && !was_flying {
+            self.gate = if self.kitchen_ready {
+                Gate::Warming
+            } else {
+                Gate::Waiting
+            };
+            self.loading_status("Loading the kitchen…");
+        } else if !self.flying {
+            self.gate = Gate::Open;
+        }
+        self.sync_gate();
         self.resize();
         self.buttons();
         self.dirty = true;
@@ -579,7 +702,7 @@ impl State {
             ((now - self.last) * 0.001).clamp(0., 0.08) as f32
         };
         self.last = now;
-        let motion = !self.paused;
+        let motion = !self.paused && !self.gate.blocked();
         let blend = 1. - (-dt * 11.).exp();
         self.progress += (self.target - self.progress) * blend;
         if (self.target - self.progress).abs() < 0.0004 {
@@ -655,7 +778,7 @@ impl State {
                 if opacity < 0.015 { "hidden" } else { "visible" },
             );
             let _ = style.set_property("z-index", &(100 - (depth.max(0.) * 2.) as i32).to_string());
-            let interactive = i == active && opacity > 0.8;
+            let interactive = i == active && opacity > 0.8 && !self.gate.blocked();
             let _ = panel.set_attribute("data-active", if interactive { "true" } else { "false" });
             let _ = panel.set_attribute("aria-hidden", if interactive { "false" } else { "true" });
             if interactive {
@@ -665,6 +788,12 @@ impl State {
             }
         }
         if let Some(r) = &self.renderer {
+            if self.gate == Gate::Warming
+                && !r.warm_kitchen(self.width / self.height.max(1.), self.width <= 700.)
+            {
+                self.reading_fallback();
+                return true;
+            }
             r.render(
                 &camera,
                 self.time,
@@ -702,7 +831,16 @@ impl State {
                     .set_attribute("data-gl-error", &r.error().to_string());
             }
         }
+        let previous_gate = self.gate;
+        self.gate = self.gate.after_frame();
+        if self.gate != previous_gate {
+            self.sync_gate();
+        }
         self.dirty = false;
-        self.initial_alignment > 0 || motion || (self.target - self.progress).abs() > 0.0004
+        self.initial_alignment > 0
+            || motion
+            || self.gate != previous_gate
+            || self.gate == Gate::Presenting
+            || (self.target - self.progress).abs() > 0.0004
     }
 }
