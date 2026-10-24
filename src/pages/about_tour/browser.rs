@@ -609,7 +609,7 @@ impl State {
             );
             let (m, depth) = flight::css_projection(camera.vp, model, self.width, self.height);
             let delta = camera.progress - i as f32;
-            let opacity = if depth < 2.5 || depth > 48. {
+            let opacity = if !(2.5..=48.).contains(&depth) {
                 0.
             } else if delta > 0. {
                 1. - super::math::smooth(0.12, 0.55, delta)
