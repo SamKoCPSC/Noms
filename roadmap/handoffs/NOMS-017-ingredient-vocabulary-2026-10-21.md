@@ -249,6 +249,82 @@ reports no page errors. The frozen 100-recipe/978-query SQL replay retains
 941/1,008 full-wording hits and 942/1,008 full-or-prefix hits with zero regressions.
 No production rollout occurred.
 
+## Recipe-gap curation (2026-10-24)
+
+The user-approved [identity policy](../../data/vocabulary/README.md#ingredient-identity-for-gap-curation)
+keeps defined cooking materials separate when ordinary substitution would likely
+require recipe adjustments or materially change the result. Stock/broth, cream
+types, sodium/fat claims, meaningful processing, rice varieties and pasta shapes
+are preserved; preparation wording is retained in recipes.
+
+The frozen breadth study expands the original 100 to **1,000 profiles**: 500 from
+the captured TheMealDB catalog and 500 from Yummly/Kaggle (25 per cuisine). It has
+**10,768 ingredient lines and 1,769 names**, with unique IDs/normalized ingredient
+profiles. These are purposive breadth samples, not population coverage estimates.
+Provider facts, measures, IDs and selection are unchanged in the after-check;
+full catalogs, instructions and generated audit/search outputs stay external.
+
+The [gap guide](../../scripts/vocabulary/GAPS.md) and committed
+`ingredient-gap-review.json` cover every one of the **314 missing/partial names**.
+There are **258 new curated UUIDs**, 246 aliases on them and 25 aliases appended to
+15 prior entries. The complete seed has **13,039 active, 81 retired and 7,408
+active aliases**. All 12,862 previous UUIDs, original wording/order, definitions,
+statuses, source evidence and provenance are retained. Source metadata remains
+four pinned descriptors. The new layer records 21 related source associations,
+authored definitions, public evidence URLs/hashes and explicit ambiguity holds;
+it does not assert nutrient equivalence or automatically assign recipe IDs.
+
+Name dispositions are 279 new-identity uses, 12 verified existing-identity uses,
+three context-dependent cases, one probable source error and 19 holds. Spaghetti,
+date syrup, shell pasta, 1% milk and several other names reuse verified existing
+identities. Unqualified sweet soy sauce stays separate from specifically Javanese
+kecap manis. Rice for sushi, cooked short-grain rice and seasoned sushi rice are
+separate; only explicitly reviewed source contexts resolve bare sushi rice.
+Black moss and lily buds need focused botanical/processing evidence. Bare
+polenta remains ambiguous between the two newly represented forms.
+
+The original alias output at `aa53490bedf674643a75ea9a8c71b57dff6da759` is the new
+builder's immutable input. Its SHA-256 remains
+`1726e0d5332dd3869cf6ba9cb7a5ee3e6adc76cb606a9f4d00aee2d9c67a73ca`.
+The final seed checksum is
+`bb4171b4892450ac5e61103f4cc61219b8c9e432fbd16388d35b95a0b2717e46`.
+Replaying the original alias builder followed by `fill_gaps.py` reproduces the
+final complete bundle byte-for-byte. Historical ingestion/alias pins are not
+rewritten; source-stage tests verify the restored original alias stage.
+
+All **82 Python tests** pass and the Rust validator accepts **13,120 entries/four
+sources with zero warnings**. The disposable local stack passes dry-run rollback,
+idempotent reload and equality of every deployed definition with the seed. All
+original recipes, versions and drafts retain their stored-row hashes. Two new
+private synthetic drafts test double-cream and chicken-stock selection, autosave,
+reload, ID clearing and free-text fallback. The final Chromium run passes **529
+authenticated label/alias lookups**, all new labels/aliases included, with no page
+errors and successful WASM delivery. Two broader aliases were removed during
+final review and their absence was verified through authenticated live requests. No recipes were published or imported and
+no production rollout occurred.
+
+Covered material rises from **9,706/10,768 (90.1%) to 10,339/10,768 (96.0%)**;
+fully covered profiles rise from 369 to 663. This includes verified reuse and
+scoped context review, not only new entries. The original 100 now have 1,077/1,110
+covered lines. The 2,952-form SQL replay is read-only and separate from browser
+checks. Among the original 9,706 covered lines, full-name retrieval improves from
+8,347 to 8,357 and full-or-prefix retrieval from 8,542 to 8,551, with zero
+regressions. Remaining source ambiguity and retrieval wording are separate queues.
+
+Research, before/after reports, all CSVs, snapshots and browser evidence are under
+`/workspace/vocabulary-gap-fill`; the loadable vocabulary plus reviewed additions
+and frozen 1,000-profile after-check are in `/workspace/noms-vocabulary-gap-review.zip`.
+Neither these local paths nor container state are guaranteed permanent. The
+committed policy/builder/guide are the durable reproduction instructions.
+
+After environment replacement, existing stopped containers were restarted
+without deleting volumes. The app is healthy on `http://127.0.0.1:32768`, with
+Postgres 32769 and mock OAuth 32772. Original `/tmp/noms-dev` lifecycle metadata
+was lost; the lifecycle helper therefore refuses to attach to the existing
+project. Browser-only metadata is external under the gap-review directory.
+Inspect actual owned containers/ports before recovery, preserve the retained
+volumes, and do not confuse browser-only metadata with a full lifecycle manifest.
+
 ## Remaining scope
 
 Other metadata dimensions, localization, further Wikidata/USDA curation, FNDDS and

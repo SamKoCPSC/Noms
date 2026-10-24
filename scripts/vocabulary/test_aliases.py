@@ -6,6 +6,7 @@ import tempfile
 import unittest
 
 import review_aliases as aliases
+import fill_gaps
 
 
 class AliasTest(unittest.TestCase):
@@ -59,7 +60,12 @@ class AliasTest(unittest.TestCase):
         policy=json.loads(Path('data/vocabulary/adapters/ingredient-alias-policy.json').read_text())
         seed_path=Path('data/vocabulary/ingredients.json')
         self.assertIs(policy['approved'],True)
-        self.assertEqual(aliases.digest(seed_path),policy['expected_output_checksum'])
+        # The maintained seed now includes a separately pinned, additive gap
+        # review. Recover and verify the original alias stage, rather than
+        # rewriting its immutable output pin for later ingredient additions.
+        gap_policy=json.loads(fill_gaps.DEFAULT_POLICY.read_text())
+        alias_seed=fill_gaps.restore_baseline(json.loads(seed_path.read_text()),gap_policy)
+        self.assertEqual(fill_gaps.checksum(alias_seed),policy['expected_output_checksum'])
         self.assertEqual(aliases.digest(Path('data/vocabulary/sources.json')),policy['base_sources_checksum'])
         seed=json.loads(seed_path.read_text());by_label={e['label']:e for e in seed['entries']}
         for label,alias in [('egg','eggs'),('all-purpose flour','plain flour'),('cumin (powdered)','ground cumin'),

@@ -9,6 +9,10 @@ aliases/order, definitions, source mappings, provenance and the source manifest
 are preserved; only the 21 explicitly approved statuses change. It does not create ingredients, merge identities,
 infer substitutes, ingest nutrients or change the runtime search algorithm.
 
+These are the immutable alias-stage counts. The later [gap curation](GAPS.md)
+adds reviewed cooking materials and appended names without changing this policy
+or its historical input/output pins.
+
 ## Review scope
 
 The maintained `data/vocabulary/adapters/ingredient-alias-policy.json` records
@@ -83,7 +87,8 @@ future return to active use requires a separately reviewed policy change.
 
 Requires Python 3.11+ and the standard library. The upstream adapters reproduce
 the immutable pre-alias seed at `c60162b0ad827963be7541ec12f21fd29764781d`.
-Apply this overlay **after** that stage to obtain the maintained complete bundle:
+Apply this overlay **after** that stage, then apply gap curation for the maintained
+complete bundle:
 
 ```bash
 mkdir -p /tmp/noms-alias-base
@@ -97,11 +102,15 @@ python3 scripts/vocabulary/review_aliases.py build \
   --seed /tmp/noms-alias-base/ingredients.json \
   --sources /tmp/noms-alias-base/sources.json \
   --output /tmp/noms-alias-seed
-cmp /tmp/noms-alias-seed/ingredients.json data/vocabulary/ingredients.json
-cmp /tmp/noms-alias-seed/sources.json data/vocabulary/sources.json
+python3 scripts/vocabulary/fill_gaps.py \
+  --seed /tmp/noms-alias-seed/ingredients.json \
+  --sources /tmp/noms-alias-seed/sources.json \
+  --output /tmp/noms-gap-seed
+cmp /tmp/noms-gap-seed/ingredients.json data/vocabulary/ingredients.json
+cmp /tmp/noms-gap-seed/sources.json data/vocabulary/sources.json
 just seed-vocabulary --validate-only \
-  --file /tmp/noms-alias-seed/ingredients.json \
-  --sources /tmp/noms-alias-seed/sources.json
+  --file /tmp/noms-gap-seed/ingredients.json \
+  --sources /tmp/noms-gap-seed/sources.json
 python3 -m unittest discover -s scripts/vocabulary -p 'test_*.py' -v
 ```
 

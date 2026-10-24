@@ -1169,7 +1169,8 @@
       "locale": "en",
       "aliases": [
         "calamondin",
-        "kalamansi"
+        "kalamansi",
+        "calamansi juice"
       ],
       "description": "The small citrus fruit or its culinary juice; not generic lime.",
       "status": "active",
@@ -65269,7 +65270,10 @@
     {
       "id": "0ce2db07-7127-424e-acb3-330cd95ada03",
       "label": "conchiglie",
-      "aliases": [],
+      "aliases": [
+        "pasta shells",
+        "shell pasta"
+      ],
       "description": "Conchiglie, commonly known as \"shells\" or \"seashells\" is a type of pasta. It is usually sold in the plain durum wheat variety. The shell shape of the pasta allows the sauce to adhere to it.",
       "locale": "en",
       "status": "active",
@@ -66986,7 +66990,11 @@
     {
       "id": "1e7a7783-6dcb-4350-b2fe-b5d2e68ac9f6",
       "label": "corn grits (quick)",
-      "aliases": [],
+      "aliases": [
+        "quick-cooking grits",
+        "quick cooking grits",
+        "quickcooking grits"
+      ],
       "description": "",
       "locale": "en",
       "status": "active",
@@ -176684,7 +176692,8 @@
       "id": "8bd8a087-17f9-4072-acec-2cc2e751b336",
       "label": "poultry seasoning (dry)",
       "aliases": [
-        "dry poultry seasoning"
+        "dry poultry seasoning",
+        "poultry seasoning"
       ],
       "description": "",
       "locale": "en",
@@ -200607,7 +200616,11 @@
     {
       "id": "431e9eee-e39b-485c-9529-1e163005ba52",
       "label": "shoyu sauce",
-      "aliases": [],
+      "aliases": [
+        "Japanese soy sauce",
+        "shoyu",
+        "shōyu"
+      ],
       "description": "",
       "locale": "en",
       "status": "active",
@@ -208311,7 +208324,9 @@
     {
       "id": "8e03c30b-5f2e-4eb6-a46f-d5d55d0330fb",
       "label": "spaghetti macaroni",
-      "aliases": [],
+      "aliases": [
+        "spaghetti"
+      ],
       "description": "",
       "locale": "en",
       "status": "active",
@@ -258519,7 +258534,10 @@
     {
       "id": "e0552228-1450-4a32-a0f2-789774c0fe3b",
       "label": "date honey",
-      "aliases": [],
+      "aliases": [
+        "date syrup",
+        "date molasses"
+      ],
       "description": "syrup extracted from dates",
       "locale": "en",
       "status": "active",
@@ -273249,7 +273267,9 @@
     {
       "id": "698508a3-fb07-4ce8-8428-011c0992a83c",
       "label": "beefsteak",
-      "aliases": [],
+      "aliases": [
+        "beef steak"
+      ],
       "description": "flat cut of beef",
       "locale": "en",
       "status": "active",
@@ -275844,7 +275864,10 @@
     {
       "id": "9ce8e86f-e128-451f-b718-1426cf0dffab",
       "label": "Nanfia",
-      "aliases": [],
+      "aliases": [
+        "orange blossom water",
+        "orange flower water"
+      ],
       "description": "fragrant solution obtained from the distillation of orange blossom",
       "locale": "en",
       "status": "active",
@@ -287035,7 +287058,10 @@
     {
       "id": "153a272d-3a3f-40e7-8b16-b2f0dbf5e168",
       "label": "grainy mustard",
-      "aliases": [],
+      "aliases": [
+        "wholegrain mustard",
+        "whole grain mustard"
+      ],
       "description": "type of mustard",
       "locale": "en",
       "status": "active",
@@ -295382,7 +295408,10 @@
       "id": "b5db9c2d-1c80-47c9-8838-46fb7932172f",
       "label": "low-fat milk",
       "aliases": [
-        "low fat milk"
+        "low fat milk",
+        "1% low-fat milk",
+        "1% milk",
+        "one percent milk"
       ],
       "description": "dairy milk whose milk fats are 1% of the total weight of the milk",
       "locale": "en",
@@ -299392,7 +299421,9 @@
     {
       "id": "9744c667-831a-4362-9bd4-579a7ba0e80d",
       "label": "first molasses",
-      "aliases": [],
+      "aliases": [
+        "light molasses"
+      ],
       "description": "by-product from the first boiling of sugarcanes or sugar beet juice",
       "locale": "en",
       "status": "active",
@@ -299413,7 +299444,9 @@
     {
       "id": "fae36049-f0c7-4d71-ae7b-1b73a56ec3f0",
       "label": "second molasses",
-      "aliases": [],
+      "aliases": [
+        "dark molasses"
+      ],
       "description": "by-product from the second boiling of sugarcanes or sugar beet juice",
       "locale": "en",
       "status": "active",
@@ -299434,7 +299467,9 @@
     {
       "id": "78c51c94-fa60-41ad-a57e-77f15d74705c",
       "label": "unsulfured molasses",
-      "aliases": [],
+      "aliases": [
+        "unsulphured molasses"
+      ],
       "description": "molasses made from boiling sugarcane or sugar beet juice that has not been treated with sulfur dioxide",
       "locale": "en",
       "status": "active",
@@ -302514,7 +302549,8 @@
       "id": "2c540916-f523-45a4-a30a-e1fccd7a9b3f",
       "label": "corn grain (white)",
       "aliases": [
-        "white corn grain"
+        "white corn grain",
+        "dried white corn"
       ],
       "description": "USDA food description: Corn grain, white",
       "locale": "en",
@@ -304216,6 +304252,3931 @@
         "references": [
           "usda-sr-legacy-2018-04"
         ]
+      }
+    },
+    {
+      "id": "543cdfeb-f7c8-47e7-9529-b7b7e66851ec",
+      "label": "chicken stock",
+      "aliases": [],
+      "description": "Ready-to-use chicken-based cooking stock, commonly extracted from bones, meat and aromatics for body and flavor. Distinct from chicken broth and concentrated bouillon; salt and fat levels are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "63b17207-18d5-4c2a-98b4-22b97b44727a",
+      "label": "beef stock",
+      "aliases": [],
+      "description": "Ready-to-use beef-based cooking stock, commonly extracted from bones, meat and aromatics. Distinct from beef broth or bouillon concentrate; homemade wording alone does not prescribe salt or fat content.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e69b3599-8a38-4584-8cb5-3a9ebc60d231",
+      "label": "fish stock",
+      "aliases": [],
+      "description": "Ready-to-use fish-based stock for cooking, commonly extracted from fish bones, trimmings and aromatics. Distinct from fish broth, fish sauce and concentrated fish bouillon.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5c3b4329-3a29-4ae4-a152-d1918429fe42",
+      "label": "lamb stock",
+      "aliases": [],
+      "description": "Ready-to-use cooking stock made from lamb bones or meat and aromatics; distinct from generic meat stock and from concentrated stock products.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "74371608-9dc3-4431-8a9a-8e60b3f5839e",
+      "label": "vegetable broth",
+      "aliases": [],
+      "description": "Ready-to-use vegetable-based broth. Retains the recipe's broth product type separately from vegetable stock; vegetable blends, salt levels and commercial stock/broth naming vary.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2b70dcb4-966e-4bff-b524-5c51734727b9",
+      "label": "low-sodium chicken broth",
+      "aliases": [
+        "low sodium chicken broth",
+        "low-salt chicken broth",
+        "low salt chicken broth"
+      ],
+      "description": "Chicken broth specifically described as low-sodium or low-salt. This is not a claim of no sodium, no added salt, reduced sodium relative to another product, or a fat-free formulation.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "cac88c2f-909f-400a-8b3c-539ab8e704ee",
+      "label": "reduced-sodium chicken broth",
+      "aliases": [
+        "reduced sodium chicken broth",
+        "lower-sodium chicken broth",
+        "lower sodium chicken broth"
+      ],
+      "description": "Chicken broth with sodium reduced relative to a reference formulation. A comparative reduction does not establish a low-sodium or unsalted product.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "0beff9fb-90b0-44aa-9f17-cb4b809deca8",
+      "label": "fat-free chicken broth",
+      "aliases": [
+        "fat free chicken broth"
+      ],
+      "description": "Chicken broth sold or specified as fat-free; retain that formulation separately from ordinary broth and from merely skimming fat off a broth.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "05f46060-1edd-4c1b-ae12-df24ba98d483",
+      "label": "fat-free reduced-sodium chicken broth",
+      "aliases": [
+        "fat free reduced sodium chicken broth",
+        "reduced sodium fat free chicken broth",
+        "fat free less sodium chicken broth"
+      ],
+      "description": "Chicken broth with both fat-free and reduced-sodium claims. Neither claim by itself establishes the other or an unsalted broth.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3d2d6755-cf50-44ad-9102-cdff1dcfdd5c",
+      "label": "fat-skimmed chicken broth",
+      "aliases": [
+        "fat skimmed chicken broth"
+      ],
+      "description": "Chicken broth from which separable surface fat has been skimmed. Skimming does not establish a regulatory fat-free claim or a sodium level.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2087aa72-0a13-4e82-96f8-60a3a4a72db8",
+      "label": "canned beef broth",
+      "aliases": [],
+      "description": "Beef broth preserved by canning, ready for use as a cooking liquid. Distinct from a dry mix, concentrate or a stock; salt and fat levels are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9cf83d3e-80c5-4f1d-8a05-b8132e519f6c",
+      "label": "canned low-sodium chicken broth",
+      "aliases": [
+        "canned low sodium chicken broth"
+      ],
+      "description": "Canned chicken broth with a low-sodium formulation; retains both preservation form and the low-sodium claim.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "03eeb4c0-f6b5-42e5-8035-e6db77761ea8",
+      "label": "low-sodium chicken stock",
+      "aliases": [
+        "low sodium chicken stock"
+      ],
+      "description": "Ready-to-use chicken stock with a low-sodium formulation. Distinct from chicken broth, concentrate and an unsalted or merely reduced-sodium stock.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8e5a1694-ee4a-49ec-9118-37a7f789c102",
+      "label": "low-sodium vegetable broth",
+      "aliases": [
+        "low sodium vegetable broth"
+      ],
+      "description": "Ready-to-use vegetable broth with a low-sodium formulation; distinct from ordinary vegetable stock and from unsalted or reduced-sodium products.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "0f353301-5c06-4abe-81f6-64c851639dfc",
+      "label": "single cream",
+      "aliases": [],
+      "description": "Single cream in the British cooking sense, typically around 18% milk fat. A pouring/cooking cream that does not perform like whipping, heavy or double cream; regional labeling can differ.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "d3e37b61-65cc-4c52-877f-7f5456406fb0",
+      "label": "double cream",
+      "aliases": [],
+      "description": "Double cream in the British cooking sense, with at least 48% milk fat. Richer than US heavy cream; retain the named type for texture, whipping and cooking behavior.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "wikidata-2026-10-23",
+          "external_id": "Q1142449",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "wikidata-2026-10-23"
+        ]
+      }
+    },
+    {
+      "id": "e24804dc-ef16-4229-8e0e-979916a14169",
+      "label": "whipping cream",
+      "aliases": [],
+      "description": "Unwhipped dairy cream intended to whip. The name alone leaves region and fat percentage unspecified; it does not select US light whipping cream, US heavy cream or British double cream.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2ae773bb-8c22-4740-abfa-ce91010c0129",
+      "label": "nonfat sour cream",
+      "aliases": [
+        "non-fat sour cream",
+        "fat-free sour cream",
+        "fat free sour cream"
+      ],
+      "description": "Sour cream with a nonfat formulation, distinct from ordinary or merely reduced-fat sour cream. Thickening and cooking behavior can differ.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "47eea11b-b4cb-4a80-b6c3-cf174fdefdbd",
+      "label": "full-fat sour cream",
+      "aliases": [
+        "full fat sour cream"
+      ],
+      "description": "Sour cream explicitly specified as full-fat; retain the formulation rather than infer it from an unspecified sour cream entry.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "fd48b505-39be-4a11-b001-a0ad93b13eb5",
+      "label": "full-fat yogurt",
+      "aliases": [
+        "full fat yogurt",
+        "full-fat yoghurt",
+        "whole-milk yogurt"
+      ],
+      "description": "Yogurt explicitly specified as full-fat or whole-milk yogurt; different from nonfat and reduced-fat formulations. Sweetening and straining are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "ff321321-4418-4921-90bd-0ac32f1fda1a",
+      "label": "nonfat cream cheese",
+      "aliases": [
+        "fat-free cream cheese",
+        "fat free cream cheese"
+      ],
+      "description": "Cream cheese with a nonfat/fat-free formulation; retains its different fat and moisture behavior from ordinary cream cheese.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f00aca91-5a3c-4eb9-9374-3b9ba2e620fe",
+      "label": "nonfat ricotta cheese",
+      "aliases": [
+        "fat-free ricotta cheese"
+      ],
+      "description": "Ricotta-style cheese with a nonfat formulation; distinct from whole-milk and part-skim ricotta.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "10c8bade-ce1c-48ae-b2ab-f5d95b2208aa",
+      "label": "light coconut milk",
+      "aliases": [],
+      "description": "Reduced-fat coconut milk sold as light coconut milk. Distinct from full-fat coconut milk, coconut cream and ready-to-drink coconut beverages.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8b9414c9-90c8-42ee-9c82-2a1dcf765077",
+      "label": "light margarine",
+      "aliases": [],
+      "description": "Reduced-fat margarine spread; its higher water/lower fat formulation can change baking and cooking compared with ordinary margarine.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "26b5338b-27ef-4780-8fe1-d47b7ce4d0be",
+      "label": "unsalted margarine",
+      "aliases": [],
+      "description": "Margarine explicitly made without added salt; retains the seasoning distinction from unspecified or salted margarine.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "6b09911c-43fe-49e5-9ff4-df6cc3ed6540",
+      "label": "sweetened quark",
+      "aliases": [
+        "sweet quark"
+      ],
+      "description": "Quark with added sweetening, used as a dessert or baking component; retain the sweetening difference from plain quark.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "ec593804-0cb9-452f-a2ff-84ca4e568f77",
+      "label": "creamed horseradish",
+      "aliases": [],
+      "description": "Horseradish condiment prepared with dairy cream or a creamy base. Distinct from grated horseradish preserved simply with vinegar and salt; product formulations vary.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f9f274df-e70c-4c16-ae6d-6b1fd6a69252",
+      "label": "basmati rice",
+      "aliases": [
+        "basmati"
+      ],
+      "description": "Aromatic long-grain rice of the basmati variety group. Preserve its named aroma, grain and cooking behavior separately from generic aromatic or long-grain rice.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "wikidata-2026-10-23",
+          "external_id": "Q1649635",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "wikidata-2026-10-23"
+        ]
+      }
+    },
+    {
+      "id": "bd220794-1531-4a36-aee0-1dab20345fdc",
+      "label": "jasmine rice",
+      "aliases": [],
+      "description": "Aromatic long-grain rice of the jasmine variety group. Distinct from basmati and generic long-grain rice in aroma and cooked texture.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "wikidata-2026-10-23",
+          "external_id": "Q2733021",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "wikidata-2026-10-23"
+        ]
+      }
+    },
+    {
+      "id": "d19dec74-6817-4631-923d-31866625f5b4",
+      "label": "rice for sushi",
+      "aliases": [
+        "uncooked sushi rice",
+        "sushi rice (uncooked)"
+      ],
+      "description": "Uncooked short- or medium-grain rice sold for sushi preparation. Distinct from cooked vinegar-seasoned sushi rice (sumeshi); the exact cultivar is unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c6918d71-a9bd-4ba2-8c58-ab728888a028",
+      "label": "rice for paella",
+      "aliases": [
+        "paella rice"
+      ],
+      "description": "Uncooked rice selected and sold for paella, a cooking-use group with suitable absorption and grain behavior. No specific Bomba, Calasparra or Valencia cultivar is inferred.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "00cb0e6a-68ba-4bcd-bbdf-5046b0f28342",
+      "label": "Valencia rice",
+      "aliases": [],
+      "description": "Rice sold as Valencia rice for Spanish-style cooking; preserve the named rice type separately from generic rice and other paella rice varieties.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "1c2ce7f4-c654-4e4b-ae22-fd1d67fcf31a",
+      "label": "lasagne pasta sheets",
+      "aliases": [
+        "lasagne sheets",
+        "lasagna sheets",
+        "lasagne noodles",
+        "lasagna noodles",
+        "lasagna noodle"
+      ],
+      "description": "Plain wide flat pasta sheets for lasagne, before cooking or assembly into a dish. Distinct from a prepared lasagne meal.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "foodon",
+          "external_id": "FOODON_03306124",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "foodon"
+        ]
+      }
+    },
+    {
+      "id": "95ee00bb-5a0c-4f8c-9fdf-8998b2f8db8b",
+      "label": "cooked lasagne pasta sheets",
+      "aliases": [
+        "cooked lasagna noodles",
+        "cooked lasagne sheets"
+      ],
+      "description": "Lasagne pasta sheets after cooking and draining, before assembly into a dish. Distinct from uncooked sheets in hydration, weight and cooking instructions.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "d4e4d564-13d7-46f3-83a1-c1f466125b59",
+      "label": "rigatoni",
+      "aliases": [],
+      "description": "Short wide ridged tube-shaped pasta called rigatoni; preserve the named shape for cooking time and sauce handling.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "foodon",
+          "external_id": "FOODON_03306346",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "foodon"
+        ]
+      }
+    },
+    {
+      "id": "63b62985-5c1d-48fe-9d40-f2fa66496a48",
+      "label": "paccheri",
+      "aliases": [
+        "paccheri pasta"
+      ],
+      "description": "Large broad tube-shaped pasta called paccheri, distinct from smaller tube shapes such as rigatoni.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a7492e54-8492-4dcc-9653-e3e51d305aca",
+      "label": "fettuccine",
+      "aliases": [],
+      "description": "Flat ribbon-shaped wheat pasta called fettuccine. Exact egg content and fresh/dried form are unspecified; do not equate with a finished pasta dish.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9dc40b22-2eb0-49fd-9724-578171386402",
+      "label": "orzo pasta",
+      "aliases": [
+        "orzo",
+        "risoni"
+      ],
+      "description": "Small rice-shaped wheat pasta called orzo or risoni; distinct from rice grains and barley.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3595f54a-a556-4e7d-9bc5-aa3a1f76ca2d",
+      "label": "udon noodles",
+      "aliases": [
+        "udon noodle",
+        "udon"
+      ],
+      "description": "Thick Japanese wheat noodles called udon. Dry, fresh or precooked storage form is unspecified; distinct from soba and generic noodles.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "85c11e4b-0de1-4fad-9de4-c19efbf74c04",
+      "label": "rice vermicelli",
+      "aliases": [
+        "vermicelli rice noodles"
+      ],
+      "description": "Very thin rice noodles; distinct from wheat vermicelli and wider rice-noodle forms.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b5ee2e20-3069-48b4-b62d-a931fef9d9c3",
+      "label": "flat rice noodles",
+      "aliases": [],
+      "description": "Flat ribbon-shaped rice noodles; width is unspecified. Distinct from round rice vermicelli.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a8327241-a8fb-402c-afd2-67fdad90b0ff",
+      "label": "wide rice noodles",
+      "aliases": [],
+      "description": "Wide flat rice noodles; retain the width distinction from rice vermicelli and narrow flat rice noodles.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "eca23412-34e6-413a-ba44-c8a8b1839fb5",
+      "label": "brown rice noodles",
+      "aliases": [
+        "brown rice noodle"
+      ],
+      "description": "Noodles made from brown rice, retaining the whole-grain base separately from generic white-rice noodles.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3c60b367-1b39-456f-9c81-fe6229b08688",
+      "label": "fresh angel hair pasta",
+      "aliases": [
+        "fresh angel hair",
+        "fresh capellini"
+      ],
+      "description": "Fresh fine-strand wheat pasta of the angel-hair/capellini shape. Distinct from generic pasta and dried pasta cooking behavior.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "872a46a8-1337-4483-a697-84db4f61b52f",
+      "label": "corn tortillas",
+      "aliases": [
+        "corn tortilla",
+        "maize tortillas"
+      ],
+      "description": "Tortillas made with a corn/maize base; distinct from wheat-flour tortillas. Storage and heating form are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "67b3b934-0630-44e2-99fb-6131eeceaf1e",
+      "label": "wheat flour tortillas",
+      "aliases": [
+        "flour tortillas",
+        "flour tortilla",
+        "wheat tortilla",
+        "wheat tortillas"
+      ],
+      "description": "Soft tortillas made with wheat flour; distinct from corn tortillas. Portion diameter is recipe wording, not a separate ingredient identity.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "ea032405-54ae-4ae9-b197-fd02dd461084",
+      "label": "tostada shells",
+      "aliases": [
+        "tostada shell"
+      ],
+      "description": "Flat crisp corn-tortilla shells prepared for tostadas, distinct from soft tortillas and bowl-shaped taco shells.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "838a3f1f-10d6-47a1-8b24-983c3e62a95e",
+      "label": "rice paper wrappers",
+      "aliases": [
+        "rice paper",
+        "rice paper sheets",
+        "rice paper wrapper"
+      ],
+      "description": "Thin edible rice-based wrappers for rolls, commonly sold as dried sheets that are hydrated before use. Some products also contain tapioca starch; formulation is not asserted by the name.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "15c7b459-168a-42da-9762-5c489f54a642",
+      "label": "whole-wheat couscous",
+      "aliases": [
+        "whole wheat couscous"
+      ],
+      "description": "Couscous made from whole-wheat semolina, distinct from refined-wheat couscous.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3d066350-642f-440c-9b9e-2e8dc08bc88a",
+      "label": "rum",
+      "aliases": [],
+      "description": "Distilled spirit made from sugarcane products, commonly molasses or cane juice. Generic rum does not specify color, aging, proof or regional style.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "foodon",
+          "external_id": "FOODON_03301614",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "foodon"
+        ]
+      }
+    },
+    {
+      "id": "a91d02c2-f01c-4fc6-9696-c4c4dd18be67",
+      "label": "dark rum",
+      "aliases": [],
+      "description": "Rum sold as dark rum, retaining its darker, richer style separately from white rum. Color alone does not establish age, proof or absence of added coloring.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "0853b3fb-db5d-45b7-8762-a9213f9736f4",
+      "label": "white rum",
+      "aliases": [
+        "light rum"
+      ],
+      "description": "Rum sold as white or light rum; a clear/light-colored style distinct from dark rum. Exact aging and proof are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f66aaf44-9a71-4b05-945a-853951e5174b",
+      "label": "Jamaican rum",
+      "aliases": [],
+      "description": "Rum identified as Jamaican in origin or style; color, aging and strength remain unspecified. Preserve the named regional spirit rather than alias all rum to it.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e887c2b0-a58e-4570-ad86-53464ed31f97",
+      "label": "cachaça",
+      "aliases": [
+        "cachaca"
+      ],
+      "description": "Brazilian sugarcane-juice spirit called cachaça, distinct from generic molasses rum. Aging and strength are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4d7639f1-8a08-4a27-aed2-eac4acfe83e3",
+      "label": "amaretto",
+      "aliases": [],
+      "description": "Sweet almond-flavored Italian-style liqueur; ingredients can include apricot kernels or almonds. Distinct from almond extract and nonalcoholic flavoring.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "6131d50a-54ce-4fe0-8d6a-751d7ee12599",
+      "label": "dashi",
+      "aliases": [],
+      "description": "Japanese cooking stock, commonly based on kombu, dried fish or other umami ingredients. The name alone does not establish the specific blend, allergens or instant versus homemade formulation.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a21a6ee5-9b90-4d3b-a104-363855a22248",
+      "label": "ginger paste",
+      "aliases": [],
+      "description": "Ginger processed into a paste for cooking. Additional oil, water, salt or preservatives depend on the product; distinct from raw whole ginger and ginger-garlic paste.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "74508f40-c5af-4174-bb74-005b782b1f9a",
+      "label": "ginger-garlic paste",
+      "aliases": [
+        "ginger garlic paste",
+        "garlic-ginger paste",
+        "garlic ginger paste"
+      ],
+      "description": "Prepared paste combining ginger and garlic for cooking. Proportions and additional ingredients are unspecified; distinct from either paste alone.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "wikidata-2026-10-23",
+          "external_id": "Q24236084",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "wikidata-2026-10-23"
+        ]
+      }
+    },
+    {
+      "id": "722e5b27-4f72-408b-97a8-6e14aa669aed",
+      "label": "rose water",
+      "aliases": [
+        "rosewater"
+      ],
+      "description": "Food-grade rose distillate used as a floral flavoring; distinct from rose extract, syrup or cosmetic rose water.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "30290ded-9052-44e1-b2c4-f9c1c28574f8",
+      "label": "vanilla bean paste",
+      "aliases": [
+        "vanilla paste"
+      ],
+      "description": "Prepared vanilla flavoring paste, commonly combining vanilla extract, seeds and a thickened/sweetened base. Distinct from whole beans and liquid extract.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "46435299-4473-42ef-b71f-cf17dd961f95",
+      "label": "lemon extract",
+      "aliases": [],
+      "description": "Concentrated food-grade lemon flavoring extract; distinct from lemon juice, zest and essential oil intended for other uses.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "18b47bf5-feec-4773-8060-3bc14b1def44",
+      "label": "champagne vinegar",
+      "aliases": [],
+      "description": "Wine vinegar sold as Champagne vinegar; distinct from sparkling wine and generic white wine vinegar as a named culinary vinegar type.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "7092852d-ded4-4b00-9e15-307fd41415f7",
+      "label": "Sirop de Liège",
+      "aliases": [
+        "sirop de liege",
+        "Liège syrup"
+      ],
+      "description": "Concentrated Belgian fruit spread/syrup traditionally made by reducing pear and apple juices, sometimes with dates. Distinct from generic liquid fruit syrup.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3e8e03c8-9fcd-4c83-b5b1-d25c75146a80",
+      "label": "biryani masala",
+      "aliases": [],
+      "description": "Spice blend intended for biryani; recipes vary. Distinct from generic garam masala and from the completed rice dish.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "da315cbb-51d4-4e23-811b-f49b7298ef58",
+      "label": "gingerbread spice blend",
+      "aliases": [
+        "gingerbread spice"
+      ],
+      "description": "Sweet baking spice blend for gingerbread, commonly featuring ginger with other warm spices. Exact composition varies.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "dc68cbd2-55d9-4f1d-9a25-5f935704cb87",
+      "label": "furikake",
+      "aliases": [],
+      "description": "Japanese dry rice-seasoning mixture, commonly including sesame and seaweed; fish, egg and other components vary. Do not infer a specific allergen-free formulation.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9b57a482-c108-4322-aa96-baf0345531b7",
+      "label": "oxtail",
+      "aliases": [
+        "oxtails",
+        "ox tail"
+      ],
+      "description": "Cattle tail cut for cooking, containing meat, connective tissue and bone. Distinct from generic beef and from prepared oxtail soup.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "wikidata-2026-10-23",
+          "external_id": "Q1275331",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "wikidata-2026-10-23"
+        ]
+      }
+    },
+    {
+      "id": "9cdae556-594a-417d-b558-f5cf3e264d64",
+      "label": "lamb leg",
+      "aliases": [
+        "leg of lamb"
+      ],
+      "description": "Lamb leg cut with bone status unspecified. Distinct from the existing specifically boneless leg and from a cooked lamb dish.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "foodon",
+          "external_id": "FOODON_02000253",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "foodon"
+        ]
+      }
+    },
+    {
+      "id": "9b252061-b7f0-4b4d-83b0-b91ad088d619",
+      "label": "lamb shoulder",
+      "aliases": [],
+      "description": "Lamb shoulder cut with bone status unspecified. Distinct from a shoulder blade chop, loin chop and leg cut.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "foodon",
+          "external_id": "FOODON_02000239",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "foodon"
+        ]
+      }
+    },
+    {
+      "id": "53bdc206-463c-41e4-9d8c-aa3343a73e2c",
+      "label": "lamb shank",
+      "aliases": [
+        "lamb shanks"
+      ],
+      "description": "Lower leg/shank cut of lamb, commonly bone-in and rich in connective tissue. Distinct from a whole leg of lamb.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4f0b7bd9-09ca-4dad-9407-9f42af135875",
+      "label": "lamb loin chop",
+      "aliases": [
+        "lamb loin chops"
+      ],
+      "description": "Chop cut from the lamb loin; preserve the cut separately from generic lamb chops and shoulder chops.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "0c1633a4-9162-47b9-842a-2d2701928951",
+      "label": "duck leg",
+      "aliases": [
+        "duck legs"
+      ],
+      "description": "Duck leg cut; preservation, cooking and skin/bone status are unspecified. Distinct from generic duck meat and duck breast.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "74f32a3e-e0b5-4ddb-91de-f10767469fcd",
+      "label": "boneless pork shoulder",
+      "aliases": [],
+      "description": "Pork shoulder cut with bones removed; distinct from bone-in or bone-unspecified pork shoulder.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5febc459-8b59-4c02-a642-c11e5972ea50",
+      "label": "boneless pork loin",
+      "aliases": [],
+      "description": "Pork loin with bones removed; distinct from generic pork loin, shoulder and tenderloin.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3ebedb3b-a8dc-4a0a-b0da-4a54c330adfd",
+      "label": "pork back ribs",
+      "aliases": [
+        "pork back rib",
+        "baby back ribs"
+      ],
+      "description": "Pork ribs from the back/loin section, distinct from spareribs and generic pork ribs.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "6b1d0a76-00dc-4e38-93c3-f7905fa58f76",
+      "label": "pork loin chop",
+      "aliases": [
+        "pork loin chops"
+      ],
+      "description": "Chop cut from the pork loin; preserve the named cut separately from generic pork chops.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "0de1cb2f-7dcb-4aa0-83c3-553f0f737e0b",
+      "label": "pork shoulder steak",
+      "aliases": [
+        "pork shoulder steaks"
+      ],
+      "description": "Steak cut from the pork shoulder; distinct from a loin chop and a whole shoulder roast.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "fe77c219-71fb-4884-b5b3-16a15745b8ff",
+      "label": "pork cutlet",
+      "aliases": [
+        "pork cutlets"
+      ],
+      "description": "Thin pork cutlet for cooking; cut, breading and preparation are not otherwise specified. Distinct from generic pork meat.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "254d7618-f188-4ba0-9778-50d89a6b676e",
+      "label": "beef cutlet",
+      "aliases": [],
+      "description": "Thin beef cutlet for cooking; exact anatomical cut and preparation are unspecified. Distinct from generic beef and fabricated beef products.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f46132eb-af0e-4158-92e1-0aace88e002d",
+      "label": "beef stew meat",
+      "aliases": [
+        "stewing beef pieces"
+      ],
+      "description": "Beef sold or cut as stew meat, usually from connective-tissue-rich cuts for slow moist cooking. Exact anatomical cut is unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "foodon",
+          "external_id": "FOODON_02000466",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "foodon"
+        ]
+      }
+    },
+    {
+      "id": "f98491be-12ad-4183-b504-abe3ceb51c62",
+      "label": "beef chuck roast",
+      "aliases": [
+        "chuck roast"
+      ],
+      "description": "Roasting/braising cut from the beef chuck; distinct from generic chuck trimmings and other roast cuts.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4f84dfc9-b8d3-447c-a90c-54d7f942a063",
+      "label": "beef hanger steak",
+      "aliases": [
+        "hanger steak"
+      ],
+      "description": "Beef steak from the hanging tender/diaphragm area, distinct from generic beef and flank or skirt steak.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "19313e78-af9a-4b75-ba90-60a5fce1fca1",
+      "label": "flanken-cut beef short ribs",
+      "aliases": [
+        "flanken short ribs",
+        "flanken-cut short ribs"
+      ],
+      "description": "Beef short ribs sliced across the rib bones in the flanken style; distinct from longer English-cut ribs in cooking behavior.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "ba186db0-2a9c-47e6-bdf2-5e93ffabfc87",
+      "label": "boneless beef short ribs",
+      "aliases": [],
+      "description": "Beef short-rib meat with bones removed; distinct from bone-in short ribs and generic beef stew meat.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2c67af90-2f45-412f-8a3f-8feb0f9ff3d0",
+      "label": "chicken breast (boneless)",
+      "aliases": [
+        "boneless chicken breast",
+        "boneless chicken breasts"
+      ],
+      "description": "Chicken breast with bones removed; skin status is unspecified. Distinct from the specifically skinless-and-boneless breast.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "145bc35a-25aa-43a8-9a65-5e07c253fb8c",
+      "label": "chicken thigh (boneless)",
+      "aliases": [
+        "boneless chicken thigh",
+        "boneless chicken thighs"
+      ],
+      "description": "Chicken thigh with bones removed; skin status is unspecified. Distinct from a specifically skinless-and-boneless thigh.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a0689411-6b6b-464a-a2b8-d8641a66c7f6",
+      "label": "chicken cutlet",
+      "aliases": [
+        "chicken cutlets",
+        "boneless chicken cutlet"
+      ],
+      "description": "Thin boneless chicken cutlet, commonly sliced from breast meat. Breading and cooking are unspecified; distinct from generic chicken meat.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c292d803-e922-4cfa-9c67-6511b1b8444c",
+      "label": "chicken wing drumette",
+      "aliases": [
+        "chicken wing drumettes",
+        "chicken wing drummettes"
+      ],
+      "description": "Upper fleshy segment of a chicken wing, distinct from the whole wing, wing flat and leg drumstick.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "37667e26-04d0-4543-91e7-79ace0619e13",
+      "label": "ground chicken",
+      "aliases": [
+        "minced chicken"
+      ],
+      "description": "Chicken meat minced/ground for cooking; fat level and meat/skin composition are unspecified. Distinct from intact chicken cuts.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8a4f05d0-6313-440f-99a6-a5b56530366f",
+      "label": "cooked chicken",
+      "aliases": [],
+      "description": "Chicken meat after cooking, with cut and cooking method unspecified. Distinct from raw chicken in hydration, handling and recipe cooking requirements.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2eba85d7-1b2f-4dd1-9acf-e54f99532b93",
+      "label": "cooked chicken breast",
+      "aliases": [
+        "cooked chicken breasts"
+      ],
+      "description": "Chicken breast after cooking; cooking method and bone/skin status are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e3c8f2f1-fa4e-4195-9663-95237546be5a",
+      "label": "cooked beef brisket",
+      "aliases": [
+        "cooked brisket"
+      ],
+      "description": "Beef brisket after cooking; seasoning, curing and cooking method are unspecified. Distinct from raw brisket.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "50138392-7624-48a5-98f2-e0c84887dce4",
+      "label": "cooked shrimp",
+      "aliases": [
+        "cooked prawns"
+      ],
+      "description": "Shrimp after cooking; species, size, shell state and storage form are unspecified. Distinct from raw shrimp.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c42f995f-2430-4bc3-b352-868fe51fb64d",
+      "label": "boneless salmon fillet",
+      "aliases": [
+        "boneless salmon fillets"
+      ],
+      "description": "Salmon fillet specifically prepared without bones; species, skin and cooking state are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a89c7446-ea95-4b49-aa49-df79ea70de59",
+      "label": "catfish fillet",
+      "aliases": [
+        "catfish fillets"
+      ],
+      "description": "Catfish fillet with storage/cooking state unspecified; distinct from specifically frozen fillets and whole fish.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f3a21fa4-96b6-4c1b-b629-e2ad0c585e94",
+      "label": "skinless haddock fillet",
+      "aliases": [
+        "skinless haddock"
+      ],
+      "description": "Haddock fillet with skin removed, without an assertion of frozen storage. Distinct from the existing specifically frozen skinless product.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e359ba59-1af3-43a6-b676-0cb541cbc613",
+      "label": "veal chop",
+      "aliases": [
+        "veal chops"
+      ],
+      "description": "Chop cut of veal; exact rib/loin position and preparation are unspecified. Distinct from generic veal meat.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "d0684063-85ab-446e-8770-81a51f424b05",
+      "label": "flat-leaf parsley",
+      "aliases": [
+        "flat leaf parsley",
+        "Italian parsley",
+        "italian parsley leaves"
+      ],
+      "description": "Leaves of flat-leaf/Italian parsley, distinct from curly-leaf parsley as a named culinary type.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "42394d8b-53e6-4305-96c8-2822fb8d1a61",
+      "label": "coriander stems",
+      "aliases": [
+        "cilantro stems",
+        "cilantro stalks"
+      ],
+      "description": "Tender stems of coriander/cilantro used as an herb ingredient; distinct from leaves and coriander seeds.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c63eabd5-744d-4f08-afd5-fae0ee7d8b85",
+      "label": "scallion greens",
+      "aliases": [
+        "spring onion greens"
+      ],
+      "description": "Green leaf portion of scallions/spring onions, distinct from the white bulb/base or whole scallions.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "95ff9fc1-18b4-4ee7-ac86-f14719705141",
+      "label": "baby bok choy",
+      "aliases": [],
+      "description": "Small/tender bok choy sold as baby bok choy for cooking; exact cultivar is unspecified. Preserve the named produce type rather than infer a mature rosette.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "04ce7896-a361-40b3-a010-d1130d51f348",
+      "label": "English cucumber",
+      "aliases": [
+        "hothouse cucumber"
+      ],
+      "description": "Long, usually thin-skinned cucumber sold as English cucumber; distinct from small pickling and Persian types.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "766df2e0-af43-482b-b86c-eb98c011641c",
+      "label": "Persian cucumber",
+      "aliases": [
+        "persian cucumbers"
+      ],
+      "description": "Small thin-skinned cucumber sold as Persian cucumber, distinct from long English and pickling types.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a61f3b46-da34-4cce-8f0b-8ebf29d1882d",
+      "label": "Kirby cucumber",
+      "aliases": [
+        "kirby cucumbers"
+      ],
+      "description": "Small firm pickling cucumber sold as Kirby, distinct from long slicing cucumbers.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e84e442e-eb23-4ee2-a898-f7e54bff7eb3",
+      "label": "Japanese cucumber",
+      "aliases": [],
+      "description": "Slender cucumber sold as a Japanese cucumber type; distinct from generic cucumber and other named culinary types.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "56318fcc-9b2e-4292-8bd3-c7e1c5c54102",
+      "label": "seedless cucumber",
+      "aliases": [],
+      "description": "Cucumber sold as seedless, without inferring an English, Persian or other cultivar. Distinct from a generic cucumber's unspecified seed characteristic.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2effc6c3-df3f-4f71-adac-4173c2de8bea",
+      "label": "Chinese eggplant",
+      "aliases": [
+        "chinese eggplants"
+      ],
+      "description": "Long slender eggplant sold as Chinese eggplant; preserve the culinary type separately from globose Italian and generic eggplant.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "6ab95159-8f99-4737-a721-f4e1acd64232",
+      "label": "Italian eggplant",
+      "aliases": [],
+      "description": "Eggplant sold as an Italian/globe type, distinct from slender Chinese/Japanese culinary types.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9c1b2db5-c301-4408-8ef1-e5c990cf1c1b",
+      "label": "green papaya",
+      "aliases": [],
+      "description": "Unripe papaya used as a firm vegetable, distinct from ripe sweet papaya fruit.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "0d70151a-93b2-4e1b-992d-ce0661dca704",
+      "label": "Meyer lemon",
+      "aliases": [
+        "meyer lemons"
+      ],
+      "description": "Fruit of the Meyer lemon type, with a distinct aroma and acidity from ordinary lemons.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "29fc4ee2-e514-4e99-b2a7-922f52ee7956",
+      "label": "Bramley apple",
+      "aliases": [
+        "bramley apples"
+      ],
+      "description": "Bramley cooking apple, retaining the named tart cooking variety and its breakdown during cooking.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2687b97f-716e-4525-96aa-f518e48c4ba0",
+      "label": "Hass avocado",
+      "aliases": [],
+      "description": "Avocado of the Hass cultivar; preserve the named cultivar separately from generic avocado.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a88e5c36-7311-40c4-bb74-cabaca86e0ea",
+      "label": "Charlotte potato",
+      "aliases": [
+        "charlotte potatoes"
+      ],
+      "description": "Charlotte potato variety, commonly a firm/waxy salad potato; distinct from generic potatoes and floury cooking types.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "489efcdc-c1da-46af-948b-2a3da68c5540",
+      "label": "Jersey Royal potato",
+      "aliases": [
+        "jersey royal potatoes"
+      ],
+      "description": "Potato sold as Jersey Royal, a named small/new potato product; distinct from generic potato and other named varieties.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f849ad00-a514-44cb-877a-01852d4b5dea",
+      "label": "floury potato",
+      "aliases": [
+        "floury potatoes"
+      ],
+      "description": "Potato selected for a floury/high-starch cooking texture, without assigning a specific cultivar. Distinct from waxy potatoes.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b6364377-47fe-4cb5-8b1f-c49af146932f",
+      "label": "hispi cabbage",
+      "aliases": [
+        "sweetheart cabbage",
+        "hispi (sweetheart) cabbage"
+      ],
+      "description": "Pointed sweetheart/hispi cabbage used for cooking; retain the named tender cabbage type.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3153caec-28d2-4907-8f66-a784f456163d",
+      "label": "purple sprouting broccoli",
+      "aliases": [],
+      "description": "Broccoli type harvested for slender purple flowering shoots; distinct from a standard broccoli head.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5b931cf9-c583-433e-b4ee-8a156db587cc",
+      "label": "Red Russian kale",
+      "aliases": [],
+      "description": "Red Russian kale type, with its named tender leaf characteristics; distinct from generic curly kale.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "777d2512-8e42-454b-ac99-38f910560aae",
+      "label": "white yam",
+      "aliases": [],
+      "description": "Edible yam sold as white yam, commonly Dioscorea rotundata. Exact species must be confirmed when required; distinct from sweet potato and unspecified yam.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "d8a4bf23-8c58-4cf6-8960-dff384633075",
+      "label": "banana leaf",
+      "aliases": [
+        "banana leaves"
+      ],
+      "description": "Banana leaf used for wrapping, steaming or serving food; distinct from banana fruit. It is generally a cooking wrapper rather than an eaten fruit ingredient.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c65d3372-97d6-48bc-9eec-a062e5eb353f",
+      "label": "dark brown sugar",
+      "aliases": [
+        "dark brown soft sugar"
+      ],
+      "description": "Moist brown sugar with a darker/higher-molasses style than light brown sugar; preserve the named sweetness, moisture and flavor distinction.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "56085d59-beb6-457c-87e6-6747b24f3028",
+      "label": "golden caster sugar",
+      "aliases": [],
+      "description": "Fine-grained golden caster sugar, retaining its light molasses/cane flavor separately from ordinary white caster sugar.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5f3f36d1-06fe-4284-9296-d9f68b52cab0",
+      "label": "dark muscovado sugar",
+      "aliases": [],
+      "description": "Dark muscovado sugar, a strongly molasses-flavored moist unrefined/partly refined cane sugar. Distinct from light muscovado and generic brown sugar.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "069a01f0-147a-4d0d-a53b-0bf94f483ac3",
+      "label": "light corn syrup",
+      "aliases": [],
+      "description": "Light-colored corn syrup for baking/confectionery; distinct from dark corn syrup and high-fructose beverage syrup.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b37449ea-ea96-494f-b8e2-dffb0e82d465",
+      "label": "dry white wine",
+      "aliases": [],
+      "description": "White wine explicitly specified as dry, retaining the low residual sweetness style separately from generic or sweet white wine.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c1aca470-4a27-4e8c-8e30-26b0efb389d0",
+      "label": "dry red wine",
+      "aliases": [],
+      "description": "Red wine explicitly specified as dry; retains the sweetness style separately from unspecified red wine.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "14028d7a-f015-4882-b53d-5d492a3c9d07",
+      "label": "sweet white wine",
+      "aliases": [],
+      "description": "White wine explicitly specified as sweet; exact grape, sweetness level and fortification are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "fdb2eedb-39cd-42b3-87c1-641e8fff5d84",
+      "label": "dry sherry",
+      "aliases": [],
+      "description": "Sherry specified as a dry style, distinct from sweet or cream sherry. Exact sherry subtype is unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "757b9cd3-6d12-4104-b20b-6cc59d852b89",
+      "label": "sweet sherry",
+      "aliases": [],
+      "description": "Sherry specified as sweet, without selecting a particular cream, Pedro Ximénez or other subtype.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "16a6eb2a-f0e9-4eb7-8d60-defadb1db265",
+      "label": "brown ale",
+      "aliases": [],
+      "description": "Ale of the brown-ale style, retaining its malt/roast character separately from generic ale.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4cf57aa2-ef8d-4a2f-b635-81cd0b94fe49",
+      "label": "Irish cream liqueur",
+      "aliases": [],
+      "description": "Cream liqueur of the Irish-cream type, combining dairy cream with spirits and flavorings. Distinct from generic cream liqueur or unalcoholic dairy cream.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "ba3a018c-bd6f-4d65-bf0e-6f47fa016df5",
+      "label": "toasted sesame oil",
+      "aliases": [
+        "roasted sesame oil",
+        "dark sesame oil"
+      ],
+      "description": "Aromatic oil pressed from toasted/roasted sesame seeds, distinct from mild untoasted sesame oil.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a26f7d1b-ad75-462b-9ebf-6c80e4e7f28d",
+      "label": "crushed tomatoes",
+      "aliases": [],
+      "description": "Tomatoes processed into crushed pieces with juice/puree for cooking, commonly canned. Distinct from whole fresh tomatoes, smooth puree and paste; packaging is unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "ad4de948-9f08-486a-bd23-83266b9e3a44",
+      "label": "roasted bell pepper",
+      "aliases": [
+        "roasted pepper",
+        "roasted peppers"
+      ],
+      "description": "Bell pepper after roasting, with color and preservation unspecified; distinct from raw peppers.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e7d9e92e-6066-4599-ac3b-c8bacfdb480e",
+      "label": "roasted red bell pepper",
+      "aliases": [
+        "roasted red pepper",
+        "roasted red peppers"
+      ],
+      "description": "Red bell pepper after roasting; brining, oil packing and packaging are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c6119390-9dd5-45e0-b6a7-60ef0ff012a2",
+      "label": "stewed tomatoes",
+      "aliases": [],
+      "description": "Tomatoes cooked/stewed as a cooking ingredient, often with seasoning; distinct from plain canned whole or diced tomatoes.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b15b8ae0-1c2c-484a-8f84-3fb943bd11cb",
+      "label": "poblano pepper",
+      "aliases": [
+        "poblano",
+        "poblanos",
+        "poblano chile",
+        "poblano chiles",
+        "poblano peppers"
+      ],
+      "description": "Fresh poblano chili pepper, distinct from dried ancho pepper. The seed's ancho entry does not cover the fresh material.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "341417aa-d590-4529-b544-b312c26d6858",
+      "label": "ground chipotle pepper",
+      "aliases": [
+        "ground chipotle",
+        "ground chipotle chile pepper",
+        "chipotle powder"
+      ],
+      "description": "Chipotle (smoke-dried jalapeño) ground into a powder; distinct from whole chipotles and chipotles canned in adobo.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "6423f0bd-c9eb-460e-973a-329bdc28d9f7",
+      "label": "chipotle peppers in adobo",
+      "aliases": [
+        "chipotles in adobo",
+        "chipotle in adobo"
+      ],
+      "description": "Chipotle peppers preserved in adobo sauce as a prepared ingredient. Distinct from dry chipotle powder, plain dried chipotles or generic adobo sauce.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b3ec648b-c44d-4b08-a868-56ae5e423c68",
+      "label": "hot smoked paprika",
+      "aliases": [],
+      "description": "Smoked paprika with a hot/pungent formulation, distinct from sweet smoked or unspecified paprika.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "85d26ded-c93f-4f1e-88dc-114ac2e9f2cc",
+      "label": "Hungarian paprika",
+      "aliases": [],
+      "description": "Paprika sold as a Hungarian type; heat grade is unspecified. Preserve the named origin/style without inferring sweet or hot.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "655d901d-9fd1-4da9-a5d0-fcf65e6d14a6",
+      "label": "English mustard",
+      "aliases": [],
+      "description": "Prepared mustard of the pungent English style; distinct from generic mustard and dry mustard powder.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3327f069-924a-4458-aab8-cae4c07d398f",
+      "label": "spicy brown mustard",
+      "aliases": [],
+      "description": "Prepared mustard sold as spicy brown mustard; retains the named seed/flavor style separately from generic mustard and Dijon.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "84e587b0-8f04-46be-9aa7-ed3c745f5bba",
+      "label": "Kalamata olive",
+      "aliases": [
+        "Kalamata olives"
+      ],
+      "description": "Olive sold as Kalamata; retain the named olive type. Pitting is preparation wording and does not establish curing liquid or salt content.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8d25d2b7-aaac-483b-84ad-3e4f9375f1a7",
+      "label": "oil-cured black olive",
+      "aliases": [
+        "oil-cured black olives",
+        "oil cured black olives"
+      ],
+      "description": "Black olive cured/finished with oil, distinct from generic black or salt-cured olives; preparation and salt content vary.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "7f753cdc-2fc8-4e4b-b6e8-57d8482c5b89",
+      "label": "baguette",
+      "aliases": [
+        "baguettes",
+        "French baguette",
+        "french baguettes"
+      ],
+      "description": "Long slender French-style bread loaf with a crisp crust, distinct from generic French bread and sourdough bread formulations.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "7e04ce8c-6bae-44cf-8979-255cba326416",
+      "label": "sourdough baguette",
+      "aliases": [],
+      "description": "Baguette-shaped bread made with sourdough fermentation; retains both loaf form and fermentation type.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "49388b14-2273-47d1-9935-3b940094905d",
+      "label": "ciabatta",
+      "aliases": [
+        "ciabatta roll",
+        "ciabatta rolls"
+      ],
+      "description": "Italian-style open-crumb bread called ciabatta; loaf/roll portion form is preparation/serving wording, not a different base bread identity.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2767e1c8-6482-40fb-b2f4-32f96be19f7d",
+      "label": "Cuban bread",
+      "aliases": [],
+      "description": "Cuban-style white bread used for sandwiches, traditionally with a thin crust and often added fat. Distinct from generic white bread; formulation varies.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "81c005f5-480c-497f-ab1e-cd519618a24d",
+      "label": "English muffin",
+      "aliases": [
+        "English muffins"
+      ],
+      "description": "Plain English-muffin bread used for splitting and toasting, distinct from sweet cake-style muffins. Enrichment, preservatives and whole-grain variants are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "993bd9a5-5b3b-42d7-8057-3f7efb9c71dd",
+      "label": "Kaiser roll",
+      "aliases": [
+        "Kaiser rolls"
+      ],
+      "description": "Round crusty bread roll of the Kaiser type, distinct from generic soft white rolls.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "74a95d4a-a22c-419b-b181-5982f0c3ec1a",
+      "label": "French-style sandwich roll",
+      "aliases": [
+        "french style sandwich rolls",
+        "French sandwich rolls"
+      ],
+      "description": "Crusty French-style bread roll for sandwiches, distinct from a generic soft white roll and from a whole baguette.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e80c06ef-aa5f-4021-8c3b-67d08ba2320f",
+      "label": "fresh breadcrumbs",
+      "aliases": [
+        "fresh bread crumbs"
+      ],
+      "description": "Breadcrumbs made from fresh/soft bread, distinct from dried breadcrumbs and panko in moisture and absorption.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "09a1d8fa-9b70-4367-a7f6-647b36442581",
+      "label": "panko breadcrumbs",
+      "aliases": [
+        "panko",
+        "Japanese breadcrumbs",
+        "panko bread crumbs"
+      ],
+      "description": "Japanese-style coarse flaky dried breadcrumbs, with different coating texture from ordinary fine breadcrumbs.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4f48c959-9074-4f75-9056-826e3b6b5ca4",
+      "label": "pita chips",
+      "aliases": [
+        "pita chip"
+      ],
+      "description": "Crisp baked or fried pieces of pita bread, distinct from soft pita bread; seasoning is unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8a1c18ee-0054-4a09-8882-a92b0436a483",
+      "label": "puff pastry cups",
+      "aliases": [
+        "puff pastry cup"
+      ],
+      "description": "Cup-shaped puff-pastry cases used as cooking components; baking state is unspecified. Preserve shape separately from a sheet of puff pastry.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2528f8be-2d95-492d-9c09-ffe2601d8d28",
+      "label": "instant yeast",
+      "aliases": [
+        "instant dry yeast",
+        "fast-action yeast"
+      ],
+      "description": "Fine dry baker's yeast intended for direct incorporation into dough; distinct from active dry yeast and fresh/compressed yeast in activation and handling.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "d9f3cca2-2e3b-4cdb-b801-816ec0efb6dd",
+      "label": "green split peas",
+      "aliases": [
+        "green split pea"
+      ],
+      "description": "Dried split green peas, distinct from yellow split peas and fresh green peas.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b5c189b3-913a-49a9-a1da-448c49c7917a",
+      "label": "barley grits",
+      "aliases": [],
+      "description": "Coarsely broken/milled barley grains, distinct from whole/pearled barley and corn grits.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "wikidata-2026-10-23",
+          "external_id": "Q48940414",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "wikidata-2026-10-23"
+        ]
+      }
+    },
+    {
+      "id": "a41de4ba-5fe5-404f-b604-744b39e494e4",
+      "label": "raw buckwheat groats",
+      "aliases": [],
+      "description": "Hulled buckwheat kernels before roasting/cooking. Distinct from generic buckwheat seed, flour and roasted kasha.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a4fbf806-230d-4a2b-91cd-df64a7f2a7c6",
+      "label": "frozen mixed berries",
+      "aliases": [],
+      "description": "Frozen mixture of more than one berry type, distinct from a single frozen berry. Exact blend is unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "cdabe332-1485-49d0-963d-99914d1cfecc",
+      "label": "frozen mango",
+      "aliases": [],
+      "description": "Mango flesh preserved by freezing, distinct from fresh, dried or canned mango; sweetening is unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "1769ee1e-5168-4fc6-ada3-a89a1d33bfbe",
+      "label": "cooked beetroot",
+      "aliases": [
+        "cooked beets"
+      ],
+      "description": "Beetroot after cooking, distinct from raw beetroot and pickled beetroot. Exact cooking method is unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "93c1b62b-0551-4acc-bf42-31a50d1cc345",
+      "label": "pumpkin puree",
+      "aliases": [
+        "pumpkin purée",
+        "pureed pumpkin"
+      ],
+      "description": "Pumpkin flesh processed into a smooth cooking puree, without assuming sweetened/spiced pie filling. Preservation form is unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8afd5dbe-9cb8-43bd-820d-878e96bbf78b",
+      "label": "unsweetened açaí puree",
+      "aliases": [
+        "unsweetened acai puree",
+        "pure acai puree"
+      ],
+      "description": "Açaí pulp/puree without added sweetener or other fruit; distinct from whole berries and sweetened açaí blends.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "386b0483-ab3c-49eb-8878-191c7bddf8d6",
+      "label": "toasted coconut flakes",
+      "aliases": [
+        "toasted coconut"
+      ],
+      "description": "Coconut flakes/shreds after toasting; distinct from raw coconut flakes. Added sugar is unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "70921902-38c2-48b9-8818-ec54c8f31ee5",
+      "label": "toasted walnuts",
+      "aliases": [
+        "toasted walnut"
+      ],
+      "description": "Walnut kernels after dry toasting/roasting; salt and added seasonings are unspecified. Distinct from raw walnuts.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "62a2c439-1d90-4f7d-ba59-656c99103d74",
+      "label": "unsalted dry-roasted peanuts",
+      "aliases": [
+        "unsalted dry roast peanuts",
+        "unsalted dry roasted peanuts"
+      ],
+      "description": "Peanuts roasted without added oil and without added salt; retains both process and seasoning distinctions.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "412367da-ce90-46fe-8813-9bcefb740f5b",
+      "label": "unsalted peanuts",
+      "aliases": [
+        "unsalted peanut"
+      ],
+      "description": "Peanuts specifically without added salt; roasting and shell/skin state are unspecified. Distinct from specifically salted peanuts.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5b97c6ea-7e41-4bd4-a952-e05bb77e2dbe",
+      "label": "unsalted cashews",
+      "aliases": [
+        "unsalted cashew nuts"
+      ],
+      "description": "Cashew kernels specifically without added salt; roasting state is unspecified. Distinct from salted cashews.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "0fa8c888-400d-4039-9a19-1b08cf9406c0",
+      "label": "orange zest",
+      "aliases": [],
+      "description": "Colored outer zest of orange peel, excluding most white pith; distinct from whole orange peel and other citrus zest.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "wikidata-2026-10-23",
+          "external_id": "Q139031885",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "wikidata-2026-10-23"
+        ]
+      }
+    },
+    {
+      "id": "7f81e3f1-7bc5-4c6a-9045-bd793cf58a52",
+      "label": "lime zest",
+      "aliases": [],
+      "description": "Colored outer zest of lime peel; distinct from generic citrus zest, lemon zest and lime juice.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b02c160e-f19f-425e-afe7-3847ede426c3",
+      "label": "dried orange peel",
+      "aliases": [],
+      "description": "Orange peel preserved by drying; distinct from fresh zest, candied peel and unspecified dried citrus peel.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a72e5d45-b282-470e-8014-418ec825478f",
+      "label": "black pudding",
+      "aliases": [],
+      "description": "British/Irish-style blood sausage with a substantial cereal component, commonly oats or barley. Distinct from generic blood sausage; exact meat/cereal recipe varies.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "foodon",
+          "external_id": "FOODON_00002557",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "foodon"
+        ]
+      }
+    },
+    {
+      "id": "9490bfed-8784-40b8-b88a-6d43a1482eba",
+      "label": "morcilla",
+      "aliases": [],
+      "description": "Spanish/Latin American-style blood sausage called morcilla; grain, seasoning and meat formulations vary. Distinct from British black pudding and generic blood sausage.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "76b72624-5171-428e-baa8-74a5db96a0fc",
+      "label": "kabanos sausage",
+      "aliases": [
+        "kabanos",
+        "kabanos sausages",
+        "Polish kabanos"
+      ],
+      "description": "Thin dry/smoked sausage of the Polish kabanos type, traditionally pork; exact meat formulation varies. Distinct from generic kielbasa.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5df3a79d-6acb-49d3-8fa9-8c0929797cf8",
+      "label": "Italian fennel sausage",
+      "aliases": [
+        "Italian fennel sausages"
+      ],
+      "description": "Italian-style sausage specifically flavored with fennel, distinct from a generic Italian sausage. Meat and heat formulation are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9fe4f8ec-93c2-4504-9d21-f6621ea0c203",
+      "label": "Tuscan sausage",
+      "aliases": [],
+      "description": "Italian sausage sold as Tuscan-style, retaining the named regional style. Exact seasoning and meat formulation vary.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "90dc8765-5740-4abf-b2be-118c357ae20f",
+      "label": "Creole seasoning",
+      "aliases": [],
+      "description": "Dry seasoning blend of the Creole cooking style; composition and salt content vary. Distinct from generic seasoning mix and a branded formulation.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "6fc2556c-198b-45c4-90be-fc363f27559c",
+      "label": "Creole seafood seasoning",
+      "aliases": [],
+      "description": "Creole-style seasoning blend specifically intended for seafood; composition and salt content vary. Distinct from an unspecified Creole blend.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "62d94f95-84fb-4288-ac81-185f56c68dd7",
+      "label": "Italian seasoning",
+      "aliases": [
+        "Italian herb seasoning"
+      ],
+      "description": "Italian-style dried herb seasoning blend; exact herb proportions vary. Distinct from generic mixed seasoning or a wet sauce.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "093485fe-d68c-4550-9ad7-a53c339ca9d0",
+      "label": "Greek seasoning",
+      "aliases": [],
+      "description": "Greek-style herb/spice seasoning blend; composition and salt content vary. Distinct from generic mixed seasoning.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "810dd0d2-37ac-4438-82ed-9100cc0a71b5",
+      "label": "jerk seasoning",
+      "aliases": [
+        "Jamaican jerk seasoning",
+        "jamaican jerk season"
+      ],
+      "description": "Jamaican-style jerk seasoning blend; heat, salt and wet/dry form are unspecified. Distinct from generic seasoning mix.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "0c83c724-31f8-4bd5-9a33-4197f75ab9f9",
+      "label": "Jamaican curry powder",
+      "aliases": [],
+      "description": "Curry powder of a Jamaican style, retaining its named spice profile rather than equating all curry powders.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f3c9a2cc-857c-46f2-87be-6430a3c9ea45",
+      "label": "Madras curry powder",
+      "aliases": [],
+      "description": "Curry powder sold as Madras-style, distinct from an unspecified curry powder. Heat and proportions vary.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "ecffa12f-4806-4683-beb0-87064b0a99f4",
+      "label": "Madras curry paste",
+      "aliases": [
+        "Madras paste"
+      ],
+      "description": "Prepared curry paste of the Madras style; distinct from dry Madras curry powder and unspecified curry paste.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2f9459cb-20e1-41fa-926d-38810ed34125",
+      "label": "mixed spice",
+      "aliases": [
+        "pudding spice",
+        "British mixed spice"
+      ],
+      "description": "British-style sweet baking spice mixture (pudding spice), distinct from allspice berries/powder and unspecified savory spice blends.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f256ca43-439c-41c1-9d95-1ce5f9436be7",
+      "label": "kabsa spice blend",
+      "aliases": [
+        "kabsa spice",
+        "kabse spice",
+        "kabsa spices"
+      ],
+      "description": "Spice mixture used for kabsa/kabse rice dishes, with recipe-dependent proportions. Distinct from generic mixed spice and a completed rice dish.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "980ec8a3-8f3a-4e71-89dc-dd92d3ecfbe8",
+      "label": "yellow miso",
+      "aliases": [
+        "shinshu miso"
+      ],
+      "description": "Miso sold as a yellow/shinshu type, distinct from white and red miso in fermentation/flavor style; precise composition varies.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3fda51ed-9b7f-44bb-9b7a-0102ebf65ca3",
+      "label": "red miso",
+      "aliases": [
+        "aka miso"
+      ],
+      "description": "Miso sold as a red/aka type, commonly stronger and more fermented than white miso; exact grain and salt formulation vary.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8d1cb09a-758c-4e84-a728-829fd38ae716",
+      "label": "reduced-sodium soy sauce",
+      "aliases": [
+        "reduced sodium soy sauce",
+        "lower-sodium soy sauce",
+        "lower sodium soy sauce"
+      ],
+      "description": "Soy sauce sold with a reduced/lower-sodium formulation; retains the product claim separately from ordinary soy sauce. Informal recipe wording does not establish a regulatory low-sodium threshold.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3dc995d4-86ad-45d7-a2d1-727ad8d9903d",
+      "label": "reduced-sodium tamari",
+      "aliases": [
+        "reduced sodium tamari"
+      ],
+      "description": "Tamari soy sauce with a reduced-sodium formulation, distinct from ordinary tamari and other reduced-sodium soy sauces.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "54c26e37-0d99-46bc-ab6a-8052e9e855a6",
+      "label": "mushroom soy sauce",
+      "aliases": [],
+      "description": "Soy sauce seasoned/flavored with mushrooms, often a dark soy style. Distinct from plain soy sauce; thickness and sodium level vary.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "ff757af6-9fbd-4828-8ee7-8f5936037e9c",
+      "label": "garlic-chili sauce",
+      "aliases": [
+        "garlic chili sauce",
+        "chili garlic sauce",
+        "chilli garlic sauce",
+        "chili paste with garlic"
+      ],
+      "description": "Prepared chili sauce/paste containing garlic; thickness, sweetness and oil content vary. Distinct from plain chili paste, garlic paste and specifically oil-packed chili-garlic products.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "d6f29083-c1ce-461f-8ee9-b638dccab7fd",
+      "label": "sambal oelek",
+      "aliases": [
+        "sambal ulek"
+      ],
+      "description": "Indonesian-style crushed chili paste called sambal oelek/ulek, distinct from other sambal formulations.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "6cb0a720-c1fd-4d3b-8039-635798ca7633",
+      "label": "Thai chili jam",
+      "aliases": [
+        "Thai chilli jam",
+        "nam prik pao"
+      ],
+      "description": "Thai cooked chili paste/jam (nam prik pao), with a roasted/fried sweet-savory profile. Ingredients may include seafood; distinct from plain chili paste.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "922b558c-6539-4640-afb2-85e97046fbf6",
+      "label": "prepared horseradish",
+      "aliases": [],
+      "description": "Grated horseradish preserved with vinegar/salt for use as a condiment, distinct from the whole root and cream-based horseradish sauce.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a8158212-4a1a-4210-aef8-11a09994d68a",
+      "label": "pickled garlic",
+      "aliases": [
+        "pickled garlics"
+      ],
+      "description": "Garlic preserved by pickling, distinct from fresh cloves and garlic paste. Pickling liquid and added sugar vary.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "74cde370-8c93-4a8f-a841-d90be039c0d6",
+      "label": "pickled grape leaves",
+      "aliases": [
+        "brined grape leaves"
+      ],
+      "description": "Grape leaves preserved in brine/acid for cooking, distinct from fresh leaves. Salt and acidity may require rinsing.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "0574a480-bedc-44ab-960b-51110ea728ba",
+      "label": "pickled scallion bulbs",
+      "aliases": [
+        "pickled scallion heads"
+      ],
+      "description": "Scallion/spring-onion bulb or white-base portions preserved by pickling; distinct from fresh scallions and their green leaves.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f85c1493-86a7-423c-996f-141253c28270",
+      "label": "pickled scallion brine",
+      "aliases": [
+        "pickled scallion head brine"
+      ],
+      "description": "Pickling liquid from preserved scallion bulbs, used as a seasoned acidic ingredient. Distinct from plain salt brine.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b8531f4e-341f-43e9-aa80-01d31d9d593f",
+      "label": "peach preserves",
+      "aliases": [],
+      "description": "Sweet peach preserve used as a cooking/baking component, distinct from generic mixed-fruit preserves and fresh peaches.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "60c1f4e9-acef-499a-bfda-9115f6d836b0",
+      "label": "unsweetened apple juice",
+      "aliases": [],
+      "description": "Apple juice specified without added sweetener; retain that formulation separately from unspecified or sweetened apple juice.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "48d8ce63-20e5-42d6-8529-02348000d137",
+      "label": "balsamic reduction",
+      "aliases": [
+        "balsamic glaze"
+      ],
+      "description": "Balsamic vinegar reduced/thickened into a glaze, with added sweetening unspecified. Distinct from ordinary liquid balsamic vinegar.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "216d4182-2a91-4db8-837c-0e7980b2c5c2",
+      "label": "reduced-fat creamy peanut butter",
+      "aliases": [
+        "reduced fat creamy peanut butter"
+      ],
+      "description": "Smooth/creamy peanut butter with reduced fat compared with its reference product; water, carbohydrate and baking behavior may differ from ordinary creamy peanut butter.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "45379358-73d7-4ded-a264-b01a67863d86",
+      "label": "light pancake syrup",
+      "aliases": [],
+      "description": "Pancake/table syrup sold as light or reduced-calorie, distinct from ordinary syrup and pure maple syrup. Exact sweetener formulation varies.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "78c000d1-93cc-4d7a-b865-0ec9fcc0c7bc",
+      "label": "olive-oil cooking spray",
+      "aliases": [
+        "olive oil flavored cooking spray",
+        "olive oil cooking spray"
+      ],
+      "description": "Cooking spray sold with olive-oil flavor/type; other oils, propellants or emulsifiers may be present. Distinct from liquid olive oil and unspecified cooking spray.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9ee10c27-607f-43c2-8d6b-47e4117db435",
+      "label": "baked beans",
+      "aliases": [],
+      "description": "Prepared beans in a savory/sweet sauce used as a cooking component, with bean, sauce and meat content unspecified. Distinct from plain cooked beans.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "foodon",
+          "external_id": "FOODON_03301946",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "foodon"
+        ]
+      }
+    },
+    {
+      "id": "c08d4861-eb6f-4fd7-8af3-17988382c4dc",
+      "label": "cheese soup",
+      "aliases": [],
+      "description": "Prepared cheese-based soup used as a recipe component; condensed/ready-to-serve form and cheese type remain unspecified. Distinct from dry soup mix.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "foodon",
+          "external_id": "FOODON_00003018",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "foodon"
+        ]
+      }
+    },
+    {
+      "id": "7de38c12-42c8-429c-9b2f-b1929742ee9e",
+      "label": "cream of chicken soup",
+      "aliases": [],
+      "description": "Prepared cream-style chicken soup, distinct from a dry soup mix. Concentration is unspecified; do not infer condensed form.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "foodon",
+          "external_id": "FOODON_03305127",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "foodon"
+        ]
+      }
+    },
+    {
+      "id": "e5fb2c28-a2a9-4466-ac99-1d56ca317076",
+      "label": "condensed cream of chicken soup",
+      "aliases": [],
+      "description": "Concentrated prepared cream-style chicken soup intended for dilution or use as a recipe component; distinct from ready-to-serve soup and dry mix.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "1b3e5b85-dced-445a-b59a-5945a6a274db",
+      "label": "condensed cream of mushroom soup",
+      "aliases": [],
+      "description": "Concentrated prepared cream-style mushroom soup, distinct from ready-to-serve mushroom soup and dry soup mix.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "6ed71f48-7e86-47e8-8ef0-27335774c092",
+      "label": "duxelles",
+      "aliases": [],
+      "description": "Finely chopped mushrooms cooked down with aromatics, commonly shallot/onion and fat, used as a filling or flavoring component. Distinct from raw mushrooms.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "bd154105-348f-40e4-ba0c-892ed17e640d",
+      "label": "casabe",
+      "aliases": [],
+      "description": "Thin crisp cassava flatbread used as a cooking/serving component; distinct from cassava flour and soft wheat bread.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2875e4be-48bf-4060-be9c-e737d9244a36",
+      "label": "sweet soy sauce",
+      "aliases": [
+        "sweet soy"
+      ],
+      "description": "Sweetened soy sauce with regional style, thickness and added aromatics unspecified. Distinct from the specifically Javanese kecap manis formulation; the reviewed recipe is Chinese.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e0d951c5-7107-475f-9fce-e92d0680e291",
+      "label": "low-sodium soy sauce",
+      "aliases": [
+        "low sodium soy sauce"
+      ],
+      "description": "Soy sauce explicitly specified as low-sodium, retaining that claim separately from a comparative reduced-sodium formulation. Numerical thresholds depend on labeling jurisdiction.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8304ed6b-0b7d-4788-9470-622b5769493d",
+      "label": "medium-firm tofu",
+      "aliases": [
+        "medium firm tofu"
+      ],
+      "description": "Tofu sold with a medium-firm texture/moisture grade, distinct from soft/silken, firm and extra-firm tofu.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "34d3f0bd-8226-4865-bb43-cde264642a86",
+      "label": "deep-fried tofu",
+      "aliases": [
+        "deep fried tofu"
+      ],
+      "description": "Tofu after deep-frying, with altered surface and moisture behavior; exact cut and seasoning are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4cdadff6-fd05-4cb0-8411-230f877bf33e",
+      "label": "tamarind paste",
+      "aliases": [],
+      "description": "Processed tamarind pulp in paste form for cooking; water, seed removal and concentration vary. Distinct from whole tamarind fruit and dry compressed pulp.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "wikidata-2026-10-23",
+          "external_id": "Q67207722",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "wikidata-2026-10-23"
+        ]
+      }
+    },
+    {
+      "id": "c2b021d0-2937-4be1-9890-7b86ba923736",
+      "label": "compressed tamarind pulp",
+      "aliases": [
+        "tamarind pulp block"
+      ],
+      "description": "Tamarind pulp sold/portioned as a compressed ball or block for soaking and extraction, as used in the reviewed Goan fish recipe. Distinct from whole pods and ready-diluted paste.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f35300c0-bfb7-470b-bee2-3f590163331d",
+      "label": "tomato passata",
+      "aliases": [
+        "passata",
+        "strained tomatoes"
+      ],
+      "description": "Smooth strained tomato preparation, generally an unconcentrated seed/skin-free tomato base. Distinct from concentrated tomato paste and a fully seasoned pasta sauce.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "11d7d6dd-abca-4569-a337-25c80d4ff9fe",
+      "label": "nori sheets",
+      "aliases": [
+        "dried nori sheets",
+        "pressed nori sheets"
+      ],
+      "description": "Edible red-seaweed material dried and pressed into sheets for sushi and other cooking uses; distinct from raw laver algae and loose seaweed flakes. Roasting and seasoning are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "wikidata-2026-10-23",
+          "external_id": "Q201565",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "wikidata-2026-10-23"
+        ]
+      }
+    },
+    {
+      "id": "d1d63205-bdff-4791-8e09-a34c5360f7f0",
+      "label": "nougatine",
+      "aliases": [],
+      "description": "Crisp confectionery component made from caramelized sugar and chopped nuts, commonly almonds. Distinct from soft nougat; exact nut composition varies.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5beff4c9-b66f-435c-b3ce-66c67ba32907",
+      "label": "Panquehue cheese",
+      "aliases": [],
+      "description": "Chilean Panquehue-type semi-soft cow-milk cheese used as a cooking ingredient. Distinct from generic cheese; specific producer and seasoning are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8be34d2d-6f65-4db4-9e11-3da8f6f34b8e",
+      "label": "Västerbottensost cheese",
+      "aliases": [
+        "Vasterbottensost cheese",
+        "Västerbotten cheese"
+      ],
+      "description": "Aged hard Swedish cow-milk cheese of the Västerbottensost type, retaining its named sharp/nutty flavor and cooking behavior.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "010bf469-7881-40f3-ac2e-ca280a9c4c30",
+      "label": "polenta cornmeal",
+      "aliases": [
+        "dry polenta",
+        "cornmeal for polenta"
+      ],
+      "description": "Dry corn/maize meal sold for making polenta, with grind and quick-cook treatment unspecified. Distinct from already cooked polenta.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "be8efb67-81d9-4769-a9bd-bac6655d683e",
+      "label": "cooked polenta",
+      "aliases": [],
+      "description": "Cornmeal cooked with liquid into polenta, used soft or set as a cooking component. Distinct from dry polenta meal; exact consistency and added dairy are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "foodon",
+          "external_id": "FOODON_03317508",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "foodon"
+        ]
+      }
+    },
+    {
+      "id": "589a19ac-8a4a-4238-bf2b-52065448fd12",
+      "label": "unbleached all-purpose flour",
+      "aliases": [
+        "all purpose unbleached flour",
+        "unbleached plain flour"
+      ],
+      "description": "Unbleached white wheat flour sold as all-purpose/plain flour, distinct from self-raising, cake and bread-flour blends.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3fc93135-2847-4d2f-906e-17b1766568d7",
+      "label": "hard-boiled egg",
+      "aliases": [
+        "hard boiled egg",
+        "hard-boiled eggs",
+        "hard cooked egg"
+      ],
+      "description": "Egg cooked in its shell until both white and yolk are firm, distinct from raw, soft-boiled and generic boiled eggs.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e3a8e185-fa14-43a1-a275-8496674e0d34",
+      "label": "boiled egg",
+      "aliases": [
+        "boiled eggs"
+      ],
+      "description": "Egg cooked in its shell by boiling; yolk firmness is unspecified. Distinct from a raw egg and from specifically hard-boiled eggs.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "10a2b859-fa99-462a-a190-1a2a0d0cfeb3",
+      "label": "fried ripe banana",
+      "aliases": [
+        "fried ripe bananas"
+      ],
+      "description": "Ripe banana after frying, distinct from raw banana and green plantain. Added fat and sugar are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5444d6b3-cf6c-4859-8be2-ac4775a38ae6",
+      "label": "French green lentil",
+      "aliases": [
+        "French green lentils",
+        "french lentils"
+      ],
+      "description": "Small firm green lentil of the French-green cooking type. No protected Le Puy origin is inferred; distinct from generic larger green lentils.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "d006e0f9-08bf-4d4b-acdd-d1594800aa76",
+      "label": "Japanese turnip",
+      "aliases": [
+        "Japanese turnips"
+      ],
+      "description": "Small tender turnip sold as a Japanese/salad turnip type; exact cultivar is unspecified. Distinct from generic mature turnips.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "982081f8-1db5-45f4-838e-d1fe7fa8be54",
+      "label": "Cubanelle pepper",
+      "aliases": [
+        "Cubanelle peppers",
+        "cuban pepper",
+        "cuban peppers"
+      ],
+      "description": "Long mild frying pepper of the Cubanelle/Cuban-pepper type, distinct from a generic bell pepper or unspecified Cuban chili.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "496e3fb1-1707-4bb9-86f7-740f84dc1323",
+      "label": "Romano pepper",
+      "aliases": [],
+      "description": "Long sweet pepper sold as Romano/Ramiro type; color is unspecified. Distinct from generic bell pepper and from hot chili peppers.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "502fb879-b382-4225-980b-7213e6c0d345",
+      "label": "lean ground pork",
+      "aliases": [
+        "lean minced pork"
+      ],
+      "description": "Minced pork specifically described as lean; exact fat percentage is unspecified. Retain that claim separately from unspecified pork mince.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "01f79161-b095-4fc0-aaa7-bb0df46c3aa8",
+      "label": "low-fat smoked sausage",
+      "aliases": [
+        "low fat smoked sausage"
+      ],
+      "description": "Smoked sausage with a low-fat formulation/claim; exact meat and numeric fat content are unspecified. Distinct from ordinary smoked sausage.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3be4be96-099d-4a0a-a809-658453a6b13f",
+      "label": "extra-sharp white cheddar",
+      "aliases": [
+        "extra sharp white cheddar cheese",
+        "extra-sharp white cheddar cheese"
+      ],
+      "description": "White cheddar with an extra-sharp/aged flavor grade; distinct from unspecified sharp cheddar. Exact aging period and milk formulation vary.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a7ef341c-e9a8-4223-a075-e0843e0ac0cb",
+      "label": "frozen whipped topping",
+      "aliases": [],
+      "description": "Prepared whipped dessert topping sold frozen for thawing/use; dairy versus nondairy formulation is unspecified. Distinct from liquid whipping cream and unfrozen whipped topping.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "05518091-6ec2-46bd-9ee8-1574744ed8c9",
+      "label": "fat-free frozen whipped topping",
+      "aliases": [
+        "fat free frozen whipped topping"
+      ],
+      "description": "Prepared frozen whipped dessert topping with a fat-free formulation. The reviewed source has malformed word order; the intended component is retained as a correction lead.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "455cbcb0-00ad-43cf-8be3-67c5832bb8ad",
+      "label": "dumpling wrappers",
+      "aliases": [
+        "dumpling skins",
+        "dumpling wrapper"
+      ],
+      "description": "Dough wrappers sold for dumplings, commonly wheat-based; exact flour, thickness and egg content are unspecified. Distinct from rice paper and named egg-roll wrapper products.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2179421b-2ead-4758-89bb-94d9d1b4ed65",
+      "label": "egg roll wrappers",
+      "aliases": [
+        "egg roll wrapper",
+        "eggroll wrappers"
+      ],
+      "description": "Dough wrappers sold for egg rolls, commonly wheat-based; exact egg content and thickness vary. Distinct from rice paper and generic dumpling skins.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "74c200d6-584f-4492-b3ea-e49ccaa8be0e",
+      "label": "lumpia wrappers",
+      "aliases": [
+        "lumpia wrapper"
+      ],
+      "description": "Thin wrappers sold for Filipino-style lumpia, commonly wheat-based; exact formulation is unspecified. Preserve the named wrapper type separately from thick egg-roll wrappers.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5a847c8f-a04e-47f8-b4d0-2039b7aacbd6",
+      "label": "medium egg noodles",
+      "aliases": [],
+      "description": "Egg noodles sold with a medium-width grade; the named width is retained separately from fine/wide noodles. Exact dimensions and fresh/dry state vary.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8f3abea6-6bb2-49e3-bcb8-a5edfd21cd12",
+      "label": "refried beans",
+      "aliases": [],
+      "description": "Prepared cooked beans mashed and fried/stewed into a thick component. Bean type, fat and seasoning are unspecified; distinct from specifically pinto refried beans.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "486bc24e-4861-461d-8d8a-e755f6968dce",
+      "label": "rotisserie chicken",
+      "aliases": [],
+      "description": "Chicken cooked by rotisserie roasting as a prepared cooking component; seasoning and cut are unspecified. Distinct from raw or generically cooked chicken.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3362ed1b-58a8-47e6-9b1d-117a9e7292ec",
+      "label": "salted roasted peanuts",
+      "aliases": [
+        "salted roast peanuts"
+      ],
+      "description": "Roasted peanuts with added salt; skin state and dry/oil-roasting process are unspecified. Distinct from a specifically skinless or unsalted product.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c818de3b-7514-4679-9374-934293d69ada",
+      "label": "tempura flour mix",
+      "aliases": [
+        "tempura flour",
+        "tempura batter mix"
+      ],
+      "description": "Dry flour/starch mixture sold for tempura batter, with leavening and egg content depending on formulation. Distinct from ordinary wheat flour and prepared wet batter.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "7745993b-b14a-41bd-b55d-dd2e18c49927",
+      "label": "yellow masarepa",
+      "aliases": [
+        "precooked yellow corn flour"
+      ],
+      "description": "Precooked yellow corn flour used for arepas and related cooking, distinct from raw cornmeal and nixtamalized masa harina.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "87aef2ed-2e00-4c32-8505-3cc887456dfc",
+      "label": "candy sprinkles",
+      "aliases": [
+        "sugar sprinkles"
+      ],
+      "description": "Small sugar-based confectionery decorations used in baking/desserts; shape and coloring vary. Distinct from chocolate-based sprinkles.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8f9e6bc0-4333-4d52-994d-a5e6c193464c",
+      "label": "chocolate sprinkles",
+      "aliases": [
+        "chocolate sprinkle"
+      ],
+      "description": "Small chocolate/cocoa-based confectionery decorations used in baking/desserts, distinct from plain sugar sprinkles.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "58ac353c-7d14-4a33-91b9-3c73ce843543",
+      "label": "ranch dressing",
+      "aliases": [],
+      "description": "Ranch-style salad dressing with an unspecified dairy/fat formulation; distinct from specifically buttermilk ranch, nonfat or dry dressing mixes.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [
+        {
+          "source": "wikidata-2026-10-23",
+          "external_id": "Q507816",
+          "relationship": "related"
+        }
+      ],
+      "provenance": {
+        "origin": "curated",
+        "references": [
+          "wikidata-2026-10-23"
+        ]
+      }
+    },
+    {
+      "id": "34bc3423-69b3-4a03-be3b-1b5c6ef0dc8f",
+      "label": "gluten-free soy sauce",
+      "aliases": [
+        "gluten free soy sauce"
+      ],
+      "description": "Soy sauce specified or labeled gluten-free, with exact grain base, fermentation and regional style unspecified. Retain the formulation claim separately from ordinary wheat-containing soy sauce; tamari is not automatically equivalent.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f340ef26-0fa9-4fe8-a265-577ed0f5f9e3",
+      "label": "whole-wheat seasoned breadcrumbs",
+      "aliases": [
+        "whole wheat seasoned breadcrumbs"
+      ],
+      "description": "Seasoned breadcrumbs made from bread sold as whole-wheat, retaining both the bread type and seasoning distinction from refined or unseasoned crumbs. Exact whole-grain proportion and seasoning blend are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "6cb979f6-cb06-45f1-943d-f705e66e6918",
+      "label": "seasoned sushi rice",
+      "aliases": [
+        "sumeshi",
+        "vinegared sushi rice"
+      ],
+      "description": "Cooked short- or medium-grain rice seasoned for sushi, commonly with rice vinegar, sugar and salt. Distinct from dry rice grains and plain cooked rice.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5e391a07-f412-4f7c-9ca7-db3571c7ede7",
+      "label": "cooked short-grain rice",
+      "aliases": [],
+      "description": "Short-grain rice after cooking, before any specific sushi-vinegar seasoning is asserted. Distinct from dry rice and seasoned sushi rice.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "06800551-47cd-4f24-b712-92bc2f2eb6c4",
+      "label": "buckwheat groats",
+      "aliases": [],
+      "description": "Hulled buckwheat kernels used for cooking; roasting state is unspecified. Distinct from whole unhusked seed, flour and explicitly raw or roasted groats.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "7bba9cdf-af4c-4e71-af7f-0d62200808d1",
+      "label": "Spanish onion",
+      "aliases": [
+        "Spanish onions"
+      ],
+      "description": "Large mature bulb onion sold as Spanish onion, generally mild and suitable for slicing/cooking; skin color/cultivar are unspecified. Distinct from Welsh onion/scallions.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
       }
     }
   ]
