@@ -282,9 +282,9 @@ pub fn stop() {
     });
 }
 fn maybe_load_kitchen(state: &StateRef) {
-    let (url, generation) = {
+    let (url, image_urls, generation) = {
         let mut s = state.borrow_mut();
-        if !s.flying || s.reduced || s.kitchen_requested || !(0.95..=2.65).contains(&s.target) {
+        if !s.flying || s.reduced || s.kitchen_requested || s.target > 1.65 {
             return;
         }
         let Some(url) = s.root.get_attribute("data-kitchen-url") else {
@@ -292,7 +292,18 @@ fn maybe_load_kitchen(state: &StateRef) {
         };
         s.kitchen_requested = true;
         let _ = s.root.set_attribute("data-kitchen-state", "loading");
-        (url, s.generation)
+        (
+            url,
+            [
+                s.root
+                    .get_attribute("data-kitchen-laptop-url")
+                    .unwrap_or_default(),
+                s.root
+                    .get_attribute("data-kitchen-cookbook-url")
+                    .unwrap_or_default(),
+            ],
+            s.generation,
+        )
     };
     let weak = Rc::downgrade(state);
     wasm_bindgen_futures::spawn_local(async move {
@@ -309,7 +320,14 @@ fn maybe_load_kitchen(state: &StateRef) {
                 .await
                 .map_err(|_| JsValue::from_str("Kitchen download failed"))?;
             let data = super::gltf::decode(&bytes).map_err(|e| JsValue::from_str(&e))?;
-            Ok::<_, JsValue>(data)
+            let mut images = Vec::new();
+            for url in image_urls {
+                let image = web_sys::HtmlImageElement::new()?;
+                image.set_src(&url);
+                wasm_bindgen_futures::JsFuture::from(image.decode()).await?;
+                images.push(image);
+            }
+            Ok::<_, JsValue>((data, [images.remove(0), images.remove(0)]))
         }
         .await;
         if let Some(state) = weak.upgrade() {
@@ -318,10 +336,10 @@ fn maybe_load_kitchen(state: &StateRef) {
                 return;
             }
             let loaded = match result {
-                Ok(data) => s
+                Ok((data, images)) => s
                     .renderer
                     .as_mut()
-                    .is_some_and(|r| r.upload_kitchen(&data).is_ok()),
+                    .is_some_and(|r| r.upload_kitchen(&data, &images).is_ok()),
                 Err(_) => false,
             };
             let _ = s.root.set_attribute(
@@ -519,8 +537,9 @@ impl State {
         if self.flying {
             let y = self.window.scroll_y().unwrap_or(0.);
             let a = self.anchors[0].get_bounding_client_rect().top() + y;
-            let step = self.anchors[1].get_bounding_client_rect().top() + y - a;
-            self.target = ((y - a) / step.max(1.)).clamp(0., 3.) as f32;
+            let step = self.anchors[2].get_bounding_client_rect().top()
+                - self.anchors[1].get_bounding_client_rect().top();
+            self.target = ((y - a) / step.max(1.)).clamp(0., 4.) as f32;
         } else {
             let mut closest = 0;
             let mut distance = f64::MAX;
@@ -574,7 +593,7 @@ impl State {
             self.time += dt;
         }
         let camera = flight::camera(
-            self.progress,
+            super::assembly::camera_progress(self.progress),
             self.width / self.height.max(1.),
             self.pointer,
         );
@@ -591,6 +610,13 @@ impl State {
             if let Ok(e) = el(&self.doc, "stop-name") {
                 e.set_text_content(Some(NAMES[active]));
             }
+        }
+        if let Ok(e) = el(&self.doc, "scroll-hint") {
+            e.set_text_content(Some(if self.progress < 0.85 {
+                "Scroll to assemble"
+            } else {
+                "Scroll to travel"
+            }));
         }
         if let Ok(e) = el(&self.doc, "route-progress") {
             if let Some(e) = e.dyn_ref::<HtmlElement>() {
@@ -614,7 +640,7 @@ impl State {
             } else if delta > 0. {
                 1. - super::math::smooth(0.12, 0.55, delta)
             } else {
-                1. - super::math::smooth(0.55, 1.65, -delta)
+                1. - super::math::smooth(0.08, 0.65, -delta)
             };
             let style = panel.style();
             let matrix = m
@@ -639,7 +665,17 @@ impl State {
             }
         }
         if let Some(r) = &self.renderer {
-            r.render(&camera, self.time, motion, self.width <= 700.);
+            r.render(
+                &camera,
+                self.time,
+                motion,
+                self.width <= 700.,
+                super::assembly::frame(self.progress),
+            );
+            let _ = self.canvas.set_attribute(
+                "data-assembly-frame",
+                &format!("{:.3}", super::assembly::frame(self.progress)),
+            );
             self.frames += 1;
             let _ = self
                 .canvas

@@ -28,9 +28,14 @@
 .app-shell:has(.about-tour.is-flight)>.main-content{padding-top:0;padding-bottom:0}
 @media(max-width:767px){.about-tour{--tour-top:82px}.about-tour .site-header{height:50px;padding-inline:18px}.about-tour .tour-brand{font-size:17px}.about-tour .journey-caption{display:none}.about-tour.is-flight .story-panel{max-height:calc(100svh - var(--tour-top) - 290px)}.about-tour .story{margin-top:70px}.about-tour.is-flight .story{margin-top:0}}
 @media(max-height:600px){.about-tour.is-flight .story-panel{max-height:calc(100svh - var(--tour-top) - 140px)}.about-tour .journey-caption{display:none}}
-.about-tour[data-kitchen-state=failed].is-flight #panel-2 .kitchen-fallback{display:block}
+.about-tour[data-kitchen-state=failed].is-flight #panel-0 .kitchen-fallback{display:block}
 
-@media(max-width:700px) and (min-height:650px){.about-tour.is-flight #panel-2{max-height:calc(100svh - var(--tour-top) - 370px)}}
+@media(max-width:700px) and (min-height:650px){.about-tour.is-flight #panel-0{max-height:calc(100svh - var(--tour-top) - 370px)}}
 
 .about-tour{overflow-anchor:none}
 .app-shell:has(.about-tour.is-flight){overflow-anchor:none}
+
+/* Hold the opening camera while the kitchen assembles under native scrolling. */
+.about-tour .waypoint:first-child{height:320svh}
+
+@media(max-width:767px){.about-tour.is-flight .journey-caption{display:none}}
