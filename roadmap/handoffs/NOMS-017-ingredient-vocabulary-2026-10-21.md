@@ -431,6 +431,38 @@ Review and test artifacts: `/workspace/vocabulary-labels`. New download:
 Two new private synthetic drafts were used; nothing was published or imported,
 and no production rollout or Details field is included.
 
+
+## Second held-out recipe sample (2026-10-25)
+
+The [gap-research guide](../../scripts/vocabulary/GAPS.md#second-held-out-1000-profile-study-2026-10-25)
+records another **1,000** disjoint source profiles: 200 TheMealDB recipes and 800
+Yummly/Kaggle ingredient lists, 40 from each of 20 cuisine labels. Zero prior-ID
+or exact ingredient-set overlaps; 10,891 lines, 1,850 normalized names, 732 new
+name strings. Selection uses the prior pinned catalogs and never vocabulary
+results. Titles/measures absent from Yummly remain absent.
+
+Current unchanged seed represents **10,185 lines (93.5%)**, with 516 fully covered
+profiles. **150 candidate gap phrases** (27 absent named materials, 123 specific
+forms/formulations) affect 182 lines across 154 profiles. These are research
+candidates, not approved new ingredients/aliases or a new-ID count. Source
+ambiguity, malformed wording, brands and subrecipes remain separate. Source and
+definition cross-checks identify rotini/fusilli, chicken bones and chevre frais
+as existing materials with naming/discoverability issues. Inactive/taxon source
+leads are not approved edible ingredient mappings.
+
+Read-only SQL captures 3,091 query forms; 100 authenticated live lookups plus two
+wildcard guards agree. Full-wording expected candidates appear for 8,790 covered
+lines, or 9,019 using full wording/short prefixes. This is retrieval evidence,
+not automatic recipe recognition. Selection and analysis reproduce exactly;
+canonical/source files are unchanged and no recipe/draft writes occur.
+
+External report, all 1,850 decisions, per-recipe/line CSVs, candidate families,
+147 upstream lexical leads and offline verification are at
+`/workspace/recipe-vocabulary-second-1000`; download
+`/workspace/noms-second-1000-recipe-gap-review.zip`. The mix differs from the first
+sample, so its raw coverage rate is not a before/after comparison. Define and
+identity-review the selected candidates before making seed changes.
+
 ## Remaining scope
 
 Other metadata dimensions, localization, further Wikidata/USDA curation, FNDDS and

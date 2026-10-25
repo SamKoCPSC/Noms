@@ -187,3 +187,48 @@ full-wording hits rise to 9,319 and full-or-prefix hits to 9,496, with zero
 regressions. Availability and lookup metrics remain separate from parsing,
 automatic assignment and compatibility. No details field or runtime matching
 change is introduced.
+
+
+## Second held-out 1,000-profile study (2026-10-25)
+
+A separate sample selects **200 additional TheMealDB recipes and 800 additional
+Yummly/Kaggle ingredient profiles** (40 per 20 cuisine labels) from the pinned
+captures. It excludes all first-sample IDs and exact normalized ingredient sets,
+without selecting on vocabulary outcomes. There are **10,891 lines, 1,850 names
+and 732 names new to the first sample**. Yummly records have no titles, measures,
+instructions or individual recipe URLs; those fields remain blank.
+
+Against preferred-label output
+`f6f5d4021ac18e7a4897752aa4c31aa9d2957ebf17608d4c6e5353ca0d280e4a`,
+**10,185/10,891 lines (93.5%)** have represented materials and **516 profiles**
+have every line represented. **150 candidate gap phrases** affect **182 lines
+across 154 profiles**: 27 missing named-material phrases and 123 specific forms,
+formulations or products with only related current definitions. These are not
+150 proposed UUIDs; synonym, scope and definition review must precede additions.
+All 150 phrases are new to the first sample's wording, rather than proof that
+all corresponding concepts are new. Another 430 ambiguous, 51 malformed,
+37 branded and six component lines are tracked separately.
+
+Useful candidate areas include farfalle/bowtie, cavatappi, ditalini and ziti;
+fresh mozzarella, low-fat/nonfat Greek yogurt and reduced-fat cream cheese;
+low/reduced/no-added-salt stock and broth types; dried fruits, roasted nuts and
+frozen produce; MSG, muesli, baked brioche and named seasoning/curry pastes.
+Cross-checking removes false gaps: chicken bones already exist, FoodOn lists
+rotini as an exact fusilli synonym, and fresh goat cheese is represented by
+chevre frais. These remain alias/discoverability leads. Captured obsolete MSG
+and taxon-only records must not be imported as current edible-material evidence.
+
+The production SQL query is replayed read-only for **3,091 query forms**; full
+wording retrieves expected candidates for **8,790 covered lines**, or **9,019**
+with three/four-character prefixes. A bounded **100 live lookups plus two
+wildcard guards** agree with the capture. Selection and analysis reproduce
+byte-for-byte; the seed and all four source descriptors remain unchanged.
+No recipe or draft is created, imported, published or rewritten by the study.
+
+Reports, every name-level decision, source leads and CSVs are external at
+`/workspace/recipe-vocabulary-second-1000`; the download is
+`/workspace/noms-second-1000-recipe-gap-review.zip`. The archive includes standard
+library offline verification and prior-sample fingerprints. Full catalogs and
+raw recipe instructions remain excluded. Its 200/800 provider mix differs from
+the first sample's 500/500 mix: these are breadth studies, not population estimates
+or a before/after vocabulary score. Earlier studies and archives stay frozen.
