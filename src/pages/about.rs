@@ -194,7 +194,7 @@ pub fn About() -> Element {
       for i in 0..4 {div{id:"stop-{i}",class:"waypoint","data-waypoint":"{i}"}}
      }
      nav{id:"tour-navigation",class:"tour-nav",aria_label:"Story chapters",
-      div{class:"nav-top",span{class:"tour-word","OUR STORY"}span{id:"stop-name",aria_live:"polite","The idea"}span{id:"scroll-hint",class:"scroll-hint","Scroll to assemble"}}
+      div{class:"nav-top",span{class:"tour-word","OUR STORY"}span{id:"stop-name",aria_live:"polite","The idea"}span{id:"scroll-hint",class:"scroll-hint","Scroll to travel"}}
       div{class:"route",div{class:"route-line",span{id:"route-progress"}}
        for i in 0..4 {a{id:"nav-{i}",href:"#{IDS[i]}",aria_label:"Chapter {i+1}: {NAMES[i]}",aria_current:if i==0{"step"}else{"false"},span{class:"route-dot"}span{class:"route-label","data-short":["Idea","Why","Creator","Philosophy"][i],"{NAMES[i]}"}}}
       }
