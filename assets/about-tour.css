@@ -35,9 +35,6 @@
 .about-tour{overflow-anchor:none}
 .app-shell:has(.about-tour.is-flight){overflow-anchor:none}
 
-/* Hold the opening camera while the kitchen assembles under native scrolling. */
-.about-tour .waypoint:first-child{height:320svh}
-
 @media(max-width:767px){.about-tour.is-flight .journey-caption{display:none}}
 
 /* The curtain is an enhancement: server-rendered/reading content stays available. */

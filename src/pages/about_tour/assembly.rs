@@ -1,10 +1,22 @@
-//! Scroll positions are shared by the camera, chapter panels and kitchen assembly.
-//! The opening gets one extra segment to assemble before forward camera travel.
-pub fn camera_progress(travel: f32) -> f32 {
-    (travel - 1.).clamp(0., 3.)
+//! The kitchen assembles once after loading, independently of camera travel.
+const DURATION: f32 = 3.;
+#[derive(Default)]
+pub struct Playback {
+    elapsed: f32,
 }
-pub fn frame(travel: f32) -> f32 {
-    40. + 120. * (travel / 0.85).clamp(0., 1.)
+impl Playback {
+    pub fn advance(&mut self, seconds: f32) {
+        self.elapsed = (self.elapsed + seconds.max(0.)).min(DURATION);
+    }
+    pub fn finish(&mut self) {
+        self.elapsed = DURATION;
+    }
+    pub fn finished(&self) -> bool {
+        self.elapsed >= DURATION
+    }
+    pub fn frame(&self) -> f32 {
+        40. + 120. * (self.elapsed / DURATION)
+    }
 }
 pub fn amount(frame: f32, start: f32, end: f32) -> f32 {
     // Keep the architectural shell intact before appliances begin to arrive.
@@ -18,12 +30,25 @@ pub fn amount(frame: f32, start: f32, end: f32) -> f32 {
 mod tests {
     use super::*;
     #[test]
-    fn kitchen_finishes_before_camera_leaves_the_opening() {
-        assert_eq!(camera_progress(0.85), 0.);
-        assert_eq!(frame(0.85), 160.);
-        for (travel, chapter) in [(0., 0.), (1., 0.), (2., 1.), (3., 2.), (4., 3.)] {
-            assert_eq!(camera_progress(travel), chapter);
-        }
+    fn intro_advances_without_scrolling_and_stays_complete() {
+        let mut playback = Playback::default();
+        assert_eq!(playback.frame(), 40.);
+        assert!(!playback.finished());
+        playback.advance(DURATION / 2.);
+        assert_eq!(playback.frame(), 100.);
+        playback.advance(DURATION);
+        assert_eq!(playback.frame(), 160.);
+        assert!(playback.finished());
+        playback.advance(-DURATION);
+        playback.advance(60.);
+        assert_eq!(playback.frame(), 160.);
+    }
+    #[test]
+    fn direct_chapter_entry_can_skip_an_unseen_intro() {
+        let mut playback = Playback::default();
+        playback.finish();
+        assert!(playback.finished());
+        assert_eq!(playback.frame(), 160.);
     }
     #[test]
     fn foundations_are_complete_at_the_start() {
@@ -32,15 +57,17 @@ mod tests {
         }
     }
     #[test]
-    fn assembly_is_clamped_and_reversible_without_time_or_history() {
+    fn groups_ease_into_place_during_the_intro() {
         assert_eq!(amount(-20., 112., 142.), 0.);
         assert_eq!(amount(160., 112., 142.), 1.);
-        let positions: Vec<_> = (0..100)
-            .map(|i| amount(frame(i as f32 / 100.), 112., 142.))
-            .collect();
-        assert!(positions.windows(2).all(|p| p[0] <= p[1]));
-        for (i, original) in positions.iter().enumerate().rev() {
-            assert_eq!(amount(frame(i as f32 / 100.), 112., 142.), *original);
+        let mut playback = Playback::default();
+        let mut previous = 0.;
+        for _ in 0..100 {
+            playback.advance(DURATION / 90.);
+            let position = amount(playback.frame(), 112., 142.);
+            assert!(position >= previous);
+            previous = position;
         }
+        assert_eq!(previous, 1.);
     }
 }

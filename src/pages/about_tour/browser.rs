@@ -59,6 +59,7 @@ struct State {
     kitchen_requested: bool,
     generation: u32,
     kitchen_ready: bool,
+    assembly: super::assembly::Playback,
     gate: Gate,
     loading_timeout: Option<gloo_timers::callback::Timeout>,
     loading_phrases: Option<gloo_timers::callback::Interval>,
@@ -135,6 +136,7 @@ pub fn start() -> Result<(), JsValue> {
         kitchen_requested: false,
         generation: 0,
         kitchen_ready: false,
+        assembly: super::assembly::Playback::default(),
         gate: Gate::Open,
         loading_timeout: None,
         loading_phrases: None,
@@ -681,7 +683,7 @@ impl State {
             let a = self.anchors[0].get_bounding_client_rect().top() + y;
             let step = self.anchors[2].get_bounding_client_rect().top()
                 - self.anchors[1].get_bounding_client_rect().top();
-            self.target = ((y - a) / step.max(1.)).clamp(0., 4.) as f32;
+            self.target = ((y - a) / step.max(1.)).clamp(0., 3.) as f32;
         } else {
             let mut closest = 0;
             let mut distance = f64::MAX;
@@ -722,6 +724,11 @@ impl State {
         };
         self.last = now;
         let motion = !self.paused && !self.gate.blocked();
+        // Warm-up stays behind the curtain. Only visible frames advance the intro;
+        // ambient pause (the mobile default) does not prevent its one-time playback.
+        if !self.gate.blocked() {
+            self.assembly.advance(dt);
+        }
         let blend = 1. - (-dt * 11.).exp();
         self.progress += (self.target - self.progress) * blend;
         if (self.target - self.progress).abs() < 0.0004 {
@@ -735,7 +742,7 @@ impl State {
             self.time += dt;
         }
         let camera = flight::camera(
-            super::assembly::camera_progress(self.progress),
+            self.progress,
             self.width / self.height.max(1.),
             self.pointer,
         );
@@ -752,13 +759,6 @@ impl State {
             if let Ok(e) = el(&self.doc, "stop-name") {
                 e.set_text_content(Some(NAMES[active]));
             }
-        }
-        if let Ok(e) = el(&self.doc, "scroll-hint") {
-            e.set_text_content(Some(if self.progress < 0.85 {
-                "Scroll to assemble"
-            } else {
-                "Scroll to travel"
-            }));
         }
         if let Ok(e) = el(&self.doc, "route-progress") {
             if let Some(e) = e.dyn_ref::<HtmlElement>() {
@@ -818,11 +818,11 @@ impl State {
                 self.time,
                 motion,
                 self.width <= 700.,
-                super::assembly::frame(self.progress),
+                self.assembly.frame(),
             );
             let _ = self.canvas.set_attribute(
                 "data-assembly-frame",
-                &format!("{:.3}", super::assembly::frame(self.progress)),
+                &format!("{:.3}", self.assembly.frame()),
             );
             self.frames += 1;
             let _ = self
@@ -853,11 +853,17 @@ impl State {
         let previous_gate = self.gate;
         self.gate = self.gate.after_frame();
         if self.gate != previous_gate {
+            // Later chapter entries should already have a settled kitchen when
+            // the visitor returns to the opening. Re-entry never resets it.
+            if !self.gate.blocked() && self.target >= 0.5 {
+                self.assembly.finish();
+            }
             self.sync_gate();
         }
         self.dirty = false;
         self.initial_alignment > 0
             || motion
+            || (!self.gate.blocked() && !self.assembly.finished())
             || self.gate != previous_gate
             || self.gate == Gate::Presenting
             || (self.target - self.progress).abs() > 0.0004
