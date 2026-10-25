@@ -605,8 +605,8 @@ impl State {
             } else {
                 Gate::Waiting
             };
-            self.loading_phrase = 0;
-            self.loading_status(LOADING_PHRASES[0]);
+            self.loading_phrase = (js_sys::Math::random() * LOADING_PHRASES.len() as f64) as usize;
+            self.loading_status(LOADING_PHRASES[self.loading_phrase]);
         } else if !self.flying {
             self.gate = Gate::Open;
         }

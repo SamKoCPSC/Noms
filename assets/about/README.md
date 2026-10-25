@@ -31,7 +31,7 @@ Mobile starts with ambient drift paused. Camera travel and reversible kitchen as
 
 The loader preserves linear glTF vertex colors until fragment lighting. The kitchen uses neutral studio fill and an AgX tone-mapping approximation, followed by sRGB display encoding, to bring its terracotta, peach, cream and oak closer to the Blender master. The tour's green atmospheric fog does not tint the kitchen. This remains a lightweight web lighting approximation rather than the master's Cycles render. The other tour objects keep their existing lighting. See `THIRD_PARTY_LICENSES.txt` for the tone-mapping attribution.
 
-The curtain offers “Click here if the page takes too long to load” throughout loading. Playful cooking phrases rotate every three seconds while loading, with a stable screen-reader status. The phrase timer stops when the curtain closes or the route unmounts. Asset or graphics failure, or a 25-second loading deadline, switches to the readable page and releases scrolling. Route exit cancels the deadline; graphics restoration and re-entering 3D warm the renderer again.
+The curtain offers “Click here if the page takes too long to load” throughout loading. A collection of 100 playful cooking phrases rotates every three seconds while loading, starting at a random phrase on each entry, with a stable screen-reader status. The phrase timer stops when the curtain closes or the route unmounts. Asset or graphics failure, or a 25-second loading deadline, switches to the readable page and releases scrolling. Route exit cancels the deadline; graphics restoration and re-entering 3D warm the renderer again.
 
 ## Checks
 
