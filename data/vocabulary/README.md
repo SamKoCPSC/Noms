@@ -100,6 +100,12 @@ checking its original source annotations. Current totals are **13,232 active,
 `adapters/ingredient-grocery-gaps.json`; all prior stages and source descriptors
 remain immutable. This adds suggestion data without assigning recipe identities.
 
+The [final random discovery audit](../../scripts/vocabulary/GAPS.md#final-random-ingredient-discovery-2026-10-26)
+checks 5,000 occurrences across 20 cuisine labels: 1,243 names from 4,375 unused
+profiles. It identifies 56 clear missing-material candidates and 20 qualified
+review candidates, plus two misleading exact-name definitions. This audit does
+not add ingredients or aliases; current vocabulary totals remain unchanged.
+
 The source coverage research still measures the original **100-ingredient**
 benchmark across 19 strata. Those percentages do not describe the expanded seed.
 See `coverage/benchmark.json` and the coverage review for source-matching evidence.

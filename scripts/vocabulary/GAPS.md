@@ -440,3 +440,103 @@ No new material-availability percentage or automatic-assignment score is claimed
 External evidence, lookup audits and the full canonical JSON/CSV are in
 `/workspace/vocabulary-grocery-gap-fill`; the portable download is
 `/workspace/noms-vocabulary-grocery-gaps.zip`. Earlier studies/downloads stay frozen.
+
+
+## Final random ingredient discovery (2026-10-26)
+
+This is a discovery-only audit of **5,000 ingredient occurrences**, balanced as
+**250 from each of 20 Yummly/Kaggle cuisine labels**. The sample contains **1,243
+normalized names** from **4,375 contributing profiles**, including **292 names
+not seen in either earlier study**. All 2,000 earlier recipe IDs and exact
+normalized ingredient-set profiles are excluded before selection. The sampled
+records have zero overlap with those IDs/profiles. Repeated staple occurrences
+are retained; this is not 5,000 unique ingredients or 5,000 complete recipes.
+Only selected occurrences are reviewed; full profiles provide source context.
+
+Selection ranks the remaining ingredient occurrences with SHA-256 using fixed
+seed `noms-final-ingredient-gap-5000-2026-10-26-v1`, taking 250 per cuisine after
+complete-profile deduplication. It never consults vocabulary matches. The source
+is the previously captured 39,774-profile [Yummly/Kaggle training set](https://www.kaggle.com/datasets/kaggle/recipe-ingredients-dataset),
+not a fresh crawl. Archive SHA-256 is
+`53d7ab877216c1dc02ab726087c890fa4ff36b75caab64c76d6ebfbc7e51b42d`;
+`train.json` is `f18e7e568d1c606774bfb134ece51ef0a143cd5069e6f9241bb6036b45b7d2b0`.
+The unchanged vocabulary is commit `70c01447aa46f35b90ea539a5b972ce7dd7d2b91`,
+seed `8a6c4f4054700d301dd293daa1de72f3e599723f631fe09eb8be45bee64515ab`.
+
+| Review outcome | Distinct names | Sampled occurrences |
+| --- | ---: | ---: |
+| Suitable material represented | 1,023 | 4,643 |
+| Clear missing-material candidates | 56 | 58 |
+| Qualified form/identity review | 20 | 25 |
+| Ambiguous source | 117 | 227 |
+| Brand/product specific | 16 | 17 |
+| Malformed source | 7 | 23 |
+| Composite/dish/component | 4 | 7 |
+| Total | 1,243 | 5,000 |
+
+The **76 discovery candidates account for 83 occurrences (1.66%)**. They are not
+76 approved new UUIDs. All clear candidates occur once or twice in this sample.
+Material availability is **4,643/5,000 (92.86%)**, an editorial availability
+measure for this balanced source corpus. It is not automatic assignment accuracy,
+live autocomplete performance, a whole-recipe completeness score or a global
+population estimate. The selection differs from the earlier purposive studies,
+so their percentages are not a before/after comparison. The provider's 20 labels
+do not cover every popular cuisine; missing titles, measures, instructions and
+individual recipe URLs are not invented.
+
+Clear candidates include annatto oil, cavatelli, guanciale, seitan, branzino,
+kelp noodles, yu choy, dried porcini, toasted nori, tarragon vinegar, char-siu
+sauce, tikka-masala paste, crème anglaise, coconut/maple/peppermint baking
+extracts, specific plain-yogurt and broth formulations, named produce varieties,
+meat cuts/parts and smoked meat products. Existing broader ingredients or a
+collection of separate components do not automatically establish a qualified
+formulation. Partial cases include lo-mein/Korean noodle forms, fines herbes,
+farofa, instant couscous, light cream cheese, frozen puff-pastry sheets, and tofu
+puffs versus the existing broader fried-tofu definition. Check qualifiers and
+existing definitions before approving additions or aliases.
+
+### False gaps and definition review
+
+Bacon drippings/grease are represented by cooked bacon fat; shungiku by garland
+chrysanthemum leaves; crab meat by shelled crabmeat; crawfish by crayfish; green
+grapes by white grapes; and pork butt by Boston butt. Culinary references and
+original FoodOn sucrose/water annotations support rock sugar as existing rock
+candy, so it is not another new ingredient. Ceylon cinnamon is represented by
+the existing cinnamon-bark definition naming *Cinnamomum verum*.
+
+Two misleading exact matches need separate cleanup, without inventing new IDs:
+
+- `sweet peas` currently resolves by exact alias to an entry defined as
+  *Lathyrus odoratus*. Culinary garden peas already exist as `green pea`.
+- `Lamb chops` is defined as a grilled dish, while existing singular `lamb chop`
+  defines the raw meat cut. A plural string hit must not select the dish ID for
+  the cooking cut.
+
+There are also **318 covered nonliteral names**, including physical preparation
+wording. This does not mean 318 absent ingredients, mandatory global aliases or
+proven UI failures; exact-name availability is a separate measure from retrieval.
+
+[Ronzoni](https://ronzoni.com/product/rotelle/) explicitly sells rotelle as spiral
+pasta. Other suppliers use the name for wheels, so the source phrase is retained
+for qualified shape review rather than forcing a wheel identity. Likewise,
+[sirloin tip](https://www.beefitswhatsfordinner.com/cuts/cut/2793/sirloin-tip)
+comes from the round/knuckle in US retail naming, not the similarly named sirloin
+primal. [Prepared seitan](https://uptonsnaturals.com/products/traditional-seitan/)
+is distinct from the existing finely ground wheat-gluten source record.
+
+### Artifacts and verification
+
+Full occurrence/name audits, all 56 clear candidates, all 20 qualified-review
+candidates, definition-quality flags, explicit decisions, source leads, hashes,
+source contexts and standard-library replay tools are external at
+`/workspace/ingredient-gap-final-5000`. Download
+`/workspace/noms-final-5000-ingredient-gap-review.zip`.
+
+The independent sampling replay reproduces every selected record from the pinned
+full archive without reading vocabulary or review outcomes. Offline verification
+checks all 5,000 rows, cuisine balance, exclusions, source-context positions,
+all 1,243 decisions, active UUID references, CSV counts and file pins. The seed
+and four-source manifest remain byte-identical; no recipes, aliases, canonical
+entries or deployment state change. Raw reference pages, the full provider
+archive and private browser/session data stay outside Git and the download.
+Earlier reports and download bundles remain frozen.

@@ -557,6 +557,38 @@ Artifacts: `/workspace/vocabulary-grocery-gap-fill`; complete vocabulary/review
 archive: `/workspace/noms-vocabulary-grocery-gaps.zip`. Earlier reports and
 archives remain frozen.
 
+## Final random gap discovery — 2026-10-26
+
+Discovery-only random sample: **5,000 ingredient occurrences**, 250 per each of
+20 Yummly/Kaggle cuisine labels; **1,243 names**, **4,375 source profiles**,
+**292 names new to both earlier samples**. Zero prior recipe-ID or exact profile
+overlap. Sampling uses a fixed SHA-256 seed and the pinned 39,774-profile archive,
+without vocabulary-based selection. Only selected rows count; full profiles are
+source context, not additional reviewed ingredients or complete-recipe checks.
+
+Results: **4,643 covered**, **58 clear-gap occurrences across 56 names**, **25
+qualified-review occurrences across 20 names**, 227 ambiguous, 17 branded, 23
+source errors and seven composite rows. The 76 candidates need curation; none
+is automatically assigned a new UUID. The 92.86% editorial availability rate is
+specific to this balanced source-corpus sample and is not comparable with earlier
+purposive rates or automatic-assignment accuracy. No vocabulary/deployment change.
+
+Important follow-up: exact `sweet peas` currently names *Lathyrus odoratus*, while
+culinary garden peas already exist as `green pea`; plural `Lamb chops` describes
+a grilled dish, while singular `lamb chop` defines the raw cut. Track these as
+name/definition cleanup, not new ingredient gaps. Rotelle can mean spiral pasta
+in manufacturer naming and is left for shape review. Rock sugar, bacon drippings,
+shungiku and other verified synonyms are removed from the new-ingredient queue.
+
+The seed remains commit `70c01447aa46f35b90ea539a5b972ce7dd7d2b91`, SHA-256
+`8a6c4f4054700d301dd293daa1de72f3e599723f631fe09eb8be45bee64515ab`.
+[GAPS.md](../../scripts/vocabulary/GAPS.md#final-random-ingredient-discovery-2026-10-26)
+records scope, counts, examples, source pins and limitations. Complete sample,
+explicit decisions, candidate/quality CSVs and verified independent replay are in
+`/workspace/ingredient-gap-final-5000`; download
+`/workspace/noms-final-5000-ingredient-gap-review.zip`. Generated full audits,
+provider snapshots and raw reference captures remain outside Git.
+
 ## Remaining scope
 
 Other metadata dimensions, localization, further Wikidata/USDA curation, FNDDS and
