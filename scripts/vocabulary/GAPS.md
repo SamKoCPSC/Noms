@@ -1,5 +1,9 @@
 # Reviewed cooking-material gaps
 
+Current maintained totals after the [second-sample curation](#second-sample-curation-2026-10-25)
+are **13,203 active, 81 retired and 8,847 active aliases**. Earlier stage counts,
+source studies and checksums below remain frozen.
+
 The first curation layer follows the immutable FoodOn, Wikidata, USDA and alias/scope
 stages. It adds **258 curated ingredients**, **246 aliases on those additions**
 and **25 aliases on 15 existing entries**. Its output contains **13,039
@@ -232,3 +236,113 @@ library offline verification and prior-sample fingerprints. Full catalogs and
 raw recipe instructions remain excluded. Its 200/800 provider mix differs from
 the first sample's 500/500 mix: these are breadth studies, not population estimates
 or a before/after vocabulary score. Earlier studies and archives stay frozen.
+
+
+## Second-sample curation (2026-10-25)
+
+The [explicit ledger](../../data/vocabulary/adapters/ingredient-second-sample-gaps.json)
+reviews all 150 candidate phrases from the held-out study plus nine existing-name
+discoveries. It adds **148 curated definitions**, including qualified alternatives
+for unresolved wording, and **298 aliases**: 273 on new entries and 25 appended to
+13 existing identities. These counts are not a one-to-one conversion of recipe
+phrases into ingredients. Current totals are **13,203 active, 81 retired and
+8,847 active aliases**. All four source descriptors and every preexisting field
+remain unchanged except the approved alias suffixes.
+
+The additions cover MSG; farfalle/bowtie, cavatappi/cellentani, ditalini and ziti;
+fresh mozzarella, low-fat/nonfat Greek-yogurt forms, reduced-fat cream cheese;
+stock/broth, sodium and concentration variants; dried fruits, frozen produce,
+roasted nuts; baking products, seasonings and named culinary plant/material types.
+Plain/flavored, fresh/low-moisture, whole/ground, raw/cooked, stock/broth,
+low/reduced/no-added-salt and meaningful edible-part differences retain separate
+IDs. Unknown species, flavor, salt, sweetness, processing or brand stays unknown.
+
+Definition review reuses published IDs for ancho powder, low-fat mayonnaise whose
+definition explicitly includes light mayonnaise, fusilli/rotini, chicken bone,
+TVP, chevre frais, ramson, seltzer water, gelatine, heavy cream and whole-grain
+bread, chocolate liquor/unsweetened chocolate and sopressata salami/soppressata. No old identities are merged, retired or relabeled.
+
+Five phrases remain held: **apricot brandy**, **Filipino eggplant**, **thin pizza
+crust**, **33% less sodium ham** and **40% less sodium taco seasoning mix**.
+Explicit apricot liqueur/eau-de-vie, raw/prebaked thin bases and generic
+reduced-sodium product alternatives are provided without claiming to resolve the
+bare phrase, exact comparison product or unknown regional variety.
+
+Original-author evidence resolves the stroopwafel's schenkstroop and the Jamaican
+bun's browning sauce only for their recipe rows; neither ambiguous phrase becomes
+a global alias. The pinned congee instructions say ginger juice, while its
+ingredient field says ginger cordial. That mismatch remains a source correction;
+the linked author page could not be independently retrieved in this run. Real
+sweetened ginger cordial and plain ginger juice have separate definitions.
+Malformed `gelatine leafs` and `color food green` remain correction leads, with
+properly named gelatin sheets and green food coloring available.
+
+Current FDA evidence supports the new curated MSG material. The obsolete FoodOn
+MSG identifier is never imported or reactivated. Captured FoodOn/USDA/Wikidata
+records and manufacturer examples support definition/form review, not exact
+source mappings, brand aliases, fixed nutrient values or substitution guarantees.
+Definitions use original curated wording; raw reference pages/catalogs stay
+outside Git. Evidence URLs and SHA-256 hashes are recorded in the ledger.
+
+### Replay
+
+Input is the unchanged preferred-label output at
+`b1cedbea2f0e8d25973096094d16718615a8060a`:
+
+- Input seed: `f6f5d4021ac18e7a4897752aa4c31aa9d2957ebf17608d4c6e5353ca0d280e4a`
+- Output seed: `6e703364b9ab3b7476a0637b7d1063dcdf0096dfb26d6b7a42b740b39acfa821`
+- Source manifest: `1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c`
+
+Obtain the complete input seed/source pair from that commit into an external
+folder, then run:
+
+```sh
+python3 scripts/vocabulary/fill_gaps.py \
+  --seed /tmp/second-gap-base/ingredients.json \
+  --sources /tmp/second-gap-base/sources.json \
+  --policy data/vocabulary/adapters/ingredient-second-sample-gaps.json \
+  --output /tmp/second-gap-review
+python3 -m unittest discover -s scripts/vocabulary -p 'test_*.py'
+```
+
+The full bundle reproduces byte-for-byte. Prior source, gap and label tests
+verify/remove each later stage at its own immutable pin before checking earlier
+invariants. New final-seed tests check existing fields/aliases, material
+separation, qualified alternatives, scoped corrections, MSG evidence and name
+ownership. All **101 Python tests** pass. The Rust validator accepts **13,284
+entries/four sources with zero warnings**.
+
+### Deployment and recipe checks
+
+Local test deployment passes transactional dry-run rollback, final definition
+comparison and zero-change repeat loading. All preexisting draft, recipe and
+immutable-version hashes remain unchanged. All **446 new preferred/alias names**
+return their intended UUID first through the production SQL query. Chromium
+passes selection/autosave/reload, clearing the ID on edit, free-text fallback
+and WASM delivery. All **181 authenticated lookup checks** pass against the
+final canonical bundle. One private synthetic draft
+was created for the UI probe; no recipe was imported or published.
+
+In the held-out sample, material availability rises **10,185 → 10,359 of 10,891
+lines (93.5% → 95.1%)**, with fully covered profiles rising **516 → 616**. There
+are no remaining confirmed missing/partial names from that candidate queue;
+the five ambiguous product/source phrases and three correction cases remain
+explicitly tracked rather than counted as resolved ingredients. Other source
+ambiguities, brands and components remain outside full coverage.
+
+Full-wording expected candidate hits rise **8,790 → 8,973**; full-or-short-prefix
+hits rise **9,019 → 9,199**, under the updated specific-material review. On the
+frozen previous 10,185 covered lines and their original expected UUIDs, full
+hits rise to **8,801** and full-or-prefix hits to **9,025**, with zero regressions.
+The first 1,000-profile sample retains **10,349 covered lines/667 fully covered
+profiles**, **9,370 full** and **9,520 full-or-prefix** candidate hits, also with
+zero regressions. These are editorial material-availability and retrieval
+measures, not automatic recipe recognition or population estimates. Ranking,
+parser behavior and the optional Details-field design remain unchanged.
+
+The full vocabulary JSON/CSV, new-entry list, decision/held audits, source pins
+and both replayable recipe after-checks are external at
+`/workspace/vocabulary-second-gap-fill`; download
+`/workspace/noms-vocabulary-second-gap-fill.zip`. Earlier studies/downloads stay
+frozen. Raw instructions, catalogs, reference HTML, browser sessions and private
+draft data are excluded from the download. No production rollout is included.

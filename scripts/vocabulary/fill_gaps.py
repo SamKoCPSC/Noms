@@ -1,4 +1,4 @@
-"""Apply the explicit cooking-material review after the immutable alias stage.
+"""Apply an explicit cooking-material review to its checksum-pinned preceding seed.
 
 No network, fuzzy identity inference, UUID generation or recipe rewrites.
 The ledger owns new UUIDs and only appended, explicitly reviewed aliases.
@@ -16,6 +16,7 @@ from foodon import normalize, require, valid_id, validate
 ROOT=Path(__file__).resolve().parents[2]
 DEFAULT_POLICY=ROOT/'data/vocabulary/adapters/ingredient-gap-review.json'
 FOLLOWUP_POLICY=ROOT/'data/vocabulary/adapters/ingredient-gap-followup.json'
+SECOND_SAMPLE_POLICY=ROOT/'data/vocabulary/adapters/ingredient-second-sample-gaps.json'
 
 
 def encoded(value):

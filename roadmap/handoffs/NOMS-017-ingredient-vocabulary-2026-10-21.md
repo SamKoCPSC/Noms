@@ -463,6 +463,63 @@ External report, all 1,850 decisions, per-recipe/line CSVs, candidate families,
 sample, so its raw coverage rate is not a before/after comparison. Define and
 identity-review the selected candidates before making seed changes.
 
+
+## Second-sample common-ingredient fill (2026-10-25)
+
+The [curation/replay guide](../../scripts/vocabulary/GAPS.md#second-sample-curation-2026-10-25)
+and `ingredient-second-sample-gaps.json` review all 150 second-sample candidate
+phrases plus nine naming discoveries. They add **148 defined ingredients**,
+including qualified alternatives, and **298 aliases** (273 on new entries,
+25 appended to 13 existing identities). Examples include MSG, named pasta shapes,
+fresh mozzarella, Greek-yogurt/fat variants, stock/broth/sodium forms, preserved
+produce and common baking/seasoning products. Existing identities are reused
+for verified equivalents such as ground ancho/ancho powder, rotini/fusilli,
+unsweetened chocolate/chocolate liquor and soppressata/sopressata salami.
+
+Current seed SHA-256:
+`6e703364b9ab3b7476a0637b7d1063dcdf0096dfb26d6b7a42b740b39acfa821`.
+Totals: **13,203 active, 81 retired, 8,847 active aliases**. All original preferred
+labels, definitions, statuses, mappings and provenance remain unchanged; only
+approved aliases are appended. All four source descriptors retain their bytes.
+The new stage follows the immutable preferred-label output. Historical tests
+verify/remove each later layer before asserting source/curation/label invariants.
+
+Five phrases remain held: apricot brandy, Filipino eggplant, thin pizza crust,
+33%-less-sodium ham and 40%-less-sodium taco mix. Explicit liqueur/eau-de-vie,
+raw/prebaked thin bases and generic reduced-sodium alternatives do not force a
+bare name, cultivar or unknown comparison product into a precise identity.
+Schenkstroop and Jamaican browning are resolved only in their source recipe
+contexts. The congee's cordial/juice mismatch and malformed gelatin-leaf/coloring
+names remain correction cases, with the intended materials available. Current
+FDA evidence supports MSG; the obsolete FoodOn identifier is not reactivated.
+Raw source instructions/reference pages remain external; brand examples do not
+create brand aliases or exact nutrition/source mappings.
+
+All **101 Python tests** pass; authoritative validation accepts **13,284 entries
+and four sources with no warnings**. Full seed/source replay is byte-identical.
+Local deployment passes transactional rollback, definition equality, no-op repeat
+loading and preservation of all preexisting authored row hashes. All **446 new
+preferred/alias names** resolve to their intended UUID first. Chromium passes
+181 final lookups, keyboard/mouse selection, UUID autosave/reload, clearing on
+edit, lookup-failure free text and WASM delivery. One new private synthetic draft; no recipe import/publication or
+production rollout.
+
+The second sample rises **10,185 → 10,359 covered lines out of 10,891**
+(**93.5% → 95.1%**) and **516 → 616 fully covered profiles**. The candidate-gap
+queue is empty after clear materials, ambiguity and source corrections receive
+their dispositions; this does not imply all source rows are resolved. Full
+candidate hits rise **8,790 → 8,973** and full/short-prefix hits **9,019 → 9,199**.
+On the frozen 10,185 previously covered lines/expected IDs, full hits rise to
+8,801 and full-or-prefix to 9,025, with zero losses. The original 1,000 sample
+retains 10,349 covered lines/667 fully covered profiles and 9,370/9,520 retrieval
+hits, also with zero losses. No matching/ranking/parser or Details-field changes.
+
+External evidence, audits, full vocabulary JSON/CSV, decision/held lists and both
+recipe after-checks are in `/workspace/vocabulary-second-gap-fill`. Download:
+`/workspace/noms-vocabulary-second-gap-fill.zip`. Earlier reports/archives stay
+frozen. Generated catalogs, instructions, raw reference pages, browser sessions
+and private draft data are excluded from Git/downloads.
+
 ## Remaining scope
 
 Other metadata dimensions, localization, further Wikidata/USDA curation, FNDDS and

@@ -66,11 +66,11 @@ class AliasTest(unittest.TestCase):
         # rewriting its immutable output pin for later ingredient additions.
         gap_policy=json.loads(fill_gaps.DEFAULT_POLICY.read_text())
         followup=json.loads(fill_gaps.FOLLOWUP_POLICY.read_text())
-        first_gap_seed=fill_gaps.restore_baseline(rename_labels.restore_baseline(json.loads(seed_path.read_text())),followup)
+        first_gap_seed=fill_gaps.restore_baseline(rename_labels.restore_maintained_baseline(json.loads(seed_path.read_text())),followup)
         alias_seed=fill_gaps.restore_baseline(first_gap_seed,gap_policy)
         self.assertEqual(fill_gaps.checksum(alias_seed),policy['expected_output_checksum'])
         self.assertEqual(aliases.digest(Path('data/vocabulary/sources.json')),policy['base_sources_checksum'])
-        seed=rename_labels.restore_baseline(json.loads(seed_path.read_text()));by_label={e['label']:e for e in seed['entries']}
+        seed=rename_labels.restore_maintained_baseline(json.loads(seed_path.read_text()));by_label={e['label']:e for e in seed['entries']}
         for label,alias in [('egg','eggs'),('all-purpose flour','plain flour'),('cumin (powdered)','ground cumin'),
                             ('eggplant','egg plants'),('coriander leaf','cilantro leaves')]:
             self.assertIn(alias,by_label[label]['aliases'])

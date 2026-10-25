@@ -11,7 +11,7 @@ class FollowupTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.policy=json.loads(gaps.FOLLOWUP_POLICY.read_text())
-        cls.seed=rename_labels.restore_baseline(json.loads((gaps.ROOT/'data/vocabulary/ingredients.json').read_text()))
+        cls.seed=rename_labels.restore_maintained_baseline(json.loads((gaps.ROOT/'data/vocabulary/ingredients.json').read_text()))
         cls.sources=json.loads((gaps.ROOT/'data/vocabulary/sources.json').read_text())
         cls.base=gaps.restore_baseline(cls.seed,cls.policy)
         cls.bylabel={e['label']:e for e in cls.seed['entries']}

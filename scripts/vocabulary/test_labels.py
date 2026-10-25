@@ -12,7 +12,7 @@ class PreferredLabelTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.policy = json.loads(labels.DEFAULT_POLICY.read_text())
-        cls.seed = json.loads((ROOT / 'data/vocabulary/ingredients.json').read_text())
+        cls.seed = labels.maintained_label_stage(json.loads((ROOT / 'data/vocabulary/ingredients.json').read_text()))
         cls.sources = json.loads((ROOT / 'data/vocabulary/sources.json').read_text())
         cls.base = labels.restore_baseline(cls.seed, cls.policy)
         cls.entries = {e['id']: e for e in cls.seed['entries']}

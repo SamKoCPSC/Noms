@@ -13,7 +13,7 @@ class GapReviewTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.policy=json.loads(gaps.DEFAULT_POLICY.read_text())
-        maintained=rename_labels.restore_baseline(json.loads((gaps.ROOT/'data/vocabulary/ingredients.json').read_text()))
+        maintained=rename_labels.restore_maintained_baseline(json.loads((gaps.ROOT/'data/vocabulary/ingredients.json').read_text()))
         # Keep checking the original gap stage at its original immutable pin.
         followup=json.loads(gaps.FOLLOWUP_POLICY.read_text())
         cls.seed=gaps.restore_baseline(maintained,followup)

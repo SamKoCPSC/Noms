@@ -1,9 +1,9 @@
 # Maintained ingredient vocabulary
 
 `ingredients.json` is the reviewed source of truth for ingredient suggestions.
-The seed contains **13,055 active ingredients**: the original 100 curated entries,
+The seed contains **13,203 active ingredients**: the original 100 curated entries,
 10,027 FoodOn-derived cooking/pantry entries, 2,550 Wikidata additions, 104
-USDA additions and 274 subsequently curated cooking-material gaps.
+USDA additions and 422 subsequently curated cooking-material definitions.
 Another 81 identities are retained as retired: 60 from the original deployment
 review and 21 from the subsequent ingredient-scope cleanup.
 Every original ID, description and prior searchable label/alias is preserved,
@@ -74,11 +74,21 @@ The subsequent [preferred-label review](../../scripts/vocabulary/LABELS.md)
 renames **2,624** parenthetical labels into ordinary cooking word order, such as
 `tomato (canned)` → `canned tomatoes`. All old names remain searchable against
 the same UUIDs. Another **244** labels retain their wording for contextual,
-scientific or name-ownership reasons. Current totals are **13,055 active,
+scientific or name-ownership reasons. Totals at that stage are **13,055 active,
 81 retired and 8,549 active aliases**. Cooking states, species, edible parts,
 fat/sodium qualifiers and packing media retain their distinctions. This layer
 changes preferred vocabulary labels only; recipes and source definitions remain
 unchanged. Historical stage counts and checksums above remain frozen.
+
+
+The subsequent [second-sample curation](../../scripts/vocabulary/GAPS.md#second-sample-curation-2026-10-25)
+adds **148 defined cooking materials** and **298 aliases** (273 on new entries,
+25 on 13 existing identities). These include MSG, named pasta shapes, fresh
+mozzarella, Greek-yogurt formulations, preserved produce and stock/broth forms.
+Ambiguous names get qualified alternatives or scoped corrections rather than
+forced identities. All prior preferred labels, descriptions, source evidence,
+statuses and alias order remain intact. Current totals are **13,203 active,
+81 retired and 8,847 active aliases**; the four-source manifest is unchanged.
 
 The source coverage research still measures the original **100-ingredient**
 benchmark across 19 strata. Those percentages do not describe the expanded seed.

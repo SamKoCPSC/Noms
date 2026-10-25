@@ -93,3 +93,13 @@ The downloadable `/workspace/noms-vocabulary-readable-labels.zip` contains full
 vocabulary JSON/CSV, the old/new/held audit, replay tools, source pins and the
 projected recipe analysis. Raw catalogs, recipe instructions, browser sessions
 and private draft data are excluded. Earlier downloadable reports stay frozen.
+
+
+## Later curation
+
+The [second-sample gap layer](GAPS.md#second-sample-curation-2026-10-25) follows
+this immutable output. Its own ledger adds ingredients/alias suffixes without
+changing these preferred labels. `maintained_label_stage` verifies and removes
+that later layer before historical label tests; `restore_maintained_baseline`
+then recovers the original pre-label seed. The label review's pins and results
+above remain frozen; current counts are in the maintained vocabulary README.
