@@ -133,12 +133,24 @@ Use `just seed-vocabulary --validate-only --file PATH --sources PATH` to run the
 Rust validator without connecting to a database before a normal loader dry-run.
 
 Apply the declarative schema with the existing `just migrate` workflow first.
-With the deployment/seed role's `DATABASE_URL` exported, run:
+Production database preparation now runs the packaged loader automatically with
+`--if-changed` after schema/grants. A fingerprint of both parsed JSON contracts is
+checked against the latest committed seed receipt under the writer lock. Matching
+inputs skip the entry scan and all seed writes. Changed inputs load atomically;
+failures and dry runs do not mark them applied. JSON whitespace/key order does
+not change the fingerprint; ingredient/alias/status/source changes do.
+
+For an explicit check or repair, with the deployment/seed role's `DATABASE_URL`
+exported, run:
 
 ```bash
 just seed-vocabulary --dry-run
 just seed-vocabulary
 ```
+
+Omitting `--if-changed` checks actual database definitions even if the fingerprint
+matches. This is the repair path for out-of-band database edits. Deployment uses
+the committed files without fetching or regenerating any upstream dataset.
 
 The recipe editor searches maintained English labels and aliases by prefix after
 two characters. Results prefer exact labels, then exact aliases, then prefixes;

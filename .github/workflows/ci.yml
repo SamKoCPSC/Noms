@@ -208,6 +208,9 @@ jobs:
       - name: Verify CI and deployment workflow
         run: bash scripts/tests/test-ci-deployment-workflow.sh
 
+      - name: Verify deployment preparation and seeding
+        run: python3 scripts/tests/test-deployment-seeding.py
+
   # Schema drift detection and destructive change blocking.
   # Runs on PRs that modify migrations/schema.sql or migrations/extensions.sql.
   # Uses pgschema to generate a plan against the staging database, then

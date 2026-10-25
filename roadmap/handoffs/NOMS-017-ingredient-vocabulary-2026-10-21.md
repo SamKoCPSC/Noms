@@ -631,6 +631,41 @@ records scope, evidence and limitations. External artifacts:
 `/workspace/noms-vocabulary-final-gap-fill.zip`. Raw catalogs/pages and private
 browser/draft data remain outside Git/downloads; earlier studies stay frozen.
 
+## Automatic deployment loading and unchanged-seed guard — 2026-10-26
+
+The production image now packages `seed-vocabulary` plus the maintained ingredient
+and source JSON. `entrypoint.sh --prepare-database` applies extensions, schema and
+runtime grants, then loads vocabulary with the deployment role and exits. Both
+repository Railway configs use that pre-deploy command. Image-backed services
+need the same command in Railway Settings → Deploy → Pre-deploy Command; startup
+also prepares the database as a fallback. The runtime server retains its own
+restricted database URL and receives no migration credentials.
+
+`--if-changed` hashes both parsed JSON contracts using the existing receipt format.
+Under the seed-writer advisory lock it compares only the latest successful
+`vocabulary_seed_runs` checksum. A match returns `skipped: true` before reading
+ingredient definitions, acquiring the popularity lock or writing seed data/history.
+Changed inputs are applied transactionally and recorded only on commit. Dry runs
+and failures do not advance the receipt, concurrent callers serialize, and an
+older historical checksum cannot cause a false skip after a newer load. An input
+reordering that changes the fingerprint but no definitions records one successful
+check. Cosmetic JSON whitespace/key-order changes do not affect the fingerprint.
+
+The default explicit seed command still scans/repairs actual definitions; omit
+`--if-changed` for out-of-band DB drift or a loader-logic maintenance run. Existing
+omission/retirement safeguards and every maintained ingredient/source file remain
+unchanged. Preparation failures block startup, including SQL extension failures.
+
+Validation: all 11 Rust library tests (including five new DB regressions), six
+deployment process/config tests, 117 offline vocabulary tests, formatting, focused
+server-library/seed-binary clippy, deployment-artifact and schema-workflow checks
+pass. The real CLI loaded all 13,446 definitions into a disposable PostgreSQL 17
+database; initial dry-run rollback, unchanged/reformatted skip, explicit no-op
+check and whole-table snapshot equality pass with one committed seed receipt.
+Artifacts: `/workspace/noms-deployment-seed-cli/summary.json` and sibling logs.
+The full release-image build remains a CI check; no Railway service configuration
+or production database has been changed from this workspace.
+
 ## Remaining scope
 
 Other metadata dimensions, localization, further Wikidata/USDA curation, FNDDS and

@@ -32,6 +32,7 @@ RUN go install github.com/pgplex/pgschema@v1.12.1
 FROM builder AS build-check
 COPY . .
 RUN dx bundle --platform web --release --force-sequential true
+RUN cargo build --locked --release --no-default-features --features server --bin seed-vocabulary
 
 # === Stage 4: Runtime ===
 FROM debian:bookworm-slim@sha256:abd67ffcfa541b485a3dff59865ab629aa048a6c613e639d36e7456b0b229241
@@ -42,6 +43,9 @@ RUN apt-get update && apt-get install -y curl postgresql-client perl && rm -rf /
 COPY --from=pgschema-builder /go/bin/pgschema /usr/local/bin/pgschema
 COPY --from=build-check /usr/src/app/target/dx/noms/release/web/ /usr/local/app
 COPY --from=build-check /usr/src/app/migrations/ /usr/local/app/migrations/
+COPY --from=build-check /usr/src/app/target/release/seed-vocabulary /usr/local/app/seed-vocabulary
+COPY --from=build-check /usr/src/app/data/vocabulary/ingredients.json /usr/local/app/data/vocabulary/ingredients.json
+COPY --from=build-check /usr/src/app/data/vocabulary/sources.json /usr/local/app/data/vocabulary/sources.json
 COPY entrypoint.sh /usr/local/app/entrypoint.sh
 RUN chmod 0555 /usr/local/app /usr/local/app/entrypoint.sh \
     && chmod -R go-w /usr/local/app

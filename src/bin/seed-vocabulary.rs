@@ -1,4 +1,4 @@
-//! Explicit data-plane command; never runs automatically at server startup.
+//! Deployment-role loader, also invoked explicitly for dry runs and repairs.
 use noms::vocabulary::{self, SeedFile, SourceManifest};
 
 #[tokio::main]
@@ -14,15 +14,17 @@ async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut sources = "data/vocabulary/sources.json".to_string();
     let mut dry_run = false;
     let mut validate_only = false;
+    let mut if_changed = false;
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--dry-run" => dry_run = true,
             "--validate-only" => validate_only = true,
+            "--if-changed" => if_changed = true,
             "--file" => file = args.next().ok_or("--file requires a path")?,
             "--sources" => sources = args.next().ok_or("--sources requires a path")?,
             "--help" | "-h" => {
-                println!("seed-vocabulary [--dry-run | --validate-only] [--file PATH] [--sources PATH]\n--validate-only checks files without connecting to a database. Other modes require DATABASE_URL and an already-applied schema.");
+                println!("seed-vocabulary [--dry-run | --validate-only] [--if-changed] [--file PATH] [--sources PATH]\n--if-changed skips loading when the latest committed seed fingerprint matches. Omit it to check/repair database drift.\n--validate-only checks files without connecting to a database. Other modes require DATABASE_URL and an already-applied schema.");
                 return Ok(());
             }
             _ => return Err(format!("Unknown argument: {arg}").into()),
@@ -32,6 +34,11 @@ async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let sources: SourceManifest = serde_json::from_slice(&std::fs::read(sources)?)?;
     if dry_run && validate_only {
         return Err("--dry-run and --validate-only are mutually exclusive".into());
+    }
+    if if_changed && validate_only {
+        return Err(
+            "--if-changed requires a database and cannot be used with --validate-only".into(),
+        );
     }
     let warnings = vocabulary::validate(&seed, &sources)?;
     if validate_only {
@@ -52,7 +59,11 @@ async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .acquire_timeout(std::time::Duration::from_secs(10))
         .connect(&url)
         .await?;
-    let report = vocabulary::store::seed(&pool, &seed, &sources, dry_run).await?;
+    let report = if if_changed {
+        vocabulary::store::seed_if_changed(&pool, &seed, &sources, dry_run).await?
+    } else {
+        vocabulary::store::seed(&pool, &seed, &sources, dry_run).await?
+    };
     println!("{}", serde_json::to_string_pretty(&report)?);
     pool.close().await;
     Ok(())

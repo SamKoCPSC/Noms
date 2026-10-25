@@ -242,6 +242,27 @@ GHCR packages initially default to private: the `noms` package must be made
 public for Railway's Free plan to pull it. Credentials are injected by Railway
 at runtime, never passed as Docker build arguments.
 
+The release image includes the maintained vocabulary and its seed executable.
+Database preparation applies extensions, schema and runtime grants, then invokes
+`seed-vocabulary --if-changed` with deployment credentials before the server starts.
+The application still receives only its restricted runtime database URL.
+
+Repository-backed Railway services use the configured pre-deploy command:
+`/usr/local/app/entrypoint.sh --prepare-database`. For image-backed services, set
+that command under **Settings → Deploy → Pre-deploy Command** to gate rollout on
+database preparation. Startup also performs preparation as a fallback when no
+hook is configured. A subsequent unchanged check skips the ingredient scan and
+all seed writes; schema/grant preparation remains idempotent.
+
+The fingerprint covers parsed ingredient and source JSON and is compared with
+the latest committed `vocabulary_seed_runs` receipt while holding the seed-writer
+lock. Whitespace/key-order changes do not trigger loading. Changed inputs load
+transactionally; failures and dry runs never advance the receipt. Concurrent
+deployments serialize, and rolling back to an older vocabulary is checked against
+the latest load rather than any historical receipt. Omitted existing IDs still
+fail; retirement must be explicit. For manual database-drift checks or repairs,
+run the seed command without `--if-changed` using deployment credentials.
+
 The PostgreSQL service continues using the repository source with root directory
 `/docker/postgres` and config file `/docker/postgres/railway.json`. App HTTP
 healthchecks must not be applied to that service.
