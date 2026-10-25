@@ -39,3 +39,26 @@
 .about-tour .waypoint:first-child{height:320svh}
 
 @media(max-width:767px){.about-tour.is-flight .journey-caption{display:none}}
+
+/* The curtain is an enhancement: server-rendered/reading content stays available. */
+.about-tour .tour-loader{display:none}
+.about-tour.is-flight[data-entry-state=loading] .tour-loader{display:grid;position:fixed;inset:var(--tour-top) 0 var(--tour-bottom);z-index:40;place-items:center;padding:28px 20px;overflow:auto;touch-action:none;background:radial-gradient(ellipse at 50% 35%,var(--surface),var(--bg-base) 75%)}
+html:has(.about-tour.is-flight[data-entry-state=loading]),body:has(.about-tour.is-flight[data-entry-state=loading]){overflow:hidden;overscroll-behavior:none}
+html:has(.about-tour.is-flight){scrollbar-gutter:stable}
+.about-tour[data-entry-state=loading] :is(.story,.site-header,.tour-nav,.journey-caption){opacity:0;pointer-events:none}
+.about-tour .tour-loader-card{width:min(440px,100%);padding:44px 36px;text-align:center;background:var(--surface);border:1px solid var(--border-color);border-radius:30px;box-shadow:var(--elevation-raised)}
+.about-tour .tour-loader-card h2{font-size:34px;line-height:1.15;margin:16px 0}
+.about-tour #tour-loading-status{color:var(--text-secondary);font-size:15px;line-height:1.6;min-height:48px;margin:0}
+.about-tour .tour-loader-track{height:7px;margin:24px 0 20px;overflow:hidden;border-radius:20px;background:var(--bg-base);box-shadow:var(--elevation-inset)}
+.about-tour .tour-loader-track span{display:block;width:40%;height:100%;border-radius:inherit;background:#a66d4d;animation:tour-loading 1.8s ease-in-out infinite}
+.about-tour #tour-loader-read{max-width:100%;white-space:normal;line-height:1.5;border:0;border-radius:24px;min-height:44px;padding:11px 18px;font-size:13px;font-weight:800;color:var(--text-primary);background:var(--surface);box-shadow:var(--elevation-raised);cursor:pointer}
+.about-tour .tour-loader-book{display:grid;gap:5px;width:58px;height:68px;margin:0 auto 30px;align-content:center;padding:13px;background:#697d54;border-radius:7px 12px 12px 7px;border-left:5px solid #4c6140;box-shadow:5px 6px 0 #e2d6b8,8px 12px 20px #53633a24;transform:rotate(-8deg)}
+.about-tour .tour-loader-book span{height:3px;background:#ece4c8;border-radius:3px}
+.about-tour .tour-loader-book span:last-child{width:65%}
+@keyframes tour-loading{0%{transform:translateX(-110%)}100%{transform:translateX(360%)}}
+@media(max-width:700px){.about-tour .tour-loader-card{padding:36px 24px;border-radius:26px}.about-tour .tour-loader-card h2{font-size:30px}}
+@media(max-height:500px){.about-tour .tour-loader-card{padding:22px 26px}.about-tour .tour-loader-book{display:none}.about-tour .tour-loader-card h2{font-size:28px;margin-block:10px}.about-tour .tour-loader-track{margin-block:14px}}
+@media(prefers-reduced-motion:reduce){.about-tour .tour-loader-track span{animation:none}}
+@media print{.about-tour .tour-loader{display:none!important}}
+
+@media(max-height:500px){.about-tour.is-flight[data-entry-state=loading] .tour-loader{padding:12px}.about-tour .tour-loader-card{padding:18px 24px}.about-tour .tour-loader-card .eyebrow{display:none}.about-tour .tour-loader-card h2{font-size:26px;margin:0 0 8px}.about-tour #tour-loading-status{font-size:13px;min-height:0}.about-tour #tour-loader-read{min-height:40px;padding-block:8px}.about-tour .tour-loader-track{margin-block:10px}}

@@ -618,6 +618,14 @@ impl Renderer {
             );
         }
     }
+    /// Render every kitchen group behind the curtain and wait for GPU completion.
+    /// This compiles the textured draw path even for direct links to later stops.
+    pub fn warm_kitchen(&self, aspect: f32, mobile: bool) -> bool {
+        let camera = flight::camera(0., aspect, [0.; 2]);
+        self.render(&camera, 0., false, mobile, 160.);
+        self.gl.finish();
+        self.error() == Gl::NO_ERROR
+    }
     pub fn error(&self) -> u32 {
         self.gl.get_error()
     }

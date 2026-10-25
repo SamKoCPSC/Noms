@@ -6,6 +6,8 @@ mod browser;
 mod flight;
 #[cfg(any(target_arch = "wasm32", test))]
 mod gltf;
+#[cfg(any(target_arch = "wasm32", test))]
+mod loading;
 #[cfg(target_arch = "wasm32")]
 mod math;
 #[cfg(target_arch = "wasm32")]

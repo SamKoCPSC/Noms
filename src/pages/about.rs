@@ -17,6 +17,108 @@ const KITCHEN_POSTER: Asset = asset!(
     "/assets/about/sams-kitchen.webp",
     manganis::AssetOptions::builder()
 );
+pub(super) const LOADING_PHRASES: [&str; 100] = [
+    "The cookies are baking…",
+    "The steak is defrosting…",
+    "The oven is preheating…",
+    "Counting the chocolate chips…",
+    "Giving the croissants a pep talk…",
+    "Negotiating with the sourdough starter…",
+    "Asking the coffee to wake up…",
+    "Flipping an imaginary pancake…",
+    "Teaching the noodles to untangle…",
+    "Looking for the other oven mitt…",
+    "Telling the onions it's okay to cry…",
+    "Checking the fridge for plot twists…",
+    "Convincing the butter to soften…",
+    "Making room for one more cookie…",
+    "Giving the whisk a spin class…",
+    "Politely interrogating the garlic…",
+    "Waiting for the kettle's solo…",
+    "Finding the thyme to relax…",
+    "Untangling the spaghetti situation…",
+    "Asking the dough to rise and shine…",
+    "Arranging a meeting with the meatballs…",
+    "Helping the soup find its spoon…",
+    "Putting tiny pajamas on the potatoes…",
+    "Giving the toast a standing ovation…",
+    "Checking the eggs for stage fright…",
+    "Counting sheep made of marshmallows…",
+    "Assembling the emergency snack kit…",
+    "Dusting the flour off the flour…",
+    "Asking the blender to use its inside voice…",
+    "Teaching the mushrooms to share a room…",
+    "Applying sunscreen to the tomatoes…",
+    "Booking a spa day for the dumplings…",
+    "Rehearsing the pancake flip…",
+    "Finding the avocado's perfect moment…",
+    "Explaining personal space to the fries…",
+    "Interviewing a suspicious zucchini…",
+    "Making sure the cheese feels grate…",
+    "Waiting for the rice to stop gossiping…",
+    "Tucking the lasagna into its layers…",
+    "Giving the broccoli a new haircut…",
+    "Trying to reason with a hot pepper…",
+    "Checking the croissants' moon phases…",
+    "Helping the gravy find its flow…",
+    "Warming up the backup waffle…",
+    "Asking the carrots to keep their crunch…",
+    "Taking attendance in the spice drawer…",
+    "Putting the peas in alphabetical order…",
+    "Finding a lid for this particular chaos…",
+    "Making a tiny hammock for the banana…",
+    "Preparing the ceremonial first bite…",
+    "Training the tongs to click twice…",
+    "Sending the biscuits a warm invitation…",
+    "Bringing the jam to band practice…",
+    "Making sure the pasta has a bow tie…",
+    "Reading the muffin's autobiography…",
+    "Helping the cinnamon rolls unwind…",
+    "Casting extras for the fruit salad…",
+    "Checking the pizza's crust credentials…",
+    "Finding the cookie that rolled away…",
+    "Giving the lemon a motivational squeeze…",
+    "Consulting the council of spatulas…",
+    "Asking the burger to hold it together…",
+    "Polishing the imaginary silverware…",
+    "Giving the baguette a boarding pass…",
+    "Explaining gravity to the soufflé…",
+    "Checking the wok's dance schedule…",
+    "Asking the sushi to roll with it…",
+    "Keeping an eye on the sneaky croutons…",
+    "Helping the cake find its good side…",
+    "Rounding up the runaway sesame seeds…",
+    "Giving the ravioli tiny name tags…",
+    "Waiting for the pickles to finish arguing…",
+    "Asking the custard to stay composed…",
+    "Adding a pinch of unnecessary drama…",
+    "Teaching the lettuce to romaine calm…",
+    "Finding the lost shaker of paprika…",
+    "Putting the kettle on hold…",
+    "Checking the sourdough's mood ring…",
+    "Untying the pretzels' shoelaces…",
+    "Organizing a support group for leftovers…",
+    "Asking the caramel to stop being clingy…",
+    "Turning the mushrooms into fun guys…",
+    "Giving the tacos a safety briefing…",
+    "Checking the noodles for loose ends…",
+    "Convincing the ice cream to play it cool…",
+    "Making tiny snow angels in the flour…",
+    "Helping the bread get its beauty rest…",
+    "Recharging the electric jellybean…",
+    "Inviting the lentils to a potluck…",
+    "Teaching the ramen proper bowl manners…",
+    "Making the marshmallows sign a toast…",
+    "Asking the coffee beans to spill the tea…",
+    "Building a fort out of breadsticks…",
+    "Checking the pancakes for flat jokes…",
+    "Giving the onion rings a wedding rehearsal…",
+    "Negotiating visiting hours with the fridge…",
+    "Asking the gnocchi to knock first…",
+    "Helping the pudding find its wobble…",
+    "Counting the holes in the Swiss cheese…",
+    "Saving the last imaginary cookie…",
+];
 const IDS: [&str; 4] = ["idea", "why", "creator", "community"];
 const NAMES: [&str; 4] = ["The idea", "The reason", "The creator", "The philosophy"];
 const EYEBROWS: [&str; 4] = [
@@ -50,8 +152,19 @@ pub fn About() -> Element {
           #[cfg(target_arch="wasm32")]
           if let Err(error)=super::about_tour::start(){tracing::warn!(?error,"About tour uses its reading fallback");}
         },
+     section{id:"tour-loader",class:"tour-loader",aria_labelledby:"tour-loader-title",
+      div{class:"tour-loader-card",
+       div{class:"tour-loader-book",aria_hidden:"true",span{}span{}span{}}
+       span{class:"eyebrow","ABOUT NOMS"}
+       h2{id:"tour-loader-title","Getting the kitchen ready"}
+       p{id:"tour-loading-status",aria_hidden:"true","{LOADING_PHRASES[0]}"}
+       span{class:"sr-only",role:"status",aria_live:"polite","Loading the kitchen. The tour will open when it is ready."}
+       div{class:"tour-loader-track",aria_hidden:"true",span{}}
+       button{id:"tour-loader-read",r#type:"button","Click here if the page takes too long to load"}
+      }
+     }
      a{class:"skip-link",href:"#idea","Skip to the story"}
-     header{class:"site-header",
+     header{id:"tour-header",class:"site-header",
       span{class:"tour-brand","About Noms"}
       span{class:"header-label","A JOURNEY THROUGH OUR STORY"}
       div{class:"header-controls",
@@ -80,7 +193,7 @@ pub fn About() -> Element {
      div{id:"scroll-track",class:"scroll-track",aria_hidden:"true",
       for i in 0..4 {div{id:"stop-{i}",class:"waypoint","data-waypoint":"{i}"}}
      }
-     nav{class:"tour-nav",aria_label:"Story chapters",
+     nav{id:"tour-navigation",class:"tour-nav",aria_label:"Story chapters",
       div{class:"nav-top",span{class:"tour-word","OUR STORY"}span{id:"stop-name",aria_live:"polite","The idea"}span{id:"scroll-hint",class:"scroll-hint","Scroll to assemble"}}
       div{class:"route",div{class:"route-line",span{id:"route-progress"}}
        for i in 0..4 {a{id:"nav-{i}",href:"#{IDS[i]}",aria_label:"Chapter {i+1}: {NAMES[i]}",aria_current:if i==0{"step"}else{"false"},span{class:"route-dot"}span{class:"route-label","data-short":["Idea","Why","Creator","Philosophy"][i],"{NAMES[i]}"}}}

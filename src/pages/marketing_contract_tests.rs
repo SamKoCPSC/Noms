@@ -75,6 +75,16 @@ fn about_provides_motion_and_reading_controls_before_enhancement() {
 }
 
 #[test]
+fn about_loading_screen_keeps_a_reading_escape_and_accessible_status() {
+    let html = dioxus_ssr::render_element(rsx! { super::about::About {} });
+    assert!(html.contains("id=\"tour-loader\""));
+    assert!(html.contains("role=\"status\""));
+    assert!(html.contains("Click here if the page takes too long to load"));
+    assert!(html.contains("class=\"about-tour is-reader\""));
+    assert!(!html.contains("data-entry-state=\"loading\""));
+}
+
+#[test]
 fn how_to_uses_stable_anchor_ids_for_every_documented_workflow() {
     let ids = HOW_TO_SECTIONS
         .iter()
