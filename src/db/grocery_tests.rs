@@ -362,5 +362,5 @@ async fn revisions_prevent_lost_edits_without_conflicting_independent_checkoffs(
 #[test]
 fn test_fixture_schema_matches_declarative_grocery_definitions() {
     assert!(include_str!("../../migrations/schema.sql")
-        .ends_with(include_str!("../../migrations/grocery-lists.sql")));
+        .contains(include_str!("../../migrations/grocery-lists.sql")));
 }

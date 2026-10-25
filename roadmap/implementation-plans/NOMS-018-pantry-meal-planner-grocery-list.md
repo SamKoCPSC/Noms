@@ -1,8 +1,8 @@
 # NOMS-018: Independent Grocery Lists, Kitchen Profiles & Recipe Feasibility — Implementation Plan
 
-**Status:** Slice 1 implemented and locally verified — later kitchen/feasibility slices remain planned; no production deployment performed
+**Status:** Grocery lists merged in [PR #21](https://github.com/SamKoCPSC/Noms/pull/21); pantry inventory implemented and locally validated with W01/C01. Production deployment is not verified here.
 **Created:** 2026-08-15
-**Updated:** 2026-10-24
+**Updated:** 2026-10-25
 **First delivery:** Multiple private, database-backed grocery lists; manual-only or generated as independent snapshots from selected recipes
 **Selected UI:** Workspace 2 — context inspector, and Create list 10 — compact form.
 **Implemented preview:** [Grocery list workspace](../assets/NOMS-018/implementation/workspace.png). Earlier exploratory HTML galleries remain local design artifacts.
@@ -12,8 +12,9 @@
 ## Delivery sequence
 
 1. **Slice 1 — Independent grocery lists:** the implementation target in this update. Deliver saved-list management, compact creation, recipe ingredient snapshots, manual items, shopping progress, and optional recipe context.
-2. **Later — Kitchen profiles and feasibility:** ingredients/equipment availability, gram inventory, recipe matching, and profile-aware shortages.
-3. **Later — Shopping enhancements:** offline synchronization, any explicit regeneration/reconciliation, and any additional list organization. Define separate contracts before adding them.
+2. **Slice 2 — Pantry inventory (implemented locally):** multiple named kitchens, ingredients with optional authored quantities/units, equipment, and explicit availability. See the [pantry inventory implementation plan](NOMS-018-pantry-inventory.md) and its selected W01/C01 UI.
+3. **Slice 3 — Recipe feasibility and shortages:** exact ingredient-name/unit matching, serving-aware requirements, known shortages, and quantity uncertainty against one pantry.
+4. **Later — Shopping enhancements:** explicit shortage-to-list generation, regeneration/reconciliation, offline synchronization, and deliberate purchased-stock updates. Define those contracts before implementation.
 
 The broader product scope remains recorded after the Slice 1 plan. Its pantry, equipment, and offline acceptance scenarios are not release gates for Slice 1. All saved lists remain independent: editing a source recipe never silently changes list contents or check-offs.
 
@@ -32,7 +33,7 @@ The broader product scope remains recorded after the Slice 1 plan. Its pantry, e
 - **Copy every authored ingredient** from the selected recipes. Do not infer exclusions for optional ingredients or choose among textual alternatives. Users can remove unwanted items and add more after generation.
 - Keep pantry management, recipe feasibility, equipment shortages, offline synchronization, and live recipe synchronization out of this first slice.
 
-These decisions supersede the earlier grams-only grocery proposal and the recommendation to keep generated rows read-only. The later pantry/feasibility slice still has a separate, narrower quantity contract.
+These decisions supersede the earlier grams-only grocery proposal and the recommendation to keep generated rows read-only. The pantry plan was subsequently updated to use the same exact ingredient-name/unit compatibility rule, with optional amounts and explicit uncertainty.
 
 The HTML prototypes use browser storage and sample data. Their numeric limits, default servings, storage messages, and controls demonstrate a design; they are not approved database/API contracts. Production integration must use the real session, database, shared components, and actual request failure states.
 
@@ -45,7 +46,7 @@ The HTML prototypes use browser storage and sample data. Their numeric limits, d
 | Recipe snapshots | [`RecipeSnapshot`](../../src/db/diff.rs) and [`recipe_versions`](../../src/db/versioning.rs) preserve recipe content; published recipe versions cascade when their parent recipe is deleted. | Copy the grocery-specific attribution and amounts into list-owned data. A live recipe/version FK must not delete list contents or be required to render them. |
 | Recipe access | [`get_recipe`](../../src/api/recipe.rs) checks ownership, then permitted public/unlisted access. | Recheck source access server-side at creation; knowing a recipe ID is not sufficient authority. The picker must cover all permitted sources, not just ownership; use existing discovery rules and resolve supplied accessible recipe links/IDs without introducing unlisted enumeration. |
 | Authenticated mutations | [`collection.rs`](../../src/api/collection.rs) and recipe mutations use server session identity, input bounds, request budgets, and account-change checks where applicable. | Follow Dioxus server-function conventions and existing protections; do not introduce a client-supplied owner ID or a separate REST/auth stack. |
-| Database delivery | [`migrations/schema.sql`](../../migrations/schema.sql), [`justfile`](../../justfile), and [`test_utils.rs`](../../src/test_utils.rs) use declarative `pgschema`, explicit SQLx cache preparation, and isolated PostgreSQL tests. No live grocery/pantry tables exist in the checked-in schema. | Add schema using the established workflow, update test-schema coverage, review the generated plan, and refresh `.sqlx` only where compile-time queries change. |
+| Database delivery | [`migrations/schema.sql`](../../migrations/schema.sql), [`justfile`](../../justfile), and [`test_utils.rs`](../../src/test_utils.rs) use declarative `pgschema`, explicit SQLx cache preparation, and isolated PostgreSQL tests. Grocery list and pantry inventory tables now exist in the checked-in schema; both follow this declarative workflow. | Add schema using the established workflow, update test-schema coverage, review the generated plan, and refresh `.sqlx` only where compile-time queries change. |
 | Historical design | [`DESIGN.md`](../../DESIGN.md), “Meal Planner & Shopping Lists,” contains earlier pantry-linked example SQL. | Treat it as historical design, not an existing migration or the selected first-release model. |
 
 ## Slice 1: implemented contracts
@@ -190,7 +191,7 @@ Local verification is complete. Production deployment has not been performed. Re
 
 - [x] First delivery is independent database-backed grocery lists; kitchen profiles and offline synchronization are deferred.
 - [x] Manual-only, recipe-derived, and mixed lists are in scope; a recipe is never mandatory.
-- [x] Workspace 2 and Create list 10 are selected and linked.
+- [x] Workspace 2 and Create list 10 are selected; the implemented workspace preview is linked.
 - [x] Current storage/scaling/auth/schema baseline and prototype limitations are recorded.
 - [x] Checkpoints, acceptance scenarios, release checks, and recovery approach are identified.
 - [x] All accessible recipes, serving-aware generation, naive name/unit matching, full item edits, and copying all ingredients are confirmed.
@@ -199,7 +200,7 @@ Local verification is complete. Production deployment has not been performed. Re
 
 ---
 
-## Later slices: intended kitchen/feasibility outcome
+## Pantry inventory and later feasibility outcome
 
 
 Users can answer two complementary questions:
@@ -217,24 +218,24 @@ Saved kitchen profiles make these later workflows reusable. They build on the in
 - Allow creating, renaming, editing, duplicating, and deleting profiles, and quickly marking ingredients as out.
 - Evaluate against one selected profile at a time and remember the last selected profile. Do not implicitly combine supplies across locations.
 - Require explicit availability for every ingredient, including salt, oil, and water; there are no assumed staples.
-- Allow ingredient presence without a quantity. Optional numeric quantities are in grams only and enable sufficiency checks; unknown quantities must remain distinguishable from sufficient quantities.
+- Allow ingredient presence without a quantity. Optional authored quantities and units support exact name/unit sufficiency checks in a later slice; unknown quantities remain distinguishable from sufficient quantities.
 - Keep inventory changes deliberate. Selecting or making a recipe and checking off a shopping item do not automatically deduct or replenish inventory.
 
 ### Initial matching and quantity rules
 
-These grams-only rules apply to later pantry availability/feasibility arithmetic. They do not restrict Slice 1 grocery generation, which scales numeric quantities in all authored units and aggregates exact name/unit matches. Future pantry integration must retain those grocery rows and show uncertainty only where stock compatibility cannot be established.
+Pantry uses the grocery list’s exact ingredient-name/unit matching rule. This supersedes the older grams-only proposal. Inventory management ships before recipe feasibility; pantry integration must preserve authored units and explicitly report incompatible or unknown quantities.
 
 - Identify ingredients by exact name equality. Distinct names are distinct ingredients; do not infer aliases, spelling/case equivalence, varieties, or substitutions. Using optional NOMS-017 vocabulary references requires a later explicit compatibility contract; recognition alone does not authorize aggregation.
 - Identify equipment by exact name equality in the same way. Each distinct equipment name represents a unique type checked for presence; do not model physical instances, counts, size, capacity, or compatibility initially.
-- Support grams only for numeric ingredient quantities, scaling, aggregation, and availability subtraction. Unit conversions and count-based calculations are deferred.
-- Preserve existing non-gram or textual recipe quantities for display. They can participate in ingredient-presence matching but cannot establish quantity sufficiency or a numeric shortage; show quantity uncertainty instead of inventing gram values.
+- Support bounded parseable numeric quantities in any authored unit, including count-style or blank units, when both ingredient name and unit match exactly. No unit conversion, alias matching, singularization, or case folding. `Rice: 2 cup` can cover `Rice: 1 cup`; `cups`, `g`, and `kg` remain distinct.
+- Preserve textual or absent amounts as presence-only entries. A same-name entry in another unit or with an unknown amount cannot establish numeric sufficiency. Known zero and explicitly out entries do not count as available. A definitive numeric shortage requires a compatible, fully known stock total; uncertain stock remains visible alongside any known deficit.
 
 ### Recipe feasibility
 
 - Match both ingredient and equipment requirements against the selected profile.
 - Explain results with missing ingredients, missing equipment, insufficient quantities, and unknown quantities. Having every ingredient is distinct from having enough to make the recipe.
 - Use the categories Ready; Ready, quantity uncertain; Missing ingredients; Missing equipment; and Missing both.
-- Known ingredient shortages count under Missing ingredients, including when the ingredient is present but its gram quantity is insufficient. Missing both means ingredient shortages and missing equipment coexist.
+- Known ingredient shortages count under Missing ingredients, including when the ingredient is present but its compatible quantity is insufficient. Missing both means ingredient shortages and missing equipment coexist.
 - Use Ready only when required ingredients have sufficient known quantities and required equipment is present. Use Ready, quantity uncertain when there are no known missing requirements but sufficiency cannot be established. Preserve uncertainty details alongside any missing-requirement category.
 - Include near matches with explicit missing requirements. Feasibility ranking is deferred.
 - Evaluate recipes individually while browsing and collectively when selected together: 200 g of rice may cover either of two recipes individually while the pair requires 400 g.
@@ -248,7 +249,7 @@ These grams-only rules apply to later pantry availability/feasibility arithmetic
 - Deduplicate equipment by exact name across recipes. Counts, size/capacity compatibility, and scheduling simultaneous equipment use are outside the initial scope.
 - Retain source-recipe attribution for every generated requirement and show which recipes contribute to it. Live recipe links must respect current access; saved list content remains independent.
 - Recalculate requirements when serving counts or selected recipes change in a preparation preview. Updating an already saved list from recipes requires a separate, explicit future regeneration workflow; ordinary recipe edits never update saved lists.
-- Merge gram quantities only for ingredients with the same exact name. Keep unsupported quantities visible and separate, including when other requirements for that ingredient have known gram quantities.
+- Sum requirements and stock only for exactly matching ingredient name and unit. Subtract stock once across the selection. Preserve incompatible and unknown quantities separately; never hide uncertainty behind a numeric total.
 
 ### Shopping checklist UI
 
@@ -267,7 +268,7 @@ These grams-only rules apply to later pantry availability/feasibility arithmetic
 - Household sharing or combining multiple kitchen profiles for a match.
 - Expiration tracking, automatic inventory consumption or replenishment, and automatic substitution suggestions.
 - Full offline editing of kitchen profiles and recipe selections; the offline commitment here is the shopping checklist.
-- Units other than grams, unit conversions, inferred ingredient/equipment equivalence, equipment counts and compatibility, and feasibility ranking. Optional vocabulary-reference integration is a later step coordinated with NOMS-017.
+- Unit conversions, inferred ingredient/equipment equivalence, equipment counts and compatibility, and feasibility ranking. Optional vocabulary-reference integration is a later step coordinated with NOMS-017.
 
 ## Questions for the later kitchen/feasibility slices
 
@@ -279,7 +280,7 @@ These grams-only rules apply to later pantry availability/feasibility arithmetic
 
 ## Deliverables for later implementation plans
 
-- Exact-name ingredient/equipment matching and grams-only quantity contracts, with a later optional NOMS-017 vocabulary-reference integration path.
+- Exact-name ingredient/equipment matching and exact name/unit quantity contracts, with a later optional NOMS-017 vocabulary-reference integration path.
 - Kitchen profile, recipe selection, combined requirements, checklist, and provenance data models.
 - Authorization, privacy, migration, and offline behavior.
 - Test-first checkpoints for each vertical slice and their integration.
@@ -292,7 +293,7 @@ These grams-only rules apply to later pantry availability/feasibility arithmetic
 - A recipe with all ingredient names present but unknown amounts shows quantity uncertainty; missing required equipment remains visible.
 - Two selected recipes requiring 200 g of rice each, against a profile containing 200 g of rice, produce a 200 g shortage.
 - A profile listing `scallion` does not satisfy `green onion`; distinct equipment names likewise do not match automatically.
-- A recipe requiring rice in cups with rice present in the profile reports quantity uncertainty and does not convert cups to grams.
+- `Rice: 2 cup` covers a `Rice: 1 cup` requirement; `Rice: 200 g` cannot establish sufficiency for that requirement and reports uncertainty. `cup` and `cups` stay distinct.
 - Feasibility categories distinguish known ingredient shortages, missing equipment, both, full coverage, and coverage with uncertain quantities; uncertainty remains visible even alongside a known shortage.
 - Two recipes requiring the same reusable blender produce one equipment requirement with both source recipes retained.
 - An absent optional garnish does not block a match; an explicitly permitted equipment alternative can satisfy its requirement.
@@ -303,7 +304,7 @@ These grams-only rules apply to later pantry availability/feasibility arithmetic
 ## Readiness for later kitchen/feasibility slices
 
 - [x] Product scope includes multiple persistent kitchen profiles, explicit ingredients and equipment, both matching directions, and a shopping checklist.
-- [ ] Ingredient/equipment matching and quantity semantics are specified.
+- [x] Pantry inventory scope and exact name/unit compatibility are recorded in the [Slice 2 plan](NOMS-018-pantry-inventory.md). Recipe-feasibility presentation remains a later slice.
 - [ ] Availability subtraction, aggregation, and checklist reconciliation rules are specified.
 - [ ] Authorization, profile/list lifecycle, and offline synchronization contracts are specified.
-- [ ] Checkpoints, acceptance evidence, and release gates are defined.
+- [x] Pantry inventory W01/C01 selection, implementation, and local verification are recorded in the Slice 2 plan. Recipe feasibility and shortage generation remain later slices.

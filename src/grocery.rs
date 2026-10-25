@@ -270,6 +270,11 @@ fn parse_quantity(text: &str) -> Option<Quantity> {
     }
 }
 
+/// Shared inventory classification; preserves the grocery parser and its bounds.
+pub(crate) fn quantity_is_zero(text: &str) -> Option<bool> {
+    parse_quantity(text).map(|q| q.n == 0)
+}
+
 pub fn build_requirements(previews: &[GroceryRecipePreview]) -> Result<Vec<GeneratedItem>, String> {
     if previews.len() > MAX_RECIPES {
         return Err("Select up to 20 recipes.".into());

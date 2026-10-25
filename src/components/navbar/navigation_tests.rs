@@ -51,6 +51,7 @@ fn primary_destinations_match_authentication_without_inventing_routes() {
             (Route::Dashboard {}, "Dashboard"),
             (Route::CollectionList {}, "Collections"),
             (Route::GroceryLists {}, "Grocery lists"),
+            (Route::Pantry {}, "Pantry"),
             (Route::Explore {}, "Explore")
         ]
     );
@@ -138,5 +139,19 @@ fn grocery_routes_keep_their_navigation_section_selected() {
     ] {
         assert!(navigation_is_current(&Route::GroceryLists {}, &route));
         assert!(!navigation_is_current(&Route::CollectionList {}, &route));
+    }
+}
+
+#[test]
+fn pantry_descendants_stay_in_pantry_navigation() {
+    for route in [
+        Route::Pantry {},
+        Route::PantryNew {},
+        Route::PantryDetail {
+            id: "sample".into(),
+        },
+    ] {
+        assert!(navigation_is_current(&Route::Pantry {}, &route));
+        assert!(!navigation_is_current(&Route::GroceryLists {}, &route));
     }
 }

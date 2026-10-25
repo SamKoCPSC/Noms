@@ -1,0 +1,413 @@
+/* Pantry W01 / C01: shared grocery composition and Noms materials. */
+.pantry-page {
+    max-width:1480px;
+}
+.pantry-detail-layout.has-inspector {
+    grid-template-columns:minmax(0,1fr) 270px;
+}
+.pantry-tabs {
+    display:flex;
+    gap:8px;
+    padding:5px;
+    border-radius:15px;
+    background:var(--neumo-surface);
+    box-shadow:var(--elevation-inset-compact);
+    margin:20px 0;
+}
+.pantry-tabs button {
+    flex:1;
+    min-height:44px;
+}
+.pantry-tabs [aria-pressed=true] {
+    background:var(--surface);
+    box-shadow:var(--elevation-raised-compact);
+}
+.pantry-row {
+    display:flex;
+    align-items:center;
+    gap:12px;
+    min-height:78px;
+    padding:12px 0;
+    border-bottom:1px solid var(--border-color);
+}
+.pantry-row-name {
+    flex:1;
+    min-width:0;
+}
+.pantry-row-name strong {
+    display:block;
+    font-size:14px;
+    overflow-wrap:anywhere;
+}
+.pantry-row-name small {
+    display:block;
+    font-size:11px;
+    color:var(--text-secondary);
+    margin-top:3px;
+}
+.pantry-row-out .pantry-row-name strong {
+    color:var(--text-secondary);
+    text-decoration:line-through;
+}
+.pantry-stock-toggle {
+    width:44px;
+    min-width:44px;
+    min-height:44px;
+    border:1px solid var(--border-color);
+    border-radius:12px;
+    color:var(--success-ink);
+    background:color-mix(in srgb,var(--surface) 65%,#9ca98c 35%);
+    display:grid;
+    place-items:center;
+}
+.pantry-stock-toggle[aria-pressed=false] {
+    background:var(--neumo-surface);
+    color:var(--text-secondary);
+    box-shadow:var(--elevation-inset-compact);
+}
+.pantry-stock-toggle:disabled {
+    opacity:.5;
+    cursor:wait;
+}
+.pantry-edit-trigger {
+    padding:8px;
+    min-width:44px;
+    min-height:44px;
+}
+.pantry-editor-head {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+}
+.pantry-editor-form,.pantry-profile-form {
+    display:grid;
+    gap:12px;
+    margin-top:24px;
+}
+.pantry-editor-form input,.pantry-profile-form input {
+    width:100%;
+    min-width:0;
+    min-height:44px;
+}
+.pantry-editor-form label,.pantry-profile-form label {
+    font-size:12px;
+    font-weight:800;
+}
+.pantry-amount-fields {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:10px;
+    margin:8px 0;
+}
+.pantry-amount-fields .grocery-muted {
+    display:block;
+    font-size:10px;
+    font-weight:400;
+}
+.pantry-remove {
+    margin-top:15px;
+    color:var(--error-ink);
+    font-size:12px;
+}
+.pantry-add-equipment {
+    grid-template-columns:minmax(0,1fr) auto;
+}
+.pantry-empty {
+    padding:25px 0;
+}
+.pantry-page .grocery-tools {
+    flex-wrap:wrap;
+}
+.pantry-page .grocery-tools input {
+    flex:1;
+    width:auto;
+    min-width:110px;
+}
+.pantry-page .grocery-tools select {
+    max-width:180px;
+}
+.pantry-create-page {
+    max-width:850px;
+}
+.pantry-create-card {
+    max-width:660px;
+    margin:24px auto 0;
+    padding:28px;
+    border-radius:25px;
+    border:1px solid var(--border-color);
+}
+.pantry-create-intro {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:20px;
+    margin-bottom:26px;
+}
+.pantry-create-intro h2 {
+    font-size:25px;
+    font-weight:500;
+}
+.pantry-create-intro>.grocery-icon {
+    width:52px;
+    height:60px;
+    color:var(--success-ink);
+}
+.pantry-create-card>label {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:13px;
+    font-weight:800;
+    margin:19px 0 8px;
+}
+.pantry-create-card>input {
+    width:100%;
+    min-height:46px;
+}
+.pantry-create-card>label .grocery-muted {
+    font-weight:400;
+    font-size:11px;
+}
+.pantry-initial-section {
+    margin:25px 0;
+}
+.pantry-initial-heading {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:15px;
+}
+.pantry-initial-heading h3 {
+    font-size:20px;
+    font-weight:500;
+}
+.pantry-initial-equipment {
+    margin-top:22px;
+    padding:10px 0 20px;
+    border-bottom:1px solid var(--border-color);
+}
+.pantry-initial-equipment>summary {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    cursor:pointer;
+    min-height:44px;
+    font-weight:800;
+    list-style:none;
+}
+.pantry-initial-equipment>summary:after {
+    content:'+';
+    margin-left:auto;
+    font-size:22px;
+}
+.pantry-initial-equipment[open]>summary:after {
+    content:'−';
+}
+.pantry-initial-equipment>summary .grocery-muted {
+    font-size:11px;
+    font-weight:400;
+}
+.pantry-draft-row {
+    display:flex;
+    align-items:center;
+    gap:9px;
+    padding:10px 0;
+    border-bottom:1px solid var(--border-color);
+    font-size:13px;
+}
+.pantry-draft-row>strong {
+    flex:1;
+    min-width:0;
+    overflow-wrap:anywhere;
+}
+.pantry-draft-row>span {
+    font-size:12px;
+    max-width:100px;
+    color:var(--text-secondary);
+    overflow-wrap:anywhere;
+}
+.pantry-draft-row button {
+    padding:8px;
+    min-width:44px;
+    min-height:44px;
+}
+.pantry-draft-rows {
+    padding:10px 0;
+}
+.pantry-create-card .grocery-add-row {
+    grid-template-columns:minmax(0,1fr) 80px 80px auto;
+}
+.pantry-create-card .pantry-add-equipment {
+    grid-template-columns:minmax(0,1fr) auto;
+}
+.pantry-create-card .grocery-create-actions {
+    margin-top:24px;
+}
+.pantry-editor .grocery-error {
+    font-size:12px;
+}
+.pantry-page button:focus-visible,.pantry-page a:focus-visible,.pantry-create-page button:focus-visible {
+    outline:3px solid var(--focus-ring);
+    outline-offset:3px;
+}
+@media(max-width:1100px) {
+    .pantry-detail-layout.has-inspector {
+        grid-template-columns:1fr;
+    }
+    .pantry-editor {
+        position:static;
+        max-height:none;
+    }
+    .pantry-page .grocery-workspace {
+        grid-template-columns:190px minmax(0,1fr);
+    }
+}
+@media(max-width:760px) {
+    .pantry-page .grocery-workspace {
+        grid-template-columns:1fr;
+    }
+    .pantry-page .grocery-rail {
+        position:static;
+        top:auto;
+    }
+    .pantry-page .grocery-list-links {
+        display:flex;
+        overflow-x:auto;
+        max-height:none;
+        gap:8px;
+        margin:10px 0;
+    }
+    .pantry-page .pantry-profile-link {
+        min-width:165px;
+        flex:none;
+        margin:0;
+    }
+    .pantry-page .grocery-rail .grocery-new-link {
+        margin-top:12px;
+    }
+    .pantry-page .grocery-list-heading {
+        flex-wrap:wrap;
+    }
+    .pantry-page .grocery-heading-actions {
+        width:100%;
+        flex-wrap:wrap;
+    }
+    .pantry-page .grocery-heading-actions button {
+        flex:1;
+        font-size:12px;
+        min-height:44px;
+    }
+    .pantry-row {
+        gap:8px;
+    }
+    .pantry-row .grocery-amount {
+        font-size:12px;
+        max-width:75px;
+        overflow-wrap:anywhere;
+        white-space:normal;
+    }
+    .pantry-row-name strong {
+        font-size:14px;
+    }
+    .pantry-row-name small {
+        font-size:10px;
+    }
+    .pantry-editor {
+        margin-top:0;
+    }
+    .pantry-create-card {
+        padding:20px;
+        border-radius:21px;
+    }
+    .pantry-create-intro h2 {
+        font-size:23px;
+    }
+    .pantry-create-card .grocery-add-row,.pantry-add {
+        grid-template-columns:minmax(0,1fr) 56px 56px auto;
+    }
+    .pantry-create-card .pantry-add-equipment,.pantry-add-equipment {
+        grid-template-columns:minmax(0,1fr) auto;
+    }
+    .pantry-create-card .grocery-add-row>label:first-child,.pantry-add>label:first-child {
+        grid-column:auto;
+    }
+    .pantry-draft-row {
+        gap:6px;
+    }
+    .pantry-draft-row>span {
+        max-width:80px;
+        font-size:11px;
+    }
+    .pantry-create-intro>.grocery-icon {
+        width:40px;
+        height:48px;
+    }
+    .pantry-initial-heading h3 {
+        font-size:19px;
+    }
+    .pantry-create-card .grocery-add-row .btn,.pantry-add .btn {
+        min-width:44px;
+        padding:8px;
+    }
+    .pantry-page .grocery-tools select {
+        max-width:100%;
+        flex:1;
+    }
+    .pantry-page .grocery-shopping {
+        padding:18px;
+    }
+    .pantry-page .grocery-list-links {
+        padding-bottom:10px;
+    }
+}
+@media(max-width:350px) {
+    .pantry-page .grocery-shopping {
+        padding:14px;
+    }
+    .pantry-row {
+        gap:5px;
+    }
+    .pantry-row-name strong {
+        font-size:12px;
+    }
+    .pantry-row .grocery-amount {
+        max-width:55px;
+        font-size:11px;
+    }
+    .pantry-create-card {
+        padding:16px;
+    }
+    .pantry-create-card .grocery-add-row,.pantry-add {
+        grid-template-columns:minmax(0,1fr) 50px 50px 44px;
+        gap:5px;
+    }
+    .pantry-create-card .pantry-add-equipment,.pantry-add-equipment {
+        grid-template-columns:minmax(0,1fr) 44px;
+    }
+}
+.pantry-modal {
+    max-width:560px;
+    width:min(560px,calc(100vw - 32px));
+}
+.pantry-modal .grocery-error {
+    margin:0;
+}
+.pantry-modal h2 {
+    font-size:25px;
+}
+.pantry-editor:focus-visible {
+    outline:2px solid var(--focus-ring);
+    outline-offset:4px;
+}
+.pantry-page .grocery-list-heading {
+    flex-wrap:wrap;
+}
+.pantry-page .grocery-list-heading>div:first-child {
+    flex:1;
+    min-width:220px;
+}
+.pantry-page .grocery-heading-actions {
+    flex-wrap:wrap;
+}
