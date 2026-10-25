@@ -15,6 +15,7 @@ mod grocery;
 #[cfg(feature = "server")]
 mod middleware;
 mod pages;
+mod pantry;
 mod recipe_html;
 mod recipe_json;
 mod routing;
@@ -38,9 +39,9 @@ use components::{AppLayout, ErrorFallback};
 use pages::{
     About, CollectionDetail, CollectionEdit, CollectionList, CollectionNew, CommunityHome,
     Dashboard, Explore, GroceryListDetail, GroceryListNew, GroceryLists, Home, HowTo, Login,
-    MobileYou, NotFound, RecipeDetail, RecipeDraftEdit, RecipeEdit, RecipeImport, RecipeNew,
-    RecipeVersionDetail, RecipeVersionGraph, Search, SettingsAccounts, SettingsProfile,
-    UserProfile,
+    MobileYou, NotFound, Pantry, PantryDetail, PantryNew, RecipeDetail, RecipeDraftEdit,
+    RecipeEdit, RecipeImport, RecipeNew, RecipeVersionDetail, RecipeVersionGraph, Search,
+    SettingsAccounts, SettingsProfile, UserProfile,
 };
 
 // The route inventory is shared by the generated renderer and the raw-query boundary.
@@ -75,6 +76,12 @@ enum GeneratedRoute {
         RecipeEdit { id: String },
         #[route("/recipes/drafts/:id/edit")]
         RecipeDraftEdit { id: String },
+        #[route("/pantry")]
+        Pantry {},
+        #[route("/pantry/new")]
+        PantryNew {},
+        #[route("/pantry/:id")]
+        PantryDetail { id: String },
         #[route("/grocery-lists")]
         GroceryLists {},
         #[route("/grocery-lists/new")]
@@ -129,6 +136,10 @@ const COLLECTION_FORMS_CSS: Asset = asset!(
 
 const GROCERY_CSS: Asset = asset!(
     "/assets/grocery.css",
+    CssAssetOptions::new().with_minify(false)
+);
+const PANTRY_CSS: Asset = asset!(
+    "/assets/pantry.css",
     CssAssetOptions::new().with_minify(false)
 );
 const MOBILE_CSS: Asset = asset!("/assets/mobile.css");
@@ -549,6 +560,7 @@ fn App() -> Element {
         document::Link { rel: "stylesheet", href: TAILWIND_CSS }
         document::Link { rel: "stylesheet", href: MOBILE_CSS }
         document::Link { rel: "stylesheet", href: GROCERY_CSS }
+        document::Link { rel: "stylesheet", href: PANTRY_CSS }
         document::Style { {format!("@font-face{{font-family:Fredoka;font-style:normal;font-weight:300 700;font-display:swap;src:url('{}') format('truetype')}}@font-face{{font-family:Nunito;font-style:normal;font-weight:200 1000;font-display:swap;src:url('{}') format('truetype')}}", FREDOKA, NUNITO)} }
         document::Meta { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" }
 
