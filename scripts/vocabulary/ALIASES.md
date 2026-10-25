@@ -132,3 +132,12 @@ review; `build` requires `approved: true` and the pinned result. Promote the
 validated complete bundle with the existing transactional loader/dry-run workflow
 in [the seed guide](../../data/vocabulary/README.md). Custom text and historical
 recipes retain their existing behavior. No automatic recognition/backfill runs.
+
+
+## Later preferred-label review
+
+The [preferred-label layer](LABELS.md) follows both gap-curation stages. It can
+promote an existing alias to the preferred label, or retain the former label as
+a new alias. This does not revise this historical alias-stage output pin. Tests
+restore the exact pre-label seed before checking earlier stage invariants; the
+label tests independently validate the final seed and every prior searchable name.

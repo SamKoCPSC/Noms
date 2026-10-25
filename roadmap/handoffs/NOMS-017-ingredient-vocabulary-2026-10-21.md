@@ -390,6 +390,47 @@ source pins and the 1,000-profile after-check with verified offline replay; raw
 provider catalogs, recipe instructions, reference HTML and browser sessions are
 excluded. The local app is healthy on the retained ports noted above.
 
+
+## Preferred-label review (2026-10-25)
+
+The [label ledger and replay guide](../../scripts/vocabulary/LABELS.md) follow
+commit `1d015efd6f9409817056a3d62283d970a68e907a`. All 2,868 active parenthetical
+labels have decisions: 2,624 become natural cooking names and 244 retain their
+wording for scientific/contextual or name-ownership reasons. `tomato (canned)`
+becomes `canned tomatoes`; `chicken breast (skinless, boneless)` becomes
+`boneless skinless chicken breast`. Former names remain aliases with the same
+UUID. Species, edible parts, cooking states, fat/sodium formulations and packing
+media retain their distinctions. No source definitions, statuses, mappings or
+authored recipe fields change; duplicate-identity merges remain deferred.
+
+Current seed SHA-256 is
+`f6f5d4021ac18e7a4897752aa4c31aa9d2957ebf17608d4c6e5353ca0d280e4a`:
+13,055 active, 81 retired, 8,549 active aliases, four unchanged source descriptors.
+The per-ID ledger pins input/output, records alias promotions and holds, and
+reconstructs the exact preceding seed for historical source/curation checks.
+Generated full audits and projected recipe reports remain external.
+
+All 94 Python tests pass; Rust validation has zero warnings. Local loading
+updates 2,624 entries, dry-run fully rolls back and repeat load is a no-op.
+Database definitions equal JSON; all preexisting authored row hashes remain
+unchanged. All 5,248 old/new full-label SQL queries return their original UUID
+first. Browser checks pass 192 authenticated lookup cases, keyboard/mouse
+selection, autosave/reload, ID clearing, free-text fallback and WASM delivery.
+A before-update private draft still reloads `tomato (canned)` with its original
+UUID; new selection uses `canned tomatoes` with that same UUID.
+
+Frozen 1,000-profile material availability stays 10,349/10,768 lines (96.1%),
+667 fully covered profiles. Full-wording expected candidate hits improve
+9,359 → 9,370 (11 gained, zero lost). Full-or-three/four-character-prefix hits
+shift 9,531 → 9,520 (19 gained, 30 lost across 12 names), as the label tie-breaker
+changes broad eight-result prefixes. Every old/new full label still resolves
+first. Ranking/runtime behavior was not changed to conceal this tradeoff.
+
+Review and test artifacts: `/workspace/vocabulary-labels`. New download:
+`/workspace/noms-vocabulary-readable-labels.zip`. Older reports remain frozen.
+Two new private synthetic drafts were used; nothing was published or imported,
+and no production rollout or Details field is included.
+
 ## Remaining scope
 
 Other metadata dimensions, localization, further Wikidata/USDA curation, FNDDS and

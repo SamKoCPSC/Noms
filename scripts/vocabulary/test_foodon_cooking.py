@@ -3,13 +3,14 @@ import json
 from pathlib import Path
 import unittest
 
+import rename_labels
 from foodon import ROOT, normalize, validate
 
 
 class CookingSeedTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.seed = json.loads((ROOT / 'data/vocabulary/ingredients.json').read_text())
+        cls.seed = rename_labels.restore_baseline(json.loads((ROOT / 'data/vocabulary/ingredients.json').read_text()))
         cls.manifest = json.loads((ROOT / 'data/vocabulary/sources.json').read_text())
         cls.base = json.loads((ROOT / 'data/vocabulary/adapters/foodon-cooking-base-ingredients.json').read_text())
         cls.review = json.loads((ROOT / 'data/vocabulary/adapters/foodon-cooking-review.json').read_text())

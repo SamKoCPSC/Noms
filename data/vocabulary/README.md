@@ -6,8 +6,9 @@ The seed contains **13,055 active ingredients**: the original 100 curated entrie
 USDA additions and 274 subsequently curated cooking-material gaps.
 Another 81 identities are retained as retired: 60 from the original deployment
 review and 21 from the subsequent ingredient-scope cleanup.
-Every original ID and authored
-label/alias/description is preserved, including the original fifteen IDs. The
+Every original ID, description and prior searchable label/alias is preserved,
+including the original fifteen IDs. Preferred labels may change through the
+explicit label-review layer below; authored recipes are not rewritten. The
 previously tested cumin-seed UUID is also retained. Before gap curation there were
 12,016 FoodOn source mappings (11,935 on active entries); overlapping source records use conservative `related` relationships
 rather than inferred exact equivalence from matching names.
@@ -63,11 +64,21 @@ external; this layer does not change runtime recognition or substitution rules.
 The separately pinned October 25 follow-up resolves ten of the nineteen held
 names through source evidence or explicit generic material definitions, and
 adds useful specific forms and names. It adds **16 ingredients and 114 aliases**:
-55 on new ingredients and 59 appended to existing entries. Current totals are
+55 on new ingredients and 59 appended to existing entries. Totals at that stage are
 **13,055 active, 81 retired and 7,522 active aliases**. Qualified botanical and
 regional names preserve context; ground coriander, dry/liquid pectin and vanilla
 extract/imitation flavouring remain distinct. All prior IDs, definitions and
 source metadata remain intact. See the [follow-up evidence and replay guide](../../scripts/vocabulary/GAPS.md#source-follow-up-2026-10-25).
+
+The subsequent [preferred-label review](../../scripts/vocabulary/LABELS.md)
+renames **2,624** parenthetical labels into ordinary cooking word order, such as
+`tomato (canned)` → `canned tomatoes`. All old names remain searchable against
+the same UUIDs. Another **244** labels retain their wording for contextual,
+scientific or name-ownership reasons. Current totals are **13,055 active,
+81 retired and 8,549 active aliases**. Cooking states, species, edible parts,
+fat/sodium qualifiers and packing media retain their distinctions. This layer
+changes preferred vocabulary labels only; recipes and source definitions remain
+unchanged. Historical stage counts and checksums above remain frozen.
 
 The source coverage research still measures the original **100-ingredient**
 benchmark across 19 strata. Those percentages do not describe the expanded seed.
@@ -162,6 +173,7 @@ coexist with specific entries, with source relationships recorded conservatively
 Each new identity needs a definition, duplicate review, stable UUID and source or
 curation provenance. This policy does not change existing IDs, aliases, recipe
 references, or NOMS-018 quantity/substitution behavior by itself.
+
 
 ## Loading and maintenance
 

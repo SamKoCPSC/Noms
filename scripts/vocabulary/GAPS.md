@@ -9,9 +9,10 @@ and provenance are preserved; only the explicit alias suffixes are appended.
 The four-source manifest is unchanged.
 
 The subsequent [October 25 follow-up](#source-follow-up-2026-10-25) adds 16 more
-materials and 114 names. Current totals are **13,055 active, 81 retired and 7,522
+materials and 114 names. After the follow-up, totals are **13,055 active, 81 retired and 7,522
 active aliases**. Both curation stages retain their own immutable input/output
-pins and explicit review ledgers.
+pins and explicit review ledgers. See [preferred-label review](LABELS.md) for
+the later naming layer.
 
 ## Identity decisions
 
