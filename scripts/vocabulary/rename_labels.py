@@ -10,7 +10,7 @@ import csv
 import json
 from pathlib import Path
 
-from fill_gaps import checksum, encoded, SECOND_SAMPLE_POLICY, restore_baseline as restore_gap_baseline
+from fill_gaps import checksum, encoded, SECOND_SAMPLE_POLICY, GROCERY_POLICY, restore_baseline as restore_gap_baseline
 from foodon import ROOT, normalize, require, validate
 
 DEFAULT_POLICY = ROOT / 'data/vocabulary/adapters/ingredient-label-review.json'
@@ -79,9 +79,14 @@ def restore_baseline(result, policy=None):
     return base
 
 
+def maintained_second_sample_stage(result):
+    """Verify/remove the grocery follow-up at its own immutable pin."""
+    return restore_gap_baseline(result, json.loads(GROCERY_POLICY.read_text()))
+
+
 def maintained_label_stage(result):
-    """Verify/remove the later second-sample gap layer at its own immutable pin."""
-    return restore_gap_baseline(result, json.loads(SECOND_SAMPLE_POLICY.read_text()))
+    """Recover the label stage through the explicitly pinned later gap layers."""
+    return restore_gap_baseline(maintained_second_sample_stage(result), json.loads(SECOND_SAMPLE_POLICY.read_text()))
 
 
 def restore_maintained_baseline(result):

@@ -1,7 +1,7 @@
 # Reviewed cooking-material gaps
 
-Current maintained totals after the [second-sample curation](#second-sample-curation-2026-10-25)
-are **13,203 active, 81 retired and 8,847 active aliases**. Earlier stage counts,
+Current maintained totals after the [grocery follow-up](#grocery-material-follow-up-2026-10-25)
+are **13,232 active, 81 retired and 8,989 active aliases**. Earlier stage counts,
 source studies and checksums below remain frozen.
 
 The first curation layer follows the immutable FoodOn, Wikidata, USDA and alias/scope
@@ -245,7 +245,7 @@ reviews all 150 candidate phrases from the held-out study plus nine existing-nam
 discoveries. It adds **148 curated definitions**, including qualified alternatives
 for unresolved wording, and **298 aliases**: 273 on new entries and 25 appended to
 13 existing identities. These counts are not a one-to-one conversion of recipe
-phrases into ingredients. Current totals are **13,203 active, 81 retired and
+phrases into ingredients. Totals at that stage are **13,203 active, 81 retired and
 8,847 active aliases**. All four source descriptors and every preexisting field
 remain unchanged except the approved alias suffixes.
 
@@ -346,3 +346,97 @@ and both replayable recipe after-checks are external at
 `/workspace/noms-vocabulary-second-gap-fill.zip`. Earlier studies/downloads stay
 frozen. Raw instructions, catalogs, reference HTML, browser sessions and private
 draft data are excluded from the download. No production rollout is included.
+
+
+## Grocery-material follow-up (2026-10-25)
+
+The user requested ordinary grocery-store ingredients, including useful specific
+forms even when a sampled recipe omits the qualifying information. This layer
+adds **29 definitions and 142 aliases** (94 on new entries, 48 on 17 existing
+identities), resulting in **13,232 active, 81 retired and 8,989 active aliases**.
+There are 451 subsequently curated definitions across the four gap rounds.
+The explicit ledger is `data/vocabulary/adapters/ingredient-grocery-gaps.json`.
+
+- Dried angel hair/capellini is searchable separately from fresh angel hair.
+- Bouillon additions cover chicken/vegetable/mushroom pastes, vegetable and shrimp
+  cubes, shrimp granules, tomato-chicken cubes/granules and reduced-sodium chicken
+  granules. Existing beef cube/granule/paste and vegetable-powder identities get
+  familiar names. Checking the pinned FoodOn annotations establishes that existing
+  `chicken bouillon mix` is a finely ground dehydrated dry broth/stock mix, so
+  chicken bouillon powder and granules reuse its published UUID. The broader
+  vegetable-flavored cube does not assert a specific vegetable-protein base;
+  the existing narrower vegetable-protein cube remains intact.
+- Whole-grain corn flour, white masarepa and instant polenta are added. Existing
+  ordinary white/yellow corn flour, yellow masarepa and masa harina get qualified
+  names. Flour, extracted starch, nixtamalized flour and precooked flour remain
+  separate. The existing dialect alias `cornflour` still belongs to cornstarch;
+  legacy overlapping corn/maize UUIDs are not hard-merged.
+- Calvados, grappa, pisco and slivovitz supplement existing Cognac, Armagnac,
+  apple/pear brandy, kirsch and apricot eau-de-vie. Sweet apricot liqueur stays
+  separate; bare `apricot brandy` and `cherry brandy` do not become exact aliases.
+- Grocery components include undressed broccoli/coleslaw mixes, unsauced frozen
+  pepper-and-onion and stir-fry mixtures, spring mix, instant espresso powder,
+  dry harissa seasoning, salt-free seasoning, whole-grain Dijon, sweet/hot Italian
+  sausage and graham crackers. Plain graham crumbs reuse the cracker identity
+  under the existing physical-preparation policy. Named styles and consequential
+  forms are distinguished; brand formulas, nutrient values and substitution
+  guarantees are not inferred. Bare `chicken base` and `broccoli slaw` remain held
+  while qualified paste and undressed-mix options are available.
+
+Definitions use original wording and retained retail/manufacturer evidence.
+Examples include [Barilla angel hair](https://www.barilla.com/en-us/products/pasta/classic-blue-box/angel-hair),
+[Knorr bouillon](https://www.knorr.com/us/en/products/granulated-bouillon.html),
+[GOYA white masarepa](https://www.goya.com/en/products/masarepa-pre-cooked-white-corn-meal/),
+[Calvados France](https://drinkcalvados.com/en/faq/),
+[Nonino grappa](https://www.grappanonino.it/en/grappa-en/optima/) and
+[Taylor Farms broccoli slaw](https://www.taylorfarms.com/products/broccoli-slaw/).
+Evidence URLs, capture kinds and hashes are in the ledger; raw pages and generated
+reports remain external. Brand examples do not create brand aliases or exact
+provider mappings. Existing IDs, descriptions, labels, statuses, provenance,
+source associations and alias prefixes are preserved. Sources are byte-identical.
+
+### Replay and validation
+
+The baseline is commit `998a69d06e2be4e7ab130bbf3ab8a81a68d00715`:
+
+- Input seed: `6e703364b9ab3b7476a0637b7d1063dcdf0096dfb26d6b7a42b740b39acfa821`
+- Output seed: `8a6c4f4054700d301dd293daa1de72f3e599723f631fe09eb8be45bee64515ab`
+- Unchanged sources: `1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c`
+
+Extract the baseline seed from that commit into an external directory, then run:
+
+```sh
+python3 scripts/vocabulary/fill_gaps.py \
+  --seed /tmp/grocery-base/ingredients.json \
+  --sources data/vocabulary/sources.json \
+  --policy data/vocabulary/adapters/ingredient-grocery-gaps.json \
+  --output /tmp/grocery-replay
+python3 -m unittest discover -s scripts/vocabulary -p 'test_*.py'
+```
+
+Full seed replay is byte-identical; all **108 Python tests** pass. The authoritative
+Rust validator accepts **13,313 entries/four sources with no warnings**. Earlier
+checks verify/remove this layer before asserting their original immutable pins.
+Local deployment passes dry-run rollback, exact DB/JSON definition equality and
+zero-change repeat loading. All **171 new preferred/alias names** return their
+intended UUID first through the production SQL query; **176 authenticated API
+checks** pass. Chromium verifies angel-hair keyboard/mouse selection, canonical
+UUID autosave/reload, ID clearing on edit, failure/free-text fallback and WASM
+responses. Existing authored row hashes are unchanged; one new private synthetic
+UI draft was created. No recipe import/publication or production rollout occurs.
+
+The two frozen 1,000-profile studies remain unchanged. Replaying their previously
+covered lines with the same expected IDs loses no full-wording candidates:
+first sample **9,370 -> 9,370**, second **8,973 -> 8,976**. There is a recorded
+short-prefix tradeoff: new spring-mix suggestions displace spring-roll pastry at
+three/four letters for four first-sample wrapper rows and one second-sample skin
+row. Full-or-short-prefix hits are **9,520 -> 9,516** and **9,199 -> 9,199**
+(one gain and one loss), respectively. The existing wrapper is still returned
+for `spring roll`. Manufacturer evidence also shows that unqualified spring-roll
+wrappers can mean rice pancakes or wheat pastry, so no unconditional alias is
+invented to conceal this result. Ranking and the eight-result limit are unchanged.
+No new material-availability percentage or automatic-assignment score is claimed.
+
+External evidence, lookup audits and the full canonical JSON/CSV are in
+`/workspace/vocabulary-grocery-gap-fill`; the portable download is
+`/workspace/noms-vocabulary-grocery-gaps.zip`. Earlier studies/downloads stay frozen.

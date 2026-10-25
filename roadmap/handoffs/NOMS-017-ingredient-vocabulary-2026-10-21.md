@@ -520,6 +520,43 @@ recipe after-checks are in `/workspace/vocabulary-second-gap-fill`. Download:
 frozen. Generated catalogs, instructions, raw reference pages, browser sessions
 and private draft data are excluded from Git/downloads.
 
+## Grocery-material follow-up — 2026-10-25
+
+User-authorized grocery-store curation adds **29 ingredients and 142 aliases**
+(94 on new entries, 48 on 17 published identities). Current seed: **13,232 active,
+81 retired, 8,989 active aliases**. New forms include dried angel hair, distinct
+bouillon products, whole-grain corn flour, white masarepa, instant polenta,
+Calvados/grappa/pisco/slivovitz and practical undressed/unsauced grocery mixtures.
+Original FoodOn dry-mix annotations justify reusing the published chicken bouillon
+mix UUID for powder/granules. Flour/starch/masa/masarepa, fresh/dried pasta,
+cube/powder/paste and spirit/liqueur distinctions remain intact. Broad source
+phrases are not automatically assigned to a narrower qualified retail form.
+
+Ledger: `data/vocabulary/adapters/ingredient-grocery-gaps.json`. Input is commit
+`998a69d06e2be4e7ab130bbf3ab8a81a68d00715`, seed SHA-256
+`6e703364b9ab3b7476a0637b7d1063dcdf0096dfb26d6b7a42b740b39acfa821`.
+Output: `8a6c4f4054700d301dd293daa1de72f3e599723f631fe09eb8be45bee64515ab`.
+Four-source manifest and every prior identity field/alias prefix are preserved.
+Earlier checksum-pinned stages remain immutable; the generic builder reproduces
+the complete new seed byte-for-byte. Evidence URLs/hashes live in the ledger,
+while raw pages, full CSVs and generated audits remain outside Git.
+
+**108 Python tests**, authoritative Rust validation of **13,313 entries/four
+sources**, dry-run rollback, no-op repeat loading, DB/JSON equality, **171 new-name
+SQL checks**, **176 authenticated API checks** and Chromium selection/autosave/
+reload/failure fallback all pass. All prior authored row hashes are preserved;
+one new private synthetic draft, no recipe import/publication or production load.
+Both frozen recipe studies retain every full-wording candidate; second-sample
+full hits gain three. New spring mix displaces spring-roll pastry at only 3/4
+letters for five rows; `spring roll` still returns the existing wrapper. This is
+recorded in [GAPS.md](../../scripts/vocabulary/GAPS.md#grocery-material-follow-up-2026-10-25),
+without inventing an alias that equates rice wrappers and wheat pastry.
+No new recipe coverage percentage, Details field or runtime/ranking change.
+
+Artifacts: `/workspace/vocabulary-grocery-gap-fill`; complete vocabulary/review
+archive: `/workspace/noms-vocabulary-grocery-gaps.zip`. Earlier reports and
+archives remain frozen.
+
 ## Remaining scope
 
 Other metadata dimensions, localization, further Wikidata/USDA curation, FNDDS and

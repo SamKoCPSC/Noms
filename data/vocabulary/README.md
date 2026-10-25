@@ -1,9 +1,9 @@
 # Maintained ingredient vocabulary
 
 `ingredients.json` is the reviewed source of truth for ingredient suggestions.
-The seed contains **13,203 active ingredients**: the original 100 curated entries,
+The seed contains **13,232 active ingredients**: the original 100 curated entries,
 10,027 FoodOn-derived cooking/pantry entries, 2,550 Wikidata additions, 104
-USDA additions and 422 subsequently curated cooking-material definitions.
+USDA additions and 451 subsequently curated cooking-material definitions.
 Another 81 identities are retained as retired: 60 from the original deployment
 review and 21 from the subsequent ingredient-scope cleanup.
 Every original ID, description and prior searchable label/alias is preserved,
@@ -87,8 +87,18 @@ adds **148 defined cooking materials** and **298 aliases** (273 on new entries,
 mozzarella, Greek-yogurt formulations, preserved produce and stock/broth forms.
 Ambiguous names get qualified alternatives or scoped corrections rather than
 forced identities. All prior preferred labels, descriptions, source evidence,
-statuses and alias order remain intact. Current totals are **13,203 active,
+statuses and alias order remain intact. Totals at that stage are **13,203 active,
 81 retired and 8,847 active aliases**; the four-source manifest is unchanged.
+
+The subsequent [grocery-material follow-up](../../scripts/vocabulary/GAPS.md#grocery-material-follow-up-2026-10-25)
+adds **29 ingredients and 142 aliases**: 94 on new definitions and 48 on 17
+published identities. Dried angel hair, bouillon forms, whole-grain corn flour,
+white masarepa, instant polenta, named brandy styles and practical retail mixtures
+are represented. Chicken bouillon powder reuses the existing dry-mix UUID after
+checking its original source annotations. Current totals are **13,232 active,
+81 retired and 8,989 active aliases**. The separate checksum-pinned ledger is
+`adapters/ingredient-grocery-gaps.json`; all prior stages and source descriptors
+remain immutable. This adds suggestion data without assigning recipe identities.
 
 The source coverage research still measures the original **100-ingredient**
 benchmark across 19 strata. Those percentages do not describe the expanded seed.

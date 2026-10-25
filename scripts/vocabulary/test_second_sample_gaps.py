@@ -13,7 +13,8 @@ class SecondSampleGapsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.policy=json.loads(gaps.SECOND_SAMPLE_POLICY.read_text())
-        cls.seed=json.loads((gaps.ROOT/'data/vocabulary/ingredients.json').read_text())
+        cls.maintained=json.loads((gaps.ROOT/'data/vocabulary/ingredients.json').read_text())
+        cls.seed=rename_labels.maintained_second_sample_stage(cls.maintained)
         cls.sources=json.loads((gaps.ROOT/'data/vocabulary/sources.json').read_text())
         cls.base=gaps.restore_baseline(cls.seed,cls.policy)
         cls.entries={e['id']:e for e in cls.seed['entries']}
@@ -33,7 +34,7 @@ class SecondSampleGapsTest(unittest.TestCase):
             expected=copy.deepcopy(entry)
             expected['aliases']+=self.policy['alias_additions'].get(entry['id'],{}).get('aliases',[])
             self.assertEqual(self.entries[entry['id']],expected)
-        self.assertEqual(rename_labels.maintained_label_stage(self.seed),self.base)
+        self.assertEqual(rename_labels.maintained_label_stage(self.maintained),self.base)
         self.assertEqual(gaps.checksum(self.sources),self.policy['base_sources_checksum'])
 
     def test_all_original_gap_phrases_and_extra_name_discoveries_have_decisions(self):
