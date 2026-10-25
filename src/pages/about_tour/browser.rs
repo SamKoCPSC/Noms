@@ -1,4 +1,5 @@
 use super::{flight, loading::Gate, scene::Renderer};
+use crate::pages::about::LOADING_PHRASES;
 use std::{
     cell::RefCell,
     rc::{Rc, Weak},
@@ -60,6 +61,8 @@ struct State {
     kitchen_ready: bool,
     gate: Gate,
     loading_timeout: Option<gloo_timers::callback::Timeout>,
+    loading_phrases: Option<gloo_timers::callback::Interval>,
+    loading_phrase: usize,
 }
 impl Drop for State {
     fn drop(&mut self) {
@@ -134,6 +137,8 @@ pub fn start() -> Result<(), JsValue> {
         kitchen_ready: false,
         gate: Gate::Open,
         loading_timeout: None,
+        loading_phrases: None,
+        loading_phrase: 0,
     }));
     let weak = Rc::downgrade(&state);
     let callback = Closure::wrap(Box::new(move |time: f64| {
@@ -141,7 +146,7 @@ pub fn start() -> Result<(), JsValue> {
             s.borrow_mut().raf = None;
             let again = s.borrow_mut().tick(time);
             maybe_load_kitchen(&s);
-            arm_loading_timeout(&s);
+            arm_loading_timers(&s);
             if again {
                 schedule(&s)
             }
@@ -345,7 +350,6 @@ fn maybe_load_kitchen(state: &StateRef) {
                 if s.generation != generation {
                     return Err(JsValue::from_str("Tour changed"));
                 }
-                s.loading_status("Preparing the recipe book and laptop…");
             }
             let data = super::gltf::decode(&bytes).map_err(|e| JsValue::from_str(&e))?;
             let mut images = Vec::new();
@@ -380,7 +384,6 @@ fn maybe_load_kitchen(state: &StateRef) {
                     s.gate = Gate::Warming;
                     s.sync_gate();
                 }
-                s.loading_status("Adding the finishing touches…");
             } else {
                 s.reading_fallback();
             }
@@ -390,18 +393,32 @@ fn maybe_load_kitchen(state: &StateRef) {
         }
     });
 }
-fn arm_loading_timeout(state: &StateRef) {
+fn arm_loading_timers(state: &StateRef) {
     let mut s = state.borrow_mut();
-    if !s.gate.blocked() || s.loading_timeout.is_some() {
+    if !s.gate.blocked() {
         return;
     }
-    let weak = Rc::downgrade(state);
-    s.loading_timeout = Some(gloo_timers::callback::Timeout::new(25_000, move || {
-        if let Some(state) = weak.upgrade() {
-            state.borrow_mut().reading_fallback();
-            schedule(&state);
-        }
-    }));
+    if s.loading_timeout.is_none() {
+        let weak = Rc::downgrade(state);
+        s.loading_timeout = Some(gloo_timers::callback::Timeout::new(25_000, move || {
+            if let Some(state) = weak.upgrade() {
+                state.borrow_mut().reading_fallback();
+                schedule(&state);
+            }
+        }));
+    }
+    if s.loading_phrases.is_none() {
+        let weak = Rc::downgrade(state);
+        s.loading_phrases = Some(gloo_timers::callback::Interval::new(3_000, move || {
+            if let Some(state) = weak.upgrade() {
+                let mut s = state.borrow_mut();
+                if s.gate.blocked() && !s.doc.hidden() {
+                    s.loading_phrase = (s.loading_phrase + 1) % LOADING_PHRASES.len();
+                    s.loading_status(LOADING_PHRASES[s.loading_phrase]);
+                }
+            }
+        }));
+    }
 }
 fn listen(state: &StateRef, target: EventTarget, name: &'static str, f: fn(&mut State, Event)) {
     let weak: Weak<RefCell<State>> = Rc::downgrade(state);
@@ -481,6 +498,7 @@ impl State {
         }
         if !blocked {
             self.loading_timeout = None;
+            self.loading_phrases = None;
             if focus_loading_control {
                 self.focus_chapter(self.active.min(3));
             }
@@ -587,7 +605,8 @@ impl State {
             } else {
                 Gate::Waiting
             };
-            self.loading_status("Loading the kitchen…");
+            self.loading_phrase = 0;
+            self.loading_status(LOADING_PHRASES[0]);
         } else if !self.flying {
             self.gate = Gate::Open;
         }

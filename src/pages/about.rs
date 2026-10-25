@@ -17,6 +17,16 @@ const KITCHEN_POSTER: Asset = asset!(
     "/assets/about/sams-kitchen.webp",
     manganis::AssetOptions::builder()
 );
+pub(super) const LOADING_PHRASES: [&str; 8] = [
+    "The cookies are baking…",
+    "The steak is defrosting…",
+    "The oven is preheating…",
+    "Counting the chocolate chips…",
+    "Giving the croissants a pep talk…",
+    "Negotiating with the sourdough starter…",
+    "Asking the coffee to wake up…",
+    "Flipping an imaginary pancake…",
+];
 const IDS: [&str; 4] = ["idea", "why", "creator", "community"];
 const NAMES: [&str; 4] = ["The idea", "The reason", "The creator", "The philosophy"];
 const EYEBROWS: [&str; 4] = [
@@ -55,9 +65,10 @@ pub fn About() -> Element {
        div{class:"tour-loader-book",aria_hidden:"true",span{}span{}span{}}
        span{class:"eyebrow","ABOUT NOMS"}
        h2{id:"tour-loader-title","Getting the kitchen ready"}
-       p{id:"tour-loading-status",role:"status",aria_live:"polite","Loading the kitchen…"}
+       p{id:"tour-loading-status",aria_hidden:"true","{LOADING_PHRASES[0]}"}
+       span{class:"sr-only",role:"status",aria_live:"polite","Loading the kitchen. The tour will open when it is ready."}
        div{class:"tour-loader-track",aria_hidden:"true",span{}}
-       button{id:"tour-loader-read",r#type:"button","Read the story instead"}
+       button{id:"tour-loader-read",r#type:"button","Click here if the page takes too long to load"}
       }
      }
      a{class:"skip-link",href:"#idea","Skip to the story"}
