@@ -64,7 +64,9 @@ class AliasTest(unittest.TestCase):
         # review. Recover and verify the original alias stage, rather than
         # rewriting its immutable output pin for later ingredient additions.
         gap_policy=json.loads(fill_gaps.DEFAULT_POLICY.read_text())
-        alias_seed=fill_gaps.restore_baseline(json.loads(seed_path.read_text()),gap_policy)
+        followup=json.loads(fill_gaps.FOLLOWUP_POLICY.read_text())
+        first_gap_seed=fill_gaps.restore_baseline(json.loads(seed_path.read_text()),followup)
+        alias_seed=fill_gaps.restore_baseline(first_gap_seed,gap_policy)
         self.assertEqual(fill_gaps.checksum(alias_seed),policy['expected_output_checksum'])
         self.assertEqual(aliases.digest(Path('data/vocabulary/sources.json')),policy['base_sources_checksum'])
         seed=json.loads(seed_path.read_text());by_label={e['label']:e for e in seed['entries']}

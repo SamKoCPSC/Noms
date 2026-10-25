@@ -2625,7 +2625,9 @@
       "aliases": [
         "pimento",
         "Jamaica pepper",
-        "Jamaica peppers"
+        "Jamaica peppers",
+        "allspice berries",
+        "whole allspice"
       ],
       "description": "The dried berry of Pimenta dioica, distinct from mixed spice.",
       "status": "active",
@@ -15934,7 +15936,9 @@
       "id": "ed9f2980-7de7-4d77-9953-0eff080702a3",
       "label": "bean sprout",
       "aliases": [
-        "bean sprouts"
+        "bean sprouts",
+        "beansprout",
+        "beansprouts"
       ],
       "description": "A bean sprout is a germinated bean to be eaten raw or cooked.",
       "locale": "en",
@@ -22758,7 +22762,9 @@
       "id": "2c1616fd-25a1-447b-9f7b-d0af6d9a2d93",
       "label": "black pepper",
       "aliases": [
-        "black peppers"
+        "black peppers",
+        "pepper (black)",
+        "pepper, black"
       ],
       "description": "A whole black pepper or some substance made from processed black pepper.",
       "locale": "en",
@@ -50753,7 +50759,13 @@
       "id": "0a09c2b8-0c1e-4b5b-bab8-fed6d17b91cc",
       "label": "chicken breast (skinless, boneless)",
       "aliases": [
-        "chicken breasts (skinless, boneless)"
+        "chicken breasts (skinless, boneless)",
+        "boneless skinless chicken breast",
+        "boneless skinless chicken breasts",
+        "skinless boneless chicken breast",
+        "skinless boneless chicken breasts",
+        "boneless, skinless chicken breast",
+        "boneless, skinless chicken breasts"
       ],
       "description": "A skinless and boneless chicken breast.",
       "locale": "en",
@@ -50978,7 +50990,9 @@
     {
       "id": "85b6b4fa-a594-4a67-a8ba-d45f3c49d3d6",
       "label": "chicken drumstick",
-      "aliases": [],
+      "aliases": [
+        "chicken drumsticks"
+      ],
       "description": "A whole drumstick that is obtained from a chicken.",
       "locale": "en",
       "status": "active",
@@ -51722,7 +51736,9 @@
     {
       "id": "fcb02a1a-31d9-4f51-9ad8-e65ae31b994e",
       "label": "chicken liver",
-      "aliases": [],
+      "aliases": [
+        "chicken livers"
+      ],
       "description": "The group includes any type of Chicken liver. The part consumed/analysed is by default the whole or a portion of it representing the observed heterogeneity. When relevant, information on the part consumed/analysed has to be reported with additional facet descriptors.[https://en.wikipedia.org/wiki/Liver_(food)]",
       "locale": "en",
       "status": "active",
@@ -52505,7 +52521,12 @@
       "id": "a4a39a9b-9592-43eb-8b09-33f9e92f6312",
       "label": "chicken thigh (skinless, boneless)",
       "aliases": [
-        "chicken thighs (skinless, boneless)"
+        "chicken thighs (skinless, boneless)",
+        "boneless skinless chicken thigh",
+        "boneless skinless chicken thighs",
+        "skinless boneless chicken thigh",
+        "skinless boneless chicken thighs",
+        "boneless chicken skinless thigh"
       ],
       "description": "A skinless and boneless chicken thigh.",
       "locale": "en",
@@ -57656,7 +57677,9 @@
     {
       "id": "000112b2-5bc2-4e08-be79-6eabdca6decf",
       "label": "cider vinegar",
-      "aliases": [],
+      "aliases": [
+        "apple cider vinegar"
+      ],
       "description": "",
       "locale": "en",
       "status": "active",
@@ -57942,7 +57965,9 @@
     {
       "id": "a808458f-3c7f-416a-a447-99064d6fc7dd",
       "label": "cinnamon stick",
-      "aliases": [],
+      "aliases": [
+        "cinnamon sticks"
+      ],
       "description": "",
       "locale": "en",
       "status": "active",
@@ -58816,7 +58841,9 @@
     {
       "id": "5f8653c9-5a5b-4960-a56b-8778d4bc462e",
       "label": "clam",
-      "aliases": [],
+      "aliases": [
+        "clams"
+      ],
       "description": "A raw clam.",
       "locale": "en",
       "status": "active",
@@ -59919,7 +59946,11 @@
     {
       "id": "66a31c26-7594-4e89-8e17-8076b2778255",
       "label": "clove ground",
-      "aliases": [],
+      "aliases": [
+        "ground cloves",
+        "ground clove",
+        "clove powder"
+      ],
       "description": "",
       "locale": "en",
       "status": "active",
@@ -71208,7 +71239,10 @@
     {
       "id": "d5a6a9bd-02f4-4d2e-9d8c-476ae075338f",
       "label": "crabmeat (lump)",
-      "aliases": [],
+      "aliases": [
+        "lump crab meat",
+        "lump crabmeat"
+      ],
       "description": "",
       "locale": "en",
       "status": "active",
@@ -82082,7 +82116,9 @@
     {
       "id": "0f696a28-f5be-4e7f-8ab2-57e8c3ad5b34",
       "label": "egg white",
-      "aliases": [],
+      "aliases": [
+        "egg whites"
+      ],
       "description": "The group includes Egg white, i.e. a liquid formed around the yolk during its passage in the oviduct. Its primary natural purpose is to protect the egg yolk and provide additional nutrition for the growth of the embryo, as it is rich in proteins. The part consumed/analysed is by default the whole or a portion of it representing the observed heterogeneity. ] and [https://en.wikipedia.org/wiki/Pasteurized_eggs] and [https://www.google.co.uk/search?tbm=isch&q=pure egg white liquid]",
       "locale": "en",
       "status": "active",
@@ -118278,7 +118314,14 @@
       "id": "09224eae-cff2-4d1a-8d65-67b689d7827a",
       "label": "jalapeno pepper",
       "aliases": [
-        "jalapeno peppers"
+        "jalapeno peppers",
+        "jalapeño pepper",
+        "jalapeño peppers",
+        "jalapeno chile",
+        "jalapeno chiles",
+        "jalapeno chili",
+        "jalapeno chilies",
+        "jalapeno chillies"
       ],
       "description": "A berry fruit of a jalapeno pepper plant (Capsicum annuum).",
       "locale": "en",
@@ -134437,7 +134480,9 @@
     {
       "id": "76675e84-40d0-4f74-be38-925a7ce3da9d",
       "label": "macaroni elbow",
-      "aliases": [],
+      "aliases": [
+        "elbow macaroni"
+      ],
       "description": "",
       "locale": "en",
       "status": "active",
@@ -143752,7 +143797,10 @@
     {
       "id": "26a83e8a-7441-4f62-a822-5295521406ab",
       "label": "mints, dry",
-      "aliases": [],
+      "aliases": [
+        "dried mint",
+        "dry mint"
+      ],
       "description": "Dried herbs from the plant classified under the genus Mentha L., commonly known as Mints, dry. The part consumed/analysed is not specified. When relevant, information on the part consumed/analysed has to be reported with additional facet descriptors. In case of data collections related to legislations, the default part consumed/analysed is the one defined in the applicable legislation.[https://en.wikipedia.org/wiki/Mentha] and [https://www.google.co.uk/search?tbm=isch&q=Mints, dry]",
       "locale": "en",
       "status": "active",
@@ -148280,7 +148328,9 @@
     {
       "id": "54392737-8f94-4b69-abea-cf40a6b28629",
       "label": "mustard (dijon)",
-      "aliases": [],
+      "aliases": [
+        "Dijon mustard"
+      ],
       "description": "",
       "locale": "en",
       "status": "active",
@@ -148557,7 +148607,10 @@
     {
       "id": "17053382-41c5-4546-ac34-d8cc7d118066",
       "label": "mustard powder",
-      "aliases": [],
+      "aliases": [
+        "dry mustard",
+        "ground mustard"
+      ],
       "description": "",
       "locale": "en",
       "status": "active",
@@ -164028,7 +164081,9 @@
     {
       "id": "fa09f9d7-f000-40e9-8bde-4a1f9a1de8a7",
       "label": "peanut butter (creamy)",
-      "aliases": [],
+      "aliases": [
+        "creamy peanut butter"
+      ],
       "description": "",
       "locale": "en",
       "status": "active",
@@ -169112,7 +169167,9 @@
       "id": "c769df9e-eda6-4a64-a434-6079ab35a43e",
       "label": "pine nut",
       "aliases": [
-        "pine nuts"
+        "pine nuts",
+        "pinenut",
+        "pinenuts"
       ],
       "description": "",
       "locale": "en",
@@ -182552,7 +182609,9 @@
       "id": "83b39b4e-0b58-4214-a66a-214b19a5d292",
       "label": "red bell pepper",
       "aliases": [
-        "red bell peppers"
+        "red bell peppers",
+        "red pepper (bell)",
+        "red pepper, bell"
       ],
       "description": "",
       "locale": "en",
@@ -183536,7 +183595,9 @@
       "id": "c5a30ddf-b3c6-4082-9c04-7bb0bf12757c",
       "label": "red onion",
       "aliases": [
-        "red onions"
+        "red onions",
+        "purple onion",
+        "purple onions"
       ],
       "description": "A bulb of a red onion plant cultivar",
       "locale": "en",
@@ -190088,7 +190149,8 @@
       "id": "f774ce18-342e-4e87-aa48-3746c024a030",
       "label": "rutabaga",
       "aliases": [
-        "rutabagas"
+        "rutabagas",
+        "swede"
       ],
       "description": "A hypocotyl of a rutabaga plant (Brassica napus subsp. rapifera).",
       "locale": "en",
@@ -193416,7 +193478,9 @@
     {
       "id": "c35b68eb-b78a-468d-a5ff-010346a9930b",
       "label": "sardine",
-      "aliases": [],
+      "aliases": [
+        "sardines"
+      ],
       "description": "",
       "locale": "en",
       "status": "active",
@@ -222562,7 +222626,9 @@
     {
       "id": "0ca551cd-dbe4-4f0e-a12c-634158095940",
       "label": "tomatillo",
-      "aliases": [],
+      "aliases": [
+        "tomatillos"
+      ],
       "description": "A berry fruit of a tomatillo plant (Physalis philadelphica)",
       "locale": "en",
       "status": "active",
@@ -244587,7 +244653,15 @@
       "id": "5ce7986d-6768-4721-8c60-9ce73db723ba",
       "label": "yogurt (nonfat)",
       "aliases": [
-        "yoghurt (nonfat)"
+        "yoghurt (nonfat)",
+        "nonfat yogurt",
+        "non-fat yogurt",
+        "fat-free yogurt",
+        "fat free yogurt",
+        "nonfat yoghurt",
+        "non-fat yoghurt",
+        "fat-free yoghurt",
+        "fat free yoghurt"
       ],
       "description": "",
       "locale": "en",
@@ -308171,6 +308245,285 @@
         "Spanish onions"
       ],
       "description": "Large mature bulb onion sold as Spanish onion, generally mild and suitable for slicing/cooking; skin color/cultivar are unspecified. Distinct from Welsh onion/scallions.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "58863397-ba10-47db-a10c-f17d66d0f9cd",
+      "label": "fat choy (black moss)",
+      "aliases": [
+        "fat choy",
+        "fat choi",
+        "black moss",
+        "edible black moss"
+      ],
+      "description": "Edible hair-like Nostoc flagelliforme material used as fat choy/black moss in Chinese cooking, commonly sold dried. Distinct from Irish moss, seaweed and other botanical mosses.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a361910f-00b8-4a15-bca0-88dbd5dfe0ee",
+      "label": "daylily flower buds",
+      "aliases": [
+        "daylily buds",
+        "daylily flower bud",
+        "lily buds (daylily)"
+      ],
+      "description": "Culinary flower buds of daylilies (Hemerocallis); species and fresh/dried state are unspecified. Distinct from Lilium lily bulbs and from an explicitly dried bud product.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a22d3c95-203a-409a-9da8-04e12e2b3fc7",
+      "label": "dried daylily buds",
+      "aliases": [
+        "dried lily buds",
+        "dried daylily flowers",
+        "dried golden needles",
+        "golden needles"
+      ],
+      "description": "Daylily flower buds processed by drying for cooking; distinct from fresh/unspecified buds and from lily bulbs. Exact species is unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8579dad7-cfd9-4e3c-aa47-f7904e2bd969",
+      "label": "dried roselle calyces",
+      "aliases": [
+        "dried roselle",
+        "dried roselle calyx",
+        "dried hibiscus calyces",
+        "dried Caribbean sorrel",
+        "dried sorrel (Caribbean roselle)"
+      ],
+      "description": "Roselle (Hibiscus sabdariffa) calyces preserved by drying, used in infusions and cooking. Distinct from dried ground roselle, roselle leaves and Rumex sorrel leaves.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4b8a8815-66a8-4a70-823d-2c7436124900",
+      "label": "roselle jam",
+      "aliases": [
+        "hibiscus jam",
+        "Caribbean sorrel jam",
+        "sorrel jam (Caribbean)"
+      ],
+      "description": "Sweet preserve made from roselle/hibiscus calyces, called sorrel jam in Caribbean cooking. Exact spice and sugar formulation varies; distinct from Rumex-leaf preparations.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "440f0135-563e-4658-a21d-1fc9ef4cc785",
+      "label": "Colombian aliños sauce",
+      "aliases": [
+        "Colombian alinos sauce",
+        "aliños Colombianos",
+        "alinos Colombianos",
+        "alinos sauce (Colombian)",
+        "aliños sauce (Colombian)"
+      ],
+      "description": "Colombian vegetable-and-spice seasoning paste/sauce used to marinate or flavor food; commonly includes peppers, onion/scallion and garlic. Recipes vary. Distinct from dry seasoning and unrelated regional aliños.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b5f7c306-f71b-4647-88e1-0ee899fbcd26",
+      "label": "som moo pork sausage",
+      "aliases": [
+        "som moo",
+        "Lao fermented pork sausage",
+        "Lao sour pork sausage",
+        "sour pork sausage (Lao)"
+      ],
+      "description": "Lao-style sour fermented pork-and-pork-skin sausage called som moo, used as a cooking component. Distinct from fresh pork sausage and other regional cured sausages; exact seasoning and fermentation vary.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4f55d4d0-98a9-4afa-a300-c40b8deb3be2",
+      "label": "pectin",
+      "aliases": [
+        "food-grade pectin",
+        "food grade pectin"
+      ],
+      "description": "Food-grade pectin used as a gelling ingredient; physical form and sugar/calcium-dependent formulation are unspecified. A generic reference does not establish interchangeability of liquid, powdered or low-sugar products.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a6e502e2-e088-40f8-bfbf-80d99e690b8c",
+      "label": "powdered pectin",
+      "aliases": [
+        "pectin powder",
+        "dry pectin",
+        "powdered fruit pectin"
+      ],
+      "description": "Food-grade pectin supplied as a dry powder for gelling. Exact sugar/calcium formulation is unspecified; distinct from liquid pectin and from a recipe-specific instant or low-sugar product.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "79b1a87c-70b9-47f5-b870-2142b9125030",
+      "label": "tuna packed in olive oil",
+      "aliases": [
+        "tuna in olive oil",
+        "olive-oil-packed tuna",
+        "olive oil packed tuna"
+      ],
+      "description": "Prepared tuna preserved/packed in olive oil for use as an ingredient. Can/jar packaging, tuna species and solid/chunk/flake presentation are unspecified; distinct from fresh tuna and tuna in brine or other oils.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4dcdb742-9eba-4641-a201-3e08fa48f753",
+      "label": "ground coriander seed",
+      "aliases": [
+        "ground coriander",
+        "coriander powder",
+        "coriander seed powder",
+        "ground coriander seeds",
+        "powdered coriander seed"
+      ],
+      "description": "Coriander seed ground into spice powder; distinct from whole seeds and coriander leaves. Grinding changes measurement and flavor release; no roasting or seasoning is inferred.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c392cff7-36e3-4669-a7c9-8047dcbde7b7",
+      "label": "golden raisins",
+      "aliases": [
+        "golden raisin",
+        "golden dried grapes"
+      ],
+      "description": "Light golden-colored dried grapes sold as golden raisins; seed status and exact drying process are unspecified. Distinct from an explicitly seedless golden-raisin product and from dried Ribes currants.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f41dec0b-70b1-4dff-a4bd-7de97c7ee8db",
+      "label": "red vermouth",
+      "aliases": [
+        "rosso vermouth",
+        "vermouth rosso"
+      ],
+      "description": "Red/rosso-style aromatized fortified wine used in drinks and cooking; exact sweetness and botanical formula are unspecified. Distinct from an entry defined only as sweet vermouth, which need not be red.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "26ed20c3-3ef3-49d6-bbaf-62a057ece5a0",
+      "label": "pul biber",
+      "aliases": [
+        "Turkish chili flakes",
+        "Turkish chilli flakes",
+        "Turkish red pepper flakes"
+      ],
+      "description": "Turkish-style crushed red chili flakes sold as pul biber; heat, pepper variety and oil/salt additions are unspecified. Do not identify the unqualified term specifically as Urfa or Aleppo pepper.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "27c73e55-4699-42f7-b440-ef63c42af7af",
+      "label": "sweet pickled piquanté peppers",
+      "aliases": [
+        "sweet pickled piquante peppers",
+        "pickled piquanté peppers",
+        "pickled piquante peppers"
+      ],
+      "description": "Piquanté-type peppers preserved in a sweet vinegar pickle. Heat and exact formulation are unspecified; distinct from fresh peppers, generic sweet pickled bell peppers and cheese-stuffed pepper products.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "772c2073-59a9-462a-aa25-8a3b5db6bb19",
+      "label": "imitation vanilla flavouring",
+      "aliases": [
+        "imitation vanilla flavoring",
+        "artificial vanilla flavouring",
+        "artificial vanilla flavoring",
+        "imitation vanilla extract"
+      ],
+      "description": "Vanilla-flavored baking ingredient made with imitation/artificial flavoring rather than an extract of vanilla pods. Color, alcohol level and concentration are unspecified; distinct from vanilla extract.",
       "locale": "en",
       "status": "active",
       "source_mappings": [],

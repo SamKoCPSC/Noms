@@ -325,6 +325,71 @@ project. Browser-only metadata is external under the gap-review directory.
 Inspect actual owned containers/ports before recovery, preserve the retained
 volumes, and do not confuse browser-only metadata with a full lifecycle manifest.
 
+## Source and name follow-up (2026-10-25)
+
+The user deferred the proposed ingredient-details field and requested further
+gap filling. The new `ingredient-gap-followup.json` is a separate reviewed layer
+after `f1ed36568801bfe1b77af10ffcc163246031954b`; the original gap policy and all
+earlier adapter/alias pins are unchanged. Replay the first gap stage and then
+invoke the same builder with the explicit follow-up `--policy`. See the
+[follow-up guide](../../scripts/vocabulary/GAPS.md#source-follow-up-2026-10-25).
+
+This round adds **16 ingredients and 114 aliases**: 55 aliases on new entries and
+59 appended to 26 prior entries. Totals are **13,055 active, 81 retired and 7,522
+active aliases**, with four unchanged source descriptors. Every prior UUID,
+definition, status, original alias/order, source association and provenance field
+is preserved. The new seed SHA-256 is
+`373d0b7b4c19f6c8e664655d1ebafedbae97e8028503cca63733c62e9609dd80`.
+
+Government/university sources resolve fat choy and daylily material identity.
+Original recipe sources resolve roselle calyces/jam, Colombian aliños and Lao som
+moo; captured provider-country metadata is not used to infer those meanings.
+Whole/ground coriander, generic/dry/liquid pectin and extract/imitation vanilla
+remain separate. Generic golden raisins do not imply seedlessness, and generic
+olive-oil-packed tuna does not imply the prior solid-pack canned subtype.
+Pul biber and red vermouth preserve unspecified subtype information.
+
+All **53 reviewed names** have dispositions: eight new-identity uses, five scoped
+source contexts, 31 existing-identity uses and nine holds. Ten of the original
+nineteen holds are resolved; remaining holds are ground red pepper, almond/vanilla
+essence, light raisins, bare polenta, salmon sashimi, Sicilian olives, a branded
+sweet pepper product and zapallo. Alternative pectin/daylily/vanilla forms and a
+generic sweet-pickled piquanté material do not force an uncertain source wording
+to a product. Bare sorrel and brands do not gain unsafe global aliases.
+
+Useful names include Dijon mustard, beansprouts, purple onion, jalapeño variants,
+apple cider vinegar and skinless/boneless cut word order. Qualified names such as
+`pepper (black)`, `red pepper (bell)` and `dried sorrel (Caribbean roselle)` make
+explicit candidates discoverable by prefix. Bare pepper/red pepper are not exact
+aliases, and the runtime still attaches no ID until an author selects a suggestion.
+Reserved legacy names, including `swedes` and `apple vinegar`, retain ownership.
+
+All **88 Python tests** pass. The authoritative Rust validator accepts **13,136
+entries/four sources with zero warnings**. The test deployment passes dry-run
+rollback, definition equality and zero-change repeat loads. All originally
+existing authored rows retain their hashes. One new private synthetic draft
+tests ground-coriander selection, UUID save/reload, clearing and free-text
+fallback. Read-only live checks pass **130 exact label/alias cases plus nine
+prefix/ambiguity/escaping guards**. No page errors or failed WASM responses; no
+recipes are imported/published and no production rollout occurs.
+
+The unchanged 1,000-profile corpus now has **10,349/10,768 covered material lines
+(96.1%)** and **667 fully covered profiles**. Both previously missing botanical
+names are represented. Full-wording candidate hits rise from 8,978 to **9,359**;
+full-or-three/four-character prefix hits rise from 9,174 to **9,531** under the
+updated specific-form review. These are candidate retrieval metrics, not an
+automatic parser or source-disambiguation score. On the frozen previous 10,339
+covered lines and their original expected IDs, full-wording hits rise to 9,319
+and full-or-prefix hits to 9,496, with zero regressions in either measure.
+
+External evidence, CSVs and browser/SQL checks are in
+`/workspace/vocabulary-gap-followup`; the new download is
+`/workspace/noms-vocabulary-gap-followup.zip`. Earlier report archives remain
+frozen. The new archive includes full before/after seeds, the explicit review,
+source pins and the 1,000-profile after-check with verified offline replay; raw
+provider catalogs, recipe instructions, reference HTML and browser sessions are
+excluded. The local app is healthy on the retained ports noted above.
+
 ## Remaining scope
 
 Other metadata dimensions, localization, further Wikidata/USDA curation, FNDDS and

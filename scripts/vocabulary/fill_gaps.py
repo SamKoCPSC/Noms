@@ -15,6 +15,7 @@ from foodon import normalize, require, valid_id, validate
 
 ROOT=Path(__file__).resolve().parents[2]
 DEFAULT_POLICY=ROOT/'data/vocabulary/adapters/ingredient-gap-review.json'
+FOLLOWUP_POLICY=ROOT/'data/vocabulary/adapters/ingredient-gap-followup.json'
 
 
 def encoded(value):
@@ -26,7 +27,7 @@ def checksum(value):
 
 
 def restore_baseline(result,policy):
-    """Recover the checksum-pinned alias stage from its appended curation layer."""
+    """Recover the exact prior seed from one checksum-pinned curation layer."""
     require(checksum(result)==policy['expected_output_checksum'],'Not the approved gap output')
     additions={e['id']:e for e in policy['additions']}
     require({e['id']:e for e in result['entries'] if e['id'] in additions}==additions,
@@ -131,7 +132,7 @@ def run(args):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--seed',type=Path,required=True,help='Immutable alias/scope output, before gap curation')
+    parser.add_argument('--seed',type=Path,required=True,help='Complete immutable seed matching the selected policy baseline')
     parser.add_argument('--sources',type=Path,required=True)
     parser.add_argument('--policy',type=Path,default=DEFAULT_POLICY)
     parser.add_argument('--output',type=Path,required=True)

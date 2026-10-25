@@ -106,11 +106,16 @@ python3 scripts/vocabulary/fill_gaps.py \
   --seed /tmp/noms-alias-seed/ingredients.json \
   --sources /tmp/noms-alias-seed/sources.json \
   --output /tmp/noms-gap-seed
-cmp /tmp/noms-gap-seed/ingredients.json data/vocabulary/ingredients.json
-cmp /tmp/noms-gap-seed/sources.json data/vocabulary/sources.json
+python3 scripts/vocabulary/fill_gaps.py \
+  --policy data/vocabulary/adapters/ingredient-gap-followup.json \
+  --seed /tmp/noms-gap-seed/ingredients.json \
+  --sources /tmp/noms-gap-seed/sources.json \
+  --output /tmp/noms-gap-followup
+cmp /tmp/noms-gap-followup/ingredients.json data/vocabulary/ingredients.json
+cmp /tmp/noms-gap-followup/sources.json data/vocabulary/sources.json
 just seed-vocabulary --validate-only \
-  --file /tmp/noms-gap-seed/ingredients.json \
-  --sources /tmp/noms-gap-seed/sources.json
+  --file /tmp/noms-gap-followup/ingredients.json \
+  --sources /tmp/noms-gap-followup/sources.json
 python3 -m unittest discover -s scripts/vocabulary -p 'test_*.py' -v
 ```
 
